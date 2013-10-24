@@ -17,5 +17,5 @@
 # under the License.
 #
 
-from qdtoollibs.disp import *
+from .disp import *
 

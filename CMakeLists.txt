@@ -125,7 +125,7 @@ install(TARGETS qpid-dispatch
 file(GLOB headers "include/qpid/dispatch/*.h")
 install(FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/qpid/dispatch)
 install(FILES include/qpid/dispatch.h DESTINATION ${INCLUDE_INSTALL_DIR}/qpid)
-install(FILES etc/qpid-dispatch.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid)
+install(FILES etc/qpid-dxrouter.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid)
 
 ##
 ## Python modules installation
@@ -156,6 +156,15 @@ set(PYTHON_CONFIG_SOURCES
     python/qpid/dispatch/__init__.py
 )
 
+set(PYTHON_TOOLS_SOURCES
+    python/qpid/dispatch/qdtoollibs/__init__.py
+    python/qpid/dispatch/qdtoollibs/disp.py
+)
+
+set(PYTHON_TOOLS_EXECUTABLES
+    tools/src/py/qdstat
+)
+
 set(DOC_FILES
     ChangeLog
     LICENSE
@@ -172,11 +181,17 @@ install(FILES ${PYTHON_ROUTER_SOURCES}
 install(FILES ${PYTHON_CONFIG_SOURCES}
         DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid/dispatch/config)
 
+install(FILES ${PYTHON_TOOLS_SOURCES}
+        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid/dispatch/qdtoollibs)
+
 install(FILES python/qpid/__init__.py
         DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid)
 
 install(FILES python/qpid/dispatch/__init__.py
         DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid/dispatch)
+
+install(PROGRAMS ${PYTHON_TOOLS_EXECUTABLES}
+        DESTINATION bin)
 
 install(FILES ${DOC_FILES}
         DESTINATION ${DOC_INSTALL_DIR}/qpid-dispatch)

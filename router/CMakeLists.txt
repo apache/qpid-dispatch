@@ -18,7 +18,7 @@
 ##
 
 
-set(DEFAULT_CONFIG_PATH "/etc/qpid/qpid-dispatch.conf" CACHE string "Default Config File Path")
+set(DEFAULT_CONFIG_PATH "/etc/qpid/qpid-dxrouter.conf" CACHE string "Default Config File Path")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
@@ -31,8 +31,8 @@ set(router_SOURCES
     src/main.c
     )
 
-add_executable(dispatch-router ${router_SOURCES})
-target_link_libraries(dispatch-router qpid-dispatch ${proton_lib})
+add_executable(qpid-dxrouterd ${router_SOURCES})
+target_link_libraries(qpid-dxrouterd qpid-dispatch ${proton_lib})
 
-install(TARGETS dispatch-router RUNTIME DESTINATION bin)
+install(TARGETS qpid-dxrouterd RUNTIME DESTINATION bin)
 

@@ -22,6 +22,6 @@ cd $(dirname ${BASH_SOURCE[0]}) > /dev/null
 export QPID_DISPATCH_HOME=$(pwd)
 cd - > /dev/null
 
-export PYTHONPATH=$QPID_DISPATCH_HOME/python:$QPID_DISPATCH_HOME/tools/src/py:$PYTHONPATH
+export PYTHONPATH=$QPID_DISPATCH_HOME/python:$PYTHONPATH
 export PATH=$QPID_DISPATCH_HOME/tools/src/py:$PATH
 
