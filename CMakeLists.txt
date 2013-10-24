@@ -140,7 +140,6 @@ set(PYTHON_ROUTER_SOURCES
     python/qpid/dispatch/router/link.py
     python/qpid/dispatch/router/router_engine.py
     python/qpid/dispatch/router/__init__.py
-    python/qpid/dispatch/router/adapter.py
     python/qpid/dispatch/router/mobile.py
     python/qpid/dispatch/router/node.py
     python/qpid/dispatch/router/routing.py
@@ -148,7 +147,6 @@ set(PYTHON_ROUTER_SOURCES
     python/qpid/dispatch/router/configuration.py
     python/qpid/dispatch/router/neighbor.py
     python/qpid/dispatch/router/path.py
-    python/qpid/dispatch/router/binding.py
 )
 
 set(PYTHON_CONFIG_SOURCES
