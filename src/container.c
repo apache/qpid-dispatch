@@ -734,15 +734,15 @@ pn_terminus_t *dx_link_remote_target(dx_link_t *link)
 
 void dx_link_activate(dx_link_t *link)
 {
-    if (!link || !link->pn_link)
+    if (!link || !link->pn_link || pn_link_state(link->pn_link) != (PN_LOCAL_ACTIVE|PN_REMOTE_ACTIVE))
         return;
 
     pn_session_t *sess = pn_link_session(link->pn_link);
-    if (!sess)
+    if (!sess || pn_session_state(sess) != (PN_LOCAL_ACTIVE|PN_REMOTE_ACTIVE))
         return;
 
     pn_connection_t *conn = pn_session_connection(sess);
-    if (!conn)
+    if (!conn || pn_connection_state(conn) != (PN_LOCAL_ACTIVE|PN_REMOTE_ACTIVE))
         return;
 
     dx_connection_t *ctx = pn_connection_get_context(conn);

@@ -239,6 +239,13 @@ void dx_compose_end_list(dx_composed_field_t *field)
 }
 
 
+void dx_compose_empty_list(dx_composed_field_t *field)
+{
+    dx_insert_8(field, DX_AMQP_LIST0);
+    bump_count(field);
+}
+
+
 void dx_compose_start_map(dx_composed_field_t *field)
 {
     dx_compose_start_composite(field, 1);

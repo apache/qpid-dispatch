@@ -25,17 +25,19 @@ from proton import Messenger, Message, PENDING, ACCEPTED, REJECTED
 
 class RouterTest(unittest.TestCase):
 
-  def setUp(self):
+  @classmethod
+  def setUpClass(cls):
       if 'CTEST_SOURCE_DIR' not in os.environ:
         raise Exception("Environment variable 'CTEST_SOURCE_DIR' not set")
       srcdir = os.environ['CTEST_SOURCE_DIR']
-      self.router = subprocess.Popen(['../router/qpid-dxrouterd', '-c', '%s/config-1/A.conf' % srcdir],
-                                     stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+      cls.router = subprocess.Popen(['../router/qpid-dxrouterd', '-c', '%s/config-1/A.conf' % srcdir],
+                                    stderr=subprocess.PIPE, stdout=subprocess.PIPE)
       time.sleep(1)
 
-  def tearDown(self):
-    self.router.terminate()
-    self.router.wait()
+  @classmethod
+  def tearDownClass(cls):
+    cls.router.terminate()
+    cls.router.wait()
 
   def flush(self, messenger):
     while messenger.work(0.1):
@@ -191,10 +193,50 @@ class RouterTest(unittest.TestCase):
       M4.settle(trk)
       self.assertEqual(i, rm.body['number'])
 
+    self.flush(M1)
+    self.flush(M2)
+    self.flush(M3)
+    self.flush(M4)
+
     M1.stop()
     M2.stop()
     M3.stop()
     M4.stop()
+
+
+  def test_2b_disp_to_closed_connection(self):
+    addr = "amqp://0.0.0.0:20000/pre_settled/multicast/1"
+    M1 = Messenger()
+    M2 = Messenger()
+
+    M1.timeout = 1.0
+    M2.timeout = 1.0
+
+    M1.outgoing_window = 5
+    M2.incoming_window = 5
+
+    M1.start()
+    M2.start()
+    self.subscribe(M2, addr)
+
+    tm = Message()
+    rm = Message()
+
+    tm.address = addr
+    for i in range(2):
+      tm.body = {'number': i}
+      M1.put(tm)
+    M1.send(0)
+    M1.stop()
+
+    for i in range(2):
+      M2.recv(1)
+      trk = M2.get(rm)
+      M2.accept(trk)
+      M2.settle(trk)
+      self.assertEqual(i, rm.body['number'])
+
+    M2.stop()
 
 
   def test_3_propagated_disposition(self):
@@ -447,6 +489,33 @@ class RouterTest(unittest.TestCase):
     M1.stop()
     M2.stop()
 
+
+  def test_9_management(self):
+    addr  = "amqp:/_local/$management"
+    reply = "amqp:/temp.reply"
+
+    M = Messenger()
+    M.start()
+    M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
+    M.subscribe(reply)
+
+    request  = Message()
+    response = Message()
+
+    request.address        = addr
+    request.reply_to       = reply
+    request.correlation_id = 1
+    request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'DISCOVER-MGMT-NODES'}
+
+    M.put(request)
+    M.send()
+    M.recv()
+    M.get(response)
+
+    self.assertEqual(response.properties['status-code'], 200)
+    self.assertEqual(response.body, ['amqp:/_local/$management'])
+
+    M.stop()
 
 if __name__ == '__main__':
   unittest.main()

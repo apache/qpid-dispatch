@@ -59,6 +59,13 @@ void dx_compose_start_list(dx_composed_field_t *field);
 void dx_compose_end_list(dx_composed_field_t *field);
 
 /**
+ * Insert an empty list into the field.
+ *
+ * @param field A field created by dx_compose.
+ */
+void dx_compose_empty_list(dx_composed_field_t *field);
+
+/**
  * Begin to compose the elements os a map in the field.  This is called before
  * inserting the first element-pair into the map.
  *

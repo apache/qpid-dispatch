@@ -176,7 +176,7 @@ static void dx_agent_process_discover_types(dx_agent_t *agent, dx_parsed_field_t
     dx_agent_class_t *cls = DEQ_HEAD(agent->class_list);
     while (cls) {
         dx_compose_insert_string(field, (const char*) dx_hash_key_by_handle(cls->hash_handle));
-        dx_compose_insert_null(field); // TODO - https://tools.oasis-open.org/issues/browse/AMQP-87
+        dx_compose_empty_list(field);
         cls = DEQ_NEXT(cls);
     }
     sys_mutex_unlock(agent->lock);
