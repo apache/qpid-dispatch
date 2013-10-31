@@ -17,27 +17,42 @@
 # under the License.
 #
 
+import sys
 import os
 import time
 import unittest
 import subprocess
 from proton import Messenger, Message, PENDING, ACCEPTED, REJECTED
 
+def startRouter(obj):
+    if 'CTEST_SOURCE_DIR' not in os.environ:
+        raise Exception("Environment variable 'CTEST_SOURCE_DIR' not set")
+    srcdir = os.environ['CTEST_SOURCE_DIR']
+    obj.router = subprocess.Popen(['../router/qpid-dxrouterd', '-c', '%s/config-1/A.conf' % srcdir],
+                                  stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    time.sleep(1)
+
+def stopRouter(obj):
+    obj.router.terminate()
+    obj.router.wait()
+
+
 class RouterTest(unittest.TestCase):
 
-  @classmethod
-  def setUpClass(cls):
-      if 'CTEST_SOURCE_DIR' not in os.environ:
-        raise Exception("Environment variable 'CTEST_SOURCE_DIR' not set")
-      srcdir = os.environ['CTEST_SOURCE_DIR']
-      cls.router = subprocess.Popen(['../router/qpid-dxrouterd', '-c', '%s/config-1/A.conf' % srcdir],
-                                    stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-      time.sleep(1)
+  if (sys.version_info.major == 2) and (sys.version_info.minor < 7):
+    def setUp(self):
+      startRouter(self)
 
-  @classmethod
-  def tearDownClass(cls):
-    cls.router.terminate()
-    cls.router.wait()
+    def tearDown(self):
+      stopRouter(self)
+  else:
+    @classmethod
+    def setUpClass(cls):
+      startRouter(cls)
+
+    @classmethod
+    def tearDownClass(cls):
+      stopRouter(cls)
 
   def flush(self, messenger):
     while messenger.work(0.1):
@@ -192,11 +207,6 @@ class RouterTest(unittest.TestCase):
       M4.accept(trk)
       M4.settle(trk)
       self.assertEqual(i, rm.body['number'])
-
-    self.flush(M1)
-    self.flush(M2)
-    self.flush(M3)
-    self.flush(M4)
 
     M1.stop()
     M2.stop()
@@ -497,7 +507,7 @@ class RouterTest(unittest.TestCase):
     M = Messenger()
     M.start()
     M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-    M.subscribe(reply)
+    self.subscribe(M, reply)
 
     request  = Message()
     response = Message()
