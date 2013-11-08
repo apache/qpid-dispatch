@@ -94,6 +94,9 @@ static unsigned char next_octet(unsigned char **cursor, dx_buffer_t **buffer)
 
 static int traverse_field(unsigned char **cursor, dx_buffer_t **buffer, dx_field_location_t *field)
 {
+    dx_buffer_t   *start_buffer = *buffer;
+    unsigned char *start_cursor = *cursor;
+
     unsigned char tag = next_octet(cursor, buffer);
     if (!(*cursor)) return 0;
 
@@ -130,8 +133,8 @@ static int traverse_field(unsigned char **cursor, dx_buffer_t **buffer, dx_field
     }
 
     if (field && !field->parsed) {
-        field->buffer     = *buffer;
-        field->offset     = *cursor - dx_buffer_base(*buffer);
+        field->buffer     = start_buffer;
+        field->offset     = start_cursor - dx_buffer_base(start_buffer);
         field->length     = consume;
         field->hdr_length = hdr_length;
         field->parsed     = 1;
@@ -245,8 +248,8 @@ static int dx_check_and_advance(dx_buffer_t         **buffer,
     // Pattern matched and tag is expected.  Mark the beginning of the section.
     //
     location->parsed     = 1;
-    location->buffer     = test_buffer;
-    location->offset     = test_cursor - dx_buffer_base(test_buffer);
+    location->buffer     = *buffer;
+    location->offset     = *cursor - dx_buffer_base(*buffer);
     location->length     = 0;
     location->hdr_length = pattern_length;
 
@@ -307,6 +310,7 @@ static dx_field_location_t *dx_message_field_location(dx_message_t *msg, dx_mess
 
             dx_buffer_t   *buffer = content->section_message_properties.buffer;
             unsigned char *cursor = dx_buffer_base(buffer) + content->section_message_properties.offset;
+            advance(&cursor, &buffer, content->section_message_properties.hdr_length, 0, 0);
 
             int count = start_list(&cursor, &buffer);
             int result;
@@ -333,6 +337,7 @@ static dx_field_location_t *dx_message_field_location(dx_message_t *msg, dx_mess
 
             dx_buffer_t   *buffer = content->section_message_properties.buffer;
             unsigned char *cursor = dx_buffer_base(buffer) + content->section_message_properties.offset;
+            advance(&cursor, &buffer, content->section_message_properties.hdr_length, 0, 0);
 
             int count = start_list(&cursor, &buffer);
             int result;
@@ -349,6 +354,39 @@ static dx_field_location_t *dx_message_field_location(dx_message_t *msg, dx_mess
             result = traverse_field(&cursor, &buffer, 0); // subject
             if (!result) return 0;
             result = traverse_field(&cursor, &buffer, &content->field_reply_to); // reply_to
+            if (!result) return 0;
+        }
+        break;
+
+    case DX_FIELD_CORRELATION_ID:
+        while (1) {
+            if (content->field_correlation_id.parsed)
+                return &content->field_correlation_id;
+
+            if (content->section_message_properties.parsed == 0)
+                break;
+
+            dx_buffer_t   *buffer = content->section_message_properties.buffer;
+            unsigned char *cursor = dx_buffer_base(buffer) + content->section_message_properties.offset;
+            advance(&cursor, &buffer, content->section_message_properties.hdr_length, 0, 0);
+
+            int count = start_list(&cursor, &buffer);
+            int result;
+
+            if (count < 6)
+                break;
+
+            result = traverse_field(&cursor, &buffer, 0); // message_id
+            if (!result) return 0;
+            result = traverse_field(&cursor, &buffer, &content->field_user_id); // user_id
+            if (!result) return 0;
+            result = traverse_field(&cursor, &buffer, &content->field_to); // to
+            if (!result) return 0;
+            result = traverse_field(&cursor, &buffer, 0); // subject
+            if (!result) return 0;
+            result = traverse_field(&cursor, &buffer, &content->field_reply_to); // reply_to
+            if (!result) return 0;
+            result = traverse_field(&cursor, &buffer, &content->field_correlation_id); // correlation_id
             if (!result) return 0;
         }
         break;
@@ -608,10 +646,11 @@ void dx_message_send(dx_message_t *in_msg, dx_link_t *link)
         //
         cursor = dx_buffer_base(buf);
         if (content->section_message_header.length > 0) {
-            pn_link_send(pnl, (const char*) MSG_HDR_SHORT, 3);
             buf    = content->section_message_header.buffer;
             cursor = content->section_message_header.offset + dx_buffer_base(buf);
-            advance(&cursor, &buf, content->section_message_header.length, send_handler, (void*) pnl);
+            advance(&cursor, &buf,
+                    content->section_message_header.length + content->section_message_header.hdr_length,
+                    send_handler, (void*) pnl);
         }
 
         //
@@ -777,13 +816,27 @@ int dx_message_check(dx_message_t *in_msg, dx_message_depth_t depth)
 }
 
 
+dx_field_iterator_t *dx_message_field_iterator_typed(dx_message_t *msg, dx_message_field_t field)
+{
+    dx_field_location_t *loc = dx_message_field_location(msg, field);
+    if (!loc)
+        return 0;
+
+    return dx_field_iterator_buffer(loc->buffer, loc->offset, loc->length + loc->hdr_length, ITER_VIEW_ALL);
+}
+
+
 dx_field_iterator_t *dx_message_field_iterator(dx_message_t *msg, dx_message_field_t field)
 {
     dx_field_location_t *loc = dx_message_field_location(msg, field);
     if (!loc)
         return 0;
 
-    return dx_field_iterator_buffer(loc->buffer, loc->offset, loc->length, ITER_VIEW_ALL);
+    dx_buffer_t   *buffer = loc->buffer;
+    unsigned char *cursor = dx_buffer_base(loc->buffer) + loc->offset;
+    advance(&cursor, &buffer, loc->hdr_length, 0, 0);
+
+    return dx_field_iterator_buffer(buffer, cursor - dx_buffer_base(buffer), loc->length, ITER_VIEW_ALL);
 }
 
 
@@ -797,7 +850,7 @@ ssize_t dx_message_field_length(dx_message_t *msg, dx_message_field_t field)
 }
 
 
-ssize_t dx_message_field_copy(dx_message_t *msg, dx_message_field_t field, void *buffer)
+ssize_t dx_message_field_copy(dx_message_t *msg, dx_message_field_t field, void *buffer, size_t *hdr_length)
 {
     dx_field_location_t *loc = dx_message_field_location(msg, field);
     if (!loc)
@@ -806,7 +859,8 @@ ssize_t dx_message_field_copy(dx_message_t *msg, dx_message_field_t field, void 
     dx_buffer_t *buf       = loc->buffer;
     size_t       bufsize   = dx_buffer_size(buf) - loc->offset;
     void        *base      = dx_buffer_base(buf) + loc->offset;
-    size_t       remaining = loc->length;
+    size_t       remaining = loc->length + loc->hdr_length;
+    *hdr_length = loc->hdr_length;
 
     while (remaining > 0) {
         if (bufsize > remaining)
@@ -821,7 +875,7 @@ ssize_t dx_message_field_copy(dx_message_t *msg, dx_message_field_t field, void 
         }
     }
 
-    return loc->length;
+    return loc->length + loc->hdr_length;
 }
 
 

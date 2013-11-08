@@ -187,5 +187,14 @@ void dx_compose_insert_string_iterator(dx_composed_field_t *field, dx_field_iter
  */
 void dx_compose_insert_symbol(dx_composed_field_t *field, const char *value);
 
+/**
+ * Insert a type-tagged value into the field from an iterator
+ *
+ * @param field A field created by dx_compose.
+ * @param iter An iterator for a typed value.  The caller is responsible for freeing
+ *        this iterator after the call is complete.
+ */
+void dx_compose_insert_typed_iterator(dx_composed_field_t *field, dx_field_iterator_t *iter);
+
 #endif
 

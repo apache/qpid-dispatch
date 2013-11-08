@@ -68,7 +68,7 @@ typedef struct {
 static char *log_module = "AGENT";
 
 
-static dx_composed_field_t *dx_agent_setup_response(dx_field_iterator_t *reply_to)
+static dx_composed_field_t *dx_agent_setup_response(dx_field_iterator_t *reply_to, dx_field_iterator_t *cid)
 {
     //
     // Compose the header
@@ -88,7 +88,7 @@ static dx_composed_field_t *dx_agent_setup_response(dx_field_iterator_t *reply_t
     dx_compose_insert_string_iterator(field, reply_to);  // to
     dx_compose_insert_null(field);                       // subject
     dx_compose_insert_null(field);                       // reply-to
-    dx_compose_insert_string(field, "1");                // correlation-id   // TODO - fix
+    dx_compose_insert_typed_iterator(field, cid);        // correlation-id
     dx_compose_end_list(field);
 
     //
@@ -107,7 +107,10 @@ static dx_composed_field_t *dx_agent_setup_response(dx_field_iterator_t *reply_t
 }
 
 
-static void dx_agent_process_get(dx_agent_t *agent, dx_parsed_field_t *map, dx_field_iterator_t *reply_to)
+static void dx_agent_process_get(dx_agent_t          *agent,
+                                 dx_parsed_field_t   *map,
+                                 dx_field_iterator_t *reply_to,
+                                 dx_field_iterator_t *cid)
 {
     dx_parsed_field_t *cls = dx_parse_value_by_key(map, "type");
     if (cls == 0)
@@ -121,7 +124,7 @@ static void dx_agent_process_get(dx_agent_t *agent, dx_parsed_field_t *map, dx_f
 
     dx_log(log_module, LOG_TRACE, "Received GET request for type: %s", dx_hash_key_by_handle(cls_record->hash_handle));
 
-    dx_composed_field_t *field = dx_agent_setup_response(reply_to);
+    dx_composed_field_t *field = dx_agent_setup_response(reply_to, cid);
 
     //
     // Open the Body (AMQP Value) to be filled in by the handler.
@@ -157,11 +160,14 @@ static void dx_agent_process_get(dx_agent_t *agent, dx_parsed_field_t *map, dx_f
 }
 
 
-static void dx_agent_process_discover_types(dx_agent_t *agent, dx_parsed_field_t *map, dx_field_iterator_t *reply_to)
+static void dx_agent_process_discover_types(dx_agent_t          *agent,
+                                            dx_parsed_field_t   *map,
+                                            dx_field_iterator_t *reply_to,
+                                            dx_field_iterator_t *cid)
 {
     dx_log(log_module, LOG_TRACE, "Received DISCOVER-TYPES request");
 
-    dx_composed_field_t *field = dx_agent_setup_response(reply_to);
+    dx_composed_field_t *field = dx_agent_setup_response(reply_to, cid);
 
     //
     // Open the Body (AMQP Value) to be filled in by the handler.
@@ -194,11 +200,14 @@ static void dx_agent_process_discover_types(dx_agent_t *agent, dx_parsed_field_t
 }
 
 
-static void dx_agent_process_discover_operations(dx_agent_t *agent, dx_parsed_field_t *map, dx_field_iterator_t *reply_to)
+static void dx_agent_process_discover_operations(dx_agent_t          *agent,
+                                                 dx_parsed_field_t   *map,
+                                                 dx_field_iterator_t *reply_to,
+                                                 dx_field_iterator_t *cid)
 {
     dx_log(log_module, LOG_TRACE, "Received DISCOVER-OPERATIONS request");
 
-    dx_composed_field_t *field = dx_agent_setup_response(reply_to);
+    dx_composed_field_t *field = dx_agent_setup_response(reply_to, cid);
 
     //
     // Open the Body (AMQP Value) to be filled in by the handler.
@@ -233,11 +242,14 @@ static void dx_agent_process_discover_operations(dx_agent_t *agent, dx_parsed_fi
 }
 
 
-static void dx_agent_process_discover_nodes(dx_agent_t *agent, dx_parsed_field_t *map, dx_field_iterator_t *reply_to)
+static void dx_agent_process_discover_nodes(dx_agent_t          *agent,
+                                            dx_parsed_field_t   *map,
+                                            dx_field_iterator_t *reply_to,
+                                            dx_field_iterator_t *cid)
 {
     dx_log(log_module, LOG_TRACE, "Received DISCOVER-MGMT-NODES request");
 
-    dx_composed_field_t *field = dx_agent_setup_response(reply_to);
+    dx_composed_field_t *field = dx_agent_setup_response(reply_to, cid);
 
     //
     // Open the Body (AMQP Value) to be filled in by the handler.
@@ -292,6 +304,7 @@ static void dx_agent_process_request(dx_agent_t *agent, dx_message_t *msg)
     dx_parsed_field_t *map = dx_parse(ap);
     if (map == 0) {
         dx_field_iterator_free(ap);
+        dx_field_iterator_free(reply_to);
         return;
     }
 
@@ -301,6 +314,7 @@ static void dx_agent_process_request(dx_agent_t *agent, dx_message_t *msg)
     if (!dx_parse_ok(map)) {
         dx_log(log_module, LOG_TRACE, "Received unparsable App Properties: %s", dx_parse_error(map));
         dx_field_iterator_free(ap);
+        dx_field_iterator_free(reply_to);
         dx_parse_free(map);
         return;
     }
@@ -310,6 +324,7 @@ static void dx_agent_process_request(dx_agent_t *agent, dx_message_t *msg)
     //
     if (!dx_parse_is_map(map)) {
         dx_field_iterator_free(ap);
+        dx_field_iterator_free(reply_to);
         dx_parse_free(map);
         return;
     }
@@ -321,25 +336,33 @@ static void dx_agent_process_request(dx_agent_t *agent, dx_message_t *msg)
     if (operation == 0) {
         dx_parse_free(map);
         dx_field_iterator_free(ap);
+        dx_field_iterator_free(reply_to);
         return;
     }
+
+    //
+    // Get an iterator for the correlation_id.
+    //
+    dx_field_iterator_t *cid = dx_message_field_iterator_typed(msg, DX_FIELD_CORRELATION_ID);
 
     //
     // Dispatch the operation to the appropriate handler
     //
     dx_field_iterator_t *operation_string = dx_parse_raw(operation);
     if (dx_field_iterator_equal(operation_string, (unsigned char*) "GET"))
-        dx_agent_process_get(agent, map, reply_to);
+        dx_agent_process_get(agent, map, reply_to, cid);
     if (dx_field_iterator_equal(operation_string, (unsigned char*) "DISCOVER-TYPES"))
-        dx_agent_process_discover_types(agent, map, reply_to);
+        dx_agent_process_discover_types(agent, map, reply_to, cid);
     if (dx_field_iterator_equal(operation_string, (unsigned char*) "DISCOVER-OPERATIONS"))
-        dx_agent_process_discover_operations(agent, map, reply_to);
+        dx_agent_process_discover_operations(agent, map, reply_to, cid);
     if (dx_field_iterator_equal(operation_string, (unsigned char*) "DISCOVER-MGMT-NODES"))
-        dx_agent_process_discover_nodes(agent, map, reply_to);
+        dx_agent_process_discover_nodes(agent, map, reply_to, cid);
 
     dx_parse_free(map);
     dx_field_iterator_free(ap);
     dx_field_iterator_free(reply_to);
+    if (cid)
+        dx_field_iterator_free(cid);
 }
 
 

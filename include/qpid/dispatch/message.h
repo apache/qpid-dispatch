@@ -172,10 +172,11 @@ int dx_message_check(dx_message_t *msg, dx_message_depth_t depth);
  * @param field The field to be returned via iterator.
  * @return A field iterator that spans the requested field.
  */
+dx_field_iterator_t *dx_message_field_iterator_typed(dx_message_t *msg, dx_message_field_t field);
 dx_field_iterator_t *dx_message_field_iterator(dx_message_t *msg, dx_message_field_t field);
 
 ssize_t dx_message_field_length(dx_message_t *msg, dx_message_field_t field);
-ssize_t dx_message_field_copy(dx_message_t *msg, dx_message_field_t field, void *buffer);
+ssize_t dx_message_field_copy(dx_message_t *msg, dx_message_field_t field, void *buffer, size_t *hdr_length);
 
 //
 // Functions for composed messages

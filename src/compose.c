@@ -454,6 +454,17 @@ void dx_compose_insert_symbol(dx_composed_field_t *field, const char *value)
 }
 
 
+void dx_compose_insert_typed_iterator(dx_composed_field_t *field, dx_field_iterator_t *iter)
+{
+    while (!dx_field_iterator_end(iter)) {
+        uint8_t octet = dx_field_iterator_octet(iter);
+        dx_insert_8(field, octet);
+    }
+
+    bump_count(field);
+}
+
+
 dx_buffer_list_t *dx_compose_buffers(dx_composed_field_t *field)
 {
     return &field->buffers;

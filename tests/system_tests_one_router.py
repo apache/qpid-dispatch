@@ -514,7 +514,35 @@ class RouterTest(unittest.TestCase):
 
     request.address        = addr
     request.reply_to       = reply
-    request.correlation_id = 1
+    request.correlation_id = "C1"
+    request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'DISCOVER-MGMT-NODES'}
+
+    M.put(request)
+    M.send()
+    M.recv()
+    M.get(response)
+
+    self.assertEqual(response.properties['status-code'], 200)
+    self.assertEqual(response.correlation_id, "C1")
+    self.assertEqual(response.body, ['amqp:/_local/$management'])
+
+
+    request.address        = addr
+    request.reply_to       = reply
+    request.correlation_id = 135
+    request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'DISCOVER-MGMT-NODES'}
+
+    M.put(request)
+    M.send()
+    M.recv()
+    M.get(response)
+
+    self.assertEqual(response.properties['status-code'], 200)
+    self.assertEqual(response.correlation_id, 135)
+    self.assertEqual(response.body, ['amqp:/_local/$management'])
+
+    request.address        = addr
+    request.reply_to       = reply
     request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'DISCOVER-MGMT-NODES'}
 
     M.put(request)
