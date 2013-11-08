@@ -34,5 +34,5 @@ set(router_SOURCES
 add_executable(qpid-dxrouterd ${router_SOURCES})
 target_link_libraries(qpid-dxrouterd qpid-dispatch ${proton_lib})
 
-install(TARGETS qpid-dxrouterd RUNTIME DESTINATION bin)
+install(TARGETS qpid-dxrouterd RUNTIME DESTINATION sbin)
 
