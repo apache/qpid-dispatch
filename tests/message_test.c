@@ -113,7 +113,6 @@ static char* test_receive_from_messenger(void *context)
     char test_field[100];
     size_t hdr_length;
     test_len = dx_message_field_copy(msg, DX_FIELD_TO, test_field, &hdr_length);
-    printf("%ld %ld\n", test_len, hdr_length);
     if (test_len - hdr_length != 11) return "Incorrect length returned from field_copy";
     test_field[test_len] = '\0';
     if (strcmp(test_field + hdr_length, "test_addr_1") != 0)
