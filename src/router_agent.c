@@ -61,6 +61,14 @@ static void dx_router_query_router(dx_router_t *router, void *cor)
     dx_agent_value_string(cor, "area",      router->router_area);
     dx_agent_value_string(cor, "router_id", router->router_id);
 
+    char *mode = "";
+    switch (router->router_mode) {
+    case DX_ROUTER_MODE_STANDALONE:  mode = "Standalone";  break;
+    case DX_ROUTER_MODE_INTERIOR:    mode = "Interior";    break;
+    case DX_ROUTER_MODE_EDGE:        mode = "Edge";        break;
+    }
+    dx_agent_value_string(cor, "mode", mode);
+
     sys_mutex_lock(router->lock);
     dx_agent_value_uint(cor, "addr_count", DEQ_SIZE(router->addrs));
     dx_agent_value_uint(cor, "link_count", DEQ_SIZE(router->links));
