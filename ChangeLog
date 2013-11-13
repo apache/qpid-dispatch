@@ -24,3 +24,4 @@ Version 0.1:
 	* QPID-5173: [dispatch] cmake ignores overrides to CMAKE_INCLUDE_PATH and CMAKE_LIBRARY_PATH
 	* QPID-5201: Dispatch - Fix build errors in Release mode
 	* QPID-5218: [dispatch] Crash when outgoing window > 0 and multiple subscribed Messenger clients
+	* QPID-5338: The Dispatch top-level Python package should be renamed
