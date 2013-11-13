@@ -107,8 +107,8 @@ class NodeTracker(object):
     def maskbit_for_node(self, node_id):
         """
         """
-        node = self.nodes[node_id]
-        if node:
+        if node_id in self.nodes:
+            node = self.nodes[node_id]
             return node.maskbit
         return None
 

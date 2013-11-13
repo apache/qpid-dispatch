@@ -45,7 +45,8 @@ class RoutingTableEngine(object):
         for _id, next_hop in next_hops.items():
             mb_id = self.node_tracker.maskbit_for_node(_id)
             mb_nh = self.node_tracker.maskbit_for_node(next_hop)
-            self.container.router_adapter.set_next_hop(mb_id, mb_nh)
+            if mb_id and mb_nh:
+                self.container.router_adapter.set_next_hop(mb_id, mb_nh)
 
 
     def valid_origins_changed(self, valid_origins):
@@ -53,7 +54,9 @@ class RoutingTableEngine(object):
             mb_id = self.node_tracker.maskbit_for_node(_id)
             mb_vo = []
             for o in vo:
-                mb_vo.append(self.node_tracker.maskbit_for_node(o))
+                mb = self.node_tracker.maskbit_for_node(o)
+                if mb != None:
+                    mb_vo.append(mb)
             self.container.router_adapter.set_valid_origins(mb_id, mb_vo)
 
 
