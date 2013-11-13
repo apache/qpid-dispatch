@@ -18,8 +18,8 @@
 #
 
 import unittest
-from qpid.dispatch.router.router_engine import NeighborEngine, PathEngine, Configuration, NodeTracker
-from qpid.dispatch.router.data import LinkState, MessageHELLO
+from qpiddx.dispatch.router.router_engine import NeighborEngine, PathEngine, Configuration, NodeTracker
+from qpiddx.dispatch.router.data import LinkState, MessageHELLO
 
 class Adapter(object):
     def __init__(self, domain):

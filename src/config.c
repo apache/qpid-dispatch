@@ -22,7 +22,7 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/log.h>
 
-#define PYTHON_MODULE "qpid.dispatch.config"
+#define PYTHON_MODULE "qpiddx.dispatch.config"
 
 static const char *log_module = "CONFIG";
 
