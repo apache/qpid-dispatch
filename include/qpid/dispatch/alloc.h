@@ -40,6 +40,7 @@ typedef struct {
 } dx_alloc_stats_t;
 
 typedef struct {
+    uint32_t           header;
     char              *type_name;
     size_t             type_size;
     size_t            *additional_size;
@@ -48,6 +49,7 @@ typedef struct {
     dx_alloc_stats_t  *stats;
     dx_alloc_pool_t   *global_pool;
     sys_mutex_t       *lock;
+    uint32_t           trailer;
 } dx_alloc_type_desc_t;
 
 
@@ -60,7 +62,7 @@ void dx_dealloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool, void *p);
     void free_##T(T *p)
 
 #define ALLOC_DEFINE_CONFIG(T,S,A,C)                                \
-    dx_alloc_type_desc_t __desc_##T = {#T, S, A, 0, C, 0, 0, 0};    \
+    dx_alloc_type_desc_t __desc_##T = {0, #T, S, A, 0, C, 0, 0, 0, 0};    \
     __thread dx_alloc_pool_t *__local_pool_##T = 0;                 \
     T *new_##T() { return (T*) dx_alloc(&__desc_##T, &__local_pool_##T); }  \
     void free_##T(T *p) { dx_dealloc(&__desc_##T, &__local_pool_##T, (void*) p); } \

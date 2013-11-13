@@ -24,6 +24,8 @@
 #include <memory.h>
 #include <stdio.h>
 
+#define DX_MEMORY_DEBUG 1
+
 typedef struct dx_alloc_type_t dx_alloc_type_t;
 typedef struct dx_alloc_item_t dx_alloc_item_t;
 
@@ -34,9 +36,15 @@ struct dx_alloc_type_t {
 
 DEQ_DECLARE(dx_alloc_type_t, dx_alloc_type_list_t);
 
+#define PATTERN_FRONT 0xdeadbeef
+#define PATTERN_BACK  0xbabecafe
 
 struct dx_alloc_item_t {
     DEQ_LINKS(dx_alloc_item_t);
+#ifdef DX_MEMORY_DEBUG
+    dx_alloc_type_desc_t *desc;
+    uint32_t              header;
+#endif
 };
 
 DEQ_DECLARE(dx_alloc_item_t, dx_alloc_item_list_t);
@@ -50,21 +58,21 @@ dx_alloc_config_t dx_alloc_default_config_big   = {16,  32, 0};
 dx_alloc_config_t dx_alloc_default_config_small = {64, 128, 0};
 #define BIG_THRESHOLD 256
 
-static sys_mutex_t          *init_lock;
+static sys_mutex_t          *init_lock = 0;
 static dx_alloc_type_list_t  type_list;
 
 static void dx_alloc_init(dx_alloc_type_desc_t *desc)
 {
     sys_mutex_lock(init_lock);
 
-    desc->total_size = desc->type_size;
-    if (desc->additional_size)
-        desc->total_size += *desc->additional_size;
-
     //dx_log("ALLOC", LOG_TRACE, "Initialized Allocator - type=%s type-size=%d total-size=%d",
     //       desc->type_name, desc->type_size, desc->total_size);
 
     if (!desc->global_pool) {
+        desc->total_size = desc->type_size;
+        if (desc->additional_size)
+            desc->total_size += *desc->additional_size;
+
         if (desc->config == 0)
             desc->config = desc->total_size > BIG_THRESHOLD ?
                 &dx_alloc_default_config_big : &dx_alloc_default_config_small;
@@ -81,6 +89,9 @@ static void dx_alloc_init(dx_alloc_type_desc_t *desc)
         DEQ_ITEM_INIT(type_item);
         type_item->desc = desc;
         DEQ_INSERT_TAIL(type_list, type_item);
+
+        desc->header  = PATTERN_FRONT;
+        desc->trailer = PATTERN_BACK;
     }
 
     sys_mutex_unlock(init_lock);
@@ -94,7 +105,7 @@ void *dx_alloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool)
     //
     // If the descriptor is not initialized, set it up now.
     //
-    if (!desc->global_pool)
+    if (desc->trailer != PATTERN_BACK)
         dx_alloc_init(desc);
 
     //
@@ -116,6 +127,11 @@ void *dx_alloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool)
     dx_alloc_item_t *item = DEQ_HEAD(pool->free_list);
     if (item) {
         DEQ_REMOVE_HEAD(pool->free_list);
+#ifdef DX_MEMORY_DEBUG
+        item->desc = desc;
+        item->header = PATTERN_FRONT;
+        *((uint32_t*) ((void*) &item[1] + desc->total_size))= PATTERN_BACK;
+#endif
         return &item[1];
     }
 
@@ -140,7 +156,11 @@ void *dx_alloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool)
         // Allocate a full batch from the heap and put it on the thread list.
         //
         for (idx = 0; idx < desc->config->transfer_batch_size; idx++) {
-            item = (dx_alloc_item_t*) malloc(sizeof(dx_alloc_item_t) + desc->total_size);
+            item = (dx_alloc_item_t*) malloc(sizeof(dx_alloc_item_t) + desc->total_size
+#ifdef DX_MEMORY_DEBUG
+                                             + sizeof(uint32_t)
+#endif
+                                             );
             if (item == 0)
                 break;
             DEQ_ITEM_INIT(item);
@@ -154,6 +174,11 @@ void *dx_alloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool)
     item = DEQ_HEAD(pool->free_list);
     if (item) {
         DEQ_REMOVE_HEAD(pool->free_list);
+#ifdef DX_MEMORY_DEBUG
+        item->desc = desc;
+        item->header = PATTERN_FRONT;
+        *((uint32_t*) ((void*) &item[1] + desc->total_size))= PATTERN_BACK;
+#endif
         return &item[1];
     }
 
@@ -165,6 +190,15 @@ void dx_dealloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool, void *p)
 {
     dx_alloc_item_t *item = ((dx_alloc_item_t*) p) - 1;
     int              idx;
+
+#ifdef DX_MEMORY_DEBUG
+    assert (desc->header  == PATTERN_FRONT);
+    assert (desc->trailer == PATTERN_BACK);
+    assert (item->header  == PATTERN_FRONT);
+    assert (*((uint32_t*) (p + desc->total_size)) == PATTERN_BACK);
+    assert (item->desc == desc);
+    item->desc = 0;
+#endif
 
     //
     // If this is the thread's first pass through here, allocate the
