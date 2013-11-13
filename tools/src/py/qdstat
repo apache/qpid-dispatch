@@ -108,8 +108,43 @@ class BusManager:
     def Disconnect(self):
         self.M.stop()
 
-    def displayConn(self):
-        pass
+    def displayConnections(self):
+        disp = Display(prefix="  ")
+        heads = []
+        heads.append(Header("state"))
+        heads.append(Header("host"))
+        heads.append(Header("container"))
+        heads.append(Header("sasl-mechanisms"))
+        heads.append(Header("role"))
+        heads.append(Header("dir"))
+
+        rows = []
+
+        request = Message()
+        response = Message()
+
+        request.address = self.address
+        request.reply_to = self.reply
+        request.correlation_id = 1
+        request.properties = {u'operation':u'GET', u'type':u'org.apache.qpid.dispatch.connection'}
+
+        self.M.put(request)
+        self.M.send()
+
+        self.M.recv()
+        self.M.get(response)
+        for conn in response.body:
+            row = []
+            row.append(conn['state'])
+            row.append(conn['host'])
+            row.append(conn['container'])
+            row.append(conn['sasl'])
+            row.append(conn['role'])
+            row.append(conn['dir'])
+            rows.append(row)
+        title = "Connections"
+        dispRows = rows
+        disp.formattedTable(title, heads, dispRows)
 
     def _addr_class(self, addr):
         if not addr:
@@ -301,6 +336,7 @@ class BusManager:
         elif main == 'n': self.displayRouterNodes()
         elif main == 'a': self.displayAddresses()
         elif main == 'm': self.displayMemory()
+        elif main == 'c': self.displayConnections()
 
     def display(self, names):
         self.displayMain(names, config._types)

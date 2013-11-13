@@ -23,7 +23,9 @@
 #include <qpid/dispatch/user_fd.h>
 #include <qpid/dispatch/timer.h>
 #include <qpid/dispatch/alloc.h>
+#include <qpid/dispatch/ctools.h>
 #include <proton/driver.h>
+#include <proton/engine.h>
 #include <proton/driver_extras.h>
 
 void dx_server_timer_pending_LH(dx_timer_t *timer);
@@ -68,6 +70,7 @@ struct dx_connector_t {
 
 
 struct dx_connection_t {
+    DEQ_LINKS(dx_connection_t);
     dx_server_t     *server;
     conn_state_t     state;
     int              owner_thread;
@@ -96,5 +99,6 @@ ALLOC_DECLARE(dx_connector_t);
 ALLOC_DECLARE(dx_connection_t);
 ALLOC_DECLARE(dx_user_fd_t);
 
+DEQ_DECLARE(dx_connection_t, dx_connection_list_t);
 
 #endif
