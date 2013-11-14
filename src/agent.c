@@ -88,7 +88,8 @@ static dx_composed_field_t *dx_agent_setup_response(dx_field_iterator_t *reply_t
     dx_compose_insert_string_iterator(field, reply_to);  // to
     dx_compose_insert_null(field);                       // subject
     dx_compose_insert_null(field);                       // reply-to
-    dx_compose_insert_typed_iterator(field, cid);        // correlation-id
+    if (cid)
+        dx_compose_insert_typed_iterator(field, cid);    // correlation-id
     dx_compose_end_list(field);
 
     //

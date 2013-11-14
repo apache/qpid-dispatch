@@ -258,6 +258,8 @@ static int router_writable_link_handler(void* context, dx_link_t *link)
     dx_routed_event_t      *re;
     size_t                  offer;
     int                     event_count = 0;
+    bool                    drain_mode;
+    bool                    drain_changed = dx_link_drain_changed(link, &drain_mode);
 
     DEQ_INIT(to_send);
     DEQ_INIT(events);
@@ -357,7 +359,20 @@ static int router_writable_link_handler(void* context, dx_link_t *link)
     //
     // Set the offer to the number of messages remaining to be sent.
     //
-    pn_link_offered(pn_link, offer);
+    if (offer > 0)
+        pn_link_offered(pn_link, offer);
+    else {
+        pn_link_drained(pn_link);
+
+        //
+        // If this link is in drain mode and it wasn't last time we came through here, we need to
+        // count this operation as a work event.  This will allow the container to process the
+        // connector and send out the flow(drain=true) response to the receiver.
+        //
+        if (drain_changed && drain_mode)
+            event_count++;
+    }
+
     return event_count;
 }
 

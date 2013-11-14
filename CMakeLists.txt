@@ -30,6 +30,8 @@ include(FindPythonLibs)
 enable_testing()
 include (CTest)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in ${CMAKE_CURRENT_BINARY_DIR}/conditionals.h)
+
 if (NOT PYTHONLIBS_FOUND)
      message(FATAL_ERROR "Python Development Libraries are needed.")
 endif (NOT PYTHONLIBS_FOUND)
@@ -73,12 +75,18 @@ find_path(proton_include proton/driver.h)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${proton_include}
     ${PYTHON_INCLUDE_PATH}
     )
 
 set(CMAKE_C_FLAGS "-pthread -Wall -Werror -std=gnu99")
 set(CATCH_UNDEFINED "-Wl,--no-undefined")
+
+set (CMAKE_REQUIRED_FLAGS "-lqpid-proton")
+set (CMAKE_REQUIRED_INCLUDES ${proton_include})
+set (CMAKE_REQUIRED_LIBRARIES ${proton_lib})
+check_function_exists(pn_link_get_drain HAVE_LINK_GET_DRAIN)
 
 ##
 ## Build the Multi-Threaded Server Library

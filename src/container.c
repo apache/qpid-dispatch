@@ -31,6 +31,14 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/agent.h>
+#include "conditionals.h"
+
+#ifndef HAVE_LINK_GET_DRAIN
+static bool pn_link_get_drain(pn_link_t *link)
+{
+    return false;
+}
+#endif
 
 static char *module="CONTAINER";
 
@@ -52,6 +60,7 @@ struct dx_link_t {
     pn_link_t *pn_link;
     void      *context;
     dx_node_t *node;
+    bool       drain_mode;
 };
 
 ALLOC_DECLARE(dx_link_t);
@@ -130,9 +139,10 @@ static void setup_outgoing_link(dx_container_t *container, pn_link_t *pn_link)
         return;
     }
 
-    link->pn_link = pn_link;
-    link->context = 0;
-    link->node    = node;
+    link->pn_link    = pn_link;
+    link->context    = 0;
+    link->node       = node;
+    link->drain_mode = pn_link_get_drain(pn_link);
 
     pn_link_set_context(pn_link, link);
     node->ntype->outgoing_handler(node->context, link);
@@ -171,9 +181,10 @@ static void setup_incoming_link(dx_container_t *container, pn_link_t *pn_link)
         return;
     }
 
-    link->pn_link = pn_link;
-    link->context = 0;
-    link->node    = node;
+    link->pn_link    = pn_link;
+    link->context    = 0;
+    link->node       = node;
+    link->drain_mode = pn_link_get_drain(pn_link);
 
     pn_link_set_context(pn_link, link);
     node->ntype->incoming_handler(node->context, link);
@@ -628,8 +639,10 @@ dx_link_t *dx_link(dx_node_t *node, dx_connection_t *conn, dx_direction_t dir, c
         link->pn_link = pn_sender(sess, name);
     else
         link->pn_link = pn_receiver(sess, name);
-    link->context = node->context;
-    link->node    = node;
+
+    link->context    = node->context;
+    link->node       = node;
+    link->drain_mode = pn_link_get_drain(link->pn_link);
 
     pn_link_set_context(link->pn_link, link);
 
@@ -756,6 +769,18 @@ void dx_link_activate(dx_link_t *link)
 void dx_link_close(dx_link_t *link)
 {
     pn_link_close(link->pn_link);
+}
+
+
+bool dx_link_drain_changed(dx_link_t *link, bool *mode)
+{
+    bool pn_mode = pn_link_get_drain(link->pn_link);
+    bool changed = pn_mode != link->drain_mode;
+
+    *mode = pn_mode;
+    if (changed)
+        link->drain_mode = pn_mode;
+    return changed;
 }
 
 

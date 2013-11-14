@@ -174,6 +174,7 @@ pn_terminus_t *dx_link_remote_source(dx_link_t *link);
 pn_terminus_t *dx_link_remote_target(dx_link_t *link);
 void dx_link_activate(dx_link_t *link);
 void dx_link_close(dx_link_t *link);
+bool dx_link_drain_changed(dx_link_t *link, bool *mode);
 
 /**
  * Important: dx_delivery must never be called twice in a row without an intervening pn_link_advance.
