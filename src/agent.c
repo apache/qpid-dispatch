@@ -62,21 +62,25 @@ struct dx_agent_t {
 typedef struct {
     dx_agent_t          *agent;
     dx_composed_field_t *response;
+    int                  empty;
 } dx_agent_request_t;
 
 
 static char *log_module = "AGENT";
 
 
+static void dx_agent_check_empty(dx_agent_request_t *request)
+{
+    if (request->empty) {
+        request->empty = 0;
+        dx_compose_start_map(request->response);
+    }
+}
+
+
 static dx_composed_field_t *dx_agent_setup_response(dx_field_iterator_t *reply_to, dx_field_iterator_t *cid)
 {
-    //
-    // Compose the header
-    //
-    dx_composed_field_t *field = dx_compose(DX_PERFORMATIVE_HEADER, 0);
-    dx_compose_start_list(field);
-    dx_compose_insert_bool(field, 0);     // durable
-    dx_compose_end_list(field);
+    dx_composed_field_t *field = 0;
 
     //
     // Compose the Properties
@@ -90,6 +94,8 @@ static dx_composed_field_t *dx_agent_setup_response(dx_field_iterator_t *reply_t
     dx_compose_insert_null(field);                       // reply-to
     if (cid)
         dx_compose_insert_typed_iterator(field, cid);    // correlation-id
+    //else
+    //    dx_compose_insert_null(field);
     dx_compose_end_list(field);
 
     //
@@ -132,7 +138,6 @@ static void dx_agent_process_get(dx_agent_t          *agent,
     //
     field = dx_compose(DX_PERFORMATIVE_BODY_AMQP_VALUE, field);
     dx_compose_start_list(field);
-    dx_compose_start_map(field);
 
     //
     // The request record is allocated locally because the entire processing of the request
@@ -141,6 +146,7 @@ static void dx_agent_process_get(dx_agent_t          *agent,
     dx_agent_request_t request;
     request.agent    = agent;
     request.response = field;
+    request.empty    = 1;
 
     cls_record->query_handler(cls_record->context, 0, &request);
 
@@ -480,6 +486,7 @@ dx_agent_class_t *dx_agent_register_event(dx_dispatch_t        *dx,
 void dx_agent_value_string(void *correlator, const char *key, const char *value)
 {
     dx_agent_request_t *request = (dx_agent_request_t*) correlator;
+    dx_agent_check_empty(request);
     dx_compose_insert_string(request->response, key);
     dx_compose_insert_string(request->response, value);
 }
@@ -488,6 +495,7 @@ void dx_agent_value_string(void *correlator, const char *key, const char *value)
 void dx_agent_value_uint(void *correlator, const char *key, uint64_t value)
 {
     dx_agent_request_t *request = (dx_agent_request_t*) correlator;
+    dx_agent_check_empty(request);
     dx_compose_insert_string(request->response, key);
     dx_compose_insert_uint(request->response, value);
 }
@@ -496,6 +504,7 @@ void dx_agent_value_uint(void *correlator, const char *key, uint64_t value)
 void dx_agent_value_null(void *correlator, const char *key)
 {
     dx_agent_request_t *request = (dx_agent_request_t*) correlator;
+    dx_agent_check_empty(request);
     dx_compose_insert_string(request->response, key);
     dx_compose_insert_null(request->response);
 }
@@ -504,6 +513,7 @@ void dx_agent_value_null(void *correlator, const char *key)
 void dx_agent_value_boolean(void *correlator, const char *key, bool value)
 {
     dx_agent_request_t *request = (dx_agent_request_t*) correlator;
+    dx_agent_check_empty(request);
     dx_compose_insert_string(request->response, key);
     dx_compose_insert_bool(request->response, value);
 }
@@ -512,6 +522,7 @@ void dx_agent_value_boolean(void *correlator, const char *key, bool value)
 void dx_agent_value_binary(void *correlator, const char *key, const uint8_t *value, size_t len)
 {
     dx_agent_request_t *request = (dx_agent_request_t*) correlator;
+    dx_agent_check_empty(request);
     dx_compose_insert_string(request->response, key);
     dx_compose_insert_binary(request->response, value, len);
 }
@@ -520,6 +531,7 @@ void dx_agent_value_binary(void *correlator, const char *key, const uint8_t *val
 void dx_agent_value_uuid(void *correlator, const char *key, const uint8_t *value)
 {
     dx_agent_request_t *request = (dx_agent_request_t*) correlator;
+    dx_agent_check_empty(request);
     dx_compose_insert_string(request->response, key);
     dx_compose_insert_uuid(request->response, value);
 }
@@ -528,6 +540,7 @@ void dx_agent_value_uuid(void *correlator, const char *key, const uint8_t *value
 void dx_agent_value_timestamp(void *correlator, const char *key, uint64_t value)
 {
     dx_agent_request_t *request = (dx_agent_request_t*) correlator;
+    dx_agent_check_empty(request);
     dx_compose_insert_string(request->response, key);
     dx_compose_insert_timestamp(request->response, value);
 }
@@ -536,6 +549,12 @@ void dx_agent_value_timestamp(void *correlator, const char *key, uint64_t value)
 void dx_agent_value_complete(void *correlator, bool more)
 {
     dx_agent_request_t *request = (dx_agent_request_t*) correlator;
+
+    if (!more && request->empty)
+        return;
+
+    assert (!more || !request->empty);
+
     dx_compose_end_map(request->response);
     if (more)
         dx_compose_start_map(request->response);
