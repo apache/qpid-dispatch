@@ -57,7 +57,7 @@ set(MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 # determine the location for installing the python packages
 if (PYTHONLIBS_FOUND)
     execute_process(COMMAND ${PYTHON_EXECUTABLE}
-                    -c "from distutils.sysconfig import get_python_lib; print get_python_lib(False)"
+                    -c "from distutils.sysconfig import get_python_lib; print get_python_lib(False, False, \"${CMAKE_INSTALL_PREFIX}\")"
                     OUTPUT_VARIABLE PYTHON_SITELIB_PACKAGES
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif (PYTHONLIBS_FOUND)
