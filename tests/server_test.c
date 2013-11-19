@@ -30,7 +30,7 @@
 #define OCTET_COUNT  100
 
 static const char    *config_file;
-static dx_dispatch_t *dx;
+static qd_dispatch_t *qd;
 static sys_mutex_t   *test_lock;
 
 static void *expected_context;
@@ -41,8 +41,8 @@ static char  stored_error[512];
 static int   write_count;
 static int   read_count;
 static int   fd[2];
-static dx_user_fd_t *ufd_write;
-static dx_user_fd_t *ufd_read;
+static qd_user_fd_t *ufd_write;
+static qd_user_fd_t *ufd_read;
 
 
 static void thread_start_handler(void *context, int thread_id)
@@ -60,12 +60,12 @@ static void thread_start_handler(void *context, int thread_id)
         threads_seen[thread_id]++;
 
     if (call_count == THREAD_COUNT)
-        dx_server_stop(dx);
+        qd_server_stop(qd);
     sys_mutex_unlock(test_lock);
 }
 
 
-static void ufd_handler(void *context, dx_user_fd_t *ufd)
+static void ufd_handler(void *context, qd_user_fd_t *ufd)
 {
     long    dir = (long) context;
     char    buffer;
@@ -76,31 +76,31 @@ static void ufd_handler(void *context, dx_user_fd_t *ufd)
     if (dir == 0) { // READ
         in_read++;
         assert(in_read == 1);
-        if (!dx_user_fd_is_readable(ufd_read)) {
+        if (!qd_user_fd_is_readable(ufd_read)) {
             sprintf(stored_error, "Expected Readable");
-            dx_server_stop(dx);
+            qd_server_stop(qd);
         } else {
             len = read(fd[0], &buffer, 1);
             if (len == 1) {
                 read_count++;
                 if (read_count == OCTET_COUNT)
-                    dx_server_stop(dx);
+                    qd_server_stop(qd);
             }
-            dx_user_fd_activate_read(ufd_read);
+            qd_user_fd_activate_read(ufd_read);
         }
         in_read--;
     } else {        // WRITE
         in_write++;
         assert(in_write == 1);
-        if (!dx_user_fd_is_writeable(ufd_write)) {
+        if (!qd_user_fd_is_writeable(ufd_write)) {
             sprintf(stored_error, "Expected Writable");
-            dx_server_stop(dx);
+            qd_server_stop(qd);
         } else {
             write(fd[1], "X", 1);
 
             write_count++;
             if (write_count < OCTET_COUNT)
-                dx_user_fd_activate_write(ufd_write);
+                qd_user_fd_activate_write(ufd_write);
         }
         in_write--;
     }
@@ -109,7 +109,7 @@ static void ufd_handler(void *context, dx_user_fd_t *ufd)
 
 static void fd_test_start(void *context)
 {
-    dx_user_fd_activate_read(ufd_read);
+    qd_user_fd_activate_read(ufd_read);
 }
 
 
@@ -117,7 +117,7 @@ static char* test_start_handler(void *context)
 {
     int i;
 
-    dx = dx_dispatch(config_file);
+    qd = qd_dispatch(config_file);
 
     expected_context = (void*) 0x00112233;
     stored_error[0] = 0x0;
@@ -125,9 +125,9 @@ static char* test_start_handler(void *context)
     for (i = 0; i < THREAD_COUNT; i++)
         threads_seen[i] = 0;
 
-    dx_server_set_start_handler(dx, thread_start_handler, expected_context);
-    dx_server_run(dx);
-    dx_dispatch_free(dx);
+    qd_server_set_start_handler(qd, thread_start_handler, expected_context);
+    qd_server_run(qd);
+    qd_dispatch_free(qd);
 
     if (stored_error[0])            return stored_error;
     if (call_count != THREAD_COUNT) return "Incorrect number of thread-start callbacks";
@@ -140,10 +140,10 @@ static char* test_start_handler(void *context)
 
 static char *test_server_start(void *context)
 {
-    dx = dx_dispatch(config_file);
-    dx_server_start(dx);
-    dx_server_stop(dx);
-    dx_dispatch_free(dx);
+    qd = qd_dispatch(config_file);
+    qd_server_start(qd);
+    qd_server_stop(qd);
+    qd_dispatch_free(qd);
 
     return 0;
 }
@@ -152,12 +152,12 @@ static char *test_server_start(void *context)
 static char* test_user_fd(void *context)
 {
     int res;
-    dx_timer_t *timer;
+    qd_timer_t *timer;
 
-    dx = dx_dispatch(config_file);
-    dx_server_set_user_fd_handler(dx, ufd_handler);
-    timer = dx_timer(dx, fd_test_start, 0);
-    dx_timer_schedule(timer, 0);
+    qd = qd_dispatch(config_file);
+    qd_server_set_user_fd_handler(qd, ufd_handler);
+    timer = qd_timer(qd, fd_test_start, 0);
+    qd_timer_schedule(timer, 0);
 
     stored_error[0] = 0x0;
 
@@ -173,12 +173,12 @@ static char* test_user_fd(void *context)
         }
     }
 
-    ufd_write = dx_user_fd(dx, fd[1], (void*) 1);
-    ufd_read  = dx_user_fd(dx, fd[0], (void*) 0);
+    ufd_write = qd_user_fd(qd, fd[1], (void*) 1);
+    ufd_read  = qd_user_fd(qd, fd[0], (void*) 0);
 
-    dx_server_run(dx);
-    dx_timer_free(timer);
-    dx_dispatch_free(dx);
+    qd_server_run(qd);
+    qd_timer_free(timer);
+    qd_dispatch_free(qd);
     close(fd[0]);
     close(fd[1]);
 
@@ -195,7 +195,7 @@ int server_tests(const char *_config_file)
 {
     int result = 0;
     test_lock = sys_mutex();
-    dx_log_set_mask(LOG_NONE);
+    qd_log_set_mask(LOG_NONE);
 
     config_file = _config_file;
 

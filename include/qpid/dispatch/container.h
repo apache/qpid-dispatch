@@ -25,41 +25,41 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/ctools.h>
 
-typedef uint8_t dx_dist_mode_t;
-#define DX_DIST_COPY 0x01
-#define DX_DIST_MOVE 0x02
-#define DX_DIST_BOTH 0x03
+typedef uint8_t qd_dist_mode_t;
+#define QD_DIST_COPY 0x01
+#define QD_DIST_MOVE 0x02
+#define QD_DIST_BOTH 0x03
 
 /**
  * Node Lifetime Policy (see AMQP 3.5.9)
  */
 typedef enum {
-    DX_LIFE_PERMANENT,
-    DX_LIFE_DELETE_CLOSE,
-    DX_LIFE_DELETE_NO_LINKS,
-    DX_LIFE_DELETE_NO_MESSAGES,
-    DX_LIFE_DELETE_NO_LINKS_MESSAGES
-} dx_lifetime_policy_t;
+    QD_LIFE_PERMANENT,
+    QD_LIFE_DELETE_CLOSE,
+    QD_LIFE_DELETE_NO_LINKS,
+    QD_LIFE_DELETE_NO_MESSAGES,
+    QD_LIFE_DELETE_NO_LINKS_MESSAGES
+} qd_lifetime_policy_t;
 
 
 /**
  * Link Direction
  */
 typedef enum {
-    DX_INCOMING,
-    DX_OUTGOING
-} dx_direction_t;
+    QD_INCOMING,
+    QD_OUTGOING
+} qd_direction_t;
 
 
-typedef struct dx_node_t     dx_node_t;
-typedef struct dx_link_t     dx_link_t;
-typedef struct dx_delivery_t dx_delivery_t;
+typedef struct qd_node_t     qd_node_t;
+typedef struct qd_link_t     qd_link_t;
+typedef struct qd_delivery_t qd_delivery_t;
 
-typedef void (*dx_container_delivery_handler_t)    (void *node_context, dx_link_t *link, dx_delivery_t *delivery);
-typedef int  (*dx_container_link_handler_t)        (void *node_context, dx_link_t *link);
-typedef int  (*dx_container_link_detach_handler_t) (void *node_context, dx_link_t *link, int closed);
-typedef void (*dx_container_node_handler_t)        (void *type_context, dx_node_t *node);
-typedef void (*dx_container_conn_handler_t)        (void *type_context, dx_connection_t *conn);
+typedef void (*qd_container_delivery_handler_t)    (void *node_context, qd_link_t *link, qd_delivery_t *delivery);
+typedef int  (*qd_container_link_handler_t)        (void *node_context, qd_link_t *link);
+typedef int  (*qd_container_link_detach_handler_t) (void *node_context, qd_link_t *link, int closed);
+typedef void (*qd_container_node_handler_t)        (void *type_context, qd_node_t *node);
+typedef void (*qd_container_conn_handler_t)        (void *type_context, qd_connection_t *conn);
 
 typedef struct {
     char *type_name;
@@ -73,23 +73,23 @@ typedef struct {
     //
     // rx_handler - Invoked when a new received delivery is avaliable for processing.
     //
-    dx_container_delivery_handler_t rx_handler;
+    qd_container_delivery_handler_t rx_handler;
 
     //
     // disp_handler - Invoked when an existing delivery changes disposition
     //                or settlement state.
     //
-    dx_container_delivery_handler_t disp_handler;
+    qd_container_delivery_handler_t disp_handler;
 
     //
     // incoming_handler - Invoked when an attach for a new incoming link is received.
     //
-    dx_container_link_handler_t incoming_handler;
+    qd_container_link_handler_t incoming_handler;
 
     //
     // outgoing_handler - Invoked when an attach for a new outgoing link is received.
     //
-    dx_container_link_handler_t outgoing_handler;
+    qd_container_link_handler_t outgoing_handler;
 
     //
     // writable_handler - Invoked when an outgoing link is available for sending either
@@ -97,12 +97,12 @@ typedef struct {
     //                    link's credit to determine whether (and how many) message
     //                    deliveries may be sent.
     //
-    dx_container_link_handler_t writable_handler;
+    qd_container_link_handler_t writable_handler;
 
     //
     // link_detach_handler - Invoked when a link is detached.
     //
-    dx_container_link_detach_handler_t link_detach_handler;
+    qd_container_link_detach_handler_t link_detach_handler;
 
     //===================
     // Node-Type Handlers
@@ -111,100 +111,100 @@ typedef struct {
     //
     // node_created_handler - Invoked when a new instance of the node-type is created.
     //
-    dx_container_node_handler_t  node_created_handler;
+    qd_container_node_handler_t  node_created_handler;
 
     //
     // node_destroyed_handler - Invoked when an instance of the node type is destroyed.
     //
-    dx_container_node_handler_t  node_destroyed_handler;
+    qd_container_node_handler_t  node_destroyed_handler;
 
     //
     // inbound_conn_open_handler - Invoked when an incoming connection (via listener)
     //                             is established.
     //
-    dx_container_conn_handler_t  inbound_conn_open_handler;
+    qd_container_conn_handler_t  inbound_conn_open_handler;
 
     //
     // outbound_conn_open_handler - Invoked when an outgoing connection (via connector)
     //                              is established.
     //
-    dx_container_conn_handler_t  outbound_conn_open_handler;
-} dx_node_type_t;
+    qd_container_conn_handler_t  outbound_conn_open_handler;
+} qd_node_type_t;
 
 
-int dx_container_register_node_type(dx_dispatch_t *dispatch, const dx_node_type_t *nt);
+int qd_container_register_node_type(qd_dispatch_t *dispatch, const qd_node_type_t *nt);
 
-dx_node_t *dx_container_set_default_node_type(dx_dispatch_t        *dispatch,
-                                              const dx_node_type_t *nt,
+qd_node_t *qd_container_set_default_node_type(qd_dispatch_t        *dispatch,
+                                              const qd_node_type_t *nt,
                                               void                 *node_context,
-                                              dx_dist_mode_t        supported_dist);
+                                              qd_dist_mode_t        supported_dist);
 
-dx_node_t *dx_container_create_node(dx_dispatch_t        *dispatch,
-                                    const dx_node_type_t *nt,
+qd_node_t *qd_container_create_node(qd_dispatch_t        *dispatch,
+                                    const qd_node_type_t *nt,
                                     const char           *name,
                                     void                 *node_context,
-                                    dx_dist_mode_t        supported_dist,
-                                    dx_lifetime_policy_t  life_policy);
-void dx_container_destroy_node(dx_node_t *node);
+                                    qd_dist_mode_t        supported_dist,
+                                    qd_lifetime_policy_t  life_policy);
+void qd_container_destroy_node(qd_node_t *node);
 
-void dx_container_node_set_context(dx_node_t *node, void *node_context);
-dx_dist_mode_t dx_container_node_get_dist_modes(const dx_node_t *node);
-dx_lifetime_policy_t dx_container_node_get_life_policy(const dx_node_t *node);
+void qd_container_node_set_context(qd_node_t *node, void *node_context);
+qd_dist_mode_t qd_container_node_get_dist_modes(const qd_node_t *node);
+qd_lifetime_policy_t qd_container_node_get_life_policy(const qd_node_t *node);
 
-dx_link_t *dx_link(dx_node_t *node, dx_connection_t *conn, dx_direction_t dir, const char *name);
+qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char *name);
 
 /**
  * Context associated with the link for storing link-specific state.
  */
-void dx_link_set_context(dx_link_t *link, void *link_context);
-void *dx_link_get_context(dx_link_t *link);
+void qd_link_set_context(qd_link_t *link, void *link_context);
+void *qd_link_get_context(qd_link_t *link);
 
 /**
  * Link context associated with the link's connection for storing state shared across
  * all links in a connection.
  */
-void dx_link_set_conn_context(dx_link_t *link, void *link_context);
-void *dx_link_get_conn_context(dx_link_t *link);
+void qd_link_set_conn_context(qd_link_t *link, void *link_context);
+void *qd_link_get_conn_context(qd_link_t *link);
 
-dx_connection_t *dx_link_connection(dx_link_t *link);
-pn_link_t *dx_link_pn(dx_link_t *link);
-pn_terminus_t *dx_link_source(dx_link_t *link);
-pn_terminus_t *dx_link_target(dx_link_t *link);
-pn_terminus_t *dx_link_remote_source(dx_link_t *link);
-pn_terminus_t *dx_link_remote_target(dx_link_t *link);
-void dx_link_activate(dx_link_t *link);
-void dx_link_close(dx_link_t *link);
-bool dx_link_drain_changed(dx_link_t *link, bool *mode);
+qd_connection_t *qd_link_connection(qd_link_t *link);
+pn_link_t *qd_link_pn(qd_link_t *link);
+pn_terminus_t *qd_link_source(qd_link_t *link);
+pn_terminus_t *qd_link_target(qd_link_t *link);
+pn_terminus_t *qd_link_remote_source(qd_link_t *link);
+pn_terminus_t *qd_link_remote_target(qd_link_t *link);
+void qd_link_activate(qd_link_t *link);
+void qd_link_close(qd_link_t *link);
+bool qd_link_drain_changed(qd_link_t *link, bool *mode);
 
 /**
- * Important: dx_delivery must never be called twice in a row without an intervening pn_link_advance.
+ * Important: qd_delivery must never be called twice in a row without an intervening pn_link_advance.
  *            The Disatch architecture provides a hook for discovering when an outgoing link is writable
  *            and has credit.  When a link is writable, a delivery is allocated, written, and advanced
  *            in one operation.  If a backlog of pending deliveries is created, an assertion will be
  *            thrown.
  */
-dx_delivery_t *dx_delivery(dx_link_t *link, pn_delivery_tag_t tag);
-void dx_delivery_free(dx_delivery_t *delivery, uint64_t final_disposition);
-void dx_delivery_set_peer(dx_delivery_t *delivery, dx_delivery_t *peer);
-dx_delivery_t *dx_delivery_peer(dx_delivery_t *delivery);
-void dx_delivery_set_context(dx_delivery_t *delivery, void *context);
-void *dx_delivery_context(dx_delivery_t *delivery);
-pn_delivery_t *dx_delivery_pn(dx_delivery_t *delivery);
-void dx_delivery_settle(dx_delivery_t *delivery);
-bool dx_delivery_settled(dx_delivery_t *delivery);
-bool dx_delivery_disp_changed(dx_delivery_t *delivery);
-uint64_t dx_delivery_disp(dx_delivery_t *delivery);
-dx_link_t *dx_delivery_link(dx_delivery_t *delivery);
+qd_delivery_t *qd_delivery(qd_link_t *link, pn_delivery_tag_t tag);
+void qd_delivery_free(qd_delivery_t *delivery, uint64_t final_disposition);
+void qd_delivery_set_peer(qd_delivery_t *delivery, qd_delivery_t *peer);
+qd_delivery_t *qd_delivery_peer(qd_delivery_t *delivery);
+void qd_delivery_set_context(qd_delivery_t *delivery, void *context);
+void *qd_delivery_context(qd_delivery_t *delivery);
+pn_delivery_t *qd_delivery_pn(qd_delivery_t *delivery);
+void qd_delivery_settle(qd_delivery_t *delivery);
+bool qd_delivery_settled(qd_delivery_t *delivery);
+bool qd_delivery_disp_changed(qd_delivery_t *delivery);
+uint64_t qd_delivery_disp(qd_delivery_t *delivery);
+qd_link_t *qd_delivery_link(qd_delivery_t *delivery);
 
 
-typedef struct dx_link_item_t dx_link_item_t;
+typedef struct qd_link_item_t qd_link_item_t;
 
-struct dx_link_item_t {
-    DEQ_LINKS(dx_link_item_t);
-    dx_link_t *link;
+struct qd_link_item_t {
+    DEQ_LINKS(qd_link_item_t);
+    qd_link_t *link;
 };
 
-ALLOC_DECLARE(dx_link_item_t);
-DEQ_DECLARE(dx_link_item_t, dx_link_list_t);
+ALLOC_DECLARE(qd_link_item_t);
+DEQ_DECLARE(qd_link_item_t, qd_link_list_t);
 
 #endif

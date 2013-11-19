@@ -21,12 +21,12 @@
 
 #include <sys/uio.h>
 
-typedef struct dx_iovec_t dx_iovec_t;
+typedef struct qd_iovec_t qd_iovec_t;
 
-dx_iovec_t *dx_iovec(int vector_count);
-void dx_iovec_free(dx_iovec_t *iov);
-struct iovec *dx_iovec_array(dx_iovec_t *iov);
-int dx_iovec_count(dx_iovec_t *iov);
+qd_iovec_t *qd_iovec(int vector_count);
+void qd_iovec_free(qd_iovec_t *iov);
+struct iovec *qd_iovec_array(qd_iovec_t *iov);
+int qd_iovec_count(qd_iovec_t *iov);
 
 
 #endif

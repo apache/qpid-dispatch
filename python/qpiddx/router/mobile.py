@@ -56,7 +56,7 @@ class MobileAddressEngine(object):
         ##
         if len(self.added_addrs) > 0 or len(self.deleted_addrs) > 0:
             self.mobile_seq += 1
-            self.container.send('amqp:/_topo/%s/all/qdxrouter' % self.area,
+            self.container.send('amqp:/_topo/%s/all/qdrouter' % self.area,
                                 MessageMAU(None, self.id, self.area, self.mobile_seq, self.added_addrs, self.deleted_addrs))
             self.local_addrs.extend(self.added_addrs)
             for addr in self.deleted_addrs:
@@ -160,7 +160,7 @@ class MobileAddressEngine(object):
         if msg.id == self.id:
             return
         if msg.have_seq < self.mobile_seq:
-            self.container.send('amqp:/_topo/%s/%s/qdxrouter' % (msg.area, msg.id),
+            self.container.send('amqp:/_topo/%s/%s/qdrouter' % (msg.area, msg.id),
                                 MessageMAU(None, self.id, self.area, self.mobile_seq, None, None, self.local_addrs))
 
 
@@ -174,7 +174,7 @@ class MobileAddressEngine(object):
 
     def _send_mars(self):
         for _id, _area, _seq in self.needed_mars.keys():
-            self.container.send('amqp:/_topo/%s/%s/qdxrouter' % (_area, _id), MessageMAR(None, self.id, self.area, _seq))
+            self.container.send('amqp:/_topo/%s/%s/qdrouter' % (_area, _id), MessageMAR(None, self.id, self.area, _seq))
         self.needed_mars = {}
 
 

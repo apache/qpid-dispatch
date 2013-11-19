@@ -23,21 +23,21 @@
 static size_t buffer_size = 512;
 static int    size_locked = 0;
 
-ALLOC_DECLARE(dx_buffer_t);
-ALLOC_DEFINE_CONFIG(dx_buffer_t, sizeof(dx_buffer_t), &buffer_size, 0);
+ALLOC_DECLARE(qd_buffer_t);
+ALLOC_DEFINE_CONFIG(qd_buffer_t, sizeof(qd_buffer_t), &buffer_size, 0);
 
 
-void dx_buffer_set_size(size_t size)
+void qd_buffer_set_size(size_t size)
 {
     assert(!size_locked);
     buffer_size = size;
 }
 
 
-dx_buffer_t *dx_buffer(void)
+qd_buffer_t *qd_buffer(void)
 {
     size_locked = 1;
-    dx_buffer_t *buf = new_dx_buffer_t();
+    qd_buffer_t *buf = new_qd_buffer_t();
 
     DEQ_ITEM_INIT(buf);
     buf->size = 0;
@@ -45,37 +45,37 @@ dx_buffer_t *dx_buffer(void)
 }
 
 
-void dx_buffer_free(dx_buffer_t *buf)
+void qd_buffer_free(qd_buffer_t *buf)
 {
-    free_dx_buffer_t(buf);
+    free_qd_buffer_t(buf);
 }
 
 
-unsigned char *dx_buffer_base(dx_buffer_t *buf)
+unsigned char *qd_buffer_base(qd_buffer_t *buf)
 {
     return (unsigned char*) &buf[1];
 }
 
 
-unsigned char *dx_buffer_cursor(dx_buffer_t *buf)
+unsigned char *qd_buffer_cursor(qd_buffer_t *buf)
 {
     return ((unsigned char*) &buf[1]) + buf->size;
 }
 
 
-size_t dx_buffer_capacity(dx_buffer_t *buf)
+size_t qd_buffer_capacity(qd_buffer_t *buf)
 {
     return buffer_size - buf->size;
 }
 
 
-size_t dx_buffer_size(dx_buffer_t *buf)
+size_t qd_buffer_size(qd_buffer_t *buf)
 {
     return buf->size;
 }
 
 
-void dx_buffer_insert(dx_buffer_t *buf, size_t len)
+void qd_buffer_insert(qd_buffer_t *buf, size_t len)
 {
     buf->size += len;
     assert(buf->size <= buffer_size);

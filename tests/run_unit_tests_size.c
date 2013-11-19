@@ -33,8 +33,8 @@ int main(int argc, char** argv)
             return 1;
     }
 
-    dx_alloc_initialize();
-    dx_buffer_set_size(buffer_size);
+    qd_alloc_initialize();
+    qd_buffer_set_size(buffer_size);
 
     int result = 0;
     result += message_tests();

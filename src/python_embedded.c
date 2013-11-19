@@ -29,43 +29,43 @@
 // Control Functions
 //===============================================================================
 
-static dx_dispatch_t *dispatch   = 0;
+static qd_dispatch_t *dispatch   = 0;
 static uint32_t       ref_count  = 0;
 static sys_mutex_t   *lock       = 0;
 static char          *log_module = "PYTHON";
 static PyObject      *dispatch_module = 0;
 
-static void dx_python_setup();
+static void qd_python_setup();
 
 
-void dx_python_initialize(dx_dispatch_t *dx)
+void qd_python_initialize(qd_dispatch_t *qd)
 {
-    dispatch = dx;
+    dispatch = qd;
     lock = sys_mutex();
 }
 
 
-void dx_python_finalize()
+void qd_python_finalize()
 {
     assert(ref_count == 0);
     sys_mutex_free(lock);
 }
 
 
-void dx_python_start()
+void qd_python_start()
 {
     sys_mutex_lock(lock);
     if (ref_count == 0) {
         Py_Initialize();
-        dx_python_setup();
-        dx_log(log_module, LOG_TRACE, "Embedded Python Interpreter Initialized");
+        qd_python_setup();
+        qd_log(log_module, LOG_TRACE, "Embedded Python Interpreter Initialized");
     }
     ref_count++;
     sys_mutex_unlock(lock);
 }
 
 
-void dx_python_stop()
+void qd_python_stop()
 {
     sys_mutex_lock(lock);
     ref_count--;
@@ -73,13 +73,13 @@ void dx_python_stop()
         Py_DECREF(dispatch_module);
         dispatch_module = 0;
         Py_Finalize();
-        dx_log(log_module, LOG_TRACE, "Embedded Python Interpreter Shut Down");
+        qd_log(log_module, LOG_TRACE, "Embedded Python Interpreter Shut Down");
     }
     sys_mutex_unlock(lock);
 }
 
 
-PyObject *dx_python_module()
+PyObject *qd_python_module()
 {
     assert(dispatch_module);
     return dispatch_module;
@@ -90,15 +90,15 @@ PyObject *dx_python_module()
 // Data Conversion Functions
 //===============================================================================
 
-static PyObject *parsed_to_py_string(dx_parsed_field_t *field)
+static PyObject *parsed_to_py_string(qd_parsed_field_t *field)
 {
-    switch (dx_parse_tag(field)) {
-    case DX_AMQP_VBIN8:
-    case DX_AMQP_VBIN32:
-    case DX_AMQP_STR8_UTF8:
-    case DX_AMQP_STR32_UTF8:
-    case DX_AMQP_SYM8:
-    case DX_AMQP_SYM32:
+    switch (qd_parse_tag(field)) {
+    case QD_AMQP_VBIN8:
+    case QD_AMQP_VBIN32:
+    case QD_AMQP_STR8_UTF8:
+    case QD_AMQP_STR32_UTF8:
+    case QD_AMQP_SYM8:
+    case QD_AMQP_SYM32:
         break;
     default:
         return Py_None;
@@ -107,9 +107,9 @@ static PyObject *parsed_to_py_string(dx_parsed_field_t *field)
 #define SHORT_BUF 1024
     uint8_t short_buf[SHORT_BUF];
     PyObject *result;
-    dx_field_iterator_t *raw = dx_parse_raw(field);
-    dx_field_iterator_reset(raw);
-    uint32_t length = dx_field_iterator_remaining(raw);
+    qd_field_iterator_t *raw = qd_parse_raw(field);
+    qd_field_iterator_reset(raw);
+    uint32_t length = qd_field_iterator_remaining(raw);
     uint8_t *buffer = short_buf;
     uint8_t *ptr;
     int alloc = 0;
@@ -120,8 +120,8 @@ static PyObject *parsed_to_py_string(dx_parsed_field_t *field)
     }
 
     ptr = buffer;
-    while (!dx_field_iterator_end(raw))
-        *(ptr++) = dx_field_iterator_octet(raw);
+    while (!qd_field_iterator_end(raw))
+        *(ptr++) = qd_field_iterator_octet(raw);
     result = PyString_FromStringAndSize((char*) buffer, ptr - buffer);
     if (alloc)
         free(buffer);
@@ -130,141 +130,141 @@ static PyObject *parsed_to_py_string(dx_parsed_field_t *field)
 }
 
 
-void dx_py_to_composed(PyObject *value, dx_composed_field_t *field)
+void qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
 {
     if      (PyBool_Check(value))
-        dx_compose_insert_bool(field, PyInt_AS_LONG(value) ? 1 : 0);
+        qd_compose_insert_bool(field, PyInt_AS_LONG(value) ? 1 : 0);
 
     //else if (PyFloat_Check(value))
-    //    dx_compose_insert_double(field, PyFloat_AS_DOUBLE(value));
+    //    qd_compose_insert_double(field, PyFloat_AS_DOUBLE(value));
 
     else if (PyInt_Check(value))
-        dx_compose_insert_long(field, (int64_t) PyInt_AS_LONG(value));
+        qd_compose_insert_long(field, (int64_t) PyInt_AS_LONG(value));
 
     else if (PyLong_Check(value))
-        dx_compose_insert_long(field, (int64_t) PyLong_AsLongLong(value));
+        qd_compose_insert_long(field, (int64_t) PyLong_AsLongLong(value));
 
     else if (PyString_Check(value))
-        dx_compose_insert_string(field, PyString_AS_STRING(value));
+        qd_compose_insert_string(field, PyString_AS_STRING(value));
 
     else if (PyDict_Check(value)) {
         Py_ssize_t  iter = 0;
         PyObject   *key;
         PyObject   *val;
-        dx_compose_start_map(field);
+        qd_compose_start_map(field);
         while (PyDict_Next(value, &iter, &key, &val)) {
-            dx_py_to_composed(key, field);
-            dx_py_to_composed(val, field);
+            qd_py_to_composed(key, field);
+            qd_py_to_composed(val, field);
         }
-        dx_compose_end_map(field);
+        qd_compose_end_map(field);
     }
 
     else if (PyList_Check(value)) {
         Py_ssize_t count = PyList_Size(value);
-        dx_compose_start_list(field);
+        qd_compose_start_list(field);
         for (Py_ssize_t idx = 0; idx < count; idx++) {
             PyObject *item = PyList_GetItem(value, idx);
-            dx_py_to_composed(item, field);
+            qd_py_to_composed(item, field);
         }
-        dx_compose_end_list(field);
+        qd_compose_end_list(field);
     }
 
     else if (PyTuple_Check(value)) {
         Py_ssize_t count = PyTuple_Size(value);
-        dx_compose_start_list(field);
+        qd_compose_start_list(field);
         for (Py_ssize_t idx = 0; idx < count; idx++) {
             PyObject *item = PyTuple_GetItem(value, idx);
-            dx_py_to_composed(item, field);
+            qd_py_to_composed(item, field);
         }
-        dx_compose_end_list(field);
+        qd_compose_end_list(field);
     }
 }
 
 
-PyObject *dx_field_to_py(dx_parsed_field_t *field)
+PyObject *qd_field_to_py(qd_parsed_field_t *field)
 {
     PyObject *result = Py_None;
-    uint8_t   tag    = dx_parse_tag(field);
+    uint8_t   tag    = qd_parse_tag(field);
 
     switch (tag) {
-    case DX_AMQP_NULL:
+    case QD_AMQP_NULL:
         result = Py_None;
         break;
 
-    case DX_AMQP_BOOLEAN:
-    case DX_AMQP_TRUE:
-    case DX_AMQP_FALSE:
-        result = dx_parse_as_uint(field) ? Py_True : Py_False;
+    case QD_AMQP_BOOLEAN:
+    case QD_AMQP_TRUE:
+    case QD_AMQP_FALSE:
+        result = qd_parse_as_uint(field) ? Py_True : Py_False;
         break;
 
-    case DX_AMQP_UBYTE:
-    case DX_AMQP_USHORT:
-    case DX_AMQP_UINT:
-    case DX_AMQP_SMALLUINT:
-    case DX_AMQP_UINT0:
-        result = PyInt_FromLong((long) dx_parse_as_uint(field));
+    case QD_AMQP_UBYTE:
+    case QD_AMQP_USHORT:
+    case QD_AMQP_UINT:
+    case QD_AMQP_SMALLUINT:
+    case QD_AMQP_UINT0:
+        result = PyInt_FromLong((long) qd_parse_as_uint(field));
         break;
 
-    case DX_AMQP_ULONG:
-    case DX_AMQP_SMALLULONG:
-    case DX_AMQP_ULONG0:
-    case DX_AMQP_TIMESTAMP:
-        result = PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) dx_parse_as_ulong(field));
+    case QD_AMQP_ULONG:
+    case QD_AMQP_SMALLULONG:
+    case QD_AMQP_ULONG0:
+    case QD_AMQP_TIMESTAMP:
+        result = PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) qd_parse_as_ulong(field));
         break;
 
-    case DX_AMQP_BYTE:
-    case DX_AMQP_SHORT:
-    case DX_AMQP_INT:
-    case DX_AMQP_SMALLINT:
-        result = PyInt_FromLong((long) dx_parse_as_int(field));
+    case QD_AMQP_BYTE:
+    case QD_AMQP_SHORT:
+    case QD_AMQP_INT:
+    case QD_AMQP_SMALLINT:
+        result = PyInt_FromLong((long) qd_parse_as_int(field));
         break;
 
-    case DX_AMQP_LONG:
-    case DX_AMQP_SMALLLONG:
-        result = PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) dx_parse_as_long(field));
+    case QD_AMQP_LONG:
+    case QD_AMQP_SMALLLONG:
+        result = PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) qd_parse_as_long(field));
         break;
 
-    case DX_AMQP_FLOAT:
-    case DX_AMQP_DOUBLE:
-    case DX_AMQP_DECIMAL32:
-    case DX_AMQP_DECIMAL64:
-    case DX_AMQP_DECIMAL128:
-    case DX_AMQP_UTF32:
-    case DX_AMQP_UUID:
+    case QD_AMQP_FLOAT:
+    case QD_AMQP_DOUBLE:
+    case QD_AMQP_DECIMAL32:
+    case QD_AMQP_DECIMAL64:
+    case QD_AMQP_DECIMAL128:
+    case QD_AMQP_UTF32:
+    case QD_AMQP_UUID:
         break;
 
-    case DX_AMQP_VBIN8:
-    case DX_AMQP_VBIN32:
-    case DX_AMQP_STR8_UTF8:
-    case DX_AMQP_STR32_UTF8:
-    case DX_AMQP_SYM8:
-    case DX_AMQP_SYM32:
+    case QD_AMQP_VBIN8:
+    case QD_AMQP_VBIN32:
+    case QD_AMQP_STR8_UTF8:
+    case QD_AMQP_STR32_UTF8:
+    case QD_AMQP_SYM8:
+    case QD_AMQP_SYM32:
         result = parsed_to_py_string(field);
         break;
 
-    case DX_AMQP_LIST0:
-    case DX_AMQP_LIST8:
-    case DX_AMQP_LIST32: {
-        uint32_t count = dx_parse_sub_count(field);
+    case QD_AMQP_LIST0:
+    case QD_AMQP_LIST8:
+    case QD_AMQP_LIST32: {
+        uint32_t count = qd_parse_sub_count(field);
         result = PyList_New(count);
         for (uint32_t idx = 0; idx < count; idx++) {
-            dx_parsed_field_t *sub = dx_parse_sub_value(field, idx);
-            PyObject *pysub = dx_field_to_py(sub);
+            qd_parsed_field_t *sub = qd_parse_sub_value(field, idx);
+            PyObject *pysub = qd_field_to_py(sub);
             if (pysub == 0)
                 return 0;
             PyList_SetItem(result, idx, pysub);
         }
         break;
     }
-    case DX_AMQP_MAP8:
-    case DX_AMQP_MAP32: {
-        uint32_t count = dx_parse_sub_count(field);
+    case QD_AMQP_MAP8:
+    case QD_AMQP_MAP32: {
+        uint32_t count = qd_parse_sub_count(field);
         result = PyDict_New();
         for (uint32_t idx = 0; idx < count; idx++) {
-            dx_parsed_field_t *key = dx_parse_sub_key(field, idx);
-            dx_parsed_field_t *val = dx_parse_sub_value(field, idx);
+            qd_parsed_field_t *key = qd_parse_sub_key(field, idx);
+            qd_parsed_field_t *val = qd_parse_sub_value(field, idx);
             PyObject *pykey = parsed_to_py_string(key);
-            PyObject *pyval = dx_field_to_py(val);
+            PyObject *pyval = qd_field_to_py(val);
             if (pyval == 0)
                 return 0;
             PyDict_SetItem(result, pykey, pyval);
@@ -273,8 +273,8 @@ PyObject *dx_field_to_py(dx_parsed_field_t *field)
         }
         break;
     }
-    case DX_AMQP_ARRAY8:
-    case DX_AMQP_ARRAY32:
+    case QD_AMQP_ARRAY8:
+    case QD_AMQP_ARRAY32:
         break;
     }
 
@@ -310,7 +310,7 @@ static void LogAdapter_dealloc(LogAdapter* self)
 }
 
 
-static PyObject* dx_python_log(PyObject *self, PyObject *args)
+static PyObject* qd_python_log(PyObject *self, PyObject *args)
 {
     int level;
     const char* text;
@@ -321,7 +321,7 @@ static PyObject* dx_python_log(PyObject *self, PyObject *args)
     LogAdapter *self_ptr = (LogAdapter*) self;
     char       *logmod   = PyString_AS_STRING(self_ptr->module_name);
 
-    dx_log(logmod, level, text);
+    qd_log(logmod, level, text);
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -329,7 +329,7 @@ static PyObject* dx_python_log(PyObject *self, PyObject *args)
 
 
 static PyMethodDef LogAdapter_methods[] = {
-    {"log", dx_python_log, METH_VARARGS, "Emit a Log Line"},
+    {"log", qd_python_log, METH_VARARGS, "Emit a Log Line"},
     {0, 0, 0, 0}
 };
 
@@ -397,64 +397,64 @@ typedef struct {
     PyObject_HEAD
     PyObject       *handler;
     PyObject       *handler_rx_call;
-    dx_dispatch_t  *dx;
+    qd_dispatch_t  *qd;
     Py_ssize_t      addr_count;
-    dx_address_t  **addrs;
+    qd_address_t  **addrs;
 } IoAdapter;
 
 
-static void dx_io_rx_handler(void *context, dx_message_t *msg, int link_id)
+static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
 {
     IoAdapter *self = (IoAdapter*) context;
 
     //
     // Parse the message through the body and exit if the message is not well formed.
     //
-    if (!dx_message_check(msg, DX_DEPTH_BODY))
+    if (!qd_message_check(msg, QD_DEPTH_BODY))
         return;
 
     //
     // Get an iterator for the application-properties.  Exit if the message has none.
     //
-    dx_field_iterator_t *ap = dx_message_field_iterator(msg, DX_FIELD_APPLICATION_PROPERTIES);
+    qd_field_iterator_t *ap = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
     if (ap == 0)
         return;
 
     //
     // Try to get a map-view of the application-properties.
     //
-    dx_parsed_field_t *ap_map = dx_parse(ap);
-    if (ap_map == 0 || !dx_parse_ok(ap_map) || !dx_parse_is_map(ap_map)) {
-        dx_field_iterator_free(ap);
-        dx_parse_free(ap_map);
+    qd_parsed_field_t *ap_map = qd_parse(ap);
+    if (ap_map == 0 || !qd_parse_ok(ap_map) || !qd_parse_is_map(ap_map)) {
+        qd_field_iterator_free(ap);
+        qd_parse_free(ap_map);
         return;
     }
 
     //
     // Get an iterator for the body.  Exit if the message has none.
     //
-    dx_field_iterator_t *body = dx_message_field_iterator(msg, DX_FIELD_BODY);
+    qd_field_iterator_t *body = qd_message_field_iterator(msg, QD_FIELD_BODY);
     if (body == 0) {
-        dx_field_iterator_free(ap);
-        dx_parse_free(ap_map);
+        qd_field_iterator_free(ap);
+        qd_parse_free(ap_map);
         return;
     }
 
     //
     // Try to get a map-view of the body.
     //
-    dx_parsed_field_t *body_map = dx_parse(body);
-    if (body_map == 0 || !dx_parse_ok(body_map) || !dx_parse_is_map(body_map)) {
-        dx_field_iterator_free(ap);
-        dx_field_iterator_free(body);
-        dx_parse_free(ap_map);
-        dx_parse_free(body_map);
+    qd_parsed_field_t *body_map = qd_parse(body);
+    if (body_map == 0 || !qd_parse_ok(body_map) || !qd_parse_is_map(body_map)) {
+        qd_field_iterator_free(ap);
+        qd_field_iterator_free(body);
+        qd_parse_free(ap_map);
+        qd_parse_free(body_map);
         return;
     }
 
     sys_mutex_lock(lock);
-    PyObject *pAP   = dx_field_to_py(ap_map);
-    PyObject *pBody = dx_field_to_py(body_map);
+    PyObject *pAP   = qd_field_to_py(ap_map);
+    PyObject *pBody = qd_field_to_py(body_map);
 
     PyObject *pArgs = PyTuple_New(3);
     PyTuple_SetItem(pArgs, 0, pAP);
@@ -468,10 +468,10 @@ static void dx_io_rx_handler(void *context, dx_message_t *msg, int link_id)
     }
     sys_mutex_unlock(lock);
 
-    dx_field_iterator_free(ap);
-    dx_field_iterator_free(body);
-    dx_parse_free(ap_map);
-    dx_parse_free(body_map);
+    qd_field_iterator_free(ap);
+    qd_field_iterator_free(body);
+    qd_parse_free(ap_map);
+    qd_parse_free(body_map);
 }
 
 
@@ -490,13 +490,13 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
 
     Py_INCREF(self->handler);
     Py_INCREF(self->handler_rx_call);
-    self->dx         = dispatch;
+    self->qd         = dispatch;
     self->addr_count = PyTuple_Size(addrs);
-    self->addrs      = NEW_PTR_ARRAY(dx_address_t, self->addr_count);
+    self->addrs      = NEW_PTR_ARRAY(qd_address_t, self->addr_count);
     for (Py_ssize_t idx = 0; idx < self->addr_count; idx++)
-        self->addrs[idx] = dx_router_register_address(self->dx,
+        self->addrs[idx] = qd_router_register_address(self->qd,
                                                       PyString_AS_STRING(PyTuple_GetItem(addrs, idx)),
-                                                      dx_io_rx_handler, self);
+                                                      qd_io_rx_handler, self);
     return 0;
 }
 
@@ -504,7 +504,7 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
 static void IoAdapter_dealloc(IoAdapter* self)
 {
     for (Py_ssize_t idx = 0; idx < self->addr_count; idx++)
-        dx_router_unregister_address(self->addrs[idx]);
+        qd_router_unregister_address(self->addrs[idx]);
     free(self->addrs);
     Py_DECREF(self->handler);
     Py_DECREF(self->handler_rx_call);
@@ -512,10 +512,10 @@ static void IoAdapter_dealloc(IoAdapter* self)
 }
 
 
-static PyObject* dx_python_send(PyObject *self, PyObject *args)
+static PyObject* qd_python_send(PyObject *self, PyObject *args)
 {
     IoAdapter           *ioa   = (IoAdapter*) self;
-    dx_composed_field_t *field = 0;
+    qd_composed_field_t *field = 0;
     const char          *address;
     PyObject            *app_properties;
     PyObject            *body;
@@ -523,37 +523,37 @@ static PyObject* dx_python_send(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "sOO", &address, &app_properties, &body))
         return 0;
 
-    field = dx_compose(DX_PERFORMATIVE_DELIVERY_ANNOTATIONS, field);
-    dx_compose_start_map(field);
+    field = qd_compose(QD_PERFORMATIVE_DELIVERY_ANNOTATIONS, field);
+    qd_compose_start_map(field);
 
-    dx_compose_insert_string(field, DX_DA_INGRESS);
-    dx_compose_insert_string(field, dx_router_id(ioa->dx));
+    qd_compose_insert_string(field, QD_DA_INGRESS);
+    qd_compose_insert_string(field, qd_router_id(ioa->qd));
 
-    dx_compose_insert_string(field, DX_DA_TRACE);
-    dx_compose_start_list(field);
-    dx_compose_insert_string(field, dx_router_id(ioa->dx));
-    dx_compose_end_list(field);
+    qd_compose_insert_string(field, QD_DA_TRACE);
+    qd_compose_start_list(field);
+    qd_compose_insert_string(field, qd_router_id(ioa->qd));
+    qd_compose_end_list(field);
 
-    dx_compose_end_map(field);
+    qd_compose_end_map(field);
 
-    field = dx_compose(DX_PERFORMATIVE_PROPERTIES, field);
-    dx_compose_start_list(field);
-    dx_compose_insert_null(field);            // message-id
-    dx_compose_insert_null(field);            // user-id
-    dx_compose_insert_string(field, address); // to
-    dx_compose_end_list(field);
+    field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
+    qd_compose_start_list(field);
+    qd_compose_insert_null(field);            // message-id
+    qd_compose_insert_null(field);            // user-id
+    qd_compose_insert_string(field, address); // to
+    qd_compose_end_list(field);
 
-    field = dx_compose(DX_PERFORMATIVE_APPLICATION_PROPERTIES, field);
-    dx_py_to_composed(app_properties, field);
+    field = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, field);
+    qd_py_to_composed(app_properties, field);
 
-    field = dx_compose(DX_PERFORMATIVE_BODY_AMQP_VALUE, field);
-    dx_py_to_composed(body, field);
+    field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, field);
+    qd_py_to_composed(body, field);
 
-    dx_message_t *msg = dx_message();
-    dx_message_compose_2(msg, field);
-    dx_router_send2(ioa->dx, address, msg);
-    dx_message_free(msg);
-    dx_compose_free(field);
+    qd_message_t *msg = qd_message();
+    qd_message_compose_2(msg, field);
+    qd_router_send2(ioa->qd, address, msg);
+    qd_message_free(msg);
+    qd_compose_free(field);
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -561,7 +561,7 @@ static PyObject* dx_python_send(PyObject *self, PyObject *args)
 
 
 static PyMethodDef IoAdapter_methods[] = {
-    {"send", dx_python_send, METH_VARARGS, "Send a Message"},
+    {"send", qd_python_send, METH_VARARGS, "Send a Message"},
     {0, 0, 0, 0}
 };
 
@@ -622,7 +622,7 @@ static PyTypeObject IoAdapterType = {
 // Initialization of Modules and Types
 //===============================================================================
 
-static void dx_register_log_constant(PyObject *module, const char *name, uint32_t value)
+static void qd_register_log_constant(PyObject *module, const char *name, uint32_t value)
 {
     PyObject *const_object = PyInt_FromLong((long) value);
     Py_INCREF(const_object);
@@ -630,13 +630,13 @@ static void dx_register_log_constant(PyObject *module, const char *name, uint32_
 }
 
 
-static void dx_python_setup()
+static void qd_python_setup()
 {
     LogAdapterType.tp_new = PyType_GenericNew;
     IoAdapterType.tp_new  = PyType_GenericNew;
     if ((PyType_Ready(&LogAdapterType) < 0) || (PyType_Ready(&IoAdapterType) < 0)) {
         PyErr_Print();
-        dx_log(log_module, LOG_ERROR, "Unable to initialize Adapters");
+        qd_log(log_module, LOG_ERROR, "Unable to initialize Adapters");
         assert(0);
     } else {
         PyObject *m = Py_InitModule3("dispatch", empty_methods, "Dispatch Adapter Module");
@@ -648,13 +648,13 @@ static void dx_python_setup()
         Py_INCREF(laType);
         PyModule_AddObject(m, "LogAdapter", (PyObject*) &LogAdapterType);
 
-        dx_register_log_constant(m, "LOG_TRACE",    LOG_TRACE);
-        dx_register_log_constant(m, "LOG_DEBUG",    LOG_DEBUG);
-        dx_register_log_constant(m, "LOG_INFO",     LOG_INFO);
-        dx_register_log_constant(m, "LOG_NOTICE",   LOG_NOTICE);
-        dx_register_log_constant(m, "LOG_WARNING",  LOG_WARNING);
-        dx_register_log_constant(m, "LOG_ERROR",    LOG_ERROR);
-        dx_register_log_constant(m, "LOG_CRITICAL", LOG_CRITICAL);
+        qd_register_log_constant(m, "LOG_TRACE",    LOG_TRACE);
+        qd_register_log_constant(m, "LOG_DEBUG",    LOG_DEBUG);
+        qd_register_log_constant(m, "LOG_INFO",     LOG_INFO);
+        qd_register_log_constant(m, "LOG_NOTICE",   LOG_NOTICE);
+        qd_register_log_constant(m, "LOG_WARNING",  LOG_WARNING);
+        qd_register_log_constant(m, "LOG_ERROR",    LOG_ERROR);
+        qd_register_log_constant(m, "LOG_CRITICAL", LOG_CRITICAL);
 
         //
         PyTypeObject *ioaType = &IoAdapterType;
@@ -666,12 +666,12 @@ static void dx_python_setup()
     }
 }
 
-void dx_python_lock()
+void qd_python_lock()
 {
     sys_mutex_lock(lock);
 }
 
-void dx_python_unlock()
+void qd_python_unlock()
 {
     sys_mutex_unlock(lock);
 }

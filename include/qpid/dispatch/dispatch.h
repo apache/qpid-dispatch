@@ -24,7 +24,7 @@
  * @{
  */
 
-typedef struct dx_dispatch_t dx_dispatch_t;
+typedef struct qd_dispatch_t qd_dispatch_t;
 
 /**
  * \brief Initialize the Dispatch library and prepare it for operation.
@@ -32,17 +32,17 @@ typedef struct dx_dispatch_t dx_dispatch_t;
  * #param config_path The path to the configuration file.
  * @return A handle to be used in API calls for this instance.
  */
-dx_dispatch_t *dx_dispatch(const char *config_path);
+qd_dispatch_t *qd_dispatch(const char *config_path);
 
 
 /**
  * \brief Finalize the Dispatch library after it has stopped running.
  *
- * @param dispatch The dispatch handle returned by dx_dispatch
+ * @param dispatch The dispatch handle returned by qd_dispatch
  */
-void dx_dispatch_free(dx_dispatch_t *dispatch);
+void qd_dispatch_free(qd_dispatch_t *dispatch);
 
-void dx_dispatch_configure(dx_dispatch_t *dispatch);
+void qd_dispatch_configure(qd_dispatch_t *dispatch);
 
 
 /**

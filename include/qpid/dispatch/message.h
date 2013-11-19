@@ -29,90 +29,90 @@
 
 // Callback for status change (confirmed persistent, loaded-in-memory, etc.)
 
-typedef struct dx_message_t dx_message_t;
+typedef struct qd_message_t qd_message_t;
 
-DEQ_DECLARE(dx_message_t, dx_message_list_t);
+DEQ_DECLARE(qd_message_t, qd_message_list_t);
 
-struct dx_message_t {
-    DEQ_LINKS(dx_message_t);
+struct qd_message_t {
+    DEQ_LINKS(qd_message_t);
     // Private members not listed here.
 };
 
 typedef enum {
-    DX_DEPTH_NONE,
-    DX_DEPTH_HEADER,
-    DX_DEPTH_DELIVERY_ANNOTATIONS,
-    DX_DEPTH_MESSAGE_ANNOTATIONS,
-    DX_DEPTH_PROPERTIES,
-    DX_DEPTH_APPLICATION_PROPERTIES,
-    DX_DEPTH_BODY,
-    DX_DEPTH_ALL
-} dx_message_depth_t;
+    QD_DEPTH_NONE,
+    QD_DEPTH_HEADER,
+    QD_DEPTH_DELIVERY_ANNOTATIONS,
+    QD_DEPTH_MESSAGE_ANNOTATIONS,
+    QD_DEPTH_PROPERTIES,
+    QD_DEPTH_APPLICATION_PROPERTIES,
+    QD_DEPTH_BODY,
+    QD_DEPTH_ALL
+} qd_message_depth_t;
 
 
 typedef enum {
     //
     // Message Sections
     //
-    DX_FIELD_HEADER,
-    DX_FIELD_DELIVERY_ANNOTATION,
-    DX_FIELD_MESSAGE_ANNOTATION,
-    DX_FIELD_PROPERTIES,
-    DX_FIELD_APPLICATION_PROPERTIES,
-    DX_FIELD_BODY,
-    DX_FIELD_FOOTER,
+    QD_FIELD_HEADER,
+    QD_FIELD_DELIVERY_ANNOTATION,
+    QD_FIELD_MESSAGE_ANNOTATION,
+    QD_FIELD_PROPERTIES,
+    QD_FIELD_APPLICATION_PROPERTIES,
+    QD_FIELD_BODY,
+    QD_FIELD_FOOTER,
 
     //
     // Fields of the Header Section
     //
-    DX_FIELD_DURABLE,
-    DX_FIELD_PRIORITY,
-    DX_FIELD_TTL,
-    DX_FIELD_FIRST_ACQUIRER,
-    DX_FIELD_DELIVERY_COUNT,
+    QD_FIELD_DURABLE,
+    QD_FIELD_PRIORITY,
+    QD_FIELD_TTL,
+    QD_FIELD_FIRST_ACQUIRER,
+    QD_FIELD_DELIVERY_COUNT,
 
     //
     // Fields of the Properties Section
     //
-    DX_FIELD_MESSAGE_ID,
-    DX_FIELD_USER_ID,
-    DX_FIELD_TO,
-    DX_FIELD_SUBJECT,
-    DX_FIELD_REPLY_TO,
-    DX_FIELD_CORRELATION_ID,
-    DX_FIELD_CONTENT_TYPE,
-    DX_FIELD_CONTENT_ENCODING,
-    DX_FIELD_ABSOLUTE_EXPIRY_TIME,
-    DX_FIELD_CREATION_TIME,
-    DX_FIELD_GROUP_ID,
-    DX_FIELD_GROUP_SEQUENCE,
-    DX_FIELD_REPLY_TO_GROUP_ID
-} dx_message_field_t;
+    QD_FIELD_MESSAGE_ID,
+    QD_FIELD_USER_ID,
+    QD_FIELD_TO,
+    QD_FIELD_SUBJECT,
+    QD_FIELD_REPLY_TO,
+    QD_FIELD_CORRELATION_ID,
+    QD_FIELD_CONTENT_TYPE,
+    QD_FIELD_CONTENT_ENCODING,
+    QD_FIELD_ABSOLUTE_EXPIRY_TIME,
+    QD_FIELD_CREATION_TIME,
+    QD_FIELD_GROUP_ID,
+    QD_FIELD_GROUP_SEQUENCE,
+    QD_FIELD_REPLY_TO_GROUP_ID
+} qd_message_field_t;
 
 
 /**
  * Allocate a new message.
  *
- * @return A pointer to a dx_message_t that is the sole reference to a newly allocated
+ * @return A pointer to a qd_message_t that is the sole reference to a newly allocated
  *         message.
  */
-dx_message_t *dx_message(void);
+qd_message_t *qd_message(void);
 
 /**
  * Free a message reference.  If this is the last reference to the message, free the
  * message as well.
  *
- * @param msg A pointer to a dx_message_t that is no longer needed.
+ * @param msg A pointer to a qd_message_t that is no longer needed.
  */
-void dx_message_free(dx_message_t *msg);
+void qd_message_free(qd_message_t *msg);
 
 /**
  * Make a new reference to an existing message.
  *
- * @param msg A pointer to a dx_message_t referencing a message.
+ * @param msg A pointer to a qd_message_t referencing a message.
  * @return A new pointer to the same referenced message.
  */
-dx_message_t *dx_message_copy(dx_message_t *msg);
+qd_message_t *qd_message_copy(qd_message_t *msg);
 
 /**
  * Retrieve the delivery annotations from a message.
@@ -124,7 +124,7 @@ dx_message_t *dx_message_copy(dx_message_t *msg);
  * @return Pointer to the parsed field for the delivery annotations.  If the message doesn't
  *         have delivery annotations, the return value shall be NULL.
  */
-dx_parsed_field_t *dx_message_delivery_annotations(dx_message_t *msg);
+qd_parsed_field_t *qd_message_delivery_annotations(qd_message_t *msg);
 
 /**
  * Set the delivery annotations for the message.  If the message already has delivery annotations,
@@ -138,7 +138,7 @@ dx_parsed_field_t *dx_message_delivery_annotations(dx_message_t *msg);
  *                      are copied into the message, it is safe to free the composed field
  *                      any time after the call to this function.
  */
-void dx_message_set_delivery_annotations(dx_message_t *msg, dx_composed_field_t *da);
+void qd_message_set_delivery_annotations(qd_message_t *msg, qd_composed_field_t *da);
 
 /**
  * Receive message data via a delivery.  This function may be called more than once on the same
@@ -148,7 +148,7 @@ void dx_message_set_delivery_annotations(dx_message_t *msg, dx_composed_field_t 
  * @param delivery An incoming delivery from a link
  * @return A pointer to the complete message or 0 if the message is not yet complete.
  */
-dx_message_t *dx_message_receive(dx_delivery_t *delivery);
+qd_message_t *qd_message_receive(qd_delivery_t *delivery);
 
 /**
  * Send the message outbound on an outgoing link.
@@ -156,13 +156,13 @@ dx_message_t *dx_message_receive(dx_delivery_t *delivery);
  * @param msg A pointer to a message to be sent.
  * @param link The outgoing link on which to send the message.
  */
-void dx_message_send(dx_message_t *msg, dx_link_t *link);
+void qd_message_send(qd_message_t *msg, qd_link_t *link);
 
 /**
  * Check that the message is well-formed up to a certain depth.  Any part of the message that is
  * beyond the specified depth is not checked for validity.
  */
-int dx_message_check(dx_message_t *msg, dx_message_depth_t depth);
+int qd_message_check(qd_message_t *msg, qd_message_depth_t depth);
 
 /**
  * Return an iterator for the requested message field.  If the field is not in the message,
@@ -172,18 +172,18 @@ int dx_message_check(dx_message_t *msg, dx_message_depth_t depth);
  * @param field The field to be returned via iterator.
  * @return A field iterator that spans the requested field.
  */
-dx_field_iterator_t *dx_message_field_iterator_typed(dx_message_t *msg, dx_message_field_t field);
-dx_field_iterator_t *dx_message_field_iterator(dx_message_t *msg, dx_message_field_t field);
+qd_field_iterator_t *qd_message_field_iterator_typed(qd_message_t *msg, qd_message_field_t field);
+qd_field_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_field_t field);
 
-ssize_t dx_message_field_length(dx_message_t *msg, dx_message_field_t field);
-ssize_t dx_message_field_copy(dx_message_t *msg, dx_message_field_t field, void *buffer, size_t *hdr_length);
+ssize_t qd_message_field_length(qd_message_t *msg, qd_message_field_t field);
+ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, void *buffer, size_t *hdr_length);
 
 //
 // Functions for composed messages
 //
 
 // Convenience Functions
-void dx_message_compose_1(dx_message_t *msg, const char *to, dx_buffer_list_t *buffers);
-void dx_message_compose_2(dx_message_t *msg, dx_composed_field_t *content);
+void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *buffers);
+void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *content);
 
 #endif

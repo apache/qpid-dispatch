@@ -27,16 +27,16 @@
  * @{
  */
 
-typedef struct dx_timer_t dx_timer_t;
+typedef struct qd_timer_t qd_timer_t;
 
 /**
  * Timer Callback
  *
  * Callback invoked after a timer's interval expires and the timer fires.
  *
- * @param context The context supplied in dx_timer
+ * @param context The context supplied in qd_timer
  */
-typedef void (*dx_timer_cb_t)(void* context);
+typedef void (*qd_timer_cb_t)(void* context);
 
 
 /**
@@ -46,7 +46,7 @@ typedef void (*dx_timer_cb_t)(void* context);
  * @param context An opaque, user-supplied context to be passed into the callback.
  * @return A pointer to the new timer object or NULL if memory is exhausted.
  */
-dx_timer_t *dx_timer(dx_dispatch_t *dx, dx_timer_cb_t cb, void* context);
+qd_timer_t *qd_timer(qd_dispatch_t *qd, qd_timer_cb_t cb, void* context);
 
 
 /**
@@ -54,23 +54,23 @@ dx_timer_t *dx_timer(dx_dispatch_t *dx, dx_timer_cb_t cb, void* context);
  * prior to freeing.  After this function returns, the callback will not be invoked for this
  * timer.
  *
- * @param timer Pointer to the timer object returned by dx_timer.
+ * @param timer Pointer to the timer object returned by qd_timer.
  */
-void dx_timer_free(dx_timer_t *timer);
+void qd_timer_free(qd_timer_t *timer);
 
 
 /**
  * Schedule a timer to fire in the future.
  *
  * Note that the timer callback will never be invoked synchronously during the execution
- * of dx_timer_schedule.  Even if the interval is immediate (0), the callback invocation will
+ * of qd_timer_schedule.  Even if the interval is immediate (0), the callback invocation will
  * be asynchronous and after the return of this function.
  *
- * @param timer Pointer to the timer object returned by dx_timer.
+ * @param timer Pointer to the timer object returned by qd_timer.
  * @param msec The minimum number of milliseconds of delay until the timer fires.
  *             If 0 is supplied, the timer will be scheduled to fire immediately.
  */
-void dx_timer_schedule(dx_timer_t *timer, long msec);
+void qd_timer_schedule(qd_timer_t *timer, long msec);
 
 
 /**
@@ -78,9 +78,9 @@ void dx_timer_schedule(dx_timer_t *timer, long msec);
  * server thread, it is always possible that a last-second cancel attempt may arrive too late
  * to stop the timer from firing (i.e. the cancel is concurrent with the fire callback).
  *
- * @param timer Pointer to the timer object returned by dx_timer.
+ * @param timer Pointer to the timer object returned by qd_timer.
  */
-void dx_timer_cancel(dx_timer_t *timer);
+void qd_timer_cancel(qd_timer_t *timer);
 
 /**
  * @}

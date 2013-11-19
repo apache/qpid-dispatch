@@ -27,18 +27,18 @@
 #include <stdio.h>
 
 static sys_mutex_t     *lock;
-static dx_timer_list_t  idle_timers;
-static dx_timer_list_t  scheduled_timers;
+static qd_timer_list_t  idle_timers;
+static qd_timer_list_t  scheduled_timers;
 static long             time_base;
 
-ALLOC_DECLARE(dx_timer_t);
-ALLOC_DEFINE(dx_timer_t);
+ALLOC_DECLARE(qd_timer_t);
+ALLOC_DEFINE(qd_timer_t);
 
 //=========================================================================
 // Private static functions
 //=========================================================================
 
-static void dx_timer_cancel_LH(dx_timer_t *timer)
+static void qd_timer_cancel_LH(qd_timer_t *timer)
 {
     switch (timer->state) {
     case TIMER_FREE:
@@ -56,7 +56,7 @@ static void dx_timer_cancel_LH(dx_timer_t *timer)
         break;
 
     case TIMER_PENDING:
-        dx_server_timer_cancel_LH(timer);
+        qd_server_timer_cancel_LH(timer);
         DEQ_INSERT_TAIL(idle_timers, timer);
         break;
     }
@@ -69,15 +69,15 @@ static void dx_timer_cancel_LH(dx_timer_t *timer)
 // Public Functions from timer.h
 //=========================================================================
 
-dx_timer_t *dx_timer(dx_dispatch_t *dx, dx_timer_cb_t cb, void* context)
+qd_timer_t *qd_timer(qd_dispatch_t *qd, qd_timer_cb_t cb, void* context)
 {
-    dx_timer_t *timer = new_dx_timer_t();
+    qd_timer_t *timer = new_qd_timer_t();
     if (!timer)
         return 0;
 
     DEQ_ITEM_INIT(timer);
 
-    timer->server     = dx ? dx->server : 0;
+    timer->server     = qd ? qd->server : 0;
     timer->handler    = cb;
     timer->context    = context;
     timer->delta_time = 0;
@@ -91,26 +91,26 @@ dx_timer_t *dx_timer(dx_dispatch_t *dx, dx_timer_cb_t cb, void* context)
 }
 
 
-void dx_timer_free(dx_timer_t *timer)
+void qd_timer_free(qd_timer_t *timer)
 {
     sys_mutex_lock(lock);
-    dx_timer_cancel_LH(timer);
+    qd_timer_cancel_LH(timer);
     DEQ_REMOVE(idle_timers, timer);
     sys_mutex_unlock(lock);
 
     timer->state = TIMER_FREE;
-    free_dx_timer_t(timer);
+    free_qd_timer_t(timer);
 }
 
 
-void dx_timer_schedule(dx_timer_t *timer, long duration)
+void qd_timer_schedule(qd_timer_t *timer, long duration)
 {
-    dx_timer_t *ptr;
-    dx_timer_t *last;
+    qd_timer_t *ptr;
+    qd_timer_t *last;
     long        total_time;
 
     sys_mutex_lock(lock);
-    dx_timer_cancel_LH(timer);  // Timer is now on the idle list
+    qd_timer_cancel_LH(timer);  // Timer is now on the idle list
     assert(timer->state == TIMER_IDLE);
     DEQ_REMOVE(idle_timers, timer);
 
@@ -121,7 +121,7 @@ void dx_timer_schedule(dx_timer_t *timer, long duration)
     //
     if (duration == 0) {
         timer->state = TIMER_PENDING;
-        dx_server_timer_pending_LH(timer);
+        qd_server_timer_pending_LH(timer);
         sys_mutex_unlock(lock);
         return;
     }
@@ -165,10 +165,10 @@ void dx_timer_schedule(dx_timer_t *timer, long duration)
 }
 
 
-void dx_timer_cancel(dx_timer_t *timer)
+void qd_timer_cancel(qd_timer_t *timer)
 {
     sys_mutex_lock(lock);
-    dx_timer_cancel_LH(timer);
+    qd_timer_cancel_LH(timer);
     sys_mutex_unlock(lock);
 }
 
@@ -177,7 +177,7 @@ void dx_timer_cancel(dx_timer_t *timer)
 // Private Functions from timer_private.h
 //=========================================================================
 
-void dx_timer_initialize(sys_mutex_t *server_lock)
+void qd_timer_initialize(sys_mutex_t *server_lock)
 {
     lock = server_lock;
     DEQ_INIT(idle_timers);
@@ -186,25 +186,25 @@ void dx_timer_initialize(sys_mutex_t *server_lock)
 }
 
 
-void dx_timer_finalize(void)
+void qd_timer_finalize(void)
 {
     lock = 0;
 }
 
 
-long dx_timer_next_duration_LH(void)
+long qd_timer_next_duration_LH(void)
 {
-    dx_timer_t *timer = DEQ_HEAD(scheduled_timers);
+    qd_timer_t *timer = DEQ_HEAD(scheduled_timers);
     if (timer)
         return timer->delta_time;
     return -1;
 }
 
 
-void dx_timer_visit_LH(long current_time)
+void qd_timer_visit_LH(long current_time)
 {
     long        delta;
-    dx_timer_t *timer = DEQ_HEAD(scheduled_timers);
+    qd_timer_t *timer = DEQ_HEAD(scheduled_timers);
 
     if (time_base == 0) {
         time_base = current_time;
@@ -223,7 +223,7 @@ void dx_timer_visit_LH(long current_time)
             DEQ_REMOVE_HEAD(scheduled_timers);
             delta -= timer->delta_time;
             timer->state = TIMER_PENDING;
-            dx_server_timer_pending_LH(timer);
+            qd_server_timer_pending_LH(timer);
 
         }
         timer = DEQ_HEAD(scheduled_timers);
@@ -231,7 +231,7 @@ void dx_timer_visit_LH(long current_time)
 }
 
 
-void dx_timer_idle_LH(dx_timer_t *timer)
+void qd_timer_idle_LH(qd_timer_t *timer)
 {
     timer->state = TIMER_IDLE;
     DEQ_INSERT_TAIL(idle_timers, timer);

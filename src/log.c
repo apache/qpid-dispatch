@@ -29,10 +29,10 @@
 #define TEXT_MAX 512
 #define LIST_MAX 1000
 
-typedef struct dx_log_entry_t dx_log_entry_t;
+typedef struct qd_log_entry_t qd_log_entry_t;
 
-struct dx_log_entry_t {
-    DEQ_LINKS(dx_log_entry_t);
+struct qd_log_entry_t {
+    DEQ_LINKS(qd_log_entry_t);
     const char     *module;
     int             cls;
     const char     *file;
@@ -41,13 +41,13 @@ struct dx_log_entry_t {
     char            text[TEXT_MAX];
 };
 
-ALLOC_DECLARE(dx_log_entry_t);
-ALLOC_DEFINE(dx_log_entry_t);
+ALLOC_DECLARE(qd_log_entry_t);
+ALLOC_DEFINE(qd_log_entry_t);
 
-DEQ_DECLARE(dx_log_entry_t, dx_log_list_t);
+DEQ_DECLARE(qd_log_entry_t, qd_log_list_t);
 
 static int            mask = LOG_INFO;
-static dx_log_list_t  entries;
+static qd_log_list_t  entries;
 static sys_mutex_t   *log_lock = 0;
 
 
@@ -66,12 +66,12 @@ static const char *cls_prefix(int cls)
     return "";
 }
 
-void dx_log_impl(const char *module, int cls, const char *file, int line, const char *fmt, ...)
+void qd_log_impl(const char *module, int cls, const char *file, int line, const char *fmt, ...)
 {
     if (!(cls & mask))
         return;
 
-    dx_log_entry_t *entry = new_dx_log_entry_t();
+    qd_log_entry_t *entry = new_qd_log_entry_t();
     DEQ_ITEM_INIT(entry);
     entry->module = module;
     entry->cls    = cls;
@@ -91,25 +91,25 @@ void dx_log_impl(const char *module, int cls, const char *file, int line, const 
     if (DEQ_SIZE(entries) > LIST_MAX) {
         entry = DEQ_HEAD(entries);
         DEQ_REMOVE_HEAD(entries);
-        free_dx_log_entry_t(entry);
+        free_qd_log_entry_t(entry);
     }
     sys_mutex_unlock(log_lock);
 }
 
-void dx_log_set_mask(int _mask)
+void qd_log_set_mask(int _mask)
 {
     mask = _mask;
 }
 
 
-void dx_log_initialize(void)
+void qd_log_initialize(void)
 {
     DEQ_INIT(entries);
     log_lock = sys_mutex();
 }
 
 
-void dx_log_finalize(void)
+void qd_log_finalize(void)
 {
 }
 

@@ -30,8 +30,6 @@ include(FindPythonLibs)
 enable_testing()
 include (CTest)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in ${CMAKE_CURRENT_BINARY_DIR}/conditionals.h)
-
 if (NOT PYTHONLIBS_FOUND)
      message(FATAL_ERROR "Python Development Libraries are needed.")
 endif (NOT PYTHONLIBS_FOUND)
@@ -88,6 +86,8 @@ set (CMAKE_REQUIRED_INCLUDES ${proton_include})
 set (CMAKE_REQUIRED_LIBRARIES ${proton_lib})
 check_function_exists(pn_link_get_drain HAVE_LINK_GET_DRAIN)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in ${CMAKE_CURRENT_BINARY_DIR}/conditionals.h)
+
 ##
 ## Build the Multi-Threaded Server Library
 ##
@@ -133,7 +133,7 @@ install(TARGETS qpid-dispatch
 file(GLOB headers "include/qpid/dispatch/*.h")
 install(FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/qpid/dispatch)
 install(FILES include/qpid/dispatch.h DESTINATION ${INCLUDE_INSTALL_DIR}/qpid)
-install(FILES etc/qpid-dxrouter.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid)
+install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
 
 ##
 ## Python modules installation

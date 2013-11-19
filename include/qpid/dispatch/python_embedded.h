@@ -29,31 +29,31 @@
  * Initialize the embedded-python subsystem.  This must be called before
  * any other call into this module is invoked.
  */
-void dx_python_initialize(dx_dispatch_t *dx);
+void qd_python_initialize(qd_dispatch_t *qd);
 
 /**
  * Finalize the embedded-python subsystem.  After this is called, there
- * must be no further invocation of dx_python methods.
+ * must be no further invocation of qd_python methods.
  */
-void dx_python_finalize();
+void qd_python_finalize();
 
 /**
  * Start using embedded python.  This is called once by each module that plans
- * to use embedded python capabilities.  It must call dx_python_start before
+ * to use embedded python capabilities.  It must call qd_python_start before
  * using any python components.
  */
-void dx_python_start();
+void qd_python_start();
 
 /**
  * Stop using embedded python.  This is called once by each module after it is
  * finished using embedded python capabilities.
  */
-void dx_python_stop();
+void qd_python_stop();
 
 /**
  * Get the Python top level "dispatch" module.
  */
-PyObject *dx_python_module();
+PyObject *qd_python_module();
 
 /**
  * Convert a Python object to AMQP format and append to a composed_field.
@@ -61,7 +61,7 @@ PyObject *dx_python_module();
  * @param value A Python Object
  * @param field A composed field
  */
-void dx_py_to_composed(PyObject *value, dx_composed_field_t *field);
+void qd_py_to_composed(PyObject *value, qd_composed_field_t *field);
 
 /**
  * Convert a parsed field to a Python object
@@ -69,13 +69,13 @@ void dx_py_to_composed(PyObject *value, dx_composed_field_t *field);
  * @param field A parsed field
  * @return A generated Python object
  */
-PyObject *dx_field_to_py(dx_parsed_field_t *field);
+PyObject *qd_field_to_py(qd_parsed_field_t *field);
 
 /**
  * These are temporary and will eventually be replaced by having an internal python
  * work queue that feeds a dedicated embedded-python thread.
  */
-void dx_python_lock();
-void dx_python_unlock();
+void qd_python_lock();
+void qd_python_unlock();
 
 #endif

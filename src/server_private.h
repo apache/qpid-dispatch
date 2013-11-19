@@ -28,8 +28,8 @@
 #include <proton/engine.h>
 #include <proton/driver_extras.h>
 
-void dx_server_timer_pending_LH(dx_timer_t *timer);
-void dx_server_timer_cancel_LH(dx_timer_t *timer);
+void qd_server_timer_pending_LH(qd_timer_t *timer);
+void qd_server_timer_cancel_LH(qd_timer_t *timer);
 
 
 typedef enum {
@@ -48,57 +48,57 @@ typedef enum {
     CXTR_STATE_FAILED
 } cxtr_state_t;
 
-typedef struct dx_server_t dx_server_t;
+typedef struct qd_server_t qd_server_t;
 
-struct dx_listener_t {
-    dx_server_t              *server;
-    const dx_server_config_t *config;
+struct qd_listener_t {
+    qd_server_t              *server;
+    const qd_server_config_t *config;
     void                     *context;
     pn_listener_t            *pn_listener;
 };
 
 
-struct dx_connector_t {
-    dx_server_t              *server;
+struct qd_connector_t {
+    qd_server_t              *server;
     cxtr_state_t              state;
-    const dx_server_config_t *config;
+    const qd_server_config_t *config;
     void                     *context;
-    dx_connection_t          *ctx;
-    dx_timer_t               *timer;
+    qd_connection_t          *ctx;
+    qd_timer_t               *timer;
     long                      delay;
 };
 
 
-struct dx_connection_t {
-    DEQ_LINKS(dx_connection_t);
-    dx_server_t     *server;
+struct qd_connection_t {
+    DEQ_LINKS(qd_connection_t);
+    qd_server_t     *server;
     conn_state_t     state;
     int              owner_thread;
     int              enqueued;
     pn_connector_t  *pn_cxtr;
     pn_connection_t *pn_conn;
-    dx_listener_t   *listener;
-    dx_connector_t  *connector;
+    qd_listener_t   *listener;
+    qd_connector_t  *connector;
     void            *context; // Copy of context from listener or connector
     void            *user_context;
     void            *link_context; // Context shared by this connection's links
-    dx_user_fd_t    *ufd;
+    qd_user_fd_t    *ufd;
 };
 
 
-struct dx_user_fd_t {
-    dx_server_t    *server;
+struct qd_user_fd_t {
+    qd_server_t    *server;
     void           *context;
     int             fd;
     pn_connector_t *pn_conn;
 };
 
 
-ALLOC_DECLARE(dx_listener_t);
-ALLOC_DECLARE(dx_connector_t);
-ALLOC_DECLARE(dx_connection_t);
-ALLOC_DECLARE(dx_user_fd_t);
+ALLOC_DECLARE(qd_listener_t);
+ALLOC_DECLARE(qd_connector_t);
+ALLOC_DECLARE(qd_connection_t);
+ALLOC_DECLARE(qd_user_fd_t);
 
-DEQ_DECLARE(dx_connection_t, dx_connection_list_t);
+DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
 
 #endif

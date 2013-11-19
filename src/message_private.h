@@ -28,13 +28,13 @@
  *
  *     +--------------+            +----------------------+
  *     |              |            |                      |
- *     | dx_message_t |----------->| dx_message_content_t |
+ *     | qd_message_t |----------->| qd_message_content_t |
  *     |              |     +----->|                      |
  *     +--------------+     |      +----------------------+
  *                          |                |
  *     +--------------+     |                |    +-------------+   +-------------+   +-------------+
- *     |              |     |                +--->| dx_buffer_t |-->| dx_buffer_t |-->| dx_buffer_t |--/
- *     | dx_message_t |-----+                     +-------------+   +-------------+   +-------------+
+ *     |              |     |                +--->| qd_buffer_t |-->| qd_buffer_t |-->| qd_buffer_t |--/
+ *     | qd_message_t |-----+                     +-------------+   +-------------+   +-------------+
  *     |              |
  *     +--------------+
  *
@@ -45,15 +45,15 @@
  */
 
 typedef struct {
-    dx_buffer_t *buffer;     // Buffer that contains the first octet of the field, null if the field is not present
+    qd_buffer_t *buffer;     // Buffer that contains the first octet of the field, null if the field is not present
     size_t       offset;     // Offset in the buffer to the first octet of the header
     size_t       length;     // Length of the field or zero if unneeded
     size_t       hdr_length; // Length of the field's header (not included in the length of the field)
     int          parsed;     // non-zero iff the buffer chain has been parsed to find this field
-} dx_field_location_t;
+} qd_field_location_t;
 
 
-// TODO - consider using pointers to dx_field_location_t below to save memory
+// TODO - consider using pointers to qd_field_location_t below to save memory
 // TODO - we need a second buffer list for modified annotations and header
 //        There are three message scenarios:
 //            1) Received message is held and forwarded unmodified - single buffer list
@@ -66,34 +66,34 @@ typedef struct {
 typedef struct {
     sys_mutex_t         *lock;
     uint32_t             ref_count;                       // The number of messages referencing this
-    dx_buffer_list_t     buffers;                         // The buffer chain containing the message
-    dx_buffer_list_t     new_delivery_annotations;        // The buffer chain containing the new delivery annotations (MOVE TO MSG_PVT)
-    dx_field_location_t  section_message_header;          // The message header list
-    dx_field_location_t  section_delivery_annotation;     // The delivery annotation map
-    dx_field_location_t  section_message_annotation;      // The message annotation map
-    dx_field_location_t  section_message_properties;      // The message properties list
-    dx_field_location_t  section_application_properties;  // The application properties list
-    dx_field_location_t  section_body;                    // The message body: Data
-    dx_field_location_t  section_footer;                  // The footer
-    dx_field_location_t  field_user_id;                   // The string value of the user-id
-    dx_field_location_t  field_to;                        // The string value of the to field
-    dx_field_location_t  field_reply_to;                  // The string value of the reply_to field
-    dx_field_location_t  field_correlation_id;            // The string value of the correlation_id field
-    dx_field_location_t  body;                            // The body of the message
-    dx_buffer_t         *parse_buffer;
+    qd_buffer_list_t     buffers;                         // The buffer chain containing the message
+    qd_buffer_list_t     new_delivery_annotations;        // The buffer chain containing the new delivery annotations (MOVE TO MSG_PVT)
+    qd_field_location_t  section_message_header;          // The message header list
+    qd_field_location_t  section_delivery_annotation;     // The delivery annotation map
+    qd_field_location_t  section_message_annotation;      // The message annotation map
+    qd_field_location_t  section_message_properties;      // The message properties list
+    qd_field_location_t  section_application_properties;  // The application properties list
+    qd_field_location_t  section_body;                    // The message body: Data
+    qd_field_location_t  section_footer;                  // The footer
+    qd_field_location_t  field_user_id;                   // The string value of the user-id
+    qd_field_location_t  field_to;                        // The string value of the to field
+    qd_field_location_t  field_reply_to;                  // The string value of the reply_to field
+    qd_field_location_t  field_correlation_id;            // The string value of the correlation_id field
+    qd_field_location_t  body;                            // The body of the message
+    qd_buffer_t         *parse_buffer;
     unsigned char       *parse_cursor;
-    dx_message_depth_t   parse_depth;
-    dx_parsed_field_t   *parsed_delivery_annotations;
-} dx_message_content_t;
+    qd_message_depth_t   parse_depth;
+    qd_parsed_field_t   *parsed_delivery_annotations;
+} qd_message_content_t;
 
 typedef struct {
-    DEQ_LINKS(dx_message_t);   // Deque linkage that overlays the dx_message_t
-    dx_message_content_t *content;
-} dx_message_pvt_t;
+    DEQ_LINKS(qd_message_t);   // Deque linkage that overlays the qd_message_t
+    qd_message_content_t *content;
+} qd_message_pvt_t;
 
-ALLOC_DECLARE(dx_message_t);
-ALLOC_DECLARE(dx_message_content_t);
+ALLOC_DECLARE(qd_message_t);
+ALLOC_DECLARE(qd_message_content_t);
 
-#define MSG_CONTENT(m) (((dx_message_pvt_t*) m)->content)
+#define MSG_CONTENT(m) (((qd_message_pvt_t*) m)->content)
 
 #endif

@@ -56,7 +56,7 @@ class RouterEngine:
         self.domain         = "domain"
         self.router_adapter = router_adapter
         self.log_adapter    = LogAdapter("dispatch.router")
-        self.io_adapter     = IoAdapter(self, ("qdxrouter", "qdxhello"))
+        self.io_adapter     = IoAdapter(self, ("qdrouter", "qdhello"))
         self.max_routers    = max_routers
         self.id             = router_id
         self.area           = area
@@ -228,7 +228,7 @@ class RouterEngine:
         """
         app_props = {'opcode' : msg.get_opcode() }
         self.io_adapter.send(dest, app_props, msg.to_dict())
-        if "qdxhello" in dest:
+        if "qdhello" in dest:
             self.log(LOG_TRACE, "SENT: %r dest=%s" % (msg, dest))
         else:
             self.log(LOG_DEBUG, "SENT: %r dest=%s" % (msg, dest))

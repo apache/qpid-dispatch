@@ -26,7 +26,7 @@
 #include "config.h"
 
 static int            exit_with_sigint = 0;
-static dx_dispatch_t *dispatch;
+static qd_dispatch_t *dispatch;
 
 
 /**
@@ -44,17 +44,17 @@ static void thread_start_handler(void* context, int thread_id)
  */
 static void signal_handler(int signum)
 {
-    dx_server_signal(dispatch, signum);
+    qd_server_signal(dispatch, signum);
 }
 
 
 /**
  * This signal handler is called cleanly by one of the server's worker threads in
- * response to an earlier call to dx_server_signal.
+ * response to an earlier call to qd_server_signal.
  */
 static void server_signal_handler(void* context, int signum)
 {
-    dx_server_pause(dispatch);
+    qd_server_pause(dispatch);
 
     switch (signum) {
     case SIGINT:
@@ -63,7 +63,7 @@ static void server_signal_handler(void* context, int signum)
     case SIGQUIT:
     case SIGTERM:
         fflush(stdout);
-        dx_server_stop(dispatch);
+        qd_server_stop(dispatch);
         break;
 
     case SIGHUP:
@@ -73,15 +73,15 @@ static void server_signal_handler(void* context, int signum)
         break;
     }
 
-    dx_server_resume(dispatch);
+    qd_server_resume(dispatch);
 }
 
 
 static void startup(void *context)
 {
-    dx_server_pause(dispatch);
-    dx_dispatch_configure(dispatch);
-    dx_server_resume(dispatch);
+    qd_server_pause(dispatch);
+    qd_dispatch_configure(dispatch);
+    qd_server_resume(dispatch);
 }
 
 
@@ -117,23 +117,23 @@ int main(int argc, char **argv)
         }
     }
 
-    dx_log_set_mask(0xFFFFFFFE);
+    qd_log_set_mask(0xFFFFFFFE);
 
-    dispatch = dx_dispatch(config_path);
+    dispatch = qd_dispatch(config_path);
 
-    dx_server_set_signal_handler(dispatch, server_signal_handler, 0);
-    dx_server_set_start_handler(dispatch, thread_start_handler, 0);
+    qd_server_set_signal_handler(dispatch, server_signal_handler, 0);
+    qd_server_set_start_handler(dispatch, thread_start_handler, 0);
 
-    dx_timer_t *startup_timer = dx_timer(dispatch, startup, 0);
-    dx_timer_schedule(startup_timer, 0);
+    qd_timer_t *startup_timer = qd_timer(dispatch, startup, 0);
+    qd_timer_schedule(startup_timer, 0);
 
     signal(SIGHUP,  signal_handler);
     signal(SIGQUIT, signal_handler);
     signal(SIGTERM, signal_handler);
     signal(SIGINT,  signal_handler);
 
-    dx_server_run(dispatch);
-    dx_dispatch_free(dispatch);
+    qd_server_run(dispatch);
+    qd_dispatch_free(dispatch);
 
     if (exit_with_sigint) {
 	signal(SIGINT, SIG_DFL);

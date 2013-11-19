@@ -29,66 +29,66 @@
  * @{
  */
 
-typedef struct dx_agent_class_t dx_agent_class_t;
+typedef struct qd_agent_class_t qd_agent_class_t;
 
 
 /**
  * \brief Get Schema Data Handler
  *
- * @param context The handler context supplied in dx_agent_register.
+ * @param context The handler context supplied in qd_agent_register.
  */
-typedef void (*dx_agent_schema_cb_t)(void* context, void *correlator);
+typedef void (*qd_agent_schema_cb_t)(void* context, void *correlator);
 
 
 /**
  * \brief Query Handler
  *
- * @param context The handler context supplied in dx_agent_register.
+ * @param context The handler context supplied in qd_agent_register.
  * @param id The identifier of the instance being queried or NULL for all instances.
- * @param correlator The correlation handle to be used in calls to dx_agent_value_*
+ * @param correlator The correlation handle to be used in calls to qd_agent_value_*
  */
-typedef void (*dx_agent_query_cb_t)(void* context, const char *id, void *correlator);
+typedef void (*qd_agent_query_cb_t)(void* context, const char *id, void *correlator);
 
 
 /**
  * \brief Register a class/object-type with the agent.
  */
-dx_agent_class_t *dx_agent_register_class(dx_dispatch_t        *dx,
+qd_agent_class_t *qd_agent_register_class(qd_dispatch_t        *qd,
                                           const char           *fqname,
                                           void                 *context,
-                                          dx_agent_schema_cb_t  schema_handler,
-                                          dx_agent_query_cb_t   query_handler);
+                                          qd_agent_schema_cb_t  schema_handler,
+                                          qd_agent_query_cb_t   query_handler);
 
 /**
  * \brief Register an event-type with the agent.
  */
-dx_agent_class_t *dx_agent_register_event(dx_dispatch_t        *dx,
+qd_agent_class_t *qd_agent_register_event(qd_dispatch_t        *qd,
                                           const char           *fqname,
                                           void                 *context,
-                                          dx_agent_schema_cb_t  schema_handler);
+                                          qd_agent_schema_cb_t  schema_handler);
 
 /**
  *
  */
-void dx_agent_value_string(void *correlator, const char *key, const char *value);
-void dx_agent_value_uint(void *correlator, const char *key, uint64_t value);
-void dx_agent_value_null(void *correlator, const char *key);
-void dx_agent_value_boolean(void *correlator, const char *key, bool value);
-void dx_agent_value_binary(void *correlator, const char *key, const uint8_t *value, size_t len);
-void dx_agent_value_uuid(void *correlator, const char *key, const uint8_t *value);
-void dx_agent_value_timestamp(void *correlator, const char *key, uint64_t value);
-
-
-/**
- *
- */
-void dx_agent_value_complete(void *correlator, bool more);
+void qd_agent_value_string(void *correlator, const char *key, const char *value);
+void qd_agent_value_uint(void *correlator, const char *key, uint64_t value);
+void qd_agent_value_null(void *correlator, const char *key);
+void qd_agent_value_boolean(void *correlator, const char *key, bool value);
+void qd_agent_value_binary(void *correlator, const char *key, const uint8_t *value, size_t len);
+void qd_agent_value_uuid(void *correlator, const char *key, const uint8_t *value);
+void qd_agent_value_timestamp(void *correlator, const char *key, uint64_t value);
 
 
 /**
  *
  */
-void *dx_agent_raise_event(dx_dispatch_t *dx, dx_agent_class_t *event);
+void qd_agent_value_complete(void *correlator, bool more);
+
+
+/**
+ *
+ */
+void *qd_agent_raise_event(qd_dispatch_t *qd, qd_agent_class_t *event);
 
 
 /**

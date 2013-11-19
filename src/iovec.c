@@ -21,29 +21,29 @@
 #include <qpid/dispatch/alloc.h>
 #include <string.h>
 
-#define DX_IOVEC_MAX 64
+#define QD_IOVEC_MAX 64
 
-struct dx_iovec_t {
-    struct iovec  iov_array[DX_IOVEC_MAX];
+struct qd_iovec_t {
+    struct iovec  iov_array[QD_IOVEC_MAX];
     struct iovec *iov;
     int           iov_count;
 };
 
 
-ALLOC_DECLARE(dx_iovec_t);
-ALLOC_DEFINE(dx_iovec_t);
+ALLOC_DECLARE(qd_iovec_t);
+ALLOC_DEFINE(qd_iovec_t);
 
 
-dx_iovec_t *dx_iovec(int vector_count)
+qd_iovec_t *qd_iovec(int vector_count)
 {
-    dx_iovec_t *iov = new_dx_iovec_t();
+    qd_iovec_t *iov = new_qd_iovec_t();
     if (!iov)
         return 0;
 
-    memset(iov, 0, sizeof(dx_iovec_t));
+    memset(iov, 0, sizeof(qd_iovec_t));
 
     iov->iov_count = vector_count;
-    if (vector_count > DX_IOVEC_MAX)
+    if (vector_count > QD_IOVEC_MAX)
         iov->iov = (struct iovec*) malloc(sizeof(struct iovec) * vector_count);
     else
         iov->iov = &iov->iov_array[0];
@@ -52,7 +52,7 @@ dx_iovec_t *dx_iovec(int vector_count)
 }
 
 
-void dx_iovec_free(dx_iovec_t *iov)
+void qd_iovec_free(qd_iovec_t *iov)
 {
     if (!iov)
         return;
@@ -60,11 +60,11 @@ void dx_iovec_free(dx_iovec_t *iov)
     if (iov->iov && iov->iov != &iov->iov_array[0])
         free(iov->iov);
 
-    free_dx_iovec_t(iov);
+    free_qd_iovec_t(iov);
 }
 
 
-struct iovec *dx_iovec_array(dx_iovec_t *iov)
+struct iovec *qd_iovec_array(qd_iovec_t *iov)
 {
     if (!iov)
         return 0;
@@ -72,7 +72,7 @@ struct iovec *dx_iovec_array(dx_iovec_t *iov)
 }
 
 
-int dx_iovec_count(dx_iovec_t *iov)
+int qd_iovec_count(qd_iovec_t *iov)
 {
     if (!iov)
         return 0;

@@ -20,10 +20,10 @@
  */
 
 typedef enum {
-    DX_ERROR_NONE = 0,
-    DX_ERROR_NOT_FOUND,
-    DX_ERROR_ALREADY_EXISTS,
-    DX_ERROR_ALLOC
-} dx_error_t;
+    QD_ERROR_NONE = 0,
+    QD_ERROR_NOT_FOUND,
+    QD_ERROR_ALREADY_EXISTS,
+    QD_ERROR_ALLOC
+} qd_error_t;
 
 #endif

@@ -28,7 +28,7 @@
  * It shields the user from the fact that the field may be split across
  * one or more physical buffers.
  */
-typedef struct dx_field_iterator_t dx_field_iterator_t;
+typedef struct qd_field_iterator_t qd_field_iterator_t;
 
 /**
  * Iterator views allow the code traversing the field to see a transformed
@@ -92,14 +92,14 @@ typedef enum {
     ITER_VIEW_NODE_SPECIFIC,
     ITER_VIEW_ADDRESS_HASH,
     ITER_VIEW_NODE_HASH
-} dx_iterator_view_t;
+} qd_iterator_view_t;
 
 
 /**
  * Set the area and router names for the local router.  These are used to match
  * my-area and my-router in address fields.
  */
-void dx_field_iterator_set_address(const char *area, const char *router);
+void qd_field_iterator_set_address(const char *area, const char *router);
 
 /**
  * Create an iterator from a null-terminated string.
@@ -107,52 +107,52 @@ void dx_field_iterator_set_address(const char *area, const char *router);
  * The "text" string must stay intact for the whole life of the iterator.  The iterator
  * does not copy the string, it references it.
  */
-dx_field_iterator_t* dx_field_iterator_string(const char         *text,
-                                              dx_iterator_view_t  view);
+qd_field_iterator_t* qd_field_iterator_string(const char         *text,
+                                              qd_iterator_view_t  view);
 
-dx_field_iterator_t* dx_field_iterator_binary(const char         *text,
+qd_field_iterator_t* qd_field_iterator_binary(const char         *text,
                                               int                 length,
-                                              dx_iterator_view_t  view);
+                                              qd_iterator_view_t  view);
 
 
 /**
  * Create an iterator from a field in a buffer chain
  */
-dx_field_iterator_t *dx_field_iterator_buffer(dx_buffer_t        *buffer,
+qd_field_iterator_t *qd_field_iterator_buffer(qd_buffer_t        *buffer,
                                               int                 offset,
                                               int                 length,
-                                              dx_iterator_view_t  view);
+                                              qd_iterator_view_t  view);
 
 /**
  * Free an iterator
  */
-void dx_field_iterator_free(dx_field_iterator_t *iter);
+void qd_field_iterator_free(qd_field_iterator_t *iter);
 
 /**
  * Reset the iterator to the first octet and set a new view
  */
-void dx_field_iterator_reset(dx_field_iterator_t *iter);
+void qd_field_iterator_reset(qd_field_iterator_t *iter);
 
-void dx_field_iterator_reset_view(dx_field_iterator_t *iter,
-                                  dx_iterator_view_t   view);
+void qd_field_iterator_reset_view(qd_field_iterator_t *iter,
+                                  qd_iterator_view_t   view);
 
 /**
  * Return the current octet in the iterator's view and step to the next.
  */
-unsigned char dx_field_iterator_octet(dx_field_iterator_t *iter);
+unsigned char qd_field_iterator_octet(qd_field_iterator_t *iter);
 
 /**
  * Return true iff the iterator has no more octets in the view.
  */
-int dx_field_iterator_end(dx_field_iterator_t *iter);
+int qd_field_iterator_end(qd_field_iterator_t *iter);
 
 /**
  * Return a sub-iterator that equals the supplied iterator except that it
  * starts at the supplied iterator's current position.
  */
-dx_field_iterator_t *dx_field_iterator_sub(dx_field_iterator_t *iter, uint32_t length);
+qd_field_iterator_t *qd_field_iterator_sub(qd_field_iterator_t *iter, uint32_t length);
 
-void dx_field_iterator_advance(dx_field_iterator_t *iter, uint32_t length);
+void qd_field_iterator_advance(qd_field_iterator_t *iter, uint32_t length);
 
 /**
  * Return the remaining length (in octets) for the iterator.
@@ -164,12 +164,12 @@ void dx_field_iterator_advance(dx_field_iterator_t *iter, uint32_t length);
  * @param iter A field iterator
  * @return The number of octets remaining in the view (or more)
  */
-uint32_t dx_field_iterator_remaining(dx_field_iterator_t *iter);
+uint32_t qd_field_iterator_remaining(qd_field_iterator_t *iter);
 
 /**
  * Compare an input string to the iterator's view.  Return true iff they are equal.
  */
-int dx_field_iterator_equal(dx_field_iterator_t *iter, const unsigned char *string);
+int qd_field_iterator_equal(qd_field_iterator_t *iter, const unsigned char *string);
 
 /**
  * Return true iff the string matches the characters at the current location in the view.
@@ -177,12 +177,12 @@ int dx_field_iterator_equal(dx_field_iterator_t *iter, const unsigned char *stri
  * This function does not alter the position of the iterator if the prefix does not match,
  * if it matches, the prefix is consumed.
  */
-int dx_field_iterator_prefix(dx_field_iterator_t *iter, const char *prefix);
+int qd_field_iterator_prefix(qd_field_iterator_t *iter, const char *prefix);
 
 /**
  * Return a copy of the iterator's view.
  */
-unsigned char *dx_field_iterator_copy(dx_field_iterator_t *iter);
+unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter);
 
 /**
  * Return the contents of this iter into an iovec structure.  This is used in a
@@ -192,6 +192,6 @@ unsigned char *dx_field_iterator_copy(dx_field_iterator_t *iter);
  * @param iter A field iterator
  * @return An iovec structure that references the data in the iterator's buffers.
  */
-dx_iovec_t *dx_field_iterator_iovec(const dx_field_iterator_t *iter);
+qd_iovec_t *qd_field_iterator_iovec(const qd_field_iterator_t *iter);
 
 #endif

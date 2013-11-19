@@ -49,7 +49,7 @@ class NeighborEngine(object):
 
         if now - self.last_hello_time >= self.hello_interval:
             self.last_hello_time = now
-            self.container.send('amqp:/_local/qdxhello', MessageHELLO(None, self.id, self.area, self.hellos.keys()))
+            self.container.send('amqp:/_local/qdhello', MessageHELLO(None, self.id, self.area, self.hellos.keys()))
 
         if self.link_state_changed:
             self.link_state_changed = False

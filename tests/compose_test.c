@@ -86,34 +86,34 @@ static int vector0_length = 302;
 
 static char *test_compose_list_of_maps(void *context)
 {
-    dx_composed_field_t *field = dx_compose(DX_PERFORMATIVE_BODY_AMQP_VALUE, 0);
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 
-    dx_compose_start_list(field);
+    qd_compose_start_list(field);
 
-    dx_compose_start_map(field);
-    dx_compose_insert_string(field, "key001");
-    dx_compose_insert_uint(field, 10);
-    dx_compose_insert_string(field, "key002");
-    dx_compose_insert_uint(field, 11);
-    dx_compose_end_map(field);
+    qd_compose_start_map(field);
+    qd_compose_insert_string(field, "key001");
+    qd_compose_insert_uint(field, 10);
+    qd_compose_insert_string(field, "key002");
+    qd_compose_insert_uint(field, 11);
+    qd_compose_end_map(field);
 
     for (int j = 0; j < 9; j++) {
-        dx_compose_start_map(field);
-        dx_compose_insert_string(field, "key001");
-        dx_compose_insert_uint(field, 20);
-        dx_compose_insert_string(field, "key002");
-        dx_compose_insert_uint(field, 21);
-        dx_compose_end_map(field);
+        qd_compose_start_map(field);
+        qd_compose_insert_string(field, "key001");
+        qd_compose_insert_uint(field, 20);
+        qd_compose_insert_string(field, "key002");
+        qd_compose_insert_uint(field, 21);
+        qd_compose_end_map(field);
     }
 
-    dx_compose_end_list(field);
+    qd_compose_end_list(field);
 
-    dx_buffer_t *buf = DEQ_HEAD(field->buffers);
+    qd_buffer_t *buf = DEQ_HEAD(field->buffers);
 
-    if (dx_buffer_size(buf) != vector0_length) return "Incorrect Length of Buffer";
+    if (qd_buffer_size(buf) != vector0_length) return "Incorrect Length of Buffer";
 
     char *left  = vector0;
-    char *right = (char*) dx_buffer_base(buf);
+    char *right = (char*) qd_buffer_base(buf);
     int   idx;
 
     for (idx = 0; idx < vector0_length; idx++) {
@@ -122,7 +122,7 @@ static char *test_compose_list_of_maps(void *context)
         right++;
     }
 
-    dx_compose_free(field);
+    qd_compose_free(field);
     return 0;
 }
 
@@ -143,32 +143,32 @@ static int vector1_length = 69;
 
 static char *test_compose_nested_composites(void *context)
 {
-    dx_composed_field_t *field = dx_compose(DX_PERFORMATIVE_DELIVERY_ANNOTATIONS, 0);
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_DELIVERY_ANNOTATIONS, 0);
 
-    dx_compose_start_map(field);
+    qd_compose_start_map(field);
 
-    dx_compose_insert_string(field, "key001");
-    dx_compose_insert_uint(field, 10);
+    qd_compose_insert_string(field, "key001");
+    qd_compose_insert_uint(field, 10);
 
-    dx_compose_insert_string(field, "key002");
-    dx_compose_start_list(field);
+    qd_compose_insert_string(field, "key002");
+    qd_compose_start_list(field);
 
-    dx_compose_insert_string(field, "item1");
-    dx_compose_insert_string(field, "item2");
-    dx_compose_insert_string(field, "item3");
+    qd_compose_insert_string(field, "item1");
+    qd_compose_insert_string(field, "item2");
+    qd_compose_insert_string(field, "item3");
 
-    dx_compose_start_list(field);
-    dx_compose_end_list(field);
+    qd_compose_start_list(field);
+    qd_compose_end_list(field);
    
-    dx_compose_end_list(field);
-    dx_compose_end_map(field);
+    qd_compose_end_list(field);
+    qd_compose_end_map(field);
 
-    dx_buffer_t *buf = DEQ_HEAD(field->buffers);
+    qd_buffer_t *buf = DEQ_HEAD(field->buffers);
 
-    if (dx_buffer_size(buf) != vector1_length) return "Incorrect Length of Buffer";
+    if (qd_buffer_size(buf) != vector1_length) return "Incorrect Length of Buffer";
 
     char *left  = vector1;
-    char *right = (char*) dx_buffer_base(buf);
+    char *right = (char*) qd_buffer_base(buf);
     int   idx;
 
     for (idx = 0; idx < vector1_length; idx++) {
@@ -177,7 +177,7 @@ static char *test_compose_nested_composites(void *context)
         right++;
     }
 
-    dx_compose_free(field);
+    qd_compose_free(field);
     return 0;
 }
 
@@ -218,53 +218,53 @@ static int vector2_length = 139;
 
 static char *test_compose_scalars(void *context)
 {
-    dx_composed_field_t *field = dx_compose(DX_PERFORMATIVE_PROPERTIES, 0);
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
 
-    dx_compose_start_list(field);
+    qd_compose_start_list(field);
 
-    dx_compose_insert_null(field);
+    qd_compose_insert_null(field);
 
-    dx_compose_insert_bool(field, 0);
-    dx_compose_insert_bool(field, 1);
+    qd_compose_insert_bool(field, 0);
+    qd_compose_insert_bool(field, 1);
 
-    dx_compose_insert_uint(field, 0);
-    dx_compose_insert_uint(field, 1);
-    dx_compose_insert_uint(field, 255);
-    dx_compose_insert_uint(field, 256);
-    dx_compose_insert_uint(field, 0x10000000);
+    qd_compose_insert_uint(field, 0);
+    qd_compose_insert_uint(field, 1);
+    qd_compose_insert_uint(field, 255);
+    qd_compose_insert_uint(field, 256);
+    qd_compose_insert_uint(field, 0x10000000);
 
-    dx_compose_insert_ulong(field, 0);
-    dx_compose_insert_ulong(field, 1);
-    dx_compose_insert_ulong(field, 255);
-    dx_compose_insert_ulong(field, 256);
-    dx_compose_insert_ulong(field, 0x20000000);
+    qd_compose_insert_ulong(field, 0);
+    qd_compose_insert_ulong(field, 1);
+    qd_compose_insert_ulong(field, 255);
+    qd_compose_insert_ulong(field, 256);
+    qd_compose_insert_ulong(field, 0x20000000);
 
-    dx_compose_insert_int(field, 0);
-    dx_compose_insert_int(field, 1);
-    dx_compose_insert_int(field, -1);
-    dx_compose_insert_int(field, 255);
-    dx_compose_insert_int(field, 256);
+    qd_compose_insert_int(field, 0);
+    qd_compose_insert_int(field, 1);
+    qd_compose_insert_int(field, -1);
+    qd_compose_insert_int(field, 255);
+    qd_compose_insert_int(field, 256);
 
-    dx_compose_insert_long(field, 0);
-    dx_compose_insert_long(field, 1);
-    dx_compose_insert_long(field, -1);
-    dx_compose_insert_long(field, 255);
-    dx_compose_insert_long(field, 256);
+    qd_compose_insert_long(field, 0);
+    qd_compose_insert_long(field, 1);
+    qd_compose_insert_long(field, -1);
+    qd_compose_insert_long(field, 255);
+    qd_compose_insert_long(field, 256);
 
-    dx_compose_insert_timestamp(field, 0x0011223344556677);
-    dx_compose_insert_uuid(field, (uint8_t*) "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x00");
-    dx_compose_insert_binary(field, (uint8_t*) "\x00\x11", 2);
-    dx_compose_insert_string(field, "string");
-    dx_compose_insert_symbol(field, "symbol");
+    qd_compose_insert_timestamp(field, 0x0011223344556677);
+    qd_compose_insert_uuid(field, (uint8_t*) "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x00");
+    qd_compose_insert_binary(field, (uint8_t*) "\x00\x11", 2);
+    qd_compose_insert_string(field, "string");
+    qd_compose_insert_symbol(field, "symbol");
 
-    dx_compose_end_list(field);
+    qd_compose_end_list(field);
 
-    dx_buffer_t *buf = DEQ_HEAD(field->buffers);
+    qd_buffer_t *buf = DEQ_HEAD(field->buffers);
 
-    if (dx_buffer_size(buf) != vector2_length) return "Incorrect Length of Buffer";
+    if (qd_buffer_size(buf) != vector2_length) return "Incorrect Length of Buffer";
 
     char *left  = vector2;
-    char *right = (char*) dx_buffer_base(buf);
+    char *right = (char*) qd_buffer_base(buf);
     int   idx;
 
     for (idx = 0; idx < vector2_length; idx++) {
@@ -273,7 +273,7 @@ static char *test_compose_scalars(void *context)
         right++;
     }
 
-    dx_compose_free(field);
+    qd_compose_free(field);
     return 0;
 }
 
@@ -281,7 +281,7 @@ static char *test_compose_scalars(void *context)
 int compose_tests()
 {
     int result = 0;
-    dx_log_set_mask(LOG_NONE);
+    qd_log_set_mask(LOG_NONE);
 
     TEST_CASE(test_compose_list_of_maps, 0);
     TEST_CASE(test_compose_nested_composites, 0);

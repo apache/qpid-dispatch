@@ -27,24 +27,24 @@ static char fail_text[FAIL_TEXT_SIZE];
 
 static char* test_view_global_dns(void *context)
 {
-    dx_field_iterator_t *iter = dx_field_iterator_string("amqp://host/global/sub", ITER_VIEW_ALL);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "amqp://host/global/sub"))
+    qd_field_iterator_t *iter = qd_field_iterator_string("amqp://host/global/sub", ITER_VIEW_ALL);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "amqp://host/global/sub"))
         return "ITER_VIEW_ALL failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "global/sub"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "global/sub"))
         return "ITER_VIEW_NO_HOST failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_NODE_ID);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "global"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_NODE_ID);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "global"))
         return "ITER_VIEW_NODE_ID failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_NODE_SPECIFIC);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "sub"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_NODE_SPECIFIC);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "sub"))
         return "ITER_VIEW_NODE_SPECIFIC failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "Mglobal/sub"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "Mglobal/sub"))
         return "ITER_VIEW_ADDRESS_HASH failed";
 
     return 0;
@@ -53,24 +53,24 @@ static char* test_view_global_dns(void *context)
 
 static char* test_view_global_non_dns(void *context)
 {
-    dx_field_iterator_t *iter = dx_field_iterator_string("amqp:/global/sub", ITER_VIEW_ALL);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "amqp:/global/sub"))
+    qd_field_iterator_t *iter = qd_field_iterator_string("amqp:/global/sub", ITER_VIEW_ALL);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "amqp:/global/sub"))
         return "ITER_VIEW_ALL failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "global/sub"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "global/sub"))
         return "ITER_VIEW_NO_HOST failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_NODE_ID);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "global"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_NODE_ID);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "global"))
         return "ITER_VIEW_NODE_ID failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_NODE_SPECIFIC);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "sub"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_NODE_SPECIFIC);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "sub"))
         return "ITER_VIEW_NODE_SPECIFIC failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "Mglobal/sub"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "Mglobal/sub"))
         return "ITER_VIEW_ADDRESS_HASH failed";
 
     return 0;
@@ -79,24 +79,24 @@ static char* test_view_global_non_dns(void *context)
 
 static char* test_view_global_no_host(void *context)
 {
-    dx_field_iterator_t *iter = dx_field_iterator_string("global/sub", ITER_VIEW_ALL);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "global/sub"))
+    qd_field_iterator_t *iter = qd_field_iterator_string("global/sub", ITER_VIEW_ALL);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "global/sub"))
         return "ITER_VIEW_ALL failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "global/sub"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "global/sub"))
         return "ITER_VIEW_NO_HOST failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_NODE_ID);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "global"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_NODE_ID);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "global"))
         return "ITER_VIEW_NODE_ID failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_NODE_SPECIFIC);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "sub"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_NODE_SPECIFIC);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "sub"))
         return "ITER_VIEW_NODE_SPECIFIC failed";
 
-    dx_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "Mglobal/sub"))
+    qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "Mglobal/sub"))
         return "ITER_VIEW_ADDRESS_HASH failed";
 
     return 0;
@@ -124,9 +124,9 @@ static char* test_view_address_hash(void *context)
     int idx;
 
     for (idx = 0; cases[idx].addr; idx++) {
-        dx_field_iterator_t *iter = dx_field_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_HASH);
-        if (!dx_field_iterator_equal(iter, (unsigned char*) cases[idx].view)) {
-            char *got = (char*) dx_field_iterator_copy(iter);
+        qd_field_iterator_t *iter = qd_field_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_HASH);
+        if (!qd_field_iterator_equal(iter, (unsigned char*) cases[idx].view)) {
+            char *got = (char*) qd_field_iterator_copy(iter);
             snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
                      cases[idx].addr, cases[idx].view, got);
             return fail_text;
@@ -148,9 +148,9 @@ static char* test_view_node_hash(void *context)
     int idx;
 
     for (idx = 0; cases[idx].addr; idx++) {
-        dx_field_iterator_t *iter = dx_field_iterator_string(cases[idx].addr, ITER_VIEW_NODE_HASH);
-        if (!dx_field_iterator_equal(iter, (unsigned char*) cases[idx].view)) {
-            char *got = (char*) dx_field_iterator_copy(iter);
+        qd_field_iterator_t *iter = qd_field_iterator_string(cases[idx].addr, ITER_VIEW_NODE_HASH);
+        if (!qd_field_iterator_equal(iter, (unsigned char*) cases[idx].view)) {
+            char *got = (char*) qd_field_iterator_copy(iter);
             snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
                      cases[idx].addr, cases[idx].view, got);
             return fail_text;
@@ -165,7 +165,7 @@ int field_tests(void)
 {
     int result = 0;
 
-    dx_field_iterator_set_address("my-area", "my-router");
+    qd_field_iterator_set_address("my-area", "my-router");
 
     TEST_CASE(test_view_global_dns, 0);
     TEST_CASE(test_view_global_non_dns, 0);

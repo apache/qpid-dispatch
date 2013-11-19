@@ -21,51 +21,51 @@
 
 #include <qpid/dispatch/ctools.h>
 
-typedef struct dx_buffer_t dx_buffer_t;
+typedef struct qd_buffer_t qd_buffer_t;
 
-DEQ_DECLARE(dx_buffer_t, dx_buffer_list_t);
+DEQ_DECLARE(qd_buffer_t, qd_buffer_list_t);
 
-struct dx_buffer_t {
-    DEQ_LINKS(dx_buffer_t);
+struct qd_buffer_t {
+    DEQ_LINKS(qd_buffer_t);
     unsigned int size;
 };
 
 /**
  */
-void dx_buffer_set_size(size_t size);
+void qd_buffer_set_size(size_t size);
 
 /**
  */
-dx_buffer_t *dx_buffer(void);
+qd_buffer_t *qd_buffer(void);
 
 /**
  * @param buf A pointer to an allocated buffer
  */
-void dx_buffer_free(dx_buffer_t *buf);
+void qd_buffer_free(qd_buffer_t *buf);
 
 /**
  * @param buf A pointer to an allocated buffer
  * @return A pointer to the first octet in the buffer
  */
-unsigned char *dx_buffer_base(dx_buffer_t *buf);
+unsigned char *qd_buffer_base(qd_buffer_t *buf);
 
 /**
  * @param buf A pointer to an allocated buffer
  * @return A pointer to the first free octet in the buffer, the insert point for new data.
  */
-unsigned char *dx_buffer_cursor(dx_buffer_t *buf);
+unsigned char *qd_buffer_cursor(qd_buffer_t *buf);
 
 /**
  * @param buf A pointer to an allocated buffer
  * @return The number of octets in the buffer's free space, how many octets may be inserted.
  */
-size_t dx_buffer_capacity(dx_buffer_t *buf);
+size_t qd_buffer_capacity(qd_buffer_t *buf);
 
 /**
  * @param buf A pointer to an allocated buffer
  * @return The number of octets of data in the buffer
  */
-size_t dx_buffer_size(dx_buffer_t *buf);
+size_t qd_buffer_size(qd_buffer_t *buf);
 
 /**
  * Notify the buffer that octets have been inserted at the buffer's cursor.  This will advance the
@@ -74,6 +74,6 @@ size_t dx_buffer_size(dx_buffer_t *buf);
  * @param buf A pointer to an allocated buffer
  * @param len The number of octets that have been appended to the buffer
  */
-void dx_buffer_insert(dx_buffer_t *buf, size_t len);
+void qd_buffer_insert(qd_buffer_t *buf, size_t len);
 
 #endif

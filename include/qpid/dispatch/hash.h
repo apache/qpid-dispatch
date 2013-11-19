@@ -23,23 +23,23 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/error.h>
 
-typedef struct dx_hash_t        dx_hash_t;
-typedef struct dx_hash_handle_t dx_hash_handle_t;
+typedef struct qd_hash_t        qd_hash_t;
+typedef struct qd_hash_handle_t qd_hash_handle_t;
 
-dx_hash_t *dx_hash(int bucket_exponent, int batch_size, int value_is_const);
-void dx_hash_free(dx_hash_t *h);
+qd_hash_t *qd_hash(int bucket_exponent, int batch_size, int value_is_const);
+void qd_hash_free(qd_hash_t *h);
 
-size_t dx_hash_size(dx_hash_t *h);
-dx_error_t dx_hash_insert(dx_hash_t *h, dx_field_iterator_t *key, void *val, dx_hash_handle_t **handle);
-dx_error_t dx_hash_insert_const(dx_hash_t *h, dx_field_iterator_t *key, const void *val, dx_hash_handle_t **handle);
-dx_error_t dx_hash_retrieve(dx_hash_t *h, dx_field_iterator_t *key, void **val);
-dx_error_t dx_hash_retrieve_const(dx_hash_t *h, dx_field_iterator_t *key, const void **val);
-dx_error_t dx_hash_remove(dx_hash_t *h, dx_field_iterator_t *key);
+size_t qd_hash_size(qd_hash_t *h);
+qd_error_t qd_hash_insert(qd_hash_t *h, qd_field_iterator_t *key, void *val, qd_hash_handle_t **handle);
+qd_error_t qd_hash_insert_const(qd_hash_t *h, qd_field_iterator_t *key, const void *val, qd_hash_handle_t **handle);
+qd_error_t qd_hash_retrieve(qd_hash_t *h, qd_field_iterator_t *key, void **val);
+qd_error_t qd_hash_retrieve_const(qd_hash_t *h, qd_field_iterator_t *key, const void **val);
+qd_error_t qd_hash_remove(qd_hash_t *h, qd_field_iterator_t *key);
 
-void dx_hash_handle_free(dx_hash_handle_t *handle);
-const unsigned char *dx_hash_key_by_handle(const dx_hash_handle_t *handle);
-dx_error_t dx_hash_remove_by_handle(dx_hash_t *h, dx_hash_handle_t *handle);
-dx_error_t dx_hash_remove_by_handle2(dx_hash_t *h, dx_hash_handle_t *handle, unsigned char **key);
+void qd_hash_handle_free(qd_hash_handle_t *handle);
+const unsigned char *qd_hash_key_by_handle(const qd_hash_handle_t *handle);
+qd_error_t qd_hash_remove_by_handle(qd_hash_t *h, qd_hash_handle_t *handle);
+qd_error_t qd_hash_remove_by_handle2(qd_hash_t *h, qd_hash_handle_t *handle, unsigned char **key);
 
 
 #endif

@@ -21,16 +21,16 @@
 #include <qpid/dispatch/alloc.h>
 #include <assert.h>
 
-#define DX_BITMASK_LONGS 16
-#define DX_BITMASK_BITS  (DX_BITMASK_LONGS * 64)
+#define QD_BITMASK_LONGS 16
+#define QD_BITMASK_BITS  (QD_BITMASK_LONGS * 64)
 
-struct dx_bitmask_t {
-    uint64_t array[DX_BITMASK_LONGS];
+struct qd_bitmask_t {
+    uint64_t array[QD_BITMASK_LONGS];
     int      first_set;
 };
 
-ALLOC_DECLARE(dx_bitmask_t);
-ALLOC_DEFINE(dx_bitmask_t);
+ALLOC_DECLARE(qd_bitmask_t);
+ALLOC_DEFINE(qd_bitmask_t);
 
 #define MASK_INDEX(num)  (num / 64)
 #define MASK_ONEHOT(num) (((uint64_t) 1) << (num % 64))
@@ -38,74 +38,74 @@ ALLOC_DEFINE(dx_bitmask_t);
 #define FIRST_UNKNOWN -2
 
 
-int dx_bitmask_width()
+int qd_bitmask_width()
 {
-    return DX_BITMASK_BITS;
+    return QD_BITMASK_BITS;
 }
 
 
-dx_bitmask_t *dx_bitmask(int initial)
+qd_bitmask_t *qd_bitmask(int initial)
 {
-    dx_bitmask_t *b = new_dx_bitmask_t();
+    qd_bitmask_t *b = new_qd_bitmask_t();
     if (initial)
-        dx_bitmask_set_all(b);
+        qd_bitmask_set_all(b);
     else
-        dx_bitmask_clear_all(b);
+        qd_bitmask_clear_all(b);
     return b;
 }
 
 
-void dx_bitmask_free(dx_bitmask_t *b)
+void qd_bitmask_free(qd_bitmask_t *b)
 {
-    free_dx_bitmask_t(b);
+    free_qd_bitmask_t(b);
 }
 
 
-void dx_bitmask_set_all(dx_bitmask_t *b)
+void qd_bitmask_set_all(qd_bitmask_t *b)
 {
-    for (int i = 0; i < DX_BITMASK_LONGS; i++)
+    for (int i = 0; i < QD_BITMASK_LONGS; i++)
         b->array[i] = 0xFFFFFFFFFFFFFFFF;
     b->first_set = 0;
 }
 
 
-void dx_bitmask_clear_all(dx_bitmask_t *b)
+void qd_bitmask_clear_all(qd_bitmask_t *b)
 {
-    for (int i = 0; i < DX_BITMASK_LONGS; i++)
+    for (int i = 0; i < QD_BITMASK_LONGS; i++)
         b->array[i] = 0;
     b->first_set = FIRST_NONE;
 }
 
 
-void dx_bitmask_set_bit(dx_bitmask_t *b, int bitnum)
+void qd_bitmask_set_bit(qd_bitmask_t *b, int bitnum)
 {
-    assert(bitnum < DX_BITMASK_BITS);
+    assert(bitnum < QD_BITMASK_BITS);
     b->array[MASK_INDEX(bitnum)] |= MASK_ONEHOT(bitnum);
     if (b->first_set > bitnum || b->first_set < 0)
         b->first_set = bitnum;
 }
 
 
-void dx_bitmask_clear_bit(dx_bitmask_t *b, int bitnum)
+void qd_bitmask_clear_bit(qd_bitmask_t *b, int bitnum)
 {
-    assert(bitnum < DX_BITMASK_BITS);
+    assert(bitnum < QD_BITMASK_BITS);
     b->array[MASK_INDEX(bitnum)] &= ~(MASK_ONEHOT(bitnum));
     if (b->first_set == bitnum)
         b->first_set = FIRST_UNKNOWN;
 }
 
 
-int dx_bitmask_value(dx_bitmask_t *b, int bitnum)
+int qd_bitmask_value(qd_bitmask_t *b, int bitnum)
 {
     return (b->array[MASK_INDEX(bitnum)] & MASK_ONEHOT(bitnum)) ? 1 : 0;
 }
 
 
-int dx_bitmask_first_set(dx_bitmask_t *b, int *bitnum)
+int qd_bitmask_first_set(qd_bitmask_t *b, int *bitnum)
 {
     if (b->first_set == FIRST_UNKNOWN) {
         b->first_set = FIRST_NONE;
-        for (int i = 0; i < DX_BITMASK_LONGS; i++)
+        for (int i = 0; i < QD_BITMASK_LONGS; i++)
             if (b->array[i]) {
                 for (int j = 0; j < 64; j++)
                     if ((((uint64_t) 1) << j) & b->array[i]) {

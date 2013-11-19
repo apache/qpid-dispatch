@@ -28,9 +28,9 @@
 #define LOG_ERROR    0x00000020
 #define LOG_CRITICAL 0x00000040
 
-void dx_log_impl(const char *module, int cls, const char *file, int line, const char *fmt, ...);
-#define dx_log(m, c, f, ...) dx_log_impl(m, c, __FILE__, __LINE__, f , ##__VA_ARGS__)
+void qd_log_impl(const char *module, int cls, const char *file, int line, const char *fmt, ...);
+#define qd_log(m, c, f, ...) qd_log_impl(m, c, __FILE__, __LINE__, f , ##__VA_ARGS__)
 
-void dx_log_set_mask(int mask);
+void qd_log_set_mask(int mask);
 
 #endif

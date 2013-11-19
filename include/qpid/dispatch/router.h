@@ -24,29 +24,29 @@
 #include <qpid/dispatch/iterator.h>
 #include <stdbool.h>
 
-typedef struct dx_address_t dx_address_t;
+typedef struct qd_address_t qd_address_t;
 
 
-typedef void (*dx_router_message_cb)(void *context, dx_message_t *msg, int link_id);
+typedef void (*qd_router_message_cb)(void *context, qd_message_t *msg, int link_id);
 
-const char *dx_router_id(const dx_dispatch_t *dx);
+const char *qd_router_id(const qd_dispatch_t *qd);
 
-dx_address_t *dx_router_register_address(dx_dispatch_t        *dx,
+qd_address_t *qd_router_register_address(qd_dispatch_t        *qd,
                                          const char           *address,
-                                         dx_router_message_cb  handler,
+                                         qd_router_message_cb  handler,
                                          void                 *context);
 
-void dx_router_unregister_address(dx_address_t *address);
+void qd_router_unregister_address(qd_address_t *address);
 
 
-void dx_router_send(dx_dispatch_t       *dx,
-                    dx_field_iterator_t *address,
-                    dx_message_t        *msg);
+void qd_router_send(qd_dispatch_t       *qd,
+                    qd_field_iterator_t *address,
+                    qd_message_t        *msg);
 
-void dx_router_send2(dx_dispatch_t *dx,
+void qd_router_send2(qd_dispatch_t *qd,
                      const char    *address,
-                     dx_message_t  *msg);
+                     qd_message_t  *msg);
 
-void dx_router_build_node_list(dx_dispatch_t *dx, dx_composed_field_t *field);
+void qd_router_build_node_list(qd_dispatch_t *qd, qd_composed_field_t *field);
 
 #endif

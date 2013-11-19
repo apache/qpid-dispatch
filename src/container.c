@@ -42,83 +42,83 @@ static bool pn_link_get_drain(pn_link_t *link)
 
 static char *module="CONTAINER";
 
-struct dx_node_t {
-    dx_container_t       *container;
-    const dx_node_type_t *ntype;
+struct qd_node_t {
+    qd_container_t       *container;
+    const qd_node_type_t *ntype;
     char                 *name;
     void                 *context;
-    dx_dist_mode_t        supported_dist;
-    dx_lifetime_policy_t  life_policy;
+    qd_dist_mode_t        supported_dist;
+    qd_lifetime_policy_t  life_policy;
 };
 
-ALLOC_DECLARE(dx_node_t);
-ALLOC_DEFINE(dx_node_t);
-ALLOC_DEFINE(dx_link_item_t);
+ALLOC_DECLARE(qd_node_t);
+ALLOC_DEFINE(qd_node_t);
+ALLOC_DEFINE(qd_link_item_t);
 
 
-struct dx_link_t {
+struct qd_link_t {
     pn_link_t *pn_link;
     void      *context;
-    dx_node_t *node;
+    qd_node_t *node;
     bool       drain_mode;
 };
 
-ALLOC_DECLARE(dx_link_t);
-ALLOC_DEFINE(dx_link_t);
+ALLOC_DECLARE(qd_link_t);
+ALLOC_DEFINE(qd_link_t);
 
 
-struct dx_delivery_t {
+struct qd_delivery_t {
     pn_delivery_t *pn_delivery;
-    dx_delivery_t *peer;
+    qd_delivery_t *peer;
     void          *context;
     uint64_t       disposition;
-    dx_link_t     *link;
+    qd_link_t     *link;
 };
 
-ALLOC_DECLARE(dx_delivery_t);
-ALLOC_DEFINE(dx_delivery_t);
+ALLOC_DECLARE(qd_delivery_t);
+ALLOC_DEFINE(qd_delivery_t);
 
 
-typedef struct dxc_node_type_t {
-    DEQ_LINKS(struct dxc_node_type_t);
-    const dx_node_type_t *ntype;
-} dxc_node_type_t;
-DEQ_DECLARE(dxc_node_type_t, dxc_node_type_list_t);
+typedef struct qdc_node_type_t {
+    DEQ_LINKS(struct qdc_node_type_t);
+    const qd_node_type_t *ntype;
+} qdc_node_type_t;
+DEQ_DECLARE(qdc_node_type_t, qdc_node_type_list_t);
 
-static int DX_CONTAINER_CLASS_CONTAINER = 1;
-static int DX_CONTAINER_CLASS_NODE_TYPE = 2;
-static int DX_CONTAINER_CLASS_NODE      = 3;
+static int QD_CONTAINER_CLASS_CONTAINER = 1;
+static int QD_CONTAINER_CLASS_NODE_TYPE = 2;
+static int QD_CONTAINER_CLASS_NODE      = 3;
 
 typedef struct container_class_t {
-    dx_container_t *container;
+    qd_container_t *container;
     int             class_id;
 } container_class_t;
 
-struct dx_container_t {
-    dx_dispatch_t        *dx;
-    dx_server_t          *server;
-    dx_hash_t            *node_type_map;
-    dx_hash_t            *node_map;
+struct qd_container_t {
+    qd_dispatch_t        *qd;
+    qd_server_t          *server;
+    qd_hash_t            *node_type_map;
+    qd_hash_t            *node_map;
     sys_mutex_t          *lock;
-    dx_node_t            *default_node;
-    dxc_node_type_list_t  node_type_list;
-    dx_agent_class_t     *class_container;
-    dx_agent_class_t     *class_node_type;
-    dx_agent_class_t     *class_node;
+    qd_node_t            *default_node;
+    qdc_node_type_list_t  node_type_list;
+    qd_agent_class_t     *class_container;
+    qd_agent_class_t     *class_node_type;
+    qd_agent_class_t     *class_node;
 };
 
-static void setup_outgoing_link(dx_container_t *container, pn_link_t *pn_link)
+static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
 {
     sys_mutex_lock(container->lock);
-    dx_node_t  *node = 0;
+    qd_node_t  *node = 0;
     const char *source = pn_terminus_get_address(pn_link_remote_source(pn_link));
-    dx_field_iterator_t *iter;
+    qd_field_iterator_t *iter;
     // TODO - Extract the name from the structured source
 
     if (source) {
-        iter   = dx_field_iterator_string(source, ITER_VIEW_NODE_ID);
-        dx_hash_retrieve(container->node_map, iter, (void*) &node);
-        dx_field_iterator_free(iter);
+        iter   = qd_field_iterator_string(source, ITER_VIEW_NODE_ID);
+        qd_hash_retrieve(container->node_map, iter, (void*) &node);
+        qd_field_iterator_free(iter);
     }
     sys_mutex_unlock(container->lock);
 
@@ -133,7 +133,7 @@ static void setup_outgoing_link(dx_container_t *container, pn_link_t *pn_link)
         }
     }
 
-    dx_link_t *link = new_dx_link_t();
+    qd_link_t *link = new_qd_link_t();
     if (!link) {
         pn_link_close(pn_link);
         return;
@@ -149,18 +149,18 @@ static void setup_outgoing_link(dx_container_t *container, pn_link_t *pn_link)
 }
 
 
-static void setup_incoming_link(dx_container_t *container, pn_link_t *pn_link)
+static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
 {
     sys_mutex_lock(container->lock);
-    dx_node_t   *node = 0;
+    qd_node_t   *node = 0;
     const char  *target = pn_terminus_get_address(pn_link_remote_target(pn_link));
-    dx_field_iterator_t *iter;
+    qd_field_iterator_t *iter;
     // TODO - Extract the name from the structured target
 
     if (target) {
-        iter   = dx_field_iterator_string(target, ITER_VIEW_NODE_ID);
-        dx_hash_retrieve(container->node_map, iter, (void*) &node);
-        dx_field_iterator_free(iter);
+        iter   = qd_field_iterator_string(target, ITER_VIEW_NODE_ID);
+        qd_hash_retrieve(container->node_map, iter, (void*) &node);
+        qd_field_iterator_free(iter);
     }
     sys_mutex_unlock(container->lock);
 
@@ -175,7 +175,7 @@ static void setup_incoming_link(dx_container_t *container, pn_link_t *pn_link)
         }
     }
 
-    dx_link_t *link = new_dx_link_t();
+    qd_link_t *link = new_qd_link_t();
     if (!link) {
         pn_link_close(pn_link);
         return;
@@ -193,11 +193,11 @@ static void setup_incoming_link(dx_container_t *container, pn_link_t *pn_link)
 
 static int do_writable(pn_link_t *pn_link)
 {
-    dx_link_t *link = (dx_link_t*) pn_link_get_context(pn_link);
+    qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
     if (!link)
         return 0;
 
-    dx_node_t *node = link->node;
+    qd_node_t *node = link->node;
     if (!node)
         return 0;
 
@@ -208,14 +208,14 @@ static int do_writable(pn_link_t *pn_link)
 static void do_receive(pn_delivery_t *pnd)
 {
     pn_link_t     *pn_link  = pn_delivery_link(pnd);
-    dx_link_t     *link     = (dx_link_t*) pn_link_get_context(pn_link);
-    dx_delivery_t *delivery = (dx_delivery_t*) pn_delivery_get_context(pnd);
+    qd_link_t     *link     = (qd_link_t*) pn_link_get_context(pn_link);
+    qd_delivery_t *delivery = (qd_delivery_t*) pn_delivery_get_context(pnd);
 
     if (link) {
-        dx_node_t *node = link->node;
+        qd_node_t *node = link->node;
         if (node) {
             if (!delivery) {
-                delivery = new_dx_delivery_t();
+                delivery = new_qd_delivery_t();
                 delivery->pn_delivery = pnd;
                 delivery->peer        = 0;
                 delivery->context     = 0;
@@ -242,11 +242,11 @@ static void do_receive(pn_delivery_t *pnd)
 static void do_updated(pn_delivery_t *pnd)
 {
     pn_link_t     *pn_link  = pn_delivery_link(pnd);
-    dx_link_t     *link     = (dx_link_t*) pn_link_get_context(pn_link);
-    dx_delivery_t *delivery = (dx_delivery_t*) pn_delivery_get_context(pnd);
+    qd_link_t     *link     = (qd_link_t*) pn_link_get_context(pn_link);
+    qd_delivery_t *delivery = (qd_delivery_t*) pn_delivery_get_context(pnd);
 
     if (link && delivery) {
-        dx_node_t *node = link->node;
+        qd_node_t *node = link->node;
         if (node)
             node->ntype->disp_handler(node->context, link, delivery);
     }
@@ -261,12 +261,12 @@ static int close_handler(void* unused, pn_connection_t *conn)
     //
     pn_link_t *pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE);
     while (pn_link) {
-        dx_link_t *link = (dx_link_t*) pn_link_get_context(pn_link);
-        dx_node_t *node = link->node;
+        qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
+        qd_node_t *node = link->node;
         if (node && link)
             node->ntype->link_detach_handler(node->context, link, 0);
         pn_link_close(pn_link);
-        free_dx_link_t(link);
+        free_qd_link_t(link);
         pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE);
     }
 
@@ -283,7 +283,7 @@ static int close_handler(void* unused, pn_connection_t *conn)
 }
 
 
-static int process_handler(dx_container_t *container, void* unused, pn_connection_t *conn)
+static int process_handler(qd_container_t *container, void* unused, pn_connection_t *conn)
 {
     pn_session_t    *ssn;
     pn_link_t       *pn_link;
@@ -355,8 +355,8 @@ static int process_handler(dx_container_t *container, void* unused, pn_connectio
     // teardown any terminating links
     pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
     while (pn_link) {
-        dx_link_t *link = (dx_link_t*) pn_link_get_context(pn_link);
-        dx_node_t *node = link->node;
+        qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
+        qd_node_t *node = link->node;
         if (node)
             node->ntype->link_detach_handler(node->context, link, 1); // TODO - get 'closed' from detach message
         pn_link_close(pn_link);
@@ -382,9 +382,9 @@ static int process_handler(dx_container_t *container, void* unused, pn_connectio
 }
 
 
-static void open_handler(dx_container_t *container, dx_connection_t *conn, dx_direction_t dir)
+static void open_handler(qd_container_t *container, qd_connection_t *conn, qd_direction_t dir)
 {
-    const dx_node_type_t *nt;
+    const qd_node_type_t *nt;
 
     //
     // Note the locking structure in this function.  Generally this would be unsafe, but since
@@ -392,14 +392,14 @@ static void open_handler(dx_container_t *container, dx_connection_t *conn, dx_di
     // this usage is safe in this case.
     //
     sys_mutex_lock(container->lock);
-    dxc_node_type_t *nt_item = DEQ_HEAD(container->node_type_list);
+    qdc_node_type_t *nt_item = DEQ_HEAD(container->node_type_list);
     sys_mutex_unlock(container->lock);
 
-    pn_connection_open(dx_connection_pn(conn));
+    pn_connection_open(qd_connection_pn(conn));
 
     while (nt_item) {
         nt = nt_item->ntype;
-        if (dir == DX_INCOMING) {
+        if (dir == QD_INCOMING) {
             if (nt->inbound_conn_open_handler)
                 nt->inbound_conn_open_handler(nt->type_context, conn);
         } else {
@@ -414,16 +414,16 @@ static void open_handler(dx_container_t *container, dx_connection_t *conn, dx_di
 }
 
 
-static int handler(void *handler_context, void *conn_context, dx_conn_event_t event, dx_connection_t *dx_conn)
+static int handler(void *handler_context, void *conn_context, qd_conn_event_t event, qd_connection_t *qd_conn)
 {
-    dx_container_t  *container = (dx_container_t*) handler_context;
-    pn_connection_t *conn      = dx_connection_pn(dx_conn);
+    qd_container_t  *container = (qd_container_t*) handler_context;
+    pn_connection_t *conn      = qd_connection_pn(qd_conn);
 
     switch (event) {
-    case DX_CONN_EVENT_LISTENER_OPEN:  open_handler(container, dx_conn, DX_INCOMING);   break;
-    case DX_CONN_EVENT_CONNECTOR_OPEN: open_handler(container, dx_conn, DX_OUTGOING);   break;
-    case DX_CONN_EVENT_CLOSE:          return close_handler(conn_context, conn);
-    case DX_CONN_EVENT_PROCESS:        return process_handler(container, conn_context, conn);
+    case QD_CONN_EVENT_LISTENER_OPEN:  open_handler(container, qd_conn, QD_INCOMING);   break;
+    case QD_CONN_EVENT_CONNECTOR_OPEN: open_handler(container, qd_conn, QD_OUTGOING);   break;
+    case QD_CONN_EVENT_CLOSE:          return close_handler(conn_context, conn);
+    case QD_CONN_EVENT_PROCESS:        return process_handler(container, conn_context, conn);
     }
 
     return 0;
@@ -439,66 +439,66 @@ static void container_query_handler(void* context, const char *id, void *correla
 {
     container_class_t *cls = (container_class_t*) context;
 
-    if (cls->class_id == DX_CONTAINER_CLASS_CONTAINER) {
-        dx_agent_value_uint(correlator, "node_type_count", dx_hash_size(cls->container->node_type_map));
-        dx_agent_value_uint(correlator, "node_count",      dx_hash_size(cls->container->node_map));
+    if (cls->class_id == QD_CONTAINER_CLASS_CONTAINER) {
+        qd_agent_value_uint(correlator, "node_type_count", qd_hash_size(cls->container->node_type_map));
+        qd_agent_value_uint(correlator, "node_count",      qd_hash_size(cls->container->node_map));
         if (cls->container->default_node)
-            dx_agent_value_string(correlator, "default_node_type", cls->container->default_node->ntype->type_name);
+            qd_agent_value_string(correlator, "default_node_type", cls->container->default_node->ntype->type_name);
         else
-            dx_agent_value_null(correlator, "default_node_type");
-        dx_agent_value_complete(correlator, false);
+            qd_agent_value_null(correlator, "default_node_type");
+        qd_agent_value_complete(correlator, false);
 
-    } else if (cls->class_id == DX_CONTAINER_CLASS_NODE_TYPE) {
+    } else if (cls->class_id == QD_CONTAINER_CLASS_NODE_TYPE) {
 
-    } else if (cls->class_id == DX_CONTAINER_CLASS_NODE) {
+    } else if (cls->class_id == QD_CONTAINER_CLASS_NODE) {
 
     }
 }
 
 
-dx_agent_class_t *setup_class(dx_container_t *container, const char *fqname, int id)
+qd_agent_class_t *setup_class(qd_container_t *container, const char *fqname, int id)
 {
     container_class_t *cls = NEW(container_class_t);
     cls->container = container;
     cls->class_id  = id;
 
-    return dx_agent_register_class(container->dx, fqname, cls,
+    return qd_agent_register_class(container->qd, fqname, cls,
                                    container_schema_handler,
                                    container_query_handler);
 }
 
 
-dx_container_t *dx_container(dx_dispatch_t *dx)
+qd_container_t *qd_container(qd_dispatch_t *qd)
 {
-    dx_container_t *container = NEW(dx_container_t);
+    qd_container_t *container = NEW(qd_container_t);
 
-    container->dx            = dx;
-    container->server        = dx->server;
-    container->node_type_map = dx_hash(6,  4, 1);  // 64 buckets, item batches of 4
-    container->node_map      = dx_hash(10, 32, 0); // 1K buckets, item batches of 32
+    container->qd            = qd;
+    container->server        = qd->server;
+    container->node_type_map = qd_hash(6,  4, 1);  // 64 buckets, item batches of 4
+    container->node_map      = qd_hash(10, 32, 0); // 1K buckets, item batches of 32
     container->lock          = sys_mutex();
     container->default_node  = 0;
     DEQ_INIT(container->node_type_list);
 
-    dx_log(module, LOG_TRACE, "Container Initializing");
-    dx_server_set_conn_handler(dx, handler, container);
+    qd_log(module, LOG_TRACE, "Container Initializing");
+    qd_server_set_conn_handler(qd, handler, container);
 
     return container;
 }
 
 
-void dx_container_setup_agent(dx_dispatch_t *dx)
+void qd_container_setup_agent(qd_dispatch_t *qd)
 {
-    dx->container->class_container =
-        setup_class(dx->container, "org.apache.qpid.dispatch.container", DX_CONTAINER_CLASS_CONTAINER);
-    dx->container->class_node_type =
-        setup_class(dx->container, "org.apache.qpid.dispatch.container.node_type", DX_CONTAINER_CLASS_NODE_TYPE);
-    dx->container->class_node =
-        setup_class(dx->container, "org.apache.qpid.dispatch.container.node", DX_CONTAINER_CLASS_NODE);
+    qd->container->class_container =
+        setup_class(qd->container, "org.apache.qpid.dispatch.container", QD_CONTAINER_CLASS_CONTAINER);
+    qd->container->class_node_type =
+        setup_class(qd->container, "org.apache.qpid.dispatch.container.node_type", QD_CONTAINER_CLASS_NODE_TYPE);
+    qd->container->class_node =
+        setup_class(qd->container, "org.apache.qpid.dispatch.container.node", QD_CONTAINER_CLASS_NODE);
 }
 
 
-void dx_container_free(dx_container_t *container)
+void qd_container_free(qd_container_t *container)
 {
     // TODO - Free the nodes
     // TODO - Free the node types
@@ -507,62 +507,62 @@ void dx_container_free(dx_container_t *container)
 }
 
 
-int dx_container_register_node_type(dx_dispatch_t *dx, const dx_node_type_t *nt)
+int qd_container_register_node_type(qd_dispatch_t *qd, const qd_node_type_t *nt)
 {
-    dx_container_t *container = dx->container;
+    qd_container_t *container = qd->container;
 
     int result;
-    dx_field_iterator_t *iter = dx_field_iterator_string(nt->type_name, ITER_VIEW_ALL);
-    dxc_node_type_t     *nt_item = NEW(dxc_node_type_t);
+    qd_field_iterator_t *iter = qd_field_iterator_string(nt->type_name, ITER_VIEW_ALL);
+    qdc_node_type_t     *nt_item = NEW(qdc_node_type_t);
     DEQ_ITEM_INIT(nt_item);
     nt_item->ntype = nt;
 
     sys_mutex_lock(container->lock);
-    result = dx_hash_insert_const(container->node_type_map, iter, nt, 0);
+    result = qd_hash_insert_const(container->node_type_map, iter, nt, 0);
     DEQ_INSERT_TAIL(container->node_type_list, nt_item);
     sys_mutex_unlock(container->lock);
 
-    dx_field_iterator_free(iter);
+    qd_field_iterator_free(iter);
     if (result < 0)
         return result;
-    dx_log(module, LOG_TRACE, "Node Type Registered - %s", nt->type_name);
+    qd_log(module, LOG_TRACE, "Node Type Registered - %s", nt->type_name);
 
     return 0;
 }
 
 
-dx_node_t *dx_container_set_default_node_type(dx_dispatch_t        *dx,
-                                              const dx_node_type_t *nt,
+qd_node_t *qd_container_set_default_node_type(qd_dispatch_t        *qd,
+                                              const qd_node_type_t *nt,
                                               void                 *context,
-                                              dx_dist_mode_t        supported_dist)
+                                              qd_dist_mode_t        supported_dist)
 {
-    dx_container_t *container = dx->container;
+    qd_container_t *container = qd->container;
 
     if (container->default_node)
-        dx_container_destroy_node(container->default_node);
+        qd_container_destroy_node(container->default_node);
 
     if (nt) {
-        container->default_node = dx_container_create_node(dx, nt, 0, context, supported_dist, DX_LIFE_PERMANENT);
-        dx_log(module, LOG_TRACE, "Node of type '%s' installed as default node", nt->type_name);
+        container->default_node = qd_container_create_node(qd, nt, 0, context, supported_dist, QD_LIFE_PERMANENT);
+        qd_log(module, LOG_TRACE, "Node of type '%s' installed as default node", nt->type_name);
     } else {
         container->default_node = 0;
-        dx_log(module, LOG_TRACE, "Default node removed");
+        qd_log(module, LOG_TRACE, "Default node removed");
     }
 
     return container->default_node;
 }
 
 
-dx_node_t *dx_container_create_node(dx_dispatch_t        *dx,
-                                    const dx_node_type_t *nt,
+qd_node_t *qd_container_create_node(qd_dispatch_t        *qd,
+                                    const qd_node_type_t *nt,
                                     const char           *name,
                                     void                 *context,
-                                    dx_dist_mode_t        supported_dist,
-                                    dx_lifetime_policy_t  life_policy)
+                                    qd_dist_mode_t        supported_dist,
+                                    qd_lifetime_policy_t  life_policy)
 {
-    dx_container_t *container = dx->container;
+    qd_container_t *container = qd->container;
     int result;
-    dx_node_t *node = new_dx_node_t();
+    qd_node_t *node = new_qd_node_t();
     if (!node)
         return 0;
 
@@ -574,13 +574,13 @@ dx_node_t *dx_container_create_node(dx_dispatch_t        *dx,
     node->life_policy    = life_policy;
 
     if (name) {
-        dx_field_iterator_t *iter = dx_field_iterator_string(name, ITER_VIEW_ALL);
+        qd_field_iterator_t *iter = qd_field_iterator_string(name, ITER_VIEW_ALL);
         sys_mutex_lock(container->lock);
-        result = dx_hash_insert(container->node_map, iter, node, 0);
+        result = qd_hash_insert(container->node_map, iter, node, 0);
         sys_mutex_unlock(container->lock);
-        dx_field_iterator_free(iter);
+        qd_field_iterator_free(iter);
         if (result < 0) {
-            free_dx_node_t(node);
+            free_qd_node_t(node);
             return 0;
         }
 
@@ -589,53 +589,53 @@ dx_node_t *dx_container_create_node(dx_dispatch_t        *dx,
     }
 
     if (name)
-        dx_log(module, LOG_TRACE, "Node of type '%s' created with name '%s'", nt->type_name, name);
+        qd_log(module, LOG_TRACE, "Node of type '%s' created with name '%s'", nt->type_name, name);
 
     return node;
 }
 
 
-void dx_container_destroy_node(dx_node_t *node)
+void qd_container_destroy_node(qd_node_t *node)
 {
-    dx_container_t *container = node->container;
+    qd_container_t *container = node->container;
 
     if (node->name) {
-        dx_field_iterator_t *iter = dx_field_iterator_string(node->name, ITER_VIEW_ALL);
+        qd_field_iterator_t *iter = qd_field_iterator_string(node->name, ITER_VIEW_ALL);
         sys_mutex_lock(container->lock);
-        dx_hash_remove(container->node_map, iter);
+        qd_hash_remove(container->node_map, iter);
         sys_mutex_unlock(container->lock);
-        dx_field_iterator_free(iter);
+        qd_field_iterator_free(iter);
         free(node->name);
     }
 
-    free_dx_node_t(node);
+    free_qd_node_t(node);
 }
 
 
-void dx_container_node_set_context(dx_node_t *node, void *node_context)
+void qd_container_node_set_context(qd_node_t *node, void *node_context)
 {
     node->context = node_context;
 }
 
 
-dx_dist_mode_t dx_container_node_get_dist_modes(const dx_node_t *node)
+qd_dist_mode_t qd_container_node_get_dist_modes(const qd_node_t *node)
 {
     return node->supported_dist;
 }
 
 
-dx_lifetime_policy_t dx_container_node_get_life_policy(const dx_node_t *node)
+qd_lifetime_policy_t qd_container_node_get_life_policy(const qd_node_t *node)
 {
     return node->life_policy;
 }
 
 
-dx_link_t *dx_link(dx_node_t *node, dx_connection_t *conn, dx_direction_t dir, const char* name)
+qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char* name)
 {
-    pn_session_t *sess = pn_session(dx_connection_pn(conn));
-    dx_link_t    *link = new_dx_link_t();
+    pn_session_t *sess = pn_session(qd_connection_pn(conn));
+    qd_link_t    *link = new_qd_link_t();
 
-    if (dir == DX_OUTGOING)
+    if (dir == QD_OUTGOING)
         link->pn_link = pn_sender(sess, name);
     else
         link->pn_link = pn_receiver(sess, name);
@@ -652,19 +652,19 @@ dx_link_t *dx_link(dx_node_t *node, dx_connection_t *conn, dx_direction_t dir, c
 }
 
 
-void dx_link_set_context(dx_link_t *link, void *context)
+void qd_link_set_context(qd_link_t *link, void *context)
 {
     link->context = context;
 }
 
 
-void *dx_link_get_context(dx_link_t *link)
+void *qd_link_get_context(qd_link_t *link)
 {
     return link->context;
 }
 
 
-void dx_link_set_conn_context(dx_link_t *link, void *context)
+void qd_link_set_conn_context(qd_link_t *link, void *context)
 {
     pn_session_t *pn_sess = pn_link_session(link->pn_link);
     if (!pn_sess)
@@ -672,14 +672,14 @@ void dx_link_set_conn_context(dx_link_t *link, void *context)
     pn_connection_t *pn_conn = pn_session_connection(pn_sess);
     if (!pn_conn)
         return;
-    dx_connection_t *conn = (dx_connection_t*) pn_connection_get_context(pn_conn);
+    qd_connection_t *conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
     if (!conn)
         return;
-    dx_connection_set_link_context(conn, context);
+    qd_connection_set_link_context(conn, context);
 }
 
 
-void *dx_link_get_conn_context(dx_link_t *link)
+void *qd_link_get_conn_context(qd_link_t *link)
 {
     pn_session_t *pn_sess = pn_link_session(link->pn_link);
     if (!pn_sess)
@@ -687,20 +687,20 @@ void *dx_link_get_conn_context(dx_link_t *link)
     pn_connection_t *pn_conn = pn_session_connection(pn_sess);
     if (!pn_conn)
         return 0;
-    dx_connection_t *conn = (dx_connection_t*) pn_connection_get_context(pn_conn);
+    qd_connection_t *conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
     if (!conn)
         return 0;
-    return dx_connection_get_link_context(conn);
+    return qd_connection_get_link_context(conn);
 }
 
 
-pn_link_t *dx_link_pn(dx_link_t *link)
+pn_link_t *qd_link_pn(qd_link_t *link)
 {
     return link->pn_link;
 }
 
 
-dx_connection_t *dx_link_connection(dx_link_t *link)
+qd_connection_t *qd_link_connection(qd_link_t *link)
 {
     if (!link || !link->pn_link)
         return 0;
@@ -713,7 +713,7 @@ dx_connection_t *dx_link_connection(dx_link_t *link)
     if (!conn)
         return 0;
 
-    dx_connection_t *ctx = pn_connection_get_context(conn);
+    qd_connection_t *ctx = pn_connection_get_context(conn);
     if (!ctx)
         return 0;
 
@@ -721,31 +721,31 @@ dx_connection_t *dx_link_connection(dx_link_t *link)
 }
 
 
-pn_terminus_t *dx_link_source(dx_link_t *link)
+pn_terminus_t *qd_link_source(qd_link_t *link)
 {
     return pn_link_source(link->pn_link);
 }
 
 
-pn_terminus_t *dx_link_target(dx_link_t *link)
+pn_terminus_t *qd_link_target(qd_link_t *link)
 {
     return pn_link_target(link->pn_link);
 }
 
 
-pn_terminus_t *dx_link_remote_source(dx_link_t *link)
+pn_terminus_t *qd_link_remote_source(qd_link_t *link)
 {
     return pn_link_remote_source(link->pn_link);
 }
 
 
-pn_terminus_t *dx_link_remote_target(dx_link_t *link)
+pn_terminus_t *qd_link_remote_target(qd_link_t *link)
 {
     return pn_link_remote_target(link->pn_link);
 }
 
 
-void dx_link_activate(dx_link_t *link)
+void qd_link_activate(qd_link_t *link)
 {
     if (!link || !link->pn_link || pn_link_state(link->pn_link) != (PN_LOCAL_ACTIVE|PN_REMOTE_ACTIVE))
         return;
@@ -758,21 +758,21 @@ void dx_link_activate(dx_link_t *link)
     if (!conn || pn_connection_state(conn) != (PN_LOCAL_ACTIVE|PN_REMOTE_ACTIVE))
         return;
 
-    dx_connection_t *ctx = pn_connection_get_context(conn);
+    qd_connection_t *ctx = pn_connection_get_context(conn);
     if (!ctx)
         return;
 
-    dx_server_activate(ctx);
+    qd_server_activate(ctx);
 }
 
 
-void dx_link_close(dx_link_t *link)
+void qd_link_close(qd_link_t *link)
 {
     pn_link_close(link->pn_link);
 }
 
 
-bool dx_link_drain_changed(dx_link_t *link, bool *mode)
+bool qd_link_drain_changed(qd_link_t *link, bool *mode)
 {
     bool pn_mode = pn_link_get_drain(link->pn_link);
     bool changed = pn_mode != link->drain_mode;
@@ -784,9 +784,9 @@ bool dx_link_drain_changed(dx_link_t *link, bool *mode)
 }
 
 
-dx_delivery_t *dx_delivery(dx_link_t *link, pn_delivery_tag_t tag)
+qd_delivery_t *qd_delivery(qd_link_t *link, pn_delivery_tag_t tag)
 {
-    pn_link_t *pnl = dx_link_pn(link);
+    pn_link_t *pnl = qd_link_pn(link);
 
     //
     // If there is a current delivery on this outgoing link, something
@@ -802,7 +802,7 @@ dx_delivery_t *dx_delivery(dx_link_t *link, pn_delivery_tag_t tag)
     if (!pnd)
         return 0;
 
-    dx_delivery_t *delivery = new_dx_delivery_t();
+    qd_delivery_t *delivery = new_qd_delivery_t();
     delivery->pn_delivery = pnd;
     delivery->peer        = 0;
     delivery->context     = 0;
@@ -814,7 +814,7 @@ dx_delivery_t *dx_delivery(dx_link_t *link, pn_delivery_tag_t tag)
 }
 
 
-void dx_delivery_free(dx_delivery_t *delivery, uint64_t final_disposition)
+void qd_delivery_free(qd_delivery_t *delivery, uint64_t final_disposition)
 {
     if (delivery->pn_delivery) {
         if (final_disposition > 0)
@@ -824,41 +824,41 @@ void dx_delivery_free(dx_delivery_t *delivery, uint64_t final_disposition)
     }
     if (delivery->peer)
         delivery->peer->peer = 0;
-    free_dx_delivery_t(delivery);
+    free_qd_delivery_t(delivery);
 }
 
 
-void dx_delivery_set_peer(dx_delivery_t *delivery, dx_delivery_t *peer)
+void qd_delivery_set_peer(qd_delivery_t *delivery, qd_delivery_t *peer)
 {
     delivery->peer = peer;
 }
 
 
-void dx_delivery_set_context(dx_delivery_t *delivery, void *context)
+void qd_delivery_set_context(qd_delivery_t *delivery, void *context)
 {
     delivery->context = context;
 }
 
 
-void *dx_delivery_context(dx_delivery_t *delivery)
+void *qd_delivery_context(qd_delivery_t *delivery)
 {
     return delivery->context;
 }
 
 
-dx_delivery_t *dx_delivery_peer(dx_delivery_t *delivery)
+qd_delivery_t *qd_delivery_peer(qd_delivery_t *delivery)
 {
     return delivery->peer;
 }
 
 
-pn_delivery_t *dx_delivery_pn(dx_delivery_t *delivery)
+pn_delivery_t *qd_delivery_pn(qd_delivery_t *delivery)
 {
     return delivery->pn_delivery;
 }
 
 
-void dx_delivery_settle(dx_delivery_t *delivery)
+void qd_delivery_settle(qd_delivery_t *delivery)
 {
     if (delivery->pn_delivery) {
         pn_delivery_settle(delivery->pn_delivery);
@@ -867,26 +867,26 @@ void dx_delivery_settle(dx_delivery_t *delivery)
 }
 
 
-bool dx_delivery_settled(dx_delivery_t *delivery)
+bool qd_delivery_settled(qd_delivery_t *delivery)
 {
     return pn_delivery_settled(delivery->pn_delivery);
 }
 
 
-bool dx_delivery_disp_changed(dx_delivery_t *delivery)
+bool qd_delivery_disp_changed(qd_delivery_t *delivery)
 {
     return delivery->disposition != pn_delivery_remote_state(delivery->pn_delivery);
 }
 
 
-uint64_t dx_delivery_disp(dx_delivery_t *delivery)
+uint64_t qd_delivery_disp(qd_delivery_t *delivery)
 {
     delivery->disposition = pn_delivery_remote_state(delivery->pn_delivery);
     return delivery->disposition;
 }
 
 
-dx_link_t *dx_delivery_link(dx_delivery_t *delivery)
+qd_link_t *qd_delivery_link(qd_delivery_t *delivery)
 {
     return delivery->link;
 }

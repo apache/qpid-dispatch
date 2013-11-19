@@ -27,13 +27,13 @@ typedef struct {
     int B;
 } object_t;
 
-dx_alloc_config_t config = {3, 7, 10};
+qd_alloc_config_t config = {3, 7, 10};
 
 ALLOC_DECLARE(object_t);
 ALLOC_DEFINE_CONFIG(object_t, sizeof(object_t), 0, &config);
 
 
-static char* check_stats(dx_alloc_stats_t *stats, uint64_t ah, uint64_t fh, uint64_t ht, uint64_t rt, uint64_t rg)
+static char* check_stats(qd_alloc_stats_t *stats, uint64_t ah, uint64_t fh, uint64_t ht, uint64_t rt, uint64_t rg)
 {
     if (stats->total_alloc_from_heap         != ah) return "Incorrect alloc-from-heap";
     if (stats->total_free_to_heap            != fh) return "Incorrect free-to-heap";
@@ -48,7 +48,7 @@ static char* test_alloc_basic(void *context)
 {
     object_t         *obj[50];
     int               idx;
-    dx_alloc_stats_t *stats;
+    qd_alloc_stats_t *stats;
     char             *error;
 
     for (idx = 0; idx < 20; idx++)
@@ -77,7 +77,7 @@ static char* test_alloc_basic(void *context)
 int alloc_tests(void)
 {
     int result = 0;
-    dx_alloc_initialize();
+    qd_alloc_initialize();
 
     TEST_CASE(test_alloc_basic, 0);
 

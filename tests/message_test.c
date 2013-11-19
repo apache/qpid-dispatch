@@ -26,14 +26,14 @@
 
 static char buffer[10000];
 
-static size_t flatten_bufs(dx_message_content_t *content)
+static size_t flatten_bufs(qd_message_content_t *content)
 {
     char        *cursor = buffer;
-    dx_buffer_t *buf    = DEQ_HEAD(content->buffers);
+    qd_buffer_t *buf    = DEQ_HEAD(content->buffers);
 
     while (buf) {
-        memcpy(cursor, dx_buffer_base(buf), dx_buffer_size(buf));
-        cursor += dx_buffer_size(buf);
+        memcpy(cursor, qd_buffer_base(buf), qd_buffer_size(buf));
+        cursor += qd_buffer_size(buf);
         buf = buf->next;
     }
 
@@ -41,20 +41,20 @@ static size_t flatten_bufs(dx_message_content_t *content)
 }
 
 
-static void set_content(dx_message_content_t *content, size_t len)
+static void set_content(qd_message_content_t *content, size_t len)
 {
     char        *cursor = buffer;
-    dx_buffer_t *buf;
+    qd_buffer_t *buf;
 
     while (len > (size_t) (cursor - buffer)) {
-        buf = dx_buffer();
-        size_t segment   = dx_buffer_capacity(buf);
+        buf = qd_buffer();
+        size_t segment   = qd_buffer_capacity(buf);
         size_t remaining = len - (size_t) (cursor - buffer);
         if (segment > remaining)
             segment = remaining;
-        memcpy(dx_buffer_base(buf), cursor, segment);
+        memcpy(qd_buffer_base(buf), cursor, segment);
         cursor += segment;
-        dx_buffer_insert(buf, segment);
+        qd_buffer_insert(buf, segment);
         DEQ_INSERT_TAIL(content->buffers, buf);
     }
 }
@@ -62,11 +62,11 @@ static void set_content(dx_message_content_t *content, size_t len)
 
 static char* test_send_to_messenger(void *context)
 {
-    dx_message_t         *msg     = dx_message();
-    dx_message_content_t *content = MSG_CONTENT(msg);
+    qd_message_t         *msg     = qd_message();
+    qd_message_content_t *content = MSG_CONTENT(msg);
 
-    dx_message_compose_1(msg, "test_addr_0", 0);
-    dx_buffer_t *buf = DEQ_HEAD(content->buffers);
+    qd_message_compose_1(msg, "test_addr_0", 0);
+    qd_buffer_t *buf = DEQ_HEAD(content->buffers);
     if (buf == 0) return "Expected a buffer in the test message";
 
     pn_message_t *pn_msg = pn_message();
@@ -78,7 +78,7 @@ static char* test_send_to_messenger(void *context)
         return "Address mismatch in received message";
 
     pn_message_free(pn_msg);
-    dx_message_free(msg);
+    qd_message_free(msg);
 
     return 0;
 }
@@ -93,33 +93,33 @@ static char* test_receive_from_messenger(void *context)
     int result = pn_message_encode(pn_msg, buffer, &size);
     if (result != 0) return "Error in pn_message_encode";
 
-    dx_message_t         *msg     = dx_message();
-    dx_message_content_t *content = MSG_CONTENT(msg);
+    qd_message_t         *msg     = qd_message();
+    qd_message_content_t *content = MSG_CONTENT(msg);
 
     set_content(content, size);
 
-    int valid = dx_message_check(msg, DX_DEPTH_ALL);
-    if (!valid) return "dx_message_check returns 'invalid'";
+    int valid = qd_message_check(msg, QD_DEPTH_ALL);
+    if (!valid) return "qd_message_check returns 'invalid'";
 
-    dx_field_iterator_t *iter = dx_message_field_iterator(msg, DX_FIELD_TO);
+    qd_field_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_TO);
     if (iter == 0) return "Expected an iterator for the 'to' field";
 
-    if (!dx_field_iterator_equal(iter, (unsigned char*) "test_addr_1"))
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "test_addr_1"))
         return "Mismatched 'to' field contents";
 
-    ssize_t test_len = dx_message_field_length(msg, DX_FIELD_TO);
+    ssize_t test_len = qd_message_field_length(msg, QD_FIELD_TO);
     if (test_len != 11) return "Incorrect field length";
 
     char test_field[100];
     size_t hdr_length;
-    test_len = dx_message_field_copy(msg, DX_FIELD_TO, test_field, &hdr_length);
+    test_len = qd_message_field_copy(msg, QD_FIELD_TO, test_field, &hdr_length);
     if (test_len - hdr_length != 11) return "Incorrect length returned from field_copy";
     test_field[test_len] = '\0';
     if (strcmp(test_field + hdr_length, "test_addr_1") != 0)
         return "Incorrect field content returned from field_copy";
 
     pn_message_free(pn_msg);
-    dx_message_free(msg);
+    qd_message_free(msg);
 
     return 0;
 }
@@ -134,18 +134,18 @@ static char* test_insufficient_check_depth(void *context)
     int result = pn_message_encode(pn_msg, buffer, &size);
     if (result != 0) return "Error in pn_message_encode";
 
-    dx_message_t         *msg     = dx_message();
-    dx_message_content_t *content = MSG_CONTENT(msg);
+    qd_message_t         *msg     = qd_message();
+    qd_message_content_t *content = MSG_CONTENT(msg);
 
     set_content(content, size);
 
-    int valid = dx_message_check(msg, DX_DEPTH_DELIVERY_ANNOTATIONS);
-    if (!valid) return "dx_message_check returns 'invalid'";
+    int valid = qd_message_check(msg, QD_DEPTH_DELIVERY_ANNOTATIONS);
+    if (!valid) return "qd_message_check returns 'invalid'";
 
-    dx_field_iterator_t *iter = dx_message_field_iterator(msg, DX_FIELD_TO);
+    qd_field_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_TO);
     if (iter) return "Expected no iterator for the 'to' field";
 
-    dx_message_free(msg);
+    qd_message_free(msg);
 
     return 0;
 }
@@ -160,21 +160,21 @@ static char* test_check_multiple(void *context)
     int result = pn_message_encode(pn_msg, buffer, &size);
     if (result != 0) return "Error in pn_message_encode";
 
-    dx_message_t         *msg     = dx_message();
-    dx_message_content_t *content = MSG_CONTENT(msg);
+    qd_message_t         *msg     = qd_message();
+    qd_message_content_t *content = MSG_CONTENT(msg);
 
     set_content(content, size);
 
-    int valid = dx_message_check(msg, DX_DEPTH_DELIVERY_ANNOTATIONS);
-    if (!valid) return "dx_message_check returns 'invalid' for DELIVERY_ANNOTATIONS";
+    int valid = qd_message_check(msg, QD_DEPTH_DELIVERY_ANNOTATIONS);
+    if (!valid) return "qd_message_check returns 'invalid' for DELIVERY_ANNOTATIONS";
 
-    valid = dx_message_check(msg, DX_DEPTH_BODY);
-    if (!valid) return "dx_message_check returns 'invalid' for BODY";
+    valid = qd_message_check(msg, QD_DEPTH_BODY);
+    if (!valid) return "qd_message_check returns 'invalid' for BODY";
 
-    valid = dx_message_check(msg, DX_DEPTH_PROPERTIES);
-    if (!valid) return "dx_message_check returns 'invalid' for PROPERTIES";
+    valid = qd_message_check(msg, QD_DEPTH_PROPERTIES);
+    if (!valid) return "qd_message_check returns 'invalid' for PROPERTIES";
 
-    dx_message_free(msg);
+    qd_message_free(msg);
 
     return 0;
 }

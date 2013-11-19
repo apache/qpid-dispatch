@@ -22,7 +22,7 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/dispatch.h>
 
-void dx_alloc_initialize(void);
-void dx_alloc_setup_agent(dx_dispatch_t *dx);
+void qd_alloc_initialize(void);
+void qd_alloc_setup_agent(qd_dispatch_t *qd);
 
 #endif

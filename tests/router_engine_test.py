@@ -271,7 +271,7 @@ class NeighborTest(unittest.TestCase):
         self.engine.tick(1.5)
         self.assertEqual(len(self.sent), 1)
         dest, msg = self.sent.pop(0)
-        self.assertEqual(dest, "amqp:/_local/qdxhello")
+        self.assertEqual(dest, "amqp:/_local/qdhello")
         self.assertEqual(msg.get_opcode(), "HELLO")
         self.assertEqual(msg.id, self.id)
         self.assertEqual(msg.area, self.area)

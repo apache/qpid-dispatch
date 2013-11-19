@@ -19,12 +19,12 @@
 
 #include <qpid/dispatch/amqp.h>
 
-const char * const DX_DA_INGRESS = "qdx.ingress";
-const char * const DX_DA_TRACE   = "qdx.trace";
-const char * const DX_DA_TO      = "qdx.to";
+const char * const QD_DA_INGRESS = "qd.ingress";
+const char * const QD_DA_TRACE   = "qd.trace";
+const char * const QD_DA_TO      = "qd.to";
 
-const char * const DX_CAPABILITY_ROUTER = "qdx.router";
+const char * const QD_CAPABILITY_ROUTER = "qd.router";
 
-const char * const DX_INTERNODE_LINK_NAME_1 = "qdx.internode.1";
-const char * const DX_INTERNODE_LINK_NAME_2 = "qdx.internode.2";
+const char * const QD_INTERNODE_LINK_NAME_1 = "qd.internode.1";
+const char * const QD_INTERNODE_LINK_NAME_2 = "qd.internode.2";
 

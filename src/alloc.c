@@ -24,48 +24,48 @@
 #include <memory.h>
 #include <stdio.h>
 
-#define DX_MEMORY_DEBUG 1
+#define QD_MEMORY_DEBUG 1
 
-typedef struct dx_alloc_type_t dx_alloc_type_t;
-typedef struct dx_alloc_item_t dx_alloc_item_t;
+typedef struct qd_alloc_type_t qd_alloc_type_t;
+typedef struct qd_alloc_item_t qd_alloc_item_t;
 
-struct dx_alloc_type_t {
-    DEQ_LINKS(dx_alloc_type_t);
-    dx_alloc_type_desc_t *desc;
+struct qd_alloc_type_t {
+    DEQ_LINKS(qd_alloc_type_t);
+    qd_alloc_type_desc_t *desc;
 };
 
-DEQ_DECLARE(dx_alloc_type_t, dx_alloc_type_list_t);
+DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
 
 #define PATTERN_FRONT 0xdeadbeef
 #define PATTERN_BACK  0xbabecafe
 
-struct dx_alloc_item_t {
-    DEQ_LINKS(dx_alloc_item_t);
-#ifdef DX_MEMORY_DEBUG
-    dx_alloc_type_desc_t *desc;
+struct qd_alloc_item_t {
+    DEQ_LINKS(qd_alloc_item_t);
+#ifdef QD_MEMORY_DEBUG
+    qd_alloc_type_desc_t *desc;
     uint32_t              header;
 #endif
 };
 
-DEQ_DECLARE(dx_alloc_item_t, dx_alloc_item_list_t);
+DEQ_DECLARE(qd_alloc_item_t, qd_alloc_item_list_t);
 
 
-struct dx_alloc_pool_t {
-    dx_alloc_item_list_t free_list;
+struct qd_alloc_pool_t {
+    qd_alloc_item_list_t free_list;
 };
 
-dx_alloc_config_t dx_alloc_default_config_big   = {16,  32, 0};
-dx_alloc_config_t dx_alloc_default_config_small = {64, 128, 0};
+qd_alloc_config_t qd_alloc_default_config_big   = {16,  32, 0};
+qd_alloc_config_t qd_alloc_default_config_small = {64, 128, 0};
 #define BIG_THRESHOLD 256
 
 static sys_mutex_t          *init_lock = 0;
-static dx_alloc_type_list_t  type_list;
+static qd_alloc_type_list_t  type_list;
 
-static void dx_alloc_init(dx_alloc_type_desc_t *desc)
+static void qd_alloc_init(qd_alloc_type_desc_t *desc)
 {
     sys_mutex_lock(init_lock);
 
-    //dx_log("ALLOC", LOG_TRACE, "Initialized Allocator - type=%s type-size=%d total-size=%d",
+    //qd_log("ALLOC", LOG_TRACE, "Initialized Allocator - type=%s type-size=%d total-size=%d",
     //       desc->type_name, desc->type_size, desc->total_size);
 
     if (!desc->global_pool) {
@@ -75,17 +75,17 @@ static void dx_alloc_init(dx_alloc_type_desc_t *desc)
 
         if (desc->config == 0)
             desc->config = desc->total_size > BIG_THRESHOLD ?
-                &dx_alloc_default_config_big : &dx_alloc_default_config_small;
+                &qd_alloc_default_config_big : &qd_alloc_default_config_small;
 
         assert (desc->config->local_free_list_max >= desc->config->transfer_batch_size);
 
-        desc->global_pool = NEW(dx_alloc_pool_t);
+        desc->global_pool = NEW(qd_alloc_pool_t);
         DEQ_INIT(desc->global_pool->free_list);
         desc->lock = sys_mutex();
-        desc->stats = NEW(dx_alloc_stats_t);
-        memset(desc->stats, 0, sizeof(dx_alloc_stats_t));
+        desc->stats = NEW(qd_alloc_stats_t);
+        memset(desc->stats, 0, sizeof(qd_alloc_stats_t));
 
-        dx_alloc_type_t *type_item = NEW(dx_alloc_type_t);
+        qd_alloc_type_t *type_item = NEW(qd_alloc_type_t);
         DEQ_ITEM_INIT(type_item);
         type_item->desc = desc;
         DEQ_INSERT_TAIL(type_list, type_item);
@@ -98,7 +98,7 @@ static void dx_alloc_init(dx_alloc_type_desc_t *desc)
 }
 
 
-void *dx_alloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool)
+void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
 {
     int idx;
 
@@ -106,28 +106,28 @@ void *dx_alloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool)
     // If the descriptor is not initialized, set it up now.
     //
     if (desc->trailer != PATTERN_BACK)
-        dx_alloc_init(desc);
+        qd_alloc_init(desc);
 
     //
     // If this is the thread's first pass through here, allocate the
     // thread-local pool for this type.
     //
     if (*tpool == 0) {
-        *tpool = NEW(dx_alloc_pool_t);
+        *tpool = NEW(qd_alloc_pool_t);
         DEQ_INIT((*tpool)->free_list);
     }
 
-    dx_alloc_pool_t *pool = *tpool;
+    qd_alloc_pool_t *pool = *tpool;
 
     //
     // Fast case: If there's an item on the local free list, take it off the
     // list and return it.  Since everything we've touched is thread-local,
     // there is no need to acquire a lock.
     //
-    dx_alloc_item_t *item = DEQ_HEAD(pool->free_list);
+    qd_alloc_item_t *item = DEQ_HEAD(pool->free_list);
     if (item) {
         DEQ_REMOVE_HEAD(pool->free_list);
-#ifdef DX_MEMORY_DEBUG
+#ifdef QD_MEMORY_DEBUG
         item->desc = desc;
         item->header = PATTERN_FRONT;
         *((uint32_t*) ((void*) &item[1] + desc->total_size))= PATTERN_BACK;
@@ -156,8 +156,8 @@ void *dx_alloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool)
         // Allocate a full batch from the heap and put it on the thread list.
         //
         for (idx = 0; idx < desc->config->transfer_batch_size; idx++) {
-            item = (dx_alloc_item_t*) malloc(sizeof(dx_alloc_item_t) + desc->total_size
-#ifdef DX_MEMORY_DEBUG
+            item = (qd_alloc_item_t*) malloc(sizeof(qd_alloc_item_t) + desc->total_size
+#ifdef QD_MEMORY_DEBUG
                                              + sizeof(uint32_t)
 #endif
                                              );
@@ -174,7 +174,7 @@ void *dx_alloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool)
     item = DEQ_HEAD(pool->free_list);
     if (item) {
         DEQ_REMOVE_HEAD(pool->free_list);
-#ifdef DX_MEMORY_DEBUG
+#ifdef QD_MEMORY_DEBUG
         item->desc = desc;
         item->header = PATTERN_FRONT;
         *((uint32_t*) ((void*) &item[1] + desc->total_size))= PATTERN_BACK;
@@ -186,12 +186,12 @@ void *dx_alloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool)
 }
 
 
-void dx_dealloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool, void *p)
+void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p)
 {
-    dx_alloc_item_t *item = ((dx_alloc_item_t*) p) - 1;
+    qd_alloc_item_t *item = ((qd_alloc_item_t*) p) - 1;
     int              idx;
 
-#ifdef DX_MEMORY_DEBUG
+#ifdef QD_MEMORY_DEBUG
     assert (desc->header  == PATTERN_FRONT);
     assert (desc->trailer == PATTERN_BACK);
     assert (item->header  == PATTERN_FRONT);
@@ -205,11 +205,11 @@ void dx_dealloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool, void *p)
     // thread-local pool for this type.
     //
     if (*tpool == 0) {
-        *tpool = NEW(dx_alloc_pool_t);
+        *tpool = NEW(qd_alloc_pool_t);
         DEQ_INIT((*tpool)->free_list);
     }
 
-    dx_alloc_pool_t *pool = *tpool;
+    qd_alloc_pool_t *pool = *tpool;
 
     DEQ_INSERT_TAIL(pool->free_list, item);
 
@@ -246,7 +246,7 @@ void dx_dealloc(dx_alloc_type_desc_t *desc, dx_alloc_pool_t **tpool, void *p)
 }
 
 
-void dx_alloc_initialize(void)
+void qd_alloc_initialize(void)
 {
     init_lock = sys_mutex();
     DEQ_INIT(type_list);
@@ -260,28 +260,28 @@ static void alloc_schema_handler(void *context, void *correlator)
 
 static void alloc_query_handler(void* context, const char *id, void *cor)
 {
-    dx_alloc_type_t *item = DEQ_HEAD(type_list);
+    qd_alloc_type_t *item = DEQ_HEAD(type_list);
 
     while (item) {
-        dx_agent_value_string(cor, "name", item->desc->type_name);
-        dx_agent_value_uint(cor, "type_size", item->desc->total_size);
-        dx_agent_value_uint(cor, "transfer_batch_size", item->desc->config->transfer_batch_size);
-        dx_agent_value_uint(cor, "local_free_list_max", item->desc->config->local_free_list_max);
-        dx_agent_value_uint(cor, "global_free_list_max", item->desc->config->global_free_list_max);
-        dx_agent_value_uint(cor, "total_alloc_from_heap", item->desc->stats->total_alloc_from_heap);
-        dx_agent_value_uint(cor, "total_free_to_heap", item->desc->stats->total_free_to_heap);
-        dx_agent_value_uint(cor, "held_by_threads", item->desc->stats->held_by_threads);
-        dx_agent_value_uint(cor, "batches_rebalanced_to_threads", item->desc->stats->batches_rebalanced_to_threads);
-        dx_agent_value_uint(cor, "batches_rebalanced_to_global", item->desc->stats->batches_rebalanced_to_global);
+        qd_agent_value_string(cor, "name", item->desc->type_name);
+        qd_agent_value_uint(cor, "type_size", item->desc->total_size);
+        qd_agent_value_uint(cor, "transfer_batch_size", item->desc->config->transfer_batch_size);
+        qd_agent_value_uint(cor, "local_free_list_max", item->desc->config->local_free_list_max);
+        qd_agent_value_uint(cor, "global_free_list_max", item->desc->config->global_free_list_max);
+        qd_agent_value_uint(cor, "total_alloc_from_heap", item->desc->stats->total_alloc_from_heap);
+        qd_agent_value_uint(cor, "total_free_to_heap", item->desc->stats->total_free_to_heap);
+        qd_agent_value_uint(cor, "held_by_threads", item->desc->stats->held_by_threads);
+        qd_agent_value_uint(cor, "batches_rebalanced_to_threads", item->desc->stats->batches_rebalanced_to_threads);
+        qd_agent_value_uint(cor, "batches_rebalanced_to_global", item->desc->stats->batches_rebalanced_to_global);
 
         item = DEQ_NEXT(item);
-        dx_agent_value_complete(cor, item != 0);
+        qd_agent_value_complete(cor, item != 0);
     }
 }
 
 
-void dx_alloc_setup_agent(dx_dispatch_t *dx)
+void qd_alloc_setup_agent(qd_dispatch_t *qd)
 {
-    dx_agent_register_class(dx, "org.apache.qpid.dispatch.allocator", 0, alloc_schema_handler, alloc_query_handler);
+    qd_agent_register_class(qd, "org.apache.qpid.dispatch.allocator", 0, alloc_schema_handler, alloc_query_handler);
 }
 

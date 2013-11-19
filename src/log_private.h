@@ -21,7 +21,7 @@
 
 #include <qpid/dispatch/log.h>
 
-void dx_log_initialize(void);
-void dx_log_finalize(void);
+void qd_log_initialize(void);
+void qd_log_finalize(void);
 
 #endif

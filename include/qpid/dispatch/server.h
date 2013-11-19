@@ -36,10 +36,10 @@
  * This handler can be used to set processor affinity or other thread-specific
  * tuning values.
  *
- * @param context The handler context supplied in dx_server_initialize.
+ * @param context The handler context supplied in qd_server_initialize.
  * @param thread_id The integer thread identifier that uniquely identifies this thread.
  */
-typedef void (*dx_thread_start_cb_t)(void* context, int thread_id);
+typedef void (*qd_thread_start_cb_t)(void* context, int thread_id);
 
 
 /**
@@ -49,11 +49,11 @@ typedef void (*dx_thread_start_cb_t)(void* context, int thread_id);
  * started.  This may be used to set tuning settings like processor affinity,
  * etc.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  * @param start_handler The thread-start handler invoked per thread on thread startup.
  * @param context Opaque context to be passed back in the callback function.
  */
-void dx_server_set_start_handler(dx_dispatch_t *dx, dx_thread_start_cb_t start_handler, void *context);
+void qd_server_set_start_handler(qd_dispatch_t *qd, qd_thread_start_cb_t start_handler, void *context);
 
 
 /**
@@ -61,12 +61,12 @@ void dx_server_set_start_handler(dx_dispatch_t *dx, dx_thread_start_cb_t start_h
  *
  * Start the operation of the server, including launching all of the worker
  * threads.  This function does not return until after the server has been
- * stopped.  The thread that calls dx_server_run is used as one of the worker
+ * stopped.  The thread that calls qd_server_run is used as one of the worker
  * threads.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  */
-void dx_server_run(dx_dispatch_t *dx);
+void qd_server_run(qd_dispatch_t *qd);
 
 
 /**
@@ -75,9 +75,9 @@ void dx_server_run(dx_dispatch_t *dx);
  * Start the operation of the server, including launching all of the worker
  * threads.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  */
-void dx_server_start(dx_dispatch_t *dx);
+void qd_server_start(qd_dispatch_t *qd);
 
 
 /**
@@ -88,9 +88,9 @@ void dx_server_start(dx_dispatch_t *dx);
  * server threads have been closed and joined.  The calling thread will be the
  * only running thread in the process.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  */
-void dx_server_stop(dx_dispatch_t *dx);
+void qd_server_stop(qd_dispatch_t *qd);
 
 
 /**
@@ -103,9 +103,9 @@ void dx_server_stop(dx_dispatch_t *dx);
  * If the calling process is *not* one of the server's worker threads, then
  * this function will block all of the worker threads before returning.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  */
-void dx_server_pause(dx_dispatch_t *dx);
+void qd_server_pause(qd_dispatch_t *qd);
 
 
 /**
@@ -114,9 +114,9 @@ void dx_server_pause(dx_dispatch_t *dx);
  * This call unblocks all of the worker threads so they can resume normal
  * connection processing.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  */
-void dx_server_resume(dx_dispatch_t *dx);
+void qd_server_resume(qd_dispatch_t *qd);
 
 
 /**
@@ -131,24 +131,24 @@ void dx_server_resume(dx_dispatch_t *dx);
  *
  * Callback for signal handling.  This handler will be invoked on one of the
  * worker threads in an orderly fashion.  This callback is triggered by a call
- * to dx_server_signal.
+ * to qd_server_signal.
  *
- * @param context The handler context supplied in dx_server_initialize.
- * @param signum The signal number that was passed into dx_server_signal.
+ * @param context The handler context supplied in qd_server_initialize.
+ * @param signum The signal number that was passed into qd_server_signal.
  */
-typedef void (*dx_signal_handler_cb_t)(void* context, int signum);
+typedef void (*qd_signal_handler_cb_t)(void* context, int signum);
 
 
 /**
  * Set the signal handler for the server.  The signal handler is invoked
- * cleanly on a worker thread after a call is made to dx_server_signal.  The
+ * cleanly on a worker thread after a call is made to qd_server_signal.  The
  * signal handler is optional and need not be set.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  * @param signal_handler The signal handler called when a registered signal is caught.
  * @param context Opaque context to be passed back in the callback function.
  */
-void dx_server_set_signal_handler(dx_dispatch_t *dx, dx_signal_handler_cb_t signal_handler, void *context);
+void qd_server_set_signal_handler(qd_dispatch_t *qd, qd_signal_handler_cb_t signal_handler, void *context);
 
 
 /**
@@ -158,10 +158,10 @@ void dx_server_set_signal_handler(dx_dispatch_t *dx, dx_signal_handler_cb_t sign
  * handler or an Interrupt Service Routine.  It schedules the orderly
  * invocation of the Server's signal handler on one of the worker threads.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  * @param signum The signal number... TODO
  */
-void dx_server_signal(dx_dispatch_t *dx, int signum);
+void qd_server_signal(qd_dispatch_t *qd, int signum);
 
 
 /**
@@ -173,40 +173,40 @@ void dx_server_signal(dx_dispatch_t *dx, int signum);
 /**
  * \brief Listener objects represent the desire to accept incoming transport connections.
  */
-typedef struct dx_listener_t dx_listener_t;
+typedef struct qd_listener_t qd_listener_t;
 
 /**
  * \brief Connector objects represent the desire to create and maintain an outgoing transport connection.
  */
-typedef struct dx_connector_t dx_connector_t;
+typedef struct qd_connector_t qd_connector_t;
 
 /**
  * \brief Connection objects wrap Proton connection objects.
  */
-typedef struct dx_connection_t dx_connection_t;
+typedef struct qd_connection_t qd_connection_t;
 
 /**
  * \brief Event type for the connection callback.
  */
 typedef enum {
     /// The connection just opened via a listener (inbound).
-    DX_CONN_EVENT_LISTENER_OPEN,
+    QD_CONN_EVENT_LISTENER_OPEN,
 
     /// The connection just opened via a connector (outbound).
-    DX_CONN_EVENT_CONNECTOR_OPEN,
+    QD_CONN_EVENT_CONNECTOR_OPEN,
 
     /// The connection was closed at the transport level (not cleanly).
-    DX_CONN_EVENT_CLOSE,
+    QD_CONN_EVENT_CLOSE,
 
     /// The connection requires processing.
-    DX_CONN_EVENT_PROCESS
-} dx_conn_event_t;
+    QD_CONN_EVENT_PROCESS
+} qd_conn_event_t;
 
 
 /**
  * \brief Configuration block for a connector or a listener.
  */
-typedef struct dx_server_config_t {
+typedef struct qd_server_config_t {
     /**
      * Host name or network address to bind to a listener or use in the connector.
      */
@@ -300,7 +300,7 @@ typedef struct dx_server_config_t {
      * capabilities of the connections.
      */
     const char *role;
-} dx_server_config_t;
+} qd_server_config_t;
 
 
 /**
@@ -313,62 +313,62 @@ typedef struct dx_server_config_t {
  * that it has exclusive access to the connection and its subservient
  * components (sessions, links, deliveries, etc.).
  *
- * @param handler_context The handler context supplied in dx_server_set_conn_handler.
- * @param conn_context The handler context supplied in dx_server_{connect,listen}.
+ * @param handler_context The handler context supplied in qd_server_set_conn_handler.
+ * @param conn_context The handler context supplied in qd_server_{connect,listen}.
  * @param event The event/reason for the invocation of the handler.
  * @param conn The connection that requires processing by the handler.
  * @return A value greater than zero if the handler did any proton processing for
  *         the connection.  If no work was done, zero is returned.
  */
-typedef int (*dx_conn_handler_cb_t)(void *handler_context, void* conn_context, dx_conn_event_t event, dx_connection_t *conn);
+typedef int (*qd_conn_handler_cb_t)(void *handler_context, void* conn_context, qd_conn_event_t event, qd_connection_t *conn);
 
 
 /**
  * \brief Set the connection event handler callback.
  *
  * Set the connection handler callback for the server.  This callback is
- * mandatory and must be set prior to the invocation of dx_server_run.
+ * mandatory and must be set prior to the invocation of qd_server_run.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  * @param conn_hander The handler for processing connection-related events.
  */
-void dx_server_set_conn_handler(dx_dispatch_t *dx, dx_conn_handler_cb_t conn_handler, void *handler_context);
+void qd_server_set_conn_handler(qd_dispatch_t *qd, qd_conn_handler_cb_t conn_handler, void *handler_context);
 
 
 /**
  * \brief Set the user context for a connection.
  *
- * @param conn Connection object supplied in DX_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @param context User context to be stored with the connection.
  */
-void dx_connection_set_context(dx_connection_t *conn, void *context);
+void qd_connection_set_context(qd_connection_t *conn, void *context);
 
 
 /**
  * \brief Get the user context from a connection.
  *
- * @param conn Connection object supplied in DX_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @return The user context stored with the connection.
  */
-void *dx_connection_get_context(dx_connection_t *conn);
+void *qd_connection_get_context(qd_connection_t *conn);
 
 
 /**
  * \brief Set the link context for a connection.
  *
- * @param conn Connection object supplied in DX_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @param context Link context to be stored with the connection.
  */
-void dx_connection_set_link_context(dx_connection_t *conn, void *context);
+void qd_connection_set_link_context(qd_connection_t *conn, void *context);
 
 
 /**
  * \brief Get the link context from a connection.
  *
- * @param conn Connection object supplied in DX_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @return The link context stored with the connection.
  */
-void *dx_connection_get_link_context(dx_connection_t *conn);
+void *qd_connection_get_link_context(qd_connection_t *conn);
 
 
 /**
@@ -382,75 +382,75 @@ void *dx_connection_get_link_context(dx_connection_t *conn);
  *
  * @param conn The connection over which the application wishes to send data
  */
-void dx_server_activate(dx_connection_t *conn);
+void qd_server_activate(qd_connection_t *conn);
 
 
 /**
  * \brief Get the wrapped proton-engine connection object.
  *
- * @param conn Connection object supplied in DX_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @return The proton connection object.
  */
-pn_connection_t *dx_connection_pn(dx_connection_t *conn);
+pn_connection_t *qd_connection_pn(qd_connection_t *conn);
 
 
 /**
  * \brief Get the configuration that was used in the setup of this connection.
  *
- * @param conn Connection object supplied in DX_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @return A pointer to the server configuration used in the establishment of this connection.
  */
-const dx_server_config_t *dx_connection_config(const dx_connection_t *conn);
+const qd_server_config_t *qd_connection_config(const qd_connection_t *conn);
 
 
 /**
  * \brief Create a listener for incoming connections.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  * @param config Pointer to a configuration block for this listener.  This block will be
  *               referenced by the server, not copied.  The referenced record must remain
  *               in-scope for the life of the listener.
  * @param context User context passed back in the connection handler.
  * @return A pointer to the new listener, or NULL in case of failure.
  */
-dx_listener_t *dx_server_listen(dx_dispatch_t *dx, const dx_server_config_t *config, void *context);
+qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *config, void *context);
 
 
 /**
  * \brief Free the resources associated with a listener.
  *
- * @param li A listener pointer returned by dx_listen.
+ * @param li A listener pointer returned by qd_listen.
  */
-void dx_listener_free(dx_listener_t* li);
+void qd_listener_free(qd_listener_t* li);
 
 
 /**
  * \brief Close a listener so it will accept no more connections.
  *
- * @param li A listener pointer returned by dx_listen.
+ * @param li A listener pointer returned by qd_listen.
  */
-void dx_listener_close(dx_listener_t* li);
+void qd_listener_close(qd_listener_t* li);
 
 
 /**
  * \brief Create a connector for an outgoing connection.
  *
- * @param dx The dispatch handle returned by dx_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  * @param config Pointer to a configuration block for this connector.  This block will be
  *               referenced by the server, not copied.  The referenced record must remain
  *               in-scope for the life of the connector..
  * @param context User context passed back in the connection handler.
  * @return A pointer to the new connector, or NULL in case of failure.
  */
-dx_connector_t *dx_server_connect(dx_dispatch_t *dx, const dx_server_config_t *config, void *context);
+qd_connector_t *qd_server_connect(qd_dispatch_t *qd, const qd_server_config_t *config, void *context);
 
 
 /**
  * \brief Free the resources associated with a connector.
  *
- * @param ct A connector pointer returned by dx_connect.
+ * @param ct A connector pointer returned by qd_connect.
  */
-void dx_connector_free(dx_connector_t* ct);
+void qd_connector_free(qd_connector_t* ct);
 
 /**
  * @}

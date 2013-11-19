@@ -26,30 +26,30 @@
 
 static const char *log_module = "CONFIG";
 
-struct dx_config_t {
+struct qd_config_t {
     PyObject *pModule;
     PyObject *pClass;
     PyObject *pObject;
 };
 
-ALLOC_DECLARE(dx_config_t);
-ALLOC_DEFINE(dx_config_t);
+ALLOC_DECLARE(qd_config_t);
+ALLOC_DEFINE(qd_config_t);
 
-void dx_config_initialize()
+void qd_config_initialize()
 {
-    dx_python_start();
+    qd_python_start();
 }
 
 
-void dx_config_finalize()
+void qd_config_finalize()
 {
-    dx_python_stop();
+    qd_python_stop();
 }
 
 
-dx_config_t *dx_config(const char *filename)
+qd_config_t *qd_config(const char *filename)
 {
-    dx_config_t *config = new_dx_config_t();
+    qd_config_t *config = new_qd_config_t();
 
     //
     // Load the Python configuration module and get a reference to the config class.
@@ -60,8 +60,8 @@ dx_config_t *dx_config(const char *filename)
 
     if (!config->pModule) {
         PyErr_Print();
-        free_dx_config_t(config);
-        dx_log(log_module, LOG_ERROR, "Unable to load configuration module: %s", PYTHON_MODULE);
+        free_qd_config_t(config);
+        qd_log(log_module, LOG_ERROR, "Unable to load configuration module: %s", PYTHON_MODULE);
         return 0;
     }
 
@@ -69,8 +69,8 @@ dx_config_t *dx_config(const char *filename)
     if (!config->pClass || !PyClass_Check(config->pClass)) {
         PyErr_Print();
         Py_DECREF(config->pModule);
-        free_dx_config_t(config);
-        dx_log(log_module, LOG_ERROR, "Problem with configuration module: Missing DXConfig class");
+        free_qd_config_t(config);
+        qd_log(log_module, LOG_ERROR, "Problem with configuration module: Missing DXConfig class");
         return 0;
     }
 
@@ -86,8 +86,8 @@ dx_config_t *dx_config(const char *filename)
     if (config->pObject == 0) {
         PyErr_Print();
         Py_DECREF(config->pModule);
-        free_dx_config_t(config);
-        dx_log(log_module, LOG_ERROR, "Configuration file '%s' could not be read", filename);
+        free_qd_config_t(config);
+        qd_log(log_module, LOG_ERROR, "Configuration file '%s' could not be read", filename);
         return 0;
     }
 
@@ -95,7 +95,7 @@ dx_config_t *dx_config(const char *filename)
 }
 
 
-void dx_config_read(dx_config_t *config)
+void qd_config_read(qd_config_t *config)
 {
     PyObject *pMethod;
     PyObject *pArgs;
@@ -106,7 +106,7 @@ void dx_config_read(dx_config_t *config)
 
     pMethod = PyObject_GetAttrString(config->pObject, "read_file");
     if (!pMethod || !PyCallable_Check(pMethod)) {
-        dx_log(log_module, LOG_ERROR, "Problem with configuration module: No callable 'item_count'");
+        qd_log(log_module, LOG_ERROR, "Problem with configuration module: No callable 'item_count'");
         if (pMethod) {
             Py_DECREF(pMethod);
         }
@@ -125,17 +125,17 @@ void dx_config_read(dx_config_t *config)
 }
 
 
-void dx_config_free(dx_config_t *config)
+void qd_config_free(qd_config_t *config)
 {
     if (config) {
         Py_DECREF(config->pClass);
         Py_DECREF(config->pModule);
-        free_dx_config_t(config);
+        free_qd_config_t(config);
     }
 }
 
 
-int dx_config_item_count(const dx_config_t *config, const char *section)
+int qd_config_item_count(const qd_config_t *config, const char *section)
 {
     PyObject *pSection;
     PyObject *pMethod;
@@ -148,7 +148,7 @@ int dx_config_item_count(const dx_config_t *config, const char *section)
 
     pMethod = PyObject_GetAttrString(config->pObject, "item_count");
     if (!pMethod || !PyCallable_Check(pMethod)) {
-        dx_log(log_module, LOG_ERROR, "Problem with configuration module: No callable 'item_count'");
+        qd_log(log_module, LOG_ERROR, "Problem with configuration module: No callable 'item_count'");
         if (pMethod) {
             Py_DECREF(pMethod);
         }
@@ -171,7 +171,7 @@ int dx_config_item_count(const dx_config_t *config, const char *section)
 }
 
 
-static PyObject *item_value(const dx_config_t *config, const char *section, int index, const char* key, const char* method)
+static PyObject *item_value(const qd_config_t *config, const char *section, int index, const char* key, const char* method)
 {
     PyObject *pSection;
     PyObject *pIndex;
@@ -185,7 +185,7 @@ static PyObject *item_value(const dx_config_t *config, const char *section, int 
 
     pMethod = PyObject_GetAttrString(config->pObject, method);
     if (!pMethod || !PyCallable_Check(pMethod)) {
-        dx_log(log_module, LOG_ERROR, "Problem with configuration module: No callable '%s'", method);
+        qd_log(log_module, LOG_ERROR, "Problem with configuration module: No callable '%s'", method);
         if (pMethod) {
             Py_DECREF(pMethod);
         }
@@ -207,7 +207,7 @@ static PyObject *item_value(const dx_config_t *config, const char *section, int 
 }
 
 
-const char *dx_config_item_value_string(const dx_config_t *config, const char *section, int index, const char* key)
+const char *qd_config_item_value_string(const qd_config_t *config, const char *section, int index, const char* key)
 {
     PyObject *pResult = item_value(config, section, index, key, "value_string");
     char     *value   = 0;
@@ -226,7 +226,7 @@ const char *dx_config_item_value_string(const dx_config_t *config, const char *s
 }
 
 
-uint32_t dx_config_item_value_int(const dx_config_t *config, const char *section, int index, const char* key)
+uint32_t qd_config_item_value_int(const qd_config_t *config, const char *section, int index, const char* key)
 {
     PyObject *pResult = item_value(config, section, index, key, "value_int");
     uint32_t  value   = 0;
@@ -242,7 +242,7 @@ uint32_t dx_config_item_value_int(const dx_config_t *config, const char *section
 }
 
 
-int dx_config_item_value_bool(const dx_config_t *config, const char *section, int index, const char* key)
+int qd_config_item_value_bool(const qd_config_t *config, const char *section, int index, const char* key)
 {
     PyObject *pResult = item_value(config, section, index, key, "value_bool");
     int       value   = 0;

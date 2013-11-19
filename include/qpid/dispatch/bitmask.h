@@ -19,17 +19,17 @@
  * under the License.
  */
 
-typedef struct dx_bitmask_t dx_bitmask_t;
+typedef struct qd_bitmask_t qd_bitmask_t;
 
-int dx_bitmask_width();
-dx_bitmask_t *dx_bitmask(int initial);
-void dx_bitmask_free(dx_bitmask_t *b);
-void dx_bitmask_set_all(dx_bitmask_t *b);
-void dx_bitmask_clear_all(dx_bitmask_t *b);
-void dx_bitmask_set_bit(dx_bitmask_t *b, int bitnum);
-void dx_bitmask_clear_bit(dx_bitmask_t *b, int bitnum);
-int dx_bitmask_value(dx_bitmask_t *b, int bitnum);
-int dx_bitmask_first_set(dx_bitmask_t *b, int *bitnum);
+int qd_bitmask_width();
+qd_bitmask_t *qd_bitmask(int initial);
+void qd_bitmask_free(qd_bitmask_t *b);
+void qd_bitmask_set_all(qd_bitmask_t *b);
+void qd_bitmask_clear_all(qd_bitmask_t *b);
+void qd_bitmask_set_bit(qd_bitmask_t *b, int bitnum);
+void qd_bitmask_clear_bit(qd_bitmask_t *b, int bitnum);
+int qd_bitmask_value(qd_bitmask_t *b, int bitnum);
+int qd_bitmask_first_set(qd_bitmask_t *b, int *bitnum);
 
 
 

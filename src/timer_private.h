@@ -29,25 +29,25 @@ typedef enum {
     TIMER_IDLE,
     TIMER_SCHEDULED,
     TIMER_PENDING
-} dx_timer_state_t;
+} qd_timer_state_t;
 
 
-struct dx_timer_t {
-    DEQ_LINKS(dx_timer_t);
-    dx_server_t      *server;
-    dx_timer_cb_t     handler;
+struct qd_timer_t {
+    DEQ_LINKS(qd_timer_t);
+    qd_server_t      *server;
+    qd_timer_cb_t     handler;
     void             *context;
     long              delta_time;
-    dx_timer_state_t  state;
+    qd_timer_state_t  state;
 };
 
-DEQ_DECLARE(dx_timer_t, dx_timer_list_t);
+DEQ_DECLARE(qd_timer_t, qd_timer_list_t);
 
-void dx_timer_initialize(sys_mutex_t *server_lock);
-void dx_timer_finalize(void);
-long dx_timer_next_duration_LH(void);
-void dx_timer_visit_LH(long current_time);
-void dx_timer_idle_LH(dx_timer_t *timer);
+void qd_timer_initialize(sys_mutex_t *server_lock);
+void qd_timer_finalize(void);
+long qd_timer_next_duration_LH(void);
+void qd_timer_visit_LH(long current_time);
+void qd_timer_idle_LH(qd_timer_t *timer);
 
 
 #endif

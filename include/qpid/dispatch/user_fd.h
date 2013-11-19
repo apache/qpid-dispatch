@@ -27,7 +27,7 @@
  * @{
  */
 
-typedef struct dx_user_fd_t dx_user_fd_t;
+typedef struct qd_user_fd_t qd_user_fd_t;
 
 
 /**
@@ -36,17 +36,17 @@ typedef struct dx_user_fd_t dx_user_fd_t;
  * Callback invoked when a user-managed file descriptor is available for reading or writing or there
  * was an error on the file descriptor.
  *
- * @param context The handler context supplied in the dx_user_fd call.
+ * @param context The handler context supplied in the qd_user_fd call.
  * @param ufd The user_fd handle for the processable fd.
  */
-typedef void (*dx_user_fd_handler_cb_t)(void* context, dx_user_fd_t *ufd);
+typedef void (*qd_user_fd_handler_cb_t)(void* context, qd_user_fd_t *ufd);
 
 
 /**
  * Set the user-fd handler callback for the server.  This handler is optional, but must be supplied
- * if the dx_server is used to manage the activation of user file descriptors.
+ * if the qd_server is used to manage the activation of user file descriptors.
  */
-void dx_server_set_user_fd_handler(dx_dispatch_t *dx, dx_user_fd_handler_cb_t ufd_handler);
+void qd_server_set_user_fd_handler(qd_dispatch_t *qd, qd_user_fd_handler_cb_t ufd_handler);
 
 
 /**
@@ -60,39 +60,39 @@ void dx_server_set_user_fd_handler(dx_dispatch_t *dx, dx_user_fd_handler_cb_t uf
  * @param context User context passed back in the connection handler.
  * @return A pointer to the new user_fd.
  */
-dx_user_fd_t *dx_user_fd(dx_dispatch_t *dx, int fd, void *context);
+qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context);
 
 
 /**
  * Free the resources for a user-managed FD tracker.
  *
- * @param ufd Structure pointer returned by dx_user_fd.
+ * @param ufd Structure pointer returned by qd_user_fd.
  */
-void dx_user_fd_free(dx_user_fd_t *ufd);
+void qd_user_fd_free(qd_user_fd_t *ufd);
 
 
 /**
  * Activate a user-fd for read.
  *
  * Use this activation when the application has capacity to receive data from the user-fd.  This will
- * cause the callback set in dx_server_set_user_fd_handler to later be invoked when the
+ * cause the callback set in qd_server_set_user_fd_handler to later be invoked when the
  * file descriptor has data to read.
  *
- * @param ufd Structure pointer returned by dx_user_fd.
+ * @param ufd Structure pointer returned by qd_user_fd.
  */
-void dx_user_fd_activate_read(dx_user_fd_t *ufd);
+void qd_user_fd_activate_read(qd_user_fd_t *ufd);
 
 
 /**
  * Activate a user-fd for write.
  *
  * Use this activation when the application has data to write via the user-fd.  This will
- * cause the callback set in dx_server_set_user_fd_handler to later be invoked when the
+ * cause the callback set in qd_server_set_user_fd_handler to later be invoked when the
  * file descriptor is writable.
  *
- * @param ufd Structure pointer returned by dx_user_fd.
+ * @param ufd Structure pointer returned by qd_user_fd.
  */
-void dx_user_fd_activate_write(dx_user_fd_t *ufd);
+void qd_user_fd_activate_write(qd_user_fd_t *ufd);
 
 
 /**
@@ -102,19 +102,19 @@ void dx_user_fd_activate_write(dx_user_fd_t *ufd);
  *       but the file-descriptor is not readable and will block if not set to O_NONBLOCK).
  *       Code accordingly.
  *
- * @param ufd Structure pointer returned by dx_user_fd.
+ * @param ufd Structure pointer returned by qd_user_fd.
  * @return true iff the user file descriptor is readable.
  */
-bool dx_user_fd_is_readable(dx_user_fd_t *ufd);
+bool qd_user_fd_is_readable(qd_user_fd_t *ufd);
 
 
 /**
  * Check writable status of a user-fd
  *
- * @param ufd Structure pointer returned by dx_user_fd.
+ * @param ufd Structure pointer returned by qd_user_fd.
  * @return true iff the user file descriptor is writable.
  */
-bool dx_user_fd_is_writeable(dx_user_fd_t *ufd);
+bool qd_user_fd_is_writeable(qd_user_fd_t *ufd);
 
 /**
  * @}
