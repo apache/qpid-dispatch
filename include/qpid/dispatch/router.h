@@ -27,14 +27,14 @@
 typedef struct qd_address_t qd_address_t;
 
 
-typedef void (*qd_router_message_cb)(void *context, qd_message_t *msg, int link_id);
+typedef void (*qd_router_message_cb_t)(void *context, qd_message_t *msg, int link_id);
 
 const char *qd_router_id(const qd_dispatch_t *qd);
 
-qd_address_t *qd_router_register_address(qd_dispatch_t        *qd,
-                                         const char           *address,
-                                         qd_router_message_cb  handler,
-                                         void                 *context);
+qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
+                                         const char             *address,
+                                         qd_router_message_cb_t  handler,
+                                         void                   *context);
 
 void qd_router_unregister_address(qd_address_t *address);
 

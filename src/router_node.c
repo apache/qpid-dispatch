@@ -502,9 +502,9 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
     // We are performing Message-Routing, therefore we will need to validate the message
     // through the Properties section so we can access the TO field.
     //
-    qd_message_t         *in_process_copy = 0;
-    qd_router_message_cb  handler         = 0;
-    void                 *handler_context = 0;
+    qd_message_t           *in_process_copy = 0;
+    qd_router_message_cb_t  handler        = 0;
+    void                   *handler_context = 0;
 
     valid_message = qd_message_check(msg, QD_DEPTH_PROPERTIES);
 
@@ -1211,10 +1211,10 @@ const char *qd_router_id(const qd_dispatch_t *qd)
 }
 
 
-qd_address_t *qd_router_register_address(qd_dispatch_t        *qd,
-                                         const char           *address,
-                                         qd_router_message_cb  handler,
-                                         void                 *context)
+qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
+                                         const char             *address,
+                                         qd_router_message_cb_t  handler,
+                                         void                   *context)
 {
     char                 addr_string[1000];
     qd_router_t         *router = qd->router;
