@@ -17,5 +17,5 @@
 # under the License.
 #
 
-from .disp import *
+from .display import *
 
