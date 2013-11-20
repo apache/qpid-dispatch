@@ -22,7 +22,7 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/log.h>
 
-#define PYTHON_MODULE "qpiddx.config"
+#define PYTHON_MODULE "qpid_dispatch.config"
 
 static const char *log_module = "CONFIG";
 
@@ -65,17 +65,17 @@ qd_config_t *qd_config(const char *filename)
         return 0;
     }
 
-    config->pClass = PyObject_GetAttrString(config->pModule, "DXConfig");
+    config->pClass = PyObject_GetAttrString(config->pModule, "DispatchConfig");
     if (!config->pClass || !PyClass_Check(config->pClass)) {
         PyErr_Print();
         Py_DECREF(config->pModule);
         free_qd_config_t(config);
-        qd_log(log_module, LOG_ERROR, "Problem with configuration module: Missing DXConfig class");
+        qd_log(log_module, LOG_ERROR, "Problem with configuration module: Missing DispatchConfig class");
         return 0;
     }
 
     //
-    // Instantiate the DXConfig class, passing in the configuration file name.
+    // Instantiate the DispatchConfig class, passing in the configuration file name.
     //
     PyObject *pArgs = PyTuple_New(1);
     PyObject *fname = PyString_FromString(filename);

@@ -166,7 +166,7 @@ class Schema:
 
 
 
-class DXConfig:
+class DispatchConfig:
   """
   Configuration File Parser for Qpid Dispatch
 

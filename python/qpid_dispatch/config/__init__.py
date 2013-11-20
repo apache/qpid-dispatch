@@ -17,4 +17,4 @@
 # under the License.
 #
 
-from parser import DXConfig
+from parser import DispatchConfig

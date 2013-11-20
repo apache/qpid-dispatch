@@ -139,64 +139,64 @@ install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatc
 ## Python modules installation
 ##
 set(PYTHON_STUBS_SOURCES
-    python/qpiddx/stubs/__init__.py
-    python/qpiddx/stubs/ioadapter.py
-    python/qpiddx/stubs/logadapter.py
+    python/qpid_dispatch/stubs/__init__.py
+    python/qpid_dispatch/stubs/ioadapter.py
+    python/qpid_dispatch/stubs/logadapter.py
 )
 
 set(PYTHON_ROUTER_SOURCES
-    python/qpiddx/router/link.py
-    python/qpiddx/router/router_engine.py
-    python/qpiddx/router/__init__.py
-    python/qpiddx/router/mobile.py
-    python/qpiddx/router/node.py
-    python/qpiddx/router/routing.py
-    python/qpiddx/router/data.py
-    python/qpiddx/router/configuration.py
-    python/qpiddx/router/neighbor.py
-    python/qpiddx/router/path.py
+    python/qpid_dispatch/router/link.py
+    python/qpid_dispatch/router/engine.py
+    python/qpid_dispatch/router/__init__.py
+    python/qpid_dispatch/router/mobile.py
+    python/qpid_dispatch/router/node.py
+    python/qpid_dispatch/router/routing.py
+    python/qpid_dispatch/router/data.py
+    python/qpid_dispatch/router/configuration.py
+    python/qpid_dispatch/router/neighbor.py
+    python/qpid_dispatch/router/path.py
 )
 
 set(PYTHON_CONFIG_SOURCES
-    python/qpiddx/config/parser.py
-    python/qpiddx/config/__init__.py
-    python/qpiddx/config/schema.py
-    python/qpiddx/__init__.py
+    python/qpid_dispatch/config/parser.py
+    python/qpid_dispatch/config/__init__.py
+    python/qpid_dispatch/config/schema.py
+    python/qpid_dispatch/__init__.py
 )
 
 set(PYTHON_TOOLS_SOURCES
-    python/qpiddx/qdtoollibs/__init__.py
-    python/qpiddx/qdtoollibs/disp.py
+    python/qpid_dispatch/tools/__init__.py
+    python/qpid_dispatch/tools/display.py
 )
 
 set(PYTHON_TOOLS_EXECUTABLES
-    tools/src/py/qdstat
+    tools/qdstat
 )
 
 set(DOC_FILES
     ChangeLog
     LICENSE
-    README.md
+    README
     TODO
 )
 
 install(FILES ${PYTHON_STUBS_SOURCES}
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpiddx/stubs)
+        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch/stubs)
 
 install(FILES ${PYTHON_ROUTER_SOURCES}
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpiddx/router)
+        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch/router)
 
 install(FILES ${PYTHON_CONFIG_SOURCES}
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpiddx/config)
+        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch/config)
 
 install(FILES ${PYTHON_TOOLS_SOURCES}
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpiddx/qdtoollibs)
+        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch/tools)
 
-install(FILES python/qpiddx/__init__.py
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpiddx)
+install(FILES python/qpid_dispatch/__init__.py
+        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch)
 
-install(FILES python/qpiddx/__init__.py
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpiddx)
+install(FILES python/qpid_dispatch/__init__.py
+        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch)
 
 install(PROGRAMS ${PYTHON_TOOLS_EXECUTABLES}
         DESTINATION bin)
