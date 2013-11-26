@@ -48,19 +48,13 @@ if (NOT DEFINED LIB_SUFFIX)
 endif()
 
 set(INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
+set(QPID_DISPATCH_HOME "lib/qpid-dispatch" CACHE PATH "Private Dispatch library directory")
 set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
 set(SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration directory")
 set(SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 set(DOC_INSTALL_DIR ${SHARE_INSTALL_DIR}/doc CACHE PATH "Shared read-only data directory")
 set(MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
-
-# determine the location for installing the python packages
-if (PYTHONLIBS_FOUND)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE}
-                    -c "from distutils.sysconfig import get_python_lib; print get_python_lib(False, False, \"${CMAKE_INSTALL_PREFIX}\")"
-                    OUTPUT_VARIABLE PYTHON_SITELIB_PACKAGES
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-endif (PYTHONLIBS_FOUND)
+set(QPID_DISPATCH_HOME_INSTALLED ${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME})
 
 ##
 ## Find dependencies
@@ -86,7 +80,11 @@ set (CMAKE_REQUIRED_INCLUDES ${proton_include})
 set (CMAKE_REQUIRED_LIBRARIES ${proton_lib})
 check_function_exists(pn_link_get_drain HAVE_LINK_GET_DRAIN)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in ${CMAKE_CURRENT_BINARY_DIR}/conditionals.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/conditionals.h)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tools/qdstat.in
+               ${CMAKE_CURRENT_BINARY_DIR}/tools/qdstat)
 
 ##
 ## Build the Multi-Threaded Server Library
@@ -138,39 +136,8 @@ install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatc
 ##
 ## Python modules installation
 ##
-set(PYTHON_STUBS_SOURCES
-    python/qpid_dispatch/stubs/__init__.py
-    python/qpid_dispatch/stubs/ioadapter.py
-    python/qpid_dispatch/stubs/logadapter.py
-)
-
-set(PYTHON_ROUTER_SOURCES
-    python/qpid_dispatch/router/link.py
-    python/qpid_dispatch/router/engine.py
-    python/qpid_dispatch/router/__init__.py
-    python/qpid_dispatch/router/mobile.py
-    python/qpid_dispatch/router/node.py
-    python/qpid_dispatch/router/routing.py
-    python/qpid_dispatch/router/data.py
-    python/qpid_dispatch/router/configuration.py
-    python/qpid_dispatch/router/neighbor.py
-    python/qpid_dispatch/router/path.py
-)
-
-set(PYTHON_CONFIG_SOURCES
-    python/qpid_dispatch/config/parser.py
-    python/qpid_dispatch/config/__init__.py
-    python/qpid_dispatch/config/schema.py
-    python/qpid_dispatch/__init__.py
-)
-
-set(PYTHON_TOOLS_SOURCES
-    python/qpid_dispatch/tools/__init__.py
-    python/qpid_dispatch/tools/display.py
-)
-
 set(PYTHON_TOOLS_EXECUTABLES
-    tools/qdstat
+    ${CMAKE_CURRENT_BINARY_DIR}/tools/qdstat
 )
 
 set(DOC_FILES
@@ -180,29 +147,15 @@ set(DOC_FILES
     TODO
 )
 
-install(FILES ${PYTHON_STUBS_SOURCES}
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch/stubs)
-
-install(FILES ${PYTHON_ROUTER_SOURCES}
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch/router)
-
-install(FILES ${PYTHON_CONFIG_SOURCES}
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch/config)
-
-install(FILES ${PYTHON_TOOLS_SOURCES}
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch/tools)
-
-install(FILES python/qpid_dispatch/__init__.py
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch)
-
-install(FILES python/qpid_dispatch/__init__.py
-        DESTINATION ${PYTHON_SITELIB_PACKAGES}/qpid_dispatch)
+install(DIRECTORY python/qpid_dispatch_internal
+        DESTINATION ${QPID_DISPATCH_HOME}/python)
 
 install(PROGRAMS ${PYTHON_TOOLS_EXECUTABLES}
         DESTINATION bin)
 
 install(FILES ${DOC_FILES}
         DESTINATION ${DOC_INSTALL_DIR}/qpid-dispatch)
+
 ##
 ## Build Tests
 ##

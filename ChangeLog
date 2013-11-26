@@ -25,3 +25,4 @@ Version 0.1:
 	* QPID-5201: Dispatch - Fix build errors in Release mode
 	* QPID-5218: [dispatch] Crash when outgoing window > 0 and multiple subscribed Messenger clients
 	* QPID-5338: The Dispatch top-level Python package should be renamed
+	* QPID-5335: Dispatch Python libraries need to install to a private directory.

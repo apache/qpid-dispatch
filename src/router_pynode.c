@@ -538,7 +538,7 @@ void qd_router_python_setup(qd_router_t *router)
     PyObject* pClass;
     PyObject* pArgs;
 
-    pName   = PyString_FromString("qpid_dispatch.router");
+    pName   = PyString_FromString("qpid_dispatch_internal.router");
     pModule = PyImport_Import(pName);
     Py_DECREF(pName);
     if (!pModule) {

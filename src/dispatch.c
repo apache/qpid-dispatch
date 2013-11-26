@@ -50,7 +50,8 @@ static const char *CONF_LISTENER    = "listener";
 static const char *CONF_CONNECTOR   = "connector";
 
 
-qd_dispatch_t *qd_dispatch(const char *config_path)
+qd_dispatch_t *qd_dispatch(const char *config_path,
+                           const char *python_pkgdir)
 {
     qd_dispatch_t *qd = NEW(qd_dispatch_t);
 
@@ -65,7 +66,7 @@ qd_dispatch_t *qd_dispatch(const char *config_path)
     DEQ_INIT(qd->config_listeners);
     DEQ_INIT(qd->config_connectors);
 
-    qd_python_initialize(qd);
+    qd_python_initialize(qd, python_pkgdir);
     qd_log_initialize();
     qd_alloc_initialize();
 

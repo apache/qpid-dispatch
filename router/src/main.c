@@ -87,16 +87,19 @@ static void startup(void *context)
 
 int main(int argc, char **argv)
 {
-    const char *config_path = DEFAULT_CONFIG_PATH;
+#define DEFAULT_DISPATCH_PYTHON_DIR QPID_DISPATCH_HOME_INSTALLED "/python"
+    const char *config_path   = DEFAULT_CONFIG_PATH;
+    const char *python_pkgdir = DEFAULT_DISPATCH_PYTHON_DIR;
 
     static struct option long_options[] = {
-    {"config", required_argument, 0, 'c'},
-    {"help",   no_argument,       0, 'h'},
-    {0,        0,                 0,  0}
+    {"config",  required_argument, 0, 'c'},
+    {"include", required_argument, 0, 'I'},
+    {"help",    no_argument,       0, 'h'},
+    {0,         0,                 0,  0}
     };
 
     while (1) {
-        int c = getopt_long(argc, argv, "c:h", long_options, 0);
+        int c = getopt_long(argc, argv, "c:I:h", long_options, 0);
         if (c == -1)
             break;
 
@@ -105,10 +108,16 @@ int main(int argc, char **argv)
             config_path = optarg;
             break;
 
+        case 'I' :
+            python_pkgdir = optarg;
+            break;
+
         case 'h' :
             printf("Usage: %s [OPTION]\n\n", argv[0]);
             printf("  -c, --config=PATH (%s)\n", DEFAULT_CONFIG_PATH);
             printf("                             Load configuration from file at PATH\n");
+            printf("  -I, --include=PATH (%s)\n", DEFAULT_DISPATCH_PYTHON_DIR);
+            printf("                             Location of Dispatch's Python library\n");
             printf("  -h, --help                 Print this help\n");
             exit(0);
 
@@ -119,7 +128,7 @@ int main(int argc, char **argv)
 
     qd_log_set_mask(0xFFFFFFFE);
 
-    dispatch = qd_dispatch(config_path);
+    dispatch = qd_dispatch(config_path, python_pkgdir);
 
     qd_server_set_signal_handler(dispatch, server_signal_handler, 0);
     qd_server_set_start_handler(dispatch, thread_start_handler, 0);

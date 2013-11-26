@@ -117,7 +117,7 @@ static char* test_start_handler(void *context)
 {
     int i;
 
-    qd = qd_dispatch(config_file);
+    qd = qd_dispatch(config_file, 0);
 
     expected_context = (void*) 0x00112233;
     stored_error[0] = 0x0;
@@ -140,7 +140,7 @@ static char* test_start_handler(void *context)
 
 static char *test_server_start(void *context)
 {
-    qd = qd_dispatch(config_file);
+    qd = qd_dispatch(config_file, 0);
     qd_server_start(qd);
     qd_server_stop(qd);
     qd_dispatch_free(qd);
@@ -154,7 +154,7 @@ static char* test_user_fd(void *context)
     int res;
     qd_timer_t *timer;
 
-    qd = qd_dispatch(config_file);
+    qd = qd_dispatch(config_file, 0);
     qd_server_set_user_fd_handler(qd, ufd_handler);
     timer = qd_timer(qd, fd_test_start, 0);
     qd_timer_schedule(timer, 0);

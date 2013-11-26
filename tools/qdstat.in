@@ -27,10 +27,10 @@ import socket
 import re
 from proton import Messenger, Message
 
-home = os.environ.get("QD_TOOLS_HOME", os.path.normpath("/usr/share/qd-tools"))
+home = os.environ.get("QPID_DISPATCH_HOME", os.path.normpath("${QPID_DISPATCH_HOME}"))
 sys.path.append(os.path.join(home, "python"))
 
-from qpid_dispatch.tools import Display, Header, Sorter, YN, Commas, TimeLong
+from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
 
 
 class Config:

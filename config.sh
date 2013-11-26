@@ -23,5 +23,5 @@ export QPID_DISPATCH_HOME=$(pwd)
 cd - > /dev/null
 
 export PYTHONPATH=$QPID_DISPATCH_HOME/python:$PYTHONPATH
-export PATH=$QPID_DISPATCH_HOME/tools:$PATH
+export PATH=$QPID_DISPATCH_HOME/build/tools:$PATH
 

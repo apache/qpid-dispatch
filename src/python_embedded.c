@@ -34,14 +34,18 @@ static uint32_t       ref_count  = 0;
 static sys_mutex_t   *lock       = 0;
 static char          *log_module = "PYTHON";
 static PyObject      *dispatch_module = 0;
+static PyObject      *dispatch_python_pkgdir = 0;
 
 static void qd_python_setup();
 
 
-void qd_python_initialize(qd_dispatch_t *qd)
+void qd_python_initialize(qd_dispatch_t *qd,
+                          const char    *python_pkgdir)
 {
     dispatch = qd;
     lock = sys_mutex();
+    if (python_pkgdir)
+        dispatch_python_pkgdir = PyString_FromString(python_pkgdir);
 }
 
 
@@ -640,6 +644,14 @@ static void qd_python_setup()
         assert(0);
     } else {
         PyObject *m = Py_InitModule3("dispatch", empty_methods, "Dispatch Adapter Module");
+
+        //
+        // Append sys.path to include location of Dispatch libraries
+        //
+        if (dispatch_python_pkgdir) {
+            PyObject *sys_path = PySys_GetObject("path");
+            PyList_Append(sys_path, dispatch_python_pkgdir);
+        }
 
         //
         // Add LogAdapter
