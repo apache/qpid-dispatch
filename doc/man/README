@@ -1,0 +1,44 @@
+# A really quick guide to nroff and man-page macros
+
+## The title heading
+
+  .TH <name> <section>
+  .TH somefile.conf 5
+  .TH somedaemon 8
+
+## Section headings
+
+  .SH <text>
+  .SH OPTIONS
+  .SH "SOMETHING ELSE" 
+
+## Subsection headings
+
+  .SS <text>
+
+## Indented paragraphs for named items
+
+  .IP <item-name>
+  <item-text>
+
+## Paragraph breaks
+
+  .P
+
+## Bold and italic
+
+  .B "some bold text"
+  .I "some italic text"
+  Some \fBbold text\fP
+  Some \fIitalic text\fP
+
+## Things to keep in mind
+
+ - Arguments containing spaces must be quoted: "some arg"
+ - Dot macros must start on their own line
+
+## More information
+
+ - http://linux.die.net/man/7/man-pages
+ - http://linux.die.net/man/7/man
+ - http://www.fnal.gov/docs/products/ups/ReferenceManual/html/manpages.html

@@ -1,11 +1,30 @@
-.TH QDROUTERD.CONF 5 "QPID DISPATCH" "Apache Qpid" \" -*- nroff -*-
+.\" -*- nroff -*-
+.\"
+.\" Licensed to the Apache Software Foundation (ASF) under one
+.\" or more contributor license agreements.  See the NOTICE file
+.\" distributed with this work for additional information
+.\" regarding copyright ownership.  The ASF licenses this file
+.\" to you under the Apache License, Version 2.0 (the
+.\" "License"); you may not use this file except in compliance
+.\" with the License.  You may obtain a copy of the License at
+.\"
+.\"   http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing,
+.\" software distributed under the License is distributed on an
+.\" "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+.\" KIND, either express or implied.  See the License for the
+.\" specific language governing permissions and limitations
+.\" under the License
+.\"
+.TH QDROUTERD.CONF 5
 .SH NAME
-qdrouterd.conf - Configuration file for the Qpid Dispatch router
-\" XXX .SH DESCRIPTION
-\" when loaded, reloaded (sighup?)
-\" XXX .SH SYNTAX
+qdrouterd.conf \- Configuration file for the Qpid Dispatch router
+.\" XXX .SH DESCRIPTION
+.\" when loaded, reloaded (sighup?)
+.\" XXX .SH SYNTAX
 .SH OPTIONS
-.SS "container - Container settings"
+.SS "'container' section"
 .IP container-name
 The name of the AMQP container.  If not specified, the container name
 will be set to a value of the container's choosing.  The automatically
@@ -14,7 +33,7 @@ restarts of the container.
 .IP worker-threads
 The number of threads that will be created to process message traffic
 and other application work (timers, non-amqp file descriptors, etc.)
-.SS "ssl-profile - SSL profiles"
+.SS "'ssl-profile' section"
 .IP
 Zero or more SSL profiles may be defined and then referenced later in
 listeners (for incoming connections) or connectors (for outgoing
@@ -39,14 +58,14 @@ password-file is to supply the password right here in the
 configuration file.  This option can be used by supplying the password
 in the 'password' option.  Don't use both password and password-file
 in the same profile.
-.SS "listener, connector - Connection settings"
+.SS "'listener' and 'connector' sections"
 .IP addr
 The listener or connector IP address
 .IP port
 The listener or connector port
 .IP sasl-mechanisms
 A list of accepted SASL mechanisms
-.SS "router - Router settings"
+.SS "'router' section"
 .IP mode
 One of "standalone", "interior", or "edge".  In standalone mode, the
 router operates as a single component.  It does not participate in the
@@ -57,16 +76,16 @@ router operates with an uplink into an interior router network. Edge
 routers are typically used as connection concentrators or as security
 firewalls for access into the interior network.
 .IP router-id
-Each router is assigned a router-id that is unique.  For interior
+Each router \fIis\fP assigned a router-id that is unique.  For interior
 router mode only.
-\" XXX .SH EXAMPLES
+.\" XXX .SH EXAMPLES
 .SH FILES
 .I /etc/qpid-dispatch/qdrouterd.conf
-.br
 .SH SEE ALSO
 .BR qdrouterd (8),
 .BR qdstat (8),
 .BR qdstat.conf (5)
 .SH AUTHOR
-Apache Qpid, http://qpid.apache.org/
+Apache Qpid <http://qpid.apache.org/>
 .SH COPYRIGHT
+Copyright 2013 The Apache Software Foundation
