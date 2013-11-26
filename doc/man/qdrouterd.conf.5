@@ -1,0 +1,72 @@
+.TH QDROUTERD.CONF 5 "QPID DISPATCH" "Apache Qpid" \" -*- nroff -*-
+.SH NAME
+qdrouterd.conf - Configuration file for the Qpid Dispatch router
+\" XXX .SH DESCRIPTION
+\" when loaded, reloaded (sighup?)
+\" XXX .SH SYNTAX
+.SH OPTIONS
+.SS "container - Container settings"
+.IP container-name
+The name of the AMQP container.  If not specified, the container name
+will be set to a value of the container's choosing.  The automatically
+assigned container name is not guaranteed to be persistent across
+restarts of the container.
+.IP worker-threads
+The number of threads that will be created to process message traffic
+and other application work (timers, non-amqp file descriptors, etc.)
+.SS "ssl-profile - SSL profiles"
+.IP
+Zero or more SSL profiles may be defined and then referenced later in
+listeners (for incoming connections) or connectors (for outgoing
+connectors).
+.IP name
+The name of the profile to be referenced later.
+.IP cert-db
+The path to the database that contains the public certificates of
+trusted certificate authorities (CAs).
+.IP cert-file
+The path to the file containing the PEM-formatted public certificate
+to be used on the local end of any connections using this profile.
+.IP key-file
+The path to the file containing the PEM-formatted private key for the
+above certificate.
+.IP password-file
+If the above private key is password protected, this is the path to a
+file containing the password that unlocks the certificate key.
+.IP password
+An alternative to storing the password in a file referenced by
+password-file is to supply the password right here in the
+configuration file.  This option can be used by supplying the password
+in the 'password' option.  Don't use both password and password-file
+in the same profile.
+.SS "listener, connector - Connection settings"
+.IP addr
+The listener or connector IP address
+.IP port
+The listener or connector port
+.IP sasl-mechanisms
+A list of accepted SASL mechanisms
+.SS "router - Router settings"
+.IP mode
+One of "standalone", "interior", or "edge".  In standalone mode, the
+router operates as a single component.  It does not participate in the
+routing protocol and therefore will not coorperate with other routers.
+In interior mode, the router operates in cooreration with other
+interior routers in an interconnected network.  In edge mode, the
+router operates with an uplink into an interior router network. Edge
+routers are typically used as connection concentrators or as security
+firewalls for access into the interior network.
+.IP router-id
+Each router is assigned a router-id that is unique.  For interior
+router mode only.
+\" XXX .SH EXAMPLES
+.SH FILES
+.I /etc/qpid-dispatch/qdrouterd.conf
+.br
+.SH SEE ALSO
+.BR qdrouterd (8),
+.BR qdstat (8),
+.BR qdstat.conf (5)
+.SH AUTHOR
+Apache Qpid, http://qpid.apache.org/
+.SH COPYRIGHT
