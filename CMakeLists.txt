@@ -132,7 +132,6 @@ file(GLOB headers "include/qpid/dispatch/*.h")
 install(FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/qpid/dispatch)
 install(FILES include/qpid/dispatch.h DESTINATION ${INCLUDE_INSTALL_DIR}/qpid)
 install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
-install(FILES doc/man/qdrouterd.conf.5 DESTINATION share/man/man5)
 
 ##
 ## Python modules installation
@@ -160,5 +159,6 @@ install(FILES ${DOC_FILES}
 ##
 ## Build Tests
 ##
+add_subdirectory(doc)
 add_subdirectory(router)
 add_subdirectory(tests)
