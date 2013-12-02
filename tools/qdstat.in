@@ -102,8 +102,8 @@ class BusManager:
         self.M.start()
         self.M.route("amqp:/*", "amqp://%s/$1" % host)
         self.address = "amqp:/_local/$management"
-        self.reply   = "amqp:/temp.reply-address/0001"    # FIX THIS!
-        self.M.subscribe(self.reply)
+        self.subscription = self.M.subscribe("amqp:/#")
+        self.reply = self.subscription.address
 
     def Disconnect(self):
         self.M.stop()
