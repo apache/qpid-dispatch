@@ -24,7 +24,12 @@ Running The Tests
 Prior to running the unit tests, you should source the file config.sh which is
 found in the root directory.
 
-$ . config.sh
+$ source config.sh
 
 The file sets up the environment so that the tests can find the Python
 libraries, etc.
+
+Run the test.sh script to run a clean, top-to-bottom build, install,
+and test.
+
+$ test.sh

@@ -25,11 +25,13 @@ import subprocess
 from proton import Messenger, Message, PENDING, ACCEPTED, REJECTED
 
 def startRouter(obj):
-    if 'CTEST_SOURCE_DIR' not in os.environ:
-        raise Exception("Environment variable 'CTEST_SOURCE_DIR' not set")
-    srcdir = os.environ['CTEST_SOURCE_DIR']
-    obj.router = subprocess.Popen(['../router/qdrouterd', '-c', '%s/config-1/A.conf' % srcdir],
-                                  stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    default_home = os.path.normpath('/usr/lib/qpid-dispatch')
+    home = os.environ.get('QPID_DISPATCH_HOME', default_home)
+    config_file = '%s/tests/config-1/A.conf' % home
+
+    obj.router = subprocess.Popen(['qdrouterd', '-c', config_file],
+                                  stderr=subprocess.PIPE,
+                                  stdout=subprocess.PIPE)
     time.sleep(1)
 
 def stopRouter(obj):

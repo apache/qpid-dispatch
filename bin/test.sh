@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,16 +18,22 @@
 # under the License.
 #
 
-if [[ ! -f config.sh ]]; then
-    echo "You must source config.sh from within its own directory"
-    return
+set -ev
+
+if [[ -z "$SOURCE_DIR" ]]; then
+    echo "The devel environment isn't ready.  Run 'source config.sh' from"
+    echo "the base of the dispatch source tree"
+    exit 1
 fi
 
-export SOURCE_DIR=$(pwd)
-export BUILD_DIR=$SOURCE_DIR/build
-export INSTALL_DIR=$SOURCE_DIR/install
+rm -rf $BUILD_DIR
+rm -rf $INSTALL_DIR
 
-export QPID_DISPATCH_HOME=$INSTALL_DIR/lib/qpid-dispatch
-export LD_LIBRARY_PATH=$INSTALL_DIR/lib64:$INSTALL_DIR/lib
-export PYTHONPATH=$QPID_DISPATCH_HOME/python:$PYTHONPATH
-export PATH=$INSTALL_DIR/sbin:$INSTALL_DIR/bin:$SOURCE_DIR/bin:$PATH
+mkdir $BUILD_DIR
+cd $BUILD_DIR
+
+cmake -D CMAKE_INSTALL_PREFIX=$INSTALL_DIR $SOURCE_DIR
+make -j4
+make install
+ctest -VV
+qdtest

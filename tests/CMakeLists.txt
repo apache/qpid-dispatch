@@ -52,8 +52,8 @@ add_test(unit_tests_size_2     unit_tests_size 2)
 add_test(unit_tests_size_1     unit_tests_size 1)
 add_test(unit_tests            unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
 add_test(router_tests          python ${CMAKE_CURRENT_SOURCE_DIR}/router_engine_test.py -v)
-add_test(system_tests_single   python ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_one_router.py -v)
 
-set_property(TEST system_tests_single PROPERTY
-    ENVIRONMENT "CTEST_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
-    )
+set(SYSTEM_TEST_FILES system_tests_one_router.py)
+
+install(FILES ${SYSTEM_TEST_FILES} DESTINATION ${QPID_DISPATCH_HOME}/tests)
+install(DIRECTORY config-1 DESTINATION ${QPID_DISPATCH_HOME}/tests)

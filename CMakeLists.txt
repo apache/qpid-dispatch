@@ -86,6 +86,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tools/qdstat.in
                ${CMAKE_CURRENT_BINARY_DIR}/tools/qdstat)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tools/qdtest.in
+               ${CMAKE_CURRENT_BINARY_DIR}/tools/qdtest)
+
 ##
 ## Build the Multi-Threaded Server Library
 ##
@@ -136,8 +139,9 @@ install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatc
 ##
 ## Python modules installation
 ##
-set(PYTHON_TOOLS_EXECUTABLES
+set(TOOLS_EXECUTABLES
     ${CMAKE_CURRENT_BINARY_DIR}/tools/qdstat
+    ${CMAKE_CURRENT_BINARY_DIR}/tools/qdtest
 )
 
 set(DOC_FILES
@@ -150,7 +154,7 @@ set(DOC_FILES
 install(DIRECTORY python/qpid_dispatch_internal
         DESTINATION ${QPID_DISPATCH_HOME}/python)
 
-install(PROGRAMS ${PYTHON_TOOLS_EXECUTABLES}
+install(PROGRAMS ${TOOLS_EXECUTABLES}
         DESTINATION bin)
 
 install(FILES ${DOC_FILES}

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,16 +18,12 @@
 # under the License.
 #
 
-if [[ ! -f config.sh ]]; then
-    echo "You must source config.sh from within its own directory"
-    return
+set -e
+
+if [[ -z "$QPID_DISPATCH_HOME" ]]; then
+    QPID_DISPATCH_HOME=${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME}
 fi
 
-export SOURCE_DIR=$(pwd)
-export BUILD_DIR=$SOURCE_DIR/build
-export INSTALL_DIR=$SOURCE_DIR/install
+echo "Running system_tests_one_router.py"
 
-export QPID_DISPATCH_HOME=$INSTALL_DIR/lib/qpid-dispatch
-export LD_LIBRARY_PATH=$INSTALL_DIR/lib64:$INSTALL_DIR/lib
-export PYTHONPATH=$QPID_DISPATCH_HOME/python:$PYTHONPATH
-export PATH=$INSTALL_DIR/sbin:$INSTALL_DIR/bin:$SOURCE_DIR/bin:$PATH
+python $QPID_DISPATCH_HOME/tests/system_tests_one_router.py

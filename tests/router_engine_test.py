@@ -17,7 +17,12 @@
 # under the License.
 #
 
+import os
+import sys
 import unittest
+
+sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))
+
 from qpid_dispatch_internal.router.engine import NeighborEngine, PathEngine, Configuration, NodeTracker
 from qpid_dispatch_internal.router.data import LinkState, MessageHELLO
 
