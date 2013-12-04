@@ -1,0 +1,9 @@
+This directory contains different kinds of documentation for Dispatch.
+
+  book/   - Book-format documentation.  This is published to the Qpid
+            website with each new Dispatch release.
+
+  man/    - Unix man pages.  These are included in the installed files.
+
+  notes/  - Developer notes: project information, design notes, or
+            anything else that's primarily of developer interest.
