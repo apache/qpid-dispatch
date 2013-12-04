@@ -25,7 +25,7 @@ import sys
 import locale
 import socket
 import re
-from proton import Messenger, Message
+from proton import Messenger, Message, Timeout
 
 home = os.environ.get("QPID_DISPATCH_HOME", os.path.normpath("${QPID_DISPATCH_HOME}"))
 sys.path.append(os.path.join(home, "python"))
@@ -36,7 +36,7 @@ from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, Ti
 class Config:
     def __init__(self):
         self._host = "0.0.0.0"
-        self._connTimeout = 10
+        self._connTimeout = 5
         self._types = ""
         self._limit = 50
         self._increasing = False
@@ -65,7 +65,7 @@ def OptionsAndArguments(argv):
     group1.add_option("-b", "--bus",  action="store", type="string", default="0.0.0.0", metavar="<access-url>",
                       help="URL of the messaging bus to connect to")
     group1.add_option("-r", "--router", action="store", type="string", default=None, metavar="<router-id>", help="Router to be queried")
-    group1.add_option("-t", "--timeout", action="store", type="int", default=10, metavar="<secs>",
+    group1.add_option("-t", "--timeout", action="store", type="int", default=5, metavar="<secs>",
                       help="Maximum time to wait for connection (in seconds)")
     group1.add_option("--sasl-mechanism", action="store", type="string", metavar="<mech>",
                       help="SASL mechanism for authentication (e.g. EXTERNAL, ANONYMOUS, PLAIN, CRAM-MD5, DIGEST-MD5, GSSAPI). SASL automatically picks the most secure available mechanism - use this option to override.")
@@ -102,6 +102,7 @@ class BusManager:
     def SetHost(self, host, router):
         self.M = Messenger()
         self.M.start()
+        self.M.timeout = config._connTimeout
         self.M.route("amqp:/*", "amqp://%s/$1" % host)
         if router:
             self.address = "amqp:/_topo/0/%s/$management" % router
@@ -352,6 +353,11 @@ def main(argv=None):
         return 0
     except KeyboardInterrupt:
         print
+    except Timeout:
+        if config._router:
+            print "No response from router %s after timeout" % config._router
+        else:
+            print "No response after timeout"
     except Exception,e:
         print "Failed: %s - %s" % (e.__class__.__name__, e)
 
