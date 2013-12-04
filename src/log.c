@@ -24,7 +24,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/time.h>
+#include <time.h>
 
 #define TEXT_MAX 512
 #define LIST_MAX 1000
@@ -37,7 +37,7 @@ struct qd_log_entry_t {
     int             cls;
     const char     *file;
     int             line;
-    struct timeval  tv;
+    time_t          time;
     char            text[TEXT_MAX];
 };
 
@@ -77,14 +77,17 @@ void qd_log_impl(const char *module, int cls, const char *file, int line, const 
     entry->cls    = cls;
     entry->file   = file;
     entry->line   = line;
-    gettimeofday(&entry->tv, 0);
+    time(&entry->time);
 
+    char ctime[100];
     va_list ap;
 
     va_start(ap, fmt);
     vsnprintf(entry->text, TEXT_MAX, fmt, ap);
     va_end(ap);
-    fprintf(stderr, "%s (%s) %s\n", module, cls_prefix(cls), entry->text);
+    ctime_r(&entry->time, ctime);
+    ctime[24] = '\0';
+    fprintf(stderr, "%s %s (%s) %s\n", ctime, module, cls_prefix(cls), entry->text);
 
     sys_mutex_lock(log_lock);
     DEQ_INSERT_TAIL(entries, entry);

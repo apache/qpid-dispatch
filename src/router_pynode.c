@@ -27,6 +27,8 @@
 #include "router_private.h"
 
 static char *module = "router.pynode";
+static qd_address_semantics_t router_addr_semantics = {true, QD_FORWARD_LOWEST_COST};
+static qd_address_semantics_t default_semantics     = {false, QD_FORWARD_LOWEST_COST};
 
 typedef struct {
     PyObject_HEAD
@@ -72,6 +74,7 @@ static char *qd_add_router(qd_router_t *router, const char *address, int router_
     DEQ_ITEM_INIT(addr);
     DEQ_INIT(addr->rlinks);
     DEQ_INIT(addr->rnodes);
+    addr->semantics = &router_addr_semantics;
     qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
     DEQ_INSERT_TAIL(router->addrs, addr);
     qd_field_iterator_free(iter);
@@ -377,6 +380,7 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
         DEQ_ITEM_INIT(addr);
         DEQ_INIT(addr->rlinks);
         DEQ_INIT(addr->rnodes);
+        addr->semantics = &default_semantics; // FIXME - Add provisioned semantics here.
         qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(router->addrs, addr);

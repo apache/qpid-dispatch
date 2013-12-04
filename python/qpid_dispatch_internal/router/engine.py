@@ -148,7 +148,7 @@ class RouterEngine:
 
             elif opcode == 'RA':
                 msg = MessageRA(body)
-                self.log(LOG_DEBUG, "RCVD: %r" % msg)
+                self.log(LOG_TRACE, "RCVD: %r" % msg)
                 self.link_state_engine.handle_ra(msg, now)
                 self.mobile_address_engine.handle_ra(msg, now)
 

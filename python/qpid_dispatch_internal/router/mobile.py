@@ -170,6 +170,7 @@ class MobileAddressEngine(object):
                 self.remote_lists.pop(_id)
                 self.remote_last_seen.pop(_id)
                 self.remote_changed = True
+                self.container.log(LOG_DEBUG, "Expired remote mobile addresses on node: %s" % _id)
 
 
     def _send_mars(self):

@@ -78,6 +78,11 @@ void qd_agent_value_binary(void *correlator, const char *key, const uint8_t *val
 void qd_agent_value_uuid(void *correlator, const char *key, const uint8_t *value);
 void qd_agent_value_timestamp(void *correlator, const char *key, uint64_t value);
 
+void qd_agent_value_start_list(void *correlator, const char *key);
+void qd_agent_value_end_list(void *correlator);
+void qd_agent_value_start_map(void *correlator, const char *key);
+void qd_agent_value_end_map(void *correlator);
+
 
 /**
  *

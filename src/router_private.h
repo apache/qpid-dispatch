@@ -111,12 +111,16 @@ ALLOC_DECLARE(qd_router_conn_t);
 
 struct qd_address_t {
     DEQ_LINKS(qd_address_t);
-    qd_router_message_cb_t     handler;          // In-Process Consumer
-    void                      *handler_context;  // In-Process Consumer context
-    qd_router_link_ref_list_t  rlinks;           // Locally-Connected Consumers
-    qd_router_ref_list_t       rnodes;           // Remotely-Connected Consumers
-    qd_hash_handle_t          *hash_handle;      // Linkage back to the hash table entry
+    qd_router_message_cb_t        handler;          // In-Process Consumer
+    void                         *handler_context;  // In-Process Consumer context
+    qd_router_link_ref_list_t     rlinks;           // Locally-Connected Consumers
+    qd_router_ref_list_t          rnodes;           // Remotely-Connected Consumers
+    qd_hash_handle_t             *hash_handle;      // Linkage back to the hash table entry
+    const qd_address_semantics_t *semantics;
 
+    //
+    // Statistics
+    //
     uint64_t deliveries_ingress;
     uint64_t deliveries_egress;
     uint64_t deliveries_transit;

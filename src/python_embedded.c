@@ -36,6 +36,8 @@ static char          *log_module = "PYTHON";
 static PyObject      *dispatch_module = 0;
 static PyObject      *dispatch_python_pkgdir = 0;
 
+static qd_address_semantics_t py_semantics = {false, QD_FORWARD_MULTICAST};
+
 static void qd_python_setup();
 
 
@@ -500,7 +502,7 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     for (Py_ssize_t idx = 0; idx < self->addr_count; idx++)
         self->addrs[idx] = qd_router_register_address(self->qd,
                                                       PyString_AS_STRING(PyTuple_GetItem(addrs, idx)),
-                                                      qd_io_rx_handler, self);
+                                                      qd_io_rx_handler, &py_semantics, self);
     return 0;
 }
 

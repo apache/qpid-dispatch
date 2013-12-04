@@ -62,8 +62,9 @@ def OptionsAndArguments(argv):
     parser = OptionParser(usage=usage)
 
     group1 = OptionGroup(parser, "General Options")
-    group1.add_option("-b", "--bus",  action="store", type="string", default="0.0.0.0", metavar="<url>",
+    group1.add_option("-b", "--bus",  action="store", type="string", default="0.0.0.0", metavar="<access-url>",
                       help="URL of the messaging bus to connect to")
+    group1.add_option("-r", "--router", action="store", type="string", default=None, metavar="<router-id>", help="Router to be queried")
     group1.add_option("-t", "--timeout", action="store", type="int", default=10, metavar="<secs>",
                       help="Maximum time to wait for connection (in seconds)")
     group1.add_option("--sasl-mechanism", action="store", type="string", metavar="<mech>",
@@ -88,6 +89,7 @@ def OptionsAndArguments(argv):
 
     config._types = opts.show
     config._host = opts.bus
+    config._router = opts.router
     config._connTimeout = opts.timeout
 
     return args
@@ -97,16 +99,36 @@ class BusManager:
     def __init__(self):
         pass
 
-    def SetHost(self, host):
+    def SetHost(self, host, router):
         self.M = Messenger()
         self.M.start()
         self.M.route("amqp:/*", "amqp://%s/$1" % host)
-        self.address = "amqp:/_local/$management"
+        if router:
+            self.address = "amqp:/_topo/0/%s/$management" % router
+        else:
+            self.address = "amqp:/_local/$management"
         self.subscription = self.M.subscribe("amqp:/#")
         self.reply = self.subscription.address
 
     def Disconnect(self):
         self.M.stop()
+
+    def _get_object(self, cls):
+        request = Message()
+        response = Message()
+
+        request.address = self.address
+        request.reply_to = self.reply
+        request.correlation_id = 1
+        request.properties = {u'operation':u'GET', u'type':cls}
+
+        self.M.put(request)
+        self.M.send()
+        self.M.recv()
+        self.M.get(response)
+
+        return response.body
+        
 
     def displayConnections(self):
         disp = Display(prefix="  ")
@@ -120,20 +142,9 @@ class BusManager:
 
         rows = []
 
-        request = Message()
-        response = Message()
+        objects = self._get_object('org.apache.qpid.dispatch.connection')
 
-        request.address = self.address
-        request.reply_to = self.reply
-        request.correlation_id = 1
-        request.properties = {u'operation':u'GET', u'type':u'org.apache.qpid.dispatch.connection'}
-
-        self.M.put(request)
-        self.M.send()
-
-        self.M.recv()
-        self.M.get(response)
-        for conn in response.body:
+        for conn in objects:
             row = []
             row.append(conn['state'])
             row.append(conn['host'])
@@ -167,21 +178,9 @@ class BusManager:
         heads.append(Header("value"))
         rows = []
 
-        request = Message()
-        response = Message()
+        objects = self._get_object('org.apache.qpid.dispatch.router')
 
-        request.address = self.address
-        request.reply_to = self.reply
-        request.correlation_id = 1
-        request.properties = {u'operation':u'GET', u'type':u'org.apache.qpid.dispatch.router'}
-
-        self.M.put(request)
-        self.M.send()
-
-        self.M.recv()
-        self.M.get(response)
-
-        router = response.body[0]
+        router = objects[0]
         rows.append(('Mode',          router['mode']))
         rows.append(('Area',          router['area']))
         rows.append(('Router Id',     router['router_id']))
@@ -203,21 +202,9 @@ class BusManager:
         heads.append(Header("addr"))
         rows = []
 
-        request = Message()
-        response = Message()
+        objects = self._get_object('org.apache.qpid.dispatch.router.link')
 
-        request.address = self.address
-        request.reply_to = self.reply
-        request.correlation_id = 1
-        request.properties = {u'operation':u'GET', u'type':u'org.apache.qpid.dispatch.router.link'}
-
-        self.M.put(request)
-        self.M.send()
-
-        self.M.recv()
-        self.M.get(response)
-
-        for link in response.body:
+        for link in objects:
             row = []
             row.append(link['link-type'])
             row.append(link['link-dir'])
@@ -235,43 +222,44 @@ class BusManager:
     def displayRouterNodes(self):
         disp = Display(prefix="  ")
         heads = []
-        heads.append(Header("class"))
-        heads.append(Header("address"))
-        heads.append(Header("rindex"))
+        heads.append(Header("router-id"))
         heads.append(Header("next-hop"))
         heads.append(Header("link"))
+        heads.append(Header("valid-origins"))
         rows = []
 
-        request = Message()
-        response = Message()
+        objects  = self._get_object('org.apache.qpid.dispatch.router.node')
+        attached = self._get_object('org.apache.qpid.dispatch.router')[0]
 
-        request.address = self.address
-        request.reply_to = self.reply
-        request.correlation_id = 1
-        request.properties = {u'operation':u'GET', u'type':u'org.apache.qpid.dispatch.router.node'}
+        nodes = {}
+        for node in objects:
+            nodes[node['index']] = node
+            node['addr'] = self._addr_text(node['addr'])
 
-        self.M.put(request)
-        self.M.send()
-
-        self.M.recv()
-        self.M.get(response)
-
-        for node in response.body:
+        rows.append([attached['router_id'], '-', '(self)', ''])
+        for node in objects:
             row = []
-            row.append(self._addr_class(node['addr']))
-            row.append(self._addr_text(node['addr']))
-            row.append(node['index'])
+            row.append(node['addr'])
             if node['next-hop'] != None:
-                row.append(node['next-hop'])
+                row.append(nodes[node['next-hop']]['addr'])
             else:
                 row.append('-')
             if node['router-link'] != None:
                 row.append(node['router-link'])
             else:
                 row.append('-')
+            vo = None
+            for i in node['valid-origins']:
+                if not vo:
+                    vo = ""
+                else:
+                    vo += ", "
+                vo += nodes[i]['addr']
+            row.append(vo)
             rows.append(row)
         title = "Router Nodes"
-        dispRows = rows
+        sort = Sorter(heads, rows, 'router-id')
+        dispRows = sort.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
     def displayAddresses(self):
@@ -289,21 +277,9 @@ class BusManager:
         heads.append(Header("from-proc", Header.COMMAS))
         rows = []
 
-        request = Message()
-        response = Message()
+        objects = self._get_object('org.apache.qpid.dispatch.router.address')
 
-        request.address = self.address
-        request.reply_to = self.reply
-        request.correlation_id = 1
-        request.properties = {u'operation':u'GET', u'type':u'org.apache.qpid.dispatch.router.address'}
-
-        self.M.put(request)
-        self.M.send()
-
-        self.M.recv()
-        self.M.get(response)
-
-        for addr in response.body:
+        for addr in objects:
             row = []
             row.append(self._addr_class(addr['addr']))
             row.append(self._addr_text(addr['addr']))
@@ -334,21 +310,9 @@ class BusManager:
         heads.append(Header("rebal-out", Header.COMMAS))
         rows = []
 
-        request = Message()
-        response = Message()
+        objects = self._get_object('org.apache.qpid.dispatch.allocator')
 
-        request.address = self.address
-        request.reply_to = self.reply
-        request.correlation_id = 1
-        request.properties = {u'operation':u'GET', u'type':u'org.apache.qpid.dispatch.allocator'}
-
-        self.M.put(request)
-        self.M.send()
-
-        self.M.recv()
-        self.M.get(response)
-
-        for t in response.body:
+        for t in objects:
             row = []
             row.append(t['name'])
             row.append(t['type_size'])
@@ -382,7 +346,7 @@ def main(argv=None):
     bm   = BusManager()
 
     try:
-        bm.SetHost(config._host)
+        bm.SetHost(config._host, config._router)
         bm.display(args)
         bm.Disconnect()
         return 0
@@ -391,7 +355,7 @@ def main(argv=None):
     except Exception,e:
         print "Failed: %s - %s" % (e.__class__.__name__, e)
 
-    bm.Disconnect()   # try to deallocate brokers
+    bm.Disconnect()
     return 1
 
 if __name__ == "__main__":

@@ -24,17 +24,37 @@
 #include <qpid/dispatch/iterator.h>
 #include <stdbool.h>
 
-typedef struct qd_address_t qd_address_t;
+/**
+ * Address Forwarding Semantics
+ *
+ * MULTICAST   - Send a copy of the message to every subscribed consumer
+ * LOWEST_COST - Send a copy to only the lowest-cost (closest) subscribed consumer
+ * ROUND_ROBIN - Distribute messages approximately evenly across subscribed consumers
+ * BALANCED    - Distribute messages based on cost/buffer-depth/outstanding-acks
+ */
+typedef enum {
+    QD_FORWARD_MULTICAST,
+    QD_FORWARD_LOWEST_COST,
+    QD_FORWARD_ROUND_ROBIN,
+    QD_FORWARD_BALANCED
+} qd_forwarding_rule_t;
 
+typedef struct {
+    bool                 bypass_valid_origins;
+    qd_forwarding_rule_t forward_rule;
+} qd_address_semantics_t;
+
+typedef struct qd_address_t qd_address_t;
 
 typedef void (*qd_router_message_cb_t)(void *context, qd_message_t *msg, int link_id);
 
 const char *qd_router_id(const qd_dispatch_t *qd);
 
-qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
-                                         const char             *address,
-                                         qd_router_message_cb_t  handler,
-                                         void                   *context);
+qd_address_t *qd_router_register_address(qd_dispatch_t                *qd,
+                                         const char                   *address,
+                                         qd_router_message_cb_t        handler,
+                                         const qd_address_semantics_t *semantics,
+                                         void                         *context);
 
 void qd_router_unregister_address(qd_address_t *address);
 

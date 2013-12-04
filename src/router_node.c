@@ -34,6 +34,9 @@ static char *topo_prefix   = "_topo/";
 static char *direct_prefix;
 static char *node_id;
 
+static qd_address_semantics_t router_semantics = {true, QD_FORWARD_MULTICAST};
+static qd_address_semantics_t default_semantics = {false, QD_FORWARD_MULTICAST};
+
 /**
  * Address Types and Processing:
  *
@@ -600,7 +603,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
                         // candidate destination router.
                         //
                         int origin = -1;
-                        if (ingress_iter) {
+                        if (ingress_iter && !addr->semantics->bypass_valid_origins) {
                             qd_field_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
                             qd_address_t *origin_addr;
                             qd_hash_retrieve(router->addr_hash, ingress_iter, (void*) &origin_addr);
@@ -676,6 +679,8 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
                 qd_delivery_free(delivery, PN_ACCEPTED);
             } else if (fanout == 0) {
                 qd_delivery_free(delivery, PN_RELEASED);
+            } else if (qd_delivery_settled(delivery)) {
+                qd_delivery_free(delivery, 0);
             }
         }
     } else {
@@ -730,13 +735,13 @@ static void router_disp_handler(void* context, qd_link_t *link, qd_delivery_t *d
             qd_link_activate(peer_link);
         }
 
-    } else {
-        //
-        // The no-peer case.  Ignore status changes and echo settlement.
-        //
-        if (settled)
-            qd_delivery_free(delivery, 0);
     }
+
+    //
+    // In all cases, if this delivery is settled, free it.
+    //
+    if (settled)
+        qd_delivery_free(delivery, 0);
 }
 
 
@@ -890,6 +895,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
             DEQ_ITEM_INIT(addr);
             DEQ_INIT(addr->rlinks);
             DEQ_INIT(addr->rnodes);
+            addr->semantics = &default_semantics; // FIXME - Use provisioned address here
             qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(router->addrs, addr);
         }
@@ -1163,8 +1169,8 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     // locally later in the initialization sequence.
     //
     if (router->router_mode == QD_ROUTER_MODE_INTERIOR) {
-        router->router_addr = qd_router_register_address(qd, "qdrouter", 0, 0);
-        router->hello_addr  = qd_router_register_address(qd, "qdhello", 0, 0);
+        router->router_addr = qd_router_register_address(qd, "qdrouter", 0, &router_semantics, 0);
+        router->hello_addr  = qd_router_register_address(qd, "qdhello", 0, &router_semantics, 0);
     }
 
     //
@@ -1211,10 +1217,11 @@ const char *qd_router_id(const qd_dispatch_t *qd)
 }
 
 
-qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
-                                         const char             *address,
-                                         qd_router_message_cb_t  handler,
-                                         void                   *context)
+qd_address_t *qd_router_register_address(qd_dispatch_t                *qd,
+                                         const char                   *address,
+                                         qd_router_message_cb_t        handler,
+                                         const qd_address_semantics_t *semantics,
+                                         void                         *context)
 {
     char                 addr_string[1000];
     qd_router_t         *router = qd->router;
@@ -1233,6 +1240,7 @@ qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
         DEQ_ITEM_INIT(addr);
         DEQ_INIT(addr->rlinks);
         DEQ_INIT(addr->rnodes);
+        addr->semantics = semantics;
         qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(router->addrs, addr);

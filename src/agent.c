@@ -35,6 +35,8 @@
 #include <string.h>
 #include <stdio.h>
 
+static qd_address_semantics_t agent_semantics = {false, QD_FORWARD_LOWEST_COST};
+
 struct qd_agent_class_t {
     DEQ_LINKS(qd_agent_class_t);
     qd_hash_handle_t     *hash_handle;
@@ -442,7 +444,7 @@ qd_agent_t *qd_agent(qd_dispatch_t *qd)
     DEQ_INIT(agent->out_fifo);
     agent->lock    = sys_mutex();
     agent->timer   = qd_timer(qd, qd_agent_deferred_handler, agent);
-    agent->address = qd_router_register_address(qd, "$management", qd_agent_rx_handler, agent);
+    agent->address = qd_router_register_address(qd, "$management", qd_agent_rx_handler, &agent_semantics, agent);
 
     return agent;
 }
@@ -487,7 +489,8 @@ void qd_agent_value_string(void *correlator, const char *key, const char *value)
 {
     qd_agent_request_t *request = (qd_agent_request_t*) correlator;
     qd_agent_check_empty(request);
-    qd_compose_insert_string(request->response, key);
+    if (key)
+        qd_compose_insert_string(request->response, key);
     qd_compose_insert_string(request->response, value);
 }
 
@@ -496,7 +499,8 @@ void qd_agent_value_uint(void *correlator, const char *key, uint64_t value)
 {
     qd_agent_request_t *request = (qd_agent_request_t*) correlator;
     qd_agent_check_empty(request);
-    qd_compose_insert_string(request->response, key);
+    if (key)
+        qd_compose_insert_string(request->response, key);
     qd_compose_insert_uint(request->response, value);
 }
 
@@ -505,7 +509,8 @@ void qd_agent_value_null(void *correlator, const char *key)
 {
     qd_agent_request_t *request = (qd_agent_request_t*) correlator;
     qd_agent_check_empty(request);
-    qd_compose_insert_string(request->response, key);
+    if (key)
+        qd_compose_insert_string(request->response, key);
     qd_compose_insert_null(request->response);
 }
 
@@ -514,7 +519,8 @@ void qd_agent_value_boolean(void *correlator, const char *key, bool value)
 {
     qd_agent_request_t *request = (qd_agent_request_t*) correlator;
     qd_agent_check_empty(request);
-    qd_compose_insert_string(request->response, key);
+    if (key)
+        qd_compose_insert_string(request->response, key);
     qd_compose_insert_bool(request->response, value);
 }
 
@@ -523,7 +529,8 @@ void qd_agent_value_binary(void *correlator, const char *key, const uint8_t *val
 {
     qd_agent_request_t *request = (qd_agent_request_t*) correlator;
     qd_agent_check_empty(request);
-    qd_compose_insert_string(request->response, key);
+    if (key)
+        qd_compose_insert_string(request->response, key);
     qd_compose_insert_binary(request->response, value, len);
 }
 
@@ -532,7 +539,8 @@ void qd_agent_value_uuid(void *correlator, const char *key, const uint8_t *value
 {
     qd_agent_request_t *request = (qd_agent_request_t*) correlator;
     qd_agent_check_empty(request);
-    qd_compose_insert_string(request->response, key);
+    if (key)
+        qd_compose_insert_string(request->response, key);
     qd_compose_insert_uuid(request->response, value);
 }
 
@@ -541,8 +549,43 @@ void qd_agent_value_timestamp(void *correlator, const char *key, uint64_t value)
 {
     qd_agent_request_t *request = (qd_agent_request_t*) correlator;
     qd_agent_check_empty(request);
-    qd_compose_insert_string(request->response, key);
+    if (key)
+        qd_compose_insert_string(request->response, key);
     qd_compose_insert_timestamp(request->response, value);
+}
+
+
+void qd_agent_value_start_list(void *correlator, const char *key)
+{
+    qd_agent_request_t *request = (qd_agent_request_t*) correlator;
+    qd_agent_check_empty(request);
+    if (key)
+        qd_compose_insert_string(request->response, key);
+    qd_compose_start_list(request->response);
+}
+
+
+void qd_agent_value_end_list(void *correlator)
+{
+    qd_agent_request_t *request = (qd_agent_request_t*) correlator;
+    qd_compose_end_list(request->response);
+}
+
+
+void qd_agent_value_start_map(void *correlator, const char *key)
+{
+    qd_agent_request_t *request = (qd_agent_request_t*) correlator;
+    qd_agent_check_empty(request);
+    if (key)
+        qd_compose_insert_string(request->response, key);
+    qd_compose_start_map(request->response);
+}
+
+
+void qd_agent_value_end_map(void *correlator)
+{
+    qd_agent_request_t *request = (qd_agent_request_t*) correlator;
+    qd_compose_end_map(request->response);
 }
 
 

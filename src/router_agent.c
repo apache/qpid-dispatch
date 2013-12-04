@@ -129,6 +129,11 @@ static void qd_router_query_node(qd_router_t *router, void *cor)
             qd_agent_value_uint(cor, "router-link", node->peer_link->mask_bit);
         else
             qd_agent_value_null(cor, "router-link");
+        qd_agent_value_start_list(cor, "valid-origins");
+        for (uint32_t bit = 1; bit < qd_bitmask_width(); bit++)
+            if (qd_bitmask_value(node->valid_origins, bit))
+                qd_agent_value_uint(cor, 0, bit);
+        qd_agent_value_end_list(cor);
         node = DEQ_NEXT(node);
         qd_agent_value_complete(cor, node != 0);
     }
