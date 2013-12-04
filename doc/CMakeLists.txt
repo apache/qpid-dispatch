@@ -19,6 +19,8 @@
 
 configure_file(man/qdrouterd.8.in ${CMAKE_CURRENT_BINARY_DIR}/man/qdrouterd.8)
 configure_file(man/qdrouterd.conf.5.in ${CMAKE_CURRENT_BINARY_DIR}/man/qdrouterd.conf.5)
+configure_file(man/qdstat.8.in ${CMAKE_CURRENT_BINARY_DIR}/man/qdstat.8)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/man/qdrouterd.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/man/qdrouterd.conf.5 DESTINATION ${MAN_INSTALL_DIR}/man5)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/man/qdstat.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
