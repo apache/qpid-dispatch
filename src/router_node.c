@@ -323,10 +323,9 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
         // with the outgoing delivery.  Otherwise, the message arrived pre-settled
         // and should be sent presettled.
         //
-        if (re->delivery) {
-            qd_delivery_set_peer(re->delivery, delivery);
-            qd_delivery_set_peer(delivery, re->delivery);
-        } else
+        if (re->delivery)
+            qd_delivery_link_peers(re->delivery, delivery);
+        else
             qd_delivery_free(delivery, 0);  // settle and free
 
         pn_link_advance(pn_link);
@@ -734,7 +733,6 @@ static void router_disp_handler(void* context, qd_link_t *link, qd_delivery_t *d
 
             qd_link_activate(peer_link);
         }
-
     }
 
     //
@@ -1183,6 +1181,12 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     // Set up the usage of the embedded python router module.
     //
     qd_python_start();
+
+    //
+    // Seed the random number generator
+    //
+    unsigned int seed = (unsigned int) time(0);
+    srandom(seed);
 
     switch (router->router_mode) {
     case QD_ROUTER_MODE_STANDALONE:  qd_log(module, LOG_INFO, "Router started in Standalone mode");  break;

@@ -89,6 +89,8 @@ static int QD_CONTAINER_CLASS_CONTAINER = 1;
 static int QD_CONTAINER_CLASS_NODE_TYPE = 2;
 static int QD_CONTAINER_CLASS_NODE      = 3;
 
+static sys_mutex_t *delivery_lock = 0;
+
 typedef struct container_class_t {
     qd_container_t *container;
     int             class_id;
@@ -483,6 +485,9 @@ qd_container_t *qd_container(qd_dispatch_t *qd)
     qd_log(module, LOG_TRACE, "Container Initializing");
     qd_server_set_conn_handler(qd, handler, container);
 
+    if (!delivery_lock)
+        delivery_lock = sys_mutex();
+
     return container;
 }
 
@@ -822,15 +827,20 @@ void qd_delivery_free(qd_delivery_t *delivery, uint64_t final_disposition)
         pn_delivery_set_context(delivery->pn_delivery, 0);
         pn_delivery_settle(delivery->pn_delivery);
     }
+    sys_mutex_lock(delivery_lock);
     if (delivery->peer)
         delivery->peer->peer = 0;
+    sys_mutex_unlock(delivery_lock);
     free_qd_delivery_t(delivery);
 }
 
 
-void qd_delivery_set_peer(qd_delivery_t *delivery, qd_delivery_t *peer)
+void qd_delivery_link_peers(qd_delivery_t *right, qd_delivery_t *left)
 {
-    delivery->peer = peer;
+    sys_mutex_lock(delivery_lock);
+    right->peer = left;
+    left->peer  = right;
+    sys_mutex_unlock(delivery_lock);
 }
 
 

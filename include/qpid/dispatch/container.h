@@ -185,7 +185,7 @@ bool qd_link_drain_changed(qd_link_t *link, bool *mode);
  */
 qd_delivery_t *qd_delivery(qd_link_t *link, pn_delivery_tag_t tag);
 void qd_delivery_free(qd_delivery_t *delivery, uint64_t final_disposition);
-void qd_delivery_set_peer(qd_delivery_t *delivery, qd_delivery_t *peer);
+void qd_delivery_link_peers(qd_delivery_t *left, qd_delivery_t *right);
 qd_delivery_t *qd_delivery_peer(qd_delivery_t *delivery);
 void qd_delivery_set_context(qd_delivery_t *delivery, void *context);
 void *qd_delivery_context(qd_delivery_t *delivery);
