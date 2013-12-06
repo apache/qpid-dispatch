@@ -323,10 +323,13 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
         // with the outgoing delivery.  Otherwise, the message arrived pre-settled
         // and should be sent presettled.
         //
-        if (re->delivery)
-            qd_delivery_link_peers(re->delivery, delivery);
-        else
-            qd_delivery_free(delivery, 0);  // settle and free
+        sys_mutex_lock(router->lock);
+        if (re->delivery) {
+            if (qd_delivery_fifo_exit_LH(re->delivery))
+                qd_delivery_link_peers_LH(re->delivery, delivery);
+        } else
+            qd_delivery_free_LH(delivery, 0);  // settle and free
+        sys_mutex_unlock(router->lock);
 
         pn_link_advance(pn_link);
         event_count++;
@@ -348,10 +351,17 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
                 pn_delivery_update(qd_delivery_pn(re->delivery), re->disposition);
                 event_count++;
             }
-            if (re->settle) {
-                qd_delivery_free(re->delivery, 0);
+
+            sys_mutex_lock(router->lock);
+
+            bool ok = qd_delivery_fifo_exit_LH(re->delivery);
+            if (ok && re->settle) {
+                qd_delivery_unlink_LH(re->delivery);
+                qd_delivery_free_LH(re->delivery, 0);
                 event_count++;
             }
+
+            sys_mutex_unlock(router->lock);
         }
 
         free_qd_routed_event_t(re);
@@ -491,9 +501,11 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
         // event.  If it's not settled, link it into the event for later handling.
         //
         if (qd_delivery_settled(delivery))
-            qd_delivery_free(delivery, 0);
-        else
+            qd_delivery_free_LH(delivery, 0);
+        else {
             re->delivery = delivery;
+            qd_delivery_fifo_enter_LH(delivery);
+        }
 
         sys_mutex_unlock(router->lock);
         qd_link_activate(clink->link);
@@ -583,8 +595,10 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
                         DEQ_INSERT_TAIL(dest_link_ref->link->msg_fifo, re);
 
                         fanout++;
-                        if (fanout == 1 && !qd_delivery_settled(delivery))
+                        if (fanout == 1 && !qd_delivery_settled(delivery)) {
                             re->delivery = delivery;
+                            qd_delivery_fifo_enter_LH(delivery);
+                        }
 
                         addr->deliveries_egress++;
                         qd_link_activate(dest_link_ref->link->link);
@@ -656,9 +670,11 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
                                     DEQ_INSERT_TAIL(dest_link->msg_fifo, re);
 
                                     fanout++;
-                                    if (fanout == 1 && !qd_delivery_settled(delivery))
+                                    if (fanout == 1 && !qd_delivery_settled(delivery)) {
                                         re->delivery = delivery;
-                                
+                                        qd_delivery_fifo_enter_LH(delivery);
+                                    }
+                            
                                     addr->deliveries_transit++;
                                     qd_link_activate(dest_link->link);
                                 }
@@ -675,18 +691,18 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
             // number of copies of the received message that were forwarded.
             //
             if (handler) {
-                qd_delivery_free(delivery, PN_ACCEPTED);
+                qd_delivery_free_LH(delivery, PN_ACCEPTED);
             } else if (fanout == 0) {
-                qd_delivery_free(delivery, PN_RELEASED);
+                qd_delivery_free_LH(delivery, PN_RELEASED);
             } else if (qd_delivery_settled(delivery)) {
-                qd_delivery_free(delivery, 0);
+                qd_delivery_free_LH(delivery, 0);
             }
         }
     } else {
         //
         // Message is invalid.  Reject the message.
         //
-        qd_delivery_free(delivery, PN_REJECTED);
+        qd_delivery_free_LH(delivery, PN_REJECTED);
     }
 
     sys_mutex_unlock(router->lock);
@@ -711,8 +727,9 @@ static void router_disp_handler(void* context, qd_link_t *link, qd_delivery_t *d
     bool           changed = qd_delivery_disp_changed(delivery);
     uint64_t       disp    = qd_delivery_disp(delivery);
     bool           settled = qd_delivery_settled(delivery);
-    qd_delivery_t *peer    = qd_delivery_peer(delivery);
 
+    sys_mutex_lock(router->lock);
+    qd_delivery_t *peer = qd_delivery_peer(delivery);
     if (peer) {
         //
         // The case where this delivery has a peer.
@@ -727,19 +744,19 @@ static void router_disp_handler(void* context, qd_link_t *link, qd_delivery_t *d
             re->settle      = settled;
             re->disposition = changed ? disp : 0;
 
-            sys_mutex_lock(router->lock);
+            qd_delivery_fifo_enter_LH(peer);
             DEQ_INSERT_TAIL(prl->event_fifo, re);
-            sys_mutex_unlock(router->lock);
+            if (settled) {
+                qd_delivery_unlink_LH(delivery);
+                qd_delivery_free_LH(delivery, 0);
+            }
 
             qd_link_activate(peer_link);
         }
-    }
+    } else if (settled)
+        qd_delivery_free_LH(delivery, 0);
 
-    //
-    // In all cases, if this delivery is settled, free it.
-    //
-    if (settled)
-        qd_delivery_free(delivery, 0);
+    sys_mutex_unlock(router->lock);
 }
 
 

@@ -228,10 +228,7 @@ class RouterEngine:
         """
         app_props = {'opcode' : msg.get_opcode() }
         self.io_adapter.send(dest, app_props, msg.to_dict())
-        if "qdhello" in dest:
-            self.log(LOG_TRACE, "SENT: %r dest=%s" % (msg, dest))
-        else:
-            self.log(LOG_DEBUG, "SENT: %r dest=%s" % (msg, dest))
+        self.log(LOG_TRACE, "SENT: %r dest=%s" % (msg, dest))
 
 
     def node_updated(self, addr, reachable, neighbor):

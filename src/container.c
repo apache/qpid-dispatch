@@ -73,6 +73,8 @@ struct qd_delivery_t {
     void          *context;
     uint64_t       disposition;
     qd_link_t     *link;
+    int            in_fifo;
+    bool           pending_delete;
 };
 
 ALLOC_DECLARE(qd_delivery_t);
@@ -88,8 +90,6 @@ DEQ_DECLARE(qdc_node_type_t, qdc_node_type_list_t);
 static int QD_CONTAINER_CLASS_CONTAINER = 1;
 static int QD_CONTAINER_CLASS_NODE_TYPE = 2;
 static int QD_CONTAINER_CLASS_NODE      = 3;
-
-static sys_mutex_t *delivery_lock = 0;
 
 typedef struct container_class_t {
     qd_container_t *container;
@@ -218,11 +218,13 @@ static void do_receive(pn_delivery_t *pnd)
         if (node) {
             if (!delivery) {
                 delivery = new_qd_delivery_t();
-                delivery->pn_delivery = pnd;
-                delivery->peer        = 0;
-                delivery->context     = 0;
-                delivery->disposition = 0;
-                delivery->link        = link;
+                delivery->pn_delivery    = pnd;
+                delivery->peer           = 0;
+                delivery->context        = 0;
+                delivery->disposition    = 0;
+                delivery->link           = link;
+                delivery->in_fifo        = 0;
+                delivery->pending_delete = false;
                 pn_delivery_set_context(pnd, delivery);
             }
 
@@ -484,9 +486,6 @@ qd_container_t *qd_container(qd_dispatch_t *qd)
 
     qd_log(module, LOG_TRACE, "Container Initializing");
     qd_server_set_conn_handler(qd, handler, container);
-
-    if (!delivery_lock)
-        delivery_lock = sys_mutex();
 
     return container;
 }
@@ -808,39 +807,70 @@ qd_delivery_t *qd_delivery(qd_link_t *link, pn_delivery_tag_t tag)
         return 0;
 
     qd_delivery_t *delivery = new_qd_delivery_t();
-    delivery->pn_delivery = pnd;
-    delivery->peer        = 0;
-    delivery->context     = 0;
-    delivery->disposition = 0;
-    delivery->link        = link;
+    delivery->pn_delivery    = pnd;
+    delivery->peer           = 0;
+    delivery->context        = 0;
+    delivery->disposition    = 0;
+    delivery->link           = link;
+    delivery->in_fifo        = 0;
+    delivery->pending_delete = false;
     pn_delivery_set_context(pnd, delivery);
 
     return delivery;
 }
 
 
-void qd_delivery_free(qd_delivery_t *delivery, uint64_t final_disposition)
+void qd_delivery_free_LH(qd_delivery_t *delivery, uint64_t final_disposition)
 {
     if (delivery->pn_delivery) {
         if (final_disposition > 0)
             pn_delivery_update(delivery->pn_delivery, final_disposition);
         pn_delivery_set_context(delivery->pn_delivery, 0);
         pn_delivery_settle(delivery->pn_delivery);
+        delivery->pn_delivery = 0;
     }
-    sys_mutex_lock(delivery_lock);
-    if (delivery->peer)
-        delivery->peer->peer = 0;
-    sys_mutex_unlock(delivery_lock);
-    free_qd_delivery_t(delivery);
+
+    assert(!delivery->peer);
+
+    if (delivery->in_fifo)
+        delivery->pending_delete = true;
+    else {
+        free_qd_delivery_t(delivery);
+    }
 }
 
 
-void qd_delivery_link_peers(qd_delivery_t *right, qd_delivery_t *left)
+void qd_delivery_link_peers_LH(qd_delivery_t *right, qd_delivery_t *left)
 {
-    sys_mutex_lock(delivery_lock);
     right->peer = left;
     left->peer  = right;
-    sys_mutex_unlock(delivery_lock);
+}
+
+
+void qd_delivery_unlink_LH(qd_delivery_t *delivery)
+{
+    if (delivery->peer) {
+        delivery->peer->peer = 0;
+        delivery->peer       = 0;
+    }
+}
+
+
+void qd_delivery_fifo_enter_LH(qd_delivery_t *delivery)
+{
+    delivery->in_fifo++;
+}
+
+
+bool qd_delivery_fifo_exit_LH(qd_delivery_t *delivery)
+{
+    delivery->in_fifo--;
+    if (delivery->in_fifo == 0 && delivery->pending_delete) {
+        free_qd_delivery_t(delivery);
+        return false;
+    }
+
+    return true;
 }
 
 
@@ -871,6 +901,7 @@ pn_delivery_t *qd_delivery_pn(qd_delivery_t *delivery)
 void qd_delivery_settle(qd_delivery_t *delivery)
 {
     if (delivery->pn_delivery) {
+        pn_delivery_set_context(delivery->pn_delivery, 0);
         pn_delivery_settle(delivery->pn_delivery);
         delivery->pn_delivery = 0;
     }

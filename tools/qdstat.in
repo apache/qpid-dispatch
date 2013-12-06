@@ -209,7 +209,7 @@ class BusManager:
             row = []
             row.append(link['link-type'])
             row.append(link['link-dir'])
-            if link['link-type'] == "router":
+            if link['link-type'] == "inter-router":
                 row.append(link['index'])
             else:
                 row.append('-')

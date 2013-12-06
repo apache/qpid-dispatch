@@ -26,4 +26,5 @@ fi
 
 echo "Running system_tests_one_router.py"
 
-python $QPID_DISPATCH_HOME/tests/system_tests_one_router.py
+python $QPID_DISPATCH_HOME/tests/system_tests_one_router.py -v
+

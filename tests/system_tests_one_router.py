@@ -251,6 +251,46 @@ class RouterTest(unittest.TestCase):
     M2.stop()
 
 
+  def test_2c_sender_settles_first(self):
+    addr = "amqp://0.0.0.0:20000/settled/senderfirst/1"
+    M1 = Messenger()
+    M2 = Messenger()
+
+    M1.timeout = 1.0
+    M2.timeout = 1.0
+
+    M1.outgoing_window = 5
+    M2.incoming_window = 5
+
+    M1.start()
+    M2.start()
+    self.subscribe(M2, addr)
+
+    tm = Message()
+    rm = Message()
+
+    tm.address = addr
+    tm.body = {'number': 0}
+    ttrk = M1.put(tm)
+    M1.send(0)
+
+    M1.settle(ttrk)
+    self.flush(M1)
+    self.flush(M2)
+
+    M2.recv(1)
+    rtrk = M2.get(rm)
+    M2.accept(rtrk)
+    M2.settle(rtrk)
+    self.assertEqual(0, rm.body['number'])
+
+    self.flush(M1)
+    self.flush(M2)
+
+    M1.stop()
+    M2.stop()
+
+
   def test_3_propagated_disposition(self):
     addr = "amqp://0.0.0.0:20000/unsettled/1"
     M1 = Messenger()
@@ -507,6 +547,7 @@ class RouterTest(unittest.TestCase):
     reply = "amqp:/temp.reply"
 
     M = Messenger()
+    M.timeout = 2.0
     M.start()
     M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
     self.subscribe(M, reply)
