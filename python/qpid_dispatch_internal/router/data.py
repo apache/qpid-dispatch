@@ -90,6 +90,9 @@ class LinkState(object):
     def del_all_peers(self):
         self.peers = []
 
+    def has_peers(self):
+        return len(self.peers) > 0
+
     def bump_sequence(self):
         self.ls_seq += 1
 

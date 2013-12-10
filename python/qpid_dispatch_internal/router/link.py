@@ -121,7 +121,7 @@ class LinkStateEngine(object):
 
     def _expire_ls(self, now):
         for key, ls in self.collection.items():
-            if key != self.id and now - ls.last_seen > self.remote_ls_max_age:
+            if key != self.id and ls.has_peers() and now - ls.last_seen > self.remote_ls_max_age:
                 ls.del_all_peers()
                 self.collection_changed = True
                 self.container.log(LOG_INFO, "Expired link-state from router: %s" % key)
