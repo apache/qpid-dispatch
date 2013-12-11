@@ -56,6 +56,9 @@ set(DOC_INSTALL_DIR ${SHARE_INSTALL_DIR}/doc CACHE PATH "Shared read-only data d
 set(MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 set(QPID_DISPATCH_HOME_INSTALLED ${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME})
 
+## Set SYSCONF_INSTALL_PREFIX to "" for RPM-based installs
+set(SYSCONF_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH "Install prefix for system configuration files")
+
 ##
 ## Find dependencies
 ##
@@ -134,7 +137,7 @@ install(TARGETS qpid-dispatch
 file(GLOB headers "include/qpid/dispatch/*.h")
 install(FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/qpid/dispatch)
 install(FILES include/qpid/dispatch.h DESTINATION ${INCLUDE_INSTALL_DIR}/qpid)
-install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
+install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_PREFIX}/${SYSCONF_INSTALL_DIR}/qpid-dispatch)
 
 ##
 ## Python modules installation
