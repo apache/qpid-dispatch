@@ -143,7 +143,6 @@ set(TOOLS_EXECUTABLES
 )
 
 set(DOC_FILES
-    ChangeLog
     LICENSE
     README
     TODO
