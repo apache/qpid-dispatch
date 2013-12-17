@@ -17,5 +17,5 @@
  * under the License.
  */
 
-#cmakedefine HAVE_LINK_GET_DRAIN "${HAVE_LINK_GET_DRAIN}"
+
 

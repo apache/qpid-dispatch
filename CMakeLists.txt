@@ -78,11 +78,6 @@ include_directories(
 set(CMAKE_C_FLAGS "-pthread -Wall -Werror -std=gnu99")
 set(CATCH_UNDEFINED "-Wl,--no-undefined")
 
-set (CMAKE_REQUIRED_FLAGS "-lqpid-proton")
-set (CMAKE_REQUIRED_INCLUDES ${proton_include})
-set (CMAKE_REQUIRED_LIBRARIES ${proton_lib})
-check_function_exists(pn_link_get_drain HAVE_LINK_GET_DRAIN)
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/conditionals.h)
 

@@ -33,13 +33,6 @@
 #include <qpid/dispatch/agent.h>
 #include "conditionals.h"
 
-#ifndef HAVE_LINK_GET_DRAIN
-static bool pn_link_get_drain(pn_link_t *link)
-{
-    return false;
-}
-#endif
-
 static char *module="CONTAINER";
 
 struct qd_node_t {
