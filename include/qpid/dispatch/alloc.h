@@ -58,15 +58,15 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p);
 
 
 #define ALLOC_DECLARE(T) \
-    T *new_##T();        \
+    T *new_##T(void);    \
     void free_##T(T *p)
 
 #define ALLOC_DEFINE_CONFIG(T,S,A,C)                                \
     qd_alloc_type_desc_t __desc_##T = {0, #T, S, A, 0, C, 0, 0, 0, 0};    \
     __thread qd_alloc_pool_t *__local_pool_##T = 0;                 \
-    T *new_##T() { return (T*) qd_alloc(&__desc_##T, &__local_pool_##T); }  \
+    T *new_##T(void) { return (T*) qd_alloc(&__desc_##T, &__local_pool_##T); }  \
     void free_##T(T *p) { qd_dealloc(&__desc_##T, &__local_pool_##T, (void*) p); } \
-    qd_alloc_stats_t *alloc_stats_##T() { return __desc_##T.stats; }
+    qd_alloc_stats_t *alloc_stats_##T(void) { return __desc_##T.stats; }
 
 #define ALLOC_DEFINE(T) ALLOC_DEFINE_CONFIG(T, sizeof(T), 0, 0)
 

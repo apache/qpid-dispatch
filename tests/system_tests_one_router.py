@@ -22,7 +22,7 @@ import os
 import time
 import unittest
 import subprocess
-from proton import Messenger, Message, PENDING, ACCEPTED, REJECTED
+from proton import Messenger, Message, PENDING, ACCEPTED, REJECTED, RELEASED
 
 def startRouter(obj):
     default_home = os.path.normpath('/usr/lib/qpid-dispatch')
@@ -366,7 +366,7 @@ class RouterTest(unittest.TestCase):
     tx_tracker = M1.put(tm)
     M1.send(0)
     self.flush(M1)
-    self.assertEqual(PENDING, M1.status(tx_tracker)) ## Is this right???
+    self.assertEqual(RELEASED, M1.status(tx_tracker))
 
     M1.stop()
 

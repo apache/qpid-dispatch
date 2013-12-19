@@ -36,25 +36,25 @@ void qd_python_initialize(qd_dispatch_t *qd,
  * Finalize the embedded-python subsystem.  After this is called, there
  * must be no further invocation of qd_python methods.
  */
-void qd_python_finalize();
+void qd_python_finalize(void);
 
 /**
  * Start using embedded python.  This is called once by each module that plans
  * to use embedded python capabilities.  It must call qd_python_start before
  * using any python components.
  */
-void qd_python_start();
+void qd_python_start(void);
 
 /**
  * Stop using embedded python.  This is called once by each module after it is
  * finished using embedded python capabilities.
  */
-void qd_python_stop();
+void qd_python_stop(void);
 
 /**
  * Get the Python top level "dispatch" module.
  */
-PyObject *qd_python_module();
+PyObject *qd_python_module(void);
 
 /**
  * Convert a Python object to AMQP format and append to a composed_field.
@@ -76,7 +76,7 @@ PyObject *qd_field_to_py(qd_parsed_field_t *field);
  * These are temporary and will eventually be replaced by having an internal python
  * work queue that feeds a dedicated embedded-python thread.
  */
-void qd_python_lock();
-void qd_python_unlock();
+void qd_python_lock(void);
+void qd_python_unlock(void);
 
 #endif

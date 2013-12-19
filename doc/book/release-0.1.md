@@ -275,6 +275,7 @@ Nevertheless, the following are known issues with the 0.1 release:
  - [QPID-5212](https://issues.apache.org/jira/browse/QPID-5212) Dispatch - Add management access to data in the router module
  - [QPID-5213](https://issues.apache.org/jira/browse/QPID-5213) Dispatch - Add a CLI tool to display manageable data in Dispatch
  - [QPID-5216](https://issues.apache.org/jira/browse/QPID-5216) Dispatch - Stabilization in anticipation of an early release
+ - [QPID-5217](https://issues.apache.org/jira/browse/QPID-5217) Dispatch - Cleanup of API inconsistencies and oddities
  - [QPID-5218](https://issues.apache.org/jira/browse/QPID-5218) [dispatch] Crash when outgoing window > 0 and multiple subscribed Messenger clients
  - [QPID-5220](https://issues.apache.org/jira/browse/QPID-5220) Dispatch - Define Modes of Operation for the router function
  - [QPID-5221](https://issues.apache.org/jira/browse/QPID-5221) Dispatch - Configured connections can be annotated as to their role
@@ -292,7 +293,10 @@ Nevertheless, the following are known issues with the 0.1 release:
  - [QPID-5351](https://issues.apache.org/jira/browse/QPID-5351) Settle on one prefix for Dispatch names
  - [QPID-5352](https://issues.apache.org/jira/browse/QPID-5352) Installation of python code ignores prefix
  - [QPID-5365](https://issues.apache.org/jira/browse/QPID-5365) Clean up file locations in Dispatch
+ - [QPID-5367](https://issues.apache.org/jira/browse/QPID-5367) Dispatch - Add man pages and stubs for other documentation
+ - [QPID-5380](https://issues.apache.org/jira/browse/QPID-5380) Dispatch - Simplify use of non-system instances
  - [QPID-5381](https://issues.apache.org/jira/browse/QPID-5381) Dispatch - Use dynamic source address for the reply-to in qdstat tool
+ - [QPID-5392](https://issues.apache.org/jira/browse/QPID-5392) Dispatch - Remove ChangeLog; use jira and our website release pages instead
  - [QPID-5393](https://issues.apache.org/jira/browse/QPID-5393) Dispatch - Allow qdstat to query any router in the network from a connection
  - [QPID-5397](https://issues.apache.org/jira/browse/QPID-5397) Dispatch - Crash occurs when linked deliveries are concurrently settled
  - [QPID-5403](https://issues.apache.org/jira/browse/QPID-5403) Dispatch - The router-specific annotations have reserved keys

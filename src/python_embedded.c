@@ -38,7 +38,7 @@ static PyObject      *dispatch_python_pkgdir = 0;
 
 static qd_address_semantics_t py_semantics = {false, QD_FORWARD_MULTICAST};
 
-static void qd_python_setup();
+static void qd_python_setup(void);
 
 
 void qd_python_initialize(qd_dispatch_t *qd,
@@ -51,14 +51,14 @@ void qd_python_initialize(qd_dispatch_t *qd,
 }
 
 
-void qd_python_finalize()
+void qd_python_finalize(void)
 {
     assert(ref_count == 0);
     sys_mutex_free(lock);
 }
 
 
-void qd_python_start()
+void qd_python_start(void)
 {
     sys_mutex_lock(lock);
     if (ref_count == 0) {
@@ -71,7 +71,7 @@ void qd_python_start()
 }
 
 
-void qd_python_stop()
+void qd_python_stop(void)
 {
     sys_mutex_lock(lock);
     ref_count--;
@@ -85,7 +85,7 @@ void qd_python_stop()
 }
 
 
-PyObject *qd_python_module()
+PyObject *qd_python_module(void)
 {
     assert(dispatch_module);
     return dispatch_module;
@@ -636,7 +636,7 @@ static void qd_register_log_constant(PyObject *module, const char *name, uint32_
 }
 
 
-static void qd_python_setup()
+static void qd_python_setup(void)
 {
     LogAdapterType.tp_new = PyType_GenericNew;
     IoAdapterType.tp_new  = PyType_GenericNew;
@@ -680,12 +680,12 @@ static void qd_python_setup()
     }
 }
 
-void qd_python_lock()
+void qd_python_lock(void)
 {
     sys_mutex_lock(lock);
 }
 
-void qd_python_unlock()
+void qd_python_unlock(void)
 {
     sys_mutex_unlock(lock);
 }
