@@ -443,7 +443,7 @@ static void *thread_run(void *arg)
                         error = pn_driver_errno(qd_server->driver);
                 } while (error == PN_INTR);
                 if (error) {
-                    qd_log(module, LOG_ERROR, "Driver Error: %s", pn_error_text(pn_error(qd_server->driver)));
+                    qd_log(module, LOG_ERROR, "Driver Error: %s", pn_driver_error(qd_server->driver));
                     exit(-1);
                 }
 
