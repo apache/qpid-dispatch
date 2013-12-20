@@ -21,7 +21,7 @@
 # config_schema =
 #    { <section_name> :
 #        (<singleton>,
-#         {<key> : (<value-type>, <index>, <flags>, <default-value>)
+#         {<key> : (<value-type>, <index>, <flags>, <default-value>, <choices>)
 #        )
 #    }
 #
@@ -38,48 +38,55 @@
 #                    S = During expansion, this key should be copied
 #  <default-value> = If not mandatory and not specified, the value defaults to this
 #                    value
+#  <choices>       = If the value is enumerated, this is a list of valid enumerations.
 #
 
 config_schema = {
-  'container' : (True, {
-    'worker-threads' : (int, None, "", 1),
-    'container-name' : (str, None, "", None)
+    'container' : (True, {
+        'worker-threads' : (int, None, '', 1,    None),
+        'container-name' : (str, None, '', None, None)
     }),
-  'ssl-profile' : (False, {
-    'name'          : (str, 0,    "M"),
-    'cert-db'       : (str, None, "S", None),
-    'cert-file'     : (str, None, "S", None),
-    'key-file'      : (str, None, "S", None),
-    'password-file' : (str, None, "S", None),
-    'password'      : (str, None, "S", None)
+    'ssl-profile' : (False, {
+        'name'          : (str, 0,    'M', None, None),
+        'cert-db'       : (str, None, 'S', None, None),
+        'cert-file'     : (str, None, 'S', None, None),
+        'key-file'      : (str, None, 'S', None, None),
+        'password-file' : (str, None, 'S', None, None),
+        'password'      : (str, None, 'S', None, None)
     }),
-  'listener' : (False, {
-    'addr'              : (str,  0,    "M"),
-    'port'              : (str,  1,    "M"),
-    'label'             : (str,  None, "",  None),
-    'role'              : (str,  None, "",  'normal'),
-    'sasl-mechanisms'   : (str,  None, "M"),
-    'ssl-profile'       : (str,  None, "E", None),
-    'require-peer-auth' : (bool, None, "",  True),
-    'allow-unsecured'   : (bool, None, "",  False)
+    'listener' : (False, {
+        'addr'              : (str,  0,    'M', None,  None),
+        'port'              : (str,  1,    'M', None,  None),
+        'label'             : (str,  None, '',  None,  None),
+        'role'              : (str,  None, '',  'normal', ['normal', 'inter-router']),
+        'sasl-mechanisms'   : (str,  None, 'M', None,  None),
+        'ssl-profile'       : (str,  None, 'E', None,  None),
+        'require-peer-auth' : (bool, None, '',  True,  None),
+        'allow-unsecured'   : (bool, None, '',  False, None)
     }),
-  'connector' : (False, {
-    'addr'            : (str,  0,    "M"),
-    'port'            : (str,  1,    "M"),
-    'label'           : (str,  None, "",  None),
-    'role'            : (str,  None, "",  'normal'),
-    'sasl-mechanisms' : (str,  None, "M"),
-    'ssl-profile'     : (str,  None, "E", None),
-    'allow-redirect'  : (bool, None, "",  True)
+    'connector' : (False, {
+        'addr'            : (str,  0,    'M', None, None),
+        'port'            : (str,  1,    'M', None, None),
+        'label'           : (str,  None, '',  None, None),
+        'role'            : (str,  None, '',  'normal', ['normal', 'inter-router']),
+        'sasl-mechanisms' : (str,  None, 'M', None, None),
+        'ssl-profile'     : (str,  None, 'E', None, None),
+        'allow-redirect'  : (bool, None, '',  True, None)
     }),
-  'router' : (True, {
-    'mode'                : (str, None, "", 'standalone'),
-    'router-id'           : (str, None, "M"),
-    'area'                : (str, None, "", None),
-    'hello-interval'      : (int, None, "", 1),
-    'hello-max-age'       : (int, None, "", 3),
-    'ra-interval'         : (int, None, "", 30),
-    'remote-ls-max-age'   : (int, None, "", 60),
-    'mobile-addr-max-age' : (int, None, "", 60)
-    })}
+    'router' : (True, {
+        'mode'                : (str, None, '', 'standalone', ['standalone', 'interior']),
+        'router-id'           : (str, None, 'M', None, None),
+        'area'                : (str, None, '',  None, None),
+        'hello-interval'      : (int, None, '',  1, None),
+        'hello-max-age'       : (int, None, '',  3, None),
+        'ra-interval'         : (int, None, '',  30, None),
+        'remote-ls-max-age'   : (int, None, '',  60, None),
+        'mobile-addr-max-age' : (int, None, '',  60, None)
+    }),
+    'address' : (False, {
+        'prefix'     : (str, 0,    'M', None, None),
+        'method'     : (str, None, '',  'fixed',     ['fixed', 'dist-mode', 'lookup']),
+        'fixed-rule' : (str, None, '',  'multicast', ['multicast', 'lowest-cost', 'round-robin', 'balanced'])
+    })
+}
 

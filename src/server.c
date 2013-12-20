@@ -731,6 +731,15 @@ void qd_server_set_user_fd_handler(qd_dispatch_t *qd, qd_user_fd_handler_cb_t uf
 }
 
 
+static void qd_server_announce(qd_server_t* qd_server)
+{
+    qd_log(module, LOG_INFO, "Operational, %d Threads Running", qd_server->thread_count);
+#ifndef NDEBUG
+    qd_log(module, LOG_INFO, "Running in DEBUG Mode");
+#endif
+}
+
+
 void qd_server_run(qd_dispatch_t *qd)
 {
     qd_server_t *qd_server = qd->server;
@@ -744,7 +753,7 @@ void qd_server_run(qd_dispatch_t *qd)
     for (i = 1; i < qd_server->thread_count; i++)
         thread_start(qd_server->threads[i]);
 
-    qd_log(module, LOG_INFO, "Operational, %d Threads Running", qd_server->thread_count);
+    qd_server_announce(qd_server);
 
     thread_run((void*) qd_server->threads[0]);
 
@@ -768,7 +777,7 @@ void qd_server_start(qd_dispatch_t *qd)
     for (i = 0; i < qd_server->thread_count; i++)
         thread_start(qd_server->threads[i]);
 
-    qd_log(module, LOG_INFO, "Operational, %d Threads Running", qd_server->thread_count);
+    qd_server_announce(qd_server);
 }
 
 

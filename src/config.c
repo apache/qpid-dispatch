@@ -87,7 +87,6 @@ qd_config_t *qd_config(const char *filename)
         PyErr_Print();
         Py_DECREF(config->pModule);
         free_qd_config_t(config);
-        qd_log(log_module, LOG_ERROR, "Configuration file '%s' could not be read", filename);
         return 0;
     }
 
@@ -106,7 +105,7 @@ void qd_config_read(qd_config_t *config)
 
     pMethod = PyObject_GetAttrString(config->pObject, "read_file");
     if (!pMethod || !PyCallable_Check(pMethod)) {
-        qd_log(log_module, LOG_ERROR, "Problem with configuration module: No callable 'item_count'");
+        qd_log(log_module, LOG_ERROR, "Problem with configuration module: No callable 'read_file'");
         if (pMethod) {
             Py_DECREF(pMethod);
         }
@@ -119,7 +118,11 @@ void qd_config_read(qd_config_t *config)
     if (pResult) {
         Py_DECREF(pResult);
     } else {
+#ifndef NDEBUG
         PyErr_Print();
+#endif
+        qd_log(log_module, LOG_CRITICAL, "Configuration Failed, Exiting");
+        exit(1);
     }
     Py_DECREF(pMethod);
 }

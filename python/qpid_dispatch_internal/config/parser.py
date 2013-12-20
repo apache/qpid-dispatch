@@ -19,7 +19,7 @@
 
 import json
 from schema   import config_schema
-from dispatch import LogAdapter, LOG_TRACE, LOG_ERROR, LOG_INFO
+from dispatch import LogAdapter, LOG_TRACE, LOG_ERROR, LOG_INFO, LOG_CRITICAL
 
 class Section:
   """
@@ -93,6 +93,7 @@ VALUE_TYPE    = 0
 VALUE_INDEX   = 1
 VALUE_FLAGS   = 2
 VALUE_DEFAULT = 3
+VALUE_ENUMS   = 4
 
 
 class SchemaSection:
@@ -131,6 +132,16 @@ class SchemaSection:
     return self.values[key][VALUE_DEFAULT]
 
 
+  def is_valid_enum(self, key, value):
+    if self.values[key][VALUE_ENUMS] == None:
+      return True
+    return value in self.values[key][VALUE_ENUMS]
+
+
+  def enums(self, key):
+    return self.values[key][VALUE_ENUMS]
+
+
   def check_and_default(self, kv_map):
     copy = {}
     for k,v in self.values.items():
@@ -143,6 +154,10 @@ class SchemaSection:
       if k not in self.values:
         raise Exception("In section '%s', unknown key '%s'" % (self.name, k))
       copy[k] = v
+    for k,v in kv_map.items():
+      if not self.is_valid_enum(k, v):
+        raise Exception("In section '%s', unknown value '%s' for key '%s'.  Expected one of %r" %
+                        (self.name, v, k, self.enums(k)))
     return copy
 
 
@@ -212,7 +227,7 @@ class DispatchConfig:
       self._validate_raw_config()
       self._process_schema()
     except Exception, E:
-      print "Exception in read_file: %r" % E
+      self.log.log(LOG_CRITICAL, "Exception in Configuration File Processing: %r" % E)
       raise
 
 
