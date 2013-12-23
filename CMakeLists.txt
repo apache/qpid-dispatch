@@ -50,14 +50,22 @@ endif()
 set(INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
 set(QPID_DISPATCH_HOME "lib/qpid-dispatch" CACHE PATH "Private Dispatch library directory")
 set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
-set(SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration directory")
 set(SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 set(DOC_INSTALL_DIR ${SHARE_INSTALL_DIR}/doc CACHE PATH "Shared read-only data directory")
 set(MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 set(QPID_DISPATCH_HOME_INSTALLED ${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME})
 
-## Set SYSCONF_INSTALL_PREFIX to "" for RPM-based installs
-set(SYSCONF_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH "Install prefix for system configuration files")
+# define the configuration directory based on whether or not the install prefix is defined
+if(NOT DEFINED SYSCONF_INSTALL_DIR)
+    if(CMAKE_INSTALL_PREFIX STREQUAL "/usr")
+        set(SYSCONF_INSTALL_DIR "/etc")
+    else()
+        set(SYSCONF_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/etc")
+    endif()
+endif()
+
+set(QPID_DISPATCH_CONFDIR ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
+message(STATUS "QPID_DISPATCH_CONFDIR=${QPID_DISPATCH_CONFDIR}")
 
 ##
 ## Find dependencies
@@ -132,7 +140,7 @@ install(TARGETS qpid-dispatch
 file(GLOB headers "include/qpid/dispatch/*.h")
 install(FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/qpid/dispatch)
 install(FILES include/qpid/dispatch.h DESTINATION ${INCLUDE_INSTALL_DIR}/qpid)
-install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_PREFIX}/${SYSCONF_INSTALL_DIR}/qpid-dispatch)
+install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
 
 ##
 ## Python modules installation
