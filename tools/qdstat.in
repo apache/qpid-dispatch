@@ -27,7 +27,7 @@ import socket
 import re
 from proton import Messenger, Message, Timeout
 
-home = os.environ.get("QPID_DISPATCH_HOME", os.path.normpath("${QPID_DISPATCH_HOME}"))
+home = os.environ.get("QPID_DISPATCH_HOME", os.path.normpath("${QPID_DISPATCH_HOME_INSTALLED}"))
 sys.path.append(os.path.join(home, "python"))
 
 from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
