@@ -25,6 +25,8 @@ if [[ -z "$QPID_DISPATCH_HOME" ]]; then
 fi
 
 echo "Running system_tests_one_router.py"
-
 python $QPID_DISPATCH_HOME/tests/system_tests_one_router.py -v
+
+echo "Running system_tests_two_routers.py"
+python $QPID_DISPATCH_HOME/tests/system_tests_two_routers.py -v
 

@@ -83,10 +83,10 @@ config_schema = {
         'remote-ls-max-age'   : (int, None, '',  60, None),
         'mobile-addr-max-age' : (int, None, '',  60, None)
     }),
-    'address' : (False, {
-        'prefix'     : (str, 0,    'M', None, None),
-        'method'     : (str, None, '',  'fixed',     ['fixed', 'dist-mode', 'lookup']),
-        'fixed-rule' : (str, None, '',  'multicast', ['multicast', 'lowest-cost', 'round-robin', 'balanced'])
+    'fixed-address' : (False, {
+        'prefix' : (str, 0,    'M', None, None),
+        'fanout' : (str, None, '', 'multiple', ['multiple', 'single']),
+        'bias'   : (str, None, '', 'none',     ['none', 'closest', 'spread'])
     })
 }
 

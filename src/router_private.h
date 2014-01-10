@@ -28,6 +28,7 @@ typedef struct qd_router_conn_t     qd_router_conn_t;
 void qd_router_python_setup(qd_router_t *router);
 void qd_pyrouter_tick(qd_router_t *router);
 void qd_router_agent_setup(qd_router_t *router);
+void qd_router_configure(qd_router_t *router);
 
 typedef enum {
     QD_ROUTER_MODE_STANDALONE,  // Standalone router.  No routing protocol participation
@@ -111,12 +112,22 @@ ALLOC_DECLARE(qd_router_conn_t);
 
 struct qd_address_t {
     DEQ_LINKS(qd_address_t);
-    qd_router_message_cb_t        handler;          // In-Process Consumer
-    void                         *handler_context;  // In-Process Consumer context
-    qd_router_link_ref_list_t     rlinks;           // Locally-Connected Consumers
-    qd_router_ref_list_t          rnodes;           // Remotely-Connected Consumers
-    qd_hash_handle_t             *hash_handle;      // Linkage back to the hash table entry
-    const qd_address_semantics_t *semantics;
+    qd_router_message_cb_t     handler;          // In-Process Consumer
+    void                      *handler_context;  // In-Process Consumer context
+    qd_router_link_ref_list_t  rlinks;           // Locally-Connected Consumers
+    qd_router_ref_list_t       rnodes;           // Remotely-Connected Consumers
+    qd_hash_handle_t          *hash_handle;      // Linkage back to the hash table entry
+    qd_address_semantics_t     semantics;
+    qd_address_t              *redirect;
+    qd_address_t              *static_cc;
+    qd_address_t              *dynamic_cc;
+    bool                       toggle;
+
+    //
+    // TODO - Add support for asynchronous address lookup:
+    //  - Add a FIFO for routed_events holding the message and delivery
+    //  - Add an indication that the address is awaiting a lookup response
+    //
 
     //
     // Statistics
@@ -130,6 +141,12 @@ struct qd_address_t {
 
 ALLOC_DECLARE(qd_address_t);
 DEQ_DECLARE(qd_address_t, qd_address_list_t);
+
+
+typedef struct {
+    char                   *prefix;
+    qd_address_semantics_t  semantics;
+} qd_config_address_t;
 
 
 struct qd_router_t {
@@ -153,6 +170,9 @@ struct qd_router_t {
     sys_mutex_t            *lock;
     qd_timer_t             *timer;
     uint64_t                dtag;
+
+    qd_config_address_t    *config_addrs;
+    int                     config_addr_count;
 
     PyObject               *pyRouter;
     PyObject               *pyTick;

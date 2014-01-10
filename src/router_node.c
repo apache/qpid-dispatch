@@ -34,8 +34,6 @@ static char *topo_prefix   = "_topo/";
 static char *direct_prefix;
 static char *node_id;
 
-static qd_address_semantics_t router_semantics = {true, QD_FORWARD_MULTICAST};
-static qd_address_semantics_t default_semantics = {false, QD_FORWARD_MULTICAST};
 
 /**
  * Address Types and Processing:
@@ -454,6 +452,164 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t *router, qd_mess
 
 
 /**
+ * Handle the link-routing case, where links are pre-paired and there is no per-message
+ * routing needed.
+ *
+ * Note that this function does not issue a replacement credit for the received message.
+ * In link-routes, the flow commands must be propagated end-to-end.  In other words, the
+ * ultimate receiving endpoint will issue the replacement credits as it sees fit.
+ *
+ * Note also that this function does not perform any message validation.  For link-routing,
+ * there is no need to look into the transferred message.
+ */
+static void router_do_link_route_LH(qd_router_link_t *peer_link, qd_delivery_t *delivery, qd_message_t *msg)
+{
+    qd_routed_event_t *re = new_qd_routed_event_t();
+
+    DEQ_ITEM_INIT(re);
+    re->delivery    = 0;
+    re->message     = msg;
+    re->settle      = false;
+    re->disposition = 0;
+    DEQ_INSERT_TAIL(peer_link->msg_fifo, re);
+
+    //
+    // If the incoming delivery is settled (pre-settled), don't link it into the routed
+    // event.  If it's not settled, link it into the event for later handling.
+    //
+    if (qd_delivery_settled(delivery))
+        qd_delivery_free_LH(delivery, 0);
+    else {
+        re->delivery = delivery;
+        qd_delivery_fifo_enter_LH(delivery);
+    }
+
+    qd_link_activate(peer_link->link);
+}
+
+
+static void router_forward_to_direct_subscribers_LH(qd_address_t *addr, qd_delivery_t *delivery, qd_message_t *msg, int *fanout)
+{
+    qd_router_link_ref_t *dest_link_ref = DEQ_HEAD(addr->rlinks);
+    while (dest_link_ref) {
+        qd_routed_event_t *re = new_qd_routed_event_t();
+        DEQ_ITEM_INIT(re);
+        re->delivery    = 0;
+        re->message     = qd_message_copy(msg);
+        re->settle      = 0;
+        re->disposition = 0;
+        DEQ_INSERT_TAIL(dest_link_ref->link->msg_fifo, re);
+
+        (*fanout)++;
+        if (*fanout == 1 && !qd_delivery_settled(delivery)) {
+            re->delivery = delivery;
+            qd_delivery_fifo_enter_LH(delivery);
+        }
+
+        addr->deliveries_egress++;
+        qd_link_activate(dest_link_ref->link->link);
+
+        //
+        // If the fanout is single, exit the loop here.  We only want to send one message copy.
+        //
+        if (QD_FANOUT(addr->semantics) == QD_FANOUT_SINGLE)
+            break;
+
+        dest_link_ref = DEQ_NEXT(dest_link_ref);
+    }
+
+    //
+    // If dest_link_ref is not null here, we exited after sending one message copy.
+    // If the number of local links is greater than one, rotate the head link to the
+    // tail so we balance the message deliveries.
+    //
+    if (dest_link_ref && DEQ_SIZE(addr->rlinks) > 1) {
+        assert(DEQ_HEAD(addr->rlinks) == dest_link_ref);
+        DEQ_REMOVE_HEAD(addr->rlinks);
+        DEQ_INSERT_TAIL(addr->rlinks, dest_link_ref);
+    }
+}
+
+
+static void router_forward_to_remote_subscribers_LH(qd_router_t *router, qd_address_t *addr, qd_delivery_t *delivery,
+                                                    qd_message_t *msg, int *fanout, qd_field_iterator_t *ingress_iter)
+{
+    //
+    // Get the mask bit associated with the ingress router for the message.
+    // This will be compared against the "valid_origin" masks for each
+    // candidate destination router.
+    //
+    int origin = -1;
+    if (ingress_iter && !(addr->semantics & QD_BYPASS_VALID_ORIGINS)) {
+        qd_field_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
+        qd_address_t *origin_addr;
+        qd_hash_retrieve(router->addr_hash, ingress_iter, (void*) &origin_addr);
+        if (origin_addr && DEQ_SIZE(origin_addr->rnodes) == 1) {
+            qd_router_ref_t *rref = DEQ_HEAD(origin_addr->rnodes);
+            origin = rref->router->mask_bit;
+        }
+    } else
+        origin = 0;
+
+    //
+    // Forward to the next-hops for remote destinations.
+    //
+    if (origin >= 0) {
+        qd_router_ref_t  *dest_node_ref = DEQ_HEAD(addr->rnodes);
+        qd_router_link_t *dest_link;
+        qd_bitmask_t     *link_set = qd_bitmask(0);
+
+        //
+        // Loop over the target nodes for this address.  Build a set of outgoing links
+        // for which there are valid targets.  We do this to avoid sending more than one
+        // message down a given link.  It's possible that there are multiple destinations
+        // for this address that are all reachable over the same link.  In this case, we
+        // will send only one copy of the message over the link and allow a downstream
+        // router to fan the message out.
+        //
+        while (dest_node_ref) {
+            if (dest_node_ref->router->next_hop)
+                dest_link = dest_node_ref->router->next_hop->peer_link;
+            else
+                dest_link = dest_node_ref->router->peer_link;
+            if (dest_link && qd_bitmask_value(dest_node_ref->router->valid_origins, origin))
+                qd_bitmask_set_bit(link_set, dest_link->mask_bit);
+            dest_node_ref = DEQ_NEXT(dest_node_ref);
+        }
+
+        //
+        // Send a copy of the message outbound on each identified link.
+        //
+        int link_bit;
+        while (qd_bitmask_first_set(link_set, &link_bit)) {
+            qd_bitmask_clear_bit(link_set, link_bit);
+            dest_link = router->out_links_by_mask_bit[link_bit];
+            if (dest_link) {
+                qd_routed_event_t *re = new_qd_routed_event_t();
+                DEQ_ITEM_INIT(re);
+                re->delivery    = 0;
+                re->message     = qd_message_copy(msg);
+                re->settle      = 0;
+                re->disposition = 0;
+                DEQ_INSERT_TAIL(dest_link->msg_fifo, re);
+
+                (*fanout)++;
+                if (*fanout == 1 && !qd_delivery_settled(delivery)) {
+                    re->delivery = delivery;
+                    qd_delivery_fifo_enter_LH(delivery);
+                }
+                            
+                addr->deliveries_transit++;
+                qd_link_activate(dest_link->link);
+            }
+        }
+
+        qd_bitmask_free(link_set);
+    }
+}
+
+
+/**
  * Inbound Delivery Handler
  */
 static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *delivery)
@@ -468,56 +624,40 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
     // Receive the message into a local representation.  If the returned message
     // pointer is NULL, we have not yet received a complete message.
     //
+    // Note:  In the link-routing case, consider cutting the message through.  There's
+    //        no reason to wait for the whole message to be received before starting to
+    //        send it.
+    //
     msg = qd_message_receive(delivery);
     if (!msg)
         return;
 
     //
-    // Consume the delivery and issue a replacement credit
+    // Consume the delivery.
     //
     pn_link_advance(pn_link);
-    pn_link_flow(pn_link, 1);
 
+    //
+    // Handle the Link-Routing case.
+    //
     sys_mutex_lock(router->lock);
-
-    //
-    // Handle the Link-Routing case.  If this incoming link is associated with a connected
-    // link, simply deliver the message to the outgoing link.  There is no need to validate
-    // the message in this case.
-    //
-    if (rlink->connected_link) {
-        qd_router_link_t  *clink = rlink->connected_link;
-        qd_routed_event_t *re    = new_qd_routed_event_t();
-
-        DEQ_ITEM_INIT(re);
-        re->delivery    = 0;
-        re->message     = msg;
-        re->settle      = false;
-        re->disposition = 0;
-        DEQ_INSERT_TAIL(clink->msg_fifo, re);
-
-        //
-        // If the incoming delivery is settled (pre-settled), don't link it into the routed
-        // event.  If it's not settled, link it into the event for later handling.
-        //
-        if (qd_delivery_settled(delivery))
-            qd_delivery_free_LH(delivery, 0);
-        else {
-            re->delivery = delivery;
-            qd_delivery_fifo_enter_LH(delivery);
-        }
-
+    qd_router_link_t *clink = rlink->connected_link;
+    if (clink) {
+        router_do_link_route_LH(clink, delivery, msg);
         sys_mutex_unlock(router->lock);
-        qd_link_activate(clink->link);
         return;
     }
 
     //
-    // We are performing Message-Routing, therefore we will need to validate the message
-    // through the Properties section so we can access the TO field.
+    // Handle the Message-Routing case.  Start by issuing a replacement credit.
+    //
+    pn_link_flow(pn_link, 1);
+
+    //
+    // Validate the message through the Properties section so we can access the TO field.
     //
     qd_message_t           *in_process_copy = 0;
-    qd_router_message_cb_t  handler        = 0;
+    qd_router_message_cb_t  handler         = 0;
     void                   *handler_context = 0;
 
     valid_message = qd_message_check(msg, QD_DEPTH_PROPERTIES);
@@ -553,19 +693,18 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
                     addr->deliveries_ingress++;
 
                 //
-                // To field is valid and contains a known destination.  Handle the various
+                // TO field is valid and contains a known destination.  Handle the various
                 // cases for forwarding.
                 //
-
-                //
                 // Interpret and update the delivery annotations of the message.  As a convenience,
-                // this function returns the iterator to the ingress field (if it exists).
+                // this function returns the iterator to the ingress field (if it exists).  It also
+                // returns a 'drop' indication if it detects that the message will loop.
                 //
                 int drop = 0;
                 qd_field_iterator_t *ingress_iter = router_annotate_message(router, msg, &drop);
 
                 //
-                // Forward to the in-process handler for this message if there is one.  The
+                // Forward to the in-process handler for this address if there is one.  The
                 // actual invocation of the handler will occur later after we've released
                 // the lock.
                 //
@@ -582,105 +721,47 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
                 //
                 if (!drop && !is_local) {
                     //
-                    // Forward to all of the local links receiving this address.
+                    // Handle the various fanout and bias cases:
                     //
-                    qd_router_link_ref_t *dest_link_ref = DEQ_HEAD(addr->rlinks);
-                    while (dest_link_ref) {
-                        qd_routed_event_t *re = new_qd_routed_event_t();
-                        DEQ_ITEM_INIT(re);
-                        re->delivery    = 0;
-                        re->message     = qd_message_copy(msg);
-                        re->settle      = 0;
-                        re->disposition = 0;
-                        DEQ_INSERT_TAIL(dest_link_ref->link->msg_fifo, re);
-
-                        fanout++;
-                        if (fanout == 1 && !qd_delivery_settled(delivery)) {
-                            re->delivery = delivery;
-                            qd_delivery_fifo_enter_LH(delivery);
-                        }
-
-                        addr->deliveries_egress++;
-                        qd_link_activate(dest_link_ref->link->link);
-                        dest_link_ref = DEQ_NEXT(dest_link_ref);
-                    }
-
-                    //
-                    // If the address form is direct to this router node, don't relay it on
-                    // to any other part of the network.
-                    //
-                    if (!is_direct) {
+                    if (QD_FANOUT(addr->semantics) == QD_FANOUT_MULTIPLE) {
                         //
-                        // Get the mask bit associated with the ingress router for the message.
-                        // This will be compared against the "valid_origin" masks for each
-                        // candidate destination router.
+                        // Forward to all of the local links receiving this address.
                         //
-                        int origin = -1;
-                        if (ingress_iter && !addr->semantics->bypass_valid_origins) {
-                            qd_field_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
-                            qd_address_t *origin_addr;
-                            qd_hash_retrieve(router->addr_hash, ingress_iter, (void*) &origin_addr);
-                            if (origin_addr && DEQ_SIZE(origin_addr->rnodes) == 1) {
-                                qd_router_ref_t *rref = DEQ_HEAD(origin_addr->rnodes);
-                                origin = rref->router->mask_bit;
+                        router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
+
+                        //
+                        // If the address form is direct to this router node, don't relay it on
+                        // to any other part of the network.
+                        //
+                        if (!is_direct)
+                            router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
+
+                    } else if (QD_FANOUT(addr->semantics) == QD_FANOUT_SINGLE) {
+                        if (QD_BIAS(addr->semantics) == QD_BIAS_CLOSEST) {
+                            //
+                            // Bias is "closest".  First, try to find a directly connected consumer for the address.
+                            // If there is none, then look for the closest remote consumer.
+                            //
+                            router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
+                            if (fanout == 0 && !is_direct)
+                                router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
+
+                        } else if (QD_BIAS(addr->semantics) == QD_BIAS_SPREAD) {
+                            //
+                            // Bias is "spread".  Alternate between looking first for a local consumer and looking
+                            // first for a remote consumer.
+                            //
+                            addr->toggle = !addr->toggle;
+                            if (addr->toggle) {
+                                router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
+                                if (fanout == 0 && !is_direct)
+                                    router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
+                            } else {
+                                if (!is_direct)
+                                    router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
+                                if (fanout == 0)
+                                    router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
                             }
-                        } else
-                            origin = 0;
-
-                        //
-                        // Forward to the next-hops for remote destinations.
-                        //
-                        if (origin >= 0) {
-                            qd_router_ref_t  *dest_node_ref = DEQ_HEAD(addr->rnodes);
-                            qd_router_link_t *dest_link;
-                            qd_bitmask_t     *link_set = qd_bitmask(0);
-
-                            //
-                            // Loop over the target nodes for this address.  Build a set of outgoing links
-                            // for which there are valid targets.  We do this to avoid sending more than one
-                            // message down a given link.  It's possible that there are multiple destinations
-                            // for this address that are all reachable over the same link.  In this case, we
-                            // will send only one copy of the message over the link and allow a downstream
-                            // router to fan the message out.
-                            //
-                            while (dest_node_ref) {
-                                if (dest_node_ref->router->next_hop)
-                                    dest_link = dest_node_ref->router->next_hop->peer_link;
-                                else
-                                    dest_link = dest_node_ref->router->peer_link;
-                                if (dest_link && qd_bitmask_value(dest_node_ref->router->valid_origins, origin))
-                                    qd_bitmask_set_bit(link_set, dest_link->mask_bit);
-                                dest_node_ref = DEQ_NEXT(dest_node_ref);
-                            }
-
-                            //
-                            // Send a copy of the message outbound on each identified link.
-                            //
-                            int link_bit;
-                            while (qd_bitmask_first_set(link_set, &link_bit)) {
-                                qd_bitmask_clear_bit(link_set, link_bit);
-                                dest_link = router->out_links_by_mask_bit[link_bit];
-                                if (dest_link) {
-                                    qd_routed_event_t *re = new_qd_routed_event_t();
-                                    DEQ_ITEM_INIT(re);
-                                    re->delivery    = 0;
-                                    re->message     = qd_message_copy(msg);
-                                    re->settle      = 0;
-                                    re->disposition = 0;
-                                    DEQ_INSERT_TAIL(dest_link->msg_fifo, re);
-
-                                    fanout++;
-                                    if (fanout == 1 && !qd_delivery_settled(delivery)) {
-                                        re->delivery = delivery;
-                                        qd_delivery_fifo_enter_LH(delivery);
-                                    }
-                            
-                                    addr->deliveries_transit++;
-                                    qd_link_activate(dest_link->link);
-                                }
-                            }
-
-                            qd_bitmask_free(link_set);
                         }
                     }
                 }
@@ -808,6 +889,20 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
 }
 
 
+qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_iterator_t *iter)
+{
+    qd_field_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
+
+    for (int idx = 0; idx < router->config_addr_count; idx++) {
+        if (qd_field_iterator_prefix(iter, router->config_addrs[idx].prefix))
+            return router->config_addrs[idx].semantics;
+        qd_field_iterator_reset(iter);
+    }
+
+    return QD_SEMANTICS_DEFAULT;
+}
+
+
 /**
  * New Outgoing Link Handler
  */
@@ -819,7 +914,8 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     int is_dynamic       = pn_terminus_is_dynamic(qd_link_remote_source(link));
     int is_router        = qd_router_terminus_is_router(qd_link_remote_target(link));
     int propagate        = 0;
-    qd_field_iterator_t *iter = 0;
+    qd_field_iterator_t    *iter = 0;
+    qd_address_semantics_t  semantics;
 
     if (is_router && !qd_router_connection_is_inter_router(qd_link_connection(link))) {
         qd_log(module, LOG_WARNING, "Outgoing link claims router capability but is not on an inter-router connection");
@@ -836,13 +932,12 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
         return 0;
     }
 
-
     //
     // If this is an endpoint link with a source address, make sure the address is
     // appropriate for endpoint links.  If it is not mobile address, it cannot be
     // bound to an endpoint link.
     //
-    if(r_src && !is_router && !is_dynamic) {
+    if (r_src && !is_router && !is_dynamic) {
         iter = qd_field_iterator_string(r_src, ITER_VIEW_ADDRESS_HASH);
         unsigned char prefix = qd_field_iterator_octet(iter);
         qd_field_iterator_reset(iter);
@@ -875,6 +970,16 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     pn_terminus_copy(qd_link_source(link), qd_link_remote_source(link));
     pn_terminus_copy(qd_link_target(link), qd_link_remote_target(link));
 
+    //
+    // Determine the semantics for the address prior to taking out the lock.
+    //
+    if (is_dynamic || !iter)
+        semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_BACKPRESSURE;
+    else {
+        semantics = router_semantics_for_addr(router, iter);
+        qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    }
+
     sys_mutex_lock(router->lock);
     rlink->mask_bit = is_router ? qd_router_find_mask_bit_LH(router, link) : 0;
 
@@ -889,7 +994,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     } else {
         //
         // If this is an endpoint link, check the source.  If it is dynamic, we will
-        // assign it an ephemeral and routable address.  If it has a non-dymanic
+        // assign it an ephemeral and routable address.  If it has a non-dynamic
         // address, that address needs to be set up in the address list.
         //
         char          temp_addr[1000]; // FIXME
@@ -910,9 +1015,9 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
             DEQ_ITEM_INIT(addr);
             DEQ_INIT(addr->rlinks);
             DEQ_INIT(addr->rnodes);
-            addr->semantics = &default_semantics; // FIXME - Use provisioned address here
             qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(router->addrs, addr);
+            addr->semantics = semantics;
         }
 
         rlink->owning_addr = addr;
@@ -1174,18 +1279,25 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     router->lock               = sys_mutex();
     router->timer              = qd_timer(qd, qd_router_timer_handler, (void*) router);
     router->dtag               = 1;
+    router->config_addrs       = 0;
+    router->config_addr_count  = 0;
     router->pyRouter           = 0;
     router->pyTick             = 0;
     router->pyAdded            = 0;
     router->pyRemoved          = 0;
 
     //
+    // Configure the router from the configuration file
+    //
+    qd_router_configure(router);
+
+    //
     // Create addresses for all of the routers in the topology.  It will be registered
     // locally later in the initialization sequence.
     //
     if (router->router_mode == QD_ROUTER_MODE_INTERIOR) {
-        router->router_addr = qd_router_register_address(qd, "qdrouter", 0, &router_semantics, 0);
-        router->hello_addr  = qd_router_register_address(qd, "qdhello", 0, &router_semantics, 0);
+        router->router_addr = qd_router_register_address(qd, "qdrouter", 0, QD_SEMANTICS_ROUTER_CONTROL, 0);
+        router->hello_addr  = qd_router_register_address(qd, "qdhello", 0, QD_SEMANTICS_ROUTER_CONTROL, 0);
     }
 
     //
@@ -1206,9 +1318,9 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     srandom(seed);
 
     switch (router->router_mode) {
-    case QD_ROUTER_MODE_STANDALONE:  qd_log(module, LOG_INFO, "Router started in Standalone mode");  break;
-    case QD_ROUTER_MODE_INTERIOR:    qd_log(module, LOG_INFO, "Router started in Interior mode, area=%s id=%s", area, id);  break;
-    case QD_ROUTER_MODE_EDGE:        qd_log(module, LOG_INFO, "Router started in Edge mode");  break;
+    case QD_ROUTER_MODE_STANDALONE: qd_log(module, LOG_INFO, "Router started in Standalone mode");  break;
+    case QD_ROUTER_MODE_INTERIOR:   qd_log(module, LOG_INFO, "Router started in Interior mode, area=%s id=%s", area, id);  break;
+    case QD_ROUTER_MODE_EDGE:       qd_log(module, LOG_INFO, "Router started in Edge mode");  break;
     }
 
     return router;
@@ -1238,11 +1350,11 @@ const char *qd_router_id(const qd_dispatch_t *qd)
 }
 
 
-qd_address_t *qd_router_register_address(qd_dispatch_t                *qd,
-                                         const char                   *address,
-                                         qd_router_message_cb_t        handler,
-                                         const qd_address_semantics_t *semantics,
-                                         void                         *context)
+qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
+                                         const char             *address,
+                                         qd_router_message_cb_t  handler,
+                                         qd_address_semantics_t  semantics,
+                                         void                   *context)
 {
     char                 addr_string[1000];
     qd_router_t         *router = qd->router;
@@ -1282,6 +1394,24 @@ qd_address_t *qd_router_register_address(qd_dispatch_t                *qd,
 void qd_router_unregister_address(qd_address_t *ad)
 {
     //free_qd_address_t(ad);
+}
+
+
+void qd_address_set_redirect(qd_address_t *address, qd_address_t *redirect)
+{
+    address->redirect = redirect;
+}
+
+
+void qd_address_set_static_cc(qd_address_t *address, qd_address_t *cc)
+{
+    address->static_cc = cc;
+}
+
+
+void qd_address_set_dynamic_cc(qd_address_t *address, qd_address_t *cc)
+{
+    address->dynamic_cc = cc;
 }
 
 

@@ -53,7 +53,7 @@ add_test(unit_tests_size_1     unit_tests_size 1)
 add_test(unit_tests            unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
 add_test(router_tests          python ${CMAKE_CURRENT_SOURCE_DIR}/router_engine_test.py -v)
 
-set(SYSTEM_TEST_FILES system_tests_one_router.py)
+set(SYSTEM_TEST_FILES system_tests_one_router.py system_tests_two_routers.py)
 
 install(FILES ${SYSTEM_TEST_FILES} DESTINATION ${QPID_DISPATCH_HOME}/tests)
-install(DIRECTORY config-1 DESTINATION ${QPID_DISPATCH_HOME}/tests)
+install(DIRECTORY config-1 config-2 DESTINATION ${QPID_DISPATCH_HOME}/tests)

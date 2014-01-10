@@ -35,7 +35,7 @@
 #include <string.h>
 #include <stdio.h>
 
-static qd_address_semantics_t agent_semantics = {false, QD_FORWARD_LOWEST_COST};
+static qd_address_semantics_t agent_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS;
 
 struct qd_agent_class_t {
     DEQ_LINKS(qd_agent_class_t);
@@ -444,7 +444,7 @@ qd_agent_t *qd_agent(qd_dispatch_t *qd)
     DEQ_INIT(agent->out_fifo);
     agent->lock    = sys_mutex();
     agent->timer   = qd_timer(qd, qd_agent_deferred_handler, agent);
-    agent->address = qd_router_register_address(qd, "$management", qd_agent_rx_handler, &agent_semantics, agent);
+    agent->address = qd_router_register_address(qd, "$management", qd_agent_rx_handler, agent_semantics, agent);
 
     return agent;
 }

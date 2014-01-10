@@ -65,7 +65,6 @@ if(NOT DEFINED SYSCONF_INSTALL_DIR)
 endif()
 
 set(QPID_DISPATCH_CONFDIR ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
-message(STATUS "QPID_DISPATCH_CONFDIR=${QPID_DISPATCH_CONFDIR}")
 
 ##
 ## Find dependencies
@@ -117,6 +116,7 @@ set(server_SOURCES
     src/posix/threading.c
     src/python_embedded.c
     src/router_agent.c
+    src/router_config.c
     src/router_node.c
     src/router_pynode.c
     src/server.c
