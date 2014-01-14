@@ -65,8 +65,8 @@ def startRouter(obj):
     M1 = Messenger()
     M2 = Messenger()
 
-    M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-    M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+    M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+    M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
     M1.start()
     M2.start()
@@ -115,7 +115,7 @@ class RouterTest(unittest.TestCase):
         return sub
 
     def test_00_discard(self):
-        addr = "amqp://0.0.0.0:20000/discard/1"
+        addr = "amqp://0.0.0.0:20100/discard/1"
         M1 = Messenger()
         M1.timeout = 1.0
         M1.start()
@@ -133,8 +133,8 @@ class RouterTest(unittest.TestCase):
         M1 = Messenger()
         M2 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 1.0
@@ -170,10 +170,10 @@ class RouterTest(unittest.TestCase):
         M3 = Messenger()
         M4 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
-        M3.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M4.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
+        M3.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M4.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 1.0
@@ -224,10 +224,10 @@ class RouterTest(unittest.TestCase):
         M3 = Messenger()
         M4 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
-        M3.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M4.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
+        M3.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M4.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 1.0
@@ -288,8 +288,8 @@ class RouterTest(unittest.TestCase):
         M1 = Messenger()
         M2 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 1.0
@@ -332,8 +332,8 @@ class RouterTest(unittest.TestCase):
         M1 = Messenger()
         M2 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 1.0
@@ -393,7 +393,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_04_unsettled_undeliverable(self):
-        addr = "amqp://0.0.0.0:20000/unsettled_undeliverable/1"
+        addr = "amqp://0.0.0.0:20100/unsettled_undeliverable/1"
         M1 = Messenger()
 
         M1.timeout = 1.0
@@ -417,8 +417,8 @@ class RouterTest(unittest.TestCase):
         M1 = Messenger()
         M2 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 1.0
@@ -482,8 +482,8 @@ class RouterTest(unittest.TestCase):
         M1 = Messenger()
         M2 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 1.0
@@ -523,7 +523,7 @@ class RouterTest(unittest.TestCase):
         M = Messenger()
         M.timeout = 2.0
         M.start()
-        M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
+        M.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
         sub = self.subscribe(M, "amqp:/#")
         reply = sub.address
 
@@ -565,10 +565,10 @@ class RouterTest(unittest.TestCase):
         M3 = Messenger()
         M4 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
-        M3.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M4.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
+        M3.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M4.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 1.0
@@ -628,10 +628,10 @@ class RouterTest(unittest.TestCase):
         M3 = Messenger()
         M4 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
-        M3.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M4.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
+        M3.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M4.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 1.0
@@ -681,10 +681,10 @@ class RouterTest(unittest.TestCase):
         M3 = Messenger()
         M4 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
-        M3.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M4.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
+        M3.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M4.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 1.0
@@ -737,10 +737,10 @@ class RouterTest(unittest.TestCase):
         M3 = Messenger()
         M4 = Messenger()
 
-        M1.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M2.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
-        M3.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        M4.route("amqp:/*", "amqp://0.0.0.0:20001/$1")
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
+        M3.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M4.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
 
         M1.timeout = 1.0
         M2.timeout = 0.2
