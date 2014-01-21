@@ -64,7 +64,7 @@ void qd_python_start(void)
     if (ref_count == 0) {
         Py_Initialize();
         qd_python_setup();
-        qd_log(log_module, LOG_TRACE, "Embedded Python Interpreter Initialized");
+        qd_log(log_module, QD_LOG_TRACE, "Embedded Python Interpreter Initialized");
     }
     ref_count++;
     sys_mutex_unlock(lock);
@@ -79,7 +79,7 @@ void qd_python_stop(void)
         Py_DECREF(dispatch_module);
         dispatch_module = 0;
         Py_Finalize();
-        qd_log(log_module, LOG_TRACE, "Embedded Python Interpreter Shut Down");
+        qd_log(log_module, QD_LOG_TRACE, "Embedded Python Interpreter Shut Down");
     }
     sys_mutex_unlock(lock);
 }
@@ -642,7 +642,7 @@ static void qd_python_setup(void)
     IoAdapterType.tp_new  = PyType_GenericNew;
     if ((PyType_Ready(&LogAdapterType) < 0) || (PyType_Ready(&IoAdapterType) < 0)) {
         PyErr_Print();
-        qd_log(log_module, LOG_ERROR, "Unable to initialize Adapters");
+        qd_log(log_module, QD_LOG_ERROR, "Unable to initialize Adapters");
         assert(0);
     } else {
         PyObject *m = Py_InitModule3("dispatch", empty_methods, "Dispatch Adapter Module");
@@ -662,13 +662,13 @@ static void qd_python_setup(void)
         Py_INCREF(laType);
         PyModule_AddObject(m, "LogAdapter", (PyObject*) &LogAdapterType);
 
-        qd_register_log_constant(m, "LOG_TRACE",    LOG_TRACE);
-        qd_register_log_constant(m, "LOG_DEBUG",    LOG_DEBUG);
-        qd_register_log_constant(m, "LOG_INFO",     LOG_INFO);
-        qd_register_log_constant(m, "LOG_NOTICE",   LOG_NOTICE);
-        qd_register_log_constant(m, "LOG_WARNING",  LOG_WARNING);
-        qd_register_log_constant(m, "LOG_ERROR",    LOG_ERROR);
-        qd_register_log_constant(m, "LOG_CRITICAL", LOG_CRITICAL);
+        qd_register_log_constant(m, "LOG_TRACE",    QD_LOG_TRACE);
+        qd_register_log_constant(m, "LOG_DEBUG",    QD_LOG_DEBUG);
+        qd_register_log_constant(m, "LOG_INFO",     QD_LOG_INFO);
+        qd_register_log_constant(m, "LOG_NOTICE",   QD_LOG_NOTICE);
+        qd_register_log_constant(m, "LOG_WARNING",  QD_LOG_WARNING);
+        qd_register_log_constant(m, "LOG_ERROR",    QD_LOG_ERROR);
+        qd_register_log_constant(m, "LOG_CRITICAL", QD_LOG_CRITICAL);
 
         //
         PyTypeObject *ioaType = &IoAdapterType;

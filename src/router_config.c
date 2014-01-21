@@ -61,7 +61,7 @@ void qd_router_configure(qd_router_t *router)
 
         router->config_addrs[idx].semantics = semantics;
 
-        qd_log(MODULE, LOG_INFO, "Configured Address: prefix=%s fanout=%s bias=%s", prefix, fanout, bias);
+        qd_log(MODULE, QD_LOG_INFO, "Configured Address: prefix=%s fanout=%s bias=%s", prefix, fanout, bias);
     }
 }
 

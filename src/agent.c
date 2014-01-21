@@ -131,7 +131,7 @@ static void qd_agent_process_get(qd_agent_t          *agent,
     if (cls_record == 0)
         return;
 
-    qd_log(log_module, LOG_TRACE, "Received GET request for type: %s", qd_hash_key_by_handle(cls_record->hash_handle));
+    qd_log(log_module, QD_LOG_TRACE, "Received GET request for type: %s", qd_hash_key_by_handle(cls_record->hash_handle));
 
     qd_composed_field_t *field = qd_agent_setup_response(reply_to, cid);
 
@@ -174,7 +174,7 @@ static void qd_agent_process_discover_types(qd_agent_t          *agent,
                                             qd_field_iterator_t *reply_to,
                                             qd_field_iterator_t *cid)
 {
-    qd_log(log_module, LOG_TRACE, "Received DISCOVER-TYPES request");
+    qd_log(log_module, QD_LOG_TRACE, "Received DISCOVER-TYPES request");
 
     qd_composed_field_t *field = qd_agent_setup_response(reply_to, cid);
 
@@ -214,7 +214,7 @@ static void qd_agent_process_discover_operations(qd_agent_t          *agent,
                                                  qd_field_iterator_t *reply_to,
                                                  qd_field_iterator_t *cid)
 {
-    qd_log(log_module, LOG_TRACE, "Received DISCOVER-OPERATIONS request");
+    qd_log(log_module, QD_LOG_TRACE, "Received DISCOVER-OPERATIONS request");
 
     qd_composed_field_t *field = qd_agent_setup_response(reply_to, cid);
 
@@ -256,7 +256,7 @@ static void qd_agent_process_discover_nodes(qd_agent_t          *agent,
                                             qd_field_iterator_t *reply_to,
                                             qd_field_iterator_t *cid)
 {
-    qd_log(log_module, LOG_TRACE, "Received DISCOVER-MGMT-NODES request");
+    qd_log(log_module, QD_LOG_TRACE, "Received DISCOVER-MGMT-NODES request");
 
     qd_composed_field_t *field = qd_agent_setup_response(reply_to, cid);
 
@@ -321,7 +321,7 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
     // Exit if there was a parsing error.
     //
     if (!qd_parse_ok(map)) {
-        qd_log(log_module, LOG_TRACE, "Received unparsable App Properties: %s", qd_parse_error(map));
+        qd_log(log_module, QD_LOG_TRACE, "Received unparsable App Properties: %s", qd_parse_error(map));
         qd_field_iterator_free(ap);
         qd_field_iterator_free(reply_to);
         qd_parse_free(map);
@@ -429,7 +429,7 @@ static qd_agent_class_t *qd_agent_register_class_LH(qd_agent_t           *agent,
 
     DEQ_INSERT_TAIL(agent->class_list, cls);
 
-    qd_log(log_module, LOG_INFO, "Manageable Entity Type (%s) %s", query_handler ? "object" : "event", fqname);
+    qd_log(log_module, QD_LOG_INFO, "Manageable Entity Type (%s) %s", query_handler ? "object" : "event", fqname);
     return cls;
 }
 

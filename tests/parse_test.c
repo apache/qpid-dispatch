@@ -156,7 +156,7 @@ static char *test_parser_errors(void *context)
 int parse_tests()
 {
     int result = 0;
-    qd_log_set_mask(LOG_NONE);
+    qd_log_set_mask(QD_LOG_NONE);
 
     TEST_CASE(test_parser_fixed_scalars, 0);
     TEST_CASE(test_parser_errors, 0);

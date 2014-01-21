@@ -46,7 +46,7 @@ ALLOC_DEFINE(qd_log_entry_t);
 
 DEQ_DECLARE(qd_log_entry_t, qd_log_list_t);
 
-static int            mask = LOG_INFO;
+static int            mask = QD_LOG_INFO;
 static qd_log_list_t  entries;
 static sys_mutex_t   *log_lock = 0;
 
@@ -54,13 +54,13 @@ static sys_mutex_t   *log_lock = 0;
 static const char *cls_prefix(int cls)
 {
     switch (cls) {
-    case LOG_TRACE    : return "TRACE";
-    case LOG_DEBUG    : return "DEBUG";
-    case LOG_INFO     : return "INFO";
-    case LOG_NOTICE   : return "NOTICE";
-    case LOG_WARNING  : return "WARNING";
-    case LOG_ERROR    : return "ERROR";
-    case LOG_CRITICAL : return "CRITICAL";
+    case QD_LOG_TRACE    : return "TRACE";
+    case QD_LOG_DEBUG    : return "DEBUG";
+    case QD_LOG_INFO     : return "INFO";
+    case QD_LOG_NOTICE   : return "NOTICE";
+    case QD_LOG_WARNING  : return "WARNING";
+    case QD_LOG_ERROR    : return "ERROR";
+    case QD_LOG_CRITICAL : return "CRITICAL";
     }
 
     return "";

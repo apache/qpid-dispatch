@@ -65,7 +65,7 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
 {
     sys_mutex_lock(init_lock);
 
-    //qd_log("ALLOC", LOG_TRACE, "Initialized Allocator - type=%s type-size=%d total-size=%d",
+    //qd_log("ALLOC", QD_LOG_TRACE, "Initialized Allocator - type=%s type-size=%d total-size=%d",
     //       desc->type_name, desc->type_size, desc->total_size);
 
     if (!desc->global_pool) {

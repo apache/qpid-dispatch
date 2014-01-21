@@ -392,7 +392,7 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
 
     sys_mutex_unlock(router->lock);
 
-    qd_log(module, LOG_DEBUG, "Remote Destination '%s' Mapped to router %d", addr_string, maskbit);
+    qd_log(module, QD_LOG_DEBUG, "Remote Destination '%s' Mapped to router %d", addr_string, maskbit);
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -438,7 +438,7 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
 
     qd_router_check_addr(router, addr, 0);
 
-    qd_log(module, LOG_DEBUG, "Remote Destination '%s' Unmapped from router %d", addr_string, maskbit);
+    qd_log(module, QD_LOG_DEBUG, "Remote Destination '%s' Unmapped from router %d", addr_string, maskbit);
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -523,7 +523,7 @@ void qd_router_python_setup(qd_router_t *router)
     RouterAdapterType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&RouterAdapterType) < 0) {
         PyErr_Print();
-        qd_log(module, LOG_CRITICAL, "Unable to initialize the Python Router Adapter");
+        qd_log(module, QD_LOG_CRITICAL, "Unable to initialize the Python Router Adapter");
         return;
     }
 
@@ -546,13 +546,13 @@ void qd_router_python_setup(qd_router_t *router)
     pModule = PyImport_Import(pName);
     Py_DECREF(pName);
     if (!pModule) {
-        qd_log(module, LOG_CRITICAL, "Can't Locate 'router' Python module");
+        qd_log(module, QD_LOG_CRITICAL, "Can't Locate 'router' Python module");
         return;
     }
 
     pClass = PyObject_GetAttrString(pModule, "RouterEngine");
     if (!pClass || !PyClass_Check(pClass)) {
-        qd_log(module, LOG_CRITICAL, "Can't Locate 'RouterEngine' class in the 'router' module");
+        qd_log(module, QD_LOG_CRITICAL, "Can't Locate 'RouterEngine' class in the 'router' module");
         return;
     }
 
@@ -591,25 +591,25 @@ void qd_router_python_setup(qd_router_t *router)
 
     if (!router->pyRouter) {
         PyErr_Print();
-        qd_log(module, LOG_CRITICAL, "'RouterEngine' class cannot be instantiated");
+        qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class cannot be instantiated");
         return;
     }
 
     router->pyTick = PyObject_GetAttrString(router->pyRouter, "handleTimerTick");
     if (!router->pyTick || !PyCallable_Check(router->pyTick)) {
-        qd_log(module, LOG_CRITICAL, "'RouterEngine' class has no handleTimerTick method");
+        qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class has no handleTimerTick method");
         return;
     }
 
     router->pyAdded = PyObject_GetAttrString(router->pyRouter, "addressAdded");
     if (!router->pyAdded || !PyCallable_Check(router->pyAdded)) {
-        qd_log(module, LOG_CRITICAL, "'RouterEngine' class has no addressAdded method");
+        qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class has no addressAdded method");
         return;
     }
 
     router->pyRemoved = PyObject_GetAttrString(router->pyRouter, "addressRemoved");
     if (!router->pyRemoved || !PyCallable_Check(router->pyRemoved)) {
-        qd_log(module, LOG_CRITICAL, "'RouterEngine' class has no addressRemoved method");
+        qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class has no addressRemoved method");
         return;
     }
 }

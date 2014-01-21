@@ -232,7 +232,7 @@ static int qd_router_find_mask_bit_LH(qd_router_t *router, qd_link_t *link)
     if (qd_bitmask_first_set(router->neighbor_free_mask, &mask_bit)) {
         qd_bitmask_clear_bit(router->neighbor_free_mask, mask_bit);
     } else {
-        qd_log(module, LOG_CRITICAL, "Exceeded maximum inter-router link count");
+        qd_log(module, QD_LOG_CRITICAL, "Exceeded maximum inter-router link count");
         return -1;
     }
 
@@ -851,7 +851,7 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
     int          is_router = qd_router_terminus_is_router(qd_link_remote_source(link));
 
     if (is_router && !qd_router_connection_is_inter_router(qd_link_connection(link))) {
-        qd_log(module, LOG_WARNING, "Incoming link claims router capability but is not on an inter-router connection");
+        qd_log(module, QD_LOG_WARNING, "Incoming link claims router capability but is not on an inter-router connection");
         pn_link_close(pn_link);
         return 0;
     }
@@ -918,7 +918,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     qd_address_semantics_t  semantics;
 
     if (is_router && !qd_router_connection_is_inter_router(qd_link_connection(link))) {
-        qd_log(module, LOG_WARNING, "Outgoing link claims router capability but is not on an inter-router connection");
+        qd_log(module, QD_LOG_WARNING, "Outgoing link claims router capability but is not on an inter-router connection");
         pn_link_close(pn_link);
         return 0;
     }
@@ -945,7 +945,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
         if (prefix != 'M') {
             qd_field_iterator_free(iter);
             pn_link_close(pn_link);
-            qd_log(module, LOG_WARNING, "Rejected an outgoing endpoint link with a router address: %s", r_src);
+            qd_log(module, QD_LOG_WARNING, "Rejected an outgoing endpoint link with a router address: %s", r_src);
             return 0;
         }
     }
@@ -1004,9 +1004,9 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
             qd_router_generate_temp_addr(router, temp_addr, 1000);
             iter = qd_field_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
             pn_terminus_set_address(qd_link_source(link), temp_addr);
-            qd_log(module, LOG_INFO, "Assigned temporary routable address: %s", temp_addr);
+            qd_log(module, QD_LOG_INFO, "Assigned temporary routable address: %s", temp_addr);
         } else
-            qd_log(module, LOG_INFO, "Registered local address: %s", r_src);
+            qd_log(module, QD_LOG_INFO, "Registered local address: %s", r_src);
 
         qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
         if (!addr) {
@@ -1080,7 +1080,7 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
         if (router->out_links_by_mask_bit[rlink->mask_bit] == rlink)
             router->out_links_by_mask_bit[rlink->mask_bit] = 0;
         else
-            qd_log(module, LOG_CRITICAL, "Outgoing router link closing but not in index: bit=%d", rlink->mask_bit);
+            qd_log(module, QD_LOG_CRITICAL, "Outgoing router link closing but not in index: bit=%d", rlink->mask_bit);
     }
 
     //
@@ -1119,7 +1119,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     // role, ignore it.
     //
     if (!qd_router_connection_is_inter_router(conn)) {
-        qd_log(module, LOG_WARNING, "Outbound connection set up without inter-router role");
+        qd_log(module, QD_LOG_WARNING, "Outbound connection set up without inter-router role");
         return;
     }
 
@@ -1138,7 +1138,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
         qd_bitmask_clear_bit(router->neighbor_free_mask, mask_bit);
     } else {
         sys_mutex_unlock(router->lock);
-        qd_log(module, LOG_CRITICAL, "Exceeded maximum inter-router link count");
+        qd_log(module, QD_LOG_CRITICAL, "Exceeded maximum inter-router link count");
         return;
     }
 
@@ -1318,9 +1318,9 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     srandom(seed);
 
     switch (router->router_mode) {
-    case QD_ROUTER_MODE_STANDALONE: qd_log(module, LOG_INFO, "Router started in Standalone mode");  break;
-    case QD_ROUTER_MODE_INTERIOR:   qd_log(module, LOG_INFO, "Router started in Interior mode, area=%s id=%s", area, id);  break;
-    case QD_ROUTER_MODE_EDGE:       qd_log(module, LOG_INFO, "Router started in Edge mode");  break;
+    case QD_ROUTER_MODE_STANDALONE: qd_log(module, QD_LOG_INFO, "Router started in Standalone mode");  break;
+    case QD_ROUTER_MODE_INTERIOR:   qd_log(module, QD_LOG_INFO, "Router started in Interior mode, area=%s id=%s", area, id);  break;
+    case QD_ROUTER_MODE_EDGE:       qd_log(module, QD_LOG_INFO, "Router started in Edge mode");  break;
     }
 
     return router;
@@ -1386,7 +1386,7 @@ qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
     sys_mutex_unlock(router->lock);
 
     if (handler)
-        qd_log(module, LOG_INFO, "In-Process Address Registered: %s", address);
+        qd_log(module, QD_LOG_INFO, "In-Process Address Registered: %s", address);
     return addr;
 }
 

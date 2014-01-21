@@ -19,14 +19,14 @@
  * under the License.
  */
 
-#define LOG_NONE     0x00000000
-#define LOG_TRACE    0x00000001
-#define LOG_DEBUG    0x00000002
-#define LOG_INFO     0x00000004
-#define LOG_NOTICE   0x00000008
-#define LOG_WARNING  0x00000010
-#define LOG_ERROR    0x00000020
-#define LOG_CRITICAL 0x00000040
+#define QD_LOG_NONE     0x00000000
+#define QD_LOG_TRACE    0x00000001
+#define QD_LOG_DEBUG    0x00000002
+#define QD_LOG_INFO     0x00000004
+#define QD_LOG_NOTICE   0x00000008
+#define QD_LOG_WARNING  0x00000010
+#define QD_LOG_ERROR    0x00000020
+#define QD_LOG_CRITICAL 0x00000040
 
 void qd_log_impl(const char *module, int cls, const char *file, int line, const char *fmt, ...);
 #define qd_log(m, c, f, ...) qd_log_impl(m, c, __FILE__, __LINE__, f , ##__VA_ARGS__)

@@ -281,7 +281,7 @@ static char *test_compose_scalars(void *context)
 int compose_tests()
 {
     int result = 0;
-    qd_log_set_mask(LOG_NONE);
+    qd_log_set_mask(QD_LOG_NONE);
 
     TEST_CASE(test_compose_list_of_maps, 0);
     TEST_CASE(test_compose_nested_composites, 0);
