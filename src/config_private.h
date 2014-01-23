@@ -21,10 +21,11 @@
 
 #include <qpid/dispatch/config.h>
 
-void qd_config_initialize();
-void qd_config_finalize();
-qd_config_t *qd_config(const char *filename);
-void qd_config_read(qd_config_t *config);
+void qd_config_initialize(void);
+void qd_config_finalize(void);
+qd_config_t *qd_config(void);
+void qd_config_read(qd_config_t *config, const char *filename);
+void qd_config_extend(qd_config_t *config, const char *text);
 void qd_config_free(qd_config_t *config);
 
 #endif

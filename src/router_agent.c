@@ -66,6 +66,7 @@ static void qd_router_query_router(qd_router_t *router, void *cor)
     case QD_ROUTER_MODE_STANDALONE:  mode = "Standalone";  break;
     case QD_ROUTER_MODE_INTERIOR:    mode = "Interior";    break;
     case QD_ROUTER_MODE_EDGE:        mode = "Edge";        break;
+    case QD_ROUTER_MODE_ENDPOINT:    mode = "Endpoint";    break;
     }
     qd_agent_value_string(cor, "mode", mode);
 

@@ -19,6 +19,12 @@
  * under the License.
  */
 
+#include <qpid/dispatch/router.h>
+#include <qpid/dispatch/message.h>
+#include <qpid/dispatch/bitmask.h>
+#include <qpid/dispatch/hash.h>
+#include <qpid/dispatch/agent.h>
+
 typedef struct qd_router_link_t     qd_router_link_t;
 typedef struct qd_router_node_t     qd_router_node_t;
 typedef struct qd_router_ref_t      qd_router_ref_t;
@@ -33,7 +39,8 @@ void qd_router_configure(qd_router_t *router);
 typedef enum {
     QD_ROUTER_MODE_STANDALONE,  // Standalone router.  No routing protocol participation
     QD_ROUTER_MODE_INTERIOR,    // Interior router.  Full participation in routing protocol.
-    QD_ROUTER_MODE_EDGE         // Edge router.  No routing protocol participation, access via other protocols.
+    QD_ROUTER_MODE_EDGE,        // Edge router.  No transit-router capability.
+    QD_ROUTER_MODE_ENDPOINT     // No routing except for internal modules (agent, etc.).
 } qd_router_mode_t;
 
 typedef enum {
@@ -173,11 +180,6 @@ struct qd_router_t {
 
     qd_config_address_t    *config_addrs;
     int                     config_addr_count;
-
-    PyObject               *pyRouter;
-    PyObject               *pyTick;
-    PyObject               *pyAdded;
-    PyObject               *pyRemoved;
 
     qd_agent_class_t       *class_router;
     qd_agent_class_t       *class_link;

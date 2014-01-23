@@ -35,19 +35,19 @@ struct qd_config_t {
 ALLOC_DECLARE(qd_config_t);
 ALLOC_DEFINE(qd_config_t);
 
-void qd_config_initialize()
+void qd_config_initialize(void)
 {
     qd_python_start();
 }
 
 
-void qd_config_finalize()
+void qd_config_finalize(void)
 {
     qd_python_stop();
 }
 
 
-qd_config_t *qd_config(const char *filename)
+qd_config_t *qd_config(void)
 {
     qd_config_t *config = new_qd_config_t();
 
@@ -75,11 +75,9 @@ qd_config_t *qd_config(const char *filename)
     }
 
     //
-    // Instantiate the DispatchConfig class, passing in the configuration file name.
+    // Instantiate the DispatchConfig class
     //
-    PyObject *pArgs = PyTuple_New(1);
-    PyObject *fname = PyString_FromString(filename);
-    PyTuple_SetItem(pArgs, 0, fname);
+    PyObject *pArgs = PyTuple_New(0);
     config->pObject = PyInstance_New(config->pClass, pArgs, 0);
     Py_DECREF(pArgs);
 
@@ -94,9 +92,10 @@ qd_config_t *qd_config(const char *filename)
 }
 
 
-void qd_config_read(qd_config_t *config)
+void qd_config_read(qd_config_t *config, const char *filepath)
 {
     PyObject *pMethod;
+    PyObject *pPath;
     PyObject *pArgs;
     PyObject *pResult;
 
@@ -112,7 +111,9 @@ void qd_config_read(qd_config_t *config)
         return;
     }
 
-    pArgs = PyTuple_New(0);
+    pArgs = PyTuple_New(1);
+    pPath = PyString_FromString(filepath);
+    PyTuple_SetItem(pArgs, 0, pPath);
     pResult = PyObject_CallObject(pMethod, pArgs);
     Py_DECREF(pArgs);
     if (pResult) {
@@ -125,6 +126,12 @@ void qd_config_read(qd_config_t *config)
         exit(1);
     }
     Py_DECREF(pMethod);
+}
+
+
+void qd_config_extend(qd_config_t *config, const char *text)
+{
+    PyRun_SimpleString(text);
 }
 
 

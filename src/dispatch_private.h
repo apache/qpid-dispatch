@@ -19,13 +19,15 @@
  * under the License.
  */
 
-#include "server_private.h"
-#include "config_private.h"
-#include <qpid/dispatch/ctools.h>
-
 typedef struct qd_container_t qd_container_t;
 typedef struct qd_router_t    qd_router_t;
 typedef struct qd_agent_t     qd_agent_t;
+
+#include <qpid/dispatch/container.h>
+#include "server_private.h"
+#include "config_private.h"
+#include "router_private.h"
+#include <qpid/dispatch/ctools.h>
 
 typedef struct qd_config_listener_t {
     DEQ_LINKS(struct qd_config_listener_t);
@@ -55,6 +57,12 @@ struct qd_dispatch_t {
 
     qd_config_listener_list_t   config_listeners;
     qd_config_connector_list_t  config_connectors;
+
+    int               thread_count;
+    const char       *container_name;
+    const char       *router_area;
+    const char       *router_id;
+    qd_router_mode_t  router_mode;
 };
 
 #endif

@@ -466,8 +466,8 @@ class RouterTest(unittest.TestCase):
             self.assertEqual(i, rm.body['number'])
             da = rm.instructions
             self.assertEqual(da.__class__, dict)
-            self.assertEqual(da['x-opt-qd.ingress'], '0/Qpid.Dispatch.Router.A')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/Qpid.Dispatch.Router.A'])
+            self.assertEqual(da['x-opt-qd.ingress'], '0/QDR')
+            self.assertEqual(da['x-opt-qd.trace'], ['0/QDR'])
 
         ##
         ## Pre-existing ingress
@@ -485,7 +485,7 @@ class RouterTest(unittest.TestCase):
             da = rm.instructions
             self.assertEqual(da.__class__, dict)
             self.assertEqual(da['x-opt-qd.ingress'], 'ingress-router')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/Qpid.Dispatch.Router.A'])
+            self.assertEqual(da['x-opt-qd.trace'], ['0/QDR'])
 
         ##
         ## Invalid trace type
@@ -502,8 +502,8 @@ class RouterTest(unittest.TestCase):
             self.assertEqual(i, rm.body['number'])
             da = rm.instructions
             self.assertEqual(da.__class__, dict)
-            self.assertEqual(da['x-opt-qd.ingress'], '0/Qpid.Dispatch.Router.A')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/Qpid.Dispatch.Router.A'])
+            self.assertEqual(da['x-opt-qd.ingress'], '0/QDR')
+            self.assertEqual(da['x-opt-qd.trace'], ['0/QDR'])
 
         ##
         ## Empty trace
@@ -520,8 +520,8 @@ class RouterTest(unittest.TestCase):
             self.assertEqual(i, rm.body['number'])
             da = rm.instructions
             self.assertEqual(da.__class__, dict)
-            self.assertEqual(da['x-opt-qd.ingress'], '0/Qpid.Dispatch.Router.A')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/Qpid.Dispatch.Router.A'])
+            self.assertEqual(da['x-opt-qd.ingress'], '0/QDR')
+            self.assertEqual(da['x-opt-qd.trace'], ['0/QDR'])
 
         ##
         ## Non-empty trace
@@ -538,8 +538,8 @@ class RouterTest(unittest.TestCase):
             self.assertEqual(i, rm.body['number'])
             da = rm.instructions
             self.assertEqual(da.__class__, dict)
-            self.assertEqual(da['x-opt-qd.ingress'], '0/Qpid.Dispatch.Router.A')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/first.hop', '0/Qpid.Dispatch.Router.A'])
+            self.assertEqual(da['x-opt-qd.ingress'], '0/QDR')
+            self.assertEqual(da['x-opt-qd.trace'], ['0/first.hop', '0/QDR'])
 
         M1.stop()
         M2.stop()

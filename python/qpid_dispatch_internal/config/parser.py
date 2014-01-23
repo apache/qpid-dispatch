@@ -207,18 +207,18 @@ class DispatchConfig:
 
   """
 
-  def __init__(self, path):
-    self.path = path
+  def __init__(self):
     self.raw_config = None
     self.config     = None
-    self.schema     = Schema()
+    self.schema     = None
     self.log        = LogAdapter('config.parser')
 
 
-  def read_file(self):
+  def read_file(self, path):
+    self.schema = Schema()
     try:
-      self.log.log(LOG_INFO, "Reading Configuration File: %s" % self.path)
-      cfile = open(self.path)
+      self.log.log(LOG_INFO, "Reading Configuration File: %s" % path)
+      cfile = open(path)
       text = cfile.read()
       cfile.close()
 

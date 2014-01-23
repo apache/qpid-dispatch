@@ -82,11 +82,5 @@ config_schema = {
         'ra-interval'         : (int, None, '',  30, None),
         'remote-ls-max-age'   : (int, None, '',  60, None),
         'mobile-addr-max-age' : (int, None, '',  60, None)
-    }),
-    'fixed-address' : (False, {
-        'prefix' : (str, 0,    'M', None, None),
-        'fanout' : (str, None, '', 'multiple', ['multiple', 'single']),
-        'bias'   : (str, None, '', 'none',     ['none', 'closest', 'spread'])
     })
 }
-

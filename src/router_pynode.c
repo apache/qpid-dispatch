@@ -30,6 +30,13 @@ static char *module = "router.pynode";
 static qd_address_semantics_t router_addr_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS | QD_BYPASS_VALID_ORIGINS;
 static qd_address_semantics_t default_semantics     = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS;
 
+static PyObject *pyRouter  = 0;
+static PyObject *pyTick    = 0;
+static PyObject *pyAdded   = 0;
+static PyObject *pyRemoved = 0;
+
+
+
 typedef struct {
     PyObject_HEAD
     qd_router_t *router;
@@ -585,30 +592,30 @@ void qd_router_python_setup(qd_router_t *router)
     //
     // Instantiate the router
     //
-    router->pyRouter = PyInstance_New(pClass, pArgs, 0);
+    pyRouter = PyInstance_New(pClass, pArgs, 0);
     Py_DECREF(pArgs);
     Py_DECREF(adapterType);
 
-    if (!router->pyRouter) {
+    if (!pyRouter) {
         PyErr_Print();
         qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class cannot be instantiated");
         return;
     }
 
-    router->pyTick = PyObject_GetAttrString(router->pyRouter, "handleTimerTick");
-    if (!router->pyTick || !PyCallable_Check(router->pyTick)) {
+    pyTick = PyObject_GetAttrString(pyRouter, "handleTimerTick");
+    if (!pyTick || !PyCallable_Check(pyTick)) {
         qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class has no handleTimerTick method");
         return;
     }
 
-    router->pyAdded = PyObject_GetAttrString(router->pyRouter, "addressAdded");
-    if (!router->pyAdded || !PyCallable_Check(router->pyAdded)) {
+    pyAdded = PyObject_GetAttrString(pyRouter, "addressAdded");
+    if (!pyAdded || !PyCallable_Check(pyAdded)) {
         qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class has no addressAdded method");
         return;
     }
 
-    router->pyRemoved = PyObject_GetAttrString(router->pyRouter, "addressRemoved");
-    if (!router->pyRemoved || !PyCallable_Check(router->pyRemoved)) {
+    pyRemoved = PyObject_GetAttrString(pyRouter, "addressRemoved");
+    if (!pyRemoved || !PyCallable_Check(pyRemoved)) {
         qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class has no addressRemoved method");
         return;
     }
@@ -620,10 +627,10 @@ void qd_pyrouter_tick(qd_router_t *router)
     PyObject *pArgs;
     PyObject *pValue;
 
-    if (router->pyTick && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
+    if (pyTick && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
         qd_python_lock();
         pArgs  = PyTuple_New(0);
-        pValue = PyObject_CallObject(router->pyTick, pArgs);
+        pValue = PyObject_CallObject(pyTick, pArgs);
         if (PyErr_Occurred()) {
             PyErr_Print();
         }
@@ -641,14 +648,14 @@ void qd_router_mobile_added(qd_router_t *router, qd_field_iterator_t *iter)
     PyObject *pArgs;
     PyObject *pValue;
 
-    if (router->pyAdded && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
+    if (pyAdded && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
         qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
         char *address = (char*) qd_field_iterator_copy(iter);
 
         qd_python_lock();
         pArgs = PyTuple_New(1);
         PyTuple_SetItem(pArgs, 0, PyString_FromString(address));
-        pValue = PyObject_CallObject(router->pyAdded, pArgs);
+        pValue = PyObject_CallObject(pyAdded, pArgs);
         if (PyErr_Occurred()) {
             PyErr_Print();
         }
@@ -668,11 +675,11 @@ void qd_router_mobile_removed(qd_router_t *router, const char *address)
     PyObject *pArgs;
     PyObject *pValue;
 
-    if (router->pyRemoved && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
+    if (pyRemoved && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
         qd_python_lock();
         pArgs = PyTuple_New(1);
         PyTuple_SetItem(pArgs, 0, PyString_FromString(address));
-        pValue = PyObject_CallObject(router->pyRemoved, pArgs);
+        pValue = PyObject_CallObject(pyRemoved, pArgs);
         if (PyErr_Occurred()) {
             PyErr_Print();
         }

@@ -28,6 +28,13 @@
 static int            exit_with_sigint = 0;
 static qd_dispatch_t *dispatch;
 
+static const char *app_config =
+    "from qpid_dispatch_internal.config.schema import config_schema\n"
+    "config_schema['fixed-address'] = (False, {\n"
+    "   'prefix' : (str, 0,    'M', None, None),\n"
+    "   'fanout' : (str, None, '', 'multiple', ['multiple', 'single']),\n"
+    "   'bias'   : (str, None, '', 'none',     ['none', 'closest', 'spread'])})\n";
+
 
 /**
  * The thread_start_handler is invoked once for each server thread at thread startup.
@@ -77,14 +84,6 @@ static void server_signal_handler(void* context, int signum)
 }
 
 
-static void startup(void *context)
-{
-    qd_server_pause(dispatch);
-    qd_dispatch_configure(dispatch);
-    qd_server_resume(dispatch);
-}
-
-
 int main(int argc, char **argv)
 {
 #define DEFAULT_DISPATCH_PYTHON_DIR QPID_DISPATCH_HOME_INSTALLED "/python"
@@ -128,13 +127,16 @@ int main(int argc, char **argv)
 
     qd_log_set_mask(0xFFFFFFFE);
 
-    dispatch = qd_dispatch(config_path, python_pkgdir);
+    dispatch = qd_dispatch(python_pkgdir);
+    qd_dispatch_extend_config_schema(dispatch, app_config);
+    qd_dispatch_load_config(dispatch, config_path);
+    qd_dispatch_configure_container(dispatch);
+    qd_dispatch_configure_router(dispatch);
+    qd_dispatch_prepare(dispatch);
+    qd_dispatch_post_configure_connections(dispatch);
 
     qd_server_set_signal_handler(dispatch, server_signal_handler, 0);
     qd_server_set_start_handler(dispatch, thread_start_handler, 0);
-
-    qd_timer_t *startup_timer = qd_timer(dispatch, startup, 0);
-    qd_timer_schedule(startup_timer, 0);
 
     signal(SIGHUP,  signal_handler);
     signal(SIGQUIT, signal_handler);
@@ -145,8 +147,8 @@ int main(int argc, char **argv)
     qd_dispatch_free(dispatch);
 
     if (exit_with_sigint) {
-	signal(SIGINT, SIG_DFL);
-	kill(getpid(), SIGINT);
+        signal(SIGINT, SIG_DFL);
+        kill(getpid(), SIGINT);
     }
 
     return 0;

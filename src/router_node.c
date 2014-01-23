@@ -719,7 +719,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
                 // If the address form is local (i.e. is prefixed by _local), don't forward
                 // outside of the router process.
                 //
-                if (!drop && !is_local) {
+                if (!drop && !is_local && router->router_mode != QD_ROUTER_MODE_ENDPOINT) {
                     //
                     // Handle the various fanout and bias cases:
                     //
@@ -1281,10 +1281,6 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     router->dtag               = 1;
     router->config_addrs       = 0;
     router->config_addr_count  = 0;
-    router->pyRouter           = 0;
-    router->pyTick             = 0;
-    router->pyAdded            = 0;
-    router->pyRemoved          = 0;
 
     //
     // Configure the router from the configuration file
@@ -1321,6 +1317,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     case QD_ROUTER_MODE_STANDALONE: qd_log(module, QD_LOG_INFO, "Router started in Standalone mode");  break;
     case QD_ROUTER_MODE_INTERIOR:   qd_log(module, QD_LOG_INFO, "Router started in Interior mode, area=%s id=%s", area, id);  break;
     case QD_ROUTER_MODE_EDGE:       qd_log(module, QD_LOG_INFO, "Router started in Edge mode");  break;
+    case QD_ROUTER_MODE_ENDPOINT:   qd_log(module, QD_LOG_INFO, "Router started in Endpoint mode");  break;
     }
 
     return router;
