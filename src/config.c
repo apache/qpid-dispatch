@@ -18,7 +18,7 @@
  */
 
 #include <qpid/dispatch/python_embedded.h>
-#include "config_private.h"
+#include "dispatch_private.h"
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/log.h>
 
@@ -145,8 +145,9 @@ void qd_config_free(qd_config_t *config)
 }
 
 
-int qd_config_item_count(const qd_config_t *config, const char *section)
+int qd_config_item_count(const qd_dispatch_t *dispatch, const char *section)
 {
+    const qd_config_t *config = dispatch->config;
     PyObject *pSection;
     PyObject *pMethod;
     PyObject *pArgs;
@@ -181,8 +182,9 @@ int qd_config_item_count(const qd_config_t *config, const char *section)
 }
 
 
-static PyObject *item_value(const qd_config_t *config, const char *section, int index, const char* key, const char* method)
+static PyObject *item_value(const qd_dispatch_t *dispatch, const char *section, int index, const char* key, const char* method)
 {
+    const qd_config_t *config = dispatch->config;
     PyObject *pSection;
     PyObject *pIndex;
     PyObject *pKey;
@@ -217,9 +219,9 @@ static PyObject *item_value(const qd_config_t *config, const char *section, int 
 }
 
 
-const char *qd_config_item_value_string(const qd_config_t *config, const char *section, int index, const char* key)
+const char *qd_config_item_value_string(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
 {
-    PyObject *pResult = item_value(config, section, index, key, "value_string");
+    PyObject *pResult = item_value(dispatch, section, index, key, "value_string");
     char     *value   = 0;
 
     if (pResult && PyString_Check(pResult)) {
@@ -236,9 +238,9 @@ const char *qd_config_item_value_string(const qd_config_t *config, const char *s
 }
 
 
-uint32_t qd_config_item_value_int(const qd_config_t *config, const char *section, int index, const char* key)
+uint32_t qd_config_item_value_int(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
 {
-    PyObject *pResult = item_value(config, section, index, key, "value_int");
+    PyObject *pResult = item_value(dispatch, section, index, key, "value_int");
     uint32_t  value   = 0;
 
     if (pResult && PyLong_Check(pResult))
@@ -252,9 +254,9 @@ uint32_t qd_config_item_value_int(const qd_config_t *config, const char *section
 }
 
 
-int qd_config_item_value_bool(const qd_config_t *config, const char *section, int index, const char* key)
+int qd_config_item_value_bool(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
 {
-    PyObject *pResult = item_value(config, section, index, key, "value_bool");
+    PyObject *pResult = item_value(dispatch, section, index, key, "value_bool");
     int       value   = 0;
 
     if (pResult && pResult != Py_None)

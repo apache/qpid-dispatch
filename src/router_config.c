@@ -29,18 +29,18 @@ static const char *MODULE       = "ROUTER";
 
 void qd_router_configure(qd_router_t *router)
 {
-    if (!router->qd->config)
+    if (!router->qd)
         return;
 
-    int count = qd_config_item_count(router->qd->config, CONF_ADDRESS);
+    int count = qd_config_item_count(router->qd, CONF_ADDRESS);
 
     router->config_addr_count = count;
     router->config_addrs      = NEW_ARRAY(qd_config_address_t, count);
 
     for (int idx = 0; idx < count; idx++) {
-        const char *prefix = qd_config_item_value_string(router->qd->config, CONF_ADDRESS, idx, "prefix");
-        const char *fanout = qd_config_item_value_string(router->qd->config, CONF_ADDRESS, idx, "fanout");
-        const char *bias   = qd_config_item_value_string(router->qd->config, CONF_ADDRESS, idx, "bias");
+        const char *prefix = qd_config_item_value_string(router->qd, CONF_ADDRESS, idx, "prefix");
+        const char *fanout = qd_config_item_value_string(router->qd, CONF_ADDRESS, idx, "fanout");
+        const char *bias   = qd_config_item_value_string(router->qd, CONF_ADDRESS, idx, "bias");
         router->config_addrs[idx].prefix = (char*) malloc(strlen(prefix) + 1);
         if (prefix[0] == '/')
             strcpy(router->config_addrs[idx].prefix, &prefix[1]);

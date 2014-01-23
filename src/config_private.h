@@ -21,6 +21,8 @@
 
 #include <qpid/dispatch/config.h>
 
+typedef struct qd_config_t qd_config_t;
+
 void qd_config_initialize(void);
 void qd_config_finalize(void);
 qd_config_t *qd_config(void);

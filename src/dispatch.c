@@ -88,10 +88,10 @@ void qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 void qd_dispatch_configure_container(qd_dispatch_t *qd)
 {
     if (qd->config) {
-        int count = qd_config_item_count(qd->config, CONF_CONTAINER);
+        int count = qd_config_item_count(qd, CONF_CONTAINER);
         if (count == 1) {
-            qd->thread_count   = qd_config_item_value_int(qd->config, CONF_CONTAINER, 0, "worker-threads");
-            qd->container_name = qd_config_item_value_string(qd->config, CONF_CONTAINER, 0, "container-name");
+            qd->thread_count   = qd_config_item_value_int(qd, CONF_CONTAINER, 0, "worker-threads");
+            qd->container_name = qd_config_item_value_string(qd, CONF_CONTAINER, 0, "container-name");
         }
     }
 
@@ -105,13 +105,13 @@ void qd_dispatch_configure_container(qd_dispatch_t *qd)
 
 void qd_dispatch_configure_router(qd_dispatch_t *qd)
 {
-    const char *router_mode_str;
+    const char *router_mode_str = 0;
 
     if (qd->config) {
-        int count = qd_config_item_count(qd->config, CONF_ROUTER);
+        int count = qd_config_item_count(qd, CONF_ROUTER);
         if (count == 1) {
-            router_mode_str = qd_config_item_value_string(qd->config, CONF_ROUTER, 0, "mode");
-            qd->router_id   = qd_config_item_value_string(qd->config, CONF_ROUTER, 0, "router-id");
+            router_mode_str = qd_config_item_value_string(qd, CONF_ROUTER, 0, "mode");
+            qd->router_id   = qd_config_item_value_string(qd, CONF_ROUTER, 0, "router-id");
         }
     }
 
@@ -158,27 +158,27 @@ void qd_dispatch_free(qd_dispatch_t *qd)
 
 static void load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, const char *section, int i)
 {
-    config->host = qd_config_item_value_string(qd->config, section, i, "addr");
-    config->port = qd_config_item_value_string(qd->config, section, i, "port");
-    config->role = qd_config_item_value_string(qd->config, section, i, "role");
+    config->host = qd_config_item_value_string(qd, section, i, "addr");
+    config->port = qd_config_item_value_string(qd, section, i, "port");
+    config->role = qd_config_item_value_string(qd, section, i, "role");
     config->sasl_mechanisms =
-        qd_config_item_value_string(qd->config, section, i, "sasl-mechanisms");
+        qd_config_item_value_string(qd, section, i, "sasl-mechanisms");
     config->ssl_enabled =
-        qd_config_item_value_bool(qd->config, section, i, "ssl-profile");
+        qd_config_item_value_bool(qd, section, i, "ssl-profile");
     if (config->ssl_enabled) {
         config->ssl_server = 1;
         config->ssl_allow_unsecured_client =
-            qd_config_item_value_bool(qd->config, section, i, "allow-unsecured");
+            qd_config_item_value_bool(qd, section, i, "allow-unsecured");
         config->ssl_certificate_file =
-            qd_config_item_value_string(qd->config, section, i, "cert-file");
+            qd_config_item_value_string(qd, section, i, "cert-file");
         config->ssl_private_key_file =
-            qd_config_item_value_string(qd->config, section, i, "key-file");
+            qd_config_item_value_string(qd, section, i, "key-file");
         config->ssl_password =
-            qd_config_item_value_string(qd->config, section, i, "password");
+            qd_config_item_value_string(qd, section, i, "password");
         config->ssl_trusted_certificate_db =
-            qd_config_item_value_string(qd->config, section, i, "cert-db");
+            qd_config_item_value_string(qd, section, i, "cert-db");
         config->ssl_require_peer_authentication =
-            qd_config_item_value_bool(qd->config, section, i, "require-peer-auth");
+            qd_config_item_value_bool(qd, section, i, "require-peer-auth");
     }
 }
 
@@ -190,7 +190,7 @@ static void configure_listeners(qd_dispatch_t *qd)
     if (!qd->config)
         return;
 
-    count = qd_config_item_count(qd->config, CONF_LISTENER);
+    count = qd_config_item_count(qd, CONF_LISTENER);
     for (int i = 0; i < count; i++) {
         qd_config_listener_t *cl = new_qd_config_listener_t();
         load_server_config(qd, &cl->configuration, CONF_LISTENER, i);
@@ -220,7 +220,7 @@ static void configure_connectors(qd_dispatch_t *qd)
     if (!qd->config)
         return;
 
-    count = qd_config_item_count(qd->config, CONF_CONNECTOR);
+    count = qd_config_item_count(qd, CONF_CONNECTOR);
     for (int i = 0; i < count; i++) {
         qd_config_connector_t *cc = new_qd_config_connector_t();
         load_server_config(qd, &cc->configuration, CONF_CONNECTOR, i);

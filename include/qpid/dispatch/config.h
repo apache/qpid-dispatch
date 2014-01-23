@@ -19,13 +19,12 @@
  * under the License.
  */
 
+#include <qpid/dispatch/dispatch.h>
 #include <stdint.h>
 
-typedef struct qd_config_t qd_config_t;
-
-int qd_config_item_count(const qd_config_t *config, const char *section);
-const char *qd_config_item_value_string(const qd_config_t *config, const char *section, int index, const char* key);
-uint32_t qd_config_item_value_int(const qd_config_t *config, const char *section, int index, const char* key);
-int qd_config_item_value_bool(const qd_config_t *config, const char *section, int index, const char* key);
+int qd_config_item_count(const qd_dispatch_t *dispatch, const char *section);
+const char *qd_config_item_value_string(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
+uint32_t qd_config_item_value_int(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
+int qd_config_item_value_bool(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
 
 #endif
