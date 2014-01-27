@@ -96,7 +96,7 @@ static void ufd_handler(void *context, qd_user_fd_t *ufd)
             sprintf(stored_error, "Expected Writable");
             qd_server_stop(qd);
         } else {
-            write(fd[1], "X", 1);
+            if (write(fd[1], "X", 1) < 0) abort();
 
             write_count++;
             if (write_count < OCTET_COUNT)
