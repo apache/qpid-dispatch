@@ -82,7 +82,10 @@ include_directories(
     ${PYTHON_INCLUDE_PATH}
     )
 
-set(CMAKE_C_FLAGS "-pthread -Wall -Werror -std=gnu99")
+add_compile_options(-pthread)
+add_compile_options(-Wall)
+add_compile_options(-Werror)
+add_compile_options(-std=gnu99)
 set(CATCH_UNDEFINED "-Wl,--no-undefined")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in
