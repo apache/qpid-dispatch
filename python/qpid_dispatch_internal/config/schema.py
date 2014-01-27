@@ -62,6 +62,7 @@ config_schema = {
         'sasl-mechanisms'   : (str,  None, 'M', None,  None),
         'ssl-profile'       : (str,  None, 'E', None,  None),
         'require-peer-auth' : (bool, None, '',  True,  None),
+        'trusted-certs'     : (str,  None, '',  None,  None),
         'allow-unsecured'   : (bool, None, '',  False, None)
     }),
     'connector' : (False, {

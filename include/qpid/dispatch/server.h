@@ -284,6 +284,14 @@ typedef struct qd_server_config_t {
     const char *ssl_trusted_certificate_db;
 
     /**
+     * Path to an optional file containing the PEM-formatted set of certificates of
+     * trusted CAs for a particular connection/listener.  This must be a subset of the
+     * set of certificates in the ssl_trusted_certificate_db.  If this is left NULL,
+     * the entire set within the db will be used.
+     */
+    const char *ssl_trusted_certificates;
+
+    /**
      * Iff non-zero, require that the peer's certificate be supplied and that it be authentic
      * according to the set of trusted CAs.
      */

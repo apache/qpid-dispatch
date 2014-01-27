@@ -177,6 +177,8 @@ static void load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, co
             qd_config_item_value_string(qd, section, i, "password");
         config->ssl_trusted_certificate_db =
             qd_config_item_value_string(qd, section, i, "cert-db");
+        config->ssl_trusted_certificates =
+            qd_config_item_value_string(qd, section, i, "trusted-certs");
         config->ssl_require_peer_authentication =
             qd_config_item_value_bool(qd, section, i, "require-peer-auth");
     }

@@ -145,8 +145,15 @@ static void thread_process_listeners(qd_server_t *qd_server)
             if (config->ssl_allow_unsecured_client)
                 pn_ssl_domain_allow_unsecured_client(domain);
 
+            if (config->ssl_trusted_certificate_db)
+                pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db);
+
+            const char *trusted = config->ssl_trusted_certificate_db;
+            if (config->ssl_trusted_certificates)
+                trusted = config->ssl_trusted_certificates;
+
             if (config->ssl_require_peer_authentication)
-                pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER_NAME, config->ssl_trusted_certificate_db);
+                pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER_NAME, trusted);
 
             pn_ssl_t *ssl = pn_ssl(tport);
             pn_ssl_init(ssl, domain, 0);
