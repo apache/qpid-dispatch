@@ -24,6 +24,7 @@
 #include <qpid/dispatch/bitmask.h>
 #include <qpid/dispatch/hash.h>
 #include <qpid/dispatch/agent.h>
+#include <qpid/dispatch/log.h>
 
 typedef struct qd_router_link_t     qd_router_link_t;
 typedef struct qd_router_node_t     qd_router_node_t;
@@ -158,6 +159,7 @@ typedef struct {
 
 struct qd_router_t {
     qd_dispatch_t          *qd;
+    qd_log_source_t        *log_source;
     qd_router_mode_t        router_mode;
     const char             *router_area;
     const char             *router_id;

@@ -26,14 +26,14 @@
 #include "dispatch_private.h"
 #include "router_private.h"
 
-static char *module = "router.pynode";
 static qd_address_semantics_t router_addr_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS | QD_BYPASS_VALID_ORIGINS;
 static qd_address_semantics_t default_semantics     = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS;
 
-static PyObject *pyRouter  = 0;
-static PyObject *pyTick    = 0;
-static PyObject *pyAdded   = 0;
-static PyObject *pyRemoved = 0;
+static qd_log_source_t *log_source = 0;
+static PyObject        *pyRouter   = 0;
+static PyObject        *pyTick     = 0;
+static PyObject        *pyAdded    = 0;
+static PyObject        *pyRemoved  = 0;
 
 
 
@@ -399,7 +399,7 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
 
     sys_mutex_unlock(router->lock);
 
-    qd_log(module, QD_LOG_DEBUG, "Remote Destination '%s' Mapped to router %d", addr_string, maskbit);
+    qd_log(log_source, QD_LOG_DEBUG, "Remote Destination '%s' Mapped to router %d", addr_string, maskbit);
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -445,7 +445,7 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
 
     qd_router_check_addr(router, addr, 0);
 
-    qd_log(module, QD_LOG_DEBUG, "Remote Destination '%s' Unmapped from router %d", addr_string, maskbit);
+    qd_log(log_source, QD_LOG_DEBUG, "Remote Destination '%s' Unmapped from router %d", addr_string, maskbit);
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -518,6 +518,9 @@ static PyTypeObject RouterAdapterType = {
 
 void qd_router_python_setup(qd_router_t *router)
 {
+
+    log_source = qd_log_source("PYROUTER");
+
     //
     // If we are not operating as an interior router, don't start the
     // router module.
@@ -530,7 +533,7 @@ void qd_router_python_setup(qd_router_t *router)
     RouterAdapterType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&RouterAdapterType) < 0) {
         PyErr_Print();
-        qd_log(module, QD_LOG_CRITICAL, "Unable to initialize the Python Router Adapter");
+        qd_log(log_source, QD_LOG_CRITICAL, "Unable to initialize the Python Router Adapter");
         return;
     }
 
@@ -553,13 +556,13 @@ void qd_router_python_setup(qd_router_t *router)
     pModule = PyImport_Import(pName);
     Py_DECREF(pName);
     if (!pModule) {
-        qd_log(module, QD_LOG_CRITICAL, "Can't Locate 'router' Python module");
+        qd_log(log_source, QD_LOG_CRITICAL, "Can't Locate 'router' Python module");
         return;
     }
 
     pClass = PyObject_GetAttrString(pModule, "RouterEngine");
     if (!pClass || !PyClass_Check(pClass)) {
-        qd_log(module, QD_LOG_CRITICAL, "Can't Locate 'RouterEngine' class in the 'router' module");
+        qd_log(log_source, QD_LOG_CRITICAL, "Can't Locate 'RouterEngine' class in the 'router' module");
         return;
     }
 
@@ -598,25 +601,25 @@ void qd_router_python_setup(qd_router_t *router)
 
     if (!pyRouter) {
         PyErr_Print();
-        qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class cannot be instantiated");
+        qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class cannot be instantiated");
         return;
     }
 
     pyTick = PyObject_GetAttrString(pyRouter, "handleTimerTick");
     if (!pyTick || !PyCallable_Check(pyTick)) {
-        qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class has no handleTimerTick method");
+        qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class has no handleTimerTick method");
         return;
     }
 
     pyAdded = PyObject_GetAttrString(pyRouter, "addressAdded");
     if (!pyAdded || !PyCallable_Check(pyAdded)) {
-        qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class has no addressAdded method");
+        qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class has no addressAdded method");
         return;
     }
 
     pyRemoved = PyObject_GetAttrString(pyRouter, "addressRemoved");
     if (!pyRemoved || !PyCallable_Check(pyRemoved)) {
-        qd_log(module, QD_LOG_CRITICAL, "'RouterEngine' class has no addressRemoved method");
+        qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class has no addressRemoved method");
         return;
     }
 }

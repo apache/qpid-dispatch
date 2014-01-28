@@ -29,12 +29,12 @@
 // Control Functions
 //===============================================================================
 
-static qd_dispatch_t *dispatch   = 0;
-static uint32_t       ref_count  = 0;
-static sys_mutex_t   *lock       = 0;
-static char          *log_module = "PYTHON";
-static PyObject      *dispatch_module = 0;
-static PyObject      *dispatch_python_pkgdir = 0;
+static qd_dispatch_t   *dispatch   = 0;
+static uint32_t         ref_count  = 0;
+static sys_mutex_t     *lock       = 0;
+static qd_log_source_t *log_source = 0;
+static PyObject        *dispatch_module = 0;
+static PyObject        *dispatch_python_pkgdir = 0;
 
 static qd_address_semantics_t py_semantics = QD_FANOUT_MULTIPLE | QD_BIAS_NONE | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS;
 
@@ -44,6 +44,7 @@ static void qd_python_setup(void);
 void qd_python_initialize(qd_dispatch_t *qd,
                           const char    *python_pkgdir)
 {
+    log_source = qd_log_source("PYTHON");
     dispatch = qd;
     lock = sys_mutex();
     if (python_pkgdir)
@@ -64,7 +65,7 @@ void qd_python_start(void)
     if (ref_count == 0) {
         Py_Initialize();
         qd_python_setup();
-        qd_log(log_module, QD_LOG_TRACE, "Embedded Python Interpreter Initialized");
+        qd_log(log_source, QD_LOG_TRACE, "Embedded Python Interpreter Initialized");
     }
     ref_count++;
     sys_mutex_unlock(lock);
@@ -79,7 +80,7 @@ void qd_python_stop(void)
         Py_DECREF(dispatch_module);
         dispatch_module = 0;
         Py_Finalize();
-        qd_log(log_module, QD_LOG_TRACE, "Embedded Python Interpreter Shut Down");
+        qd_log(log_source, QD_LOG_TRACE, "Embedded Python Interpreter Shut Down");
     }
     sys_mutex_unlock(lock);
 }
@@ -295,6 +296,7 @@ PyObject *qd_field_to_py(qd_parsed_field_t *field)
 typedef struct {
     PyObject_HEAD
     PyObject *module_name;
+    qd_log_source_t *log_source;
 } LogAdapter;
 
 
@@ -305,6 +307,7 @@ static int LogAdapter_init(LogAdapter *self, PyObject *args, PyObject *kwds)
         return -1;
 
     self->module_name = PyString_FromString(text);
+    self->log_source  = qd_log_source(text);
     return 0;
 }
 
@@ -325,9 +328,9 @@ static PyObject* qd_python_log(PyObject *self, PyObject *args)
         return 0;
 
     LogAdapter *self_ptr = (LogAdapter*) self;
-    char       *logmod   = PyString_AS_STRING(self_ptr->module_name);
+    //char       *logmod   = PyString_AS_STRING(self_ptr->module_name);
 
-    qd_log(logmod, level, text);
+    qd_log(self_ptr->log_source, level, text);
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -642,7 +645,7 @@ static void qd_python_setup(void)
     IoAdapterType.tp_new  = PyType_GenericNew;
     if ((PyType_Ready(&LogAdapterType) < 0) || (PyType_Ready(&IoAdapterType) < 0)) {
         PyErr_Print();
-        qd_log(log_module, QD_LOG_ERROR, "Unable to initialize Adapters");
+        qd_log(log_source, QD_LOG_ERROR, "Unable to initialize Adapters");
         assert(0);
     } else {
         PyObject *m = Py_InitModule3("dispatch", empty_methods, "Dispatch Adapter Module");

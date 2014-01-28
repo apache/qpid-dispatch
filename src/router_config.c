@@ -25,7 +25,6 @@
 #include "router_private.h"
 
 static const char *CONF_ADDRESS = "fixed-address";
-static const char *MODULE       = "ROUTER";
 
 void qd_router_configure(qd_router_t *router)
 {
@@ -61,7 +60,7 @@ void qd_router_configure(qd_router_t *router)
 
         router->config_addrs[idx].semantics = semantics;
 
-        qd_log(MODULE, QD_LOG_INFO, "Configured Address: prefix=%s fanout=%s bias=%s", prefix, fanout, bias);
+        qd_log(router->log_source, QD_LOG_INFO, "Configured Address: prefix=%s fanout=%s bias=%s", prefix, fanout, bias);
     }
 }
 

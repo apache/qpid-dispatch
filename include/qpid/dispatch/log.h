@@ -28,8 +28,12 @@
 #define QD_LOG_ERROR    0x00000020
 #define QD_LOG_CRITICAL 0x00000040
 
-void qd_log_impl(const char *module, int cls, const char *file, int line, const char *fmt, ...);
-#define qd_log(m, c, f, ...) qd_log_impl(m, c, __FILE__, __LINE__, f , ##__VA_ARGS__)
+typedef struct qd_log_source_t qd_log_source_t;
+
+qd_log_source_t* qd_log_source(const char *module);
+
+void qd_log_impl(qd_log_source_t *source, int cls, const char *file, int line, const char *fmt, ...);
+#define qd_log(s, c, f, ...) qd_log_impl(s, c, __FILE__, __LINE__, f , ##__VA_ARGS__)
 
 void qd_log_set_mask(int mask);
 

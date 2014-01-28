@@ -24,7 +24,7 @@
 
 #define PYTHON_MODULE "qpid_dispatch_internal.config"
 
-static const char *log_module = "CONFIG";
+static qd_log_source_t *log_source = 0;
 
 struct qd_config_t {
     PyObject *pModule;
@@ -37,6 +37,7 @@ ALLOC_DEFINE(qd_config_t);
 
 void qd_config_initialize(void)
 {
+    log_source = qd_log_source("CONFIG");
     qd_python_start();
 }
 
@@ -61,7 +62,7 @@ qd_config_t *qd_config(void)
     if (!config->pModule) {
         PyErr_Print();
         free_qd_config_t(config);
-        qd_log(log_module, QD_LOG_ERROR, "Unable to load configuration module: %s", PYTHON_MODULE);
+        qd_log(log_source, QD_LOG_ERROR, "Unable to load configuration module: %s", PYTHON_MODULE);
         return 0;
     }
 
@@ -70,7 +71,7 @@ qd_config_t *qd_config(void)
         PyErr_Print();
         Py_DECREF(config->pModule);
         free_qd_config_t(config);
-        qd_log(log_module, QD_LOG_ERROR, "Problem with configuration module: Missing DispatchConfig class");
+        qd_log(log_source, QD_LOG_ERROR, "Problem with configuration module: Missing DispatchConfig class");
         return 0;
     }
 
@@ -104,7 +105,7 @@ void qd_config_read(qd_config_t *config, const char *filepath)
 
     pMethod = PyObject_GetAttrString(config->pObject, "read_file");
     if (!pMethod || !PyCallable_Check(pMethod)) {
-        qd_log(log_module, QD_LOG_ERROR, "Problem with configuration module: No callable 'read_file'");
+        qd_log(log_source, QD_LOG_ERROR, "Problem with configuration module: No callable 'read_file'");
         if (pMethod) {
             Py_DECREF(pMethod);
         }
@@ -122,7 +123,7 @@ void qd_config_read(qd_config_t *config, const char *filepath)
 #ifndef NDEBUG
         PyErr_Print();
 #endif
-        qd_log(log_module, QD_LOG_CRITICAL, "Configuration Failed, Exiting");
+        qd_log(log_source, QD_LOG_CRITICAL, "Configuration Failed, Exiting");
         exit(1);
     }
     Py_DECREF(pMethod);
@@ -159,7 +160,7 @@ int qd_config_item_count(const qd_dispatch_t *dispatch, const char *section)
 
     pMethod = PyObject_GetAttrString(config->pObject, "item_count");
     if (!pMethod || !PyCallable_Check(pMethod)) {
-        qd_log(log_module, QD_LOG_ERROR, "Problem with configuration module: No callable 'item_count'");
+        qd_log(log_source, QD_LOG_ERROR, "Problem with configuration module: No callable 'item_count'");
         if (pMethod) {
             Py_DECREF(pMethod);
         }
@@ -197,7 +198,7 @@ static PyObject *item_value(const qd_dispatch_t *dispatch, const char *section, 
 
     pMethod = PyObject_GetAttrString(config->pObject, method);
     if (!pMethod || !PyCallable_Check(pMethod)) {
-        qd_log(log_module, QD_LOG_ERROR, "Problem with configuration module: No callable '%s'", method);
+        qd_log(log_source, QD_LOG_ERROR, "Problem with configuration module: No callable '%s'", method);
         if (pMethod) {
             Py_DECREF(pMethod);
         }
@@ -268,5 +269,4 @@ int qd_config_item_value_bool(const qd_dispatch_t *dispatch, const char *section
 
     return value;
 }
-
 

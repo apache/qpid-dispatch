@@ -30,7 +30,6 @@
 #include <time.h>
 #include <string.h>
 
-static char *module="SERVER";
 static __thread qd_server_t *thread_server = 0;
 
 typedef struct qd_thread_t {
@@ -47,6 +46,7 @@ struct qd_server_t {
     int                      thread_count;
     const char              *container_name;
     pn_driver_t             *driver;
+    qd_log_source_t         *log_source;
     qd_thread_start_cb_t     start_handler;
     qd_conn_handler_cb_t     conn_handler;
     qd_user_fd_handler_cb_t  ufd_handler;
@@ -103,7 +103,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
 
     while (listener) {
         cxtr = pn_listener_accept(listener);
-        qd_log(module, QD_LOG_TRACE, "Accepting Connection from %s", pn_connector_name(cxtr));
+        qd_log(qd_server->log_source, QD_LOG_TRACE, "Accepting Connection from %s", pn_connector_name(cxtr));
         ctx = new_qd_connection_t();
         DEQ_ITEM_INIT(ctx);
         ctx->state        = CONN_STATE_OPENING;
@@ -123,7 +123,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         pn_connection_set_context(conn, ctx);
         ctx->pn_conn = conn;
 
-        qd_log(module, QD_LOG_DEBUG, "added listener connection");
+        qd_log(qd_server->log_source, QD_LOG_DEBUG, "added listener connection");
         // qd_server->lock is already locked
         DEQ_INSERT_TAIL(qd_server->connections, ctx);
 
@@ -298,7 +298,7 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
                 ctx->state = CONN_STATE_FAILED;
                 if (ctx->connector) {
                     const qd_server_config_t *config = ctx->connector->config;
-                    qd_log(module, QD_LOG_TRACE, "Connection to %s:%s failed", config->host, config->port);
+                    qd_log(qd_server->log_source, QD_LOG_TRACE, "Connection to %s:%s failed", config->host, config->port);
                 }
             }
         }
@@ -428,7 +428,7 @@ static void *thread_run(void *arg)
                 qd_server->a_thread_is_waiting = true;
 
                 //
-                // Ask the timer module when its next timer is scheduled to fire.  We'll
+                // Ask the timer log_handle when its next timer is scheduled to fire.  We'll
                 // use this value in driver_wait as the timeout.  If there are no scheduled
                 // timers, the returned value will be -1.
                 //
@@ -450,7 +450,7 @@ static void *thread_run(void *arg)
                         error = pn_driver_errno(qd_server->driver);
                 } while (error == PN_INTR);
                 if (error) {
-                    qd_log(module, QD_LOG_ERROR, "Driver Error: %s", pn_driver_error(qd_server->driver));
+                    qd_log(qd_server->log_source, QD_LOG_ERROR, "Driver Error: %s", pn_driver_error(qd_server->driver));
                     exit(-1);
                 }
 
@@ -463,7 +463,7 @@ static void *thread_run(void *arg)
                 }
 
                 //
-                // Visit the timer module.
+                // Visit the timer log_handle.
                 //
                 struct timespec tv;
                 clock_gettime(CLOCK_REALTIME, &tv);
@@ -545,7 +545,7 @@ static void *thread_run(void *arg)
 
                 sys_mutex_lock(qd_server->lock);
                 DEQ_REMOVE(qd_server->connections, ctx);
-                qd_log(module, QD_LOG_DEBUG, "removed %s connection",
+                qd_log(qd_server->log_source, QD_LOG_DEBUG, "removed %s connection",
                         ctx->connector ? "connector" : "listener");
                 free_qd_connection_t(ctx);
                 pn_connector_free(work);
@@ -641,12 +641,12 @@ static void cxtr_try_open(void *context)
     sys_mutex_lock(ct->server->lock);
     ctx->pn_cxtr = pn_connector(ct->server->driver, ct->config->host, ct->config->port, (void*) ctx);
     DEQ_INSERT_TAIL(ct->server->connections, ctx);
-    qd_log(module, QD_LOG_DEBUG, "added connector connection");
+    qd_log(ct->server->log_source, QD_LOG_DEBUG, "added connector connection");
     sys_mutex_unlock(ct->server->lock);
 
     ct->ctx   = ctx;
     ct->delay = 5000;
-    qd_log(module, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
+    qd_log(ct->server->log_source, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
 }
 
 
@@ -659,6 +659,7 @@ qd_server_t *qd_server(int thread_count, const char *container_name)
         return 0;
 
     DEQ_INIT(qd_server->connections);
+    qd_server->log_source      = qd_log_source("SERVER");
     qd_server->thread_count    = thread_count;
     qd_server->container_name  = container_name;
     qd_server->driver          = pn_driver();
@@ -687,7 +688,7 @@ qd_server_t *qd_server(int thread_count, const char *container_name)
     qd_server->pause_now_serving   = 0;
     qd_server->pending_signal      = 0;
 
-    qd_log(module, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
+    qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 
     return qd_server;
 }
@@ -740,9 +741,9 @@ void qd_server_set_user_fd_handler(qd_dispatch_t *qd, qd_user_fd_handler_cb_t uf
 
 static void qd_server_announce(qd_server_t* qd_server)
 {
-    qd_log(module, QD_LOG_INFO, "Operational, %d Threads Running", qd_server->thread_count);
+    qd_log(qd_server->log_source, QD_LOG_INFO, "Operational, %d Threads Running", qd_server->thread_count);
 #ifndef NDEBUG
-    qd_log(module, QD_LOG_INFO, "Running in DEBUG Mode");
+    qd_log(qd_server->log_source, QD_LOG_INFO, "Running in DEBUG Mode");
 #endif
 }
 
@@ -767,7 +768,7 @@ void qd_server_run(qd_dispatch_t *qd)
     for (i = 1; i < qd_server->thread_count; i++)
         thread_join(qd_server->threads[i]);
 
-    qd_log(module, QD_LOG_INFO, "Shut Down");
+    qd_log(qd_server->log_source, QD_LOG_INFO, "Shut Down");
 }
 
 
@@ -803,7 +804,7 @@ void qd_server_stop(qd_dispatch_t *qd)
     if (thread_server != qd_server) {
         for (idx = 0; idx < qd_server->thread_count; idx++)
             thread_join(qd_server->threads[idx]);
-        qd_log(module, QD_LOG_INFO, "Shut Down");
+        qd_log(qd_server->log_source, QD_LOG_INFO, "Shut Down");
     }
 }
 
@@ -927,12 +928,12 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
     li->pn_listener = pn_listener(qd_server->driver, config->host, config->port, (void*) li);
 
     if (!li->pn_listener) {
-        qd_log(module, QD_LOG_ERROR, "Driver Error %d (%s)",
+        qd_log(qd_server->log_source, QD_LOG_ERROR, "Driver Error %d (%s)",
                pn_driver_errno(qd_server->driver), pn_driver_error(qd_server->driver));
         free_qd_listener_t(li);
         return 0;
     }
-    qd_log(module, QD_LOG_TRACE, "Listening on %s:%s", config->host, config->port);
+    qd_log(qd_server->log_source, QD_LOG_TRACE, "Listening on %s:%s", config->host, config->port);
 
     return li;
 }

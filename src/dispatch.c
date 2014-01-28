@@ -59,13 +59,15 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     DEQ_INIT(qd->config_listeners);
     DEQ_INIT(qd->config_connectors);
 
+    // alloc and log has to be initialized before any module.
+    qd_alloc_initialize();
+    qd_log_initialize(); 
+
     qd->router_area = "0";
     qd->router_id   = "0";
     qd->router_mode = QD_ROUTER_MODE_ENDPOINT;
 
     qd_python_initialize(qd, python_pkgdir);
-    qd_log_initialize();
-    qd_alloc_initialize();
     qd_config_initialize();
     qd->config = qd_config();
 

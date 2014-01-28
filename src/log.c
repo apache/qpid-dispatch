@@ -46,10 +46,24 @@ ALLOC_DEFINE(qd_log_entry_t);
 
 DEQ_DECLARE(qd_log_entry_t, qd_log_list_t);
 
-static int            mask = QD_LOG_INFO;
-static qd_log_list_t  entries;
-static sys_mutex_t   *log_lock = 0;
+struct qd_log_source_t {
+    DEQ_LINKS(qd_log_source_t);
+    const char *module_name;
+    //int mask;
+    //int print_timestamp;
+    //int print_to_stderr;
+    //int print_to_file;
+    //int print_to_syslog;
+    //FILE *file;
+};
 
+DEQ_DECLARE(qd_log_source_t, qd_log_source_list_t);
+
+
+static qd_log_list_t         entries;
+static sys_mutex_t          *log_lock = 0;
+static qd_log_source_list_t  source_list;
+static int                   mask = QD_LOG_INFO;
 
 static const char *cls_prefix(int cls)
 {
@@ -66,14 +80,26 @@ static const char *cls_prefix(int cls)
     return "";
 }
 
-void qd_log_impl(const char *module, int cls, const char *file, int line, const char *fmt, ...)
+qd_log_source_t *qd_log_source(const char *module)
+{
+    qd_log_source_t *source = NEW(qd_log_source_t);
+    memset(source, 0, sizeof(qd_log_source_t));
+    DEQ_ITEM_INIT(source);
+    source->module_name = module;
+
+    // TODO - Configure the source
+
+    return source;
+}
+
+void qd_log_impl(qd_log_source_t *source, int cls, const char *file, int line, const char *fmt, ...)
 {
     if (!(cls & mask))
         return;
 
     qd_log_entry_t *entry = new_qd_log_entry_t();
     DEQ_ITEM_INIT(entry);
-    entry->module = module;
+    entry->module = source->module_name;
     entry->cls    = cls;
     entry->file   = file;
     entry->line   = line;
@@ -87,7 +113,7 @@ void qd_log_impl(const char *module, int cls, const char *file, int line, const 
     va_end(ap);
     ctime_r(&entry->time, ctime);
     ctime[24] = '\0';
-    fprintf(stderr, "%s %s (%s) %s\n", ctime, module, cls_prefix(cls), entry->text);
+    fprintf(stderr, "%s %s (%s) %s\n", ctime, entry->module, cls_prefix(cls), entry->text);
 
     sys_mutex_lock(log_lock);
     DEQ_INSERT_TAIL(entries, entry);
@@ -108,6 +134,7 @@ void qd_log_set_mask(int _mask)
 void qd_log_initialize(void)
 {
     DEQ_INIT(entries);
+    DEQ_INIT(source_list);
     log_lock = sys_mutex();
 }
 
