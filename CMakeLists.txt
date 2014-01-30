@@ -82,6 +82,12 @@ include_directories(
     ${PYTHON_INCLUDE_PATH}
     )
 
+if (NOT COMMAND add_compile_options)
+  macro (add_compile_options option)
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${option}")
+  endmacro (add_compile_options)
+endif (NOT COMMAND add_compile_options)
+
 add_compile_options(-pthread)
 add_compile_options(-Wall)
 add_compile_options(-Werror)
