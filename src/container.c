@@ -78,9 +78,9 @@ typedef struct qdc_node_type_t {
 } qdc_node_type_t;
 DEQ_DECLARE(qdc_node_type_t, qdc_node_type_list_t);
 
-static int QD_CONTAINER_CLASS_CONTAINER = 1;
-static int QD_CONTAINER_CLASS_NODE_TYPE = 2;
-static int QD_CONTAINER_CLASS_NODE      = 3;
+#define QD_CONTAINER_CLASS_CONTAINER  1
+#define QD_CONTAINER_CLASS_NODE_TYPE  2
+#define QD_CONTAINER_CLASS_NODE       3
 
 typedef struct container_class_t {
     qd_container_t *container;
@@ -428,6 +428,18 @@ static int handler(void *handler_context, void *conn_context, qd_conn_event_t ev
 
 static void container_schema_handler(void *context, void *correlator)
 {
+    container_class_t *cls = (container_class_t*) context;
+    switch (cls->class_id) {
+    case QD_CONTAINER_CLASS_CONTAINER:
+        qd_agent_value_string(correlator, 0, "node_type_count");
+        qd_agent_value_string(correlator, 0, "node_count");
+        qd_agent_value_string(correlator, 0, "default_node_type");
+        break;
+
+    case QD_CONTAINER_CLASS_NODE_TYPE:
+    case QD_CONTAINER_CLASS_NODE:
+        break;
+    }
 }
 
 

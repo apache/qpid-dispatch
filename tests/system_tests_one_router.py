@@ -561,7 +561,7 @@ class RouterTest(unittest.TestCase):
         request.address        = addr
         request.reply_to       = reply
         request.correlation_id = "C1"
-        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'DISCOVER-MGMT-NODES'}
+        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
 
         M.put(request)
         M.send()
@@ -572,11 +572,10 @@ class RouterTest(unittest.TestCase):
         self.assertEqual(response.correlation_id, "C1")
         self.assertEqual(response.body, ['amqp:/_local/$management'])
 
-
         request.address        = addr
         request.reply_to       = reply
         request.correlation_id = 135
-        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'DISCOVER-MGMT-NODES'}
+        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
 
         M.put(request)
         M.send()
@@ -589,7 +588,7 @@ class RouterTest(unittest.TestCase):
 
         request.address        = addr
         request.reply_to       = reply
-        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'DISCOVER-MGMT-NODES'}
+        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
 
         M.put(request)
         M.send()
@@ -600,6 +599,192 @@ class RouterTest(unittest.TestCase):
         self.assertEqual(response.body, ['amqp:/_local/$management'])
 
         M.stop()
+
+    def test_09a_management_get_types(self):
+        addr  = "amqp:/_local/$management"
+
+        M = Messenger()
+        M.timeout = 2.0
+        M.start()
+        M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
+        sub = self.subscribe(M, "amqp:/#")
+        reply = sub.address
+
+        request  = Message()
+        response = Message()
+
+        ##
+        ## Unrestricted request
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-TYPES'}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.body.__class__, dict)
+        self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
+        self.assertTrue(len(response.body.keys()) > 2)
+
+        ##
+        ## Restricted Request with two matches
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-TYPES',
+                              u'entityTypes':['org.apache.qpid.dispatch.container', 'org.apache.qpid.dispatch.connection']}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.body.__class__, dict)
+        self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
+        self.assertTrue('org.apache.qpid.dispatch.connection' in response.body.keys())
+        self.assertEqual(len(response.body.keys()), 2)
+
+        ##
+        ## Restricted Request with no matches
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-TYPES',
+                              u'entityTypes':['com.profitron.item']}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.body, {})
+
+        ##
+        ## Error Request
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-TYPES',
+                              u'entityTypes':256}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['status-code'], 400)
+
+        M.stop()
+
+
+    def test_09b_management_get_attributes(self):
+        addr  = "amqp:/_local/$management"
+
+        M = Messenger()
+        M.timeout = 2.0
+        M.start()
+        M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
+        sub = self.subscribe(M, "amqp:/#")
+        reply = sub.address
+
+        request  = Message()
+        response = Message()
+
+        ##
+        ## Unrestricted request
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-ATTRIBUTES'}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.body.__class__, dict)
+        self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
+        self.assertTrue(len(response.body.keys()) > 2)
+        self.assertTrue(response.body['org.apache.qpid.dispatch.container'].__class__, list)
+
+        ##
+        ## Restricted Request with a match
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-ATTRIBUTES',
+                              u'entityTypes':['org.apache.qpid.dispatch.router']}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.body.__class__, dict)
+        self.assertTrue('org.apache.qpid.dispatch.router' in response.body.keys())
+        self.assertEqual(len(response.body.keys()), 1)
+        self.assertTrue('mode' in response.body['org.apache.qpid.dispatch.router'])
+
+        ##
+        ## Restricted Request with no matches
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-ATTRIBUTES',
+                              u'entityTypes':['com.profitron.item']}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.body, {})
+
+        M.stop()
+
+
+    def test_09c_management_get_operations(self):
+        addr  = "amqp:/_local/$management"
+
+        M = Messenger()
+        M.timeout = 2.0
+        M.start()
+        M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
+        sub = self.subscribe(M, "amqp:/#")
+        reply = sub.address
+
+        request  = Message()
+        response = Message()
+
+        ##
+        ## Unrestricted request
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-OPERATIONS'}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.body.__class__, dict)
+        self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
+        self.assertTrue(len(response.body.keys()) > 2)
+        self.assertTrue(response.body['org.apache.qpid.dispatch.container'].__class__, list)
+
+        M.stop()
+
 
     def test_10_semantics_multicast(self):
         addr = "amqp://0.0.0.0:20000/multicast/1"

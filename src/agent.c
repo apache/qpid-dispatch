@@ -65,14 +65,27 @@ struct qd_agent_t {
 typedef struct {
     qd_agent_t          *agent;
     qd_composed_field_t *response;
-    int                  empty;
+    bool                 empty;
 } qd_agent_request_t;
+
+
+typedef enum {
+    QD_DISCOVER_TYPES,
+    QD_DISCOVER_ATTRIBUTES,
+    QD_DISCOVER_OPERATIONS
+} qd_discover_t;
+
+
+static const char *STATUS_CODE         = "status-code";
+static const char *STATUS_DESCRIPTION  = "status-description";
+static const char *ENTITY_TYPES        = "entityTypes";
+static const char *BAD_REQUEST         = "Bad Request";
 
 
 static void qd_agent_check_empty(qd_agent_request_t *request)
 {
     if (request->empty) {
-        request->empty = 0;
+        request->empty = false;
         qd_compose_start_map(request->response);
     }
 }
@@ -102,11 +115,47 @@ static qd_composed_field_t *qd_agent_setup_response(qd_field_iterator_t *reply_t
     //
     field = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, field);
     qd_compose_start_map(field);
-    qd_compose_insert_string(field, "status-code");
+    qd_compose_insert_string(field, STATUS_CODE);
     qd_compose_insert_uint(field, 200);
 
-    qd_compose_insert_string(field, "status-descriptor");
+    qd_compose_insert_string(field, STATUS_DESCRIPTION);
     qd_compose_insert_string(field, "OK");
+    qd_compose_end_map(field);
+
+    return field;
+}
+
+
+static qd_composed_field_t *qd_agent_setup_error(qd_field_iterator_t *reply_to, qd_field_iterator_t *cid, uint32_t code, const char *text)
+{
+    qd_composed_field_t *field = 0;
+
+    //
+    // Compose the Properties
+    //
+    field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
+    qd_compose_start_list(field);
+    qd_compose_insert_null(field);                       // message-id
+    qd_compose_insert_null(field);                       // user-id
+    qd_compose_insert_string_iterator(field, reply_to);  // to
+    qd_compose_insert_null(field);                       // subject
+    qd_compose_insert_null(field);                       // reply-to
+    if (cid)
+        qd_compose_insert_typed_iterator(field, cid);    // correlation-id
+    //else
+    //    qd_compose_insert_null(field);
+    qd_compose_end_list(field);
+
+    //
+    // Compose the Application Properties
+    //
+    field = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, field);
+    qd_compose_start_map(field);
+    qd_compose_insert_string(field, STATUS_CODE);
+    qd_compose_insert_uint(field, code);
+
+    qd_compose_insert_string(field, STATUS_DESCRIPTION);
+    qd_compose_insert_string(field, text);
     qd_compose_end_map(field);
 
     return field;
@@ -145,7 +194,7 @@ static void qd_agent_process_get(qd_agent_t          *agent,
     qd_agent_request_t request;
     request.agent    = agent;
     request.response = field;
-    request.empty    = 1;
+    request.empty    = true;
 
     cls_record->query_handler(cls_record->context, 0, &request);
 
@@ -169,30 +218,97 @@ static void qd_agent_process_get(qd_agent_t          *agent,
 static void qd_agent_process_discover_types(qd_agent_t          *agent,
                                             qd_parsed_field_t   *map,
                                             qd_field_iterator_t *reply_to,
-                                            qd_field_iterator_t *cid)
+                                            qd_field_iterator_t *cid,
+                                            qd_discover_t        kind)
 {
-    qd_log(agent->log_source, QD_LOG_TRACE, "Received DISCOVER-TYPES request");
+    switch (kind) {
+    case QD_DISCOVER_TYPES:
+        qd_log(agent->log_source, QD_LOG_TRACE, "Received GET-TYPES request");
+        break;
 
-    qd_composed_field_t *field = qd_agent_setup_response(reply_to, cid);
+    case QD_DISCOVER_ATTRIBUTES:
+        qd_log(agent->log_source, QD_LOG_TRACE, "Received GET-ATTRIBUTES request");
+        break;
 
-    //
-    // Open the Body (AMQP Value) to be filled in by the handler.
-    //
-    field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, field);
-    qd_compose_start_map(field);
-
-    //
-    // Put entries into the map for each known entity type
-    //
-    sys_mutex_lock(agent->lock);
-    qd_agent_class_t *cls = DEQ_HEAD(agent->class_list);
-    while (cls) {
-        qd_compose_insert_string(field, (const char*) qd_hash_key_by_handle(cls->hash_handle));
-        qd_compose_empty_list(field);
-        cls = DEQ_NEXT(cls);
+    case QD_DISCOVER_OPERATIONS:
+        qd_log(agent->log_source, QD_LOG_TRACE, "Received GET-OPERATIONS request");
+        break;
     }
-    sys_mutex_unlock(agent->lock);
-    qd_compose_end_map(field);
+
+    qd_parsed_field_t   *etypes = qd_parse_value_by_key(map, ENTITY_TYPES);
+    qd_composed_field_t *field  = 0;
+
+    if (etypes && !qd_parse_is_list(etypes))
+        field = qd_agent_setup_error(reply_to, cid, 400, BAD_REQUEST);
+    else {
+        field = qd_agent_setup_response(reply_to, cid);
+
+        //
+        // Open the Body (AMQP Value) to be filled in by the handler.
+        //
+        field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, field);
+        qd_compose_start_map(field);
+
+        //
+        // Put entries into the map for each known entity type
+        //
+        sys_mutex_lock(agent->lock);
+        qd_agent_class_t *cls = DEQ_HEAD(agent->class_list);
+        for (; cls; cls = DEQ_NEXT(cls)) {
+            const char *class_name = (const char*) qd_hash_key_by_handle(cls->hash_handle);
+
+            //
+            // If entityTypes was provided to restrict the result, check to see if the 
+            // class is in the restricted set.
+            //
+            if (etypes) {
+                uint32_t idx;
+                uint32_t count = qd_parse_sub_count(etypes);
+
+                for (idx = 0; idx < count; idx++) {
+                    qd_parsed_field_t *item = qd_parse_sub_value(etypes, idx);
+                    if (qd_parse_is_scalar(item) &&
+                        qd_field_iterator_equal(qd_parse_raw(item), (unsigned char*) class_name))
+                        break;
+                }
+
+                if (idx == count)
+                    continue;
+            }
+
+            qd_compose_insert_string(field, class_name);
+            switch (kind) {
+            case QD_DISCOVER_TYPES:
+                qd_compose_empty_list(field); // The list of supertypes implemented by this type.
+                break;
+
+            case QD_DISCOVER_ATTRIBUTES: {
+                //
+                // The request record is allocated locally because the entire processing of the request
+                // will be done synchronously.
+                //
+                qd_agent_request_t request;
+                request.agent    = agent;
+                request.response = field;
+                request.empty    = false;
+
+                qd_compose_start_list(field);
+                cls->schema_handler(cls->context, &request);
+                qd_compose_end_list(field);
+                break;
+            }
+
+            case QD_DISCOVER_OPERATIONS:
+                qd_compose_start_list(field);
+                qd_compose_insert_string(field, "QUERY");
+                qd_compose_end_list(field);
+                break;
+            }
+        }
+
+        sys_mutex_unlock(agent->lock);
+        qd_compose_end_map(field);
+    }
 
     //
     // Create a message and send it.
@@ -211,7 +327,7 @@ static void qd_agent_process_discover_operations(qd_agent_t          *agent,
                                                  qd_field_iterator_t *reply_to,
                                                  qd_field_iterator_t *cid)
 {
-    qd_log(agent->log_source, QD_LOG_TRACE, "Received DISCOVER-OPERATIONS request");
+    qd_log(agent->log_source, QD_LOG_TRACE, "Received GET-OPERATIONS request");
 
     qd_composed_field_t *field = qd_agent_setup_response(reply_to, cid);
 
@@ -253,7 +369,7 @@ static void qd_agent_process_discover_nodes(qd_agent_t          *agent,
                                             qd_field_iterator_t *reply_to,
                                             qd_field_iterator_t *cid)
 {
-    qd_log(agent->log_source, QD_LOG_TRACE, "Received DISCOVER-MGMT-NODES request");
+    qd_log(agent->log_source, QD_LOG_TRACE, "Received GET-MGMT-NODES request");
 
     qd_composed_field_t *field = qd_agent_setup_response(reply_to, cid);
 
@@ -357,11 +473,13 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
     qd_field_iterator_t *operation_string = qd_parse_raw(operation);
     if (qd_field_iterator_equal(operation_string, (unsigned char*) "GET"))
         qd_agent_process_get(agent, map, reply_to, cid);
-    if (qd_field_iterator_equal(operation_string, (unsigned char*) "DISCOVER-TYPES"))
-        qd_agent_process_discover_types(agent, map, reply_to, cid);
-    if (qd_field_iterator_equal(operation_string, (unsigned char*) "DISCOVER-OPERATIONS"))
+    if (qd_field_iterator_equal(operation_string, (unsigned char*) "GET-TYPES"))
+        qd_agent_process_discover_types(agent, map, reply_to, cid, false);
+    if (qd_field_iterator_equal(operation_string, (unsigned char*) "GET-ATTRIBUTES"))
+        qd_agent_process_discover_types(agent, map, reply_to, cid, true);
+    if (qd_field_iterator_equal(operation_string, (unsigned char*) "GET-OPERATIONS"))
         qd_agent_process_discover_operations(agent, map, reply_to, cid);
-    if (qd_field_iterator_equal(operation_string, (unsigned char*) "DISCOVER-MGMT-NODES"))
+    if (qd_field_iterator_equal(operation_string, (unsigned char*) "GET-MGMT-NODES"))
         qd_agent_process_discover_nodes(agent, map, reply_to, cid);
 
     qd_parse_free(map);

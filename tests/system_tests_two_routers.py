@@ -532,7 +532,7 @@ class RouterTest(unittest.TestCase):
 
         request.address    = "amqp:/_local/$management"
         request.reply_to   = reply
-        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'DISCOVER-MGMT-NODES'}
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
 
         M.put(request)
         M.send()
@@ -545,7 +545,7 @@ class RouterTest(unittest.TestCase):
 
         request.address    = "amqp:/_topo/0/QDR.B/$management"
         request.reply_to   = reply
-        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'DISCOVER-MGMT-NODES'}
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
 
         M.put(request)
         M.send()

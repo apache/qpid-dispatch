@@ -253,8 +253,18 @@ void qd_alloc_initialize(void)
 }
 
 
-static void alloc_schema_handler(void *context, void *correlator)
+static void alloc_schema_handler(void *context, void *cor)
 {
+    qd_agent_value_string(cor, 0, "name");
+    qd_agent_value_string(cor, 0, "type_size");
+    qd_agent_value_string(cor, 0, "transfer_batch_size");
+    qd_agent_value_string(cor, 0, "local_free_list_max");
+    qd_agent_value_string(cor, 0, "global_free_list_max");
+    qd_agent_value_string(cor, 0, "total_alloc_from_heap");
+    qd_agent_value_string(cor, 0, "total_free_to_heap");
+    qd_agent_value_string(cor, 0, "held_by_threads");
+    qd_agent_value_string(cor, 0, "batches_rebalanced_to_threads");
+    qd_agent_value_string(cor, 0, "batches_rebalanced_to_global");
 }
 
 

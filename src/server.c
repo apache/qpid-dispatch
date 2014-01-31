@@ -1065,8 +1065,14 @@ void qd_server_timer_cancel_LH(qd_timer_t *timer)
 }
 
 
-static void server_schema_handler(void *context, void *correlator)
+static void server_schema_handler(void *context, void *cor)
 {
+    qd_agent_value_string(cor, 0, "state");
+    qd_agent_value_string(cor, 0, "container");
+    qd_agent_value_string(cor, 0, "host");
+    qd_agent_value_string(cor, 0, "sasl");
+    qd_agent_value_string(cor, 0, "role");
+    qd_agent_value_string(cor, 0, "dir");
 }
 
 

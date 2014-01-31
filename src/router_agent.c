@@ -27,8 +27,6 @@
 #include "dispatch_private.h"
 #include "router_private.h"
 
-//static char *module = "router.agent";
-
 #define QD_ROUTER_CLASS_ROUTER  1
 #define QD_ROUTER_CLASS_LINK    2
 #define QD_ROUTER_CLASS_NODE    3
@@ -40,8 +38,46 @@ typedef struct qd_router_class_t {
 } qd_router_class_t;
 
 
-static void qd_router_schema_handler(void *context, void *correlator)
+static void qd_router_schema_handler(void *context, void *cor)
 {
+    qd_router_class_t *cls = (qd_router_class_t*) context;
+    switch (cls->class_id) {
+    case QD_ROUTER_CLASS_ROUTER:
+        qd_agent_value_string(cor, 0, "area");
+        qd_agent_value_string(cor, 0, "router_id");
+        qd_agent_value_string(cor, 0, "mode");
+        qd_agent_value_string(cor, 0, "addr_count");
+        qd_agent_value_string(cor, 0, "link_count");
+        qd_agent_value_string(cor, 0, "node_count");
+        break;
+
+    case QD_ROUTER_CLASS_LINK:
+        qd_agent_value_string(cor, 0, "index");
+        qd_agent_value_string(cor, 0, "link-type");
+        qd_agent_value_string(cor, 0, "link-dir");
+        qd_agent_value_string(cor, 0, "owning-addr");
+        break;
+
+    case QD_ROUTER_CLASS_NODE:
+        qd_agent_value_string(cor, 0, "index");
+        qd_agent_value_string(cor, 0, "addr");
+        qd_agent_value_string(cor, 0, "next-hop");
+        qd_agent_value_string(cor, 0, "router-link");
+        qd_agent_value_string(cor, 0, "valid-origins");
+        break;
+
+    case QD_ROUTER_CLASS_ADDRESS:
+        qd_agent_value_string(cor, 0, "addr");
+        qd_agent_value_string(cor, 0, "in-process");
+        qd_agent_value_string(cor, 0, "subscriber-count");
+        qd_agent_value_string(cor, 0, "remote-count");
+        qd_agent_value_string(cor, 0, "deliveries-ingress");
+        qd_agent_value_string(cor, 0, "deliveries-egress");
+        qd_agent_value_string(cor, 0, "deliveries-transit");
+        qd_agent_value_string(cor, 0, "deliveries-to-container");
+        qd_agent_value_string(cor, 0, "deliveries-from-container");
+        break;
+    }
 }
 
 
