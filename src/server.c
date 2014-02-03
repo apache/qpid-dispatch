@@ -153,7 +153,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
                 trusted = config->ssl_trusted_certificates;
 
             if (config->ssl_require_peer_authentication)
-                pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER_NAME, trusted);
+                pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER, trusted);
 
             pn_ssl_t *ssl = pn_ssl(tport);
             pn_ssl_init(ssl, domain, 0);
@@ -236,36 +236,7 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
             pn_connector_set_connection(cxtr, conn);
             pn_connection_set_context(conn, ctx);
             ctx->pn_conn = conn;
-
-            pn_transport_t           *tport  = pn_connector_transport(cxtr);
-            const qd_server_config_t *config = ctx->connector->config;
-
-            //
-            // Set up SSL if appropriate
-            //
-            if (config->ssl_enabled) {
-                pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
-                pn_ssl_domain_set_credentials(domain,
-                                              config->ssl_certificate_file,
-                                              config->ssl_private_key_file,
-                                              config->ssl_password);
-
-                if (config->ssl_require_peer_authentication)
-                    pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER_NAME, config->ssl_trusted_certificate_db);
-
-                pn_ssl_t *ssl = pn_ssl(tport);
-                pn_ssl_init(ssl, domain, 0);
-                pn_ssl_domain_free(domain);
-            }
-
-            //
-            // Set up SASL
-            //
-            pn_sasl_t *sasl = pn_sasl(tport);
-            pn_sasl_mechanisms(sasl, config->sasl_mechanisms);
-            pn_sasl_client(sasl);
-
-            ctx->state = CONN_STATE_OPENING;
+            ctx->state   = CONN_STATE_OPENING;
             assert(ctx->connector);
             ctx->connector->state = CXTR_STATE_OPEN;
             events = 1;
@@ -647,6 +618,37 @@ static void cxtr_try_open(void *context)
     ct->ctx   = ctx;
     ct->delay = 5000;
     qd_log(ct->server->log_source, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
+
+    //
+    // Set up the transport, SASL, and SSL for the connection.
+    //
+    pn_transport_t           *tport  = pn_connector_transport(ctx->pn_cxtr);
+    const qd_server_config_t *config = ct->config;
+
+    //
+    // Set up SSL if appropriate
+    //
+    if (config->ssl_enabled) {
+        pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+        pn_ssl_domain_set_credentials(domain,
+                                      config->ssl_certificate_file,
+                                      config->ssl_private_key_file,
+                                      config->ssl_password);
+
+        if (config->ssl_require_peer_authentication)
+            pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER, config->ssl_trusted_certificate_db);
+
+        pn_ssl_t *ssl = pn_ssl(tport);
+        pn_ssl_init(ssl, domain, 0);
+        pn_ssl_domain_free(domain);
+    }
+
+    //
+    // Set up SASL
+    //
+    pn_sasl_t *sasl = pn_sasl(tport);
+    pn_sasl_mechanisms(sasl, config->sasl_mechanisms);
+    pn_sasl_client(sasl);
 }
 
 
