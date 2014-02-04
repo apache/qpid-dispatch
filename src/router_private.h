@@ -201,6 +201,6 @@ void qd_router_del_node_ref_LH(qd_router_ref_list_t *ref_list, qd_router_node_t 
 
 void qd_router_mobile_added(qd_router_t *router, qd_field_iterator_t *iter);
 void qd_router_mobile_removed(qd_router_t *router, const char *addr);
-
+void qd_router_link_lost(qd_router_t *router, int link_mask_bit);
 
 #endif

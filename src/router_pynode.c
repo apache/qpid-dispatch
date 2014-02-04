@@ -34,6 +34,7 @@ static PyObject        *pyRouter   = 0;
 static PyObject        *pyTick     = 0;
 static PyObject        *pyAdded    = 0;
 static PyObject        *pyRemoved  = 0;
+static PyObject        *pyLinkLost = 0;
 
 
 
@@ -622,6 +623,12 @@ void qd_router_python_setup(qd_router_t *router)
         qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class has no addressRemoved method");
         return;
     }
+
+    pyLinkLost = PyObject_GetAttrString(pyRouter, "linkLost");
+    if (!pyLinkLost || !PyCallable_Check(pyLinkLost)) {
+        qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class has no linkLost method");
+        return;
+    }
 }
 
 
@@ -683,6 +690,28 @@ void qd_router_mobile_removed(qd_router_t *router, const char *address)
         pArgs = PyTuple_New(1);
         PyTuple_SetItem(pArgs, 0, PyString_FromString(address));
         pValue = PyObject_CallObject(pyRemoved, pArgs);
+        if (PyErr_Occurred()) {
+            PyErr_Print();
+        }
+        Py_DECREF(pArgs);
+        if (pValue) {
+            Py_DECREF(pValue);
+        }
+        qd_python_unlock();
+    }
+}
+
+
+void qd_router_link_lost(qd_router_t *router, int link_mask_bit)
+{
+    PyObject *pArgs;
+    PyObject *pValue;
+
+    if (pyRemoved && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
+        qd_python_lock();
+        pArgs = PyTuple_New(1);
+        PyTuple_SetItem(pArgs, 0, PyInt_FromLong((long) link_mask_bit));
+        pValue = PyObject_CallObject(pyLinkLost, pArgs);
         if (PyErr_Occurred()) {
             PyErr_Print();
         }

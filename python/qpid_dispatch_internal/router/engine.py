@@ -119,6 +119,13 @@ class RouterEngine:
             traceback.print_tb(exc_traceback)
 
 
+    def linkLost(self, link_id):
+        """
+        """
+        self.log(LOG_INFO, "Router Link Lost - link_id=%d" % link_id)
+        self.neighbor_engine.linkLost(link_id)
+
+
     def handleTimerTick(self):
         """
         """

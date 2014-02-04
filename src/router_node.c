@@ -1105,6 +1105,7 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
     qd_router_link_t *rlink  = (qd_router_link_t*) qd_link_get_context(link);
     qd_router_conn_t *shared = (qd_router_conn_t*) qd_link_get_conn_context(link);
     qd_address_t     *oaddr  = 0;
+    int               lost_link_mask_bit = -1;
 
     if (shared) {
         qd_link_set_conn_context(link, 0);
@@ -1138,8 +1139,10 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
     //
     // If this is an incoming inter-router link, we must free the mask_bit.
     //
-    if (rlink->link_type == QD_LINK_ROUTER && rlink->link_direction == QD_INCOMING)
+    if (rlink->link_type == QD_LINK_ROUTER && rlink->link_direction == QD_INCOMING) {
+        lost_link_mask_bit = rlink->mask_bit;
         qd_bitmask_set_bit(router->neighbor_free_mask, rlink->mask_bit);
+    }
 
     //
     // Remove the link from the master list-of-links.
@@ -1156,6 +1159,13 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
     if (rlink->target)
         free(rlink->target);
     free_qd_router_link_t(rlink);
+
+    //
+    // If we lost the link to a neighbor router, notify the route engine so it doesn't
+    // have to wait for the HELLO timeout to expire.
+    //
+    if (lost_link_mask_bit >= 0)
+        qd_router_link_lost(router, lost_link_mask_bit);
 
     return 0;
 }

@@ -66,9 +66,18 @@ class NeighborEngine(object):
                 self.link_state_changed = True
                 self.container.new_neighbor(msg.id, link_id)
                 self.container.log(LOG_INFO, "New neighbor established: %s on link: %d" % (msg.id, link_id))
-        ##
-        ## TODO - Use this function to detect area boundaries
-        ##
+
+    def linkLost(self, link_id):
+        node_id = self.container.node_tracker.link_id_to_node_id(link_id)
+        if node_id:
+            self._delete_neighbor(node_id)
+
+    def _delete_neighbor(self, key):
+        self.hellos.pop(key)
+        if self.link_state.del_peer(key):
+            self.link_state_changed = True
+            self.container.lost_neighbor(key)
+            self.container.log(LOG_INFO, "Neighbor lost: %s" % key)
 
     def _expire_hellos(self, now):
         to_delete = []
@@ -76,8 +85,5 @@ class NeighborEngine(object):
             if now - last_seen > self.hello_max_age:
                 to_delete.append(key)
         for key in to_delete:
-            self.hellos.pop(key)
-            if self.link_state.del_peer(key):
-                self.link_state_changed = True
-                self.container.lost_neighbor(key)
-                self.container.log(LOG_INFO, "Neighbor lost: %s" % key)
+            self._delete_neighbor(key)
+

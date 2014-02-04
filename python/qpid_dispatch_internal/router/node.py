@@ -32,11 +32,12 @@ class NodeTracker(object):
     The mask bit is used in the main router to represent sets of valid destinations for addresses.
     """
     def __init__(self, container, max_routers):
-        self.container    = container
-        self.max_routers  = max_routers
-        self.nodes        = {}  # id => RemoteNode
-        self.maskbits     = []
-        self.next_maskbit = 1   # Reserve bit '0' to represent this router
+        self.container        = container
+        self.max_routers      = max_routers
+        self.nodes            = {}  # id => RemoteNode
+        self.nodes_by_link_id = {}  # link-id => node-id
+        self.maskbits         = []
+        self.next_maskbit     = 1   # Reserve bit '0' to represent this router
         for i in range(max_routers):
             self.maskbits.append(None)
         self.maskbits[0] = True
@@ -51,14 +52,16 @@ class NodeTracker(object):
         A node, designated by node_id, has been discovered as a neighbor over a link with
         a maskbit of link_maskbit.
         """
+        self.nodes_by_link_id[link_maskbit] = node_id
         if node_id in self.nodes:
             node = self.nodes[node_id]
             if node.neighbor:
                 return
             self.container.del_remote_router(node.maskbit)
             node.neighbor = True
+            node.link_id  = link_maskbit
         else:
-            node = RemoteNode(node_id, self._allocate_maskbit(), True)
+            node = RemoteNode(node_id, self._allocate_maskbit(), True, link_maskbit)
             self.nodes[node_id] = node
         self.container.add_neighbor_router(self._address(node_id), node.maskbit, link_maskbit)
 
@@ -69,6 +72,8 @@ class NodeTracker(object):
         """
         node = self.nodes[node_id]
         node.neighbor = False
+        self.nodes_by_link_id.pop(node.link_id)
+        node.link_id = None
         self.container.del_neighbor_router(node.maskbit)
         if node.remote:
             self.container.add_remote_router(self._address(node.id), node.maskbit)
@@ -83,7 +88,7 @@ class NodeTracker(object):
         remote peer.
         """
         if node_id not in self.nodes:
-            node = RemoteNode(node_id, self._allocate_maskbit(), False)
+            node = RemoteNode(node_id, self._allocate_maskbit(), False, None)
             self.nodes[node_id] = node
             self.container.add_remote_router(self._address(node.id), node.maskbit)
         else:
@@ -140,6 +145,12 @@ class NodeTracker(object):
         return (added, deleted)
 
 
+    def link_id_to_node_id(self, link_id):
+        if link_id in self.nodes_by_link_id:
+            return self.nodes_by_link_id[link_id]
+        return None
+
+
     def _allocate_maskbit(self):
         if self.next_maskbit == None:
             raise Exception("Exceeded Maximum Router Count")
@@ -165,10 +176,11 @@ class NodeTracker(object):
 
 class RemoteNode(object):
 
-    def __init__(self, node_id, maskbit, neighbor):
+    def __init__(self, node_id, maskbit, neighbor, link_id):
         self.id       = node_id
         self.maskbit  = maskbit
         self.neighbor = neighbor
         self.remote   = not neighbor
+        self.link_id  = link_id
         self.addrs    = {}  # Address => Count at Node (1 only for the present)
 

@@ -31,7 +31,7 @@
 
 static qd_dispatch_t   *dispatch   = 0;
 static uint32_t         ref_count  = 0;
-static sys_mutex_t     *lock       = 0;
+static sys_mutex_t     *ilock      = 0;
 static qd_log_source_t *log_source = 0;
 static PyObject        *dispatch_module = 0;
 static PyObject        *dispatch_python_pkgdir = 0;
@@ -46,7 +46,7 @@ void qd_python_initialize(qd_dispatch_t *qd,
 {
     log_source = qd_log_source("PYTHON");
     dispatch = qd;
-    lock = sys_mutex();
+    ilock = sys_mutex();
     if (python_pkgdir)
         dispatch_python_pkgdir = PyString_FromString(python_pkgdir);
 }
@@ -55,26 +55,26 @@ void qd_python_initialize(qd_dispatch_t *qd,
 void qd_python_finalize(void)
 {
     assert(ref_count == 0);
-    sys_mutex_free(lock);
+    sys_mutex_free(ilock);
 }
 
 
 void qd_python_start(void)
 {
-    sys_mutex_lock(lock);
+    sys_mutex_lock(ilock);
     if (ref_count == 0) {
         Py_Initialize();
         qd_python_setup();
         qd_log(log_source, QD_LOG_TRACE, "Embedded Python Interpreter Initialized");
     }
     ref_count++;
-    sys_mutex_unlock(lock);
+    sys_mutex_unlock(ilock);
 }
 
 
 void qd_python_stop(void)
 {
-    sys_mutex_lock(lock);
+    sys_mutex_lock(ilock);
     ref_count--;
     if (ref_count == 0) {
         Py_DECREF(dispatch_module);
@@ -82,7 +82,7 @@ void qd_python_stop(void)
         Py_Finalize();
         qd_log(log_source, QD_LOG_TRACE, "Embedded Python Interpreter Shut Down");
     }
-    sys_mutex_unlock(lock);
+    sys_mutex_unlock(ilock);
 }
 
 
@@ -461,7 +461,7 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
         return;
     }
 
-    sys_mutex_lock(lock);
+    sys_mutex_lock(ilock);
     PyObject *pAP   = qd_field_to_py(ap_map);
     PyObject *pBody = qd_field_to_py(body_map);
 
@@ -475,7 +475,7 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
     if (pValue) {
         Py_DECREF(pValue);
     }
-    sys_mutex_unlock(lock);
+    sys_mutex_unlock(ilock);
 
     qd_field_iterator_free(ap);
     qd_field_iterator_free(body);
@@ -685,11 +685,11 @@ static void qd_python_setup(void)
 
 void qd_python_lock(void)
 {
-    sys_mutex_lock(lock);
+    sys_mutex_lock(ilock);
 }
 
 void qd_python_unlock(void)
 {
-    sys_mutex_unlock(lock);
+    sys_mutex_unlock(ilock);
 }
 
