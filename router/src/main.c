@@ -33,7 +33,7 @@ static const char *app_config =
     "config_schema['fixed-address'] = (False, {\n"
     "   'prefix' : (str, 0,    'M', None, None),\n"
     "   'fanout' : (str, None, '', 'multiple', ['multiple', 'single']),\n"
-    "   'bias'   : (str, None, '', 'none',     ['none', 'closest', 'spread'])})\n";
+    "   'bias'   : (str, None, '', 'closest',  ['closest', 'spread'])})\n";
 
 
 /**

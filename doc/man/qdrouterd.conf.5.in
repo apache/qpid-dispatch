@@ -60,11 +60,33 @@ in the 'password' option.  Don't use both password and password-file
 in the same profile.
 .SS "'listener' and 'connector' sections"
 .IP addr
-The listener or connector IP address
+The listener or connector address.  This can be an IP address or a host name.
 .IP port
-The listener or connector port
+The listener or connector port.  This can be a numeric port or a symbolic value like "amqp".
+.IP role
+The role of the established connection.  This is one of "normal" or "inter-router".  If
+this item is not provided, it defaults to "normal".  In the normal role, the
+connection is assumed to be used for AMQP clients that are doing normal message
+delivery over the connection.  In the inter-router role, the connection is assumed to
+be to another router in the network.  Inter-router discovery and routing protocols
+can only be used over inter-router connections.
 .IP sasl-mechanisms
 A list of accepted SASL mechanisms
+.IP ssl-profile
+If SSL is to be used for this connector or listener, a profile is selected
+by name using this configuration setting.
+.IP require-peer-auth
+Only for listeners using SSL.  If set to "yes", attached clients will be required to
+supply a certificate.  If the certificate is not traceable to a CA in the ssl profile's
+cert-db, authentication fails for the connection.
+.IP trusted-certs
+This optional setting can be used to reduce the set of available CAs for client
+authentication.  If used, this setting must provide a path to a PEM file that
+contains the trusted certificates.
+.IP allow-unsecured
+For listeners using SSL only.  If set to "yes", this option causes the listener to
+watch the initial network traffic to determine if the client is using SSL or is
+running in-the-clear.  The listener will enable SSL only if the client uis using SSL.
 .SS "'router' section"
 .IP mode
 One of "standalone", "interior", or "edge".  In standalone mode, the
@@ -76,8 +98,27 @@ router operates with an uplink into an interior router network. Edge
 routers are typically used as connection concentrators or as security
 firewalls for access into the interior network.
 .IP router-id
-Each router \fIis\fP assigned a router-id that is unique.  For interior
+Each router is assigned a router-id that is unique.  For interior
 router mode only.
+.SS "'fixed-address' section"
+Fixed-address sections are used to specify the router's behavior for sets
+of addresses defined by prefix.  If there are multiple fix-address sections
+in the configuration, they are considered in the order in which they appear.
+When an address matches a fixed-address prefix, the matching configuration is
+used and no other configurations are considered.
+If there is a catch-all prefix ("/"), it must be the last one specified.
+.IP prefix
+The address prefix (always starting with "/").
+.IP fanout
+One of "multiple" or "single".  Multiple fanout is a non-competing pattern.  If there
+are multiple consumers using the same address, each consumer will receive its own copy
+of every message sent to the address.  Single fanout is a competing pattern where each
+message is sent to only one consumer.
+.IP bias
+Only if fanout is single.  One of "closest" or "spread".  Closest bias means that messages
+to an address will always be delivered to the closest (lowest cost) subscribed consumer.
+Spread bias will distribute the messages across subscribers in an approximately even
+manner.
 .\" XXX .SH EXAMPLES
 .SH FILES
 .I /etc/qpid-dispatch/qdrouterd.conf
@@ -88,4 +129,4 @@ router mode only.
 .SH AUTHOR
 Apache Qpid <http://qpid.apache.org/>
 .SH COPYRIGHT
-Copyright 2013 The Apache Software Foundation
+Copyright 2014 The Apache Software Foundation
