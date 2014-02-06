@@ -52,15 +52,18 @@ void qd_router_configure(qd_router_t *router)
         else
             assert(0);
 
-        if      (strcmp("none",    bias) == 0) semantics |= QD_BIAS_NONE;
-        else if (strcmp("closest", bias) == 0) semantics |= QD_BIAS_CLOSEST;
-        else if (strcmp("spread",  bias) == 0) semantics |= QD_BIAS_SPREAD;
-        else
-            assert(0);
+        if ((semantics & QD_FANOUTMASK) == QD_FANOUT_SINGLE) {
+            if      (strcmp("closest", bias) == 0) semantics |= QD_BIAS_CLOSEST;
+            else if (strcmp("spread",  bias) == 0) semantics |= QD_BIAS_SPREAD;
+            else
+                assert(0);
+            qd_log(router->log_source, QD_LOG_INFO, "Configured Address: prefix=%s fanout=%s bias=%s", prefix, fanout, bias);
+        } else {
+            semantics |= QD_BIAS_NONE;
+            qd_log(router->log_source, QD_LOG_INFO, "Configured Address: prefix=%s fanout=%s", prefix, fanout);
+        }
 
         router->config_addrs[idx].semantics = semantics;
-
-        qd_log(router->log_source, QD_LOG_INFO, "Configured Address: prefix=%s fanout=%s bias=%s", prefix, fanout, bias);
     }
 }
 
