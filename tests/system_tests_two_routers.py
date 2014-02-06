@@ -46,12 +46,15 @@ def wait_for_addr(messenger, addr, local_count, remote_count):
                 done = True
         time.sleep(0.2)
 
-
 def startRouter(obj):
     default_home = os.path.normpath('/usr/lib/qpid-dispatch')
     home = os.environ.get('QPID_DISPATCH_HOME', default_home)
-    configA_file = '%s/tests/config-2/A.conf' % home
-    configB_file = '%s/tests/config-2/B.conf' % home
+    if obj.ssl_option == "ssl":
+        configA_file = '%s/tests/config-2/A-ssl.conf' % home
+        configB_file = '%s/tests/config-2/B-ssl.conf' % home 
+    else:
+        configA_file = '%s/tests/config-2/A.conf' % home
+        configB_file = '%s/tests/config-2/B.conf' % home
 
     obj.routerA = subprocess.Popen(['qdrouterd', '-c', configA_file],
                                    stderr=subprocess.PIPE,
@@ -89,6 +92,7 @@ def stopRouter(obj):
 
 
 class RouterTest(unittest.TestCase):
+    ssl_option = None
 
     if (sys.version_info[0] == 2) and (sys.version_info[1] < 7):
         def setUp(self):
@@ -809,6 +813,12 @@ class RouterTest(unittest.TestCase):
         M3.stop()
         M4.stop()
 
-
 if __name__ == '__main__':
-  unittest.main()
+    if len(sys.argv) > 1:
+        if '--ssl' in sys.argv:
+            sys.argv.remove('--ssl')
+            RouterTest.ssl_option = "ssl"
+            print "...Using SSL configuration"
+        else:
+            print "...Using non-SSL configuration"
+    unittest.main()

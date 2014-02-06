@@ -55,5 +55,8 @@ add_test(router_tests          python ${CMAKE_CURRENT_SOURCE_DIR}/router_engine_
 
 set(SYSTEM_TEST_FILES system_tests_one_router.py system_tests_two_routers.py)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf.in ${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/B-ssl.conf.in ${CMAKE_CURRENT_SOURCE_DIR}/config-2/B-ssl.conf)
+
 install(FILES ${SYSTEM_TEST_FILES} DESTINATION ${QPID_DISPATCH_HOME}/tests)
 install(DIRECTORY config-1 config-2 DESTINATION ${QPID_DISPATCH_HOME}/tests)
