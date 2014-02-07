@@ -698,7 +698,7 @@ class RouterTest(unittest.TestCase):
         M3.stop()
         M4.stop()
 
-    def test_11a_semantics_closest_is_remote(self):
+    def test_11b_semantics_closest_is_remote(self):
         addr = "amqp:/closest/2"
         M1 = Messenger()
         M2 = Messenger()
