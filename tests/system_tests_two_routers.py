@@ -46,6 +46,26 @@ def wait_for_addr(messenger, addr, local_count, remote_count):
                 done = True
         time.sleep(0.2)
 
+def wait_for_routethrough(messenger, addr):
+    msub  = messenger.subscribe("amqp:/#")
+    reply = msub.address
+    req   = Message()
+    rsp   = Message()
+
+    done = False
+    while not done:
+        req.address    = "amqp:/_topo/0/%s/$management" % addr
+        req.reply_to   = reply
+        req.properties = {u'operation':u'GET-OPERATIONS', u'type':u'org.amqp.management', u'name':u'self'}
+        messenger.put(req)
+        messenger.send()
+        try:
+            messenger.recv()
+            done = True
+        except Exception:
+            pass
+        time.sleep(0.2)
+
 def startRouter(obj):
     default_home = os.path.normpath('/usr/lib/qpid-dispatch')
     home = os.environ.get('QPID_DISPATCH_HOME', default_home)
@@ -74,11 +94,11 @@ def startRouter(obj):
     M1.start()
     M2.start()
 
-    M1.timeout = 1.0
-    M2.timeout = 1.0
+    M1.timeout = 0.5
+    M2.timeout = 0.5
 
-    wait_for_addr(M1, "QDR.B", 0, 1)
-    wait_for_addr(M2, "QDR.A", 0, 1)
+    wait_for_routethrough(M1, "QDR.B")
+    wait_for_routethrough(M2, "QDR.A")
 
     M1.stop()
     M2.stop()
