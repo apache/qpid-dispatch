@@ -36,7 +36,7 @@ def startRouter(obj):
 
 def stopRouter(obj):
     obj.router.terminate()
-    obj.router.wait()
+    obj.router.communicate()
 
 
 class RouterTest(unittest.TestCase):
@@ -45,8 +45,8 @@ class RouterTest(unittest.TestCase):
         def setUp(self):
             startRouter(self)
 
-            def tearDown(self):
-                stopRouter(self)
+        def tearDown(self):
+            stopRouter(self)
     else:
         @classmethod
         def setUpClass(cls):
