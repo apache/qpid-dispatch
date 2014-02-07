@@ -209,12 +209,16 @@ static void qd_router_generate_temp_addr(qd_router_t *router, char *buffer, size
 {
     static const char *table = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+_";
     char     discriminator[11];
-    long int rnd = random();
+    long int rnd1 = random();
+    long int rnd2 = random();
     int      idx;
+    int      cursor = 0;
 
-    for (idx = 0; idx < 6; idx++)
-        discriminator[idx] = table[(rnd >> (idx * 6)) & 63];
-    discriminator[idx] = '\0';
+    for (idx = 0; idx < 5; idx++) {
+        discriminator[cursor++] = table[(rnd1 >> (idx * 6)) & 63];
+        discriminator[cursor++] = table[(rnd2 >> (idx * 6)) & 63];
+    }
+    discriminator[cursor] = '\0';
 
     snprintf(buffer, length, "amqp:/%s%s/%s/temp.%s", topo_prefix, router->router_area, router->router_id, discriminator);
 }
