@@ -114,7 +114,7 @@ class MobileAddressEngine(object):
         if msg.id == self.id:
             return
 
-        if msg.exist_list:
+        if msg.exist_list != None:
             ##
             ## Absolute MAU
             ##
@@ -145,9 +145,9 @@ class MobileAddressEngine(object):
                         for addr in msg.del_list:
                             _list.remove(addr)
                     self.remote_lists[msg.id] = (msg.mobile_seq, _list)
-                    if msg.add_list:
+                    if msg.add_list != None:
                         self.node_tracker.add_addresses(msg.id, msg.add_list)
-                    if msg.del_list:
+                    if msg.del_list != None:
                         self.node_tracker.del_addresses(msg.id, msg.del_list)
                     self._activate_remotes(msg.id, msg.add_list, msg.del_list)
                 else:
@@ -181,10 +181,10 @@ class MobileAddressEngine(object):
 
     def _activate_remotes(self, _id, added, deleted):
         bit = self.node_tracker.maskbit_for_node(_id)
-        if added:
+        if added != None:
             for a in added:
                 self.container.router_adapter.map_destination(a, bit)
-        if deleted:
+        if deleted != None:
             for d in deleted:
                 self.container.router_adapter.unmap_destination(d, bit)
 
