@@ -239,9 +239,9 @@ class MessageMAU(object):
         _add = ''
         _del = ''
         _exist = ''
-        if self.add_list:   _add   = ' add=%r'   % self.add_list
-        if self.del_list:   _del   = ' del=%r'   % self.del_list
-        if self.exist_list: _exist = ' exist=%r' % self.exist_list
+        if self.add_list != None:   _add   = ' add=%r'   % self.add_list
+        if self.del_list != None:   _del   = ' del=%r'   % self.del_list
+        if self.exist_list != None: _exist = ' exist=%r' % self.exist_list
         return "MAU(id=%s area=%s mobile_seq=%d%s%s%s)" % \
                 (self.id, self.area, self.mobile_seq, _add, _del, _exist)
 
@@ -249,9 +249,9 @@ class MessageMAU(object):
         body = { 'id'         : self.id,
                  'area'       : self.area,
                  'mobile_seq' : self.mobile_seq }
-        if self.add_list:   body['add']   = self.add_list
-        if self.del_list:   body['del']   = self.del_list
-        if self.exist_list: body['exist'] = self.exist_list
+        if self.add_list != None:   body['add']   = self.add_list
+        if self.del_list != None:   body['del']   = self.del_list
+        if self.exist_list != None: body['exist'] = self.exist_list
         return body
 
 
