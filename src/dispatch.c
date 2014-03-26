@@ -163,6 +163,7 @@ static void load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, co
     config->host = qd_config_item_value_string(qd, section, i, "addr");
     config->port = qd_config_item_value_string(qd, section, i, "port");
     config->role = qd_config_item_value_string(qd, section, i, "role");
+    config->max_frame_size = qd_config_item_value_int(qd, section, i, "max-frame-size");
     config->sasl_mechanisms =
         qd_config_item_value_string(qd, section, i, "sasl-mechanisms");
     config->ssl_enabled =

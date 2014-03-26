@@ -298,6 +298,7 @@ static int process_handler(qd_container_t *container, void* unused, pn_connectio
     // open all pending sessions
     ssn = pn_session_head(conn, PN_LOCAL_UNINIT);
     while (ssn) {
+        pn_session_set_incoming_capacity(ssn, 1000000);
         pn_session_open(ssn);
         ssn = pn_session_next(ssn, PN_LOCAL_UNINIT);
         event_count++;
@@ -643,6 +644,8 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
 {
     pn_session_t *sess = pn_session(qd_connection_pn(conn));
     qd_link_t    *link = new_qd_link_t();
+
+    pn_session_set_incoming_capacity(sess, 1000000);
 
     if (dir == QD_OUTGOING)
         link->pn_link = pn_sender(sess, name);

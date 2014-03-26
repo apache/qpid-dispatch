@@ -63,16 +63,18 @@ config_schema = {
         'ssl-profile'       : (str,  None, 'E', None,  None),
         'require-peer-auth' : (bool, None, '',  True,  None),
         'trusted-certs'     : (str,  None, '',  None,  None),
-        'allow-unsecured'   : (bool, None, '',  False, None)
+        'allow-unsecured'   : (bool, None, '',  False, None),
+        'max-frame-size'    : (int,  None, '',  65536, None)
     }),
     'connector' : (False, {
-        'addr'            : (str,  0,    'M', None, None),
-        'port'            : (str,  1,    'M', None, None),
-        'label'           : (str,  None, '',  None, None),
+        'addr'            : (str,  0,    'M', None,  None),
+        'port'            : (str,  1,    'M', None,  None),
+        'label'           : (str,  None, '',  None,  None),
         'role'            : (str,  None, '',  'normal', ['normal', 'inter-router']),
-        'sasl-mechanisms' : (str,  None, 'M', None, None),
-        'ssl-profile'     : (str,  None, 'E', None, None),
-        'allow-redirect'  : (bool, None, '',  True, None)
+        'sasl-mechanisms' : (str,  None, 'M', None,  None),
+        'ssl-profile'     : (str,  None, 'E', None,  None),
+        'allow-redirect'  : (bool, None, '',  True,  None),
+        'max-frame-size'  : (int,  None, '',  65536, None)
     }),
     'router' : (True, {
         'mode'                : (str, None, '', 'standalone', ['standalone', 'interior']),

@@ -87,6 +87,11 @@ contains the trusted certificates.
 For listeners using SSL only.  If set to "yes", this option causes the listener to
 watch the initial network traffic to determine if the client is using SSL or is
 running in-the-clear.  The listener will enable SSL only if the client uis using SSL.
+.IP max-frame-size
+Defaults to 65536.  If specified, it is the maximum-frame-size in octets that will be used in
+the connection-open negotiation with a connected peer.  The frame size is the largest contiguous
+set of uniterruptible data that can be sent for a message delivery over the connection.
+Interleaving of messages on different links is done at frame granularity.
 .SS "'router' section"
 .IP mode
 One of "standalone", "interior", or "edge".  In standalone mode, the

@@ -308,6 +308,11 @@ typedef struct qd_server_config_t {
      * capabilities of the connections.
      */
     const char *role;
+
+    /**
+     * The maximum size of an AMQP frame in octets.
+     */
+    uint32_t max_frame_size;
 } qd_server_config_t;
 
 

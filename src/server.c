@@ -134,6 +134,11 @@ static void thread_process_listeners(qd_server_t *qd_server)
         const qd_server_config_t *config = ctx->listener->config;
 
         //
+        // Configure the transport.
+        //
+        pn_transport_set_max_frame(tport, config->max_frame_size);
+
+        //
         // Set up SSL if appropriate
         //
         if (config->ssl_enabled) {
@@ -624,6 +629,11 @@ static void cxtr_try_open(void *context)
     //
     pn_transport_t           *tport  = pn_connector_transport(ctx->pn_cxtr);
     const qd_server_config_t *config = ct->config;
+
+    //
+    // Configure the transport
+    //
+    pn_transport_set_max_frame(tport, config->max_frame_size);
 
     //
     // Set up SSL if appropriate
