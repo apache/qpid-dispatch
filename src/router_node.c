@@ -319,14 +319,30 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
         qd_message_send(re->message, link);
 
         //
-        // If there is an incoming delivery associated with this message, link it
-        // with the outgoing delivery.  Otherwise, the message arrived pre-settled
-        // and should be sent presettled.
+        // Check the delivery associated with the queued message.  If it is not
+        // settled, link it to the ougoing delivery for disposition/settlement
+        // tracking.  If it is (pre-)settled, put it on the incoming link's event
+        // queue to be locally settled.  This is done to hold session credit during
+        // the time the message is in the outgoing message fifo.
         //
         sys_mutex_lock(router->lock);
         if (re->delivery) {
-            if (qd_delivery_fifo_exit_LH(re->delivery))
-                qd_delivery_link_peers_LH(re->delivery, delivery);
+            if (qd_delivery_fifo_exit_LH(re->delivery)) {
+                if (qd_delivery_settled(re->delivery)) {
+                    qd_link_t         *peer_link  = qd_delivery_link(re->delivery);
+                    qd_router_link_t  *peer_rlink = (qd_router_link_t*) qd_link_get_context(peer_link);
+                    qd_routed_event_t *return_re = new_qd_routed_event_t();
+                    DEQ_ITEM_INIT(return_re);
+                    return_re->delivery    = re->delivery;
+                    return_re->message     = 0;
+                    return_re->settle      = true;
+                    return_re->disposition = 0;
+                    qd_delivery_fifo_enter_LH(re->delivery);
+                    DEQ_INSERT_TAIL(peer_rlink->event_fifo, return_re);
+                    qd_link_activate(peer_link);
+                } else
+                    qd_delivery_link_peers_LH(re->delivery, delivery);
+            }
         } else
             qd_delivery_free_LH(delivery, 0);  // settle and free
         sys_mutex_unlock(router->lock);
@@ -357,7 +373,7 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
             bool ok = qd_delivery_fifo_exit_LH(re->delivery);
             if (ok && re->settle) {
                 qd_delivery_unlink_LH(re->delivery);
-                qd_delivery_free_LH(re->delivery, 0);
+                qd_delivery_free_LH(re->delivery, re->disposition);
                 event_count++;
             }
 
@@ -487,15 +503,10 @@ static void router_do_link_route_LH(qd_router_link_t *peer_link, qd_delivery_t *
     DEQ_INSERT_TAIL(peer_link->msg_fifo, re);
 
     //
-    // If the incoming delivery is settled (pre-settled), don't link it into the routed
-    // event.  If it's not settled, link it into the event for later handling.
+    // Link the incoming delivery into the event for deferred processing
     //
-    if (qd_delivery_settled(delivery))
-        qd_delivery_free_LH(delivery, 0);
-    else {
-        re->delivery = delivery;
-        qd_delivery_fifo_enter_LH(delivery);
-    }
+    re->delivery = delivery;
+    qd_delivery_fifo_enter_LH(delivery);
 
     qd_link_activate(peer_link->link);
 }
@@ -514,7 +525,7 @@ static void router_forward_to_direct_subscribers_LH(qd_address_t *addr, qd_deliv
         DEQ_INSERT_TAIL(dest_link_ref->link->msg_fifo, re);
 
         (*fanout)++;
-        if (*fanout == 1 && !qd_delivery_settled(delivery)) {
+        if (*fanout == 1) {
             re->delivery = delivery;
             qd_delivery_fifo_enter_LH(delivery);
         }
@@ -607,7 +618,7 @@ static void router_forward_to_remote_subscribers_LH(qd_router_t *router, qd_addr
                 DEQ_INSERT_TAIL(dest_link->msg_fifo, re);
 
                 (*fanout)++;
-                if (*fanout == 1 && !qd_delivery_settled(delivery)) {
+                if (*fanout == 1) {
                     re->delivery = delivery;
                     qd_delivery_fifo_enter_LH(delivery);
                 }
