@@ -505,7 +505,7 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     for (Py_ssize_t idx = 0; idx < self->addr_count; idx++)
         self->addrs[idx] = qd_router_register_address(self->qd,
                                                       PyString_AS_STRING(PyTuple_GetItem(addrs, idx)),
-                                                      qd_io_rx_handler, py_semantics, self);
+                                                      qd_io_rx_handler, py_semantics, false, self);
     return 0;
 }
 

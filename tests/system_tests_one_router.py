@@ -546,7 +546,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_09_management(self):
-        addr  = "amqp:/_local/$management"
+        addr  = "amqp:/$management"
 
         M = Messenger()
         M.timeout = 2.0

@@ -107,7 +107,7 @@ class BusManager:
         if router:
             self.address = "amqp:/_topo/0/%s/$management" % router
         else:
-            self.address = "amqp:/_local/$management"
+            self.address = "amqp:/$management"
         self.subscription = self.M.subscribe("amqp:/#")
         self.reply = self.subscription.address
 

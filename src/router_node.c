@@ -1377,8 +1377,8 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     // locally later in the initialization sequence.
     //
     if (router->router_mode == QD_ROUTER_MODE_INTERIOR) {
-        router->router_addr = qd_router_register_address(qd, "qdrouter", 0, QD_SEMANTICS_ROUTER_CONTROL, 0);
-        router->hello_addr  = qd_router_register_address(qd, "qdhello", 0, QD_SEMANTICS_ROUTER_CONTROL, 0);
+        router->router_addr = qd_router_register_address(qd, "qdrouter", 0, QD_SEMANTICS_ROUTER_CONTROL, false, 0);
+        router->hello_addr  = qd_router_register_address(qd, "qdhello", 0, QD_SEMANTICS_ROUTER_CONTROL, false, 0);
     }
 
     //
@@ -1436,6 +1436,7 @@ qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
                                          const char             *address,
                                          qd_router_message_cb_t  handler,
                                          qd_address_semantics_t  semantics,
+                                         bool                    global,
                                          void                   *context)
 {
     char                 addr_string[1000];
@@ -1443,7 +1444,7 @@ qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
     qd_address_t        *addr;
     qd_field_iterator_t *iter;
 
-    strcpy(addr_string, "L");  // Local Hash-Key Space
+    strcpy(addr_string, global ? "M" : "L");
     strcat(addr_string, address);
     iter = qd_field_iterator_string(addr_string, ITER_VIEW_NO_HOST);
 

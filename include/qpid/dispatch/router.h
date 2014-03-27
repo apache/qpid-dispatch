@@ -88,6 +88,7 @@ qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
                                          const char             *address,
                                          qd_router_message_cb_t  handler,
                                          qd_address_semantics_t  semantics,
+                                         bool                    global,
                                          void                   *context);
 
 void qd_router_unregister_address(qd_address_t *address);

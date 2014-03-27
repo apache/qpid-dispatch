@@ -57,7 +57,8 @@ struct qd_agent_t {
     qd_message_list_t      out_fifo;
     sys_mutex_t           *lock;
     qd_timer_t            *timer;
-    qd_address_t          *address;
+    qd_address_t          *local_address;
+    qd_address_t          *global_address;
     qd_agent_class_t      *container_class;
 };
 
@@ -558,9 +559,10 @@ qd_agent_t *qd_agent(qd_dispatch_t *qd)
     DEQ_INIT(agent->class_list);
     DEQ_INIT(agent->in_fifo);
     DEQ_INIT(agent->out_fifo);
-    agent->lock    = sys_mutex();
-    agent->timer   = qd_timer(qd, qd_agent_deferred_handler, agent);
-    agent->address = qd_router_register_address(qd, "$management", qd_agent_rx_handler, agent_semantics, agent);
+    agent->lock  = sys_mutex();
+    agent->timer = qd_timer(qd, qd_agent_deferred_handler, agent);
+    agent->local_address  = qd_router_register_address(qd, "$management", qd_agent_rx_handler, agent_semantics, false, agent);
+    agent->global_address = qd_router_register_address(qd, "$management", qd_agent_rx_handler, agent_semantics, true, agent);
 
     return agent;
 }
@@ -568,7 +570,8 @@ qd_agent_t *qd_agent(qd_dispatch_t *qd)
 
 void qd_agent_free(qd_agent_t *agent)
 {
-    qd_router_unregister_address(agent->address);
+    qd_router_unregister_address(agent->local_address);
+    qd_router_unregister_address(agent->global_address);
     sys_mutex_free(agent->lock);
     qd_timer_free(agent->timer);
     qd_hash_free(agent->class_hash);
