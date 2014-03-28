@@ -563,7 +563,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertTrue('amqp:/_local/$management' in response.body)
         self.assertTrue('amqp:/_topo/0/QDR.B/$management' in response.body)
 
@@ -576,7 +576,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertTrue('amqp:/_local/$management' in response.body)
         self.assertTrue('amqp:/_topo/0/QDR.A/$management' in response.body)
 

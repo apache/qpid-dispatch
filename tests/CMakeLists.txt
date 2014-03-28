@@ -62,6 +62,10 @@ install(FILES ${SYSTEM_TEST_FILES}
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests
         )
 
+install(FILES qdstat_test.sh 
+        DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests
+        )
+
 install(DIRECTORY config-1 config-2
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests
         PATTERN *.in EXCLUDE

@@ -77,8 +77,8 @@ typedef enum {
 } qd_discover_t;
 
 
-static const char *STATUS_CODE         = "status-code";
-static const char *STATUS_DESCRIPTION  = "status-description";
+static const char *STATUS_CODE         = "statusCode";
+static const char *STATUS_DESCRIPTION  = "statusDescription";
 static const char *ENTITY_TYPES        = "entityTypes";
 static const char *BAD_REQUEST         = "Bad Request";
 

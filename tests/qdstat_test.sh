@@ -20,18 +20,28 @@
 
 set -e
 
-if [[ -z "$QPID_DISPATCH_HOME" ]]; then
-    QPID_DISPATCH_HOME=${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME}
-fi
+tmpdir=$(mktemp -d)
+randport=$(python -c "import random; print random.randint(49152, 65535)")
 
-echo "Running system_tests_one_router.py"
-python $QPID_DISPATCH_HOME/tests/system_tests_one_router.py -v
+echo "listener {
+  addr: localhost
+  port: $randport
+  sasl-mechanisms: ANONYMOUS
+}" > $tmpdir/conf
 
-echo "Running system_tests_two_routers.py with SSL"
-python $QPID_DISPATCH_HOME/tests/system_tests_two_routers.py -v --ssl
+qdrouterd -c $tmpdir/conf &
 
-echo "Running system_tests_two_routers.py"
-python $QPID_DISPATCH_HOME/tests/system_tests_two_routers.py -v
+pid=$!
 
-echo "Running qdstat_test.sh"
-bash $QPID_DISPATCH_HOME/tests/qdstat_test.sh
+qdstat --help > /dev/null
+qdstat --bus localhost:$randport --general > /dev/null
+qdstat --bus localhost:$randport --connections > /dev/null
+qdstat --bus localhost:$randport --links > /dev/null
+qdstat --bus localhost:$randport --nodes > /dev/null
+qdstat --bus localhost:$randport --address > /dev/null
+qdstat --bus localhost:$randport --memory > /dev/null
+
+kill $pid
+wait $pid
+
+rm -rf $tmpdir

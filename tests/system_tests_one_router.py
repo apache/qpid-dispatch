@@ -568,7 +568,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.correlation_id, "C1")
         self.assertEqual(response.body, ['amqp:/_local/$management'])
 
@@ -582,7 +582,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.correlation_id, 135)
         self.assertEqual(response.body, ['amqp:/_local/$management'])
 
@@ -595,7 +595,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body, ['amqp:/_local/$management'])
 
         M.stop()
@@ -625,7 +625,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body.__class__, dict)
         self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
         self.assertTrue(len(response.body.keys()) > 2)
@@ -643,7 +643,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body.__class__, dict)
         self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
         self.assertTrue('org.apache.qpid.dispatch.connection' in response.body.keys())
@@ -662,7 +662,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body, {})
 
         ##
@@ -678,7 +678,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 400)
+        self.assertEqual(response.properties['statusCode'], 400)
 
         M.stop()
 
@@ -708,7 +708,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body.__class__, dict)
         self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
         self.assertTrue(len(response.body.keys()) > 2)
@@ -727,7 +727,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body.__class__, dict)
         self.assertTrue('org.apache.qpid.dispatch.router' in response.body.keys())
         self.assertEqual(len(response.body.keys()), 1)
@@ -746,7 +746,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body, {})
 
         M.stop()
@@ -777,7 +777,7 @@ class RouterTest(unittest.TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['status-code'], 200)
+        self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body.__class__, dict)
         self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
         self.assertTrue(len(response.body.keys()) > 2)
