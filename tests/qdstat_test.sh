@@ -22,9 +22,10 @@ set -e
 
 tmpdir=$(mktemp -d)
 randport=$(python -c "import random; print random.randint(49152, 65535)")
+localhost=0.0.0.0
 
 echo "listener {
-  addr: localhost
+  addr: $localhost
   port: $randport
   sasl-mechanisms: ANONYMOUS
 }" > $tmpdir/conf
@@ -34,12 +35,12 @@ qdrouterd -c $tmpdir/conf &
 pid=$!
 
 qdstat --help > /dev/null
-qdstat --bus localhost:$randport --general > /dev/null
-qdstat --bus localhost:$randport --connections > /dev/null
-qdstat --bus localhost:$randport --links > /dev/null
-qdstat --bus localhost:$randport --nodes > /dev/null
-qdstat --bus localhost:$randport --address > /dev/null
-qdstat --bus localhost:$randport --memory > /dev/null
+qdstat --bus $localhost:$randport --general > /dev/null
+qdstat --bus $localhost:$randport --connections > /dev/null
+qdstat --bus $localhost:$randport --links > /dev/null
+qdstat --bus $localhost:$randport --nodes > /dev/null
+qdstat --bus $localhost:$randport --address > /dev/null
+qdstat --bus $localhost:$randport --memory > /dev/null
 
 kill $pid
 wait $pid
