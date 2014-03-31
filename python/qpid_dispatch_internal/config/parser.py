@@ -18,7 +18,7 @@
 ##
 
 import json
-from schema   import config_schema
+from schema   import config_schema, config_rules
 from dispatch import LogAdapter, LOG_TRACE, LOG_ERROR, LOG_INFO, LOG_CRITICAL
 
 class Section:
@@ -226,6 +226,7 @@ class DispatchConfig:
       self.raw_config = json.loads(self.json_text);
       self._validate_raw_config()
       self._process_schema()
+      self._validate()
     except Exception, E:
       self.log.log(LOG_CRITICAL, "Exception in Configuration File Processing: %r" % E)
       raise
@@ -305,6 +306,11 @@ class DispatchConfig:
     self.config = ConfigMain(self.schema)
     self.config.update(self.raw_config)
     self.raw_config = None
+
+
+  def _validate(self):
+    for validator in config_rules:
+      validator(self)
 
 
   def item_count(self, section):

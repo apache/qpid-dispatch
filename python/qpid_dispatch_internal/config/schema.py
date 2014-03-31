@@ -87,3 +87,25 @@ config_schema = {
         'mobile-addr-max-age' : (int, None, '',  60, None)
     })
 }
+
+
+def validate_roles(config):
+    """
+    If the operating mode of the router is not 'interior', then the only permitted roles
+    for listeners and connectors is 'normal'.
+    """
+    mode = config.value_string('router', 0, 'mode')
+    if mode == 'interior':
+        return None
+    for item in ['listener', 'connector']:
+        count = config.item_count(item)
+        for idx in range(count):
+            role = config.value_string(item, idx, 'role')
+            if role != 'normal':
+                addr = config.value_string(item, idx, 'addr')
+                port = config.value_string(item, idx, 'port')
+                raise Exception("Role '%s' for %s %s:%s only permitted with 'interior' mode" %
+                                (role, item, addr, port))
+
+config_rules = [validate_roles]
+
