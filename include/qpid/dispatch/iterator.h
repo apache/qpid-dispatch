@@ -136,6 +136,8 @@ void qd_field_iterator_reset(qd_field_iterator_t *iter);
 void qd_field_iterator_reset_view(qd_field_iterator_t *iter,
                                   qd_iterator_view_t   view);
 
+void qd_field_iterator_set_phase(qd_field_iterator_t *iter, char phase);
+
 /**
  * Return the current octet in the iterator's view and step to the next.
  */

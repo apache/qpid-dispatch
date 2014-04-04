@@ -32,6 +32,12 @@ typedef enum {
     MODE_TO_SLASH
 } parse_mode_t;
 
+typedef enum {
+    STATE_AT_PREFIX,
+    STATE_AT_PHASE,
+    STATE_IN_ADDRESS
+} addr_state_t;
+
 typedef struct {
     qd_buffer_t   *buffer;
     unsigned char *cursor;
@@ -44,9 +50,10 @@ struct qd_field_iterator_t {
     pointer_t           pointer;
     qd_iterator_view_t  view;
     parse_mode_t        mode;
+    addr_state_t        state;
+    bool                view_prefix;
     unsigned char       prefix;
-    int                 at_prefix;
-    int                 view_prefix;
+    unsigned char       phase;
 };
 
 ALLOC_DECLARE(qd_field_iterator_t);
@@ -79,8 +86,8 @@ static void parse_address_view(qd_field_iterator_t *iter)
     if (qd_field_iterator_prefix(iter, "_")) {
         if (qd_field_iterator_prefix(iter, "local/")) {
             iter->prefix      = 'L';
-            iter->at_prefix   = 1;
-            iter->view_prefix = 1;
+            iter->state       = STATE_AT_PREFIX;
+            iter->view_prefix = true;
             return;
         }
 
@@ -88,29 +95,29 @@ static void parse_address_view(qd_field_iterator_t *iter)
             if (qd_field_iterator_prefix(iter, "all/") || qd_field_iterator_prefix(iter, my_area)) {
                 if (qd_field_iterator_prefix(iter, "all/") || qd_field_iterator_prefix(iter, my_router)) {
                     iter->prefix      = 'L';
-                    iter->at_prefix   = 1;
-                    iter->view_prefix = 1;
+                    iter->state       = STATE_AT_PREFIX;
+                    iter->view_prefix = true;
                     return;
                 }
 
                 iter->prefix      = 'R';
-                iter->at_prefix   = 1;
-                iter->view_prefix = 1;
+                iter->state       = STATE_AT_PREFIX;
+                iter->view_prefix = true;
                 iter->mode        = MODE_TO_SLASH;
                 return;
             }
 
             iter->prefix      = 'A';
-            iter->at_prefix   = 1;
-            iter->view_prefix = 1;
+            iter->state       = STATE_AT_PREFIX;
+            iter->view_prefix = true;
             iter->mode        = MODE_TO_SLASH;
             return;
         }
     }
 
     iter->prefix      = 'M';
-    iter->at_prefix   = 1;
-    iter->view_prefix = 1;
+    iter->state       = STATE_AT_PREFIX;
+    iter->view_prefix = true;
 }
 
 
@@ -124,15 +131,15 @@ static void parse_node_view(qd_field_iterator_t *iter)
 
     if (qd_field_iterator_prefix(iter, my_area)) {
         iter->prefix      = 'R';
-        iter->at_prefix   = 1;
-        iter->view_prefix = 1;
+        iter->state       = STATE_AT_PREFIX;
+        iter->view_prefix = true;
         iter->mode        = MODE_TO_END;
         return;
     }
 
     iter->prefix      = 'A';
-    iter->at_prefix   = 1;
-    iter->view_prefix = 1;
+    iter->state       = STATE_AT_PREFIX;
+    iter->view_prefix = true;
     iter->mode        = MODE_TO_SLASH;
 }
 
@@ -143,8 +150,8 @@ static void view_initialize(qd_field_iterator_t *iter)
     // The default behavior is for the view to *not* have a prefix.
     // We'll add one if it's needed later.
     //
-    iter->at_prefix   = 0;
-    iter->view_prefix = 0;
+    iter->state       = STATE_IN_ADDRESS;
+    iter->view_prefix = false;
     iter->mode        = MODE_TO_END;
 
     if (iter->view == ITER_VIEW_ALL)
@@ -272,6 +279,7 @@ qd_field_iterator_t* qd_field_iterator_string(const char *text, qd_iterator_view
     iter->start_pointer.buffer = 0;
     iter->start_pointer.cursor = (unsigned char*) text;
     iter->start_pointer.length = strlen(text);
+    iter->phase                = '0';
 
     qd_field_iterator_reset_view(iter, view);
 
@@ -288,6 +296,7 @@ qd_field_iterator_t* qd_field_iterator_binary(const char *text, int length, qd_i
     iter->start_pointer.buffer = 0;
     iter->start_pointer.cursor = (unsigned char*) text;
     iter->start_pointer.length = length;
+    iter->phase                = '0';
 
     qd_field_iterator_reset_view(iter, view);
 
@@ -304,6 +313,7 @@ qd_field_iterator_t *qd_field_iterator_buffer(qd_buffer_t *buffer, int offset, i
     iter->start_pointer.buffer = buffer;
     iter->start_pointer.cursor = qd_buffer_base(buffer) + offset;
     iter->start_pointer.length = length;
+    iter->phase                = '0';
 
     qd_field_iterator_reset_view(iter, view);
 
@@ -319,8 +329,8 @@ void qd_field_iterator_free(qd_field_iterator_t *iter)
 
 void qd_field_iterator_reset(qd_field_iterator_t *iter)
 {
-    iter->pointer   = iter->view_start_pointer;
-    iter->at_prefix = iter->view_prefix;
+    iter->pointer = iter->view_start_pointer;
+    iter->state   = iter->view_prefix ? STATE_AT_PREFIX : STATE_IN_ADDRESS;
 }
 
 
@@ -335,11 +345,22 @@ void qd_field_iterator_reset_view(qd_field_iterator_t *iter, qd_iterator_view_t 
 }
 
 
+void qd_field_iterator_set_phase(qd_field_iterator_t *iter, char phase)
+{
+    iter->phase = phase;
+}
+
+
 unsigned char qd_field_iterator_octet(qd_field_iterator_t *iter)
 {
-    if (iter->at_prefix) {
-        iter->at_prefix = 0;
+    if (iter->state == STATE_AT_PREFIX) {
+        iter->state =  iter->prefix == 'M' ? STATE_AT_PHASE : STATE_IN_ADDRESS;
         return iter->prefix;
+    }
+
+    if (iter->state == STATE_AT_PHASE) {
+        iter->state = STATE_IN_ADDRESS;
+        return iter->phase;
     }
 
     if (iter->pointer.length == 0)
@@ -386,8 +407,9 @@ qd_field_iterator_t *qd_field_iterator_sub(qd_field_iterator_t *iter, uint32_t l
     sub->pointer              = sub->start_pointer;
     sub->view                 = iter->view;
     sub->mode                 = iter->mode;
-    sub->at_prefix            = 0;
-    sub->view_prefix          = 0;
+    sub->state                = STATE_IN_ADDRESS;
+    sub->view_prefix          = false;
+    sub->phase                = '0';
 
     return sub;
 }

@@ -40,7 +40,7 @@ def wait_for_addr(messenger, addr, local_count, remote_count):
         messenger.recv()
         messenger.get(rsp)
         for item in rsp.body:
-            if item['addr'][1:] == addr and \
+            if item['addr'][2:] == addr and \
                local_count == item['subscriber-count'] and \
                remote_count == item['remote-count']:
                 done = True

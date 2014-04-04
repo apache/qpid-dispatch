@@ -44,7 +44,7 @@ static char* test_view_global_dns(void *context)
         return "ITER_VIEW_NODE_SPECIFIC failed";
 
     qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    if (!qd_field_iterator_equal(iter, (unsigned char*) "Mglobal/sub"))
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "M0global/sub"))
         return "ITER_VIEW_ADDRESS_HASH failed";
 
     return 0;
@@ -70,7 +70,7 @@ static char* test_view_global_non_dns(void *context)
         return "ITER_VIEW_NODE_SPECIFIC failed";
 
     qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    if (!qd_field_iterator_equal(iter, (unsigned char*) "Mglobal/sub"))
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "M0global/sub"))
         return "ITER_VIEW_ADDRESS_HASH failed";
 
     return 0;
@@ -96,7 +96,7 @@ static char* test_view_global_no_host(void *context)
         return "ITER_VIEW_NODE_SPECIFIC failed";
 
     qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    if (!qd_field_iterator_equal(iter, (unsigned char*) "Mglobal/sub"))
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "M0global/sub"))
         return "ITER_VIEW_ADDRESS_HASH failed";
 
     return 0;
@@ -119,12 +119,14 @@ static char* test_view_address_hash(void *context)
     {"_topo/my-area/router/my-addr",            "Rrouter"},
     {"_topo/my-area/my-router/my-addr",         "Lmy-addr"},
     {"_topo/my-area/router",                    "Rrouter"},
+    {"amqp:/mobile",                            "M1mobile"},
     {0, 0}
     };
     int idx;
 
     for (idx = 0; cases[idx].addr; idx++) {
         qd_field_iterator_t *iter = qd_field_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_HASH);
+        qd_field_iterator_set_phase(iter, '1');
         if (!qd_field_iterator_equal(iter, (unsigned char*) cases[idx].view)) {
             char *got = (char*) qd_field_iterator_copy(iter);
             snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",

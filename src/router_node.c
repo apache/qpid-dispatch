@@ -955,20 +955,6 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
 }
 
 
-qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_iterator_t *iter)
-{
-    qd_field_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
-
-    for (int idx = 0; idx < router->config_addr_count; idx++) {
-        if (qd_field_iterator_prefix(iter, router->config_addrs[idx].prefix))
-            return router->config_addrs[idx].semantics;
-        qd_field_iterator_reset(iter);
-    }
-
-    return QD_SEMANTICS_DEFAULT;
-}
-
-
 /**
  * New Outgoing Link Handler
  */
@@ -981,6 +967,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     int is_router        = qd_router_terminus_is_router(qd_link_remote_target(link));
     int propagate        = 0;
     qd_field_iterator_t    *iter = 0;
+    char                    phase = '0';
     qd_address_semantics_t  semantics;
 
     if (is_router && !qd_router_connection_is_inter_router(qd_link_connection(link))) {
@@ -1043,7 +1030,8 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     if (is_dynamic || !iter)
         semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_BACKPRESSURE;
     else {
-        semantics = router_semantics_for_addr(router, iter);
+        semantics = router_semantics_for_addr(router, iter, '\0', &phase);
+        qd_field_iterator_set_phase(iter, phase);
         qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
     }
 
@@ -1071,9 +1059,9 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
             qd_router_generate_temp_addr(router, temp_addr, 1000);
             iter = qd_field_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
             pn_terminus_set_address(qd_link_source(link), temp_addr);
-            qd_log(router->log_source, QD_LOG_INFO, "Assigned temporary routable address: %s", temp_addr);
+            qd_log(router->log_source, QD_LOG_INFO, "Assigned temporary routable address=%s", temp_addr);
         } else
-            qd_log(router->log_source, QD_LOG_INFO, "Registered local address: %s", r_src);
+            qd_log(router->log_source, QD_LOG_INFO, "Registered local address=%s phase=%c", r_src, phase);
 
         qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
         if (!addr) {
@@ -1364,8 +1352,8 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     router->lock               = sys_mutex();
     router->timer              = qd_timer(qd, qd_router_timer_handler, (void*) router);
     router->dtag               = 1;
-    router->config_addrs       = 0;
-    router->config_addr_count  = 0;
+    DEQ_INIT(router->config_addrs);
+    DEQ_INIT(router->config_waypoints);
 
     //
     // Configure the router from the configuration file
@@ -1444,7 +1432,7 @@ qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
     qd_address_t        *addr;
     qd_field_iterator_t *iter;
 
-    strcpy(addr_string, global ? "M" : "L");
+    strcpy(addr_string, global ? "M0" : "L");
     strcat(addr_string, address);
     iter = qd_field_iterator_string(addr_string, ITER_VIEW_NO_HOST);
 

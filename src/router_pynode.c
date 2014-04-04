@@ -27,7 +27,6 @@
 #include "router_private.h"
 
 static qd_address_semantics_t router_addr_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS | QD_BYPASS_VALID_ORIGINS;
-static qd_address_semantics_t default_semantics     = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS;
 
 static qd_log_source_t *log_source = 0;
 static PyObject        *pyRouter   = 0;
@@ -360,12 +359,14 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
 {
     RouterAdapter       *adapter = (RouterAdapter*) self;
     qd_router_t         *router  = adapter->router;
+    char                 phase;
+    char                 unused;
     const char          *addr_string;
     int                  maskbit;
     qd_address_t        *addr;
     qd_field_iterator_t *iter;
 
-    if (!PyArg_ParseTuple(args, "si", &addr_string, &maskbit))
+    if (!PyArg_ParseTuple(args, "csi", &phase, &addr_string, &maskbit))
         return 0;
 
     if (maskbit >= qd_bitmask_width() || maskbit < 0) {
@@ -379,6 +380,7 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
     }
 
     iter = qd_field_iterator_string(addr_string, ITER_VIEW_ADDRESS_HASH);
+    qd_field_iterator_set_phase(iter, phase);
 
     sys_mutex_lock(router->lock);
     qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
@@ -388,8 +390,8 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
         DEQ_ITEM_INIT(addr);
         DEQ_INIT(addr->rlinks);
         DEQ_INIT(addr->rnodes);
-        addr->semantics = default_semantics; // FIXME - Add provisioned semantics here.
         qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
+        addr->semantics = router_semantics_for_addr(router, iter, phase, &unused);
         DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(router->addrs, addr);
     }
@@ -411,11 +413,12 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
 {
     RouterAdapter *adapter = (RouterAdapter*) self;
     qd_router_t   *router  = adapter->router;
+    char           phase;
     const char    *addr_string;
     int            maskbit;
     qd_address_t  *addr;
 
-    if (!PyArg_ParseTuple(args, "si", &addr_string, &maskbit))
+    if (!PyArg_ParseTuple(args, "csi", &phase, &addr_string, &maskbit))
         return 0;
 
     if (maskbit >= qd_bitmask_width() || maskbit < 0) {
@@ -430,6 +433,7 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
 
     qd_router_node_t    *rnode = router->routers_by_mask_bit[maskbit];
     qd_field_iterator_t *iter  = qd_field_iterator_string(addr_string, ITER_VIEW_ADDRESS_HASH);
+    qd_field_iterator_set_phase(iter, phase);
 
     sys_mutex_lock(router->lock);
     qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);

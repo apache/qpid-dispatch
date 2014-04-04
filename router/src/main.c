@@ -31,9 +31,15 @@ static qd_dispatch_t *dispatch;
 static const char *app_config =
     "from qpid_dispatch_internal.config.schema import config_schema\n"
     "config_schema['fixed-address'] = (False, {\n"
-    "   'prefix' : (str, 0,    'M', None, None),\n"
+    "   'prefix' : (str, 0, 'M', None, None),\n"
+    "   'phase'  : (int, 1, '', 0, None),\n"
     "   'fanout' : (str, None, '', 'multiple', ['multiple', 'single']),\n"
-    "   'bias'   : (str, None, '', 'closest',  ['closest', 'spread'])})\n";
+    "   'bias'   : (str, None, '', 'closest',  ['closest', 'spread'])})\n"
+    "config_schema['waypoint'] = (False, {\n"
+    "   'name'      : (str, 0,    'M', None, None),\n"
+    "   'in-phase'  : (int, None, 'M', None, None),\n"
+    "   'out-phase' : (int, None, 'M', None, None),\n"
+    "   'connector' : (str, None, 'M', None, None)})\n";
 
 
 /**

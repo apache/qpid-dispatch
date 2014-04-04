@@ -183,8 +183,8 @@ class MobileAddressEngine(object):
         bit = self.node_tracker.maskbit_for_node(_id)
         if added != None:
             for a in added:
-                self.container.router_adapter.map_destination(a, bit)
+                self.container.router_adapter.map_destination(a[0], a[1:], bit)
         if deleted != None:
             for d in deleted:
-                self.container.router_adapter.unmap_destination(d, bit)
+                self.container.router_adapter.unmap_destination(d[0], d[1:], bit)
 

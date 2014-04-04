@@ -29,7 +29,7 @@ class Section:
     self.name           = name
     self.schema_section = schema_section
     self.values         = schema_section.check_and_default(kv_pairs)
-    self.index          = schema_section.index_of(kv_pairs)
+    self.index          = schema_section.index_of(self.values)
 
   def __repr__(self):
     return "%r" % self.values

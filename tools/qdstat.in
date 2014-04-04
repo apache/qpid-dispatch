@@ -170,7 +170,17 @@ class BusManager:
     def _addr_text(self, addr):
         if not addr:
             return "-"
-        return addr[1:]
+        if addr[0] == 'M':
+            return addr[2:]
+        else:
+            return addr[1:]
+
+    def _addr_phase(self, addr):
+        if not addr:
+            return "-"
+        if addr[0] == 'M':
+            return addr[1]
+        return ''
 
     def displayGeneral(self):
         disp = Display(prefix="  ")
@@ -268,6 +278,7 @@ class BusManager:
         heads = []
         heads.append(Header("class"))
         heads.append(Header("address"))
+        heads.append(Header("phase"))
         heads.append(Header("in-proc", Header.Y))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
@@ -284,6 +295,7 @@ class BusManager:
             row = []
             row.append(self._addr_class(addr['addr']))
             row.append(self._addr_text(addr['addr']))
+            row.append(self._addr_phase(addr['addr']))
             row.append(addr['in-process'])
             row.append(addr['subscriber-count'])
             row.append(addr['remote-count'])

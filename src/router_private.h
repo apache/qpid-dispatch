@@ -152,42 +152,70 @@ ALLOC_DECLARE(qd_address_t);
 DEQ_DECLARE(qd_address_t, qd_address_list_t);
 
 
-typedef struct {
-    char                   *prefix;
+typedef struct qd_config_phase_t qd_config_phase_t;
+typedef struct qd_config_address_t qd_config_address_t;
+typedef struct qd_config_waypoint_t qd_config_waypoint_t;
+
+struct qd_config_phase_t {
+    DEQ_LINKS(qd_config_phase_t);
+    char                    phase;
     qd_address_semantics_t  semantics;
-} qd_config_address_t;
+};
+
+DEQ_DECLARE(qd_config_phase_t, qd_config_phase_list_t);
+
+struct qd_config_address_t {
+    DEQ_LINKS(qd_config_address_t);
+    char                   *prefix;
+    char                    last_phase;
+    qd_config_phase_list_t  phases;
+};
+
+DEQ_DECLARE(qd_config_address_t, qd_config_address_list_t);
+
+struct qd_config_waypoint_t {
+    DEQ_LINKS(qd_config_waypoint_t);
+    char           *name;
+    char            in_phase;
+    char            out_phase;
+    qd_connector_t *connector;
+    qd_link_t      *in_link;
+    qd_link_t      *out_link;
+};
+
+DEQ_DECLARE(qd_config_waypoint_t, qd_config_waypoint_list_t);
 
 
 struct qd_router_t {
-    qd_dispatch_t          *qd;
-    qd_log_source_t        *log_source;
-    qd_router_mode_t        router_mode;
-    const char             *router_area;
-    const char             *router_id;
-    qd_node_t              *node;
+    qd_dispatch_t            *qd;
+    qd_log_source_t          *log_source;
+    qd_router_mode_t          router_mode;
+    const char               *router_area;
+    const char               *router_id;
+    qd_node_t                *node;
 
-    qd_address_list_t       addrs;
-    qd_hash_t              *addr_hash;
-    qd_address_t           *router_addr;
-    qd_address_t           *hello_addr;
+    qd_address_list_t         addrs;
+    qd_hash_t                *addr_hash;
+    qd_address_t             *router_addr;
+    qd_address_t             *hello_addr;
 
-    qd_router_link_list_t   links;
-    qd_router_node_list_t   routers;
-    qd_router_link_t      **out_links_by_mask_bit;
-    qd_router_node_t      **routers_by_mask_bit;
+    qd_router_link_list_t     links;
+    qd_router_node_list_t     routers;
+    qd_router_link_t        **out_links_by_mask_bit;
+    qd_router_node_t        **routers_by_mask_bit;
 
-    qd_bitmask_t           *neighbor_free_mask;
-    sys_mutex_t            *lock;
-    qd_timer_t             *timer;
-    uint64_t                dtag;
+    qd_bitmask_t             *neighbor_free_mask;
+    sys_mutex_t              *lock;
+    qd_timer_t               *timer;
+    uint64_t                  dtag;
 
-    qd_config_address_t    *config_addrs;
-    int                     config_addr_count;
+    qd_config_address_list_t  config_addrs;
+    qd_config_waypoint_list_t config_waypoints;
 
-    qd_agent_class_t       *class_router;
-    qd_agent_class_t       *class_link;
-    qd_agent_class_t       *class_node;
-    qd_agent_class_t       *class_address;
+    qd_agent_class_t         *class_router;
+    qd_agent_class_t         *class_link;
+    qd_agent_class_t         *class_node;
+    qd_agent_class_t         *class_address;
 };
 
 
@@ -203,4 +231,6 @@ void qd_router_mobile_added(qd_router_t *router, qd_field_iterator_t *iter);
 void qd_router_mobile_removed(qd_router_t *router, const char *addr);
 void qd_router_link_lost(qd_router_t *router, int link_mask_bit);
 
+qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_iterator_t *iter,
+                                                 char in_phase, char *out_phase);
 #endif
