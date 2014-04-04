@@ -25,6 +25,7 @@
 #include <qpid/dispatch.h>
 #include "dispatch_private.h"
 #include "router_private.h"
+#include "waypoint_private.h"
 
 static qd_address_semantics_t router_addr_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS | QD_BYPASS_VALID_ORIGINS;
 
@@ -400,6 +401,12 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
     qd_router_node_t *rnode = router->routers_by_mask_bit[maskbit];
     qd_router_add_node_ref_LH(&addr->rnodes, rnode);
 
+    //
+    // If the address has an associated waypoint, notify the waypoint module of the changes.
+    //
+    if (addr->waypoint)
+        qd_waypoint_address_updated_LH(router->qd, addr);
+
     sys_mutex_unlock(router->lock);
 
     qd_log(log_source, QD_LOG_DEBUG, "Remote Destination '%s' Mapped to router %d", addr_string, maskbit);
@@ -446,6 +453,13 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
     }
         
     qd_router_del_node_ref_LH(&addr->rnodes, rnode);
+
+    //
+    // If the address has an associated waypoint, notify the waypoint module of the changes.
+    //
+    if (addr->waypoint)
+        qd_waypoint_address_updated_LH(router->qd, addr);
+
     sys_mutex_unlock(router->lock);
 
     qd_router_check_addr(router, addr, 0);

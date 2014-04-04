@@ -127,6 +127,7 @@ static void qd_router_query_link(qd_router_t *router, void *cor)
         qd_agent_value_uint(cor, "index", link->mask_bit);
         switch (link->link_type) {
         case QD_LINK_ENDPOINT: link_type = "endpoint";     break;
+        case QD_LINK_WAYPOINT: link_type = "waypoint";     break;
         case QD_LINK_ROUTER:   link_type = "inter-router"; break;
         case QD_LINK_AREA:     link_type = "inter-area";   break;
         }

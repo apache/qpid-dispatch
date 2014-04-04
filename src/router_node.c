@@ -25,6 +25,7 @@
 #include <qpid/dispatch.h>
 #include "dispatch_private.h"
 #include "router_private.h"
+#include "waypoint_private.h"
 
 static char *router_role    = "inter-router";
 static char *on_demand_role = "on-demand";
@@ -122,7 +123,9 @@ void qd_router_check_addr(qd_router_t *router, qd_address_t *addr, int was_local
     //
     // If the address has no handlers or destinations, it should be deleted.
     //
-    if (addr->handler == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->rnodes) == 0)
+    if (addr->handler == 0 &&
+        DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->rnodes) == 0 &&
+        !addr->waypoint)
         to_delete = 1;
 
     //
@@ -435,7 +438,7 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
     qd_parsed_field_t *ingress = 0;
 
     if (in_da) {
-        trace = qd_parse_value_by_key(in_da, QD_DA_TRACE);
+        trace   = qd_parse_value_by_key(in_da, QD_DA_TRACE);
         ingress = qd_parse_value_by_key(in_da, QD_DA_INGRESS);
     }
 
@@ -704,12 +707,18 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
     valid_message = qd_message_check(msg, QD_DEPTH_PROPERTIES);
 
     if (valid_message) {
-        qd_parsed_field_t   *in_da     = qd_message_delivery_annotations(msg);
+        qd_parsed_field_t   *in_da     = 0;
         qd_field_iterator_t *iter      = 0;
         bool                 free_iter = true;
         qd_address_t        *addr;
         int                  fanout       = 0;
         char                *to_override  = 0;
+
+        //
+        // Only respect the delivery annotations if the message came from another router.
+        //
+        if (rlink->link_type != QD_LINK_WAYPOINT)
+            in_da = qd_message_delivery_annotations(msg);
 
         //
         // If the message has delivery annotations, get the to-override field from the annotations.
@@ -723,8 +732,16 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
         }
 
         //
-        // If there was no to-override field, use the TO field from the
-        // message properties.
+        // If this is a waypoint link, set the address (and to_override) to the phased
+        // address for the link.
+        //
+        if (!iter && rlink->waypoint) {
+            iter = qd_field_iterator_string(rlink->waypoint->name, ITER_VIEW_ADDRESS_HASH);
+            qd_field_iterator_set_phase(iter, rlink->waypoint->out_phase);
+        }
+
+        //
+        // Still no destination address?  Use the TO field from the message properties.
         //
         if (!iter)
             iter = qd_message_field_iterator(msg, QD_FIELD_TO);
@@ -938,6 +955,7 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
     rlink->link_type      = is_router ? QD_LINK_ROUTER : QD_LINK_ENDPOINT;
     rlink->link_direction = QD_INCOMING;
     rlink->owning_addr    = 0;
+    rlink->waypoint       = 0;
     rlink->link           = link;
     rlink->connected_link = 0;
     rlink->peer_link      = 0;
@@ -983,9 +1001,10 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     int is_dynamic       = pn_terminus_is_dynamic(qd_link_remote_source(link));
     int is_router        = qd_router_terminus_is_router(qd_link_remote_target(link));
     int propagate        = 0;
-    qd_field_iterator_t    *iter = 0;
+    qd_field_iterator_t    *iter  = 0;
     char                    phase = '0';
     qd_address_semantics_t  semantics;
+    qd_address_t           *addr = 0;
 
     if (is_router && !qd_router_connection_is_inter_router(qd_link_connection(link))) {
         qd_log(router->log_source, QD_LOG_WARNING, "Outgoing link claims router capability but is not on an inter-router connection");
@@ -1029,6 +1048,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     rlink->link_type      = is_router ? QD_LINK_ROUTER : QD_LINK_ENDPOINT;
     rlink->link_direction = QD_OUTGOING;
     rlink->owning_addr    = 0;
+    rlink->waypoint       = 0;
     rlink->link           = link;
     rlink->connected_link = 0;
     rlink->peer_link      = 0;
@@ -1069,8 +1089,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
         // assign it an ephemeral and routable address.  If it has a non-dynamic
         // address, that address needs to be set up in the address list.
         //
-        char          temp_addr[1000]; // FIXME
-        qd_address_t *addr;
+        char temp_addr[1000]; // FIXME
 
         if (is_dynamic) {
             qd_router_generate_temp_addr(router, temp_addr, 1000);
@@ -1104,6 +1123,14 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     }
 
     DEQ_INSERT_TAIL(router->links, rlink);
+
+    //
+    // If an interesting change has occurred with this address and it has an associated waypoint,
+    // notify the waypoint module so it can react appropriately.
+    //
+    if (propagate && addr->waypoint)
+        qd_waypoint_address_updated_LH(router->qd, addr);
+
     sys_mutex_unlock(router->lock);
 
     if (propagate)
@@ -1191,12 +1218,12 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
 }
 
 
-static void router_inbound_open_handler(void *type_context, qd_connection_t *conn)
+static void router_inbound_open_handler(void *type_context, qd_connection_t *conn, void *context)
 {
 }
 
 
-static void router_outbound_open_handler(void *type_context, qd_connection_t *conn)
+static void router_outbound_open_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qd_router_t *router = (qd_router_t*) type_context;
 
@@ -1205,6 +1232,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     // connection to arrive.
     //
     if (qd_router_connection_is_on_demand(conn)) {
+        qd_waypoint_connection_opened(router->qd, (qd_config_connector_t*) context, conn);
         return;
     }
 
@@ -1246,6 +1274,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     rlink->link_type      = QD_LINK_ROUTER;
     rlink->link_direction = QD_INCOMING;
     rlink->owning_addr    = 0;
+    rlink->waypoint       = 0;
     rlink->link           = receiver;
     rlink->connected_link = 0;
     rlink->peer_link      = 0;
@@ -1271,6 +1300,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     rlink->link_type      = QD_LINK_ROUTER;
     rlink->link_direction = QD_OUTGOING;
     rlink->owning_addr    = router->hello_addr;
+    rlink->waypoint       = 0;
     rlink->link           = sender;
     rlink->connected_link = 0;
     rlink->peer_link      = 0;
@@ -1375,7 +1405,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     router->timer              = qd_timer(qd, qd_router_timer_handler, (void*) router);
     router->dtag               = 1;
     DEQ_INIT(router->config_addrs);
-    DEQ_INIT(router->config_waypoints);
+    DEQ_INIT(router->waypoints);
 
     //
     // Configure the router from the configuration file

@@ -60,13 +60,13 @@ void qd_connection_manager_start(qd_dispatch_t *qd);
 
 
 /**
- * \brief Given a connector-tag, find and return a pointer to the on-demand connector.
+ * \brief Given a connector-name, find and return a pointer to the on-demand connector.
  *
  * @param qd The dispatch handle returned by qd_dispatch.
- * @param tag The tag that uniquely identifies the on-demand connector.
- * @return The matching on-demand connector or NULL if the tag is not found.
+ * @param name The name that uniquely identifies the on-demand connector.
+ * @return The matching on-demand connector or NULL if the name is not found.
  */
-qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, const char *tag);
+qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, const char *name);
 
 
 /**
@@ -74,7 +74,7 @@ qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, c
  *
  * @param od The pointer to an on-demand connector returned by qd_connections_find_on_demand.
  */
-void qd_connection_manager_start_on_demand(qd_config_connector_t *od);
+void qd_connection_manager_start_on_demand(qd_dispatch_t *qd, qd_config_connector_t *cc);
 
 
 /**
@@ -82,6 +82,27 @@ void qd_connection_manager_start_on_demand(qd_config_connector_t *od);
  *
  * @param od The pointer to an on-demand connector returned by qd_connections_find_on_demand.
  */
-void qd_connection_manager_stop_on_demand(qd_config_connector_t *od);
+void qd_connection_manager_stop_on_demand(qd_dispatch_t *qd, qd_config_connector_t *cc);
+
+
+/**
+ * \brief Get the user context for a configured connector.
+ *
+ * @param cc Connector handle returned by qd_connection_manager_find_on_demand
+ * @return User context for the configured connector.
+ */
+void *qd_config_connector_context(qd_config_connector_t *cc);
+
+
+/**
+ * \brief Set the user context for a configured connector.
+ *
+ * @param cc Connector handle returned by qd_connection_manager_find_on_demand
+ * @param context User context to be stored with the configured connector
+ */
+void qd_config_connector_set_context(qd_config_connector_t *cc, void *context);
+
+
+const char *qd_config_connector_name(qd_config_connector_t *cc);
 
 #endif

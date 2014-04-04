@@ -39,9 +39,10 @@ DEQ_DECLARE(qd_config_listener_t, qd_config_listener_list_t);
 
 struct qd_config_connector_t {
     DEQ_LINKS(qd_config_connector_t);
+    void               *context;
+    const char         *connector_name;
     qd_connector_t     *connector;
     qd_server_config_t  configuration;
-    const char         *tag;
     bool                started;
 };
 
@@ -123,17 +124,23 @@ static void configure_connectors(qd_dispatch_t *qd)
     count = qd_config_item_count(qd, CONF_CONNECTOR);
     for (int i = 0; i < count; i++) {
         qd_config_connector_t *cc = NEW(qd_config_connector_t);
-        cc->connector = 0;
-        cc->tag       = 0;
-        cc->started   = false;
+        cc->context        = 0;
+        cc->connector      = 0;
+        cc->connector_name = 0;
+        cc->started        = false;
         load_server_config(qd, &cc->configuration, CONF_CONNECTOR, i);
         DEQ_ITEM_INIT(cc);
         if (strcmp(cc->configuration.role, "on-demand") == 0) {
+            cc->connector_name =
+                qd_config_item_value_string(qd, CONF_CONNECTOR, i, "name");
             DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
-        } else
+            qd_log(cm->log_source, QD_LOG_INFO, "Configured on-demand connector: %s:%s name=%s",
+                   cc->configuration.host, cc->configuration.port, cc->connector_name);
+        } else {
             DEQ_INSERT_TAIL(cm->config_connectors, cc);
-        qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",
-               cc->configuration.host, cc->configuration.port, cc->configuration.role);
+            qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",
+                   cc->configuration.host, cc->configuration.port, cc->configuration.role);
+        }
     }
 }
 
@@ -185,20 +192,31 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
 }
 
 
-qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, const char *tag)
+qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, const char *name)
 {
-    return 0;
+    qd_config_connector_t *cc = DEQ_HEAD(qd->connection_manager->on_demand_connectors);
+
+    while (cc) {
+        if (strcmp(cc->connector_name, name) == 0)
+            break;
+        cc = DEQ_NEXT(cc);
+    }
+
+    return cc;
 }
 
 
-void qd_connection_manager_start_on_demand(qd_config_connector_t *od)
+void qd_connection_manager_start_on_demand(qd_dispatch_t *qd, qd_config_connector_t *cc)
 {
+    if (cc && cc->connector == 0)
+        cc->connector = qd_server_connect(qd, &cc->configuration, cc);
 }
 
 
-void qd_connection_manager_stop_on_demand(qd_config_connector_t *od)
+void qd_connection_manager_stop_on_demand(qd_dispatch_t *qd, qd_config_connector_t *cc)
 {
 }
+
 
 static void server_schema_handler(void *context, void *cor)
 {
@@ -269,3 +287,23 @@ void qd_connection_manager_setup_agent(qd_dispatch_t *qd)
 {
     qd_agent_register_class(qd, "org.apache.qpid.dispatch.connection", qd, server_schema_handler, server_query_handler);
 }
+
+
+void *qd_config_connector_context(qd_config_connector_t *cc)
+{
+    return cc ? cc->context : 0;
+}
+
+
+void qd_config_connector_set_context(qd_config_connector_t *cc, void *context)
+{
+    if (cc)
+        cc->context = context;
+}
+
+
+const char *qd_config_connector_name(qd_config_connector_t *cc)
+{
+    return cc ? cc->connector_name : 0;
+}
+

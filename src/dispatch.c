@@ -25,6 +25,7 @@
 #include "alloc_private.h"
 #include "log_private.h"
 #include "router_private.h"
+#include "waypoint_private.h"
 
 /**
  * Private Function Prototypes
@@ -157,5 +158,6 @@ void qd_dispatch_post_configure_connections(qd_dispatch_t *qd)
 {
     qd_connection_manager_configure(qd);
     qd_connection_manager_start(qd);
+    qd_waypoint_activate_all(qd);
 }
 

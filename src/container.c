@@ -379,7 +379,7 @@ static int process_handler(qd_container_t *container, void* unused, pn_connectio
 }
 
 
-static void open_handler(qd_container_t *container, qd_connection_t *conn, qd_direction_t dir)
+static void open_handler(qd_container_t *container, qd_connection_t *conn, qd_direction_t dir, void *context)
 {
     const qd_node_type_t *nt;
 
@@ -398,10 +398,10 @@ static void open_handler(qd_container_t *container, qd_connection_t *conn, qd_di
         nt = nt_item->ntype;
         if (dir == QD_INCOMING) {
             if (nt->inbound_conn_open_handler)
-                nt->inbound_conn_open_handler(nt->type_context, conn);
+                nt->inbound_conn_open_handler(nt->type_context, conn, context);
         } else {
             if (nt->outbound_conn_open_handler)
-                nt->outbound_conn_open_handler(nt->type_context, conn);
+                nt->outbound_conn_open_handler(nt->type_context, conn, context);
         }
 
         sys_mutex_lock(container->lock);
@@ -417,8 +417,8 @@ static int handler(void *handler_context, void *conn_context, qd_conn_event_t ev
     pn_connection_t *conn      = qd_connection_pn(qd_conn);
 
     switch (event) {
-    case QD_CONN_EVENT_LISTENER_OPEN:  open_handler(container, qd_conn, QD_INCOMING);   break;
-    case QD_CONN_EVENT_CONNECTOR_OPEN: open_handler(container, qd_conn, QD_OUTGOING);   break;
+    case QD_CONN_EVENT_LISTENER_OPEN:  open_handler(container, qd_conn, QD_INCOMING, conn_context);   break;
+    case QD_CONN_EVENT_CONNECTOR_OPEN: open_handler(container, qd_conn, QD_OUTGOING, conn_context);   break;
     case QD_CONN_EVENT_CLOSE:          return close_handler(conn_context, conn);
     case QD_CONN_EVENT_PROCESS:        return process_handler(container, conn_context, conn);
     }

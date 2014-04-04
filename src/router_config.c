@@ -110,28 +110,26 @@ static void qd_router_configure_waypoints(qd_router_t *router)
         const char *name      = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "name");
         int         in_phase  = qd_config_item_value_int(router->qd,    CONF_WAYPOINT, idx, "in-phase");
         int         out_phase = qd_config_item_value_int(router->qd,    CONF_WAYPOINT, idx, "out-phase");
-        //const char *connector = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "connector");
+        const char *connector = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "connector");
 
-        if (in_phase < 0 || in_phase > 9 || out_phase < 0 || out_phase > 9) {
+        if (in_phase > 9 || out_phase > 9) {
             qd_log(router->log_source, QD_LOG_ERROR, "Phases for waypoint '%s' must be between 0 and 9.  Ignoring", name);
             continue;
         }
 
-        qd_config_waypoint_t *waypoint = NEW(qd_config_waypoint_t);
+        qd_waypoint_t *waypoint = NEW(qd_waypoint_t);
+        memset(waypoint, 0, sizeof(qd_waypoint_t));
         DEQ_ITEM_INIT(waypoint);
-        waypoint->name = (char*) malloc(strlen(name) + 1);
-        strcpy(waypoint->name, name);
-        waypoint->in_phase  = (char) in_phase  + '0';
-        waypoint->out_phase = (char) out_phase + '0';
-        waypoint->connector = 0;
-        waypoint->in_link   = 0;
-        waypoint->out_link  = 0;
+        waypoint->name           = name;
+        waypoint->in_phase       = in_phase >= 0  ? (char) in_phase  + '0' : '\0';
+        waypoint->out_phase      = out_phase >= 0 ? (char) out_phase + '0' : '\0';
+        waypoint->connector_name = connector;
 
         //
         // TODO - Look up connector
         //
 
-        DEQ_INSERT_TAIL(router->config_waypoints, waypoint);
+        DEQ_INSERT_TAIL(router->waypoints, waypoint);
 
         qd_log(router->log_source, QD_LOG_INFO, "Configured Waypoint: name=%s in_phase=%d out_phase=%d",
                name, in_phase, out_phase);

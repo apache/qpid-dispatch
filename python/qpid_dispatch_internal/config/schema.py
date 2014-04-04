@@ -58,7 +58,7 @@ config_schema = {
         'addr'              : (str,  0,    'M', None,  None),
         'port'              : (str,  1,    'M', None,  None),
         'label'             : (str,  None, '',  None,  None),
-        'role'              : (str,  None, '',  'normal', ['normal', 'inter-router', 'on-demand']),
+        'role'              : (str,  None, '',  'normal', ['normal', 'inter-router']),
         'sasl-mechanisms'   : (str,  None, 'M', None,  None),
         'ssl-profile'       : (str,  None, 'E', None,  None),
         'require-peer-auth' : (bool, None, '',  True,  None),
@@ -69,8 +69,9 @@ config_schema = {
     'connector' : (False, {
         'addr'            : (str,  0,    'M', None,  None),
         'port'            : (str,  1,    'M', None,  None),
+        'name'            : (str,  None, '',  None,  None),
         'label'           : (str,  None, '',  None,  None),
-        'role'            : (str,  None, '',  'normal', ['normal', 'inter-router']),
+        'role'            : (str,  None, '',  'normal', ['normal', 'inter-router', 'on-demand']),
         'sasl-mechanisms' : (str,  None, 'M', None,  None),
         'ssl-profile'     : (str,  None, 'E', None,  None),
         'allow-redirect'  : (bool, None, '',  True,  None),
@@ -101,7 +102,7 @@ def validate_roles(config):
         count = config.item_count(item)
         for idx in range(count):
             role = config.value_string(item, idx, 'role')
-            if role != 'normal':
+            if role == 'inter-router':
                 addr = config.value_string(item, idx, 'addr')
                 port = config.value_string(item, idx, 'port')
                 raise Exception("Role '%s' for %s %s:%s only permitted with 'interior' mode" %

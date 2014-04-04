@@ -59,7 +59,7 @@ typedef void (*qd_container_delivery_handler_t)    (void *node_context, qd_link_
 typedef int  (*qd_container_link_handler_t)        (void *node_context, qd_link_t *link);
 typedef int  (*qd_container_link_detach_handler_t) (void *node_context, qd_link_t *link, int closed);
 typedef void (*qd_container_node_handler_t)        (void *type_context, qd_node_t *node);
-typedef void (*qd_container_conn_handler_t)        (void *type_context, qd_connection_t *conn);
+typedef void (*qd_container_conn_handler_t)        (void *type_context, qd_connection_t *conn, void *context);
 
 typedef struct {
     char *type_name;

@@ -31,6 +31,10 @@ typedef struct qd_router_node_t     qd_router_node_t;
 typedef struct qd_router_ref_t      qd_router_ref_t;
 typedef struct qd_router_link_ref_t qd_router_link_ref_t;
 typedef struct qd_router_conn_t     qd_router_conn_t;
+typedef struct qd_config_phase_t    qd_config_phase_t;
+typedef struct qd_config_address_t  qd_config_address_t;
+typedef struct qd_waypoint_t        qd_waypoint_t;
+
 
 void qd_router_python_setup(qd_router_t *router);
 void qd_pyrouter_tick(qd_router_t *router);
@@ -46,6 +50,7 @@ typedef enum {
 
 typedef enum {
     QD_LINK_ENDPOINT,   // A link to a connected endpoint
+    QD_LINK_WAYPOINT,   // A link to a configured waypoint
     QD_LINK_ROUTER,     // A link to a peer router in the same area
     QD_LINK_AREA        // A link to a peer router in a different area (area boundary)
 } qd_link_type_t;
@@ -69,6 +74,7 @@ struct qd_router_link_t {
     qd_link_type_t          link_type;
     qd_direction_t          link_direction;
     qd_address_t           *owning_addr;     // [ref] Address record that owns this link
+    qd_waypoint_t          *waypoint;        // [ref] Waypoint that owns this link
     qd_link_t              *link;            // [own] Link pointer
     qd_router_link_t       *connected_link;  // [ref] If this is a link-route, reference the connected link
     qd_router_link_t       *peer_link;       // [ref] If this is a bidirectional link-route, reference the peer link
@@ -131,6 +137,7 @@ struct qd_address_t {
     qd_address_t              *static_cc;
     qd_address_t              *dynamic_cc;
     bool                       toggle;
+    bool                       waypoint;
 
     //
     // TODO - Add support for asynchronous address lookup:
@@ -152,10 +159,6 @@ ALLOC_DECLARE(qd_address_t);
 DEQ_DECLARE(qd_address_t, qd_address_list_t);
 
 
-typedef struct qd_config_phase_t qd_config_phase_t;
-typedef struct qd_config_address_t qd_config_address_t;
-typedef struct qd_config_waypoint_t qd_config_waypoint_t;
-
 struct qd_config_phase_t {
     DEQ_LINKS(qd_config_phase_t);
     char                    phase;
@@ -173,17 +176,22 @@ struct qd_config_address_t {
 
 DEQ_DECLARE(qd_config_address_t, qd_config_address_list_t);
 
-struct qd_config_waypoint_t {
-    DEQ_LINKS(qd_config_waypoint_t);
-    char           *name;
-    char            in_phase;
-    char            out_phase;
-    qd_connector_t *connector;
-    qd_link_t      *in_link;
-    qd_link_t      *out_link;
+struct qd_waypoint_t {
+    DEQ_LINKS(qd_waypoint_t);
+    const char            *name;
+    char                   in_phase;
+    char                   out_phase;
+    const char            *connector_name;
+    qd_config_connector_t *connector;
+    qd_connection_t       *connection;
+    qd_link_t             *in_link;
+    qd_link_t             *out_link;
+    qd_address_t          *in_address;
+    qd_address_t          *out_address;
+    bool                   connected;
 };
 
-DEQ_DECLARE(qd_config_waypoint_t, qd_config_waypoint_list_t);
+DEQ_DECLARE(qd_waypoint_t, qd_waypoint_list_t);
 
 
 struct qd_router_t {
@@ -210,7 +218,7 @@ struct qd_router_t {
     uint64_t                  dtag;
 
     qd_config_address_list_t  config_addrs;
-    qd_config_waypoint_list_t config_waypoints;
+    qd_waypoint_list_t        waypoints;
 
     qd_agent_class_t         *class_router;
     qd_agent_class_t         *class_link;

@@ -131,6 +131,7 @@ set(server_SOURCES
     src/router_pynode.c
     src/server.c
     src/timer.c
+    src/waypoint.c
     src/work_queue.c
     )
 

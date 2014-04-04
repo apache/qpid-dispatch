@@ -37,8 +37,8 @@ static const char *app_config =
     "   'bias'   : (str, None, '', 'closest',  ['closest', 'spread'])})\n"
     "config_schema['waypoint'] = (False, {\n"
     "   'name'      : (str, 0,    'M', None, None),\n"
-    "   'in-phase'  : (int, None, 'M', None, None),\n"
-    "   'out-phase' : (int, None, 'M', None, None),\n"
+    "   'in-phase'  : (int, None, '',  -1, None),\n"
+    "   'out-phase' : (int, None, '',  -1, None),\n"
     "   'connector' : (str, None, 'M', None, None)})\n";
 
 
