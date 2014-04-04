@@ -21,12 +21,17 @@
 
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/user_fd.h>
-#include <qpid/dispatch/timer.h>
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/ctools.h>
+#include <qpid/dispatch/log.h>
+#include "work_queue.h"
 #include <proton/driver.h>
 #include <proton/engine.h>
 #include <proton/driver_extras.h>
+
+typedef struct qd_server_t qd_server_t;
+
+#include "timer_private.h"
 
 void qd_server_timer_pending_LH(qd_timer_t *timer);
 void qd_server_timer_cancel_LH(qd_timer_t *timer);
@@ -85,6 +90,8 @@ struct qd_connection_t {
     qd_user_fd_t    *ufd;
 };
 
+DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
+
 
 struct qd_user_fd_t {
     qd_server_t    *server;
@@ -94,11 +101,47 @@ struct qd_user_fd_t {
 };
 
 
+typedef struct qd_thread_t {
+    qd_server_t  *qd_server;
+    int           thread_id;
+    volatile int  running;
+    volatile int  canceled;
+    int           using_thread;
+    sys_thread_t *thread;
+} qd_thread_t;
+
+
+struct qd_server_t {
+    int                      thread_count;
+    const char              *container_name;
+    pn_driver_t             *driver;
+    qd_log_source_t         *log_source;
+    qd_thread_start_cb_t     start_handler;
+    qd_conn_handler_cb_t     conn_handler;
+    qd_user_fd_handler_cb_t  ufd_handler;
+    void                    *start_context;
+    void                    *conn_handler_context;
+    sys_cond_t              *cond;
+    sys_mutex_t             *lock;
+    qd_thread_t            **threads;
+    work_queue_t            *work_queue;
+    qd_timer_list_t          pending_timers;
+    bool                     a_thread_is_waiting;
+    int                      threads_active;
+    int                      pause_requests;
+    int                      threads_paused;
+    int                      pause_next_sequence;
+    int                      pause_now_serving;
+    qd_signal_handler_cb_t   signal_handler;
+    void                    *signal_context;
+    int                      pending_signal;
+    qd_connection_list_t     connections;
+};
+
+
 ALLOC_DECLARE(qd_listener_t);
 ALLOC_DECLARE(qd_connector_t);
 ALLOC_DECLARE(qd_connection_t);
 ALLOC_DECLARE(qd_user_fd_t);
-
-DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
 
 #endif

@@ -19,7 +19,6 @@
 
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/agent.h>
 #include <qpid/dispatch/log.h>
 #include "server_private.h"
 #include "timer_private.h"
@@ -31,46 +30,6 @@
 #include <string.h>
 
 static __thread qd_server_t *thread_server = 0;
-
-typedef struct qd_thread_t {
-    qd_server_t  *qd_server;
-    int           thread_id;
-    volatile int  running;
-    volatile int  canceled;
-    int           using_thread;
-    sys_thread_t *thread;
-} qd_thread_t;
-
-
-struct qd_server_t {
-    int                      thread_count;
-    const char              *container_name;
-    pn_driver_t             *driver;
-    qd_log_source_t         *log_source;
-    qd_thread_start_cb_t     start_handler;
-    qd_conn_handler_cb_t     conn_handler;
-    qd_user_fd_handler_cb_t  ufd_handler;
-    void                    *start_context;
-    void                    *conn_handler_context;
-    sys_cond_t              *cond;
-    sys_mutex_t             *lock;
-    qd_thread_t            **threads;
-    work_queue_t            *work_queue;
-    qd_timer_list_t          pending_timers;
-    bool                     a_thread_is_waiting;
-    int                      threads_active;
-    int                      pause_requests;
-    int                      threads_paused;
-    int                      pause_next_sequence;
-    int                      pause_now_serving;
-    qd_signal_handler_cb_t   signal_handler;
-    void                    *signal_context;
-    int                      pending_signal;
-    qd_connection_list_t     connections;
-};
-
-
-
 
 ALLOC_DEFINE(qd_listener_t);
 ALLOC_DEFINE(qd_connector_t);
@@ -123,7 +82,6 @@ static void thread_process_listeners(qd_server_t *qd_server)
         pn_connection_set_context(conn, ctx);
         ctx->pn_conn = conn;
 
-        qd_log(qd_server->log_source, QD_LOG_DEBUG, "added listener connection");
         // qd_server->lock is already locked
         DEQ_INSERT_TAIL(qd_server->connections, ctx);
 
@@ -521,8 +479,6 @@ static void *thread_run(void *arg)
 
                 sys_mutex_lock(qd_server->lock);
                 DEQ_REMOVE(qd_server->connections, ctx);
-                qd_log(qd_server->log_source, QD_LOG_DEBUG, "removed %s connection",
-                        ctx->connector ? "connector" : "listener");
                 free_qd_connection_t(ctx);
                 pn_connector_free(work);
                 if (conn)
@@ -617,7 +573,6 @@ static void cxtr_try_open(void *context)
     sys_mutex_lock(ct->server->lock);
     ctx->pn_cxtr = pn_connector(ct->server->driver, ct->config->host, ct->config->port, (void*) ctx);
     DEQ_INSERT_TAIL(ct->server->connections, ctx);
-    qd_log(ct->server->log_source, QD_LOG_DEBUG, "added connector connection");
     sys_mutex_unlock(ct->server->lock);
 
     ct->ctx   = ctx;
@@ -1077,71 +1032,3 @@ void qd_server_timer_cancel_LH(qd_timer_t *timer)
 }
 
 
-static void server_schema_handler(void *context, void *cor)
-{
-    qd_agent_value_string(cor, 0, "state");
-    qd_agent_value_string(cor, 0, "container");
-    qd_agent_value_string(cor, 0, "host");
-    qd_agent_value_string(cor, 0, "sasl");
-    qd_agent_value_string(cor, 0, "role");
-    qd_agent_value_string(cor, 0, "dir");
-}
-
-
-static void server_query_handler(void* context, const char *id, void *cor)
-{
-    qd_server_t *qd_server = (qd_server_t*) context;
-    sys_mutex_lock(qd_server->lock);
-    const char               *conn_state;
-    const qd_server_config_t *config;
-    const char               *pn_container_name;
-    const char               *direction;
-
-    qd_connection_t *conn = DEQ_HEAD(qd_server->connections);
-    while (conn) {
-        switch (conn->state) {
-        case CONN_STATE_CONNECTING:  conn_state = "Connecting";  break;
-        case CONN_STATE_OPENING:     conn_state = "Opening";     break;
-        case CONN_STATE_OPERATIONAL: conn_state = "Operational"; break;
-        case CONN_STATE_FAILED:      conn_state = "Failed";      break;
-        case CONN_STATE_USER:        conn_state = "User";        break;
-        default:                     conn_state = "undefined";   break;
-        }
-        qd_agent_value_string(cor, "state", conn_state);
-        // get remote container name using proton connection
-        pn_container_name = pn_connection_remote_container(conn->pn_conn);
-        if (pn_container_name)
-            qd_agent_value_string(cor, "container", pn_container_name);
-        else
-            qd_agent_value_null(cor, "container");
-
-        // and now for some config entries
-        if (conn->connector) {
-            config = conn->connector->config;
-            direction = "out";
-            char host[1000];
-            strcpy(host, config->host);
-            strcat(host, ":");
-            strcat(host, config->port);
-            qd_agent_value_string(cor, "host", host);
-        } else {
-            config = conn->listener->config;
-            direction = "in";
-            qd_agent_value_string(cor, "host", pn_connector_name(conn->pn_cxtr));
-        }
-
-        qd_agent_value_string(cor, "sasl", config->sasl_mechanisms);
-        qd_agent_value_string(cor, "role", config->role);
-        qd_agent_value_string(cor, "dir",  direction);
-
-        conn = DEQ_NEXT(conn);
-        qd_agent_value_complete(cor, conn != 0);
-    }
-    sys_mutex_unlock(qd_server->lock);
-}
-
-
-void qd_server_setup_agent(qd_dispatch_t *qd)
-{
-    qd_agent_register_class(qd, "org.apache.qpid.dispatch.connection", qd->server, server_schema_handler, server_query_handler);
-}

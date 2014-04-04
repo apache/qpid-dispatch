@@ -26,9 +26,10 @@
 #include "dispatch_private.h"
 #include "router_private.h"
 
-static char *router_role   = "inter-router";
-static char *local_prefix  = "_local/";
-static char *topo_prefix   = "_topo/";
+static char *router_role    = "inter-router";
+static char *on_demand_role = "on-demand";
+static char *local_prefix   = "_local/";
+static char *topo_prefix    = "_topo/";
 static char *direct_prefix;
 static char *node_id;
 
@@ -179,6 +180,22 @@ static int qd_router_connection_is_inter_router(const qd_connection_t *conn)
 
     const qd_server_config_t *cf = qd_connection_config(conn);
     if (cf && strcmp(cf->role, router_role) == 0)
+        return 1;
+
+    return 0;
+}
+
+
+/**
+ * Determine whether a connection is configured in the on-demand role.
+ */
+static int qd_router_connection_is_on_demand(const qd_connection_t *conn)
+{
+    if (!conn)
+        return 0;
+
+    const qd_server_config_t *cf = qd_connection_config(conn);
+    if (cf && strcmp(cf->role, on_demand_role) == 0)
         return 1;
 
     return 0;
@@ -1184,13 +1201,18 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     qd_router_t *router = (qd_router_t*) type_context;
 
     //
-    // Check the configured role of this connection.  If it is not the inter-router
-    // role, ignore it.
+    // If the connection is on-demand, visit all waypoints that are waiting for their
+    // connection to arrive.
     //
-    if (!qd_router_connection_is_inter_router(conn)) {
-        qd_log(router->log_source, QD_LOG_WARNING, "Outbound connection set up without inter-router role");
+    if (qd_router_connection_is_on_demand(conn)) {
         return;
     }
+
+    //
+    // If the connection isn't inter-router, ignore it.
+    //
+    if (!qd_router_connection_is_inter_router(conn))
+        return;
 
     qd_link_t        *sender;
     qd_link_t        *receiver;

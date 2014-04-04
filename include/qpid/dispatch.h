@@ -39,6 +39,7 @@
 #include <qpid/dispatch/message.h>
 #include <qpid/dispatch/container.h>
 #include <qpid/dispatch/agent.h>
+#include <qpid/dispatch/connection_manager.h>
 #include <qpid/dispatch/dispatch.h>
 
 #endif

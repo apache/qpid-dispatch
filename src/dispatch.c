@@ -30,7 +30,7 @@
  * Private Function Prototypes
  */
 qd_server_t    *qd_server(int tc, const char *container_name);
-void            qd_server_setup_agent(qd_dispatch_t *qd);
+void            qd_connection_manager_setup_agent(qd_dispatch_t *qd);
 void            qd_server_free(qd_server_t *server);
 qd_container_t *qd_container(qd_dispatch_t *qd);
 void            qd_container_setup_agent(qd_dispatch_t *qd);
@@ -41,13 +41,9 @@ void            qd_router_free(qd_router_t *router);
 qd_agent_t     *qd_agent(qd_dispatch_t *qd);
 void            qd_agent_free(qd_agent_t *agent);
 
-ALLOC_DEFINE(qd_config_listener_t);
-ALLOC_DEFINE(qd_config_connector_t);
 
 static const char *CONF_CONTAINER   = "container";
 static const char *CONF_ROUTER      = "router";
-static const char *CONF_LISTENER    = "listener";
-static const char *CONF_CONNECTOR   = "connector";
 
 
 qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
@@ -55,9 +51,6 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_dispatch_t *qd = NEW(qd_dispatch_t);
 
     memset(qd, 0, sizeof(qd_dispatch_t));
-
-    DEQ_INIT(qd->config_listeners);
-    DEQ_INIT(qd->config_connectors);
 
     // alloc and log has to be initialized before any module.
     qd_alloc_initialize();
@@ -133,13 +126,14 @@ void qd_dispatch_configure_router(qd_dispatch_t *qd)
 
 void qd_dispatch_prepare(qd_dispatch_t *qd)
 {
-    qd->server    = qd_server(qd->thread_count, qd->container_name);
-    qd->container = qd_container(qd);
-    qd->router    = qd_router(qd, qd->router_mode, qd->router_area, qd->router_id);
-    qd->agent     = qd_agent(qd);
+    qd->server             = qd_server(qd->thread_count, qd->container_name);
+    qd->container          = qd_container(qd);
+    qd->router             = qd_router(qd, qd->router_mode, qd->router_area, qd->router_id);
+    qd->agent              = qd_agent(qd);
+    qd->connection_manager = qd_connection_manager(qd);
 
     qd_alloc_setup_agent(qd);
-    qd_server_setup_agent(qd);
+    qd_connection_manager_setup_agent(qd);
     qd_container_setup_agent(qd);
     qd_router_setup_late(qd);
 }
@@ -149,6 +143,7 @@ void qd_dispatch_free(qd_dispatch_t *qd)
 {
     qd_config_free(qd->config);
     qd_config_finalize();
+    qd_connection_manager_free(qd->connection_manager);
     qd_agent_free(qd->agent);
     qd_router_free(qd->router);
     qd_container_free(qd->container);
@@ -158,98 +153,9 @@ void qd_dispatch_free(qd_dispatch_t *qd)
 }
 
 
-static void load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, const char *section, int i)
-{
-    config->host = qd_config_item_value_string(qd, section, i, "addr");
-    config->port = qd_config_item_value_string(qd, section, i, "port");
-    config->role = qd_config_item_value_string(qd, section, i, "role");
-    config->max_frame_size = qd_config_item_value_int(qd, section, i, "max-frame-size");
-    config->sasl_mechanisms =
-        qd_config_item_value_string(qd, section, i, "sasl-mechanisms");
-    config->ssl_enabled =
-        qd_config_item_value_bool(qd, section, i, "ssl-profile");
-    if (config->ssl_enabled) {
-        config->ssl_server = 1;
-        config->ssl_allow_unsecured_client =
-            qd_config_item_value_bool(qd, section, i, "allow-unsecured");
-        config->ssl_certificate_file =
-            qd_config_item_value_string(qd, section, i, "cert-file");
-        config->ssl_private_key_file =
-            qd_config_item_value_string(qd, section, i, "key-file");
-        config->ssl_password =
-            qd_config_item_value_string(qd, section, i, "password");
-        config->ssl_trusted_certificate_db =
-            qd_config_item_value_string(qd, section, i, "cert-db");
-        config->ssl_trusted_certificates =
-            qd_config_item_value_string(qd, section, i, "trusted-certs");
-        config->ssl_require_peer_authentication =
-            qd_config_item_value_bool(qd, section, i, "require-peer-auth");
-    }
-}
-
-
-static void configure_listeners(qd_dispatch_t *qd)
-{
-    int count;
-
-    if (!qd->config)
-        return;
-
-    count = qd_config_item_count(qd, CONF_LISTENER);
-    for (int i = 0; i < count; i++) {
-        qd_config_listener_t *cl = new_qd_config_listener_t();
-        load_server_config(qd, &cl->configuration, CONF_LISTENER, i);
-
-        printf("\nListener   : %s:%s\n", cl->configuration.host, cl->configuration.port);
-        printf("       SASL: %s\n", cl->configuration.sasl_mechanisms);
-        printf("        SSL: %d\n", cl->configuration.ssl_enabled);
-        if (cl->configuration.ssl_enabled) {
-            printf("      unsec: %d\n", cl->configuration.ssl_allow_unsecured_client);
-            printf("  cert-file: %s\n", cl->configuration.ssl_certificate_file);
-            printf("   key-file: %s\n", cl->configuration.ssl_private_key_file);
-            printf("    cert-db: %s\n", cl->configuration.ssl_trusted_certificate_db);
-            printf("  peer-auth: %d\n", cl->configuration.ssl_require_peer_authentication);
-        }
-
-        cl->listener = qd_server_listen(qd, &cl->configuration, cl);
-        DEQ_ITEM_INIT(cl);
-        DEQ_INSERT_TAIL(qd->config_listeners, cl);
-    }
-}
-
-
-static void configure_connectors(qd_dispatch_t *qd)
-{
-    int count;
-
-    if (!qd->config)
-        return;
-
-    count = qd_config_item_count(qd, CONF_CONNECTOR);
-    for (int i = 0; i < count; i++) {
-        qd_config_connector_t *cc = new_qd_config_connector_t();
-        load_server_config(qd, &cc->configuration, CONF_CONNECTOR, i);
-
-        printf("\nConnector  : %s:%s\n", cc->configuration.host, cc->configuration.port);
-        printf("       SASL: %s\n", cc->configuration.sasl_mechanisms);
-        printf("        SSL: %d\n", cc->configuration.ssl_enabled);
-        if (cc->configuration.ssl_enabled) {
-            printf("  cert-file: %s\n", cc->configuration.ssl_certificate_file);
-            printf("   key-file: %s\n", cc->configuration.ssl_private_key_file);
-            printf("    cert-db: %s\n", cc->configuration.ssl_trusted_certificate_db);
-            printf("  peer-auth: %d\n", cc->configuration.ssl_require_peer_authentication);
-        }
-
-        cc->connector = qd_server_connect(qd, &cc->configuration, cc);
-        DEQ_ITEM_INIT(cc);
-        DEQ_INSERT_TAIL(qd->config_connectors, cc);
-    }
-}
-
-
 void qd_dispatch_post_configure_connections(qd_dispatch_t *qd)
 {
-    configure_listeners(qd);
-    configure_connectors(qd);
+    qd_connection_manager_configure(qd);
+    qd_connection_manager_start(qd);
 }
 

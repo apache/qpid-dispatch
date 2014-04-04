@@ -24,39 +24,19 @@ typedef struct qd_router_t    qd_router_t;
 typedef struct qd_agent_t     qd_agent_t;
 
 #include <qpid/dispatch/container.h>
+#include <qpid/dispatch/connection_manager.h>
 #include "server_private.h"
 #include "config_private.h"
 #include "router_private.h"
-#include <qpid/dispatch/ctools.h>
 
-typedef struct qd_config_listener_t {
-    DEQ_LINKS(struct qd_config_listener_t);
-    qd_listener_t      *listener;
-    qd_server_config_t  configuration;
-} qd_config_listener_t;
-
-DEQ_DECLARE(qd_config_listener_t, qd_config_listener_list_t);
-ALLOC_DECLARE(qd_config_listener_t);
-
-
-typedef struct qd_config_connector_t {
-    DEQ_LINKS(struct qd_config_connector_t);
-    qd_connector_t     *connector;
-    qd_server_config_t  configuration;
-} qd_config_connector_t;
-
-DEQ_DECLARE(qd_config_connector_t, qd_config_connector_list_t);
-ALLOC_DECLARE(qd_config_connector_t);
 
 struct qd_dispatch_t {
-    qd_server_t        *server;
-    qd_container_t     *container;
-    qd_router_t        *router;
-    qd_agent_t         *agent;
-    qd_config_t        *config;
-
-    qd_config_listener_list_t   config_listeners;
-    qd_config_connector_list_t  config_connectors;
+    qd_server_t             *server;
+    qd_container_t          *container;
+    qd_router_t             *router;
+    qd_agent_t              *agent;
+    qd_config_t             *config;
+    qd_connection_manager_t *connection_manager;
 
     int               thread_count;
     const char       *container_name;

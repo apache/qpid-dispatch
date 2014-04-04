@@ -114,6 +114,7 @@ set(server_SOURCES
     src/buffer.c
     src/compose.c
     src/config.c
+    src/connection_manager.c
     src/container.c
     src/dispatch.c
     src/hash.c

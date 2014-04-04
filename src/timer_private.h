@@ -22,7 +22,8 @@
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/timer.h>
 #include <qpid/dispatch/threading.h>
-#include "server_private.h"
+
+typedef struct qd_server_t qd_server_t;
 
 typedef enum {
     TIMER_FREE,
