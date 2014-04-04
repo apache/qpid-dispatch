@@ -19,6 +19,7 @@
  * under the License.
  */
 
+typedef struct qd_server_t    qd_server_t;
 typedef struct qd_container_t qd_container_t;
 typedef struct qd_router_t    qd_router_t;
 typedef struct qd_agent_t     qd_agent_t;

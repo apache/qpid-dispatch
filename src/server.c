@@ -20,11 +20,10 @@
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
+#include "dispatch_private.h"
 #include "server_private.h"
 #include "timer_private.h"
 #include "alloc_private.h"
-#include "dispatch_private.h"
-#include "work_queue.h"
 #include <stdio.h>
 #include <time.h>
 #include <string.h>

@@ -20,8 +20,8 @@
 #include <qpid/dispatch/connection_manager.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/agent.h>
-#include "server_private.h"
 #include "dispatch_private.h"
+#include "server_private.h"
 #include <string.h>
 
 static const char *CONF_LISTENER    = "listener";

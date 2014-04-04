@@ -23,8 +23,6 @@
 #include <qpid/dispatch/timer.h>
 #include <qpid/dispatch/threading.h>
 
-typedef struct qd_server_t qd_server_t;
-
 typedef enum {
     TIMER_FREE,
     TIMER_IDLE,

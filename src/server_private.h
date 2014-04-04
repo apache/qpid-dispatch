@@ -29,8 +29,6 @@
 #include <proton/engine.h>
 #include <proton/driver_extras.h>
 
-typedef struct qd_server_t qd_server_t;
-
 #include "timer_private.h"
 
 void qd_server_timer_pending_LH(qd_timer_t *timer);
@@ -53,7 +51,6 @@ typedef enum {
     CXTR_STATE_FAILED
 } cxtr_state_t;
 
-typedef struct qd_server_t qd_server_t;
 
 struct qd_listener_t {
     qd_server_t              *server;

@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <qpid/dispatch/timer.h>
+#include "dispatch_private.h"
 #include "alloc_private.h"
 #include "timer_private.h"
 #include "test_case.h"
