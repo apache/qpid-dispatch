@@ -20,8 +20,7 @@
  */
 
 #include <qpid/dispatch/config.h>
-
-typedef struct qd_config_t qd_config_t;
+#include "dispatch_private.h"
 
 void qd_config_initialize(void);
 void qd_config_finalize(void);

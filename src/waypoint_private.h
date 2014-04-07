@@ -21,11 +21,7 @@
 
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/connection_manager.h>
-
-typedef struct qd_dispatch_t qd_dispatch_t;
-typedef struct qd_waypoint_t qd_waypoint_t;
-typedef struct qd_address_t  qd_address_t;
-typedef struct qd_link_t     qd_link_t;
+#include "dispatch_private.h"
 
 void qd_waypoint_activate_all(qd_dispatch_t *qd);
 

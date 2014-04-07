@@ -19,12 +19,27 @@
  * under the License.
  */
 
-typedef struct qd_server_t    qd_server_t;
-typedef struct qd_container_t qd_container_t;
-typedef struct qd_router_t    qd_router_t;
-typedef struct qd_agent_t     qd_agent_t;
+//
+// The following declarations are for types that are shared between modules yet are
+// not in the public API.
+//
+typedef struct qd_server_t          qd_server_t;
+typedef struct qd_container_t       qd_container_t;
+typedef struct qd_router_t          qd_router_t;
+typedef struct qd_agent_t           qd_agent_t;
+typedef struct qd_waypoint_t        qd_waypoint_t;
+typedef struct qd_config_t          qd_config_t;
+typedef struct qd_router_link_t     qd_router_link_t;
+typedef struct qd_router_node_t     qd_router_node_t;
+typedef struct qd_router_ref_t      qd_router_ref_t;
+typedef struct qd_router_link_ref_t qd_router_link_ref_t;
+typedef struct qd_router_conn_t     qd_router_conn_t;
+typedef struct qd_config_phase_t    qd_config_phase_t;
+typedef struct qd_config_address_t  qd_config_address_t;
+
 
 #include <qpid/dispatch/container.h>
+#include <qpid/dispatch/router.h>
 #include <qpid/dispatch/connection_manager.h>
 #include "server_private.h"
 #include "config_private.h"

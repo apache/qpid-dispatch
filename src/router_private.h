@@ -25,16 +25,7 @@
 #include <qpid/dispatch/hash.h>
 #include <qpid/dispatch/agent.h>
 #include <qpid/dispatch/log.h>
-
-typedef struct qd_router_link_t     qd_router_link_t;
-typedef struct qd_router_node_t     qd_router_node_t;
-typedef struct qd_router_ref_t      qd_router_ref_t;
-typedef struct qd_router_link_ref_t qd_router_link_ref_t;
-typedef struct qd_router_conn_t     qd_router_conn_t;
-typedef struct qd_config_phase_t    qd_config_phase_t;
-typedef struct qd_config_address_t  qd_config_address_t;
-typedef struct qd_waypoint_t        qd_waypoint_t;
-
+#include "dispatch_private.h"
 
 void qd_router_python_setup(qd_router_t *router);
 void qd_pyrouter_tick(qd_router_t *router);

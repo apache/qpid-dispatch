@@ -29,6 +29,7 @@
 #include <proton/engine.h>
 #include <proton/driver_extras.h>
 
+#include "dispatch_private.h"
 #include "timer_private.h"
 
 void qd_server_timer_pending_LH(qd_timer_t *timer);
