@@ -132,7 +132,6 @@ set(server_SOURCES
     src/server.c
     src/timer.c
     src/waypoint.c
-    src/work_queue.c
     )
 
 set_property(SOURCE src/python_embedded.c src/router_pynode.c

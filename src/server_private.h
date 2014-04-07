@@ -24,7 +24,6 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
-#include "work_queue.h"
 #include <proton/driver.h>
 #include <proton/engine.h>
 #include <proton/driver_extras.h>
@@ -109,6 +108,14 @@ typedef struct qd_thread_t {
 } qd_thread_t;
 
 
+typedef struct qd_work_item_t {
+    DEQ_LINKS(struct qd_work_item_t);
+    pn_connector_t *cxtr;
+} qd_work_item_t;
+
+DEQ_DECLARE(qd_work_item_t, qd_work_list_t);
+
+
 struct qd_server_t {
     int                      thread_count;
     const char              *container_name;
@@ -122,7 +129,7 @@ struct qd_server_t {
     sys_cond_t              *cond;
     sys_mutex_t             *lock;
     qd_thread_t            **threads;
-    work_queue_t            *work_queue;
+    qd_work_list_t           work_queue;
     qd_timer_list_t          pending_timers;
     bool                     a_thread_is_waiting;
     int                      threads_active;
@@ -136,7 +143,7 @@ struct qd_server_t {
     qd_connection_list_t     connections;
 };
 
-
+ALLOC_DECLARE(qd_work_item_t);
 ALLOC_DECLARE(qd_listener_t);
 ALLOC_DECLARE(qd_connector_t);
 ALLOC_DECLARE(qd_connection_t);
