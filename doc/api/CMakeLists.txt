@@ -23,8 +23,8 @@ if (DOXYGEN_FOUND)
 endif (DOXYGEN_FOUND)
 
 if (BUILD_DOCS)
-  configure_file(user.doxygen.in user.doxygen)
-  configure_file(dev.doxygen.in dev.doxygen)
+  configure_file(user.doxygen.in ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
+  configure_file(dev.doxygen.in ${CMAKE_CURRENT_BINARY_DIR}/dev.doxygen)
   # This is not ideal: if files are added/removed it won't be detected
   # until we re-run cmake.
   file(GLOB_RECURSE API_SOURCES
