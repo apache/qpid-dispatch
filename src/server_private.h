@@ -26,6 +26,7 @@
 #include <qpid/dispatch/log.h>
 #include <proton/driver.h>
 #include <proton/engine.h>
+#include <proton/event.h>
 #include <proton/driver_extras.h>
 
 #include "dispatch_private.h"
@@ -79,6 +80,7 @@ struct qd_connection_t {
     int              enqueued;
     pn_connector_t  *pn_cxtr;
     pn_connection_t *pn_conn;
+    pn_collector_t  *collector;
     qd_listener_t   *listener;
     qd_connector_t  *connector;
     void            *context; // Copy of context from listener or connector

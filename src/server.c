@@ -69,6 +69,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         ctx->owner_thread = CONTEXT_NO_OWNER;
         ctx->enqueued     = 0;
         ctx->pn_cxtr      = cxtr;
+        ctx->collector    = 0;
         ctx->listener     = (qd_listener_t*) pn_listener_context(listener);
         ctx->connector    = 0;
         ctx->context      = ctx->listener->context;
@@ -77,6 +78,8 @@ static void thread_process_listeners(qd_server_t *qd_server)
         ctx->ufd          = 0;
 
         pn_connection_t *conn = pn_connection();
+        ctx->collector = pn_collector();
+        pn_connection_collect(conn, ctx->collector);
         pn_connection_set_container(conn, qd_server->container_name);
         pn_connector_set_connection(cxtr, conn);
         pn_connection_set_context(conn, ctx);
@@ -195,6 +198,8 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
             }
 
             pn_connection_t *conn = pn_connection();
+            ctx->collector = pn_collector();
+            pn_connection_collect(conn, ctx->collector);
             pn_connection_set_container(conn, qd_server->container_name);
             pn_connector_set_connection(cxtr, conn);
             pn_connection_set_context(conn, ctx);
@@ -486,6 +491,8 @@ static void *thread_run(void *arg)
 
                 sys_mutex_lock(qd_server->lock);
                 DEQ_REMOVE(qd_server->connections, ctx);
+                if (ctx->collector)
+                    pn_collector_free(ctx->collector);
                 free_qd_connection_t(ctx);
                 pn_connector_free(cxtr);
                 if (conn)
@@ -567,6 +574,7 @@ static void cxtr_try_open(void *context)
     ctx->owner_thread = CONTEXT_NO_OWNER;
     ctx->enqueued     = 0;
     ctx->pn_conn      = 0;
+    ctx->collector    = 0;
     ctx->listener     = 0;
     ctx->connector    = ct;
     ctx->context      = ct->context;
@@ -878,6 +886,12 @@ pn_connection_t *qd_connection_pn(qd_connection_t *conn)
 }
 
 
+pn_collector_t *qd_connection_collector(qd_connection_t *conn)
+{
+    return conn->collector;
+}
+
+
 const qd_server_config_t *qd_connection_config(const qd_connection_t *conn)
 {
     if (conn->listener)
@@ -975,6 +989,7 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     ctx->owner_thread = CONTEXT_NO_OWNER;
     ctx->enqueued     = 0;
     ctx->pn_conn      = 0;
+    ctx->collector    = 0;
     ctx->listener     = 0;
     ctx->connector    = 0;
     ctx->context      = 0;

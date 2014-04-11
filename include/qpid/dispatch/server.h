@@ -408,6 +408,15 @@ pn_connection_t *qd_connection_pn(qd_connection_t *conn);
 
 
 /**
+ * \brief Get the event collector for a connection.
+ *
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @return The pn_collector associated with the connection.
+ */
+pn_collector_t *qd_connection_collector(qd_connection_t *conn);
+
+
+/**
  * \brief Get the configuration that was used in the setup of this connection.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
