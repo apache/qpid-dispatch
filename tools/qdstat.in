@@ -212,6 +212,8 @@ class BusManager:
         heads.append(Header("class"))
         heads.append(Header("addr"))
         heads.append(Header("phase"))
+        heads.append(Header("event-fifo"))
+        heads.append(Header("msg-fifo"))
         rows = []
 
         objects = self._get_object('org.apache.qpid.dispatch.router.link')
@@ -227,6 +229,11 @@ class BusManager:
             row.append(self._addr_class(link['owning-addr']))
             row.append(self._addr_text(link['owning-addr']))
             row.append(self._addr_phase(link['owning-addr']))
+            row.append(link['event-fifo-depth'])
+            if link['link-dir'] == 'out':
+                row.append(link['msg-fifo-depth'])
+            else:
+                row.append('-')
             rows.append(row)
         title = "Router Links"
         dispRows = rows

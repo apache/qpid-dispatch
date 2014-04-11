@@ -56,6 +56,8 @@ static void qd_router_schema_handler(void *context, void *cor)
         qd_agent_value_string(cor, 0, "link-type");
         qd_agent_value_string(cor, 0, "link-dir");
         qd_agent_value_string(cor, 0, "owning-addr");
+        qd_agent_value_string(cor, 0, "event-fifo-depth");
+        qd_agent_value_string(cor, 0, "msg-fifo-depth");
         break;
 
     case QD_ROUTER_CLASS_NODE:
@@ -144,6 +146,9 @@ static void qd_router_query_link(qd_router_t *router, void *cor)
             qd_agent_value_string(cor, "owning-addr", text);
         else
             qd_agent_value_null(cor, "owning-addr");
+
+        qd_agent_value_uint(cor, "event-fifo-depth", DEQ_SIZE(link->event_fifo));
+        qd_agent_value_uint(cor, "msg-fifo-depth", DEQ_SIZE(link->msg_fifo));
 
         link = DEQ_NEXT(link);
         qd_agent_value_complete(cor, link != 0);
