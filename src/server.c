@@ -491,12 +491,12 @@ static void *thread_run(void *arg)
 
                 sys_mutex_lock(qd_server->lock);
                 DEQ_REMOVE(qd_server->connections, ctx);
-                if (ctx->collector)
-                    pn_collector_free(ctx->collector);
-                free_qd_connection_t(ctx);
                 pn_connector_free(cxtr);
                 if (conn)
                     pn_connection_free(conn);
+                if (ctx->collector)
+                    pn_collector_free(ctx->collector);
+                free_qd_connection_t(ctx);
                 qd_server->threads_active--;
                 sys_mutex_unlock(qd_server->lock);
             } else {
