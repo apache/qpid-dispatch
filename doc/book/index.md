@@ -24,13 +24,6 @@ A lightweight message router, written in C and built on
 and scalable interconnect between AMQP endpoints or between endpoints
 and brokers.
 
-  || *Platforms* || Linux ||
-  || *AMQP versions* || 1.0 ||
-  || *Download* || <http://people.apache.org/~tross/qpid-dispatch-0.1rc3/> ||
-  || *Source location* ||  <http://svn.apache.org/repos/asf/qpid/dispatch/trunk/> ||
-  
-[What can you do with Qpid Dispatch 0.1?](release-0.1.html)
-
 ## Overview
 
 The Dispatch router is an AMQP router that provides advanced interconnect for AMQP.

@@ -70,7 +70,6 @@ Non-compliance occurs for one of the following reasons:
 
   - Implementation of an optional feature is not planned
   - Implementation is not complete as of the current time
-  - The specified operation is considered suboptimal or unimplementable.  In all of these cases, an issue is pending with the AMQP Technical Committee.
   
 ### Compliance Matrix
 
@@ -79,11 +78,11 @@ Non-compliance occurs for one of the following reasons:
   || READ || Should || No || Not yet implemented ||
   || UPDATE || Should || No || There are currently no Manageable Entities for which this is appropriate ||
   || DELETE || Should || No || There are currently no Manageable Entities for which this is appropriate ||
-  || READALL || Should || No || A non-standard version of this operation is supported that retrieves data from all entities of a type.  There is an outstanding issue raised with the AMQP Technical Committee to address this requirement. ||
-  || DISCOVER-NAMES || Should || No || Not yet implemented ||
-  || DISCOVER-TYPES || Should || Yes || There are no types that implement base types ||
-  || DISCOVER-OPERATIONS || Should || Yes || ||
-  || DISCOVER-MGMT-NODES || Should || Yes || This operation yields the addresses of all of the router nodes in the known network ||
+  || QUERY || Should || No || A non-standard version of this operation is supported that retrieves data from all entities of a type. ||
+  || GET-TYPES || Should || Yes || There are no types that implement base types ||
+  || GET-ATTRIBUTES || Should || Yes || ||
+  || GET-OPERATIONS || Should || Yes || ||
+  || GET-MGMT-NODES || Should || Yes || This operation yields the addresses of all of the router nodes in the known network ||
   || REGISTER || May || Not Planned || The router has a specific way to discover peers that does not involve this operation ||
   || DEREGISTER || May || Not Planned || The router has a specific way to discover peers that does not involve this operation ||
 
