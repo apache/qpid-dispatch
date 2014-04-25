@@ -33,10 +33,10 @@ if (BUILD_DOCS)
     ${CMAKE_SOURCE_DIR}/src/*.c)
 
   add_custom_command (OUTPUT user
-    COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.sh user.doxygen
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in ${API_SOURCES})
   add_custom_command (OUTPUT dev
-    COMMAND ${DOXYGEN_EXECUTABLE} dev.doxygen
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.sh dev.doxygen
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dev.doxygen.in ${API_SOURCES})
 
   add_custom_target(apidocs ALL DEPENDS user dev)
