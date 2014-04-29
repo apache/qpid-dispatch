@@ -131,8 +131,9 @@ static void qd_router_configure_waypoints(qd_router_t *router)
 
         DEQ_INSERT_TAIL(router->waypoints, waypoint);
 
-        qd_log(router->log_source, QD_LOG_INFO, "Configured Waypoint: name=%s in_phase=%d out_phase=%d",
-               name, in_phase, out_phase);
+        qd_log(router->log_source, QD_LOG_INFO,
+	       "Configured Waypoint: name=%s in_phase=%d out_phase=%d connector=%s",
+               name, in_phase, out_phase, connector);
     }
 }
 
