@@ -123,13 +123,20 @@ def wait_ports(ports, host="127.0.0.1", **retry_kwargs):
     Takes same keyword arguments as retry to control the timeout"""
     for p in ports: wait_port(p)
 
-class TestPopen(subprocess.Popen):
+class Process(subprocess.Popen):
     """Popen that can be torn down at the end of a TestCase and stores its output."""
 
-    def __init__(self, name, args, **kwargs):
+    # Expected states of a Process at teardown
+    RUNNING=1                   # Still running
+    EXIT_OK=2                   # Exit status 0
+    EXIT_FAIL=3                 # Exit status not 0
+
+    def __init__(self, name, args, expect=EXIT_OK, **kwargs):
+        self.name, self.args, self.expect = name, args, expect
         self.out = open(name+".out", 'w')
         self.torndown = False
-        super(TestPopen, self).__init__(args, stdout=self.out, stderr=subprocess.STDOUT, **kwargs)
+        super(Process, self).__init__(
+            args, stdout=self.out, stderr=subprocess.STDOUT, **kwargs)
 
     def assert_running(self): assert self.poll() is None, "%s exited"%name
 
@@ -138,10 +145,21 @@ class TestPopen(subprocess.Popen):
         self.teardown()
 
     def teardown(self):
-        if not self.torndown:
-            self.torndown = True
-            self.kill() # FIXME aconway 2014-03-27: check expectations
-            self.out.close()
+        if self.torndown: return
+        self.torndown = True
+        status = self.poll()
+        if status is None: self.kill()
+        self.out.close()
+        self.check_exit(status)
+
+    def check_exit(self, status):
+        def check(condition, expect):
+            if status is None: actual="still running"
+            else: actual="exit %s"%status
+            assert condition, "Expected %s but %s: %s"%(expect, actual, self.name)
+        if self.expect == Process.RUNNING: check(status is None, "still running"),
+        elif self.expect == Process.EXIT_OK: check(status == 0, "exit 0"),
+        elif self.expect == Process.EXIT_FAIL: check(status != 0, "exit non-0")
 
 class Config(object):
     """Base class for configuration objects that provide a convenient
@@ -154,7 +172,7 @@ class Config(object):
         return name
 
 
-class Qdrouterd(TestPopen):
+class Qdrouterd(Process):
     """Run a Qpid Dispatch Router Daemon"""
 
     class Config(list, Config):
@@ -183,7 +201,8 @@ class Qdrouterd(TestPopen):
 
     def __init__(self, name, config, **kwargs):
         self.config = copy(config)
-        super(Qdrouterd, self).__init__(name, ['qdrouterd', '-c', config.write(name)])
+        super(Qdrouterd, self).__init__(
+            name, ['qdrouterd', '-c', config.write(name)], expect=Process.RUNNING)
 
     @property
     def ports(self):
@@ -201,7 +220,7 @@ class Qdrouterd(TestPopen):
         
 
 
-class Qpidd(TestPopen):
+class Qpidd(Process):
     """Run a Qpid Daemon"""
 
     class Config(dict, Config):
@@ -216,7 +235,8 @@ class Qpidd(TestPopen):
              'log-to-stderr':'false', 'log-to-file':name+".log",
              'data-dir':name+".data"})
         self.config.update(config)
-        super(Qpidd, self).__init__(name, ['qpidd', '--config', self.config.write(name)]),
+        super(Qpidd, self).__init__(
+            name, ['qpidd', '--config', self.config.write(name)], expect=Process.RUNNING)
         self.port = self.config['port'] or 5672
         self.address = "127.0.0.1:%s"%self.port
         self._agent = None
@@ -275,6 +295,10 @@ class TestCase(unittest.TestCase):
         p = self.next_port;
         self.next_port += 1;
         return p
+
+    def popen(self, *args, **kwargs):
+        """Start a Process that will be cleaned up on teardown"""
+        return self.cleanup(Process(*args, **kwargs))
 
     def qdrouterd(self, *args, **kwargs):
         """Return a Qdrouterd that will be cleaned up on teardown"""
