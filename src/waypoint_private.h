@@ -23,8 +23,15 @@
 #include <qpid/dispatch/connection_manager.h>
 #include "dispatch_private.h"
 
+/**
+ * @file
+ * A waypoint is a point on a multi-phase route where messages can exit and re-enter the router.
+ * For example after being sent through an external broker's queue.
+ */
+
 void qd_waypoint_activate_all(qd_dispatch_t *qd);
 
+/** Called when the router opens a connector associated with this waypoint */
 void qd_waypoint_connection_opened(qd_dispatch_t *qd, qd_config_connector_t *cc, qd_connection_t *conn);
 
 void qd_waypoint_new_incoming_link(qd_dispatch_t *qd, qd_waypoint_t *wp, qd_link_t *link);

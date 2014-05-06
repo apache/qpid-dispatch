@@ -23,12 +23,14 @@
 #include <proton/engine.h>
 
 /**
- * \defgroup Control Server Control Functions
+ * @defgroup server
+ *
+ * Control server threads, starting and stopping the server.
  * @{
  */
 
 /**
- * \brief Thread Start Handler
+ * Thread Start Handler
  *
  * Callback invoked when a new server thread is started.  The callback is
  * invoked on the newly created thread.
@@ -43,7 +45,7 @@ typedef void (*qd_thread_start_cb_t)(void* context, int thread_id);
 
 
 /**
- * \brief Set the optional thread-start handler.
+ * Set the optional thread-start handler.
  *
  * This handler is called once on each worker thread at the time the thread is
  * started.  This may be used to set tuning settings like processor affinity,
@@ -57,7 +59,7 @@ void qd_server_set_start_handler(qd_dispatch_t *qd, qd_thread_start_cb_t start_h
 
 
 /**
- * \brief Run the server threads until completion - The blocking version.
+ * Run the server threads until completion - The blocking version.
  *
  * Start the operation of the server, including launching all of the worker
  * threads.  This function does not return until after the server has been
@@ -70,7 +72,7 @@ void qd_server_run(qd_dispatch_t *qd);
 
 
 /**
- * \brief Start the server threads and return immediately - The non-blocking version.
+ * Start the server threads and return immediately - The non-blocking version.
  *
  * Start the operation of the server, including launching all of the worker
  * threads.
@@ -81,7 +83,7 @@ void qd_server_start(qd_dispatch_t *qd);
 
 
 /**
- * \brief Stop the server
+ * Stop the server
  *
  * Stop the server and join all of its worker threads.  This function may be
  * called from any thread.  When this function returns, all of the other
@@ -94,7 +96,7 @@ void qd_server_stop(qd_dispatch_t *qd);
 
 
 /**
- * \brief Pause (quiesce) the server.
+ * Pause (quiesce) the server.
  *
  * This call blocks until all of the worker threads (except the one calling
  * this function) are finished processing and have been blocked.  When this
@@ -109,7 +111,7 @@ void qd_server_pause(qd_dispatch_t *qd);
 
 
 /**
- * \brief Resume normal operation of a paused server.
+ * Resume normal operation of a paused server.
  *
  * This call unblocks all of the worker threads so they can resume normal
  * connection processing.
@@ -121,13 +123,16 @@ void qd_server_resume(qd_dispatch_t *qd);
 
 /**
  * @}
- * \defgroup Signal Server Signal Handling Functions
+ * @defgroup server_signal Server Signal
+ *
+ * Server Signal Handling
+ * 
  * @{
  */
 
 
 /**
- * \brief Signal Handler
+ * Signal Handler
  *
  * Callback for signal handling.  This handler will be invoked on one of the
  * worker threads in an orderly fashion.  This callback is triggered by a call
@@ -152,7 +157,7 @@ void qd_server_set_signal_handler(qd_dispatch_t *qd, qd_signal_handler_cb_t sign
 
 
 /**
- * \brief Schedule the invocation of the Server's signal handler.
+ * Schedule the invocation of the Server's signal handler.
  *
  * This function is safe to call from any context, including an OS signal
  * handler or an Interrupt Service Routine.  It schedules the orderly
@@ -166,27 +171,31 @@ void qd_server_signal(qd_dispatch_t *qd, int signum);
 
 /**
  * @}
- * \defgroup Connection Server AMQP Connection Handling Functions
+ * @defgroup server_connection Server Connection
+ *
+ * Server AMQP Connection Handling
+ *
+ * Handling listeners, connectors, connections and events.
  * @{
  */
 
 /**
- * \brief Listener objects represent the desire to accept incoming transport connections.
+ * Listener objects represent the desire to accept incoming transport connections.
  */
 typedef struct qd_listener_t qd_listener_t;
 
 /**
- * \brief Connector objects represent the desire to create and maintain an outgoing transport connection.
+ * Connector objects represent the desire to create and maintain an outgoing transport connection.
  */
 typedef struct qd_connector_t qd_connector_t;
 
 /**
- * \brief Connection objects wrap Proton connection objects.
+ * Connection objects wrap Proton connection objects.
  */
 typedef struct qd_connection_t qd_connection_t;
 
 /**
- * \brief Event type for the connection callback.
+ * Event type for the connection callback.
  */
 typedef enum {
     /// The connection just opened via a listener (inbound).
@@ -204,7 +213,7 @@ typedef enum {
 
 
 /**
- * \brief Configuration block for a connector or a listener.
+ * Configuration block for a connector or a listener.
  */
 typedef struct qd_server_config_t {
     /**
@@ -317,7 +326,7 @@ typedef struct qd_server_config_t {
 
 
 /**
- * \brief Connection Event Handler
+ * Connection Event Handler
  *
  * Callback invoked when processing is needed on a proton connection.  This
  * callback shall be invoked on one of the server's worker threads.  The
@@ -337,7 +346,7 @@ typedef int (*qd_conn_handler_cb_t)(void *handler_context, void* conn_context, q
 
 
 /**
- * \brief Set the connection event handler callback.
+ * Set the connection event handler callback.
  *
  * Set the connection handler callback for the server.  This callback is
  * mandatory and must be set prior to the invocation of qd_server_run.
@@ -349,7 +358,7 @@ void qd_server_set_conn_handler(qd_dispatch_t *qd, qd_conn_handler_cb_t conn_han
 
 
 /**
- * \brief Set the user context for a connection.
+ * Set the user context for a connection.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @param context User context to be stored with the connection.
@@ -358,7 +367,7 @@ void qd_connection_set_context(qd_connection_t *conn, void *context);
 
 
 /**
- * \brief Get the user context from a connection.
+ * Get the user context from a connection.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @return The user context stored with the connection.
@@ -367,7 +376,7 @@ void *qd_connection_get_context(qd_connection_t *conn);
 
 
 /**
- * \brief Set the link context for a connection.
+ * Set the link context for a connection.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @param context Link context to be stored with the connection.
@@ -376,7 +385,7 @@ void qd_connection_set_link_context(qd_connection_t *conn, void *context);
 
 
 /**
- * \brief Get the link context from a connection.
+ * Get the link context from a connection.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @return The link context stored with the connection.
@@ -385,7 +394,7 @@ void *qd_connection_get_link_context(qd_connection_t *conn);
 
 
 /**
- * \brief Activate a connection for output.
+ * Activate a connection for output.
  *
  * This function is used to request that the server activate the indicated
  * connection.  It is assumed that the connection is one that the caller does
@@ -399,7 +408,7 @@ void qd_server_activate(qd_connection_t *conn);
 
 
 /**
- * \brief Get the wrapped proton-engine connection object.
+ * Get the wrapped proton-engine connection object.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @return The proton connection object.
@@ -408,7 +417,7 @@ pn_connection_t *qd_connection_pn(qd_connection_t *conn);
 
 
 /**
- * \brief Get the event collector for a connection.
+ * Get the event collector for a connection.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @return The pn_collector associated with the connection.
@@ -417,7 +426,7 @@ pn_collector_t *qd_connection_collector(qd_connection_t *conn);
 
 
 /**
- * \brief Get the configuration that was used in the setup of this connection.
+ * Get the configuration that was used in the setup of this connection.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
  * @return A pointer to the server configuration used in the establishment of this connection.
@@ -426,7 +435,7 @@ const qd_server_config_t *qd_connection_config(const qd_connection_t *conn);
 
 
 /**
- * \brief Create a listener for incoming connections.
+ * Create a listener for incoming connections.
  *
  * @param qd The dispatch handle returned by qd_dispatch.
  * @param config Pointer to a configuration block for this listener.  This block will be
@@ -439,7 +448,7 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
 
 
 /**
- * \brief Free the resources associated with a listener.
+ * Free the resources associated with a listener.
  *
  * @param li A listener pointer returned by qd_listen.
  */
@@ -447,7 +456,7 @@ void qd_listener_free(qd_listener_t* li);
 
 
 /**
- * \brief Close a listener so it will accept no more connections.
+ * Close a listener so it will accept no more connections.
  *
  * @param li A listener pointer returned by qd_listen.
  */
@@ -455,7 +464,7 @@ void qd_listener_close(qd_listener_t* li);
 
 
 /**
- * \brief Create a connector for an outgoing connection.
+ * Create a connector for an outgoing connection.
  *
  * @param qd The dispatch handle returned by qd_dispatch.
  * @param config Pointer to a configuration block for this connector.  This block will be
@@ -468,7 +477,7 @@ qd_connector_t *qd_server_connect(qd_dispatch_t *qd, const qd_server_config_t *c
 
 
 /**
- * \brief Free the resources associated with a connector.
+ * Free the resources associated with a connector.
  *
  * @param ct A connector pointer returned by qd_connect.
  */

@@ -23,21 +23,28 @@ if (DOXYGEN_FOUND)
 endif (DOXYGEN_FOUND)
 
 if (BUILD_DOCS)
-  configure_file(user.doxygen.in ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
-  configure_file(dev.doxygen.in ${CMAKE_CURRENT_BINARY_DIR}/dev.doxygen)
-  # This is not ideal: if files are added/removed it won't be detected
-  # until we re-run cmake.
+  # Create doxygen configuration files.
+  function(configure_doxygen DOXYGEN_OUTPUT_DIRECTORY DOXYGEN_INPUT DOXYGEN_MORE)
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in
+      ${CMAKE_CURRENT_BINARY_DIR}/${DOXYGEN_OUTPUT_DIRECTORY}.doxygen)
+  endfunction(configure_doxygen)
+  configure_doxygen(user "${CMAKE_SOURCE_DIR}/include" "")
+  configure_doxygen(dev "${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src"
+    "ENABLED_SECTIONS=INTERNAL\nINTERNAL_DOCS=yes")
+
+  # This is not ideal: if files are added/removed it won't be detected til we re-run cmake.
   file(GLOB_RECURSE API_SOURCES
     ${CMAKE_SOURCE_DIR}/include/*.h
     ${CMAKE_SOURCE_DIR}/src/*.h
     ${CMAKE_SOURCE_DIR}/src/*.c)
 
   add_custom_command (OUTPUT user
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.sh user.doxygen
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in ${API_SOURCES})
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.py ${DOXYGEN_EXECUTABLE} user.doxygen
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in ${API_SOURCES})
   add_custom_command (OUTPUT dev
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.sh dev.doxygen
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dev.doxygen.in ${API_SOURCES})
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.py ${DOXYGEN_EXECUTABLE} dev.doxygen
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in ${API_SOURCES})
 
   add_custom_target(apidocs ALL DEPENDS user dev)
 

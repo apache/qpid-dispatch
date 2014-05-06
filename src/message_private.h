@@ -23,7 +23,9 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/threading.h>
 
-/**
+/** @file
+ * Message representation.
+ * 
  * Architecture of the message module:
  *
  *     +--------------+            +----------------------+
@@ -42,6 +44,8 @@
  * references.  If a message is received and is to be queued for multiple destinations, there is only
  * one copy of the message content in memory but multiple lightweight references to the content.
  *
+ * @internal
+ * @{ 
  */
 
 typedef struct {
@@ -95,5 +99,7 @@ ALLOC_DECLARE(qd_message_t);
 ALLOC_DECLARE(qd_message_content_t);
 
 #define MSG_CONTENT(m) (((qd_message_pvt_t*) m)->content)
+
+///@}
 
 #endif

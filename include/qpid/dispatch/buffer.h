@@ -19,6 +19,11 @@
  * under the License.
  */
 
+/** @file
+ * Buffer chains.
+ * @internal
+ */
+
 #include <qpid/dispatch/ctools.h>
 
 typedef struct qd_buffer_t qd_buffer_t;
@@ -27,41 +32,49 @@ DEQ_DECLARE(qd_buffer_t, qd_buffer_list_t);
 
 struct qd_buffer_t {
     DEQ_LINKS(qd_buffer_t);
-    unsigned int size;
+    unsigned int size;          ///< Size of data content
 };
 
 /**
+ * Set the initial buffer capacity to be allocated by future calls to qp_buffer.
  */
 void qd_buffer_set_size(size_t size);
 
 /**
+ * Create a buffer with capacity set by last call to qd_buffer_set_size(), and data
+ * content size of 0 bytes.
  */
 qd_buffer_t *qd_buffer(void);
 
 /**
+ * Free a buffer
  * @param buf A pointer to an allocated buffer
  */
 void qd_buffer_free(qd_buffer_t *buf);
 
 /**
+ * Return a pointer to the start of the buffer.
  * @param buf A pointer to an allocated buffer
  * @return A pointer to the first octet in the buffer
  */
 unsigned char *qd_buffer_base(qd_buffer_t *buf);
 
 /**
+ * Return a pointer to the first unused byte in the buffer.
  * @param buf A pointer to an allocated buffer
  * @return A pointer to the first free octet in the buffer, the insert point for new data.
  */
 unsigned char *qd_buffer_cursor(qd_buffer_t *buf);
 
 /**
+ * Return remaining capacity at end of buffer.
  * @param buf A pointer to an allocated buffer
  * @return The number of octets in the buffer's free space, how many octets may be inserted.
  */
 size_t qd_buffer_capacity(qd_buffer_t *buf);
 
 /**
+ * Return the size of the buffers data content.
  * @param buf A pointer to an allocated buffer
  * @return The number of octets of data in the buffer
  */

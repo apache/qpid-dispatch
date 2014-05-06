@@ -23,6 +23,15 @@
 #include <stdint.h>
 #include <qpid/dispatch/threading.h>
 
+/**
+ * @file
+ * Memory Allocation
+ *
+ * Allocate memory in per-thread, per-type memory pools.
+
+ * @internal
+ */
+
 typedef struct qd_alloc_pool_t qd_alloc_pool_t;
 
 typedef struct {
@@ -52,11 +61,14 @@ typedef struct {
     uint32_t           trailer;
 } qd_alloc_type_desc_t;
 
-
+/** Allocate in a thread pool. Use via ALLOC_DECLARE */
 void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool);
+/** De-allocate from a thread pool. Use via ALLOC_DECLARE */
 void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p);
 
-
+/**
+ * Declare functions new_T and alloc_T
+ */
 #define ALLOC_DECLARE(T) \
     T *new_##T(void);    \
     void free_##T(T *p)
@@ -68,7 +80,9 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p);
     void free_##T(T *p) { qd_dealloc(&__desc_##T, &__local_pool_##T, (void*) p); } \
     qd_alloc_stats_t *alloc_stats_##T(void) { return __desc_##T.stats; }
 
+/**
+ * Define functions new_T and alloc_T
+ */
 #define ALLOC_DEFINE(T) ALLOC_DEFINE_CONFIG(T, sizeof(T), 0, 0)
-
 
 #endif

@@ -7,3 +7,5 @@ This directory contains different kinds of documentation for Dispatch.
 
   notes/  - Developer notes: project information, design notes, or
             anything else that's primarily of developer interest.
+
+  api/    - Generated API documentation.

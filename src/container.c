@@ -35,9 +35,10 @@
 #include <qpid/dispatch/agent.h>
 #include "conditionals.h"
 
+/** Instance of a node type in a container */
 struct qd_node_t {
     qd_container_t       *container;
-    const qd_node_type_t *ntype;
+    const qd_node_type_t *ntype; ///< Type of node, defines callbacks.
     char                 *name;
     void                 *context;
     qd_dist_mode_t        supported_dist;
@@ -48,7 +49,7 @@ ALLOC_DECLARE(qd_node_t);
 ALLOC_DEFINE(qd_node_t);
 ALLOC_DEFINE(qd_link_item_t);
 
-
+/** Encapsulates a proton link for sending and receiving messages */
 struct qd_link_t {
     pn_link_t *pn_link;
     void      *context;
@@ -59,7 +60,7 @@ struct qd_link_t {
 ALLOC_DECLARE(qd_link_t);
 ALLOC_DEFINE(qd_link_t);
 
-
+/** Encapsulates a proton message delivery */
 struct qd_delivery_t {
     pn_delivery_t *pn_delivery;
     qd_delivery_t *peer;

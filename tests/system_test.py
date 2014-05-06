@@ -63,9 +63,6 @@ import proton
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED
 from copy import copy
 
-HOME=os.environ.get('QPID_DISPATCH_HOME')
-assert HOME, "QPID_DISPATCH_HOME not defined"
-
 def retry_delay(deadline, timeout, delay, max_delay):
     """For internal use in retry. Sleep as required
     and return the new delay or None if retry should time out"""
@@ -140,10 +137,6 @@ class Process(subprocess.Popen):
 
     def assert_running(self): assert self.poll() is None, "%s exited"%name
 
-    def __del__(self):
-        subprocess.Popen.__del__(self)
-        self.teardown()
-
     def teardown(self):
         if self.torndown: return
         self.torndown = True
@@ -180,8 +173,10 @@ class Qdrouterd(Process):
         Fills in some default values automatically, see Qdrouterd.DEFAULTS
         """
 
-        DEFAULTS = {'listener':{'sasl-mechanisms':'ANONYMOUS'},
-                    'connector':{'sasl-mechanisms':'ANONYMOUS','role':'on-demand'}}
+        DEFAULTS = {
+            'listener':{'sasl-mechanisms':'ANONYMOUS'},
+            'connector':{'sasl-mechanisms':'ANONYMOUS','role':'on-demand'}
+        }
 
         def sections(self, name):
             """Return list of sections named name"""
@@ -212,7 +207,7 @@ class Qdrouterd(Process):
     @property
     def addresses(self):
         """Return host:port addresses for all listeners"""
-        return [ "%s:%s"%(l['addr'],l['port']) for l in self.config.sections('listener') ]
+        return [ "amqp://%s:%s"%(l['addr'],l['port']) for l in self.config.sections('listener') ]
 
     @property
     def address(self):
@@ -255,10 +250,14 @@ class Qpidd(Process):
 class Messenger(proton.Messenger):
     """Minor additions to Messenger for tests"""
 
+    def flush(self):
+        """Call work() till there is no work left."""
+        while self.work(0.01): pass
+
     def subscribe(self, source):
         """proton.Messenger.subscribe and work till subscription is visible."""
         t = proton.Messenger.subscribe(self, source)
-        while self.work(0.01): pass
+        self.flush()
         return t
 
 class TestCase(unittest.TestCase):
@@ -308,10 +307,10 @@ class TestCase(unittest.TestCase):
         """Return a Qpidd that will be cleaned up on teardown"""
         return self.cleanup(Qpidd(*args, **kwargs))
 
-    def messenger(self, name="test-messenger"):
+    def messenger(self, name="test-messenger", timeout=1):
         """Return a started Messenger that will be cleaned up on teardown."""
         m = Messenger(name)
-        m.timeout = 1
+        m.timeout = timeout
         m.start()
         self.cleanup(m)
         return m

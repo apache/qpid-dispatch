@@ -17,7 +17,9 @@
 # under the License.
 #
 
-PROJECT_NAME           = "Dispatch"
-OUTPUT_DIRECTORY       = dev
-INPUT                  = ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src
-RECURSIVE              = yes
+# Configuration for running tests directly against the build in src (no need to install)
+export SOURCE_DIR=${CMAKE_SOURCE_DIR}
+export BUILD_DIR=${CMAKE_BINARY_DIR}
+
+export PYTHONPATH=$SOURCE_DIR/python/qpid_dispatch_internal:$SOURCE_DIR/tests:$PYTHONPATH
+export PATH=$BUILD_DIR:$BUILD_DIR/router:$SOURCE_DIR/bin:$PATH

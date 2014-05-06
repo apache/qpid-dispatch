@@ -24,9 +24,14 @@
 #include <qpid/dispatch/iovec.h>
 
 /**
- * The field iterator is used to access fields within a buffer chain.
- * It shields the user from the fact that the field may be split across
+ * @defgroup iterator
+ *
+ * Used to access fields within a message buffer chain, in particular address
+ * fields.
+ *
+ * Iterator shields the user from the fact that the field may be split across
  * one or more physical buffers.
+ * @{
  */
 typedef struct qd_field_iterator_t qd_field_iterator_t;
 
@@ -96,12 +101,6 @@ typedef enum {
 
 
 /**
- * Set the area and router names for the local router.  These are used to match
- * my-area and my-router in address fields.
- */
-void qd_field_iterator_set_address(const char *area, const char *router);
-
-/**
  * Create an iterator from a null-terminated string.
  *
  * The "text" string must stay intact for the whole life of the iterator.  The iterator
@@ -110,6 +109,13 @@ void qd_field_iterator_set_address(const char *area, const char *router);
 qd_field_iterator_t* qd_field_iterator_string(const char         *text,
                                               qd_iterator_view_t  view);
 
+
+/**
+ * Create an iterator from binar data.
+ *
+ * The "text" string must stay intact for the whole life of the iterator.  The iterator
+ * does not copy the data, it references it.
+ */
 qd_field_iterator_t* qd_field_iterator_binary(const char         *text,
                                               int                 length,
                                               qd_iterator_view_t  view);
@@ -117,6 +123,9 @@ qd_field_iterator_t* qd_field_iterator_binary(const char         *text,
 
 /**
  * Create an iterator from a field in a buffer chain
+
+ * The buffer chain must stay intact for the whole life of the iterator.  The iterator
+ * does not copy the buffer, it references it.
  */
 qd_field_iterator_t *qd_field_iterator_buffer(qd_buffer_t        *buffer,
                                               int                 offset,
@@ -127,6 +136,12 @@ qd_field_iterator_t *qd_field_iterator_buffer(qd_buffer_t        *buffer,
  * Free an iterator
  */
 void qd_field_iterator_free(qd_field_iterator_t *iter);
+
+/**
+ * Set the area and router names for the local router.  These are used to match
+ * my-area and my-router in address fields.
+ */
+void qd_field_iterator_set_address(const char *area, const char *router);
 
 /**
  * Reset the iterator to the first octet and set a new view
@@ -183,6 +198,7 @@ int qd_field_iterator_prefix(qd_field_iterator_t *iter, const char *prefix);
 
 /**
  * Return a copy of the iterator's view.
+ * @return Copy of the view, free with free()
  */
 unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter);
 
@@ -195,5 +211,7 @@ unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter);
  * @return An iovec structure that references the data in the iterator's buffers.
  */
 qd_iovec_t *qd_field_iterator_iovec(const qd_field_iterator_t *iter);
+
+/** @} */
 
 #endif

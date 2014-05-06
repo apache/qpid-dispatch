@@ -53,6 +53,9 @@ typedef enum {
 } cxtr_state_t;
 
 
+/**
+ * Listener objects represent the desire to accept incoming transport connections.
+ */
 struct qd_listener_t {
     qd_server_t              *server;
     const qd_server_config_t *config;
@@ -61,6 +64,9 @@ struct qd_listener_t {
 };
 
 
+/**
+ * Connector objects represent the desire to create and maintain an outgoing transport connection.
+ */
 struct qd_connector_t {
     qd_server_t              *server;
     cxtr_state_t              state;
@@ -71,7 +77,9 @@ struct qd_connector_t {
     long                      delay;
 };
 
-
+/**
+ * Connection objects wrap Proton connection objects.
+ */
 struct qd_connection_t {
     DEQ_LINKS(qd_connection_t);
     qd_server_t     *server;

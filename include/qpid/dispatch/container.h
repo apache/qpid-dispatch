@@ -19,6 +19,12 @@
  * under the License.
  */
 
+/** @defgroup container
+ *
+ * Container for nodes, links and deliveries.
+ * @{
+ */
+
 #include <proton/engine.h>
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/server.h>
@@ -61,73 +67,55 @@ typedef int  (*qd_container_link_detach_handler_t) (void *node_context, qd_link_
 typedef void (*qd_container_node_handler_t)        (void *type_context, qd_node_t *node);
 typedef void (*qd_container_conn_handler_t)        (void *type_context, qd_connection_t *conn, void *context);
 
+/**
+ * A set  of Node handlers for deliveries, links and container events.
+ */
 typedef struct {
     char *type_name;
     void *type_context;
     int   allow_dynamic_creation;
 
-    //=======================
-    // Node-Instance Handlers
-    //=======================
+    /** @name Node-Instance Handlers
+     * @{
+     */
 
-    //
-    // rx_handler - Invoked when a new received delivery is avaliable for processing.
-    //
+    /** Invoked when a new received delivery is avaliable for processing. */
     qd_container_delivery_handler_t rx_handler;
 
-    //
-    // disp_handler - Invoked when an existing delivery changes disposition
-    //                or settlement state.
-    //
+    /** Invoked when an existing delivery changes disposition or settlement state. */
     qd_container_delivery_handler_t disp_handler;
 
-    //
-    // incoming_handler - Invoked when an attach for a new incoming link is received.
-    //
+    /** Invoked when an attach for a new incoming link is received. */
     qd_container_link_handler_t incoming_handler;
 
-    //
-    // outgoing_handler - Invoked when an attach for a new outgoing link is received.
-    //
+    /** Invoked when an attach for a new outgoing link is received. */
     qd_container_link_handler_t outgoing_handler;
 
-    //
-    // writable_handler - Invoked when an outgoing link is available for sending either
-    //                    deliveries or disposition changes.  The handler must check the
-    //                    link's credit to determine whether (and how many) message
-    //                    deliveries may be sent.
-    //
+    /**
+     * Invoked when an outgoing link is available for sending either deliveries
+     * or disposition changes.  The handler must check the link's credit to
+     * determine whether (and how many) message deliveries may be sent.
+     */
     qd_container_link_handler_t writable_handler;
 
-    //
-    // link_detach_handler - Invoked when a link is detached.
-    //
+    /** Invoked when a link is detached. */
     qd_container_link_detach_handler_t link_detach_handler;
+    ///@}
 
-    //===================
-    // Node-Type Handlers
-    //===================
+    /** @name Node-Type Handlers
+     * @{
+     */
 
-    //
-    // node_created_handler - Invoked when a new instance of the node-type is created.
-    //
+    /** Invoked when a new instance of the node-type is created. */
     qd_container_node_handler_t  node_created_handler;
 
-    //
-    // node_destroyed_handler - Invoked when an instance of the node type is destroyed.
-    //
+    /** Invoked when an instance of the node type is destroyed. */
     qd_container_node_handler_t  node_destroyed_handler;
 
-    //
-    // inbound_conn_open_handler - Invoked when an incoming connection (via listener)
-    //                             is established.
-    //
+    /** Invoked when an incoming connection (via listener) is established. */
     qd_container_conn_handler_t  inbound_conn_open_handler;
 
-    //
-    // outbound_conn_open_handler - Invoked when an outgoing connection (via connector)
-    //                              is established.
-    //
+    /** Invoked when an outgoing connection (via connector) is established. */
     qd_container_conn_handler_t  outbound_conn_open_handler;
 } qd_node_type_t;
 
@@ -210,4 +198,5 @@ struct qd_link_item_t {
 ALLOC_DECLARE(qd_link_item_t);
 DEQ_DECLARE(qd_link_item_t, qd_link_list_t);
 
+///@}
 #endif

@@ -23,7 +23,9 @@
 #include <qpid/dispatch/server.h>
 
 /**
- * \defgroup UserFd Server User-File-Descriptor Functions
+ * @defgroup user_fd User FD
+ *
+ * Server User-File-Descriptor Functions
  * @{
  */
 
@@ -32,7 +34,7 @@ typedef struct qd_user_fd_t qd_user_fd_t;
 
 /**
  * User_fd Handler
- *
+ *x
  * Callback invoked when a user-managed file descriptor is available for reading or writing or there
  * was an error on the file descriptor.
  *

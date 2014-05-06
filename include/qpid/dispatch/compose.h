@@ -22,11 +22,21 @@
 #include <qpid/dispatch/buffer.h>
 #include <qpid/dispatch/iterator.h>
 
+/** A linked list of buffers composing a sequence of AMQP data objects. */
 typedef struct qd_composed_field_t qd_composed_field_t;
 
 /**
- * Begin composing a new field for a message.  The new field can be standalone or
- * appended onto an existing field.
+ * @defgroup compose
+ *
+ * Compose a tree-structure representing an AMQP datatype that can
+ * be serialized into a message.
+ * @{
+ */
+
+/**
+ * Begin composing a new field for a message.
+ *
+ * The new field can be standalone or appended onto an existing field.
  *
  * @param performative The performative for the message section being composed.
  * @param extend An existing field onto which to append the new field or NULL to

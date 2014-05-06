@@ -53,37 +53,31 @@ class BrokerSystemTest(TestCase):
             ('listener', {'addr':'0.0.0.0', 'port':self.get_port()}),
             ('connector', {'name':'qpidd0', 'addr':'localhost', 'port':qpidd[0].port}),
             ('connector', {'name':'qpidd1', 'addr':'localhost', 'port':qpidd[1].port}),
-            ('waypoint', {'name':testq, 'in-phase':0, 'out-phase':1, 'connector':'qpidd0'})
+            ('fixed-address', {'prefix':'/testme/', 'fanout':'multiple'}),
+            ('waypoint', {'name':testq, 'out-phase':1, 'connector':'qpidd0'})
         ])
         router = self.qdrouterd('router0', router_conf)
 
         # Wait for broker & router to be ready
         wait_ports([q.port for q in qpidd] + router.ports)
 
-        # FIXME aconway 2014-03-27: smoke test for qpidd
+        # Smoke test for qpidd
         qc = self.cleanup(qm.Connection.establish(qpidd[0].address))
         qc.session().sender(testq+";{create:always}").send("a")
         qr = qc.session().receiver(testq)
         self.assertEqual(qr.fetch(1).content, "a")
 
-        # FIXME aconway 2014-03-28: smoke test for dispatch routing via queue
-        qaddr = router.addresses[0]+"/"+testq
-        m = self.message(address=qaddr, body="b")
-        mr = self.messenger()
-        mr.put(m)
-        mr.send()
-
-        # FIXME aconway 2014-03-28: check direct on broker
-        self.assertEqual(qc.session().receiver(testq).fetch(timeout=1).content, "b")
-        #self.assertEqual(sq.receiver(testq).fetch(timeout=1).content, "FOO")
-
-        # FIXME aconway 2014-03-28: subscribing first overshadows the waypoint?
-        m2 = self.messenger()
-        m2.subscribe(qaddr)
-        time.sleep(1)
-        m = Message()
+        # Smoke test for dispatch.
+        addr = router.addresses[0]+"/xxx/1"
+        m1, m2 = self.messenger(), self.messenger()
+        m2.subscribe(addr)
+        m1.put(self.message(address=addr, body="b"))
+        m1.send()
+        msg = Message()
         m2.recv(1)
-        m2.get(m)
-        self.assertEqual(m.body, "b")
+        m2.get(msg)
+        self.assertEqual(msg.body, "b")
+
+        # FIXME aconway 2014-05-05: test for waypoint routing via queue
 
 if __name__ == '__main__': unittest.main()

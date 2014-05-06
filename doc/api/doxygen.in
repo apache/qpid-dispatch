@@ -18,6 +18,8 @@
 #
 
 PROJECT_NAME           = "Dispatch"
-OUTPUT_DIRECTORY       = user
-INPUT                  = ${CMAKE_SOURCE_DIR}/include
+OUTPUT_DIRECTORY       = ${DOXYGEN_OUTPUT_DIRECTORY}
+INPUT                  = ${DOXYGEN_INPUT}
 RECURSIVE              = yes
+JAVADOC_AUTOBRIEF      = yes
+${DOXYGEN_MORE}

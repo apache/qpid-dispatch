@@ -19,80 +19,92 @@
  * under the License.
  */
 
+/** @defgroup amqp AMQP
+ * 
+ * AMQP related constant definitions.
+ */
+/// @{
+
+
 /**
  * AMQP Performative Tags
  */
-#define QD_PERFORMATIVE_HEADER                  0x70
-#define QD_PERFORMATIVE_DELIVERY_ANNOTATIONS    0x71
-#define QD_PERFORMATIVE_MESSAGE_ANNOTATIONS     0x72  
-#define QD_PERFORMATIVE_PROPERTIES              0x73
-#define QD_PERFORMATIVE_APPLICATION_PROPERTIES  0x74
-#define QD_PERFORMATIVE_BODY_DATA               0x75
-#define QD_PERFORMATIVE_BODY_AMQP_SEQUENCE      0x76
-#define QD_PERFORMATIVE_BODY_AMQP_VALUE         0x77
-#define QD_PERFORMATIVE_FOOTER                  0x78
-
+typedef enum {
+    QD_PERFORMATIVE_HEADER = 0x70,
+    QD_PERFORMATIVE_DELIVERY_ANNOTATIONS = 0x71,
+    QD_PERFORMATIVE_MESSAGE_ANNOTATIONS = 0x72  ,
+    QD_PERFORMATIVE_PROPERTIES = 0x73,
+    QD_PERFORMATIVE_APPLICATION_PROPERTIES = 0x74,
+    QD_PERFORMATIVE_BODY_DATA = 0x75,
+    QD_PERFORMATIVE_BODY_AMQP_SEQUENCE = 0x76,
+    QD_PERFORMATIVE_BODY_AMQP_VALUE = 0x77,
+    QD_PERFORMATIVE_FOOTER = 0x78,
+} qd_amqp_performative_t;
 
 /**
  * AMQP Type Tags
  */
-#define QD_AMQP_NULL        0x40
-#define QD_AMQP_BOOLEAN     0x56
-#define QD_AMQP_TRUE        0x41
-#define QD_AMQP_FALSE       0x42
-#define QD_AMQP_UBYTE       0x50
-#define QD_AMQP_USHORT      0x60
-#define QD_AMQP_UINT        0x70
-#define QD_AMQP_SMALLUINT   0x52
-#define QD_AMQP_UINT0       0x43
-#define QD_AMQP_ULONG       0x80
-#define QD_AMQP_SMALLULONG  0x53
-#define QD_AMQP_ULONG0      0x44
-#define QD_AMQP_BYTE        0x51
-#define QD_AMQP_SHORT       0x61
-#define QD_AMQP_INT         0x71
-#define QD_AMQP_SMALLINT    0x54
-#define QD_AMQP_LONG        0x81
-#define QD_AMQP_SMALLLONG   0x55
-#define QD_AMQP_FLOAT       0x72
-#define QD_AMQP_DOUBLE      0x82
-#define QD_AMQP_DECIMAL32   0x74
-#define QD_AMQP_DECIMAL64   0x84
-#define QD_AMQP_DECIMAL128  0x94
-#define QD_AMQP_UTF32       0x73
-#define QD_AMQP_TIMESTAMP   0x83
-#define QD_AMQP_UUID        0x98
-#define QD_AMQP_VBIN8       0xa0
-#define QD_AMQP_VBIN32      0xb0
-#define QD_AMQP_STR8_UTF8   0xa1
-#define QD_AMQP_STR32_UTF8  0xb1
-#define QD_AMQP_SYM8        0xa3
-#define QD_AMQP_SYM32       0xb3
-#define QD_AMQP_LIST0       0x45
-#define QD_AMQP_LIST8       0xc0
-#define QD_AMQP_LIST32      0xd0
-#define QD_AMQP_MAP8        0xc1
-#define QD_AMQP_MAP32       0xd1
-#define QD_AMQP_ARRAY8      0xe0
-#define QD_AMQP_ARRAY32     0xf0
+enum {
+    QD_AMQP_NULL = 0x40,
+    QD_AMQP_BOOLEAN = 0x56,
+    QD_AMQP_TRUE = 0x41,
+    QD_AMQP_FALSE = 0x42,
+    QD_AMQP_UBYTE = 0x50,
+    QD_AMQP_USHORT = 0x60,
+    QD_AMQP_UINT = 0x70,
+    QD_AMQP_SMALLUINT = 0x52,
+    QD_AMQP_UINT0 = 0x43,
+    QD_AMQP_ULONG = 0x80,
+    QD_AMQP_SMALLULONG = 0x53,
+    QD_AMQP_ULONG0 = 0x44,
+    QD_AMQP_BYTE = 0x51,
+    QD_AMQP_SHORT = 0x61,
+    QD_AMQP_INT = 0x71,
+    QD_AMQP_SMALLINT = 0x54,
+    QD_AMQP_LONG = 0x81,
+    QD_AMQP_SMALLLONG = 0x55,
+    QD_AMQP_FLOAT = 0x72,
+    QD_AMQP_DOUBLE = 0x82,
+    QD_AMQP_DECIMAL32 = 0x74,
+    QD_AMQP_DECIMAL64 = 0x84,
+    QD_AMQP_DECIMAL128 = 0x94,
+    QD_AMQP_UTF32 = 0x73,
+    QD_AMQP_TIMESTAMP = 0x83,
+    QD_AMQP_UUID = 0x98,
+    QD_AMQP_VBIN8 = 0xa0,
+    QD_AMQP_VBIN32 = 0xb0,
+    QD_AMQP_STR8_UTF8 = 0xa1,
+    QD_AMQP_STR32_UTF8 = 0xb1,
+    QD_AMQP_SYM8 = 0xa3,
+    QD_AMQP_SYM32 = 0xb3,
+    QD_AMQP_LIST0 = 0x45,
+    QD_AMQP_LIST8 = 0xc0,
+    QD_AMQP_LIST32 = 0xd0,
+    QD_AMQP_MAP8 = 0xc1,
+    QD_AMQP_MAP32 = 0xd1,
+    QD_AMQP_ARRAY8 = 0xe0,
+    QD_AMQP_ARRAY32 = 0xf0,
+} qd_amqp_type_t;
 
-/**
- * Delivery Annotation Headers
- */
-const char * const QD_DA_INGRESS;  // Ingress Router
-const char * const QD_DA_TRACE;    // Trace
-const char * const QD_DA_TO;       // To-Override
+/** @name Delivery Annotation Headers */
+/// @{
+const char * const QD_DA_INGRESS;  ///< Ingress Router
+const char * const QD_DA_TRACE;    ///< Trace
+const char * const QD_DA_TO;       ///< To-Override
+/// @}
 
-/**
- * Link Terminus Capabilities
- */
+/** @name Link Terminus Capabilities */
+/// @{
 const char * const QD_CAPABILITY_ROUTER;
+/// @}
 
-/**
- * Miscellaneous Strings
- */
+/** @name Miscellaneous Strings */
+/// @{
 const char * const QD_INTERNODE_LINK_NAME_1;
 const char * const QD_INTERNODE_LINK_NAME_2;
+/// @}
+
+/// @}
 
 #endif
 

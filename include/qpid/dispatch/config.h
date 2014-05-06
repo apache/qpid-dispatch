@@ -19,6 +19,12 @@
  * under the License.
  */
 
+/**
+ * @defgroup configuration 
+ * 
+ * Get configuration values from a dispatch instance.
+ *@{
+ */
 #include <qpid/dispatch/dispatch.h>
 #include <stdint.h>
 
@@ -26,5 +32,5 @@ int qd_config_item_count(const qd_dispatch_t *dispatch, const char *section);
 const char *qd_config_item_value_string(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
 uint32_t qd_config_item_value_int(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
 int qd_config_item_value_bool(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
-
+///@}
 #endif

@@ -27,6 +27,13 @@
 #include <qpid/dispatch/parse.h>
 #include <qpid/dispatch/container.h>
 
+/** 
+ * @defgroup message
+ *
+ * Message representation.
+ * @{
+ */
+
 // Callback for status change (confirmed persistent, loaded-in-memory, etc.)
 
 typedef struct qd_message_t qd_message_t;
@@ -185,5 +192,7 @@ ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, void 
 // Convenience Functions
 void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *buffers);
 void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *content);
+
+///@}
 
 #endif

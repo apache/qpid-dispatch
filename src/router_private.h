@@ -19,6 +19,11 @@
  * under the License.
  */
 
+/**@file
+ * Router Private type definitions
+ *@internal
+ */
+
 #include <qpid/dispatch/router.h>
 #include <qpid/dispatch/message.h>
 #include <qpid/dispatch/bitmask.h>
@@ -33,17 +38,17 @@ void qd_router_agent_setup(qd_router_t *router);
 void qd_router_configure(qd_router_t *router);
 
 typedef enum {
-    QD_ROUTER_MODE_STANDALONE,  // Standalone router.  No routing protocol participation
-    QD_ROUTER_MODE_INTERIOR,    // Interior router.  Full participation in routing protocol.
-    QD_ROUTER_MODE_EDGE,        // Edge router.  No transit-router capability.
-    QD_ROUTER_MODE_ENDPOINT     // No routing except for internal modules (agent, etc.).
+    QD_ROUTER_MODE_STANDALONE,  ///< Standalone router.  No routing protocol participation
+    QD_ROUTER_MODE_INTERIOR,    ///< Interior router.  Full participation in routing protocol.
+    QD_ROUTER_MODE_EDGE,        ///< Edge router.  No transit-router capability.
+    QD_ROUTER_MODE_ENDPOINT     ///< No routing except for internal modules (agent, etc.).
 } qd_router_mode_t;
 
 typedef enum {
-    QD_LINK_ENDPOINT,   // A link to a connected endpoint
-    QD_LINK_WAYPOINT,   // A link to a configured waypoint
-    QD_LINK_ROUTER,     // A link to a peer router in the same area
-    QD_LINK_AREA        // A link to a peer router in a different area (area boundary)
+    QD_LINK_ENDPOINT,   ///< A link to a connected endpoint
+    QD_LINK_WAYPOINT,   ///< A link to a configured waypoint
+    QD_LINK_ROUTER,     ///< A link to a peer router in the same area
+    QD_LINK_AREA        ///< A link to a peer router in a different area (area boundary)
 } qd_link_type_t;
 
 
@@ -61,18 +66,18 @@ DEQ_DECLARE(qd_routed_event_t, qd_routed_event_list_t);
 
 struct qd_router_link_t {
     DEQ_LINKS(qd_router_link_t);
-    int                     mask_bit;        // Unique mask bit if this is an inter-router link
+    int                     mask_bit;        ///< Unique mask bit if this is an inter-router link
     qd_link_type_t          link_type;
     qd_direction_t          link_direction;
-    qd_address_t           *owning_addr;     // [ref] Address record that owns this link
-    qd_waypoint_t          *waypoint;        // [ref] Waypoint that owns this link
-    qd_link_t              *link;            // [own] Link pointer
-    qd_router_link_t       *connected_link;  // [ref] If this is a link-route, reference the connected link
-    qd_router_link_t       *peer_link;       // [ref] If this is a bidirectional link-route, reference the peer link
-    qd_router_link_ref_t   *ref;             // Pointer to a containing reference object
-    char                   *target;          // Target address for incoming links
-    qd_routed_event_list_t  event_fifo;      // FIFO of outgoing delivery/link events (no messages)
-    qd_routed_event_list_t  msg_fifo;        // FIFO of outgoing message deliveries
+    qd_address_t           *owning_addr;     ///< [ref] Address record that owns this link
+    qd_waypoint_t          *waypoint;        ///< [ref] Waypoint that owns this link
+    qd_link_t              *link;            ///< [own] Link pointer
+    qd_router_link_t       *connected_link;  ///< [ref] If this is a link-route, reference the connected link
+    qd_router_link_t       *peer_link;       ///< [ref] If this is a bidirectional link-route, reference the peer link
+    qd_router_link_ref_t   *ref;             ///< Pointer to a containing reference object
+    char                   *target;          ///< Target address for incoming links
+    qd_routed_event_list_t  event_fifo;      ///< FIFO of outgoing delivery/link events (no messages)
+    qd_routed_event_list_t  msg_fifo;        ///< FIFO of outgoing message deliveries
 };
 
 ALLOC_DECLARE(qd_router_link_t);
@@ -82,8 +87,8 @@ struct qd_router_node_t {
     DEQ_LINKS(qd_router_node_t);
     qd_address_t     *owning_addr;
     int               mask_bit;
-    qd_router_node_t *next_hop;   // Next hop node _if_ this is not a neighbor node
-    qd_router_link_t *peer_link;  // Outgoing link _if_ this is a neighbor node
+    qd_router_node_t *next_hop;   ///< Next hop node _if_ this is not a neighbor node
+    qd_router_link_t *peer_link;  ///< Outgoing link _if_ this is a neighbor node
     uint32_t          ref_count;
     qd_bitmask_t     *valid_origins;
 };
@@ -116,13 +121,14 @@ struct qd_router_conn_t {
 ALLOC_DECLARE(qd_router_conn_t);
 
 
+/** A router address */
 struct qd_address_t {
     DEQ_LINKS(qd_address_t);
-    qd_router_message_cb_t     handler;          // In-Process Consumer
-    void                      *handler_context;  // In-Process Consumer context
-    qd_router_link_ref_list_t  rlinks;           // Locally-Connected Consumers
-    qd_router_ref_list_t       rnodes;           // Remotely-Connected Consumers
-    qd_hash_handle_t          *hash_handle;      // Linkage back to the hash table entry
+    qd_router_message_cb_t     handler;          ///< In-Process Consumer
+    void                      *handler_context;  ///< In-Process Consumer context
+    qd_router_link_ref_list_t  rlinks;           ///< Locally-Connected Consumers
+    qd_router_ref_list_t       rnodes;           ///< Remotely-Connected Consumers
+    qd_hash_handle_t          *hash_handle;      ///< Linkage back to the hash table entry
     qd_address_semantics_t     semantics;
     qd_address_t              *redirect;
     qd_address_t              *static_cc;
@@ -136,14 +142,14 @@ struct qd_address_t {
     //  - Add an indication that the address is awaiting a lookup response
     //
 
-    //
-    // Statistics
-    //
+    /**@name Statistics */
+    ///@{
     uint64_t deliveries_ingress;
     uint64_t deliveries_egress;
     uint64_t deliveries_transit;
     uint64_t deliveries_to_container;
     uint64_t deliveries_from_container;
+    ///@}
 };
 
 ALLOC_DECLARE(qd_address_t);
@@ -167,19 +173,24 @@ struct qd_config_address_t {
 
 DEQ_DECLARE(qd_config_address_t, qd_config_address_list_t);
 
+/**
+ * A waypoint is a point on a multi-phase route where messages can exit and re-enter the router.
+ *
+ * NOTE: a message received by a waypoint is first sent OUT and then received back IN.
+ */
 struct qd_waypoint_t {
     DEQ_LINKS(qd_waypoint_t);
     const char            *name;
-    char                   in_phase;
-    char                   out_phase;
-    const char            *connector_name;
-    qd_config_connector_t *connector;
-    qd_connection_t       *connection;
-    qd_link_t             *in_link;
-    qd_link_t             *out_link;
-    qd_address_t          *in_address;
-    qd_address_t          *out_address;
-    bool                   connected;
+    char                   in_phase;       ///< Phase for re-entering message.
+    char                   out_phase;      ///< Phase for exiting message.
+    const char            *connector_name; ///< On-demand connector name for outgoing messages.
+    qd_config_connector_t *connector;      ///< Connector for outgoing messages.
+    qd_connection_t       *connection;     ///< Connection for outgoing messages.
+    qd_link_t             *in_link;        ///< Link for re-entering messages.
+    qd_link_t             *out_link;       ///< Link for exiting messages.
+    qd_address_t          *in_address;     ///< Address for re-entering messages.
+    qd_address_t          *out_address;    ///< Address for exiting messages.
+    bool                   connected;      ///< True if connected.
 };
 
 DEQ_DECLARE(qd_waypoint_t, qd_waypoint_list_t);

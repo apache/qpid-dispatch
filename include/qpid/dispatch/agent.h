@@ -25,7 +25,10 @@
 #include <stdint.h>
 
 /**
- * \defgroup Container Management Agent
+ * @defgroup agent
+ *
+ * Container Management Agent
+ * 
  * @{
  */
 
@@ -33,7 +36,7 @@ typedef struct qd_agent_class_t qd_agent_class_t;
 
 
 /**
- * \brief Get Schema Data Handler
+ * Get Schema Data Handler
  *
  * @param context The handler context supplied in qd_agent_register.
  */
@@ -41,7 +44,7 @@ typedef void (*qd_agent_schema_cb_t)(void* context, void *correlator);
 
 
 /**
- * \brief Query Handler
+ * Query Handler
  *
  * @param context The handler context supplied in qd_agent_register.
  * @param id The identifier of the instance being queried or NULL for all instances.
@@ -51,7 +54,7 @@ typedef void (*qd_agent_query_cb_t)(void* context, const char *id, void *correla
 
 
 /**
- * \brief Register a class/object-type with the agent.
+ * Register a class/object-type with the agent.
  */
 qd_agent_class_t *qd_agent_register_class(qd_dispatch_t        *qd,
                                           const char           *fqname,
@@ -60,16 +63,13 @@ qd_agent_class_t *qd_agent_register_class(qd_dispatch_t        *qd,
                                           qd_agent_query_cb_t   query_handler);
 
 /**
- * \brief Register an event-type with the agent.
+ * Register an event-type with the agent.
  */
 qd_agent_class_t *qd_agent_register_event(qd_dispatch_t        *qd,
                                           const char           *fqname,
                                           void                 *context,
                                           qd_agent_schema_cb_t  schema_handler);
 
-/**
- *
- */
 void qd_agent_value_string(void *correlator, const char *key, const char *value);
 void qd_agent_value_uint(void *correlator, const char *key, uint64_t value);
 void qd_agent_value_null(void *correlator, const char *key);
