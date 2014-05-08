@@ -94,6 +94,9 @@ static void configure_listeners(qd_dispatch_t *qd)
     qd_connection_manager_t *cm = qd->connection_manager;
 
     if (!qd->config || !cm) {
+        qd_log(cm->log_source, QD_LOG_ERROR, "Cannot configure listeners%s%s",
+	       (qd->config ? "" : ", no configuration"),
+	       (cm ? "" : ", no connection manager"));
         assert(false);
         return;
     }
