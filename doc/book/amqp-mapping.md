@@ -78,7 +78,7 @@ Non-compliance occurs for one of the following reasons:
   || READ || Should || No || Not yet implemented ||
   || UPDATE || Should || No || There are currently no Manageable Entities for which this is appropriate ||
   || DELETE || Should || No || There are currently no Manageable Entities for which this is appropriate ||
-  || QUERY || Should || No || A non-standard version of this operation is supported that retrieves data from all entities of a type. ||
+  || QUERY || Should || Yes || Query requests must provide either an entityType or a set of attributeNames.  It will not support the general "get all attributes from all entityTypes" query. ||
   || GET-TYPES || Should || Yes || There are no types that implement base types ||
   || GET-ATTRIBUTES || Should || Yes || ||
   || GET-OPERATIONS || Should || Yes || ||
@@ -91,9 +91,6 @@ Non-compliance occurs for one of the following reasons:
   || *Type Name* || *Description* ||
   || org.apache.qpid.dispatch.allocator || Per-type memory allocation statistics ||
   || org.apache.qpid.dispatch.connection || Connections to the router's container ||
-  || org.apache.qpid.dispatch.container || General state and statistics for the AMQP container ||
-  || org.apache.qpid.dispatch.container.node_type || Description of registered node types ||
-  || org.apache.qpid.dispatch.container.node || Description of registered nodes in the container ||
   || org.apache.qpid.dispatch.router || General state and statistics for the router node ||
   || org.apache.qpid.dispatch.router.link || Per-link state and statistics for links attached to the router node ||
   || org.apache.qpid.dispatch.router.node || Per-node state and statistics for remote router nodes in the known network ||
