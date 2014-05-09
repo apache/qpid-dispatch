@@ -27,61 +27,6 @@
 #include "dispatch_private.h"
 #include "router_private.h"
 
-#define QD_ROUTER_CLASS_ROUTER  1
-#define QD_ROUTER_CLASS_LINK    2
-#define QD_ROUTER_CLASS_NODE    3
-#define QD_ROUTER_CLASS_ADDRESS 4
-
-typedef struct qd_router_class_t {
-    qd_router_t *router;
-    int          class_id;
-} qd_router_class_t;
-
-
-static void qd_router_schema_handler(void *context, void *cor)
-{
-    qd_router_class_t *cls = (qd_router_class_t*) context;
-    switch (cls->class_id) {
-    case QD_ROUTER_CLASS_ROUTER:
-        qd_agent_value_string(cor, 0, "area");
-        qd_agent_value_string(cor, 0, "router_id");
-        qd_agent_value_string(cor, 0, "mode");
-        qd_agent_value_string(cor, 0, "addr_count");
-        qd_agent_value_string(cor, 0, "link_count");
-        qd_agent_value_string(cor, 0, "node_count");
-        break;
-
-    case QD_ROUTER_CLASS_LINK:
-        qd_agent_value_string(cor, 0, "index");
-        qd_agent_value_string(cor, 0, "link-type");
-        qd_agent_value_string(cor, 0, "link-dir");
-        qd_agent_value_string(cor, 0, "owning-addr");
-        qd_agent_value_string(cor, 0, "event-fifo-depth");
-        qd_agent_value_string(cor, 0, "msg-fifo-depth");
-        break;
-
-    case QD_ROUTER_CLASS_NODE:
-        qd_agent_value_string(cor, 0, "index");
-        qd_agent_value_string(cor, 0, "addr");
-        qd_agent_value_string(cor, 0, "next-hop");
-        qd_agent_value_string(cor, 0, "router-link");
-        qd_agent_value_string(cor, 0, "valid-origins");
-        break;
-
-    case QD_ROUTER_CLASS_ADDRESS:
-        qd_agent_value_string(cor, 0, "addr");
-        qd_agent_value_string(cor, 0, "in-process");
-        qd_agent_value_string(cor, 0, "subscriber-count");
-        qd_agent_value_string(cor, 0, "remote-count");
-        qd_agent_value_string(cor, 0, "deliveries-ingress");
-        qd_agent_value_string(cor, 0, "deliveries-egress");
-        qd_agent_value_string(cor, 0, "deliveries-transit");
-        qd_agent_value_string(cor, 0, "deliveries-to-container");
-        qd_agent_value_string(cor, 0, "deliveries-from-container");
-        break;
-    }
-}
-
 
 static const char *qd_router_addr_text(qd_address_t *addr)
 {
@@ -94,151 +39,328 @@ static const char *qd_router_addr_text(qd_address_t *addr)
 }
 
 
-static void qd_router_query_router(qd_router_t *router, void *cor)
+static void router_attr_name(void *object_handle, void *cor, void *unused)
 {
-    qd_agent_value_string(cor, "area",      router->router_area);
-    qd_agent_value_string(cor, "router_id", router->router_id);
-
-    char *mode = "";
-    switch (router->router_mode) {
-    case QD_ROUTER_MODE_STANDALONE:  mode = "Standalone";  break;
-    case QD_ROUTER_MODE_INTERIOR:    mode = "Interior";    break;
-    case QD_ROUTER_MODE_EDGE:        mode = "Edge";        break;
-    case QD_ROUTER_MODE_ENDPOINT:    mode = "Endpoint";    break;
-    }
-    qd_agent_value_string(cor, "mode", mode);
-
-    sys_mutex_lock(router->lock);
-    qd_agent_value_uint(cor, "addr_count", DEQ_SIZE(router->addrs));
-    qd_agent_value_uint(cor, "link_count", DEQ_SIZE(router->links));
-    qd_agent_value_uint(cor, "node_count", DEQ_SIZE(router->routers));
-    sys_mutex_unlock(router->lock);
-
-    qd_agent_value_complete(cor, 0);
+    qd_router_t *router = (qd_router_t*) object_handle;
+    qd_agent_value_string(cor, 0, router->router_id);
 }
 
 
-static void qd_router_query_link(qd_router_t *router, void *cor)
+static void router_attr_area(void *object_handle, void *cor, void *unused)
 {
+    qd_router_t *router = (qd_router_t*) object_handle;
+    qd_agent_value_string(cor, 0, router->router_area);
+}
+
+
+static void router_attr_mode(void *object_handle, void *cor, void *unused)
+{
+    qd_router_t *router = (qd_router_t*) object_handle;
+    switch (router->router_mode) {
+    case QD_ROUTER_MODE_STANDALONE:  qd_agent_value_string(cor, 0, "Standalone");  break;
+    case QD_ROUTER_MODE_INTERIOR:    qd_agent_value_string(cor, 0, "Interior");    break;
+    case QD_ROUTER_MODE_EDGE:        qd_agent_value_string(cor, 0, "Edge");        break;
+    case QD_ROUTER_MODE_ENDPOINT:    qd_agent_value_string(cor, 0, "Endpoint");    break;
+    }
+}
+
+
+static void router_attr_addrCount(void *object_handle, void *cor, void *unused)
+{
+    qd_router_t *router = (qd_router_t*) object_handle;
+    qd_agent_value_uint(cor, 0, DEQ_SIZE(router->addrs));
+}
+
+
+static void router_attr_linkCount(void *object_handle, void *cor, void *unused)
+{
+    qd_router_t *router = (qd_router_t*) object_handle;
+    qd_agent_value_uint(cor, 0, DEQ_SIZE(router->links));
+}
+
+
+static void router_attr_nodeCount(void *object_handle, void *cor, void *unused)
+{
+    qd_router_t *router = (qd_router_t*) object_handle;
+    qd_agent_value_uint(cor, 0, DEQ_SIZE(router->routers));
+}
+
+
+static const char *ROUTER_TYPE = "org.apache.qpid.dispatch.router";
+static const qd_agent_attribute_t ROUTER_ATTRIBUTES[] =
+    {{"name", router_attr_name, 0},
+     {"identity", router_attr_name, 0},
+     {"area", router_attr_area, 0},
+     {"mode", router_attr_mode, 0},
+     {"addrCount", router_attr_addrCount, 0},
+     {"linkCount", router_attr_linkCount, 0},
+     {"nodeCount", router_attr_nodeCount, 0},
+     {0, 0, 0}};
+
+
+static void qd_router_query_router(void *context, void *cor)
+{
+    qd_router_t *router = (qd_router_t*) context;
+
+    sys_mutex_lock(router->lock);
+    qd_agent_object(cor, (void*) router);
+    sys_mutex_unlock(router->lock);
+}
+
+
+static void link_attr_name(void *object_handle, void *cor, void *unused)
+{
+    qd_router_link_t *link = (qd_router_link_t*) object_handle;
+    qd_agent_value_uint(cor, 0, link->mask_bit);
+}
+
+
+static void link_attr_linkType(void *object_handle, void *cor, void *unused)
+{
+    qd_router_link_t *link = (qd_router_link_t*) object_handle;
+    switch (link->link_type) {
+    case QD_LINK_ENDPOINT: qd_agent_value_string(cor, 0, "endpoint");     break;
+    case QD_LINK_WAYPOINT: qd_agent_value_string(cor, 0, "waypoint");     break;
+    case QD_LINK_ROUTER:   qd_agent_value_string(cor, 0, "inter-router"); break;
+    case QD_LINK_AREA:     qd_agent_value_string(cor, 0, "inter-area");   break;
+    }
+}
+
+
+static void link_attr_linkDir(void *object_handle, void *cor, void *unused)
+{
+    qd_router_link_t *link = (qd_router_link_t*) object_handle;
+    if (link->link_direction == QD_INCOMING)
+        qd_agent_value_string(cor, 0, "in");
+    else
+        qd_agent_value_string(cor, 0, "out");
+}
+
+
+static void link_attr_owningAddr(void *object_handle, void *cor, void *unused)
+{
+    qd_router_link_t *link = (qd_router_link_t*) object_handle;
+    const char *text = qd_router_addr_text(link->owning_addr);
+    if (text)
+        qd_agent_value_string(cor, 0, text);
+    else
+        qd_agent_value_null(cor, 0);
+}
+
+
+static void link_attr_eventFifoDepth(void *object_handle, void *cor, void *unused)
+{
+    qd_router_link_t *link = (qd_router_link_t*) object_handle;
+    qd_agent_value_uint(cor, 0, DEQ_SIZE(link->event_fifo));
+}
+
+
+static void link_attr_msgFifoDepth(void *object_handle, void *cor, void *unused)
+{
+    qd_router_link_t *link = (qd_router_link_t*) object_handle;
+    qd_agent_value_uint(cor, 0, DEQ_SIZE(link->msg_fifo));
+}
+
+
+static const char *LINK_TYPE = "org.apache.qpid.dispatch.router.link";
+static const qd_agent_attribute_t LINK_ATTRIBUTES[] =
+    {{"name", link_attr_name, 0},
+     {"identity", link_attr_name, 0},
+     {"linkType", link_attr_linkType, 0},
+     {"linkDir", link_attr_linkDir, 0},
+     {"owningAddr", link_attr_owningAddr, 0},
+     {"eventFifoDepth", link_attr_eventFifoDepth, 0},
+     {"msgFifoDepth", link_attr_msgFifoDepth, 0},
+     {0, 0, 0}};
+
+static void qd_router_query_link(void *context, void *cor)
+{
+    qd_router_t *router = (qd_router_t*) context;
+
     sys_mutex_lock(router->lock);
     qd_router_link_t *link = DEQ_HEAD(router->links);
-    const char       *link_type = "?";
-    const char       *link_dir;
 
     while (link) {
-        qd_agent_value_uint(cor, "index", link->mask_bit);
-        switch (link->link_type) {
-        case QD_LINK_ENDPOINT: link_type = "endpoint";     break;
-        case QD_LINK_WAYPOINT: link_type = "waypoint";     break;
-        case QD_LINK_ROUTER:   link_type = "inter-router"; break;
-        case QD_LINK_AREA:     link_type = "inter-area";   break;
-        }
-        qd_agent_value_string(cor, "link-type", link_type);
-
-        if (link->link_direction == QD_INCOMING)
-            link_dir = "in";
-        else
-            link_dir = "out";
-        qd_agent_value_string(cor, "link-dir", link_dir);
-
-        const char *text = qd_router_addr_text(link->owning_addr);
-        if (text)
-            qd_agent_value_string(cor, "owning-addr", text);
-        else
-            qd_agent_value_null(cor, "owning-addr");
-
-        qd_agent_value_uint(cor, "event-fifo-depth", DEQ_SIZE(link->event_fifo));
-        qd_agent_value_uint(cor, "msg-fifo-depth", DEQ_SIZE(link->msg_fifo));
-
+        if (!qd_agent_object(cor, (void*) link))
+            break;
         link = DEQ_NEXT(link);
-        qd_agent_value_complete(cor, link != 0);
     }
     sys_mutex_unlock(router->lock);
 }
 
 
-static void qd_router_query_node(qd_router_t *router, void *cor)
+static void node_attr_name(void *object_handle, void *cor, void *unused)
 {
+    qd_router_node_t *node = (qd_router_node_t*) object_handle;
+    qd_agent_value_uint(cor, 0, node->mask_bit);
+}
+
+
+static void node_attr_addr(void *object_handle, void *cor, void *unused)
+{
+    qd_router_node_t *node = (qd_router_node_t*) object_handle;
+    qd_agent_value_string(cor, 0, qd_router_addr_text(node->owning_addr));
+}
+
+
+static void node_attr_nextHop(void *object_handle, void *cor, void *unused)
+{
+    qd_router_node_t *node = (qd_router_node_t*) object_handle;
+    if (node->next_hop)
+        qd_agent_value_uint(cor, 0, node->next_hop->mask_bit);
+    else
+        qd_agent_value_null(cor, 0);
+}
+
+
+static void node_attr_routerLink(void *object_handle, void *cor, void *unused)
+{
+    qd_router_node_t *node = (qd_router_node_t*) object_handle;
+    if (node->peer_link)
+        qd_agent_value_uint(cor, 0, node->peer_link->mask_bit);
+    else
+        qd_agent_value_null(cor, 0);
+}
+
+
+static void node_attr_validOrigins(void *object_handle, void *cor, void *unused)
+{
+    qd_router_node_t *node = (qd_router_node_t*) object_handle;
+    qd_agent_value_start_list(cor, 0);
+    for (uint32_t bit = 1; bit < qd_bitmask_width(); bit++)
+        if (qd_bitmask_value(node->valid_origins, bit))
+            qd_agent_value_uint(cor, 0, bit);
+    qd_agent_value_end_list(cor);
+}
+
+
+static const char *NODE_TYPE = "org.apache.qpid.dispatch.router.node";
+static const qd_agent_attribute_t NODE_ATTRIBUTES[] =
+    {{"name", node_attr_name, 0},
+     {"identity", node_attr_name, 0},
+     {"addr", node_attr_addr, 0},
+     {"nextHop", node_attr_nextHop, 0},
+     {"routerLink", node_attr_routerLink, 0},
+     {"validOrigins", node_attr_validOrigins, 0},
+     {0, 0, 0}};
+
+static void qd_router_query_node(void *context, void *cor)
+{
+    qd_router_t *router = (qd_router_t*) context;
+
     sys_mutex_lock(router->lock);
     qd_router_node_t *node = DEQ_HEAD(router->routers);
     while (node) {
-        qd_agent_value_uint(cor, "index", node->mask_bit);
-        qd_agent_value_string(cor, "addr", qd_router_addr_text(node->owning_addr));
-        if (node->next_hop)
-            qd_agent_value_uint(cor, "next-hop", node->next_hop->mask_bit);
-        else
-            qd_agent_value_null(cor, "next-hop");
-        if (node->peer_link)
-            qd_agent_value_uint(cor, "router-link", node->peer_link->mask_bit);
-        else
-            qd_agent_value_null(cor, "router-link");
-        qd_agent_value_start_list(cor, "valid-origins");
-        for (uint32_t bit = 1; bit < qd_bitmask_width(); bit++)
-            if (qd_bitmask_value(node->valid_origins, bit))
-                qd_agent_value_uint(cor, 0, bit);
-        qd_agent_value_end_list(cor);
+        if (!qd_agent_object(cor, (void*) node))
+            break;
         node = DEQ_NEXT(node);
-        qd_agent_value_complete(cor, node != 0);
     }
     sys_mutex_unlock(router->lock);
 }
 
 
-static void qd_router_query_address(qd_router_t *router, void *cor)
+static void addr_attr_name(void *object_handle, void *cor, void *unused)
 {
+    qd_address_t *addr = (qd_address_t*) object_handle;
+    qd_agent_value_string(cor, 0, qd_router_addr_text(addr));
+}
+
+
+static void addr_attr_inProcess(void *object_handle, void *cor, void *unused)
+{
+    qd_address_t *addr = (qd_address_t*) object_handle;
+    qd_agent_value_boolean(cor, 0, addr->handler != 0);
+}
+
+
+static void addr_attr_subscriberCount(void *object_handle, void *cor, void *unused)
+{
+    qd_address_t *addr = (qd_address_t*) object_handle;
+    qd_agent_value_uint(cor, 0, DEQ_SIZE(addr->rlinks));
+}
+
+
+static void addr_attr_remoteCount(void *object_handle, void *cor, void *unused)
+{
+    qd_address_t *addr = (qd_address_t*) object_handle;
+    qd_agent_value_uint(cor, 0, DEQ_SIZE(addr->rnodes));
+}
+
+
+static void addr_attr_deliveriesIngress(void *object_handle, void *cor, void *unused)
+{
+    qd_address_t *addr = (qd_address_t*) object_handle;
+    qd_agent_value_uint(cor, 0, addr->deliveries_ingress);
+}
+
+
+static void addr_attr_deliveriesEgress(void *object_handle, void *cor, void *unused)
+{
+    qd_address_t *addr = (qd_address_t*) object_handle;
+    qd_agent_value_uint(cor, 0, addr->deliveries_egress);
+}
+
+
+static void addr_attr_deliveriesTransit(void *object_handle, void *cor, void *unused)
+{
+    qd_address_t *addr = (qd_address_t*) object_handle;
+    qd_agent_value_uint(cor, 0, addr->deliveries_transit);
+}
+
+
+static void addr_attr_deliveriesToContainer(void *object_handle, void *cor, void *unused)
+{
+    qd_address_t *addr = (qd_address_t*) object_handle;
+    qd_agent_value_uint(cor, 0, addr->deliveries_to_container);
+}
+
+
+static void addr_attr_deliveriesFromContainer(void *object_handle, void *cor, void *unused)
+{
+    qd_address_t *addr = (qd_address_t*) object_handle;
+    qd_agent_value_uint(cor, 0, addr->deliveries_from_container);
+}
+
+
+static const char *ADDRESS_TYPE = "org.apache.qpid.dispatch.router.address";
+static const qd_agent_attribute_t ADDRESS_ATTRIBUTES[] =
+    {{"name", addr_attr_name, 0},
+     {"identity", addr_attr_name, 0},
+     {"inProcess", addr_attr_inProcess, 0},
+     {"subscriberCount", addr_attr_subscriberCount, 0},
+     {"remoteCount", addr_attr_remoteCount, 0},
+     {"deliveriesIngress", addr_attr_deliveriesIngress, 0},
+     {"deliveriesEgress", addr_attr_deliveriesEgress, 0},
+     {"deliveriesTransit", addr_attr_deliveriesTransit, 0},
+     {"deliveriesToContainer", addr_attr_deliveriesToContainer, 0},
+     {"deliveriesFromContainer", addr_attr_deliveriesFromContainer, 0},
+     {0, 0, 0}};
+
+static void qd_router_query_address(void *context, void *cor)
+{
+    qd_router_t *router = (qd_router_t*) context;
+
     sys_mutex_lock(router->lock);
     qd_address_t *addr = DEQ_HEAD(router->addrs);
     while (addr) {
-        qd_agent_value_string(cor, "addr", qd_router_addr_text(addr));
-        qd_agent_value_boolean(cor, "in-process", addr->handler != 0);
-        qd_agent_value_uint(cor, "subscriber-count", DEQ_SIZE(addr->rlinks));
-        qd_agent_value_uint(cor, "remote-count", DEQ_SIZE(addr->rnodes));
-        qd_agent_value_uint(cor, "deliveries-ingress", addr->deliveries_ingress);
-        qd_agent_value_uint(cor, "deliveries-egress", addr->deliveries_egress);
-        qd_agent_value_uint(cor, "deliveries-transit", addr->deliveries_transit);
-        qd_agent_value_uint(cor, "deliveries-to-container", addr->deliveries_to_container);
-        qd_agent_value_uint(cor, "deliveries-from-container", addr->deliveries_from_container);
+        if (!qd_agent_object(cor, (void*) addr))
+            break;
         addr = DEQ_NEXT(addr);
-        qd_agent_value_complete(cor, addr != 0);
     }
     sys_mutex_unlock(router->lock);
-}
-
-
-static void qd_router_query_handler(void* context, const char *id, void *correlator)
-{
-    qd_router_class_t *cls = (qd_router_class_t*) context;
-    switch (cls->class_id) {
-    case QD_ROUTER_CLASS_ROUTER:  qd_router_query_router(cls->router, correlator); break;
-    case QD_ROUTER_CLASS_LINK:    qd_router_query_link(cls->router, correlator); break;
-    case QD_ROUTER_CLASS_NODE:    qd_router_query_node(cls->router, correlator); break;
-    case QD_ROUTER_CLASS_ADDRESS: qd_router_query_address(cls->router, correlator); break;
-    }
-}
-
-
-static qd_agent_class_t *qd_router_setup_class(qd_router_t *router, const char *fqname, int id)
-{
-    qd_router_class_t *cls = NEW(qd_router_class_t);
-    cls->router   = router;
-    cls->class_id = id;
-
-    return qd_agent_register_class(router->qd, fqname, cls,
-                                   qd_router_schema_handler,
-                                   qd_router_query_handler);
 }
 
 
 void qd_router_agent_setup(qd_router_t *router)
 {
     router->class_router =
-        qd_router_setup_class(router, "org.apache.qpid.dispatch.router", QD_ROUTER_CLASS_ROUTER);
+        qd_agent_register_class(router->qd, ROUTER_TYPE, router, ROUTER_ATTRIBUTES, qd_router_query_router);
     router->class_link =
-        qd_router_setup_class(router, "org.apache.qpid.dispatch.router.link", QD_ROUTER_CLASS_LINK);
+        qd_agent_register_class(router->qd, LINK_TYPE, router, LINK_ATTRIBUTES, qd_router_query_link);
     router->class_node =
-        qd_router_setup_class(router, "org.apache.qpid.dispatch.router.node", QD_ROUTER_CLASS_NODE);
+        qd_agent_register_class(router->qd, NODE_TYPE, router, NODE_ATTRIBUTES, qd_router_query_node);
     router->class_address =
-        qd_router_setup_class(router, "org.apache.qpid.dispatch.router.address", QD_ROUTER_CLASS_ADDRESS);
+        qd_agent_register_class(router->qd, ADDRESS_TYPE, router, ADDRESS_ATTRIBUTES, qd_router_query_address);
 }
 
 

@@ -95,6 +95,23 @@ def OptionsAndArguments(argv):
     return args
 
 
+class AmqpEntity(object):
+    def __init__(self, types, values):
+        if len(types) != len(values):
+            raise Exception("Mismatched types and values for entity")
+        self.values = {}
+        for idx in range(len(types)):
+            self.values[types[idx]] = values[idx]
+
+    def __getattr__(self, attr):
+        if attr in self.values:
+            return self.values[attr]
+        raise Exception("Unknown attribute: %s" % attr)
+
+    def __repr__(self):
+        return "%r" % self.values
+
+
 class BusManager:
     def __init__(self):
         pass
@@ -121,14 +138,24 @@ class BusManager:
         request.address = self.address
         request.reply_to = self.reply
         request.correlation_id = 1
-        request.properties = {u'operation':u'GET', u'type':cls}
+        request.properties = {u'operation':u'QUERY', u'entityType':cls}
+        request.body = {'attributeNames': []}
 
         self.M.put(request)
         self.M.send()
         self.M.recv()
         self.M.get(response)
 
-        return response.body
+        if response.properties['statusCode'] != 200:
+            raise Exception("Agent reports: %d %s" % (response.properties['statusCode'], response.properties['statusDescription']))
+
+        entities = []
+        anames = response.body['attributeNames']
+        results = response.body['results']
+        for e in results:
+            entities.append(AmqpEntity(anames, e))
+
+        return entities
         
 
     def displayConnections(self):
@@ -147,12 +174,12 @@ class BusManager:
 
         for conn in objects:
             row = []
-            row.append(conn['state'])
-            row.append(conn['host'])
-            row.append(conn['container'])
-            row.append(conn['sasl'])
-            row.append(conn['role'])
-            row.append(conn['dir'])
+            row.append(conn.state)
+            row.append(conn.host)
+            row.append(conn.container)
+            row.append(conn.sasl)
+            row.append(conn.role)
+            row.append(conn.dir)
             rows.append(row)
         title = "Connections"
         dispRows = rows
@@ -192,12 +219,12 @@ class BusManager:
         objects = self._get_object('org.apache.qpid.dispatch.router')
 
         router = objects[0]
-        rows.append(('Mode',          router['mode']))
-        rows.append(('Area',          router['area']))
-        rows.append(('Router Id',     router['router_id']))
-        rows.append(('Address Count', router['addr_count']))
-        rows.append(('Link Count',    router['link_count']))
-        rows.append(('Node Count',    router['node_count']))
+        rows.append(('Mode',          router.mode))
+        rows.append(('Area',          router.area))
+        rows.append(('Router Id',     router.name))
+        rows.append(('Address Count', router.addrCount))
+        rows.append(('Link Count',    router.linkCount))
+        rows.append(('Node Count',    router.nodeCount))
 
         title = "Router Statistics"
         dispRows = rows
@@ -220,18 +247,18 @@ class BusManager:
 
         for link in objects:
             row = []
-            row.append(link['link-type'])
-            row.append(link['link-dir'])
-            if link['link-type'] == "inter-router":
-                row.append(link['index'])
+            row.append(link.linkType)
+            row.append(link.linkDir)
+            if link.linkType == "inter-router":
+                row.append(link.name)
             else:
                 row.append('-')
-            row.append(self._addr_class(link['owning-addr']))
-            row.append(self._addr_text(link['owning-addr']))
-            row.append(self._addr_phase(link['owning-addr']))
-            row.append(link['event-fifo-depth'])
-            if link['link-dir'] == 'out':
-                row.append(link['msg-fifo-depth'])
+            row.append(self._addr_class(link.owningAddr))
+            row.append(self._addr_text(link.owningAddr))
+            row.append(self._addr_phase(link.owningAddr))
+            row.append(link.eventFifoDepth)
+            if link.linkDir == 'out':
+                row.append(link.msgFifoDepth)
             else:
                 row.append('-')
             rows.append(row)
@@ -253,28 +280,28 @@ class BusManager:
 
         nodes = {}
         for node in objects:
-            nodes[node['index']] = node
-            node['addr'] = self._addr_text(node['addr'])
+            nodes[node.name] = node
+            node.addr = self._addr_text(node.addr)
 
-        rows.append([attached['router_id'], '-', '(self)', ''])
+        rows.append([attached.name, '-', '(self)', ''])
         for node in objects:
             row = []
-            row.append(node['addr'])
-            if node['next-hop'] != None:
-                row.append(nodes[node['next-hop']]['addr'])
+            row.append(node.addr)
+            if node.next-hop != None:
+                row.append(nodes[node.nextHop].addr)
             else:
                 row.append('-')
-            if node['router-link'] != None:
-                row.append(node['router-link'])
+            if node.router-link != None:
+                row.append(node.routerLink)
             else:
                 row.append('-')
             vo = None
-            for i in node['valid-origins']:
+            for i in node.validOrigins:
                 if not vo:
                     vo = ""
                 else:
                     vo += ", "
-                vo += nodes[i]['addr']
+                vo += nodes[i].addr
             row.append(vo)
             rows.append(row)
         title = "Router Nodes"
@@ -302,17 +329,17 @@ class BusManager:
 
         for addr in objects:
             row = []
-            row.append(self._addr_class(addr['addr']))
-            row.append(self._addr_text(addr['addr']))
-            row.append(self._addr_phase(addr['addr']))
-            row.append(addr['in-process'])
-            row.append(addr['subscriber-count'])
-            row.append(addr['remote-count'])
-            row.append(addr['deliveries-ingress'])
-            row.append(addr['deliveries-egress'])
-            row.append(addr['deliveries-transit'])
-            row.append(addr['deliveries-to-container'])
-            row.append(addr['deliveries-from-container'])
+            row.append(self._addr_class(addr.name))
+            row.append(self._addr_text(addr.name))
+            row.append(self._addr_phase(addr.name))
+            row.append(addr.inProcess)
+            row.append(addr.subscriberCount)
+            row.append(addr.remoteCount)
+            row.append(addr.deliveriesIngress)
+            row.append(addr.deliveriesEgress)
+            row.append(addr.deliveriesTransit)
+            row.append(addr.deliveriesToContainer)
+            row.append(addr.deliveriesFromContainer)
             rows.append(row)
         title = "Router Addresses"
         sorter = Sorter(heads, rows, 'address', 0, True)
@@ -336,14 +363,14 @@ class BusManager:
 
         for t in objects:
             row = []
-            row.append(t['name'])
-            row.append(t['type_size'])
-            row.append(t['transfer_batch_size'])
-            row.append(t['local_free_list_max'])
-            row.append(t['total_alloc_from_heap'])
-            row.append(t['held_by_threads'])
-            row.append(t['batches_rebalanced_to_threads'])
-            row.append(t['batches_rebalanced_to_global'])
+            row.append(t.name)
+            row.append(t.type_size)
+            row.append(t.transfer_batch_size)
+            row.append(t.local_free_list_max)
+            row.append(t.total_alloc_from_heap)
+            row.append(t.held_by_threads)
+            row.append(t.batches_rebalanced_to_threads)
+            row.append(t.batches_rebalanced_to_global)
             rows.append(row)
         title = "Types"
         sorter = Sorter(heads, rows, 'type', 0, True)

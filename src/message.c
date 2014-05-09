@@ -931,3 +931,21 @@ void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *field)
     DEQ_INIT(*field_buffers); // Zero out the linkage to the now moved buffers.
 }
 
+
+void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2)
+{
+    qd_message_content_t *content        = MSG_CONTENT(msg);
+    qd_buffer_list_t     *field1_buffers = qd_compose_buffers(field1);
+    qd_buffer_list_t     *field2_buffers = qd_compose_buffers(field2);
+
+    content->buffers = *field1_buffers;
+    DEQ_INIT(*field1_buffers);
+
+    qd_buffer_t *buf = DEQ_HEAD(*field2_buffers);
+    while (buf) {
+        DEQ_REMOVE_HEAD(*field2_buffers);
+        DEQ_INSERT_TAIL(content->buffers, buf);
+        buf = DEQ_HEAD(*field2_buffers);
+    }
+}
+

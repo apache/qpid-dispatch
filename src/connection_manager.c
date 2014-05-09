@@ -220,67 +220,116 @@ void qd_connection_manager_stop_on_demand(qd_dispatch_t *qd, qd_config_connector
 {
 }
 
-
-static void server_schema_handler(void *context, void *cor)
+static void cm_attr_name(void *object_handle, void *cor, void *unused)
 {
-    qd_agent_value_string(cor, 0, "state");
-    qd_agent_value_string(cor, 0, "container");
-    qd_agent_value_string(cor, 0, "host");
-    qd_agent_value_string(cor, 0, "sasl");
-    qd_agent_value_string(cor, 0, "role");
-    qd_agent_value_string(cor, 0, "dir");
+    qd_connection_t *conn = (qd_connection_t*) object_handle;
+    qd_agent_value_string(cor, 0, pn_connector_name(conn->pn_cxtr));
 }
 
 
-static void server_query_handler(void* context, const char *id, void *cor)
+static void cm_attr_state(void *object_handle, void *cor, void *unused)
+{
+    qd_connection_t *conn = (qd_connection_t*) object_handle;
+    switch (conn->state) {
+    case CONN_STATE_CONNECTING:  qd_agent_value_string(cor, 0, "Connecting");  break;
+    case CONN_STATE_OPENING:     qd_agent_value_string(cor, 0, "Opening");     break;
+    case CONN_STATE_OPERATIONAL: qd_agent_value_string(cor, 0, "Operational"); break;
+    case CONN_STATE_FAILED:      qd_agent_value_string(cor, 0, "Failed");      break;
+    case CONN_STATE_USER:        qd_agent_value_string(cor, 0, "User");        break;
+    default:                     qd_agent_value_string(cor, 0, "undefined");   break;
+    }
+}
+
+
+static void cm_attr_container(void *object_handle, void *cor, void *unused)
+{
+    qd_connection_t *conn = (qd_connection_t*) object_handle;
+    // get remote container name using proton connection
+    const char *container_name = pn_connection_remote_container(conn->pn_conn);
+    if (container_name)
+        qd_agent_value_string(cor, 0, container_name);
+    else
+        qd_agent_value_null(cor, 0);
+}
+
+
+static void cm_attr_host(void *object_handle, void *cor, void *unused)
+{
+    qd_connection_t *conn = (qd_connection_t*) object_handle;
+    const qd_server_config_t *config;
+    if (conn->connector)
+        config = conn->connector->config;
+    else
+        config = conn->listener->config;
+    if (conn->connector) {
+        char host[1000];
+        strcpy(host, config->host);
+        strcat(host, ":");
+        strcat(host, config->port);
+        qd_agent_value_string(cor, 0, host);
+    } else
+        qd_agent_value_string(cor, 0, pn_connector_name(conn->pn_cxtr));
+}
+
+
+static void cm_attr_sasl(void *object_handle, void *cor, void *unused)
+{
+    qd_connection_t *conn = (qd_connection_t*) object_handle;
+    const qd_server_config_t *config;
+    if (conn->connector)
+        config = conn->connector->config;
+    else
+        config = conn->listener->config;
+    qd_agent_value_string(cor, 0, config->sasl_mechanisms);
+}
+
+
+static void cm_attr_role(void *object_handle, void *cor, void *unused)
+{
+    qd_connection_t *conn = (qd_connection_t*) object_handle;
+    const qd_server_config_t *config;
+    if (conn->connector)
+        config = conn->connector->config;
+    else
+        config = conn->listener->config;
+    qd_agent_value_string(cor, 0, config->role);
+}
+
+
+static void cm_attr_dir(void *object_handle, void *cor, void *unused)
+{
+    qd_connection_t *conn = (qd_connection_t*) object_handle;
+    if (conn->connector)
+        qd_agent_value_string(cor, 0, "out");
+    else
+        qd_agent_value_string(cor, 0, "in");
+}
+
+
+static const char *CONN_TYPE = "org.apache.qpid.dispatch.connection";
+static const qd_agent_attribute_t CONN_ATTRIBUTES[] =
+    {{"name", cm_attr_name, 0},
+     {"identity", cm_attr_name, 0},
+     {"state", cm_attr_state, 0},
+     {"container", cm_attr_container, 0},
+     {"host", cm_attr_host, 0},
+     {"sasl", cm_attr_sasl, 0},
+     {"role", cm_attr_role, 0},
+     {"dir", cm_attr_dir, 0},
+     {0, 0, 0}};
+
+
+static void server_query_handler(void* context, void *cor)
 {
     qd_dispatch_t *qd        = (qd_dispatch_t*) context;
     qd_server_t   *qd_server = qd->server;
     sys_mutex_lock(qd_server->lock);
-    const char               *conn_state;
-    const qd_server_config_t *config;
-    const char               *pn_container_name;
-    const char               *direction;
 
     qd_connection_t *conn = DEQ_HEAD(qd_server->connections);
     while (conn) {
-        switch (conn->state) {
-        case CONN_STATE_CONNECTING:  conn_state = "Connecting";  break;
-        case CONN_STATE_OPENING:     conn_state = "Opening";     break;
-        case CONN_STATE_OPERATIONAL: conn_state = "Operational"; break;
-        case CONN_STATE_FAILED:      conn_state = "Failed";      break;
-        case CONN_STATE_USER:        conn_state = "User";        break;
-        default:                     conn_state = "undefined";   break;
-        }
-        qd_agent_value_string(cor, "state", conn_state);
-        // get remote container name using proton connection
-        pn_container_name = pn_connection_remote_container(conn->pn_conn);
-        if (pn_container_name)
-            qd_agent_value_string(cor, "container", pn_container_name);
-        else
-            qd_agent_value_null(cor, "container");
-
-        // and now for some config entries
-        if (conn->connector) {
-            config = conn->connector->config;
-            direction = "out";
-            char host[1000];
-            strcpy(host, config->host);
-            strcat(host, ":");
-            strcat(host, config->port);
-            qd_agent_value_string(cor, "host", host);
-        } else {
-            config = conn->listener->config;
-            direction = "in";
-            qd_agent_value_string(cor, "host", pn_connector_name(conn->pn_cxtr));
-        }
-
-        qd_agent_value_string(cor, "sasl", config->sasl_mechanisms);
-        qd_agent_value_string(cor, "role", config->role);
-        qd_agent_value_string(cor, "dir",  direction);
-
+        if (!qd_agent_object(cor, (void*) conn))
+            break;
         conn = DEQ_NEXT(conn);
-        qd_agent_value_complete(cor, conn != 0);
     }
     sys_mutex_unlock(qd_server->lock);
 }
@@ -288,7 +337,7 @@ static void server_query_handler(void* context, const char *id, void *cor)
 
 void qd_connection_manager_setup_agent(qd_dispatch_t *qd)
 {
-    qd_agent_register_class(qd, "org.apache.qpid.dispatch.connection", qd, server_schema_handler, server_query_handler);
+    qd_agent_register_class(qd, CONN_TYPE, qd, CONN_ATTRIBUTES, server_query_handler);
 }
 
 

@@ -81,15 +81,6 @@ typedef struct qdc_node_type_t {
 } qdc_node_type_t;
 DEQ_DECLARE(qdc_node_type_t, qdc_node_type_list_t);
 
-#define QD_CONTAINER_CLASS_CONTAINER  1
-#define QD_CONTAINER_CLASS_NODE_TYPE  2
-#define QD_CONTAINER_CLASS_NODE       3
-
-typedef struct container_class_t {
-    qd_container_t *container;
-    int             class_id;
-} container_class_t;
-
 struct qd_container_t {
     qd_dispatch_t        *qd;
     qd_log_source_t      *log_source;
@@ -99,9 +90,6 @@ struct qd_container_t {
     sys_mutex_t          *lock;
     qd_node_t            *default_node;
     qdc_node_type_list_t  node_type_list;
-    qd_agent_class_t     *class_container;
-    qd_agent_class_t     *class_node_type;
-    qd_agent_class_t     *class_node;
 };
 
 static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
@@ -419,56 +407,6 @@ static int handler(void *handler_context, void *conn_context, qd_conn_event_t ev
 }
 
 
-static void container_schema_handler(void *context, void *correlator)
-{
-    container_class_t *cls = (container_class_t*) context;
-    switch (cls->class_id) {
-    case QD_CONTAINER_CLASS_CONTAINER:
-        qd_agent_value_string(correlator, 0, "node_type_count");
-        qd_agent_value_string(correlator, 0, "node_count");
-        qd_agent_value_string(correlator, 0, "default_node_type");
-        break;
-
-    case QD_CONTAINER_CLASS_NODE_TYPE:
-    case QD_CONTAINER_CLASS_NODE:
-        break;
-    }
-}
-
-
-static void container_query_handler(void* context, const char *id, void *correlator)
-{
-    container_class_t *cls = (container_class_t*) context;
-
-    if (cls->class_id == QD_CONTAINER_CLASS_CONTAINER) {
-        qd_agent_value_uint(correlator, "node_type_count", qd_hash_size(cls->container->node_type_map));
-        qd_agent_value_uint(correlator, "node_count",      qd_hash_size(cls->container->node_map));
-        if (cls->container->default_node)
-            qd_agent_value_string(correlator, "default_node_type", cls->container->default_node->ntype->type_name);
-        else
-            qd_agent_value_null(correlator, "default_node_type");
-        qd_agent_value_complete(correlator, false);
-
-    } else if (cls->class_id == QD_CONTAINER_CLASS_NODE_TYPE) {
-
-    } else if (cls->class_id == QD_CONTAINER_CLASS_NODE) {
-
-    }
-}
-
-
-qd_agent_class_t *setup_class(qd_container_t *container, const char *fqname, int id)
-{
-    container_class_t *cls = NEW(container_class_t);
-    cls->container = container;
-    cls->class_id  = id;
-
-    return qd_agent_register_class(container->qd, fqname, cls,
-                                   container_schema_handler,
-                                   container_query_handler);
-}
-
-
 qd_container_t *qd_container(qd_dispatch_t *qd)
 {
     qd_container_t *container = NEW(qd_container_t);
@@ -491,12 +429,6 @@ qd_container_t *qd_container(qd_dispatch_t *qd)
 
 void qd_container_setup_agent(qd_dispatch_t *qd)
 {
-    qd->container->class_container =
-        setup_class(qd->container, "org.apache.qpid.dispatch.container", QD_CONTAINER_CLASS_CONTAINER);
-    qd->container->class_node_type =
-        setup_class(qd->container, "org.apache.qpid.dispatch.container.node_type", QD_CONTAINER_CLASS_NODE_TYPE);
-    qd->container->class_node =
-        setup_class(qd->container, "org.apache.qpid.dispatch.container.node", QD_CONTAINER_CLASS_NODE);
 }
 
 

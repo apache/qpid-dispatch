@@ -570,7 +570,7 @@ class RouterTest(unittest.TestCase):
 
         self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.correlation_id, "C1")
-        self.assertEqual(response.body, ['amqp:/_local/$management'])
+        self.assertEqual(response.body, [])
 
         request.address        = addr
         request.reply_to       = reply
@@ -584,7 +584,7 @@ class RouterTest(unittest.TestCase):
 
         self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.correlation_id, 135)
-        self.assertEqual(response.body, ['amqp:/_local/$management'])
+        self.assertEqual(response.body, [])
 
         request.address        = addr
         request.reply_to       = reply
@@ -596,7 +596,7 @@ class RouterTest(unittest.TestCase):
         M.get(response)
 
         self.assertEqual(response.properties['statusCode'], 200)
-        self.assertEqual(response.body, ['amqp:/_local/$management'])
+        self.assertEqual(response.body, [])
 
         M.stop()
 
@@ -627,16 +627,16 @@ class RouterTest(unittest.TestCase):
 
         self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body.__class__, dict)
-        self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
+        self.assertTrue('org.apache.qpid.dispatch.router' in response.body.keys())
         self.assertTrue(len(response.body.keys()) > 2)
 
         ##
-        ## Restricted Request with two matches
+        ## Restricted Request one match
         ##
         request.address    = addr
         request.reply_to   = reply
         request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-TYPES',
-                              u'entityTypes':['org.apache.qpid.dispatch.container', 'org.apache.qpid.dispatch.connection']}
+                              u'entityType':'org.apache.qpid.dispatch.connection'}
 
         M.put(request)
         M.send()
@@ -645,9 +645,8 @@ class RouterTest(unittest.TestCase):
 
         self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body.__class__, dict)
-        self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
         self.assertTrue('org.apache.qpid.dispatch.connection' in response.body.keys())
-        self.assertEqual(len(response.body.keys()), 2)
+        self.assertEqual(len(response.body.keys()), 1)
 
         ##
         ## Restricted Request with no matches
@@ -655,7 +654,7 @@ class RouterTest(unittest.TestCase):
         request.address    = addr
         request.reply_to   = reply
         request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-TYPES',
-                              u'entityTypes':['com.profitron.item']}
+                              u'entityType':'com.profitron.item'}
 
         M.put(request)
         M.send()
@@ -671,7 +670,7 @@ class RouterTest(unittest.TestCase):
         request.address    = addr
         request.reply_to   = reply
         request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-TYPES',
-                              u'entityTypes':256}
+                              u'entityType':['one', 'two']}
 
         M.put(request)
         M.send()
@@ -710,9 +709,9 @@ class RouterTest(unittest.TestCase):
 
         self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body.__class__, dict)
-        self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
+        self.assertTrue('org.apache.qpid.dispatch.router' in response.body.keys())
         self.assertTrue(len(response.body.keys()) > 2)
-        self.assertTrue(response.body['org.apache.qpid.dispatch.container'].__class__, list)
+        self.assertTrue(response.body['org.apache.qpid.dispatch.router'].__class__, list)
 
         ##
         ## Restricted Request with a match
@@ -720,7 +719,7 @@ class RouterTest(unittest.TestCase):
         request.address    = addr
         request.reply_to   = reply
         request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-ATTRIBUTES',
-                              u'entityTypes':['org.apache.qpid.dispatch.router']}
+                              u'entityType':'org.apache.qpid.dispatch.router'}
 
         M.put(request)
         M.send()
@@ -739,7 +738,7 @@ class RouterTest(unittest.TestCase):
         request.address    = addr
         request.reply_to   = reply
         request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-ATTRIBUTES',
-                              u'entityTypes':['com.profitron.item']}
+                              u'entityType':'com.profitron.item'}
 
         M.put(request)
         M.send()
@@ -779,9 +778,39 @@ class RouterTest(unittest.TestCase):
 
         self.assertEqual(response.properties['statusCode'], 200)
         self.assertEqual(response.body.__class__, dict)
-        self.assertTrue('org.apache.qpid.dispatch.container' in response.body.keys())
+        self.assertTrue('org.apache.qpid.dispatch.router' in response.body.keys())
         self.assertTrue(len(response.body.keys()) > 2)
-        self.assertTrue(response.body['org.apache.qpid.dispatch.container'].__class__, list)
+        self.assertTrue(response.body['org.apache.qpid.dispatch.router'].__class__, list)
+
+        M.stop()
+
+
+    def test_09d_management_not_implemented(self):
+        addr  = "amqp:/$management"
+
+        M = Messenger()
+        M.timeout = 2.0
+        M.start()
+        M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
+        sub = self.subscribe(M, "amqp:/#")
+        reply = sub.address
+
+        request  = Message()
+        response = Message()
+
+        ##
+        ## Request with an invalid operation
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'NOT-IMPL'}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['statusCode'], 501)
 
         M.stop()
 

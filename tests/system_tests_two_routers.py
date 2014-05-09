@@ -34,15 +34,16 @@ def wait_for_addr(messenger, addr, local_count, remote_count):
     while not done:
         req.address    = "amqp:/_local/$management"
         req.reply_to   = reply
-        req.properties = {u'operation':u'GET', u'type':u'org.apache.qpid.dispatch.router.address'}
+        req.properties = {u'operation':u'QUERY', u'entityType':u'org.apache.qpid.dispatch.router.address'}
+        req.body       = {u'attributeNames': [u'name', u'subscriberCount', u'remoteCount']}
         messenger.put(req)
         messenger.send()
         messenger.recv()
         messenger.get(rsp)
-        for item in rsp.body:
-            if item['addr'][2:] == addr and \
-               local_count == item['subscriber-count'] and \
-               remote_count == item['remote-count']:
+        for item in rsp.body[u'results']:
+            if item[0][2:] == addr and \
+               local_count == item[1] and \
+               remote_count == item[2]:
                 done = True
         time.sleep(0.2)
 
@@ -564,7 +565,6 @@ class RouterTest(unittest.TestCase):
         M.get(response)
 
         self.assertEqual(response.properties['statusCode'], 200)
-        self.assertTrue('amqp:/_local/$management' in response.body)
         self.assertTrue('amqp:/_topo/0/QDR.B/$management' in response.body)
 
         request.address    = "amqp:/_topo/0/QDR.B/$management"
@@ -577,7 +577,6 @@ class RouterTest(unittest.TestCase):
         M.get(response)
 
         self.assertEqual(response.properties['statusCode'], 200)
-        self.assertTrue('amqp:/_local/$management' in response.body)
         self.assertTrue('amqp:/_topo/0/QDR.A/$management' in response.body)
 
         M.stop()

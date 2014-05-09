@@ -253,45 +253,106 @@ void qd_alloc_initialize(void)
 }
 
 
-static void alloc_schema_handler(void *context, void *cor)
+static void alloc_attr_name(void *object_handle, void *cor, void *unused)
 {
-    qd_agent_value_string(cor, 0, "name");
-    qd_agent_value_string(cor, 0, "type_size");
-    qd_agent_value_string(cor, 0, "transfer_batch_size");
-    qd_agent_value_string(cor, 0, "local_free_list_max");
-    qd_agent_value_string(cor, 0, "global_free_list_max");
-    qd_agent_value_string(cor, 0, "total_alloc_from_heap");
-    qd_agent_value_string(cor, 0, "total_free_to_heap");
-    qd_agent_value_string(cor, 0, "held_by_threads");
-    qd_agent_value_string(cor, 0, "batches_rebalanced_to_threads");
-    qd_agent_value_string(cor, 0, "batches_rebalanced_to_global");
+    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_string(cor, 0, item->desc->type_name);
 }
 
 
-static void alloc_query_handler(void* context, const char *id, void *cor)
+static void alloc_attr_type_size(void *object_handle, void *cor, void *unused)
+{
+    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_uint(cor, 0, item->desc->total_size);
+}
+
+
+static void alloc_attr_transfer_batch_size(void *object_handle, void *cor, void *unused)
+{
+    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_uint(cor, 0, item->desc->config->transfer_batch_size);
+}
+
+
+static void alloc_attr_local_free_list_max(void *object_handle, void *cor, void *unused)
+{
+    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_uint(cor, 0, item->desc->config->local_free_list_max);
+}
+
+
+static void alloc_attr_global_free_list_max(void *object_handle, void *cor, void *unused)
+{
+    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_uint(cor, 0, item->desc->config->global_free_list_max);
+}
+
+
+static void alloc_attr_total_alloc_from_heap(void *object_handle, void *cor, void *unused)
+{
+    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_uint(cor, 0, item->desc->stats->total_alloc_from_heap);
+}
+
+
+static void alloc_attr_total_free_to_heap(void *object_handle, void *cor, void *unused)
+{
+    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_uint(cor, 0, item->desc->stats->total_free_to_heap);
+}
+
+
+static void alloc_attr_held_by_threads(void *object_handle, void *cor, void *unused)
+{
+    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_uint(cor, 0, item->desc->stats->held_by_threads);
+}
+
+
+static void alloc_attr_batches_rebalanced_to_threads(void *object_handle, void *cor, void *unused)
+{
+    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_uint(cor, 0, item->desc->stats->batches_rebalanced_to_threads);
+}
+
+
+static void alloc_attr_batches_rebalanced_to_global(void *object_handle, void *cor, void *unused)
+{
+    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_uint(cor, 0, item->desc->stats->batches_rebalanced_to_global);
+}
+
+
+static const char *ALLOC_TYPE = "org.apache.qpid.dispatch.allocator";
+static const qd_agent_attribute_t ALLOC_ATTRIBUTES[] =
+    {{"name", alloc_attr_name, 0},
+     {"identity", alloc_attr_name, 0},
+     {"type_size", alloc_attr_type_size, 0},
+     {"transfer_batch_size", alloc_attr_transfer_batch_size, 0},
+     {"local_free_list_max", alloc_attr_local_free_list_max, 0},
+     {"global_free_list_max", alloc_attr_global_free_list_max, 0},
+     {"total_alloc_from_heap", alloc_attr_total_alloc_from_heap, 0},
+     {"total_free_to_heap", alloc_attr_total_free_to_heap, 0},
+     {"held_by_threads", alloc_attr_held_by_threads, 0},
+     {"batches_rebalanced_to_threads", alloc_attr_batches_rebalanced_to_threads, 0},
+     {"batches_rebalanced_to_global", alloc_attr_batches_rebalanced_to_global, 0},
+     {0, 0, 0}};
+
+
+static void alloc_query_handler(void* context, void *cor)
 {
     qd_alloc_type_t *item = DEQ_HEAD(type_list);
 
     while (item) {
-        qd_agent_value_string(cor, "name", item->desc->type_name);
-        qd_agent_value_uint(cor, "type_size", item->desc->total_size);
-        qd_agent_value_uint(cor, "transfer_batch_size", item->desc->config->transfer_batch_size);
-        qd_agent_value_uint(cor, "local_free_list_max", item->desc->config->local_free_list_max);
-        qd_agent_value_uint(cor, "global_free_list_max", item->desc->config->global_free_list_max);
-        qd_agent_value_uint(cor, "total_alloc_from_heap", item->desc->stats->total_alloc_from_heap);
-        qd_agent_value_uint(cor, "total_free_to_heap", item->desc->stats->total_free_to_heap);
-        qd_agent_value_uint(cor, "held_by_threads", item->desc->stats->held_by_threads);
-        qd_agent_value_uint(cor, "batches_rebalanced_to_threads", item->desc->stats->batches_rebalanced_to_threads);
-        qd_agent_value_uint(cor, "batches_rebalanced_to_global", item->desc->stats->batches_rebalanced_to_global);
-
+        if (!qd_agent_object(cor, (void*) item))
+            break;
         item = DEQ_NEXT(item);
-        qd_agent_value_complete(cor, item != 0);
     }
 }
 
 
 void qd_alloc_setup_agent(qd_dispatch_t *qd)
 {
-    qd_agent_register_class(qd, "org.apache.qpid.dispatch.allocator", 0, alloc_schema_handler, alloc_query_handler);
+    qd_agent_register_class(qd, ALLOC_TYPE, 0, ALLOC_ATTRIBUTES, alloc_query_handler);
 }
 

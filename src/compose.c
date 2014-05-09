@@ -414,13 +414,13 @@ void qd_compose_insert_string_iterator(qd_composed_field_t *field, qd_field_iter
 {
     uint32_t len = 0;
 
+    qd_field_iterator_reset(iter);
     while (!qd_field_iterator_end(iter)) {
         qd_field_iterator_octet(iter);
         len++;
     }
 
     qd_field_iterator_reset(iter);
-
     if (len < 256) {
         qd_insert_8(field, QD_AMQP_STR8_UTF8);
         qd_insert_8(field, (uint8_t) len);
