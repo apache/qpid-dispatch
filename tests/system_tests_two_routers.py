@@ -108,8 +108,8 @@ def startRouter(obj):
 def stopRouter(obj):
     obj.routerA.terminate()
     obj.routerB.terminate()
-    obj.routerA.communicate()
-    obj.routerB.communicate()
+    obj.routerA.wait()
+    obj.routerB.wait()
 
 
 class RouterTest(unittest.TestCase):
