@@ -115,6 +115,7 @@ DEQ_DECLARE(qd_router_link_ref_t, qd_router_link_ref_list_t);
 
 
 struct qd_router_conn_t {
+    int ref_count;
     int mask_bit;
 };
 

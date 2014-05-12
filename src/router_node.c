@@ -225,6 +225,10 @@ static int qd_router_terminus_is_router(pn_terminus_t *term)
 }
 
 
+/**
+ * Generate a temporary routable address for a destination connected to this
+ * router node.
+ */
 static void qd_router_generate_temp_addr(qd_router_t *router, char *buffer, size_t length)
 {
     static const char *table = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+_";
@@ -244,11 +248,17 @@ static void qd_router_generate_temp_addr(qd_router_t *router, char *buffer, size
 }
 
 
+/**
+ * Assign a link-mask-bit to a new link.  Do this in such a way that all links on the same
+ * connection share the same mask-bit value.
+ */
 static int qd_router_find_mask_bit_LH(qd_router_t *router, qd_link_t *link)
 {
     qd_router_conn_t *shared = (qd_router_conn_t*) qd_link_get_conn_context(link);
-    if (shared)
+    if (shared) {
+        shared->ref_count++;
         return shared->mask_bit;
+    }
 
     int mask_bit;
     if (qd_bitmask_first_set(router->neighbor_free_mask, &mask_bit)) {
@@ -259,7 +269,8 @@ static int qd_router_find_mask_bit_LH(qd_router_t *router, qd_link_t *link)
     }
 
     shared = new_qd_router_conn_t();
-    shared->mask_bit = mask_bit;
+    shared->ref_count = 1;
+    shared->mask_bit  = mask_bit;
     qd_link_set_conn_context(link, shared);
     return mask_bit;
 }
@@ -1154,15 +1165,25 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
     qd_address_t     *oaddr  = 0;
     int               lost_link_mask_bit = -1;
 
-    if (shared) {
-        qd_link_set_conn_context(link, 0);
-        free_qd_router_conn_t(shared);
-    }
-
     if (!rlink)
         return 0;
 
     sys_mutex_lock(router->lock);
+
+    //
+    // If this link is part of an inter-router connection, drop the
+    // reference count.  If this is the last link on the connection,
+    // free the mask-bit and the shared connection record.
+    //
+    if (shared) {
+        shared->ref_count--;
+        if (shared->ref_count == 0) {
+            lost_link_mask_bit = rlink->mask_bit;
+            qd_bitmask_set_bit(router->neighbor_free_mask, rlink->mask_bit);
+            qd_link_set_conn_context(link, 0);
+            free_qd_router_conn_t(shared);
+        }
+    }
 
     //
     // If the link is outgoing, we must disassociate it from its address.
@@ -1181,14 +1202,6 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
             router->out_links_by_mask_bit[rlink->mask_bit] = 0;
         else
             qd_log(router->log_source, QD_LOG_CRITICAL, "Outgoing router link closing but not in index: bit=%d", rlink->mask_bit);
-    }
-
-    //
-    // If this is an incoming inter-router link, we must free the mask_bit.
-    //
-    if (rlink->link_type == QD_LINK_ROUTER && rlink->link_direction == QD_INCOMING) {
-        lost_link_mask_bit = rlink->mask_bit;
-        qd_bitmask_set_bit(router->neighbor_free_mask, rlink->mask_bit);
     }
 
     //
