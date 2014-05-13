@@ -160,4 +160,3 @@ void qd_dispatch_post_configure_connections(qd_dispatch_t *qd)
     qd_connection_manager_start(qd);
     qd_waypoint_activate_all(qd);
 }
-

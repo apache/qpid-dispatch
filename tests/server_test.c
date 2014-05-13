@@ -206,7 +206,6 @@ int server_tests(const char *_config_file)
 {
     int result = 0;
     test_lock = sys_mutex();
-    qd_log_set_mask(QD_LOG_NONE);
 
     config_file = _config_file;
 

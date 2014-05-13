@@ -131,11 +131,11 @@ int main(int argc, char **argv)
         }
     }
 
-    qd_log_set_mask(0xFFFFFFFE);
 
     dispatch = qd_dispatch(python_pkgdir);
     qd_dispatch_extend_config_schema(dispatch, app_config);
     qd_dispatch_load_config(dispatch, config_path);
+    qd_log_configure(dispatch);
     qd_dispatch_configure_container(dispatch);
     qd_dispatch_configure_router(dispatch);
     qd_dispatch_prepare(dispatch);

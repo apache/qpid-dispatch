@@ -86,6 +86,15 @@ config_schema = {
         'ra-interval'         : (int, None, '',  30, None),
         'remote-ls-max-age'   : (int, None, '',  60, None),
         'mobile-addr-max-age' : (int, None, '',  60, None)
+    }),
+    'log' : (False, {
+        'module' : (str, None, 'M', None, None),
+        'level'  : (str, None, '', 'INFO', ['NONE', 'TRACE', 'DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL']),
+	'timestamp' : (bool, None, '', True, None),
+	'stderr' : (bool, None, '', True, None),
+	'syslog' : (bool, None, '', False, None),
+	'file'   : (str, None, '', None, None), # File name
+	'max-size'  : (int, None, "", 1024, None), # Max file size
     })
 }
 

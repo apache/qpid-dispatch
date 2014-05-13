@@ -211,13 +211,12 @@ class DispatchConfig:
     self.raw_config = None
     self.config     = None
     self.schema     = None
-    self.log        = LogAdapter('config.parser')
+    self.log        = LogAdapter('CONFIG')
 
 
   def read_file(self, path):
     self.schema = Schema()
     try:
-      self.log.log(LOG_INFO, "Reading Configuration File: %s" % path)
       cfile = open(path)
       text = cfile.read()
       cfile.close()
@@ -227,8 +226,8 @@ class DispatchConfig:
       self._validate_raw_config()
       self._process_schema()
       self._validate()
-    except Exception, E:
-      self.log.log(LOG_CRITICAL, "Exception in Configuration File Processing: %r" % E)
+    except Exception, e:
+      self.log.log(LOG_CRITICAL, "Error in configuration file '%s': %r" % (path, e))
       raise
 
 

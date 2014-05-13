@@ -220,6 +220,14 @@ static PyObject *item_value(const qd_dispatch_t *dispatch, const char *section, 
 }
 
 
+bool qd_config_item_exists(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
+{
+    PyObject *pResult = item_value(dispatch, section, index, key, "value_string");
+    bool exists = pResult;
+    if (pResult) Py_DECREF(pResult);
+    return exists;
+}
+
 const char *qd_config_item_value_string(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
 {
     PyObject *pResult = item_value(dispatch, section, index, key, "value_string");

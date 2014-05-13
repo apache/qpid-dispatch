@@ -94,6 +94,14 @@ void qd_dispatch_prepare(qd_dispatch_t *dispatch);
  */
 void qd_dispatch_post_configure_connections(qd_dispatch_t *dispatch);
 
+/**
+ * \brief Configure the logging module from the
+ *        parsed configuration file.  This must be called after the
+ *        call to qd_dispatch_prepare completes.
+ *
+ * @param dispatch The dispatch handle returned by qd_dispatch
+ */
+void qd_dispatch_configure_logging(qd_dispatch_t *qd);
 
 /**
  * @}

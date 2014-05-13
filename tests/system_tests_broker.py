@@ -48,6 +48,8 @@ class BrokerSystemTest(TestCase):
 
         # Start a qdrouterd
         router_conf = Qdrouterd.Config([
+            ('log', { 'module':'DEFAULT', 'level':'TRACE' }),
+            ('container', {'container-name':self.id()}),
             ('container', {'container-name':self.id()}),
             ('router', { 'mode': 'standalone', 'router-id': self.id() }),
             ('listener', {'addr':'0.0.0.0', 'port':self.get_port()}),
