@@ -40,6 +40,8 @@ struct qd_waypoint_context_t {
     qd_waypoint_ref_list_t refs;
 };
 
+// Convenience for logging waypoint messages, expects qd and wp to be defined.
+#define LOG(LEVEL, MSG, ...) qd_log(qd->router->log_source, QD_LOG_##LEVEL, "Waypoint '%s': " MSG, wp->name, ##__VA_ARGS__)
 
 static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
 {
@@ -47,11 +49,13 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
     qd_address_t *addr   = wp->in_address;
     char          unused;
 
+    LOG(TRACE, "Visit sink");
     //
     // If the waypoint has no in-address, look it up in the hash table or create
     // a new one and put it in the hash table.
     //
     if (!addr) {
+	LOG(TRACE, "Create sink address, in-phase %c", wp->in_phase);
         //
         // Compose the phased-address and search the routing table for the address.
         // If it's not found, add it to the table but leave the link/router linkages empty.
@@ -76,8 +80,10 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         qd_field_iterator_free(iter);
     }
 
-    if (!wp->connected)
+    if (!wp->connected) {
+	LOG(TRACE, "Start on-demand sink connector");
         qd_connection_manager_start_on_demand(qd, wp->connector);
+    }
     else if (!wp->out_link) {
         wp->out_link = qd_link(router->node, wp->connection, QD_OUTGOING, wp->name);
         pn_terminus_set_address(qd_link_target(wp->out_link), wp->name);
@@ -109,7 +115,7 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         pn_link_open(qd_link_pn(wp->out_link));
         qd_link_activate(wp->out_link);
 
-        qd_log(router->log_source, QD_LOG_DEBUG, "Added outgoing link for waypoint: %s", wp->name);
+	LOG(TRACE, "Create sink out-link '%s'", pn_link_name(qd_link_pn(wp->out_link)));
     }
 }
 
@@ -120,11 +126,13 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
     qd_address_t *addr   = wp->out_address;
     char          unused;
 
+    LOG(TRACE, "Visit source");
     //
     // If the waypoint has no out-address, look it up in the hash table or create
     // a new one and put it in the hash table.
     //
     if (!addr) {
+	LOG(TRACE, "Create source address, out-phase %c", wp->out_phase);
         //
         // Compose the phased-address and search the routing table for the address.
         // If it's not found, add it to the table but leave the link/router linkages empty.
@@ -149,8 +157,10 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         qd_field_iterator_free(iter);
     }
 
-    if (!wp->connected)
+    if (!wp->connected) {
+	LOG(TRACE, "Start source on-demand connector");
         qd_connection_manager_start_on_demand(qd, wp->connector);
+    }
     else if (!wp->in_link) {
         wp->in_link = qd_link(router->node, wp->connection, QD_INCOMING, wp->name);
         pn_terminus_set_address(qd_link_source(wp->in_link), wp->name);
@@ -174,10 +184,9 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         pn_link_open(qd_link_pn(wp->in_link));
         qd_link_activate(wp->in_link);
 
-        qd_log(router->log_source, QD_LOG_DEBUG, "Added incoming link for waypoint: %s", wp->name);
+	LOG(TRACE, "Create source in-link '%s'", pn_link_name(qd_link_pn(wp->in_link)));
     }
-
-    if (DEQ_SIZE(addr->rlinks) + DEQ_SIZE(addr->rnodes) > 0) {
+    if (wp->in_link && (DEQ_SIZE(addr->rlinks) + DEQ_SIZE(addr->rnodes) > 0)) {
         //
         // CASE: This address has reachable destinations in the network.
         //       If there is no inbound link from the waypoint source,
@@ -185,7 +194,7 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         //
         pn_link_flow(qd_link_pn(wp->in_link), 1);
         qd_link_activate(wp->in_link);
-        qd_log(router->log_source, QD_LOG_DEBUG, "Added credit for incoming link for waypoint: %s", wp->name);
+        LOG(DEBUG, "Added credit for incoming link '%s'", pn_link_name(qd_link_pn(wp->in_link)));
     } else {
         //
         // CASE: This address has no reachable destinations in the network.
@@ -248,9 +257,7 @@ void qd_waypoint_activate_all(qd_dispatch_t *qd)
         if (!wp->connector) {
             wp->connector = qd_connection_manager_find_on_demand(qd, wp->connector_name);
             if (!wp->connector) {
-                qd_log(qd->router->log_source, QD_LOG_ERROR,
-                       "In waypoint '%s', on-demand connector '%s' not found",
-                       wp->name, wp->connector_name);
+                LOG(ERROR, "On-demand connector '%s' not found", wp->connector_name);
                 continue;
             }
 
@@ -281,7 +288,7 @@ void qd_waypoint_connection_opened(qd_dispatch_t *qd, qd_config_connector_t *cc,
 {
     qd_waypoint_context_t *context = (qd_waypoint_context_t*) qd_config_connector_context(cc);
 
-    qd_log(qd->router->log_source, QD_LOG_INFO, "On-demand connector opened: %s",
+    qd_log(qd->router->log_source, QD_LOG_INFO, "On-demand connector '%s' opened",
            qd_config_connector_name(cc));
 
     sys_mutex_lock(qd->router->lock);
@@ -314,6 +321,7 @@ void qd_waypoint_link_closed(qd_dispatch_t *qd, qd_waypoint_t *wp, qd_link_t *li
 void qd_waypoint_address_updated_LH(qd_dispatch_t *qd, qd_address_t *addr)
 {
     qd_waypoint_t *wp = DEQ_HEAD(qd->router->waypoints);
+    LOG(TRACE, "Address updated");
     while (wp) {
         if (wp->out_address == addr)
             qd_waypoint_visit_LH(qd, wp);

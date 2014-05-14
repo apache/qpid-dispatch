@@ -71,7 +71,10 @@ def retry_delay(deadline, timeout, delay, max_delay):
     time.sleep(min(delay, remaining))
     return min(delay*2, max_delay)
 
-def retry(function, timeout=10, delay=.001, max_delay=1):
+
+default_timeout=float(os.environ.get("QPID_SYSTEM_TEST_TIMEOUT", 5))
+
+def retry(function, timeout=default_timeout, delay=.001, max_delay=1):
     """Call function until it returns a true value or timeout expires.
     Double the delay for each retry up to max_delay.
     Returns what function returns or None if timeout expires.
@@ -85,7 +88,7 @@ def retry(function, timeout=10, delay=.001, max_delay=1):
             delay = retry_delay(deadline, timeout, delay, max_delay)
             if delay is None: return None
 
-def retry_exception(function, timeout=10, delay=.001, max_delay=1, exception_test=None):
+def retry_exception(function, timeout=default_timeout, delay=.001, max_delay=1, exception_test=None):
     """Call function until it returns without exception or timeout expires.
     Double the delay for each retry up to max_delay.
     Calls exception_test with any exception raised by function, exception_test
@@ -102,7 +105,18 @@ def retry_exception(function, timeout=10, delay=.001, max_delay=1, exception_tes
             delay = retry_delay(deadline, timeout, delay, max_delay)
             if delay is None: raise
 
-def wait_port(port, host="127.0.0.1", **retry_kwargs):
+def port_available(port, host='0.0.0.0'):
+    """Return true if connecting to host:port gives 'connection refused'."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.connect((host, port))
+        s.close()
+    except socket.error, e:
+        return e.errno == 111
+    except: pass
+    return False
+
+def wait_port(port, host='0.0.0.0', **retry_kwargs):
     """Wait up to timeout for port (on host) to be connectable.
     Takes same keyword arguments as retry to control the timeout"""
     def check(e):               # Only retry on connection refused
@@ -119,6 +133,12 @@ def wait_ports(ports, host="127.0.0.1", **retry_kwargs):
     """Wait up to timeout for all ports (on host) to be connectable.
     Takes same keyword arguments as retry to control the timeout"""
     for p in ports: wait_port(p)
+
+def message(**properties):
+    """Convenience to create a proton.Message with properties set"""
+    m = Message()
+    for name, value in properties.iteritems(): setattr(m, name, value)
+    return m
 
 class Process(subprocess.Popen):
     """Popen that can be torn down at the end of a TestCase and stores its output."""
@@ -194,10 +214,51 @@ class Qdrouterd(Process):
             def props(p): return "".join(["    %s: %s\n"%(k,v) for k,v in p.iteritems()])
             return "".join(["%s {\n%s}\n"%(n,props(self._defs(n,p))) for n,p in self])
 
+    class Agent(object):
+        """Management agent"""
+        def __init__(self, router):
+            self.router = router
+            self.messenger = Messenger()
+            self.messenger.route("amqp:/*", "amqp://0.0.0.0:%s/$1"%router.ports[0])
+            self.address = "amqp:/$management"
+            self.subscription = self.messenger.subscribe("amqp:/#")
+            self.reply_to = self.subscription.address
+
+        def stop(self): self.messenger.stop()
+
+        def get(self, type):
+            """Return a list of attribute dicts for each instance of type"""
+            request = message(address=self.address, reply_to=self.reply_to,
+                              correlation_id=1,
+                              properties={u'operation':u'QUERY', u'entityType':type},
+                              body={'attributeNames':[]})
+            response = Message()
+            self.messenger.put(request)
+            self.messenger.send()
+            self.messenger.recv(1)
+            self.messenger.get(response)
+            if response.properties['statusCode'] != 200:
+                raise Exception("Agent error: %d %s" % (
+                    response.properties['statusCode'],
+                    response.properties['statusDescription']))
+            attrs = response.body['attributeNames']
+            return [dict(zip(attrs, values)) for values in response.body['results']]
+
+
     def __init__(self, name, config, **kwargs):
         self.config = copy(config)
         super(Qdrouterd, self).__init__(
             name, ['qdrouterd', '-c', config.write(name)], expect=Process.RUNNING)
+        self._agent = None
+
+    @property
+    def agent(self):
+        if not self._agent: self._agent = self.Agent(self)
+        return self._agent
+
+    def teardown(self):
+        if self._agent: self._agent.stop()
+        super(Qdrouterd, self).teardown()
 
     @property
     def ports(self):
@@ -206,13 +267,16 @@ class Qdrouterd(Process):
 
     @property
     def addresses(self):
-        """Return host:port addresses for all listeners"""
+        """Return amqp://host:port addresses for all listeners"""
         return [ "amqp://%s:%s"%(l['addr'],l['port']) for l in self.config.sections('listener') ]
 
-    @property
-    def address(self):
-        """Return address of the first listener"""
-        
+    def is_connected(self, port, host='0.0.0.0'):
+        """If router has a connection to host:port return the management info.
+        Otherwise return None"""
+        connections = self.agent.get('org.apache.qpid.dispatch.connection')
+        for c in connections:
+            if c['name'] == '%s:%s'%(host, port): return c
+        return None
 
 
 class Qpidd(Process):
@@ -238,7 +302,7 @@ class Qpidd(Process):
 
     def qm_connect(self):
         """Make a qpid_messaging connection to the broker"""
-        qm.Connection.establish(self.address)
+        return qm.Connection.establish(self.address)
 
     @property
     def agent(self, **kwargs):
@@ -264,7 +328,8 @@ class TestCase(unittest.TestCase):
     """A test case that creates a separate directory for each test and
     cleans up during teardown."""
 
-    def setUp(self):
+    def __init__(self, *args, **kwargs):
+        super(TestCase, self).__init__(*args, **kwargs)
         self.save_dir = os.getcwd()
         # self.id() is normally _module[.module].TestClass.test_name
         id = self.id().split(".")
@@ -272,12 +337,12 @@ class TestCase(unittest.TestCase):
             dir = id[0]
         else:                   # use dir = module[.module].TestClass/test_name
             dir = os.path.join(".".join(id[0:-1]), id[-1])
-        shutil.rmtree(dir, ignore_errors=True) # FIXME aconway 2014-03-27: wrong place
+        shutil.rmtree(dir, ignore_errors=True)
         os.makedirs(dir)
         os.chdir(dir)
         self.cleanup_list = []
-        # FIXME aconway 2014-04-29: need a safer (configurable?) way to pick ports.
-        self.next_port = random.randint(30000,40000)
+        self.port_range = (20000, 30000)
+        self.next_port = random.randint(*self.port_range)
 
     def tearDown(self):
         os.chdir(self.save_dir)
@@ -290,9 +355,17 @@ class TestCase(unittest.TestCase):
     def cleanup(self, x): self.cleanup_list.append(x); return x
 
     def get_port(self):
-        """Get a (hopefully) unused port"""
+        """Get an unused port"""
+        def advance():          # Advance with wrap-around
+            self.next_port += 1
+            if self.next_port >= self.port_range[1]: self.next_port = port_range[0]
+        start = self.next_port
+        while not port_available(self.next_port):
+            advance()
+            if self.next_port == start:
+                raise Exception("No avaliable ports in range %s", self.port_range)
         p = self.next_port;
-        self.next_port += 1;
+        advance()
         return p
 
     def popen(self, *args, **kwargs):
@@ -307,16 +380,16 @@ class TestCase(unittest.TestCase):
         """Return a Qpidd that will be cleaned up on teardown"""
         return self.cleanup(Qpidd(*args, **kwargs))
 
-    def messenger(self, name="test-messenger", timeout=1):
+    def messenger(self, name="test-messenger", timeout=default_timeout, blocking=True, cleanup=True):
         """Return a started Messenger that will be cleaned up on teardown."""
         m = Messenger(name)
         m.timeout = timeout
+        m.blocking = blocking
         m.start()
-        self.cleanup(m)
+        if cleanup: self.cleanup(m)
         return m
 
     def message(self, **properties):
         """Convenience to create a proton.Message with properties set"""
-        m = Message()
-        for name, value in properties.iteritems(): setattr(m, name, value)
-        return m
+        global message
+        return message(**properties)
