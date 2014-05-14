@@ -224,7 +224,9 @@ bool qd_config_item_exists(const qd_dispatch_t *dispatch, const char *section, i
 {
     PyObject *pResult = item_value(dispatch, section, index, key, "value_string");
     bool exists = pResult;
-    if (pResult) Py_DECREF(pResult);
+    if (pResult) {
+        Py_DECREF(pResult);
+    }
     return exists;
 }
 
