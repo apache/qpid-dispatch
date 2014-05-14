@@ -287,11 +287,11 @@ class BusManager:
         for node in objects:
             row = []
             row.append(node.addr)
-            if node.next-hop != None:
+            if node.nextHop != None:
                 row.append(nodes[node.nextHop].addr)
             else:
                 row.append('-')
-            if node.router-link != None:
+            if node.routerLink != None:
                 row.append(node.routerLink)
             else:
                 row.append('-')
