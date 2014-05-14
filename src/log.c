@@ -160,10 +160,15 @@ void qd_log_source_free(qd_log_source_t* src) {
     free(src);
 }
 
+bool qd_log_enabled(qd_log_source_t *source, int level) {
+    if (!source) return false;
+    int mask = source->mask == -1 ? default_log_source->mask : source->mask;
+    return level & mask;
+}
+
 void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line, const char *fmt, ...)
 {
-    int mask = source->mask == -1 ? default_log_source->mask : source->mask;
-    if (!(level & mask)) return;
+    if (!qd_log_enabled(source, level)) return;
 
     qd_log_entry_t *entry = new_qd_log_entry_t();
     DEQ_ITEM_INIT(entry);
