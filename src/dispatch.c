@@ -26,6 +26,7 @@
 #include "log_private.h"
 #include "router_private.h"
 #include "waypoint_private.h"
+#include "message_private.h"
 
 /**
  * Private Function Prototypes
@@ -63,6 +64,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
 
     qd_python_initialize(qd, python_pkgdir);
     qd_config_initialize();
+    qd_message_initialize();
     qd->config = qd_config();
 
     return qd;

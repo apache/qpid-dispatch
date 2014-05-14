@@ -20,6 +20,8 @@
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/threading.h>
+#include <qpid/dispatch/iterator.h>
+#include <qpid/dispatch/log.h>
 #include "message_private.h"
 #include "compose_private.h"
 #include <string.h>
@@ -52,6 +54,24 @@ ALLOC_DEFINE_CONFIG(qd_message_t, sizeof(qd_message_pvt_t), 0, 0);
 ALLOC_DEFINE(qd_message_content_t);
 
 typedef void (*buffer_process_t) (void *context, const unsigned char *base, int length);
+
+static qd_log_source_t* log_source = 0;
+
+void qd_message_initialize() {
+    log_source = qd_log_source("MESSAGE");
+}
+
+int qd_message_repr_len() { return qd_log_max_len(); }
+
+/* TODO aconway 2014-05-13: more detailed message representation. */
+char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len) {
+    qd_field_iterator_t* iter = qd_message_field_iterator((qd_message_t*)msg, QD_FIELD_TO);
+    char* to = iter? (char*)qd_field_iterator_copy(iter) : 0;
+    qd_field_iterator_free(iter);
+    snprintf(buffer, len, "Message(%p){to=%s}", msg, to? to:"");
+    free(to);
+    return buffer;
+}
 
 static void advance(unsigned char **cursor, qd_buffer_t **buffer, int consume, buffer_process_t handler, void *context)
 {
@@ -581,7 +601,13 @@ qd_message_t *qd_message_receive(qd_delivery_t *delivery)
                 qd_buffer_free(buf);
             }
             qd_delivery_set_context(delivery, 0);
-            return (qd_message_t*) msg;
+
+	    char repr[qd_message_repr_len()];
+	    qd_log(log_source, QD_LOG_TRACE, "%s received, link=%s",
+		   qd_message_repr((qd_message_t*)msg, repr, sizeof(repr)),
+		   pn_link_name(link));
+
+	    return (qd_message_t*) msg;
         }
 
         if (rc > 0) {
@@ -626,6 +652,11 @@ void qd_message_send(qd_message_t *in_msg, qd_link_t *link)
     qd_buffer_t          *buf     = DEQ_HEAD(content->buffers);
     unsigned char        *cursor;
     pn_link_t            *pnl     = qd_link_pn(link);
+
+    char repr[qd_message_repr_len()];
+    qd_log(log_source, QD_LOG_TRACE, "%s sending, link=%s",
+	   qd_message_repr(in_msg, repr, sizeof(repr)),
+	   pn_link_name(pnl));
 
     if (DEQ_SIZE(content->new_delivery_annotations) > 0) {
         //
@@ -812,6 +843,9 @@ int qd_message_check(qd_message_t *in_msg, qd_message_depth_t depth)
     result = qd_message_check_LH(content, depth);
     sys_mutex_unlock(content->lock);
 
+    char repr[qd_message_repr_len()];
+    qd_log(log_source, QD_LOG_TRACE, "%s check",
+	   qd_message_repr(in_msg, repr, sizeof(repr)));
     return result;
 }
 

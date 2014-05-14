@@ -50,7 +50,7 @@ void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line,
 #define qd_log(s, c, f, ...) \
     do { if (qd_log_enabled(s,c)) qd_log_impl(s, c, __FILE__, __LINE__, f , ##__VA_ARGS__); } while(0)
 
-/** Set the mask to enable log levels, see qd_log_level_t */
-void qd_log_set_mask(int mask);
+/** Maximum length for a log message */
+int qd_log_max_len();
 
 #endif

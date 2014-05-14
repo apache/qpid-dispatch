@@ -32,6 +32,8 @@
 #define LIST_MAX 1000
 #define LOG_MAX 640
 
+int qd_log_max_len() { return TEXT_MAX; }
+
 typedef struct qd_log_entry_t qd_log_entry_t;
 
 struct qd_log_entry_t {

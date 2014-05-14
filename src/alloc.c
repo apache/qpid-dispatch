@@ -188,6 +188,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
 
 void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p)
 {
+    if (!p) return;
     qd_alloc_item_t *item = ((qd_alloc_item_t*) p) - 1;
     int              idx;
 

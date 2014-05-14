@@ -100,6 +100,9 @@ ALLOC_DECLARE(qd_message_content_t);
 
 #define MSG_CONTENT(m) (((qd_message_pvt_t*) m)->content)
 
+/** Initialize logging */
+void qd_message_initialize();
+
 ///@}
 
 #endif

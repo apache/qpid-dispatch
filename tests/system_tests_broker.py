@@ -48,7 +48,9 @@ class BrokerSystemTest(TestCase):
 
         # Start a qdrouterd
         router_conf = Qdrouterd.Config([
-            ('log', { 'module':'DEFAULT', 'level':'TRACE' }),
+            ('log', { 'module':'DEFAULT', 'level':'NOTICE' }),
+            ('log', { 'module':'ROUTER', 'level':'TRACE' }),
+            ('log', { 'module':'MESSAGE', 'level':'TRACE' }),
             ('container', {'container-name':self.id()}),
             ('container', {'container-name':self.id()}),
             ('router', { 'mode': 'standalone', 'router-id': self.id() }),
@@ -62,23 +64,24 @@ class BrokerSystemTest(TestCase):
 
         # Wait for broker & router to be ready
         wait_ports([q.port for q in qpidd] + router.ports)
+        qpidd[0].agent.addQueue(testq)
 
-        # Smoke test for qpidd
-        qc = self.cleanup(qm.Connection.establish(qpidd[0].address))
-        qc.session().sender(testq+";{create:always}").send("a")
-        qr = qc.session().receiver(testq)
-        self.assertEqual(qr.fetch(1).content, "a")
-
-        # Smoke test for dispatch.
-        addr = router.addresses[0]+"/xxx/1"
-        m1, m2 = self.messenger(), self.messenger()
-        m2.subscribe(addr)
-        m1.put(self.message(address=addr, body="b"))
-        m1.send()
+        # Test for waypoint routing via queue
+        m=self.message(address=router.addresses[0]+"/"+testq, body="c")
+        msgr = self.messenger()
+        time.sleep(3)           # FIXME aconway 2014-05-07: race on router
+        msgr.subscribe(m.address)
+        time.sleep(3)           # FIXME aconway 2014-05-07: race on router
+        msgr.put(m)
+        msgr.send()
         msg = Message()
-        m2.recv(1)
-        m2.get(msg)
-        self.assertEqual(msg.body, "b")
+        msgr.recv(1)
+        msgr.get(msg)
+        msgr.accept()
+        self.assertEqual(msg.body, m.body)
+        aq = qpidd[0].agent.getQueue(testq)
+        aq.update()
+        self.assertEquals((aq.msgTotalEnqueues, aq.msgTotalDequeues), (1,1))
 
         # FIXME aconway 2014-05-05: test for waypoint routing via queue
 
