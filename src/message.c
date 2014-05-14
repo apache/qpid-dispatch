@@ -416,6 +416,11 @@ static qd_field_location_t *qd_message_field_location(qd_message_t *msg, qd_mess
             return &content->section_delivery_annotation;
         break;
 
+    case QD_FIELD_MESSAGE_ANNOTATION:
+        if (content->section_message_annotation.parsed)
+            return &content->section_message_annotation;
+        break;
+
     case QD_FIELD_APPLICATION_PROPERTIES:
         if (content->section_application_properties.parsed)
             return &content->section_application_properties;
@@ -452,7 +457,7 @@ qd_message_t *qd_message()
     msg->content->lock        = sys_mutex();
     msg->content->ref_count   = 1;
     msg->content->parse_depth = QD_DEPTH_NONE;
-    msg->content->parsed_delivery_annotations = 0;
+    msg->content->parsed_message_annotations = 0;
 
     return (qd_message_t*) msg;
 }
@@ -469,8 +474,8 @@ void qd_message_free(qd_message_t *in_msg)
     sys_mutex_unlock(content->lock);
 
     if (rc == 0) {
-        if (content->parsed_delivery_annotations)
-            qd_parse_free(content->parsed_delivery_annotations);
+        if (content->parsed_message_annotations)
+            qd_parse_free(content->parsed_message_annotations);
 
         qd_buffer_t *buf = DEQ_HEAD(content->buffers);
         while (buf) {
@@ -479,11 +484,11 @@ void qd_message_free(qd_message_t *in_msg)
             buf = DEQ_HEAD(content->buffers);
         }
 
-        buf = DEQ_HEAD(content->new_delivery_annotations);
+        buf = DEQ_HEAD(content->new_message_annotations);
         while (buf) {
-            DEQ_REMOVE_HEAD(content->new_delivery_annotations);
+            DEQ_REMOVE_HEAD(content->new_message_annotations);
             qd_buffer_free(buf);
-            buf = DEQ_HEAD(content->new_delivery_annotations);
+            buf = DEQ_HEAD(content->new_message_annotations);
         }
 
         sys_mutex_free(content->lock);
@@ -514,40 +519,40 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
 }
 
 
-qd_parsed_field_t *qd_message_delivery_annotations(qd_message_t *in_msg)
+qd_parsed_field_t *qd_message_message_annotations(qd_message_t *in_msg)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     qd_message_content_t *content = msg->content;
 
-    if (content->parsed_delivery_annotations)
-        return content->parsed_delivery_annotations;
+    if (content->parsed_message_annotations)
+        return content->parsed_message_annotations;
 
-    qd_field_iterator_t *da = qd_message_field_iterator(in_msg, QD_FIELD_DELIVERY_ANNOTATION);
-    if (da == 0)
+    qd_field_iterator_t *ma = qd_message_field_iterator(in_msg, QD_FIELD_MESSAGE_ANNOTATION);
+    if (ma == 0)
         return 0;
 
-    content->parsed_delivery_annotations = qd_parse(da);
-    if (content->parsed_delivery_annotations == 0 ||
-        !qd_parse_ok(content->parsed_delivery_annotations) ||
-        !qd_parse_is_map(content->parsed_delivery_annotations)) {
-        qd_field_iterator_free(da);
-        qd_parse_free(content->parsed_delivery_annotations);
-        content->parsed_delivery_annotations = 0;
+    content->parsed_message_annotations = qd_parse(ma);
+    if (content->parsed_message_annotations == 0 ||
+        !qd_parse_ok(content->parsed_message_annotations) ||
+        !qd_parse_is_map(content->parsed_message_annotations)) {
+        qd_field_iterator_free(ma);
+        qd_parse_free(content->parsed_message_annotations);
+        content->parsed_message_annotations = 0;
         return 0;
     }
 
-    qd_field_iterator_free(da);
-    return content->parsed_delivery_annotations;
+    qd_field_iterator_free(ma);
+    return content->parsed_message_annotations;
 }
 
 
-void qd_message_set_delivery_annotations(qd_message_t *msg, qd_composed_field_t *da)
+void qd_message_set_message_annotations(qd_message_t *msg, qd_composed_field_t *da)
 {
     qd_message_content_t *content       = MSG_CONTENT(msg);
     qd_buffer_list_t     *field_buffers = qd_compose_buffers(da);
 
-    assert(DEQ_SIZE(content->new_delivery_annotations) == 0);
-    content->new_delivery_annotations = *field_buffers;
+    assert(DEQ_SIZE(content->new_message_annotations) == 0);
+    content->new_message_annotations = *field_buffers;
     DEQ_INIT(*field_buffers); // Zero out the linkage to the now moved buffers.
 }
 
@@ -658,18 +663,18 @@ void qd_message_send(qd_message_t *in_msg, qd_link_t *link)
 	   qd_message_repr(in_msg, repr, sizeof(repr)),
 	   pn_link_name(pnl));
 
-    if (DEQ_SIZE(content->new_delivery_annotations) > 0) {
+    if (DEQ_SIZE(content->new_message_annotations) > 0) {
         //
-        // This is the case where the delivery annotations have been modified.
+        // This is the case where the message annotations have been modified.
         // The message send must be divided into sections:  The existing header;
-        // the new delivery annotations; the rest of the existing message.
-        // Note that the original delivery annotations that are still in the
+        // the new message annotations; the rest of the existing message.
+        // Note that the original message annotations that are still in the
         // buffer chain must not be sent.
         //
         // Start by making sure that we've parsed the message sections through
-        // the delivery annotations
+        // the message annotations
         //
-        if (!qd_message_check(in_msg, QD_DEPTH_DELIVERY_ANNOTATIONS))
+        if (!qd_message_check(in_msg, QD_DEPTH_MESSAGE_ANNOTATIONS))
             return;
 
         //
@@ -685,20 +690,20 @@ void qd_message_send(qd_message_t *in_msg, qd_link_t *link)
         }
 
         //
-        // Send new delivery annotations
+        // Send new message annotations
         //
-        qd_buffer_t *da_buf = DEQ_HEAD(content->new_delivery_annotations);
+        qd_buffer_t *da_buf = DEQ_HEAD(content->new_message_annotations);
         while (da_buf) {
             pn_link_send(pnl, (char*) qd_buffer_base(da_buf), qd_buffer_size(da_buf));
             da_buf = DEQ_NEXT(da_buf);
         }
 
         //
-        // Skip over replaced delivery annotations
+        // Skip over replaced message annotations
         //
-        if (content->section_delivery_annotation.length > 0)
+        if (content->section_message_annotation.length > 0)
             advance(&cursor, &buf,
-                    content->section_delivery_annotation.hdr_length + content->section_delivery_annotation.length,
+                    content->section_message_annotation.hdr_length + content->section_message_annotation.length,
                     0, 0);
 
         //

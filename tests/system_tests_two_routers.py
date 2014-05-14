@@ -503,7 +503,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_08_delivery_annotations(self):
-        addr = "amqp:/da/1"
+        addr = "amqp:/ma/1"
         M1 = Messenger()
         M2 = Messenger()
 
@@ -516,7 +516,7 @@ class RouterTest(unittest.TestCase):
         M1.start()
         M2.start()
         self.subscribe(M2, addr)
-        wait_for_addr(M1, "da/1", 0, 1)
+        wait_for_addr(M1, "ma/1", 0, 1)
 
         tm = Message()
         rm = Message()
@@ -535,10 +535,10 @@ class RouterTest(unittest.TestCase):
             M2.recv(1)
             M2.get(rm)
             self.assertEqual(i, rm.body['number'])
-            da = rm.instructions
-            self.assertEqual(da.__class__, dict)
-            self.assertEqual(da['x-opt-qd.ingress'], '0/QDR.A')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
+            ma = rm.annotations
+            self.assertEqual(ma.__class__, dict)
+            self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR.A')
+            self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
 
         M1.stop()
         M2.stop()

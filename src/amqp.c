@@ -19,9 +19,10 @@
 
 #include <qpid/dispatch/amqp.h>
 
-const char * const QD_DA_INGRESS = "x-opt-qd.ingress";
-const char * const QD_DA_TRACE   = "x-opt-qd.trace";
-const char * const QD_DA_TO      = "x-opt-qd.to";
+const char * const QD_MA_INGRESS = "x-opt-qd.ingress";
+const char * const QD_MA_TRACE   = "x-opt-qd.trace";
+const char * const QD_MA_TO      = "x-opt-qd.to";
+const char * const QD_MA_CLASS   = "x-opt-qd.class";
 
 const char * const QD_CAPABILITY_ROUTER = "qd.router";
 

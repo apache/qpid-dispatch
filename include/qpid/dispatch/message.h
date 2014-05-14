@@ -122,30 +122,30 @@ void qd_message_free(qd_message_t *msg);
 qd_message_t *qd_message_copy(qd_message_t *msg);
 
 /**
- * Retrieve the delivery annotations from a message.
+ * Retrieve the message annotations from a message.
  *
  * IMPORTANT: The pointer returned by this function remains owned by the message.
  *            The caller MUST NOT free the parsed field.
  *
  * @param msg Pointer to a received message.
- * @return Pointer to the parsed field for the delivery annotations.  If the message doesn't
- *         have delivery annotations, the return value shall be NULL.
+ * @return Pointer to the parsed field for the message annotations.  If the message doesn't
+ *         have message annotations, the return value shall be NULL.
  */
-qd_parsed_field_t *qd_message_delivery_annotations(qd_message_t *msg);
+qd_parsed_field_t *qd_message_message_annotations(qd_message_t *msg);
 
 /**
- * Set the delivery annotations for the message.  If the message already has delivery annotations,
+ * Set the message annotations for the message.  If the message already has message annotations,
  * they will be overwritten/replaced by the new field.
  *
  * @param msg Pointer to a receiver message.
- * @param da Pointer to a composed field representing the new delivery annotations of the message.
- *           If null, the message will not have a delivery annotations field.
+ * @param da Pointer to a composed field representing the new message annotations of the message.
+ *           If null, the message will not have a message annotations field.
  *           IMPORTANT: The message will not take ownership of the composed field.  The
  *                      caller is responsible for freeing it after this call.  Since the contents
  *                      are copied into the message, it is safe to free the composed field
  *                      any time after the call to this function.
  */
-void qd_message_set_delivery_annotations(qd_message_t *msg, qd_composed_field_t *da);
+void qd_message_set_message_annotations(qd_message_t *msg, qd_composed_field_t *da);
 
 /**
  * Receive message data via a delivery.  This function may be called more than once on the same

@@ -434,8 +434,8 @@ class RouterTest(unittest.TestCase):
 #        pass 
 
 
-    def test_08_delivery_annotations(self):
-        addr = "amqp://0.0.0.0:20000/da/1"
+    def test_08_message_annotations(self):
+        addr = "amqp://0.0.0.0:20000/ma/1"
         M1 = Messenger()
         M2 = Messenger()
 
@@ -464,15 +464,15 @@ class RouterTest(unittest.TestCase):
             M2.recv(1)
             M2.get(rm)
             self.assertEqual(i, rm.body['number'])
-            da = rm.instructions
-            self.assertEqual(da.__class__, dict)
-            self.assertEqual(da['x-opt-qd.ingress'], '0/QDR')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/QDR'])
+            ma = rm.annotations
+            self.assertEqual(ma.__class__, dict)
+            self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR')
+            self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR'])
 
         ##
         ## Pre-existing ingress
         ##
-        tm.instructions = {'x-opt-qd.ingress': 'ingress-router'}
+        tm.annotations = {'x-opt-qd.ingress': 'ingress-router'}
         for i in range(10):
             tm.body = {'number': i}
             M1.put(tm)
@@ -482,15 +482,15 @@ class RouterTest(unittest.TestCase):
             M2.recv(1)
             M2.get(rm)
             self.assertEqual(i, rm.body['number'])
-            da = rm.instructions
-            self.assertEqual(da.__class__, dict)
-            self.assertEqual(da['x-opt-qd.ingress'], 'ingress-router')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/QDR'])
+            ma = rm.annotations
+            self.assertEqual(ma.__class__, dict)
+            self.assertEqual(ma['x-opt-qd.ingress'], 'ingress-router')
+            self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR'])
 
         ##
         ## Invalid trace type
         ##
-        tm.instructions = {'x-opt-qd.trace' : 45}
+        tm.annotations = {'x-opt-qd.trace' : 45}
         for i in range(10):
             tm.body = {'number': i}
             M1.put(tm)
@@ -500,15 +500,15 @@ class RouterTest(unittest.TestCase):
             M2.recv(1)
             M2.get(rm)
             self.assertEqual(i, rm.body['number'])
-            da = rm.instructions
-            self.assertEqual(da.__class__, dict)
-            self.assertEqual(da['x-opt-qd.ingress'], '0/QDR')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/QDR'])
+            ma = rm.annotations
+            self.assertEqual(ma.__class__, dict)
+            self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR')
+            self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR'])
 
         ##
         ## Empty trace
         ##
-        tm.instructions = {'x-opt-qd.trace' : []}
+        tm.annotations = {'x-opt-qd.trace' : []}
         for i in range(10):
             tm.body = {'number': i}
             M1.put(tm)
@@ -518,15 +518,15 @@ class RouterTest(unittest.TestCase):
             M2.recv(1)
             M2.get(rm)
             self.assertEqual(i, rm.body['number'])
-            da = rm.instructions
-            self.assertEqual(da.__class__, dict)
-            self.assertEqual(da['x-opt-qd.ingress'], '0/QDR')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/QDR'])
+            ma = rm.annotations
+            self.assertEqual(ma.__class__, dict)
+            self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR')
+            self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR'])
 
         ##
         ## Non-empty trace
         ##
-        tm.instructions = {'x-opt-qd.trace' : ['0/first.hop']}
+        tm.annotations = {'x-opt-qd.trace' : ['0/first.hop']}
         for i in range(10):
             tm.body = {'number': i}
             M1.put(tm)
@@ -536,10 +536,10 @@ class RouterTest(unittest.TestCase):
             M2.recv(1)
             M2.get(rm)
             self.assertEqual(i, rm.body['number'])
-            da = rm.instructions
-            self.assertEqual(da.__class__, dict)
-            self.assertEqual(da['x-opt-qd.ingress'], '0/QDR')
-            self.assertEqual(da['x-opt-qd.trace'], ['0/first.hop', '0/QDR'])
+            ma = rm.annotations
+            self.assertEqual(ma.__class__, dict)
+            self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR')
+            self.assertEqual(ma['x-opt-qd.trace'], ['0/first.hop', '0/QDR'])
 
         M1.stop()
         M2.stop()

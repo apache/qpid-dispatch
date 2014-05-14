@@ -532,13 +532,13 @@ static PyObject* qd_python_send(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "sOO", &address, &app_properties, &body))
         return 0;
 
-    field = qd_compose(QD_PERFORMATIVE_DELIVERY_ANNOTATIONS, field);
+    field = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, field);
     qd_compose_start_map(field);
 
-    qd_compose_insert_string(field, QD_DA_INGRESS);
+    qd_compose_insert_string(field, QD_MA_INGRESS);
     qd_compose_insert_string(field, qd_router_id(ioa->qd));
 
-    qd_compose_insert_string(field, QD_DA_TRACE);
+    qd_compose_insert_string(field, QD_MA_TRACE);
     qd_compose_start_list(field);
     qd_compose_insert_string(field, qd_router_id(ioa->qd));
     qd_compose_end_list(field);

@@ -86,11 +86,12 @@ enum {
     QD_AMQP_ARRAY32 = 0xf0,
 } qd_amqp_type_t;
 
-/** @name Delivery Annotation Headers */
+/** @name Message Annotation Headers */
 /// @{
-const char * const QD_DA_INGRESS;  ///< Ingress Router
-const char * const QD_DA_TRACE;    ///< Trace
-const char * const QD_DA_TO;       ///< To-Override
+const char * const QD_MA_INGRESS;  ///< Ingress Router
+const char * const QD_MA_TRACE;    ///< Trace
+const char * const QD_MA_TO;       ///< To-Override
+const char * const QD_MA_CLASS;    ///< Message-Class
 /// @}
 
 /** @name Link Terminus Capabilities */

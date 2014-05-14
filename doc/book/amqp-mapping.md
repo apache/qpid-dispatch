@@ -24,14 +24,15 @@ codepoints, and semantics for routing over AMQP.  This page documents
 the details of Dispatch Router's use of AMQP.
 
 
-## Delivery Annotations
+## Message Annotations
 
-The following Delivery Annotation fields are defined by Dispatch Router:
+The following Message Annotation fields are defined by Dispatch Router:
 
   || *Field* || *Type* || *Description* ||
   || <span style="white-space: nowrap;">x-opt-qd.ingress</span> || string || The identity of the ingress router for a message-routed message.  The ingress router is the first router encountered by a transiting message.  The router will, if this field is present, leave it unaltered.  If the field is not present, the router shall insert the field with its own identity. ||
   || <span style="white-space: nowrap;">x-opt-qd.trace</span> || list of string || The list of routers through which this message-routed message has transited.  If this field is not present, the router shall do nothing.  If the field is present, the router shall append its own identity to the end of the list. ||
   || x-opt-qd.to || string || To-Override for message-routed messages.  If this field is present, the address in this field shall be used for routing in lieu of the *to* field in the message properties.  A router may append, remove, or modify this annotation field depending on the policy in place for routing the message. ||
+  || x-opt-qd.class || string || Message class.  This is used to allow the router to provide separate paths for different classes of traffic. ||
 
 
 ## Source/Target Capabilities

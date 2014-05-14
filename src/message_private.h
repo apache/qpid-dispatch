@@ -71,7 +71,7 @@ typedef struct {
     sys_mutex_t         *lock;
     uint32_t             ref_count;                       // The number of messages referencing this
     qd_buffer_list_t     buffers;                         // The buffer chain containing the message
-    qd_buffer_list_t     new_delivery_annotations;        // The buffer chain containing the new delivery annotations (MOVE TO MSG_PVT)
+    qd_buffer_list_t     new_message_annotations;         // The buffer chain containing the new message annotations (MOVE TO MSG_PVT)
     qd_field_location_t  section_message_header;          // The message header list
     qd_field_location_t  section_delivery_annotation;     // The delivery annotation map
     qd_field_location_t  section_message_annotation;      // The message annotation map
@@ -87,7 +87,7 @@ typedef struct {
     qd_buffer_t         *parse_buffer;
     unsigned char       *parse_cursor;
     qd_message_depth_t   parse_depth;
-    qd_parsed_field_t   *parsed_delivery_annotations;
+    qd_parsed_field_t   *parsed_message_annotations;
 } qd_message_content_t;
 
 typedef struct {

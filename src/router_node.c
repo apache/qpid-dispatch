@@ -437,37 +437,37 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
 
 
 static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
-                                                    qd_parsed_field_t *in_da,
+                                                    qd_parsed_field_t *in_ma,
                                                     qd_message_t      *msg,
                                                     int               *drop,
                                                     const char        *to_override)
 {
-    qd_composed_field_t *out_da       = qd_compose(QD_PERFORMATIVE_DELIVERY_ANNOTATIONS, 0);
+    qd_composed_field_t *out_ma       = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
     qd_field_iterator_t *ingress_iter = 0;
 
     qd_parsed_field_t *trace   = 0;
     qd_parsed_field_t *ingress = 0;
 
-    if (in_da) {
-        trace   = qd_parse_value_by_key(in_da, QD_DA_TRACE);
-        ingress = qd_parse_value_by_key(in_da, QD_DA_INGRESS);
+    if (in_ma) {
+        trace   = qd_parse_value_by_key(in_ma, QD_MA_TRACE);
+        ingress = qd_parse_value_by_key(in_ma, QD_MA_INGRESS);
     }
 
-    qd_compose_start_map(out_da);
+    qd_compose_start_map(out_ma);
 
     //
     // If there is a to_override provided, insert a TO field.
     //
     if (to_override) {
-        qd_compose_insert_string(out_da, QD_DA_TO);
-        qd_compose_insert_string(out_da, to_override);
+        qd_compose_insert_string(out_ma, QD_MA_TO);
+        qd_compose_insert_string(out_ma, to_override);
     }
 
     //
     // If there is a trace field, append this router's ID to the trace.
     //
-    qd_compose_insert_string(out_da, QD_DA_TRACE);
-    qd_compose_start_list(out_da);
+    qd_compose_insert_string(out_ma, QD_MA_TRACE);
+    qd_compose_start_list(out_ma);
     if (trace) {
         if (qd_parse_is_list(trace)) {
             uint32_t idx = 0;
@@ -477,31 +477,31 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
                 if (qd_field_iterator_equal(iter, (unsigned char*) node_id))
                     *drop = 1;
                 qd_field_iterator_reset(iter);
-                qd_compose_insert_string_iterator(out_da, iter);
+                qd_compose_insert_string_iterator(out_ma, iter);
                 idx++;
                 trace_item = qd_parse_sub_value(trace, idx);
             }
         }
     }
 
-    qd_compose_insert_string(out_da, node_id);
-    qd_compose_end_list(out_da);
+    qd_compose_insert_string(out_ma, node_id);
+    qd_compose_end_list(out_ma);
 
     //
     // If there is no ingress field, annotate the ingress as this router else
     // keep the original field.
     //
-    qd_compose_insert_string(out_da, QD_DA_INGRESS);
+    qd_compose_insert_string(out_ma, QD_MA_INGRESS);
     if (ingress && qd_parse_is_scalar(ingress)) {
         ingress_iter = qd_parse_raw(ingress);
-        qd_compose_insert_string_iterator(out_da, ingress_iter);
+        qd_compose_insert_string_iterator(out_ma, ingress_iter);
     } else
-        qd_compose_insert_string(out_da, node_id);
+        qd_compose_insert_string(out_ma, node_id);
 
-    qd_compose_end_map(out_da);
+    qd_compose_end_map(out_ma);
 
-    qd_message_set_delivery_annotations(msg, out_da);
-    qd_compose_free(out_da);
+    qd_message_set_message_annotations(msg, out_ma);
+    qd_compose_free(out_ma);
 
     //
     // Return the iterator to the ingress field _if_ it was present.
@@ -718,7 +718,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
     valid_message = qd_message_check(msg, QD_DEPTH_PROPERTIES);
 
     if (valid_message) {
-        qd_parsed_field_t   *in_da     = 0;
+        qd_parsed_field_t   *in_ma     = 0;
         qd_field_iterator_t *iter      = 0;
         bool                 free_iter = true;
         qd_address_t        *addr;
@@ -729,15 +729,15 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
         // Only respect the delivery annotations if the message came from another router.
         //
         if (rlink->link_type != QD_LINK_WAYPOINT)
-            in_da = qd_message_delivery_annotations(msg);
+            in_ma = qd_message_message_annotations(msg);
 
         //
         // If the message has delivery annotations, get the to-override field from the annotations.
         //
-        if (in_da) {
-            qd_parsed_field_t *da_to = qd_parse_value_by_key(in_da, QD_DA_TO);
-            if (da_to) {
-                iter      = qd_parse_raw(da_to);
+        if (in_ma) {
+            qd_parsed_field_t *ma_to = qd_parse_value_by_key(in_ma, QD_MA_TO);
+            if (ma_to) {
+                iter      = qd_parse_raw(ma_to);
                 free_iter = false;
             }
         }
@@ -805,7 +805,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
                 // returns a 'drop' indication if it detects that the message will loop.
                 //
                 int drop = 0;
-                qd_field_iterator_t *ingress_iter = router_annotate_message(router, in_da, msg, &drop, to_override);
+                qd_field_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &drop, to_override);
 
                 //
                 // Forward to the in-process handler for this address if there is one.  The
