@@ -53,7 +53,7 @@ add_test(unit_tests_size_1     unit_tests_size 1)
 add_test(unit_tests            unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
 add_test(router_tests          python ${CMAKE_CURRENT_SOURCE_DIR}/router_engine_test.py -v)
 
-set(SYSTEM_TEST_FILES system_tests_one_router.py system_tests_two_routers.py)
+set(SYSTEM_TEST_FILES system_test.py system_tests_one_router.py system_tests_two_routers.py system_tests_broker.py)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_build.sh.in ${CMAKE_CURRENT_BINARY_DIR}/config_build.sh)
 

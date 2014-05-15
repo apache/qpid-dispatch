@@ -25,8 +25,23 @@
 
 /**
  * @file
- * A waypoint is a point on a multi-phase route where messages can exit and re-enter the router.
- * For example after being sent through an external broker's queue.
+ *
+ * A waypoint sends/receives messages to/from an external entity such as a
+ * broker as part of a multi-phase address.
+ *
+ * An address can have multiple phases. Each phase acts like a separate address,
+ * but sharing the same address string.
+ *
+ * Phases are not visible to normal senders/receivers, they are set by
+ * waypoints. Messages from normal senders go to the phase=0 address.  Normal
+ * subscribers subscribe to the highest phase defined for the address.
+ *
+ * A waypoint takes messages for its in-phase and sends them to the external
+ * entity. Messages received from the external entity are given the waypoint's
+ * out-phase. Waypoints can be "chained" with the out-phase of one equal to the
+ * in-phase for the next. Thus waypoints provide a way to route messages via
+ * multiple external entities between a sender and a subscriber using the same
+ * address.
  */
 
 void qd_waypoint_activate_all(qd_dispatch_t *qd);

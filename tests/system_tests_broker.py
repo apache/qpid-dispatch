@@ -17,70 +17,94 @@
 # under the License.
 #
 
-"""System tests involving one or more brokers and dispatch routers
-
-FIXME aconway 2014-04-29:
-
-These tests is a work in progress, they do not pass
-and they are not run by the qdtest script.
-
-They are provided as an example of how to use the system_test module.
-
-To run the tests from a dispatch checkout:
- . config.sh; python tests/system_tests_broker.py
-Note the tests wil 
 """
+System tests involving one or more brokers and dispatch routers integrated
+with waypoints.
+"""
+import unittest, system_test
+from system_test import wait_port, wait_ports, Qdrouterd, retry, message, MISSING_REQUIREMENTS
 
-from system_test import *
+class BrokerSystemTest(system_test.TestCase): # pylint: disable=too-many-public-methods
+    """System tests involving routers and qpidd brokers"""
 
-class BrokerSystemTest(TestCase):
+    # Hack for python 2.6 which does not support setupClass.
+    # We set setup_ok = true in setupClass, and skip all tests if it's not true.
+    setup_ok = False
 
-    def test_broker(self):
-        testq = 'testq'
+    @classmethod
+    def setUpClass(cls):
+        """Start 3 qpidd brokers, wait for them to be ready."""
+        super(BrokerSystemTest, cls).setUpClass()
+        cls.qpidd = [cls.tester.qpidd('qpidd%s'%i, port=cls.get_port())
+                    for i in xrange(3)]
+        for q in cls.qpidd:
+            wait_port(q.port)
+        cls.setup_ok = True
 
-        # Start two qpidd brokers called qpidd0 and qpidd1
-        qpidd = [
-            self.qpidd('qpidd%s'%i,
-                       Qpidd.Config({'port':self.get_port(), 'trace':1}))
-                  for i in xrange(2) ]
+    @classmethod
+    def tearDownClass(cls):
+        if cls.setup_ok:
+            cls.setup_ok = False
+            super(BrokerSystemTest, cls).tearDownClass()
 
-        # FIXME aconway 2014-05-13: router waypoint connection seems fragile
-        # unless everything is set up beforehand.
-        wait_ports([q.port for q in qpidd])
-        qpidd[0].agent.addQueue(testq)
+    def test_distrbuted_queue(self):
+        """Static distributed queue, one router, three brokers"""
+        if not self.setup_ok:
+            return self.skipTest("setUpClass failed")
+        testq = self.id()       # The distributed queue name
+        for q in self.qpidd:
+            q.agent.addQueue(testq)
 
         # Start a qdrouterd
+        # We have a waypoint for each broker, on the same testq address.
+        # Sending to testq should spread messages to the qpidd queues.
+        # Subscribing to testq should gather messages from the qpidd queues.
         router_conf = Qdrouterd.Config([
-            ('log', { 'module':'DEFAULT', 'level':'NOTICE' }),
-            ('log', { 'module':'ROUTER', 'level':'TRACE' }),
-            ('log', { 'module':'MESSAGE', 'level':'TRACE' }),
+            ('log', {'module':'DEFAULT', 'level':'NOTICE'}),
+            ('log', {'module':'ROUTER', 'level':'TRACE'}),
+            ('log', {'module':'MESSAGE', 'level':'TRACE'}),
             ('container', {'container-name':self.id()}),
             ('container', {'container-name':self.id()}),
-            ('router', { 'mode': 'standalone', 'router-id': self.id() }),
+            ('router', {'mode': 'standalone', 'router-id': self.id()}),
             ('listener', {'addr':'0.0.0.0', 'port':self.get_port()}),
-            ('connector', {'name':'qpidd0', 'addr':'0.0.0.0', 'port':qpidd[0].port}),
-            ('connector', {'name':'qpidd1', 'addr':'0.0.0.0', 'port':qpidd[1].port}),
-            ('fixed-address', {'prefix':'testq', 'phase':0, 'fanout':'single', 'bias':'closest'}),
-            ('fixed-address', {'prefix':'testq', 'phase':1, 'fanout':'single', 'bias':'closest'}),
-            ('waypoint', {'name':'testq', 'out-phase':1, 'in-phase':0, 'connector':'qpidd0'})
+            ('fixed-address', {'prefix':testq, 'phase':0, 'fanout':'single', 'bias':'spread'}),
+            ('fixed-address', {'prefix':testq, 'phase':1, 'fanout':'single', 'bias':'spread'})
         ])
+        # Add connector and waypoint for each broker.
+        for q in self.qpidd:
+            router_conf += [
+                ('connector', {'name':q.name, 'addr':'0.0.0.0', 'port':q.port}),
+                ('waypoint', {'name':testq, 'out-phase':1, 'in-phase':0, 'connector':q.name})]
+
         router = self.qdrouterd('router0', router_conf)
         wait_ports(router.ports)
-        retry(lambda: router.is_connected(qpidd[0].port))
+        for q in self.qpidd:
+            retry(lambda: router.is_connected(q.port))
 
-        # Test for waypoint routing via queue
-        m=self.message(address=router.addresses[0]+"/"+testq, body="FOO")
         msgr = self.messenger()
-        msgr.subscribe(m.address)
-        msgr.put(m)
-        msgr.send()
-        msg = Message()
-        msgr.recv(1)
-        msgr.get(msg)
-        msgr.accept()
-        msgr.flush()
-        self.assertEqual(msg.body, m.body)
-        aq = qpidd[0].agent.getQueue(testq)
-        self.assertEquals((aq.msgTotalEnqueues, aq.msgTotalDequeues), (1,1))
 
-if __name__ == '__main__': unittest.main()
+        address = router.addresses[0]+"/"+testq
+        msgr.subscribe(address, flush=True)
+        n = 20                  # Messages per broker
+        r = range(n*len(self.qpidd))
+        for i in r:
+            msgr.put(message(address=address, body=i))
+        messages = sorted(msgr.fetch().body for i in r)
+        msgr.flush()
+        self.assertEqual(messages, r)
+        # Verify we got back exactly what we sent.
+        qs = [q.agent.getQueue(testq) for q in self.qpidd]
+        enq = sum(q.msgTotalEnqueues for q in qs)
+        deq = sum(q.msgTotalDequeues for q in qs)
+        self.assertEquals((enq, deq), (len(r), len(r)))
+        # Verify the messages were spread equally over the brokers.
+        self.assertEquals(
+            [(q.msgTotalEnqueues, q.msgTotalDequeues) for q in qs],
+            [(n, n) for q in qs]
+        )
+
+if __name__ == '__main__':
+    if MISSING_REQUIREMENTS:
+        print MISSING_REQUIREMENTS
+    else:
+        unittest.main()
