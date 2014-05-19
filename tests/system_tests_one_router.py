@@ -992,7 +992,7 @@ class RouterTest(unittest.TestCase):
         tm.address = addr
 
         ##
-        ## Pre-existing ingress
+        ## Pre-existing TO
         ##
         tm.annotations = {'x-opt-qd.to': 'toov/1'}
         for i in range(10):
@@ -1007,6 +1007,9 @@ class RouterTest(unittest.TestCase):
             ma = rm.annotations
             self.assertEqual(ma.__class__, dict)
             self.assertEqual(ma['x-opt-qd.to'], 'toov/1')
+
+        M1.stop()
+        M2.stop()
 
 
 if __name__ == '__main__':
