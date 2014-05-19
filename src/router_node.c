@@ -447,10 +447,12 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
 
     qd_parsed_field_t *trace   = 0;
     qd_parsed_field_t *ingress = 0;
+    qd_parsed_field_t *to      = 0;
 
     if (in_ma) {
         trace   = qd_parse_value_by_key(in_ma, QD_MA_TRACE);
         ingress = qd_parse_value_by_key(in_ma, QD_MA_INGRESS);
+        to      = qd_parse_value_by_key(in_ma, QD_MA_TO);
     }
 
     qd_compose_start_map(out_ma);
@@ -461,6 +463,9 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
     if (to_override) {
         qd_compose_insert_string(out_ma, QD_MA_TO);
         qd_compose_insert_string(out_ma, to_override);
+    } else if (to) {
+        qd_compose_insert_string(out_ma, QD_MA_TO);
+        qd_compose_insert_string_iterator(out_ma, qd_parse_raw(to));
     }
 
     //

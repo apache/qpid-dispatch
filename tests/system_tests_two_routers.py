@@ -832,6 +832,48 @@ class RouterTest(unittest.TestCase):
         M3.stop()
         M4.stop()
 
+    def test_13_to_override(self):
+        addr = "amqp:/toov/1"
+        M1 = Messenger()
+        M2 = Messenger()
+
+        M1.route("amqp:/*", "amqp://0.0.0.0:20100/$1")
+        M2.route("amqp:/*", "amqp://0.0.0.0:20101/$1")
+
+        M1.timeout = 1.0
+        M2.timeout = 1.0
+
+        M1.start()
+        M2.start()
+        self.subscribe(M2, addr)
+        wait_for_addr(M1, "toov/1", 0, 1)
+
+        tm = Message()
+        rm = Message()
+
+        tm.address = addr
+
+        ##
+        ## Pre-existing TO
+        ##
+        tm.annotations = {'x-opt-qd.to': 'toov/1'}
+        for i in range(10):
+            tm.body = {'number': i}
+            M1.put(tm)
+        M1.send()
+
+        for i in range(10):
+            M2.recv(1)
+            M2.get(rm)
+            self.assertEqual(i, rm.body['number'])
+            ma = rm.annotations
+            self.assertEqual(ma.__class__, dict)
+            self.assertEqual(ma['x-opt-qd.to'], 'toov/1')
+
+        M1.stop()
+        M2.stop()
+
+
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         if '--ssl' in sys.argv:
