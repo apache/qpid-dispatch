@@ -25,6 +25,7 @@
 #include "message_private.h"
 #include "compose_private.h"
 #include <string.h>
+#include <ctype.h>
 #include <stdio.h>
 
 static const unsigned char * const MSG_HDR_LONG                 = (unsigned char*) "\x00\x80\x00\x00\x00\x00\x00\x00\x00\x70";
@@ -63,13 +64,43 @@ void qd_message_initialize() {
 
 int qd_message_repr_len() { return qd_log_max_len(); }
 
+static int quote(char* bytes, int n, char* buffer, int len) {
+    int i = 0;
+    for (char* p = bytes; p < bytes+n && i < len; ++p) {
+	if (isprint(*p) || isspace(*p)) {
+	    buffer[i++] = *p;
+	}
+	else {
+	    int d = snprintf(buffer+i, len-i, "\\%02hhx", *p);
+	    i += d;
+	}
+    }
+    return i;
+}
+
 /* TODO aconway 2014-05-13: more detailed message representation. */
 char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len) {
-    qd_field_iterator_t* iter = qd_message_field_iterator((qd_message_t*)msg, QD_FIELD_TO);
-    char* to = iter? (char*)qd_field_iterator_copy(iter) : 0;
-    qd_field_iterator_free(iter);
-    snprintf(buffer, len, "Message(%p){to=%s}", msg, to? to:"");
-    free(to);
+    qd_message_check(msg, QD_DEPTH_BODY);
+    int i = 0;
+    --len;			/* Save space for final '\0' */
+    i += snprintf(buffer+i, len-i, "Message(%p){to=", msg);
+    qd_field_iterator_t* iter =	0;
+    iter = qd_message_field_iterator(msg, QD_FIELD_TO);
+    if (iter) {
+	i += qd_field_iterator_ncopy(iter, (unsigned char*)buffer+i, len-i);
+	qd_field_iterator_free(iter);
+    }
+    iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+    if (iter) {
+	i += snprintf(buffer+i, len-i, " body='");
+	char body[8];		/* Initial bytes of body */
+	int bytes = qd_field_iterator_ncopy(iter, (unsigned char*)body, sizeof(body));
+	i += quote(body, bytes, buffer+i, len-i);
+	i += snprintf(buffer+i, len-i, "'");
+    }
+    i += snprintf(buffer+i, len-i, "}");
+    assert(i <= len);
+    buffer[i] = '\0';
     return buffer;
 }
 
@@ -847,10 +878,6 @@ int qd_message_check(qd_message_t *in_msg, qd_message_depth_t depth)
     sys_mutex_lock(content->lock);
     result = qd_message_check_LH(content, depth);
     sys_mutex_unlock(content->lock);
-
-    char repr[qd_message_repr_len()];
-    qd_log(log_source, QD_LOG_TRACE, "%s check",
-	   qd_message_repr(in_msg, repr, sizeof(repr)));
     return result;
 }
 
@@ -987,4 +1014,3 @@ void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_com
         buf = DEQ_HEAD(*field2_buffers);
     }
 }
-

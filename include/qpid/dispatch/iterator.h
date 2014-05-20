@@ -197,10 +197,29 @@ int qd_field_iterator_equal(qd_field_iterator_t *iter, const unsigned char *stri
 int qd_field_iterator_prefix(qd_field_iterator_t *iter, const char *prefix);
 
 /**
- * Return a copy of the iterator's view.
+ * Return the exact length of the iterator's view.
+ */
+int qd_field_iterator_length(qd_field_iterator_t *iter);
+
+/**
+ * Copy the iterator's view into buffer up to a maximum of n bytes.
+ * There is no trailing '\n' added.
+ * @return number of bytes copied.
+ */
+int qd_field_iterator_ncopy(qd_field_iterator_t *iter, unsigned char* buffer, int n);
+
+/**
+ * Return a new copy of the iterator's view, with a trailing '\0' added.
  * @return Copy of the view, free with free()
  */
 unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter);
+
+/**
+ * Copy the iterator's view into buffer as a null terminated string,
+ * up to a maximum of n bytes. Useful for log messages.
+ * @return buffer.
+ */
+char* qd_field_iterator_logstr(qd_field_iterator_t *iter, char* buffer, int n);
 
 /**
  * Return the contents of this iter into an iovec structure.  This is used in a

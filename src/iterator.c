@@ -461,25 +461,36 @@ int qd_field_iterator_prefix(qd_field_iterator_t *iter, const char *prefix)
     return 1;
 }
 
-
-unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter)
-{
-    int            length = 0;
-    int            idx    = 0;
-    unsigned char *copy;
-
+int qd_field_iterator_length(qd_field_iterator_t *iter) {
+    int length = 0;
     qd_field_iterator_reset(iter);
     while (!qd_field_iterator_end(iter)) {
         qd_field_iterator_octet(iter);
         length++;
     }
+    return length;
+}
 
+int qd_field_iterator_ncopy(qd_field_iterator_t *iter, unsigned char* buffer, int n) {
     qd_field_iterator_reset(iter);
-    copy = (unsigned char*) malloc(length + 1);
-    while (!qd_field_iterator_end(iter))
-        copy[idx++] = qd_field_iterator_octet(iter);
-    copy[idx] = '\0';
+    int i = 0;
+    while (!qd_field_iterator_end(iter) && i < n)
+	buffer[i++] = qd_field_iterator_octet(iter);
+    return i;
+}
 
+char* qd_field_iterator_logstr(qd_field_iterator_t *iter, char* buffer, int n) {
+    int i = qd_field_iterator_ncopy(iter, (unsigned char*)buffer, n-1);
+    buffer[i] = '\0';
+    return buffer;
+}
+
+unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter)
+{
+    int length = qd_field_iterator_length(iter);
+    unsigned char *copy = malloc(length+1);
+    int i = qd_field_iterator_ncopy(iter, copy, length+1);
+    copy[i] = '\0';
     return copy;
 }
 

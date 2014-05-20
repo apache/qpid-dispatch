@@ -86,9 +86,9 @@ class BrokerSystemTest(system_test.TestCase): # pylint: disable=too-many-public-
         address = router.addresses[0]+"/"+testq
         msgr.subscribe(address, flush=True)
         n = 20                  # Messages per broker
-        r = range(n*len(self.qpidd))
-        for i in r:
-            msgr.put(message(address=address, body=i))
+        r = ["x-%02d"%i for i in range(n*len(self.qpidd))]
+        for b in r:
+            msgr.put(message(address=address, body=b))
         messages = sorted(msgr.fetch().body for i in r)
         msgr.flush()
         self.assertEqual(messages, r)
