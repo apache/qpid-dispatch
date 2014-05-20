@@ -68,6 +68,10 @@ qd_address_t* qd_address() {
     return addr;
 }
 
+const char* qd_address_logstr(qd_address_t* address) {
+    return (char*)qd_hash_key_by_handle(address->hash_handle);
+}
+
 void qd_router_add_link_ref_LH(qd_router_link_ref_list_t *ref_list, qd_router_link_t *link)
 {
     qd_router_link_ref_t *ref = new_qd_router_link_ref_t();

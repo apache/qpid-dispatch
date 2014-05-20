@@ -129,4 +129,6 @@ void qd_router_send2(qd_dispatch_t *qd,
 
 void qd_router_build_node_list(qd_dispatch_t *qd, qd_composed_field_t *field);
 
+/** String form of address for logging */
+const char* qd_address_logstr(qd_address_t* address);
 #endif
