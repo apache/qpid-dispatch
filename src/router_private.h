@@ -156,6 +156,8 @@ struct qd_address_t {
 ALLOC_DECLARE(qd_address_t);
 DEQ_DECLARE(qd_address_t, qd_address_list_t);
 
+/** Constructor for qd_address_t */
+qd_address_t* qd_address();
 
 struct qd_config_phase_t {
     DEQ_LINKS(qd_config_phase_t);

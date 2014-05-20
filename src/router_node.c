@@ -59,6 +59,15 @@ ALLOC_DEFINE(qd_address_t);
 ALLOC_DEFINE(qd_router_conn_t);
 
 
+qd_address_t* qd_address() {
+    qd_address_t* addr = new_qd_address_t();
+    memset(addr, 0, sizeof(qd_address_t));
+    DEQ_ITEM_INIT(addr);
+    DEQ_INIT(addr->rlinks);
+    DEQ_INIT(addr->rnodes);
+    return addr;
+}
+
 void qd_router_add_link_ref_LH(qd_router_link_ref_list_t *ref_list, qd_router_link_t *link)
 {
     qd_router_link_ref_t *ref = new_qd_router_link_ref_t();
@@ -1117,11 +1126,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
 
         qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
         if (!addr) {
-            addr = new_qd_address_t();
-            memset(addr, 0, sizeof(qd_address_t));
-            DEQ_ITEM_INIT(addr);
-            DEQ_INIT(addr->rlinks);
-            DEQ_INIT(addr->rnodes);
+            addr = qd_address();
             qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(router->addrs, addr);
             addr->semantics = semantics;
@@ -1509,11 +1514,7 @@ qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
     sys_mutex_lock(router->lock);
     qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
     if (!addr) {
-        addr = new_qd_address_t();
-        memset(addr, 0, sizeof(qd_address_t));
-        DEQ_ITEM_INIT(addr);
-        DEQ_INIT(addr->rlinks);
-        DEQ_INIT(addr->rnodes);
+        addr = qd_address();
         addr->semantics = semantics;
         qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_ITEM_INIT(addr);

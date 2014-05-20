@@ -65,11 +65,7 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
 
         if (!addr) {
-            addr = new_qd_address_t();
-            memset(addr, 0, sizeof(qd_address_t));
-            DEQ_ITEM_INIT(addr);
-            DEQ_INIT(addr->rlinks);
-            DEQ_INIT(addr->rnodes);
+            addr = qd_address();
             qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(router->addrs, addr);
             addr->waypoint  = true;
@@ -142,11 +138,7 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
 
         if (!addr) {
-            addr = new_qd_address_t();
-            memset(addr, 0, sizeof(qd_address_t));
-            DEQ_ITEM_INIT(addr);
-            DEQ_INIT(addr->rlinks);
-            DEQ_INIT(addr->rnodes);
+            addr = qd_address();
             qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(router->addrs, addr);
             addr->waypoint  = true;

@@ -347,6 +347,15 @@ class Qdrouterd(Process):
                 return c
         return None
 
+    def wait_connectors(self):
+        """Wait for all connectors to be connected"""
+        for c in self.config.sections('connector'):
+            retry(lambda: self.is_connected(c['port']))
+
+    def wait_ready(self):
+        """Wait for ports and connectors to be ready"""
+        wait_ports(self.ports)
+        self.wait_connectors()
 
 class Qpidd(Process):
     """Run a Qpid Daemon"""
@@ -511,13 +520,17 @@ class Tester(object):
 class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-methods
     """A TestCase that sets up its own working directory and is also a Tester."""
 
+    _base_dir = None
+
     def __init__(self, test_method):
         unittest.TestCase.__init__(self, test_method)
         Tester.__init__(self)
 
     @classmethod
     def base_dir(cls):
-        return os.path.abspath(os.path.join(__name__, cls.__name__))
+        if not cls._base_dir:
+            cls._base_dir = os.path.abspath(os.path.join(__name__+'.dir', cls.__name__))
+        return cls._base_dir
 
     @classmethod
     def setUpClass(cls):
