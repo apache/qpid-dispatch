@@ -247,6 +247,10 @@ class Config(object):
             f.write(str(self))
         return name
 
+    # def __getitem(self, key):
+    #     """Get an item, make sure any defaults have been set first"""
+    #     # defaults()
+    #     return super(Config, self).__getitem__(self, key)
 
 class Qdrouterd(Process):
     """Run a Qpid Dispatch Router Daemon"""
@@ -257,27 +261,28 @@ class Qdrouterd(Process):
         """
 
         DEFAULTS = {
-            'listener':{'sasl-mechanisms':'ANONYMOUS'},
-            'connector':{'sasl-mechanisms':'ANONYMOUS', 'role':'on-demand'}
+            'listener':{'addr':'0.0.0.0', 'sasl-mechanisms':'ANONYMOUS'},
+            'connector':{'addr':'0.0.0.0', 'sasl-mechanisms':'ANONYMOUS', 'role':'on-demand'}
         }
 
         def sections(self, name):
             """Return list of sections named name"""
             return [p for n, p in self if n == name]
 
+        def defaults(self):
+            """Fill in default values in configuration"""
+            for name, props in self:
+                if name in Qdrouterd.Config.DEFAULTS:
+                    for n,p in Qdrouterd.Config.DEFAULTS[name].iteritems():
+                        props.setdefault(n,p)
+
         def __str__(self):
-            """Generate config file content. Fills in defaults for some require values"""
-            def defs(name, props):
-                """Fill in defaults for required values"""
-                if not name in Qdrouterd.Config.DEFAULTS:
-                    return props
-                p = copy(Qdrouterd.Config.DEFAULTS[name])
-                p.update(props)
-                return p
+            """Generate config file content. Calls default() first."""
             def props(p):
                 """qpidd.conf format of dict p"""
                 return "".join(["    %s: %s\n"%(k, v) for k, v in p.iteritems()])
-            return "".join(["%s {\n%s}\n"%(n, props(defs(n, p))) for n, p in self])
+            self.defaults()
+            return "".join(["%s {\n%s}\n"%(n, props(p)) for n, p in self])
 
     class Agent(object):
         """Management agent"""
@@ -567,3 +572,8 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
         def test_zzzz_teardown_class(self):
             """Fake test to call tearDownClass"""
             self.__class__.tearDownClass()
+
+    def assert_fair(self, seq):
+        avg = sum(seq)/len(seq)
+        for i in seq:
+            assert i > avg/2, "Work not fairly distributed: %s"%seq
