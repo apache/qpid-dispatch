@@ -1233,7 +1233,6 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
     if (rlink->target)
         free(rlink->target);
     free_qd_router_link_t(rlink);
-    qd_link_free(link);
 
     //
     // If we lost the link to a neighbor router, notify the route engine so it doesn't

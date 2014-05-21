@@ -109,6 +109,7 @@ void qd_dispatch_configure_router(qd_dispatch_t *qd)
         int count = qd_config_item_count(qd, CONF_ROUTER);
         if (count == 1) {
             router_mode_str = qd_config_item_value_string(qd, CONF_ROUTER, 0, "mode");
+            free(qd->router_id);
             qd->router_id   = qd_config_item_value_string(qd, CONF_ROUTER, 0, "router-id");
         }
     }
