@@ -101,7 +101,20 @@ qd_hash_t *qd_hash(int bucket_exponent, int batch_size, int value_is_const)
 
 void qd_hash_free(qd_hash_t *h)
 {
-    // TODO - Implement this
+    qd_hash_item_t *item;
+    int             idx;
+
+    for (idx = 0; idx < h->bucket_count; idx++) {
+        item = DEQ_HEAD(h->buckets[idx].items);
+        while (item) {
+            free(item->key);
+            free_qd_hash_item_t(item);
+            DEQ_REMOVE_HEAD(h->buckets[idx].items);
+            item = DEQ_HEAD(h->buckets[idx].items);
+        }
+    }
+    free(h->buckets);
+    free(h);
 }
 
 

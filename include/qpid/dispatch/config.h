@@ -32,7 +32,7 @@
 void qd_log_configure(const qd_dispatch_t *dispatch);
 int qd_config_item_count(const qd_dispatch_t *dispatch, const char *section);
 bool qd_config_item_exists(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
-const char *qd_config_item_value_string(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
+char *qd_config_item_value_string(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
 uint32_t qd_config_item_value_int(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
 int qd_config_item_value_bool(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
 ///@}

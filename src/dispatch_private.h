@@ -54,10 +54,10 @@ struct qd_dispatch_t {
     qd_config_t             *config;
     qd_connection_manager_t *connection_manager;
 
-    int               thread_count;
-    const char       *container_name;
-    const char       *router_area;
-    const char       *router_id;
+    int    thread_count;
+    char  *container_name;
+    char  *router_area;
+    char  *router_id;
     qd_router_mode_t  router_mode;
 };
 

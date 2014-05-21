@@ -547,8 +547,10 @@ static void thread_join(qd_thread_t *thread)
     if (!thread)
         return;
 
-    if (thread->using_thread)
+    if (thread->using_thread) {
         sys_thread_join(thread->thread);
+        sys_thread_free(thread->thread);
+    }
 }
 
 
@@ -688,6 +690,7 @@ void qd_server_free(qd_server_t *qd_server)
     pn_driver_free(qd_server->driver);
     sys_mutex_free(qd_server->lock);
     sys_cond_free(qd_server->cond);
+    free(qd_server->threads);
     free(qd_server);
 }
 
@@ -747,6 +750,9 @@ void qd_server_run(qd_dispatch_t *qd)
 
     for (i = 1; i < qd_server->thread_count; i++)
         thread_join(qd_server->threads[i]);
+
+    for (i = 0; i < qd_server->thread_count; i++)
+        qd_server->threads[i]->canceled = 0;
 
     qd_log(qd_server->log_source, QD_LOG_INFO, "Shut Down");
 }

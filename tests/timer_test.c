@@ -408,6 +408,7 @@ int timer_tests(void)
         qd_timer_free(timers[i]);
 
     qd_timer_finalize();
+    sys_mutex_free(lock);
 
     return result;
 }

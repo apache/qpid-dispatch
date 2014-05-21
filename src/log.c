@@ -40,7 +40,7 @@ struct qd_log_entry_t {
     DEQ_LINKS(qd_log_entry_t);
     const char     *module;
     int             level;
-    const char     *file;
+    char           *file;
     int             line;
     time_t          time;
     char            text[TEXT_MAX];
@@ -175,7 +175,7 @@ void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line,
     qd_log_entry_t *entry = new_qd_log_entry_t();
     DEQ_ITEM_INIT(entry);
     entry->module = source->module;
-    entry->level    = level;
+    entry->level  = level;
     entry->file   = file ? strdup(file) : 0;
     entry->line   = line;
     time(&entry->time);
@@ -195,6 +195,7 @@ void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line,
     if (DEQ_SIZE(entries) > LIST_MAX) {
         entry = DEQ_HEAD(entries);
         DEQ_REMOVE_HEAD(entries);
+        free(entry->file);
         free_qd_log_entry_t(entry);
     }
     sys_mutex_unlock(log_lock);
@@ -222,8 +223,14 @@ void qd_log_initialize(void)
 
 void qd_log_finalize(void) {
     for (qd_log_source_t *src = DEQ_HEAD(source_list); src != 0; src = DEQ_HEAD(source_list)) {
-	DEQ_REMOVE_HEAD(source_list);
-	qd_log_source_free(src);
+        DEQ_REMOVE_HEAD(source_list);
+        qd_log_source_free(src);
+    }
+
+    for (qd_log_entry_t *entry = DEQ_HEAD(entries); entry; entry = DEQ_HEAD(entries)) {
+        DEQ_REMOVE_HEAD(entries);
+        free(entry->file);
+        free_qd_log_entry_t(entry);
     }
 }
 

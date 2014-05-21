@@ -58,8 +58,8 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_alloc_initialize();
     qd_log_initialize(); 
 
-    qd->router_area = "0";
-    qd->router_id   = "0";
+    qd->router_area = strdup("0");
+    qd->router_id   = strdup("0");
     qd->router_mode = QD_ROUTER_MODE_ENDPOINT;
 
     qd_python_initialize(qd, python_pkgdir);
@@ -103,7 +103,7 @@ void qd_dispatch_configure_container(qd_dispatch_t *qd)
 
 void qd_dispatch_configure_router(qd_dispatch_t *qd)
 {
-    const char *router_mode_str = 0;
+    char *router_mode_str = 0;
 
     if (qd->config) {
         int count = qd_config_item_count(qd, CONF_ROUTER);
@@ -124,6 +124,8 @@ void qd_dispatch_configure_router(qd_dispatch_t *qd)
 
     if (!qd->router_id)
         qd->router_id = qd->container_name;
+
+    free(router_mode_str);
 }
 
 
@@ -144,6 +146,8 @@ void qd_dispatch_prepare(qd_dispatch_t *qd)
 
 void qd_dispatch_free(qd_dispatch_t *qd)
 {
+    free(qd->router_id);
+    free(qd->router_area);
     qd_config_free(qd->config);
     qd_config_finalize();
     qd_connection_manager_free(qd->connection_manager);
@@ -152,6 +156,7 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     qd_container_free(qd->container);
     qd_server_free(qd->server);
     qd_log_finalize();
+    qd_alloc_finalize();
     qd_python_finalize();
 }
 

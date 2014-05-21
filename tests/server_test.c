@@ -29,13 +29,10 @@
 #define THREAD_COUNT 4
 #define OCTET_COUNT  100
 
-static const char    *config_file;
 static qd_dispatch_t *qd;
 static sys_mutex_t   *test_lock;
 
-static void *expected_context;
 static int   call_count;
-static int   threads_seen[THREAD_COUNT];
 static char  stored_error[512];
 
 static int   write_count;
@@ -43,26 +40,6 @@ static int   read_count;
 static int   fd[2];
 static qd_user_fd_t *ufd_write;
 static qd_user_fd_t *ufd_read;
-
-
-static void thread_start_handler(void *context, int thread_id)
-{
-    sys_mutex_lock(test_lock);
-    if (context != expected_context && !stored_error[0])
-        sprintf(stored_error, "Unexpected Context Value: %lx", (long) context);
-    if (thread_id >= THREAD_COUNT && !stored_error[0])
-        sprintf(stored_error, "Thread_ID too large: %d", thread_id);
-    if (thread_id < 0 && !stored_error[0])
-        sprintf(stored_error, "Thread_ID negative: %d", thread_id);
-
-    call_count++;
-    if (thread_id >= 0 && thread_id < THREAD_COUNT)
-        threads_seen[thread_id]++;
-
-    if (call_count == THREAD_COUNT)
-        qd_server_stop(qd);
-    sys_mutex_unlock(test_lock);
-}
 
 
 static void ufd_handler(void *context, qd_user_fd_t *ufd)
@@ -107,68 +84,21 @@ static void ufd_handler(void *context, qd_user_fd_t *ufd)
 }
 
 
-static void fd_test_start(void *context)
+static void fd_test_start(void *context, int unused)
 {
-    qd_user_fd_activate_read(ufd_read);
-}
-
-
-static char* test_start_handler(void *context)
-{
-    int i;
-
-    qd = qd_dispatch(0);
-    qd_dispatch_load_config(qd, config_file);
-    qd_dispatch_configure_container(qd);
-    qd_dispatch_prepare(qd);
-
-    expected_context = (void*) 0x00112233;
-    stored_error[0] = 0x0;
-    call_count      = 0;
-    for (i = 0; i < THREAD_COUNT; i++)
-        threads_seen[i] = 0;
-
-    qd_server_set_start_handler(qd, thread_start_handler, expected_context);
-    qd_server_run(qd);
-    qd_dispatch_free(qd);
-
-    if (stored_error[0])            return stored_error;
-    if (call_count != THREAD_COUNT) return "Incorrect number of thread-start callbacks";
-    for (i = 0; i < THREAD_COUNT; i++)
-        if (threads_seen[i] != 1)   return "Incorrect count on one thread ID";
-
-    return 0;
-}
-
-
-static char *test_server_start(void *context)
-{
-    qd = qd_dispatch(0);
-    qd_dispatch_load_config(qd, config_file);
-    qd_dispatch_configure_container(qd);
-    qd_dispatch_prepare(qd);
-
-    qd_server_start(qd);
-    qd_server_stop(qd);
-    qd_dispatch_free(qd);
-
-    return 0;
+    if (++call_count == THREAD_COUNT) {
+        qd_user_fd_activate_read(ufd_read);
+    }
 }
 
 
 static char* test_user_fd(void *context)
 {
     int res;
-    qd_timer_t *timer;
 
-    qd = qd_dispatch(0);
-    qd_dispatch_load_config(qd, config_file);
-    qd_dispatch_configure_container(qd);
-    qd_dispatch_prepare(qd);
-
+    call_count = 0;
+    qd_server_set_start_handler(qd, fd_test_start, 0);
     qd_server_set_user_fd_handler(qd, ufd_handler);
-    timer = qd_timer(qd, fd_test_start, 0);
-    qd_timer_schedule(timer, 0);
 
     stored_error[0] = 0x0;
 
@@ -188,8 +118,6 @@ static char* test_user_fd(void *context)
     ufd_read  = qd_user_fd(qd, fd[0], (void*) 0);
 
     qd_server_run(qd);
-    qd_timer_free(timer);
-    qd_dispatch_free(qd);
     close(fd[0]);
     close(fd[1]);
 
@@ -202,15 +130,13 @@ static char* test_user_fd(void *context)
 }
 
 
-int server_tests(const char *_config_file)
+int server_tests(qd_dispatch_t *_qd)
 {
     int result = 0;
     test_lock = sys_mutex();
 
-    config_file = _config_file;
+    qd = _qd;
 
-    TEST_CASE(test_server_start, 0);
-    TEST_CASE(test_start_handler, 0);
     TEST_CASE(test_user_fd, 0);
 
     sys_mutex_free(test_lock);

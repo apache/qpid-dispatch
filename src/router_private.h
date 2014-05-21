@@ -36,6 +36,7 @@ void qd_router_python_setup(qd_router_t *router);
 void qd_pyrouter_tick(qd_router_t *router);
 void qd_router_agent_setup(qd_router_t *router);
 void qd_router_configure(qd_router_t *router);
+void qd_router_configure_free(qd_router_t *router);
 
 typedef enum {
     QD_ROUTER_MODE_STANDALONE,  ///< Standalone router.  No routing protocol participation
@@ -183,10 +184,10 @@ DEQ_DECLARE(qd_config_address_t, qd_config_address_list_t);
  */
 struct qd_waypoint_t {
     DEQ_LINKS(qd_waypoint_t);
-    const char            *name;
+    char                  *name;
     char                   in_phase;       ///< Phase for re-entering message.
     char                   out_phase;      ///< Phase for exiting message.
-    const char            *connector_name; ///< On-demand connector name for outgoing messages.
+    char                  *connector_name; ///< On-demand connector name for outgoing messages.
     qd_config_connector_t *connector;      ///< Connector for outgoing messages.
     qd_connection_t       *connection;     ///< Connection for outgoing messages.
     qd_link_t             *in_link;        ///< Link for re-entering messages.

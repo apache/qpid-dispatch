@@ -1233,6 +1233,7 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
     if (rlink->target)
         free(rlink->target);
     free_qd_router_link_t(rlink);
+    qd_link_free(link);
 
     //
     // If we lost the link to a neighbor router, notify the route engine so it doesn't
@@ -1487,9 +1488,35 @@ void qd_router_setup_late(qd_dispatch_t *qd)
 void qd_router_free(qd_router_t *router)
 {
     qd_container_set_default_node_type(router->qd, 0, 0, QD_DIST_BOTH);
+
+    for (qd_address_t *addr = DEQ_HEAD(router->addrs); addr; addr = DEQ_HEAD(router->addrs)) {
+        for (qd_router_link_ref_t *rlink = DEQ_HEAD(addr->rlinks); rlink; rlink = DEQ_HEAD(addr->rlinks)) {
+            DEQ_REMOVE_HEAD(addr->rlinks);
+            free_qd_router_link_ref_t(rlink);
+        }
+
+        for (qd_router_ref_t *rnode = DEQ_HEAD(addr->rnodes); rnode; rnode = DEQ_HEAD(addr->rnodes)) {
+            DEQ_REMOVE_HEAD(addr->rnodes);
+            free_qd_router_ref_t(rnode);
+        }
+
+        qd_hash_handle_free(addr->hash_handle);
+
+        DEQ_REMOVE_HEAD(router->addrs);
+        free_qd_address_t(addr);
+    }
+
+    qd_timer_free(router->timer);
     sys_mutex_free(router->lock);
+    qd_bitmask_free(router->neighbor_free_mask);
+    free(router->out_links_by_mask_bit);
+    free(router->routers_by_mask_bit);
+    qd_hash_free(router->addr_hash);
+    qd_router_configure_free(router);
     free(router);
     qd_python_stop();
+    free(node_id);
+    free(direct_prefix);
 }
 
 

@@ -753,6 +753,14 @@ qd_agent_t *qd_agent(qd_dispatch_t *qd)
 
 void qd_agent_free(qd_agent_t *agent)
 {
+    qd_agent_class_t *cls = DEQ_HEAD(agent->class_list);
+    while (cls) {
+        DEQ_REMOVE_HEAD(agent->class_list);
+        qd_hash_handle_free(cls->hash_handle);
+        free(cls);
+        cls = DEQ_HEAD(agent->class_list);
+    }
+
     qd_router_unregister_address(agent->local_address);
     qd_router_unregister_address(agent->global_address);
     sys_mutex_free(agent->lock);

@@ -141,6 +141,7 @@ void qd_config_free(qd_config_t *config)
     if (config) {
         Py_DECREF(config->pClass);
         Py_DECREF(config->pModule);
+        Py_DECREF(config->pObject);
         free_qd_config_t(config);
     }
 }
@@ -230,7 +231,7 @@ bool qd_config_item_exists(const qd_dispatch_t *dispatch, const char *section, i
     return exists;
 }
 
-const char *qd_config_item_value_string(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
+char *qd_config_item_value_string(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
 {
     PyObject *pResult = item_value(dispatch, section, index, key, "value_string");
     char     *value   = 0;

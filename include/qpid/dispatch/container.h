@@ -140,6 +140,7 @@ qd_dist_mode_t qd_container_node_get_dist_modes(const qd_node_t *node);
 qd_lifetime_policy_t qd_container_node_get_life_policy(const qd_node_t *node);
 
 qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char *name);
+void qd_link_free(qd_link_t *link);
 
 /**
  * Context associated with the link for storing link-specific state.

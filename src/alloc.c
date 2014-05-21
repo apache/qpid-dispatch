@@ -51,6 +51,7 @@ DEQ_DECLARE(qd_alloc_item_t, qd_alloc_item_list_t);
 
 
 struct qd_alloc_pool_t {
+    DEQ_LINKS(qd_alloc_pool_t);
     qd_alloc_item_list_t free_list;
 };
 
@@ -82,6 +83,7 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
         desc->global_pool = NEW(qd_alloc_pool_t);
         DEQ_INIT(desc->global_pool->free_list);
         desc->lock = sys_mutex();
+        DEQ_INIT(desc->tpool_list);
         desc->stats = NEW(qd_alloc_stats_t);
         memset(desc->stats, 0, sizeof(qd_alloc_stats_t));
 
@@ -114,7 +116,11 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
     //
     if (*tpool == 0) {
         *tpool = NEW(qd_alloc_pool_t);
+        DEQ_ITEM_INIT(*tpool);
         DEQ_INIT((*tpool)->free_list);
+        sys_mutex_lock(desc->lock);
+        DEQ_INSERT_TAIL(desc->tpool_list, *tpool);
+        sys_mutex_unlock(desc->lock);
     }
 
     qd_alloc_pool_t *pool = *tpool;
@@ -128,7 +134,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
     if (item) {
         DEQ_REMOVE_HEAD(pool->free_list);
 #ifdef QD_MEMORY_DEBUG
-        item->desc = desc;
+        item->desc   = desc;
         item->header = PATTERN_FRONT;
         *((uint32_t*) ((void*) &item[1] + desc->total_size))= PATTERN_BACK;
 #endif
@@ -197,7 +203,7 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p)
     assert (desc->trailer == PATTERN_BACK);
     assert (item->header  == PATTERN_FRONT);
     assert (*((uint32_t*) (p + desc->total_size)) == PATTERN_BACK);
-    assert (item->desc == desc);
+    assert (item->desc == desc);  // Check for double-free
     item->desc = 0;
 #endif
 
@@ -207,7 +213,11 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p)
     //
     if (*tpool == 0) {
         *tpool = NEW(qd_alloc_pool_t);
+        DEQ_ITEM_INIT(*tpool);
         DEQ_INIT((*tpool)->free_list);
+        sys_mutex_lock(desc->lock);
+        DEQ_INSERT_TAIL(desc->tpool_list, *tpool);
+        sys_mutex_unlock(desc->lock);
     }
 
     qd_alloc_pool_t *pool = *tpool;
@@ -251,6 +261,83 @@ void qd_alloc_initialize(void)
 {
     init_lock = sys_mutex();
     DEQ_INIT(type_list);
+}
+
+
+void qd_alloc_finalize(void)
+{
+    //
+    // Note that the logging facility is already finalized by the time this is called.
+    // We will use fprintf(stderr, ...) for logging.
+    //
+    // The assumption coming into this finalizer is that all allocations have been
+    // released.  Any non-released objects shall be flagged.
+    //
+
+    //
+    // Note: By the time we get here, the server threads have been joined and there is
+    //       only the main thread remaining.  There is therefore no reason to be 
+    //       concerned about locking.
+    //
+
+    qd_alloc_item_t *item;
+    qd_alloc_type_t *type_item = DEQ_HEAD(type_list);
+    while (type_item) {
+        qd_alloc_type_desc_t *desc = type_item->desc;
+
+        //
+        // Reclaim the items on the global free pool
+        //
+        item = DEQ_HEAD(desc->global_pool->free_list);
+        while (item) {
+            DEQ_REMOVE_HEAD(desc->global_pool->free_list);
+            free(item);
+            desc->stats->total_free_to_heap++;
+            item = DEQ_HEAD(desc->global_pool->free_list);
+        }
+        free(desc->global_pool);
+        desc->global_pool = 0;
+
+        //
+        // Reclaim the items on thread pools
+        //
+        qd_alloc_pool_t *tpool = DEQ_HEAD(desc->tpool_list);
+        while (tpool) {
+            item = DEQ_HEAD(tpool->free_list);
+            while (item) {
+                DEQ_REMOVE_HEAD(tpool->free_list);
+                free(item);
+                desc->stats->total_free_to_heap++;
+                item = DEQ_HEAD(tpool->free_list);
+            }
+
+            DEQ_REMOVE_HEAD(desc->tpool_list);
+            free(tpool);
+            tpool = DEQ_HEAD(desc->tpool_list);
+        }
+
+        //
+        // Check the stats for lost items
+        //
+        if (desc->stats->total_free_to_heap < desc->stats->total_alloc_from_heap)
+            fprintf(stderr, "alloc.c: Items of type '%s' remain allocated at shutdown: %ld\n",
+                    desc->type_name,
+                    desc->stats->total_alloc_from_heap - desc->stats->total_free_to_heap);
+
+        //
+        // Reclaim the descriptor components
+        //
+        free(desc->stats);
+        sys_mutex_free(desc->lock);
+        desc->lock = 0;
+        desc->trailer = 0;
+
+        DEQ_REMOVE_HEAD(type_list);
+        free(type_item);
+        type_item = DEQ_HEAD(type_list);
+    }
+
+    sys_mutex_free(init_lock);
 }
 
 

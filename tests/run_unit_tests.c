@@ -17,15 +17,16 @@
  * under the License.
  */
 
+#include <qpid/dispatch.h>
 #include <qpid/dispatch/buffer.h>
 #include <stdio.h>
 
-int tool_tests();
-int timer_tests();
-int alloc_tests();
-int server_tests();
-int parse_tests();
-int compose_tests();
+int tool_tests(void);
+int timer_tests(void);
+int alloc_tests(void);
+int server_tests(qd_dispatch_t *qd);
+int parse_tests(void);
+int compose_tests(void);
 
 int main(int argc, char** argv)
 {
@@ -34,13 +35,19 @@ int main(int argc, char** argv)
         exit(1);
     }
 
+    qd_dispatch_t *qd = qd_dispatch(0);
+    qd_dispatch_load_config(qd, argv[1]);
+    qd_dispatch_configure_container(qd);
+    qd_dispatch_prepare(qd);
+
     int result = 0;
     result += tool_tests();
-    result += timer_tests();
     result += alloc_tests();
-    result += server_tests(argv[1]);
-    result += parse_tests(0);
-    result += compose_tests(0);
+    result += server_tests(qd);
+    result += parse_tests();
+    result += compose_tests();
+    qd_dispatch_free(qd);
+    result += timer_tests();
     return result;
 }
 

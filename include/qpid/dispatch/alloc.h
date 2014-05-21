@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <qpid/dispatch/threading.h>
+#include <qpid/dispatch/ctools.h>
 
 /**
  * @file
@@ -33,6 +34,8 @@
  */
 
 typedef struct qd_alloc_pool_t qd_alloc_pool_t;
+
+DEQ_DECLARE(qd_alloc_pool_t, qd_alloc_pool_list_t);
 
 typedef struct {
     int  transfer_batch_size;
@@ -49,16 +52,17 @@ typedef struct {
 } qd_alloc_stats_t;
 
 typedef struct {
-    uint32_t           header;
-    char              *type_name;
-    size_t             type_size;
-    size_t            *additional_size;
-    size_t             total_size;
-    qd_alloc_config_t *config;
-    qd_alloc_stats_t  *stats;
-    qd_alloc_pool_t   *global_pool;
-    sys_mutex_t       *lock;
-    uint32_t           trailer;
+    uint32_t              header;
+    char                 *type_name;
+    size_t                type_size;
+    size_t               *additional_size;
+    size_t                total_size;
+    qd_alloc_config_t    *config;
+    qd_alloc_stats_t     *stats;
+    qd_alloc_pool_t      *global_pool;
+    sys_mutex_t          *lock;
+    qd_alloc_pool_list_t  tpool_list;
+    uint32_t              trailer;
 } qd_alloc_type_desc_t;
 
 /** Allocate in a thread pool. Use via ALLOC_DECLARE */
@@ -70,12 +74,13 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p);
  * Declare functions new_T and alloc_T
  */
 #define ALLOC_DECLARE(T) \
+    extern __thread qd_alloc_pool_t *__local_pool_##T; \
     T *new_##T(void);    \
     void free_##T(T *p)
 
 #define ALLOC_DEFINE_CONFIG(T,S,A,C)                                \
-    qd_alloc_type_desc_t __desc_##T = {0, #T, S, A, 0, C, 0, 0, 0, 0};    \
-    __thread qd_alloc_pool_t *__local_pool_##T = 0;                 \
+    qd_alloc_type_desc_t __desc_##T = {0, #T, S, A, 0, C, 0, 0, 0, {0,0}, 0}; \
+    __thread qd_alloc_pool_t *__local_pool_##T = 0;                     \
     T *new_##T(void) { return (T*) qd_alloc(&__desc_##T, &__local_pool_##T); }  \
     void free_##T(T *p) { qd_dealloc(&__desc_##T, &__local_pool_##T, (void*) p); } \
     qd_alloc_stats_t *alloc_stats_##T(void) { return __desc_##T.stats; }

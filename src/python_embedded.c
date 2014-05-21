@@ -79,6 +79,7 @@ void qd_python_stop(void)
     if (ref_count == 0) {
         Py_DECREF(dispatch_module);
         dispatch_module = 0;
+        PyGC_Collect();
         Py_Finalize();
         qd_log(log_source, QD_LOG_TRACE, "Embedded Python Interpreter Shut Down");
     }

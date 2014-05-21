@@ -77,7 +77,6 @@ static char* test_alloc_basic(void *context)
 int alloc_tests(void)
 {
     int result = 0;
-    qd_alloc_initialize();
 
     TEST_CASE(test_alloc_basic, 0);
 

@@ -219,29 +219,29 @@ typedef struct qd_server_config_t {
     /**
      * Host name or network address to bind to a listener or use in the connector.
      */
-    const char *host;
+    char *host;
 
     /**
      * Port name or number to bind to a listener or use in the connector.
      */
-    const char *port;
+    char *port;
 
     /**
      * Space-separated list of SASL mechanisms to be accepted for the connection.
      */
-    const char *sasl_mechanisms;
+    char *sasl_mechanisms;
 
     /**
      * If appropriate for the mechanism, the username for authentication
      * (connector only)
      */
-    const char *sasl_username;
+    char *sasl_username;
 
     /**
      * If appropriate for the mechanism, the password for authentication
      * (connector only)
      */
-    const char *sasl_password;
+    char *sasl_password;
 
     /**
      * If appropriate for the mechanism, the minimum acceptable security strength factor
@@ -274,23 +274,23 @@ typedef struct qd_server_config_t {
      * Path to the file containing the PEM-formatted public certificate for the local end
      * of the connection.
      */
-    const char *ssl_certificate_file;
+    char *ssl_certificate_file;
 
     /**
      * Path to the file containing the PEM-formatted private key for the local end of the
      * connection.
      */
-    const char *ssl_private_key_file;
+    char *ssl_private_key_file;
 
     /**
      * The password used to sign the private key, or NULL if the key is not protected.
      */
-    const char *ssl_password;
+    char *ssl_password;
 
     /**
      * Path to the file containing the PEM-formatted set of certificates of trusted CAs.
      */
-    const char *ssl_trusted_certificate_db;
+    char *ssl_trusted_certificate_db;
 
     /**
      * Path to an optional file containing the PEM-formatted set of certificates of
@@ -298,7 +298,7 @@ typedef struct qd_server_config_t {
      * set of certificates in the ssl_trusted_certificate_db.  If this is left NULL,
      * the entire set within the db will be used.
      */
-    const char *ssl_trusted_certificates;
+    char *ssl_trusted_certificates;
 
     /**
      * Iff non-zero, require that the peer's certificate be supplied and that it be authentic
@@ -316,7 +316,7 @@ typedef struct qd_server_config_t {
      * The specified role of the connection.  This can be used to control the behavior and
      * capabilities of the connections.
      */
-    const char *role;
+    char *role;
 
     /**
      * The maximum size of an AMQP frame in octets.
@@ -452,7 +452,7 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
  *
  * @param li A listener pointer returned by qd_listen.
  */
-void qd_listener_free(qd_listener_t* li);
+void qd_server_listener_free(qd_listener_t* li);
 
 
 /**
@@ -460,7 +460,7 @@ void qd_listener_free(qd_listener_t* li);
  *
  * @param li A listener pointer returned by qd_listen.
  */
-void qd_listener_close(qd_listener_t* li);
+void qd_server_listener_close(qd_listener_t* li);
 
 
 /**
@@ -481,7 +481,7 @@ qd_connector_t *qd_server_connect(qd_dispatch_t *qd, const qd_server_config_t *c
  *
  * @param ct A connector pointer returned by qd_connect.
  */
-void qd_connector_free(qd_connector_t* ct);
+void qd_server_connector_free(qd_connector_t* ct);
 
 /**
  * @}

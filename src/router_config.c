@@ -33,13 +33,16 @@ static void qd_router_configure_addresses(qd_router_t *router)
     int count = qd_config_item_count(router->qd, CONF_ADDRESS);
 
     for (int idx = 0; idx < count; idx++) {
-        const char *prefix = qd_config_item_value_string(router->qd, CONF_ADDRESS, idx, "prefix");
-        int         phase  = qd_config_item_value_int(router->qd,    CONF_ADDRESS, idx, "phase");
-        const char *fanout = qd_config_item_value_string(router->qd, CONF_ADDRESS, idx, "fanout");
-        const char *bias   = qd_config_item_value_string(router->qd, CONF_ADDRESS, idx, "bias");
+        char *prefix = qd_config_item_value_string(router->qd, CONF_ADDRESS, idx, "prefix");
+        int   phase  = qd_config_item_value_int(router->qd,    CONF_ADDRESS, idx, "phase");
+        char *fanout = qd_config_item_value_string(router->qd, CONF_ADDRESS, idx, "fanout");
+        char *bias   = qd_config_item_value_string(router->qd, CONF_ADDRESS, idx, "bias");
 
         if (phase < 0 || phase > 9) {
             qd_log(router->log_source, QD_LOG_ERROR, "Phase for prefix '%s' must be between 0 and 9.  Ignoring", prefix);
+            free(prefix);
+            free(fanout);
+            free(bias);
             continue;
         }
 
@@ -98,6 +101,10 @@ static void qd_router_configure_addresses(qd_router_t *router)
         addr_phase->semantics = semantics;
         addr->last_phase      = addr_phase->phase;
         DEQ_INSERT_TAIL(addr->phases, addr_phase);
+
+        free(prefix);
+        free(fanout);
+        free(bias);
     }
 }
 
@@ -107,13 +114,15 @@ static void qd_router_configure_waypoints(qd_router_t *router)
     int count = qd_config_item_count(router->qd, CONF_WAYPOINT);
 
     for (int idx = 0; idx < count; idx++) {
-        const char *name      = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "name");
-        int         in_phase  = qd_config_item_value_int(router->qd,    CONF_WAYPOINT, idx, "in-phase");
-        int         out_phase = qd_config_item_value_int(router->qd,    CONF_WAYPOINT, idx, "out-phase");
-        const char *connector = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "connector");
+        char *name      = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "name");
+        int   in_phase  = qd_config_item_value_int(router->qd,    CONF_WAYPOINT, idx, "in-phase");
+        int   out_phase = qd_config_item_value_int(router->qd,    CONF_WAYPOINT, idx, "out-phase");
+        char *connector = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "connector");
 
         if (in_phase > 9 || out_phase > 9) {
             qd_log(router->log_source, QD_LOG_ERROR, "Phases for waypoint '%s' must be between 0 and 9.  Ignoring", name);
+            free(name);
+            free(connector);
             continue;
         }
 
@@ -144,6 +153,27 @@ void qd_router_configure(qd_router_t *router)
         return;
     qd_router_configure_addresses(router);
     qd_router_configure_waypoints(router);
+}
+
+
+void qd_router_configure_free(qd_router_t *router)
+{
+    for (qd_config_address_t *ca = DEQ_HEAD(router->config_addrs); ca; ca = DEQ_HEAD(router->config_addrs)) {
+        for (qd_config_phase_t *ap = DEQ_HEAD(ca->phases); ap; ap = DEQ_HEAD(ca->phases)) {
+            DEQ_REMOVE_HEAD(ca->phases);
+            free(ap);
+        }
+        free(ca->prefix);
+        DEQ_REMOVE_HEAD(router->config_addrs);
+        free(ca);
+    }
+
+    for (qd_waypoint_t *wp = DEQ_HEAD(router->waypoints); wp; wp = DEQ_HEAD(router->waypoints)) {
+        DEQ_REMOVE_HEAD(router->waypoints);
+        free(wp->name);
+        free(wp->connector_name);
+        free(wp);
+    }
 }
 
 

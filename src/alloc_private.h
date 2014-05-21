@@ -23,6 +23,7 @@
 #include <qpid/dispatch/dispatch.h>
 
 void qd_alloc_initialize(void);
+void qd_alloc_finalize(void);
 void qd_alloc_setup_agent(qd_dispatch_t *qd);
 
 #endif

@@ -164,8 +164,51 @@ qd_connection_manager_t *qd_connection_manager(qd_dispatch_t *qd)
 }
 
 
+static void qd_connection_manager_config_free(qd_server_config_t *cf)
+{
+    free(cf->host);
+    free(cf->port);
+    free(cf->role);
+    free(cf->sasl_mechanisms);
+    if (cf->ssl_enabled) {
+        free(cf->ssl_certificate_file);
+        free(cf->ssl_private_key_file);
+        free(cf->ssl_password);
+        free(cf->ssl_trusted_certificate_db);
+        free(cf->ssl_trusted_certificates);
+    }
+}
+
+
 void qd_connection_manager_free(qd_connection_manager_t *cm)
 {
+    qd_config_listener_t *cl = DEQ_HEAD(cm->config_listeners);
+    while (cl) {
+        DEQ_REMOVE_HEAD(cm->config_listeners);
+        qd_server_listener_free(cl->listener);
+        qd_connection_manager_config_free(&cl->configuration);
+        free(cl);
+        cl = DEQ_HEAD(cm->config_listeners);
+    }
+
+    qd_config_connector_t *cc = DEQ_HEAD(cm->config_connectors);
+    while(cc) {
+        DEQ_REMOVE_HEAD(cm->config_connectors);
+        qd_server_connector_free(cc->connector);
+        qd_connection_manager_config_free(&cc->configuration);
+        free(cc);
+        cc = DEQ_HEAD(cm->config_connectors);
+    }
+
+    qd_config_connector_t *odc = DEQ_HEAD(cm->on_demand_connectors);
+    while(odc) {
+        DEQ_REMOVE_HEAD(cm->on_demand_connectors);
+        if (odc->connector)
+            qd_server_connector_free(odc->connector);
+        qd_connection_manager_config_free(&odc->configuration);
+        free(odc);
+        odc = DEQ_HEAD(cm->on_demand_connectors);
+    }
 }
 
 
