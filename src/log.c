@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <syslog.h>
 
 #define TEXT_MAX 512
 #define LIST_MAX 1000
@@ -51,16 +52,71 @@ ALLOC_DEFINE(qd_log_entry_t);
 
 DEQ_DECLARE(qd_log_entry_t, qd_log_list_t);
 
+// Ref-counted log sink, may be shared by several sources.
+typedef struct qd_log_sink_t {
+    int refcount;
+    char *name;
+    bool syslog;
+    FILE *file;
+    DEQ_LINKS(struct qd_log_sink_t);
+} qd_log_sink_t;
+
+DEQ_DECLARE(qd_log_sink_t, qd_log_sink_list_t);
+
+static qd_log_sink_list_t log_sinks;
+
+static qd_log_sink_t* find_log_sink(const char* name) {
+    qd_log_sink_t* sink = DEQ_HEAD(log_sinks);
+    DEQ_FIND(sink, strcmp(sink->name, name) == 0);
+    return sink;
+}
+
+qd_log_sink_t* qd_log_sink(const char* name) {
+    qd_log_sink_t* sink = find_log_sink(name);
+    if (sink) 
+	sink->refcount++;
+    else {
+	sink = NEW(qd_log_sink_t);
+	*sink = (qd_log_sink_t){ 1, strdup(name), };
+	if (strcmp(name, "stderr") == 0) {
+	    sink->file = stderr;
+	}
+	else if (strcmp(name, "syslog") == 0) {
+	    openlog(0, 0, LOG_DAEMON);
+	    sink->syslog = true;
+	}
+	else {
+	    sink->file = fopen(name, "w");
+	    if (!sink->file) {
+		char msg[LOG_MAX];
+		snprintf(msg, sizeof(msg), "Failed to open log file '%s'", name);
+		perror(msg);
+		exit(1);		/* TODO aconway 2014-05-22: better error handling */
+	    }
+	}
+	DEQ_INSERT_TAIL(log_sinks, sink);
+    }
+    return sink;
+}
+
+void qd_log_sink_free(qd_log_sink_t* sink) {
+    if (!sink) return;
+    assert(sink->refcount);
+    if (--sink->refcount == 0) {
+	free(sink->name);
+	if (sink->file && sink->file != stderr) fclose(sink->file);
+	if (sink->syslog) closelog();
+	free(sink);
+    }
+}
+
 struct qd_log_source_t {
     DEQ_LINKS(qd_log_source_t);
     const char *module;
     int mask;
     int timestamp;
-    int print;
-    int stderr;
-    char* file;
-    int syslog;
-    //FILE *file;
+    bool syslog;
+    qd_log_sink_t *sink;
 };
 
 DEQ_DECLARE(qd_log_source_t, qd_log_source_list_t);
@@ -74,17 +130,26 @@ static qd_log_source_t      *default_log_source=0;
 static qd_log_source_t      *logging_log_source=0;
 
 static const int nlevels = 7;
-static const char* level_names[]={"TRACE", "DEBUG", "INFO", "NOTICE", "WARNING", "ERROR", "CRITICAL"};
 static const int level_bits[] ={QD_LOG_TRACE, QD_LOG_DEBUG, QD_LOG_INFO, QD_LOG_NOTICE, QD_LOG_WARNING, QD_LOG_ERROR, QD_LOG_CRITICAL};
+static const char* level_names[] = {"TRACE", "DEBUG", "INFO", "NOTICE", "WARNING", "ERROR", "CRITICAL"};
+static const int level_syslog_priorities[] = {LOG_DEBUG, LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING, LOG_ERR, LOG_CRIT};
 static const int all_bits = ((QD_LOG_CRITICAL-1) | QD_LOG_CRITICAL);
 
-static const char *level_str(int level) {
-    if (level == 0) return "NONE";
+static int level_index(int level) {
     int i = 0;
     while (i < nlevels && level_bits[i] != level) ++i;
-    return (i == nlevels) ? "NONE" : level_names[i];
+    return (i == nlevels) ? -1 : i;
 }
 
+static const char *level_str(int level) {
+    int i = level_index(level);
+    return i >= 0 ? level_names[i] : "NONE";
+}
+
+static int level_syslog(int level) {
+    int i = level_index(level);
+    return i >= 0 ? level_syslog_priorities[i] : LOG_NOTICE;
+}
 
 static int get_mask(const char *level) {
     if (strcasecmp(level, "NONE") == 0) return 0;
@@ -103,30 +168,25 @@ static qd_log_source_t* lookup_log_source_lh(const char *module)
     if (strcasecmp(module, "DEFAULT") == 0)
 	return default_log_source;
     qd_log_source_t *src = DEQ_HEAD(source_list);
-    while(src && strcasecmp(module, src->module) != 0)
-	src = DEQ_NEXT(src);
+    DEQ_FIND(src, strcasecmp(module, src->module) == 0);
     return src;
 }
 
-static void write_log(qd_log_source_t *log_source, const char *fmt, ...)
+static void write_log(int level, qd_log_source_t *log_source, const char *fmt, ...)
 {
-    int stderr_ = log_source->stderr == -1 ? default_log_source->stderr : log_source->stderr;
-    int syslog = log_source->syslog == -1 ? default_log_source->syslog : log_source->syslog;
-    const char* file = log_source->file == 0 ? default_log_source->file : log_source->file;
+    qd_log_sink_t* sink = log_source->sink ? log_source->sink : default_log_source->sink;
 
-    if (!(stderr_ || syslog || file)) return;
+    if (!sink) return;
 
+    /* FIXME aconway 2014-05-22: move output logic to sink */
     char log_str[LOG_MAX];
     va_list arglist;
     va_start(arglist, fmt);
     vsnprintf(log_str, LOG_MAX, fmt, arglist);
     va_end(arglist);
 
-    if (stderr_) fputs(log_str, stderr);
-    /* FIXME aconway 2014-05-12: unfinished
-       if (syslog) ...
-       if (file) ...
-    */
+    if (sink->file) fputs(log_str, sink->file);
+    if (sink->syslog) syslog(level_syslog(level), "%s", log_str);
 }
 
 /// Caller must hold the log_source_lock
@@ -141,9 +201,7 @@ static qd_log_source_t *qd_log_source_lh(const char *module)
 	log_source->module = module;
 	log_source->mask = -1;
 	log_source->timestamp = -1;
-	log_source->stderr = -1;
-	log_source->syslog = -1;
-	log_source->file = 0;
+	log_source->sink = 0;
         DEQ_INSERT_TAIL(source_list, log_source);
     }
     return log_source;
@@ -158,7 +216,7 @@ qd_log_source_t *qd_log_source(const char *module)
 }
 
 void qd_log_source_free(qd_log_source_t* src) {
-    free(src->file);
+    qd_log_sink_free(src->sink);
     free(src);
 }
 
@@ -188,7 +246,7 @@ void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line,
     va_end(ap);
     ctime_r(&entry->time, ctime);
     ctime[24] = '\0';
-    write_log(source, "%s %s (%s) %s\n", ctime, entry->module, level_str(level), entry->text);
+    write_log(level, source, "%s %s (%s) %s\n", ctime, entry->module, level_str(level), entry->text);
 
     sys_mutex_lock(log_lock);
     DEQ_INSERT_TAIL(entries, entry);
@@ -214,9 +272,7 @@ void qd_log_initialize(void)
     // Only report errors until we have configured the logging system.
     default_log_source->mask = get_mask("ERROR");
     default_log_source->timestamp = 1;
-    default_log_source->stderr = 1;
-    default_log_source->syslog = 0;
-    default_log_source->file = 0;
+    default_log_source->sink = 0;
     logging_log_source = qd_log_source("LOGGING");
 }
 
@@ -256,10 +312,9 @@ void qd_log_configure(const qd_dispatch_t *qd)
 	src->module = ITEM_STRING("module");
 	src->mask = get_mask(ITEM_STRING("level"));
 	src->timestamp = ITEM_OPT_BOOL("timestamp");
-	src->stderr = ITEM_OPT_BOOL("stderr");
-	src->syslog = ITEM_OPT_BOOL("syslog");
-	const char* file = ITEM_STRING("file");
-	src->file = file ? strdup(file) : 0;
+
+	const char* output = ITEM_STRING("output");
+	if (output) src->sink = qd_log_sink(output);
 	sys_mutex_unlock(log_source_lock);
     }
     qd_log(logging_log_source, QD_LOG_INFO, "Logging system configured");

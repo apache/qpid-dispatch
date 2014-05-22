@@ -55,7 +55,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
     def common_router_conf(self, name, mode='standalone'):
         """Common router configuration for the tests"""
         return Qdrouterd.Config([
-            ('log', {'module':'DEFAULT', 'level':'INFO'}),
+            ('log', {'module':'DEFAULT', 'level':'INFO', 'output':name+".log"}),
             ('log', {'module':'ROUTER', 'level':'TRACE'}),
             ('log', {'module':'MESSAGE', 'level':'TRACE'}),
             ('container', {'container-name':name}),

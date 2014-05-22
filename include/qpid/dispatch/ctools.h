@@ -28,6 +28,8 @@
 #define NEW_ARRAY(t,n)     (t*)  malloc(sizeof(t)*(n))
 #define NEW_PTR_ARRAY(t,n) (t**) malloc(sizeof(t*)*(n))
 
+#define ZERO(p)            memset(p, 0, sizeof(*p))
+
 #define DEQ_DECLARE(i,d) typedef struct { \
     i      *head;       \
     i      *tail;       \
@@ -44,6 +46,11 @@
 #define DEQ_SIZE(d) ((d).size)
 #define DEQ_NEXT(i) (i)->next
 #define DEQ_PREV(i) (i)->prev
+/**
+ *@pre ptr points to first element of deq
+ *@post ptr points to first element of deq that passes test, or 0. Test should involve ptr.
+ */
+#define DEQ_FIND(ptr, test) while((ptr) && !(test)) ptr = DEQ_NEXT(ptr);
 
 #define DEQ_INSERT_HEAD(d,i)      \
 do {                              \

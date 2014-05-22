@@ -124,6 +124,16 @@ Only if fanout is single.  One of "closest" or "spread".  Closest bias means tha
 to an address will always be delivered to the closest (lowest cost) subscribed consumer.
 Spread bias will distribute the messages across subscribers in an approximately even
 manner.
+.SS "'log' section"
+Specifies logging for a router module. 
+.IP module
+The module name, e.g. ROUTER, MESSAGE, SERVER, AGENT, CONTAINER, CONFIG. The special module name DEFAULT specifies logging for any modules that don't have explicit log sections.
+.IP level
+One of NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL. Indicates the minimum
+logging level for the module. E.g. WARNING means log WARNING, ERROR and CRITICAL messages.
+TRACE logs all messages. NONE disables logging for the module.
+.IP output
+Where to send log messages. Can be 'stderr', 'syslog' or a file name.
 .\" XXX .SH EXAMPLES
 .SH FILES
 .I /etc/qpid-dispatch/qdrouterd.conf
