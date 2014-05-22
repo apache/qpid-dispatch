@@ -22,6 +22,7 @@
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/agent.h>
 #include <memory.h>
+#include <inttypes.h>
 #include <stdio.h>
 
 #define QD_MEMORY_DEBUG 1
@@ -320,7 +321,7 @@ void qd_alloc_finalize(void)
         // Check the stats for lost items
         //
         if (desc->stats->total_free_to_heap < desc->stats->total_alloc_from_heap)
-            fprintf(stderr, "alloc.c: Items of type '%s' remain allocated at shutdown: %ld\n",
+            fprintf(stderr, "alloc.c: Items of type '%s' remain allocated at shutdown: %"PRIx64"\n",
                     desc->type_name,
                     desc->stats->total_alloc_from_heap - desc->stats->total_free_to_heap);
 
