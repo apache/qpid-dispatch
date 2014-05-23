@@ -55,7 +55,7 @@ class RouterEngine:
         ##
         self.domain         = "domain"
         self.router_adapter = router_adapter
-        self.log_adapter    = LogAdapter("dispatch.router")
+        self.log_adapter    = LogAdapter("ROUTER")
         self.io_adapter     = IoAdapter(self, ("qdrouter", "qdhello"))
         self.max_routers    = max_routers
         self.id             = router_id

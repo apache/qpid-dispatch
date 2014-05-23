@@ -55,9 +55,9 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
     def common_router_conf(self, name, mode='standalone'):
         """Common router configuration for the tests"""
         return Qdrouterd.Config([
-            ('log', {'module':'DEFAULT', 'level':'INFO', 'output':name+".log"}),
-            ('log', {'module':'ROUTER', 'level':'TRACE'}),
-            ('log', {'module':'MESSAGE', 'level':'TRACE'}),
+            # ('log', {'module':'DEFAULT', 'level':'info', 'output':name+".log"}),
+            # ('log', {'module':'ROUTER', 'level':'trace'}),
+            # ('log', {'module':'MESSAGE', 'level':'trace'}),
             ('container', {'container-name':name}),
             ('router', {'mode': mode, 'router-id': name})
         ])
@@ -75,7 +75,6 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
         for b, a in zip(r, cycle(send_addresses)):
             msgr.put(message(address=a, body=b))
         msgr.flush()
-        # FIXME aconway 2014-05-20: From which subscription?
         messages = sorted(msgr.fetch().body for i in r)
         msgr.flush()
         self.assertEqual(r, messages)

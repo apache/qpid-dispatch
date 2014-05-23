@@ -89,8 +89,8 @@ config_schema = {
     }),
     'log' : (False, {
         'module' : (str, None, 'M', None, None),
-        'level'  : (str, None, '', 'INFO', ['NONE', 'TRACE', 'DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL']),
-	'timestamp' : (bool, None, '', True, None),
+        'level'  : (str, None, '', 'info', ['none', 'trace', 'debug', 'info', 'notice', 'warning', 'error', 'critical']),
+	'timestamp' : (bool, None, '', None, None),
 	'output'   : (str, None, '', None, None), # File name or 'stderr' or 'syslog'
     })
 }

@@ -148,7 +148,7 @@ class SchemaSection:
       if k not in kv_map:
         if self.is_mandatory(k):
           raise Exception("In section '%s', missing mandatory key '%s'" % (self.name, k))
-        else:
+        elif self.default_value(k) is not None:
           copy[k] = self.default_value(k)
     for k,v in kv_map.items():
       if k not in self.values:
@@ -342,12 +342,18 @@ class DispatchConfig:
     return long(value)
 
 
+  TRUTH_VALUES= {"yes":True, "true":True, "on":True, "1":True,
+                 "no":None, "false":None, "off":None, "0":None}
+
   def value_bool(self, section, idx, key):
     """
     Return the boolean value for the key in the idx'th item in the section.
     """
     value = self._value(section, idx, key)
-    if value:
-      if str(value) != "no":
-        return True
-    return None
+    if (isinstance(value, basestring)):
+      if value.lower() in TRUTH_VALUES:
+        return TRUTH_VALUES[value.lower()]
+      else:
+        raise ValueError("invalid boolean value '%s'"%value)
+    else:
+      return bool(value) or None
