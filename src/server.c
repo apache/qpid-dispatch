@@ -56,12 +56,15 @@ static qd_thread_t *thread(qd_server_t *qd_server, int id)
 static void thread_process_listeners(qd_server_t *qd_server)
 {
     pn_driver_t     *driver   = qd_server->driver;
-    pn_listener_t   *listener = pn_driver_listener(driver);
+    pn_listener_t   *listener;
     pn_connector_t  *cxtr;
     qd_connection_t *ctx;
 
-    while (listener) {
+    for (listener = pn_driver_listener(driver); listener; listener = pn_driver_listener(driver)) {
         cxtr = pn_listener_accept(listener);
+        if (!cxtr)
+            continue;
+
         qd_log(qd_server->log_source, QD_LOG_TRACE, "Accepting Connection from %s", pn_connector_name(cxtr));
         ctx = new_qd_connection_t();
         DEQ_ITEM_INIT(ctx);
@@ -135,7 +138,6 @@ static void thread_process_listeners(qd_server_t *qd_server)
         pn_sasl_done(sasl, PN_SASL_OK);  // TODO - This needs to go away
 
         pn_connector_set_context(cxtr, ctx);
-        listener = pn_driver_listener(driver);
     }
 }
 
@@ -933,6 +935,9 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
 
 void qd_server_listener_free(qd_listener_t* li)
 {
+    if (!li)
+        return;
+
     pn_listener_free(li->pn_listener);
     free_qd_listener_t(li);
 }
@@ -969,6 +974,9 @@ void qd_server_connector_free(qd_connector_t* ct)
 {
     // Don't free the proton connector.  This will be done by the connector
     // processing/cleanup.
+
+    if (!ct)
+        return;
 
     if (ct->ctx) {
         pn_connector_close(ct->ctx->pn_cxtr);
