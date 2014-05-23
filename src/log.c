@@ -23,6 +23,7 @@
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/threading.h>
+#include <qpid/dispatch/log.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -33,7 +34,6 @@
 #define LIST_MAX 1000
 #define LOG_MAX 640
 
-typedef struct qd_log_source_t qd_log_source_t;
 static qd_log_source_t      *default_log_source=0;
 static qd_log_source_t      *logging_log_source=0;
 
