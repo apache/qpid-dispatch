@@ -101,6 +101,44 @@ void sys_cond_signal_all(sys_cond_t *cond)
 }
 
 
+struct sys_rwlock_t {
+    pthread_rwlock_t lock;
+};
+
+
+sys_rwlock_t *sys_rwlock(void)
+{
+    sys_rwlock_t *lock = NEW(sys_rwlock_t);
+    pthread_rwlock_init(&(lock->lock), 0);
+    return lock;
+}
+
+
+void sys_rwlock_free(sys_rwlock_t *lock)
+{
+    pthread_rwlock_destroy(&(lock->lock));
+    free(lock);
+}
+
+
+void sys_rwlock_wrlock(sys_rwlock_t *lock)
+{
+    pthread_rwlock_wrlock(&(lock->lock));
+}
+
+
+void sys_rwlock_rdlock(sys_rwlock_t *lock)
+{
+    pthread_rwlock_rdlock(&(lock->lock));
+}
+
+
+void sys_rwlock_unlock(sys_rwlock_t *lock)
+{
+    pthread_rwlock_unlock(&(lock->lock));
+}
+
+
 struct sys_thread_t {
     pthread_t thread;
 };

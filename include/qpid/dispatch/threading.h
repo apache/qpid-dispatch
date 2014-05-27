@@ -36,6 +36,15 @@ void        sys_cond_signal(sys_cond_t *cond);
 void        sys_cond_signal_all(sys_cond_t *cond);
 
 
+typedef struct sys_rwlock_t sys_rwlock_t;
+
+sys_rwlock_t *sys_rwlock(void);
+void          sys_rwlock_free(sys_rwlock_t *lock);
+void          sys_rwlock_wrlock(sys_rwlock_t *lock);
+void          sys_rwlock_rdlock(sys_rwlock_t *lock);
+void          sys_rwlock_unlock(sys_rwlock_t *lock);
+
+
 typedef struct sys_thread_t sys_thread_t;
 
 sys_thread_t *sys_thread(void *(*run_function) (void *), void *arg);
