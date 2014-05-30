@@ -1,0 +1,80 @@
+{
+  "prefix": "org.apache.qpid.dispatch",
+  
+  "includes": {
+    "entity-id": {
+      "name": {"type":"String", "required":true, "unique":true},
+      "identity": {"type":"String", "required":true, "unique":true}
+    },
+    
+    "ssl-profile": {
+      "cert-db" : {"type":"String"},
+      "cert-file" : {"type":"String"},
+      "key-file" : {"type":"String"},
+      "password-file" : {"type":"String"},
+      "password" : {"type":"String"}
+    },
+
+    "ip-addr": {
+      "addr" : {"type":"String", "default":"0.0.0.0"},
+      "port" : {"type":"String", "default":"amqp"}
+    }
+  },
+
+  "entity_types": {
+    "container": {
+      "singleton": true,
+      "include" : ["entity-id"],
+      "attributes": {
+	"worker-threads" : {"type":"Integer", "default":"1"}
+      }
+    },
+    
+    "router": {
+      "singleton": true,
+      "include" : ["entity-id"],
+      "attributes": {
+	"mode" : {"type": ["standalone", "interior"], "default":"standalone"},
+	"area" : {"type": "String"},
+	"hello-interval" : {"type": "Integer", "default": 1},
+	"hello-max-age" : {"type": "Integer", "default": 3},
+	"ra-Integererval" : {"type": "Integer", "default": 30},
+	"remote-ls-max-age" : {"type": "Integer", "default": 60},
+	"mobile-addr-max-age" : {"type": "Integer", "default": 60}
+      }
+    },
+    
+    "listener": {
+      "include" : ["entity-id", "ssl-profile", "ip-addr"],
+      "attributes": {
+	"role" : {"type":["normal", "inter-router"], "default":"normal"},
+	"sasl-mechanisms" : {"type":"String", "required":true},
+	"require-peer-auth" : {"type": "Boolean", "default":true},
+	"trusted-certs" : {"type": "String"},
+	"allow-unsecured" : {"type": "Boolean", "default":false},
+	"max-frame-size" : {"type": "Integer", "default":65536}
+      }
+    },
+    
+    "connector": {
+      "include" : ["entity-id", "ssl-profile", "ip-addr"],
+      "attributes": {
+	"role" : {"type": ["normal", "inter-router", "on-demand"], "default":"normal"},
+	"sasl-mechanisms" : {"type":"String", "required":true},
+	"allow-redirect" : {"type": "Boolean", "default":true},
+	"max-frame-size" : {"type": "Integer", "default":65536}
+      }
+    },
+
+    "logging": {
+      "include": ["entity-id"],
+      "attributes": {
+	"level" : {"type": ["none", "trace", "debug", "info", "notice", "warning", "error", "critical"], "default":"info"},
+	"timestamp" : {"type": "Boolean"},
+	"output" : {"type": "String"}
+      }
+    }
+  }
+}
+
+
