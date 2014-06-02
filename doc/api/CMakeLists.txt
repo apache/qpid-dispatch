@@ -47,5 +47,4 @@ if (BUILD_DOCS)
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in ${API_SOURCES})
 
   add_custom_target(apidocs ALL DEPENDS user dev)
-
 endif (BUILD_DOCS)

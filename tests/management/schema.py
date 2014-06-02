@@ -21,15 +21,25 @@
 #pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
 
 import unittest, json
-from qpid_dispatch_internal.management.schema import Schema, EntityType, BooleanType, EnumType, AttributeDef, SchemaError, schema_file
+from qpid_dispatch_internal.management.schema import Schema, EntityType, BooleanType, EnumType, AttributeType, SchemaError, schema_file
 from qpid_dispatch_internal.management.entity import Entity
+import collections
+
+def replace_od(thing):
+    if isinstance(thing, collections.Mapping):
+        return dict((k, replace_od(v)) for k,v in thing.iteritems())
+    if isinstance(thing, list):
+        return [replace_od(t) for t in thing]
+    return thing
 
 SCHEMA_1 = {
     "prefix":"org.example",
     "includes": {
         "entity-id": {
-            "name": {"type":"String", "required": True, "unique":True}
-        },
+            "attributes": {
+                "name": {"type":"String", "required": True, "unique":True}
+            }
+        }
     },
     "entity_types": {
         "container": {
@@ -54,7 +64,6 @@ SCHEMA_1 = {
     }
 }
 
-
 class SchemaTest(unittest.TestCase):
 
     def test_bool(self):
@@ -75,18 +84,18 @@ class SchemaTest(unittest.TestCase):
         self.assertRaises(ValueError, e.validate, 3)
 
     def test_attribute_def(self):
-        a = AttributeDef('foo', 'String', 'FOO', False)
+        a = AttributeType('foo', 'String', 'FOO', False)
         self.assertEqual(a.validate('x'), 'x')
         self.assertEqual(a.validate(None), 'FOO')
-        a = AttributeDef('foo', 'String', 'FOO', True)
+        a = AttributeType('foo', 'String', 'FOO', True)
         self.assertEqual('FOO', a.validate(None))
-        a = AttributeDef('foo', 'Integer', None, True)
+        a = AttributeType('foo', 'Integer', None, True)
         self.assertRaises(SchemaError, a.validate, None) # Missing default
 
     def test_entity_type(self):
         s = Schema(includes={
-            'i1':{'foo1': {'type':'String', 'default':'FOO1'}},
-            'i2':{'foo2': {'type':'String', 'default':'FOO2'}}})
+            'i1':{'attributes': { 'foo1': {'type':'String', 'default':'FOO1'}}},
+            'i2':{'attributes': { 'foo2': {'type':'String', 'default':'FOO2'}}}})
 
         e = EntityType('MyEntity', s, attributes={
             'foo': {'type':'String', 'default':'FOO'},
@@ -110,32 +119,46 @@ class SchemaTest(unittest.TestCase):
     def test_schema_dump(self):
         s = Schema(**SCHEMA_1)
         self.maxDiff = None     # pylint: disable=invalid-name
+        self.longMessage = True     # pylint: disable=invalid-name
         expect = {
             "prefix":"org.example",
-            "includes": {"entity-id": {"name": {"required": True, "unique":True, "type": "String"}}},
+
+            "includes": {
+                "entity-id": {
+                    "attributes": {
+                        "name": {"required": True,
+                                 "unique":True,
+                                 "type": "String"}
+                    }
+                }
+            },
+
             "entity_types": {
                 "container": {
                     "singleton": True,
                     "attributes": {
-                        "name": {"type":"String", "required": True},
+                        "name": {"type":"String", "unique":True, "required": True},
                         "worker-threads": {"type":"Integer", "default": 1}
                     }
                     },
                     "listener": {
                         "attributes": {
-                            "name": {"type":"String", "required": True},
+                            "name": {"type":"String", "unique":True, "required": True},
                             "addr" : {"type":"String"}
                         }
                     },
                 "connector": {
                     "attributes": {
-                        "name": {"type":"String", "required": True},
+                        "name": {"type":"String", "unique":True, "required": True},
                         "addr" : {"type":"String"}
                     }
                 }
             }
         }
-        self.assertEquals(s.dump(), expect)
+        def jsontof(j,fname):
+            with open(fname,'w') as f:
+                json.dump(j, f, indent=4)
+        self.assertDictEqual(replace_od(s.dump()), expect)
 
         s2 = Schema(**s.dump())
         self.assertEqual(s.dump(), s2.dump())

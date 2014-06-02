@@ -6,9 +6,9 @@
 ## to you under the Apache License, Version 2.0 (the
 ## "License"); you may not use this file except in compliance
 ## with the License.  You may obtain a copy of the License at
-## 
+##
 ##   http://www.apache.org/licenses/LICENSE-2.0
-## 
+##
 ## Unless required by applicable law or agreed to in writing,
 ## software distributed under the License is distributed on an
 ## "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -52,6 +52,7 @@ add_test(unit_tests_size_2     unit_tests_size 2)
 add_test(unit_tests_size_1     unit_tests_size 1)
 add_test(unit_tests            unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
 add_test(router_tests          python ${CMAKE_CURRENT_SOURCE_DIR}/router_engine_test.py -v)
+add_test(management_tests      python -m unittest -v management)
 
 set(SYSTEM_TEST_FILES system_test.py system_tests_one_router.py system_tests_two_routers.py system_tests_broker.py)
 
@@ -64,7 +65,7 @@ install(FILES ${SYSTEM_TEST_FILES}
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests
         )
 
-install(FILES qdstat_test.sh 
+install(FILES qdstat_test.sh
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests
         )
 

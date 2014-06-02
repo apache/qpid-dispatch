@@ -1,4 +1,4 @@
-##*
+##
 ## Licensed to the Apache Software Foundation (ASF) under one
 ## or more contributor license agreements.  See the NOTICE file
 ## distributed with this work for additional information
@@ -27,6 +27,7 @@ A Schema can be loaded/dumped to a json file.
 """
 
 import os
+from collections import OrderedDict
 
 class SchemaError(Exception):
     """Class for schema errors"""
@@ -64,7 +65,8 @@ class Type(object):
         """
         return self.name
 
-    def __repr__(self):
+    def __str__(self):
+        """String name of type."""
         return str(self.dump())
 
 class BooleanType(Type):
@@ -131,6 +133,10 @@ class EnumType(Type):
         """
         return self.tags
 
+    def __str__(self):
+        """String description of enum type."""
+        return "One of [%s]"%(', '.join(self.tags))
+
 BUILTIN_TYPES = dict((t.name, t) for t in [Type("String", str), Type("Integer", int), BooleanType()])
 
 def get_type(rep):
@@ -149,7 +155,7 @@ def _dump_dict(items):
     Remove all items with None value from a mapping.
     @return: Map of non-None items.
     """
-    return dict((k, v) for k, v in items if v)
+    return OrderedDict((k, v) for k, v in items if v)
 
 def _is_unique(found, category, value):
     """
@@ -173,7 +179,7 @@ def _is_unique(found, category, value):
         return True
 
 
-class AttributeDef(object):
+class AttributeType(object):
     """
     Definition of an attribute.
 
@@ -182,19 +188,25 @@ class AttributeDef(object):
     @ivar required: True if the attribute is reqiured.
     @ivar default: Default value for the attribute or None if no default.
     @ivar unique: True if the attribute value is unique.
+    @ivar description: Description of the attribute type.
+    @ivar include: Include section or None
     """
 
-    def __init__(self, name, type=None, default=None, required=False, unique=False): # pylint: disable=redefined-builtin
+    def __init__(self, name, type=None, default=None, required=False, unique=False, include=None,
+                 description=""
+    ): # pylint: disable=redefined-builtin
         """
-        See L{AttributeDef} instance variables.
+        See L{AttributeType} instance variables.
         """
         self.name = name
         self.atype = get_type(type)
         self.required = required
         self.default = default
         self.unique = unique
+        self.description = description
         if default is not None:
             self.default = self.atype.validate(default)
+        self.include = include
 
     def validate(self, value, check_required=True, add_default=True, check_unique=None, **kwargs):
         """
@@ -223,36 +235,24 @@ class AttributeDef(object):
         @return: Json-friendly representation of an attribute type
         """
         return _dump_dict([
-            ('type', self.atype.dump()), ('default', self.default), ('required', self.required)])
+            ('type', self.atype.dump()),
+            ('default', self.default),
+            ('required', self.required),
+            ('unique', self.unique),
+            ('description', self.description)
+        ])
 
     def __str__(self):
-        return "AttributeDef%s"%(self.__dict__)
+        return "AttributeType%s"%(self.__dict__)
 
-class EntityType(object):
-    """
-    An entity type defines a set of attributes for an entity.
+class AttributeTypeHolder(object):
+    """Base class for IncludeType and EntityType - a named holder of attribute types"""
 
-    @ivar name: Entity type name.
-    @ivar attributes: Map of L{AttributeDef} for entity.
-    @ivar singleton: If true only one entity of this type is allowed.
-    """
-    def __init__(self, name, schema, singleton=False, include=None, attributes=None):
-        """
-        @param name: name of the entity type.
-        @param schema: schema for this type.
-        @param singleton: True if entity type is a singleton.
-        @param include: List of names of include types for this entity.
-        @param attributes: Map of attributes {name: {type:, default:, required:, unique:}}
-        """
-        self.name = name
-        self.schema = schema
-        self.singleton = singleton
-        self.attributes = {}
+    def __init__(self, name, schema, attributes=None, description=""):
+        self.name, self.schema, self.description = name, schema, description
+        self.attributes = OrderedDict()
         if attributes:
             self.add_attributes(attributes)
-        if include and self.schema.includes:
-            for i in include:
-                self.add_attributes(schema.includes[i])
 
     def add_attributes(self, attributes):
         """
@@ -262,13 +262,54 @@ class EntityType(object):
         for k, v in attributes.iteritems():
             if k in self.attributes:
                 raise SchemaError("Attribute '%s' duplicated in '%s'"%(k, self.name))
-            self.attributes[k] = AttributeDef(k, **v)
+            self.attributes[k] = AttributeType(k, **v)
 
     def dump(self):
         """Json friendly representation"""
         return _dump_dict([
-            ('singleton', self.singleton),
-            ('attributes', dict((k, v.dump()) for k, v in self.attributes.iteritems()))])
+            ('attributes', OrderedDict((k, v.dump()) for k, v in self.attributes.iteritems())),
+            ('description', self.description or None)
+        ])
+
+class IncludeType(AttributeTypeHolder):
+
+    def __init__(self, name, schema, attributes=None, description=""):
+        super(IncludeType, self).__init__(name, schema, attributes, description)
+        for a in self.attributes.itervalues():
+            a.include = self
+
+class EntityType(AttributeTypeHolder):
+    """
+    An entity type defines a set of attributes for an entity.
+
+    @ivar name: Entity type name.
+    @ivar attributes: Map of L{AttributeType} for entity.
+    @ivar singleton: If true only one entity of this type is allowed.
+    #ivar include: List of names of sections included by this entity.
+    """
+    def __init__(self, name, schema, singleton=False, include=None, attributes=None,
+                 description=""):
+        """
+        @param name: name of the entity type.
+        @param schema: schema for this type.
+        @param singleton: True if entity type is a singleton.
+        @param include: List of names of include types for this entity.
+        @param attributes: Map of attributes {name: {type:, default:, required:, unique:}}
+        @param description: Human readable description.
+        """
+        super(EntityType, self).__init__(name, schema, attributes, description)
+        self.singleton = singleton
+        self.include = include
+        if include and self.schema.includes:
+            for i in include:
+                for attr in schema.includes[i].attributes.itervalues():
+                    self.attributes[attr.name] = attr
+
+    def dump(self):
+        """Json friendly representation"""
+        d = super(EntityType, self).dump()
+        if self.singleton: d['singleton'] = True
+        return d
 
     def validate(self, attributes, check_singleton=None, **kwargs):
         """
@@ -303,30 +344,26 @@ class Schema(object):
     @ivar prefix: Prefix to prepend to short entity names.
     @ivar entity_types: Map of L{EntityType} by name.
     """
-    def __init__(self, prefix="", includes=None, entity_types=None):
+    def __init__(self, prefix="", includes=None, entity_types=None, description=""):
         """
         @param prefix: Prefix for entity names.
         @param includes: Map of  { include-name: {attribute-name:value, ... }}
         @param entity_types: Map of  { entity-type-name: { singleton:, include:[...], attributes:{...}}}
+        @param description: Human readable description.
         """
         self.prefix = self.prefixdot = prefix
         if not prefix.endswith('.'):
             self.prefixdot += '.'
-        self.includes = includes or {}
-        self.entity_types = {}
+        self.description = description
+        self.includes = OrderedDict()
+        if includes:
+            for k, v in includes.iteritems():
+                self.includes[k] = IncludeType(k, self, **v)
+        self.entity_types = OrderedDict()
         if entity_types:
             for k, v in entity_types.iteritems():
-                self.add_entity_type(k, **v)
+                self.entity_types[k] = EntityType(k, self, **v)
 
-    def add_entity_type(self, name, singleton=False, include=None, attributes=None):
-        """
-        Add an entity type to the schema.
-        @param name: Entity type name.
-        @param singleton: True if this is a singleton.
-        @param include: List of names of include sections for this entity.
-        @param attributes: Map of attributes {name: {type:, default:, required:, unique:}}
-        """
-        self.entity_types[name] = EntityType(name, self, singleton, include, attributes)
 
     def short_name(self, name):
         """Remove prefix from name if present"""
@@ -342,9 +379,9 @@ class Schema(object):
 
     def dump(self):
         """Return json-friendly representation"""
-        return {'prefix':self.prefix,
-                'includes':self.includes,
-                'entity_types':dict((k, v.dump()) for k, v in self.entity_types.iteritems())}
+        return {'prefix': self.prefix,
+                'includes': OrderedDict((k, v.dump()) for k, v in self.includes.iteritems()),
+                'entity_types': OrderedDict((k, v.dump()) for k, v in self.entity_types.iteritems())}
 
     def validate(self, entities, enum_as_int=False, check_required=True, add_default=True, check_unique=True, check_singleton=True):
         """
