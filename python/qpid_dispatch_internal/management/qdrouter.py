@@ -53,14 +53,11 @@ class Schema(schema.Schema):
                 if connect['role'] != 'normal':
                     raise schema.SchemaError("Role '%s' for entity '%s' only permitted with 'interior' mode % (entity['role'], connect.name)")
 
-SCHEMA = Schema()
-"""Instance of the Qpid Dispatch Router management schema""" # pylint: disable=pointless-string-statement
-
 class Configuration(EntityList):
-    """An L{EntityList} loaded from a qdrouterd.conf and validated against L{SCHEMA}."""
+    """An L{EntityList} loaded from a qdrouterd.conf and validated against L{Schema}."""
 
-    def __init__(self):
-        super(Configuration, self).__init__(SCHEMA)
+    def __init__(self, schema=Schema()):
+        super(Configuration, self).__init__(schema)
 
     @staticmethod
     def _parse(lines):

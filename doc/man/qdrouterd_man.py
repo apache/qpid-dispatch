@@ -21,10 +21,10 @@
 Generate the qdrouterd.conf man page from the qdrouterd management schema."""
 
 import sys
-from qpid_dispatch_internal.management.qdrouter import SCHEMA
+from qpid_dispatch_internal.management.qdrouter import Schema
 
 def make_man_page(filename):
-    """Generate a man page for the configuration file from L{SCHEMA} descriptions"""
+    """Generate a man page for the configuration file from L{Schema} descriptions"""
     with open(filename, 'w') as f:
 
         f.write(
@@ -99,11 +99,12 @@ the attributes associated with each type of configuration entity.
             for attr in attrs.attributes.itervalues():
                 write_attribute(attr, attrs)
 
-        for include in SCHEMA.includes.itervalues():
+        schema = Schema()
+        for include in schema.includes.itervalues():
             f.write('.SS "\'%s\' include group"\n'% include.name)
             write_attributes(include)
 
-        for name, entity_type in SCHEMA.entity_types.iteritems():
+        for name, entity_type in schema.entity_types.iteritems():
             f.write('.SS "\'%s\' entity"\n'% name)
             f.write('Includes: %s\n\n'%(', '.join(entity_type.include)))
             write_attributes(entity_type)
