@@ -33,5 +33,4 @@ os.environ['PYTHONPATH'] = os.pathsep.join(
     ])
 
 if __name__ == "__main__":
-    print "FIXME", sys.argv
     os.execvp(sys.argv[1], sys.argv[1:])
