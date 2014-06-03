@@ -103,6 +103,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tools/qdstat.in
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tools/qdtest.in
                ${CMAKE_CURRENT_BINARY_DIR}/tools/qdtest)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/build_env.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/build_env.py)
+
 ##
 ## Build the Multi-Threaded Server Library
 ##
