@@ -27,7 +27,10 @@ A Schema can be loaded/dumped to a json file.
 """
 
 import os
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except:
+    from qpid_dispatch_internal.ordereddict import OrderedDict # For python <= 2.6
 
 class SchemaError(Exception):
     """Class for schema errors"""
