@@ -28,10 +28,6 @@ from itertools import cycle
 class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-public-methods
     """System tests involving routers and qpidd brokers"""
 
-    # Hack for python 2.6 which does not support setupClass.
-    # We set setup_ok = true in setupClass, and skip all tests if it's not true.
-    setup_ok = False
-
     @classmethod
     def setUpClass(cls):
         """Start 3 qpidd brokers, wait for them to be ready."""
@@ -40,13 +36,10 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
                     for i in xrange(3)]
         for q in cls.qpidd:
             wait_port(q.port)
-        cls.setup_ok = True
 
     @classmethod
     def tearDownClass(cls):
-        if cls.setup_ok:
-            cls.setup_ok = False
-            super(DistributedQueueTest, cls).tearDownClass()
+        super(DistributedQueueTest, cls).tearDownClass()
 
     def setUp(self):
         super(DistributedQueueTest, self).setUp()
@@ -89,8 +82,6 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
     def test_distrbuted_queue(self):
         """Create a distributed queue with N routers and N brokers.
         Each router is connected to all the brokers."""
-        if not self.setup_ok:
-            return self.skipTest("setUpClass failed")
         for q in self.qpidd:
             q.agent.addQueue(self.testq)
 

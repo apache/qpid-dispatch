@@ -52,7 +52,7 @@ export PYTHONPATH="$PYTHONPATH:/usr/local/lib/proton/bindings/python:/usr/local/
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib64"
 """
 
-import os, time, socket, random, subprocess, shutil, unittest
+import os, time, socket, random, subprocess, shutil, unittest, inspect
 from copy import copy
 import proton
 from proton import Message
@@ -429,7 +429,7 @@ class Messenger(proton.Messenger): # pylint: disable=too-many-public-methods
 
     def flush(self):
         """Call work() till there is no work left."""
-        while self.work(0.01):
+        while self.work(0.1):
             pass
 
     @flush_arg
@@ -539,13 +539,18 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
 
     @classmethod
     def setUpClass(cls):
+        # Don't delete cwd out from under ourselves.
+        # cwd can be a subdir of base_dir if we were called by test_0000_setup_class
+        if os.path.commonprefix([os.getcwd(), cls.base_dir()]) == cls.base_dir():
+            os.chdir(os.path.dirname(cls.base_dir()))
         shutil.rmtree(cls.base_dir(), ignore_errors=True) # Clear old test tree.
         cls.tester = Tester()
         cls.tester.setup(os.path.join(cls.base_dir(), 'setup_class'))
 
     @classmethod
     def tearDownClass(cls):
-        cls.tester.teardown()
+        if inspect.isclass(cls):
+            cls.tester.teardown()
 
     def setUp(self):
         # self.id() is normally the fully qualified method name
@@ -568,10 +573,10 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
     if not hasattr(unittest.TestCase, 'setUpClass'):
         def test_0000_setup_class(self):
             """Fake test to call setUpClass"""
-            self.__class__.setUpClass()
+            self.setUpClass()
         def test_zzzz_teardown_class(self):
             """Fake test to call tearDownClass"""
-            self.__class__.tearDownClass()
+            self.tearDownClass()
 
     def assert_fair(self, seq):
         avg = sum(seq)/len(seq)

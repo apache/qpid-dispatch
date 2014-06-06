@@ -22,52 +22,34 @@ import os
 import time
 import unittest
 import subprocess
-from proton import Messenger, Message, PENDING, ACCEPTED, REJECTED, RELEASED
+from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED
+from system_test import TestCase, message, Messenger, Qdrouterd
 
-def startRouter(obj):
-    default_home = os.path.normpath('/usr/lib/qpid-dispatch')
-    home = os.environ.get('QPID_DISPATCH_HOME', default_home)
-    config_file = '%s/tests/config-1/A.conf' % home
+class RouterTest(TestCase):
+    """System tests involving a single router"""
 
-    obj.router = subprocess.Popen(['qdrouterd', '-c', config_file],
-                                  stderr=subprocess.PIPE,
-                                  stdout=subprocess.PIPE)
-    time.sleep(1)
-
-def stopRouter(obj):
-    obj.router.terminate()
-    obj.router.communicate()
-
-
-class RouterTest(unittest.TestCase):
-
-    if (sys.version_info[0] == 2) and (sys.version_info[1] < 7):
-        def setUp(self):
-            startRouter(self)
-
-        def tearDown(self):
-            stopRouter(self)
-    else:
-        @classmethod
-        def setUpClass(cls):
-            startRouter(cls)
-
-        @classmethod
-        def tearDownClass(cls):
-            stopRouter(cls)
-
-    def flush(self, messenger):
-        while messenger.work(0.1):
-            pass
-
-    def subscribe(self, messenger, address):
-        sub = messenger.subscribe(address)
-        self.flush(messenger)
-        return sub
+    @classmethod
+    def setUpClass(cls):
+        """Start a router and a messenger"""
+        super(RouterTest, cls).setUpClass()
+        name = "test-router"
+        config = Qdrouterd.Config([
+            ('log', {'module':'DEFAULT', 'level':'info', 'output':name+".log"}),
+            ('container', {'worker-threads': 4, 'container-name': 'Qpid.Dispatch.Router.A'}),
+            ('router', {'mode': 'standalone', 'router-id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('fixed-address', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
+            ('fixed-address', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
+            ('fixed-address', {'prefix': '/multicast/', 'fanout': 'multiple'}),
+            ('fixed-address', {'prefix': '/', 'fanout': 'multiple'})
+        ])
+        cls.router = cls.tester.qdrouterd(name, config)
+        cls.router.wait_ready()
+        cls.address = cls.router.addresses[0]
 
 
     def test_00_discard(self):
-        addr = "amqp://0.0.0.0:20000/discard/1"
+        addr = self.address+"/discard/1"
         M1 = Messenger()
         M1.timeout = 1.0
         M1.start()
@@ -81,7 +63,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_01_pre_settled(self):
-        addr = "amqp://0.0.0.0:20000/pre_settled/1"
+        addr = self.address+"/pre_settled/1"
         M1 = Messenger()
         M2 = Messenger()
 
@@ -90,7 +72,7 @@ class RouterTest(unittest.TestCase):
 
         M1.start()
         M2.start()
-        self.subscribe(M2, addr)
+        M2.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -111,7 +93,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_02_multicast(self):
-        addr = "amqp://0.0.0.0:20000/pre_settled/multicast/1"
+        addr = self.address+"/pre_settled/multicast/1"
         M1 = Messenger()
         M2 = Messenger()
         M3 = Messenger()
@@ -127,9 +109,9 @@ class RouterTest(unittest.TestCase):
         M3.start()
         M4.start()
 
-        self.subscribe(M2, addr)
-        self.subscribe(M3, addr)
-        self.subscribe(M4, addr)
+        M2.subscribe(addr, flush=True)
+        M3.subscribe(addr, flush=True)
+        M4.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -160,7 +142,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_02a_multicast_unsettled(self):
-        addr = "amqp://0.0.0.0:20000/pre_settled/multicast/1"
+        addr = self.address+"/pre_settled/multicast/1"
         M1 = Messenger()
         M2 = Messenger()
         M3 = Messenger()
@@ -181,9 +163,9 @@ class RouterTest(unittest.TestCase):
         M3.start()
         M4.start()
 
-        self.subscribe(M2, addr)
-        self.subscribe(M3, addr)
-        self.subscribe(M4, addr)
+        M2.subscribe(addr, flush=True)
+        M3.subscribe(addr, flush=True)
+        M4.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -220,7 +202,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_02b_disp_to_closed_connection(self):
-        addr = "amqp://0.0.0.0:20000/pre_settled/multicast/1"
+        addr = self.address+"/pre_settled/multicast/1"
         M1 = Messenger()
         M2 = Messenger()
 
@@ -232,7 +214,7 @@ class RouterTest(unittest.TestCase):
 
         M1.start()
         M2.start()
-        self.subscribe(M2, addr)
+        M2.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -255,7 +237,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_02c_sender_settles_first(self):
-        addr = "amqp://0.0.0.0:20000/settled/senderfirst/1"
+        addr = self.address+"/settled/senderfirst/1"
         M1 = Messenger()
         M2 = Messenger()
 
@@ -267,7 +249,7 @@ class RouterTest(unittest.TestCase):
 
         M1.start()
         M2.start()
-        self.subscribe(M2, addr)
+        M2.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -278,8 +260,8 @@ class RouterTest(unittest.TestCase):
         M1.send(0)
 
         M1.settle(ttrk)
-        self.flush(M1)
-        self.flush(M2)
+        M1.flush()
+        M2.flush()
 
         M2.recv(1)
         rtrk = M2.get(rm)
@@ -287,15 +269,15 @@ class RouterTest(unittest.TestCase):
         M2.settle(rtrk)
         self.assertEqual(0, rm.body['number'])
 
-        self.flush(M1)
-        self.flush(M2)
+        M1.flush()
+        M2.flush()
 
         M1.stop()
         M2.stop()
 
 
     def test_03_propagated_disposition(self):
-        addr = "amqp://0.0.0.0:20000/unsettled/1"
+        addr = self.address+"/unsettled/1"
         M1 = Messenger()
         M2 = Messenger()
 
@@ -306,7 +288,7 @@ class RouterTest(unittest.TestCase):
 
         M1.start()
         M2.start()
-        self.subscribe(M2, addr)
+        M2.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -327,8 +309,8 @@ class RouterTest(unittest.TestCase):
         M2.accept(rx_tracker)
         M2.settle(rx_tracker)
 
-        self.flush(M2)
-        self.flush(M1)
+        M2.flush()
+        M1.flush()
 
         self.assertEqual(ACCEPTED, M1.status(tx_tracker))
 
@@ -345,8 +327,8 @@ class RouterTest(unittest.TestCase):
         M2.reject(rx_tracker)
         M2.settle(rx_tracker)
 
-        self.flush(M2)
-        self.flush(M1)
+        M2.flush()
+        M1.flush()
 
         self.assertEqual(REJECTED, M1.status(tx_tracker))
 
@@ -355,7 +337,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_04_unsettled_undeliverable(self):
-        addr = "amqp://0.0.0.0:20000/unsettled_undeliverable/1"
+        addr = self.address+"/unsettled_undeliverable/1"
         M1 = Messenger()
 
         M1.timeout = 1.0
@@ -368,14 +350,14 @@ class RouterTest(unittest.TestCase):
 
         tx_tracker = M1.put(tm)
         M1.send(0)
-        self.flush(M1)
+        M1.flush()
         self.assertEqual(RELEASED, M1.status(tx_tracker))
 
         M1.stop()
 
 
     def test_05_three_ack(self):
-        addr = "amqp://0.0.0.0:20000/three_ack/1"
+        addr = self.address+"/three_ack/1"
         M1 = Messenger()
         M2 = Messenger()
 
@@ -386,7 +368,7 @@ class RouterTest(unittest.TestCase):
 
         M1.start()
         M2.start()
-        self.subscribe(M2, addr)
+        M2.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -403,15 +385,15 @@ class RouterTest(unittest.TestCase):
 
         M2.accept(rx_tracker)
 
-        self.flush(M2)
-        self.flush(M1)
+        M2.flush()
+        M1.flush()
 
         self.assertEqual(ACCEPTED, M1.status(tx_tracker))
 
         M1.settle(tx_tracker)
 
-        self.flush(M1)
-        self.flush(M2)
+        M1.flush()
+        M2.flush()
 
         ##
         ## We need a way to verify on M2 (receiver) that the tracker has been
@@ -420,22 +402,22 @@ class RouterTest(unittest.TestCase):
 
         M2.settle(rx_tracker)
 
-        self.flush(M2)
-        self.flush(M1)
+        M2.flush()
+        M1.flush()
 
         M1.stop()
         M2.stop()
 
 
 #    def test_06_link_route_sender(self):
-#        pass 
+#        pass
 
 #    def test_07_link_route_receiver(self):
-#        pass 
+#        pass
 
 
     def test_08_message_annotations(self):
-        addr = "amqp://0.0.0.0:20000/ma/1"
+        addr = self.address+"/ma/1"
         M1 = Messenger()
         M2 = Messenger()
 
@@ -444,7 +426,7 @@ class RouterTest(unittest.TestCase):
 
         M1.start()
         M2.start()
-        self.subscribe(M2, addr)
+        M2.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -551,8 +533,8 @@ class RouterTest(unittest.TestCase):
         M = Messenger()
         M.timeout = 2.0
         M.start()
-        M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        sub = self.subscribe(M, "amqp:/#")
+        M.route("amqp:/*", self.address+"/$1")
+        sub = M.subscribe("amqp:/#", flush=True)
         reply = sub.address
 
         request  = Message()
@@ -606,8 +588,8 @@ class RouterTest(unittest.TestCase):
         M = Messenger()
         M.timeout = 2.0
         M.start()
-        M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        sub = self.subscribe(M, "amqp:/#")
+        M.route("amqp:/*", self.address+"/$1")
+        sub = M.subscribe("amqp:/#", flush=True)
         reply = sub.address
 
         request  = Message()
@@ -688,8 +670,8 @@ class RouterTest(unittest.TestCase):
         M = Messenger()
         M.timeout = 2.0
         M.start()
-        M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        sub = self.subscribe(M, "amqp:/#")
+        M.route("amqp:/*", self.address+"/$1")
+        sub = M.subscribe("amqp:/#", flush=True)
         reply = sub.address
 
         request  = Message()
@@ -757,8 +739,8 @@ class RouterTest(unittest.TestCase):
         M = Messenger()
         M.timeout = 2.0
         M.start()
-        M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        sub = self.subscribe(M, "amqp:/#")
+        M.route("amqp:/*", self.address+"/$1")
+        sub = M.subscribe("amqp:/#", flush=True)
         reply = sub.address
 
         request  = Message()
@@ -791,8 +773,8 @@ class RouterTest(unittest.TestCase):
         M = Messenger()
         M.timeout = 2.0
         M.start()
-        M.route("amqp:/*", "amqp://0.0.0.0:20000/$1")
-        sub = self.subscribe(M, "amqp:/#")
+        M.route("amqp:/*", self.address+"/$1")
+        sub = M.subscribe("amqp:/#", flush=True)
         reply = sub.address
 
         request  = Message()
@@ -816,7 +798,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_10_semantics_multicast(self):
-        addr = "amqp://0.0.0.0:20000/multicast/1"
+        addr = self.address+"/multicast/1"
         M1 = Messenger()
         M2 = Messenger()
         M3 = Messenger()
@@ -832,9 +814,9 @@ class RouterTest(unittest.TestCase):
         M3.start()
         M4.start()
 
-        self.subscribe(M2, addr)
-        self.subscribe(M3, addr)
-        self.subscribe(M4, addr)
+        M2.subscribe(addr, flush=True)
+        M3.subscribe(addr, flush=True)
+        M4.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -864,7 +846,7 @@ class RouterTest(unittest.TestCase):
         M4.stop()
 
     def test_11_semantics_closest(self):
-        addr = "amqp://0.0.0.0:20000/closest/1"
+        addr = self.address+"/closest/1"
         M1 = Messenger()
         M2 = Messenger()
         M3 = Messenger()
@@ -880,9 +862,9 @@ class RouterTest(unittest.TestCase):
         M3.start()
         M4.start()
 
-        self.subscribe(M2, addr)
-        self.subscribe(M3, addr)
-        self.subscribe(M4, addr)
+        M2.subscribe(addr, flush=True)
+        M3.subscribe(addr, flush=True)
+        M4.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -919,7 +901,7 @@ class RouterTest(unittest.TestCase):
         M4.stop()
 
     def test_12_semantics_spread(self):
-        addr = "amqp://0.0.0.0:20000/spread/1"
+        addr = self.address+"/spread/1"
         M1 = Messenger()
         M2 = Messenger()
         M3 = Messenger()
@@ -935,9 +917,9 @@ class RouterTest(unittest.TestCase):
         M3.start()
         M4.start()
 
-        self.subscribe(M2, addr)
-        self.subscribe(M3, addr)
-        self.subscribe(M4, addr)
+        M2.subscribe(addr, flush=True)
+        M3.subscribe(addr, flush=True)
+        M4.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
@@ -975,7 +957,7 @@ class RouterTest(unittest.TestCase):
 
 
     def test_13_to_override(self):
-        addr = "amqp://0.0.0.0:20000/toov/1"
+        addr = self.address+"/toov/1"
         M1 = Messenger()
         M2 = Messenger()
 
@@ -984,7 +966,7 @@ class RouterTest(unittest.TestCase):
 
         M1.start()
         M2.start()
-        self.subscribe(M2, addr)
+        M2.subscribe(addr, flush=True)
 
         tm = Message()
         rm = Message()
