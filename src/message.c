@@ -101,12 +101,11 @@ static const char REPR_END[] = "}\0";
 
 /* TODO aconway 2014-05-13: more detailed message representation. */
 char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len) {
+    qd_message_check(msg, QD_DEPTH_BODY);
     int i = 0;
     len -= sizeof(REPR_END);	/* Save space for ending */
     i += snprintf(buffer+i, len-i, "Message(%p){", msg);
-    if (!qd_message_check(msg, QD_DEPTH_BODY))
-	i += snprintf(buffer+i, len-i, "<%s>", qd_error_message());
-    i += copy_field(msg, QD_FIELD_TO, INT_MAX, " to='", "'", buffer+i, len-i);
+    i += copy_field(msg, QD_FIELD_TO, INT_MAX, "to='", "'", buffer+i, len-i);
     i += copy_field(msg, QD_FIELD_REPLY_TO, INT_MAX, " reply-to='", "'", buffer+i, len-i);
     i += copy_field(msg, QD_FIELD_BODY, 16, " body='", "'", buffer+i, len-i);
     assert(i <= len);

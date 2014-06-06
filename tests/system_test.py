@@ -173,7 +173,7 @@ def wait_port(port, host='0.0.0.0', **retry_kwargs):
         retry_exception(lambda: s.connect((host, port)), exception_test=check,
                         **retry_kwargs)
     except Exception, e:
-        raise Exception("wait_port timeout on %s:%s: %s"%(host, port, e))
+        raise Exception("wait_port timeout on host %s port %s: %s"%(host, port, e))
 
     finally: s.close()
 
@@ -187,6 +187,7 @@ def message(**properties):
     """Convenience to create a proton.Message with properties set"""
     m = Message()
     for name, value in properties.iteritems():
+        getattr(m, name)        # Raise exception if not a valid message attribute.
         setattr(m, name, value)
     return m
 
@@ -473,7 +474,7 @@ class Tester(object):
                 if a:
                     a()
                     break
-        os.chdir(self.save_dir)
+        if self.save_dir: os.chdir(self.save_dir)
 
     def cleanup(self, x):
         """Record object x for clean-up during tear-down.
@@ -553,30 +554,34 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
             cls.tester.teardown()
 
     def setUp(self):
+        # Hack to support setUpClass on older python.
+        # If the class has not already been set up, do it now.
+        if not hasattr(self.__class__, 'tester'):
+            self.setUpClass()
         # self.id() is normally the fully qualified method name
         Tester.setup(self, os.path.join(self.base_dir(), self.id().split(".")[-1]))
 
     def tearDown(self):
         Tester.teardown(self)
+        # Hack to support tearDownClass on older versions of python.
+        if hasattr(self.__class__, '_tear_down_class'):
+            self.tearDownClass()
 
     def skipTest(self, reason):
         """Workaround missing unittest.TestCase.skipTest in python 2.6.
         The caller must return in order to end the test"""
         if hasattr(unittest.TestCase, 'skipTest'):
-            self.skipTest(reason)
+            unittest.TestCase.skipTest(self, reason)
         else:
             print "Skipping test", id(), reason
 
-    # Hack to support setUpClass/tearDownClass on older versions of python.
+    # Hack to support tearDownClass on older versions of python.
     # The default TestLoader sorts tests alphabetically so we insert
-    # fake tests that will run first and last to call the class setup/teardown functions.
+    # a fake tests that will run last to call tearDownClass.
     if not hasattr(unittest.TestCase, 'setUpClass'):
-        def test_0000_setup_class(self):
-            """Fake test to call setUpClass"""
-            self.setUpClass()
         def test_zzzz_teardown_class(self):
             """Fake test to call tearDownClass"""
-            self.tearDownClass()
+            self.__class__._tear_down_class = True
 
     def assert_fair(self, seq):
         avg = sum(seq)/len(seq)

@@ -17,13 +17,9 @@
 # under the License.
 #
 
-import sys
-import os
-import time
 import unittest
-import subprocess
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED
-from system_test import TestCase, message, Messenger, Qdrouterd
+from system_test import TestCase, Messenger, Qdrouterd
 
 class RouterTest(TestCase):
     """System tests involving a single router"""

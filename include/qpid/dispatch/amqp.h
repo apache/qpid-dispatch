@@ -8,9 +8,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -20,7 +20,7 @@
  */
 
 /** @defgroup amqp AMQP
- * 
+ *
  * AMQP related constant definitions.
  */
 /// @{
@@ -105,7 +105,15 @@ const char * const QD_INTERNODE_LINK_NAME_1;
 const char * const QD_INTERNODE_LINK_NAME_2;
 /// @}
 
+/** @name AMQP error codes. */
+/// @{
+typedef struct qd_amqp_error_t { int status; const char* description; } qd_amqp_error_t;
+extern const qd_amqp_error_t QD_AMQP_OK;
+extern const qd_amqp_error_t QD_AMQP_BAD_REQUEST;
+extern const qd_amqp_error_t QD_AMQP_NOT_FOUND;
+extern const qd_amqp_error_t QD_AMQP_NOT_IMPLEMENTED;
+/// @}
+
 /// @}
 
 #endif
-

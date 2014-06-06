@@ -67,4 +67,6 @@ const char* qd_error_message();
  */
 qd_error_t qd_error_code();
 
+/** Maximum length of a qd_error_message, useful for temporary buffers. */
+extern const int QD_ERROR_MAX;
 #endif

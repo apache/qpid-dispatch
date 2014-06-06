@@ -29,3 +29,7 @@ const char * const QD_CAPABILITY_ROUTER = "qd.router";
 const char * const QD_INTERNODE_LINK_NAME_1 = "qd.internode.1";
 const char * const QD_INTERNODE_LINK_NAME_2 = "qd.internode.2";
 
+const qd_amqp_error_t QD_AMQP_OK = { 200, "OK" };
+const qd_amqp_error_t QD_AMQP_BAD_REQUEST = { 400, "Bad Request" };
+const qd_amqp_error_t QD_AMQP_NOT_FOUND = { 404, "Not Found" };
+const qd_amqp_error_t QD_AMQP_NOT_IMPLEMENTED = { 501, "Not Implemented"};

@@ -22,6 +22,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "static_assert.h"
+#include "log_private.h"
 
 static const char *error_names[] = {
  "No Error",
@@ -33,8 +34,8 @@ static const char *error_names[] = {
 
 STATIC_ASSERT(sizeof(error_names)/sizeof(error_names[0]) == QD_ERROR_COUNT, error_names_wrong_size);
 
-#define ERROR_MAX 512
-
+#define ERROR_MAX QD_LOG_TEXT_MAX
+const int QD_ERROR_MAX = ERROR_MAX;
 static __thread char error_message[ERROR_MAX];
 static __thread qd_error_t error_code = 0;
 static qd_log_source_t* log_source = 0;

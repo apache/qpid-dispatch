@@ -30,7 +30,7 @@
 #include <time.h>
 #include <syslog.h>
 
-#define TEXT_MAX 512
+#define TEXT_MAX QD_LOG_TEXT_MAX
 #define LIST_MAX 1000
 #define LOG_MAX 640
 
@@ -89,7 +89,7 @@ static log_sink_t* find_log_sink_lh(const char* name) {
 
 static log_sink_t* log_sink_lh(const char* name) {
     log_sink_t* sink = find_log_sink_lh(name);
-    if (sink) 
+    if (sink)
 	sink->refcount++;
     else {
 	sink = NEW(log_sink_t);
@@ -362,4 +362,3 @@ void qd_log_configure(const qd_dispatch_t *qd)
     }
     qd_log(logging_log_source, QD_LOG_INFO, "Logging system configured");
 }
-

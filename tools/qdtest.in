@@ -36,5 +36,8 @@ python $QPID_DISPATCH_HOME/tests/system_tests_two_routers.py -v --ssl
 echo "Running system_tests_broker.py"
 python $QPID_DISPATCH_HOME/tests/system_tests_broker.py -v
 
+echo "Running system_tests_management.py"
+python $QPID_DISPATCH_HOME/tests/system_tests_management.py -v
+
 echo "Running qdstat_test.sh"
 bash $QPID_DISPATCH_HOME/tests/qdstat_test.sh
