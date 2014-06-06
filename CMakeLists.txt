@@ -115,6 +115,7 @@ set(server_SOURCES
     src/amqp.c
     src/bitmask.c
     src/buffer.c
+    src/error.c
     src/compose.c
     src/config.c
     src/connection_manager.c

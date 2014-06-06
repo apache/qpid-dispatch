@@ -8,9 +8,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -19,11 +19,52 @@
  * under the License.
  */
 
+/** @file
+ * Thread-safe error handling mechansim for dispatch.
+ *
+ * Functions that detect an error should return qd_error_t.
+ *
+ * Implementation of such functions should first call qd_error_clear()
+ * to clear any previous error and on detecting an error do:
+ *     return qd_error(code, "printf format", ...)
+ *
+ * The caller can check the error code and message with
+ * qd_error_code() and qd_error_message().
+ *
+ *
+ */
+// NOTE: If you modify this enum, you must update error_names in error.c
 typedef enum {
     QD_ERROR_NONE = 0,
     QD_ERROR_NOT_FOUND,
     QD_ERROR_ALREADY_EXISTS,
-    QD_ERROR_ALLOC
+    QD_ERROR_ALLOC,
+    QD_ERROR_MESSAGE,           ///< Error parsing a message.
+
+    QD_ERROR_COUNT              ///< Not an error, marks the end of the enum
 } qd_error_t;
+
+/**
+ * Store thread-local error code and message.
+ *@param code Error code. If 0 this is equivalent to calling qd_error_clear()
+ *@param fmt printf-stlye format.
+ *@return code
+ */
+qd_error_t qd_error(qd_error_t code, const char *fmt, ...);
+
+/**
+ * Clear thread-local error code and message.
+ */
+void qd_error_clear();
+
+/**
+ * @return Thread local error message. Includes text for error code.
+ */
+const char* qd_error_message();
+
+/**
+ *@return Thread local error code
+ */
+qd_error_t qd_error_code();
 
 #endif

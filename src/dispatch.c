@@ -42,7 +42,7 @@ void            qd_router_setup_late(qd_dispatch_t *qd);
 void            qd_router_free(qd_router_t *router);
 qd_agent_t     *qd_agent(qd_dispatch_t *qd);
 void            qd_agent_free(qd_agent_t *agent);
-
+void            qd_error_initialize();
 
 static const char *CONF_CONTAINER   = "container";
 static const char *CONF_ROUTER      = "router";
@@ -56,7 +56,8 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
 
     // alloc and log has to be initialized before any module.
     qd_alloc_initialize();
-    qd_log_initialize(); 
+    qd_log_initialize();
+    qd_error_initialize();
 
     qd->router_area = strdup("0");
     qd->router_id   = strdup("0");

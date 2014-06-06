@@ -82,6 +82,9 @@ typedef enum {
     QD_DISCOVER_OPERATIONS
 } qd_discover_t;
 
+// Convenience for logging, expects agent to be defined.
+#define LOG(LEVEL, MSG, ...) qd_log(agent->log_source, QD_LOG_##LEVEL, MSG, ##__VA_ARGS__)
+
 
 static const char *AGENT_ADDRESS       = "$management";
 static const char *STATUS_CODE         = "statusCode";
@@ -520,7 +523,7 @@ static void qd_agent_process_agent_query(qd_agent_t          *agent,
             const char *class_name = (const char*) qd_hash_key_by_handle(cls->hash_handle);
 
             //
-            // If entityType was provided to restrict the result, check to see if the 
+            // If entityType was provided to restrict the result, check to see if the
             // class is in the restricted set.
             //
             if (etype && !qd_field_iterator_equal(qd_parse_raw(etype), (unsigned char*) class_name))
@@ -592,23 +595,28 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
     //
     // Parse the message through the body and exit if the message is not well formed.
     //
-    if (!qd_message_check(msg, QD_DEPTH_BODY))
-        return;
+    if (!qd_message_check(msg, QD_DEPTH_BODY)) {
+	LOG(ERROR, "Bad request: %s", qd_error_message());
+	return;
+    }
 
     //
     // Get an iterator for the application-properties.  Exit if the message has none.
     //
     qd_field_iterator_t *ap = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
-    if (ap == 0)
-        return;
+    if (ap == 0) {
+	LOG(ERROR, "Bad request: no application-properties");
+	return;
+    }
 
     //
     // Get an iterator for the reply-to.  Exit if not found.
     //
     qd_field_iterator_t *reply_to = qd_message_field_iterator(msg, QD_FIELD_REPLY_TO);
-    if (reply_to == 0)
+    if (reply_to == 0) {
+	LOG(ERROR, "Bad request: no reply-to");
         return;
-
+    }
     //
     // Try to get a map-view of the application-properties.
     //
@@ -616,6 +624,7 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
     if (map == 0) {
         qd_field_iterator_free(ap);
         qd_field_iterator_free(reply_to);
+	LOG(ERROR, "Bad request: application-properties not a map");
         return;
     }
 
@@ -626,6 +635,7 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
         qd_field_iterator_free(ap);
         qd_field_iterator_free(reply_to);
         qd_parse_free(map);
+	LOG(ERROR, "Bad request: application-properties not a map");
         return;
     }
 
@@ -885,4 +895,3 @@ void *qd_agent_raise_event(qd_dispatch_t *qd, qd_agent_class_t *event)
 {
     return 0;
 }
-
