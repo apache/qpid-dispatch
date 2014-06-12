@@ -60,7 +60,7 @@ qd_config_t *qd_config(void)
     Py_DECREF(pName);
 
     if (!config->pModule) {
-        PyErr_Print();
+        qd_error_py();
         free_qd_config_t(config);
         qd_log(log_source, QD_LOG_ERROR, "Unable to load configuration module: %s", PYTHON_MODULE);
         return 0;
@@ -83,7 +83,7 @@ qd_config_t *qd_config(void)
     Py_DECREF(pArgs);
 
     if (config->pObject == 0) {
-        PyErr_Print();
+        qd_error_py();
         Py_DECREF(config->pModule);
         free_qd_config_t(config);
         return 0;
@@ -120,9 +120,7 @@ void qd_config_read(qd_config_t *config, const char *filepath)
     if (pResult) {
         Py_DECREF(pResult);
     } else {
-#ifndef NDEBUG
-        PyErr_Print();
-#endif
+        qd_error_py();
         qd_log(log_source, QD_LOG_CRITICAL, "Configuration Failed, Exiting");
         exit(1);
     }
@@ -280,4 +278,3 @@ int qd_config_item_value_bool(const qd_dispatch_t *dispatch, const char *section
 
     return value;
 }
-

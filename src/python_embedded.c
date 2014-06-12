@@ -20,6 +20,7 @@
 #include <qpid/dispatch/python_embedded.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
+#include <qpid/dispatch/error.h>
 #include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/router.h>
@@ -645,7 +646,7 @@ static void qd_python_setup(void)
     LogAdapterType.tp_new = PyType_GenericNew;
     IoAdapterType.tp_new  = PyType_GenericNew;
     if ((PyType_Ready(&LogAdapterType) < 0) || (PyType_Ready(&IoAdapterType) < 0)) {
-        PyErr_Print();
+        qd_error_py();
         qd_log(log_source, QD_LOG_ERROR, "Unable to initialize Adapters");
         assert(0);
     } else {
@@ -693,4 +694,3 @@ void qd_python_unlock(void)
 {
     sys_mutex_unlock(ilock);
 }
-

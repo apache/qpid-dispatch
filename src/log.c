@@ -31,8 +31,8 @@
 #include <syslog.h>
 
 #define TEXT_MAX QD_LOG_TEXT_MAX
+#define LOG_MAX (QD_LOG_TEXT_MAX+128)
 #define LIST_MAX 1000
-#define LOG_MAX 640
 
 static qd_log_source_t      *default_log_source=0;
 static qd_log_source_t      *logging_log_source=0;

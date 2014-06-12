@@ -40,6 +40,7 @@ typedef enum {
     QD_ERROR_ALREADY_EXISTS,
     QD_ERROR_ALLOC,
     QD_ERROR_MESSAGE,           ///< Error parsing a message.
+    QD_ERROR_PYTHON,            ///< Error from python code.
 
     QD_ERROR_COUNT              ///< Not an error, marks the end of the enum
 } qd_error_t;
@@ -69,4 +70,17 @@ qd_error_t qd_error_code();
 
 /** Maximum length of a qd_error_message, useful for temporary buffers. */
 extern const int QD_ERROR_MAX;
+
+/**
+ * Check for a python error.
+ *
+ * If there is a python error, call qd_error(QD_ERROR_PYTHON, <python-msg>),
+ * clear the python error indicator, log the python error and stack trace and
+ * return QD_ERROR_PYTHON.
+ *
+ * If there is no python error, call qd_error_clear() and return QD_ERROR_NONE.
+ *
+ * @return QD_ERROR_PYTHON or QD_ERROR_NONE.
+ */
+qd_error_t qd_error_py();
 #endif

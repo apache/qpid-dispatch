@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <Python.h>
 #include <qpid/dispatch/error.h>
 #include <qpid/dispatch/log.h>
 #include <stdarg.h>
@@ -29,7 +30,8 @@ static const char *error_names[] = {
  "Not found",
  "Already exists",
  "Allocation",
- "Invalid message"
+ "Invalid message",
+ "Python"
 };
 
 STATIC_ASSERT(sizeof(error_names)/sizeof(error_names[0]) == QD_ERROR_COUNT, error_names_wrong_size);
@@ -56,7 +58,7 @@ qd_error_t qd_error(qd_error_t code, const char *fmt, ...) {
 	va_start(arglist, fmt);
 	vsnprintf(error_message+i, ERROR_MAX-i, fmt, arglist);
 	va_end(arglist);
-	qd_log(log_source, QD_LOG_TRACE, "%s", qd_error_message());
+	qd_log(log_source, QD_LOG_ERROR, "%s", qd_error_message());
 	return code;
     }
     else
@@ -75,4 +77,64 @@ const char* qd_error_message() {
 
 qd_error_t qd_error_code() {
     return error_code;
+}
+
+static void py_set_item(PyObject *dict, const char* name, PyObject *value) {
+    PyObject *py_name = PyString_FromString(name);
+    PyDict_SetItem(dict, py_name, value);
+    Py_DECREF(py_name);
+}
+
+static PyObject *py_import(const char* module) {
+    PyObject *py_str = PyString_FromString(module);
+    PyObject *py_module = PyImport_Import(py_str);
+    Py_DECREF(py_str);
+    return py_module;
+}
+
+static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace) {
+    if (!(type && value && trace)) return;
+
+    PyObject *module = py_import("traceback");
+    if (!module) return;
+
+    PyObject *globals = PyDict_New();
+    py_set_item(globals, "traceback", module);
+    Py_DECREF(module);
+
+    PyObject *locals  = PyDict_New();
+    py_set_item(locals, "type", type);
+    py_set_item(locals, "value", value);
+    py_set_item(locals, "trace", trace);
+
+    PyObject *result = PyRun_String(
+	"'\\n'.join(traceback.format_exception(type, value, trace))", Py_eval_input, globals, locals);
+    Py_DECREF(globals);
+    Py_DECREF(locals);
+
+    if (result) {
+	qd_log(log_source, QD_LOG_ERROR, "%s", PyString_AsString(result));
+	Py_DECREF(result);
+    }
+}
+
+qd_error_t qd_error_py() {
+    if (PyErr_Occurred()) {
+	PyObject *type, *value, *trace;
+	PyErr_Fetch(&type, &value, &trace); /* Note clears the python error indicator */
+
+	PyObject *py_str = value ? PyObject_Str(value) : NULL;
+	const char* str = py_str ? PyString_AsString(py_str) : NULL;
+	qd_error(QD_ERROR_PYTHON, "%s", str ? str : "Unknown");
+	Py_XDECREF(py_str);
+
+	log_trace_py(type, value, trace);
+
+	Py_XDECREF(type);
+	Py_XDECREF(value);
+	Py_XDECREF(trace);
+    } else {
+	qd_error_clear();
+    }
+    return qd_error_code();
 }

@@ -291,7 +291,7 @@ static PyObject* qd_set_valid_origins(PyObject *self, PyObject *args)
             PyErr_SetString(PyExc_Exception, "Origin bit mask out of range");
             return 0;
         }
-        
+
         if (router->routers_by_mask_bit[maskbit] == 0) {
             PyErr_SetString(PyExc_Exception, "Origin router Not Found");
             return 0;
@@ -370,7 +370,7 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
         PyErr_SetString(PyExc_Exception, "Router bit mask out of range");
         return 0;
     }
-        
+
     if (router->routers_by_mask_bit[maskbit] == 0) {
         PyErr_SetString(PyExc_Exception, "Router Not Found");
         return 0;
@@ -424,7 +424,7 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
         PyErr_SetString(PyExc_Exception, "Router bit mask out of range");
         return 0;
     }
-        
+
     if (router->routers_by_mask_bit[maskbit] == 0) {
         PyErr_SetString(PyExc_Exception, "Router Not Found");
         return 0;
@@ -443,7 +443,7 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
         sys_mutex_unlock(router->lock);
         return 0;
     }
-        
+
     qd_router_del_node_ref_LH(&addr->rnodes, rnode);
 
     //
@@ -543,7 +543,7 @@ void qd_router_python_setup(qd_router_t *router)
 
     RouterAdapterType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&RouterAdapterType) < 0) {
-        PyErr_Print();
+        qd_error_py();
         qd_log(log_source, QD_LOG_CRITICAL, "Unable to initialize the Python Router Adapter");
         return;
     }
@@ -611,7 +611,7 @@ void qd_router_python_setup(qd_router_t *router)
     Py_DECREF(adapterType);
 
     if (!pyRouter) {
-        PyErr_Print();
+        qd_error_py();
         qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class cannot be instantiated");
         return;
     }
@@ -651,13 +651,9 @@ void qd_pyrouter_tick(qd_router_t *router)
         qd_python_lock();
         pArgs  = PyTuple_New(0);
         pValue = PyObject_CallObject(pyTick, pArgs);
-        if (PyErr_Occurred()) {
-            PyErr_Print();
-        }
+	qd_error_py();
         Py_DECREF(pArgs);
-        if (pValue) {
-            Py_DECREF(pValue);
-        }
+	Py_XDECREF(pValue);
         qd_python_unlock();
     }
 }
@@ -676,13 +672,9 @@ void qd_router_mobile_added(qd_router_t *router, qd_field_iterator_t *iter)
         pArgs = PyTuple_New(1);
         PyTuple_SetItem(pArgs, 0, PyString_FromString(address));
         pValue = PyObject_CallObject(pyAdded, pArgs);
-        if (PyErr_Occurred()) {
-            PyErr_Print();
-        }
+	qd_error_py();
         Py_DECREF(pArgs);
-        if (pValue) {
-            Py_DECREF(pValue);
-        }
+	Py_XDECREF(pValue);
         qd_python_unlock();
 
         free(address);
@@ -700,13 +692,9 @@ void qd_router_mobile_removed(qd_router_t *router, const char *address)
         pArgs = PyTuple_New(1);
         PyTuple_SetItem(pArgs, 0, PyString_FromString(address));
         pValue = PyObject_CallObject(pyRemoved, pArgs);
-        if (PyErr_Occurred()) {
-            PyErr_Print();
-        }
+	qd_error_py();
         Py_DECREF(pArgs);
-        if (pValue) {
-            Py_DECREF(pValue);
-        }
+	Py_XDECREF(pValue);
         qd_python_unlock();
     }
 }
@@ -722,14 +710,9 @@ void qd_router_link_lost(qd_router_t *router, int link_mask_bit)
         pArgs = PyTuple_New(1);
         PyTuple_SetItem(pArgs, 0, PyInt_FromLong((long) link_mask_bit));
         pValue = PyObject_CallObject(pyLinkLost, pArgs);
-        if (PyErr_Occurred()) {
-            PyErr_Print();
-        }
+	qd_error_py();
         Py_DECREF(pArgs);
-        if (pValue) {
-            Py_DECREF(pValue);
-        }
+	Py_XDECREF(pValue);
         qd_python_unlock();
     }
 }
-
