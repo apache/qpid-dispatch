@@ -101,6 +101,7 @@ qd_hash_t *qd_hash(int bucket_exponent, int batch_size, int value_is_const)
 
 void qd_hash_free(qd_hash_t *h)
 {
+    if (!h) return;
     qd_hash_item_t *item;
     int             idx;
 
@@ -295,4 +296,3 @@ qd_error_t qd_hash_remove_by_handle2(qd_hash_t *h, qd_hash_handle_t *handle, uns
     h->size--;
     return QD_ERROR_NONE;
 }
-

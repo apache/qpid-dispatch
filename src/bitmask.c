@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -57,6 +57,7 @@ qd_bitmask_t *qd_bitmask(int initial)
 
 void qd_bitmask_free(qd_bitmask_t *b)
 {
+    if (!b) return;
     free_qd_bitmask_t(b);
 }
 
@@ -121,4 +122,3 @@ int qd_bitmask_first_set(qd_bitmask_t *b, int *bitnum)
     *bitnum = b->first_set;
     return 1;
 }
-

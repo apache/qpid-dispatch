@@ -671,7 +671,7 @@ static void router_forward_to_remote_subscribers_LH(qd_router_t *router, qd_addr
                     re->delivery = delivery;
                     qd_delivery_fifo_enter_LH(delivery);
                 }
-                            
+
                 addr->deliveries_transit++;
                 qd_link_activate(dest_link->link);
             }
@@ -1486,6 +1486,8 @@ void qd_router_setup_late(qd_dispatch_t *qd)
 
 void qd_router_free(qd_router_t *router)
 {
+    if (!router) return;
+
     qd_container_set_default_node_type(router->qd, 0, 0, QD_DIST_BOTH);
 
     for (qd_address_t *addr = DEQ_HEAD(router->addrs); addr; addr = DEQ_HEAD(router->addrs)) {
@@ -1666,4 +1668,3 @@ void qd_router_send2(qd_dispatch_t *qd,
     qd_router_send(qd, iter, msg);
     qd_field_iterator_free(iter);
 }
-

@@ -55,7 +55,7 @@ ALLOC_DECLARE(qd_log_entry_t);
 ALLOC_DEFINE(qd_log_entry_t);
 
 DEQ_DECLARE(qd_log_entry_t, qd_log_list_t);
-static qd_log_list_t         entries;
+static qd_log_list_t         entries = {0};
 
 static void qd_log_entry_free_lh(qd_log_entry_t* entry) {
     DEQ_REMOVE(entries, entry);
@@ -74,7 +74,7 @@ typedef struct log_sink_t {
 
 DEQ_DECLARE(log_sink_t, log_sink_list_t);
 
-static log_sink_list_t sink_list;
+static log_sink_list_t sink_list = {0};
 
 static const char* SINK_STDERR = "stderr";
 static const char* SINK_SYSLOG = "syslog";
@@ -142,7 +142,7 @@ DEQ_DECLARE(qd_log_source_t, qd_log_source_list_t);
 
 static sys_mutex_t          *log_lock = 0;
 static sys_mutex_t          *log_source_lock = 0;
-static qd_log_source_list_t  source_list;
+static qd_log_source_list_t  source_list = {0};
 
 typedef enum {NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, N_LEVELS} level_index_t;
 typedef struct level {

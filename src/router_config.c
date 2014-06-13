@@ -158,6 +158,8 @@ void qd_router_configure(qd_router_t *router)
 
 void qd_router_configure_free(qd_router_t *router)
 {
+    if (!router) return;
+
     for (qd_config_address_t *ca = DEQ_HEAD(router->config_addrs); ca; ca = DEQ_HEAD(router->config_addrs)) {
         for (qd_config_phase_t *ap = DEQ_HEAD(ca->phases); ap; ap = DEQ_HEAD(ca->phases)) {
             DEQ_REMOVE_HEAD(ca->phases);
@@ -193,7 +195,7 @@ qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_i
     }
 
     if (addr) {
-        *out_phase = in_phase == '\0' ? addr->last_phase : in_phase; 
+        *out_phase = in_phase == '\0' ? addr->last_phase : in_phase;
         phase = DEQ_HEAD(addr->phases);
         while (phase) {
             if (phase->phase == *out_phase)
@@ -204,5 +206,3 @@ qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_i
 
     return phase ? phase->semantics : QD_SEMANTICS_DEFAULT;
 }
-
-

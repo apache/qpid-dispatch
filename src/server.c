@@ -682,6 +682,7 @@ qd_server_t *qd_server(int thread_count, const char *container_name)
 
 void qd_server_free(qd_server_t *qd_server)
 {
+    if (!qd_server) return;
     int i;
     if (!qd_server)
         return;
@@ -1023,6 +1024,7 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
 
 void qd_user_fd_free(qd_user_fd_t *ufd)
 {
+    if (!ufd) return;
     pn_connector_close(ufd->pn_conn);
     free_qd_user_fd_t(ufd);
 }
@@ -1064,5 +1066,3 @@ void qd_server_timer_cancel_LH(qd_timer_t *timer)
 {
     DEQ_REMOVE(timer->server->pending_timers, timer);
 }
-
-

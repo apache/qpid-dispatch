@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -166,6 +166,7 @@ qd_connection_manager_t *qd_connection_manager(qd_dispatch_t *qd)
 
 static void qd_connection_manager_config_free(qd_server_config_t *cf)
 {
+    if (!cf) return;
     free(cf->host);
     free(cf->port);
     free(cf->role);
@@ -182,6 +183,7 @@ static void qd_connection_manager_config_free(qd_server_config_t *cf)
 
 void qd_connection_manager_free(qd_connection_manager_t *cm)
 {
+    if (!cm) return;
     qd_config_listener_t *cl = DEQ_HEAD(cm->config_listeners);
     while (cl) {
         DEQ_REMOVE_HEAD(cm->config_listeners);
@@ -401,4 +403,3 @@ const char *qd_config_connector_name(qd_config_connector_t *cc)
 {
     return cc ? cc->connector_name : 0;
 }
-

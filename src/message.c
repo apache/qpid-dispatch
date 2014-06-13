@@ -505,6 +505,7 @@ qd_message_t *qd_message()
 
 void qd_message_free(qd_message_t *in_msg)
 {
+    if (!in_msg) return;
     uint32_t rc;
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     qd_message_content_t *content = msg->content;

@@ -209,6 +209,7 @@ qd_composed_field_t *qd_compose(uint64_t performative, qd_composed_field_t *exte
 
 void qd_compose_free(qd_composed_field_t *field)
 {
+    if (!field) return;
     qd_buffer_t *buf = DEQ_HEAD(field->buffers);
     while (buf) {
         DEQ_REMOVE_HEAD(field->buffers);
@@ -469,4 +470,3 @@ qd_buffer_list_t *qd_compose_buffers(qd_composed_field_t *field)
 {
     return &field->buffers;
 }
-

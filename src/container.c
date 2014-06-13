@@ -441,6 +441,7 @@ void qd_container_setup_agent(qd_dispatch_t *qd)
 
 void qd_container_free(qd_container_t *container)
 {
+    if (!container) return;
     if (container->default_node)
         qd_container_destroy_node(container->default_node);
 
@@ -616,6 +617,7 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
 
 void qd_link_free(qd_link_t *link)
 {
+    if (!link) return;
     free_qd_link_t(link);
 }
 
@@ -895,4 +897,3 @@ qd_link_t *qd_delivery_link(qd_delivery_t *delivery)
 {
     return delivery->link;
 }
-

@@ -323,6 +323,7 @@ qd_field_iterator_t *qd_field_iterator_buffer(qd_buffer_t *buffer, int offset, i
 
 void qd_field_iterator_free(qd_field_iterator_t *iter)
 {
+    if (!iter) return;
     free_qd_field_iterator_t(iter);
 }
 
@@ -548,5 +549,3 @@ qd_iovec_t *qd_field_iterator_iovec(const qd_field_iterator_t *iter)
 
     return iov;
 }
-
-

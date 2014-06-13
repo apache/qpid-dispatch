@@ -47,6 +47,7 @@ qd_buffer_t *qd_buffer(void)
 
 void qd_buffer_free(qd_buffer_t *buf)
 {
+    if (!buf) return;
     free_qd_buffer_t(buf);
 }
 
@@ -80,4 +81,3 @@ void qd_buffer_insert(qd_buffer_t *buf, size_t len)
     buf->size += len;
     assert(buf->size <= buffer_size);
 }
-

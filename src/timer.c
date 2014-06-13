@@ -93,6 +93,7 @@ qd_timer_t *qd_timer(qd_dispatch_t *qd, qd_timer_cb_t cb, void* context)
 
 void qd_timer_free(qd_timer_t *timer)
 {
+    if (!timer) return;
     sys_mutex_lock(lock);
     qd_timer_cancel_LH(timer);
     DEQ_REMOVE(idle_timers, timer);
@@ -236,4 +237,3 @@ void qd_timer_idle_LH(qd_timer_t *timer)
     timer->state = TIMER_IDLE;
     DEQ_INSERT_TAIL(idle_timers, timer);
 }
-

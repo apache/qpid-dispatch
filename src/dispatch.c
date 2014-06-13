@@ -148,6 +148,7 @@ void qd_dispatch_prepare(qd_dispatch_t *qd)
 
 void qd_dispatch_free(qd_dispatch_t *qd)
 {
+    if (!qd) return;
     free(qd->router_id);
     free(qd->router_area);
     qd_config_free(qd->config);

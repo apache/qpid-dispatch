@@ -780,6 +780,7 @@ qd_agent_t *qd_agent(qd_dispatch_t *qd)
 
 void qd_agent_free(qd_agent_t *agent)
 {
+    if (!agent) return;
     qd_agent_class_t *cls = DEQ_HEAD(agent->class_list);
     while (cls) {
         DEQ_REMOVE_HEAD(agent->class_list);
