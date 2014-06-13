@@ -32,9 +32,9 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
     def setUpClass(cls):
         """Start 3 qpidd brokers, wait for them to be ready."""
         super(DistributedQueueTest, cls).setUpClass()
-        cls.qpidd = [cls.tester.qpidd('qpidd%s'%i, port=cls.get_port())
+        cls.qpidds = [cls.tester.qpidd('qpidd%s'%i, port=cls.get_port())
                     for i in xrange(3)]
-        for q in cls.qpidd:
+        for q in cls.qpidds:
             wait_port(q.port)
 
     @classmethod
@@ -64,7 +64,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
             msgr.subscribe(a)
         msgr.flush()
         n = 20                  # Messages per broker
-        r = ["x-%02d"%i for i in range(n*len(self.qpidd))]
+        r = ["x-%02d"%i for i in range(n*len(self.qpidds))]
         for b, a in zip(r, cycle(send_addresses)):
             msgr.put(message(address=a, body=b))
         msgr.flush()
@@ -72,7 +72,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
         msgr.flush()
         self.assertEqual(r, messages)
 
-        qs = [q.agent.getQueue(self.testq) for q in self.qpidd]
+        qs = [q.agent.getQueue(self.testq) for q in self.qpidds]
         enq = sum(q.msgTotalEnqueues for q in qs)
         deq = sum(q.msgTotalDequeues for q in qs)
         self.assertEquals((enq, deq), (len(r), len(r)))
@@ -82,7 +82,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
     def test_distrbuted_queue(self):
         """Create a distributed queue with N routers and N brokers.
         Each router is connected to all the brokers."""
-        for q in self.qpidd:
+        for q in self.qpidds:
             q.agent.addQueue(self.testq)
 
         def router(i):
@@ -93,12 +93,12 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
                 ('listener', {'port':self.get_port(), 'role':'normal'}),
                 ('fixed-address', {'prefix':self.testq, 'phase':0, 'fanout':'single', 'bias':'spread'}),
                 ('fixed-address', {'prefix':self.testq, 'phase':1, 'fanout':'single', 'bias':'spread'})]
-            for q in self.qpidd:
+            for q in self.qpidds:
                 rconf += [
                     ('connector', {'name':q.name, 'port':q.port}),
                     ('waypoint', {'name':self.testq, 'out-phase':1, 'in-phase':0, 'connector':q.name})]
             return self.qdrouterd(name, rconf)
-        routers = [router(i) for i in xrange(len(self.qpidd))]
+        routers = [router(i) for i in xrange(len(self.qpidds))]
         for r in routers: r.wait_ready()
         addrs = [r.addresses[0]+"/"+self.testq for r in routers]
         self.verify_equal_spread(addrs, addrs)

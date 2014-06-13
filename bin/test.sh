@@ -36,4 +36,4 @@ cmake -D CMAKE_INSTALL_PREFIX=$INSTALL_DIR -D CMAKE_BUILD_TYPE=Debug $SOURCE_DIR
 make -j4
 make install
 ctest -VV
-qdtest
+python $INSTALL_DIR/lib/qpid-dispatch/tests/run_system_tests.py

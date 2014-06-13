@@ -200,11 +200,22 @@ class Process(subprocess.Popen):
     EXIT_FAIL = 3                 # Exit status not 0
 
     def __init__(self, name, args, expect=EXIT_OK, **kwargs):
+        """
+        Takes same arguments as subprocess.Popen. Some additional/special args:
+        @param expect: Raise error if process staus not as expected at end of test:
+            L{RUNNING} - expect still running.
+            L{EXIT_OK} - expect proces to have terminated with 0 exit status.
+            L{EXIT_ERROR} - expect proces to have terminated with non-0 exit status.
+        @keyword stdout: Defaults to the file name+".out"
+        @keyword stderr: Defaults to be the same as stdout
+        """
         self.name, self.args, self.expect = name, args, expect
         self.out = open(name+".out", 'w')
+        with open(name+".cmd", 'w') as f: f.write("%s\n" % ' '.join(args))
         self.torndown = False
-        super(Process, self).__init__(
-            args, stdout=self.out, stderr=subprocess.STDOUT, **kwargs)
+        kwargs.setdefault('stdout', self.out)
+        kwargs.setdefault('stderr', kwargs['stdout'])
+        super(Process, self).__init__(args, **kwargs)
 
     def assert_running(self):
         """Assert that the proces is still running"""
@@ -316,11 +327,17 @@ class Qdrouterd(Process):
             return [dict(zip(attrs, values)) for values in response.body['results']]
 
 
-    def __init__(self, name, config=Config()):
+    def __init__(self, name, config=Config(), wait=True):
+        """
+        @param name: name used for for output files.
+        @param config: router configuration
+        @keyword wait: wait for router to be ready (call self.wait_ready())
+        """
         self.config = copy(config)
         super(Qdrouterd, self).__init__(
             name, ['qdrouterd', '-c', config.write(name)], expect=Process.RUNNING)
         self._agent = None
+        if wait: self.wait_ready()
 
     @property
     def agent(self):
@@ -343,6 +360,11 @@ class Qdrouterd(Process):
     def addresses(self):
         """Return amqp://host:port addresses for all listeners"""
         return ["amqp://%s:%s"%(l['addr'], l['port']) for l in self.config.sections('listener')]
+
+    @property
+    def hostports(self):
+        """Return host:port for all listeners"""
+        return ["%s:%s"%(l['addr'], l['port']) for l in self.config.sections('listener')]
 
     def is_connected(self, port, host='0.0.0.0'):
         """If router has a connection to host:port return the management info.
@@ -545,6 +567,7 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
         if os.path.commonprefix([os.getcwd(), cls.base_dir()]) == cls.base_dir():
             os.chdir(os.path.dirname(cls.base_dir()))
         shutil.rmtree(cls.base_dir(), ignore_errors=True) # Clear old test tree.
+        assert cls is not TestCase
         cls.tester = Tester()
         cls.tester.setup(os.path.join(cls.base_dir(), 'setup_class'))
 
@@ -552,6 +575,7 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
     def tearDownClass(cls):
         if inspect.isclass(cls):
             cls.tester.teardown()
+            del cls.tester
 
     def setUp(self):
         # Hack to support setUpClass on older python.
