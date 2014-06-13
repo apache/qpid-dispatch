@@ -129,10 +129,16 @@ qd_error_t qd_error_py() {
 	PyObject *type, *value, *trace;
 	PyErr_Fetch(&type, &value, &trace); /* Note clears the python error indicator */
 
-	PyObject *py_str = value ? PyObject_Str(value) : NULL;
-	const char* str = py_str ? PyString_AsString(py_str) : NULL;
-	qd_error(QD_ERROR_PYTHON, "%s", str ? str : "Unknown");
-	Py_XDECREF(py_str);
+	PyObject *type_name = type ? PyObject_GetAttrString(type, "__name__") : NULL;
+	PyErr_Print();
+	PyObject *value_str = value ? PyObject_Str(value) : NULL;
+	const char* str = value_str ? PyString_AsString(value_str) : "Unknown";
+	if (type_name)
+	    qd_error(QD_ERROR_PYTHON, "%s: %s", PyString_AsString(type_name), str);
+	else
+	    qd_error(QD_ERROR_PYTHON, "%s", str);
+	Py_XDECREF(value_str);
+	Py_XDECREF(type_name);
 
 	log_trace_py(type, value, trace);
 
