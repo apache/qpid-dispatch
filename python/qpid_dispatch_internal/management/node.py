@@ -23,9 +23,7 @@ AMQP management tools for Qpid dispatch.
 
 import proton, re, threading, httplib
 from collections import namedtuple
-from entity import Entity
-
-class Error(Exception): pass
+from entity import Entity, EntityList
 
 class ManagementError(Exception):
     """An AMQP management error. str() gives a string with status code and text.
@@ -235,9 +233,9 @@ class Node(object):
         self.check_response(response)
         return response
 
-    class QueryResponse(list):
+    class QueryResponse(EntityList):
         """
-        Result returned by L{query}. Behaves as a list of L{Entity}.
+        Result returned by L{query}.
         @ivar attribute_names: List of attribute names for the results.
         """
         def __init__(self, response):
@@ -246,7 +244,7 @@ class Node(object):
             """
             self.attribute_names = response.body['attributeNames']
             for r in response.body['results']:
-                self.append(Entity(attributes=dict(zip(self.attribute_names, r))))
+                self.append(Entity(zip(self.attribute_names, r)))
 
     def query(self, entity_type=None, attribute_names=None, offset=None, count=None):
         """
@@ -256,7 +254,7 @@ class Node(object):
         @keyword attribute_names: A list of attribute names to query.
         @keyword offset: An integer offset into the list of results to return.
         @keyword count: A count of the maximum number of results to return.
-        @return: A L{QueryResponse}
+        @return: An L{EntityList}
         """
         attribute_names = attribute_names or []
         response = self.call(self.node_request(

@@ -20,7 +20,7 @@
 """System tests for management of qdrouter"""
 
 import unittest, system_test, re
-from qpid_dispatch_internal.management import amqp
+from qpid_dispatch_internal.management import Node, ManagementError
 from system_test import Qdrouterd, MISSING_REQUIREMENTS
 from httplib import BAD_REQUEST, NOT_IMPLEMENTED
 
@@ -40,7 +40,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
     def setUp(self):
         super(ManagementTest, self).setUp()
-        self.node = self.cleanup(amqp.Node(self.router.addresses[0]))
+        self.node = self.cleanup(Node(self.router.addresses[0]))
 
     def assertRaisesManagement(self, status, pattern, call, *args, **kwargs):
         """Assert that call(*args, **kwargs) raises a ManagementError
@@ -48,7 +48,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         try:
             call(*args, **kwargs)
             self.fail("Expected ManagementError with %s, %s"%(status, pattern))
-        except amqp.ManagementError, e:
+        except ManagementError, e:
             self.assertEqual(e.status, status)
             assert re.search("(?i)"+pattern, e.description), "No match for %s in %s"%(pattern, e.description)
 

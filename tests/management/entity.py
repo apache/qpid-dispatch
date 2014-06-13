@@ -20,41 +20,29 @@
 #pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
 
 import unittest
-from qpid_dispatch_internal.management.schema import Schema
-from qpid_dispatch_internal.management.entity import Entity, EntityList
-from schema import SCHEMA_1
+from qpid_dispatch_internal.management import Entity, EntityList
 
 class EntityTest(unittest.TestCase):
 
     def test_entity(self):
-        s = Schema(**SCHEMA_1)
-        e = Entity('container', name='x', schema=s)
+        e = Entity(type='container', name='x')
         self.assertEqual(e.name, 'x')
-        self.assertEqual(e.attributes, {'name':'x'})
-        e.validate()
-        attrs = {'name':'x', 'worker-threads':1}
-        self.assertEqual(e.attributes, attrs)
-        self.assertEqual(e.dump(as_map=True), {'entity_type':'container', 'attributes':attrs})
-        self.assertEqual(e.dump(), ('container', attrs))
+        self.assertEqual(e, {'type': 'container', 'name':'x'})
 
 
     def test_entity_list(self):
-        s = Schema(**SCHEMA_1)
-        contents = [('container', {'name':'x'}),
-             ('listener', {'name':'y', 'addr':'1'}),
-             ('listener', {'name':'z', 'addr':'2'}),
-             ('listener', {'name':'q', 'addr':'2'}),
-             ('connector', {'name':'c1', 'addr':'1'})]
-        l = EntityList(s, contents)
+        contents = [
+            Entity(type='container', name='x'),
+            Entity(type='listener', name='y', addr='1'),
+            Entity(type='listener', name='z', addr='2'),
+            Entity(type='connector', name='c1', addr='1')]
+        l = EntityList(contents)
 
-        self.assertEqual(l.dump(), contents)
-        self.assertEqual([e.name for e in l.get(entity_type='listener')], ['y', 'z', 'q'])
-        self.assertEqual([e.name for e in l.get(entity_type='listener', addr='1')], ['y'])
+        self.assertEqual(l, contents)
+        self.assertEqual([e.name for e in l.get(type='listener')], ['y', 'z'])
+        self.assertEqual([e.name for e in l.get(type='listener', addr='1')], ['y'])
         self.assertEqual([e.name for e in l.get(addr='1')], ['y', 'c1'])
-        self.assertEqual(l.get(name='x', single=True).name, 'x')
-
-        self.assertRaises(ValueError, l.get, entity_type='listener', single=True)
-        self.assertRaises(ValueError, l.get, name='nosuch', single=True)
+        self.assertEqual(l.get(name='x')[0].name, 'x')
 
 if __name__ == '__main__':
     unittest.main()

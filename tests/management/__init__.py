@@ -20,4 +20,5 @@
 #pylint: disable=wildcard-import,missing-docstring
 from entity import *
 from schema import *
+from node import *
 from qdrouter import *

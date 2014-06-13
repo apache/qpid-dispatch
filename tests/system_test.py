@@ -56,7 +56,7 @@ import os, time, socket, random, subprocess, shutil, unittest, inspect
 from copy import copy
 import proton
 from proton import Message
-from qpid_dispatch_internal.management import amqp
+from qpid_dispatch_internal.management import Node
 
 # Optional modules
 MISSING_MODULES = []
@@ -314,7 +314,7 @@ class Qdrouterd(Process):
     def agent(self):
         """Return an management Agent for this router"""
         if not self._agent:
-            self._agent = amqp.Node(self.addresses[0])
+            self._agent = Node(self.addresses[0])
         return self._agent
 
     def teardown(self):

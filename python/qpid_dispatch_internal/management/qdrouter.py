@@ -21,11 +21,12 @@
 Qpid Dispatch Router management schema and config file parsing.
 """
 
-import schema, json, re
-from entity import EntityList
+import json, re
+import schema
+from entity import EntityList, Entity
 from copy import copy
 
-class Schema(schema.Schema):
+class QdSchema(schema.Schema):
     """
     Qpid Dispatch Router management schema.
     """
@@ -34,7 +35,7 @@ class Schema(schema.Schema):
     def __init__(self):
         """Load schema."""
         with open(self.SCHEMA_FILE) as f:
-            schema.Schema.__init__(self, **json.load(f))
+            super(QdSchema, self).__init__(**json.load(f))
 
     def validate(self, entities, **kwargs):
         """
@@ -46,18 +47,18 @@ class Schema(schema.Schema):
         @param entities: An L{EntityList}
         @param kwargs: See L{schema.Schema.validate}
         """
-        schema.Schema.validate(self, entities, **kwargs)
+        super(QdSchema, self).validate(entities, **kwargs)
 
-        if entities.router.mode != 'interior':
+        if entities.router[0].mode != 'interior':
             for connect in entities.get(entity_type='listeners') + entities.get(entity_type='connector'):
                 if connect['role'] != 'normal':
                     raise schema.SchemaError("Role '%s' for entity '%s' only permitted with 'interior' mode % (entity['role'], connect.name)")
 
-class Configuration(EntityList):
-    """An L{EntityList} loaded from a qdrouterd.conf and validated against L{Schema}."""
+class QdConfig(EntityList):
+    """An L{EntityList} loaded from a qdrouterd.conf and validated against L{QdSchema}."""
 
-    def __init__(self, schema=Schema()):
-        super(Configuration, self).__init__(schema)
+    def __init__(self, schema=QdSchema()):
+        self.schema = schema
 
     @staticmethod
     def _parse(lines):
@@ -82,6 +83,7 @@ class Configuration(EntityList):
         """
         Find include sections (defined by schema) in the content,
         expand references and remove the include sections.
+        @param content: ((section-name:{name:value...}))
         """
         def _expand_section(section, includes):
             """Expand one section"""
@@ -126,5 +128,6 @@ class Configuration(EntityList):
         Load a configuration file.
         @param lines: A list of lines, or an open file object.
         """
-        self.replace(self._default_ids(self._expand(self._parse(lines))))
-        self.validate()
+        sections = self._default_ids(self._expand(self._parse(lines)))
+        self[:] = [Entity(type=s[0], **s[1]) for s in sections]
+        self.validate(self.schema)

@@ -26,8 +26,7 @@ import locale
 import socket
 import re
 from proton import Messenger, Message, Timeout
-from qpid_dispatch_internal.management.amqp import Url, Node
-from qpid_dispatch_internal.management.entity import Entity
+from qpid_dispatch_internal.management import Url, Node, Entity
 
 home = os.environ.get("QPID_DISPATCH_HOME", os.path.normpath(os.path.dirname(__file__)))
 sys.path.append(os.path.join(home, "python"))

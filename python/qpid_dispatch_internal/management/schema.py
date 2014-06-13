@@ -27,18 +27,12 @@ A Schema can be loaded/dumped to a json file.
 """
 
 import os
-try:
-    from collections import OrderedDict
-except:
-    from qpid_dispatch_internal.ordereddict import OrderedDict # For python <= 2.6
-
-class SchemaError(Exception):
-    """Class for schema errors"""
-    pass
+from entity import OrderedDict
 
 def schema_file(name):
     """Return a file name relative to the directory from which this module was loaded."""
     return os.path.join(os.path.dirname(__file__), name)
+
 
 class Type(object):
     """Base class for schema types.
@@ -151,7 +145,7 @@ def get_type(rep):
         return EnumType(rep)
     if rep in BUILTIN_TYPES:
         return BUILTIN_TYPES[rep]
-    raise SchemaError("No such schema type: %s"%rep)
+    raise TypeError("No such schema type: %s"%rep)
 
 def _dump_dict(items):
     """
@@ -225,12 +219,12 @@ class AttributeType(object):
             value = self.default
         if value is None:
             if self.required and check_required:
-                raise SchemaError("Missing value for attribute '%s'"%self.name)
+                raise ValueError("Missing value for attribute '%s'"%self.name)
             else:
                 return None
         else:
             if self.unique and not _is_unique(check_unique, self.name, value):
-                raise SchemaError("Multiple instances of unique attribute '%s'"%self.name)
+                raise ValueError("Multiple instances of unique attribute '%s'"%self.name)
             return self.atype.validate(value, **kwargs)
 
     def dump(self):
@@ -254,6 +248,7 @@ class AttributeTypeHolder(object):
     def __init__(self, name, schema, attributes=None, description=""):
         self.name, self.schema, self.description = name, schema, description
         self.attributes = OrderedDict()
+        self.attributes['type'] = AttributeType('type', type='String', default=name, required=True)
         if attributes:
             self.add_attributes(attributes)
 
@@ -264,13 +259,14 @@ class AttributeTypeHolder(object):
         """
         for k, v in attributes.iteritems():
             if k in self.attributes:
-                raise SchemaError("Attribute '%s' duplicated in '%s'"%(k, self.name))
+                raise TypeError("Duplicate attribute in '%s': '%s'"%(self.name, k))
             self.attributes[k] = AttributeType(k, **v)
 
     def dump(self):
         """Json friendly representation"""
         return _dump_dict([
-            ('attributes', OrderedDict((k, v.dump()) for k, v in self.attributes.iteritems())),
+            ('attributes', OrderedDict((k, v.dump()) for k, v in self.attributes.iteritems()
+                                       if k != 'type')), # Don't dump special 'type' attribute
             ('description', self.description or None)
         ])
 
@@ -326,7 +322,7 @@ class EntityType(AttributeTypeHolder):
         @param kwargs: See L{Schema.validate}
         """
         if self.singleton and not _is_unique(check_singleton, self.name, True):
-            raise SchemaError("Found multiple instances of singleton entity type '%s'"%self.name)
+            raise ValueError("Found multiple instances of singleton entity type '%s'"%self.name)
         # Validate
         for name, value in attributes.iteritems():
             attributes[name] = self.attributes[name].validate(value, **kwargs)
@@ -399,16 +395,15 @@ class Schema(object):
         @keyword add_default: Add defaults for missing attributes.
         @keyword check_unique: Raise exception if unique attributes are duplicated.
         @keyword check_singleton: Raise exception if singleton entities are duplicated.
-
         """
         if check_singleton: check_singleton = {}
         if check_unique: check_unique = {}
         for e in entities:
-            assert e.entity_type.schema is self, "Entity '%s' from wrong schema"%e
-            e.validate(
-                enum_as_int=enum_as_int,
-                check_required=check_required,
-                add_default=add_default,
-                check_unique=check_unique,
-                check_singleton=check_singleton)
+            et = self.entity_types[e.type]
+            et.validate(e,
+                        enum_as_int=enum_as_int,
+                        check_required=check_required,
+                        add_default=add_default,
+                        check_unique=check_unique,
+                        check_singleton=check_singleton)
         return entities

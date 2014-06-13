@@ -20,13 +20,13 @@
 #pylint: disable=wildcard-import,unused-wildcard-import,missing-docstring,too-many-public-methods
 
 import unittest
-from qpid_dispatch_internal.management.qdrouter import *
+from qpid_dispatch_internal.management import QdSchema, QdConfig
 
 class QdrouterTest(unittest.TestCase):
     """Tests for qpid_dispatch_internal.config.qdrouter"""
 
     def test_qdrouter_parse(self):
-        conf = Configuration()
+        conf = QdConfig()
         conf_text = """
 # Line comment
 router {
@@ -80,8 +80,8 @@ listener {
         ])
 
         conf.load(conf_text.split("\n"))
-        self.assertEqual(conf.router.name, 'router0')
-        self.assertEqual(conf.router.identity, 'router0')
+        self.assertEqual(conf.router[0].name, 'router0')
+        self.assertEqual(conf.router[0].identity, 'router0')
         self.assertEqual(len(conf.listener), 3)
         self.assertEqual(conf.listener[0].name, 'l0')
         self.assertEqual(conf.listener[2].name, 'listener2')

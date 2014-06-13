@@ -21,8 +21,7 @@
 #pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
 
 import unittest, json
-from qpid_dispatch_internal.management.schema import Schema, EntityType, BooleanType, EnumType, AttributeType, SchemaError, schema_file
-from qpid_dispatch_internal.management.entity import Entity
+from qpid_dispatch_internal.management import Schema, Entity, EntityType, BooleanType, EnumType, AttributeType, schema_file
 import collections
 
 def replace_od(thing):
@@ -37,7 +36,7 @@ SCHEMA_1 = {
     "includes": {
         "entity-id": {
             "attributes": {
-                "name": {"type":"String", "required": True, "unique":True}
+                "name": {"type":"String", "required": True, "unique":True},
             }
         }
     },
@@ -90,7 +89,7 @@ class SchemaTest(unittest.TestCase):
         a = AttributeType('foo', 'String', 'FOO', True)
         self.assertEqual('FOO', a.validate(None))
         a = AttributeType('foo', 'Integer', None, True)
-        self.assertRaises(SchemaError, a.validate, None) # Missing default
+        self.assertRaises(ValueError, a.validate, None) # Missing default
 
     def test_entity_type(self):
         s = Schema(includes={
@@ -101,11 +100,11 @@ class SchemaTest(unittest.TestCase):
             'foo': {'type':'String', 'default':'FOO'},
             'req': {'type':'Integer', 'required':True},
             'e': {'type':['x', 'y']}})
-        self.assertRaises(SchemaError, e.validate, {}) # Missing required 'req'
-        self.assertEqual(e.validate({'req':42, 'e':None}), {'foo': 'FOO', 'req': 42})
+        self.assertRaises(ValueError, e.validate, {}) # Missing required 'req'
+        self.assertEqual(e.validate({'req':42, 'e':None}), {'foo': 'FOO', 'req': 42, 'type': 'MyEntity'})
         # Try with an include
         e = EntityType('e2', s, attributes={'x':{'type':'Integer'}}, include=['i1', 'i2'])
-        self.assertEqual(e.validate({'x':1}), {'x':1, 'foo1': 'FOO1', 'foo2': 'FOO2'})
+        self.assertEqual(e.validate({'x':1}), {'x':1, 'foo1': 'FOO1', 'foo2': 'FOO2', 'type': 'i2'})
 
     qdrouter_json = schema_file('qdrouter.json')
 
@@ -158,7 +157,7 @@ class SchemaTest(unittest.TestCase):
         def jsontof(j,fname):
             with open(fname,'w') as f:
                 json.dump(j, f, indent=4)
-        self.assertDictEqual(replace_od(s.dump()), expect)
+        self.assertDictEqual(expect, replace_od(s.dump()))
 
         s2 = Schema(**s.dump())
         self.assertEqual(s.dump(), s2.dump())
@@ -166,16 +165,16 @@ class SchemaTest(unittest.TestCase):
     def test_schema_validate(self):
         s = Schema(**SCHEMA_1)
         # Duplicate unique attribute 'name'
-        m = [Entity('listener', {'name':'x'}, s),
-             Entity('listener', {'name':'x'}, s)]
-        self.assertRaises(SchemaError, s.validate, m)
+        m = [Entity({'type': 'listener', 'name':'x'}),
+             Entity({'type': 'listener', 'name':'x'})]
+        self.assertRaises(ValueError, s.validate, m)
         # Duplicate singleton entity 'container'
-        m = [Entity('container', {'name':'x'}, s),
-             Entity('container', {'name':'y'}, s)]
-        self.assertRaises(SchemaError, s.validate, m)
+        m = [Entity({'type': 'container', 'name':'x'}),
+             Entity({'type': 'container', 'name':'y'})]
+        self.assertRaises(ValueError, s.validate, m)
         # Valid model
-        m = [Entity('container', {'name':'x'}, s),
-             Entity('listener', {'name':'y'}, s)]
+        m = [Entity({'type': 'container', 'name':'x'}),
+             Entity({'type': 'listener', 'name':'y'})]
         s.validate(m)
 
 if __name__ == '__main__':

@@ -25,10 +25,10 @@ from qpid_dispatch_internal.management.amqp import Url
 class UrlTest(unittest.TestCase):
 
     def test_url(self):
-        url = Url(scheme='amqp', user='me', password='secret', host='myhost', port=1234, name='foobar')
+        url = Url(scheme='amqp', user='me', password='secret', host='myhost', port=1234, path='foobar')
         self.assertEqual(str(url), "amqp://me:secret@myhost:1234/foobar")
         self.assertEqual(
-            [url.scheme, url.user, url.password, url.host, url.port, url.name],
+            [url.scheme, url.user, url.password, url.host, url.port, url.path],
             ['amqp', 'me', 'secret', 'myhost', 1234, 'foobar']
         )
 
@@ -42,10 +42,10 @@ class UrlTest(unittest.TestCase):
         self.assertNotEqual(str(url), "amqp://me:secret@myhost:5555/foobar")
 
         # Check that we allow None for scheme, port
-        url = Url(user='me', password='secret', host='myhost', name='foobar')
+        url = Url(user='me', password='secret', host='myhost', path='foobar')
         self.assertEqual(str(url), "me:secret@myhost/foobar")
         self.assertEqual(
-            [url.scheme, url.user, url.password, url.host, url.port, url.name],
+            [url.scheme, url.user, url.password, url.host, url.port, url.path],
             [None, 'me', 'secret', 'myhost', None, 'foobar']
         )
 
@@ -58,6 +58,6 @@ class UrlTest(unittest.TestCase):
         self.assertEqual(str(Url("amqp://me:secret@myhost/foobar").defaults()),
                          "amqp://me:secret@myhost:5672/foobar")
 
-        # Empty string for name
-        self.assertEqual(Url("myhost/").name, "")
-        self.assertIsNone(Url("myhost").name)
+        # Empty string for path
+        self.assertEqual(Url("myhost/").path, "")
+        self.assertIsNone(Url("myhost").path)

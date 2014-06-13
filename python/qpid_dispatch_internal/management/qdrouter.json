@@ -2,7 +2,7 @@
   "prefix": "org.apache.qpid.dispatch",
   "includes": {
     "entity-id": {
-      "description":"Name and identity attributes common to all entity types",
+      "description":"Name and identity attributes are common to all entity types",
       "attributes": {
         "name": {
           "type": "String",
@@ -203,7 +203,8 @@
 	    "agent",
 	    "container",
 	    "config",
-	    "default"
+	    "default",
+	    "error"
 	  ],
 	  "description": "Module to configure logging level. The special module 'default' specifies logging for modules that don't have explicit log sections."
 	},
