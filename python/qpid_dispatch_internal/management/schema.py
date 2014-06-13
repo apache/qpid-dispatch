@@ -274,6 +274,9 @@ class AttributeTypeHolder(object):
             ('description', self.description or None)
         ])
 
+    def __str__(self):
+        print self.name
+
 class IncludeType(AttributeTypeHolder):
 
     def __init__(self, name, schema, attributes=None, description=""):

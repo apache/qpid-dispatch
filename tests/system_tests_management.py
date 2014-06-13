@@ -68,9 +68,9 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         address = 'org.apache.qpid.dispatch.router.address'
         response = self.node.query(entity_type=address)
         self.assertEqual(response.attribute_names[0:3], ['type', 'name', 'identity'])
-        for r in response.results:  # Check types
-            self.assertEqual(r[0], address)
-        names = [r[1] for r in response.results]
+        for r in response:  # Check types
+            self.assertEqual(r.type, address)
+        names = [r.name for r in response]
         self.assertTrue('L$management' in names)
         self.assertTrue('M0$management' in names)
 
@@ -79,9 +79,9 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
             # Try offset, count
             self.assertGreater(len(names), 2)
             response0 = self.node.query(entity_type=address, count=1)
-            self.assertEqual(names[0:1], [r[1] for r in response0.results])
+            self.assertEqual(names[0:1], [r[1] for r in response0])
             response1_2 = self.node.query(entity_type=address, count=2, offset=1)
-            self.assertEqual(names[1:3], [r[1] for r in response1_2.results])
+            self.assertEqual(names[1:3], [r[1] for r in response1_2])
             self.fail("Negative test passed!")
         except: pass
 
@@ -90,7 +90,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         # FIXME aconway 2014-06-05: negative test: attribute_names query doesn't work.
         # Need a better test.
         try:
-            self.assertNotEqual([], response.results)
+            self.assertNotEqual([], response)
             self.fail("Negative test passed!")
         except: pass
 

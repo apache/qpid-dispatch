@@ -97,9 +97,6 @@ set(CATCH_UNDEFINED "-Wl,--no-undefined")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/conditionals.h)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tools/qdstat.in
-               ${CMAKE_CURRENT_BINARY_DIR}/tools/qdstat)
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/build_env.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/build_env.py)
 
@@ -157,7 +154,7 @@ install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatc
 ## Python modules installation
 ##
 set(TOOLS_EXECUTABLES
-    ${CMAKE_CURRENT_BINARY_DIR}/tools/qdstat
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/qdstat
 )
 
 set(DOC_FILES

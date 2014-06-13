@@ -56,6 +56,7 @@ import os, time, socket, random, subprocess, shutil, unittest, inspect
 from copy import copy
 import proton
 from proton import Message
+from qpid_dispatch_internal.management import amqp
 
 # Optional modules
 MISSING_MODULES = []
@@ -296,37 +297,6 @@ class Qdrouterd(Process):
             self.defaults()
             return "".join(["%s {\n%s}\n"%(n, props(p)) for n, p in self])
 
-    class Agent(object):
-        """Management agent"""
-        def __init__(self, router):
-            self.router = router
-            self.messenger = Messenger()
-            self.messenger.route("amqp:/*", "amqp://0.0.0.0:%s/$1"%router.ports[0])
-            self.address = "amqp:/$management"
-            self.subscription = self.messenger.subscribe("amqp:/#")
-            self.reply_to = self.subscription.address
-
-        def stop(self):
-            """Stop the agent's messenger"""
-            self.messenger.stop()
-
-        def get(self, entity_type):
-            """Return a list of attribute dicts for each instance of entity_type"""
-            request = message(
-                address=self.address, reply_to=self.reply_to,
-                correlation_id=1,
-                properties={u'operation':u'QUERY', u'entityType':entity_type},
-                body={'attributeNames':[]})
-            self.messenger.put(request)
-            response = self.messenger.fetch()
-            if response.properties['statusCode'] != 200:
-                raise Exception("Agent error: %d %s" % (
-                    response.properties['statusCode'],
-                    response.properties['statusDescription']))
-            attrs = response.body['attributeNames']
-            return [dict(zip(attrs, values)) for values in response.body['results']]
-
-
     def __init__(self, name, config=Config(), wait=True):
         """
         @param name: name used for for output files.
@@ -337,13 +307,14 @@ class Qdrouterd(Process):
         super(Qdrouterd, self).__init__(
             name, ['qdrouterd', '-c', config.write(name)], expect=Process.RUNNING)
         self._agent = None
-        if wait: self.wait_ready()
+        if wait:
+            self.wait_ready()
 
     @property
     def agent(self):
         """Return an management Agent for this router"""
         if not self._agent:
-            self._agent = self.Agent(self)
+            self._agent = amqp.Node(self.addresses[0])
         return self._agent
 
     def teardown(self):
@@ -369,9 +340,9 @@ class Qdrouterd(Process):
     def is_connected(self, port, host='0.0.0.0'):
         """If router has a connection to host:port return the management info.
         Otherwise return None"""
-        connections = self.agent.get('org.apache.qpid.dispatch.connection')
+        connections = self.agent.query('org.apache.qpid.dispatch.connection')
         for c in connections:
-            if c['name'] == '%s:%s'%(host, port):
+            if c.name == '%s:%s'%(host, port):
                 return c
         return None
 
@@ -393,7 +364,7 @@ class Qpidd(Process):
         def __str__(self):
             return "".join(["%s=%s\n"%(k, v) for k, v in self.iteritems()])
 
-    def __init__(self, name, config=Config(), port=None):
+    def __init__(self, name, config=Config(), port=None, wait=True):
         self.config = Qpidd.Config(
             {'auth':'no',
              'log-to-stderr':'false', 'log-to-file':name+".log",
@@ -406,6 +377,8 @@ class Qpidd(Process):
         self.port = self.config['port'] or 5672
         self.address = "127.0.0.1:%s"%self.port
         self._agent = None
+        if wait:
+            self.wait_ready()
 
     def qm_connect(self):
         """Make a qpid_messaging connection to the broker"""
@@ -422,7 +395,8 @@ class Qpidd(Process):
             self._agent = qpidtoollibs.BrokerAgent(self.qm_connect(), **kwargs)
         return self._agent
 
-
+    def wait_ready(self):
+        wait_port(self.port)
 
 # Decorator to add an optional flush argument to a method, defaulting to
 # the _flush value for the messenger.

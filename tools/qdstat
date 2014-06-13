@@ -26,8 +26,10 @@ import locale
 import socket
 import re
 from proton import Messenger, Message, Timeout
+from qpid_dispatch_internal.management.amqp import Url, Node
+from qpid_dispatch_internal.management.entity import Entity
 
-home = os.environ.get("QPID_DISPATCH_HOME", os.path.normpath("${QPID_DISPATCH_HOME_INSTALLED}"))
+home = os.environ.get("QPID_DISPATCH_HOME", os.path.normpath(os.path.dirname(__file__)))
 sys.path.append(os.path.join(home, "python"))
 
 from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
@@ -35,7 +37,6 @@ from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, Ti
 
 class Config:
     def __init__(self):
-        self._host = "0.0.0.0"
         self._connTimeout = 5
         self._types = ""
         self._limit = 50
@@ -88,75 +89,15 @@ def OptionsAndArguments(argv):
         parser.error("You must specify one of these options: -g, -c, -l, -n, -a, or -m. For details, try $ qdstat --help")
 
     config._types = opts.show
-    config._host = opts.bus
+    config._address = opts.bus
     config._router = opts.router
     config._connTimeout = opts.timeout
 
     return args
 
 
-class AmqpEntity(object):
-    def __init__(self, types, values):
-        if len(types) != len(values):
-            raise Exception("Mismatched types and values for entity")
-        self.values = {}
-        for idx in range(len(types)):
-            self.values[types[idx]] = values[idx]
 
-    def __getattr__(self, attr):
-        if attr in self.values:
-            return self.values[attr]
-        raise Exception("Unknown attribute: %s" % attr)
-
-    def __repr__(self):
-        return "%r" % self.values
-
-
-class BusManager:
-    def __init__(self):
-        pass
-
-    def SetHost(self, host, router):
-        self.M = Messenger()
-        self.M.start()
-        self.M.timeout = config._connTimeout
-        self.M.route("amqp:/*", "amqp://%s/$1" % host)
-        if router:
-            self.address = "amqp:/_topo/0/%s/$management" % router
-        else:
-            self.address = "amqp:/$management"
-        self.subscription = self.M.subscribe("amqp:/#")
-        self.reply = self.subscription.address
-
-    def Disconnect(self):
-        self.M.stop()
-
-    def _get_object(self, cls):
-        request = Message()
-        response = Message()
-
-        request.address = self.address
-        request.reply_to = self.reply
-        request.correlation_id = 1
-        request.properties = {u'operation':u'QUERY', u'entityType':cls}
-        request.body = {'attributeNames': []}
-
-        self.M.put(request)
-        self.M.send()
-        self.M.recv()
-        self.M.get(response)
-
-        if response.properties['statusCode'] != 200:
-            raise Exception("Agent reports: %d %s" % (response.properties['statusCode'], response.properties['statusDescription']))
-
-        entities = []
-        anames = response.body['attributeNames']
-        results = response.body['results']
-        for e in results:
-            entities.append(AmqpEntity(anames, e))
-
-        return entities
-        
+class BusManager(Node):
 
     def displayConnections(self):
         disp = Display(prefix="  ")
@@ -170,7 +111,7 @@ class BusManager:
 
         rows = []
 
-        objects = self._get_object('org.apache.qpid.dispatch.connection')
+        objects = self.query('org.apache.qpid.dispatch.connection')
 
         for conn in objects:
             row = []
@@ -216,7 +157,7 @@ class BusManager:
         heads.append(Header("value"))
         rows = []
 
-        objects = self._get_object('org.apache.qpid.dispatch.router')
+        objects = self.query('org.apache.qpid.dispatch.router')
 
         router = objects[0]
         rows.append(('Mode',          router.mode))
@@ -243,7 +184,7 @@ class BusManager:
         heads.append(Header("msg-fifo"))
         rows = []
 
-        objects = self._get_object('org.apache.qpid.dispatch.router.link')
+        objects = self.query('org.apache.qpid.dispatch.router.link')
 
         for link in objects:
             row = []
@@ -275,8 +216,8 @@ class BusManager:
         heads.append(Header("valid-origins"))
         rows = []
 
-        objects  = self._get_object('org.apache.qpid.dispatch.router.node')
-        attached = self._get_object('org.apache.qpid.dispatch.router')[0]
+        objects  = self.query('org.apache.qpid.dispatch.router.node')
+        attached = self.query('org.apache.qpid.dispatch.router')[0]
 
         nodes = {}
         for node in objects:
@@ -325,7 +266,7 @@ class BusManager:
         heads.append(Header("from-proc", Header.COMMAS))
         rows = []
 
-        objects = self._get_object('org.apache.qpid.dispatch.router.address')
+        objects = self.query('org.apache.qpid.dispatch.router.address')
 
         for addr in objects:
             row = []
@@ -359,7 +300,7 @@ class BusManager:
         heads.append(Header("rebal-out", Header.COMMAS))
         rows = []
 
-        objects = self._get_object('org.apache.qpid.dispatch.allocator')
+        objects = self.query('org.apache.qpid.dispatch.allocator')
 
         for t in objects:
             row = []
@@ -392,12 +333,10 @@ class BusManager:
 def main(argv=None):
 
     args = OptionsAndArguments(argv)
-    bm   = BusManager()
-
     try:
-        bm.SetHost(config._host, config._router)
+        bm = BusManager(config._address, config._router)
         bm.display(args)
-        bm.Disconnect()
+        bm.stop()
         return 0
     except KeyboardInterrupt:
         print
@@ -409,7 +348,7 @@ def main(argv=None):
     except Exception,e:
         print "Failed: %s - %s" % (e.__class__.__name__, e)
 
-    bm.Disconnect()
+    bm.stop()
     return 1
 
 if __name__ == "__main__":

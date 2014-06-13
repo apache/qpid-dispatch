@@ -26,7 +26,7 @@ An entity has a set of named attributes and an L{EntityType} defined by a L{Sche
 from schema import EntityType
 from copy import copy
 
-class Entity(dict):
+class Entity(object):
     """
     A management entity: a set of attributes with an associated entity-type.
 
@@ -37,18 +37,19 @@ class Entity(dict):
     @ivar I{attribute-name}: Access an entity attribute as a python attribute.
     """
 
-    def __init__(self, entity_type, attributes=None, schema=None, **kw_attributes):
+    def __init__(self, entity_type=None, attributes=None, schema=None, **kw_attributes):
         """
         @param entity_type: An L{EntityType} or the name of an entity type in the schema.
-        @param schema: The L{Schema} defining entity_type.
         @param attributes: An attribute mapping.
+        @param schema: The L{Schema} defining entity_type.
         @param kw_attributes: Attributes as keyword arguments.
         """
         super(Entity, self).__init__()
         if schema and entity_type in schema.entity_types:
             self.entity_type = schema.entity_types[entity_type]
         else:
-            assert isinstance(entity_type, EntityType), "'%s' is not an entity type"%entity_type
+            assert entity_type is None or \
+                isinstance(entity_type, EntityType), "'%s' is not an entity type"%entity_type
             self.entity_type = entity_type
         self.attributes = attributes or {}
         self.attributes.update(kw_attributes)
@@ -75,6 +76,10 @@ class Entity(dict):
             return {'entity_type':self.entity_type.name, 'attributes':self.attributes}
         else:
             return (self.entity_type.name, self.attributes)
+
+    def __str__(self):
+        return str(self.dump)
+
 
 class EntityList(list):
     """
@@ -149,6 +154,9 @@ class EntityList(list):
         @keyword as_map: If true dump entities as maps, else as tuples.
         """
         return [e.dump(as_map) for e in self]
+
+    def __str__(self):
+        return str(self.dump())
 
     def replace(self, contents):
         """

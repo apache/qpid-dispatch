@@ -23,6 +23,7 @@ AMQP management tools for Qpid dispatch.
 
 import proton, re, threading, httplib
 from collections import namedtuple
+from entity import Entity
 
 class Error(Exception): pass
 
@@ -67,8 +68,6 @@ class Url:
             self.password = kwargs.get('password')
             self.host = kwargs.get('host')
             self.port = kwargs.get('port')
-            if self.host is None:
-                raise ValueError('Host required for url')
             self.path = kwargs.get('path')
         elif isinstance(s, Url):
             self.scheme = s.scheme
@@ -97,10 +96,10 @@ class Url:
             s += self.user
         if self.password:
             s += ":%s@" % self.password
-        if ':' not in self.host:
-            s += self.host
-        else:
+        if self.host and ':' in self.host:
             s += "[%s]" % self.host
+        else:
+            s += self.host or '0.0.0.0'
         if self.port:
             s += ":%s" % self.port
         if self.path:
@@ -140,7 +139,7 @@ class Node(object):
     NODE_TYPE='org.amqp.management' # AMQP management node type
     NODE_PROPERTIES={'name':SELF, 'type':NODE_TYPE}
 
-    def __init__(self, address, router=None, locales=None):
+    def __init__(self, address=None, router=None, locales=None):
         """
         @param address: AMQP address of the management node.
         @param router: If address does not contain a path, use the management node for this router ID.
@@ -171,7 +170,8 @@ class Node(object):
         self.messenger = None
 
     def __del__(self):
-        self.stop()
+        if hasattr(self, 'messenger'):
+            self.stop()
 
     def _flush(self):
         """Call self.messenger.work() till there is no work left."""
@@ -235,14 +235,18 @@ class Node(object):
         self.check_response(response)
         return response
 
-    class QueryResult(namedtuple('QueryResult', ['attribute_names', 'results'])):
+    class QueryResponse(list):
         """
-        Result returned by L{query}
+        Result returned by L{query}. Behaves as a list of L{Entity}.
         @ivar attribute_names: List of attribute names for the results.
-        @ivar results: List of lists. Each entry is a list of attribute values
-            corresponding to the attribute_names.
         """
-        pass
+        def __init__(self, response):
+            """
+            @param response: the respose message to a query.
+            """
+            self.attribute_names = response.body['attributeNames']
+            for r in response.body['results']:
+                self.append(Entity(attributes=dict(zip(self.attribute_names, r))))
 
     def query(self, entity_type=None, attribute_names=None, offset=None, count=None):
         """
@@ -252,9 +256,10 @@ class Node(object):
         @keyword attribute_names: A list of attribute names to query.
         @keyword offset: An integer offset into the list of results to return.
         @keyword count: A count of the maximum number of results to return.
-        @return: A L{QueryResult}
+        @return: A L{QueryResponse}
         """
+        attribute_names = attribute_names or []
         response = self.call(self.node_request(
             operation='QUERY', entityType=entity_type, offset=offset, count=count,
-            body={'attributeNames':attribute_names or []}))
-        return Node.QueryResult(response.body['attributeNames'], response.body['results'])
+            body={'attributeNames':attribute_names}))
+        return Node.QueryResponse(response)
