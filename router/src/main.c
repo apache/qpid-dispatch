@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -26,7 +26,8 @@
 #include "config.h"
 
 static int            exit_with_sigint = 0;
-static qd_dispatch_t *dispatch;
+static qd_dispatch_t *dispatch = 0;
+static qd_log_source_t *log_source = 0;
 
 static const char *app_config =
     "from qpid_dispatch_internal.config.schema import config_schema\n"
@@ -89,6 +90,12 @@ static void server_signal_handler(void* context, int signum)
     qd_server_resume(dispatch);
 }
 
+static void check() {
+    if (qd_error_code()) {
+	qd_log(log_source, QD_LOG_CRITICAL, "Router start-up failed: %s", qd_error_message());
+	exit(1);
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -132,14 +139,23 @@ int main(int argc, char **argv)
     }
 
 
+    qd_error_clear();
     dispatch = qd_dispatch(python_pkgdir);
     qd_dispatch_extend_config_schema(dispatch, app_config);
+    log_source = qd_log_source("MAIN"); /* Logging is initialized by qd_dispatch. */
+    check();
     qd_dispatch_load_config(dispatch, config_path);
+    check();
     qd_log_configure(dispatch);
+    check();
     qd_dispatch_configure_container(dispatch);
+    check();
     qd_dispatch_configure_router(dispatch);
+    check();
     qd_dispatch_prepare(dispatch);
+    check();
     qd_dispatch_post_configure_connections(dispatch);
+    check();
 
     qd_server_set_signal_handler(dispatch, server_signal_handler, 0);
     qd_server_set_start_handler(dispatch, thread_start_handler, 0);
@@ -159,4 +175,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-

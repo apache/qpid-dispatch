@@ -54,7 +54,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
 
     memset(qd, 0, sizeof(qd_dispatch_t));
 
-    // alloc and log has to be initialized before any module.
+    // alloc, log and error have to be initialized before any module.
     qd_alloc_initialize();
     qd_log_initialize();
     qd_error_initialize();
@@ -78,9 +78,9 @@ void qd_dispatch_extend_config_schema(qd_dispatch_t *qd, const char* text)
 }
 
 
-void qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
+qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 {
-    qd_config_read(qd->config, config_path);
+    return qd_config_read(qd->config, config_path);
 }
 
 

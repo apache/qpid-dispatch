@@ -41,6 +41,7 @@ typedef enum {
     QD_ERROR_ALLOC,
     QD_ERROR_MESSAGE,           ///< Error parsing a message.
     QD_ERROR_PYTHON,            ///< Error from python code.
+    QD_ERROR_CONFIG,            ///< Error in configuration
 
     QD_ERROR_COUNT              ///< Not an error, marks the end of the enum
 } qd_error_t;
@@ -83,4 +84,5 @@ extern const int QD_ERROR_MAX;
  * @return QD_ERROR_PYTHON or QD_ERROR_NONE.
  */
 qd_error_t qd_error_py();
+
 #endif

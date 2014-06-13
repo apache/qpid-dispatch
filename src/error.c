@@ -31,15 +31,21 @@ static const char *error_names[] = {
  "Already exists",
  "Allocation",
  "Invalid message",
- "Python"
+ "Python",
+ "Configuration"
 };
 
 STATIC_ASSERT(sizeof(error_names)/sizeof(error_names[0]) == QD_ERROR_COUNT, error_names_wrong_size);
 
 #define ERROR_MAX QD_LOG_TEXT_MAX
 const int QD_ERROR_MAX = ERROR_MAX;
-static __thread char error_message[ERROR_MAX];
-static __thread qd_error_t error_code = 0;
+
+/* Thread local data. */
+static __thread struct {
+    char error_message[ERROR_MAX];
+    qd_error_t error_code;
+} ts = {{0}, 0};
+
 static qd_log_source_t* log_source = 0;
 
 void qd_error_initialize() {
@@ -47,16 +53,16 @@ void qd_error_initialize() {
 }
 
 qd_error_t qd_error(qd_error_t code, const char *fmt, ...) {
-    error_code = code;
+    ts.error_code = code;
     if (code) {
 	int i = 0;
 	if (code < QD_ERROR_COUNT)
-	    i = snprintf(error_message, ERROR_MAX,"%s: ", error_names[code]);
+	    i = snprintf(ts.error_message, ERROR_MAX,"%s: ", error_names[code]);
 	else
-	    i = snprintf(error_message, ERROR_MAX, "%d: ", code);
+	    i = snprintf(ts.error_message, ERROR_MAX, "%d: ", code);
 	va_list arglist;
 	va_start(arglist, fmt);
-	vsnprintf(error_message+i, ERROR_MAX-i, fmt, arglist);
+	vsnprintf(ts.error_message+i, ERROR_MAX-i, fmt, arglist);
 	va_end(arglist);
 	qd_log(log_source, QD_LOG_ERROR, "%s", qd_error_message());
 	return code;
@@ -67,16 +73,16 @@ qd_error_t qd_error(qd_error_t code, const char *fmt, ...) {
 }
 
 void qd_error_clear() {
-    error_code = 0;
-    error_message[0] = '\0';
+    ts.error_code = 0;
+    snprintf(ts.error_message, ERROR_MAX, "No Error");
 }
 
 const char* qd_error_message() {
-    return error_message;
+    return ts.error_message;
 }
 
 qd_error_t qd_error_code() {
-    return error_code;
+    return ts.error_code;
 }
 
 static void py_set_item(PyObject *dict, const char* name, PyObject *value) {

@@ -8,9 +8,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -19,6 +19,7 @@
  * under the License.
  */
 
+#include <qpid/dispatch/error.h>
 /**
  * @defgroup dispatch
  *
@@ -59,7 +60,7 @@ void qd_dispatch_extend_config_schema(qd_dispatch_t *dispatch, const char* text)
  * @param dispatch The dispatch handle returned by qd_dispatch
  * @param config_path The path to the configuration file.
  */
-void qd_dispatch_load_config(qd_dispatch_t *dispatch, const char *config_path);
+qd_error_t qd_dispatch_load_config(qd_dispatch_t *dispatch, const char *config_path);
 
 /**
  * Configure the AMQP container from the parsed configuration file.

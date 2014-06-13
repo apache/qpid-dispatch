@@ -93,23 +93,22 @@ qd_config_t *qd_config(void)
 }
 
 
-void qd_config_read(qd_config_t *config, const char *filepath)
+qd_error_t qd_config_read(qd_config_t *config, const char *filepath)
 {
+    qd_error_clear();
     PyObject *pMethod;
     PyObject *pPath;
     PyObject *pArgs;
     PyObject *pResult;
 
     if (!config)
-        return;
+	return qd_error(QD_ERROR_CONFIG, "No configuration object");
 
     pMethod = PyObject_GetAttrString(config->pObject, "read_file");
     if (!pMethod || !PyCallable_Check(pMethod)) {
-        qd_log(log_source, QD_LOG_ERROR, "Problem with configuration module: No callable 'read_file'");
-        if (pMethod) {
-            Py_DECREF(pMethod);
-        }
-        return;
+	Py_XDECREF(pMethod);
+        qd_error_py();
+        return qd_error(QD_ERROR_CONFIG, "No callable 'read_file'");
     }
 
     pArgs = PyTuple_New(1);
@@ -120,11 +119,10 @@ void qd_config_read(qd_config_t *config, const char *filepath)
     if (pResult) {
         Py_DECREF(pResult);
     } else {
-        qd_error_py();
-        qd_log(log_source, QD_LOG_CRITICAL, "Configuration Failed, Exiting");
-        exit(1);
+        return qd_error_py();
     }
     Py_DECREF(pMethod);
+    return QD_ERROR_NONE;
 }
 
 
