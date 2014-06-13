@@ -137,7 +137,7 @@ class Node(object):
     NODE_TYPE='org.amqp.management' # AMQP management node type
     NODE_PROPERTIES={'name':SELF, 'type':NODE_TYPE}
 
-    def __init__(self, address=None, router=None, locales=None):
+    def __init__(self, address=None, router=None, locales=None, timeout=10):
         """
         @param address: AMQP address of the management node.
         @param router: If address does not contain a path, use the management node for this router ID.
@@ -155,7 +155,7 @@ class Node(object):
 
         self.messenger = proton.Messenger()
         self.messenger.start()
-        self.messenger.timeout = 1 # FIXME aconway 2014-06-02: config
+        self.messenger.timeout = timeout
         subscribe_address = Url(address)
         subscribe_address.path = "#"
         self.subscription = self.messenger.subscribe(str(subscribe_address))
@@ -173,7 +173,7 @@ class Node(object):
 
     def _flush(self):
         """Call self.messenger.work() till there is no work left."""
-        while self.messenger.work(0.01):
+        while self.messenger.work(0.1):
             pass
 
     CORRELATION_ID = 0

@@ -297,15 +297,17 @@ class Qdrouterd(Process):
             self.defaults()
             return "".join(["%s {\n%s}\n"%(n, props(p)) for n, p in self])
 
-    def __init__(self, name, config=Config(), wait=True):
+    def __init__(self, name, config=Config(), pyinclude=None, wait=True):
         """
         @param name: name used for for output files.
         @param config: router configuration
         @keyword wait: wait for router to be ready (call self.wait_ready())
         """
         self.config = copy(config)
+        if not pyinclude and os.environ['QPID_DISPATCH_HOME']:
+            pyinclude = os.path.join(os.environ['QPID_DISPATCH_HOME'], 'python')
         super(Qdrouterd, self).__init__(
-            name, ['qdrouterd', '-c', config.write(name)], expect=Process.RUNNING)
+            name, ['qdrouterd', '-c', config.write(name), '-I', pyinclude], expect=Process.RUNNING)
         self._agent = None
         if wait:
             self.wait_ready()
@@ -346,10 +348,31 @@ class Qdrouterd(Process):
                 return c
         return None
 
-    def wait_connectors(self):
-        """Wait for all connectors to be connected"""
+    def wait_address(self, address, subscribers=0, remotes=0, **retry_kwargs):
+        """
+        Wait for an address to be visible on the router.
+        @keyword subscribers: Wait till subscriberCount >= subscribers
+        @keyword remotes: Wait till remoteCount >= remotes
+        @param retry_kwargs: keyword args for L{retry}
+        """
+        def check():
+            # FIXME aconway 2014-06-12: this should be a request by name, not a query.
+            addrs = self.agent.query(
+                entity_type='org.apache.qpid.dispatch.router.address',
+                attribute_names=['name', 'subscriberCount', 'remoteCount'])
+            # FIXME aconway 2014-06-12: endswith check is because of M0/L prefixes
+            addrs = [a for a in addrs if a.name.endswith(address)]
+            return addrs and addrs[0].subscriberCount >= subscribers and addrs[0].remoteCount >= remotes
+        assert retry(check, **retry_kwargs)
+
+
+    def wait_connectors(self, **retry_kwargs):
+        """
+        Wait for all connectors to be connected
+        @param retry_kwargs: keyword args for L{retry}
+        """
         for c in self.config.sections('connector'):
-            retry(lambda: self.is_connected(c['port']))
+            assert retry(lambda: self.is_connected(c['port']), **retry_kwargs)
 
     def wait_ready(self):
         """Wait for ports and connectors to be ready"""
@@ -531,7 +554,8 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
     @classmethod
     def base_dir(cls):
         if not cls._base_dir:
-            cls._base_dir = os.path.abspath(os.path.join(__name__+'.dir', cls.__name__))
+            cls._base_dir = os.path.abspath(
+                os.path.join(__name__+'.dir', cls.__module__, cls.__name__))
         return cls._base_dir
 
     @classmethod
