@@ -20,7 +20,7 @@
 """Tests for management.amqp"""
 
 import unittest
-from qpid_dispatch_internal.management.amqp import Url
+from qpid_dispatch_internal.management.node import Url
 
 class UrlTest(unittest.TestCase):
 
