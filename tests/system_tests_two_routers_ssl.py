@@ -14,13 +14,16 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
-# under the License.
+# under the License
 #
 
-# Configuration for running tests directly against the build in src (no need to install)
-export SOURCE_DIR=${CMAKE_SOURCE_DIR}
-export BUILD_DIR=${CMAKE_BINARY_DIR}
-export QPID_DISPATCH_HOME=${CMAKE_SOURCE_DIR} # to pick up python system tests.
+import unittest
+from system_tests_two_routers import RouterTest
 
-export PYTHONPATH=$SOURCE_DIR/python:$SOURCE_DIR/tests:$PYTHONPATH
-export PATH=$BUILD_DIR:$BUILD_DIR/router:$BUILD_DIR/tools:$SOURCE_DIR/bin:$PATH
+class RouterTestSsl(RouterTest):
+    ssl_option = True
+
+del RouterTest                  # Don't run it twice.
+
+if __name__ == '__main__':
+    unittest.main()

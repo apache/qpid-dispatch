@@ -23,8 +23,7 @@ from system_test import TestCase, Messenger, Qdrouterd, retry_exception
 from qpid_dispatch_internal.management import Node
 
 class RouterTest(TestCase):
-    ssl_option = None
-
+    ssl_option = False
 
     @classmethod
     def setUpClass(cls):
@@ -800,8 +799,4 @@ class RouterTest(TestCase):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        if '--ssl' in sys.argv:
-            sys.argv.remove('--ssl')
-            RouterTest.ssl_option = "ssl"
     unittest.main()

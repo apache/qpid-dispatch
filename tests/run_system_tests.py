@@ -24,27 +24,12 @@ Note that each system test is an executable script, you can run them directly.
 
 import os
 import sys
-import re
-import unittest
+from fnmatch import fnmatch
+import runpy
 
-# Collect all system_tests_*.py scripts
+# Collect all system_tests_*.py scripts in the same directory as this script.
 test_dir = os.path.normpath(os.path.dirname(__file__))
-os.environ.setdefault('QPID_DISPATCH_HOME', os.path.dirname(test_dir))
-tests = [[f] for f in os.listdir(test_dir) if re.match('^system_tests.*.py$', f)]
-
-# Tests to re-run with extra parameters
-tests += [['system_tests_two_routers.py', '--ssl']]
-
-status = 0
-
-def run_test(script, *args):
-    global status
-    cmd = "%s %s -v %s"%(sys.executable, os.path.join(test_dir,script), " ".join(args))
-    sys.stderr.write("\nRunning %s\n"%cmd)
-    if os.system(cmd) != 0:
-        status = 1
-
-for test in tests:
-    run_test(*test)
-
-sys.exit(status)
+tests = [os.path.splitext(f)[0] for f in os.listdir(test_dir) if fnmatch(f, "system_tests_*.py")]
+sys.path = [test_dir] + sys.path # Find test modules in sys.path
+sys.argv = ['unittest', '-v'] + tests
+runpy.run_module('unittest', alter_sys=True, run_name="__main__")

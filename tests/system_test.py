@@ -57,6 +57,7 @@ from copy import copy
 import proton
 from proton import Message
 from qpid_dispatch_internal.management import Node
+from run import with_valgrind
 
 # Optional modules
 MISSING_MODULES = []
@@ -193,7 +194,10 @@ def message(**properties):
     return m
 
 class Process(subprocess.Popen):
-    """Popen that can be torn down at the end of a TestCase and stores its output."""
+    """
+    Popen that can be torn down at the end of a TestCase and stores its output.
+    Uses valgrind if enabled.
+    """
 
     # Expected states of a Process at teardown
     RUNNING = 1                   # Still running
@@ -216,6 +220,7 @@ class Process(subprocess.Popen):
         self.torndown = False
         kwargs.setdefault('stdout', self.out)
         kwargs.setdefault('stderr', kwargs['stdout'])
+        args = with_valgrind(args)
         super(Process, self).__init__(args, **kwargs)
 
     def assert_running(self):
@@ -229,7 +234,9 @@ class Process(subprocess.Popen):
         self.torndown = True
         status = self.poll()
         if status is None:
-            self.kill()
+            self.terminate()
+            if self.wait() is None:
+                self.kill()
         self.out.close()
         self.check_exit(status)
 
@@ -487,13 +494,15 @@ class Tester(object):
     def teardown(self):
         """Clean up (tear-down, stop or close) objects recorded via cleanup()"""
         self.cleanup_list.reverse()
-        for t in self.cleanup_list:
-            for m in ["teardown", "tearDown", "stop", "close"]:
-                a = getattr(t, m, None)
-                if a:
-                    a()
-                    break
-        if self.save_dir: os.chdir(self.save_dir)
+        try:
+            for t in self.cleanup_list:
+                for m in ["teardown", "tearDown", "stop", "close"]:
+                    a = getattr(t, m, None)
+                    if a:
+                        a()
+                        break
+        finally:
+            if self.save_dir: os.chdir(self.save_dir)
 
     def cleanup(self, x):
         """Record object x for clean-up during tear-down.

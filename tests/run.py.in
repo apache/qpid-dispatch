@@ -1,0 +1,135 @@
+#!/usr/bin/env python
+##
+## Licensed to the Apache Software Foundation (ASF) under one
+## or more contributor license agreements.  See the NOTICE file
+## distributed with this work for additional information
+## regarding copyright ownership.  The ASF licenses this file
+## to you under the Apache License, Version 2.0 (the
+## "License"); you may not use this file except in compliance
+## with the License.  You may obtain a copy of the License at
+##
+##   http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing,
+## software distributed under the License is distributed on an
+## "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+## KIND, either express or implied.  See the License for the
+## specific language governing permissions and limitations
+## under the License
+##
+
+
+"""
+Run a tool or test in a build tree with the correct PATH, PYTHONPATH, etc.
+Run with no arguments for help.
+"""
+
+usage="""
+Run a tool or test in a build tree with the correct PATH, PYTHONPATH, etc.
+
+Usage:
+run.py <program> [<arg>....]               # Run a program, can be an interactive shell.
+run.py -m <python-module>  [<arg>....]     # Run a python module.
+run.py -s <python-script>.py  [<arg>....]  # Run a python script.
+run.py --vg <program> [<arg>....]          # Run a program with valgrind if enabled.
+run.py --sh                                # Output a shell script to set the environment.
+
+Valgrind can be enabled or disabled by the cmake 'USE_VALGRIND' option and the
+environment variable 'USE_VALGRIND' (set to 'ON' or 'OFF'). The environment
+variable takes precendence if set."""
+
+import os, sys, runpy
+from subprocess import Popen, PIPE
+
+def dedup(l):
+    """Remove duplicates from list l, keep first instance. Keep order of l."""
+    s = set()
+    return [i for i in l if i not in s and (s.add(i) or True)]
+
+sys.path = dedup([
+    "${CMAKE_SOURCE_DIR}/python",
+    "${CMAKE_BINARY_DIR}/python",
+    "${CMAKE_SOURCE_DIR}/tests"
+] + sys.path)
+
+env_vars = {
+    'PYTHONPATH': os.pathsep.join(sys.path),
+    'PATH': os.pathsep.join(dedup(["${CMAKE_BINARY_DIR}",
+                                   os.path.join("${CMAKE_BINARY_DIR}", 'tests'),
+                                   os.path.join("${CMAKE_BINARY_DIR}", 'router'),
+                                   os.path.join("${CMAKE_BINARY_DIR}", 'tools'),
+                                   os.path.join("${CMAKE_SOURCE_DIR}", 'bin')] +
+                                  os.environ['PATH'].split(os.pathsep))),
+    'SOURCE_DIR': "${CMAKE_SOURCE_DIR}",
+    'BUILD_DIR': "${CMAKE_BINARY_DIR}",
+    'QPID_DISPATCH_HOME': "${CMAKE_SOURCE_DIR}"
+}
+os.environ.update(env_vars)
+
+# Valgrind setup
+valgrind_exe = "${VALGRIND_EXECUTABLE}"
+
+def use_valgrind():
+    """True if we should use valgrind"""
+    if not os.path.exists(valgrind_exe): return False
+    def on(str):
+        return str.lower() in ['on', 'yes', '1']
+    env = os.environ.get('USE_VALGRIND')
+    if env: return on(env)
+    return on("${USE_VALGRIND}")
+
+def find_exe(program):
+    """Find an executable in the system PATH"""
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+    mydir, name = os.path.split(program)
+    if mydir:
+        if is_exe(program): return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file): return exe_file
+    return None
+
+def is_binary_exe(program):
+    """True if the program is a binary executable"""
+    if not program: return None
+    p = Popen(['file', '-bi', program], stdout=PIPE, stderr=PIPE)
+    return p.communicate()[0].startswith('application/x-executable')
+
+def with_valgrind(args):
+    if use_valgrind() and is_binary_exe(find_exe(args[0])):
+        opts = ['--leak-check=full',
+                '--demangle=yes',
+                '--suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp',
+                '--num-callers=12',
+                '--error-exitcode=42',
+                '--quiet']
+        return [valgrind_exe]+opts+args
+    return args
+
+if __name__ == "__main__":
+    try:
+        if len(sys.argv) == 1:
+            print usage
+        elif sys.argv[1] == '-m':
+            sys.argv = sys.argv[2:]
+            runpy.run_module(sys.argv[0], alter_sys=True, run_name="__main__")
+        elif sys.argv[1] == '-s':
+            sys.argv = sys.argv[2:]
+            runpy.run_path(sys.argv[0], run_name="__main__")
+        elif sys.argv[1] == '--sh':
+            for name, value in env_vars.iteritems(): print "%s=%s"%(name, value)
+            print "export %s"%' '.join(env_vars.keys())
+        elif sys.argv[1] == '--vg':
+            args = with_valgrind(sys.argv[2:])
+            os.execvp(args[0], args)
+        elif sys.argv[1].startswith('-'):
+            print usage
+        else:
+            args = sys.argv[1:]
+            os.execvp(args[0], args)
+
+    except Exception, e:
+        print "Error in %s: %s"%(" ".join(sys.argv), e)
+        sys.exit(1)

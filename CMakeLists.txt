@@ -97,9 +97,6 @@ set(CATCH_UNDEFINED "-Wl,--no-undefined")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/conditionals.h)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/build_env.py.in
-               ${CMAKE_CURRENT_BINARY_DIR}/build_env.py)
-
 ##
 ## Build the Multi-Threaded Server Library
 ##
@@ -173,8 +170,8 @@ install(FILES ${DOC_FILES}
         DESTINATION ${DOC_INSTALL_DIR}/qpid-dispatch)
 
 ##
-## Build Tests
+## Build Tests first as other subdirs use tests/run.py
 ##
+add_subdirectory(tests)
 add_subdirectory(doc)
 add_subdirectory(router)
-add_subdirectory(tests)

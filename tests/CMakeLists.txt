@@ -17,6 +17,14 @@
 ## under the License.
 ##
 
+# Check for valgrind
+find_program(VALGRIND_EXECUTABLE valgrind DOC "Location of the valgrind program")
+mark_as_advanced(VALGRIND_EXECUTABLE)
+find_package_handle_standard_args(VALGRIND DEFAULT_MSG VALGRIND_EXECUTABLE)
+if (VALGRIND_FOUND)
+  option(USE_VALGRIND "Use valgrind when running tests" OFF)
+endif(VALGRIND_FOUND)
+
 ##
 ## Build test applications
 ##
@@ -42,21 +50,26 @@ set(unit_test_size_SOURCES
 add_executable(unit_tests_size ${unit_test_size_SOURCES})
 target_link_libraries(unit_tests_size qpid-dispatch)
 
-add_test(unit_tests_size_10000 unit_tests_size 10000)
-add_test(unit_tests_size_512   unit_tests_size 512)
-add_test(unit_tests_size_10    unit_tests_size 10)
-add_test(unit_tests_size_7     unit_tests_size 7)
-add_test(unit_tests_size_5     unit_tests_size 5)
-add_test(unit_tests_size_3     unit_tests_size 3)
-add_test(unit_tests_size_2     unit_tests_size 2)
-add_test(unit_tests_size_1     unit_tests_size 1)
-add_test(unit_tests            unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
-add_test(router_tests          ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/router_engine_test.py -v)
-add_test(management_tests      ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/build_env.py ${PYTHON_EXECUTABLE} -m unittest -v management)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 
-set(SYSTEM_TEST_FILES run_system_tests.py system_test.py system_tests_one_router.py system_tests_two_routers.py system_tests_broker.py system_tests_management.py system_tests_qdstat.py)
+set(TEST_WRAP ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_build.sh.in ${CMAKE_CURRENT_BINARY_DIR}/config_build.sh)
+add_test(unit_tests_size_10000 ${TEST_WRAP} --vg unit_tests_size 10000)
+add_test(unit_tests_size_512   ${TEST_WRAP} --vg unit_tests_size 512)
+add_test(unit_tests_size_10    ${TEST_WRAP} --vg unit_tests_size 10)
+add_test(unit_tests_size_7     ${TEST_WRAP} --vg unit_tests_size 7)
+add_test(unit_tests_size_5     ${TEST_WRAP} --vg unit_tests_size 5)
+add_test(unit_tests_size_3     ${TEST_WRAP} --vg unit_tests_size 3)
+add_test(unit_tests_size_2     ${TEST_WRAP} --vg unit_tests_size 2)
+add_test(unit_tests_size_1     ${TEST_WRAP} --vg unit_tests_size 1)
+add_test(unit_tests            ${TEST_WRAP} --vg unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
+add_test(router_tests          ${TEST_WRAP} -s ${CMAKE_CURRENT_SOURCE_DIR}/router_engine_test.py -v)
+add_test(management_tests      ${TEST_WRAP} -m unittest -v management)
+add_test(system_tests          ${TEST_WRAP} -m run_system_tests -v)
+
+set(SYSTEM_TEST_FILES ${CMAKE_CURRENT_BINARY_DIR}/run.py run_system_tests.py system_test.py
+  system_tests_one_router.py system_tests_two_routers.py system_tests_two_routers_ssl.py
+  system_tests_broker.py system_tests_management.py system_tests_qdstat.py)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/A-ssl.conf)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/B-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/B-ssl.conf)

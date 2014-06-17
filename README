@@ -4,32 +4,52 @@ Qpid Dispatch
 A lightweight AMQP router for building scalable, available, and performant messaging
 interconnect.
 
-Building
-========
+Building and testing
+====================
 
 From the dispatch directory:
 
-$ mkdir build
-$ cd build
+$ mkdir my_build    # or directory of your choice.
+$ cd my_build
 $ cmake ..
 $ make
-$ make test # see below
+$ ctest -VV
 
-Note:  Your PYTHONPATH _must_ include <dispatch>/python in its list of paths in order
-to test and run Dispatch.
 
 Running The Tests
 =================
 
-Prior to running the unit tests, you should source the file config.sh which is
-found in the root directory.
+From the <build> directory you can run all the system and tests with:
+$ ctest -VV
 
-$ source config.sh
+ctest uses the script <build>/test/run.py to set up the correct environment for
+tests. You can use it to run tests individually from the <build>/tests
+directory, for example:
 
-The file sets up the environment so that the tests can find the Python
-libraries, etc.
+$ ./run.py unit_tests_size 3
+$ ./run.py -m unittest system_tests_qdstat
 
-Run the test.sh script to run a clean, top-to-bottom build, install,
-and test.
+Run it without arguments to get a summary of how it can be used:
+$ ./run.py
 
-$ test.sh
+
+Clean build, install and test
+=============================
+
+$ source config.sh; test.sh
+
+This does the following:
+- NOTE: delete any existing directories 'build' and 'install'
+- Do a fresh cmake and make in directory 'build'
+- Run unit tests (not system tests) in 'build'
+- Do 'make install' into the directory 'install'
+- Run system tests on the installation in 'install'.
+
+
+Valgrind support
+================
+
+If valgrind is installed it will be used by default when running the tests.
+Set the cmake option 'USE_VALGRIND' to 'ON' or 'OFF' to enable/disable valgrind.
+You can also set the environment variable 'USE_VALGRIND' to 'ON or 'OFF'.
+If set the environment variable takes precendence over the cmake option.
