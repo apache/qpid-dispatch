@@ -57,6 +57,7 @@ env_vars = {
     'PATH': os.pathsep.join(dedup(["${CMAKE_BINARY_DIR}",
                                    os.path.join("${CMAKE_BINARY_DIR}", 'tests'),
                                    os.path.join("${CMAKE_BINARY_DIR}", 'router'),
+                                   os.path.join("${CMAKE_SOURCE_DIR}", 'tools'),
                                    os.path.join("${CMAKE_BINARY_DIR}", 'tools'),
                                    os.path.join("${CMAKE_SOURCE_DIR}", 'bin')] +
                                   os.environ['PATH'].split(os.pathsep))),
