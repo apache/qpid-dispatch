@@ -484,12 +484,13 @@ class Tester(object):
 
     def __init__(self, id, *args, **kwargs):
         """
-        @param id: module.class.method
+        @param id: module.class.method or False if no directory should be created
         """
         self.cleanup_list = []
-        self.directory = os.path.join(self.root_dir, *id.split('.'))
-        os.makedirs(self.directory)
-        os.chdir(self.directory)
+        if id:                  # not id: means don't create a directory.
+            self.directory = os.path.join(self.root_dir, *id.split('.'))
+            os.makedirs(self.directory)
+            os.chdir(self.directory)
 
     def teardown(self):
         """Clean up (tear-down, stop or close) objects recorded via cleanup()"""
@@ -553,22 +554,27 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
 
     def __init__(self, test_method):
         unittest.TestCase.__init__(self, test_method)
-        Tester.__init__(self, self.id())
+        # Older python will create an instance of TestCase itself as well as
+        # subclasses, we don't want the Tester to create a directory in that case.
+        Tester.__init__(self, self.__class__ is not TestCase and self.id())
 
     @classmethod
     def setUpClass(cls):
-        cls.tester = Tester('.'.join([cls.__module__, cls.__name__, 'setup']))
+        # Python < 2.7 will call setUpClass on the system_test.TestCase class
+        # itself as well as the subclasses. Ignore that.
+        if cls is not TestCase:
+            cls.tester = Tester('.'.join([cls.__module__, cls.__name__, 'setUpClass']))
 
     @classmethod
     def tearDownClass(cls):
-        if inspect.isclass(cls):
+        if inspect.isclass(cls) and cls is not TestCase and hasattr(cls, 'tester'):
             cls.tester.teardown()
             del cls.tester
 
     def setUp(self):
         # Hack to support setUpClass on older python.
         # If the class has not already been set up, do it now.
-        if not hasattr(self.__class__, 'tester'):
+        if self.__class__ is not TestCase and not hasattr(self.__class__, 'tester'):
             self.setUpClass()
 
     def tearDown(self):
@@ -588,10 +594,12 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
     # Hack to support tearDownClass on older versions of python.
     # The default TestLoader sorts tests alphabetically so we insert
     # a fake tests that will run last to call tearDownClass.
+    # NOTE: definitely not safe for a parallel test-runner.
     if not hasattr(unittest.TestCase, 'setUpClass'):
         def test_zzzz_teardown_class(self):
             """Fake test to call tearDownClass"""
-            self.__class__._tear_down_class = True
+            if self.__class__ is not TestCase:
+                self.__class__._tear_down_class = True
 
     def assert_fair(self, seq):
         avg = sum(seq)/len(seq)

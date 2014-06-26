@@ -26,10 +26,18 @@ import os
 import sys
 from fnmatch import fnmatch
 import runpy
-
+import unittest
 # Collect all system_tests_*.py scripts in the same directory as this script.
 test_dir = os.path.normpath(os.path.dirname(__file__))
-tests = [os.path.splitext(f)[0] for f in os.listdir(test_dir) if fnmatch(f, "system_tests_*.py")]
+test_modules = [os.path.splitext(f)[0] for f in os.listdir(test_dir) if fnmatch(f, "system_tests_*.py")]
 sys.path = [test_dir] + sys.path # Find test modules in sys.path
+
+# python < 2.7 unittest main won't load tests from modules, so use the loader:
+all_tests = unittest.TestSuite()
+for m in test_modules:
+    tests = unittest.defaultTestLoader.loadTestsFromModule(__import__(m))
+    all_tests.addTest(tests)
+result = unittest.TextTestRunner(verbosity=2).run(all_tests)
+sys.exit(not result.wasSuccessful())
+
 sys.argv = ['unittest', '-v'] + tests
-runpy.run_module('unittest', alter_sys=True, run_name="__main__")
