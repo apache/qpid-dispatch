@@ -478,31 +478,28 @@ class Tester(object):
 - Utilities to create processes and servers, manage ports etc.
 - Clean up processes on teardown"""
 
-    def __init__(self, *args, **kwargs):
-        self.cleanup_list = []
-        self.save_dir = None
-        self.directory = None
+    # Wipe the old test tree when we are first imported.
+    root_dir = os.path.abspath(__name__+'.dir')
+    shutil.rmtree(root_dir, ignore_errors=True) # Wipe the old test tree.
 
-    def setup(self, directory):
-        """Create directory"""
-        self.directory = directory
-        shutil.rmtree(directory, ignore_errors=True)
-        os.makedirs(directory)
-        self.save_dir = os.getcwd()
-        os.chdir(directory)
+    def __init__(self, id, *args, **kwargs):
+        """
+        @param id: module.class.method
+        """
+        self.cleanup_list = []
+        self.directory = os.path.join(self.root_dir, *id.split('.'))
+        os.makedirs(self.directory)
+        os.chdir(self.directory)
 
     def teardown(self):
         """Clean up (tear-down, stop or close) objects recorded via cleanup()"""
         self.cleanup_list.reverse()
-        try:
-            for t in self.cleanup_list:
-                for m in ["teardown", "tearDown", "stop", "close"]:
-                    a = getattr(t, m, None)
-                    if a:
-                        a()
-                        break
-        finally:
-            if self.save_dir: os.chdir(self.save_dir)
+        for t in self.cleanup_list:
+            for m in ["teardown", "tearDown", "stop", "close"]:
+                a = getattr(t, m, None)
+                if a:
+                    a()
+                    break
 
     def cleanup(self, x):
         """Record object x for clean-up during tear-down.
@@ -554,29 +551,13 @@ class Tester(object):
 class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-methods
     """A TestCase that sets up its own working directory and is also a Tester."""
 
-    _base_dir = None
-
     def __init__(self, test_method):
         unittest.TestCase.__init__(self, test_method)
-        Tester.__init__(self)
-
-    @classmethod
-    def base_dir(cls):
-        if not cls._base_dir:
-            cls._base_dir = os.path.abspath(
-                os.path.join(__name__+'.dir', cls.__module__, cls.__name__))
-        return cls._base_dir
+        Tester.__init__(self, self.id())
 
     @classmethod
     def setUpClass(cls):
-        # Don't delete cwd out from under ourselves.
-        # cwd can be a subdir of base_dir if we were called by test_0000_setup_class
-        if os.path.commonprefix([os.getcwd(), cls.base_dir()]) == cls.base_dir():
-            os.chdir(os.path.dirname(cls.base_dir()))
-        shutil.rmtree(cls.base_dir(), ignore_errors=True) # Clear old test tree.
-        assert cls is not TestCase
-        cls.tester = Tester()
-        cls.tester.setup(os.path.join(cls.base_dir(), 'setup_class'))
+        cls.tester = Tester('.'.join([cls.__module__, cls.__name__, 'setup']))
 
     @classmethod
     def tearDownClass(cls):
@@ -589,8 +570,6 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
         # If the class has not already been set up, do it now.
         if not hasattr(self.__class__, 'tester'):
             self.setUpClass()
-        # self.id() is normally the fully qualified method name
-        Tester.setup(self, os.path.join(self.base_dir(), self.id().split(".")[-1]))
 
     def tearDown(self):
         Tester.teardown(self)
