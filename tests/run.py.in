@@ -109,6 +109,13 @@ def with_valgrind(args):
         return [valgrind_exe]+opts+args
     return args
 
+def run_path(file_path, run_name=None):
+    """Wrapper for run path that falls back to exec python for python < 2.7"""
+    if hasattr(runpy, 'run_path'):
+        runpy.run_path(file_path, run_name=run_name)
+    else:                       # Python < 2.7
+        os.execvp(sys.executable, [sys.executable]+sys.argv)
+
 if __name__ == "__main__":
     try:
         if len(sys.argv) == 1:
@@ -118,7 +125,7 @@ if __name__ == "__main__":
             runpy.run_module(sys.argv[0], alter_sys=True, run_name="__main__")
         elif sys.argv[1] == '-s':
             sys.argv = sys.argv[2:]
-            runpy.run_path(sys.argv[0], run_name="__main__")
+            run_path(sys.argv[0], run_name="__main__")
         elif sys.argv[1] == '--sh':
             for name, value in env_vars.iteritems(): print "%s=%s"%(name, value)
             print "export %s"%' '.join(env_vars.keys())
