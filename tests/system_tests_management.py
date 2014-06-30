@@ -21,7 +21,7 @@
 
 import unittest, system_test, re
 from qpid_dispatch_internal.management import Node, ManagementError
-from system_test import Qdrouterd, MISSING_REQUIREMENTS
+from system_test import Qdrouterd
 from httplib import BAD_REQUEST, NOT_IMPLEMENTED
 
 class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-methods
@@ -95,7 +95,4 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         except: pass
 
 if __name__ == '__main__':
-    if MISSING_REQUIREMENTS:
-        print MISSING_REQUIREMENTS
-    else:
-        unittest.main()
+    unittest.main()

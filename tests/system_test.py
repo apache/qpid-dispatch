@@ -19,6 +19,7 @@
 
 """System test library, provides tools for tests that start multiple processes,
 with special support for qpidd and qdrouter processes.
+
 Features:
 - Create separate directories for each test.
 - Save logs, sub-process output, core files etc.
@@ -26,8 +27,7 @@ Features:
 - Tools to manipulate qpidd and qdrouter configuration files.
 - Sundry other tools.
 
-Requires the following:
- - proton with python bindings
+To run qpidd, additional to basic dispatch requirements:
  - qpidd with AMQP 1.0 support
  - qpidtoollibs python module from qpid/tools
  - qpid_messaging python module from qpid/cpp
@@ -95,7 +95,7 @@ def _check_requirements():
     """If requirements are missing, return a message, else return empty string."""
     missing = MISSING_MODULES
     required_exes = ['qpidd', 'qdrouterd']
-    missing += ["No exectuable  %s"%e for e in required_exes if not find_exe(e)]
+    missing += ["No exectuable %s"%e for e in required_exes if not find_exe(e)]
     if find_exe('qpidd'):
         p = subprocess.Popen(['qpidd', '--help'], stdout=subprocess.PIPE)
         if not "AMQP 1.0" in p.communicate()[0]:
@@ -221,7 +221,11 @@ class Process(subprocess.Popen):
         kwargs.setdefault('stdout', self.out)
         kwargs.setdefault('stderr', kwargs['stdout'])
         args = with_valgrind(args)
-        super(Process, self).__init__(args, **kwargs)
+        try:
+            super(Process, self).__init__(args, **kwargs)
+        except Exception, e:
+            raise Exception("subprocess.Popen(%s, %s) failed: %s: %s" %
+                            (args, kwargs, type(e).__name__, e))
 
     def assert_running(self):
         """Assert that the proces is still running"""
@@ -266,11 +270,6 @@ class Config(object):
         with open(name, 'w') as f:
             f.write(str(self))
         return name
-
-    # def __getitem(self, key):
-    #     """Get an item, make sure any defaults have been set first"""
-    #     # defaults()
-    #     return super(Config, self).__getitem__(self, key)
 
 class Qdrouterd(Process):
     """Run a Qpid Dispatch Router Daemon"""
@@ -480,17 +479,22 @@ class Tester(object):
 
     # Wipe the old test tree when we are first imported.
     root_dir = os.path.abspath(__name__+'.dir')
-    shutil.rmtree(root_dir, ignore_errors=True) # Wipe the old test tree.
 
-    def __init__(self, id, *args, **kwargs):
+    def __init__(self, id):
         """
         @param id: module.class.method or False if no directory should be created
         """
+        self.directory = os.path.join(self.root_dir, *id.split('.'))
         self.cleanup_list = []
-        if id:                  # not id: means don't create a directory.
-            self.directory = os.path.join(self.root_dir, *id.split('.'))
-            os.makedirs(self.directory)
-            os.chdir(self.directory)
+
+    def rmtree(self):
+        """Remove old test class results directory"""
+        shutil.rmtree(os.path.dirname(self.directory), ignore_errors=True)
+
+    def setup(self):
+        """Called from test setup and class setup."""
+        os.makedirs(self.directory)
+        os.chdir(self.directory)
 
     def teardown(self):
         """Clean up (tear-down, stop or close) objects recorded via cleanup()"""
@@ -554,30 +558,34 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
 
     def __init__(self, test_method):
         unittest.TestCase.__init__(self, test_method)
-        # Older python will create an instance of TestCase itself as well as
-        # subclasses, we don't want the Tester to create a directory in that case.
-        Tester.__init__(self, self.__class__ is not TestCase and self.id())
+        Tester.__init__(self, self.id())
 
     @classmethod
     def setUpClass(cls):
-        # Python < 2.7 will call setUpClass on the system_test.TestCase class
-        # itself as well as the subclasses. Ignore that.
-        if cls is not TestCase:
-            cls.tester = Tester('.'.join([cls.__module__, cls.__name__, 'setUpClass']))
+        cls.tester = Tester('.'.join([cls.__module__, cls.__name__, 'setUpClass']))
+        cls.tester.rmtree()
+        cls.tester.setup()
 
     @classmethod
     def tearDownClass(cls):
-        if inspect.isclass(cls) and cls is not TestCase and hasattr(cls, 'tester'):
+        if hasattr(cls, 'tester'):
             cls.tester.teardown()
             del cls.tester
 
     def setUp(self):
+        # Python < 2.7 will call setUp on the system_test.TestCase class
+        # itself as well as the subclasses. Ignore that.
+        if self.__class__ is TestCase: return
         # Hack to support setUpClass on older python.
         # If the class has not already been set up, do it now.
-        if self.__class__ is not TestCase and not hasattr(self.__class__, 'tester'):
+        if not hasattr(self.__class__, 'tester'):
             self.setUpClass()
+        Tester.setup(self)
 
     def tearDown(self):
+        # Python < 2.7 will call tearDown on the system_test.TestCase class
+        # itself as well as the subclasses. Ignore that.
+        if self.__class__ is TestCase: return
         Tester.teardown(self)
         # Hack to support tearDownClass on older versions of python.
         if hasattr(self.__class__, '_tear_down_class'):
@@ -589,13 +597,13 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
         if hasattr(unittest.TestCase, 'skipTest'):
             unittest.TestCase.skipTest(self, reason)
         else:
-            print "Skipping test", id(), reason
+            print "Skipping test", self.id(), reason
 
     # Hack to support tearDownClass on older versions of python.
     # The default TestLoader sorts tests alphabetically so we insert
     # a fake tests that will run last to call tearDownClass.
     # NOTE: definitely not safe for a parallel test-runner.
-    if not hasattr(unittest.TestCase, 'setUpClass'):
+    if not hasattr(unittest.TestCase, 'tearDownClass'):
         def test_zzzz_teardown_class(self):
             """Fake test to call tearDownClass"""
             if self.__class__ is not TestCase:

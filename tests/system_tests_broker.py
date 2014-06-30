@@ -28,84 +28,84 @@ from itertools import cycle
 class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-public-methods
     """System tests involving routers and qpidd brokers"""
 
-    @classmethod
-    def setUpClass(cls):
-        """Start 3 qpidd brokers, wait for them to be ready."""
-        super(DistributedQueueTest, cls).setUpClass()
-        cls.qpidds = [cls.tester.qpidd('qpidd%s'%i, port=cls.get_port(), wait=False)
-                    for i in xrange(3)]
-        for q in cls.qpidds:
-            q.wait_ready()
+    if MISSING_REQUIREMENTS:
+        def test_skip(self):
+            self.skipTest(MISSING_REQUIREMENTS)
+    else:
+        @classmethod
+        def setUpClass(cls):
+            """Start 3 qpidd brokers, wait for them to be ready."""
+            super(DistributedQueueTest, cls).setUpClass()
+            cls.qpidds = [cls.tester.qpidd('qpidd%s'%i, port=cls.get_port(), wait=False)
+                        for i in xrange(3)]
+            for q in cls.qpidds:
+                q.wait_ready()
 
-    @classmethod
-    def tearDownClass(cls):
-        super(DistributedQueueTest, cls).tearDownClass()
+        @classmethod
+        def tearDownClass(cls):
+            super(DistributedQueueTest, cls).tearDownClass()
 
-    def setUp(self):
-        super(DistributedQueueTest, self).setUp()
-        self.testq = 'testq.'+self.id().split('.')[-1] # The distributed queue name
+        def setUp(self):
+            super(DistributedQueueTest, self).setUp()
+            self.testq = 'testq.'+self.id().split('.')[-1] # The distributed queue name
 
-    def common_router_conf(self, name, mode='standalone'):
-        """Common router configuration for the tests"""
-        return Qdrouterd.Config([
-            # ('log', {'module':'DEFAULT', 'level':'info', 'output':name+".log"}),
-            # ('log', {'module':'ROUTER', 'level':'trace'}),
-            # ('log', {'module':'MESSAGE', 'level':'trace'}),
-            ('container', {'container-name':name}),
-            ('router', {'mode': mode, 'router-id': name})
-        ])
+        def common_router_conf(self, name, mode='standalone'):
+            """Common router configuration for the tests"""
+            return Qdrouterd.Config([
+                # ('log', {'module':'DEFAULT', 'level':'info', 'output':name+".log"}),
+                # ('log', {'module':'ROUTER', 'level':'trace'}),
+                # ('log', {'module':'MESSAGE', 'level':'trace'}),
+                ('container', {'container-name':name}),
+                ('router', {'mode': mode, 'router-id': name})
+            ])
 
-    def verify_equal_spread(self, send_addresses, receive_addresses):
-        """Verify we send/receive to the queue the load was spread over the brokers.
-        Send to each of the send_addresses in turn, subscribe to all of the receive_addresses.
-        """
-        msgr = self.messenger()
-        for a in receive_addresses:
-            msgr.subscribe(a)
-        msgr.flush()
-        n = 20                  # Messages per broker
-        r = ["x-%02d"%i for i in range(n*len(self.qpidds))]
-        for b, a in zip(r, cycle(send_addresses)):
-            msgr.put(message(address=a, body=b))
-        msgr.flush()
-        messages = sorted(msgr.fetch().body for i in r)
-        msgr.flush()
-        self.assertEqual(r, messages)
+        def verify_equal_spread(self, send_addresses, receive_addresses):
+            """Verify we send/receive to the queue the load was spread over the brokers.
+            Send to each of the send_addresses in turn, subscribe to all of the receive_addresses.
+            """
+            msgr = self.messenger()
+            for a in receive_addresses:
+                msgr.subscribe(a)
+            msgr.flush()
+            n = 20                  # Messages per broker
+            r = ["x-%02d"%i for i in range(n*len(self.qpidds))]
+            for b, a in zip(r, cycle(send_addresses)):
+                msgr.put(message(address=a, body=b))
+            msgr.flush()
+            messages = sorted(msgr.fetch().body for i in r)
+            msgr.flush()
+            self.assertEqual(r, messages)
 
-        qs = [q.agent.getQueue(self.testq) for q in self.qpidds]
-        enq = sum(q.msgTotalEnqueues for q in qs)
-        deq = sum(q.msgTotalDequeues for q in qs)
-        self.assertEquals((enq, deq), (len(r), len(r)))
-        # Verify each broker handled a reasonable share of the messages.
-        self.assert_fair([q.msgTotalEnqueues for q in qs])
+            qs = [q.agent.getQueue(self.testq) for q in self.qpidds]
+            enq = sum(q.msgTotalEnqueues for q in qs)
+            deq = sum(q.msgTotalDequeues for q in qs)
+            self.assertEquals((enq, deq), (len(r), len(r)))
+            # Verify each broker handled a reasonable share of the messages.
+            self.assert_fair([q.msgTotalEnqueues for q in qs])
 
-    def test_distrbuted_queue(self):
-        """Create a distributed queue with N routers and N brokers.
-        Each router is connected to all the brokers."""
-        for q in self.qpidds:
-            q.agent.addQueue(self.testq)
-
-        def router(i):
-            """Create router<i> with waypoints to each broker."""
-            name = "router%s"%i
-            rconf = self.common_router_conf(name, mode='interior')
-            rconf += [
-                ('listener', {'port':self.get_port(), 'role':'normal'}),
-                ('fixed-address', {'prefix':self.testq, 'phase':0, 'fanout':'single', 'bias':'spread'}),
-                ('fixed-address', {'prefix':self.testq, 'phase':1, 'fanout':'single', 'bias':'spread'})]
+        def test_distrbuted_queue(self):
+            """Create a distributed queue with N routers and N brokers.
+            Each router is connected to all the brokers."""
             for q in self.qpidds:
-                rconf += [
-                    ('connector', {'name':q.name, 'port':q.port}),
-                    ('waypoint', {'name':self.testq, 'out-phase':1, 'in-phase':0, 'connector':q.name})]
-            return self.qdrouterd(name, rconf)
-        routers = [router(i) for i in xrange(len(self.qpidds))]
-        for r in routers: r.wait_ready()
-        addrs = [r.addresses[0]+"/"+self.testq for r in routers]
-        self.verify_equal_spread(addrs, addrs)
+                q.agent.addQueue(self.testq)
 
+            def router(i):
+                """Create router<i> with waypoints to each broker."""
+                name = "router%s"%i
+                rconf = self.common_router_conf(name, mode='interior')
+                rconf += [
+                    ('listener', {'port':self.get_port(), 'role':'normal'}),
+                    ('fixed-address', {'prefix':self.testq, 'phase':0, 'fanout':'single', 'bias':'spread'}),
+                    ('fixed-address', {'prefix':self.testq, 'phase':1, 'fanout':'single', 'bias':'spread'})]
+                for q in self.qpidds:
+                    rconf += [
+                        ('connector', {'name':q.name, 'port':q.port}),
+                        ('waypoint', {'name':self.testq, 'out-phase':1, 'in-phase':0, 'connector':q.name})]
+                return self.qdrouterd(name, rconf)
+            routers = [router(i) for i in xrange(len(self.qpidds))]
+            for r in routers: r.wait_ready()
+            addrs = [r.addresses[0]+"/"+self.testq for r in routers]
+            self.verify_equal_spread(addrs, addrs)
 
 if __name__ == '__main__':
-    if MISSING_REQUIREMENTS:
-        print MISSING_REQUIREMENTS
-    else:
-        unittest.main()
+    unittest.main()
