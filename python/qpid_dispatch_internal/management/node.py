@@ -77,7 +77,7 @@ class Url:
         else:
             match = Url.RE.match(s)
             if match is None:
-                raise ValueError(s)
+                raise ValueError("Invalid AMQP URL: %s"%s)
             scheme, self.user, self.password, host4, host6, port, self.path = match.groups()
             self.host = host4 or host6
             self.port = port and int(port)
@@ -218,7 +218,7 @@ class Node(object):
     def call(self, request):
         """
         Send a management request message, wait for a response.
-        @return: Response message
+        @return: Response message.
         """
         if not request.address:
             raise ValueError("Message must have an address")
