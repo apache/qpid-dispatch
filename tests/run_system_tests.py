@@ -25,8 +25,8 @@ Note that each system test is an executable script, you can run them directly.
 import os
 import sys
 from fnmatch import fnmatch
+import runpy
 import unittest
-
 # Collect all system_tests_*.py scripts in the same directory as this script.
 test_dir = os.path.normpath(os.path.dirname(__file__))
 test_modules = [os.path.splitext(f)[0] for f in os.listdir(test_dir) if fnmatch(f, "system_tests_*.py")]

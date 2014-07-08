@@ -52,7 +52,7 @@ export PYTHONPATH="$PYTHONPATH:/usr/local/lib/proton/bindings/python:/usr/local/
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib64"
 """
 
-import os, time, socket, random, subprocess, shutil, unittest
+import os, time, socket, random, subprocess, shutil, unittest, inspect
 from copy import copy
 import proton
 from proton import Message
@@ -275,9 +275,7 @@ class Qdrouterd(Process):
     """Run a Qpid Dispatch Router Daemon"""
 
     class Config(list, Config):
-        """
-        List of ('section', {'name':'value', ...}).
-
+        """List of ('section', {'name':'value', ...}).
         Fills in some default values automatically, see Qdrouterd.DEFAULTS
         """
 
@@ -312,8 +310,6 @@ class Qdrouterd(Process):
         @keyword wait: wait for router to be ready (call self.wait_ready())
         """
         self.config = copy(config)
-        if not [l for l in config if l[0] == 'log']:
-            config.append(('log', {'module':'DEFAULT', 'level':'info', 'output':name+'.log'}))
         if not pyinclude and os.environ['QPID_DISPATCH_HOME']:
             pyinclude = os.path.join(os.environ['QPID_DISPATCH_HOME'], 'python')
         super(Qdrouterd, self).__init__(
@@ -368,7 +364,7 @@ class Qdrouterd(Process):
         def check():
             # FIXME aconway 2014-06-12: this should be a request by name, not a query.
             addrs = self.agent.query(
-                type='org.apache.qpid.dispatch.router.address',
+                entity_type='org.apache.qpid.dispatch.router.address',
                 attribute_names=['name', 'subscriberCount', 'remoteCount'])
             # FIXME aconway 2014-06-12: endswith check is because of M0/L prefixes
             addrs = [a for a in addrs if a.name.endswith(address)]

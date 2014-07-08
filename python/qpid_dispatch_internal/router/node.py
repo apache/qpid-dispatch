@@ -17,6 +17,12 @@
 # under the License.
 #
 
+try:
+    from dispatch import *
+except ImportError:
+    from ..stubs import *
+
+
 class NodeTracker(object):
     """
     This module is responsible for tracking the set of router nodes that are known to this
@@ -177,3 +183,4 @@ class RemoteNode(object):
         self.remote   = not neighbor
         self.link_id  = link_id
         self.addrs    = {}  # Address => Count at Node (1 only for the present)
+

@@ -22,9 +22,11 @@
 #include <qpid/dispatch/agent.h>
 #include "dispatch_private.h"
 #include "server_private.h"
-#include "entity_private.h"
-#include "schema_enum.h"
 #include <string.h>
+
+static const char *CONF_LISTENER    = "listener";
+static const char *CONF_CONNECTOR   = "connector";
+
 
 struct qd_config_listener_t {
     DEQ_LINKS(qd_config_listener_t);
@@ -56,95 +58,93 @@ struct qd_connection_manager_t {
 };
 
 
-// True if entity has any of attributes.
-static bool has_attrs(qd_entity_t *entity, const char **attributes, int n) {
-    for (int i = 0; i < n; ++i)
-	if (qd_entity_has(entity, attributes[i])) return true;
-    return false;
-}
-
-static const char *ssl_attributes[] = {
-    "allow-unsecured", "cert-file", "key-file", "password", "cert-db",
-    "trusted-certs", "require-peer-auth"
-};
-static const int ssl_attributes_count = sizeof(ssl_attributes)/sizeof(ssl_attributes[0]);
-
-static void qd_server_config_free(qd_server_config_t *cf)
+static void load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, const char *section, int i)
 {
-    if (!cf) return;
-    free(cf->host);
-    free(cf->port);
-    free(cf->role);
-    free(cf->sasl_mechanisms);
-    if (cf->ssl_enabled) {
-        free(cf->ssl_certificate_file);
-        free(cf->ssl_private_key_file);
-        free(cf->ssl_password);
-        free(cf->ssl_trusted_certificate_db);
-        free(cf->ssl_trusted_certificates);
-    }
-    memset(cf, 0, sizeof(*cf));
-}
-
-#define CHECK() if (qd_error_code()) goto error
-static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, qd_entity_t* entity)
-{
-    qd_error_clear();
-    memset(config, 0, sizeof(*config));
-    config->host           = qd_entity_string(entity, "addr"); CHECK();
-    config->port           = qd_entity_string(entity, "port"); CHECK();
-    config->role           = qd_entity_string(entity, "role"); CHECK();
-    config->max_frame_size = qd_entity_long(entity, "max-frame-size"); CHECK();
-    config->sasl_mechanisms = qd_entity_string(entity, "sasl-mechanisms"); CHECK();
-    config->ssl_enabled = has_attrs(entity, ssl_attributes, ssl_attributes_count);
+    config->host           = qd_config_item_value_string(qd, section, i, "addr");
+    config->port           = qd_config_item_value_string(qd, section, i, "port");
+    config->role           = qd_config_item_value_string(qd, section, i, "role");
+    config->max_frame_size = qd_config_item_value_int(qd, section, i, "max-frame-size");
+    config->sasl_mechanisms =
+        qd_config_item_value_string(qd, section, i, "sasl-mechanisms");
+    config->ssl_enabled =
+        qd_config_item_value_bool(qd, section, i, "ssl-profile");
     if (config->ssl_enabled) {
         config->ssl_server = 1;
-	config->ssl_allow_unsecured_client = qd_entity_opt_bool(entity, "allow-unsecured", false); CHECK();
-	config->ssl_certificate_file = qd_entity_opt_string(entity, "cert-file", 0); CHECK();
-	config->ssl_private_key_file = qd_entity_opt_string(entity, "key-file", 0); CHECK();
-	config->ssl_trusted_certificate_db = qd_entity_opt_string(entity, "cert-db", 0); CHECK();
-	config->ssl_trusted_certificates = qd_entity_opt_string(entity, "trusted-certs", 0); CHECK();
+        config->ssl_allow_unsecured_client =
+            qd_config_item_value_bool(qd, section, i, "allow-unsecured");
+        config->ssl_certificate_file =
+            qd_config_item_value_string(qd, section, i, "cert-file");
+        config->ssl_private_key_file =
+            qd_config_item_value_string(qd, section, i, "key-file");
+        config->ssl_password =
+            qd_config_item_value_string(qd, section, i, "password");
+        config->ssl_trusted_certificate_db =
+            qd_config_item_value_string(qd, section, i, "cert-db");
+        config->ssl_trusted_certificates =
+            qd_config_item_value_string(qd, section, i, "trusted-certs");
+        config->ssl_require_peer_authentication =
+            qd_config_item_value_bool(qd, section, i, "require-peer-auth");
     }
-    return QD_ERROR_NONE;
-
-  error:
-    qd_server_config_free(config);
-    return qd_error_code();
-}
-
-void qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
-{
-    qd_connection_manager_t *cm = qd->connection_manager;
-    qd_config_listener_t *cl = NEW(qd_config_listener_t);
-    cl->listener = 0;
-    load_server_config(qd, &cl->configuration, entity);
-    DEQ_ITEM_INIT(cl);
-    DEQ_INSERT_TAIL(cm->config_listeners, cl);
-    qd_log(cm->log_source, QD_LOG_INFO, "Configured Listener: %s:%s role=%s",
-	   cl->configuration.host, cl->configuration.port, cl->configuration.role);
 }
 
 
-qd_error_t qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entity)
+static void configure_listeners(qd_dispatch_t *qd)
 {
-    qd_error_clear();
+    int count;
     qd_connection_manager_t *cm = qd->connection_manager;
-    qd_config_connector_t *cc = NEW(qd_config_connector_t);
-    memset(cc, 0, sizeof(*cc));
-    if (load_server_config(qd, &cc->configuration, entity))
-	return qd_error_code();
-    DEQ_ITEM_INIT(cc);
-    if (strcmp(cc->configuration.role, "on-demand") == 0) {
-	cc->connector_name = qd_entity_string(entity, "name"); QD_ERROR_RET();
-	DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
-	qd_log(cm->log_source, QD_LOG_INFO, "Configured on-demand connector: %s:%s name=%s",
-	       cc->configuration.host, cc->configuration.port, cc->connector_name);
-    } else {
-	DEQ_INSERT_TAIL(cm->config_connectors, cc);
-	qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",
-	       cc->configuration.host, cc->configuration.port, cc->configuration.role);
+
+    if (!qd->config || !cm) {
+        qd_log(cm->log_source, QD_LOG_ERROR, "Cannot configure listeners%s%s",
+	       (qd->config ? "" : ", no configuration"),
+	       (cm ? "" : ", no connection manager"));
+        assert(false);
+        return;
     }
-    return QD_ERROR_NONE;
+
+    count = qd_config_item_count(qd, CONF_LISTENER);
+    for (int i = 0; i < count; i++) {
+        qd_config_listener_t *cl = NEW(qd_config_listener_t);
+        cl->listener = 0;
+        load_server_config(qd, &cl->configuration, CONF_LISTENER, i);
+        DEQ_ITEM_INIT(cl);
+        DEQ_INSERT_TAIL(cm->config_listeners, cl);
+        qd_log(cm->log_source, QD_LOG_INFO, "Configured Listener: %s:%s role=%s",
+               cl->configuration.host, cl->configuration.port, cl->configuration.role);
+    }
+}
+
+
+static void configure_connectors(qd_dispatch_t *qd)
+{
+    int count;
+    qd_connection_manager_t *cm = qd->connection_manager;
+
+    if (!qd->config || !cm) {
+        assert(false);
+        return;
+    }
+
+    count = qd_config_item_count(qd, CONF_CONNECTOR);
+    for (int i = 0; i < count; i++) {
+        qd_config_connector_t *cc = NEW(qd_config_connector_t);
+        cc->context        = 0;
+        cc->connector      = 0;
+        cc->connector_name = 0;
+        cc->started        = false;
+        load_server_config(qd, &cc->configuration, CONF_CONNECTOR, i);
+        DEQ_ITEM_INIT(cc);
+        if (strcmp(cc->configuration.role, "on-demand") == 0) {
+            cc->connector_name =
+                qd_config_item_value_string(qd, CONF_CONNECTOR, i, "name");
+            DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
+            qd_log(cm->log_source, QD_LOG_INFO, "Configured on-demand connector: %s:%s name=%s",
+                   cc->configuration.host, cc->configuration.port, cc->connector_name);
+        } else {
+            DEQ_INSERT_TAIL(cm->config_connectors, cc);
+            qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",
+                   cc->configuration.host, cc->configuration.port, cc->configuration.role);
+        }
+    }
 }
 
 
@@ -164,6 +164,23 @@ qd_connection_manager_t *qd_connection_manager(qd_dispatch_t *qd)
 }
 
 
+static void qd_connection_manager_config_free(qd_server_config_t *cf)
+{
+    if (!cf) return;
+    free(cf->host);
+    free(cf->port);
+    free(cf->role);
+    free(cf->sasl_mechanisms);
+    if (cf->ssl_enabled) {
+        free(cf->ssl_certificate_file);
+        free(cf->ssl_private_key_file);
+        free(cf->ssl_password);
+        free(cf->ssl_trusted_certificate_db);
+        free(cf->ssl_trusted_certificates);
+    }
+}
+
+
 void qd_connection_manager_free(qd_connection_manager_t *cm)
 {
     if (!cm) return;
@@ -171,7 +188,7 @@ void qd_connection_manager_free(qd_connection_manager_t *cm)
     while (cl) {
         DEQ_REMOVE_HEAD(cm->config_listeners);
         qd_server_listener_free(cl->listener);
-        qd_server_config_free(&cl->configuration);
+        qd_connection_manager_config_free(&cl->configuration);
         free(cl);
         cl = DEQ_HEAD(cm->config_listeners);
     }
@@ -180,7 +197,7 @@ void qd_connection_manager_free(qd_connection_manager_t *cm)
     while(cc) {
         DEQ_REMOVE_HEAD(cm->config_connectors);
         qd_server_connector_free(cc->connector);
-        qd_server_config_free(&cc->configuration);
+        qd_connection_manager_config_free(&cc->configuration);
         free(cc);
         cc = DEQ_HEAD(cm->config_connectors);
     }
@@ -190,10 +207,17 @@ void qd_connection_manager_free(qd_connection_manager_t *cm)
         DEQ_REMOVE_HEAD(cm->on_demand_connectors);
         if (odc->connector)
             qd_server_connector_free(odc->connector);
-        qd_server_config_free(&odc->configuration);
+        qd_connection_manager_config_free(&odc->configuration);
         free(odc);
         odc = DEQ_HEAD(cm->on_demand_connectors);
     }
+}
+
+
+void qd_connection_manager_configure(qd_dispatch_t *qd)
+{
+    configure_listeners(qd);
+    configure_connectors(qd);
 }
 
 

@@ -765,7 +765,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
         // address for the link.
         //
         if (!iter && rlink->waypoint) {
-            iter = qd_field_iterator_string(rlink->waypoint->address, ITER_VIEW_ADDRESS_HASH);
+            iter = qd_field_iterator_string(rlink->waypoint->name, ITER_VIEW_ADDRESS_HASH);
             qd_field_iterator_set_phase(iter, rlink->waypoint->out_phase);
         }
 
@@ -1404,7 +1404,6 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     strcat(node_id, id);
 
     qd_router_t *router = NEW(qd_router_t);
-    ZERO(router);
 
     router_node.type_context = router;
 
@@ -1436,6 +1435,11 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     DEQ_INIT(router->waypoints);
 
     //
+    // Configure the router from the configuration file
+    //
+    qd_router_configure(router);
+
+    //
     // Create addresses for all of the routers in the topology.  It will be registered
     // locally later in the initialization sequence.
     //
@@ -1449,6 +1453,11 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     // uses this to offload some of the address-processing load from the router.
     //
     qd_field_iterator_set_address(area, id);
+
+    //
+    // Set up the usage of the embedded python router module.
+    //
+    qd_python_start();
 
     //
     // Seed the random number generator
@@ -1505,9 +1514,8 @@ void qd_router_free(qd_router_t *router)
     free(router->routers_by_mask_bit);
     qd_hash_free(router->addr_hash);
     qd_router_configure_free(router);
-    qd_router_python_free(router);
-
     free(router);
+    qd_python_stop();
     free(node_id);
     free(direct_prefix);
 }

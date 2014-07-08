@@ -26,13 +26,11 @@ import locale
 import socket
 import re
 from proton import Messenger, Message, Timeout
-
-home = os.environ.get("QPID_DISPATCH_HOME")
-if not home:
-    home = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib', 'qpid-dispatch')
-sys.path.insert(0, os.path.join(home, "python"))
-
 from qpid_dispatch_internal.management import Url, Node, Entity
+
+home = os.environ.get("QPID_DISPATCH_HOME", os.path.normpath(os.path.dirname(__file__)))
+sys.path.append(os.path.join(home, "python"))
+
 from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
 
 
@@ -336,10 +334,8 @@ def main(argv=None):
     args = OptionsAndArguments(argv)
     try:
         bm = BusManager(config._address, config._router)
-        try:
-            bm.display(args)
-        finally:
-            bm.stop()
+        bm.display(args)
+        bm.stop()
         return 0
     except KeyboardInterrupt:
         print
@@ -351,6 +347,7 @@ def main(argv=None):
     except Exception,e:
         print "Failed: %s - %s" % (e.__class__.__name__, e)
 
+    bm.stop()
     return 1
 
 if __name__ == "__main__":

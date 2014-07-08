@@ -18,13 +18,33 @@
 ##
 
 """
-AMQP management client for Qpid dispatch.
+AMQP management tools for Qpid dispatch.
 """
 
-import proton, re, threading
+import proton, re, threading, httplib
+from collections import namedtuple
 from entity import Entity, EntityList
-from error import ManagementError, OK, NOT_FOUND
 
+class ManagementError(Exception):
+    """An AMQP management error. str() gives a string with status code and text.
+    @ivar status: integer status code
+    @ivar description: description text
+    """
+    def __init__(self, status, description):
+        self.status, self.description = status, description
+
+    def __str__(self):
+        status_str = httplib.responses.get(self.status)
+        if status_str in self.description: return self.description
+        else: return "%s: %s"%(self.status, self.description)
+
+    @staticmethod
+    def check(status, response):
+        if status != httplib.OK:
+            raise ManagementError(status, response)
+
+
+# FIXME aconway 2014-06-03: proton URL class, conditional import?
 class Url:
     """Simple AMQP URL parser/constructor"""
 
@@ -35,32 +55,33 @@ class Url:
     AMQPS = "amqps"
     AMQP = "amqp"
 
-    def __init__(self, url=None, **kwargs):
+    def __init__(self, s=None, **kwargs):
         """
-        @param url: String or Url instance to parse or copy.
-        @param kwargs: URL fields: scheme, user, password, host, port, path.
-            If specified, replaces corresponding component in url.
+        @param s: String value to convert to URL
+        @param kwargs: URL components: scheme, user, password, host, port, path.
         """
-
-        fields = ['scheme', 'user', 'password', 'host', 'port', 'path']
-
-        for f in fields: setattr(self, f, None)
-        for k in kwargs: getattr(self, k) # Check for invalid kwargs
-
-        if isinstance(url, Url): # Copy from another Url instance.
-            self.__dict__.update(url.__dict__)
-
-        elif url is not None:   # Parse from url
-            match = Url.RE.match(url)
+        if s is None:
+            self.scheme = kwargs.get('scheme')
+            self.user = kwargs.get('user')
+            self.password = kwargs.get('password')
+            self.host = kwargs.get('host')
+            self.port = kwargs.get('port')
+            self.path = kwargs.get('path')
+        elif isinstance(s, Url):
+            self.scheme = s.scheme
+            self.user = s.user
+            self.password = s.password
+            self.host = s.host
+            self.port = s.port
+            self.path = s.path
+        else:
+            match = Url.RE.match(s)
             if match is None:
-                raise ValueError("Invalid AMQP URL: %s"%url)
-            self.scheme, self.user, self.password, host4, host6, port, self.path = match.groups()
+                raise ValueError(s)
+            scheme, self.user, self.password, host4, host6, port, self.path = match.groups()
             self.host = host4 or host6
             self.port = port and int(port)
-
-        # Let kwargs override values previously set from url
-        for field in fields:
-            setattr(self, field, kwargs.get(field, getattr(self, field)))
+            self.scheme = scheme
 
     def __repr__(self):
         return "Url(%r)" % str(self)
@@ -140,8 +161,6 @@ class Node(object):
         self.subscription = self.messenger.subscribe(str(subscribe_address))
         self._flush()
         self.reply_to = self.subscription.address
-        if not self.reply_to:
-            raise ValueError("Failed to subscribe to %s"%subscribe_address)
 
     def stop(self):
         if not self.messenger: return
@@ -157,38 +176,33 @@ class Node(object):
         while self.messenger.work(0.1):
             pass
 
-    def __repr__(self):
-        return "%s(%s)"%(self.__class__.__name__, self.address)
-
     CORRELATION_ID = 0
-    CORRELATION_LOCK = threading.Lock()
+    CORRELATION_LOCK = threading.Lock
 
     def correlation_id(self):
         """Get the next correlation ID. Thread safe."""
-        with self.CORRELATION_LOCK:
-            self.CORRELATION_ID += 1
-            return self.CORRELATION_ID
+        self.CORRELATION_ID += 1
+        return self.CORRELATION_ID
 
-    def check_response(self, response, request):
+    def check_response(self, response, correlation_id=None):
         """
         Check a manaement response message for errors and correlation ID.
         """
-        code = response.properties.get('statusCode')
-        if code != OK:
-            raise ManagementError(code, response.properties.get('statusDescription'))
-        if response.correlation_id != request.correlation_id:
-            raise ManagementError(NOT_FOUND, "Bad correlation id request=%s, response=%s"%(
-                request.correlation_id, response.correlation_id))
+        properties = response.properties
+        ManagementError.check(properties.get('statusCode'), properties.get('statusDescription'))
+        if correlation_id is not None and response.correlation_id != correlation_id:
+            raise ManagementError("Bad correlation id request=%s, response=%s"%(
+                correlation_id, response.correlation_id))
 
 
     def request(self, body=None, **properties):
         """
         Make a L{proton.Message} containining a management request.
         @param body: The request body, a dict or list.
-        @param properties: Keyword arguments for application-properties of the request.
+        @param properties: Map of application-properties for the request.
         @return: L{proton.Message} containining the management request.
         """
-        if self.locales: properties.setdefault('locales', self.locales)
+        if self.locales: properties.set_default(self.locales)
         request = proton.Message()
         request.address=str(self.address)
         request.reply_to=self.reply_to
@@ -197,29 +211,26 @@ class Node(object):
         request.body=remove_none(body or {})
         return request
 
-    def node_request(self, body=None, **properties):
+    def node_request(self, body={}, **properties):
         return self.request(body, name=self.SELF, type=self.NODE_TYPE, **properties)
-
-    def op_request(self, operation, type, name, body=None, **properties):
-        return self.request(body,  name=name, type=type, operation=operation, **properties)
 
     # TODO aconway 2014-06-03: async send/receive
     def call(self, request):
         """
         Send a management request message, wait for a response.
-        @return: Response message.
+        @return: Response message
         """
         if not request.address:
             raise ValueError("Message must have an address")
         if not request.reply_to:
-            raise ValueError("Message must have reply_to %s", request)
+            raise ValueError("Message must have reply_to")
         self.messenger.put(request)
         self.messenger.send()
         self._flush()
         self.messenger.recv(1)
         response = proton.Message()
         self.messenger.get(response)
-        self.check_response(response, request)
+        self.check_response(response)
         return response
 
     class QueryResponse(EntityList):
@@ -235,32 +246,18 @@ class Node(object):
             for r in response.body['results']:
                 self.append(Entity(zip(self.attribute_names, r)))
 
-    def query(self, type=None, attribute_names=None, offset=None, count=None):
+    def query(self, entity_type=None, attribute_names=None, offset=None, count=None):
         """
         Send an AMQP management query message and return the response.
-        At least one of type, attribute_names must be specified.
-        @keyword type: The type of entity to query.
+        At least one of entity_type, attribute_names must be specified.
+        @keyword entity_type: The type of entity to query.
         @keyword attribute_names: A list of attribute names to query.
         @keyword offset: An integer offset into the list of results to return.
         @keyword count: A count of the maximum number of results to return.
         @return: An L{EntityList}
         """
         attribute_names = attribute_names or []
-        request = self.node_request(
-            {'attributeNames':attribute_names},
-            operation='QUERY', entityType=type, offset=offset, count=count)
-
-        response = self.call(request)
+        response = self.call(self.node_request(
+            operation='QUERY', entityType=entity_type, offset=offset, count=count,
+            body={'attributeNames':attribute_names}))
         return Node.QueryResponse(response)
-
-    def create(self, type, name, attributes=None):
-        """
-        Send an AMQP management create message and return the response.
-        @param type: Type of entity to create.
-        @param name: Name for the new entity.
-        @param attributes: Map of attribute name:value for the new entity.
-        @return: Map of actual attributes returned by create (with defaults etc.)
-        """
-        request = self.op_request(operation='CREATE', type=type, name=name, body=attributes or {})
-        response = self.call(request)
-        return response.body

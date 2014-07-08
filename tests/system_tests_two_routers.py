@@ -17,9 +17,9 @@
 # under the License.
 #
 
-import unittest, os
+import unittest, sys, time, os
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED
-from system_test import TestCase, Qdrouterd, retry_exception
+from system_test import TestCase, Messenger, Qdrouterd, retry_exception
 from qpid_dispatch_internal.management import Node
 
 class RouterTest(TestCase):
@@ -95,7 +95,7 @@ class RouterTest(TestCase):
         tm = Message()
         rm = Message()
 
-        self.routers[0].wait_address("pre_settled/1", 0, 1)
+        self.routers[0].wait_address("pre_settled/1", 0, 1, timeout=30)
 
         tm.address = addr
         for i in range(100):

@@ -21,7 +21,11 @@
 Representation of management entities. An entity is a set of named attributes.
 """
 
-from qpid_dispatch_internal.compat import OrderedDict
+try:
+    from collections import OrderedDict
+except:
+    from qpid_dispatch_internal.ordereddict import OrderedDict # For python <= 2.6
+
 
 class Entity(OrderedDict):
     """
@@ -62,3 +66,5 @@ class EntityList(list):
 
     def __getattr__(self, name):
         return self.get(type=name)
+
+__all__ = [ Entity, EntityList ]

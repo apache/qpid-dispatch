@@ -28,7 +28,7 @@ def make_man_page(filename):
     with open(filename, 'w') as f:
 
         f.write(
-r""".\" -*- nroff -*-
+            r""".\" -*- nroff -*-
 .\"
 .\" Licensed to the Apache Software Foundation (ASF) under one
 .\" or more contributor license agreements.  See the NOTICE file
@@ -52,92 +52,62 @@ r""".\" -*- nroff -*-
 qdrouterd.conf \- Configuration file for the Qpid Dispatch router
 .SH DESCRIPTION
 
-The configuration file is made up of sections with this syntax:
+The dispatch router is configured in terms of configuration "entities". Each
+type of entity has a set of associated attributes. For example there is a single
+"router" entity that has attributes to set configuration associated with the
+router as a whole. There may be multiple "listener" and "connector" entities
+that specify how to make and receive external connections.
+
+Some entities have attributes in common, for example "listener" and "connector"
+entities both have attributes to specify an IP address. All entities have "name"
+and "identity" attributes. Commonly used attribute groups are specified as an
+"include group" and referenced from entity types that want to include them.
+
+
+.SH SYNTAX
+
+This file is divided into sections. "Include" sections define groups of
+attributes that are included by multiple entity types. "Entity" sections define
+the attributes associated with each type of configuration entity.
 
 .nf
-SECTION-NAME {
-    ATTRIBUTE-NAME: ATTRIBUTE-VALUE
-    ATTRIBUTE-NAME: ATTRIBUTE-VALUE
+<section-name> {
+    <attribute-name>: <attribute-value>
+    <attribute-name>: <attribute-value>
     ...
 }
+
+<section-name> { ...
 .fi
 
-There are two types of sections:
-
-Entity sections correspond to management entities. They can be queried and
-configured via management tools. By default each section is assigned a
-management name and identity of <section-name>-<n>. For example
-"listener-2". You can provide explicit name and identity attributes in any
-section.
-
-Include sections define a group of attribute values that can be included in
-one or more entity sections.
-
-For example you can define an "ssl-profile" include section with SSL credentials
-that can be included in multiple "listener" entities. Here's an example, note
-how the 'ssl-profile' attribute of 'listener' sections references the 'name'
-attribute of 'ssl-profile' sections.
-
-.nf
-ssl-profile {
-    name: ssl-profile-one
-    cert-db: ca-certificate-1.pem
-    cert-file: server-certificate-1.pem
-    key-file: server-private-key.pem
-}
-
-listener {
-    ssl-profile: ssl-profile-one
-    addr: 0.0.0.0
-    port: 20102
-    sasl-mechanisms: ANONYMOUS
-}
-.fi
+.SH SECTIONS
 """)
-        schema = QdSchema()
-
         def write_attribute(attr, attrs):
             if attr.include and attr.include != attrs:
                 return          # Don't repeat included attributes
-            if attr.value is not None:
-                return          # Don't show fixed-value attributes, they can't be set in conf file.
-
-            default = attr.default
-            if isinstance(default, basestring) and default.startswith('$'):
-                default = None  # Don't show defaults that are references, confusing.
-
             f.write('.IP %s\n'%(attr.name))
             f.write('(%s)\n\n'%(', '.join(
                 filter(None, [str(attr.atype),
                               attr.required and "required",
                               attr.unique and "unique",
-                              default and "default=%s"%default]))))
-            if attr.description:
-                f.write("%s\n"%attr.description)
-            else:
-                print "Warning no description for", attr, "in", attrs
+                              attr.default and "default=%s"%attr.default]))))
+            if attr.description: f.write("%s\n"%attr.description)
 
         def write_attributes(attrs):
             if attrs.description:
                 f.write('\n%s\n'%attrs.description)
-            else:
-                print "Warning no description for ", attrs
             for attr in attrs.attributes.itervalues():
                 write_attribute(attr, attrs)
-            f.write('\n\n')
 
-        f.write(".SH INCLUDE SECTIONS\n\n")
+        schema = QdSchema()
         for include in schema.includes.itervalues():
-            used_by = [e.name for e in schema.entity_types.itervalues() if include.name in e.include]
-            f.write('.SS "%s"\n'%include.name)
+            f.write('.SS "\'%s\' include group"\n'% include.name)
             write_attributes(include)
-            f.write('.IP "Included by %s."\n'%(', '.join(used_by)))
 
-        f.write(".SH ENTITY SECTIONS\n\n")
         for name, entity_type in schema.entity_types.iteritems():
-            f.write('.SS "%s"\n'% name)
+            f.write('.SS "\'%s\' entity"\n'% name)
+            f.write('Includes: %s\n\n'%(', '.join(entity_type.include)))
             write_attributes(entity_type)
-            f.write('.IP "Includes %s."\n'%(', '.join(entity_type.include)))
 
 
 if __name__ == '__main__':

@@ -17,6 +17,11 @@
 # under the License.
 #
 
+try:
+    from dispatch import *
+except ImportError:
+    from ..stubs import *
+
 class RoutingTableEngine(object):
     """
     This module is responsible for converting the set of next hops to remote routers to a routing
@@ -57,3 +62,4 @@ class RoutingTableEngine(object):
 
     def get_next_hops(self):
         return self.next_hops
+

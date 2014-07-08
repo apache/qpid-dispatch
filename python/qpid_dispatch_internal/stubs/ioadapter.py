@@ -14,19 +14,14 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
-# under the License
+# under the License.
 #
 
-"""Compatibility hacks for older versions of python"""
+class IoAdapter:
+  def __init__(self, handler, address):
+    self.handler = handler
+    self.address = address
 
-import sys
+  def send(self, address, app_properties, body):
+    print "IO: send(addr=%s props=%r body=%r" % (address, app_properties, body)
 
-__all__ = ["OrderedDict"]
-
-try: from collections import OrderedDict
-except: from ordereddict import OrderedDict
-
-if sys.version_info >= (2,7):
-    json_load_kwargs = {'object_pairs_hook':OrderedDict}
-else:
-    json_load_kwargs = {}

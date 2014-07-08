@@ -24,7 +24,6 @@
 #include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/router.h>
-#include <qpid/dispatch/error.h>
 
 
 //===============================================================================
@@ -32,12 +31,11 @@
 //===============================================================================
 
 static qd_dispatch_t   *dispatch   = 0;
+static uint32_t         ref_count  = 0;
 static sys_mutex_t     *ilock      = 0;
 static qd_log_source_t *log_source = 0;
 static PyObject        *dispatch_module = 0;
-static PyObject        *message_type = 0;
 static PyObject        *dispatch_python_pkgdir = 0;
-static PyObject        *qpid_dispatch_lib = 0;
 
 static qd_address_semantics_t py_semantics = QD_FANOUT_MULTIPLE | QD_BIAS_NONE | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS;
 
@@ -45,29 +43,48 @@ static void qd_python_setup(void);
 
 
 void qd_python_initialize(qd_dispatch_t *qd,
-                          const char *python_pkgdir,
-                          const char *qpid_dispatch_lib_)
+                          const char    *python_pkgdir)
 {
     log_source = qd_log_source("PYTHON");
     dispatch = qd;
     ilock = sys_mutex();
     if (python_pkgdir)
         dispatch_python_pkgdir = PyString_FromString(python_pkgdir);
-    if (qpid_dispatch_lib_)
-        qpid_dispatch_lib = PyString_FromString(qpid_dispatch_lib_);
-    Py_Initialize();
-
-    qd_python_setup();
 }
 
 
 void qd_python_finalize(void)
 {
+    assert(ref_count == 0);
     sys_mutex_free(ilock);
-    Py_DECREF(dispatch_module);
-    dispatch_module = 0;
-    PyGC_Collect();
-    Py_Finalize();
+}
+
+
+void qd_python_start(void)
+{
+    sys_mutex_lock(ilock);
+    if (ref_count == 0) {
+        Py_Initialize();
+        qd_python_setup();
+        qd_log(log_source, QD_LOG_TRACE, "Embedded Python Interpreter Initialized");
+    }
+    ref_count++;
+    sys_mutex_unlock(ilock);
+}
+
+
+void qd_python_stop(void)
+{
+    sys_mutex_lock(ilock);
+    ref_count--;
+    if (ref_count == 0) {
+        Py_DECREF(dispatch_module);
+        dispatch_module = 0;
+        PyGC_Collect();
+        Py_Finalize();
+        qd_log(log_source, QD_LOG_TRACE, "Embedded Python Interpreter Shut Down");
+    }
+    sys_mutex_unlock(ilock);
 }
 
 
@@ -85,15 +102,15 @@ PyObject *qd_python_module(void)
 static PyObject *parsed_to_py_string(qd_parsed_field_t *field)
 {
     switch (qd_parse_tag(field)) {
-      case QD_AMQP_VBIN8:
-      case QD_AMQP_VBIN32:
-      case QD_AMQP_STR8_UTF8:
-      case QD_AMQP_STR32_UTF8:
-      case QD_AMQP_SYM8:
-      case QD_AMQP_SYM32:
+    case QD_AMQP_VBIN8:
+    case QD_AMQP_VBIN32:
+    case QD_AMQP_STR8_UTF8:
+    case QD_AMQP_STR32_UTF8:
+    case QD_AMQP_SYM8:
+    case QD_AMQP_SYM32:
         break;
-      default:
-        Py_RETURN_NONE;
+    default:
+        return Py_None;
     }
 
 #define SHORT_BUF 1024
@@ -122,34 +139,32 @@ static PyObject *parsed_to_py_string(qd_parsed_field_t *field)
 }
 
 
-qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
+void qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
 {
-    qd_error_clear();
-    if (value == Py_None) {
-        // Do nothing
-    }
-    else if (PyBool_Check(value)) {
+    if      (PyBool_Check(value))
         qd_compose_insert_bool(field, PyInt_AS_LONG(value) ? 1 : 0);
-    }
-    else if (PyInt_Check(value)) {
+
+    //else if (PyFloat_Check(value))
+    //    qd_compose_insert_double(field, PyFloat_AS_DOUBLE(value));
+
+    else if (PyInt_Check(value))
         qd_compose_insert_long(field, (int64_t) PyInt_AS_LONG(value));
-    }
-    else if (PyLong_Check(value)) {
+
+    else if (PyLong_Check(value))
         qd_compose_insert_long(field, (int64_t) PyLong_AsLongLong(value));
-    }
-    else if (PyString_Check(value) || PyUnicode_Check(value)) {
-        qd_compose_insert_string(field, PyString_AsString(value));
-    }
+
+    else if (PyString_Check(value))
+        qd_compose_insert_string(field, PyString_AS_STRING(value));
+
     else if (PyDict_Check(value)) {
         Py_ssize_t  iter = 0;
         PyObject   *key;
         PyObject   *val;
         qd_compose_start_map(field);
         while (PyDict_Next(value, &iter, &key, &val)) {
-            qd_py_to_composed(key, field); QD_ERROR_RET();
-            qd_py_to_composed(val, field); QD_ERROR_RET();
+            qd_py_to_composed(key, field);
+            qd_py_to_composed(val, field);
         }
-        QD_ERROR_PY_RET();
         qd_compose_end_map(field);
     }
 
@@ -157,8 +172,8 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
         Py_ssize_t count = PyList_Size(value);
         qd_compose_start_list(field);
         for (Py_ssize_t idx = 0; idx < count; idx++) {
-            PyObject *item = PyList_GetItem(value, idx); QD_ERROR_PY_RET();
-            qd_py_to_composed(item, field); QD_ERROR_RET();
+            PyObject *item = PyList_GetItem(value, idx);
+            qd_py_to_composed(item, field);
         }
         qd_compose_end_list(field);
     }
@@ -167,136 +182,111 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
         Py_ssize_t count = PyTuple_Size(value);
         qd_compose_start_list(field);
         for (Py_ssize_t idx = 0; idx < count; idx++) {
-            PyObject *item = PyTuple_GetItem(value, idx); QD_ERROR_PY_RET();
-            qd_py_to_composed(item, field); QD_ERROR_RET();
+            PyObject *item = PyTuple_GetItem(value, idx);
+            qd_py_to_composed(item, field);
         }
         qd_compose_end_list(field);
     }
-    else {
-        PyObject *type=0, *typestr=0, *repr=0;
-        if ((type = PyObject_Type(value)) &&
-            (typestr = PyObject_Str(type)) &&
-            (repr = PyObject_Repr(value)))
-            qd_error(QD_ERROR_TYPE, "Can't compose object of type %s: %s",
-                     PyString_AsString(typestr), PyString_AsString(repr));
-        else
-            qd_error(QD_ERROR_TYPE, "Can't compose python object of unknown type");
-
-        Py_XDECREF(type);
-        Py_XDECREF(typestr);
-        Py_XDECREF(repr);
-    }
-    return qd_error_code();
 }
 
-void qd_py_attr_to_composed(PyObject *object, const char *attr, qd_composed_field_t *field)
-{
-    PyObject *value = PyObject_GetAttrString(object, attr);
-    if (value) {
-        qd_py_to_composed(value, field);
-        Py_DECREF(value);
-    }
-    else {
-        qd_error_py();
-    }
-}
 
 PyObject *qd_field_to_py(qd_parsed_field_t *field)
 {
-    PyObject *result = 0;
+    PyObject *result = Py_None;
     uint8_t   tag    = qd_parse_tag(field);
+
     switch (tag) {
-      case QD_AMQP_NULL:
+    case QD_AMQP_NULL:
+        result = Py_None;
         break;
 
-      case QD_AMQP_BOOLEAN:
-      case QD_AMQP_TRUE:
-      case QD_AMQP_FALSE:
+    case QD_AMQP_BOOLEAN:
+    case QD_AMQP_TRUE:
+    case QD_AMQP_FALSE:
         result = qd_parse_as_uint(field) ? Py_True : Py_False;
         break;
 
-      case QD_AMQP_UBYTE:
-      case QD_AMQP_USHORT:
-      case QD_AMQP_UINT:
-      case QD_AMQP_SMALLUINT:
-      case QD_AMQP_UINT0:
+    case QD_AMQP_UBYTE:
+    case QD_AMQP_USHORT:
+    case QD_AMQP_UINT:
+    case QD_AMQP_SMALLUINT:
+    case QD_AMQP_UINT0:
         result = PyInt_FromLong((long) qd_parse_as_uint(field));
         break;
 
-      case QD_AMQP_ULONG:
-      case QD_AMQP_SMALLULONG:
-      case QD_AMQP_ULONG0:
-      case QD_AMQP_TIMESTAMP:
+    case QD_AMQP_ULONG:
+    case QD_AMQP_SMALLULONG:
+    case QD_AMQP_ULONG0:
+    case QD_AMQP_TIMESTAMP:
         result = PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) qd_parse_as_ulong(field));
         break;
 
-      case QD_AMQP_BYTE:
-      case QD_AMQP_SHORT:
-      case QD_AMQP_INT:
-      case QD_AMQP_SMALLINT:
+    case QD_AMQP_BYTE:
+    case QD_AMQP_SHORT:
+    case QD_AMQP_INT:
+    case QD_AMQP_SMALLINT:
         result = PyInt_FromLong((long) qd_parse_as_int(field));
         break;
 
-      case QD_AMQP_LONG:
-      case QD_AMQP_SMALLLONG:
+    case QD_AMQP_LONG:
+    case QD_AMQP_SMALLLONG:
         result = PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) qd_parse_as_long(field));
         break;
 
-      case QD_AMQP_FLOAT:
-      case QD_AMQP_DOUBLE:
-      case QD_AMQP_DECIMAL32:
-      case QD_AMQP_DECIMAL64:
-      case QD_AMQP_DECIMAL128:
-      case QD_AMQP_UTF32:
-      case QD_AMQP_UUID:
+    case QD_AMQP_FLOAT:
+    case QD_AMQP_DOUBLE:
+    case QD_AMQP_DECIMAL32:
+    case QD_AMQP_DECIMAL64:
+    case QD_AMQP_DECIMAL128:
+    case QD_AMQP_UTF32:
+    case QD_AMQP_UUID:
         break;
 
-      case QD_AMQP_VBIN8:
-      case QD_AMQP_VBIN32:
-      case QD_AMQP_STR8_UTF8:
-      case QD_AMQP_STR32_UTF8:
-      case QD_AMQP_SYM8:
-      case QD_AMQP_SYM32:
+    case QD_AMQP_VBIN8:
+    case QD_AMQP_VBIN32:
+    case QD_AMQP_STR8_UTF8:
+    case QD_AMQP_STR32_UTF8:
+    case QD_AMQP_SYM8:
+    case QD_AMQP_SYM32:
         result = parsed_to_py_string(field);
         break;
 
-      case QD_AMQP_LIST0:
-      case QD_AMQP_LIST8:
-      case QD_AMQP_LIST32: {
-          uint32_t count = qd_parse_sub_count(field);
-          result = PyList_New(count);
-          for (uint32_t idx = 0; idx < count; idx++) {
-              qd_parsed_field_t *sub = qd_parse_sub_value(field, idx);
-              PyObject *pysub = qd_field_to_py(sub);
-              if (pysub == 0)
-                  return 0;
-              PyList_SetItem(result, idx, pysub);
-          }
-          break;
-      }
-      case QD_AMQP_MAP8:
-      case QD_AMQP_MAP32: {
-          uint32_t count = qd_parse_sub_count(field);
-          result = PyDict_New();
-          for (uint32_t idx = 0; idx < count; idx++) {
-              qd_parsed_field_t *key = qd_parse_sub_key(field, idx);
-              qd_parsed_field_t *val = qd_parse_sub_value(field, idx);
-              PyObject *pykey = parsed_to_py_string(key);
-              PyObject *pyval = qd_field_to_py(val);
-              if (pyval == 0)
-                  return 0;
-              PyDict_SetItem(result, pykey, pyval);
-              Py_DECREF(pykey);
-              Py_DECREF(pyval);
-          }
-          break;
-      }
-      case QD_AMQP_ARRAY8:
-      case QD_AMQP_ARRAY32:
+    case QD_AMQP_LIST0:
+    case QD_AMQP_LIST8:
+    case QD_AMQP_LIST32: {
+        uint32_t count = qd_parse_sub_count(field);
+        result = PyList_New(count);
+        for (uint32_t idx = 0; idx < count; idx++) {
+            qd_parsed_field_t *sub = qd_parse_sub_value(field, idx);
+            PyObject *pysub = qd_field_to_py(sub);
+            if (pysub == 0)
+                return 0;
+            PyList_SetItem(result, idx, pysub);
+        }
         break;
     }
-    if (!result)
-        Py_RETURN_NONE;
+    case QD_AMQP_MAP8:
+    case QD_AMQP_MAP32: {
+        uint32_t count = qd_parse_sub_count(field);
+        result = PyDict_New();
+        for (uint32_t idx = 0; idx < count; idx++) {
+            qd_parsed_field_t *key = qd_parse_sub_key(field, idx);
+            qd_parsed_field_t *val = qd_parse_sub_value(field, idx);
+            PyObject *pykey = parsed_to_py_string(key);
+            PyObject *pyval = qd_field_to_py(val);
+            if (pyval == 0)
+                return 0;
+            PyDict_SetItem(result, pykey, pyval);
+            Py_DECREF(pykey);
+            Py_DECREF(pyval);
+        }
+        break;
+    }
+    case QD_AMQP_ARRAY8:
+    case QD_AMQP_ARRAY32:
+        break;
+    }
+
     return result;
 }
 
@@ -355,7 +345,7 @@ static PyMethodDef LogAdapter_methods[] = {
 };
 
 static PyMethodDef empty_methods[] = {
-    {0, 0, 0, 0}
+  {0, 0, 0, 0}
 };
 
 static PyTypeObject LogAdapterType = {
@@ -417,59 +407,12 @@ static PyTypeObject LogAdapterType = {
 typedef struct {
     PyObject_HEAD
     PyObject       *handler;
+    PyObject       *handler_rx_call;
     qd_dispatch_t  *qd;
-    qd_address_t   *addr;
+    Py_ssize_t      addr_count;
+    qd_address_t  **addrs;
 } IoAdapter;
 
-// Parse an iterator to a python object.
-static PyObject *py_iter_parse(qd_field_iterator_t *iter)
-{
-    qd_parsed_field_t *parsed=0;
-    if (iter && (parsed = qd_parse(iter))) {
-        if (!qd_parse_ok(parsed)) {
-            qd_error(QD_ERROR_MESSAGE, qd_parse_error(parsed));
-            qd_parse_free(parsed);
-            return 0;
-        }
-        PyObject *value = qd_field_to_py(parsed);
-        qd_parse_free(parsed);
-        qd_error_py();
-        return value;
-    }
-    qd_error(QD_ERROR_MESSAGE, "Failed to parse message field");
-    return 0;
-}
-
-// Copy a string value from an iterator as a python object.
-static PyObject *py_iter_copy(qd_field_iterator_t *iter)
-{
-    unsigned char *bytes = 0;
-    PyObject *value = 0;
-    (void)(iter && (bytes = qd_field_iterator_copy(iter)) && (value = PyString_FromString((char*)bytes)));
-    if (bytes) free(bytes);
-    return value;
-}
-
-// Copy a message field, using to_py to a python object attribute.
-static qd_error_t iter_to_py_attr(qd_field_iterator_t *iter,
-                                  PyObject* (*to_py)(qd_field_iterator_t *),
-                                  PyObject *obj, const char *attr)
-{
-    qd_error_clear();
-    if (iter) {
-        PyObject *value = to_py(iter);
-        qd_field_iterator_free(iter);
-        if (value) {
-            PyObject_SetAttrString(obj, attr, value);
-            Py_DECREF(value);
-        }
-        else {
-            qd_error_py();      /* In case there were python errors. */
-            qd_error(QD_ERROR_MESSAGE, "Can't convert message field %s", attr);
-        }
-    }
-    return qd_error_code();
-}
 
 static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
 {
@@ -481,119 +424,150 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
     if (!qd_message_check(msg, QD_DEPTH_BODY))
         return;
 
-    PyObject *py_msg = PyObject_CallFunction(message_type, NULL);
-    if (!py_msg) {
-        qd_error_py();
+    //
+    // Get an iterator for the application-properties.  Exit if the message has none.
+    //
+    qd_field_iterator_t *ap = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
+    if (ap == 0)
+        return;
+
+    //
+    // Try to get a map-view of the application-properties.
+    //
+    qd_parsed_field_t *ap_map = qd_parse(ap);
+    if (ap_map == 0 || !qd_parse_ok(ap_map) || !qd_parse_is_map(ap_map)) {
+        qd_field_iterator_free(ap);
+        qd_parse_free(ap_map);
         return;
     }
 
-    iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_TO), py_iter_copy, py_msg, "address");
-    iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_REPLY_TO), py_iter_copy, py_msg, "reply_to");
-    // Note: correlation ID requires _typed()
-    iter_to_py_attr(qd_message_field_iterator_typed(msg, QD_FIELD_CORRELATION_ID), py_iter_parse, py_msg, "correlation_id");
-    iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES), py_iter_parse, py_msg, "properties");
-    iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_BODY), py_iter_parse, py_msg, "body");
+    //
+    // Get an iterator for the body.  Exit if the message has none.
+    //
+    qd_field_iterator_t *body = qd_message_field_iterator(msg, QD_FIELD_BODY);
+    if (body == 0) {
+        qd_field_iterator_free(ap);
+        qd_parse_free(ap_map);
+        return;
+    }
+
+    //
+    // Try to get a map-view of the body.
+    //
+    qd_parsed_field_t *body_map = qd_parse(body);
+    if (body_map == 0 || !qd_parse_ok(body_map) || !qd_parse_is_map(body_map)) {
+        qd_field_iterator_free(ap);
+        qd_field_iterator_free(body);
+        qd_parse_free(ap_map);
+        qd_parse_free(body_map);
+        return;
+    }
 
     sys_mutex_lock(ilock);
-    PyObject *value = PyObject_CallFunction(self->handler, "Ol", py_msg, link_id);
+    PyObject *pAP   = qd_field_to_py(ap_map);
+    PyObject *pBody = qd_field_to_py(body_map);
+
+    PyObject *pArgs = PyTuple_New(3);
+    PyTuple_SetItem(pArgs, 0, pAP);
+    PyTuple_SetItem(pArgs, 1, pBody);
+    PyTuple_SetItem(pArgs, 2, PyInt_FromLong((long) link_id));
+
+    PyObject *pValue = PyObject_CallObject(self->handler_rx_call, pArgs);
+    Py_DECREF(pArgs);
+    if (pValue) {
+        Py_DECREF(pValue);
+    }
     sys_mutex_unlock(ilock);
 
-    Py_DECREF(py_msg);
-    Py_XDECREF(value);
-    qd_error_py();
+    qd_field_iterator_free(ap);
+    qd_field_iterator_free(body);
+    qd_parse_free(ap_map);
+    qd_parse_free(body_map);
 }
 
 
 static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
 {
-    PyObject *addr;
-    int global = 0;
-    if (!PyArg_ParseTuple(args, "OO|i", &self->handler, &addr, &global))
+    PyObject *addrs;
+    if (!PyArg_ParseTuple(args, "OO", &self->handler, &addrs))
         return -1;
-    if (!PyCallable_Check(self->handler)) {
-        PyErr_SetString(PyExc_TypeError, "IoAdapter.__init__ handler is not callable");
+
+    self->handler_rx_call = PyObject_GetAttrString(self->handler, "receive");
+    if (!self->handler_rx_call || !PyCallable_Check(self->handler_rx_call))
         return -1;
-    }
+
+    if (!PyTuple_Check(addrs))
+        return -1;
+
     Py_INCREF(self->handler);
-    self->qd = dispatch;
-    const char *address = PyString_AsString(addr);
-    if (!address) return -1;
-    qd_error_clear();
-    self->addr =
-        qd_router_register_address(self->qd, address, qd_io_rx_handler, py_semantics, global, self);
-    if (qd_error_code()) {
-        PyErr_SetString(PyExc_RuntimeError, qd_error_message());
-        return -1;
-    }
+    Py_INCREF(self->handler_rx_call);
+    self->qd         = dispatch;
+    self->addr_count = PyTuple_Size(addrs);
+    self->addrs      = NEW_PTR_ARRAY(qd_address_t, self->addr_count);
+    for (Py_ssize_t idx = 0; idx < self->addr_count; idx++)
+        self->addrs[idx] = qd_router_register_address(self->qd,
+                                                      PyString_AS_STRING(PyTuple_GetItem(addrs, idx)),
+                                                      qd_io_rx_handler, py_semantics, false, self);
     return 0;
 }
+
 
 static void IoAdapter_dealloc(IoAdapter* self)
 {
-    qd_router_unregister_address(self->addr);
-    free(self->addr);
+    for (Py_ssize_t idx = 0; idx < self->addr_count; idx++)
+        qd_router_unregister_address(self->addrs[idx]);
+    free(self->addrs);
     Py_DECREF(self->handler);
+    Py_DECREF(self->handler_rx_call);
     self->ob_type->tp_free((PyObject*)self);
 }
 
-static qd_error_t compose_python_message(qd_composed_field_t **field, PyObject *message,
-                                         qd_dispatch_t* qd) {
-    *field = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, *field);
-    qd_compose_start_map(*field);
 
-    qd_compose_insert_string(*field, QD_MA_INGRESS);
-    qd_compose_insert_string(*field, qd_router_id(qd));
-
-    qd_compose_insert_string(*field, QD_MA_TRACE);
-    qd_compose_start_list(*field);
-    qd_compose_insert_string(*field, qd_router_id(qd));
-    qd_compose_end_list(*field);
-
-    qd_compose_end_map(*field);
-
-    *field = qd_compose(QD_PERFORMATIVE_PROPERTIES, *field);
-    qd_compose_start_list(*field);
-    qd_compose_insert_null(*field);                                 // message-id
-    qd_compose_insert_null(*field);                                 // user-id
-    qd_py_attr_to_composed(message, "address", *field); QD_ERROR_RET(); // to
-    qd_compose_insert_null(*field);                                 // subject
-    qd_compose_insert_null(*field);                                 // reply-to
-    qd_py_attr_to_composed(message, "correlation_id", *field); QD_ERROR_RET(); // correlation-id
-    qd_compose_end_list(*field);
-
-    *field = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, *field);  QD_ERROR_RET();
-    qd_py_attr_to_composed(message, "properties", *field); QD_ERROR_RET();
-
-    *field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, *field); QD_ERROR_RET();
-    qd_py_attr_to_composed(message, "body", *field); QD_ERROR_RET();
-    return qd_error_code();
-}
-
-static PyObject *qd_python_send(PyObject *self, PyObject *args)
+static PyObject* qd_python_send(PyObject *self, PyObject *args)
 {
-    qd_error_clear();
     IoAdapter           *ioa   = (IoAdapter*) self;
     qd_composed_field_t *field = 0;
-    PyObject *message = 0;
+    const char          *address;
+    PyObject            *app_properties;
+    PyObject            *body;
 
-    if (!PyArg_ParseTuple(args, "O", &message))
+    if (!PyArg_ParseTuple(args, "sOO", &address, &app_properties, &body))
         return 0;
 
-    if (compose_python_message(&field, message, ioa->qd) == QD_ERROR_NONE) {
-        qd_message_t *msg = qd_message();
-        qd_message_compose_2(msg, field);
-        PyObject *address = PyObject_GetAttrString(message, "address");
-        if (address) {
-            qd_router_send2(ioa->qd, PyString_AsString(address), msg);
-            Py_DECREF(address);
-        }
-        qd_compose_free(field);
-        qd_message_free(msg);
-        Py_RETURN_NONE;
-    }
-    if (!PyErr_Occurred())
-        PyErr_SetString(PyExc_RuntimeError, qd_error_message());
-    return 0;
+    field = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, field);
+    qd_compose_start_map(field);
+
+    qd_compose_insert_string(field, QD_MA_INGRESS);
+    qd_compose_insert_string(field, qd_router_id(ioa->qd));
+
+    qd_compose_insert_string(field, QD_MA_TRACE);
+    qd_compose_start_list(field);
+    qd_compose_insert_string(field, qd_router_id(ioa->qd));
+    qd_compose_end_list(field);
+
+    qd_compose_end_map(field);
+
+    field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
+    qd_compose_start_list(field);
+    qd_compose_insert_null(field);            // message-id
+    qd_compose_insert_null(field);            // user-id
+    qd_compose_insert_string(field, address); // to
+    qd_compose_end_list(field);
+
+    field = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, field);
+    qd_py_to_composed(app_properties, field);
+
+    field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, field);
+    qd_py_to_composed(body, field);
+
+    qd_message_t *msg = qd_message();
+    qd_message_compose_2(msg, field);
+    qd_router_send2(ioa->qd, address, msg);
+    qd_message_free(msg);
+    qd_compose_free(field);
+
+    Py_INCREF(Py_None);
+    return Py_None;
 }
 
 
@@ -659,7 +633,7 @@ static PyTypeObject IoAdapterType = {
 // Initialization of Modules and Types
 //===============================================================================
 
-static void qd_register_constant(PyObject *module, const char *name, uint32_t value)
+static void qd_register_log_constant(PyObject *module, const char *name, uint32_t value)
 {
     PyObject *const_object = PyInt_FromLong((long) value);
     Py_INCREF(const_object);
@@ -686,11 +660,6 @@ static void qd_python_setup(void)
             PyList_Append(sys_path, dispatch_python_pkgdir);
         }
 
-        // Set the QPID_DISPATCH_LIB constant.
-        if (qpid_dispatch_lib) {
-            PyModule_AddObject(m, "QPID_DISPATCH_LIB", qpid_dispatch_lib);
-        }
-
         //
         // Add LogAdapter
         //
@@ -698,32 +667,21 @@ static void qd_python_setup(void)
         Py_INCREF(laType);
         PyModule_AddObject(m, "LogAdapter", (PyObject*) &LogAdapterType);
 
-        qd_register_constant(m, "LOG_TRACE",    QD_LOG_TRACE);
-        qd_register_constant(m, "LOG_DEBUG",    QD_LOG_DEBUG);
-        qd_register_constant(m, "LOG_INFO",     QD_LOG_INFO);
-        qd_register_constant(m, "LOG_NOTICE",   QD_LOG_NOTICE);
-        qd_register_constant(m, "LOG_WARNING",  QD_LOG_WARNING);
-        qd_register_constant(m, "LOG_ERROR",    QD_LOG_ERROR);
-        qd_register_constant(m, "LOG_CRITICAL", QD_LOG_CRITICAL);
+        qd_register_log_constant(m, "LOG_TRACE",    QD_LOG_TRACE);
+        qd_register_log_constant(m, "LOG_DEBUG",    QD_LOG_DEBUG);
+        qd_register_log_constant(m, "LOG_INFO",     QD_LOG_INFO);
+        qd_register_log_constant(m, "LOG_NOTICE",   QD_LOG_NOTICE);
+        qd_register_log_constant(m, "LOG_WARNING",  QD_LOG_WARNING);
+        qd_register_log_constant(m, "LOG_ERROR",    QD_LOG_ERROR);
+        qd_register_log_constant(m, "LOG_CRITICAL", QD_LOG_CRITICAL);
 
+        //
         PyTypeObject *ioaType = &IoAdapterType;
         Py_INCREF(ioaType);
         PyModule_AddObject(m, "IoAdapter", (PyObject*) &IoAdapterType);
 
         Py_INCREF(m);
         dispatch_module = m;
-    }
-
-    // Get the router.message.Message class.
-    PyObject *message_module =
-        PyImport_ImportModule("qpid_dispatch_internal.router.message");
-    if (message_module) {
-        message_type = PyObject_GetAttrString(message_module, "Message");
-        Py_DECREF(message_module);
-    }
-    if (!message_type) {
-        qd_error_py();
-        return;
     }
 }
 

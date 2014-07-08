@@ -1,64 +1,25 @@
 {
   "prefix": "org.apache.qpid.dispatch",
   "includes": {
-    "common": {
-      "description":"Attributes common to all entities.",
+    "entity-id": {
+      "description":"Name and identity attributes are common to all entity types",
       "attributes": {
         "name": {
           "type": "String",
           "required": true,
           "unique": true,
-	  "default": "$identity",
           "description": "Unique name, can be changed."
         },
         "identity": {
           "type": "String",
           "required": true,
           "unique": true,
-	  "default": "$name",
           "description": "Unique identity, will not change."
-        },
-	"type": {
-	  "type": "String",
-	  "required": true,
-	  "value": "$$entity-type",
-	  "description": "Management entity type."
-	}
-      }
-    },
-    "ip-address": {
-      "attributes": {
-        "addr": {
-	  "description":"IP address: ipv4 or ipv6 literal or a host name",
-          "type": "String",
-          "default": "0.0.0.0"
-        },
-        "port": {
-	  "description":"Port number or symbolic service name",
-          "type": "String",
-          "default": "amqp"
-        }
-      }
-    },
-    "connection": {
-      "attributes": {
-        "sasl-mechanisms": {
-          "type": "String",
-          "required": true,
-          "description": "Comma separated list of accepted SASL authentication mechanisms."
-        },
-        "role": {
-          "type": [
-            "normal",
-            "inter-router",
-	    "on-demand"
-          ],
-          "default": "normal",
-          "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. "
         }
       }
     },
     "ssl-profile": {
+      "description": "SSL profile to be referenced in listeners (for incoming connections) or connectors (for outgoing connectors).",
       "attributes": {
         "cert-db": {
           "type": "String",
@@ -81,19 +42,49 @@
           "description": "An alternative to storing the password in a file referenced by password-file is to supply the password right here in the configuration file.  This option can be used by supplying the password in the 'password' option.  Don't use both password and password-file in the same profile. "
         }
       }
+    },
+    "ip-addr": {
+      "description": "IP address to be referenced in listeners (for incoming connections) or connectors (for outgoing connectors).",
+      "attributes": {
+        "addr": {
+	  "description":"IP address: ipv4 or ipv6 literal or a host name",
+          "type": "String",
+          "default": "0.0.0.0"
+        },
+        "port": {
+	  "description":"Port number or symbolic service name",
+          "type": "String",
+          "default": "amqp"
+        }
+      }
+    },
+    "connection": {
+      "description": "Common connection attributes for listeners and connectors.",
+      "attributes": {
+        "sasl-mechanisms": {
+          "type": "String",
+          "required": true,
+          "description": "Comma separated list of accepted SASL mechanisms."
+        },
+        "role": {
+          "type": [
+            "normal",
+            "inter-router",
+	    "on-demand"
+          ],
+          "default": "normal",
+          "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. "
+        }
+      }
     }
   },
   "entity_types": {
     "container": {
       "singleton": true,
       "include": [
-        "common"
+        "entity-id"
       ],
       "attributes": {
-	"container-name": {
-	  "type": "String",
-	  "description": "The  name of the AMQP container.  If not specified, the container name will be set to a value of the container's choosing.  The automatically assigned container name is not guaranteed to be persistent across restarts of the container."
-	},
         "worker-threads": {
           "type": "Integer",
           "default": "1",
@@ -105,18 +96,14 @@
     "router": {
       "singleton": true,
       "include": [
-        "common"
+        "entity-id"
       ],
       "attributes": {
-	"router-id": {
-	  "type": "String"
-	},
         "mode": {
           "type": [
             "standalone",
             "interior",
-	    "edge",
-	    "endpoint"
+	    "edge"
           ],
           "default": "standalone",
           "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not coorperate with other routers. In interior mode, the router operates in cooreration with other interior routers in an interconnected network.  In edge mode, the router operates with an uplink into an interior router network. Edge routers are typically used as connection concentrators or as security firewalls for access into the interior network. "
@@ -154,11 +141,10 @@
     },
 
     "listener": {
-      "description": "Listens for incoming connections to the router",
       "include": [
-        "common",
+        "entity-id",
         "ssl-profile",
-        "ip-address",
+        "ip-addr",
 	"connection"
       ],
       "attributes": {
@@ -184,11 +170,10 @@
       }
     },
     "connector": {
-      "description": "Establishes an outgoing connections from the router",
       "include": [
-        "common",
+        "entity-id",
         "ssl-profile",
-        "ip-address",
+        "ip-addr",
 	"connection"
       ],
       "attributes": {
@@ -205,25 +190,23 @@
       }
     },
 
-    "log": {
-      "description": "Set the level of logging output from a particular module",
+    "logging": {
       "include": [
-        "common"
+        "entity-id"
       ],
       "attributes": {
 	"module": {
 	  "type":[
-	    "ROUTER",
-	    "MESSAGE",
-	    "SERVER",
-	    "AGENT",
-	    "CONTAINER",
-	    "CONFIG",
-	    "DEFAULT",
-	    "ERROR"
+	    "router",
+	    "message",
+	    "server",
+	    "agent",
+	    "container",
+	    "config",
+	    "default",
+	    "error"
 	  ],
-	  "required": true,
-	  "description": "Module to configure logging level. The special module 'DEFAULT' specifies logging for modules that don't have explicit log sections."
+	  "description": "Module to configure logging level. The special module 'default' specifies logging for modules that don't have explicit log sections."
 	},
         "level": {
           "type": [
@@ -237,7 +220,7 @@
             "critical"
           ],
           "default": "info",
-          "description": "Indicates the minimum logging level for the module. E.g. 'warning' means log warning, error and critical messages. 'trace' logs all messages. 'none' disables logging for the module. "
+          "description": "Indicates the minimum logging level for the module. E.g. WARNING means log WARNING, ERROR and CRITICAL messages. TRACE logs all messages. NONE disables logging for the module. "
         },
         "timestamp": {
           "type": "Boolean",
@@ -253,7 +236,7 @@
 
     "fixed-address": {
       "include": [
-        "common"
+        "entity-id"
       ],
       "attributes": {
         "prefix": {
@@ -286,17 +269,9 @@
 
     "waypoint": {
       "include": [
-        "common"
+        "entity-id"
       ],
       "attributes": {
-        "address": {
-          "type": "String",
-          "required": true
-        },
-        "connector": {
-          "type": "String",
-          "required": true
-        },
         "in-phase": {
           "type": "Integer",
           "default": -1
@@ -304,6 +279,10 @@
         "out-phase": {
           "type": "Integer",
           "default": -1
+        },
+        "connector": {
+          "type": "String",
+          "required": true
         }
       }
     }

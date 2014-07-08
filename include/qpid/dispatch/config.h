@@ -1,5 +1,5 @@
-#ifndef __dispatch_h__
-#define __dispatch_h__ 1
+#ifndef __dispatch_config_h__
+#define __dispatch_config_h__ 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,27 +19,21 @@
  * under the License.
  */
 
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/bitmask.h>
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/hash.h>
-#include <qpid/dispatch/iovec.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/log.h>
-#include <qpid/dispatch/router.h>
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/parse.h>
-#include <qpid/dispatch/compose.h>
-#include <qpid/dispatch/config.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/timer.h>
-#include <qpid/dispatch/user_fd.h>
-#include <qpid/dispatch/server.h>
-#include <qpid/dispatch/message.h>
-#include <qpid/dispatch/container.h>
-#include <qpid/dispatch/agent.h>
-#include <qpid/dispatch/connection_manager.h>
+/**
+ * @defgroup configuration 
+ * 
+ * Get configuration values from a dispatch instance.
+ *@{
+ */
 #include <qpid/dispatch/dispatch.h>
+#include <stdint.h>
+#include <stdbool.h>
 
+void qd_log_configure(const qd_dispatch_t *dispatch);
+int qd_config_item_count(const qd_dispatch_t *dispatch, const char *section);
+bool qd_config_item_exists(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
+char *qd_config_item_value_string(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
+uint32_t qd_config_item_value_int(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
+int qd_config_item_value_bool(const qd_dispatch_t *dispatch, const char *section, int index, const char* key);
+///@}
 #endif

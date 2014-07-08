@@ -18,7 +18,7 @@
  */
 
 #include "log_private.h"
-#include "entity_private.h"
+#include <qpid/dispatch/config.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/alloc.h>
@@ -312,7 +312,7 @@ void qd_log_initialize(void)
 
     default_log_source = qd_log_source(SOURCE_DEFAULT);
     // Only report errors until we have configured the logging system.
-    default_log_source->mask = levels[INFO].mask;
+    default_log_source->mask = levels[ERROR].mask;
     default_log_source->timestamp = 1;
     default_log_source->sink = log_sink_lh(SINK_STDERR);
     logging_log_source = qd_log_source(SOURCE_LOGGING);
@@ -328,36 +328,37 @@ void qd_log_finalize(void) {
 	log_sink_free_lh(DEQ_HEAD(sink_list));
 }
 
-qd_error_t qd_log_entity(qd_entity_t *entity) {
+///@return 0,1 or -1 if not present
+static int get_optional_bool(const qd_dispatch_t *qd, const char* item, int i, const char* name) {
+    if (!qd_config_item_exists(qd, item, i, name)) return -1;
+    return qd_config_item_value_bool(qd, item, i, name);
+}
 
-    qd_error_clear();
-    char* module = qd_entity_string(entity, "module"); QD_ERROR_RET();
-    sys_mutex_lock(log_source_lock);
-    qd_log_source_t *src = qd_log_source_lh(module);
-    assert(src);
-    qd_log_source_t copy = *src;
-    sys_mutex_unlock(log_source_lock);
-    free(module);
+#define ITEM_STRING(NAME) qd_config_item_value_string(qd, "log", i, NAME)
+#define ITEM_OPT_BOOL(NAME) get_optional_bool(qd, "log", i, NAME)
 
-    char *level = qd_entity_string(entity, "level"); QD_ERROR_RET();
-    copy.mask = level_for_name(level)->mask;
-    free(level);
-
-    if (qd_entity_has(entity, "timestamp"))
-	copy.timestamp = qd_entity_bool(entity, "timestamp");
-    QD_ERROR_RET();
-
-    if (qd_entity_has(entity, "output")) {
-	log_sink_free_lh(copy.sink); /* DEFAULT source may already have a sink */
-	char* output = qd_entity_string(entity, "output"); QD_ERROR_RET();
-	copy.sink = log_sink_lh(output);
-	free(output);
-	if (copy.sink->syslog) /* Timestamp off for syslog. */
-	    copy.timestamp = 0;
+void qd_log_configure(const qd_dispatch_t *qd)
+{
+    if (!qd) return;
+    // Default to INFO now that we are configuring the logging system.
+    default_log_source->mask = levels[INFO].mask;
+    int count = qd_config_item_count(qd, "log");
+    for (int i=0; i < count; i++) {
+	sys_mutex_lock(log_source_lock);
+	const char* module = ITEM_STRING("module");
+	qd_log_source_t *src = qd_log_source_lh(module);
+	src->mask = level_for_name(ITEM_STRING("level"))->mask;
+	int timestamp = ITEM_OPT_BOOL("timestamp");
+	if (timestamp != -1) src->timestamp = timestamp;
+	const char* output = ITEM_STRING("output");
+	if (output) {
+	    log_sink_t* old_sink = src->sink;
+	    src->sink = log_sink_lh(output);
+	    log_sink_free_lh(old_sink); /* DEFAULT source may already have a sink */
+	    if (src->sink->syslog) /* Timestamp off for syslog. */
+		src->timestamp = 0;
+	}
+	sys_mutex_unlock(log_source_lock);
     }
-
-    sys_mutex_lock(log_source_lock);
-    *src = copy;
-    sys_mutex_unlock(log_source_lock);
-    return qd_error_code();
+    qd_log(logging_log_source, QD_LOG_INFO, "Logging system configured");
 }

@@ -28,6 +28,7 @@ typedef struct qd_container_t       qd_container_t;
 typedef struct qd_router_t          qd_router_t;
 typedef struct qd_agent_t           qd_agent_t;
 typedef struct qd_waypoint_t        qd_waypoint_t;
+typedef struct qd_config_t          qd_config_t;
 typedef struct qd_router_link_t     qd_router_link_t;
 typedef struct qd_router_node_t     qd_router_node_t;
 typedef struct qd_router_ref_t      qd_router_ref_t;
@@ -41,6 +42,7 @@ typedef struct qd_config_address_t  qd_config_address_t;
 #include <qpid/dispatch/router.h>
 #include <qpid/dispatch/connection_manager.h>
 #include "server_private.h"
+#include "config_private.h"
 #include "router_private.h"
 
 
@@ -49,6 +51,7 @@ struct qd_dispatch_t {
     qd_container_t          *container;
     qd_router_t             *router;
     qd_agent_t              *agent;
+    qd_config_t             *config;
     qd_connection_manager_t *connection_manager;
 
     int    thread_count;
@@ -59,3 +62,4 @@ struct qd_dispatch_t {
 };
 
 #endif
+

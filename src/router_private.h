@@ -31,15 +31,11 @@
 #include <qpid/dispatch/agent.h>
 #include <qpid/dispatch/log.h>
 #include "dispatch_private.h"
-#include "entity_private.h"
 
-qd_error_t qd_router_python_setup(qd_router_t *router);
-void qd_router_python_free(qd_router_t *router);
-qd_error_t qd_pyrouter_tick(qd_router_t *router);
-qd_error_t qd_router_agent_setup(qd_router_t *router);
-qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity);
-qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity);
-
+void qd_router_python_setup(qd_router_t *router);
+void qd_pyrouter_tick(qd_router_t *router);
+void qd_router_agent_setup(qd_router_t *router);
+void qd_router_configure(qd_router_t *router);
 void qd_router_configure_free(qd_router_t *router);
 
 typedef enum {
@@ -188,7 +184,7 @@ DEQ_DECLARE(qd_config_address_t, qd_config_address_list_t);
  */
 struct qd_waypoint_t {
     DEQ_LINKS(qd_waypoint_t);
-    char                  *address;
+    char                  *name;
     char                   in_phase;       ///< Phase for re-entering message.
     char                   out_phase;      ///< Phase for exiting message.
     char                  *connector_name; ///< On-demand connector name for outgoing messages.
@@ -234,8 +230,6 @@ struct qd_router_t {
     qd_agent_class_t         *class_link;
     qd_agent_class_t         *class_node;
     qd_agent_class_t         *class_address;
-
-    void                     *py_agent;
 };
 
 

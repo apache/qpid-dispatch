@@ -32,13 +32,10 @@ static const char *error_names[] = {
  "Allocation",
  "Invalid message",
  "Python",
- "Configuration",
- "Type",
- "Value"
+ "Configuration"
 };
 
-STATIC_ASSERT(sizeof(error_names)/sizeof(error_names[0]) == QD_ERROR_ENUM_COUNT,
-	      error_names_wrong_size);
+STATIC_ASSERT(sizeof(error_names)/sizeof(error_names[0]) == QD_ERROR_COUNT, error_names_wrong_size);
 
 #define ERROR_MAX QD_LOG_TEXT_MAX
 const int QD_ERROR_MAX = ERROR_MAX;
@@ -59,7 +56,7 @@ qd_error_t qd_error(qd_error_t code, const char *fmt, ...) {
     ts.error_code = code;
     if (code) {
 	int i = 0;
-	if (code < QD_ERROR_ENUM_COUNT)
+	if (code < QD_ERROR_COUNT)
 	    i = snprintf(ts.error_message, ERROR_MAX,"%s: ", error_names[code]);
 	else
 	    i = snprintf(ts.error_message, ERROR_MAX, "%d: ", code);
@@ -94,11 +91,17 @@ static void py_set_item(PyObject *dict, const char* name, PyObject *value) {
     Py_DECREF(py_name);
 }
 
-static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_log_level_t level) {
-    if (!qd_log_enabled(log_source, level)) return;
+static PyObject *py_import(const char* module) {
+    PyObject *py_str = PyString_FromString(module);
+    PyObject *py_module = PyImport_Import(py_str);
+    Py_DECREF(py_str);
+    return py_module;
+}
+
+static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace) {
     if (!(type && value && trace)) return;
 
-    PyObject *module = PyImport_ImportModule("traceback");
+    PyObject *module = py_import("traceback");
     if (!module) return;
 
     PyObject *globals = PyDict_New();
@@ -116,21 +119,9 @@ static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_lo
     Py_DECREF(locals);
 
     if (result) {
-	const char* trace = PyString_AsString(result);
-	if (strlen(trace) < QD_LOG_TEXT_MAX) {
-	    qd_log(log_source, level, "%s", trace);
-	} else {
-	    // Keep as much of the the tail of the trace as we can.
-	    const char *tail = trace;
-	    while (tail && strlen(tail) > QD_LOG_TEXT_MAX) {
-		tail = strchr(tail, '\n');
-		if (tail) ++tail;
-	    }
-	    qd_log(log_source, level, "Traceback truncated:\n%s", tail ? tail : "");
-	}
+	qd_log(log_source, QD_LOG_ERROR, "%s", PyString_AsString(result));
 	Py_DECREF(result);
     }
-
 }
 
 qd_error_t qd_error_py() {
@@ -149,7 +140,7 @@ qd_error_t qd_error_py() {
 	Py_XDECREF(value_str);
 	Py_XDECREF(type_name);
 
-	log_trace_py(type, value, trace, QD_LOG_ERROR);
+	log_trace_py(type, value, trace);
 
 	Py_XDECREF(type);
 	Py_XDECREF(value);

@@ -18,23 +18,25 @@
 ##
 
 configure_file(qdrouterd.8.in ${CMAKE_CURRENT_BINARY_DIR}/qdrouterd.8)
+configure_file(qdrouterd.conf.5.in ${CMAKE_CURRENT_BINARY_DIR}/qdrouterd.conf.5)
 configure_file(qdstat.8.in ${CMAKE_CURRENT_BINARY_DIR}/qdstat.8)
 
-# Generate a man page from the qdrouter.json schema.
-set (QDROUTERD_CONF qdrouterd.conf.5)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qdrouterd.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qdrouterd.conf.5 DESTINATION ${MAN_INSTALL_DIR}/man5)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qdstat.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
 
-file (GLOB_RECURSE QDROUTERD_CONF_DEPENDS
-  ${CMAKE_CURRENT_SOURCE_DIR}/qdrouterd_conf_man.py
+# Generate a man page from the new qdrouter.json schema. This will eventually replace
+# the hand-written man page generated from qdrouterd.conf.5.in
+
+file (GLOB_RECURSE MAN_PAGE_GENERATOR
+  ${CMAKE_CURRENT_SOURCE_DIR}/qdrouterd_man.py
   ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/*.py
   ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/qdrouterd.json)
 
-add_custom_command (OUTPUT ${QDROUTERD_CONF}
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${CMAKE_CURRENT_SOURCE_DIR}/qdrouterd_conf_man.py ${QDROUTERD_CONF}
-    DEPENDS ${QDROUTERD_CONF_DEPENDS})
+set (QDROUTERD_MAN qdrouterdconf.conf.5.new)
 
-add_custom_target(man ALL DEPENDS ${QDROUTERD_CONF})
+add_custom_command (OUTPUT ${QDROUTERD_MAN}
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${CMAKE_CURRENT_SOURCE_DIR}/qdrouterd_man.py ${QDROUTERD_MAN}
+    DEPENDS ${MAN_PAGE_GENERATOR})
 
-# Install man pages
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qdrouterd.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${QDROUTERD_CONF} DESTINATION ${MAN_INSTALL_DIR}/man5)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qdstat.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
+add_custom_target(man ALL DEPENDS ${QDROUTERD_MAN})

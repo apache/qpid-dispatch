@@ -22,7 +22,6 @@ import sys
 import unittest
 
 sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "mock")) # Mock modules for tests
 
 from qpid_dispatch_internal.router.engine import NeighborEngine, PathEngine, Configuration, NodeTracker
 from qpid_dispatch_internal.router.data import LinkState, MessageHELLO
@@ -168,7 +167,7 @@ class NodeTrackerTest(unittest.TestCase):
         self.reset()
         try:
             tracker.new_neighbor('E', 9)
-            self.fail("We shouldn't be here")
+            AssertFalse("We shouldn't be here")
         except:
             pass
 
@@ -355,7 +354,7 @@ class PathTest(unittest.TestCase):
     def valid_origins_changed(self, vo):
         self.valid_origins = vo
 
-    def test_topology1(self):
+    def test_topology1(self): 
         """
 
         +====+      +----+      +----+

@@ -8,9 +8,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * 
  *   http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -24,15 +24,13 @@
 #include <qpid/dispatch/compose.h>
 #include <qpid/dispatch/parse.h>
 #include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/error.h>
 
 /**
  * Initialize the embedded-python subsystem.  This must be called before
  * any other call into this module is invoked.
  */
 void qd_python_initialize(qd_dispatch_t *qd,
-                          const char *python_pkgdir,
-                          const char *qpid_dispatch_lib);
+                          const char    *python_pkgdir);
 
 /**
  * Finalize the embedded-python subsystem.  After this is called, there
@@ -64,7 +62,7 @@ PyObject *qd_python_module(void);
  * @param value A Python Object
  * @param field A composed field
  */
-qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field);
+void qd_py_to_composed(PyObject *value, qd_composed_field_t *field);
 
 /**
  * Convert a parsed field to a Python object

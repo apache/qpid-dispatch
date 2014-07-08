@@ -21,11 +21,9 @@
  */
 
 /** @file
- * STATIC_ASSERT allows you to do compile time assertions at file scope or in a function.
- * @param expr: a boolean expression that is valid at compile time.
- * @param msg: a "message" that must also be a valid identifier, i.e. message_with_underscores
+   STATIC_ASSERT allows you to do compile time assertions at file scope
+   or in a funciton.
  */
-
 
 #ifdef __GNUC__
 #define STATIC_ASSERT_HELPER(expr, msg) \
