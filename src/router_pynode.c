@@ -527,10 +527,26 @@ static PyTypeObject RouterAdapterType = {
 };
 
 
+static qd_error_t router_python_agent_setup(qd_router_t *router) {
+    PyObject *agent_module=0, *agent_type=0, *agent=0;
+    bool ok =
+        (agent_module = PyImport_ImportModule("qpid_dispatch_internal.management.agent")) &&
+        (agent_type = PyObject_GetAttrString(agent_module, "Agent")) &&
+	(agent = PyObject_CallFunction(agent_type, "(l)", (long)router->qd));
+    Py_XDECREF(agent_module);
+    Py_XDECREF(agent_type);
+    if (!ok) return qd_error_py();
+    assert(agent);
+    router->py_agent = agent;
+    return qd_error_code();
+}
+
 qd_error_t qd_router_python_setup(qd_router_t *router)
 {
     qd_error_clear();
     log_source = qd_log_source("PYROUTER");
+
+    router_python_agent_setup(router); QD_ERROR_RET();
 
     //
     // If we are not operating as an interior router, don't start the
@@ -601,6 +617,10 @@ qd_error_t qd_router_python_setup(qd_router_t *router)
     pyRemoved = PyObject_GetAttrString(pyRouter, "addressRemoved"); QD_ERROR_PY_RET();
     pyLinkLost = PyObject_GetAttrString(pyRouter, "linkLost"); QD_ERROR_PY_RET();
     return qd_error_code();
+}
+
+void qd_router_python_free(qd_router_t *router) {
+    Py_XDECREF((PyObject*)router->py_agent);
 }
 
 

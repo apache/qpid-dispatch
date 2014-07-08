@@ -27,7 +27,6 @@
 
 qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity) {
     qd_error_clear();
-    /* FIXME aconway 2014-06-19: review phase default -1?? */
     int   phase  = qd_entity_opt_long(entity, "phase", 0); QD_ERROR_RET();
     qd_schema_fixed_address_fanout_t fanout = qd_entity_long(entity, "fanout"); QD_ERROR_RET();
     qd_schema_fixed_address_bias_t bias   = qd_entity_long(entity, "bias"); QD_ERROR_RET();

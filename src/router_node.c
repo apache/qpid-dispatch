@@ -1404,6 +1404,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     strcat(node_id, id);
 
     qd_router_t *router = NEW(qd_router_t);
+    ZERO(router);
 
     router_node.type_context = router;
 
@@ -1504,6 +1505,8 @@ void qd_router_free(qd_router_t *router)
     free(router->routers_by_mask_bit);
     qd_hash_free(router->addr_hash);
     qd_router_configure_free(router);
+    qd_router_python_free(router);
+
     free(router);
     free(node_id);
     free(direct_prefix);

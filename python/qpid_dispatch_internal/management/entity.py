@@ -23,7 +23,6 @@ Representation of management entities. An entity is a set of named attributes.
 
 from qpid_dispatch_internal.compat import OrderedDict
 
-
 class Entity(OrderedDict):
     """
     A dict mapping attribute names to attribute value.

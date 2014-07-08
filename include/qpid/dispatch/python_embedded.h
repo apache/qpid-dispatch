@@ -24,6 +24,7 @@
 #include <qpid/dispatch/compose.h>
 #include <qpid/dispatch/parse.h>
 #include <qpid/dispatch/iterator.h>
+#include <qpid/dispatch/error.h>
 
 /**
  * Initialize the embedded-python subsystem.  This must be called before
@@ -63,7 +64,7 @@ PyObject *qd_python_module(void);
  * @param value A Python Object
  * @param field A composed field
  */
-void qd_py_to_composed(PyObject *value, qd_composed_field_t *field);
+qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field);
 
 /**
  * Convert a parsed field to a Python object

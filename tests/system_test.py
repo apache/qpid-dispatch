@@ -368,7 +368,7 @@ class Qdrouterd(Process):
         def check():
             # FIXME aconway 2014-06-12: this should be a request by name, not a query.
             addrs = self.agent.query(
-                entity_type='org.apache.qpid.dispatch.router.address',
+                type='org.apache.qpid.dispatch.router.address',
                 attribute_names=['name', 'subscriberCount', 'remoteCount'])
             # FIXME aconway 2014-06-12: endswith check is because of M0/L prefixes
             addrs = [a for a in addrs if a.name.endswith(address)]

@@ -17,9 +17,9 @@
 # under the License.
 #
 
-import unittest, sys, time, os
+import unittest, os
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED
-from system_test import TestCase, Messenger, Qdrouterd, retry_exception
+from system_test import TestCase, Qdrouterd, retry_exception
 from qpid_dispatch_internal.management import Node
 
 class RouterTest(TestCase):

@@ -27,7 +27,7 @@ A Schema can be loaded/dumped to a json file.
 """
 
 import os, sys
-from entity import OrderedDict, Entity
+from entity import OrderedDict
 
 class ValidationError(Exception):
     """Error raised if schema validation fails"""
@@ -245,7 +245,7 @@ class AttributeType(object):
         if self.unique and not _is_unique(check_unique, self.name, value):
             raise ValidationError("Duplicate value '%s' for unique attribute '%s'"%(value, self.name))
         if self.value and value != resolve(self.value):
-            raise ValidationError("Attribute '%s' has fixed value '%s' but given '%s'"%(self.name, self.value, value))
+            raise ValidationError("Attribute '%s' has fixed value '%s' but given '%s'"%(self.name, resolve(self.value), value))
         try:
             return self.atype.validate(value, **kwargs)
         except (TypeError, ValueError), e:
@@ -396,6 +396,7 @@ class EntityType(AttributeTypeHolder):
             for name, value in attributes.iteritems():
                 if name not in self.attributes:
                     raise ValidationError("%s has unknown attribute '%s'"%(self, name))
+                if name == 'type': value = self.schema.short_name(value) # Normalize type name
                 attributes[name] = self.attributes[name].validate(
                     value, lambda v: self.resolve(v, attributes), **kwargs)
         except ValidationError, e:
@@ -467,6 +468,9 @@ class Schema(object):
 
         # Validate all entities.
         for e in entities:
+            e.type = self.short_name(e.type)
+            if not e.type in self.entity_types:
+                raise ValidationError("No such entity type: '%s'" % e.type)
             et = self.entity_types[e.type]
             et.validate(e,
                         check_required=check_required,

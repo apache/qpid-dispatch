@@ -21,10 +21,10 @@ configure_file(qdrouterd.8.in ${CMAKE_CURRENT_BINARY_DIR}/qdrouterd.8)
 configure_file(qdstat.8.in ${CMAKE_CURRENT_BINARY_DIR}/qdstat.8)
 
 # Generate a man page from the qdrouter.json schema.
-set (QDROUTERD_CONF qdrouterdconf.conf.5)
+set (QDROUTERD_CONF qdrouterd.conf.5)
 
 file (GLOB_RECURSE QDROUTERD_CONF_DEPENDS
-  ${CMAKE_CURRENT_SOURCE_DIR}/qdrouterd_man.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/qdrouterd_conf_man.py
   ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/*.py
   ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/qdrouterd.json)
 

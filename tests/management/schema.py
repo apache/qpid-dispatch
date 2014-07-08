@@ -20,7 +20,7 @@
 
 #pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
 
-import unittest, json, sys
+import unittest, json
 from qpid_dispatch_internal.management import Schema, Entity, EntityType, BooleanType, EnumType, AttributeType, schema_file, ValidationError, EnumValue
 import collections
 

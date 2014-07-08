@@ -34,6 +34,7 @@
 #include "entity_private.h"
 
 qd_error_t qd_router_python_setup(qd_router_t *router);
+void qd_router_python_free(qd_router_t *router);
 qd_error_t qd_pyrouter_tick(qd_router_t *router);
 qd_error_t qd_router_agent_setup(qd_router_t *router);
 qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity);
@@ -233,6 +234,8 @@ struct qd_router_t {
     qd_agent_class_t         *class_link;
     qd_agent_class_t         *class_node;
     qd_agent_class_t         *class_address;
+
+    void                     *py_agent;
 };
 
 

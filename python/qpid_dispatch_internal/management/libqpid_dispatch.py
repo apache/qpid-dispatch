@@ -21,8 +21,8 @@
 
 # TODO aconway 2014-06-19: this is all linux specific.
 
-import ctypes, os, glob
-from ctypes import c_char_p, c_void_p, c_long, py_object
+import ctypes, os
+from ctypes import c_char_p, c_long, py_object
 try:
     from dispatch import QPID_DISPATCH_LIB
 except:
@@ -52,7 +52,8 @@ class QdDll(ctypes.PyDLL):
         super(QdDll, self).__init__(lib)
 
         # Types
-        self.qd_dispatch_p = ctypes.c_void_p # Use void* for qd_dispatch_t*
+        # TODO aconway 2014-06-27: can we use typed pointers instead of void*?
+        self.qd_dispatch_p = ctypes.c_void_p
 
         # No check on qd_error_* functions, it would be recursive
         self._prototype(self.qd_error_code, c_long, [], check=False)
