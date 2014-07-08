@@ -18,7 +18,7 @@
 #
 
 import httplib, re
-import libqpid_dispatch
+from qpid_dispatch_internal import dispatch_c
 from dispatch import IoAdapter, LogAdapter, LOG_DEBUG, LOG_ERROR
 from node import ManagementError
 from schema import ValidationError
@@ -30,7 +30,7 @@ from traceback import format_exc
 
 class Agent(object):
     def __init__(self, dispatch):
-        self.qd = libqpid_dispatch.instance()
+        self.qd = dispatch_c.instance()
         self.dispatch = self.qd.qd_dispatch_p(dispatch)
         # FIXME aconway 2014-06-26: $management
         self.io = [IoAdapter(self.receive, "$management2"),

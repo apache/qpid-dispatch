@@ -17,12 +17,8 @@
 # under the License.
 #
 
-from data import MessageRA, MessageMAR, MessageMAU
-
-try:
-    from dispatch import *
-except ImportError:
-    from ..stubs import *
+from data import MessageMAR, MessageMAU
+from dispatch import LOG_DEBUG
 
 class MobileAddressEngine(object):
     """
@@ -187,4 +183,3 @@ class MobileAddressEngine(object):
         if deleted != None:
             for d in deleted:
                 self.container.router_adapter.unmap_destination(d[0], d[1:], bit)
-

@@ -36,11 +36,7 @@ import traceback
 ## Import the Dispatch adapters from the environment.  If they are not found
 ## (i.e. we are in a test bench, etc.), load the stub versions.
 ##
-try:
-    from dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_ERROR
-except ImportError:
-    from ..stubs import IoAdapter, LogAdapter, LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_ERROR
-
+from dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_ERROR
 
 class RouterEngine:
     """

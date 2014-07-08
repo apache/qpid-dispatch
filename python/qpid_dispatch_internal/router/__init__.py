@@ -17,4 +17,6 @@
 # under the License.
 #
 
-from .engine import *
+from .engine import RouterEngine
+
+__all__ = ["RouterEngine"]

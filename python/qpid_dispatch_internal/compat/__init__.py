@@ -19,5 +19,14 @@
 
 """Compatibility hacks for older versions of python"""
 
+import sys
+
+__all__ = ["OrderedDict"]
+
 try: from collections import OrderedDict
 except: from ordereddict import OrderedDict
+
+if sys.version_info >= (2,7):
+    json_load_kwargs = {'object_pairs_hook':OrderedDict}
+else:
+    json_load_kwargs = {}
