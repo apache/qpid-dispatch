@@ -20,8 +20,8 @@
 
 #pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
 
-import unittest, json
-from qpid_dispatch_internal.management import Schema, Entity, EntityType, BooleanType, EnumType, AttributeType, schema_file
+import unittest, json, sys
+from qpid_dispatch_internal.management import Schema, Entity, EntityType, BooleanType, EnumType, AttributeType, schema_file, ValidationError
 import collections
 
 def replace_od(thing):
@@ -37,6 +37,7 @@ SCHEMA_1 = {
         "entity-id": {
             "attributes": {
                 "name": {"type":"String", "required": True, "unique":True},
+                "type": {"type":"String", "required": True}
             }
         }
     },
@@ -71,7 +72,7 @@ class SchemaTest(unittest.TestCase):
         self.assertTrue(b.validate(True))
         self.assertFalse(b.validate(False))
         self.assertFalse(b.validate('no'))
-        self.assertRaises(ValueError, b.validate, 'x')
+        self.assertRaises(ValidationError, b.validate, 'x')
 
     def test_enum(self):
         e = EnumType(['a', 'b', 'c'])
@@ -79,17 +80,34 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual(e.validate(1), 'b')
         self.assertEqual(e.validate('c', enum_as_int=True), 2)
         self.assertEqual(e.validate(2, enum_as_int=True), 2)
-        self.assertRaises(ValueError, e.validate, 'foo')
-        self.assertRaises(ValueError, e.validate, 3)
+        self.assertRaises(ValidationError, e.validate, 'foo')
+        self.assertRaises(ValidationError, e.validate, 3)
 
     def test_attribute_def(self):
-        a = AttributeType('foo', 'String', 'FOO', False)
+        a = AttributeType('foo', 'String', default='FOO')
+        self.assertEqual('FOO', a.missing_value())
         self.assertEqual(a.validate('x'), 'x')
-        self.assertEqual(a.validate(None), 'FOO')
-        a = AttributeType('foo', 'String', 'FOO', True)
-        self.assertEqual('FOO', a.validate(None))
-        a = AttributeType('foo', 'Integer', None, True)
-        self.assertRaises(ValueError, a.validate, None) # Missing default
+
+        a = AttributeType('foo', 'String', default='FOO', required=True)
+        self.assertEqual('FOO', a.missing_value())
+
+        a = AttributeType('foo', 'String', required=True)
+        self.assertRaises(ValidationError, a.missing_value) # Missing required value.
+
+        a = AttributeType('foo', 'String', value='FOO') # Fixed value
+        self.assertEqual('FOO', a.missing_value())
+        self.assertEqual(a.validate('FOO'), 'FOO')
+        self.assertRaises(ValidationError, a.validate, 'XXX') # Bad fixed value
+
+        self.assertRaises(ValidationError, AttributeType, 'foo', 'String', value='FOO', default='BAR') # Illegal
+
+        a = AttributeType('foo', 'Integer')
+        self.assertEqual(3, a.validate(3))
+        self.assertEqual(3, a.validate('3'))
+        self.assertEqual(3, a.validate(3.0))
+        self.assertRaises(ValidationError, a.validate, None)
+        self.assertRaises(ValidationError, a.validate, "xxx")
+
 
     def test_entity_type(self):
         s = Schema(includes={
@@ -100,14 +118,39 @@ class SchemaTest(unittest.TestCase):
             'foo': {'type':'String', 'default':'FOO'},
             'req': {'type':'Integer', 'required':True},
             'e': {'type':['x', 'y']}})
-        self.assertRaises(ValueError, e.validate, {}) # Missing required 'req'
-        self.assertEqual(e.validate({'req':42, 'e':None}), {'foo': 'FOO', 'req': 42, 'type': 'MyEntity'})
+        self.assertRaises(ValidationError, e.validate, {}) # Missing required 'req'
+        self.assertEqual(e.validate({'req':42, 'e':None}), {'foo': 'FOO', 'req': 42})
         # Try with an include
         e = EntityType('e2', s, attributes={'x':{'type':'Integer'}}, include=['i1', 'i2'])
-        self.assertEqual(e.validate({'x':1}), {'x':1, 'foo1': 'FOO1', 'foo2': 'FOO2', 'type': 'i2'})
+        self.assertEqual(e.validate({'x':1}), {'x':1, 'foo1': 'FOO1', 'foo2': 'FOO2'})
+
+    def test_entity_refs(self):
+        e = EntityType('MyEntity', Schema(), attributes={
+            'type': {'type': 'String', 'required': True, 'value': '$$entity-type'},
+            'name': {'type':'String', 'default':'$identity'},
+            'identity': {'type':'String', 'default':'$name', "required": True}})
+
+        self.assertEqual({'type': 'MyEntity', 'identity': 'x', 'name': 'x'},
+                         e.validate({'identity':'x'}))
+        self.assertEqual({'type': 'MyEntity', 'identity': 'x', 'name': 'x'},
+                         e.validate({'name':'x'}))
+        self.assertEqual({'type': 'MyEntity', 'identity': 'x', 'name': 'y'},
+                         e.validate({'identity': 'x', 'name':'y'}))
+        self.assertRaises(ValidationError, e.validate, {}) # Circular reference.
+
+    def test_entity_include_refs(self):
+        s = Schema(includes={
+            'i1': {'attributes': {
+                'name': {'type':'String', 'default':'$identity'},
+                'identity': {'type':'String', 'default':'$name', "required": True}}}})
+
+        e = EntityType('MyEntity', s, attributes={}, include=['i1'])
+        self.assertEqual({'identity': 'x', 'name': 'x'}, e.validate({'identity':'x'}))
+        self.assertEqual({'identity': 'x', 'name': 'x'}, e.validate({'name':'x'}))
+        self.assertEqual({'identity': 'x', 'name': 'y'}, e.validate({'identity': 'x', 'name':'y'}))
+        self.assertRaises(ValidationError, e.validate, {})
 
     qdrouter_json = schema_file('qdrouter.json')
-
 
     @staticmethod
     def load_schema(fname=qdrouter_json):
@@ -167,11 +210,11 @@ class SchemaTest(unittest.TestCase):
         # Duplicate unique attribute 'name'
         m = [Entity({'type': 'listener', 'name':'x'}),
              Entity({'type': 'listener', 'name':'x'})]
-        self.assertRaises(ValueError, s.validate, m)
+        self.assertRaises(ValidationError, s.validate, m)
         # Duplicate singleton entity 'container'
         m = [Entity({'type': 'container', 'name':'x'}),
              Entity({'type': 'container', 'name':'y'})]
-        self.assertRaises(ValueError, s.validate, m)
+        self.assertRaises(ValidationError, s.validate, m)
         # Valid model
         m = [Entity({'type': 'container', 'name':'x'}),
              Entity({'type': 'listener', 'name':'y'})]

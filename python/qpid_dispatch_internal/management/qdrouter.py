@@ -21,10 +21,11 @@
 Qpid Dispatch Router management schema and config file parsing.
 """
 
-import json, re
+import json, re, sys
 import schema
-from entity import EntityList, Entity
+from entity import EntityList, Entity, OrderedDict
 from copy import copy
+
 
 class QdSchema(schema.Schema):
     """
@@ -35,7 +36,7 @@ class QdSchema(schema.Schema):
     def __init__(self):
         """Load schema."""
         with open(self.SCHEMA_FILE) as f:
-            super(QdSchema, self).__init__(**json.load(f))
+            super(QdSchema, self).__init__(**json.load(f, object_pairs_hook=OrderedDict))
 
     def validate(self, entities, **kwargs):
         """
@@ -52,20 +53,22 @@ class QdSchema(schema.Schema):
         if entities.router[0].mode != 'interior':
             for connect in entities.get(entity_type='listeners') + entities.get(entity_type='connector'):
                 if connect['role'] != 'normal':
-                    raise schema.SchemaError("Role '%s' for entity '%s' only permitted with 'interior' mode % (entity['role'], connect.name)")
+                    raise schema.ValidationError("Role '%s' for entity '%s' only permitted with 'interior' mode % (entity['role'], connect.name)")
+
 
 class QdConfig(EntityList):
     """An L{EntityList} loaded from a qdrouterd.conf and validated against L{QdSchema}."""
 
-    def __init__(self, schema=QdSchema()):
+    def __init__(self, filename=None, schema=QdSchema()):
         self.schema = schema
+        if filename: self.load(filename)
 
     @staticmethod
     def _parse(lines):
         """Parse config file format into a section list"""
         begin = re.compile(r'([\w-]+)[ \t]*{') # WORD {
         end = re.compile(r'}')                 # }
-        attr = re.compile(r'([\w-]+)[ \t]*:[ \t]*([\w-]+)') # WORD1: WORD2
+        attr = re.compile(r'([\w-]+)[ \t]*:[ \t]*(.+)') # WORD1: VALUE
 
         def sub(line):
             """Do substitutions to make line json-friendly"""
@@ -77,7 +80,8 @@ class QdConfig(EntityList):
 
         js_text = "[%s]"%("".join([sub(l) for l in lines]))
         spare_comma = re.compile(r',\s*([]}])') # Strip spare commas
-        return json.loads(re.sub(spare_comma, r'\1', js_text))
+        js_text = re.sub(spare_comma, r'\1', js_text)
+        return json.loads(js_text, object_pairs_hook=OrderedDict)
 
     def _expand(self, content):
         """
@@ -123,11 +127,38 @@ class QdConfig(EntityList):
                 attrs['name'] = attrs['identity'] = identity
         return content
 
-    def load(self, lines):
+    def load(self, source):
         """
         Load a configuration file.
-        @param lines: A list of lines, or an open file object.
+        @param source: A file name, open file object or iterable list of lines
         """
-        sections = self._default_ids(self._expand(self._parse(lines)))
-        self[:] = [Entity(type=s[0], **s[1]) for s in sections]
-        self.validate(self.schema)
+        if isinstance(source, basestring):
+            with open(source) as f:
+                try:
+                    self.load(f)
+                except:
+                    ex_type, ex_value, ex_trace = sys.exc_info()
+                    raise ex_type, "Loading '%s': %s"%(source, ex_value), ex_trace
+        else:
+            sections = self._parse(source);
+            # Add missing singleton sections
+            for et in self.schema.entity_types.itervalues():
+                if et.singleton and not [s for s in sections if s[0] == et.name]:
+                    sections.append((et.name, {}))
+            sections = self._expand(sections)
+            sections = self._default_ids(sections)
+            self[:] = [Entity(type=s[0], **s[1]) for s in sections]
+            self.validate(self.schema)
+
+    def section_count(self, section):
+        return len(self.get(type=section))
+
+    def value(self, section, index, key, convert=lambda x: x):
+        """
+        @return: Value at section, index, key or None if absent.
+        @param as_type: A callable to convert the result to some type.
+        """
+        entities = self.get(type=section)
+        if len(entities) <= index or key not in entities[index]:
+            return None
+        return convert(entities[index][key])

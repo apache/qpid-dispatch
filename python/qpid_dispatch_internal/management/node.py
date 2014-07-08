@@ -44,7 +44,7 @@ class ManagementError(Exception):
             raise ManagementError(status, response)
 
 
-# FIXME aconway 2014-06-03: proton URL class, conditional import?
+# TODO aconway 2014-06-03: proton URL class, conditional import?
 class Url:
     """Simple AMQP URL parser/constructor"""
 

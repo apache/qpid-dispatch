@@ -22,7 +22,8 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/log.h>
 
-#define PYTHON_MODULE "qpid_dispatch_internal.config"
+const char *MANAGEMENT_MODULE = "qpid_dispatch_internal.management";
+const char *CONFIG_CLASS = "QdConfig";
 
 static qd_log_source_t *log_source = 0;
 
@@ -50,46 +51,22 @@ void qd_config_finalize(void)
 
 qd_config_t *qd_config(void)
 {
+    qd_error_clear();
     qd_config_t *config = new_qd_config_t();
-
+    memset(config, 0, sizeof(*config));
     //
-    // Load the Python configuration module and get a reference to the config class.
+    // Load the Python management module and get a reference to the config class.
     //
-    PyObject *pName = PyString_FromString(PYTHON_MODULE);
-    config->pModule = PyImport_Import(pName);
-    Py_DECREF(pName);
-
-    if (!config->pModule) {
-        qd_error_py();
-        free_qd_config_t(config);
-        qd_log(log_source, QD_LOG_ERROR, "Unable to load configuration module: %s", PYTHON_MODULE);
-        return 0;
+    if ((config->pModule = PyImport_ImportModule(MANAGEMENT_MODULE)) &&
+	(config->pClass = PyObject_GetAttrString(config->pModule, CONFIG_CLASS)) &&
+	(config->pObject = PyObject_CallFunction(config->pClass, NULL)))
+    {
+	return config;
+    } else {
+	qd_error_py();		/* Log python error & set qd_error */
+	qd_config_free(config);
+	return 0;
     }
-
-    config->pClass = PyObject_GetAttrString(config->pModule, "DispatchConfig");
-    if (!config->pClass || !PyClass_Check(config->pClass)) {
-        PyErr_Print();
-        Py_DECREF(config->pModule);
-        free_qd_config_t(config);
-        qd_log(log_source, QD_LOG_ERROR, "Problem with configuration module: Missing DispatchConfig class");
-        return 0;
-    }
-
-    //
-    // Instantiate the DispatchConfig class
-    //
-    PyObject *pArgs = PyTuple_New(0);
-    config->pObject = PyInstance_New(config->pClass, pArgs, 0);
-    Py_DECREF(pArgs);
-
-    if (config->pObject == 0) {
-        qd_error_py();
-        Py_DECREF(config->pModule);
-        free_qd_config_t(config);
-        return 0;
-    }
-
-    return config;
 }
 
 
@@ -101,16 +78,16 @@ qd_error_t qd_config_read(qd_config_t *config, const char *filepath)
     PyObject *pArgs;
     PyObject *pResult;
 
+    assert(config);
     if (!config)
 	return qd_error(QD_ERROR_CONFIG, "No configuration object");
 
-    pMethod = PyObject_GetAttrString(config->pObject, "read_file");
+    pMethod = PyObject_GetAttrString(config->pObject, "load");
     if (!pMethod || !PyCallable_Check(pMethod)) {
 	Py_XDECREF(pMethod);
         qd_error_py();
-        return qd_error(QD_ERROR_CONFIG, "No callable 'read_file'");
+        return qd_error(QD_ERROR_CONFIG, "No callable 'load'");
     }
-
     pArgs = PyTuple_New(1);
     pPath = PyString_FromString(filepath);
     PyTuple_SetItem(pArgs, 0, pPath);
@@ -126,18 +103,12 @@ qd_error_t qd_config_read(qd_config_t *config, const char *filepath)
 }
 
 
-void qd_config_extend(qd_config_t *config, const char *text)
-{
-    PyRun_SimpleString(text);
-}
-
-
 void qd_config_free(qd_config_t *config)
 {
     if (config) {
-        Py_DECREF(config->pClass);
-        Py_DECREF(config->pModule);
-        Py_DECREF(config->pObject);
+        Py_XDECREF(config->pClass);
+        Py_XDECREF(config->pModule);
+        Py_XDECREF(config->pObject);
         free_qd_config_t(config);
     }
 }
@@ -145,134 +116,70 @@ void qd_config_free(qd_config_t *config)
 
 int qd_config_item_count(const qd_dispatch_t *dispatch, const char *section)
 {
-    const qd_config_t *config = dispatch->config;
-    PyObject *pSection;
-    PyObject *pMethod;
-    PyObject *pArgs;
-    PyObject *pResult;
-    int       result = 0;
-
-    if (!config)
-        return 0;
-
-    pMethod = PyObject_GetAttrString(config->pObject, "item_count");
-    if (!pMethod || !PyCallable_Check(pMethod)) {
-        qd_log(log_source, QD_LOG_ERROR, "Problem with configuration module: No callable 'item_count'");
-        if (pMethod) {
-            Py_DECREF(pMethod);
-        }
-        return 0;
-    }
-
-    pSection = PyString_FromString(section);
-    pArgs    = PyTuple_New(1);
-    PyTuple_SetItem(pArgs, 0, pSection);
-    pResult = PyObject_CallObject(pMethod, pArgs);
-    Py_DECREF(pArgs);
-    if (pResult && PyInt_Check(pResult))
-        result = (int) PyInt_AsLong(pResult);
-    if (pResult) {
-        Py_DECREF(pResult);
-    }
-    Py_DECREF(pMethod);
-
-    return result;
+    PyErr_Clear();
+    PyObject *result =
+	PyObject_CallMethod(dispatch->config->pObject, "section_count", "(s)", section);
+    if (qd_error_py()) return -1;
+    long count = PyInt_AsLong(result);
+    if (qd_error_py()) return -1;
+    Py_DECREF(result);
+    return count;
 }
 
 
-static PyObject *item_value(const qd_dispatch_t *dispatch, const char *section, int index, const char* key, const char* method)
+static PyObject *item_value(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
 {
-    const qd_config_t *config = dispatch->config;
-    PyObject *pSection;
-    PyObject *pIndex;
-    PyObject *pKey;
-    PyObject *pMethod;
-    PyObject *pArgs;
-    PyObject *pResult;
-
-    if (!config)
-        return 0;
-
-    pMethod = PyObject_GetAttrString(config->pObject, method);
-    if (!pMethod || !PyCallable_Check(pMethod)) {
-        qd_log(log_source, QD_LOG_ERROR, "Problem with configuration module: No callable '%s'", method);
-        if (pMethod) {
-            Py_DECREF(pMethod);
-        }
-        return 0;
-    }
-
-    pSection = PyString_FromString(section);
-    pIndex   = PyInt_FromLong((long) index);
-    pKey     = PyString_FromString(key);
-    pArgs    = PyTuple_New(3);
-    PyTuple_SetItem(pArgs, 0, pSection);
-    PyTuple_SetItem(pArgs, 1, pIndex);
-    PyTuple_SetItem(pArgs, 2, pKey);
-    pResult = PyObject_CallObject(pMethod, pArgs);
-    Py_DECREF(pArgs);
-    Py_DECREF(pMethod);
-
-    return pResult;
+    return PyObject_CallMethod(dispatch->config->pObject, "value", "(sis)", section, index, key);
 }
 
 
 bool qd_config_item_exists(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
 {
-    PyObject *pResult = item_value(dispatch, section, index, key, "value_string");
-    bool exists = pResult && pResult != Py_None;
-    if (pResult) {
-        Py_DECREF(pResult);
-    }
+    PyObject *value = item_value(dispatch, section, index, key);
+    if (!value) qd_error_py();
+    bool exists = value && (value != Py_None);
+    Py_XDECREF(value);
     return exists;
 }
 
 char *qd_config_item_value_string(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
 {
-    PyObject *pResult = item_value(dispatch, section, index, key, "value_string");
-    char     *value   = 0;
-
-    if (pResult && PyString_Check(pResult)) {
-        Py_ssize_t size = PyString_Size(pResult);
-        value = (char*) malloc(size + 1);
-        strncpy(value, PyString_AsString(pResult), size + 1);
+    PyObject *value = item_value(dispatch, section, index, key);
+    if (value && value != Py_None) {
+	PyObject *value_str = PyObject_Str(value);
+	Py_DECREF(value);
+	if (value_str) {
+	    char* result = strdup(PyString_AsString(value_str));
+	    Py_DECREF(value_str);
+	    return result;
+	}
     }
-
-    if (pResult) {
-        Py_DECREF(pResult);
-    }
-
-    return value;
+    qd_error_py();
+    return 0;
 }
 
 
 uint32_t qd_config_item_value_int(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
 {
-    PyObject *pResult = item_value(dispatch, section, index, key, "value_int");
-    uint32_t  value   = 0;
-
-    if (pResult && PyLong_Check(pResult))
-        value = (uint32_t) PyLong_AsLong(pResult);
-
-    if (pResult) {
-        Py_DECREF(pResult);
+    PyObject *value = item_value(dispatch, section, index, key);
+    if (value && value != Py_None) {
+	long result = PyLong_AsLong(value);
+	Py_DECREF(value);
+	return result;
     }
-
-    return value;
+    qd_error_py();
+    return 0;
 }
 
 
 int qd_config_item_value_bool(const qd_dispatch_t *dispatch, const char *section, int index, const char* key)
 {
-    PyObject *pResult = item_value(dispatch, section, index, key, "value_bool");
-    int       value   = 0;
-
-    if (pResult && pResult != Py_None)
-        value = 1;
-
-    if (pResult) {
-        Py_DECREF(pResult);
+    PyObject *value = item_value(dispatch, section, index, key);
+    if (value) {
+	bool result = PyObject_IsTrue(value);
+        Py_DECREF(value);
+	return result;
     }
-
-    return value;
+    qd_error_py();
+    return 0;
 }

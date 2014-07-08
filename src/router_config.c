@@ -39,7 +39,7 @@ static void qd_router_configure_addresses(qd_router_t *router)
         char *bias   = qd_config_item_value_string(router->qd, CONF_ADDRESS, idx, "bias");
 
         if (phase < 0 || phase > 9) {
-            qd_log(router->log_source, QD_LOG_ERROR, "Phase for prefix '%s' must be between 0 and 9.  Ignoring", prefix);
+            qd_log(router->log_source, QD_LOG_ERROR, "Invalid phase %d for prefix '%s' must be between 0 and 9.  Ignoring", phase, prefix);
             free(prefix);
             free(fanout);
             free(bias);
@@ -114,14 +114,14 @@ static void qd_router_configure_waypoints(qd_router_t *router)
     int count = qd_config_item_count(router->qd, CONF_WAYPOINT);
 
     for (int idx = 0; idx < count; idx++) {
-        char *name      = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "name");
+        char *address      = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "address");
+        char *connector = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "connector");
         int   in_phase  = qd_config_item_value_int(router->qd,    CONF_WAYPOINT, idx, "in-phase");
         int   out_phase = qd_config_item_value_int(router->qd,    CONF_WAYPOINT, idx, "out-phase");
-        char *connector = qd_config_item_value_string(router->qd, CONF_WAYPOINT, idx, "connector");
 
         if (in_phase > 9 || out_phase > 9) {
-            qd_log(router->log_source, QD_LOG_ERROR, "Phases for waypoint '%s' must be between 0 and 9.  Ignoring", name);
-            free(name);
+            qd_log(router->log_source, QD_LOG_ERROR, "Phases for waypoint '%s' must be between 0 and 9.  Ignoring", address);
+            free(address);
             free(connector);
             continue;
         }
@@ -129,7 +129,7 @@ static void qd_router_configure_waypoints(qd_router_t *router)
         qd_waypoint_t *waypoint = NEW(qd_waypoint_t);
         memset(waypoint, 0, sizeof(qd_waypoint_t));
         DEQ_ITEM_INIT(waypoint);
-        waypoint->name           = name;
+        waypoint->address        = address;
         waypoint->in_phase       = in_phase >= 0  ? (char) in_phase  + '0' : '\0';
         waypoint->out_phase      = out_phase >= 0 ? (char) out_phase + '0' : '\0';
         waypoint->connector_name = connector;
@@ -141,8 +141,8 @@ static void qd_router_configure_waypoints(qd_router_t *router)
         DEQ_INSERT_TAIL(router->waypoints, waypoint);
 
         qd_log(router->log_source, QD_LOG_INFO,
-	       "Configured Waypoint: name=%s in_phase=%d out_phase=%d connector=%s",
-               name, in_phase, out_phase, connector);
+	       "Configured Waypoint: address=%s in_phase=%d out_phase=%d connector=%s",
+               address, in_phase, out_phase, connector);
     }
 }
 
@@ -172,7 +172,7 @@ void qd_router_configure_free(qd_router_t *router)
 
     for (qd_waypoint_t *wp = DEQ_HEAD(router->waypoints); wp; wp = DEQ_HEAD(router->waypoints)) {
         DEQ_REMOVE_HEAD(router->waypoints);
-        free(wp->name);
+        free(wp->address);
         free(wp->connector_name);
         free(wp);
     }

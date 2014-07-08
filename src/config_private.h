@@ -26,8 +26,7 @@
 void qd_config_initialize(void);
 void qd_config_finalize(void);
 qd_config_t *qd_config(void);
-qd_error_t qd_config_read(qd_config_t *config, const char *filename);
-void qd_config_extend(qd_config_t *config, const char *text);
+qd_error_t  qd_config_read(qd_config_t *config, const char *filename);
 void qd_config_free(qd_config_t *config);
 
 #endif

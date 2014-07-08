@@ -383,4 +383,3 @@ void qd_router_build_node_list(qd_dispatch_t *qd, qd_composed_field_t *field)
     }
     sys_mutex_unlock(router->lock);
 }
-

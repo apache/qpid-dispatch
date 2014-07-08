@@ -41,7 +41,7 @@ struct qd_waypoint_context_t {
 };
 
 // Convenience for logging waypoint messages, expects qd and wp to be defined.
-#define LOG(LEVEL, MSG, ...) qd_log(qd->router->log_source, QD_LOG_##LEVEL, "waypoint=%s: " MSG, wp->name, ##__VA_ARGS__)
+#define LOG(LEVEL, MSG, ...) qd_log(qd->router->log_source, QD_LOG_##LEVEL, "waypoint=%s: " MSG, wp->address, ##__VA_ARGS__)
 
 static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
 {
@@ -58,7 +58,7 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         // Compose the phased-address and search the routing table for the address.
         // If it's not found, add it to the table but leave the link/router linkages empty.
         //
-        qd_field_iterator_t *iter = qd_field_iterator_string(wp->name, ITER_VIEW_ADDRESS_HASH);
+        qd_field_iterator_t *iter = qd_field_iterator_string(wp->address, ITER_VIEW_ADDRESS_HASH);
         qd_field_iterator_set_phase(iter, wp->in_phase);
         qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
 
@@ -81,8 +81,8 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         qd_connection_manager_start_on_demand(qd, wp->connector);
     }
     else if (!wp->out_link) {
-        wp->out_link = qd_link(router->node, wp->connection, QD_OUTGOING, wp->name);
-        pn_terminus_set_address(qd_link_target(wp->out_link), wp->name);
+        wp->out_link = qd_link(router->node, wp->connection, QD_OUTGOING, wp->address);
+        pn_terminus_set_address(qd_link_target(wp->out_link), wp->address);
 
         qd_router_link_t *rlink = new_qd_router_link_t();
         DEQ_ITEM_INIT(rlink);
@@ -102,7 +102,7 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         qd_router_add_link_ref_LH(&addr->rlinks, rlink);
 
         if (DEQ_SIZE(addr->rlinks) == 1) {
-            qd_field_iterator_t *iter = qd_field_iterator_string(wp->name, ITER_VIEW_ADDRESS_HASH);
+            qd_field_iterator_t *iter = qd_field_iterator_string(wp->address, ITER_VIEW_ADDRESS_HASH);
             qd_field_iterator_set_phase(iter, wp->in_phase);
             qd_router_mobile_added(router, iter);
             qd_field_iterator_free(iter);
@@ -131,7 +131,7 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         // Compose the phased-address and search the routing table for the address.
         // If it's not found, add it to the table but leave the link/router linkages empty.
         //
-        qd_field_iterator_t *iter = qd_field_iterator_string(wp->name, ITER_VIEW_ADDRESS_HASH);
+        qd_field_iterator_t *iter = qd_field_iterator_string(wp->address, ITER_VIEW_ADDRESS_HASH);
         qd_field_iterator_set_phase(iter, wp->out_phase);
         qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
 
@@ -154,8 +154,8 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         qd_connection_manager_start_on_demand(qd, wp->connector);
     }
     else if (!wp->in_link) {
-        wp->in_link = qd_link(router->node, wp->connection, QD_INCOMING, wp->name);
-        pn_terminus_set_address(qd_link_source(wp->in_link), wp->name);
+        wp->in_link = qd_link(router->node, wp->connection, QD_INCOMING, wp->address);
+        pn_terminus_set_address(qd_link_source(wp->in_link), wp->address);
 
         qd_router_link_t *rlink = new_qd_router_link_t();
         DEQ_ITEM_INIT(rlink);
@@ -320,4 +320,3 @@ void qd_waypoint_address_updated_LH(qd_dispatch_t *qd, qd_address_t *addr)
         wp = DEQ_NEXT(wp);
     }
 }
-

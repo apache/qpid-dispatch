@@ -64,7 +64,6 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
             self.node.query)
 
     def test_query_entity_type(self):
-        # FIXME aconway 2014-06-03: prefix support in Node, get from schema.
         address = 'org.apache.qpid.dispatch.router.address'
         response = self.node.query(entity_type=address)
         self.assertEqual(response.attribute_names[0:3], ['type', 'name', 'identity'])
@@ -74,7 +73,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertTrue('L$management' in names)
         self.assertTrue('M0$management' in names)
 
-        # FIXME aconway 2014-06-05: negative test: offset, count not implemented on router
+        # TODO aconway 2014-06-05: negative test: offset, count not implemented on router
         try:
             # Try offset, count
             self.assertGreater(len(names), 2)
@@ -87,8 +86,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
     def test_query_attribute_names(self):
         response = self.node.query(attribute_names=["type", "name", "identity"])
-        # FIXME aconway 2014-06-05: negative test: attribute_names query doesn't work.
-        # Need a better test.
+        # TODO aconway 2014-06-05: negative test: attribute_names query doesn't work.
         try:
             self.assertNotEqual([], response)
             self.fail("Negative test passed!")

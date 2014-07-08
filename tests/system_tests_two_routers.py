@@ -95,7 +95,7 @@ class RouterTest(TestCase):
         tm = Message()
         rm = Message()
 
-        self.routers[0].wait_address("pre_settled/1", 0, 1, timeout=30)
+        self.routers[0].wait_address("pre_settled/1", 0, 1)
 
         tm.address = addr
         for i in range(100):

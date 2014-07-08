@@ -91,17 +91,10 @@ static void py_set_item(PyObject *dict, const char* name, PyObject *value) {
     Py_DECREF(py_name);
 }
 
-static PyObject *py_import(const char* module) {
-    PyObject *py_str = PyString_FromString(module);
-    PyObject *py_module = PyImport_Import(py_str);
-    Py_DECREF(py_str);
-    return py_module;
-}
-
 static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace) {
     if (!(type && value && trace)) return;
 
-    PyObject *module = py_import("traceback");
+    PyObject *module = PyImport_ImportModule("traceback");
     if (!module) return;
 
     PyObject *globals = PyDict_New();
