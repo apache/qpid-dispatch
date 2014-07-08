@@ -26,8 +26,13 @@ check for uniqueness of enties/attributes that are specified to be unique.
 A Schema can be loaded/dumped to a json file.
 """
 
-import os
-from entity import OrderedDict
+import os, sys
+from entity import OrderedDict, Entity
+
+class ValidationError(Exception):
+    """Error raised if schema validation fails"""
+    pass
+
 
 def schema_file(name):
     """Return a file name relative to the directory from which this module was loaded."""
@@ -86,7 +91,7 @@ class BooleanType(Type):
                 return self.VALUES[value.lower()]
             return bool(value)
         except:
-            raise ValueError("Invalid Boolean value '%r'"%value)
+            raise ValidationError("Invalid Boolean value '%r'"%value)
 
 class EnumType(Type):
     """An enumerated type"""
@@ -122,7 +127,7 @@ class EnumType(Type):
                         return self.tags[i]
             except (ValueError, IndexError):
                 pass
-        raise ValueError("Invalid value for %s: '%r'"%(self.name, value))
+        raise ValidationError("Invalid value for %s: '%r'"%(self.name, value))
 
     def dump(self):
         """
@@ -145,7 +150,7 @@ def get_type(rep):
         return EnumType(rep)
     if rep in BUILTIN_TYPES:
         return BUILTIN_TYPES[rep]
-    raise TypeError("No such schema type: %s"%rep)
+    raise ValidationError("No such schema type: %s"%rep)
 
 def _dump_dict(items):
     """
@@ -183,15 +188,15 @@ class AttributeType(object):
     @ivar name: Attribute name.
     @ivar atype: Attribute L{Type}
     @ivar required: True if the attribute is reqiured.
-    @ivar default: Default value for the attribute or None if no default.
+    @ivar default: Default value for the attribute or None if no default. Can be a reference.
+    @ivar value: Fixed value for the attribute. Can be a reference.
     @ivar unique: True if the attribute value is unique.
     @ivar description: Description of the attribute type.
     @ivar include: Include section or None
     """
 
-    def __init__(self, name, type=None, default=None, required=False, unique=False, include=None,
-                 description=""
-    ): # pylint: disable=redefined-builtin
+    def __init__(self, name, type=None, default=None, required=False, unique=False, value=None,
+                 include=None, description=""):
         """
         See L{AttributeType} instance variables.
         """
@@ -199,33 +204,47 @@ class AttributeType(object):
         self.atype = get_type(type)
         self.required = required
         self.default = default
+        self.value = value
         self.unique = unique
         self.description = description
-        if default is not None:
-            self.default = self.atype.validate(default)
         self.include = include
+        if self.value is not None and self.default is not None:
+            raise ValidationError("Attribute '%s' has default value and fixed value"%self.name)
 
-    def validate(self, value, check_required=True, add_default=True, check_unique=None, **kwargs):
+    def missing_value(self, check_required=True, add_default=True, **kwargs):
         """
-        Validate value for this attribute definition.
+        Fill in missing default and fixed values but don't resolve references.
         @keyword check_required: Raise an exception if required attributes are misssing.
         @keyword add_default:  Add a default value for missing attributes.
+        @param kwargs: See L{Schema.validate}
+        """
+        if self.value is not None: # Fixed value attribute
+            return self.value
+        if add_default and self.default is not None:
+            return self.default
+        if check_required and self.required:
+            raise ValidationError("Missing required attribute '%s'"%(self.name))
+
+
+    def validate(self, value, resolve=lambda x: x, check_unique=None, **kwargs):
+        """
+        Validate value for this attribute definition.
+        @param value: The value to validate.
+        @param resolve: function to resolve value references.
         @keyword check_unique: A dict to collect values to check for uniqueness.
             None means don't check for uniqueness.
         @param kwargs: See L{Schema.validate}
         @return: value converted to the correct python type. Rais exception if any check fails.
         """
-        if value is None and add_default:
-            value = self.default
-        if value is None:
-            if self.required and check_required:
-                raise ValueError("Missing value for attribute '%s'"%self.name)
-            else:
-                return None
-        else:
-            if self.unique and not _is_unique(check_unique, self.name, value):
-                raise ValueError("Multiple instances of unique attribute '%s'"%self.name)
+        value = resolve(value)
+        if self.unique and not _is_unique(check_unique, self.name, value):
+            raise ValidationError("Duplicate value '%s' for unique attribute '%s'"%(value, self.name))
+        if self.value and value != resolve(self.value):
+            raise ValidationError("Attribute '%s' has fixed value '%s' but given '%s'"%(self.name, self.value, value))
+        try:
             return self.atype.validate(value, **kwargs)
+        except (TypeError, ValueError), e:
+            raise ValidationError, str(e), sys.exc_info()[2]
 
     def dump(self):
         """
@@ -240,7 +259,7 @@ class AttributeType(object):
         ])
 
     def __str__(self):
-        return "AttributeType%s"%(self.__dict__)
+        return "%s(%s)"%(self.__class__.__name__, self.name)
 
 class AttributeTypeHolder(object):
     """Base class for IncludeType and EntityType - a named holder of attribute types"""
@@ -248,9 +267,9 @@ class AttributeTypeHolder(object):
     def __init__(self, name, schema, attributes=None, description=""):
         self.name, self.schema, self.description = name, schema, description
         self.attributes = OrderedDict()
-        self.attributes['type'] = AttributeType('type', type='String', default=name, required=True)
         if attributes:
             self.add_attributes(attributes)
+
 
     def add_attributes(self, attributes):
         """
@@ -259,7 +278,7 @@ class AttributeTypeHolder(object):
         """
         for k, v in attributes.iteritems():
             if k in self.attributes:
-                raise TypeError("Duplicate attribute in '%s': '%s'"%(self.name, k))
+                raise ValidationError("Duplicate attribute in '%s': '%s'"%(self.name, k))
             self.attributes[k] = AttributeType(k, **v)
 
     def dump(self):
@@ -270,13 +289,16 @@ class AttributeTypeHolder(object):
             ('description', self.description or None)
         ])
 
+
     def __str__(self):
-        print self.name
+        return "%s(%s)"%(self.__class__.__name__, self.name)
+
 
 class IncludeType(AttributeTypeHolder):
 
     def __init__(self, name, schema, attributes=None, description=""):
         super(IncludeType, self).__init__(name, schema, attributes, description)
+        attributes = attributes or {}
         for a in self.attributes.itervalues():
             a.include = self
 
@@ -300,10 +322,13 @@ class EntityType(AttributeTypeHolder):
         @param description: Human readable description.
         """
         super(EntityType, self).__init__(name, schema, attributes, description)
+        self.refs = {'entity-type': name}
         self.singleton = singleton
         self.include = include
         if include and self.schema.includes:
             for i in include:
+                if not i in schema.includes:
+                    raise ValidationError("Include '%s' not found in %s'"%(i, self))
                 for attr in schema.includes[i].attributes.itervalues():
                     self.attributes[attr.name] = attr
 
@@ -313,6 +338,25 @@ class EntityType(AttributeTypeHolder):
         if self.singleton: d['singleton'] = True
         return d
 
+    def resolve(self, value, attributes):
+        """Resolve a $ or $$ reference"""
+        values = [value]
+        while True:
+            if isinstance(value, basestring) and value.startswith('$$'):
+                if value[2:] not in self.refs:
+                    raise ValidationError("Invalid entity type reference '%s'"%value)
+                value = self.refs[value[2:]]
+            elif isinstance(value, basestring) and value.startswith('$'):
+                if value[1:] not in self.attributes:
+                    raise ValidationError("Invalid attribute reference '%s'"%value)
+                value = attributes.get(value[1:])
+            else:
+                return value # Not a reference, don't need to resolve
+            if value == values[0]: # Circular reference
+                raise ValidationError("Unresolved circular reference '%s'"%values)
+            values.append(value)
+
+
     def validate(self, attributes, check_singleton=None, **kwargs):
         """
         Validate attributes.
@@ -321,21 +365,32 @@ class EntityType(AttributeTypeHolder):
         @param check_singleton: dict to enable singleton checking or None to disable.
         @param kwargs: See L{Schema.validate}
         """
+
+        def drop_none(): # Drop null items in attributes
+            for name in attributes.keys():
+                if attributes[name] is None:
+                    del attributes[name]
+
         if self.singleton and not _is_unique(check_singleton, self.name, True):
-            raise ValueError("Found multiple instances of singleton entity type '%s'"%self.name)
-        # Validate
-        for name, value in attributes.iteritems():
-            attributes[name] = self.attributes[name].validate(value, **kwargs)
-        # Set defaults, check for missing required values
+            raise ValidationError("Multiple instances of singleton entity type '%s'"%self.name)
+
+        drop_none()
+
+        # Add missing values
         for attr in self.attributes.itervalues():
             if attr.name not in attributes:
-                value = attr.validate(None, **kwargs)
-                if not value is None:
-                    attributes[attr.name] = value
-        # Drop null items
-        for name in attributes.keys():
-            if attributes[name] is None:
-                del attributes[name]
+                value = attr.missing_value(**kwargs)
+                if value is not None: attributes[attr.name] = value
+
+        # Validate attributes.
+        for name, value in attributes.iteritems():
+            if name not in self.attributes:
+                raise ValidationError("%s has unknown attribute '%s'"%(self, name))
+            attributes[name] = self.attributes[name].validate(
+                value, lambda v: self.resolve(v, attributes), **kwargs)
+
+        drop_none()
+
         return attributes
 
 
@@ -394,10 +449,12 @@ class Schema(object):
         @keyword check_required: Raise exception if required attributes are missing.
         @keyword add_default: Add defaults for missing attributes.
         @keyword check_unique: Raise exception if unique attributes are duplicated.
-        @keyword check_singleton: Raise exception if singleton entities are duplicated.
+        @keyword check_singleton: Raise exception if singleton entities are duplicated or missing
         """
         if check_singleton: check_singleton = {}
         if check_unique: check_unique = {}
+
+        # Validate all entities.
         for e in entities:
             et = self.entity_types[e.type]
             et.validate(e,
@@ -406,4 +463,5 @@ class Schema(object):
                         add_default=add_default,
                         check_unique=check_unique,
                         check_singleton=check_singleton)
+
         return entities

@@ -29,20 +29,6 @@ static int            exit_with_sigint = 0;
 static qd_dispatch_t *dispatch = 0;
 static qd_log_source_t *log_source = 0;
 
-static const char *app_config =
-    "from qpid_dispatch_internal.config.schema import config_schema\n"
-    "config_schema['fixed-address'] = (False, {\n"
-    "   'prefix' : (str, 0, 'M', None, None),\n"
-    "   'phase'  : (int, 1, '', 0, None),\n"
-    "   'fanout' : (str, None, '', 'multiple', ['multiple', 'single']),\n"
-    "   'bias'   : (str, None, '', 'closest',  ['closest', 'spread'])})\n"
-    "config_schema['waypoint'] = (False, {\n"
-    "   'name'      : (str, 0,    'M', None, None),\n"
-    "   'in-phase'  : (int, None, '',  -1, None),\n"
-    "   'out-phase' : (int, None, '',  -1, None),\n"
-    "   'connector' : (str, None, 'M', None, None)})\n";
-
-
 /**
  * The thread_start_handler is invoked once for each server thread at thread startup.
  */
@@ -141,7 +127,6 @@ int main(int argc, char **argv)
 
     qd_error_clear();
     dispatch = qd_dispatch(python_pkgdir);
-    qd_dispatch_extend_config_schema(dispatch, app_config);
     log_source = qd_log_source("MAIN"); /* Logging is initialized by qd_dispatch. */
     check();
     qd_dispatch_load_config(dispatch, config_path);

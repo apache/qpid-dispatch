@@ -765,7 +765,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
         // address for the link.
         //
         if (!iter && rlink->waypoint) {
-            iter = qd_field_iterator_string(rlink->waypoint->name, ITER_VIEW_ADDRESS_HASH);
+            iter = qd_field_iterator_string(rlink->waypoint->address, ITER_VIEW_ADDRESS_HASH);
             qd_field_iterator_set_phase(iter, rlink->waypoint->out_phase);
         }
 

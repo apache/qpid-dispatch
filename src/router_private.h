@@ -184,7 +184,7 @@ DEQ_DECLARE(qd_config_address_t, qd_config_address_list_t);
  */
 struct qd_waypoint_t {
     DEQ_LINKS(qd_waypoint_t);
-    char                  *name;
+    char                  *address;
     char                   in_phase;       ///< Phase for re-entering message.
     char                   out_phase;      ///< Phase for exiting message.
     char                  *connector_name; ///< On-demand connector name for outgoing messages.

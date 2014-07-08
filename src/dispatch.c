@@ -68,13 +68,9 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_message_initialize();
     qd->config = qd_config();
 
+    assert(qd->config);
+
     return qd;
-}
-
-
-void qd_dispatch_extend_config_schema(qd_dispatch_t *qd, const char* text)
-{
-    qd_config_extend(qd->config, text);
 }
 
 
