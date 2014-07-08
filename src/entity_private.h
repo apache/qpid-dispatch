@@ -1,5 +1,5 @@
 #ifndef ENTITY_PRIVATE_H
-#define ENTITY_PRIVATE_H
+#define ENTITY_PRIVATE_H 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,10 +20,7 @@
  */
 
 #include <stdbool.h>
-
-typedef struct qd_entity_t qd_entity_t;
-
-typedef struct qd_dispatch_t qd_dispatch_t;
+#include <qpid/dispatch/dispatch.h>
 
 void qd_entity_free(qd_entity_t* entity);
 

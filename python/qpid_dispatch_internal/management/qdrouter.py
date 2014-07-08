@@ -27,6 +27,11 @@ from entity import EntityList, Entity, OrderedDict
 from copy import copy
 import libqpid_dispatch
 
+if sys.version_info >= (2,7):
+    json_load_kwargs = {'object_pairs_hook':OrderedDict}
+else:
+    json_load_kwargs = {}
+
 class QdSchema(schema.Schema):
     """
     Qpid Dispatch Router management schema.
@@ -36,7 +41,7 @@ class QdSchema(schema.Schema):
     def __init__(self):
         """Load schema."""
         with open(self.SCHEMA_FILE) as f:
-            super(QdSchema, self).__init__(**json.load(f, object_pairs_hook=OrderedDict))
+            super(QdSchema, self).__init__(**json.load(f, **json_load_kwargs))
 
     def validate(self, entities, **kwargs):
         """
@@ -81,7 +86,7 @@ class QdConfig(EntityList):
         js_text = "[%s]"%("".join([sub(l) for l in lines]))
         spare_comma = re.compile(r',\s*([]}])') # Strip spare commas
         js_text = re.sub(spare_comma, r'\1', js_text)
-        return json.loads(js_text, object_pairs_hook=OrderedDict)
+        return json.loads(js_text, **json_load_kwargs)
 
     def _expand(self, content):
         """
