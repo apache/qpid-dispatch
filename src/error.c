@@ -91,7 +91,8 @@ static void py_set_item(PyObject *dict, const char* name, PyObject *value) {
     Py_DECREF(py_name);
 }
 
-static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace) {
+static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_log_level_t level) {
+    if (!qd_log_enabled(log_source, level)) return;
     if (!(type && value && trace)) return;
 
     PyObject *module = PyImport_ImportModule("traceback");
@@ -112,7 +113,7 @@ static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace) {
     Py_DECREF(locals);
 
     if (result) {
-	qd_log(log_source, QD_LOG_ERROR, "%s", PyString_AsString(result));
+	qd_log(log_source, level, "%s", PyString_AsString(result));
 	Py_DECREF(result);
     }
 }
@@ -133,7 +134,7 @@ qd_error_t qd_error_py() {
 	Py_XDECREF(value_str);
 	Py_XDECREF(type_name);
 
-	log_trace_py(type, value, trace);
+	log_trace_py(type, value, trace, QD_LOG_DEBUG);
 
 	Py_XDECREF(type);
 	Py_XDECREF(value);
