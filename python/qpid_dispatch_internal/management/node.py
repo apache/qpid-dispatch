@@ -55,33 +55,29 @@ class Url:
     AMQPS = "amqps"
     AMQP = "amqp"
 
-    def __init__(self, s=None, **kwargs):
+    def __init__(self, url=None, **kwargs):
         """
-        @param s: String value to convert to URL
-        @param kwargs: URL components: scheme, user, password, host, port, path.
+        @param url: String or Url instance to parse or copy.
+        @param kwargs: URL fields: scheme, user, password, host, port, path.
+            If specified, replaces corresponding component in url.
         """
-        if s is None:
-            self.scheme = kwargs.get('scheme')
-            self.user = kwargs.get('user')
-            self.password = kwargs.get('password')
-            self.host = kwargs.get('host')
-            self.port = kwargs.get('port')
-            self.path = kwargs.get('path')
-        elif isinstance(s, Url):
-            self.scheme = s.scheme
-            self.user = s.user
-            self.password = s.password
-            self.host = s.host
-            self.port = s.port
-            self.path = s.path
-        else:
-            match = Url.RE.match(s)
+
+        fields = ['scheme', 'user', 'password', 'host', 'port', 'path']
+        for field in fields: setattr(self, field, None)
+
+        if isinstance(url, Url): # Copy from url
+            for field in fields:
+                setattr(self, field, getattr(url, field))
+        elif url is not None: # Parse from url
+            match = Url.RE.match(url)
             if match is None:
                 raise ValueError("Invalid AMQP URL: %s"%s)
-            scheme, self.user, self.password, host4, host6, port, self.path = match.groups()
+            self.scheme, self.user, self.password, host4, host6, port, self.path = match.groups()
             self.host = host4 or host6
             self.port = port and int(port)
-            self.scheme = scheme
+        # Let kwargs override values previously set from url
+        for field in fields:
+            setattr(self, field, kwargs.get(field, getattr(self, field)))
 
     def __repr__(self):
         return "Url(%r)" % str(self)
