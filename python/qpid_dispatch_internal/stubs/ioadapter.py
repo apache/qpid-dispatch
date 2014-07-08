@@ -18,10 +18,10 @@
 #
 
 class IoAdapter:
-  def __init__(self, handler, address):
+  def __init__(self, handler, address, global_address=False):
     self.handler = handler
     self.address = address
+    self.global_address = global_address
 
-  def send(self, address, app_properties, body):
-    print "IO: send(addr=%s props=%r body=%r" % (address, app_properties, body)
-
+  def send(self, address, properties, application_properties, body, correlation_id=None):
+    print "IO: send(addr=%s properties=%r application_properties=%r body=%r" % (address, properties, application_properties, body)

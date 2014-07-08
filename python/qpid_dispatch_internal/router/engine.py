@@ -18,16 +18,16 @@
 #
 
 from time import time
-from uuid import uuid4
 
 from configuration import Configuration
-from data import *
+from data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, MessageLSR
 from neighbor import NeighborEngine
 from link import LinkStateEngine
 from path import PathEngine
 from mobile import MobileAddressEngine
 from routing import RoutingTableEngine
 from node import NodeTracker
+from message import Message
 
 import sys
 import traceback
@@ -37,9 +37,9 @@ import traceback
 ## (i.e. we are in a test bench, etc.), load the stub versions.
 ##
 try:
-    from dispatch import *
+    from dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_ERROR
 except ImportError:
-    from ..stubs import *
+    from ..stubs import IoAdapter, LogAdapter, LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_ERROR
 
 
 class RouterEngine:
@@ -56,7 +56,8 @@ class RouterEngine:
         self.domain         = "domain"
         self.router_adapter = router_adapter
         self.log_adapter    = LogAdapter("ROUTER")
-        self.io_adapter     = IoAdapter(self, ("qdrouter", "qdhello"))
+        self.io_adapter     = [IoAdapter(self.receive, "qdrouter"),
+                               IoAdapter(self.receive, "qdhello")]
         self.max_routers    = max_routers
         self.id             = router_id
         self.area           = area
@@ -185,16 +186,15 @@ class RouterEngine:
             traceback.print_tb(exc_traceback)
 
 
-    def receive(self, message_properties, body, link_id):
+    def receive(self, message, link_id):
         """
         This is the IoAdapter message-receive handler
         """
         try:
-            #self.log(LOG_DEBUG, "Raw Receive: mp=%r body=%r link_id=%r" % (message_properties, body, link_id))
-            self.handleControlMessage(message_properties['opcode'], body, link_id)
+            self.handleControlMessage(message.properties['opcode'], message.body, link_id)
         except Exception, e:
             self.log(LOG_ERROR, "Exception in raw message processing: properties=%r body=%r exception=%r" %
-                     (message_properties, body, e))
+                     (message.properties, message.body, e))
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_tb(exc_traceback)
 
@@ -234,7 +234,7 @@ class RouterEngine:
         Send a control message to another router.
         """
         app_props = {'opcode' : msg.get_opcode() }
-        self.io_adapter.send(dest, app_props, msg.to_dict())
+        self.io_adapter[0].send(Message(address=dest, properties=app_props, body=msg.to_dict()))
         self.log(LOG_TRACE, "SENT: %r dest=%s" % (msg, dest))
 
 
@@ -302,4 +302,3 @@ class RouterEngine:
     def del_remote_router(self, router_bit):
         self.log(LOG_DEBUG, "Event: del_remote_router: router_bit=%d" % router_bit)
         self.router_adapter.del_remote_router(router_bit)
-

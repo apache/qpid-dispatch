@@ -24,5 +24,5 @@
 void qd_log_initialize(void);
 void qd_log_finalize(void);
 
-#define QD_LOG_TEXT_MAX 1024
+#define QD_LOG_TEXT_MAX 2048
 #endif

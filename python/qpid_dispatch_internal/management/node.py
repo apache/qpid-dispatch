@@ -22,7 +22,6 @@ AMQP management tools for Qpid dispatch.
 """
 
 import proton, re, threading, httplib
-from collections import namedtuple
 from entity import Entity, EntityList
 
 class ManagementError(Exception):
@@ -36,11 +35,15 @@ class ManagementError(Exception):
     def __str__(self):
         status_str = httplib.responses.get(self.status)
         if status_str in self.description: return self.description
-        else: return "%s: %s"%(self.status, self.description)
+        else: return "%s: %s"%(status_str, self.description)
 
-    @staticmethod
-    def check(status, response):
-        if status != httplib.OK:
+    @classmethod
+    def is_ok(cls, status):
+        return status == httplib.OK
+
+    @classmethod
+    def raise_if(cls, status, response):
+        if not cls.is_ok(status):
             raise ManagementError(status, response)
 
 
@@ -71,7 +74,7 @@ class Url:
         elif url is not None: # Parse from url
             match = Url.RE.match(url)
             if match is None:
-                raise ValueError("Invalid AMQP URL: %s"%s)
+                raise ValueError("Invalid AMQP URL: %s"%url)
             self.scheme, self.user, self.password, host4, host6, port, self.path = match.groups()
             self.host = host4 or host6
             self.port = port and int(port)
@@ -157,6 +160,8 @@ class Node(object):
         self.subscription = self.messenger.subscribe(str(subscribe_address))
         self._flush()
         self.reply_to = self.subscription.address
+        if not self.reply_to:
+            raise ValueError("Failed to subscribe to %s"%subscribe_address)
 
     def stop(self):
         if not self.messenger: return
@@ -172,33 +177,37 @@ class Node(object):
         while self.messenger.work(0.1):
             pass
 
+    def __repr__(self):
+        return "%s(%s)"%(self.__class__.__name__, self.address)
+
     CORRELATION_ID = 0
-    CORRELATION_LOCK = threading.Lock
+    CORRELATION_LOCK = threading.Lock()
 
     def correlation_id(self):
         """Get the next correlation ID. Thread safe."""
-        self.CORRELATION_ID += 1
-        return self.CORRELATION_ID
+        with self.CORRELATION_LOCK:
+            self.CORRELATION_ID += 1
+            return self.CORRELATION_ID
 
-    def check_response(self, response, correlation_id=None):
+    def check_response(self, response, request):
         """
         Check a manaement response message for errors and correlation ID.
         """
         properties = response.properties
-        ManagementError.check(properties.get('statusCode'), properties.get('statusDescription'))
-        if correlation_id is not None and response.correlation_id != correlation_id:
-            raise ManagementError("Bad correlation id request=%s, response=%s"%(
-                correlation_id, response.correlation_id))
+        ManagementError.raise_if(properties.get('statusCode'), properties.get('statusDescription'))
+        if response.correlation_id != request.correlation_id:
+            raise ManagementError(httplib.NOT_FOUND, "Bad correlation id request=%s, response=%s"%(
+                request.correlation_id, response.correlation_id))
 
 
     def request(self, body=None, **properties):
         """
         Make a L{proton.Message} containining a management request.
         @param body: The request body, a dict or list.
-        @param properties: Map of application-properties for the request.
+        @param properties: Keyword arguments for application-properties of the request.
         @return: L{proton.Message} containining the management request.
         """
-        if self.locales: properties.set_default(self.locales)
+        if self.locales: properties.setdefault('locales', self.locales)
         request = proton.Message()
         request.address=str(self.address)
         request.reply_to=self.reply_to
@@ -207,8 +216,11 @@ class Node(object):
         request.body=remove_none(body or {})
         return request
 
-    def node_request(self, body={}, **properties):
+    def node_request(self, body=None, **properties):
         return self.request(body, name=self.SELF, type=self.NODE_TYPE, **properties)
+
+    def op_request(self, operation, type, name, body=None, **properties):
+        return self.request(body,  name=name, type=type, operation=operation, **properties)
 
     # TODO aconway 2014-06-03: async send/receive
     def call(self, request):
@@ -219,14 +231,14 @@ class Node(object):
         if not request.address:
             raise ValueError("Message must have an address")
         if not request.reply_to:
-            raise ValueError("Message must have reply_to")
+            raise ValueError("Message must have reply_to %s", request)
         self.messenger.put(request)
         self.messenger.send()
         self._flush()
         self.messenger.recv(1)
         response = proton.Message()
         self.messenger.get(response)
-        self.check_response(response)
+        self.check_response(response, request)
         return response
 
     class QueryResponse(EntityList):
@@ -242,18 +254,32 @@ class Node(object):
             for r in response.body['results']:
                 self.append(Entity(zip(self.attribute_names, r)))
 
-    def query(self, entity_type=None, attribute_names=None, offset=None, count=None):
+    def query(self, type=None, attribute_names=None, offset=None, count=None):
         """
         Send an AMQP management query message and return the response.
-        At least one of entity_type, attribute_names must be specified.
-        @keyword entity_type: The type of entity to query.
+        At least one of type, attribute_names must be specified.
+        @keyword type: The type of entity to query.
         @keyword attribute_names: A list of attribute names to query.
         @keyword offset: An integer offset into the list of results to return.
         @keyword count: A count of the maximum number of results to return.
         @return: An L{EntityList}
         """
         attribute_names = attribute_names or []
-        response = self.call(self.node_request(
-            operation='QUERY', entityType=entity_type, offset=offset, count=count,
-            body={'attributeNames':attribute_names}))
+        request = self.node_request(
+            {'attributeNames':attribute_names},
+            operation='QUERY', entityType=type, offset=offset, count=count)
+
+        response = self.call(request)
         return Node.QueryResponse(response)
+
+    def create(self, type, name, attributes=None):
+        """
+        Send an AMQP management create message and return the response.
+        @param type: Type of entity to create.
+        @param name: Name for the new entity.
+        @param attributes: Map of attribute name:value for the new entity.
+        @return: Map of actual attributes returned by create (with defaults etc.)
+        """
+        request = self.op_request(operation='CREATE', type=type, name=name, body=attributes or {})
+        response = self.call(request)
+        return response.body

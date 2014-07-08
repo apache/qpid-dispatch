@@ -126,7 +126,6 @@ listener {
                 write_attribute(attr, attrs)
             f.write('\n\n')
 
-
         f.write(".SH INCLUDE SECTIONS\n\n")
         for include in schema.includes.itervalues():
             used_by = [e.name for e in schema.entity_types.itervalues() if include.name in e.include]

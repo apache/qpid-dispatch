@@ -21,8 +21,8 @@
 Generate C code from the router schema.
 """
 
-import sys
-from qpid_dispatch_internal.management import QdSchema
+import re
+from qpid_dispatch_internal.management import EnumType, QdSchema
 
 copyright="""/*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -46,8 +46,6 @@ copyright="""/*
 
 """
 
-import re
-from qpid_dispatch_internal.management import QdSchema, EnumType
 
 class Generator(object):
 

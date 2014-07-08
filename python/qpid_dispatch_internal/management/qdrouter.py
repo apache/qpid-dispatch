@@ -43,7 +43,7 @@ class QdSchema(schema.Schema):
         with open(self.SCHEMA_FILE) as f:
             super(QdSchema, self).__init__(**json.load(f, **json_load_kwargs))
 
-    def validate(self, entities, **kwargs):
+    def validate(self, entities, full=True, **kwargs):
         """
         In addition to L{schema.Schema.validate}, check the following:
 
@@ -51,14 +51,16 @@ class QdSchema(schema.Schema):
         permitted roles for listeners and connectors is 'normal'.
 
         @param entities: An L{EntityList}
+        @param full: Perform validation for full configuration.
         @param kwargs: See L{schema.Schema.validate}
         """
         super(QdSchema, self).validate(entities, **kwargs)
 
-        if entities.router[0].mode != 'interior':
-            for connect in entities.get(entity_type='listeners') + entities.get(entity_type='connector'):
-                if connect['role'] != 'normal':
-                    raise schema.ValidationError("Role '%s' for entity '%s' only permitted with 'interior' mode % (entity['role'], connect.name)")
+        if full:
+            if entities.router[0].mode != 'interior':
+                for connect in entities.get(entity_type='listeners') + entities.get(entity_type='connector'):
+                    if connect['role'] != 'normal':
+                        raise schema.ValidationError("Role '%s' for entity '%s' only permitted with 'interior' mode % (entity['role'], connect.name)")
 
 
 class QdConfig(EntityList):
@@ -143,7 +145,7 @@ class QdConfig(EntityList):
                     self.load(f)
                 except:
                     ex_type, ex_value, ex_trace = sys.exc_info()
-                    raise ex_type, "Loading '%s': %s"%(source, ex_value), ex_trace
+                    raise schema.ValidationError, "Loading '%s', %s: %s"%(source, ex_type.__name__, ex_value), ex_trace
         else:
             sections = self._parse(source);
             # Add missing singleton sections
