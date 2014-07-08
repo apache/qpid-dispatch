@@ -20,7 +20,8 @@
 
 
 from .entity import Entity, EntityList
-from .node import ManagementError, Node, Url
+from .error import ManagementError
+from .client import Node, Url
 from .qdrouter import QdSchema
 from .config import Config, configure_dispatch
 from .schema import Type, BooleanType, EnumType, EnumValue, AttributeType, EntityType, Schema, schema_file, ValidationError

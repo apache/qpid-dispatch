@@ -17,10 +17,10 @@
 # under the License
 #
 
-import httplib, re
+import re
 from qpid_dispatch_internal import dispatch_c
 from dispatch import IoAdapter, LogAdapter, LOG_DEBUG, LOG_ERROR
-from node import ManagementError
+from error import ManagementError, OK, BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_IMPLEMENTED
 from schema import ValidationError
 from entity import Entity, EntityList
 from qdrouter import QdSchema
@@ -38,7 +38,7 @@ class Agent(object):
         self.log = LogAdapter("AGENT").log
         self.schema = QdSchema()
 
-    def respond(self, request, status=httplib.OK, description="OK", body=None):
+    def respond(self, request, status=OK, description="OK", body=None):
         response = Message(
             address=request.reply_to,
             correlation_id=request.correlation_id,
@@ -60,18 +60,18 @@ class Agent(object):
         except ManagementError, e:
             error(e, format_exc())
         except ValidationError, e:
-            error(ManagementError(httplib.BAD_REQUEST, str(e)), format_exc())
+            error(ManagementError(BAD_REQUEST, str(e)), format_exc())
         except Exception, e:
-            error(ManagementError(httplib.INTERNAL_SERVER_ERROR,
+            error(ManagementError(INTERNAL_SERVER_ERROR,
                                   "%s: %s"%(type(e).__name__ , e)), format_exc())
 
     def handle(self, request):
         op = request.properties.get('operation')
         if not op:
-            raise ManagementError(httplib.BAD_REQUEST, "No 'operation' property on %s"%request)
+            raise ManagementError(BAD_REQUEST, "No 'operation' property on %s"%request)
         method = getattr(self, op.lower(), None)
         if not method:
-            raise ManagementError(httplib.NOT_IMPLEMENTED, op)
+            raise ManagementError(NOT_IMPLEMENTED, op)
         method(request)
 
     def create(self, request):
@@ -79,10 +79,10 @@ class Agent(object):
         entity = Entity(request.body)
         for a in ['type', 'name']:
             if a not in request.properties:
-                raise ManagementError(httplib.BAD_REQUEST,
+                raise ManagementError(BAD_REQUEST,
                                       "No value for '%s' in request properties"%a)
             if a in entity and entity[a] != request.properties[a]:
-                raise ManagementError(httplib.BAD_REQUEST, "Conflicting values for '%s'"%a)
+                raise ManagementError(BAD_REQUEST, "Conflicting values for '%s'"%a)
             entity[a] = request.properties[a]
         self.schema.validate(EntityList([entity]), full=False)
 
@@ -114,6 +114,6 @@ class Agent(object):
             getattr(Creator(), re.sub('-', '_', entity.type))()
         except AttributeError:
             raise ManagementError(
-                httplib.BAD_REQUEST, "Cannot create entity of type '%s'"%entity.type)
+                BAD_REQUEST, "Cannot create entity of type '%s'"%entity.type)
 
         self.respond(request, body=dict(entity))

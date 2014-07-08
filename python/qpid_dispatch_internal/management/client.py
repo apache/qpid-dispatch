@@ -18,36 +18,13 @@
 ##
 
 """
-AMQP management tools for Qpid dispatch.
+AMQP management client for Qpid dispatch.
 """
 
-import proton, re, threading, httplib
+import proton, re, threading
 from entity import Entity, EntityList
+from error import ManagementError, OK, NOT_FOUND
 
-class ManagementError(Exception):
-    """An AMQP management error. str() gives a string with status code and text.
-    @ivar status: integer status code
-    @ivar description: description text
-    """
-    def __init__(self, status, description):
-        self.status, self.description = status, description
-
-    def __str__(self):
-        status_str = httplib.responses.get(self.status)
-        if status_str in self.description: return self.description
-        else: return "%s: %s"%(status_str, self.description)
-
-    @classmethod
-    def is_ok(cls, status):
-        return status == httplib.OK
-
-    @classmethod
-    def raise_if(cls, status, response):
-        if not cls.is_ok(status):
-            raise ManagementError(status, response)
-
-
-# TODO aconway 2014-06-03: proton URL class, conditional import?
 class Url:
     """Simple AMQP URL parser/constructor"""
 
@@ -66,18 +43,21 @@ class Url:
         """
 
         fields = ['scheme', 'user', 'password', 'host', 'port', 'path']
-        for field in fields: setattr(self, field, None)
 
-        if isinstance(url, Url): # Copy from url
-            for field in fields:
-                setattr(self, field, getattr(url, field))
-        elif url is not None: # Parse from url
+        for f in fields: setattr(self, f, None)
+        for k in kwargs: getattr(self, k) # Check for invalid kwargs
+
+        if isinstance(url, Url): # Copy from another Url instance.
+            self.__dict__.update(url.__dict__)
+
+        elif url is not None:   # Parse from url
             match = Url.RE.match(url)
             if match is None:
                 raise ValueError("Invalid AMQP URL: %s"%url)
             self.scheme, self.user, self.password, host4, host6, port, self.path = match.groups()
             self.host = host4 or host6
             self.port = port and int(port)
+
         # Let kwargs override values previously set from url
         for field in fields:
             setattr(self, field, kwargs.get(field, getattr(self, field)))
@@ -193,10 +173,11 @@ class Node(object):
         """
         Check a manaement response message for errors and correlation ID.
         """
-        properties = response.properties
-        ManagementError.raise_if(properties.get('statusCode'), properties.get('statusDescription'))
+        code = response.properties.get('statusCode')
+        if code != OK:
+            raise ManagementError(code, response.properties.get('statusDescription'))
         if response.correlation_id != request.correlation_id:
-            raise ManagementError(httplib.NOT_FOUND, "Bad correlation id request=%s, response=%s"%(
+            raise ManagementError(NOT_FOUND, "Bad correlation id request=%s, response=%s"%(
                 request.correlation_id, response.correlation_id))
 
 
