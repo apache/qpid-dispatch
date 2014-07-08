@@ -115,7 +115,8 @@
           "type": [
             "standalone",
             "interior",
-	    "edge"
+	    "edge",
+	    "endpoint"
           ],
           "default": "standalone",
           "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not coorperate with other routers. In interior mode, the router operates in cooreration with other interior routers in an interconnected network.  In edge mode, the router operates with an uplink into an interior router network. Edge routers are typically used as connection concentrators or as security firewalls for access into the interior network. "
@@ -221,6 +222,7 @@
 	    "DEFAULT",
 	    "ERROR"
 	  ],
+	  "required": true,
 	  "description": "Module to configure logging level. The special module 'DEFAULT' specifies logging for modules that don't have explicit log sections."
 	},
         "level": {

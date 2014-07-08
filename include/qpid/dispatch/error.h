@@ -35,7 +35,7 @@
  */
 // NOTE: If you modify this enum, you must update error_names in error.c
 typedef enum {
-    QD_ERROR_NONE = 0,
+    QD_ERROR_NONE,
     QD_ERROR_NOT_FOUND,
     QD_ERROR_ALREADY_EXISTS,
     QD_ERROR_ALLOC,
@@ -43,7 +43,7 @@ typedef enum {
     QD_ERROR_PYTHON,            ///< Error from python code.
     QD_ERROR_CONFIG,            ///< Error in configuration
 
-    QD_ERROR_COUNT              ///< Not an error, marks the end of the enum
+    QD_ERROR_ENUM_COUNT         ///< Not an error, marks the end of the enum
 } qd_error_t;
 
 /**
@@ -84,5 +84,8 @@ extern const int QD_ERROR_MAX;
  * @return QD_ERROR_PYTHON or QD_ERROR_NONE.
  */
 qd_error_t qd_error_py();
+
+#define QD_ERROR_RET() do { if (qd_error_code()) return qd_error_code(); } while(0)
+#define QD_ERROR_PY_RET() do { if (qd_error_py()) return qd_error_code(); } while(0)
 
 #endif

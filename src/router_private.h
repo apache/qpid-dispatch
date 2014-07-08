@@ -31,11 +31,14 @@
 #include <qpid/dispatch/agent.h>
 #include <qpid/dispatch/log.h>
 #include "dispatch_private.h"
+#include "entity_private.h"
 
-void qd_router_python_setup(qd_router_t *router);
-void qd_pyrouter_tick(qd_router_t *router);
-void qd_router_agent_setup(qd_router_t *router);
-void qd_router_configure(qd_router_t *router);
+qd_error_t qd_router_python_setup(qd_router_t *router);
+qd_error_t qd_pyrouter_tick(qd_router_t *router);
+qd_error_t qd_router_agent_setup(qd_router_t *router);
+qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity);
+qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity);
+
 void qd_router_configure_free(qd_router_t *router);
 
 typedef enum {

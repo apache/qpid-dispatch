@@ -275,7 +275,9 @@ class Qdrouterd(Process):
     """Run a Qpid Dispatch Router Daemon"""
 
     class Config(list, Config):
-        """List of ('section', {'name':'value', ...}).
+        """
+        List of ('section', {'name':'value', ...}).
+
         Fills in some default values automatically, see Qdrouterd.DEFAULTS
         """
 
@@ -310,6 +312,8 @@ class Qdrouterd(Process):
         @keyword wait: wait for router to be ready (call self.wait_ready())
         """
         self.config = copy(config)
+        if not [l for l in config if l[0] == 'log']:
+            config.append(('log', {'module':'DEFAULT', 'level':'info', 'output':name+'.log'}))
         if not pyinclude and os.environ['QPID_DISPATCH_HOME']:
             pyinclude = os.path.join(os.environ['QPID_DISPATCH_HOME'], 'python')
         super(Qdrouterd, self).__init__(

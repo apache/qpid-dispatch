@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -19,3 +19,6 @@
 
 #cmakedefine DEFAULT_CONFIG_PATH          "${DEFAULT_CONFIG_PATH}"
 #cmakedefine QPID_DISPATCH_HOME_INSTALLED "${QPID_DISPATCH_HOME_INSTALLED}"
+
+// Use #define, not #cmakedefine because SO_VERSION_MAJOR may be 0 which #cmakedefine considers unset.
+#define QPID_DISPATCH_LIB "libqpid-dispatch.so.${SO_VERSION_MAJOR}"

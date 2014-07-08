@@ -31,11 +31,11 @@
 //===============================================================================
 
 static qd_dispatch_t   *dispatch   = 0;
-static uint32_t         ref_count  = 0;
 static sys_mutex_t     *ilock      = 0;
 static qd_log_source_t *log_source = 0;
 static PyObject        *dispatch_module = 0;
 static PyObject        *dispatch_python_pkgdir = 0;
+static PyObject        *qpid_dispatch_lib = 0;
 
 static qd_address_semantics_t py_semantics = QD_FANOUT_MULTIPLE | QD_BIAS_NONE | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS;
 
@@ -43,48 +43,28 @@ static void qd_python_setup(void);
 
 
 void qd_python_initialize(qd_dispatch_t *qd,
-                          const char    *python_pkgdir)
+                          const char *python_pkgdir,
+                          const char *qpid_dispatch_lib_)
 {
     log_source = qd_log_source("PYTHON");
     dispatch = qd;
     ilock = sys_mutex();
     if (python_pkgdir)
         dispatch_python_pkgdir = PyString_FromString(python_pkgdir);
+    if (qpid_dispatch_lib_)
+        qpid_dispatch_lib = PyString_FromString(qpid_dispatch_lib_);
+    Py_Initialize();
+    qd_python_setup();
 }
 
 
 void qd_python_finalize(void)
 {
-    assert(ref_count == 0);
     sys_mutex_free(ilock);
-}
-
-
-void qd_python_start(void)
-{
-    sys_mutex_lock(ilock);
-    if (ref_count == 0) {
-        Py_Initialize();
-        qd_python_setup();
-        qd_log(log_source, QD_LOG_TRACE, "Embedded Python Interpreter Initialized");
-    }
-    ref_count++;
-    sys_mutex_unlock(ilock);
-}
-
-
-void qd_python_stop(void)
-{
-    sys_mutex_lock(ilock);
-    ref_count--;
-    if (ref_count == 0) {
-        Py_DECREF(dispatch_module);
-        dispatch_module = 0;
-        PyGC_Collect();
-        Py_Finalize();
-        qd_log(log_source, QD_LOG_TRACE, "Embedded Python Interpreter Shut Down");
-    }
-    sys_mutex_unlock(ilock);
+    Py_DECREF(dispatch_module);
+    dispatch_module = 0;
+    PyGC_Collect();
+    Py_Finalize();
 }
 
 
@@ -658,6 +638,11 @@ static void qd_python_setup(void)
         if (dispatch_python_pkgdir) {
             PyObject *sys_path = PySys_GetObject("path");
             PyList_Append(sys_path, dispatch_python_pkgdir);
+        }
+
+        // Set the QPID_DISPATCH_LIB constant.
+        if (qpid_dispatch_lib) {
+            PyModule_AddObject(m, "QPID_DISPATCH_LIB", qpid_dispatch_lib);
         }
 
         //

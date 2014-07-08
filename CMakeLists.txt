@@ -78,6 +78,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}/src
     ${proton_include}
     ${PYTHON_INCLUDE_PATH}
     )
@@ -98,50 +99,8 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/conditionals.h)
 
 ##
-## Build the Multi-Threaded Server Library
+## Header file installation
 ##
-set(server_SOURCES
-    src/agent.c
-    src/alloc.c
-    src/amqp.c
-    src/bitmask.c
-    src/buffer.c
-    src/error.c
-    src/compose.c
-    src/config.c
-    src/connection_manager.c
-    src/container.c
-    src/dispatch.c
-    src/hash.c
-    src/iovec.c
-    src/iterator.c
-    src/log.c
-    src/message.c
-    src/parse.c
-    src/posix/threading.c
-    src/python_embedded.c
-    src/router_agent.c
-    src/router_config.c
-    src/router_node.c
-    src/router_pynode.c
-    src/server.c
-    src/timer.c
-    src/waypoint.c
-    )
-
-set_property(SOURCE src/python_embedded.c src/router_pynode.c
-    PROPERTY COMPILE_FLAGS -Wno-strict-aliasing
-    )
-
-add_library(qpid-dispatch SHARED ${server_SOURCES})
-target_link_libraries(qpid-dispatch ${proton_lib} ${pthread_lib} ${rt_lib} ${PYTHON_LIBRARIES})
-set_target_properties(qpid-dispatch PROPERTIES
-                      VERSION "${SO_VERSION}"
-                      SOVERSION "${SO_VERSION_MAJOR}"
-                      LINK_FLAGS "${CATCH_UNDEFINED}"
-                      )
-install(TARGETS qpid-dispatch
-        LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 file(GLOB headers "include/qpid/dispatch/*.h")
 install(FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/qpid/dispatch)
 install(FILES include/qpid/dispatch.h DESTINATION ${INCLUDE_INSTALL_DIR}/qpid)
@@ -169,9 +128,9 @@ install(PROGRAMS ${TOOLS_EXECUTABLES}
 install(FILES ${DOC_FILES}
         DESTINATION ${DOC_INSTALL_DIR}/qpid-dispatch)
 
-##
 ## Build Tests first as other subdirs use tests/run.py
 ##
 add_subdirectory(tests)
+add_subdirectory(src)
 add_subdirectory(doc)
 add_subdirectory(router)
