@@ -336,8 +336,10 @@ def main(argv=None):
     args = OptionsAndArguments(argv)
     try:
         bm = BusManager(config._address, config._router)
-        bm.display(args)
-        bm.stop()
+        try:
+            bm.display(args)
+        finally:
+            bm.stop()
         return 0
     except KeyboardInterrupt:
         print
@@ -349,7 +351,6 @@ def main(argv=None):
     except Exception,e:
         print "Failed: %s - %s" % (e.__class__.__name__, e)
 
-    bm.stop()
     return 1
 
 if __name__ == "__main__":
