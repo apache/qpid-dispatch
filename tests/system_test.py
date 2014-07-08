@@ -52,7 +52,7 @@ export PYTHONPATH="$PYTHONPATH:/usr/local/lib/proton/bindings/python:/usr/local/
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib64"
 """
 
-import os, time, socket, random, subprocess, shutil, unittest, inspect
+import os, time, socket, random, subprocess, shutil, unittest
 from copy import copy
 import proton
 from proton import Message

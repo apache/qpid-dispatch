@@ -18,13 +18,7 @@
 #
 
 from data import LinkState, MessageHELLO
-from time import time
-
-try:
-    from dispatch import *
-except ImportError:
-    from ..stubs import *
-
+from dispatch import LOG_INFO
 
 class NeighborEngine(object):
     """
@@ -86,4 +80,3 @@ class NeighborEngine(object):
                 to_delete.append(key)
         for key in to_delete:
             self._delete_neighbor(key)
-

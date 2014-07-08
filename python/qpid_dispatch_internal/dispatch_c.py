@@ -17,9 +17,7 @@
 # under the License
 #
 
-"""Access to fucntions in libqpid-dispatch.so"""
-
-# TODO aconway 2014-06-19: this is all linux specific.
+"""Access to functions in libqpid-dispatch.so"""
 
 import ctypes, os
 from ctypes import c_char_p, c_long, py_object

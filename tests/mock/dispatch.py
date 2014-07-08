@@ -1,4 +1,3 @@
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,6 +16,10 @@
 # under the License.
 #
 
+"""
+Mock implementation of the dispatch C extension module for use in unit tests.
+"""
+
 LOG_TRACE    = 1
 LOG_DEBUG    = 2
 LOG_INFO     = 4
@@ -31,3 +34,12 @@ class LogAdapter:
 
   def log(self, level, text):
     print "LOG: mod=%s level=%d text=%s" % (self.mod_name, level, text)
+
+class IoAdapter:
+  def __init__(self, handler, address, global_address=False):
+    self.handler = handler
+    self.address = address
+    self.global_address = global_address
+
+  def send(self, address, properties, application_properties, body, correlation_id=None):
+    print "IO: send(addr=%s properties=%r application_properties=%r body=%r" % (address, properties, application_properties, body)

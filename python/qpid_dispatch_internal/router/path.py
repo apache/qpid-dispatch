@@ -17,10 +17,6 @@
 # under the License.
 #
 
-try:
-    from dispatch import *
-except ImportError:
-    from ..stubs import *
 
 class PathEngine(object):
     """
@@ -232,4 +228,3 @@ class NodeSet(object):
             index += 1
 
         self.nodes.insert(index, (_id, new_cost))
-

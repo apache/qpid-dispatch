@@ -38,10 +38,10 @@ class Message(object):
     def __init__(self, **kwds):
         """All instance variables can be set as keywords. See L{Message}"""
         for f in self._fields:
-            setattr(self, f, None)
-        for k, v in kwds.iteritems():
-            getattr(self, k)    # Check for bad attributes.
-            setattr(self, k, v)
+            setattr(self, f, kwds.get(f, None))
+        for k in kwds:
+            getattr(self, k)    # Check for bad attributes
 
     def __repr__(self):
-        return "Message(%s)"%', '.join('%s=%s'%(f,getattr(self, f)) for f in self._fields)
+        return "%s(%s)" % (type(self).__name__,
+                           ", ".join("%s=%r"%(f, getattr(self, f)) for f in self._fields))

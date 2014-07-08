@@ -18,12 +18,7 @@
 #
 
 from data import MessageRA, MessageLSU, MessageLSR
-from time import time
-
-try:
-    from dispatch import *
-except ImportError:
-    from ..stubs import *
+from dispatch import LOG_INFO
 
 class LinkStateEngine(object):
     """

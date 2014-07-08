@@ -17,8 +17,9 @@
 ## under the License
 ##
 
-#pylint: disable=wildcard-import,missing-docstring
-from entity import *
-from schema import *
-from node import *
-from qdrouter import *
+from entity import EntityTest
+from schema import SchemaTest
+from node import UrlTest
+from qdrouter import QdrouterTest
+
+__all__ = ["EntityTest", "SchemaTest", "UrlTest", "QdrouterTest"]

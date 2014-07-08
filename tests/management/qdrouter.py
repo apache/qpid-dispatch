@@ -20,13 +20,13 @@
 #pylint: disable=wildcard-import,unused-wildcard-import,missing-docstring,too-many-public-methods
 
 import unittest
-from qpid_dispatch_internal.management import QdSchema, QdConfig
+from qpid_dispatch_internal.management import Config
 
 class QdrouterTest(unittest.TestCase):
     """Tests for qpid_dispatch_internal.config.qdrouter"""
 
     def test_qdrouter_parse(self):
-        conf = QdConfig()
+        conf = Config()
         conf_text = """
 # Line comment
 router {

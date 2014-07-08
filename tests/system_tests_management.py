@@ -19,9 +19,9 @@
 
 """System tests for management of qdrouter"""
 
-import unittest, system_test, re, os, time
+import unittest, system_test, re, os
 from qpid_dispatch_internal.management import Node, ManagementError, Url
-from system_test import Qdrouterd, message, retry, MISSING_REQUIREMENTS
+from system_test import Qdrouterd, message, retry
 from httplib import BAD_REQUEST, NOT_IMPLEMENTED
 
 class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-methods
@@ -153,7 +153,6 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
             ('fixed-address', {'prefix':'foo'})
         ])
         wp_router = self.qdrouterd('wp-router', conf)
-        wp_node = self.cleanup(Node(self.router.addresses[0]))
         wp_router.wait_ready()
 
         # Configure the router
