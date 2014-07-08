@@ -351,8 +351,9 @@ static void qd_router_query_address(void *context, void *cor)
 }
 
 
-void qd_router_agent_setup(qd_router_t *router)
+qd_error_t qd_router_agent_setup(qd_router_t *router)
 {
+    qd_error_clear();
     router->class_router =
         qd_agent_register_class(router->qd, ROUTER_TYPE, router, ROUTER_ATTRIBUTES, qd_router_query_router);
     router->class_link =
@@ -361,6 +362,7 @@ void qd_router_agent_setup(qd_router_t *router)
         qd_agent_register_class(router->qd, NODE_TYPE, router, NODE_ATTRIBUTES, qd_router_query_node);
     router->class_address =
         qd_agent_register_class(router->qd, ADDRESS_TYPE, router, ADDRESS_ATTRIBUTES, qd_router_query_address);
+    return qd_error_code();
 }
 
 

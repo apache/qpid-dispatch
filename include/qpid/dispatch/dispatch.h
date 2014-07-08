@@ -20,6 +20,9 @@
  */
 
 #include <qpid/dispatch/error.h>
+
+typedef struct qd_entity_t qd_entity_t;
+
 /**
  * @defgroup dispatch
  *
@@ -35,7 +38,7 @@ typedef struct qd_dispatch_t qd_dispatch_t;
  * @param python_pkgdir The path to the Python files.
  * @return A handle to be used in API calls for this instance.
  */
-qd_dispatch_t *qd_dispatch(const char *python_pkgdir);
+qd_dispatch_t *qd_dispatch(const char *python_pkgdir, const char *qpid_dispatch_lib);
 
 
 /**
@@ -46,15 +49,6 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir);
 void qd_dispatch_free(qd_dispatch_t *dispatch);
 
 /**
- * Extend the schema for the configuration file prior to loading and
- *        parsing the file.
- *
- * @param dispatch The dispatch handle returned by qd_dispatch
- * @param text Python text used to extend the schema structure in the config reader
- */
-void qd_dispatch_extend_config_schema(qd_dispatch_t *dispatch, const char* text);
-
-/**
  * Load the configuration file.
  *
  * @param dispatch The dispatch handle returned by qd_dispatch
@@ -63,20 +57,21 @@ void qd_dispatch_extend_config_schema(qd_dispatch_t *dispatch, const char* text)
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *dispatch, const char *config_path);
 
 /**
- * Configure the AMQP container from the parsed configuration file.
- *        If this is not called, the container will take on default settings.
+ * Configure the AMQP container from a configuration entity.
  *
  * @param dispatch The dispatch handle returned by qd_dispatch
+ * @param entity The configuration entity.
  */
-void qd_dispatch_configure_container(qd_dispatch_t *dispatch);
+qd_error_t qd_dispatch_configure_container(qd_dispatch_t *dispatch, qd_entity_t *entity);
 
 /**
- * Configure the router node from the parsed configuration file.
+ * Configure the router node from a configuration entity.
  *        If this is not called, the router will run in ENDPOINT mode.
  *
- * @param dispatch The dispatch handle returned by qd_dispatch
+ * @param dispatch The dispatch handle returned by qd_dispatch.
+ * @param entity The configuration entity.
  */
-void qd_dispatch_configure_router(qd_dispatch_t *dispatch);
+qd_error_t qd_dispatch_configure_router(qd_dispatch_t *dispatch, qd_entity_t *entity);
 
 /**
  * Prepare Dispatch for operation.  This must be called prior to
@@ -84,16 +79,17 @@ void qd_dispatch_configure_router(qd_dispatch_t *dispatch);
  *
  * @param dispatch The dispatch handle returned by qd_dispatch
  */
-void qd_dispatch_prepare(qd_dispatch_t *dispatch);
+qd_error_t qd_dispatch_prepare(qd_dispatch_t *dispatch);
 
 /**
- * Configure the server connectors and listeners from the
- *        parsed configuration file.  This must be called after the
- *        call to qd_dispatch_prepare completes.
- *
- * @param dispatch The dispatch handle returned by qd_dispatch
+ * Configure an address, must be called after qd_dispatch_prepare
  */
-void qd_dispatch_post_configure_connections(qd_dispatch_t *dispatch);
+qd_error_t qd_dispatch_configure_address(qd_dispatch_t *dispatch, qd_entity_t *entity);
+
+/**
+ * Configure a waypoint, must be called after qd_dispatch_prepare
+ */
+qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *dispatch, qd_entity_t *entity);
 
 /**
  * \brief Configure the logging module from the
@@ -102,7 +98,7 @@ void qd_dispatch_post_configure_connections(qd_dispatch_t *dispatch);
  *
  * @param dispatch The dispatch handle returned by qd_dispatch
  */
-void qd_dispatch_configure_logging(qd_dispatch_t *qd);
+qd_error_t qd_dispatch_configure_logging(qd_dispatch_t *qd);
 
 /**
  * @}

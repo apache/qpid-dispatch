@@ -26,11 +26,13 @@ import locale
 import socket
 import re
 from proton import Messenger, Message, Timeout
+
+home = os.environ.get("QPID_DISPATCH_HOME")
+if not home:
+    home = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib', 'qpid-dispatch')
+sys.path.insert(0, os.path.join(home, "python"))
+
 from qpid_dispatch_internal.management import Url, Node, Entity
-
-home = os.environ.get("QPID_DISPATCH_HOME", os.path.normpath(os.path.dirname(__file__)))
-sys.path.append(os.path.join(home, "python"))
-
 from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
 
 

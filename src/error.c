@@ -35,7 +35,8 @@ static const char *error_names[] = {
  "Configuration"
 };
 
-STATIC_ASSERT(sizeof(error_names)/sizeof(error_names[0]) == QD_ERROR_COUNT, error_names_wrong_size);
+STATIC_ASSERT(sizeof(error_names)/sizeof(error_names[0]) == QD_ERROR_ENUM_COUNT,
+	      error_names_wrong_size);
 
 #define ERROR_MAX QD_LOG_TEXT_MAX
 const int QD_ERROR_MAX = ERROR_MAX;
@@ -56,7 +57,7 @@ qd_error_t qd_error(qd_error_t code, const char *fmt, ...) {
     ts.error_code = code;
     if (code) {
 	int i = 0;
-	if (code < QD_ERROR_COUNT)
+	if (code < QD_ERROR_ENUM_COUNT)
 	    i = snprintf(ts.error_message, ERROR_MAX,"%s: ", error_names[code]);
 	else
 	    i = snprintf(ts.error_message, ERROR_MAX, "%d: ", code);
@@ -113,9 +114,21 @@ static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_lo
     Py_DECREF(locals);
 
     if (result) {
-	qd_log(log_source, level, "%s", PyString_AsString(result));
+	const char* trace = PyString_AsString(result);
+	if (strlen(trace) < QD_LOG_TEXT_MAX) {
+	    qd_log(log_source, level, "%s", trace);
+	} else {
+	    // Keep as much of the the tail of the trace as we can.
+	    const char *tail = trace;
+	    while (tail && strlen(tail) > QD_LOG_TEXT_MAX) {
+		tail = strchr(tail, '\n');
+		if (tail) ++tail;
+	    }
+	    qd_log(log_source, level, "Traceback truncated:\n%s", tail ? tail : "");
+	}
 	Py_DECREF(result);
     }
+
 }
 
 qd_error_t qd_error_py() {
@@ -134,7 +147,7 @@ qd_error_t qd_error_py() {
 	Py_XDECREF(value_str);
 	Py_XDECREF(type_name);
 
-	log_trace_py(type, value, trace, QD_LOG_DEBUG);
+	log_trace_py(type, value, trace, QD_LOG_ERROR);
 
 	Py_XDECREF(type);
 	Py_XDECREF(value);

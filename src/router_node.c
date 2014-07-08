@@ -1435,11 +1435,6 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     DEQ_INIT(router->waypoints);
 
     //
-    // Configure the router from the configuration file
-    //
-    qd_router_configure(router);
-
-    //
     // Create addresses for all of the routers in the topology.  It will be registered
     // locally later in the initialization sequence.
     //
@@ -1453,11 +1448,6 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     // uses this to offload some of the address-processing load from the router.
     //
     qd_field_iterator_set_address(area, id);
-
-    //
-    // Set up the usage of the embedded python router module.
-    //
-    qd_python_start();
 
     //
     // Seed the random number generator
@@ -1515,7 +1505,6 @@ void qd_router_free(qd_router_t *router)
     qd_hash_free(router->addr_hash);
     qd_router_configure_free(router);
     free(router);
-    qd_python_stop();
     free(node_id);
     free(direct_prefix);
 }

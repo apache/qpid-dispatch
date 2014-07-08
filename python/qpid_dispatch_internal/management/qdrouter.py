@@ -25,7 +25,7 @@ import json, re, sys
 import schema
 from entity import EntityList, Entity, OrderedDict
 from copy import copy
-
+import libqpid_dispatch
 
 class QdSchema(schema.Schema):
     """
@@ -153,6 +153,9 @@ class QdConfig(EntityList):
     def section_count(self, section):
         return len(self.get(type=section))
 
+    def entity(self, section, index):
+        return self.get(type=section)[index]
+
     def value(self, section, index, key, convert=lambda x: x):
         """
         @return: Value at section, index, key or None if absent.
@@ -162,3 +165,26 @@ class QdConfig(EntityList):
         if len(entities) <= index or key not in entities[index]:
             return None
         return convert(entities[index][key])
+
+
+def configure_dispatch(dispatch, filename):
+    """Called by C router code to load configuration file and do configuration"""
+    qd = libqpid_dispatch.instance()
+    dispatch = qd.qd_dispatch_p(dispatch)
+    config = QdConfig(filename)
+    # Configure any DEFAULT log entities first so we can report errors in non-
+    # default log configurations to the correct place.
+    for l in config.log:
+        if l.module.upper() == 'DEFAULT': qd.qd_log_entity(l)
+    for l in config.log:
+        if l.module.upper() != 'DEFAULT': qd.qd_log_entity(l)
+    qd.qd_dispatch_configure_container(dispatch, config.container[0])
+    qd.qd_dispatch_configure_router(dispatch, config.router[0])
+    qd.qd_dispatch_prepare(dispatch)
+    # Note must configure addresses, waypoints, listeners and connectors after qd_dispatch_prepare
+    for a in config.get(type='fixed-address'): qd.qd_dispatch_configure_address(dispatch, a)
+    for w in config.waypoint: qd.qd_dispatch_configure_waypoint(dispatch, w)
+    for l in config.listener: qd.qd_dispatch_configure_listener(dispatch, l)
+    for c in config.connector: qd.qd_dispatch_configure_connector(dispatch, c)
+    qd.qd_connection_manager_start(dispatch);
+    qd.qd_waypoint_activate_all(dispatch);

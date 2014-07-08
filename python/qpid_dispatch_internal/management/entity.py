@@ -63,5 +63,3 @@ class EntityList(list):
 
     def __getattr__(self, name):
         return self.get(type=name)
-
-__all__ = [ Entity, EntityList ]

@@ -527,9 +527,9 @@ static PyTypeObject RouterAdapterType = {
 };
 
 
-void qd_router_python_setup(qd_router_t *router)
+qd_error_t qd_router_python_setup(qd_router_t *router)
 {
-
+    qd_error_clear();
     log_source = qd_log_source("PYROUTER");
 
     //
@@ -537,16 +537,12 @@ void qd_router_python_setup(qd_router_t *router)
     // router module.
     //
     if (router->router_mode != QD_ROUTER_MODE_INTERIOR)
-        return;
+        return QD_ERROR_NONE;
 
     PyObject *pDispatchModule = qd_python_module();
-
     RouterAdapterType.tp_new = PyType_GenericNew;
-    if (PyType_Ready(&RouterAdapterType) < 0) {
-        qd_error_py();
-        qd_log(log_source, QD_LOG_CRITICAL, "Unable to initialize the Python Router Adapter");
-        return;
-    }
+    PyType_Ready(&RouterAdapterType);
+    QD_ERROR_PY_RET();
 
     PyTypeObject *raType = &RouterAdapterType;
     Py_INCREF(raType);
@@ -555,7 +551,6 @@ void qd_router_python_setup(qd_router_t *router)
     //
     // Attempt to import the Python Router module
     //
-    PyObject* pName;
     PyObject* pId;
     PyObject* pArea;
     PyObject* pMaxRouters;
@@ -563,23 +558,13 @@ void qd_router_python_setup(qd_router_t *router)
     PyObject* pClass;
     PyObject* pArgs;
 
-    pName   = PyString_FromString("qpid_dispatch_internal.router");
-    pModule = PyImport_Import(pName);
-    Py_DECREF(pName);
-    if (!pModule) {
-        qd_log(log_source, QD_LOG_CRITICAL, "Can't Locate 'router' Python module");
-        return;
-    }
-
+    pModule = PyImport_ImportModule("qpid_dispatch_internal.router"); QD_ERROR_PY_RET();
     pClass = PyObject_GetAttrString(pModule, "RouterEngine");
-    if (!pClass || !PyClass_Check(pClass)) {
-        qd_log(log_source, QD_LOG_CRITICAL, "Can't Locate 'RouterEngine' class in the 'router' module");
-        return;
-    }
+    Py_DECREF(pModule);
+    QD_ERROR_PY_RET();
 
-    PyObject *adapterType     = PyObject_GetAttrString(pDispatchModule, "RouterAdapter");
-    PyObject *adapterInstance = PyObject_CallObject(adapterType, 0);
-    assert(adapterInstance);
+    PyObject *adapterType     = PyObject_GetAttrString(pDispatchModule, "RouterAdapter");  QD_ERROR_PY_RET();
+    PyObject *adapterInstance = PyObject_CallObject(adapterType, 0); QD_ERROR_PY_RET();
 
     ((RouterAdapter*) adapterInstance)->router = router;
 
@@ -609,41 +594,20 @@ void qd_router_python_setup(qd_router_t *router)
     pyRouter = PyInstance_New(pClass, pArgs, 0);
     Py_DECREF(pArgs);
     Py_DECREF(adapterType);
+    QD_ERROR_PY_RET();
 
-    if (!pyRouter) {
-        qd_error_py();
-        qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class cannot be instantiated");
-        return;
-    }
-
-    pyTick = PyObject_GetAttrString(pyRouter, "handleTimerTick");
-    if (!pyTick || !PyCallable_Check(pyTick)) {
-        qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class has no handleTimerTick method");
-        return;
-    }
-
-    pyAdded = PyObject_GetAttrString(pyRouter, "addressAdded");
-    if (!pyAdded || !PyCallable_Check(pyAdded)) {
-        qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class has no addressAdded method");
-        return;
-    }
-
-    pyRemoved = PyObject_GetAttrString(pyRouter, "addressRemoved");
-    if (!pyRemoved || !PyCallable_Check(pyRemoved)) {
-        qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class has no addressRemoved method");
-        return;
-    }
-
-    pyLinkLost = PyObject_GetAttrString(pyRouter, "linkLost");
-    if (!pyLinkLost || !PyCallable_Check(pyLinkLost)) {
-        qd_log(log_source, QD_LOG_CRITICAL, "'RouterEngine' class has no linkLost method");
-        return;
-    }
+    pyTick = PyObject_GetAttrString(pyRouter, "handleTimerTick"); QD_ERROR_PY_RET();
+    pyAdded = PyObject_GetAttrString(pyRouter, "addressAdded"); QD_ERROR_PY_RET();
+    pyRemoved = PyObject_GetAttrString(pyRouter, "addressRemoved"); QD_ERROR_PY_RET();
+    pyLinkLost = PyObject_GetAttrString(pyRouter, "linkLost"); QD_ERROR_PY_RET();
+    return qd_error_code();
 }
 
 
-void qd_pyrouter_tick(qd_router_t *router)
+qd_error_t qd_pyrouter_tick(qd_router_t *router)
 {
+    qd_error_clear();
+
     PyObject *pArgs;
     PyObject *pValue;
 
@@ -651,11 +615,11 @@ void qd_pyrouter_tick(qd_router_t *router)
         qd_python_lock();
         pArgs  = PyTuple_New(0);
         pValue = PyObject_CallObject(pyTick, pArgs);
-	qd_error_py();
         Py_DECREF(pArgs);
 	Py_XDECREF(pValue);
         qd_python_unlock();
     }
+    return qd_error_py();
 }
 
 

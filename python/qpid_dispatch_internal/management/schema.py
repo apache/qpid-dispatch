@@ -93,6 +93,19 @@ class BooleanType(Type):
         except:
             raise ValidationError("Invalid Boolean value '%r'"%value)
 
+class EnumValue(str):
+    """A string that convets to an integer value via int()"""
+
+    def __new__(cls, name, value):
+        s = super(EnumValue, cls).__new__(cls, name)
+        setattr(s, 'value', value)
+        return s
+
+    def __int__(self): return self.value
+    def __eq__(self, x): return str(self) == x or int(self) == x
+    def __ne__(self, x): return not self == x
+    def __repr__(self): return "EnumValue('%s', %s)"%(str(self), int(self))
+
 class EnumType(Type):
     """An enumerated type"""
 
@@ -104,27 +117,19 @@ class EnumType(Type):
         super(EnumType, self).__init__("enum%s"%([str(t) for t in tags]), int)
         self.tags = tags
 
-    def validate(self, value, enum_as_int=False, **kwargs):
+    def validate(self, value, **kwargs):
         """
         @param value: May be a string from the set of enum tag strings or anything
             that can convert to an int - in which case it must be in the enum range.
-        @keyword enum_as_int: If true the return value will be an int.
         @param kwargs: See L{Schema.validate}
-        @return: If enum_as_int is True the int value of the enum, othewise the enum tag string.
+        @return: An EnumValue.
         """
         if value in self.tags:
-            if enum_as_int:
-                return self.tags.index(value)
-            else:
-                return value
+            return EnumValue(value, self.tags.index(value))
         else:
             try:
                 i = int(value)
-                if 0 <= i and i < len(self.tags):
-                    if enum_as_int:
-                        return i
-                    else:
-                        return self.tags[i]
+                return EnumValue(self.tags[i], i)
             except (ValueError, IndexError):
                 pass
         raise ValidationError("Invalid value for %s: '%r'"%(self.name, value))
@@ -339,7 +344,11 @@ class EntityType(AttributeTypeHolder):
         return d
 
     def resolve(self, value, attributes):
-        """Resolve a $ or $$ reference"""
+        """
+        Resolve a $ or $$ reference.
+        $attr refers to another attribute.
+        $$name refers to a value in EntityType.refs
+        """
         values = [value]
         while True:
             if isinstance(value, basestring) and value.startswith('$$'):
@@ -376,18 +385,21 @@ class EntityType(AttributeTypeHolder):
 
         drop_none()
 
-        # Add missing values
-        for attr in self.attributes.itervalues():
-            if attr.name not in attributes:
-                value = attr.missing_value(**kwargs)
-                if value is not None: attributes[attr.name] = value
+        try:
+            # Add missing values
+            for attr in self.attributes.itervalues():
+                if attr.name not in attributes:
+                    value = attr.missing_value(**kwargs)
+                    if value is not None: attributes[attr.name] = value
 
-        # Validate attributes.
-        for name, value in attributes.iteritems():
-            if name not in self.attributes:
-                raise ValidationError("%s has unknown attribute '%s'"%(self, name))
-            attributes[name] = self.attributes[name].validate(
-                value, lambda v: self.resolve(v, attributes), **kwargs)
+            # Validate attributes.
+            for name, value in attributes.iteritems():
+                if name not in self.attributes:
+                    raise ValidationError("%s has unknown attribute '%s'"%(self, name))
+                attributes[name] = self.attributes[name].validate(
+                    value, lambda v: self.resolve(v, attributes), **kwargs)
+        except ValidationError, e:
+            raise  ValidationError, "Entity '%s': %s"%(self.name, e), sys.exc_info()[2]
 
         drop_none()
 
@@ -440,12 +452,11 @@ class Schema(object):
                 'includes': OrderedDict((k, v.dump()) for k, v in self.includes.iteritems()),
                 'entity_types': OrderedDict((k, v.dump()) for k, v in self.entity_types.iteritems())}
 
-    def validate(self, entities, enum_as_int=False, check_required=True, add_default=True, check_unique=True, check_singleton=True):
+    def validate(self, entities, check_required=True, add_default=True, check_unique=True, check_singleton=True):
         """
         Validate entities, verify singleton entities and unique attributes are unique.
 
         @param entities: List of L{Entity}
-        @keyword enum_as_int: Represent enums as int rather than string.
         @keyword check_required: Raise exception if required attributes are missing.
         @keyword add_default: Add defaults for missing attributes.
         @keyword check_unique: Raise exception if unique attributes are duplicated.
@@ -458,7 +469,6 @@ class Schema(object):
         for e in entities:
             et = self.entity_types[e.type]
             et.validate(e,
-                        enum_as_int=enum_as_int,
                         check_required=check_required,
                         add_default=add_default,
                         check_unique=check_unique,
