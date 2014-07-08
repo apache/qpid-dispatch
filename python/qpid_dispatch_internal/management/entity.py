@@ -21,10 +21,7 @@
 Representation of management entities. An entity is a set of named attributes.
 """
 
-try:
-    from collections import OrderedDict
-except:
-    from qpid_dispatch_internal.ordereddict import OrderedDict # For python <= 2.6
+from qpid_dispatch_internal.compat import OrderedDict
 
 
 class Entity(OrderedDict):
