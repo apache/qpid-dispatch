@@ -30,7 +30,7 @@ class RouterTest(TestCase):
         """Start a router and a messenger"""
         super(RouterTest, cls).setUpClass()
 
-        def ssl_config(password):
+        def ssl_config(client_server):
             if not cls.ssl_option: return []
             def ssl_file(name):
                 return os.path.join(os.path.dirname(__file__), 'config-2', name)
@@ -38,14 +38,14 @@ class RouterTest(TestCase):
                 ('ssl-profile', {
                     'name': 'ssl-profile-name',
                     'cert-db': ssl_file('ca-certificate.pem'),
-                    'cert-file': ssl_file('server-certificate.pem'),
-                    'key-file': ssl_file('server-private-key.pem'),
-                    'password': password})]
+                    'cert-file': ssl_file(client_server+'-certificate.pem'),
+                    'key-file': ssl_file(client_server+'-private-key.pem'),
+                    'password': client_server+'-password'})]
 
-        def router(name, password, connection):
+        def router(name, client_server, connection):
             if cls.ssl_option:
                 connection[1]['ssl-profile'] = 'ssl-profile-name'
-            config = Qdrouterd.Config(ssl_config(password) + [
+            config = Qdrouterd.Config(ssl_config(client_server) + [
                 ('log', {'module':'DEFAULT', 'level':'trace', 'output':name+".log"}),
                 ('container', {'worker-threads': 4, 'container-name': 'Qpid.Dispatch.Router.%s'%name}),
                 ('router', {'mode': 'interior', 'router-id': 'QDR.%s'%name}),
@@ -59,9 +59,9 @@ class RouterTest(TestCase):
             cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
 
         cls.routers = []
-        router('A', 'server-password',
+        router('A', 'server',
                ('listener', {'role': 'inter-router', 'port': cls.tester.get_port()}))
-        router('B', 'client-password',
+        router('B', 'client',
                ('connector', {'role': 'inter-router', 'port': cls.routers[0].ports[1]}))
 
         def query_through(address, router):

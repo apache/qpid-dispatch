@@ -64,8 +64,7 @@ static bool has_attrs(qd_entity_t *entity, const char **attributes, int n) {
 }
 
 static const char *ssl_attributes[] = {
-    "allow-unsecured", "cert-file", "key-file", "password", "cert-db",
-    "trusted-certs", "require-peer-auth"
+  "cert-db", "cert-file", "key-file", "password-file", "password"
 };
 static const int ssl_attributes_count = sizeof(ssl_attributes)/sizeof(ssl_attributes[0]);
 
@@ -99,11 +98,20 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->ssl_enabled = has_attrs(entity, ssl_attributes, ssl_attributes_count);
     if (config->ssl_enabled) {
         config->ssl_server = 1;
-	config->ssl_allow_unsecured_client = qd_entity_opt_bool(entity, "allow-unsecured", false); CHECK();
-	config->ssl_certificate_file = qd_entity_opt_string(entity, "cert-file", 0); CHECK();
-	config->ssl_private_key_file = qd_entity_opt_string(entity, "key-file", 0); CHECK();
-	config->ssl_trusted_certificate_db = qd_entity_opt_string(entity, "cert-db", 0); CHECK();
-	config->ssl_trusted_certificates = qd_entity_opt_string(entity, "trusted-certs", 0); CHECK();
+	config->ssl_allow_unsecured_client =
+	  qd_entity_opt_bool(entity, "allow-unsecured", false); CHECK();
+	config->ssl_certificate_file =
+	  qd_entity_opt_string(entity, "cert-file", 0); CHECK();
+	config->ssl_private_key_file =
+	  qd_entity_opt_string(entity, "key-file", 0); CHECK();
+        config->ssl_password =
+	  qd_entity_opt_string(entity, "password", 0); CHECK();
+	config->ssl_trusted_certificate_db =
+	  qd_entity_opt_string(entity, "cert-db", 0); CHECK();
+	config->ssl_trusted_certificates =
+	  qd_entity_opt_string(entity, "trusted-certs", 0); CHECK();
+        config->ssl_require_peer_authentication =
+	  qd_entity_opt_bool(entity, "require-peer-auth", true);
     }
     return QD_ERROR_NONE;
 

@@ -35,6 +35,7 @@ cd $BUILD_DIR
 cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=Debug $SOURCE_DIR
 make -j4
 make install
+cd tests
 # Run unit tests on the build.
 ctest -VV -E system_tests
 # Run system tests on the install.
