@@ -219,7 +219,7 @@ class Process(subprocess.Popen):
         with open(name+".cmd", 'w') as f: f.write("%s\n" % ' '.join(args))
         self.torndown = False
         kwargs.setdefault('stdout', self.out)
-        kwargs.setdefault('stderr', kwargs['stdout'])
+        kwargs.setdefault('stderr', subprocess.STDOUT)
         args = with_valgrind(args)
         try:
             super(Process, self).__init__(args, **kwargs)
@@ -352,9 +352,9 @@ class Qdrouterd(Process):
     def is_connected(self, port, host='0.0.0.0'):
         """If router has a connection to host:port return the management info.
         Otherwise return None"""
-        connections = self.agent.query('org.apache.qpid.dispatch.connection')
+        connections = self.agent.query('org.apache.qpid.dispatch.connection').result_maps
         for c in connections:
-            if c.name == '%s:%s'%(host, port):
+            if c['name'] == '%s:%s'%(host, port):
                 return c
         return None
 
@@ -369,10 +369,10 @@ class Qdrouterd(Process):
             # FIXME aconway 2014-06-12: this should be a request by name, not a query.
             addrs = self.agent.query(
                 type='org.apache.qpid.dispatch.router.address',
-                attribute_names=['name', 'subscriberCount', 'remoteCount'])
+                attribute_names=['name', 'subscriberCount', 'remoteCount']).result_maps
             # FIXME aconway 2014-06-12: endswith check is because of M0/L prefixes
-            addrs = [a for a in addrs if a.name.endswith(address)]
-            return addrs and addrs[0].subscriberCount >= subscribers and addrs[0].remoteCount >= remotes
+            addrs = [a for a in addrs if a['name'].endswith(address)]
+            return addrs and addrs[0]['subscriberCount'] >= subscribers and addrs[0]['remoteCount'] >= remotes
         assert retry(check, **retry_kwargs)
 
 

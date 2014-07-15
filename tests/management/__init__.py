@@ -17,9 +17,7 @@
 ## under the License
 ##
 
-from entity import EntityTest
 from schema import SchemaTest
-from node import UrlTest
+from client import UrlTest
 from qdrouter import QdrouterTest
-
-__all__ = ["EntityTest", "SchemaTest", "UrlTest", "QdrouterTest"]
+from entity import EntityTest

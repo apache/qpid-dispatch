@@ -20,29 +20,30 @@
 #pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
 
 import unittest
-from qpid_dispatch_internal.management import Entity, EntityList
+from qpid_dispatch_internal.management import Entity
 
 class EntityTest(unittest.TestCase):
 
     def test_entity(self):
-        e = Entity(type='container', name='x')
+        e = Entity({'foo-bar': 'baz'}, type='container', name='x')
         self.assertEqual(e.name, 'x')
-        self.assertEqual(e, {'type': 'container', 'name':'x'})
+        self.assertEqual(e.attributes, {'type': 'container', 'name':'x', 'foo-bar': 'baz'})
+        self.assertEqual(e.foo_bar, 'baz')
+        self.assertEqual(e.attributes['foo-bar'], 'baz')
 
+        e.foo_bar = 'x'
+        self.assertEqual(e.foo_bar, 'x')
+        self.assertEqual(e.attributes['foo-bar'], 'x')
 
-    def test_entity_list(self):
-        contents = [
-            Entity(type='container', name='x'),
-            Entity(type='listener', name='y', addr='1'),
-            Entity(type='listener', name='z', addr='2'),
-            Entity(type='connector', name='c1', addr='1')]
-        l = EntityList(contents)
+        e.xx = 'xx'
+        self.assertEqual(e.xx, 'xx')
+        self.assertEqual(e.attributes['xx'], 'xx')
 
-        self.assertEqual(l, contents)
-        self.assertEqual([e.name for e in l.get(type='listener')], ['y', 'z'])
-        self.assertEqual([e.name for e in l.get(type='listener', addr='1')], ['y'])
-        self.assertEqual([e.name for e in l.get(addr='1')], ['y', 'c1'])
-        self.assertEqual(l.get(name='x')[0].name, 'x')
+        e.attributes['y-y'] = 'yy'
+        self.assertEqual(e.y_y, 'yy')
+        self.assertEqual(e.attributes['y-y'], 'yy')
+        def assign(): e.attributes['foo/bar'] = 1
+        self.assertRaises(KeyError, assign)
 
 if __name__ == '__main__':
     unittest.main()

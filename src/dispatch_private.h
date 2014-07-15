@@ -35,7 +35,7 @@ typedef struct qd_router_link_ref_t qd_router_link_ref_t;
 typedef struct qd_router_conn_t     qd_router_conn_t;
 typedef struct qd_config_phase_t    qd_config_phase_t;
 typedef struct qd_config_address_t  qd_config_address_t;
-
+typedef struct _object PyObject;
 
 #include <qpid/dispatch/container.h>
 #include <qpid/dispatch/router.h>
@@ -43,12 +43,12 @@ typedef struct qd_config_address_t  qd_config_address_t;
 #include "server_private.h"
 #include "router_private.h"
 
-
 struct qd_dispatch_t {
     qd_server_t             *server;
     qd_container_t          *container;
     qd_router_t             *router;
     qd_agent_t              *agent;
+    PyObject                *py_agent;
     qd_connection_manager_t *connection_manager;
 
     int    thread_count;
@@ -57,5 +57,7 @@ struct qd_dispatch_t {
     char  *router_id;
     qd_router_mode_t  router_mode;
 };
+
+void qd_dispatch_set_agent(qd_dispatch_t *qd, PyObject *agent);
 
 #endif

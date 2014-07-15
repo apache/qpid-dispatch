@@ -31,13 +31,24 @@ void qd_entity_free(qd_entity_t* entity) {
     Py_XDECREF(entity);
 }
 
+static PyObject* qd_entity_get_py(qd_entity_t* entity, const char* attribute) {
+    PyObject *py_key = PyString_FromString(attribute);
+    if (!py_key) return NULL;   /* Don't set qd_error, caller will set if needed. */
+    PyObject *value = PyObject_GetItem((PyObject*)entity, py_key);
+    Py_DECREF(py_key);
+    return value;
+}
+
 bool qd_entity_has(qd_entity_t* entity, const char *attribute) {
-    return PyObject_HasAttrString((PyObject*)entity, attribute);
+    PyObject *value = qd_entity_get_py(entity, attribute);
+    Py_XDECREF(value);
+    PyErr_Clear();              /* Ignore errors */
+    return value;
 }
 
 char *qd_entity_string(qd_entity_t *entity, const char* attribute) {
     qd_error_clear();
-    PyObject *py_obj = PyObject_GetAttrString((PyObject*)entity, attribute);
+    PyObject *py_obj = qd_entity_get_py(entity, attribute);
     PyObject *py_str = py_obj ? PyObject_Str(py_obj) : NULL;
     char* str = py_str ? PyString_AsString(py_str) : NULL;
     Py_XDECREF(py_obj);
@@ -49,7 +60,7 @@ char *qd_entity_string(qd_entity_t *entity, const char* attribute) {
 
 long qd_entity_long(qd_entity_t *entity, const char* attribute) {
     qd_error_clear();
-    PyObject *py_obj = PyObject_GetAttrString((PyObject*)entity, attribute);
+    PyObject *py_obj = qd_entity_get_py(entity, attribute);
     long result = py_obj ? PyInt_AsLong(py_obj) : -1;
     Py_XDECREF(py_obj);
     qd_error_py();
@@ -58,7 +69,7 @@ long qd_entity_long(qd_entity_t *entity, const char* attribute) {
 
 bool qd_entity_bool(qd_entity_t *entity, const char* attribute) {
     qd_error_clear();
-    PyObject *py_obj = PyObject_GetAttrString((PyObject*)entity, attribute);
+    PyObject *py_obj = qd_entity_get_py(entity, attribute);
     bool result = py_obj ? PyObject_IsTrue(py_obj) : false;
     Py_XDECREF(py_obj);
     qd_error_py();

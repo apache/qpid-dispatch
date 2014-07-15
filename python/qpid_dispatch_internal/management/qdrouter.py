@@ -43,14 +43,14 @@ class QdSchema(schema.Schema):
         If the operating mode of the router is not 'interior', then the only
         permitted roles for listeners and connectors is 'normal'.
 
-        @param entities: An L{EntityList}
+        @param entities: List of attribute name:value maps.
         @param full: Perform validation for full configuration.
         @param kwargs: See L{schema.Schema.validate}
         """
-        super(QdSchema, self).validate(entities, **kwargs)
+        super(QdSchema, self).validate_all(entities, **kwargs)
 
         if full:
             if entities.router[0].mode != 'interior':
                 for connect in entities.get(entity_type='listeners') + entities.get(entity_type='connector'):
                     if connect['role'] != 'normal':
-                        raise schema.ValidationError("Role '%s' for entity '%s' only permitted with 'interior' mode % (entity['role'], connect.name)")
+                        raise schema.ValidationError("Role '%s' for connection '%s' only permitted with 'interior' mode" % (connect['role'], connect.name))

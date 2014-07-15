@@ -75,7 +75,7 @@ STATIC_ASSERT(sizeof(long) >= sizeof(void*), pointer_is_bigger_than_long);
 
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 {
-    PyObject *module = 0, *configure_dispatch = 0, *result = 0;
+    PyObject *module=0, *configure_dispatch=0, *result=0;
     bool ok =
         (module = PyImport_ImportModule("qpid_dispatch_internal.management")) &&
 	(configure_dispatch = PyObject_GetAttrString(module, "configure_dispatch")) &&
@@ -133,6 +133,11 @@ qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
     return qd_error_code();
 }
 
+void qd_dispatch_set_agent(qd_dispatch_t *qd, PyObject *agent) {
+    assert(agent);
+    assert(!qd->py_agent);
+    qd->py_agent = agent;
+}
 
 void qd_dispatch_free(qd_dispatch_t *qd)
 {
@@ -142,6 +147,7 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     free(qd->router_area);
     qd_connection_manager_free(qd->connection_manager);
     qd_agent_free(qd->agent);
+    Py_XDECREF(qd->py_agent);
     qd_router_free(qd->router);
     qd_container_free(qd->container);
     qd_server_free(qd->server);

@@ -75,12 +75,12 @@ class Generator(object):
         def __init__(self, generator, entity, attribute):
             self.generator, self.entity, self.attribute = generator, entity, attribute
             self.tags = attribute.atype.tags
-            self.type_name = generator.type_name([entity.name, attribute.name])
-            self.array = self.generator.prefix_name([entity.name, attribute.name, 'names'])
+            self.type_name = generator.type_name([entity.short_name, attribute.name])
+            self.array = self.generator.prefix_name([entity.short_name, attribute.name, 'names'])
             self.count = self.name('ENUM_COUNT')
 
         def name(self, tag):
-            return self.generator.prefix_name([self.entity.name, self.attribute.name, tag]).upper()
+            return self.generator.prefix_name([self.entity.short_name, self.attribute.name, tag]).upper()
 
         def decl(self):
             tags = self.tags + ['ENUM_COUNT']

@@ -126,7 +126,7 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
 {
     qd_error_clear();
     if (value == Py_None) {
-        // Do nothing
+        qd_compose_insert_null(field);
     }
     else if (PyBool_Check(value)) {
         qd_compose_insert_bool(field, PyInt_AS_LONG(value) ? 1 : 0);
@@ -207,6 +207,8 @@ PyObject *qd_field_to_py(qd_parsed_field_t *field)
     uint8_t   tag    = qd_parse_tag(field);
     switch (tag) {
       case QD_AMQP_NULL:
+        Py_INCREF(Py_None);
+        result = Py_None;
         break;
 
       case QD_AMQP_BOOLEAN:

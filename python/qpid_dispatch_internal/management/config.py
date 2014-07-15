@@ -25,16 +25,18 @@ import json, re, sys
 import schema
 from copy import copy
 from qpid_dispatch_internal import dispatch_c
-from .entity import EntityList, Entity
 from .qdrouter import QdSchema
 from ..compat import json_load_kwargs
 
-class Config(EntityList):
-    """An L{EntityList} loaded from a qdrouterd.conf and validated against L{QdSchema}."""
+class Config(object):
+    """Load config entities from qdrouterd.conf and validated against L{QdSchema}."""
 
     def __init__(self, filename=None, schema=QdSchema()):
         self.schema = schema
-        if filename: self.load(filename)
+        if filename:
+            e = self.load(filename)
+        else:
+            self.entities = []
 
     @staticmethod
     def _parse(lines):
@@ -84,11 +86,11 @@ class Config(EntityList):
         - If entity has one of name/identity set the other to be the same.
         - If entity has both, do nothing
         """
-        counts = dict((e, 0) for e in self.schema.entity_types)
+        counts = dict((et.short_name, 0) for et in self.schema.entity_types.itervalues())
         for section in content:
-            entity_type, attrs = section
-            count = counts[entity_type]
-            counts[entity_type] += 1
+            section_name, attrs = section
+            count = counts[section_name]
+            counts[section_name] += 1
             if 'name' in attrs and 'identity' in attrs:
                 continue
             elif 'name' in attrs:
@@ -96,7 +98,7 @@ class Config(EntityList):
             elif 'identity' in attrs:
                 attrs['name'] = attrs['identity']
             else:
-                identity = "%s%d"%(entity_type, count)
+                identity = "%s%d"%(section_name, count)
                 attrs['name'] = attrs['identity'] = identity
         return content
 
@@ -116,29 +118,19 @@ class Config(EntityList):
             sections = self._parse(source);
             # Add missing singleton sections
             for et in self.schema.entity_types.itervalues():
-                if et.singleton and not [s for s in sections if s[0] == et.name]:
-                    sections.append((et.name, {}))
+                if et.singleton and not [s for s in sections if s[0] == et.short_name]:
+                    sections.append((et.short_name, {}))
             sections = self._expand(sections)
             sections = self._default_ids(sections)
-            self[:] = [Entity(type=s[0], **s[1]) for s in sections]
-            self.validate(self.schema)
+            entities = [dict(type=self.schema.long_name(s[0]), **s[1]) for s in sections]
+            self.schema.validate_all(entities)
+            self.entities = entities
 
-    def section_count(self, section):
-        return len(self.get(type=section))
-
-    def entity(self, section, index):
-        return self.get(type=section)[index]
-
-    def value(self, section, index, key, convert=lambda x: x):
-        """
-        @return: Value at section, index, key or None if absent.
-        @param as_type: A callable to convert the result to some type.
-        """
-        entities = self.get(type=section)
-        if len(entities) <= index or key not in entities[index]:
-            return None
-        return convert(entities[index][key])
-
+    def by_type(self, entity_type):
+        """Iterator over entities of given type"""
+        entity_type = self.schema.long_name(entity_type)
+        for e in self.entities:
+            if e['type'] == entity_type: yield e
 
 def configure_dispatch(dispatch, filename):
     """Called by C router code to load configuration file and do configuration"""
@@ -147,17 +139,22 @@ def configure_dispatch(dispatch, filename):
     config = Config(filename)
     # Configure any DEFAULT log entities first so we can report errors in non-
     # default log configurations to the correct place.
-    for l in config.log:
-        if l.module.upper() == 'DEFAULT': qd.qd_log_entity(l)
-    for l in config.log:
-        if l.module.upper() != 'DEFAULT': qd.qd_log_entity(l)
-    qd.qd_dispatch_configure_container(dispatch, config.container[0])
-    qd.qd_dispatch_configure_router(dispatch, config.router[0])
+    for l in config.by_type('log'):
+        if l['module'].upper() == 'DEFAULT': qd.qd_log_entity(l)
+    for l in config.by_type('log'):
+        if l['module'].upper() != 'DEFAULT': qd.qd_log_entity(l)
+    qd.qd_dispatch_configure_container(dispatch, config.by_type('container').next())
+    qd.qd_dispatch_configure_router(dispatch, config.by_type('router').next())
     qd.qd_dispatch_prepare(dispatch)
+
     # Note must configure addresses, waypoints, listeners and connectors after qd_dispatch_prepare
-    for a in config.get(type='fixed-address'): qd.qd_dispatch_configure_address(dispatch, a)
-    for w in config.waypoint: qd.qd_dispatch_configure_waypoint(dispatch, w)
-    for l in config.listener: qd.qd_dispatch_configure_listener(dispatch, l)
-    for c in config.connector: qd.qd_dispatch_configure_connector(dispatch, c)
+    for a in config.by_type('fixed-address'): qd.qd_dispatch_configure_address(dispatch, a)
+    for w in config.by_type('waypoint'): qd.qd_dispatch_configure_waypoint(dispatch, w)
+    for l in config.by_type('listener'): qd.qd_dispatch_configure_listener(dispatch, l)
+    for c in config.by_type('connector'): qd.qd_dispatch_configure_connector(dispatch, c)
     qd.qd_connection_manager_start(dispatch);
     qd.qd_waypoint_activate_all(dispatch);
+
+    # TODO aconway 2014-07-09: messy dependency, can't import till after prepare
+    from .agent import Agent
+    qd.qd_dispatch_set_agent(dispatch, Agent(dispatch, config.entities))

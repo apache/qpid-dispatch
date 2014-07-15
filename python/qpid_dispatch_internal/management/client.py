@@ -18,36 +18,13 @@
 ##
 
 """
-AMQP management tools for Qpid dispatch.
+AMQP management client for Qpid dispatch.
 """
 
-import proton, re, threading, httplib
-from entity import Entity, EntityList
+import proton, re, threading
+from error import ManagementError, OK, NOT_FOUND
+from schema import Schema
 
-class ManagementError(Exception):
-    """An AMQP management error. str() gives a string with status code and text.
-    @ivar status: integer status code
-    @ivar description: description text
-    """
-    def __init__(self, status, description):
-        self.status, self.description = status, description
-
-    def __str__(self):
-        status_str = httplib.responses.get(self.status)
-        if status_str in self.description: return self.description
-        else: return "%s: %s"%(status_str, self.description)
-
-    @classmethod
-    def is_ok(cls, status):
-        return status == httplib.OK
-
-    @classmethod
-    def raise_if(cls, status, response):
-        if not cls.is_ok(status):
-            raise ManagementError(status, response)
-
-
-# TODO aconway 2014-06-03: proton URL class, conditional import?
 class Url:
     """Simple AMQP URL parser/constructor"""
 
@@ -66,18 +43,21 @@ class Url:
         """
 
         fields = ['scheme', 'user', 'password', 'host', 'port', 'path']
-        for field in fields: setattr(self, field, None)
 
-        if isinstance(url, Url): # Copy from url
-            for field in fields:
-                setattr(self, field, getattr(url, field))
-        elif url is not None: # Parse from url
+        for f in fields: setattr(self, f, None)
+        for k in kwargs: getattr(self, k) # Check for invalid kwargs
+
+        if isinstance(url, Url): # Copy from another Url instance.
+            self.__dict__.update(url.__dict__)
+
+        elif url is not None:   # Parse from url
             match = Url.RE.match(url)
             if match is None:
                 raise ValueError("Invalid AMQP URL: %s"%url)
             self.scheme, self.user, self.password, host4, host6, port, self.path = match.groups()
             self.host = host4 or host6
             self.port = port and int(port)
+
         # Let kwargs override values previously set from url
         for field in fields:
             setattr(self, field, kwargs.get(field, getattr(self, field)))
@@ -125,16 +105,10 @@ class Url:
         return self
 
 def remove_none(d):
-    """
-    Remove any None values from a dictionary. Does not modify d.
-    """
+    """@return: A copy of d without any None values. Does not modify d."""
     return dict((k, v) for k, v in d.iteritems() if v is not None)
 
 class Node(object):
-
-    SELF='self'                 # AMQP management node name
-    NODE_TYPE='org.amqp.management' # AMQP management node type
-    NODE_PROPERTIES={'name':SELF, 'type':NODE_TYPE}
 
     def __init__(self, address=None, router=None, locales=None, timeout=10):
         """
@@ -143,6 +117,9 @@ class Node(object):
             If not specified and address does not contain a path, use the default management node.
         @param locales: Default list of locales for management operations.
         """
+        self.name = self.identity = 'self'
+        self.type='org.amqp.management' # AMQP management node type
+
         self.address = Url(address).defaults()
         self.locales = locales
         if self.address.path is None:
@@ -194,10 +171,11 @@ class Node(object):
         """
         Check a manaement response message for errors and correlation ID.
         """
-        properties = response.properties
-        ManagementError.raise_if(properties.get('statusCode'), properties.get('statusDescription'))
+        code = response.properties.get('statusCode')
+        if code != OK:
+            raise ManagementError(code, response.properties.get('statusDescription'))
         if response.correlation_id != request.correlation_id:
-            raise ManagementError(httplib.NOT_FOUND, "Bad correlation id request=%s, response=%s"%(
+            raise ManagementError(NOT_FOUND, "Bad correlation id request=%s, response=%s"%(
                 request.correlation_id, response.correlation_id))
 
 
@@ -214,14 +192,11 @@ class Node(object):
         request.reply_to=self.reply_to
         request.correlation_id=self.correlation_id()
         request.properties=remove_none(properties)
-        request.body=remove_none(body or {})
+        request.body=body or {}
         return request
 
     def node_request(self, body=None, **properties):
-        return self.request(body, name=self.SELF, type=self.NODE_TYPE, **properties)
-
-    def op_request(self, operation, type, name, body=None, **properties):
-        return self.request(body,  name=name, type=type, operation=operation, **properties)
+        return self.request(body, name=self.name, type=self.type, **properties)
 
     # TODO aconway 2014-06-03: async send/receive
     def call(self, request):
@@ -242,18 +217,27 @@ class Node(object):
         self.check_response(response, request)
         return response
 
-    class QueryResponse(EntityList):
+    class QueryResponse(object):
         """
         Result returned by L{query}.
         @ivar attribute_names: List of attribute names for the results.
+        @ivar results: list of lists of attribute values in same order as attribute_names
+        @ivar result_maps: Results as list of attributes maps {name: value}.
         """
         def __init__(self, response):
             """
             @param response: the respose message to a query.
             """
             self.attribute_names = response.body['attributeNames']
-            for r in response.body['results']:
-                self.append(Entity(zip(self.attribute_names, r)))
+            self.results = response.body['results']
+
+        @property
+        def result_maps(self):
+            return [dict(zip(self.attribute_names, r)) for r in self.results]
+
+        def __str__(self):
+            return "QueryResponse(attribute_names=%s, results=%s"%(
+                self.attribute_names, self.results)
 
     def query(self, type=None, attribute_names=None, offset=None, count=None):
         """
@@ -263,11 +247,10 @@ class Node(object):
         @keyword attribute_names: A list of attribute names to query.
         @keyword offset: An integer offset into the list of results to return.
         @keyword count: A count of the maximum number of results to return.
-        @return: An L{EntityList}
+        @return: A L{QueryResponse}
         """
-        attribute_names = attribute_names or []
         request = self.node_request(
-            {'attributeNames':attribute_names},
+            {'attributeNames': attribute_names or []},
             operation='QUERY', entityType=type, offset=offset, count=count)
 
         response = self.call(request)
@@ -275,12 +258,24 @@ class Node(object):
 
     def create(self, type, name, attributes=None):
         """
-        Send an AMQP management create message and return the response.
+        Send an AMQP management create request.
         @param type: Type of entity to create.
         @param name: Name for the new entity.
         @param attributes: Map of attribute name:value for the new entity.
-        @return: Map of actual attributes returned by create (with defaults etc.)
+        @return: Map of attributes returned by create (with defaults etc.)
         """
-        request = self.op_request(operation='CREATE', type=type, name=name, body=attributes or {})
+        request = self.request(operation='CREATE', type=type, name=name, body=attributes or {})
+        response = self.call(request)
+        return response.body
+
+    def read(self, type, name=None, identity=None):
+        """
+        Send an AMQP management read request. Must specify one of name or identity.
+        @param type: Type of entity to read.
+        @param name: Name of entity to read.
+        @param identity: Identity of entity to read.
+        @return: Map of attributes for the requested entity.
+        """
+        request = self.request(operation='READ', type=type, name=name, identity=identity)
         response = self.call(request)
         return response.body

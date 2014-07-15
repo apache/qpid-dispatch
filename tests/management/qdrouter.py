@@ -80,12 +80,14 @@ listener {
         ])
 
         conf.load(conf_text.split("\n"))
-        self.assertEqual(conf.router[0].name, 'router0')
-        self.assertEqual(conf.router[0].identity, 'router0')
-        self.assertEqual(len(conf.listener), 3)
-        self.assertEqual(conf.listener[0].name, 'l0')
-        self.assertEqual(conf.listener[2].name, 'listener2')
-        self.assertEqual(conf.listener[2].identity, 'listener2')
+        router = conf.by_type('router').next()
+        self.assertEqual(router['name'], 'router0')
+        self.assertEqual(router['identity'], 'router0')
+        listeners = list(conf.by_type('listener'))
+        self.assertEqual(len(listeners), 3)
+        self.assertEqual(listeners[0]['name'], 'l0')
+        self.assertEqual(listeners[2]['name'], 'listener2')
+        self.assertEqual(listeners[2]['identity'], 'listener2')
 
 if __name__ == '__main__':
     unittest.main()

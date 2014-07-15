@@ -19,10 +19,13 @@
 """Management package"""
 
 
-from .entity import Entity, EntityList
-from .node import ManagementError, Node, Url
+from .client import Node, Url
 from .qdrouter import QdSchema
 from .config import Config, configure_dispatch
 from .schema import Type, BooleanType, EnumType, EnumValue, AttributeType, EntityType, Schema, schema_file, ValidationError
+from .entity import Entity
 
-__all__ = ["Entity", "EntityList", "ManagementError", "Node", "Url", "QdSchema", "Config", "configure_dispatch", "Type", "BooleanType", "EnumType", "EnumValue", "AttributeType", "EntityType", "Schema", "schema_file", "ValidationError"]
+from  .error import ManagementError, STATUS_CODES, STATUS_TEXT
+for code in STATUS_CODES: exec("from .error import %s"%code)
+
+__all__ = ["ManagementError", "Node", "Url", "QdSchema", "Config", "configure_dispatch", "Type", "BooleanType", "EnumType", "EnumValue", "AttributeType", "EntityType", "Schema", "schema_file", "ValidationError", "ManagementError", "STATUS_CODES", "STATUS_TEXT"] + STATUS_CODES

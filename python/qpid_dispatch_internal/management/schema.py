@@ -1,4 +1,4 @@
-##
+#
 ## Licensed to the Apache Software Foundation (ASF) under one
 ## or more contributor license agreements.  See the NOTICE file
 ## distributed with this work for additional information
@@ -26,8 +26,10 @@ check for uniqueness of enties/attributes that are specified to be unique.
 A Schema can be loaded/dumped to a json file.
 """
 
-import os, sys
-from entity import OrderedDict
+import os, sys, re
+from ..compat import OrderedDict
+import entity
+from collections import MutableMapping
 
 class ValidationError(Exception):
     """Error raised if schema validation fails"""
@@ -56,7 +58,7 @@ class Type(object):
         """
         Convert value to the correct python type.
 
-        @param kwargs: See L{Schema.validate}
+        @param kwargs: See L{Schema.validate_all}
         """
         return self.pytype(value)
 
@@ -83,7 +85,7 @@ class BooleanType(Type):
         """
         @param value: A string such as "yes", "false" etc. is converted appropriately.
             Any other type is converted using python's bool()
-        @param kwargs: See L{Schema.validate}
+        @param kwargs: See L{Schema.validate_all}
         @return A python bool.
         """
         try:
@@ -121,7 +123,7 @@ class EnumType(Type):
         """
         @param value: May be a string from the set of enum tag strings or anything
             that can convert to an int - in which case it must be in the enum range.
-        @param kwargs: See L{Schema.validate}
+        @param kwargs: See L{Schema.validate_all}
         @return: An EnumValue.
         """
         if value in self.tags:
@@ -164,27 +166,17 @@ def _dump_dict(items):
     """
     return OrderedDict((k, v) for k, v in items if v)
 
-def _is_unique(found, category, value):
+def _is_unique(found, item):
     """
-    Check if value has already been found in category.
-
-    @param found: Map of values found in each category { category:set(value,...), ...}
-        Modified: value is added to the category.
-        If found is None then _is_unique simply returns True.
-    @param category: category to check for value.
-    @param value: value to check.
-    @return: True if value is unique so far (i.e. was not already found)
+    Return true if found is None or item is not in found (adds item to found.)
+    Return false if item is in found.
     """
-    if found is None:
+    if found is None or found is False:
         return True
-    if not category in found:
-        found[category] = set()
-    if value in found[category]:
-        return False
-    else:
-        found[category].add(value)
+    if item not in found:
+        found.add(item)
         return True
-
+    return False
 
 class AttributeType(object):
     """
@@ -200,8 +192,8 @@ class AttributeType(object):
     @ivar include: Include section or None
     """
 
-    def __init__(self, name, type=None, default=None, required=False, unique=False, value=None,
-                 include=None, description=""):
+    def __init__(self, name, type=None, default=None, required=False, unique=False,
+                 value=None, include=None, description=""):
         """
         See L{AttributeType} instance variables.
         """
@@ -221,7 +213,7 @@ class AttributeType(object):
         Fill in missing default and fixed values but don't resolve references.
         @keyword check_required: Raise an exception if required attributes are misssing.
         @keyword add_default:  Add a default value for missing attributes.
-        @param kwargs: See L{Schema.validate}
+        @param kwargs: See L{Schema.validate_all}
         """
         if self.value is not None: # Fixed value attribute
             return self.value
@@ -236,13 +228,13 @@ class AttributeType(object):
         Validate value for this attribute definition.
         @param value: The value to validate.
         @param resolve: function to resolve value references.
-        @keyword check_unique: A dict to collect values to check for uniqueness.
+        @keyword check_unique: set of (name, value) to check for attribute uniqueness.
             None means don't check for uniqueness.
-        @param kwargs: See L{Schema.validate}
+        @param kwargs: See L{Schema.validate_all}
         @return: value converted to the correct python type. Rais exception if any check fails.
         """
         value = resolve(value)
-        if self.unique and not _is_unique(check_unique, self.name, value):
+        if self.unique and not _is_unique(check_unique, (self.name, value)):
             raise ValidationError("Duplicate value '%s' for unique attribute '%s'"%(value, self.name))
         if self.value and value != resolve(self.value):
             raise ValidationError("Attribute '%s' has fixed value '%s' but given '%s'"%(self.name, resolve(self.value), value))
@@ -266,6 +258,7 @@ class AttributeType(object):
     def __str__(self):
         return "%s(%s)"%(self.__class__.__name__, self.name)
 
+
 class AttributeTypeHolder(object):
     """Base class for IncludeType and EntityType - a named holder of attribute types"""
 
@@ -274,7 +267,6 @@ class AttributeTypeHolder(object):
         self.attributes = OrderedDict()
         if attributes:
             self.add_attributes(attributes)
-
 
     def add_attributes(self, attributes):
         """
@@ -289,15 +281,17 @@ class AttributeTypeHolder(object):
     def dump(self):
         """Json friendly representation"""
         return _dump_dict([
-            ('attributes', OrderedDict((k, v.dump()) for k, v in self.attributes.iteritems()
-                                       if k != 'type')), # Don't dump special 'type' attribute
+            ('attributes', OrderedDict(
+                (k, v.dump()) for k, v in self.attributes.iteritems()
+                if k != 'type')), # Don't dump 'type' attribute, dumped separately.
             ('description', self.description or None)
         ])
 
-
-    def __str__(self):
+    def __repr__(self):
         return "%s(%s)"%(self.__class__.__name__, self.name)
 
+    def __str__(self):
+        return self.name
 
 class IncludeType(AttributeTypeHolder):
 
@@ -307,11 +301,13 @@ class IncludeType(AttributeTypeHolder):
         for a in self.attributes.itervalues():
             a.include = self
 
+
 class EntityType(AttributeTypeHolder):
     """
     An entity type defines a set of attributes for an entity.
 
-    @ivar name: Entity type name.
+    @ivar name: Fully qualified entity type name.
+    @ivar short_name: Un-prefixed short name.
     @ivar attributes: Map of L{AttributeType} for entity.
     @ivar singleton: If true only one entity of this type is allowed.
     #ivar include: List of names of sections included by this entity.
@@ -327,6 +323,7 @@ class EntityType(AttributeTypeHolder):
         @param description: Human readable description.
         """
         super(EntityType, self).__init__(name, schema, attributes, description)
+        self.short_name = schema.short_name(name)
         self.refs = {'entity-type': name}
         self.singleton = singleton
         self.include = include
@@ -368,23 +365,18 @@ class EntityType(AttributeTypeHolder):
 
     def validate(self, attributes, check_singleton=None, **kwargs):
         """
-        Validate attributes.
-        @param attributes: Map of attribute values {name:value}
+        Validate attributes for entity type.
+        @param attributes: Map attributes name:value or Entity with attributes property.
             Modifies attributes: adds defaults, converts values.
-        @param check_singleton: dict to enable singleton checking or None to disable.
-        @param kwargs: See L{Schema.validate}
+        @param check_singleton: set of entity-type name to enable singleton checking.
+            None to disable.
+        @param kwargs: See L{Schema.validate_all}
         """
 
-        def drop_none(): # Drop null items in attributes
-            for name in attributes.keys():
-                if attributes[name] is None:
-                    del attributes[name]
+        if isinstance(attributes, Entity): attributes = attributes.attributes
 
-        if self.singleton and not _is_unique(check_singleton, self.name, True):
-            raise ValidationError("Multiple instances of singleton entity type '%s'"%self.name)
-
-        drop_none()
-
+        if self.singleton and not _is_unique(check_singleton, self.name):
+            raise ValidationError("Multiple instances of singleton '%s'"%self.name)
         try:
             # Add missing values
             for attr in self.attributes.itervalues():
@@ -396,22 +388,24 @@ class EntityType(AttributeTypeHolder):
             for name, value in attributes.iteritems():
                 if name not in self.attributes:
                     raise ValidationError("%s has unknown attribute '%s'"%(self, name))
-                if name == 'type': value = self.schema.short_name(value) # Normalize type name
+                if name == 'type':
+                    value = self.schema.long_name(value)
                 attributes[name] = self.attributes[name].validate(
                     value, lambda v: self.resolve(v, attributes), **kwargs)
         except ValidationError, e:
-            raise  ValidationError, "Entity '%s': %s"%(self.name, e), sys.exc_info()[2]
-
-        drop_none()
+            raise  ValidationError, "%s: %s"%(self, e), sys.exc_info()[2]
 
         return attributes
 
+    def __repr__(self): return "%s(%s)" % (type(self).__name__, self.name)
+
+    def __str__(self): return self.name
 
 class Schema(object):
     """
     Schema defining entity types.
 
-    @ivar prefix: Prefix to prepend to short entity names.
+    @ivar prefix: Prefix to prepend to short entity type names.
     @ivar entity_types: Map of L{EntityType} by name.
     """
     def __init__(self, prefix="", includes=None, entity_types=None, description=""):
@@ -421,9 +415,10 @@ class Schema(object):
         @param entity_types: Map of  { entity-type-name: { singleton:, include:[...], attributes:{...}}}
         @param description: Human readable description.
         """
+        if prefix.endswith('.'): prefix = prefix[:-1]
         self.prefix = self.prefixdot = prefix
-        if not prefix.endswith('.'):
-            self.prefixdot += '.'
+        if prefix: self.prefixdot += '.'
+
         self.description = description
         self.includes = OrderedDict()
         if includes:
@@ -432,50 +427,124 @@ class Schema(object):
         self.entity_types = OrderedDict()
         if entity_types:
             for k, v in entity_types.iteritems():
-                self.entity_types[k] = EntityType(k, self, **v)
-
+                name = self.long_name(k)
+                self.entity_types[name] = EntityType(name, self, **v)
 
     def short_name(self, name):
         """Remove prefix from name if present"""
         if name.startswith(self.prefixdot):
-            return name[len(self.prefixdot):]
-        else: return name
+            name = name[len(self.prefixdot):]
+        return name
 
     def long_name(self, name):
-        """Add prefix to name if absent"""
-        if not name.startswith(self.prefixdot):
-            return self.prefixdot + name
-        else: return name
+        """Add prefix to unqualified name"""
+        if not '.' in  name:
+            name = self.prefixdot + name
+        return name
 
     def dump(self):
         """Return json-friendly representation"""
-        return {'prefix': self.prefix,
-                'includes': OrderedDict((k, v.dump()) for k, v in self.includes.iteritems()),
-                'entity_types': OrderedDict((k, v.dump()) for k, v in self.entity_types.iteritems())}
+        return OrderedDict([
+            ('prefix', self.prefix),
+            ('includes',
+             OrderedDict((k, v.dump()) for k, v in self.includes.iteritems())),
+            ('entity_types',
+             OrderedDict((e.short_name, e.dump())
+                         for e in self.entity_types.itervalues()))
+        ])
 
-    def validate(self, entities, check_required=True, add_default=True, check_unique=True, check_singleton=True):
+    def entity_type(self, name):
+        try:
+            return self.entity_types[self.long_name(name)]
+        except KeyError:
+            raise ValidationError("No such entity_type %r" % name)
+
+    def validate_entity(self, attributes, check_required=True, add_default=True,
+                        check_unique=None, check_singleton=None):
         """
-        Validate entities, verify singleton entities and unique attributes are unique.
+        Validate a single entity.
 
-        @param entities: List of L{Entity}
+        @param attributes: Map of attribute name: value
+        @keyword check_required: Raise exception if required attributes are missing.
+        @keyword add_default: Add defaults for missing attributes.
+        @keyword check_unique: Used by L{validate_all}
+        @keyword check_singleton: Used by L{validate_all}
+        """
+        attributes['type'] = self.long_name(attributes['type'])
+        if not attributes['type'] in self.entity_types:
+            raise ValidationError("No such entity type: '%s'" % attributes['type'])
+        entity_type = self.entity_types[attributes['type']]
+        entity_type.validate(
+            attributes,
+            check_required=check_required,
+            add_default=add_default,
+            check_unique=check_unique,
+            check_singleton=check_singleton)
+
+    def validate_all(self, attribute_maps, check_required=True, add_default=True,
+                     check_unique=True, check_singleton=True):
+        """
+        Validate a list of attribute maps representing entity attributes.
+        Verify singleton entities and unique attributes are unique.
+        Modifies attribute_maps, adds default values, converts values.
+
+        @param attribute_maps: List of attribute name:value maps.
         @keyword check_required: Raise exception if required attributes are missing.
         @keyword add_default: Add defaults for missing attributes.
         @keyword check_unique: Raise exception if unique attributes are duplicated.
-        @keyword check_singleton: Raise exception if singleton entities are duplicated or missing
+        @keyword check_singleton: Raise exception if singleton entities are duplicated
         """
-        if check_singleton: check_singleton = {}
-        if check_unique: check_unique = {}
+        if check_singleton: check_singleton = set()
+        if check_unique: check_unique = set()
 
-        # Validate all entities.
-        for e in entities:
-            e.type = self.short_name(e.type)
-            if not e.type in self.entity_types:
-                raise ValidationError("No such entity type: '%s'" % e.type)
-            et = self.entity_types[e.type]
-            et.validate(e,
-                        check_required=check_required,
-                        add_default=add_default,
-                        check_unique=check_unique,
-                        check_singleton=check_singleton)
+        for e in attribute_maps:
+            self.validate_entity(e,
+                                 check_required=check_required,
+                                 add_default=add_default,
+                                 check_unique=check_unique,
+                                 check_singleton=check_singleton)
+        return attribute_maps
 
-        return entities
+    def entity(self, attributes):
+        """Convert an attribute map into an L{Entity}"""
+        attributes = dict((k, v) for k, v in attributes.iteritems() if v is not None)
+        return Entity(self.entity_type(attributes['type']), attributes)
+
+    def entities(self, attribute_maps):
+        """Convert a list of attribute maps into a list of L{Entity}"""
+        return map(self.entity, attribute_maps)
+
+
+class Entity(entity.Entity):
+    """
+    An L{entity.Entity} with schema enforced entity type.
+    @ivar _entity_type: not private, _ prefix to avoid clash with attribute names.
+    """
+
+    def __init__(self, entity_type, attributes):
+        """
+        @param entity_type: L{EntityType}
+        @param attributes: map of atrribute name:value or list of [(name, value)]
+        """
+        super(Entity, self).__init__(attributes)
+        self.__dict__['_entity_type'] = entity_type # Avoid __getattr__ recursion
+        entity_type.validate(self)
+
+    @staticmethod
+    def from_schema(schema, attributes):
+        """
+        Look up attributes['type'] in schema and create an Entity.
+        """
+        entity_type = schema.entity_type.get(attributes['type'])
+        if not entity_type:
+            raise ValidationError("No 'type' attributre in %s" % attributes)
+        return Entity(entity_type, attributes)
+
+
+    def __setitem__(self, attrname, value):
+        if attrname not in self._entity_type.attributes:
+            raise ValidationError("Illegal attribute '%s' for %s" % (attrname, self._entity_type))
+        super(Entity, self).__setitem__(attrname, value);
+
+    def __delitem__(self, attrname):
+        raise TypeError("Can't delete attributes from %s" % self)
