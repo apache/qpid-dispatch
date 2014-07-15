@@ -344,7 +344,7 @@ static PyObject* qd_python_log(PyObject *self, PyObject *args)
     LogAdapter *self_ptr = (LogAdapter*) self;
     //char       *logmod   = PyString_AS_STRING(self_ptr->module_name);
 
-    qd_log(self_ptr->log_source, level, text);
+    qd_log(self_ptr->log_source, level, "%s", text);
 
     Py_INCREF(Py_None);
     return Py_None;
