@@ -76,7 +76,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
             msgr.flush()
             self.assertEqual(r, messages)
 
-            qs = [q.agent.getQueue(self.testq) for q in self.qpidds]
+            qs = [q.management.getQueue(self.testq) for q in self.qpidds]
             enq = sum(q.msgTotalEnqueues for q in qs)
             deq = sum(q.msgTotalDequeues for q in qs)
             self.assertEquals((enq, deq), (len(r), len(r)))
@@ -87,7 +87,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
             """Create a distributed queue with N routers and N brokers.
             Each router is connected to all the brokers."""
             for q in self.qpidds:
-                q.agent.addQueue(self.testq)
+                q.management.addQueue(self.testq)
 
             def router(i):
                 """Create router<i> with waypoints to each broker."""

@@ -318,20 +318,20 @@ class Qdrouterd(Process):
             pyinclude = os.path.join(os.environ['QPID_DISPATCH_HOME'], 'python')
         super(Qdrouterd, self).__init__(
             name, ['qdrouterd', '-c', config.write(name), '-I', pyinclude], expect=Process.RUNNING)
-        self._agent = None
+        self._management = None
         if wait:
             self.wait_ready()
 
     @property
-    def agent(self):
-        """Return an management Agent for this router"""
-        if not self._agent:
-            self._agent = Node(self.addresses[0])
-        return self._agent
+    def management(self):
+        """Return an management agent proxy for this router"""
+        if not self._management:
+            self._management = Node(self.addresses[0])
+        return self._management
 
     def teardown(self):
-        if self._agent:
-            self._agent.stop()
+        if self._management:
+            self._management.stop()
         super(Qdrouterd, self).teardown()
 
     @property
@@ -352,7 +352,7 @@ class Qdrouterd(Process):
     def is_connected(self, port, host='0.0.0.0'):
         """If router has a connection to host:port return the management info.
         Otherwise return None"""
-        connections = self.agent.query('org.apache.qpid.dispatch.connection').result_maps
+        connections = self.management.query('org.apache.qpid.dispatch.connection').result_maps
         for c in connections:
             if c['name'] == '%s:%s'%(host, port):
                 return c
@@ -367,7 +367,7 @@ class Qdrouterd(Process):
         """
         def check():
             # FIXME aconway 2014-06-12: this should be a request by name, not a query.
-            addrs = self.agent.query(
+            addrs = self.management.query(
                 type='org.apache.qpid.dispatch.router.address',
                 attribute_names=['name', 'subscriberCount', 'remoteCount']).result_maps
             # FIXME aconway 2014-06-12: endswith check is because of M0/L prefixes
@@ -409,7 +409,7 @@ class Qpidd(Process):
             name, ['qpidd', '--config', self.config.write(name)], expect=Process.RUNNING)
         self.port = self.config['port'] or 5672
         self.address = "127.0.0.1:%s"%self.port
-        self._agent = None
+        self._management = None
         if wait:
             self.wait_ready()
 
@@ -420,13 +420,13 @@ class Qpidd(Process):
         return qm.Connection.establish(self.address)
 
     @property
-    def agent(self, **kwargs):
-        """Get the management agent for this broker"""
+    def management(self, **kwargs):
+        """Get the management agent proxy for this broker"""
         if not qpidtoollibs:
             raise Exception("No qpidtoollibs module available")
-        if not self._agent:
-            self._agent = qpidtoollibs.BrokerAgent(self.qm_connect(), **kwargs)
-        return self._agent
+        if not self._management:
+            self._management = qpidtoollibs.BrokerAgent(self.qm_connect(), **kwargs)
+        return self._management
 
     def wait_ready(self):
         wait_port(self.port)
