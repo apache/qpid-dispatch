@@ -170,7 +170,8 @@ class Node(object):
 
     def __del__(self):
         if hasattr(self, 'messenger'):
-            self.stop()
+            try: self.stop()
+            except: pass
 
     def _flush(self):
         """Call self.messenger.work() till there is no work left."""

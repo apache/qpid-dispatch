@@ -68,7 +68,7 @@ add_test(management_tests      ${TEST_WRAP} -m unittest -v management)
 add_test(system_tests          ${TEST_WRAP} -m run_system_tests -v)
 
 set(SYSTEM_TEST_FILES ${CMAKE_CURRENT_BINARY_DIR}/run.py run_system_tests.py system_test.py
-  system_tests_one_router.py system_tests_two_routers.py system_tests_two_routers_ssl.py
+  system_tests_one_router.py system_tests_two_routers.py
   system_tests_broker.py system_tests_management.py system_tests_qdstat.py)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/A-ssl.conf)

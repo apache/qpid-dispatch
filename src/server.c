@@ -107,6 +107,14 @@ static void thread_process_listeners(qd_server_t *qd_server)
         //
         if (config->ssl_enabled) {
             pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
+            if (!domain) {
+                qd_error(QD_ERROR_RUNTIME, "SSL domain failed for connection from %s",
+                         pn_connector_name(cxtr));
+                /* FIXME aconway 2014-07-15: Close the connection */
+                continue;
+            }
+
+            /* FIXME aconway 2014-07-15: error handling on all calls. */
             pn_ssl_domain_set_credentials(domain,
                                           config->ssl_certificate_file,
                                           config->ssl_private_key_file,
@@ -614,6 +622,13 @@ static void cxtr_try_open(void *context)
     //
     if (config->ssl_enabled) {
         pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+        if (!domain) {
+            qd_error(QD_ERROR_RUNTIME, "SSL domain failed for connection to %s:%s",
+                     ct->config->host, ct->config->port);
+            /* FIXME aconway 2014-07-15: Close the connection, clean up. */
+            return;
+        }
+        /* FIXME aconway 2014-07-15: error handling on all SSL calls. */
         pn_ssl_domain_set_credentials(domain,
                                       config->ssl_certificate_file,
                                       config->ssl_private_key_file,

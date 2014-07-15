@@ -18,34 +18,20 @@
 #
 
 import unittest, os
-from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED
+from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable
 from system_test import TestCase, Qdrouterd, retry_exception
 from qpid_dispatch_internal.management import Node
 
 class RouterTest(TestCase):
-    ssl_option = False
-
     @classmethod
     def setUpClass(cls):
         """Start a router and a messenger"""
         super(RouterTest, cls).setUpClass()
 
-        def ssl_config(client_server):
-            if not cls.ssl_option: return []
-            def ssl_file(name):
-                return os.path.join(os.path.dirname(__file__), 'config-2', name)
-            return [
-                ('ssl-profile', {
-                    'name': 'ssl-profile-name',
-                    'cert-db': ssl_file('ca-certificate.pem'),
-                    'cert-file': ssl_file(client_server+'-certificate.pem'),
-                    'key-file': ssl_file(client_server+'-private-key.pem'),
-                    'password': client_server+'-password'})]
+        def ssl_config(client_server, connection): return [] # Over-ridden by RouterTestSsl
 
         def router(name, client_server, connection):
-            if cls.ssl_option:
-                connection[1]['ssl-profile'] = 'ssl-profile-name'
-            config = Qdrouterd.Config(ssl_config(client_server) + [
+            config = Qdrouterd.Config(ssl_config(client_server, connection) + [
                 ('log', {'module':'DEFAULT', 'level':'trace', 'output':name+".log"}),
                 ('container', {'worker-threads': 4, 'container-name': 'Qpid.Dispatch.Router.%s'%name}),
                 ('router', {'mode': 'interior', 'router-id': 'QDR.%s'%name}),
@@ -797,6 +783,27 @@ class RouterTest(TestCase):
         M1.stop()
         M2.stop()
 
+
+
+try:
+    SSLDomain(SSLDomain.MODE_CLIENT)
+    class RouterTestSsl(RouterTest):
+        def ssl_config(self, client_server, connection):
+            connection[1]['ssl-profile'] = 'ssl-profile-name'
+            def ssl_file(name):
+                return os.path.join(os.path.dirname(__file__), 'config-2', name)
+            return [
+                ('ssl-profile', {
+                    'name': 'ssl-profile-name',
+                    'cert-db': ssl_file('ca-certificate.pem'),
+                    'cert-file': ssl_file(client_server+'-certificate.pem'),
+                    'key-file': ssl_file(client_server+'-private-key.pem'),
+                    'password': client_server+'-password'})]
+
+except SSLUnavailable:
+    class RouterTestSsl(TestCase):
+        def test_skip(self):
+            self.skipTest("Proton SSL support unavailable.")
 
 if __name__ == '__main__':
     unittest.main()

@@ -42,9 +42,10 @@ typedef enum {
     QD_ERROR_MESSAGE,           ///< Error parsing a message.
     QD_ERROR_PYTHON,            ///< Error from python code.
     QD_ERROR_CONFIG,            ///< Error in configuration
-    QD_ERROR_TYPE,              ///< Value of inappropriate type
-    QD_ERROR_VALUE,             ///< Invalid value
-    QD_ERROR_ENUM_COUNT         ///< Not an error, marks the end of the enum
+    QD_ERROR_TYPE,              ///< Value of inappropriate type.
+    QD_ERROR_VALUE,             ///< Invalid value.
+    QD_ERROR_RUNTIME,           ///< Run-time failure.
+    QD_ERROR_ENUM_COUNT         ///< Not an error, marks the end of the enum.
 } qd_error_t;
 
 /**

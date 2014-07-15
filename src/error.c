@@ -34,7 +34,8 @@ static const char *error_names[] = {
  "Python",
  "Configuration",
  "Type",
- "Value"
+ "Value",
+ "Run Time"
 };
 
 STATIC_ASSERT(sizeof(error_names)/sizeof(error_names[0]) == QD_ERROR_ENUM_COUNT,
