@@ -8,33 +8,33 @@
           "type": "String",
           "required": true,
           "unique": true,
-	  "default": "$identity",
+          "default": "$identity",
           "description": "Unique name, can be changed."
         },
         "identity": {
           "type": "String",
           "required": true,
           "unique": true,
-	  "default": "$name",
+          "default": "$name",
           "description": "Unique identity, will not change."
         },
-	"type": {
-	  "type": "String",
-	  "required": true,
-	  "value": "$$entity-type",
-	  "description": "Management entity type."
-	}
+        "type": {
+          "type": "String",
+          "required": true,
+          "value": "$$entity-type",
+          "description": "Management entity type."
+        }
       }
     },
     "ip-address": {
       "attributes": {
         "addr": {
-	  "description":"IP address: ipv4 or ipv6 literal or a host name",
+          "description":"IP address: ipv4 or ipv6 literal or a host name",
           "type": "String",
           "default": "0.0.0.0"
         },
         "port": {
-	  "description":"Port number or symbolic service name",
+          "description":"Port number or symbolic service name",
           "type": "String",
           "default": "amqp"
         }
@@ -51,7 +51,7 @@
           "type": [
             "normal",
             "inter-router",
-	    "on-demand"
+            "on-demand"
           ],
           "default": "normal",
           "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. "
@@ -90,10 +90,10 @@
         "common"
       ],
       "attributes": {
-	"container-name": {
-	  "type": "String",
-	  "description": "The  name of the AMQP container.  If not specified, the container name will be set to a value of the container's choosing.  The automatically assigned container name is not guaranteed to be persistent across restarts of the container."
-	},
+        "container-name": {
+          "type": "String",
+          "description": "The  name of the AMQP container.  If not specified, the container name will be set to a value of the container's choosing.  The automatically assigned container name is not guaranteed to be persistent across restarts of the container."
+        },
         "worker-threads": {
           "type": "Integer",
           "default": "1",
@@ -108,15 +108,15 @@
         "common"
       ],
       "attributes": {
-	"router-id": {
-	  "type": "String"
-	},
+        "router-id": {
+          "type": "String"
+        },
         "mode": {
           "type": [
             "standalone",
             "interior",
-	    "edge",
-	    "endpoint"
+            "edge",
+            "endpoint"
           ],
           "default": "standalone",
           "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not coorperate with other routers. In interior mode, the router operates in cooreration with other interior routers in an interconnected network.  In edge mode, the router operates with an uplink into an interior router network. Edge routers are typically used as connection concentrators or as security firewalls for access into the interior network. "
@@ -159,7 +159,7 @@
         "common",
         "ssl-profile",
         "ip-address",
-	"connection"
+        "connection"
       ],
       "attributes": {
         "require-peer-auth": {
@@ -189,7 +189,7 @@
         "common",
         "ssl-profile",
         "ip-address",
-	"connection"
+        "connection"
       ],
       "attributes": {
         "allow-redirect": {
@@ -211,20 +211,20 @@
         "common"
       ],
       "attributes": {
-	"module": {
-	  "type":[
-	    "ROUTER",
-	    "MESSAGE",
-	    "SERVER",
-	    "AGENT",
-	    "CONTAINER",
-	    "CONFIG",
-	    "DEFAULT",
-	    "ERROR"
-	  ],
-	  "required": true,
-	  "description": "Module to configure logging level. The special module 'DEFAULT' specifies logging for modules that don't have explicit log sections."
-	},
+        "module": {
+          "type":[
+            "ROUTER",
+            "MESSAGE",
+            "SERVER",
+            "AGENT",
+            "CONTAINER",
+            "CONFIG",
+            "DEFAULT",
+            "ERROR"
+          ],
+          "required": true,
+          "description": "Module to configure logging level. The special module 'DEFAULT' specifies logging for modules that don't have explicit log sections."
+        },
         "level": {
           "type": [
             "none",
@@ -241,7 +241,7 @@
         },
         "timestamp": {
           "type": "Boolean",
-	  "default": true,
+          "default": true,
           "description": "Set a timestamp on log messages"
         },
         "output": {
