@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <Python.h>
 #include <qpid/dispatch/python_embedded.h>
 #include <qpid/dispatch.h>
 #include <qpid/dispatch/server.h>
@@ -133,7 +134,7 @@ qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
     return qd_error_code();
 }
 
-void qd_dispatch_set_agent(qd_dispatch_t *qd, PyObject *agent) {
+void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent) {
     assert(agent);
     assert(!qd->py_agent);
     qd->py_agent = agent;
@@ -147,7 +148,7 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     free(qd->router_area);
     qd_connection_manager_free(qd->connection_manager);
     qd_agent_free(qd->agent);
-    Py_XDECREF(qd->py_agent);
+    Py_XDECREF((PyObject*) qd->py_agent);
     qd_router_free(qd->router);
     qd_container_free(qd->container);
     qd_server_free(qd->server);
