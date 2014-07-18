@@ -87,7 +87,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         """Query with type only"""
         response = self.node2.query(type=LISTENER)
         for attr in ['type', 'name', 'identity', 'addr', 'port']:
-            self.assertIn(attr, response.attribute_names)
+            self.assertTrue(attr in response.attribute_names)
         for r in response.result_maps:           # Check types
             self.assertEqual(len(response.attribute_names), len(r))
             self.assertEqual(r['type'], LISTENER)
@@ -101,8 +101,8 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertEqual(attribute_names, response.attribute_names)
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in xrange(3)]
         for r in expect: # We might have extras in results due to create tests
-            self.assertIn(r, response.results)
-            self.assertIn(dict(zip(attribute_names, r)), response.result_maps)
+            self.assertTrue(r in response.results)
+            self.assertTrue(dict(zip(attribute_names, r)) in response.result_maps)
 
     def test_query_attributes(self):
         """Query with attributes only"""
@@ -111,7 +111,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertEqual(attribute_names, response.attribute_names)
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in xrange(3)]
         for r in expect: # We might have extras in results due to create tests
-            self.assertIn(r, response.results)
+            self.assertTrue(r in response.results)
         for name in ['router0', 'log0']:
             self.assertTrue([r for r in response.result_maps if r['name'] == name],
                             msg="Can't find result with name '%s'" % name)
