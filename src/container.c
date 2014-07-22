@@ -295,30 +295,43 @@ static int process_handler(qd_container_t *container, void* unused, qd_connectio
         event_count++;
 
         switch (pn_event_type(event)) {
-        case PN_CONNECTION_REMOTE_STATE :
+        case PN_CONNECTION_REMOTE_OPEN :
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
                 pn_connection_open(conn);
-            else if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED))
+            break;
+
+        case PN_CONNECTION_REMOTE_CLOSE :
+            if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED))
                 pn_connection_close(conn);
             break;
 
-        case PN_SESSION_REMOTE_STATE :
+        case PN_SESSION_REMOTE_OPEN :
             ssn = pn_event_session(event);
             if (pn_session_state(ssn) & PN_LOCAL_UNINIT) {
                 pn_session_set_incoming_capacity(ssn, 1000000);
                 pn_session_open(ssn);
-            } else if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED))
+            }
+            break;
+
+        case PN_SESSION_REMOTE_CLOSE :
+            ssn = pn_event_session(event);
+            if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED))
                 pn_session_close(ssn);
             break;
 
-        case PN_LINK_REMOTE_STATE :
+        case PN_LINK_REMOTE_OPEN :
             pn_link = pn_event_link(event);
             if (pn_link_state(pn_link) & PN_LOCAL_UNINIT) {
                 if (pn_link_is_sender(pn_link))
                     setup_outgoing_link(container, pn_link);
                 else
                     setup_incoming_link(container, pn_link);
-            } else if (pn_link_state(pn_link) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
+            }
+            break;
+
+        case PN_LINK_REMOTE_CLOSE :
+            pn_link = pn_event_link(event);
+            if (pn_link_state(pn_link) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
                 qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
                 qd_node_t *node = link->node;
                 if (node)
