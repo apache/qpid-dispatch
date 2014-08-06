@@ -197,7 +197,8 @@ static int traverse_field(unsigned char **cursor, qd_buffer_t **buffer, qd_field
         field->offset     = start_cursor - qd_buffer_base(start_buffer);
         field->length     = consume;
         field->hdr_length = hdr_length;
-        field->parsed     = 1;
+        field->parsed     = true;
+        field->tag        = tag;
     }
 
     advance(cursor, buffer, consume, 0, 0);
@@ -930,6 +931,9 @@ qd_field_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_fie
 {
     qd_field_location_t *loc = qd_message_field_location(msg, field);
     if (!loc)
+        return 0;
+
+    if (loc->tag == QD_AMQP_NULL)
         return 0;
 
     qd_buffer_t   *buffer = loc->buffer;
