@@ -17,6 +17,14 @@
 ## under the License.
 ##
 
+# Set default build type. Must come before project() which sets default to ""
+set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
+  "Build type: Debug, Release, RelWithDebInfo or MinSizeRel (default RelWithDebInfo)")
+if (CMAKE_BUILD_TYPE MATCHES "Deb")
+  set (has_debug_symbols " (has debug symbols)")
+endif (CMAKE_BUILD_TYPE MATCHES "Deb")
+message("Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
+
 project(qpid-dispatch C)
 
 cmake_minimum_required(VERSION 2.6)
