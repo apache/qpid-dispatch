@@ -28,15 +28,16 @@ usage="""
 Run a tool or test in a build tree with the correct PATH, PYTHONPATH, etc.
 
 Usage:
-run.py <program> [<arg>....]               # Run a program, can be an interactive shell.
-run.py -m <python-module>  [<arg>....]     # Run a python module.
+run.py <program> [<arg>....]               # Run a program, can be an interactive shell. Use PATH.
+run.py -m <python-module>  [<arg>....]     # Run a python module. Use PYTHONPATH.
 run.py -s <python-script>.py  [<arg>....]  # Run a python script.
-run.py --vg <program> [<arg>....]          # Run a program with valgrind if enabled.
-run.py --sh                                # Output a shell script to set the environment.
+run.py --vg <program> [<arg>....]          # Run a program with valgrind if enabled. Use PATH.
+run.py --sh                                # Print a shell script to set the run.py environment.
 
 Valgrind can be enabled or disabled by the cmake 'USE_VALGRIND' option and the
 environment variable 'USE_VALGRIND' (set to 'ON' or 'OFF'). The environment
-variable takes precendence if set."""
+variable takes precendence if set.
+"""
 
 import os, sys, runpy
 from subprocess import Popen, PIPE
@@ -118,26 +119,32 @@ def run_path(file_path, run_name=None):
         os.execvp(sys.executable, [sys.executable]+sys.argv)
 
 if __name__ == "__main__":
+    error_prefix = ""
     try:
         if len(sys.argv) == 1:
             print usage
         elif sys.argv[1] == '-m':
             sys.argv = sys.argv[2:]
+            error_prefix = "Run python module '%s': "%(sys.argv[0])
             runpy.run_module(sys.argv[0], alter_sys=True, run_name="__main__")
         elif sys.argv[1] == '-s':
             sys.argv = sys.argv[2:]
+            error_prefix = "Run python script '%s':"%(sys.argv[0])
             run_path(sys.argv[0], run_name="__main__")
         elif sys.argv[1] == '--sh':
             for name, value in env_vars.iteritems(): print "%s=%s"%(name, value)
             print "export %s"%' '.join(env_vars.keys())
         elif sys.argv[1] == '--vg':
             args = with_valgrind(sys.argv[2:])
+            error_prefix = "Run executable '%s' with valgrind: "%(args[0])
             os.execvp(args[0], args)
         elif sys.argv[1].startswith('-'):
             print usage
         else:
             args = sys.argv[1:]
+            error_prefix = "Run executable '%s': "%(args[0])
             os.execvp(args[0], args)
     except Exception, e:
-        raise Exception, "Error in %s: %s"%(" ".join(sys.argv), e), sys.exc_info()[2]
+        print "%s%s: %s"%(error_prefix, type(e).__name__, e)
         sys.exit(1)
+
