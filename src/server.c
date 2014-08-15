@@ -20,6 +20,7 @@
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
+#include <qpid/dispatch/amqp.h>
 #include "dispatch_private.h"
 #include "server_private.h"
 #include "timer_private.h"
@@ -80,10 +81,12 @@ static void thread_process_listeners(qd_server_t *qd_server)
         ctx->link_context = 0;
         ctx->ufd          = 0;
 
+        size_t clen = strlen(QD_CAPABILITY_ANONYMOUS_RELAY);
         pn_connection_t *conn = pn_connection();
         ctx->collector = pn_collector();
         pn_connection_collect(conn, ctx->collector);
         pn_connection_set_container(conn, qd_server->container_name);
+        pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
         pn_connector_set_connection(cxtr, conn);
         pn_connection_set_context(conn, ctx);
         ctx->pn_conn = conn;
@@ -208,10 +211,12 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
                 break;
             }
 
+            size_t clen = strlen(QD_CAPABILITY_ANONYMOUS_RELAY);
             pn_connection_t *conn = pn_connection();
             ctx->collector = pn_collector();
             pn_connection_collect(conn, ctx->collector);
             pn_connection_set_container(conn, qd_server->container_name);
+            pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
             pn_connector_set_connection(cxtr, conn);
             pn_connection_set_context(conn, ctx);
             ctx->pn_conn = conn;

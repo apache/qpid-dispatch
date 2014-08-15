@@ -94,6 +94,11 @@ const char * const QD_MA_TO;       ///< To-Override
 const char * const QD_MA_CLASS;    ///< Message-Class
 /// @}
 
+/** @name Container Capabilities */
+/// @{
+const char * const QD_CAPABILITY_ANONYMOUS_RELAY;
+/// @}
+
 /** @name Link Terminus Capabilities */
 /// @{
 const char * const QD_CAPABILITY_ROUTER;

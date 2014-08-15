@@ -24,7 +24,8 @@ const char * const QD_MA_TRACE   = "x-opt-qd.trace";
 const char * const QD_MA_TO      = "x-opt-qd.to";
 const char * const QD_MA_CLASS   = "x-opt-qd.class";
 
-const char * const QD_CAPABILITY_ROUTER = "qd.router";
+const char * const QD_CAPABILITY_ROUTER          = "qd.router";
+const char * const QD_CAPABILITY_ANONYMOUS_RELAY = "ANONYMOUS-RELAY";
 
 const char * const QD_INTERNODE_LINK_NAME_1 = "qd.internode.1";
 const char * const QD_INTERNODE_LINK_NAME_2 = "qd.internode.2";
