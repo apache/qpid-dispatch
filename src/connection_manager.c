@@ -96,22 +96,24 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->max_frame_size = qd_entity_long(entity, "max-frame-size"); CHECK();
     config->sasl_mechanisms = qd_entity_string(entity, "sasl-mechanisms"); CHECK();
     config->ssl_enabled = has_attrs(entity, ssl_attributes, ssl_attributes_count);
+    config->allow_no_sasl =
+        qd_entity_opt_bool(entity, "allow-no-sasl", false); CHECK();
     if (config->ssl_enabled) {
         config->ssl_server = 1;
-	config->ssl_allow_unsecured_client =
-	  qd_entity_opt_bool(entity, "allow-unsecured", false); CHECK();
-	config->ssl_certificate_file =
-	  qd_entity_opt_string(entity, "cert-file", 0); CHECK();
-	config->ssl_private_key_file =
-	  qd_entity_opt_string(entity, "key-file", 0); CHECK();
+        config->ssl_allow_unsecured_client =
+            qd_entity_opt_bool(entity, "allow-unsecured", false); CHECK();
+        config->ssl_certificate_file =
+            qd_entity_opt_string(entity, "cert-file", 0); CHECK();
+        config->ssl_private_key_file =
+            qd_entity_opt_string(entity, "key-file", 0); CHECK();
         config->ssl_password =
-	  qd_entity_opt_string(entity, "password", 0); CHECK();
-	config->ssl_trusted_certificate_db =
-	  qd_entity_opt_string(entity, "cert-db", 0); CHECK();
-	config->ssl_trusted_certificates =
-	  qd_entity_opt_string(entity, "trusted-certs", 0); CHECK();
+            qd_entity_opt_string(entity, "password", 0); CHECK();
+        config->ssl_trusted_certificate_db =
+            qd_entity_opt_string(entity, "cert-db", 0); CHECK();
+        config->ssl_trusted_certificates =
+            qd_entity_opt_string(entity, "trusted-certs", 0); CHECK();
         config->ssl_require_peer_authentication =
-	  qd_entity_opt_bool(entity, "require-peer-auth", true);
+            qd_entity_opt_bool(entity, "require-peer-auth", true);
     }
     return QD_ERROR_NONE;
 
@@ -129,7 +131,7 @@ void qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
     DEQ_ITEM_INIT(cl);
     DEQ_INSERT_TAIL(cm->config_listeners, cl);
     qd_log(cm->log_source, QD_LOG_INFO, "Configured Listener: %s:%s role=%s",
-	   cl->configuration.host, cl->configuration.port, cl->configuration.role);
+           cl->configuration.host, cl->configuration.port, cl->configuration.role);
 }
 
 

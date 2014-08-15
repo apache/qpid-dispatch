@@ -271,6 +271,12 @@ typedef struct qd_server_config_t {
     int ssl_allow_unsecured_client;
 
     /**
+     * Iff non-zero, this listener will allow clients to connect even if they skip the
+     * SASL authentication protocol.
+     */
+    int allow_no_sasl;
+
+    /**
      * Path to the file containing the PEM-formatted public certificate for the local end
      * of the connection.
      */

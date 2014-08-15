@@ -176,6 +176,11 @@
           "default": false,
           "description": "For listeners using SSL only.  If set to \"yes\", this option causes the listener to watch the initial network traffic to determine if the client is using SSL or is running in-the-clear.  The listener will enable SSL only if the client uis using SSL. "
         },
+        "allow-no-sasl": {
+          "type": "Boolean",
+          "default": false,
+          "description": "If set to \"yes\", this option causes the listener to allow clients to connect even if they skip the SASL authentication protocol. "
+        },
         "max-frame-size": {
           "type": "Integer",
           "default": 65536,

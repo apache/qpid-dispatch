@@ -143,6 +143,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         pn_sasl_t *sasl = pn_sasl(tport);
         pn_sasl_mechanisms(sasl, config->sasl_mechanisms);
         pn_sasl_server(sasl);
+        pn_sasl_allow_skip(sasl, config->allow_no_sasl);
         pn_sasl_done(sasl, PN_SASL_OK);  // TODO - This needs to go away
 
         pn_connector_set_context(cxtr, ctx);
@@ -225,7 +226,8 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
             pn_transport_t *tport = pn_connector_transport(cxtr);
             pn_sasl_t      *sasl  = pn_sasl(tport);
 
-            if (pn_sasl_outcome(sasl) == PN_SASL_OK) {
+            if (pn_sasl_outcome(sasl) == PN_SASL_OK ||
+                pn_sasl_outcome(sasl) == PN_SASL_SKIPPED) {
                 ctx->state = CONN_STATE_OPERATIONAL;
 
                 qd_conn_event_t ce = QD_CONN_EVENT_PROCESS; // Initialize to keep the compiler happy
