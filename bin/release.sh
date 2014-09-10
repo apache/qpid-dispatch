@@ -77,14 +77,19 @@ FILENAME=$PWD/${BASENAME}.tar.gz
 
 if [ -f $FILENAME ]; then rm -f $FILENAME; fi
 
-(
 echo "Checking out to ${WORKDIR}..."
 cd $WORKDIR
-svn export -r ${SVNREV} ${URL} ${BASENAME} >/dev/null
 
-echo "Building source tarball..."
+svn export -r ${SVNREV} ${URL} ${BASENAME} >/dev/null || exit 1
+
+BUILD_VERSION=$(cat $WORKDIR/$BASENAME/VERSION.txt) || exit 1
+test "$VERSION" == "$BUILD_VERSION" || {
+    echo "Version mismatch: $VERSION != $BUILD_VERSION. Please update VERSION.txt in SVN"
+    exit 1
+}
+
+echo "Building source tarball $FILENAME"
 cd $WORKDIR
-tar --exclude release.sh -zcvf $FILENAME ${BASENAME} >/dev/null
-)
+tar --exclude release.sh -zcvf $FILENAME ${BASENAME} >/dev/null || exit 1
 
 echo "Done!"
