@@ -20,7 +20,7 @@
 import unittest, os
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable
 from system_test import TestCase, Qdrouterd, retry_exception
-from qpid_dispatch_internal.management import Node
+from qpid_dispatch.management import Node
 
 class RouterTest(TestCase):
     @classmethod

@@ -85,6 +85,7 @@
   },
   "entity_types": {
     "container": {
+      "allows": "CR",
       "singleton": true,
       "include": [
         "common"
@@ -103,6 +104,7 @@
     },
 
     "router": {
+      "allows": "CR",
       "singleton": true,
       "include": [
         "common"
@@ -155,6 +157,7 @@
 
     "listener": {
       "description": "Listens for incoming connections to the router",
+      "allows": "CR",
       "include": [
         "common",
         "ssl-profile",
@@ -190,6 +193,7 @@
     },
     "connector": {
       "description": "Establishes an outgoing connections from the router",
+      "allows": "CR",
       "include": [
         "common",
         "ssl-profile",
@@ -215,6 +219,7 @@
       "include": [
         "common"
       ],
+      "allows": "CR",
       "attributes": {
         "module": {
           "type":[
@@ -222,6 +227,7 @@
             "MESSAGE",
             "SERVER",
             "AGENT",
+	    "PYAGENT",
             "CONTAINER",
             "CONFIG",
             "DEFAULT",
@@ -257,6 +263,7 @@
     },
 
     "fixed-address": {
+      "allows": "CR",
       "include": [
         "common"
       ],
@@ -290,6 +297,7 @@
     },
 
     "waypoint": {
+      "allows": "CR",
       "include": [
         "common"
       ],
@@ -310,6 +318,18 @@
           "type": "Integer",
           "default": -1
         }
+      }
+    },
+
+    "dummy": {
+      "description": "Dummy entity for test purposes.",
+      "allows": "CRUD",
+      "include": ["common"],
+      "attributes": {
+        "arg1": {"type": "String"},
+        "arg2": {"type": "String"},
+	"num1": {"type": "Integer"},
+	"num2": {"type": "Integer"}
       }
     }
   }

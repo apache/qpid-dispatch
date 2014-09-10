@@ -56,7 +56,7 @@ import os, time, socket, random, subprocess, shutil, unittest
 from copy import copy
 import proton
 from proton import Message
-from qpid_dispatch_internal.management import Node
+from qpid_dispatch.management import Node
 from run import with_valgrind
 
 # Optional modules
@@ -352,7 +352,7 @@ class Qdrouterd(Process):
     def is_connected(self, port, host='0.0.0.0'):
         """If router has a connection to host:port return the management info.
         Otherwise return None"""
-        connections = self.management.query('org.apache.qpid.dispatch.connection').result_maps
+        connections = self.management.query('org.apache.qpid.dispatch.connection').entities
         for c in connections:
             if c['name'] == '%s:%s'%(host, port):
                 return c
@@ -369,7 +369,7 @@ class Qdrouterd(Process):
             # FIXME aconway 2014-06-12: this should be a request by name, not a query.
             addrs = self.management.query(
                 type='org.apache.qpid.dispatch.router.address',
-                attribute_names=['name', 'subscriberCount', 'remoteCount']).result_maps
+                attribute_names=['name', 'subscriberCount', 'remoteCount']).entities
             # FIXME aconway 2014-06-12: endswith check is because of M0/L prefixes
             addrs = [a for a in addrs if a['name'].endswith(address)]
             return addrs and addrs[0]['subscriberCount'] >= subscribers and addrs[0]['remoteCount'] >= remotes

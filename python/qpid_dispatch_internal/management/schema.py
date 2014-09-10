@@ -26,10 +26,10 @@ check for uniqueness of enties/attributes that are specified to be unique.
 A Schema can be loaded/dumped to a json file.
 """
 
-import os, sys, re
+import os, sys
+from qpid_dispatch.management import entity
+from qpid_dispatch.management.error import Forbidden
 from ..compat import OrderedDict
-import entity
-from collections import MutableMapping
 
 class ValidationError(Exception):
     """Error raised if schema validation fails"""
@@ -294,7 +294,7 @@ class AttributeTypeHolder(object):
         return self.name
 
 class IncludeType(AttributeTypeHolder):
-
+    """An include type defines a set of attributes that can be re-used by multiple EntityTypes"""
     def __init__(self, name, schema, attributes=None, description=""):
         super(IncludeType, self).__init__(name, schema, attributes, description)
         attributes = attributes or {}
@@ -313,7 +313,7 @@ class EntityType(AttributeTypeHolder):
     #ivar include: List of names of sections included by this entity.
     """
     def __init__(self, name, schema, singleton=False, include=None, attributes=None,
-                 description=""):
+                 description="", allows=""):
         """
         @param name: name of the entity type.
         @param schema: schema for this type.
@@ -321,12 +321,14 @@ class EntityType(AttributeTypeHolder):
         @param include: List of names of include types for this entity.
         @param attributes: Map of attributes {name: {type:, default:, required:, unique:}}
         @param description: Human readable description.
+        @param allows: Allowed operations, string of "CRUD"
         """
         super(EntityType, self).__init__(name, schema, attributes, description)
         self.short_name = schema.short_name(name)
         self.refs = {'entity-type': name}
         self.singleton = singleton
         self.include = include
+        self.allows = allows.upper()
         if include and self.schema.includes:
             for i in include:
                 if not i in schema.includes:
@@ -397,9 +399,16 @@ class EntityType(AttributeTypeHolder):
 
         return attributes
 
+    def allowed(self, operation):
+        """Raise excepiton if op is not a valid operation on entity."""
+        op = operation.upper()
+        if op[0] not in self.allows:
+            raise Forbidden("Operation '%s' not allowed for '%s'" % (op, self.name))
+
     def __repr__(self): return "%s(%s)" % (type(self).__name__, self.name)
 
     def __str__(self): return self.name
+
 
 class Schema(object):
     """
@@ -454,6 +463,7 @@ class Schema(object):
         ])
 
     def entity_type(self, name):
+        """Look up an EntityType by name"""
         try:
             return self.entity_types[self.long_name(name)]
         except KeyError:
@@ -512,39 +522,19 @@ class Schema(object):
 
     def entities(self, attribute_maps):
         """Convert a list of attribute maps into a list of L{Entity}"""
-        return map(self.entity, attribute_maps)
+        return [self.entity(m) for m in attribute_maps]
 
 
 class Entity(entity.Entity):
-    """
-    An L{entity.Entity} with schema enforced entity type.
-    @ivar _entity_type: not private, _ prefix to avoid clash with attribute names.
-    """
+    """A map of attributes associated with an L{EntityType}"""
+    def __init__(self, entity_type, attributes=None, **kwattrs):
+        super(Entity, self).__init__(attributes, **kwattrs)
+        self.__dict__['entity_type'] = entity_type
+        self.validate()
 
-    def __init__(self, entity_type, attributes):
-        """
-        @param entity_type: L{EntityType}
-        @param attributes: map of atrribute name:value or list of [(name, value)]
-        """
-        super(Entity, self).__init__(attributes)
-        self.__dict__['_entity_type'] = entity_type # Avoid __getattr__ recursion
-        entity_type.validate(self)
+    def __setitem__(self, name, value):
+        super(Entity, self).__setitem__(name, value)
+        self.validate()
 
-    @staticmethod
-    def from_schema(schema, attributes):
-        """
-        Look up attributes['type'] in schema and create an Entity.
-        """
-        entity_type = schema.entity_type.get(attributes['type'])
-        if not entity_type:
-            raise ValidationError("No 'type' attributre in %s" % attributes)
-        return Entity(entity_type, attributes)
-
-
-    def __setitem__(self, attrname, value):
-        if attrname not in self._entity_type.attributes:
-            raise ValidationError("Illegal attribute '%s' for %s" % (attrname, self._entity_type))
-        super(Entity, self).__setitem__(attrname, value);
-
-    def __delitem__(self, attrname):
-        raise TypeError("Can't delete attributes from %s" % self)
+    def validate(self):
+        self.entity_type.validate(self)

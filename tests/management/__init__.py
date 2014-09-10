@@ -17,7 +17,9 @@
 ## under the License
 ##
 
-from schema import SchemaTest
-from client import UrlTest
-from qdrouter import QdrouterTest
-from entity import EntityTest
+"""Management unit test package"""
+
+from client import *
+from schema import *
+from qdrouter import *
+from entity import *

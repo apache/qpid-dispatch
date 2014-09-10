@@ -146,5 +146,5 @@ if __name__ == "__main__":
             os.execvp(args[0], args)
     except Exception, e:
         print "%s%s: %s"%(error_prefix, type(e).__name__, e)
-        sys.exit(1)
+        raise
 

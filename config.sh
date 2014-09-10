@@ -26,7 +26,9 @@ export SOURCE_DIR=$(pwd)
 export BUILD_DIR=$SOURCE_DIR/build
 export INSTALL_DIR=$SOURCE_DIR/install
 
+PYTHON_LIB=$(python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(prefix='$INSTALL_DIR')")
+
 export QPID_DISPATCH_HOME=$INSTALL_DIR/lib/qpid-dispatch
 export LD_LIBRARY_PATH=$INSTALL_DIR/lib64:$INSTALL_DIR/lib:$LD_LIBRARY_PATH
-export PYTHONPATH=$QPID_DISPATCH_HOME/python:$PYTHONPATH
+export PYTHONPATH=$QPID_DISPATCH_HOME/python:$PYTHON_LIB:$PYTHONPATH
 export PATH=$INSTALL_DIR/sbin:$INSTALL_DIR/bin:$SOURCE_DIR/bin:$PATH

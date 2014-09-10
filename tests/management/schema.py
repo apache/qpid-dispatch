@@ -21,7 +21,7 @@
 #pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
 
 import unittest, json
-from qpid_dispatch_internal.management import Schema, BooleanType, EnumType, AttributeType, schema_file, ValidationError, EnumValue, EntityType
+from qpid_dispatch_internal.management.schema import Schema, BooleanType, EnumType, AttributeType, schema_file, ValidationError, EnumValue, EntityType
 import collections
 
 def replace_od(thing):
@@ -228,10 +228,10 @@ class SchemaTest(unittest.TestCase):
         self.assertRaises(ValidationError, s.entity, {'type': 'listener', 'nosuch': 'x'})
         e = s.entity({'type': 'listener', 'name':'x', 'addr':'foo'})
         self.assertEqual(e.attributes, {'type': 'org.example.listener', 'name':'x', 'addr':'foo'})
-        self.assertEqual(e.addr, 'foo')
+        self.assertEqual(e['addr'], 'foo')
         self.assertRaises(ValidationError, e.__setitem__, 'nosuch', 'x')
         try:
-            e.nosuch = x
+            e.nosuch = 'x'
             self.fail("Expected exception")
         except: pass
 

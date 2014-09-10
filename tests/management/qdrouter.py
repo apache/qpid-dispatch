@@ -20,7 +20,7 @@
 #pylint: disable=wildcard-import,unused-wildcard-import,missing-docstring,too-many-public-methods
 
 import unittest
-from qpid_dispatch_internal.management import Config
+from qpid_dispatch_internal.management.config import Config
 
 class QdrouterTest(unittest.TestCase):
     """Tests for qpid_dispatch_internal.config.qdrouter"""

@@ -27,6 +27,8 @@ message("Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
 
 project(qpid-dispatch C)
 
+file(STRINGS "${CMAKE_SOURCE_DIR}/VERSION.txt" QPID_DISPATCH_VERSION)
+
 cmake_minimum_required(VERSION 2.6)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
@@ -135,6 +137,12 @@ install(PROGRAMS ${TOOLS_EXECUTABLES}
 
 install(FILES ${DOC_FILES}
         DESTINATION ${DOC_INSTALL_DIR}/qpid-dispatch)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/setup.py)
+
+install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} setup.py install --prefix=${CMAKE_INSTALL_PREFIX} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
+
 
 ## Build Tests first as other subdirs use tests/run.py
 ##

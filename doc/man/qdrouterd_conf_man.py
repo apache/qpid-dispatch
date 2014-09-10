@@ -21,7 +21,7 @@
 Generate the qdrouterd.conf man page from the qdrouterd management schema."""
 
 import sys
-from qpid_dispatch_internal.management import QdSchema
+from qpid_dispatch_internal.management.qdrouter import QdSchema
 
 def make_man_page(filename):
     """Generate a man page for the configuration file from L{QdSchema} descriptions"""

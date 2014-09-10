@@ -22,9 +22,9 @@ Configuration file parsing
 """
 
 import json, re, sys
-import schema
 from copy import copy
-from qpid_dispatch_internal import dispatch_c
+from .schema import ValidationError
+from .. import dispatch_c
 from .qdrouter import QdSchema
 from ..compat import json_load_kwargs
 
@@ -34,7 +34,7 @@ class Config(object):
     def __init__(self, filename=None, schema=QdSchema()):
         self.schema = schema
         if filename:
-            e = self.load(filename)
+            self.load(filename)
         else:
             self.entities = []
 
@@ -113,9 +113,9 @@ class Config(object):
                     self.load(f)
                 except:
                     ex_type, ex_value, ex_trace = sys.exc_info()
-                    raise schema.ValidationError, "Loading '%s', %s: %s"%(source, ex_type.__name__, ex_value), ex_trace
+                    raise ValidationError, "Loading '%s', %s: %s"%(source, ex_type.__name__, ex_value), ex_trace
         else:
-            sections = self._parse(source);
+            sections = self._parse(source)
             # Add missing singleton sections
             for et in self.schema.entity_types.itervalues():
                 if et.singleton and not [s for s in sections if s[0] == et.short_name]:
@@ -152,9 +152,9 @@ def configure_dispatch(dispatch, filename):
     for w in config.by_type('waypoint'): qd.qd_dispatch_configure_waypoint(dispatch, w)
     for l in config.by_type('listener'): qd.qd_dispatch_configure_listener(dispatch, l)
     for c in config.by_type('connector'): qd.qd_dispatch_configure_connector(dispatch, c)
-    qd.qd_connection_manager_start(dispatch);
-    qd.qd_waypoint_activate_all(dispatch);
+    qd.qd_connection_manager_start(dispatch)
+    qd.qd_waypoint_activate_all(dispatch)
 
-    # TODO aconway 2014-07-09: messy dependency, can't import till after prepare
+    # NOTE: Can't import agent till after qd_dispatch_prepare
     from .agent import Agent
     qd.qd_dispatch_set_agent(dispatch, Agent(dispatch, config.entities))

@@ -78,7 +78,7 @@ qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 {
     PyObject *module=0, *configure_dispatch=0, *result=0;
     bool ok =
-        (module = PyImport_ImportModule("qpid_dispatch_internal.management")) &&
+        (module = PyImport_ImportModule("qpid_dispatch_internal.management.config")) &&
 	(configure_dispatch = PyObject_GetAttrString(module, "configure_dispatch")) &&
 	(result = PyObject_CallFunction(configure_dispatch, "(ls)", (long)qd, config_path));
     Py_XDECREF(module);

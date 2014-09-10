@@ -17,13 +17,13 @@
 # under the License
 #
 
-# HTTP status codes used by AMQP (extend as needed)
+"""
+ManagementError exception class and subclasses, with status codes used by AMQP.
+"""
 
 from httplib import responses as STATUS_TEXT
-
-STATUS_CODES=['OK', 'BAD_REQUEST', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'REQUEST_TIMEOUT', 'INTERNAL_SERVER_ERROR', 'NOT_IMPLEMENTED']
-
-for code in STATUS_CODES: exec("from httplib import %s" % code)
+from httplib import OK, NO_CONTENT, CREATED, \
+    BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_SERVER_ERROR, NOT_IMPLEMENTED
 
 class ManagementError(Exception):
     """
@@ -34,10 +34,25 @@ class ManagementError(Exception):
     """
     def __init__(self, status, description):
         self.status, self.description = status, description
+        super(ManagementError, self).__init__(description)
 
-    def __str__(self):
-        text = STATUS_TEXT.get(self.status) or "Unknown status %s"%self.status
-        if text in self.description: return self.description
-        else: return "%s: %s"%(text, self.description)
+    @staticmethod
+    def create(status, description):
+        """Create the appropriate ManagementError subclass for status"""
+        try:
+            class_name = '' + (STATUS_TEXT[status].replace(' ',''))
+            return globals()[class_name](description)
+        except KeyError, e:
+            return ManagementError(status, description)
 
-__all__ = STATUS_CODES + ['ManagementError', 'STATUS_TEXT']
+def _error_class(code):
+    class Error(ManagementError):
+        def __init__(self, description): ManagementError.__init__(self, code, description)
+    return Error
+
+class BadRequest(_error_class(BAD_REQUEST)): pass
+class Unauthorized(_error_class(UNAUTHORIZED)): pass
+class Forbidden(_error_class(FORBIDDEN)): pass
+class NotFound(_error_class(NOT_FOUND)): pass
+class InternalServerError(_error_class(INTERNAL_SERVER_ERROR)): pass
+class NotImplemented(_error_class(NOT_IMPLEMENTED)): pass
