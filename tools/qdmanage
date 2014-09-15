@@ -1,0 +1,218 @@
+#!/usr/bin/env python
+
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+import optparse, sys, time, os, re, math, json
+import  qpid_dispatch.site
+from qpid_dispatch.management import Node, Entity, Url
+from collections import Mapping, Sequence
+
+from qpid_dispatch_internal.tools.options import connection_options
+
+class QdManage(object):
+    """
+    Common options and logic for all commands. Subclasses provide additional
+    options and execution logic.
+    """
+
+    class Commands(list):
+        """Decorator to collect command names."""
+        def __call__(self, func): self.append(func.__name__); return func
+
+    commands = Commands()
+
+    class Option (optparse.Option):
+        """Add json_map and json_list types to optparse.Option"""
+
+        def check_json(option, opt, value):
+            try:
+                result = json.loads(value)
+                if option.type == 'json_list' and not isinstance(result, Sequence) or \
+                   option.type == 'json_map' and not isinstance(result, Mapping):
+                    raise ValueError()
+                return result
+            except ValueError:
+                 raise optparse.OptionValueError("%s: invalid %s: %r" % (opt, option.type, value))
+
+        TYPES = optparse.Option.TYPES + ("json_list", "json_map")
+        TYPE_CHECKER = dict(optparse.Option.TYPE_CHECKER, json_list=check_json, json_map=check_json)
+
+
+    class Usage(Exception):
+        def __init__(self, prog):
+            Exception.__init__(self, """
+Usage: %s <command> [options]
+
+Commands are: 
+  %s
+
+For help with a command: %s <command> --help
+""" % (prog, "\n  ".join(QdManage.commands), prog))
+
+
+    def __init__(self, argv):
+        """Execute the command specified by argv"""
+        self.node = None
+        self.argv = argv
+        if len(argv) <= 1 or argv[1] not in self.commands:
+            raise self.Usage(os.path.basename(self.argv[0]))
+        self.op=optparse.OptionParser("%s [options]" % argv[1], option_class=self.Option)
+        self.op.add_option_group(connection_options(self.op))
+        json_group = optparse.OptionGroup(self.op, "JSON Formatting options")
+        json_group.add_option("--indent", action="store", type="int", default=2, metavar="<spaces>",
+                           help="Indent for pretty-printing output. -1 means don't pretty-print (default %default)")
+        self.op.add_option_group(json_group)
+        command = getattr(self, argv[1])
+        command()               # Call the command method
+
+    def setup(self, description, call_opts, other_opts=None):
+        """Set up for executing a command
+        @param description: Command description for help
+        @param call_opts: (name, type, help) tuples for options passed to Node.
+        @param other_opts: (name, type, help) tuples for options not passed to Node.
+        """
+        self.op.description = description
+        for (name, type, help) in call_opts + (other_opts or []):
+            name = '--' + name
+            if type:
+                self.op.add_option(name, action="store", type=type, help=help, metavar="<%s>" % type)
+            else:
+                self.op.add_option(name, action="store_true", help=help)
+        self.optnames = [name.replace('-','_') for name, type, help in call_opts]
+        self.opts, self.args = self.op.parse_args(self.argv)
+        if self.opts.indent == -1: self.opts.indent = None
+        url = Url(self.opts.bus)
+        self.node = Node(url, self.opts.router)
+
+    def call_node(self, op):
+        """Call node operation op with self.opts for opts in self.optnames"""
+        kwargs = dict((k, getattr(self.opts, k)) for k in self.optnames)
+        return getattr(self.node, op)(**kwargs)
+
+    def call_node_attrs(self, op, attrs):
+        """Call node operation op with attributes=attrs"""
+        return getattr(self.node, op)(attributes=attrs)
+
+    def print_json(self, data):
+        """Print data as JSON"""
+        print json.dumps(data, indent=self.opts.indent)
+
+    @commands
+    def query(self):
+        self.setup(
+            "Query for attributes of management entities. Print a JSON list of attribute maps.",
+            [('type', 'string', 'Query only for entities of <type>.'),
+             ('attribute-names', 'json_list', 'Attribute names to include in results.')])
+        self.print_json(self.call_node('query').get_dicts(clean=True))
+
+    # Used by several operations
+    stdin_opt = [('stdin', None, 'Read JSON atttribute map or list of maps from stdin. Other options are ignored.')]
+
+    def do_stdin(self, op):
+        """Call op for the attribute map or sequence of attribute maps on stdin"""
+        data = json.load(sys.stdin)
+        if isinstance(data, Mapping):
+            self.print_json(self.call_node_attrs(op, data).attributes)
+        elif isinstance(data, Sequence):
+            self.print_json([self.call_node_attrs(op, attrs).attributes
+                             for attrs in data])
+        else: raise ValueError("stdin is not a JSON map or list")
+
+    @commands
+    def create(self):
+        self.setup(
+            "Create a new entity. Print a JSON map of created attributes.",
+            [('type', 'string', 'Type of new entity, can also be specified in --attributes.'),
+             ('name', 'string', 'Name of new entity, can also be specified in --attributes.'),
+             ('attributes', 'json_map', 'Attributes for new entity.')],
+            self.stdin_opt)
+        if self.opts.stdin:
+            self.do_stdin('create')
+        else:
+            self.print_json(self.call_node('create').attributes)
+
+    # Used by several operations
+    type_name_identity = [
+        ('type', 'string', 'Entity type.'),
+        ('name', 'string', 'Find by name.'),
+        ('identity', 'string', 'Find by identity.')
+    ]
+
+    @commands
+    def read(self):
+        self.setup(
+            "Get the attributes of a single entity. Prints a JSON attribute map.",
+            self.type_name_identity)
+        self.print_json(self.call_node('read').attributes)
+
+    @commands
+    def update(self):
+        self.setup(
+            "Update an entity. Prints a JSON map of updated attributes.",
+            [('type', 'string', 'Entity type, can also be specified in --attributes.'),
+             ('name', 'string', 'Find by name, can also be specified in --attributes.'),
+             ('identity', 'string', 'Find by identity, can also be specified in --attributes.'),
+             ('attributes', 'json_map', 'Attributes to update.')],
+            self.stdin_opt)
+        if self.opts.stdin:
+            self.do_stdin('update')
+        else:
+            self.print_json(self.call_node('update').attributes)
+
+    @commands
+    def delete(self):
+        self.setup("Delete an  entity.", self.type_name_identity)
+        self.call_node('delete')
+
+    @commands
+    def get_types(self):
+        self.setup(
+            "Get the list of entity types. Prints a JSON list of type names.",
+            [('type', 'string', 'Restrict types implementing <type>.')])
+        self.print_json(self.call_node('create'))
+
+    @commands
+    def get_attributes(self):
+        self.setup(
+            "Get the list of entity attribute names. Prints a JSON list of attribute names.",
+            [('type', 'string', 'If set return only attributes for <type>.')])
+        self.print_json(self.call_node('create'))
+
+    @commands
+    def get_operations(self):
+        self.setup(
+            "Get the list of entity operation names. Prints a JSON list of operation names.",
+            [('type', 'string', 'If set return only operations for <type>.')])
+        self.print_json(self.call_node('create'))
+
+
+def main(argv):
+    try:
+        QdManage(argv)
+        return 0
+    except QdManage.Usage, e:
+        print e
+        return 1
+    except Exception, e:
+        print "%s: %s" % (type(e).__name__, e)
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

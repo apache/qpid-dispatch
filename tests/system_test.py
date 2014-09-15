@@ -204,7 +204,13 @@ class Process(subprocess.Popen):
     EXIT_OK = 2                   # Exit status 0
     EXIT_FAIL = 3                 # Exit status not 0
 
-    def __init__(self, name, args, expect=EXIT_OK, **kwargs):
+    unique_id = 0
+    @classmethod
+    def unique(cls, name):
+        cls.unique_id += 1
+        return name + str(cls.unique_id)
+
+    def __init__(self, args, name=None, expect=EXIT_OK, **kwargs):
         """
         Takes same arguments as subprocess.Popen. Some additional/special args:
         @param expect: Raise error if process staus not as expected at end of test:
@@ -214,9 +220,11 @@ class Process(subprocess.Popen):
         @keyword stdout: Defaults to the file name+".out"
         @keyword stderr: Defaults to be the same as stdout
         """
-        self.name, self.args, self.expect = name, args, expect
-        self.out = open(name+".out", 'w')
-        with open(name+".cmd", 'w') as f: f.write("%s\n" % ' '.join(args))
+        self.name = name or os.path.basename(args[0])
+        self.args, self.expect = args, expect
+        self.outfile = self.unique(self.name)
+        self.out = open(self.outfile + '.out', 'w')
+        with open(self.outfile + '.cmd', 'w') as f: f.write("%s\n" % ' '.join(args))
         self.torndown = False
         kwargs.setdefault('stdout', self.out)
         kwargs.setdefault('stderr', subprocess.STDOUT)
@@ -305,7 +313,7 @@ class Qdrouterd(Process):
             self.defaults()
             return "".join(["%s {\n%s}\n"%(n, props(p)) for n, p in self])
 
-    def __init__(self, name, config=Config(), pyinclude=None, wait=True):
+    def __init__(self, name=None, config=Config(), pyinclude=None, wait=True):
         """
         @param name: name used for for output files.
         @param config: router configuration
@@ -317,7 +325,8 @@ class Qdrouterd(Process):
         if not pyinclude and os.environ['QPID_DISPATCH_HOME']:
             pyinclude = os.path.join(os.environ['QPID_DISPATCH_HOME'], 'python')
         super(Qdrouterd, self).__init__(
-            name, ['qdrouterd', '-c', config.write(name), '-I', pyinclude], expect=Process.RUNNING)
+            ['qdrouterd', '-c', config.write(name), '-I', pyinclude],
+            name=name, expect=Process.RUNNING)
         self._management = None
         if wait:
             self.wait_ready()
@@ -352,7 +361,7 @@ class Qdrouterd(Process):
     def is_connected(self, port, host='0.0.0.0'):
         """If router has a connection to host:port return the management info.
         Otherwise return None"""
-        connections = self.management.query('org.apache.qpid.dispatch.connection').entities
+        connections = self.management.query('org.apache.qpid.dispatch.connection').get_entities()
         for c in connections:
             if c['name'] == '%s:%s'%(host, port):
                 return c
@@ -369,7 +378,7 @@ class Qdrouterd(Process):
             # FIXME aconway 2014-06-12: this should be a request by name, not a query.
             addrs = self.management.query(
                 type='org.apache.qpid.dispatch.router.address',
-                attribute_names=['name', 'subscriberCount', 'remoteCount']).entities
+                attribute_names=['name', 'subscriberCount', 'remoteCount']).get_entities()
             # FIXME aconway 2014-06-12: endswith check is because of M0/L prefixes
             addrs = [a for a in addrs if a['name'].endswith(address)]
             return addrs and addrs[0]['subscriberCount'] >= subscribers and addrs[0]['remoteCount'] >= remotes
@@ -397,7 +406,7 @@ class Qpidd(Process):
         def __str__(self):
             return "".join(["%s=%s\n"%(k, v) for k, v in self.iteritems()])
 
-    def __init__(self, name, config=Config(), port=None, wait=True):
+    def __init__(self, name=None, config=Config(), port=None, wait=True):
         self.config = Qpidd.Config(
             {'auth':'no',
              'log-to-stderr':'false', 'log-to-file':name+".log",
@@ -406,7 +415,8 @@ class Qpidd(Process):
         if port:
             self.config['port'] = port
         super(Qpidd, self).__init__(
-            name, ['qpidd', '--config', self.config.write(name)], expect=Process.RUNNING)
+            ['qpidd', '--config', self.config.write(name)],
+            name=name, expect=Process.RUNNING)
         self.port = self.config['port'] or 5672
         self.address = "127.0.0.1:%s"%self.port
         self._management = None
@@ -503,11 +513,11 @@ class Tester(object):
     def teardown(self):
         """Clean up (tear-down, stop or close) objects recorded via cleanup()"""
         self.cleanup_list.reverse()
-        for t in self.cleanup_list:
-            for m in ["teardown", "tearDown", "stop", "close"]:
-                a = getattr(t, m, None)
-                if a:
-                    a()
+        for obj in self.cleanup_list:
+            for method in ["teardown", "tearDown", "stop", "close"]:
+                cleanup = getattr(obj, method, None)
+                if cleanup:
+                    cleanup()
                     break
 
     def cleanup(self, x):

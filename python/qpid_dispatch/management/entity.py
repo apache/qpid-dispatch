@@ -21,6 +21,17 @@
 AMQP Managment Entity
 """
 
+import itertools
+
+def clean_dict(items, **kwargs):
+    """
+    @param items: A mapping or iterable of pairs.
+    @return: dict containing items + kwargs without any None values. All keys are unicode.
+    """
+    if hasattr(items, 'iteritems'): items = items.iteritems()
+    return dict((unicode(k), v) for k, v in itertools.chain(items, kwargs.iteritems())
+                if v is not None)
+
 class Entity(object):
     """
     A collection of named attributes.

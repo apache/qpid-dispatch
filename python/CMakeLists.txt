@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,30 +16,14 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-from distutils.core import setup
 
-pypi_long_description = """
+# Private python modules, not in standard python site dir.
+install(DIRECTORY qpid_dispatch_internal DESTINATION ${QPID_DISPATCH_HOME}/python)
 
-============
-qpid_dispatch
-=============
+# Python files with CMake config variables. 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/setup.py)
 
-qpid_dispatch contains the following sub-packages:
-- qpid_dispatch.management: AMQP management client library.
+# Use python setup.py install for public python modules.	     
+install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} setup.py -v install --prefix=${CMAKE_INSTALL_PREFIX} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
 
-"""
-
-setup(
-    name="qpid_dispatch",
-    version="${QPID_DISPATCH_VERSION}",
-    author="Apache Qpid",
-    author_email="dev@qpid.apache.org",
-    package_dir={'' : '${CMAKE_SOURCE_DIR}/python'},
-    packages=["qpid_dispatch", "qpid_dispatch.management"],
-    scripts=[],                # Installed by cmake
-    data_files=[],             # Installed by cmake
-    url="http://qpid.apache.org/",
-    license="Apache Software License",
-    description="Management libraries for Apache Qpid Dispatch.",
-    long_description=pypi_long_description
-)

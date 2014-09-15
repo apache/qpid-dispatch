@@ -116,37 +116,24 @@ install(FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/qpid/dispatch)
 install(FILES include/qpid/dispatch.h DESTINATION ${INCLUDE_INSTALL_DIR}/qpid)
 install(FILES etc/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
 
-##
-## Python modules installation
-##
-set(TOOLS_EXECUTABLES
+# Tools
+install(PROGRAMS
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/qdstat
-)
-
-set(DOC_FILES
-    LICENSE
-    README
-    TODO
-)
-
-install(DIRECTORY python/qpid_dispatch_internal
-        DESTINATION ${QPID_DISPATCH_HOME}/python)
-
-install(PROGRAMS ${TOOLS_EXECUTABLES}
-        DESTINATION bin)
-
-install(FILES ${DOC_FILES}
-        DESTINATION ${DOC_INSTALL_DIR}/qpid-dispatch)
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
-               ${CMAKE_CURRENT_BINARY_DIR}/setup.py)
-
-install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} setup.py install --prefix=${CMAKE_INSTALL_PREFIX} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/qdmanage
+    DESTINATION bin)
 
 
-## Build Tests first as other subdirs use tests/run.py
-##
+# Doc files
+install(FILES
+  LICENSE
+  README
+  TODO
+  DESTINATION ${DOC_INSTALL_DIR}/qpid-dispatch)
+
+
+# Build Tests first as other subdirs use tests/run.py
 add_subdirectory(tests)
+add_subdirectory(python)
 add_subdirectory(src)
 add_subdirectory(doc)
 add_subdirectory(router)

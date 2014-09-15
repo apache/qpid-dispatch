@@ -49,7 +49,6 @@ def dedup(l):
 
 sys.path = dedup([
     "${CMAKE_SOURCE_DIR}/python",
-    "${CMAKE_BINARY_DIR}/python",
     "${CMAKE_SOURCE_DIR}/tests"
 ] + sys.path)
 

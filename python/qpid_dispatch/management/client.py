@@ -1,21 +1,21 @@
-##
-## Licensed to the Apache Software Foundation (ASF) under one
-## or more contributor license agreements.  See the NOTICE file
-## distributed with this work for additional information
-## regarding copyright ownership.  The ASF licenses this file
-## to you under the Apache License, Version 2.0 (the
-## "License"); you may not use this file except in compliance
-## with the License.  You may obtain a copy of the License at
-##
-##   http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing,
-## software distributed under the License is distributed on an
-## "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-## KIND, either express or implied.  See the License for the
-## specific language governing permissions and limitations
-## under the License
-##
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License
+#
 
 """
 AMQP management client for Qpid dispatch.
@@ -23,7 +23,7 @@ AMQP management client for Qpid dispatch.
 
 import proton, re, threading
 from .error import *
-from . import entity
+from .entity import Entity as BaseEntity, clean_dict
 
 class Url(object):
     """Simple AMQP URL parser/constructor"""
@@ -104,11 +104,6 @@ class Url(object):
             else: raise ValueError("Invalid URL scheme: %s"%self.scheme)
         return self
 
-def remove_none(d):
-    """@return: A copy of d without any None values. Does not modify d."""
-    return dict((unicode(k), v) for k, v in d.iteritems() if v is not None)
-
-
 class MessengerImpl(object):
     """
     Messaging implementation for L{Node} based on proton.Messenger
@@ -149,7 +144,7 @@ class MessengerImpl(object):
         self.messenger.stop()
 
 
-class Entity(entity.Entity):
+class Entity(BaseEntity):
     """
     Proxy for an AMQP manageable entity.
 
@@ -233,10 +228,11 @@ class Node(object):
     def correlation_id(self):
         """Get the next correlation ID. Thread safe."""
         with self.CORRELATION_LOCK:
-            self.CORRELATION_ID += 1
-            return self.CORRELATION_ID
+            Node.CORRELATION_ID += 1
+            return Node.CORRELATION_ID
 
-    def check_response(self, response, request, expect=OK):
+    @staticmethod
+    def check_response(response, request, expect=OK):
         """
         Check a management response message for errors and correlation ID.
         """
@@ -249,7 +245,7 @@ class Node(object):
             else:
                 raise ManagementError.create(code, response.properties.get('statusDescription'))
         if response.correlation_id != request.correlation_id:
-            raise NotFound("Bad correlation id request=%s, response=%s" %
+            raise NotFoundStatus("Bad correlation id request=%s, response=%s" %
                                (request.correlation_id, response.correlation_id))
 
 
@@ -265,7 +261,7 @@ class Node(object):
         request.address = str(self.address)
         request.reply_to = self.reply_to
         request.correlation_id = self.correlation_id()
-        request.properties = remove_none(properties)
+        request.properties = clean_dict(properties)
         request.body = body or {}
         return request
 
@@ -292,24 +288,41 @@ class Node(object):
         Result returned by L{query}.
         @ivar attribute_names: List of attribute names for the results.
         @ivar results: list of lists of attribute values in same order as attribute_names
-        @ivar entities: Results as list of L{Entity}
         """
-        def __init__(self, node, response):
+        def __init__(self, node, attribute_names, results):
             """
             @param response: the respose message to a query.
             """
             self.node = node
-            self.attribute_names = response.body['attributeNames']
-            self.results = response.body['results']
+            self.attribute_names = attribute_names
+            self.results = results
 
-        @property
-        def entities(self):
+        def iter_dicts(self, clean=False):
+            """
+            Return an iterator that yields a dictionary for each result.
+            @param clean: if True remove any None values from returned dictionaries.
+            """
+            for r in self.results:
+                if clean: yield clean_dict(zip(self.attribute_names, r))
+                else: yield dict(zip(self.attribute_names, r))
+
+        def iter_entities(self, clean=False):
+            """
+            Return an iterator that yields an L{Entity} for each result.
+            @param clean: if True remove any None values from returned dictionaries.
+            """
+            for d in self.iter_dicts(clean=clean): yield Entity(self.node, d)
+
+        def get_dicts(self, clean=False):
+            """Results as list of dicts."""
+            return [d for d in self.iter_dicts(clean=clean)]
+
+        def get_entities(self, clean=False):
             """Results as list of entities."""
-            return [Entity(self.node, dict(zip(self.attribute_names, r))) for r in self.results]
+            return [d for d in self.iter_entities(clean=clean)]
 
-        def __str__(self):
-            return "QueryResponse(attribute_names=%s, results=%s"%(
-                self.attribute_names, self.results)
+        def __repr__(self):
+            return "QueryResponse(attribute_names=%r, results=%r"%(self.attribute_names, self.results)
 
     def query(self, type=None, attribute_names=None, offset=None, count=None):
         """
@@ -326,28 +339,73 @@ class Node(object):
             operation='QUERY', entityType=type, offset=offset, count=count)
 
         response = self.call(request)
-        return Node.QueryResponse(self, response)
+        return Node.QueryResponse(self, response.body['attributeNames'], response.body['results'])
 
-    def create(self, type, name, attributes=None):
+    def create(self, attributes=None, type=None, name=None):
         """
-        Send an AMQP management create request.
+        Create an entity.
+        type and name can be specified in the attributes.
+
+        @param attributes: Attributes for the new entity.
         @param type: Type of entity to create.
         @param name: Name for the new entity.
-        @param attributes: Map of attribute name:value for the new entity.
         @return: Entity proxy for the new entity.
         """
-        request = self.request(operation='CREATE', type=type, name=name, body=attributes or {})
+        attributes = attributes or {}
+        type = type or attributes.get('type')
+        name = name or attributes.get('name')
+        request = self.request(operation='CREATE', type=type, name=name, body=attributes)
         return Entity(self, self.call(request, expect=CREATED).body)
 
-
-    def read(self, type, name=None, identity=None):
+    def read(self, type=None, name=None, identity=None):
         """
-        Read an AMQP entity, specify exactly one of name or identity.
-        @param type: Type of entity to read.
+        Read an AMQP entity.
+        If both name and identity are specified, only identity is used.
+
+        @param type: Entity type.
+        @param name: Entity name.
+        @param identity: Entity identity.
         @return: An L{Entity}
         """
+        if name and identity: name = None # Only specify one
         request = self.request(operation='READ', type=type, name=name, identity=identity)
         return Entity(self, self.call(request).body)
+
+    def update(self, attributes, type=None, name=None, identity=None):
+        """
+        Update an entity with attributes.
+        type, name and identity can be specified in the attributes.
+        If both name and identity are specified, only identity is used.
+
+        @param attributes: Attributes for the new entity.
+        @param type: Entity type.
+        @param name: Entity name.
+        @param identity: Entity identity.
+        @return: L{Entity} for the updated entity.
+
+        """
+        attributes = attributes or {}
+        type = type or attributes.get('type')
+        name = name or attributes.get('name')
+        identity = identity or attributes.get('identity')
+        if name and identity: name = None # Only send one
+        request = self.request(operation='UPDATE', type=type, name=name,
+                               identity=identity, body=attributes)
+        return Entity(self, self.call(request).body)
+
+    def delete(self, type=None, name=None, identity=None):
+        """
+        Delete the remote entity.
+        If both name and identity are specified, only identity is used.
+
+        @param type: Entity type.
+        @param name: Entity name.
+        @param identity: Entity identity.
+        """
+        if name and identity: name = None # Only specify one
+        request = self.request(operation='DELETE', type=type, name=name,
+                               identity=identity)
+        self.call(request, expect=NO_CONTENT)
 
     def get_types(self, type=None):
         return self.call(self.node_request(operation="GET-TYPES", entityType=type)).body
@@ -358,6 +416,6 @@ class Node(object):
     def get_operations(self, type=None):
         return self.call(self.node_request(operation="GET-OPERATIONS", entityType=type)).body
 
-    def get_other_nodes(self):
+    def get_mgmt_nodes(self):
         return self.call(self.node_request(operation="GET-MGMT-NODES")).body
 

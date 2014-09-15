@@ -20,7 +20,7 @@
 """System tests for management of qdrouter"""
 
 import unittest, system_test, re, os
-from qpid_dispatch.management import Node, ManagementError, Url, BadRequest, NotImplemented, NotFound, Forbidden
+from qpid_dispatch.management import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
 from system_test import Qdrouterd, message, retry
 
 LISTENER = 'org.apache.qpid.dispatch.listener'
@@ -61,22 +61,22 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
     def test_bad_query(self):
         """Test that various badly formed queries get the proper response"""
         # No operation attribute
-        self.assertRaises(BadRequest, self.node.call, self.node.request())
+        self.assertRaises(BadRequestStatus, self.node.call, self.node.request())
         # Unknown operation
-        self.assertRaises(NotImplemented, self.node.call, self.node.request(operation="nosuch"))
+        self.assertRaises(NotImplementedStatus, self.node.call, self.node.request(operation="nosuch"))
         # No entityType or attributeList
-        self.assertRaises(BadRequest, self.node.query)
+        self.assertRaises(BadRequestStatus, self.node.query)
 
     def test_query_type(self):
         """Query with type only"""
         response = self.node2.query(type=LISTENER)
         for attr in ['type', 'name', 'identity', 'addr', 'port']:
             self.assertTrue(attr in response.attribute_names)
-        for r in response.entities: # Check types
-            self.assertEqual(len(response.attribute_names), len(r.attributes))
+        for r in response.get_dicts():
+            self.assertEqual(len(response.attribute_names), len(r))
             self.assertEqual(r['type'], LISTENER)
         self.assertTrue(
-            set(['l0', 'l1', 'l2']) <= set(r['name'] for r in response.entities))
+            set(['l0', 'l1', 'l2']) <= set(r['name'] for r in response.get_entities()))
 
     def test_query_type_attributes(self):
         """Query with type and attribute names"""
@@ -86,7 +86,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in xrange(3)]
         for r in expect: # We might have extras in results due to create tests
             self.assertTrue(r in response.results)
-            self.assertTrue(dict(zip(attribute_names, r)) in [e.attributes for e in response.entities])
+            self.assertTrue(dict(zip(attribute_names, r)) in response.get_dicts())
 
     def test_query_attributes(self):
         """Query with attributes only"""
@@ -97,7 +97,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         for r in expect: # We might have extras in results due to create tests
             self.assertTrue(r in response.results)
         for name in ['router0', 'log0']:
-            self.assertTrue([r for r in response.entities if r['name'] == name],
+            self.assertTrue([r for r in response.get_dicts() if r['name'] == name],
                             msg="Can't find result with name '%s'" % name)
 
     def assertMapSubset(self, small, big):
@@ -106,7 +106,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         assert not missing, "Not a subset, missing %s, sub=%s, super=%s"%(missing, small, big)
 
     def assert_create_ok(self, type, name, attributes):
-        entity = self.node2.create(type, name, attributes)
+        entity = self.node2.create(attributes, type, name)
         self.assertMapSubset(attributes, entity.attributes)
         return entity
 
@@ -122,7 +122,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
         # Connect via the new listener
         node3 = self.cleanup(Node(Url(port=port, path='$management')))
-        router = node3.query(type='org.apache.qpid.dispatch.router').entities
+        router = node3.query(type='org.apache.qpid.dispatch.router').get_entities()
         self.assertEqual(self.__class__.router.name, router[0]['name'])
 
     def test_create_log(self):
@@ -202,24 +202,21 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertEqual('l1', entity.identity)
         self.assertEqual(str(self.router.ports[1]), entity.port)
 
-        # Can't specify both name and identity
-        self.assertRaises(BadRequest, self.node2.read, type=LISTENER, name='l0', identity='l1')
-
         # Bad type
-        self.assertRaises(NotFound, self.node2.read, type=CONNECTOR, name='l0')
+        self.assertRaises(NotFoundStatus, self.node2.read, type=CONNECTOR, name='l0')
 
         # Unknown entity
-        self.assertRaises(NotFound, self.node2.read, type=LISTENER, name='nosuch')
+        self.assertRaises(NotFoundStatus, self.node2.read, type=LISTENER, name='nosuch')
 
         # Update and delete are not allowed by the schema
-        self.assertRaises(Forbidden, entity.update)
-        self.assertRaises(Forbidden, entity.delete)
+        self.assertRaises(ForbiddenStatus, entity.update)
+        self.assertRaises(ForbiddenStatus, entity.delete)
 
         # Non-standard request is not allowed by schema.
-        self.assertRaises(Forbidden, entity.call, 'nosuchop', foo="bar")
+        self.assertRaises(ForbiddenStatus, entity.call, 'nosuchop', foo="bar")
 
         # Dummy entity supports all CRUD operations
-        dummy = self.node2.create(type=DUMMY, name='MyDummy', attributes={'arg1': 'START'})
+        dummy = self.node2.create({'arg1': 'START'}, type=DUMMY, name='MyDummy', )
         self.assertEqual(dummy.type, DUMMY)
         self.assertEqual(dummy.name, 'MyDummy')
         self.assertEqual(dummy.arg1, 'START')
@@ -248,22 +245,22 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
                          dummy.call('callme', foo='bar'))
 
         dummy.badattribute = 'Bad'
-        self.assertRaises(BadRequest, dummy.update)
+        self.assertRaises(BadRequestStatus, dummy.update)
 
         dummy.delete()
-        self.assertRaises(NotFound, self.node2.read, type=DUMMY, name='MyDummy')
+        self.assertRaises(NotFoundStatus, self.node2.read, type=DUMMY, name='MyDummy')
 
     def test_get_types(self):
-        self.assertRaises(NotImplemented, self.node2.get_types)
+        self.assertRaises(NotImplementedStatus, self.node2.get_types)
 
     def test_get_attributes(self):
-        self.assertRaises(NotImplemented, self.node2.get_attributes)
+        self.assertRaises(NotImplementedStatus, self.node2.get_attributes)
 
     def test_get_operations(self):
-        self.assertRaises(NotImplemented, self.node2.get_operations)
+        self.assertRaises(NotImplementedStatus, self.node2.get_operations)
 
-    def test_get_other_nodes(self):
-        self.assertRaises(NotImplemented, self.node2.get_other_nodes)
+    def test_get_mgmt_nodes(self):
+        self.assertRaises(NotImplementedStatus, self.node2.get_mgmt_nodes)
 
 if __name__ == '__main__':
     unittest.main()

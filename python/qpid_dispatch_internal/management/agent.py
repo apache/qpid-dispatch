@@ -29,7 +29,7 @@ from traceback import format_exc
 from threading import Lock
 from dispatch import IoAdapter, LogAdapter, LOG_DEBUG, LOG_ERROR
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
-    BadRequest, InternalServerError, NotImplemented, NotFound, Forbidden
+    BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
 from .. import dispatch_c
 from .schema import ValidationError, Entity as SchemaEntity
 from .qdrouter import QdSchema
@@ -42,12 +42,12 @@ def dictstr(d):
 def required_property(prop, request):
     """Raise exception if required property is missing"""
     if prop not in request.properties:
-        raise BadRequest("No '%s' property: %s"%(prop, request))
+        raise BadRequestStatus("No '%s' property: %s"%(prop, request))
     return request.properties[prop]
 
 def not_implemented(operation, entity_type):
     """Raise NOT_IMPLEMENTED exception"""
-    raise NotImplemented("Operation '%s' not implemented on %s"  % (operation, entity_type))
+    raise NotImplementedStatus("Operation '%s' not implemented on %s"  % (operation, entity_type))
 
 class AtomicCount(object):
     """Simple atomic counter"""
@@ -57,7 +57,7 @@ class AtomicCount(object):
 
     def next(self):
         with self.lock:
-            self.count  += 1
+            self.count += 1
             return self.count
 
 class Entity(SchemaEntity):
@@ -85,16 +85,19 @@ class Entity(SchemaEntity):
 
     def read(self, request):
         """Handle read request, default is to return attributes."""
+        request_type = self.entity_type.schema.long_name(request.properties.get('type'))
+        if request_type and self.type != request_type:
+            raise NotFoundStatus("Entity type '%s' does match requested type '%s'" %
+                           (self.type, request_type))
         return (OK, self.attributes)
 
     def update(self, request):
-        self.entity_type.allowed('update')
-        self.attributes.update(request.body)
-        self.validate()
+        newattrs = dict(self.attributes, **request.body)
+        self.entity_type.validate(newattrs)
+        self.attributes = newattrs
         return (OK, self.attributes)
 
     def delete(self, request):
-        self.entity_type.allowed('delete')
         self._agent.delete(self)
         return (NO_CONTENT, {})
 
@@ -168,14 +171,14 @@ class Agent(object):
 
     def create_entity(self, attributes):
         """Create an instance of the implementation class for an entity"""
-        if not 'type' in attributes:
-            raise BadRequest("No 'type' attribute in %s" % attributes)
+        if 'type' not in attributes:
+            raise BadRequestStatus("No 'type' attribute in %s" % attributes)
         entity_type = self.schema.entity_type(attributes['type'])
         class_name = ''.join([n.capitalize() for n in entity_type.short_name.split('-')])
         class_name += 'Entity'
         entity_class = globals().get(class_name)
         if not entity_class:
-            raise InternalServerError("Can't find implementation for %s" % entity_type)
+            raise InternalServerErrorStatus("Can't find implementation for %s" % entity_type)
         return entity_class(self, entity_type, attributes)
 
     def respond(self, request, status=OK, description=None, body=None):
@@ -205,9 +208,9 @@ class Agent(object):
         except ManagementError, e:
             error(e, format_exc())
         except ValidationError, e:
-            error(BadRequest(str(e)), format_exc())
+            error(BadRequestStatus(str(e)), format_exc())
         except Exception, e:
-            error(InternalServerError("%s: %s"%(type(e).__name__, e)), format_exc())
+            error(InternalServerErrorStatus("%s: %s"%(type(e).__name__, e)), format_exc())
 
     def handle(self, request):
         """
@@ -216,7 +219,7 @@ class Agent(object):
         @return: (response-code, body)
         """
         operation = required_property('operation', request)
-        type = required_property('type', request)
+        type = request.properties.get('type')
         if type == self.type or operation.lower() == 'create':
             target = self
         else:
@@ -225,7 +228,7 @@ class Agent(object):
         try:
             method = getattr(target, operation.lower())
         except AttributeError:
-            not_implemented(operation, type)
+            not_implemented(operation, target.type)
         return method(request)
 
     def query(self, request):
@@ -235,7 +238,7 @@ class Agent(object):
             try:
                 entity_type = self.schema.entity_type(entity_type)
             except:
-                raise BadRequest("Unknown entity type '%s'" % entity_type)
+                raise NotFoundStatus("Unknown entity type '%s'" % entity_type)
         attribute_names = request.body.get('attributeNames')
         if not attribute_names:
             if entity_type:
@@ -261,7 +264,7 @@ class Agent(object):
         for a in ['type', 'name']:
             value = required_property(a, request)
             if a in attributes and attributes[a] != value:
-                raise BadRequest("Conflicting values for '%s'"%a)
+                raise BadRequestStatus("Conflicting values for '%s'"%a)
             attributes[a] = value
         entity = self.create_entity(attributes)
         entity.entity_type.allowed('create')
@@ -273,23 +276,33 @@ class Agent(object):
 
     def find_entity(self, request):
         """Find the entity addressed by request"""
-        attr = [(name, value) for name, value in request.properties.iteritems()
-                if name in ['name', 'identity'] and value is not None]
-        if len(attr) != 1:
-            raise BadRequest("Specify exactly one of 'name' or 'identity': %s" % request)
-        name, value = attr[0]
-        try:
-            entity = (e for e in self.entities if e.attributes.get(name) == value).next()
-        except StopIteration:
-            raise NotFound("No entity with %s='%s'" % (name, value))
-        expect_type = request.properties.get('type')
-        if expect_type and entity.type != expect_type:
-            raise NotFound("Type mismatch, expected '%s', found '%s'" %
-                               (expect_type, entity.type))
+
+        # ids is a map of identifying attribute values
+        ids = dict((k, request.properties.get(k))
+                   for k in ['name', 'identity'] if k in request.properties)
+        if not len(ids): raise BadRequestStatus("No name or identity provided")
+
+        def attrvals():
+            """String form of the id attribute values for error messages"""
+            return " ".join(["%s=%r" % (k, v) for k, v in ids.iteritems()])
+
+        k, v = ids.iteritems().next() # Get the first id attribute
+        found = [e for e in self.entities if e.attributes.get(k) == v]
+        if len(found) == 1:
+            entity = found[0]
+        elif len(found) > 1:
+            raise InternalServerErrorStatus(
+                "Duplicate (%s) entities with %s=%r" % (len(found), k, v))
+        else:
+            raise NotFoundStatus("No entity with %s'" % attrvals())
+
+        for k, v in ids.iteritems():
+            if entity[k] != v: raise BadRequestStatus("Conflicting %s" % attrvals())
+
         return entity
 
     def delete(self, entity):
         try:
             self.entities.remove(entity)
         except ValueError:
-            raise NotFound("Cannot delete, entity not found: %s"%entity)
+            raise NotFoundStatus("Cannot delete, entity not found: %s"%entity)

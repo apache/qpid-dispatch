@@ -26,15 +26,11 @@ import locale
 import socket
 import re
 from proton import Messenger, Message, Timeout
-
-home = os.environ.get("QPID_DISPATCH_HOME")
-if not home:
-    home = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib', 'qpid-dispatch')
-sys.path.insert(0, os.path.join(home, "python"))
-
+import  qpid_dispatch.site
 from qpid_dispatch.management import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
+from qpid_dispatch_internal.tools.options import connection_options
 
 
 class Config:
@@ -64,17 +60,7 @@ def OptionsAndArguments(argv):
 
     parser = OptionParser(usage=usage)
 
-    group1 = OptionGroup(parser, "General Options")
-    group1.add_option("-b", "--bus",  action="store", type="string", default="0.0.0.0", metavar="<access-url>",
-                      help="URL of the messaging bus to connect to")
-    group1.add_option("-r", "--router", action="store", type="string", default=None, metavar="<router-id>", help="Router to be queried")
-    group1.add_option("-t", "--timeout", action="store", type="int", default=5, metavar="<secs>",
-                      help="Maximum time to wait for connection (in seconds)")
-    group1.add_option("--sasl-mechanism", action="store", type="string", metavar="<mech>",
-                      help="SASL mechanism for authentication (e.g. EXTERNAL, ANONYMOUS, PLAIN, CRAM-MD5, DIGEST-MD5, GSSAPI). SASL automatically picks the most secure available mechanism - use this option to override.")
-    group1.add_option("--ssl-certificate", action="store", type="string", metavar="<cert>", help="Client SSL certificate (PEM Format)")
-    group1.add_option("--ssl-key", action="store", type="string", metavar="<key>", help="Client SSL private key (PEM Format)")
-    parser.add_option_group(group1)
+    parser.add_option_group(connection_options(parser))
 
     group2 = OptionGroup(parser, "Command Options")
     group2.add_option("-g", "--general", help="Show General Router Stats",  action="store_const", const="g",   dest="show")
@@ -104,7 +90,7 @@ class BusManager(Node):
     schema = QdSchema()
 
     def query(self, entity_type):
-        return super(BusManager, self).query(entity_type).entities
+        return super(BusManager, self).query(entity_type).get_entities()
 
     def displayConnections(self):
         disp = Display(prefix="  ")

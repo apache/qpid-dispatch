@@ -40,19 +40,28 @@ class ManagementError(Exception):
     def create(status, description):
         """Create the appropriate ManagementError subclass for status"""
         try:
-            class_name = '' + (STATUS_TEXT[status].replace(' ',''))
+            class_name = STATUS_TEXT[status].replace(' ', '') + "Status"
             return globals()[class_name](description)
-        except KeyError, e:
+        except KeyError:
             return ManagementError(status, description)
 
-def _error_class(code):
+def _error_class(status):
+    """Create a ManagementError class for a particular status"""
     class Error(ManagementError):
-        def __init__(self, description): ManagementError.__init__(self, code, description)
+        def __init__(self, description): ManagementError.__init__(self, status, description)
     return Error
 
-class BadRequest(_error_class(BAD_REQUEST)): pass
-class Unauthorized(_error_class(UNAUTHORIZED)): pass
-class Forbidden(_error_class(FORBIDDEN)): pass
-class NotFound(_error_class(NOT_FOUND)): pass
-class InternalServerError(_error_class(INTERNAL_SERVER_ERROR)): pass
-class NotImplemented(_error_class(NOT_IMPLEMENTED)): pass
+class BadRequestStatus(_error_class(BAD_REQUEST)): pass
+class UnauthorizedStatus(_error_class(UNAUTHORIZED)): pass
+class ForbiddenStatus(_error_class(FORBIDDEN)): pass
+class NotFoundStatus(_error_class(NOT_FOUND)): pass
+class InternalServerErrorStatus(_error_class(INTERNAL_SERVER_ERROR)): pass
+class NotImplementedStatus(_error_class(NOT_IMPLEMENTED)): pass
+
+__all__ = [
+    "STATUS_TEXT", "OK", "NO_CONTENT", "CREATED",
+    "BAD_REQUEST", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND",
+    "INTERNAL_SERVER_ERROR", "NOT_IMPLEMENTED",
+    "ManagementError",
+    "BadRequestStatus", "UnauthorizedStatus", "ForbiddenStatus",
+    "NotFoundStatus", "InternalServerErrorStatus", "NotImplementedStatus"]

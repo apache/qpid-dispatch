@@ -14,21 +14,19 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
-# under the License.
+# under the License
 #
 
-if [[ ! -f config.sh ]]; then
-    echo "You must source config.sh from within its own directory"
-    return
-fi
+"""Qpid Dispatch site configuration - INTERNAL USE ONLY"""
 
-export SOURCE_DIR=$(pwd)
-export BUILD_DIR=$SOURCE_DIR/build
-export INSTALL_DIR=$SOURCE_DIR/install
+import os, sys
 
-PYTHON_LIB=$(python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(prefix='$INSTALL_DIR')")
+HOME = os.environ.get('QPID_DISPATCH_HOME')
 
-export QPID_DISPATCH_HOME=$INSTALL_DIR/lib/qpid-dispatch
-export LD_LIBRARY_PATH=$INSTALL_DIR/lib64:$INSTALL_DIR/lib:$LD_LIBRARY_PATH
-export PYTHONPATH=$PYTHON_LIB:$PYTHONPATH
-export PATH=$INSTALL_DIR/sbin:$INSTALL_DIR/bin:$SOURCE_DIR/bin:$PATH
+if not HOME:
+    try:
+        from .site_data import HOME
+    except ImportError, e:
+        raise ImportError("%s: Set QPID_DISPATCH_HOME environment variable." % e)
+
+sys.path.insert(0, os.path.join(HOME, 'python'))

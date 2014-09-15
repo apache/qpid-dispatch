@@ -34,9 +34,8 @@ class QdstatTest(system_test.TestCase):
         cls.router = cls.tester.qdrouterd('test-router', config)
 
     def run_qdstat(self, args, regexp=None):
-        p = self.popen('qdstat-'+self.id(),
-                       ['qdstat', '--bus', self.router.hostports[0]]+args,
-                       stdout=PIPE)
+        p = self.popen(['qdstat', '--bus', self.router.hostports[0]]+args,
+                       name='qdstat-'+self.id(), stdout=PIPE)
         out = p.communicate()[0]
         self.assertEqual(0, p.returncode, "qdstat exit status %s, output:\n%s" % (p.returncode, out))
         if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)

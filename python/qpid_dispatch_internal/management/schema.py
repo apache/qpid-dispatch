@@ -28,7 +28,7 @@ A Schema can be loaded/dumped to a json file.
 
 import os, sys
 from qpid_dispatch.management import entity
-from qpid_dispatch.management.error import Forbidden
+from qpid_dispatch.management.error import ForbiddenStatus
 from ..compat import OrderedDict
 
 class ValidationError(Exception):
@@ -403,7 +403,7 @@ class EntityType(AttributeTypeHolder):
         """Raise excepiton if op is not a valid operation on entity."""
         op = operation.upper()
         if op[0] not in self.allows:
-            raise Forbidden("Operation '%s' not allowed for '%s'" % (op, self.name))
+            raise ForbiddenStatus("Operation '%s' not allowed for '%s'" % (op, self.name))
 
     def __repr__(self): return "%s(%s)" % (type(self).__name__, self.name)
 
@@ -447,6 +447,7 @@ class Schema(object):
 
     def long_name(self, name):
         """Add prefix to unqualified name"""
+        if not name: return name
         if not '.' in  name:
             name = self.prefixdot + name
         return name
@@ -537,4 +538,4 @@ class Entity(entity.Entity):
         self.validate()
 
     def validate(self):
-        self.entity_type.validate(self)
+        self.entity_type.validate(self.attributes)
