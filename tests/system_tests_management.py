@@ -56,7 +56,6 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.node2 = self.cleanup(Node(Url(self.router.addresses[0], path='$management2')))
         self.maxDiff = None
         self.longMessage = True
-        unittest.util._MAX_LENGTH = 256 # Monkey patch unittest truncation
 
     def test_bad_query(self):
         """Test that various badly formed queries get the proper response"""

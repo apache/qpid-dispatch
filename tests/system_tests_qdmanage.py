@@ -123,7 +123,7 @@ class QdmanageTest(TestCase):
         LONG_TYPES=[long_type(name) for name in TYPES]
 
         qall = json.loads(self.run_qdmanage('query'))
-        self.assertLessEqual(set(LONG_TYPES), set([e['type'] for e in qall]))
+        self.assertTrue(set(LONG_TYPES) <= set([e['type'] for e in qall]))
 
         qlistener = json.loads(self.run_qdmanage('query', type='listener'))
         self.assertEqual([long_type('listener')], [e['type'] for e in qlistener])
