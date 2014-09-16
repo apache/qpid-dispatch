@@ -19,33 +19,36 @@
 #
 
 from distutils.core import setup
-from distutils.sysconfig import get_python_lib
+from distutils.command.build_py import build_py
+from distutils.file_util import write_file
 import os
 
 """Install public packages and scripts for Qpid Dispatch."""
 
+class BuildPy(build_py):
+    """Extend standard build command, add generated site_data.py file."""
+
+    def site_data_py(self): return os.path.join(self.build_lib, 'qpid_dispatch', 'site_data.py')
+
+    def run(self):
+        build_py.run(self)      # Run the standard build
+        write_file(self.site_data_py(), ['HOME = "${QPID_DISPATCH_HOME_INSTALLED}"'])
+
+    def get_outputs(self, **kwargs):
+        return build_py.get_outputs(self, **kwargs) +[self.site_data_py()]
+
+# Install public python modules in standard python locations.
 setup(
     name='qpid_dispatch',
     description='Apache Qpid Dispatch tools and libraries.',
-
+    package_dir={'' : '${CMAKE_SOURCE_DIR}/python'},
     packages=['qpid_dispatch', 'qpid_dispatch.management'],
-    package_dir={'qpid_dispatch' : '${CMAKE_SOURCE_DIR}/python/qpid_dispatch'},
     scripts=['${CMAKE_SOURCE_DIR}/tools/qdstat', '${CMAKE_SOURCE_DIR}/tools/qdmanage'],
+    cmdclass={'build_py': BuildPy},
 
     version='${QPID_DISPATCH_VERSION}',
     author='Apache Qpid',
     author_email='dev@qpid.apache.org',
     url='http://qpid.apache.org/',
-    license='Apache Software License',
+    license='Apache Software License'
 )
-
-# Create site_data.py pointing to the install location for the private files.
-site_data = os.path.join(
-    get_python_lib(prefix='${CMAKE_INSTALL_PREFIX}'), 'qpid_dispatch', 'site_data.py')
-try:
-    print "creating %s" % (site_data)
-    f = open(site_data, 'w')
-    f.write('HOME = "${QPID_DISPATCH_HOME_INSTALLED}"\n')
-finally:
-    f.close()
-

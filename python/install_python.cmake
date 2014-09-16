@@ -17,11 +17,16 @@
 # under the License.
 #
 
-# Private python modules, not in standard python site dir.
-install(DIRECTORY qpid_dispatch_internal DESTINATION ${QPID_DISPATCH_HOME}/python)
+# Install script to install public python modules.
+# Install with setup.py, add installed files to install manifest.
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
-               ${CMAKE_CURRENT_BINARY_DIR}/setup.py)
+include(FindPythonInterp)
 
-# Install script for public python modules
-install(SCRIPT install_python.cmake)
+set(PYTHON_MANIFEST ${CMAKE_CURRENT_BINARY_DIR}/python/python_manifest.txt)
+
+execute_process(COMMAND ${PYTHON_EXECUTABLE}
+  setup.py -v install --prefix=${CMAKE_INSTALL_PREFIX} --record=${PYTHON_MANIFEST}
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/python)
+
+file(READ ${PYTHON_MANIFEST} PYTHON_MANIFEST_FILES)
+list(APPEND CMAKE_INSTALL_MANIFEST_FILES ${PYTHON_MANIFEST_FILES})

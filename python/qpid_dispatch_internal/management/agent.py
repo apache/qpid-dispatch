@@ -18,7 +18,7 @@
 #
 
 """
-Pyton agent for dispatch router.
+Python agent for dispatch router.
 
 Implements the server side of the AMQP management protocol for the dispatch router.
 Manages a set of manageable Entities that can be Created, Read, Updated and Deleted.
