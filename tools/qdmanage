@@ -186,21 +186,21 @@ For help with a command: %s <command> --help
         self.setup(
             "Get the list of entity types. Prints a JSON list of type names.",
             [('type', 'string', 'Restrict types implementing <type>.')])
-        self.print_json(self.call_node('get-types'))
+        self.print_json(self.call_node('get_types'))
 
     @commands
     def get_attributes(self):
         self.setup(
             "Get the list of entity attribute names. Prints a JSON list of attribute names.",
             [('type', 'string', 'If set return only attributes for <type>.')])
-        self.print_json(self.call_node('get-attributes'))
+        self.print_json(self.call_node('get_attributes'))
 
     @commands
     def get_operations(self):
         self.setup(
             "Get the list of entity operation names. Prints a JSON list of operation names.",
             [('type', 'string', 'If set return only operations for <type>.')])
-        self.print_json(self.call_node('get-operations'))
+        self.print_json(self.call_node('get_operations'))
 
 
 def main(argv):
