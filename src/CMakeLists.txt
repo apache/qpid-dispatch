@@ -80,3 +80,6 @@ set_target_properties(qpid-dispatch PROPERTIES
   )
 install(TARGETS qpid-dispatch
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+
+# TODO aconway 2014-09-24: won't work on windows, need portable way to get link name.
+set (QPID_DISPATCH_LIB "libqpid-dispatch.so.${SO_VERSION_MAJOR}" PARENT_SCOPE)

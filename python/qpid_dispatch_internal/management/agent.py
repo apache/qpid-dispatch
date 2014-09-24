@@ -41,7 +41,7 @@ def dictstr(d):
 
 def required_property(prop, request):
     """Raise exception if required property is missing"""
-    if prop not in request.properties:
+    if not request.properties or prop not in request.properties:
         raise BadRequestStatus("No '%s' property: %s"%(prop, request))
     return request.properties[prop]
 

@@ -89,10 +89,10 @@ static void check(int fd) {
 }
 
 
-static void main_process(const char *config_path, const char *python_pkgdir, const char *qpid_dispatch_lib, int fd)
+static void main_process(const char *config_path, const char *python_pkgdir, int fd)
 {
     qd_error_clear();
-    dispatch = qd_dispatch(python_pkgdir, qpid_dispatch_lib);
+    dispatch = qd_dispatch(python_pkgdir);
     check(fd);
     log_source = qd_log_source("MAIN"); /* Logging is initialized by qd_dispatch. */
     qd_dispatch_load_config(dispatch, config_path);
@@ -122,7 +122,7 @@ static void main_process(const char *config_path, const char *python_pkgdir, con
 }
 
 
-static void daemon_process(const char *config_path, const char *python_pkgdir, const char *qpid_dispatch_lib,
+static void daemon_process(const char *config_path, const char *python_pkgdir,
                            const char *pidfile, const char *user)
 {
     int pipefd[2];
@@ -234,7 +234,7 @@ static void daemon_process(const char *config_path, const char *python_pkgdir, c
                 }
             }
 
-            main_process(config_path, python_pkgdir, qpid_dispatch_lib, pipefd[1]);
+            main_process(config_path, python_pkgdir, pipefd[1]);
         } else
             //
             // Exit first child
@@ -266,7 +266,6 @@ int main(int argc, char **argv)
 #define DEFAULT_DISPATCH_PYTHON_DIR QPID_DISPATCH_HOME_INSTALLED "/python"
     const char *config_path   = DEFAULT_CONFIG_PATH;
     const char *python_pkgdir = DEFAULT_DISPATCH_PYTHON_DIR;
-    const char *qpid_dispatch_lib = QPID_DISPATCH_LIB;
     const char *pidfile = 0;
     const char *user    = 0;
     bool        daemon_mode = false;
@@ -325,9 +324,9 @@ int main(int argc, char **argv)
     }
 
     if (daemon_mode)
-        daemon_process(config_path, python_pkgdir, qpid_dispatch_lib, pidfile, user);
+        daemon_process(config_path, python_pkgdir, pidfile, user);
     else
-        main_process(config_path, python_pkgdir, qpid_dispatch_lib, -1);
+        main_process(config_path, python_pkgdir, -1);
 
     return 0;
 }

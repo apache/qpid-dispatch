@@ -35,7 +35,7 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    qd_dispatch_t *qd = qd_dispatch(0, 0);
+    qd_dispatch_t *qd = qd_dispatch(0);
     qd_dispatch_load_config(qd, argv[1]);
 
     int result = 0;

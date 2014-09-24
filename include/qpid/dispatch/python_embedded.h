@@ -30,9 +30,7 @@
  * Initialize the embedded-python subsystem.  This must be called before
  * any other call into this module is invoked.
  */
-void qd_python_initialize(qd_dispatch_t *qd,
-                          const char *python_pkgdir,
-                          const char *qpid_dispatch_lib);
+void qd_python_initialize(qd_dispatch_t *qd, const char *python_pkgdir);
 
 /**
  * Finalize the embedded-python subsystem.  After this is called, there

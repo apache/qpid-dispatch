@@ -64,7 +64,7 @@ env_vars = {
     'SOURCE_DIR': "${CMAKE_SOURCE_DIR}",
     'BUILD_DIR': "${CMAKE_BINARY_DIR}",
     'QPID_DISPATCH_HOME': "${CMAKE_SOURCE_DIR}",
-    'QPID_DISPATCH_LIB': "${CMAKE_BINARY_DIR}/src/libqpid-dispatch.so.${SO_VERSION_MAJOR}"
+    'QPID_DISPATCH_LIB': "${CMAKE_BINARY_DIR}/src/${QPID_DISPATCH_LIB}"
 }
 os.environ.update(env_vars)
 

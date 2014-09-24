@@ -38,7 +38,7 @@ typedef struct qd_dispatch_t qd_dispatch_t;
  * @param python_pkgdir The path to the Python files.
  * @return A handle to be used in API calls for this instance.
  */
-qd_dispatch_t *qd_dispatch(const char *python_pkgdir, const char *qpid_dispatch_lib);
+qd_dispatch_t *qd_dispatch(const char *python_pkgdir);
 
 
 /**

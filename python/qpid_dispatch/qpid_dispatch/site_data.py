@@ -14,26 +14,18 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
-# under the License
+# under the License.
 #
 
 """
-INTERNAL USE ONLY - Qpid Dispatch site configuration.
+INTERNAL USE ONLY - Installed locations for qpid dispatch.
+
+Do not import directly, import site.py which also checks for override by
+environment variables. This file will not be available for uninstalled builds,
+site.py will use env variables instead.
 """
 
-import os, sys
+from os.path import join
 
-def get_variable(name):
-    """Get variable value  by first checking os.environ, then site_data"""
-    value = os.environ.get(name)
-    if value: return value
-    try:
-        site_data = __import__('qpid_dispatch.site_data', globals(), locals(), [name])
-        return getattr(site_data, name)
-    except ImportError, e:
-        raise ImportError("%s: Set %s environment variable." % (e, env))
-
-for var in ['QPID_DISPATCH_HOME', 'QPID_DISPATCH_LIB']:
-    globals()[var] = get_variable(var)
-
-sys.path.insert(0, os.path.join(QPID_DISPATCH_HOME, 'python'))
+QPID_DISPATCH_HOME = ""
+QPID_DISPATCH_LIB = ""

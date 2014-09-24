@@ -20,22 +20,23 @@
 
 from distutils.core import setup
 from distutils.command.build_py import build_py
-from distutils.file_util import write_file
-import os
+from distutils.file_util import copy_file
+from os.path import join
 
 """Install public packages and scripts for Qpid Dispatch."""
 
 class BuildPy(build_py):
     """Extend standard build command, add generated site_data.py file."""
 
-    def site_data_py(self): return os.path.join(self.build_lib, 'qpid_dispatch', 'site_data.py')
+    SITE_DATA_PY = join('qpid_dispatch', 'site_data.py')
 
     def run(self):
-        build_py.run(self)      # Run the standard build
-        write_file(self.site_data_py(), ['HOME = "${QPID_DISPATCH_HOME_INSTALLED}"'])
+        build_py.run(self)      # Run the standard build, copies source .py files into builddir
+        copy_file(join('${CMAKE_CURRENT_BINARY_DIR}', self.SITE_DATA_PY),
+                  join(self.build_lib, self.SITE_DATA_PY))
 
     def get_outputs(self, **kwargs):
-        return build_py.get_outputs(self, **kwargs) +[self.site_data_py()]
+        return build_py.get_outputs(self, **kwargs) +[join(self.build_lib, self.SITE_DATA_PY)]
 
 # Install public python modules in standard python locations.
 setup(

@@ -20,5 +20,3 @@
 #cmakedefine DEFAULT_CONFIG_PATH          "${DEFAULT_CONFIG_PATH}"
 #cmakedefine QPID_DISPATCH_HOME_INSTALLED "${QPID_DISPATCH_HOME_INSTALLED}"
 
-// Use #define, not #cmakedefine because SO_VERSION_MAJOR may be 0 which #cmakedefine considers unset.
-#define QPID_DISPATCH_LIB "libqpid-dispatch.so.${SO_VERSION_MAJOR}"
