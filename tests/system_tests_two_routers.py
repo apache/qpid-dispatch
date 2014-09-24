@@ -76,7 +76,7 @@ class RouterTest(TestCase):
         M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
 
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -119,9 +119,9 @@ class RouterTest(TestCase):
         M2.start()
         M3.start()
         M4.start()
-        M2.subscribe(addr, flush=True)
-        M3.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
         self.routers[0].wait_address("pre_settled/multicast/1", 1, 1)
 
         tm = Message()
@@ -179,9 +179,9 @@ class RouterTest(TestCase):
         M3.start()
         M4.start()
 
-        M2.subscribe(addr, flush=True)
-        M3.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
         self.routers[0].wait_address("pre_settled/multicast/2", 1, 1)
 
         tm = Message()
@@ -234,7 +234,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
         self.routers[0].wait_address("settled/senderfirst/1", 0, 1)
 
         tm = Message()
@@ -278,7 +278,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
         self.routers[0].wait_address("unsettled/2", 0, 1)
 
         tm = Message()
@@ -363,7 +363,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
         self.routers[0].wait_address("three_ack/1", 0, 1)
 
         tm = Message()
@@ -425,7 +425,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
         self.routers[0].wait_address("ma/1", 0, 1)
 
         tm = Message()
@@ -513,9 +513,9 @@ class RouterTest(TestCase):
         M3.start()
         M4.start()
 
-        M2.subscribe(addr, flush=True)
-        M3.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
         self.routers[0].wait_address("multicast/1", 1, 1)
 
         tm = Message()
@@ -576,9 +576,9 @@ class RouterTest(TestCase):
         M3.start()
         M4.start()
 
-        M2.subscribe(addr, flush=True)
-        M3.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
         self.routers[0].wait_address("closest/1", 1, 1)
 
         tm = Message()
@@ -629,8 +629,8 @@ class RouterTest(TestCase):
         M3.start()
         M4.start()
 
-        M2.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M4.subscribe(addr)
         self.routers[0].wait_address("closest/2", 0, 1)
 
         tm = Message()
@@ -684,9 +684,9 @@ class RouterTest(TestCase):
         M2.start()
         M3.start()
         M4.start()
-        M2.subscribe(addr, flush=True)
-        M3.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
         self.routers[0].wait_address("spread/1", 1, 1)
 
         tm = Message()
@@ -755,7 +755,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
         self.routers[0].wait_address("toov/1", 0, 1)
 
         tm = Message()

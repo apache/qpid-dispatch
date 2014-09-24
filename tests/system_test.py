@@ -441,38 +441,19 @@ class Qpidd(Process):
     def wait_ready(self):
         wait_port(self.port)
 
-# Decorator to add an optional flush argument to a method, defaulting to
-# the _flush value for the messenger.
-def flush_arg(method):
-    """Decorator for Messenger methods that adds an optional flush argument,
-    defaulting to the Messenger default"""
-    def wrapper(self, *args, **kwargs):
-        """Wrapper that adds flush argument"""
-        flush = self._flush # pylint: disable=protected-access
-        if 'flush' in kwargs:
-            flush = kwargs['flush']
-            del kwargs['flush']
-        r = method(self, *args, **kwargs)
-        if flush:
-            self.flush()
-        return r
-    return wrapper
-
 class Messenger(proton.Messenger): # pylint: disable=too-many-public-methods
     """Convenience additions to proton.Messenger"""
 
-    def __init__(self, name=None, timeout=DEFAULT_TIMEOUT, blocking=True, flush=False):
+    def __init__(self, name=None, timeout=DEFAULT_TIMEOUT, blocking=True):
         super(Messenger, self).__init__(name)
         self.timeout = timeout
         self.blocking = blocking
-        self._flush = flush
 
     def flush(self):
         """Call work() till there is no work left."""
         while self.work(0.1):
             pass
 
-    @flush_arg
     def fetch(self, accept=True):
         """Fetch a single message"""
         msg = Message()
@@ -482,8 +463,11 @@ class Messenger(proton.Messenger): # pylint: disable=too-many-public-methods
             self.accept()
         return msg
 
-    put = flush_arg(proton.Messenger.put)
-    subscribe = flush_arg(proton.Messenger.subscribe)
+    def subscribe(self, source, **retry_args):
+        """Do a proton.Messenger.subscribe and wait till the address is available."""
+        subscription = super(Messenger, self).subscribe(source)
+        assert retry(lambda: subscription.address, **retry_args) # Wait for address
+        return subscription
 
 class Tester(object):
     """Tools for use by TestCase

@@ -30,7 +30,7 @@ class RouterTest(TestCase):
         super(RouterTest, cls).setUpClass()
         name = "test-router"
         config = Qdrouterd.Config([
-            ('log', {'module':'DEFAULT', 'level':'info', 'output':name+".log"}),
+            ('log', {'module':'DEFAULT', 'level':'trace', 'output':name+".log"}),
             ('container', {'worker-threads': 4, 'container-name': 'Qpid.Dispatch.Router.A'}),
             ('router', {'mode': 'standalone', 'router-id': 'QDR'}),
             ('listener', {'port': cls.tester.get_port()}),
@@ -68,7 +68,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -105,9 +105,9 @@ class RouterTest(TestCase):
         M3.start()
         M4.start()
 
-        M2.subscribe(addr, flush=True)
-        M3.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -159,9 +159,9 @@ class RouterTest(TestCase):
         M3.start()
         M4.start()
 
-        M2.subscribe(addr, flush=True)
-        M3.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -210,7 +210,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -245,7 +245,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -284,7 +284,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -364,7 +364,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -422,7 +422,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -530,7 +530,7 @@ class RouterTest(TestCase):
         M.timeout = 2.0
         M.start()
         M.route("amqp:/*", self.address+"/$1")
-        sub = M.subscribe("amqp:/#", flush=True)
+        sub = M.subscribe("amqp:/#")
         reply = sub.address
 
         request  = Message()
@@ -585,7 +585,7 @@ class RouterTest(TestCase):
         M.timeout = 2.0
         M.start()
         M.route("amqp:/*", self.address+"/$1")
-        sub = M.subscribe("amqp:/#", flush=True)
+        sub = M.subscribe("amqp:/#")
         reply = sub.address
 
         request  = Message()
@@ -667,7 +667,7 @@ class RouterTest(TestCase):
         M.timeout = 2.0
         M.start()
         M.route("amqp:/*", self.address+"/$1")
-        sub = M.subscribe("amqp:/#", flush=True)
+        sub = M.subscribe("amqp:/#")
         reply = sub.address
 
         request  = Message()
@@ -736,7 +736,7 @@ class RouterTest(TestCase):
         M.timeout = 2.0
         M.start()
         M.route("amqp:/*", self.address+"/$1")
-        sub = M.subscribe("amqp:/#", flush=True)
+        sub = M.subscribe("amqp:/#")
         reply = sub.address
 
         request  = Message()
@@ -770,7 +770,7 @@ class RouterTest(TestCase):
         M.timeout = 2.0
         M.start()
         M.route("amqp:/*", self.address+"/$1")
-        sub = M.subscribe("amqp:/#", flush=True)
+        sub = M.subscribe("amqp:/#")
         reply = sub.address
 
         request  = Message()
@@ -810,9 +810,9 @@ class RouterTest(TestCase):
         M3.start()
         M4.start()
 
-        M2.subscribe(addr, flush=True)
-        M3.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -858,9 +858,9 @@ class RouterTest(TestCase):
         M3.start()
         M4.start()
 
-        M2.subscribe(addr, flush=True)
-        M3.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -913,9 +913,9 @@ class RouterTest(TestCase):
         M3.start()
         M4.start()
 
-        M2.subscribe(addr, flush=True)
-        M3.subscribe(addr, flush=True)
-        M4.subscribe(addr, flush=True)
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
 
         tm = Message()
         rm = Message()
@@ -962,7 +962,7 @@ class RouterTest(TestCase):
 
         M1.start()
         M2.start()
-        M2.subscribe(addr, flush=True)
+        M2.subscribe(addr)
 
         tm = Message()
         rm = Message()

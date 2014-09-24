@@ -141,7 +141,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
     def test_create_fixed_address(self):
         self.assert_create_ok(FIXED_ADDRESS, 'fixed1', dict(prefix='fixed1'))
-        msgr = self.messenger(flush=True)
+        msgr = self.messenger()
         address = self.router.addresses[0]+'/fixed1'
         msgr.subscribe(address)
         msgr.put(message(address=address, body='hello'))
@@ -172,7 +172,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
         # Send a message through self.router, verify it goes via wp_router
         address=self.router.addresses[0]+"/foo"
-        mr = self.messenger(flush=True)
+        mr = self.messenger()
         mr.subscribe(address)
         messages = ['a', 'b', 'c']
         for m in messages:
