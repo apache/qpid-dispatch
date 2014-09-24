@@ -65,7 +65,17 @@ add_test(unit_tests_size_1     ${TEST_WRAP} --vg unit_tests_size 1)
 add_test(unit_tests            ${TEST_WRAP} --vg unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
 add_test(router_tests          ${TEST_WRAP} -s ${CMAKE_CURRENT_SOURCE_DIR}/router_engine_test.py -v)
 add_test(management_tests      ${TEST_WRAP} -m unittest -v management)
-add_test(system_tests          ${TEST_WRAP} -m run_system_tests -v)
+
+macro(add_system_test test)
+  add_test(${test} ${TEST_WRAP} -m unittest -v ${test})
+endmacro(add_system_test)
+
+add_system_test(system_tests_broker)
+add_system_test(system_tests_management)
+add_system_test(system_tests_one_router)
+add_system_test(system_tests_qdmanage)
+add_system_test(system_tests_qdstat)
+add_system_test(system_tests_two_routers)
 
 set(SYSTEM_TEST_FILES
   ${CMAKE_CURRENT_BINARY_DIR}/run.py run_system_tests.py system_test.py
