@@ -38,7 +38,8 @@ class Entity(object):
 
     Attribute access:
     - via index operator: entity['foo']
-    - as python attributes: entity.foo (only if attribute name is a legal python identitfier)
+    - as python attributes: entity.foo (only if attribute name is a legal python identitfier
+      after replacing '-' with '_')
 
     @ivar attributes: Map of attribute values for this entity.
 
@@ -47,28 +48,32 @@ class Entity(object):
     """
 
     def __init__(self, attributes=None, **kwargs):
-        self.__dict__['attributes'] = dict(attributes or [], **kwargs)
+        self.__dict__['attributes'] = {}
+        if attributes:
+            for k, v in attributes.iteritems():
+                self._set(k, v)
+        for k, v in kwargs.iteritems():
+            self._set(k, v)
 
     def __getitem__(self, name): return self.attributes[name]
 
-    def __setitem__(self, name, value): self.attributes[name] = value
+    def _pyname(self, name): return name.replace('-', '_')
 
-    def __getattr__(self, name):
-        try:
-            return self.attributes[name]
-        except KeyError:
-            raise AttributeError("'%s' object has no attribute '%s'" % (type(self).__name__, name))
+    def _set(self, name, value):
+        self.attributes[name] = value
+        self.__dict__[self._pyname(name)] = value
 
-    def __setattr__(self, name, value):
-        if name in self.__dict__:
-            super(Entity, self).__setattr__(name, value)
-        else:
-            self.attributes[name] = value
+    # Subclasses should override __setitem__ to do extra actions on set,
+    # e.g. validation.
+    def __setitem__(self, name, value): self._set(name, value)
+
+    def __delitem__(self, name, value):
+        del self.attributes[name]
+        del self.__dict__[self._pyname(name)]
+
+    def __setattr__(self, name, value): self.__setitem__(name, value)
 
     def __delattr__(self, name):
-        try:
-            del self.attributes[name]
-        except KeyError:
-            super(Entity, self).__delattr__(name)
+        self.__delitem__(name)
 
     def __repr__(self): return "Entity(%r)" % self.attributes

@@ -147,6 +147,11 @@ def configure_dispatch(dispatch, filename):
     qd.qd_dispatch_configure_router(dispatch, config.by_type('router').next())
     qd.qd_dispatch_prepare(dispatch)
 
+    # NOTE: Can't import agent till after qd_dispatch_prepare
+    from .agent import Agent
+    qd.qd_dispatch_set_agent(dispatch, Agent(dispatch, config.entities))
+    qd.qd_router_setup_late(dispatch); # Must come after qd_dispatch_set_agent
+
     # Note must configure addresses, waypoints, listeners and connectors after qd_dispatch_prepare
     for a in config.by_type('fixed-address'): qd.qd_dispatch_configure_address(dispatch, a)
     for w in config.by_type('waypoint'): qd.qd_dispatch_configure_waypoint(dispatch, w)
@@ -155,6 +160,3 @@ def configure_dispatch(dispatch, filename):
     qd.qd_connection_manager_start(dispatch)
     qd.qd_waypoint_activate_all(dispatch)
 
-    # NOTE: Can't import agent till after qd_dispatch_prepare
-    from .agent import Agent
-    qd.qd_dispatch_set_agent(dispatch, Agent(dispatch, config.entities))

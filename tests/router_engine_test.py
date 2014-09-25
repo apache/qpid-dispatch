@@ -24,8 +24,9 @@ import unittest
 sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "mock")) # Mock modules for tests
 
-from qpid_dispatch_internal.router.engine import NeighborEngine, PathEngine, Configuration, NodeTracker
+from qpid_dispatch_internal.router.engine import NeighborEngine, PathEngine, NodeTracker
 from qpid_dispatch_internal.router.data import LinkState, MessageHELLO
+from qpid_dispatch.management.entity import Entity
 
 class Adapter(object):
     def __init__(self, domain):
@@ -265,7 +266,13 @@ class NeighborTest(unittest.TestCase):
         self.local_link_state = None
         self.id = "R1"
         self.area = "area"
-        self.config = Configuration()
+        # Fake configuration
+        self.config = Entity({
+            'hello_interval'      :  1.0,
+            'hello_max_age'       :  3.0,
+            'ra_interval'         : 30.0,
+            'remote_ls_max_age'   : 60.0,
+            'mobile_addr_max_age' : 60.0  })
         self.neighbors = {}
 
     def test_hello_sent(self):

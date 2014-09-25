@@ -19,7 +19,6 @@
 
 from time import time
 
-from configuration import Configuration
 from data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, MessageLSR
 from neighbor import NeighborEngine
 from link import LinkStateEngine
@@ -59,13 +58,7 @@ class RouterEngine:
         self.area           = area
         self.log(LOG_INFO, "Router Engine Instantiated: area=%s id=%s max_routers=%d" %
                  (self.area, self.id, self.max_routers))
-
-        ##
-        ## Setup configuration
-        ##
-        self.config = Configuration(config_override)
-        self.log(LOG_INFO, "Config: %r" % self.config)
-
+        self._config         = None # Not yet loaded
         ##
         ## Launch the sub-module engines
         ##
@@ -87,6 +80,14 @@ class RouterEngine:
         """
         return self.id
 
+    @property
+    def config(self):
+        if not self._config:
+            router_type = 'org.apache.qpid.dispatch.router'
+            routers = self.router_adapter.get_agent().find_entity_by_type(router_type)
+            if not routers: raise ValueError("No router configuration found") 
+            self._config = routers[0]
+        return self._config
 
     def addressAdded(self, addr):
         """
@@ -298,3 +299,4 @@ class RouterEngine:
     def del_remote_router(self, router_bit):
         self.log(LOG_DEBUG, "Event: del_remote_router: router_bit=%d" % router_bit)
         self.router_adapter.del_remote_router(router_bit)
+

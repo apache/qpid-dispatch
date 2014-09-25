@@ -130,7 +130,6 @@ qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
     qd_alloc_setup_agent(qd);
     qd_connection_manager_setup_agent(qd);
     qd_container_setup_agent(qd);
-    qd_router_setup_late(qd);
     return qd_error_code();
 }
 

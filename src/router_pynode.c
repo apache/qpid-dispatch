@@ -462,6 +462,15 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
     return Py_None;
 }
 
+static PyObject* qd_get_agent(PyObject *self, PyObject *args) {
+    RouterAdapter *adapter = (RouterAdapter*) self;
+    PyObject *agent = adapter->router->qd->py_agent;
+    if (agent) {
+        Py_INCREF(agent);
+        return agent;
+    }
+    Py_RETURN_NONE;
+}
 
 static PyMethodDef RouterAdapter_methods[] = {
     {"add_remote_router",   qd_add_remote_router,   METH_VARARGS, "A new remote/reachable router has been discovered"},
@@ -472,6 +481,7 @@ static PyMethodDef RouterAdapter_methods[] = {
     {"del_neighbor_router", qd_del_neighbor_router, METH_VARARGS, "We've lost reachability to a neighbor router"},
     {"map_destination",     qd_map_destination,     METH_VARARGS, "Add a newly discovered destination mapping"},
     {"unmap_destination",   qd_unmap_destination,   METH_VARARGS, "Delete a destination mapping"},
+    {"get_agent",           qd_get_agent,           METH_VARARGS, "Get the management agent"},
     {0, 0, 0, 0}
 };
 
@@ -683,3 +693,4 @@ void qd_router_link_lost(qd_router_t *router, int link_mask_bit)
         qd_python_unlock();
     }
 }
+

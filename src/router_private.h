@@ -234,8 +234,6 @@ struct qd_router_t {
     qd_agent_class_t         *class_link;
     qd_agent_class_t         *class_node;
     qd_agent_class_t         *class_address;
-
-    void                     *py_agent;
 };
 
 

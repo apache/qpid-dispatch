@@ -301,6 +301,9 @@ class Agent(object):
 
         return entity
 
+    def find_entity_by_type(self, type):
+        return [e for e in self.entities if e.entity_type.name == type]
+
     def delete(self, entity):
         try:
             self.entities.remove(entity)
