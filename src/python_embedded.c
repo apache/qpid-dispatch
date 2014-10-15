@@ -150,22 +150,30 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
 
     else if (PyList_Check(value)) {
         Py_ssize_t count = PyList_Size(value);
-        qd_compose_start_list(field);
-        for (Py_ssize_t idx = 0; idx < count; idx++) {
-            PyObject *item = PyList_GetItem(value, idx); QD_ERROR_PY_RET();
-            qd_py_to_composed(item, field); QD_ERROR_RET();
+        if (count == 0)
+            qd_compose_empty_list(field);
+        else {
+            qd_compose_start_list(field);
+            for (Py_ssize_t idx = 0; idx < count; idx++) {
+                PyObject *item = PyList_GetItem(value, idx); QD_ERROR_PY_RET();
+                qd_py_to_composed(item, field); QD_ERROR_RET();
+            }
+            qd_compose_end_list(field);
         }
-        qd_compose_end_list(field);
     }
 
     else if (PyTuple_Check(value)) {
         Py_ssize_t count = PyTuple_Size(value);
-        qd_compose_start_list(field);
-        for (Py_ssize_t idx = 0; idx < count; idx++) {
-            PyObject *item = PyTuple_GetItem(value, idx); QD_ERROR_PY_RET();
-            qd_py_to_composed(item, field); QD_ERROR_RET();
+        if (count == 0)
+            qd_compose_empty_list(field);
+        else {
+            qd_compose_start_list(field);
+            for (Py_ssize_t idx = 0; idx < count; idx++) {
+                PyObject *item = PyTuple_GetItem(value, idx); QD_ERROR_PY_RET();
+                qd_py_to_composed(item, field); QD_ERROR_RET();
+            }
+            qd_compose_end_list(field);
         }
-        qd_compose_end_list(field);
     }
     else {
         PyObject *type=0, *typestr=0, *repr=0;
