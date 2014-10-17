@@ -85,7 +85,7 @@
   },
   "entity_types": {
     "container": {
-      "allows": "CR",
+      "operations": ["CREATE", "READ"],
       "singleton": true,
       "include": [
         "common"
@@ -104,7 +104,7 @@
     },
 
     "router": {
-      "allows": "CR",
+      "operations": ["CREATE", "READ"],
       "singleton": true,
       "include": [
         "common"
@@ -151,13 +151,16 @@
           "type": "Integer",
           "default": 60,
           "description": ""
-        }
+        },
+	"addrCount": {"type": "Integer"},
+	"linkCount": {"type": "Integer"},
+	"nodeCount": {"type": "Integer"}
       }
     },
 
     "listener": {
       "description": "Listens for incoming connections to the router",
-      "allows": "CR",
+      "operations": ["CREATE", "READ"],
       "include": [
         "common",
         "ssl-profile",
@@ -193,7 +196,7 @@
     },
     "connector": {
       "description": "Establishes an outgoing connections from the router",
-      "allows": "CR",
+      "operations": ["CREATE", "READ"],
       "include": [
         "common",
         "ssl-profile",
@@ -219,19 +222,20 @@
       "include": [
         "common"
       ],
-      "allows": "CR",
+      "operations": ["CREATE", "READ"],
       "attributes": {
         "module": {
           "type":[
             "ROUTER",
             "MESSAGE",
             "SERVER",
-            "AGENT",
-	    "PYAGENT",
+            "CAGENT",
+	    "AGENT",
             "CONTAINER",
             "CONFIG",
             "DEFAULT",
-            "ERROR"
+            "ERROR",
+	    "DISPATCH"
           ],
           "required": true,
           "description": "Module to configure logging level. The special module 'DEFAULT' specifies logging for modules that don't have explicit log sections."
@@ -253,7 +257,12 @@
         "timestamp": {
           "type": "Boolean",
           "default": true,
-          "description": "Set a timestamp on log messages"
+          "description": "Include timestamp in log messages"
+        },
+        "source": {
+          "type": "Boolean",
+          "default": false,
+          "description": "Include source file and line number in log messages"
         },
         "output": {
           "type": "String",
@@ -263,7 +272,7 @@
     },
 
     "fixed-address": {
-      "allows": "CR",
+      "operations": ["CREATE", "READ"],
       "include": [
         "common"
       ],
@@ -297,7 +306,7 @@
     },
 
     "waypoint": {
-      "allows": "CR",
+      "operations": ["CREATE", "READ"],
       "include": [
         "common"
       ],
@@ -323,7 +332,7 @@
 
     "dummy": {
       "description": "Dummy entity for test purposes.",
-      "allows": "CRUD",
+      "operations": ["CREATE", "READ", "UPDATE", "DELETE", "CALLME"],
       "include": ["common"],
       "attributes": {
         "arg1": {"type": "String"},
@@ -331,6 +340,84 @@
 	"num1": {"type": "Integer"},
 	"num2": {"type": "Integer"}
       }
+    },
+
+    "router.link": {
+      "description": "Link to another AMQP endpoint: router node, client or other AMQP process.",
+      "operations": ["READ"],
+      "include": ["common"],
+      "attributes": {
+	"linkType": {"type": ["endpoint", "waypoint", "inter-router", "inter-area"]},
+	"linkDir": {"type": ["in", "out"]},
+	"owningAddr": {"type": "String"},
+	"eventFifoDepth": {"type": "Integer"},
+	"msgFifoDepth": {"type": "Integer"}
+      }
+    },
+
+    "router.address": {
+      "description": "AMQP address managed by the router",
+      "operations": ["READ"],
+      "include": ["common"],
+      "attributes": {
+	"inProcess": {"type": "Boolean"},
+	"subscriberCount": {"type": "Integer"},
+	"remoteCount": {"type": "Integer"},
+	"deliveriesIngress": {"type": "Integer"},
+	"deliveriesEgress": {"type": "Integer"},
+	"deliveriesTransit": {"type": "Integer"},
+	"deliveriesToContainer": {"type": "Integer"},
+	"deliveriesFromContainer": {"type": "Integer"}
+      }
+    },
+
+    "router.node": {
+      "description": "AMQP node managed by the router",
+      "operations": ["READ"],
+      "include": ["common"],
+      "attributes": {
+	"addr": {"type": "String"},
+	"nextHop": {"type": "Integer"},
+	"routerLink": {"type": "Integer"},
+	"validOrigins": {"type": "List"}
+      }
+    },
+
+    "connection": {
+      "description": "Connections to the router's container",
+      "operations": ["READ"],
+      "include": ["common"],
+      "attributes": {
+	"container": {"type": "String"} ,
+	"state": {"type": [
+	  "connecting",
+	  "opening",
+	  "operational",
+	  "failed",
+	  "user"
+	]},
+	"host": {"type": "String"},
+	"dir": {"type": ["in", "out"]},
+	"role": {"type": "String"},
+	"sasl": {"type": "String"}
+      }
+    },
+
+    "allocator": {
+      "description": "Memory allocation pool.",
+      "operations": ["READ"],
+      "include": ["common"],
+      "attributes": {
+	"type_size": {"type": "Integer"},
+	"transfer_batch_size": {"type": "Integer"},
+	"local_free_list_max": {"type": "Integer"},
+	"global_free_list_max": {"type": "Integer"},
+	"total_alloc_from_heap": {"type": "Integer"},
+	"total_free_to_heap": {"type": "Integer"},
+	"held_by_threads": {"type": "Integer"},
+	"batches_rebalanced_to_threads": {"type": "Integer"},
+	"batches_rebalanced_to_global": {"type": "Integer"}
+       }
     }
   }
 }

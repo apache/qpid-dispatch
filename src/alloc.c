@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <Python.h>
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
@@ -24,6 +25,8 @@
 #include <memory.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include "entity_private.h"
+#include "c_entity.h"
 
 #define QD_MEMORY_DEBUG 1
 
@@ -95,6 +98,7 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
 
         desc->header  = PATTERN_FRONT;
         desc->trailer = PATTERN_BACK;
+        qd_c_entity_add(QD_ALLOCATOR_TYPE, type_item);
     }
 
     sys_mutex_unlock(init_lock);
@@ -284,6 +288,7 @@ void qd_alloc_finalize(void)
     qd_alloc_item_t *item;
     qd_alloc_type_t *type_item = DEQ_HEAD(type_list);
     while (type_item) {
+        qd_c_entity_remove(QD_ALLOCATOR_TYPE, type_item);
         qd_alloc_type_desc_t *desc = type_item->desc;
 
         //
@@ -342,10 +347,28 @@ void qd_alloc_finalize(void)
 }
 
 
+qd_error_t qd_c_entity_update_allocator(qd_entity_t* entity, void *impl) {
+    qd_alloc_type_t *alloc_type = (qd_alloc_type_t*) impl;
+    if ((qd_entity_has(entity, "identity") ||
+         qd_entity_set_string(entity, "identity", alloc_type->desc->type_name) == 0) &&
+        qd_entity_set_long(entity, "type_size", alloc_type->desc->total_size) == 0 &&
+        qd_entity_set_long(entity, "transfer_batch_size", alloc_type->desc->config->transfer_batch_size) == 0 &&
+        qd_entity_set_long(entity, "local_free_list_max", alloc_type->desc->config->local_free_list_max) == 0 &&
+        qd_entity_set_long(entity, "global_free_list_max", alloc_type->desc->config->global_free_list_max) == 0 &&
+        qd_entity_set_long(entity, "total_alloc_from_heap", alloc_type->desc->stats->total_alloc_from_heap) == 0 &&
+        qd_entity_set_long(entity, "total_free_to_heap", alloc_type->desc->stats->total_free_to_heap) == 0 &&
+        qd_entity_set_long(entity, "held_by_threads", alloc_type->desc->stats->held_by_threads) == 0 &&
+        qd_entity_set_long(entity, "batches_rebalanced_to_threads", alloc_type->desc->stats->batches_rebalanced_to_threads) == 0 &&
+        qd_entity_set_long(entity, "batches_rebalanced_to_global", alloc_type->desc->stats->batches_rebalanced_to_global) == 0)
+        return QD_ERROR_NONE;
+    return qd_error_code();
+}
+
+
 static void alloc_attr_name(void *object_handle, void *cor, void *unused)
 {
-    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_string(cor, 0, item->desc->type_name);
+    qd_alloc_type_t *alloc_type = (qd_alloc_type_t*) object_handle;
+    qd_agent_value_string(cor, 0, alloc_type->desc->type_name);
 }
 
 
@@ -412,7 +435,6 @@ static void alloc_attr_batches_rebalanced_to_global(void *object_handle, void *c
 }
 
 
-static const char *ALLOC_TYPE = "org.apache.qpid.dispatch.allocator";
 static const qd_agent_attribute_t ALLOC_ATTRIBUTES[] =
     {{"name", alloc_attr_name, 0},
      {"identity", alloc_attr_name, 0},
@@ -442,6 +464,14 @@ static void alloc_query_handler(void* context, void *cor)
 
 void qd_alloc_setup_agent(qd_dispatch_t *qd)
 {
-    qd_agent_register_class(qd, ALLOC_TYPE, 0, ALLOC_ATTRIBUTES, alloc_query_handler);
+    qd_agent_register_class(qd, QD_ALLOCATOR_TYPE, 0, ALLOC_ATTRIBUTES, alloc_query_handler);
 }
 
+
+// Entity add/remove event cache.
+
+
+struct event {
+    const char *type;           /* Set for an add event, NULL for a remove event */
+    void *pointer;
+};

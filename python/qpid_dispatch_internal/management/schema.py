@@ -26,7 +26,7 @@ check for uniqueness of enties/attributes that are specified to be unique.
 A Schema can be loaded/dumped to a json file.
 """
 
-import os, sys
+import sys
 from qpid_dispatch.management import entity
 from qpid_dispatch.management.error import ForbiddenStatus
 from ..compat import OrderedDict
@@ -34,11 +34,6 @@ from ..compat import OrderedDict
 class ValidationError(Exception):
     """Error raised if schema validation fails"""
     pass
-
-
-def schema_file(name):
-    """Return a file name relative to the directory from which this module was loaded."""
-    return os.path.join(os.path.dirname(__file__), name)
 
 
 class Type(object):
@@ -73,6 +68,7 @@ class Type(object):
         """String name of type."""
         return str(self.dump())
 
+
 class BooleanType(Type):
     """A boolean schema type"""
 
@@ -95,6 +91,7 @@ class BooleanType(Type):
         except:
             raise ValidationError("Invalid Boolean value '%r'"%value)
 
+
 class EnumValue(str):
     """A string that convets to an integer value via int()"""
 
@@ -107,6 +104,7 @@ class EnumValue(str):
     def __eq__(self, x): return str(self) == x or int(self) == x
     def __ne__(self, x): return not self == x
     def __repr__(self): return "EnumValue('%s', %s)"%(str(self), int(self))
+
 
 class EnumType(Type):
     """An enumerated type"""
@@ -146,7 +144,8 @@ class EnumType(Type):
         """String description of enum type."""
         return "One of [%s]"%(', '.join(self.tags))
 
-BUILTIN_TYPES = dict((t.name, t) for t in [Type("String", str), Type("Integer", int), BooleanType()])
+BUILTIN_TYPES = dict((t.name, t) for t in
+                     [Type("String", str), Type("Integer", int), Type("List", list), BooleanType()])
 
 def get_type(rep):
     """
@@ -313,7 +312,7 @@ class EntityType(AttributeTypeHolder):
     #ivar include: List of names of sections included by this entity.
     """
     def __init__(self, name, schema, singleton=False, include=None, attributes=None,
-                 description="", allows=""):
+                 description="", operations=None):
         """
         @param name: name of the entity type.
         @param schema: schema for this type.
@@ -321,14 +320,14 @@ class EntityType(AttributeTypeHolder):
         @param include: List of names of include types for this entity.
         @param attributes: Map of attributes {name: {type:, default:, required:, unique:}}
         @param description: Human readable description.
-        @param allows: Allowed operations, string of "CRUD"
+        @param operations: Allowed operations, list of operation names.
         """
         super(EntityType, self).__init__(name, schema, attributes, description)
         self.short_name = schema.short_name(name)
         self.refs = {'entity-type': name}
         self.singleton = singleton
         self.include = include
-        self.allows = allows.upper()
+        self.operations = operations or []
         if include and self.schema.includes:
             for i in include:
                 if not i in schema.includes:
@@ -399,16 +398,18 @@ class EntityType(AttributeTypeHolder):
 
         return attributes
 
-    def allowed(self, operation):
+    def allowed(self, op):
         """Raise excepiton if op is not a valid operation on entity."""
-        op = operation.upper()
-        if op[0] not in self.allows:
+        op = op.upper()
+        if op not in self.operations:
             raise ForbiddenStatus("Operation '%s' not allowed for '%s'" % (op, self.name))
 
     def __repr__(self): return "%s(%s)" % (type(self).__name__, self.name)
 
     def __str__(self): return self.name
 
+    def name_is(self, name):
+        return self.name == self.schema.long_name(name)
 
 class Schema(object):
     """
@@ -448,7 +449,7 @@ class Schema(object):
     def long_name(self, name):
         """Add prefix to unqualified name"""
         if not name: return name
-        if not '.' in  name:
+        if not name.startswith(self.prefixdot):
             name = self.prefixdot + name
         return name
 
@@ -463,12 +464,15 @@ class Schema(object):
                          for e in self.entity_types.itervalues()))
         ])
 
-    def entity_type(self, name):
-        """Look up an EntityType by name"""
+    def entity_type(self, name, error=True):
+        """Look up an EntityType by name.
+        If error raise exception if not found else return None
+        """
         try:
             return self.entity_types[self.long_name(name)]
         except KeyError:
-            raise ValidationError("No such entity_type %r" % name)
+            if error: raise ValidationError("No such entity type '%s'" % name)
+        return None
 
     def validate_entity(self, attributes, check_required=True, add_default=True,
                         check_unique=None, check_singleton=None):
@@ -514,7 +518,6 @@ class Schema(object):
                                  add_default=add_default,
                                  check_unique=check_unique,
                                  check_singleton=check_singleton)
-        return attribute_maps
 
     def entity(self, attributes):
         """Convert an attribute map into an L{Entity}"""
@@ -528,10 +531,11 @@ class Schema(object):
 
 class Entity(entity.Entity):
     """A map of attributes associated with an L{EntityType}"""
-    def __init__(self, entity_type, attributes=None, **kwattrs):
+    def __init__(self, entity_type, attributes=None, validate=True, **kwattrs):
         super(Entity, self).__init__(attributes, **kwattrs)
         self.__dict__['entity_type'] = entity_type
-        self.validate()
+        self.attributes.setdefault('type', entity_type.name)
+        if validate: self.validate()
 
     def __setitem__(self, name, value):
         super(Entity, self).__setitem__(name, value)

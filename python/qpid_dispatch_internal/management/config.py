@@ -98,7 +98,7 @@ class Config(object):
             elif 'identity' in attrs:
                 attrs['name'] = attrs['identity']
             else:
-                identity = "%s%d"%(section_name, count)
+                identity = "%s:%d"%(section_name, count)
                 attrs['name'] = attrs['identity'] = identity
         return content
 
@@ -137,6 +137,12 @@ def configure_dispatch(dispatch, filename):
     qd = dispatch_c.instance()
     dispatch = qd.qd_dispatch_p(dispatch)
     config = Config(filename)
+
+    # NOTE: Can't import agent till till dispatch C extension module is initialized.
+    from .agent import Agent
+    agent = Agent(dispatch, config.entities)
+    qd.qd_dispatch_set_agent(dispatch, agent)
+
     # Configure any DEFAULT log entities first so we can report errors in non-
     # default log configurations to the correct place.
     for l in config.by_type('log'):
@@ -147,10 +153,8 @@ def configure_dispatch(dispatch, filename):
     qd.qd_dispatch_configure_router(dispatch, config.by_type('router').next())
     qd.qd_dispatch_prepare(dispatch)
 
-    # NOTE: Can't import agent till after qd_dispatch_prepare
-    from .agent import Agent
-    qd.qd_dispatch_set_agent(dispatch, Agent(dispatch, config.entities))
-    qd.qd_router_setup_late(dispatch); # Must come after qd_dispatch_set_agent
+    agent.activate("$management")
+    qd.qd_router_setup_late(dispatch);
 
     # Note must configure addresses, waypoints, listeners and connectors after qd_dispatch_prepare
     for a in config.by_type('fixed-address'): qd.qd_dispatch_configure_address(dispatch, a)

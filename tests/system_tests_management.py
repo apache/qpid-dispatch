@@ -23,19 +23,24 @@ import unittest, system_test, re, os
 from qpid_dispatch.management import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
 from system_test import Qdrouterd, message, retry
 
-LISTENER = 'org.apache.qpid.dispatch.listener'
-CONNECTOR = 'org.apache.qpid.dispatch.connector'
-FIXED_ADDRESS = 'org.apache.qpid.dispatch.fixed-address'
-WAYPOINT = 'org.apache.qpid.dispatch.waypoint'
-DUMMY = 'org.apache.qpid.dispatch.dummy'
+DISPATCH = 'org.apache.qpid.dispatch'
+LISTENER = DISPATCH + '.listener'
+CONNECTOR = DISPATCH + '.connector'
+FIXED_ADDRESS = DISPATCH + '.fixed-address'
+WAYPOINT = DISPATCH + '.waypoint'
+DUMMY = DISPATCH + '.dummy'
+ROUTER = DISPATCH + '.router'
+LINK = ROUTER + '.link'
+ADDRESS = ROUTER + '.address'
+NODE = ROUTER + '.node'
 
-ADDRESS = 'org.apache.qpid.dispatch.router.address'
 
 class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-methods
 
     @classmethod
     def setUpClass(cls):
         super(ManagementTest, cls).setUpClass()
+        # Stand-alone router
         name = cls.__name__
         cls.log_file = name+".log"
         conf = Qdrouterd.Config([
@@ -52,8 +57,6 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
     def setUp(self):
         super(ManagementTest, self).setUp()
         self.node = self.cleanup(Node(self.router.addresses[0]))
-        # Temporary access to separate new management address.
-        self.node2 = self.cleanup(Node(Url(self.router.addresses[0], path='$management2')))
         self.maxDiff = None
         self.longMessage = True
 
@@ -61,14 +64,12 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         """Test that various badly formed queries get the proper response"""
         # No operation attribute
         self.assertRaises(BadRequestStatus, self.node.call, self.node.request())
-        # Unknown operation
-        self.assertRaises(NotImplementedStatus, self.node.call, self.node.request(operation="nosuch"))
-        # No entityType or attributeList
-        self.assertRaises(BadRequestStatus, self.node.query)
+        self.assertRaises(NotImplementedStatus, self.node.call,
+                          self.node.request(operation="nosuch", type="org.amqp.management"))
 
     def test_query_type(self):
         """Query with type only"""
-        response = self.node2.query(type=LISTENER)
+        response = self.node.query(type=LISTENER)
         for attr in ['type', 'name', 'identity', 'addr', 'port']:
             self.assertTrue(attr in response.attribute_names)
         for r in response.get_dicts():
@@ -80,7 +81,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
     def test_query_type_attributes(self):
         """Query with type and attribute names"""
         attribute_names=['type', 'name', 'port']
-        response = self.node2.query(type=LISTENER, attribute_names=attribute_names)
+        response = self.node.query(type=LISTENER, attribute_names=attribute_names)
         self.assertEqual(attribute_names, response.attribute_names)
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in xrange(3)]
         for r in expect: # We might have extras in results due to create tests
@@ -90,12 +91,12 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
     def test_query_attributes(self):
         """Query with attributes only"""
         attribute_names=['type', 'name', 'port']
-        response = self.node2.query(attribute_names=attribute_names)
+        response = self.node.query(attribute_names=attribute_names)
         self.assertEqual(attribute_names, response.attribute_names)
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in xrange(3)]
         for r in expect: # We might have extras in results due to create tests
             self.assertTrue(r in response.results)
-        for name in ['router0', 'log0']:
+        for name in [self.router.name, 'log:0']:
             self.assertTrue([r for r in response.get_dicts() if r['name'] == name],
                             msg="Can't find result with name '%s'" % name)
 
@@ -105,7 +106,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         assert not missing, "Not a subset, missing %s, sub=%s, super=%s"%(missing, small, big)
 
     def assert_create_ok(self, type, name, attributes):
-        entity = self.node2.create(attributes, type, name)
+        entity = self.node.create(attributes, type, name)
         self.assertMapSubset(attributes, entity.attributes)
         return entity
 
@@ -120,20 +121,16 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertEqual(entity['addr'], '0.0.0.0')
 
         # Connect via the new listener
-        node3 = self.cleanup(Node(Url(port=port, path='$management')))
-        router = node3.query(type='org.apache.qpid.dispatch.router').get_entities()
+        node3 = self.cleanup(Node(Url(port=port)))
+        router = node3.query(type=ROUTER).get_entities()
         self.assertEqual(self.__class__.router.name, router[0]['name'])
 
     def test_create_log(self):
         """Create a log entity"""
-        # FIXME aconway 2014-07-04: rework log entity.
-        # - allow auto-assigned name/identity? Use module as name/identity?
-        # - 1 entity with full log state, allow updates.
         log = os.path.abspath("test_create_log.log")
-        # FIXME aconway 2014-09-08: PYAGENT->AGENT
-        self.assert_create_ok('log', 'log.1', dict(module='PYAGENT', level="error", output=log))
+        self.assert_create_ok('log', 'log.1', dict(module='AGENT', level="error", output=log))
         # Cause an error and verify it shows up in the log file.
-        self.assertRaises(ManagementError, self.node2.create, type='nosuch', name='nosuch')
+        self.assertRaises(ManagementError, self.node.create, type='nosuch', name='nosuch')
         f = self.cleanup(open(log))
         logstr = f.read()
         self.assertTrue(re.search(r'ValidationError.*nosuch', logstr),
@@ -191,21 +188,21 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
             f.close()
 
     def test_entity(self):
-        entity = self.node2.read(type=LISTENER, name='l0')
+        entity = self.node.read(type=LISTENER, name='l0')
         self.assertEqual('l0', entity.name)
         self.assertEqual('l0', entity.identity)
         self.assertEqual(str(self.router.ports[0]), entity.port)
 
-        entity = self.node2.read(type=LISTENER, identity='l1')
+        entity = self.node.read(type=LISTENER, identity='l1')
         self.assertEqual('l1', entity.name)
         self.assertEqual('l1', entity.identity)
         self.assertEqual(str(self.router.ports[1]), entity.port)
 
         # Bad type
-        self.assertRaises(NotFoundStatus, self.node2.read, type=CONNECTOR, name='l0')
+        self.assertRaises(NotFoundStatus, self.node.read, type=CONNECTOR, name='l0')
 
         # Unknown entity
-        self.assertRaises(NotFoundStatus, self.node2.read, type=LISTENER, name='nosuch')
+        self.assertRaises(NotFoundStatus, self.node.read, type=LISTENER, name='nosuch')
 
         # Update and delete are not allowed by the schema
         self.assertRaises(ForbiddenStatus, entity.update)
@@ -215,7 +212,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertRaises(ForbiddenStatus, entity.call, 'nosuchop', foo="bar")
 
         # Dummy entity supports all CRUD operations
-        dummy = self.node2.create({'arg1': 'START'}, type=DUMMY, name='MyDummy', )
+        dummy = self.node.create({'arg1': 'START'}, type=DUMMY, name='MyDummy', )
         self.assertEqual(dummy.type, DUMMY)
         self.assertEqual(dummy.name, 'MyDummy')
         self.assertEqual(dummy.arg1, 'START')
@@ -237,7 +234,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
             dict(type=DUMMY, name='MyDummy', identity=identity, arg1='one', num1=42),
             dummy.attributes)
 
-        dummy2 = self.node2.read(type=DUMMY, name='MyDummy')
+        dummy2 = self.node.read(type=DUMMY, name='MyDummy')
         self.assertEqual(dummy.attributes, dummy2.attributes)
 
         self.assertEqual({'operation': 'callme', 'foo': 'bar', 'type': DUMMY, 'identity': identity},
@@ -247,19 +244,87 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertRaises(BadRequestStatus, dummy.update)
 
         dummy.delete()
-        self.assertRaises(NotFoundStatus, self.node2.read, type=DUMMY, name='MyDummy')
+        self.assertRaises(NotFoundStatus, self.node.read, type=DUMMY, name='MyDummy')
+
+    def test_link(self):
+        """Verify we can find our own reply-to address in links"""
+        response = self.node.query(type=LINK)
+        path = self.node.reply_to.split('/')[-1]
+        mylink = [l for l in response.get_dicts()
+                  if l['owningAddr'] and l['owningAddr'].endswith(path)]
+        self.assertTrue(mylink)
+
+    def test_connection(self):
+        """Verify there is at least one connection"""
+        response = self.node.query(type='connection')
+        self.assertTrue(response.get_dicts())
+
+    def test_router(self):
+        """Verify router counts match entity counts"""
+        entities = self.node.query().get_entities()
+        routers = [e for e in entities if e.type == ROUTER]
+        self.assertEqual(1, len(routers))
+        router = routers[0]
+        self.assertEqual(router.linkCount, len([e for e in entities if e.type == LINK]))
+        self.assertEqual(router.addrCount, len([e for e in entities if e.type == ADDRESS]))
+
+    def test_router_node(self):
+        """Test node entity in a pair of linked routers"""
+        # Pair of linked interior routers
+        conf1 = Qdrouterd.Config([
+            ('log', {'module':'DEFAULT', 'level':'trace', 'output':'router1.log'}),
+            ('router', { 'mode': 'interior', 'router-id': 'router1'}),
+            ('listener', {'port':self.get_port(), 'role':'normal'}),
+            ('listener', {'port':self.get_port(), 'role':'inter-router'})
+        ])
+        conf2 = Qdrouterd.Config([
+            ('log', {'module':'DEFAULT', 'level':'trace', 'output':'router2.log'}),
+            ('router', { 'mode': 'interior', 'router-id': 'router2'}),
+            ('listener', {'port':self.get_port(), 'role':'normal'}),
+            ('connector', {'port':conf1.sections('listener')[1]['port'], 'role':'inter-router'})
+        ])
+        routers = [self.qdrouterd('router1', conf1, wait=False),
+                   self.qdrouterd('router2', conf2, wait=False)]
+        for r in routers: r.wait_ready()
+        routers[0].wait_connected('router2')
+        routers[1].wait_connected('router1')
+
+        nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in routers]
+
+        class RNodes(list):
+            def __call__(self):
+                self[:] = sum([n.query(type=NODE).get_entities() for n in nodes], [])
+                return self
+        rnodes = RNodes()
+
+        assert retry(lambda: len(rnodes()) >= 2)
+        self.assertEqual(['Rrouter2', 'Rrouter1'], [r.addr for r in rnodes])
+        # FIXME aconway 2014-10-15: verify nextHop and validOrigins updated correctly
+        self.assertEqual([u'amqp:/_topo/0/router2/$management', u'amqp:/_topo/0/router1/$management'],
+                         sum([n.get_mgmt_nodes() for n in nodes], []))
+
+
 
     def test_get_types(self):
-        self.assertRaises(NotImplementedStatus, self.node2.get_types)
-
-    def test_get_attributes(self):
-        self.assertRaises(NotImplementedStatus, self.node2.get_attributes)
+        types = self.node.get_types()
+        self.assertIn('org.apache.qpid.dispatch.listener', types)
+        self.assertIn('org.apache.qpid.dispatch.waypoint', types)
+        self.assertIn('org.apache.qpid.dispatch.router.link', types)
 
     def test_get_operations(self):
-        self.assertRaises(NotImplementedStatus, self.node2.get_operations)
+        result = self.node.get_operations(type=DUMMY)
+        self.assertEqual({DUMMY: ["CREATE", "READ", "UPDATE", "DELETE", "CALLME"]}, result)
+        result = self.node.get_operations()
+        for type in LISTENER, WAYPOINT, LINK: self.assertIn(type, result)
+        self.assertEqual(["READ"], result[LINK])
+        self.assertEqual(["CREATE", "READ"], result[WAYPOINT])
 
-    def test_get_mgmt_nodes(self):
-        self.assertRaises(NotImplementedStatus, self.node2.get_mgmt_nodes)
+    def test_get_attributes(self):
+        result = self.node.get_attributes(type=DUMMY)
+        self.assertEqual({DUMMY: [u'arg1', u'arg2', u'num1', u'num2', u'name', u'identity', u'type']}, result)
+        result = self.node.get_attributes()
+        for type in LISTENER, WAYPOINT, LINK: self.assertIn(type, result)
+        for a in ['linkType', 'linkDir', 'owningAddr']: self.assertIn(a, result[LINK])
 
 if __name__ == '__main__':
     unittest.main()

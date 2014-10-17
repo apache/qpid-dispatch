@@ -19,7 +19,8 @@
 
 """Access to functions in libqpid-dispatch.so"""
 
-import ctypes, os
+import ctypes
+from contextlib import contextmanager
 from ctypes import c_char_p, c_long, py_object
 from qpid_dispatch.site import QPID_DISPATCH_LIB
 
@@ -47,7 +48,6 @@ class QdDll(ctypes.PyDLL):
         super(QdDll, self).__init__(lib)
 
         # Types
-        # TODO aconway 2014-06-27: can we use typed pointers instead of void*?
         self.qd_dispatch_p = ctypes.c_void_p
 
         # No check on qd_error_* functions, it would be recursive
@@ -63,9 +63,23 @@ class QdDll(ctypes.PyDLL):
         self._prototype(self.qd_dispatch_configure_address, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_waypoint, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_set_agent, None, [self.qd_dispatch_p, py_object])
+
         self._prototype(self.qd_router_setup_late, None, [self.qd_dispatch_p])
+
+        self._prototype(self.qd_dispatch_router_lock, None, [self.qd_dispatch_p])
+        self._prototype(self.qd_dispatch_router_unlock, None, [self.qd_dispatch_p])
+
         self._prototype(self.qd_connection_manager_start, None, [self.qd_dispatch_p])
         self._prototype(self.qd_waypoint_activate_all, None, [self.qd_dispatch_p])
+        self._prototype(self.qd_c_entity_flush, c_long, [py_object])
+
+    @contextmanager
+    def scoped_dispatch_router_lock(self, dispatch):
+        self.qd_dispatch_router_lock(dispatch)
+        try:
+            yield
+        finally:
+            self.qd_dispatch_router_unlock(dispatch)
 
     def _errcheck(self, result, func, args):
         if self.qd_error_code():
@@ -76,6 +90,10 @@ class QdDll(ctypes.PyDLL):
         f.restype = restype
         f.argtypes = argtypes
         if check: f.errcheck = self._errcheck
+        return f
+
+    def function(self, fname, restype, argtypes, check=True):
+        return self._prototype(getattr(self, fname), restype, argtypes, check)
 
 def instance():
     return QdDll.instance()

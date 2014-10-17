@@ -23,6 +23,7 @@
 #include "dispatch_private.h"
 #include "server_private.h"
 #include "entity_private.h"
+#include "c_entity.h"
 #include "schema_enum.h"
 #include <string.h>
 
@@ -337,7 +338,6 @@ static void cm_attr_dir(void *object_handle, void *cor, void *unused)
 }
 
 
-static const char *CONN_TYPE = "org.apache.qpid.dispatch.connection";
 static const qd_agent_attribute_t CONN_ATTRIBUTES[] =
     {{"name", cm_attr_name, 0},
      {"identity", cm_attr_name, 0},
@@ -348,7 +348,6 @@ static const qd_agent_attribute_t CONN_ATTRIBUTES[] =
      {"role", cm_attr_role, 0},
      {"dir", cm_attr_dir, 0},
      {0, 0, 0}};
-
 
 static void server_query_handler(void* context, void *cor)
 {
@@ -365,10 +364,9 @@ static void server_query_handler(void* context, void *cor)
     sys_mutex_unlock(qd_server->lock);
 }
 
-
 void qd_connection_manager_setup_agent(qd_dispatch_t *qd)
 {
-    qd_agent_register_class(qd, CONN_TYPE, qd, CONN_ATTRIBUTES, server_query_handler);
+    qd_agent_register_class(qd, QD_CONNECTION_TYPE, qd, CONN_ATTRIBUTES, server_query_handler);
 }
 
 

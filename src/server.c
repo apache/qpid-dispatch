@@ -21,6 +21,8 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/amqp.h>
+#include "entity_private.h"
+#include "c_entity.h"
 #include "dispatch_private.h"
 #include "server_private.h"
 #include "timer_private.h"
@@ -37,6 +39,14 @@ ALLOC_DEFINE(qd_connector_t);
 ALLOC_DEFINE(qd_connection_t);
 ALLOC_DEFINE(qd_user_fd_t);
 
+static const char *conn_state_names[] = {
+    "connecting",
+    "opening",
+    "operational",
+    "failed",
+    "user"
+};
+ENUM_DEFINE(conn_state, conn_state_names);
 
 static qd_thread_t *thread(qd_server_t *qd_server, int id)
 {
@@ -52,6 +62,44 @@ static qd_thread_t *thread(qd_server_t *qd_server, int id)
 
     return thread;
 }
+
+qd_error_t qd_entity_update_connection(qd_entity_t* entity, void *impl);
+
+static qd_error_t connection_entity_update_host(qd_entity_t* entity, qd_connection_t *conn)
+{
+    const qd_server_config_t *config;
+    if (conn->connector) {
+        config = conn->connector->config;
+        char host[strlen(config->host)+strlen(config->port)+2];
+        snprintf(host, sizeof(host), "%s:%s", config->host, config->port);
+        return qd_entity_set_string(entity, "host", host);
+    }
+    else
+        return qd_entity_set_string(entity, "host", pn_connector_name(conn->pn_cxtr));
+}
+
+qd_error_t qd_c_entity_update_connection(qd_entity_t* entity, void *impl)
+{
+    qd_connection_t *conn = (qd_connection_t*)impl;
+    const qd_server_config_t *config =
+        conn->connector ? conn->connector->config : conn->listener->config;
+
+    if ((qd_entity_has(entity, "identity") ||
+         qd_entity_set_string(entity, "identity", pn_connector_name(conn->pn_cxtr)) == 0) &&
+        qd_entity_set_string(entity, "state", conn_state_name(conn->state)) == 0 &&
+        qd_entity_set_string(
+            entity, "container",
+            conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0) == 0 &&
+        connection_entity_update_host(entity, conn) == 0 &&
+        /* FIXME aconway 2014-10-14: change attr name to sasl-mechanisms for consistency? */
+        qd_entity_set_string(entity, "sasl", config->sasl_mechanisms) == 0 &&
+        qd_entity_set_string(entity, "role", config->role) == 0 &&
+        qd_entity_set_string(entity, "dir", conn->connector ? "out" : "in") == 0)
+        return QD_ERROR_NONE;
+    return qd_error_code();
+}
+
+
 
 
 static void thread_process_listeners(qd_server_t *qd_server)
@@ -93,6 +141,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
 
         // qd_server->lock is already locked
         DEQ_INSERT_TAIL(qd_server->connections, ctx);
+        qd_c_entity_add(QD_CONNECTION_TYPE, ctx);
 
         //
         // Get a pointer to the transport so we can insert security components into it
@@ -492,6 +541,7 @@ static void *thread_run(void *arg)
             // Check to see if the connector was closed during processing
             //
             if (pn_connector_closed(cxtr)) {
+                qd_c_entity_remove(QD_CONNECTION_TYPE, ctx);
                 //
                 // Connector is closed.  Free the context and the connector.
                 //
@@ -508,6 +558,7 @@ static void *thread_run(void *arg)
 
                 sys_mutex_lock(qd_server->lock);
                 DEQ_REMOVE(qd_server->connections, ctx);
+
                 pn_connector_free(cxtr);
                 if (conn)
                     pn_connection_free(conn);
@@ -607,6 +658,8 @@ static void cxtr_try_open(void *context)
     sys_mutex_lock(ct->server->lock);
     ctx->pn_cxtr = pn_connector(ct->server->driver, ct->config->host, ct->config->port, (void*) ctx);
     DEQ_INSERT_TAIL(ct->server->connections, ctx);
+    qd_c_entity_add(QD_CONNECTION_TYPE, ctx);
+
     sys_mutex_unlock(ct->server->lock);
 
     ct->ctx   = ctx;
@@ -658,7 +711,7 @@ static void cxtr_try_open(void *context)
 }
 
 
-qd_server_t *qd_server(int thread_count, const char *container_name)
+qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *container_name)
 {
     int i;
 
@@ -667,6 +720,7 @@ qd_server_t *qd_server(int thread_count, const char *container_name)
         return 0;
 
     DEQ_INIT(qd_server->connections);
+    qd_server->qd              = qd;
     qd_server->log_source      = qd_log_source("SERVER");
     qd_server->thread_count    = thread_count;
     qd_server->container_name  = container_name;

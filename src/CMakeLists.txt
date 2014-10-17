@@ -26,7 +26,7 @@ set(GENERATED_SOURCES
 file (GLOB_RECURSE GENERATOR_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/schema_c.py
   ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/*.py
-  ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/qdrouterd.json)
+  ${CMAKE_SOURCE_DIR}/python/qpid_router/management/qdrouterd.json)
 
 add_custom_command (
   OUTPUT ${GENERATED_SOURCES}
@@ -48,6 +48,7 @@ set(qpid_dispatch_SOURCES
   container.c
   dispatch.c
   entity.c
+  c_entity.c
   hash.c
   iovec.c
   iterator.c

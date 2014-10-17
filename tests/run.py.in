@@ -99,7 +99,7 @@ def is_binary_exe(program):
     p = Popen(['file', '-bi', program], stdout=PIPE, stderr=PIPE)
     return p.communicate()[0].startswith('application/x-executable')
 
-def with_valgrind(args):
+def with_valgrind(args, outfile=None):
     if use_valgrind() and is_binary_exe(find_exe(args[0])):
         opts = ['--leak-check=full',
                 '--demangle=yes',
@@ -107,6 +107,7 @@ def with_valgrind(args):
                 '--num-callers=12',
                 '--error-exitcode=42',
                 '--quiet']
+        if outfile: opts.append('--log-file=%s' % outfile)
         return [valgrind_exe]+opts+args
     return args
 

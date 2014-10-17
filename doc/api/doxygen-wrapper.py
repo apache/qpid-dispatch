@@ -18,7 +18,7 @@
 # under the License.
 #
 
-import sys, subprocess;
+import sys, subprocess
 
 doxygen, config = sys.argv[1:3]
 outfile = config+".output"

@@ -19,8 +19,8 @@
 
 import unittest, os
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable
-from system_test import TestCase, Qdrouterd, retry_exception
-from qpid_dispatch.management import Node
+from system_test import TestCase, Qdrouterd
+
 
 class RouterTest(TestCase):
     @classmethod
@@ -50,12 +50,8 @@ class RouterTest(TestCase):
         router('B', 'client',
                ('connector', {'role': 'inter-router', 'port': cls.routers[0].ports[1]}))
 
-        def query_through(address, router):
-            n = Node(address, router, timeout=0.2)
-            retry_exception(lambda: n.query('org.apache.qpid.dispatch.router'))
-        # Wait till we can query through each router to the other.
-        query_through(cls.routers[0].addresses[0], 'QDR.B')
-        query_through(cls.routers[1].addresses[0], 'QDR.A')
+        cls.routers[0].wait_connected('QDR.B')
+        cls.routers[1].wait_connected('QDR.A')
 
 
     def test_00_discard(self):
@@ -474,8 +470,8 @@ class RouterTest(TestCase):
         M.recv()
         M.get(response)
 
-        self.assertEqual(response.properties['statusCode'], 200)
-        self.assertTrue('amqp:/_topo/0/QDR.B/$management' in response.body)
+        assert response.properties['statusCode'] == 200, response.properties['statusDescription']
+        self.assertIn('amqp:/_topo/0/QDR.B/$management', response.body)
 
         request.address    = "amqp:/_topo/0/QDR.B/$management"
         request.reply_to   = reply

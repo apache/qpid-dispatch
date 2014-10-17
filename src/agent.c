@@ -85,7 +85,7 @@ typedef enum {
 // Convenience for logging, expects agent to be defined.
 #define LOG(LEVEL, MSG, ...) qd_log(agent->log_source, QD_LOG_##LEVEL, MSG, ##__VA_ARGS__)
 
-static const char *AGENT_ADDRESS       = "$management";
+static const char *AGENT_ADDRESS       = "$cmanagement";
 static const char *STATUS_CODE         = "statusCode";
 static const char *STATUS_DESCRIPTION  = "statusDescription";
 static const char *AP_ENTITY_TYPE      = "entityType";
@@ -763,7 +763,7 @@ static qd_agent_class_t *qd_agent_register_class_LH(qd_agent_t                 *
 qd_agent_t *qd_agent(qd_dispatch_t *qd)
 {
     qd_agent_t *agent = NEW(qd_agent_t);
-    agent->log_source = qd_log_source("AGENT");
+    agent->log_source = qd_log_source("CAGENT");
     agent->qd         = qd;
     agent->class_hash = qd_hash(6, 10, 1);
     DEQ_INIT(agent->class_list);

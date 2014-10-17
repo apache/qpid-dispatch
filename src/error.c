@@ -19,13 +19,14 @@
 
 #include <Python.h>
 #include <qpid/dispatch/error.h>
+#include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/log.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include "static_assert.h"
 #include "log_private.h"
+#include "aprintf.h"
 
-static const char *error_names[] = {
+static const char *qd_error_names[] = {
  "No Error",
  "Not found",
  "Already exists",
@@ -37,9 +38,7 @@ static const char *error_names[] = {
  "Value",
  "Run Time"
 };
-
-STATIC_ASSERT(sizeof(error_names)/sizeof(error_names[0]) == QD_ERROR_ENUM_COUNT,
-	      error_names_wrong_size);
+ENUM_DEFINE(qd_error, qd_error_names);
 
 #define ERROR_MAX QD_LOG_TEXT_MAX
 const int QD_ERROR_MAX = ERROR_MAX;
@@ -56,19 +55,22 @@ void qd_error_initialize() {
     log_source = qd_log_source("ERROR");
 }
 
-qd_error_t qd_error(qd_error_t code, const char *fmt, ...) {
+qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char *fmt, ...) {
     ts.error_code = code;
     if (code) {
-	int i = 0;
-	if (code < QD_ERROR_ENUM_COUNT)
-	    i = snprintf(ts.error_message, ERROR_MAX,"%s: ", error_names[code]);
+        char *begin = ts.error_message;
+        char *end = begin + ERROR_MAX;
+	const char* name = qd_error_name(code);
+        if (name)
+            aprintf(&begin, end, "%s: ", name);
 	else
-	    i = snprintf(ts.error_message, ERROR_MAX, "%d: ", code);
+	    aprintf(&begin, end, "%d: ", code);
 	va_list arglist;
 	va_start(arglist, fmt);
-	vsnprintf(ts.error_message+i, ERROR_MAX-i, fmt, arglist);
+	vaprintf(&begin, end, fmt, arglist);
 	va_end(arglist);
-	qd_log(log_source, QD_LOG_ERROR, "%s", qd_error_message());
+        // NOTE: Use the file/line from the qd_error macro, not this line in error.c
+	qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", qd_error_message());
 	return code;
     }
     else
@@ -95,7 +97,9 @@ static void py_set_item(PyObject *dict, const char* name, PyObject *value) {
     Py_DECREF(py_name);
 }
 
-static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_log_level_t level) {
+static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_log_level_t level,
+                         const char *file, int line)
+{
     if (!qd_log_enabled(log_source, level)) return;
     if (!(type && value && trace)) return;
 
@@ -116,10 +120,11 @@ static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_lo
     Py_DECREF(globals);
     Py_DECREF(locals);
 
+
     if (result) {
 	const char* trace = PyString_AsString(result);
 	if (strlen(trace) < QD_LOG_TEXT_MAX) {
-	    qd_log(log_source, level, "%s", trace);
+	    qd_log_impl(log_source, level, file, line, "%s", trace);
 	} else {
 	    // Keep as much of the the tail of the trace as we can.
 	    const char *tail = trace;
@@ -127,14 +132,14 @@ static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_lo
 		tail = strchr(tail, '\n');
 		if (tail) ++tail;
 	    }
-	    qd_log(log_source, level, "Traceback truncated:\n%s", tail ? tail : "");
+	    qd_log_impl(log_source, level, file, line, "Traceback truncated:\n%s", tail ? tail : "");
 	}
 	Py_DECREF(result);
     }
 
 }
 
-qd_error_t qd_error_py() {
+qd_error_t qd_error_py_impl(const char *file, int line) {
     if (PyErr_Occurred()) {
 	PyObject *type, *value, *trace;
 	PyErr_Fetch(&type, &value, &trace); /* Note clears the python error indicator */
@@ -144,13 +149,13 @@ qd_error_t qd_error_py() {
 	PyObject *value_str = value ? PyObject_Str(value) : NULL;
 	const char* str = value_str ? PyString_AsString(value_str) : "Unknown";
 	if (type_name)
-	    qd_error(QD_ERROR_PYTHON, "%s: %s", PyString_AsString(type_name), str);
+	    qd_error_impl(QD_ERROR_PYTHON, file, line, "%s: %s", PyString_AsString(type_name), str);
 	else
-	    qd_error(QD_ERROR_PYTHON, "%s", str);
+	    qd_error_impl(QD_ERROR_PYTHON, file, line, "%s", str);
 	Py_XDECREF(value_str);
 	Py_XDECREF(type_name);
 
-	log_trace_py(type, value, trace, QD_LOG_ERROR);
+	log_trace_py(type, value, trace, QD_LOG_ERROR, file, line);
 
 	Py_XDECREF(type);
 	Py_XDECREF(value);

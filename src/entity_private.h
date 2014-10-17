@@ -22,6 +22,14 @@
 #include <stdbool.h>
 #include <qpid/dispatch/dispatch.h>
 
+/**
+ * @defgroup entity
+xo *
+ * Holds attributes of a managed entity.
+ * @{
+ */
+
+
 void qd_entity_free(qd_entity_t* entity);
 
 /** True if the entity has this attribute. */
@@ -59,5 +67,36 @@ long qd_entity_opt_long(qd_entity_t *entity, const char *attribute, long default
  */
 bool qd_entity_opt_bool(qd_entity_t *entity, const char *attribute, bool default_value);
 
+
+/** Set a string valued attribute, entity makes a copy.
+ * If value is NULL clear the attribute.
+ */
+qd_error_t qd_entity_set_string(qd_entity_t *entity, const char* attribute, const char *value);
+
+/** Set a string valued attribute from a printf format */
+qd_error_t qd_entity_set_stringf(qd_entity_t *entity, const char* attribute, const char *format, ...);
+
+/** Set an integer valued attribute. */
+qd_error_t qd_entity_set_long(qd_entity_t *entity, const char* attribute, long value);
+
+/** Set a boolean valued attribute. */
+qd_error_t qd_entity_set_bool(qd_entity_t *entity, const char *attribute, bool value);
+
+/** Set an integer valued attribute. If value is NULL clear the attribute. */
+qd_error_t qd_entity_set_longp(qd_entity_t *entity, const char* attribute, const long *value);
+
+/** Set a boolean valued attribute. If value is NULL clear the attribute. */
+qd_error_t qd_entity_set_boolp(qd_entity_t *entity, const char *attribute, const bool *value);
+
+/** Clear the attribute  */
+qd_error_t qd_entity_clear(qd_entity_t *entity, const char *attribute);
+
+/**
+ * Set the attribute to an empty list. Futher qd_entity_set* calls for the attribute
+ * will append values to the list.
+ */
+qd_error_t qd_entity_set_list(qd_entity_t *entity, const char *attribute);
+
+/// @}
 
 #endif

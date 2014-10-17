@@ -26,18 +26,74 @@
 #include <qpid/dispatch/agent.h>
 #include "dispatch_private.h"
 #include "router_private.h"
+#include "c_entity.h"
 
+static const char *qd_router_mode_names[] = {
+    "standalone",
+    "interior",
+    "edge",
+    "endpoint"
+};
+ENUM_DEFINE(qd_router_mode, qd_router_mode_names);
 
-static const char *qd_router_addr_text(qd_address_t *addr)
-{
-    if (addr) {
-        const unsigned char *text = qd_hash_key_by_handle(addr->hash_handle);
-        if (text)
-            return (const char*) text;
-    }
-    return 0;
+qd_error_t qd_c_entity_update_router(qd_entity_t* entity, void *impl) {
+    qd_dispatch_t *qd = (qd_dispatch_t*) impl;
+    qd_router_t *router = qd->router;
+    if (qd_entity_set_string(entity, "name", router->router_id) == 0 &&
+        qd_entity_set_string(entity, "identity", router->router_id) == 0 &&
+        qd_entity_set_string(entity, "area", router->router_area) == 0 &&
+        qd_entity_set_string(entity, "mode", qd_router_mode_name(router->router_mode)) == 0 &&
+        qd_entity_set_long(entity, "addrCount", DEQ_SIZE(router->addrs)) == 0 &&
+        qd_entity_set_long(entity, "linkCount", DEQ_SIZE(router->links)) == 0 &&
+        qd_entity_set_long(entity, "nodeCount", DEQ_SIZE(router->routers)) == 0
+    )
+        return QD_ERROR_NONE;
+    return qd_error_code();
 }
 
+static const char *address_text(qd_address_t *addr)
+{
+    return addr ? (const char*) qd_hash_key_by_handle(addr->hash_handle) : 0;
+}
+
+qd_error_t qd_c_entity_update_router_address(qd_entity_t* entity, void *impl) {
+    qd_address_t *addr = (qd_address_t*) impl;
+    if ((qd_entity_has(entity, "identity") ||
+         qd_entity_set_string(entity, "identity", address_text(addr)) == 0) &&
+        qd_entity_set_bool(entity, "inProcess", addr->handler != 0) == 0 &&
+        qd_entity_set_long(entity, "subscriberCount", DEQ_SIZE(addr->rlinks)) == 0 &&
+        qd_entity_set_long(entity, "remoteCount", DEQ_SIZE(addr->rnodes)) == 0 &&
+        qd_entity_set_long(entity, "deliveriesIngress", addr->deliveries_ingress) == 0 &&
+        qd_entity_set_long(entity, "deliveriesEgress", addr->deliveries_egress) == 0 &&
+        qd_entity_set_long(entity, "deliveriesTransit", addr->deliveries_transit) == 0 &&
+        qd_entity_set_long(entity, "deliveriesToContainer", addr->deliveries_to_container) == 0 &&
+        qd_entity_set_long(entity, "deliveriesFromContainer", addr->deliveries_from_container) == 0
+    )
+        return QD_ERROR_NONE;
+    return qd_error_code();
+}
+
+#define CHECK(err) if (err != 0) return qd_error_code()
+
+qd_error_t qd_c_entity_update_router_node(qd_entity_t* entity, void *impl) {
+    qd_router_node_t *rnode = (qd_router_node_t*) impl;
+
+    if (!qd_entity_has(entity, "identity")) {
+        CHECK(qd_entity_set_stringf(entity, "identity", "%s-%d", QD_ROUTER_NODE_TYPE, rnode->mask_bit));
+    }
+    CHECK(qd_entity_set_string(entity, "addr", address_text(rnode->owning_addr)));
+    long next_hop = rnode->next_hop ? rnode->next_hop->mask_bit : 0;
+    CHECK(qd_entity_set_longp(entity, "nextHop", rnode->next_hop ? &next_hop : 0));
+    long router_link = rnode->peer_link ? rnode->peer_link->mask_bit : 0;
+    CHECK(qd_entity_set_longp(entity, "routerLink", rnode->peer_link ? &router_link : 0));
+    CHECK(qd_entity_set_list(entity, "validOrigins"));
+    for (uint32_t bit = 1; bit < qd_bitmask_width(); bit++) {
+        if (qd_bitmask_value(rnode->valid_origins, bit)) {
+            CHECK(qd_entity_set_long(entity, "validOrigins", bit));
+        }
+    }
+    return QD_ERROR_NONE;
+}
 
 static void router_attr_name(void *object_handle, void *cor, void *unused)
 {
@@ -86,7 +142,6 @@ static void router_attr_nodeCount(void *object_handle, void *cor, void *unused)
 }
 
 
-static const char *ROUTER_TYPE = "org.apache.qpid.dispatch.router";
 static const qd_agent_attribute_t ROUTER_ATTRIBUTES[] =
     {{"name", router_attr_name, 0},
      {"identity", router_attr_name, 0},
@@ -106,7 +161,6 @@ static void qd_router_query_router(void *context, void *cor)
     qd_agent_object(cor, (void*) router);
     sys_mutex_unlock(router->lock);
 }
-
 
 static void link_attr_name(void *object_handle, void *cor, void *unused)
 {
@@ -140,7 +194,7 @@ static void link_attr_linkDir(void *object_handle, void *cor, void *unused)
 static void link_attr_owningAddr(void *object_handle, void *cor, void *unused)
 {
     qd_router_link_t *link = (qd_router_link_t*) object_handle;
-    const char *text = qd_router_addr_text(link->owning_addr);
+    const char *text = address_text(link->owning_addr);
     if (text)
         qd_agent_value_string(cor, 0, text);
     else
@@ -162,7 +216,6 @@ static void link_attr_msgFifoDepth(void *object_handle, void *cor, void *unused)
 }
 
 
-static const char *LINK_TYPE = "org.apache.qpid.dispatch.router.link";
 static const qd_agent_attribute_t LINK_ATTRIBUTES[] =
     {{"name", link_attr_name, 0},
      {"identity", link_attr_name, 0},
@@ -172,6 +225,7 @@ static const qd_agent_attribute_t LINK_ATTRIBUTES[] =
      {"eventFifoDepth", link_attr_eventFifoDepth, 0},
      {"msgFifoDepth", link_attr_msgFifoDepth, 0},
      {0, 0, 0}};
+
 
 static void qd_router_query_link(void *context, void *cor)
 {
@@ -188,6 +242,30 @@ static void qd_router_query_link(void *context, void *cor)
     sys_mutex_unlock(router->lock);
 }
 
+static const char *qd_link_type_names[] = { "endpoint", "waypoint", "inter-router", "inter-area" };
+ENUM_DEFINE(qd_link_type, qd_link_type_names);
+
+static const char *qd_router_addr_text(qd_address_t *addr)
+{
+    return addr ? (const char*)qd_hash_key_by_handle(addr->hash_handle) : NULL;
+}
+
+qd_error_t qd_c_entity_update_router_link(qd_entity_t* entity, void *impl)
+{
+    qd_router_link_t *link = (qd_router_link_t*) impl;
+    /* FIXME aconway 2014-10-17: old management used link->bit_mask as name/identity,
+     * but even when prefixed with router.link this is not unique. Let python agent
+     * generate a name for now, revisit with a better name later.
+     */
+    if (!qd_entity_set_string(entity, "linkType", qd_link_type_name(link->link_type)) &&
+        !qd_entity_set_string(entity, "linkDir", (link->link_direction == QD_INCOMING) ? "in": "out") &&
+        !qd_entity_set_string(entity, "owningAddr", qd_router_addr_text(link->owning_addr)) &&
+        !qd_entity_set_long(entity, "eventFifoDepth", DEQ_SIZE(link->event_fifo)) &&
+        !qd_entity_set_long(entity, "msgFifoDepth", DEQ_SIZE(link->msg_fifo))
+    )
+        return QD_ERROR_NONE;
+    return qd_error_code();
+}
 
 static void node_attr_name(void *object_handle, void *cor, void *unused)
 {
@@ -199,7 +277,7 @@ static void node_attr_name(void *object_handle, void *cor, void *unused)
 static void node_attr_addr(void *object_handle, void *cor, void *unused)
 {
     qd_router_node_t *node = (qd_router_node_t*) object_handle;
-    qd_agent_value_string(cor, 0, qd_router_addr_text(node->owning_addr));
+    qd_agent_value_string(cor, 0, address_text(node->owning_addr));
 }
 
 
@@ -234,7 +312,6 @@ static void node_attr_validOrigins(void *object_handle, void *cor, void *unused)
 }
 
 
-static const char *NODE_TYPE = "org.apache.qpid.dispatch.router.node";
 static const qd_agent_attribute_t NODE_ATTRIBUTES[] =
     {{"name", node_attr_name, 0},
      {"identity", node_attr_name, 0},
@@ -262,7 +339,7 @@ static void qd_router_query_node(void *context, void *cor)
 static void addr_attr_name(void *object_handle, void *cor, void *unused)
 {
     qd_address_t *addr = (qd_address_t*) object_handle;
-    qd_agent_value_string(cor, 0, qd_router_addr_text(addr));
+    qd_agent_value_string(cor, 0, address_text(addr));
 }
 
 
@@ -322,7 +399,6 @@ static void addr_attr_deliveriesFromContainer(void *object_handle, void *cor, vo
 }
 
 
-static const char *ADDRESS_TYPE = "org.apache.qpid.dispatch.router.address";
 static const qd_agent_attribute_t ADDRESS_ATTRIBUTES[] =
     {{"name", addr_attr_name, 0},
      {"identity", addr_attr_name, 0},
@@ -355,13 +431,13 @@ qd_error_t qd_router_agent_setup(qd_router_t *router)
 {
     qd_error_clear();
     router->class_router =
-        qd_agent_register_class(router->qd, ROUTER_TYPE, router, ROUTER_ATTRIBUTES, qd_router_query_router);
+        qd_agent_register_class(router->qd, QD_ROUTER_TYPE, router, ROUTER_ATTRIBUTES, qd_router_query_router);
     router->class_link =
-        qd_agent_register_class(router->qd, LINK_TYPE, router, LINK_ATTRIBUTES, qd_router_query_link);
+        qd_agent_register_class(router->qd, QD_ROUTER_LINK_TYPE, router, LINK_ATTRIBUTES, qd_router_query_link);
     router->class_node =
-        qd_agent_register_class(router->qd, NODE_TYPE, router, NODE_ATTRIBUTES, qd_router_query_node);
+        qd_agent_register_class(router->qd, QD_ROUTER_NODE_TYPE, router, NODE_ATTRIBUTES, qd_router_query_node);
     router->class_address =
-        qd_agent_register_class(router->qd, ADDRESS_TYPE, router, ADDRESS_ATTRIBUTES, qd_router_query_address);
+        qd_agent_register_class(router->qd, QD_ROUTER_ADDRESS_TYPE, router, ADDRESS_ATTRIBUTES, qd_router_query_address);
     return qd_error_code();
 }
 
@@ -369,7 +445,7 @@ qd_error_t qd_router_agent_setup(qd_router_t *router)
 void qd_router_build_node_list(qd_dispatch_t *qd, qd_composed_field_t *field)
 {
     qd_router_t *router = qd->router;
-    char         temp[1000];  // FIXME
+    char         temp[1000];
 
     sys_mutex_lock(router->lock);
     qd_router_node_t *rnode = DEQ_HEAD(router->routers);

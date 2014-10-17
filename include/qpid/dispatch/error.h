@@ -19,6 +19,8 @@
  * under the License.
  */
 
+#include <qpid/dispatch/enum.h>
+
 /** @file
  * Thread-safe error handling mechansim for dispatch.
  *
@@ -44,9 +46,9 @@ typedef enum {
     QD_ERROR_CONFIG,            ///< Error in configuration
     QD_ERROR_TYPE,              ///< Value of inappropriate type.
     QD_ERROR_VALUE,             ///< Invalid value.
-    QD_ERROR_RUNTIME,           ///< Run-time failure.
-    QD_ERROR_ENUM_COUNT         ///< Not an error, marks the end of the enum.
+    QD_ERROR_RUNTIME            ///< Run-time failure.
 } qd_error_t;
+ENUM_DECLARE(qd_error);
 
 /**
  * Store thread-local error code and message.
@@ -54,7 +56,9 @@ typedef enum {
  *@param fmt printf-stlye format.
  *@return code
  */
-qd_error_t qd_error(qd_error_t code, const char *fmt, ...);
+#define qd_error(code, fmt, ...) qd_error_impl(code, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+
+qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char *fmt, ...);
 
 /**
  * Clear thread-local error code and message.
@@ -85,7 +89,9 @@ extern const int QD_ERROR_MAX;
  *
  * @return QD_ERROR_PYTHON or QD_ERROR_NONE.
  */
-qd_error_t qd_error_py();
+#define qd_error_py() qd_error_py_impl(__FILE__, __LINE__)
+
+qd_error_t qd_error_py_impl(const char *file, int line);
 
 #define QD_ERROR_RET() do { if (qd_error_code()) return qd_error_code(); } while(0)
 #define QD_ERROR_PY_RET() do { if (qd_error_py()) return qd_error_code(); } while(0)

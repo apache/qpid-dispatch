@@ -25,6 +25,7 @@
 #include <qpid/dispatch/log.h>
 #include "message_private.h"
 #include "compose_private.h"
+#include "aprintf.h"
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -67,34 +68,29 @@ void qd_message_initialize() {
 int qd_message_repr_len() { return qd_log_max_len(); }
 
 // Quote non-printable characters suitable for log messages. Output in buffer.
-static int quote(char* bytes, int n, char* buffer, int len) {
-    int i = 0;
-    for (char* p = bytes; p < bytes+n && i < len; ++p) {
-	if (isprint(*p) || isspace(*p)) {
-	    buffer[i++] = *p;
-	}
-	else {
-	    int d = snprintf(buffer+i, len-i, "\\%02hhx", *p);
-	    i += d;
-	}
+static void quote(char* bytes, int n, char **begin, char *end) {
+    for (char* p = bytes; p < bytes+n; ++p) {
+	if (isprint(*p) || isspace(*p))
+            aprintf(begin, end, "%c", (int)*p);
+	else
+            aprintf(begin, end, "\\%02hhx", *p);
     }
-    return i;
 }
 
 /** Copy a message field for use in log messages. Output in buffer. */
-static int copy_field(qd_message_t *msg,  int field, int max, char *pre, char *post, char *buffer, size_t len) {
+static void copy_field(qd_message_t *msg,  int field, int max, char *pre, char *post,
+                       char **begin, char *end)
+{
     qd_field_iterator_t* iter =	qd_message_field_iterator(msg, field);
-    int i = 0;
     if (iter) {
-	i += snprintf(buffer+i, len-i, "%s", pre);
+	aprintf(begin, end, "%s", pre);
 	qd_field_iterator_reset(iter);
-	for (int j = 0; !qd_field_iterator_end(iter) && i < len && j < max; ++j) {
+	for (int j = 0; !qd_field_iterator_end(iter) && j < max; ++j) {
 	    char byte = qd_field_iterator_octet(iter);
-	    i += quote(&byte, 1, buffer+i, len-i);
+	    quote(&byte, 1, begin, end);
 	}
-	i += snprintf(buffer+i, len-i, "%s", post);
+	aprintf(begin, end, "%s", post);
     }
-    return i;
 }
 
 static const char REPR_END[] = "}\0";
@@ -102,14 +98,13 @@ static const char REPR_END[] = "}\0";
 /* TODO aconway 2014-05-13: more detailed message representation. */
 char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len) {
     qd_message_check(msg, QD_DEPTH_BODY);
-    int i = 0;
-    len -= sizeof(REPR_END);	/* Save space for ending */
-    i += snprintf(buffer+i, len-i, "Message(%p){", msg);
-    i += copy_field(msg, QD_FIELD_TO, INT_MAX, "to='", "'", buffer+i, len-i);
-    i += copy_field(msg, QD_FIELD_REPLY_TO, INT_MAX, " reply-to='", "'", buffer+i, len-i);
-    i += copy_field(msg, QD_FIELD_BODY, 16, " body='", "'", buffer+i, len-i);
-    assert(i <= len);
-    strcat(buffer, REPR_END);	/* We saved space at the beginning. */
+    char *begin = buffer;
+    char *end = buffer + len - sizeof(REPR_END); /* Save space for ending */
+    aprintf(&begin, end, "Message(%p){", msg);
+    copy_field(msg, QD_FIELD_TO, INT_MAX, "to='", "'", &begin, end);
+    copy_field(msg, QD_FIELD_REPLY_TO, INT_MAX, " reply-to='", "'", &begin, end);
+    copy_field(msg, QD_FIELD_BODY, 16, " body='", "'", &begin, end);
+    aprintf(&begin, end, "%s", REPR_END);	/* We saved space at the beginning. */
     return buffer;
 }
 

@@ -18,7 +18,8 @@
 ##
 
 """
-Generate the qdrouterd.conf man page from the qdrouterd management schema."""
+Generate the qdrouterd.conf man page from the qdrouterd management schema.
+"""
 
 import sys
 from qpid_dispatch_internal.management.qdrouter import QdSchema
@@ -134,10 +135,11 @@ listener {
             f.write('.IP "Included by %s."\n'%(', '.join(used_by)))
 
         f.write(".SH ENTITY SECTIONS\n\n")
-        for name, entity_type in schema.entity_types.iteritems():
-            f.write('.SS "%s"\n'% name)
-            write_attributes(entity_type)
-            f.write('.IP "Includes %s."\n'%(', '.join(entity_type.include)))
+        for entity_type in schema.entity_types.itervalues():
+            if "CREATE" in entity_type.operations and not entity_type.short_name == 'dummy':
+                f.write('.SS "%s"\n'% entity_type.short_name)
+                write_attributes(entity_type)
+                f.write('.IP "Includes %s."\n'%(', '.join(entity_type.include)))
 
 
 if __name__ == '__main__':

@@ -83,10 +83,8 @@ class RouterEngine:
     @property
     def config(self):
         if not self._config:
-            router_type = 'org.apache.qpid.dispatch.router'
-            routers = self.router_adapter.get_agent().find_entity_by_type(router_type)
-            if not routers: raise ValueError("No router configuration found") 
-            self._config = routers[0]
+            try: self._config = self.router_adapter.get_agent().find_entity_by_type('router')[0]
+            except IndexError: raise ValueError("No router configuration found")
         return self._config
 
     def addressAdded(self, addr):

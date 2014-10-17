@@ -19,6 +19,7 @@
  * under the License.
  */
 
+#include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/user_fd.h>
 #include <qpid/dispatch/alloc.h>
@@ -43,6 +44,7 @@ typedef enum {
     CONN_STATE_FAILED,
     CONN_STATE_USER
 } conn_state_t;
+ENUM_DECLARE(conn_state);
 
 #define CONTEXT_NO_OWNER -1
 
@@ -127,6 +129,7 @@ DEQ_DECLARE(qd_work_item_t, qd_work_list_t);
 
 
 struct qd_server_t {
+    qd_dispatch_t           *qd;
     int                      thread_count;
     const char              *container_name;
     pn_driver_t             *driver;

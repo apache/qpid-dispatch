@@ -19,6 +19,7 @@
 
 #include "log_private.h"
 #include "entity_private.h"
+#include "aprintf.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/alloc.h>
@@ -133,7 +134,8 @@ struct qd_log_source_t {
     DEQ_LINKS(qd_log_source_t);
     const char *module;
     int mask;
-    int timestamp;
+    int timestamp;              /* boolean or -1 means not set */
+    int source;                 /* boolean or -1 means not set */
     bool syslog;
     log_sink_t *sink;
 };
@@ -196,17 +198,30 @@ static qd_log_source_t* lookup_log_source_lh(const char *module)
     return src;
 }
 
-static void write_log(int level, qd_log_source_t *log_source, const char *fmt, ...)
+static bool default_bool(int value, int default_value) {
+    return value == -1 ? default_value : value;
+}
+
+static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
 {
     log_sink_t* sink = log_source->sink ? log_source->sink : default_log_source->sink;
-
     if (!sink) return;
 
     char log_str[LOG_MAX];
-    va_list arglist;
-    va_start(arglist, fmt);
-    vsnprintf(log_str, LOG_MAX, fmt, arglist);
-    va_end(arglist);
+    char *begin = log_str;
+    char *end = log_str + LOG_MAX;
+
+    if (default_bool(log_source->timestamp, default_log_source->timestamp)) {
+        char buf[100];
+        buf[0] = '\0';
+        ctime_r(&entry->time, buf);
+        buf[strlen(buf)-1] = '\0'; /* Get rid of trailng \n */
+	aprintf(&begin, end, "%s ", buf);
+    }
+    aprintf(&begin, end, "%s (%s) %s", entry->module, level_for_bit(entry->level)->name, entry->text);
+    if (default_bool(log_source->source, default_log_source->source))
+	aprintf(&begin, end, " (%s:%d)", entry->file, entry->line);
+    aprintf(&begin, end, "\n");
 
     if (sink->file) {
 	if (fputs(log_str, sink->file) == EOF) {
@@ -218,7 +233,7 @@ static void write_log(int level, qd_log_source_t *log_source, const char *fmt, .
 	fflush(sink->file);
     }
     if (sink->syslog) {
-	int syslog_level = level_for_bit(level)->syslog;
+	int syslog_level = level_for_bit(entry->level)->syslog;
 	if (syslog_level != -1)
 	    syslog(syslog_level, "%s", log_str);
     }
@@ -236,6 +251,7 @@ static qd_log_source_t *qd_log_source_lh(const char *module)
 	log_source->module = module;
 	log_source->mask = -1;
 	log_source->timestamp = -1;
+	log_source->source = -1;
 	log_source->sink = 0;
         DEQ_INSERT_TAIL(source_list, log_source);
     }
@@ -273,22 +289,12 @@ void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line,
     entry->file   = file ? strdup(file) : 0;
     entry->line   = line;
     time(&entry->time);
-
-    char ctime[100];
-    ctime[0] = '\0';
-    bool timestamp = (source->timestamp == -1) ?
-		      default_log_source->timestamp : source->timestamp;
-    assert(timestamp != -1);
-    if (timestamp) {
-	ctime_r(&entry->time, ctime);
-	ctime[24] = '\0';
-	strcat(ctime, " ");
-    }
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(entry->text, TEXT_MAX, fmt, ap);
     va_end(ap);
-    write_log(level, source, "%s%s (%s) %s\n", ctime, entry->module, level_for_bit(level)->name, entry->text);
+
+    write_log(source, entry);
 
     sys_mutex_lock(log_lock);
     DEQ_INSERT_TAIL(entries, entry);
@@ -314,6 +320,7 @@ void qd_log_initialize(void)
     // Only report errors until we have configured the logging system.
     default_log_source->mask = levels[INFO].mask;
     default_log_source->timestamp = 1;
+    default_log_source->source = 0;
     default_log_source->sink = log_sink_lh(SINK_STDERR);
     logging_log_source = qd_log_source(SOURCE_LOGGING);
 }

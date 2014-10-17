@@ -440,9 +440,9 @@ qd_container_t *qd_container(qd_dispatch_t *qd)
     DEQ_INIT(container->nodes);
     DEQ_INIT(container->node_type_list);
 
-    qd_log(container->log_source, QD_LOG_TRACE, "Container Initializing");
     qd_server_set_conn_handler(qd, handler, container);
 
+    qd_log(container->log_source, QD_LOG_TRACE, "Container Initialized");
     return container;
 }
 

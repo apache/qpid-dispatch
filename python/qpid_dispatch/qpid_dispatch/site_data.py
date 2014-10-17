@@ -25,7 +25,5 @@ environment variables. This file will not be available for uninstalled builds,
 site.py will use env variables instead.
 """
 
-from os.path import join
-
 QPID_DISPATCH_HOME = ""
 QPID_DISPATCH_LIB = ""

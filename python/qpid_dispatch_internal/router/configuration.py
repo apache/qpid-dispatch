@@ -25,7 +25,7 @@ class Configuration(object):
         ##
         ## Load default values
         ##
-        self.values = 
+        self.values = {}
 
         ##
         ## Apply supplied overrides

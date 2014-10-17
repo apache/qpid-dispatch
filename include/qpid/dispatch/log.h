@@ -47,8 +47,7 @@ void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line,
  * @param c qd_log_level_t log level of message
  * @param f printf style format string ...
  */
-#define qd_log(s, c, f, ...) \
-    do { if (qd_log_enabled(s,c)) qd_log_impl(s, c, __FILE__, __LINE__, f , ##__VA_ARGS__); } while(0)
+#define qd_log(s, c, f, ...) qd_log_impl(s, c, __FILE__, __LINE__, f , ##__VA_ARGS__)
 
 /** Maximum length for a log message */
 int qd_log_max_len();

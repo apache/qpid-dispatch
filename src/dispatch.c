@@ -22,6 +22,8 @@
 #include <qpid/dispatch.h>
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/ctools.h>
+#include <qpid/dispatch/static_assert.h>
+
 #include "dispatch_private.h"
 #include "alloc_private.h"
 #include "log_private.h"
@@ -29,12 +31,12 @@
 #include "waypoint_private.h"
 #include "message_private.h"
 #include "entity_private.h"
-#include "static_assert.h"
+#include "c_entity.h"
 
 /**
  * Private Function Prototypes
  */
-qd_server_t    *qd_server(int tc, const char *container_name);
+qd_server_t    *qd_server(qd_dispatch_t *qd, int tc, const char *container_name);
 void            qd_connection_manager_setup_agent(qd_dispatch_t *qd);
 void            qd_server_free(qd_server_t *server);
 qd_container_t *qd_container(qd_dispatch_t *qd);
@@ -49,11 +51,10 @@ void            qd_error_initialize();
 
 qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
 {
-    qd_error_clear();
     qd_dispatch_t *qd = NEW(qd_dispatch_t);
     memset(qd, 0, sizeof(qd_dispatch_t));
 
-    // alloc, log and error have to be initialized before any module.
+    qd_c_entity_initialize();   /* Must be first */
     qd_alloc_initialize();
     qd_log_initialize();
     qd_error_initialize();
@@ -67,6 +68,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     if (qd_error_code()) { qd_dispatch_free(qd); return 0; }
     qd_message_initialize();
     if (qd_error_code()) { qd_dispatch_free(qd); return 0; }
+    qd->log_source = qd_log_source("DISPATCH");
     return qd;
 }
 
@@ -76,15 +78,15 @@ STATIC_ASSERT(sizeof(long) >= sizeof(void*), pointer_is_bigger_than_long);
 
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 {
-    PyObject *module=0, *configure_dispatch=0, *result=0;
-    bool ok =
-        (module = PyImport_ImportModule("qpid_dispatch_internal.management.config")) &&
-	(configure_dispatch = PyObject_GetAttrString(module, "configure_dispatch")) &&
-	(result = PyObject_CallFunction(configure_dispatch, "(ls)", (long)qd, config_path));
-    Py_XDECREF(module);
-    Py_XDECREF(configure_dispatch);
-    Py_XDECREF(result);
-    return ok ? QD_ERROR_NONE : qd_error_py();
+    PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.management.config");
+    if (!module) return qd_error_py();
+    PyObject *configure_dispatch = PyObject_GetAttrString(module, "configure_dispatch");
+    Py_DECREF(module);
+    if (!configure_dispatch) return qd_error_py();
+    PyObject *result = PyObject_CallFunction(configure_dispatch, "(ls)", (long)qd, config_path);
+    Py_DECREF(configure_dispatch);
+    if (!result) return qd_error_py();
+    return QD_ERROR_NONE;
 }
 
 
@@ -121,7 +123,7 @@ qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *qd, qd_entity_t *entity
 
 qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
 {
-    qd->server             = qd_server(qd->thread_count, qd->container_name);
+    qd->server             = qd_server(qd, qd->thread_count, qd->container_name);
     qd->container          = qd_container(qd);
     qd->router             = qd_router(qd, qd->router_mode, qd->router_area, qd->router_id);
     qd->agent              = qd_agent(qd);
@@ -155,3 +157,7 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     qd_alloc_finalize();
     qd_python_finalize();
 }
+
+
+void qd_dispatch_router_lock(qd_dispatch_t *qd) { sys_mutex_lock(qd->router->lock); }
+void qd_dispatch_router_unlock(qd_dispatch_t *qd) { sys_mutex_unlock(qd->router->lock); }

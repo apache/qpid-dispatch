@@ -20,7 +20,7 @@
 import re, json, unittest
 from system_test import TestCase, Process, Qdrouterd
 from subprocess import PIPE, STDOUT
-from copy import copy
+
 
 DUMMY = "org.apache.qpid.dispatch.dummy"
 
@@ -33,28 +33,26 @@ class QdmanageTest(TestCase):
         config = Qdrouterd.Config([
             ('listener', {'port': cls.tester.get_port()})
         ])
-        cls.router = cls.tester.qdrouterd('test-router', config)
+        cls.router = cls.tester.qdrouterd('test-router', config, wait=True)
 
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, **kwargs):
         args = filter(None, sum([["--%s" % k.replace('_','-'), v]
                                  for k, v in kwargs.iteritems()], []))
         p = self.popen(
-            ['qdmanage', cmd, '--bus', self.router.hostports[0]+"/$management2",
-             '--indent=-1']+args,
+            ['qdmanage', cmd, '--bus', self.router.hostports[0], '--indent=-1']+args,
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
         out = p.communicate(input)[0]
-        if expect == Process.EXIT_OK:
-            assert p.returncode == 0, "%s exit %s, output:\n%s" % (p.args, p.returncode, out)
-        else:
-            assert p.returncode != 0, "%s expected to fail but exit 0" %(p.args)
+        try:
+            p.teardown()
+        except Exception, e:
+            raise Exception("%s\n%s" % (e, out))
         return out
 
     def test_help(self):
         self.run_qdmanage('help', r'Usage: qdmanage', expect=Process.EXIT_FAIL)
         for cmd in ['create', 'read', 'update', 'delete', 'query']:
             out = self.run_qdmanage(cmd, help=None)
-            assert re.search('Usage: %s \[options\]' % cmd, out, re.I), \
-                "Can't find '%s' in '%s'" % (regexp, out)
+            assert re.search('Usage: %s \[options\]' % cmd, out, re.I)
 
     def assert_entity_equal(self, expect, actual, copy=None):
         """Copy keys in copy from actual to idenity, then assert maps equal."""
@@ -119,11 +117,12 @@ class QdmanageTest(TestCase):
 
     def test_query(self):
         def long_type(name): return u'org.apache.qpid.dispatch.'+name
-        TYPES=['listener', 'log', 'container', 'router']
+        TYPES=['listener', 'log', 'container', 'router', 'router.link']
         LONG_TYPES=[long_type(name) for name in TYPES]
 
         qall = json.loads(self.run_qdmanage('query'))
-        self.assertTrue(set(LONG_TYPES) <= set([e['type'] for e in qall]))
+        qall_types = set([e['type'] for e in qall])
+        for t in LONG_TYPES: self.assertIn(t, qall_types)
 
         qlistener = json.loads(self.run_qdmanage('query', type='listener'))
         self.assertEqual([long_type('listener')], [e['type'] for e in qlistener])
@@ -132,10 +131,12 @@ class QdmanageTest(TestCase):
         qattr = json.loads(
             self.run_qdmanage('query', attribute_names='["type", "name"]'))
         for e in qattr: self.assertEqual(2, len(e))
-        self.assertEqual(
-            set([(e['name'], e['type']) for e in qall]),
-            set([(e['name'], e['type']) for e in qattr]))
 
+        def name_type(entities):
+            ignore_types = [long_type(t) for t in ['router.link', 'connection', 'router.address']]
+            return set((e['name'], e['type']) for e in entities
+                       if e['type'] not in ignore_types)
+        self.assertEqual(name_type(qall), name_type(qattr))
 
 if __name__ == '__main__':
     unittest.main()

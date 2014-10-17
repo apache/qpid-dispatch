@@ -34,7 +34,9 @@ class QdManage(object):
 
     class Commands(list):
         """Decorator to collect command names."""
-        def __call__(self, func): self.append(func.__name__); return func
+        def __call__(self, func):
+            self.append(func.__name__.replace('_', '-'));
+            return func
 
     commands = Commands()
 
@@ -77,9 +79,9 @@ For help with a command: %s <command> --help
         self.op.add_option_group(connection_options(self.op))
         json_group = optparse.OptionGroup(self.op, "JSON Formatting options")
         json_group.add_option("--indent", action="store", type="int", default=2, metavar="<spaces>",
-                           help="Indent for pretty-printing output. -1 means don't pretty-print (default %default)")
+                              help="Indent for pretty-printing output. -1 means don't pretty-print (default %default)")
         self.op.add_option_group(json_group)
-        command = getattr(self, argv[1])
+        command = getattr(self, argv[1].replace('-', '_'))
         command()               # Call the command method
 
     def setup(self, description, call_opts, other_opts=None):

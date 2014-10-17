@@ -77,3 +77,10 @@ class Entity(object):
         self.__delitem__(name)
 
     def __repr__(self): return "Entity(%r)" % self.attributes
+
+def update(entity, values):
+    """Update entity from values
+    @param entity: an Entity
+    @param values: a map of values
+    """
+    for k, v in values.iteritems(): entity[k] = v

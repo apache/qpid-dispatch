@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include "c_entity.h"
 #include <qpid/dispatch/python_embedded.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
@@ -679,7 +680,7 @@ static void qd_python_setup(void)
     if ((PyType_Ready(&LogAdapterType) < 0) || (PyType_Ready(&IoAdapterType) < 0)) {
         qd_error_py();
         qd_log(log_source, QD_LOG_ERROR, "Unable to initialize Adapters");
-        assert(0);
+        abort();
     } else {
         PyObject *m = Py_InitModule3("dispatch", empty_methods, "Dispatch Adapter Module");
 

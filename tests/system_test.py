@@ -208,7 +208,7 @@ class Process(subprocess.Popen):
     @classmethod
     def unique(cls, name):
         cls.unique_id += 1
-        return name + str(cls.unique_id)
+        return "%s-%s" % (name, cls.unique_id)
 
     def __init__(self, args, name=None, expect=EXIT_OK, **kwargs):
         """
@@ -228,7 +228,7 @@ class Process(subprocess.Popen):
         self.torndown = False
         kwargs.setdefault('stdout', self.out)
         kwargs.setdefault('stderr', subprocess.STDOUT)
-        args = with_valgrind(args)
+        args = with_valgrind(args, self.outfile + '.vg')
         try:
             super(Process, self).__init__(args, **kwargs)
         except Exception, e:
@@ -376,10 +376,11 @@ class Qdrouterd(Process):
         """
         def check():
             # FIXME aconway 2014-06-12: this should be a request by name, not a query.
+            # Need to rationalize addresses in management attributes.
+            # endswith check is because of M0/L/R prefixes
             addrs = self.management.query(
                 type='org.apache.qpid.dispatch.router.address',
                 attribute_names=['name', 'subscriberCount', 'remoteCount']).get_entities()
-            # FIXME aconway 2014-06-12: endswith check is because of M0/L prefixes
             addrs = [a for a in addrs if a['name'].endswith(address)]
             return addrs and addrs[0]['subscriberCount'] >= subscribers and addrs[0]['remoteCount'] >= remotes
         assert retry(check, **retry_kwargs)
@@ -397,6 +398,12 @@ class Qdrouterd(Process):
         """Wait for ports and connectors to be ready"""
         wait_ports(self.ports)
         self.wait_connectors()
+
+    def wait_connected(self, router_id):
+        """Wait till this router is connected to router with router-id"""
+        node = Node(self.addresses[0], router_id, timeout=0.2)
+        retry_exception(lambda: node.query('org.apache.qpid.dispatch.router'))
+
 
 class Qpidd(Process):
     """Run a Qpid Daemon"""

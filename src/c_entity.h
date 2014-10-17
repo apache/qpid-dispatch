@@ -1,6 +1,5 @@
-#ifndef STATIC_ASSERT_H
-#define STATIC_ASSERT_H
-
+#ifndef C_ENTITY_H
+#define C_ENTITY_H 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,21 +20,28 @@
  */
 
 /** @file
- * STATIC_ASSERT allows you to do compile time assertions at file scope or in a function.
- * @param expr: a boolean expression that is valid at compile time.
- * @param msg: a "message" that must also be a valid identifier, i.e. message_with_underscores
+ *
+ * Python-C interface for managed entity implementation objects.
+ *
+ * Maintain a cache of entity add and remove events that can be read by the
+ * python agent.
  */
 
+/** Initialize the module. */
+void qd_c_entity_initialize(void);
 
-#ifdef __GNUC__
-#define STATIC_ASSERT_HELPER(expr, msg) \
-    (!!sizeof(struct { unsigned int STATIC_ASSERTION__##msg: (expr) ? 1 : -1; }))
-#define STATIC_ASSERT(expr, msg) \
-    extern int (*assert_function__(void)) [STATIC_ASSERT_HELPER(expr, msg)]
-#else
-    #define STATIC_ASSERT(expr, msg)   \
-    extern char STATIC_ASSERTION__##msg[1]; \
-    extern char STATIC_ASSERTION__##msg[(expr)?1:2]
-#endif /* #ifdef __GNUC__ */
+/** Record an entity add event. */
+void qd_c_entity_add(const char *type, void *object);
 
-#endif // STATIC_ASSERT_H
+/** Record an entity remove event. */
+void qd_c_entity_remove(const char *type, void *object);
+
+/** Entity type strings */
+extern const char *QD_ALLOCATOR_TYPE;
+extern const char *QD_CONNECTION_TYPE;
+extern const char *QD_ROUTER_TYPE;
+extern const char *QD_ROUTER_NODE_TYPE;
+extern const char *QD_ROUTER_ADDRESS_TYPE;
+extern const char *QD_ROUTER_LINK_TYPE;
+
+#endif

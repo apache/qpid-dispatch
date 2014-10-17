@@ -22,6 +22,8 @@
 #include <qpid/dispatch/error.h>
 
 typedef struct qd_entity_t qd_entity_t;
+typedef struct qd_c_entity_t  qd_c_entity_t;
+typedef struct qd_c_entity_type_t qd_c_entity_type_t;
 
 /**
  * @defgroup dispatch
@@ -46,7 +48,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir);
  *
  * @param dispatch The dispatch handle returned by qd_dispatch
  */
-void qd_dispatch_free(qd_dispatch_t *dispatch);
+void qd_dispatch_free(qd_dispatch_t *qd);
 
 /**
  * Load the configuration file.
@@ -54,7 +56,7 @@ void qd_dispatch_free(qd_dispatch_t *dispatch);
  * @param dispatch The dispatch handle returned by qd_dispatch
  * @param config_path The path to the configuration file.
  */
-qd_error_t qd_dispatch_load_config(qd_dispatch_t *dispatch, const char *config_path);
+qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path);
 
 /**
  * Configure the AMQP container from a configuration entity.
@@ -62,7 +64,7 @@ qd_error_t qd_dispatch_load_config(qd_dispatch_t *dispatch, const char *config_p
  * @param dispatch The dispatch handle returned by qd_dispatch
  * @param entity The configuration entity.
  */
-qd_error_t qd_dispatch_configure_container(qd_dispatch_t *dispatch, qd_entity_t *entity);
+qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * Configure the router node from a configuration entity.
@@ -71,7 +73,7 @@ qd_error_t qd_dispatch_configure_container(qd_dispatch_t *dispatch, qd_entity_t 
  * @param dispatch The dispatch handle returned by qd_dispatch.
  * @param entity The configuration entity.
  */
-qd_error_t qd_dispatch_configure_router(qd_dispatch_t *dispatch, qd_entity_t *entity);
+qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * Prepare Dispatch for operation.  This must be called prior to
@@ -79,17 +81,17 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *dispatch, qd_entity_t *en
  *
  * @param dispatch The dispatch handle returned by qd_dispatch
  */
-qd_error_t qd_dispatch_prepare(qd_dispatch_t *dispatch);
+qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd);
 
 /**
  * Configure an address, must be called after qd_dispatch_prepare
  */
-qd_error_t qd_dispatch_configure_address(qd_dispatch_t *dispatch, qd_entity_t *entity);
+qd_error_t qd_dispatch_configure_address(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * Configure a waypoint, must be called after qd_dispatch_prepare
  */
-qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *dispatch, qd_entity_t *entity);
+qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * \brief Configure the logging module from the
@@ -99,6 +101,15 @@ qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *dispatch, qd_entity_t *
  * @param dispatch The dispatch handle returned by qd_dispatch
  */
 qd_error_t qd_dispatch_configure_logging(qd_dispatch_t *qd);
+
+/** Register a managed entity implementation with the management agent.
+ * NOTE: impl must be unregistered before it is freed.
+ */
+void qd_dispatch_register_entity(qd_dispatch_t *qd, const char *type, void *impl);
+
+/** Unregister a managed entity implementation */
+void qd_dispatch_unregister_entity(qd_dispatch_t *qd, void *impl);
+
 
 /**
  * @}

@@ -24,6 +24,7 @@
  *@internal
  */
 
+#include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/router.h>
 #include <qpid/dispatch/message.h>
 #include <qpid/dispatch/bitmask.h>
@@ -48,6 +49,7 @@ typedef enum {
     QD_ROUTER_MODE_EDGE,        ///< Edge router.  No transit-router capability.
     QD_ROUTER_MODE_ENDPOINT     ///< No routing except for internal modules (agent, etc.).
 } qd_router_mode_t;
+ENUM_DECLARE(qd_router_mode);
 
 typedef enum {
     QD_LINK_ENDPOINT,   ///< A link to a connected endpoint
@@ -55,7 +57,7 @@ typedef enum {
     QD_LINK_ROUTER,     ///< A link to a peer router in the same area
     QD_LINK_AREA        ///< A link to a peer router in a different area (area boundary)
 } qd_link_type_t;
-
+ENUM_DECLARE(qd_link_type);
 
 typedef struct qd_routed_event_t {
     DEQ_LINKS(struct qd_routed_event_t);

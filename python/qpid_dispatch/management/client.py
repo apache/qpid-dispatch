@@ -21,88 +21,10 @@
 AMQP management client for Qpid dispatch.
 """
 
-import proton, re, threading
+import proton, threading
+from proton import Url
 from .error import *
 from .entity import Entity as BaseEntity, clean_dict
-
-class Url(object):
-    """Simple AMQP URL parser/constructor"""
-
-    URL_RE = re.compile(r"""
-    # [   <scheme>://  ] [   <user>   [    : <password> ]  @]      ( <host4>   | \[    <host6>    \] ) [   :<port>   ]   [ / path]
-    ^ (?: ([^:/@]+)://)? (?: ([^:/@]+) (?: : ([^:/@]+)  )? @)? (?: ([^@:/\[]+) | \[ ([a-f0-9:.]+) \] ) (?: :([0-9]+))? (?: / (.*))? $
-""", re.X | re.I)
-    AMQPS = "amqps"
-    AMQP = "amqp"
-
-    def __init__(self, url=None, **kwargs):
-        """
-        @param url: String or Url instance to parse or copy.
-        @param kwargs: URL fields: scheme, user, password, host, port, path.
-            If specified, replaces corresponding component in url.
-        """
-
-        fields = ['scheme', 'user', 'password', 'host', 'port', 'path']
-
-        for f in fields: setattr(self, f, None)
-        for k in kwargs: getattr(self, k) # Check for invalid kwargs
-
-        if isinstance(url, Url): # Copy from another Url instance.
-            self.__dict__.update(url.__dict__)
-
-        elif url is not None:   # Parse from url
-            match = Url.URL_RE.match(url)
-            if match is None:
-                raise ValueError("Invalid AMQP URL: %s"%url)
-            self.scheme, self.user, self.password, host4, host6, port, self.path = match.groups()
-            self.host = host4 or host6
-            self.port = port and int(port)
-
-        # Let kwargs override values previously set from url
-        for field in fields:
-            setattr(self, field, kwargs.get(field, getattr(self, field)))
-
-    def __repr__(self):
-        return "Url(%r)" % str(self)
-
-    def __str__(self):
-        s = ""
-        if self.scheme:
-            s += "%s://" % self.scheme
-        if self.user:
-            s += self.user
-        if self.password:
-            s += ":%s@" % self.password
-        if self.host and ':' in self.host:
-            s += "[%s]" % self.host
-        else:
-            s += self.host or '0.0.0.0'
-        if self.port:
-            s += ":%s" % self.port
-        if self.path:
-            s += "/%s" % self.path
-        return s
-
-    def __eq__(self, url):
-        if isinstance(url, basestring):
-            url = Url(url)
-        return \
-            self.scheme == url.scheme and \
-            self.user == url.user and self.password == url.password and \
-            self.host == url.host and self.port == url.port and \
-            self.path == url.path
-
-    def __ne__(self, url):
-        return not self.__eq__(url)
-
-    def defaults(self):
-        """"Fill in defaults for scheme and port if missing """
-        if not self.scheme: self.scheme = self.AMQP
-        if not self.port:
-            if self.scheme == self.AMQP: self.port = 5672
-            elif self.scheme == self.AMQPS: self.port = 5671
-            else: raise ValueError("Invalid URL scheme: %s"%self.scheme)
-        return self
 
 class MessengerImpl(object):
     """
@@ -244,10 +166,6 @@ class Node(object):
                     response.properties.get('statusDescription')))
             else:
                 raise ManagementError.create(code, response.properties.get('statusDescription'))
-        if response.correlation_id != request.correlation_id:
-            raise NotFoundStatus("Bad correlation id request=%s, response=%s" %
-                               (request.correlation_id, response.correlation_id))
-
 
     def request(self, body=None, **properties):
         """
@@ -279,7 +197,10 @@ class Node(object):
         if not request.reply_to:
             raise ValueError("Message must have reply_to %s", request)
         self.message_impl.send(request)
-        response = self.message_impl.fetch()
+        while True:
+            response = self.message_impl.fetch()
+            # Ignore mismatched correlation IDs, responses to earlier requests that timed out.
+            if response.correlation_id == request.correlation_id: break
         self.check_response(response, request, expect=expect)
         return response
 

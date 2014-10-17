@@ -73,21 +73,21 @@ listener {
 
         content = conf._default_ids(content)
         self.assertEqual(content, [
-            ["router", {"mode":"standalone", "name":"router0", "identity":"router0"}],
+            ["router", {"mode":"standalone", "name":"router:0", "identity":"router:0"}],
             ["listener", {"name":"l0", "identity":"l0", "sasl-mechanisms":"ANONYMOUS", "password":"secret"}],
             ["listener", {"name":"l1", "identity":"l1", "sasl-mechanisms":"ANONYMOUS", "port":"1234"}],
-            ["listener", {"name":"listener2", "identity":"listener2", "sasl-mechanisms":"ANONYMOUS", "port":"4567"}]
+            ["listener", {"name":"listener:2", "identity":"listener:2", "sasl-mechanisms":"ANONYMOUS", "port":"4567"}]
         ])
 
         conf.load(conf_text.split("\n"))
         router = conf.by_type('router').next()
-        self.assertEqual(router['name'], 'router0')
-        self.assertEqual(router['identity'], 'router0')
+        self.assertEqual(router['name'], 'router:0')
+        self.assertEqual(router['identity'], 'router:0')
         listeners = list(conf.by_type('listener'))
         self.assertEqual(len(listeners), 3)
         self.assertEqual(listeners[0]['name'], 'l0')
-        self.assertEqual(listeners[2]['name'], 'listener2')
-        self.assertEqual(listeners[2]['identity'], 'listener2')
+        self.assertEqual(listeners[2]['name'], 'listener:2')
+        self.assertEqual(listeners[2]['identity'], 'listener:2')
 
 if __name__ == '__main__':
     unittest.main()

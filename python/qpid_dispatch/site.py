@@ -27,13 +27,10 @@ def get_variable(name):
     """Get variable value  by first checking os.environ, then site_data"""
     value = os.environ.get(name)
     if value: return value
-    try:
-        site_data = __import__('qpid_dispatch.site_data', globals(), locals(), [name])
-        return getattr(site_data, name)
-    except ImportError, e:
-        raise ImportError("%s: Set %s environment variable." % (e, env))
+    site_data = __import__('qpid_dispatch.site_data', globals(), locals(), [name])
+    return getattr(site_data, name)
 
-for var in ['QPID_DISPATCH_HOME', 'QPID_DISPATCH_LIB']:
-    globals()[var] = get_variable(var)
+QPID_DISPATCH_HOME = get_variable('QPID_DISPATCH_HOME')
+QPID_DISPATCH_LIB = get_variable('QPID_DISPATCH_LIB')
 
 sys.path.insert(0, os.path.join(QPID_DISPATCH_HOME, 'python'))

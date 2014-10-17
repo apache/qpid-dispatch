@@ -21,7 +21,7 @@
 #pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
 
 import unittest, json
-from qpid_dispatch_internal.management.schema import Schema, BooleanType, EnumType, AttributeType, schema_file, ValidationError, EnumValue, EntityType
+from qpid_dispatch_internal.management.schema import Schema, BooleanType, EnumType, AttributeType, ValidationError, EnumValue, EntityType
 import collections
 
 def replace_od(thing):
@@ -151,14 +151,6 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual({'identity': 'x', 'name': 'x'}, e.validate({'name':'x'}))
         self.assertEqual({'identity': 'x', 'name': 'y'}, e.validate({'identity': 'x', 'name':'y'}))
         self.assertRaises(ValidationError, e.validate, {})
-
-    qdrouter_json = schema_file('qdrouter.json')
-
-    @staticmethod
-    def load_schema(fname=qdrouter_json):
-        with open(fname) as f:
-            j = json.load(f)
-            return Schema(**j)
 
     def test_schema_dump(self):
         s = Schema(**SCHEMA_1)

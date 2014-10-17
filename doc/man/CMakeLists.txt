@@ -26,7 +26,7 @@ set (QDROUTERD_CONF qdrouterd.conf.5)
 file (GLOB_RECURSE QDROUTERD_CONF_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/qdrouterd_conf_man.py
   ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/*.py
-  ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/qdrouterd.json)
+  ${CMAKE_SOURCE_DIR}/python/qpid_router/management/qdrouterd.json)
 
 add_custom_command (OUTPUT ${QDROUTERD_CONF}
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${CMAKE_CURRENT_SOURCE_DIR}/qdrouterd_conf_man.py ${QDROUTERD_CONF}

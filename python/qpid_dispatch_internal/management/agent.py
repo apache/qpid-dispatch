@@ -23,15 +23,41 @@ Python agent for dispatch router.
 Implements the server side of the AMQP management protocol for the dispatch router.
 Manages a set of manageable Entities that can be Created, Read, Updated and Deleted.
 Entity types are described by the schema in qdrouter.json.
+
+HOW IT WORKS:
+
+There are 3 types of entity:
+1 .Entities created via this agent, e.g. configuration entities.
+   Attributes are pushed into C code and cached by the agent.
+2. Entities created in C code and registered with the agent.
+   Attributes are pulled from C code before handling an operation.
+3. Combined: created as 1. and later registered via 2.
+   Attributes pulled from C overide the initial attributes.
+
+THREAD SAFETY:
+
+The agent is always driven by requests arriving in connection threads.
+Handling requests is serialized.
+
+Adding/removing/updating entities from C:
+- C code registers add/remove of C entities in a thread safe C cache.
+- Before handling an operation, the agent:
+  1. locks the router
+  2. flushes the add/remove cache and adds/removes entities in python cache.
+  3. updates *all* known entites with a C implementation.
+  4. unlocks the router.
 """
 
+import re
+from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
+from ctypes import c_void_p, py_object, c_long
 from dispatch import IoAdapter, LogAdapter, LOG_DEBUG, LOG_ERROR
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
 from .. import dispatch_c
-from .schema import ValidationError, Entity as SchemaEntity
+from .schema import ValidationError, Entity as SchemaEntity, EntityType
 from .qdrouter import QdSchema
 from ..router.message import Message
 
@@ -65,19 +91,30 @@ class Entity(SchemaEntity):
     Base class for agent entities with operations as well as attributes.
     """
 
-    def __init__(self, agent, entity_type, attributes):
+    def _update(self): return False # Replaced by _set_pointer
+
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
         """
-        @para qd: Dispatch C library.
+        @para agent: Containing L{Agent}
         @param dispatch: Pointer to qd_dispatch C object.
         @param entity_type: L{EntityType}
-        @param attribute: Attribute name:value map
+        @param attributes: Attribute name:value map
+        @param pointer: Pointer to C object that can be used to update attributes.
         """
-        super(Entity, self).__init__(entity_type, attributes)
+        super(Entity, self).__init__(entity_type, attributes, validate=validate)
         # Direct __dict__ access to avoid validation as schema attributes
         self.__dict__['_agent'] = agent
         self.__dict__['_qd'] = agent.qd
         self.__dict__['_dispatch'] = agent.dispatch
 
+    def _set_pointer(self, pointer):
+        fname = "qd_c_entity_update_" + self.entity_type.short_name.replace('.', '_')
+        updatefn = self._qd.function(
+            fname, c_long, [py_object, c_void_p])
+        def _do_update():
+            updatefn(self.attributes, pointer);
+            return True
+        self.__dict__['_update'] = _do_update
 
     def create(self, request):
         """Subclasses can add extra create actions here"""
@@ -92,26 +129,26 @@ class Entity(SchemaEntity):
         return (OK, self.attributes)
 
     def update(self, request):
+        """Handle update request with new attributes from management client"""
         newattrs = dict(self.attributes, **request.body)
         self.entity_type.validate(newattrs)
         self.attributes = newattrs
         return (OK, self.attributes)
 
     def delete(self, request):
-        self._agent.delete(self)
+        """Handle delete request from client"""
+        self._agent.remove(self)
         return (NO_CONTENT, {})
 
 
-class ContainerEntity(Entity):
-    def create(self, request):
-        self._qd.qd_dispatch_configure_container(self._dispatch, request.body)
+class ContainerEntity(Entity): pass
 
 
 class RouterEntity(Entity):
-    def create(self, request):
-        self._qd.qd_dispatch_configure_router(self._dispatch, self)
-        self._qd.qd_dispatch_prepare(self._dispatch)
-
+    def __init__(self, *args, **kwargs):
+        kwargs['validate'] = False
+        super(RouterEntity, self).__init__(*args, **kwargs)
+        self._set_pointer(self._dispatch)
 
 class LogEntity(Entity):
     def create(self, request):
@@ -146,12 +183,143 @@ class DummyEntity(Entity):
 
     def create(self, request):
         self['identity'] = self.next_id()
-        return (OK, self.attributes)
 
     def next_id(self): return self.type+str(self.id_count.next())
 
     def callme(self, request):
         return (OK, dict(**request.properties))
+
+
+class CEntity(Entity):
+    """
+    Entity that is registered from C code rather than created via management.
+    """
+    def __init__(self, agent, entity_type, pointer):
+        super(CEntity, self).__init__(agent, entity_type, validate=False)
+        self._set_pointer(pointer)
+        self._update()
+        if not 'identity' in self.attributes:
+            self.attributes['identity'] = "%s:%s" % (entity_type.short_name, self.id_count.next())
+        self.attributes['identity'] = str(self.attributes['identity'])
+        self.validate()
+
+
+class RouterLinkEntity(CEntity):
+    id_count = AtomicCount()
+
+
+class RouterNodeEntity(CEntity):
+    id_count = AtomicCount()
+
+
+class RouterAddressEntity(CEntity):
+    id_count = AtomicCount()
+
+
+class ConnectionEntity(CEntity):
+    id_count = AtomicCount()
+
+
+class AllocatorEntity(CEntity):
+    id_count = AtomicCount()
+
+
+class EntityCache(object):
+    """
+    Searchable cache of entities, can be updated from C attributes.
+    """
+    def __init__(self, agent):
+        self.entities = []
+        self.pointers = {}
+        self.agent = agent
+        self.qd = self.agent.qd
+        self.schema = agent.schema
+
+    def log(self, *args): self.agent.log(*args)
+
+    def map_filter(self, function, test):
+        """Filter with test then apply function."""
+        return map(function, ifilter(test, self.entities))
+
+    def map_type(self, function, type):
+        """Apply function to all entities of type, if type is None do all entities"""
+        if type is None:
+            return map(function, self.entities)
+        else:
+            if isinstance(type, EntityType): type = type.name
+            else: type = self.schema.long_name(type)
+            return map(function, ifilter(lambda e: e.entity_type.name == type, self.entities))
+
+    def add(self, entity, pointer=None):
+        """Add an entity. Provide pointer if it is associated with a C entity"""
+        self.log(LOG_DEBUG, "Add %s entity: %s" %
+                 (entity.entity_type.short_name, entity.attributes['identity']))
+        # Validate in the context of the existing entities for uniqueness
+        self.schema.validate_all(chain(iter([entity]), iter(self.entities)))
+        self.entities.append(entity)
+        if pointer: self.pointers[pointer] = entity
+
+    def _remove(self, entity):
+        try:
+            self.entities.remove(entity);
+            self.log(LOG_DEBUG, "Remove %s entity: %s" %
+                     (entity.entity_type.short_name, entity.attributes['identity']))
+        except ValueError: pass
+
+    def remove(self, entity):
+        self._remove(entity)
+
+    def remove_pointer(self, pointer):
+        self._remove_pointer()
+
+    def _remove_pointer(self, pointer):
+        if pointer in self.pointers:
+            entity = self.pointers[pointer]
+            del self.pointers[pointer]
+            self._remove(entity)
+
+    def update_from_c(self):
+        """Update entities from the C dispatch runtime"""
+        events = []
+        REMOVE, ADD, REMOVE_ADD = 0, 1, 2
+
+        class Action(object):
+            """Collapse a sequence of add/remove actions down to None, remove, add or remove_add"""
+
+            MATRIX = {          # Collaps pairs of actions
+                (None, ADD): ADD,
+                (None, REMOVE): REMOVE,
+                (REMOVE, ADD): REMOVE_ADD,
+                (ADD, REMOVE): None,
+                (REMOVE_ADD, REMOVE): REMOVE
+            }
+
+            def __init__(self, type):
+                self.action = None
+                self.type = type
+
+            def add(self, action):
+                try: self.action = self.MATRIX[(self.action, action)]
+                except KeyError: pass
+
+
+        with self.qd.scoped_dispatch_router_lock(self.agent.dispatch):
+            self.qd.qd_c_entity_flush(events)
+            # Collapse sequences of add/remove into a single remove/add/remove_add per pointer.
+            actions = {}
+            for action, type, pointer in events:
+                if not pointer in actions: actions[pointer] = Action(type)
+                actions[pointer].add(action)
+            for pointer, action in actions.iteritems():
+                if action.action == REMOVE or action.action == REMOVE_ADD:
+                    self._remove_pointer(pointer)
+                if action.action == ADD or action.action == REMOVE_ADD:
+                    entity_type = self.schema.entity_type(action.type)
+                    klass = self.agent.entity_class(entity_type)
+                    entity = klass(self.agent, entity_type, pointer)
+                    self.add(entity, pointer)
+
+            for e in self.entities: e._update()
 
 
 class Agent(object):
@@ -160,35 +328,49 @@ class Agent(object):
     def __init__(self, dispatch, attribute_maps=None):
         self.qd = dispatch_c.instance()
         self.dispatch = dispatch
-        # FIXME aconway 2014-06-26: merge with $management
-        self.io = [IoAdapter(self.receive, "$management2"),
-                   IoAdapter(self.receive, "$management2", True)] # Global
-        self.log = LogAdapter("PYAGENT").log                      # FIXME aconway 2014-09-08: AGENT
         self.schema = QdSchema()
-        self.entities = [self.create_entity(attributes) for attributes in attribute_maps or []]
+        self.entities = EntityCache(self)
         self.name = self.identity = 'self'
         self.type = 'org.amqp.management' # AMQP management node type
+        for attributes in attribute_maps or []:
+            self.add_entity(self.create_entity(attributes))
+        self.request_lock = Lock()
+
+    def log(self, *args): pass         # Replaced in activate.
+
+    SEP_RE = re.compile(r'-|\.')
+
+    def activate(self, address):
+        """Register the management address to receive management requests"""
+        self.io = [IoAdapter(self.receive, address),
+                   IoAdapter(self.receive, address, True)] # Global
+        self.log = LogAdapter("AGENT").log
+
+    def entity_class(self, entity_type):
+        """Return the class that implements entity_type"""
+        class_name = ''.join([n.capitalize() for n in re.split(self.SEP_RE, entity_type.short_name)])
+        class_name += 'Entity'
+        entity_class = globals().get(class_name)
+        if not entity_class:
+            raise InternalServerErrorStatus("Can't find implementation for %s" % entity_type)
+        return entity_class
 
     def create_entity(self, attributes):
         """Create an instance of the implementation class for an entity"""
         if 'type' not in attributes:
             raise BadRequestStatus("No 'type' attribute in %s" % attributes)
         entity_type = self.schema.entity_type(attributes['type'])
-        class_name = ''.join([n.capitalize() for n in entity_type.short_name.split('-')])
-        class_name += 'Entity'
-        entity_class = globals().get(class_name)
-        if not entity_class:
-            raise InternalServerErrorStatus("Can't find implementation for %s" % entity_type)
-        return entity_class(self, entity_type, attributes)
+        return self.entity_class(entity_type)(self, entity_type, attributes)
 
     def respond(self, request, status=OK, description=None, body=None):
         """Send a response to the client"""
+        if body is None: body = {}
         description = description or STATUS_TEXT[status]
         response = Message(
             address=request.reply_to,
             correlation_id=request.correlation_id,
             properties={'statusCode': status, 'statusDescription': description},
-            body=body or {})
+            body=body)
         self.log(LOG_DEBUG, "Agent response:\n  %s\n  Responding to: \n  %s"%(response, request))
         try:
             self.io[0].send(response)
@@ -197,20 +379,27 @@ class Agent(object):
 
     def receive(self, request, link_id):
         """Called when a management request is received."""
-        self.log(LOG_DEBUG, "Agent request %s on link %s"%(request, link_id))
-        def error(e, trace):
-            """Raise an error"""
-            self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
-            self.respond(request, e.status, e.description)
-        try:
-            status, body = self.handle(request)
-            self.respond(request, status=status, body=body)
-        except ManagementError, e:
-            error(e, format_exc())
-        except ValidationError, e:
-            error(BadRequestStatus(str(e)), format_exc())
-        except Exception, e:
-            error(InternalServerErrorStatus("%s: %s"%(type(e).__name__, e)), format_exc())
+        # Coarse locking, handle one request at a time.
+        with self.request_lock:
+            self.entities.update_from_c()
+            self.log(LOG_DEBUG, "Agent request %s on link %s"%(request, link_id))
+            def error(e, trace):
+                """Raise an error"""
+                self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
+                self.respond(request, e.status, e.description)
+            try:
+                status, body = self.handle(request)
+                self.respond(request, status=status, body=body)
+            except ManagementError, e:
+                error(e, format_exc())
+            except ValidationError, e:
+                error(BadRequestStatus(str(e)), format_exc())
+            except Exception, e:
+                error(InternalServerErrorStatus("%s: %s"%(type(e).__name__, e)), format_exc())
+
+    def entity_type(self, type):
+        try: return self.schema.entity_type(type)
+        except ValidationError, e: raise NotFoundStatus(str(e))
 
     def handle(self, request):
         """
@@ -219,39 +408,41 @@ class Agent(object):
         @return: (response-code, body)
         """
         operation = required_property('operation', request)
-        type = request.properties.get('type')
+        type = request.properties.get('type') # Allow absent type for requests with a name.
         if type == self.type or operation.lower() == 'create':
+            # Create requests are entity requests but must be handled by the agent since
+            # the entity does not yet exist.
             target = self
         else:
             target = self.find_entity(request)
             target.entity_type.allowed(operation)
         try:
-            method = getattr(target, operation.lower())
+            method = getattr(target, operation.lower().replace("-", "_"))
         except AttributeError:
             not_implemented(operation, target.type)
         return method(request)
 
+    def requested_type(self, request):
+        type = request.properties.get('entityType')
+        if type: return self.entity_type(type)
+        else: return None
+
     def query(self, request):
         """Management node query operation"""
-        entity_type = request.properties.get('entityType')
-        if entity_type:
-            try:
-                entity_type = self.schema.entity_type(entity_type)
-            except:
-                raise NotFoundStatus("Unknown entity type '%s'" % entity_type)
+        type = self.requested_type(request)
         attribute_names = request.body.get('attributeNames')
         if not attribute_names:
-            if entity_type:
-                attribute_names = entity_type.attributes.keys()
+            if type:
+                attribute_names = type.attributes.keys()
             else:               # Every attribute in the schema!
                 names = set()
                 for e in self.schema.entity_types.itervalues():
                     names.update(e.attributes.keys())
                 attribute_names = list(names)
 
-        results = [[e.attributes.get(a) for a in attribute_names]
-                   for e in self.entities
-                   if not entity_type or e.type == entity_type.name]
+        attributes = self.entities.map_type(lambda e: e.attributes, type)
+        results = [[attrs.get(name) for name in attribute_names]
+                   for attrs in attributes]
         return (OK, {'attributeNames': attribute_names, 'results': results})
 
     def create(self, request):
@@ -268,11 +459,38 @@ class Agent(object):
             attributes[a] = value
         entity = self.create_entity(attributes)
         entity.entity_type.allowed('create')
-        # Validate in the context of the existing entities for uniqueness
-        self.schema.validate_all([entity]+self.entities)
         entity.create(request)  # Send the create request to the entity
-        self.entities.append(entity)
+        self.add_entity(entity)
         return (CREATED, entity.attributes)
+
+    def add_entity(self, entity): self.entities.add(entity)
+
+    def remove(self, entity): self.entities.remove(entity)
+
+    def get_types(self, request):
+        type = self.requested_type(request)
+        return (OK, dict((t, []) for t in self.schema.entity_types
+                         if not type or type.name == t))
+
+    def get_operations(self, request):
+        type = self.requested_type(request)
+        return (OK, dict((t, et.operations)
+                         for t, et in self.schema.entity_types.iteritems()
+                         if not type or type.name == t))
+
+    def get_attributes(self, request):
+        type = self.requested_type(request)
+        return (OK, dict((t, [a for a in et.attributes])
+                         for t, et in self.schema.entity_types.iteritems()
+                         if not type or type.name == t))
+
+    def get_mgmt_nodes(self, request):
+        router = self.entities.map_type(None, 'router')[0]
+        area = router.attributes['area']
+        def node_address(node):
+            return "amqp:/_topo/%s/%s/$management" % (area, node.attributes['addr'][1:])
+        return (OK, self.entities.map_type(node_address, 'router.node'))
+
 
     def find_entity(self, request):
         """Find the entity addressed by request"""
@@ -287,7 +505,7 @@ class Agent(object):
             return " ".join(["%s=%r" % (k, v) for k, v in ids.iteritems()])
 
         k, v = ids.iteritems().next() # Get the first id attribute
-        found = [e for e in self.entities if e.attributes.get(k) == v]
+        found = self.entities.map_filter(None, lambda e: e.attributes.get(k) == v)
         if len(found) == 1:
             entity = found[0]
         elif len(found) > 1:
@@ -299,13 +517,12 @@ class Agent(object):
         for k, v in ids.iteritems():
             if entity[k] != v: raise BadRequestStatus("Conflicting %s" % attrvals())
 
+        request_type = request.properties.get('type')
+        if request_type and not entity.entity_type.name_is(request_type):
+            raise NotFoundStatus("Entity type '%s' does match requested type '%s'" %
+                           (entity.entity_type.name, request_type))
+
         return entity
 
     def find_entity_by_type(self, type):
-        return [e for e in self.entities if e.entity_type.name == type]
-
-    def delete(self, entity):
-        try:
-            self.entities.remove(entity)
-        except ValueError:
-            raise NotFoundStatus("Cannot delete, entity not found: %s"%entity)
+        return self.entities.map_type(None, type)

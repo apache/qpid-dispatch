@@ -55,6 +55,8 @@ struct qd_dispatch_t {
     char  *router_area;
     char  *router_id;
     qd_router_mode_t  router_mode;
+
+    qd_log_source_t *log_source;
 };
 
 void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent);
