@@ -67,7 +67,7 @@ add_test(router_tests          ${TEST_WRAP} -s ${CMAKE_CURRENT_SOURCE_DIR}/route
 add_test(management_tests      ${TEST_WRAP} -m unittest -v management)
 
 macro(add_system_test test)
-  add_test(${test} ${TEST_WRAP} -m unittest -v ${test})
+  add_test(${test} ${TEST_WRAP} -m ${test} -v)
 endmacro(add_system_test)
 
 add_system_test(system_tests_broker)

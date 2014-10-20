@@ -303,8 +303,6 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertEqual([u'amqp:/_topo/0/router2/$management', u'amqp:/_topo/0/router1/$management'],
                          sum([n.get_mgmt_nodes() for n in nodes], []))
 
-
-
     def test_get_types(self):
         types = self.node.get_types()
         self.assertIn('org.apache.qpid.dispatch.listener', types)
@@ -321,7 +319,8 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
     def test_get_attributes(self):
         result = self.node.get_attributes(type=DUMMY)
-        self.assertEqual({DUMMY: [u'arg1', u'arg2', u'num1', u'num2', u'name', u'identity', u'type']}, result)
+        self.assertEqual(set([u'arg1', u'arg2', u'num1', u'num2', u'name', u'identity', u'type']),
+                         set(result[DUMMY]))
         result = self.node.get_attributes()
         for type in LISTENER, WAYPOINT, LINK: self.assertIn(type, result)
         for a in ['linkType', 'linkDir', 'owningAddr']: self.assertIn(a, result[LINK])

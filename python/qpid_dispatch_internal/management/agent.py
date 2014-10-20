@@ -195,12 +195,17 @@ class CEntity(Entity):
     Entity that is registered from C code rather than created via management.
     """
     def __init__(self, agent, entity_type, pointer):
+        def prefix(prefix, name):
+            if not str(name).startswith(prefix):
+                name = "%s:%s" % (prefix, name)
+            return name
+
         super(CEntity, self).__init__(agent, entity_type, validate=False)
         self._set_pointer(pointer)
         self._update()
-        if not 'identity' in self.attributes:
-            self.attributes['identity'] = "%s:%s" % (entity_type.short_name, self.id_count.next())
-        self.attributes['identity'] = str(self.attributes['identity'])
+        identity = self.attributes.get('identity')
+        if identity is None: identity = str(self.id_count.next())
+        self.attributes['identity'] = prefix(entity_type.short_name, identity)
         self.validate()
 
 

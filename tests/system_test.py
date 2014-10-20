@@ -363,7 +363,7 @@ class Qdrouterd(Process):
         Otherwise return None"""
         connections = self.management.query('org.apache.qpid.dispatch.connection').get_entities()
         for c in connections:
-            if c['name'] == '%s:%s'%(host, port):
+            if c['name'].endswith('%s:%s'%(host, port)):
                 return c
         return None
 
@@ -618,3 +618,6 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
         avg = sum(seq)/len(seq)
         for i in seq:
             assert i > avg/2, "Work not fairly distributed: %s"%seq
+
+    def assertIn(self, item, items):
+        assert item in items, "%s not in %s" % (item, items)

@@ -57,7 +57,7 @@ class QdstatTest(system_test.TestCase):
         self.run_qdstat(['--nodes'], r'router-id\s+next-hop\s+link')
 
     def test_address(self):
-        self.run_qdstat(['--address'], r'local.*\$management')
+        self.run_qdstat(['--address'], r'\$management')
 
     def test_memory(self):
         self.run_qdstat(['--memory'], r'qd_address_t\s+[0-9]+')
