@@ -31,8 +31,8 @@ class NeighborEngine(object):
         self.id = self.container.id
         self.area = self.container.area
         self.last_hello_time = 0.0
-        self.hello_interval = container.config.hello_interval
-        self.hello_max_age = container.config.hello_max_age
+        self.hello_interval = container.config.helloInterval
+        self.hello_max_age = container.config.helloMaxAge
         self.hellos = {}
         self.link_state_changed = False
         self.link_state = LinkState(None, self.id, self.area, 0, [])

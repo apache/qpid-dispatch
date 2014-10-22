@@ -39,8 +39,9 @@ ENUM_DEFINE(qd_router_mode, qd_router_mode_names);
 qd_error_t qd_c_entity_update_router(qd_entity_t* entity, void *impl) {
     qd_dispatch_t *qd = (qd_dispatch_t*) impl;
     qd_router_t *router = qd->router;
-    if (qd_entity_set_string(entity, "name", router->router_id) == 0 &&
-        qd_entity_set_string(entity, "identity", router->router_id) == 0 &&
+    if (qd_entity_set_stringf(entity, "name", "%s:%s", QD_ROUTER_TYPE, router->router_id) == 0 &&
+        qd_entity_set_stringf(entity, "identity", "%s:%s", QD_ROUTER_TYPE, router->router_id) == 0 &&
+        
         qd_entity_set_string(entity, "area", router->router_area) == 0 &&
         qd_entity_set_string(entity, "mode", qd_router_mode_name(router->router_mode)) == 0 &&
         qd_entity_set_long(entity, "addrCount", DEQ_SIZE(router->addrs)) == 0 &&
@@ -79,7 +80,7 @@ qd_error_t qd_c_entity_update_router_node(qd_entity_t* entity, void *impl) {
     qd_router_node_t *rnode = (qd_router_node_t*) impl;
 
     if (!qd_entity_has(entity, "identity")) {
-        CHECK(qd_entity_set_stringf(entity, "identity", "%s-%d", QD_ROUTER_NODE_TYPE, rnode->mask_bit));
+        CHECK(qd_entity_set_stringf(entity, "identity", "%s:%d", QD_ROUTER_NODE_TYPE, rnode->mask_bit));
     }
     CHECK(qd_entity_set_string(entity, "addr", address_text(rnode->owning_addr)));
     long next_hop = rnode->next_hop ? rnode->next_hop->mask_bit : 0;
@@ -431,13 +432,13 @@ qd_error_t qd_router_agent_setup(qd_router_t *router)
 {
     qd_error_clear();
     router->class_router =
-        qd_agent_register_class(router->qd, QD_ROUTER_TYPE, router, ROUTER_ATTRIBUTES, qd_router_query_router);
+        qd_agent_register_class(router->qd, QD_ROUTER_TYPE_LONG, router, ROUTER_ATTRIBUTES, qd_router_query_router);
     router->class_link =
-        qd_agent_register_class(router->qd, QD_ROUTER_LINK_TYPE, router, LINK_ATTRIBUTES, qd_router_query_link);
+        qd_agent_register_class(router->qd, QD_ROUTER_LINK_TYPE_LONG, router, LINK_ATTRIBUTES, qd_router_query_link);
     router->class_node =
-        qd_agent_register_class(router->qd, QD_ROUTER_NODE_TYPE, router, NODE_ATTRIBUTES, qd_router_query_node);
+        qd_agent_register_class(router->qd, QD_ROUTER_NODE_TYPE_LONG, router, NODE_ATTRIBUTES, qd_router_query_node);
     router->class_address =
-        qd_agent_register_class(router->qd, QD_ROUTER_ADDRESS_TYPE, router, ADDRESS_ATTRIBUTES, qd_router_query_address);
+        qd_agent_register_class(router->qd, QD_ROUTER_ADDRESS_TYPE_LONG, router, ADDRESS_ATTRIBUTES, qd_router_query_address);
     return qd_error_code();
 }
 

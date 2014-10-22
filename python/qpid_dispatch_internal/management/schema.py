@@ -324,7 +324,7 @@ class EntityType(AttributeTypeHolder):
         """
         super(EntityType, self).__init__(name, schema, attributes, description)
         self.short_name = schema.short_name(name)
-        self.refs = {'entity-type': name}
+        self.refs = {'entityType': name}
         self.singleton = singleton
         self.include = include
         self.operations = operations or []
@@ -414,11 +414,14 @@ class EntityType(AttributeTypeHolder):
 class Schema(object):
     """
     Schema defining entity types.
+    Note: keyword arguments come from schema so use camelCase
 
     @ivar prefix: Prefix to prepend to short entity type names.
-    @ivar entity_types: Map of L{EntityType} by name.
+    @ivar entityTypes: Map of L{EntityType} by name.
+    @ivar includes: Map of L{IncludeType} by name.
+    @ivar description: Text description of schema.
     """
-    def __init__(self, prefix="", includes=None, entity_types=None, description=""):
+    def __init__(self, prefix="", includes=None, entityTypes=None, description=""):
         """
         @param prefix: Prefix for entity names.
         @param includes: Map of  { include-name: {attribute-name:value, ... }}
@@ -435,8 +438,8 @@ class Schema(object):
             for k, v in includes.iteritems():
                 self.includes[k] = IncludeType(k, self, **v)
         self.entity_types = OrderedDict()
-        if entity_types:
-            for k, v in entity_types.iteritems():
+        if entityTypes:
+            for k, v in entityTypes.iteritems():
                 name = self.long_name(k)
                 self.entity_types[name] = EntityType(name, self, **v)
 
@@ -459,7 +462,7 @@ class Schema(object):
             ('prefix', self.prefix),
             ('includes',
              OrderedDict((k, v.dump()) for k, v in self.includes.iteritems())),
-            ('entity_types',
+            ('entityTypes',
              OrderedDict((e.short_name, e.dump())
                          for e in self.entity_types.itervalues()))
         ])

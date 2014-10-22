@@ -23,10 +23,10 @@ Configuration file parsing
 
 import json, re, sys
 from copy import copy
+from qpid_dispatch.management.entity import camelcase
 from .schema import ValidationError
 from .. import dispatch_c
 from .qdrouter import QdSchema
-from ..compat import json_load_kwargs
 
 class Config(object):
     """Load config entities from qdrouterd.conf and validated against L{QdSchema}."""
@@ -56,7 +56,14 @@ class Config(object):
         js_text = "[%s]"%("".join([sub(l) for l in lines]))
         spare_comma = re.compile(r',\s*([]}])') # Strip spare commas
         js_text = re.sub(spare_comma, r'\1', js_text)
-        return json.loads(js_text, **json_load_kwargs)
+        # Convert dictionary keys to camelCase
+        def cameldict(pairs): return dict((camelcase(k), v) for k, v in pairs)
+        sections = json.loads(js_text)
+        for s in sections:
+            s[0] = camelcase(s[0])
+            s[1] = dict((camelcase(k), v) for k, v in s[1].iteritems())
+        return sections
+
 
     def _expand(self, content):
         """
@@ -82,7 +89,7 @@ class Config(object):
     def _default_ids(self, content):
         """
         Set default name and identity where missing.
-        - If entity has no name/identity, set both to "<entity-type>-<i>"
+        - If entity has no name/identity, set both to "<entity-type>:<i>"
         - If entity has one of name/identity set the other to be the same.
         - If entity has both, do nothing
         """
@@ -157,7 +164,7 @@ def configure_dispatch(dispatch, filename):
     qd.qd_router_setup_late(dispatch);
 
     # Note must configure addresses, waypoints, listeners and connectors after qd_dispatch_prepare
-    for a in config.by_type('fixed-address'): qd.qd_dispatch_configure_address(dispatch, a)
+    for a in config.by_type('fixedAddress'): qd.qd_dispatch_configure_address(dispatch, a)
     for w in config.by_type('waypoint'): qd.qd_dispatch_configure_waypoint(dispatch, w)
     for l in config.by_type('listener'): qd.qd_dispatch_configure_listener(dispatch, l)
     for c in config.by_type('connector'): qd.qd_dispatch_configure_connector(dispatch, c)

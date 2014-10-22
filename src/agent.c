@@ -402,7 +402,7 @@ static void qd_agent_process_object_query(qd_agent_t          *agent,
             //
             if (cls_record == 0) {
 		char entity[QD_ERROR_MAX];
-		qd_field_iterator_ncopy(cls_string, (unsigned char*)entity, sizeof(entity));
+		qd_field_iterator_strncpy(cls_string, entity, sizeof(entity));
                 qd_agent_send_error(agent, reply_to, cid, QD_AMQP_NOT_FOUND, entity);
                 break;
             }
@@ -688,8 +688,7 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
         qd_agent_process_discover_nodes(agent, map, reply_to, cid);
     else {
 	char op[QD_ERROR_MAX];
-	int i = qd_field_iterator_ncopy(operation_string, (unsigned char*)op, sizeof(op)-1);
-	op[i] = '\0';
+	qd_field_iterator_strncpy(operation_string, op, sizeof(op));
         qd_agent_send_error(agent, reply_to, cid, QD_AMQP_NOT_IMPLEMENTED, op);
     }
 
@@ -755,7 +754,7 @@ static qd_agent_class_t *qd_agent_register_class_LH(qd_agent_t                 *
 
     DEQ_INSERT_TAIL(agent->class_list, cls);
 
-    qd_log(agent->log_source, QD_LOG_INFO, "Manageable Entity Type (%s) %s", query_handler ? "object" : "event", fqname);
+    qd_log(agent->log_source, QD_LOG_DEBUG, "Manageable Entity Type (%s) %s", query_handler ? "object" : "event", fqname);
     return cls;
 }
 

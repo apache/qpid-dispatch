@@ -351,15 +351,15 @@ qd_error_t qd_c_entity_update_allocator(qd_entity_t* entity, void *impl) {
     qd_alloc_type_t *alloc_type = (qd_alloc_type_t*) impl;
     if ((qd_entity_has(entity, "identity") ||
          qd_entity_set_string(entity, "identity", alloc_type->desc->type_name) == 0) &&
-        qd_entity_set_long(entity, "type_size", alloc_type->desc->total_size) == 0 &&
-        qd_entity_set_long(entity, "transfer_batch_size", alloc_type->desc->config->transfer_batch_size) == 0 &&
-        qd_entity_set_long(entity, "local_free_list_max", alloc_type->desc->config->local_free_list_max) == 0 &&
-        qd_entity_set_long(entity, "global_free_list_max", alloc_type->desc->config->global_free_list_max) == 0 &&
-        qd_entity_set_long(entity, "total_alloc_from_heap", alloc_type->desc->stats->total_alloc_from_heap) == 0 &&
-        qd_entity_set_long(entity, "total_free_to_heap", alloc_type->desc->stats->total_free_to_heap) == 0 &&
-        qd_entity_set_long(entity, "held_by_threads", alloc_type->desc->stats->held_by_threads) == 0 &&
-        qd_entity_set_long(entity, "batches_rebalanced_to_threads", alloc_type->desc->stats->batches_rebalanced_to_threads) == 0 &&
-        qd_entity_set_long(entity, "batches_rebalanced_to_global", alloc_type->desc->stats->batches_rebalanced_to_global) == 0)
+        qd_entity_set_long(entity, "typeSize", alloc_type->desc->total_size) == 0 &&
+        qd_entity_set_long(entity, "transferBatchSize", alloc_type->desc->config->transfer_batch_size) == 0 &&
+        qd_entity_set_long(entity, "localFreeListMax", alloc_type->desc->config->local_free_list_max) == 0 &&
+        qd_entity_set_long(entity, "globalFreeListMax", alloc_type->desc->config->global_free_list_max) == 0 &&
+        qd_entity_set_long(entity, "totalAllocFromHeap", alloc_type->desc->stats->total_alloc_from_heap) == 0 &&
+        qd_entity_set_long(entity, "totalFreeToHeap", alloc_type->desc->stats->total_free_to_heap) == 0 &&
+        qd_entity_set_long(entity, "heldByThreads", alloc_type->desc->stats->held_by_threads) == 0 &&
+        qd_entity_set_long(entity, "batchesRebalancedToThreads", alloc_type->desc->stats->batches_rebalanced_to_threads) == 0 &&
+        qd_entity_set_long(entity, "batchesRebalancedToGlobal", alloc_type->desc->stats->batches_rebalanced_to_global) == 0)
         return QD_ERROR_NONE;
     return qd_error_code();
 }
@@ -438,15 +438,15 @@ static void alloc_attr_batches_rebalanced_to_global(void *object_handle, void *c
 static const qd_agent_attribute_t ALLOC_ATTRIBUTES[] =
     {{"name", alloc_attr_name, 0},
      {"identity", alloc_attr_name, 0},
-     {"type_size", alloc_attr_type_size, 0},
-     {"transfer_batch_size", alloc_attr_transfer_batch_size, 0},
-     {"local_free_list_max", alloc_attr_local_free_list_max, 0},
-     {"global_free_list_max", alloc_attr_global_free_list_max, 0},
-     {"total_alloc_from_heap", alloc_attr_total_alloc_from_heap, 0},
-     {"total_free_to_heap", alloc_attr_total_free_to_heap, 0},
-     {"held_by_threads", alloc_attr_held_by_threads, 0},
-     {"batches_rebalanced_to_threads", alloc_attr_batches_rebalanced_to_threads, 0},
-     {"batches_rebalanced_to_global", alloc_attr_batches_rebalanced_to_global, 0},
+     {"typeSize", alloc_attr_type_size, 0},
+     {"transferBatchSize", alloc_attr_transfer_batch_size, 0},
+     {"localFreeListMax", alloc_attr_local_free_list_max, 0},
+     {"globalFreeListMax", alloc_attr_global_free_list_max, 0},
+     {"totalAllocFromHeap", alloc_attr_total_alloc_from_heap, 0},
+     {"totalFreeToHeap", alloc_attr_total_free_to_heap, 0},
+     {"heldByThreads", alloc_attr_held_by_threads, 0},
+     {"batchesRebalancedToThreads", alloc_attr_batches_rebalanced_to_threads, 0},
+     {"batchesRebalancedToGlobal", alloc_attr_batches_rebalanced_to_global, 0},
      {0, 0, 0}};
 
 
@@ -464,7 +464,7 @@ static void alloc_query_handler(void* context, void *cor)
 
 void qd_alloc_setup_agent(qd_dispatch_t *qd)
 {
-    qd_agent_register_class(qd, QD_ALLOCATOR_TYPE, 0, ALLOC_ATTRIBUTES, alloc_query_handler);
+    qd_agent_register_class(qd, QD_ALLOCATOR_TYPE_LONG, 0, ALLOC_ATTRIBUTES, alloc_query_handler);
 }
 
 

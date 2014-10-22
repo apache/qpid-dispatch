@@ -298,13 +298,13 @@ class BusManager(Node):
         for t in objects:
             row = []
             row.append(t.name)
-            row.append(t.type_size)
-            row.append(t.transfer_batch_size)
-            row.append(t.local_free_list_max)
-            row.append(t.total_alloc_from_heap)
-            row.append(t.held_by_threads)
-            row.append(t.batches_rebalanced_to_threads)
-            row.append(t.batches_rebalanced_to_global)
+            row.append(t.typeSize)
+            row.append(t.transferBatchSize)
+            row.append(t.localFreeListMax)
+            row.append(t.totalAllocFromHeap)
+            row.append(t.heldByThreads)
+            row.append(t.batchesRebalancedToThreads)
+            row.append(t.batchesRebalancedToGlobal)
             rows.append(row)
         title = "Types"
         sorter = Sorter(heads, rows, 'type', 0, True)

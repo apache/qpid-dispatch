@@ -30,8 +30,8 @@ class LinkStateEngine(object):
         self.container = container
         self.id = self.container.id
         self.area = self.container.area
-        self.ra_interval = self.container.config.ra_interval
-        self.remote_ls_max_age = self.container.config.remote_ls_max_age
+        self.ra_interval = self.container.config.raInterval
+        self.remote_ls_max_age = self.container.config.remoteLsMaxAge
         self.last_ra_time = 0
         self.collection = {}
         self.collection_changed = False

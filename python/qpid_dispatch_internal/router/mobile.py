@@ -32,7 +32,7 @@ class MobileAddressEngine(object):
         self.node_tracker = node_tracker
         self.id = self.container.id
         self.area = self.container.area
-        self.mobile_addr_max_age = self.container.config.mobile_addr_max_age
+        self.mobile_addr_max_age = self.container.config.mobileAddrMaxAge
         self.mobile_seq = 0
         self.local_addrs = []
         self.added_addrs = []

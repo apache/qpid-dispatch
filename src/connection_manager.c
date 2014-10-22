@@ -94,27 +94,27 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->host           = qd_entity_string(entity, "addr"); CHECK();
     config->port           = qd_entity_string(entity, "port"); CHECK();
     config->role           = qd_entity_string(entity, "role"); CHECK();
-    config->max_frame_size = qd_entity_long(entity, "max-frame-size"); CHECK();
-    config->sasl_mechanisms = qd_entity_string(entity, "sasl-mechanisms"); CHECK();
+    config->max_frame_size = qd_entity_long(entity, "maxFrameSize"); CHECK();
+    config->sasl_mechanisms = qd_entity_string(entity, "saslMechanisms"); CHECK();
     config->ssl_enabled = has_attrs(entity, ssl_attributes, ssl_attributes_count);
     config->allow_no_sasl =
-        qd_entity_opt_bool(entity, "allow-no-sasl", false); CHECK();
+        qd_entity_opt_bool(entity, "allowNoSasl", false); CHECK();
     if (config->ssl_enabled) {
         config->ssl_server = 1;
         config->ssl_allow_unsecured_client =
-            qd_entity_opt_bool(entity, "allow-unsecured", false); CHECK();
+            qd_entity_opt_bool(entity, "allowUnsecured", false); CHECK();
         config->ssl_certificate_file =
-            qd_entity_opt_string(entity, "cert-file", 0); CHECK();
+            qd_entity_opt_string(entity, "certFile", 0); CHECK();
         config->ssl_private_key_file =
-            qd_entity_opt_string(entity, "key-file", 0); CHECK();
+            qd_entity_opt_string(entity, "keyFile", 0); CHECK();
         config->ssl_password =
             qd_entity_opt_string(entity, "password", 0); CHECK();
         config->ssl_trusted_certificate_db =
-            qd_entity_opt_string(entity, "cert-db", 0); CHECK();
+            qd_entity_opt_string(entity, "certDb", 0); CHECK();
         config->ssl_trusted_certificates =
-            qd_entity_opt_string(entity, "trusted-certs", 0); CHECK();
+            qd_entity_opt_string(entity, "trustedCerts", 0); CHECK();
         config->ssl_require_peer_authentication =
-            qd_entity_opt_bool(entity, "require-peer-auth", true);
+            qd_entity_opt_bool(entity, "requirePeerAuth", true);
     }
     return QD_ERROR_NONE;
 
@@ -366,7 +366,7 @@ static void server_query_handler(void* context, void *cor)
 
 void qd_connection_manager_setup_agent(qd_dispatch_t *qd)
 {
-    qd_agent_register_class(qd, QD_CONNECTION_TYPE, qd, CONN_ATTRIBUTES, server_query_handler);
+    qd_agent_register_class(qd, QD_CONNECTION_TYPE_LONG, qd, CONN_ATTRIBUTES, server_query_handler);
 }
 
 

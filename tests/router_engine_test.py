@@ -269,11 +269,11 @@ class NeighborTest(unittest.TestCase):
         self.area = "area"
         # Fake configuration
         self.config = Entity({
-            'hello_interval'      :  1.0,
-            'hello_max_age'       :  3.0,
-            'ra_interval'         : 30.0,
-            'remote_ls_max_age'   : 60.0,
-            'mobile_addr_max_age' : 60.0  })
+            'helloInterval'      :  1.0,
+            'helloMaxAge'       :  3.0,
+            'raInterval'         : 30.0,
+            'remoteLsMaxAge'   : 60.0,
+            'mobileAddrMaxAge' : 60.0  })
         self.neighbors = {}
 
     def test_hello_sent(self):

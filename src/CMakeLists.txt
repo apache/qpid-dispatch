@@ -23,17 +23,18 @@ set(GENERATED_SOURCES
   schema_enum.c
   )
 
-file (GLOB_RECURSE GENERATOR_DEPENDS
+set(GENERATOR_DEPENDS
   ${CMAKE_CURRENT_SOURCE_DIR}/schema_c.py
-  ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/*.py
-  ${CMAKE_SOURCE_DIR}/python/qpid_router/management/qdrouterd.json)
+  ${CMAKE_SOURCE_DIR}/python/qpid_dispatch/management/qdrouter.json)
+file (GLOB GENERATOR_SRC ${CMAKE_SOURCE_DIR}/python/qpid_dispatch_internal/management/*.py)
+set(GENERATOR_DEPENDS ${GENERATOR_DEPENDS} ${GENERATOR_SRC})
+file (GLOB GENERATOR_SRC ${CMAKE_SOURCE_DIR}/python/qpid_dispatch/management/*.py)
+set(GENERATOR_DEPENDS ${GENERATOR_DEPENDS} ${GENERATOR_SRC})
 
 add_custom_command (
   OUTPUT ${GENERATED_SOURCES}
   COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${CMAKE_CURRENT_SOURCE_DIR}/schema_c.py
   DEPENDS ${GENERATOR_DEPENDS})
-
-add_custom_target(generate ALL DEPENDS ${GENERATED_SOURCES})
 
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES

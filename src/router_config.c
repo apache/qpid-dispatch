@@ -28,8 +28,8 @@
 qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity) {
     qd_error_clear();
     int   phase  = qd_entity_opt_long(entity, "phase", 0); QD_ERROR_RET();
-    qd_schema_fixed_address_fanout_t fanout = qd_entity_long(entity, "fanout"); QD_ERROR_RET();
-    qd_schema_fixed_address_bias_t bias   = qd_entity_long(entity, "bias"); QD_ERROR_RET();
+    qd_schema_fixedAddress_fanout_t fanout = qd_entity_long(entity, "fanout"); QD_ERROR_RET();
+    qd_schema_fixedAddress_bias_t bias   = qd_entity_long(entity, "bias"); QD_ERROR_RET();
     char *prefix = qd_entity_string(entity, "prefix"); QD_ERROR_RET();
 
     if (phase < 0 || phase > 9) {
@@ -72,8 +72,8 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 
     qd_address_semantics_t semantics = 0;
     switch(fanout) {
-      case QD_SCHEMA_FIXED_ADDRESS_FANOUT_MULTIPLE: semantics |= QD_FANOUT_MULTIPLE; break;
-      case QD_SCHEMA_FIXED_ADDRESS_FANOUT_SINGLE: semantics |= QD_FANOUT_SINGLE; break;
+      case QD_SCHEMA_FIXEDADDRESS_FANOUT_MULTIPLE: semantics |= QD_FANOUT_MULTIPLE; break;
+      case QD_SCHEMA_FIXEDADDRESS_FANOUT_SINGLE: semantics |= QD_FANOUT_SINGLE; break;
       default:
         free(prefix);
         return qd_error(QD_ERROR_CONFIG, "Invalid fanout value %d", fanout);
@@ -81,8 +81,8 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 
     if ((semantics & QD_FANOUTMASK) == QD_FANOUT_SINGLE) {
         switch(bias) {
-          case QD_SCHEMA_FIXED_ADDRESS_BIAS_CLOSEST: semantics |= QD_BIAS_CLOSEST; break;
-          case QD_SCHEMA_FIXED_ADDRESS_BIAS_SPREAD: semantics |= QD_BIAS_SPREAD; break;
+          case QD_SCHEMA_FIXEDADDRESS_BIAS_CLOSEST: semantics |= QD_BIAS_CLOSEST; break;
+          case QD_SCHEMA_FIXEDADDRESS_BIAS_SPREAD: semantics |= QD_BIAS_SPREAD; break;
           default:
             free(prefix);
             return qd_error(QD_ERROR_CONFIG, "Invalid bias value %d", fanout);
@@ -90,12 +90,12 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 	qd_log(router->log_source, QD_LOG_INFO,
 		   "Configured Address: prefix=%s phase=%d fanout=%s bias=%s",
 		   prefix, phase,
-		   qd_schema_fixed_address_fanout_names[fanout],
-		   qd_schema_fixed_address_bias_names[bias]);
+		   qd_schema_fixedAddress_fanout_names[fanout],
+		   qd_schema_fixedAddress_bias_names[bias]);
     } else {
 	semantics |= QD_BIAS_NONE;
 	qd_log(router->log_source, QD_LOG_INFO, "Configured Address: prefix=%s phase=%d fanout=%s",
-	       prefix, phase, qd_schema_fixed_address_fanout_names[fanout]);
+	       prefix, phase, qd_schema_fixedAddress_fanout_names[fanout]);
     }
 
     addr_phase->semantics = semantics;
@@ -110,8 +110,8 @@ qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity
 
     char *address = qd_entity_string(entity, "address"); QD_ERROR_RET();
     char *connector = qd_entity_string(entity, "connector"); QD_ERROR_RET();
-    int   in_phase  = qd_entity_opt_long(entity, "in-phase", 0); QD_ERROR_RET();
-    int   out_phase = qd_entity_opt_long(entity, "out-phase", 0);  QD_ERROR_RET();
+    int   in_phase  = qd_entity_opt_long(entity, "inPhase", 0); QD_ERROR_RET();
+    int   out_phase = qd_entity_opt_long(entity, "outPhase", 0);  QD_ERROR_RET();
 
     if (in_phase > 9 || out_phase > 9) {
         free(address);

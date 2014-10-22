@@ -35,11 +35,13 @@ class QdmanageTest(TestCase):
         ])
         cls.router = cls.tester.qdrouterd('test-router', config, wait=True)
 
+    def address(self): return self.router.hostports[0]
+
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, **kwargs):
         args = filter(None, sum([["--%s" % k.replace('_','-'), v]
                                  for k, v in kwargs.iteritems()], []))
         p = self.popen(
-            ['qdmanage', cmd, '--bus', self.router.hostports[0], '--indent=-1']+args,
+            ['qdmanage', cmd, '--bus', self.address(), '--indent=-1']+args,
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
         out = p.communicate(input)[0]
         try:
@@ -92,6 +94,7 @@ class QdmanageTest(TestCase):
 
 
     def test_stdin(self):
+        """Test piping from stdin"""
         def check(cmd, expect, input, copy=None):
             actual = json.loads(self.run_qdmanage(cmd, input=input, stdin=None))
             self.assert_entity_equal(expect, actual, copy=copy)
@@ -137,6 +140,17 @@ class QdmanageTest(TestCase):
             return set((e['name'], e['type']) for e in entities
                        if e['type'] not in ignore_types)
         self.assertEqual(name_type(qall), name_type(qattr))
+
+
+class OldQdmanageTest(QdmanageTest):
+    """Test with old managment interface"""
+    def address(self): return super(OldQdmanageTest, self).address() + '/$cmanagement'
+
+    def test_crud(self): pass   # Not supported by old management
+
+    def test_query(self): pass  # Not supported by old management
+
+    def test_stdin(self): pass  # Not supported by old management
 
 if __name__ == '__main__':
     unittest.main(main_module())

@@ -29,15 +29,18 @@ class QdstatTest(system_test.TestCase):
     def setUpClass(cls):
         super(QdstatTest, cls).setUpClass()
         config = system_test.Qdrouterd.Config([
-            ('listener', {'port': cls.tester.get_port()})
+            ('listener', {'port': cls.tester.get_port()}),
         ])
         cls.router = cls.tester.qdrouterd('test-router', config)
 
+    def address(self): return self.router.hostports[0] # Overridden by subclasses
+
     def run_qdstat(self, args, regexp=None):
-        p = self.popen(['qdstat', '--bus', self.router.hostports[0]]+args,
-                       name='qdstat-'+self.id(), stdout=PIPE)
+        p = self.popen(['qdstat', '--bus', self.address()] + args,
+                       name='qdstat-'+self.id(), stdout=PIPE, expect=None)
         out = p.communicate()[0]
-        self.assertEqual(0, p.returncode, "qdstat exit status %s, output:\n%s" % (p.returncode, out))
+        assert p.returncode == 0, \
+            "qdstat exit status %s, output:\n%s" % (p.returncode, out)
         if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
         return out
 
@@ -63,6 +66,9 @@ class QdstatTest(system_test.TestCase):
         self.run_qdstat(['--memory'], r'qd_address_t\s+[0-9]+')
 
 
+class OldQdstatTest(QdstatTest):
+    """Test with old managment interface"""
+    def address(self): return super(OldQdstatTest, self).address() + '/$cmanagement'
 
 if __name__ == '__main__':
     unittest.main(system_test.main_module())

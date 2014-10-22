@@ -18,9 +18,22 @@
 #
 
 import unittest
-from qpid_dispatch.management.entity import Entity
+from qpid_dispatch.management.entity import Entity, camelcase
 
 class EntityTest(unittest.TestCase):
+
+    def test_camelcase(self):
+        self.assertEqual('', camelcase(''))
+        self.assertEqual('foo', camelcase('foo'))
+        self.assertEqual('Foo', camelcase('foo', capital=True))
+        self.assertEqual('fooBar', camelcase('foo bar'))
+        self.assertEqual('fooBar', camelcase('foo.bar'))
+        self.assertEqual('fooBar', camelcase('foo-bar'))
+        self.assertEqual('fooBar', camelcase('foo_bar'))
+        self.assertEqual('fooBarBaz', camelcase('foo_bar.baz'))
+        self.assertEqual('FooBarBaz', camelcase('foo_bar.baz', capital=True))
+        self.assertEqual('fooBar', camelcase('fooBar'))
+        self.assertEqual('FooBar', camelcase('fooBar', capital=True))
 
     def test_entity(self):
         e = Entity({'foo-bar': 'baz'}, type='container', name='x')

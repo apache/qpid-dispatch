@@ -75,14 +75,13 @@ qd_error_t qd_c_entity_flush(PyObject *list) {
     if (!event_lock) return QD_ERROR_NONE;    /* Unit tests don't call qd_c_entity_initialize */
     qd_error_clear();
     sys_mutex_lock(event_lock);
-    fprintf(stderr, "qd_c_entity_flush %d\n", (int)DEQ_SIZE(event_list));
     entity_event_t *event = DEQ_HEAD(event_list);
     while (event) {
         PyObject *tuple = Py_BuildValue("(isl)", (int)event->action, event->type, (long)event->object);
-        if (!tuple) { fprintf(stderr, "No tuple"); qd_error_py(); break; }
+        if (!tuple) { qd_error_py(); break; }
         int err = PyList_Append(list, tuple);
         Py_DECREF(tuple);
-        if (err) { fprintf(stderr, "No tuple"); qd_error_py(); break; }
+        if (err) { qd_error_py(); break; }
         DEQ_REMOVE_HEAD(event_list);
         free(event);
         event = DEQ_HEAD(event_list);
@@ -97,3 +96,10 @@ const char *QD_ROUTER_TYPE = "router";
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
 const char *QD_ROUTER_LINK_TYPE = "router.link";
+
+const char *QD_ALLOCATOR_TYPE_LONG = "org.apache.qpid.dispatch.allocator";
+const char *QD_CONNECTION_TYPE_LONG = "org.apache.qpid.dispatch.connection";
+const char *QD_ROUTER_TYPE_LONG = "org.apache.qpid.dispatch.router";
+const char *QD_ROUTER_NODE_TYPE_LONG = "org.apache.qpid.dispatch.router.node";
+const char *QD_ROUTER_ADDRESS_TYPE_LONG = "org.apache.qpid.dispatch.router.address";
+const char *QD_ROUTER_LINK_TYPE_LONG = "org.apache.qpid.dispatch.router.link";

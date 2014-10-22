@@ -26,7 +26,7 @@ from system_test import Qdrouterd, message, retry
 DISPATCH = 'org.apache.qpid.dispatch'
 LISTENER = DISPATCH + '.listener'
 CONNECTOR = DISPATCH + '.connector'
-FIXED_ADDRESS = DISPATCH + '.fixed-address'
+FIXED_ADDRESS = DISPATCH + '.fixedAddress'
 WAYPOINT = DISPATCH + '.waypoint'
 DUMMY = DISPATCH + '.dummy'
 ROUTER = DISPATCH + '.router'
@@ -43,7 +43,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         # Stand-alone router
         name = cls.__name__
         conf = Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'router-id': name}),
+            ('router', { 'mode': 'standalone', 'routerId': name}),
             ('listener', {'name': 'l0', 'port':cls.get_port(), 'role':'normal'}),
             # Extra listeners to exercise managment query
             ('listener', {'name': 'l1', 'port':cls.get_port(), 'role':'normal'}),
@@ -94,7 +94,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in xrange(3)]
         for r in expect: # We might have extras in results due to create tests
             self.assertTrue(r in response.results)
-        for name in [self.router.name, 'log:0']:
+        for name in ['router:' + self.router.name, 'log:0']:
             self.assertTrue([r for r in response.get_dicts() if r['name'] == name],
                             msg="Can't find result with name '%s'" % name)
 
@@ -113,7 +113,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
         port = self.get_port()
         # Note qdrouter schema defines port as string not int, since it can be a service name.
-        attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'sasl-mechanisms': 'ANONYMOUS'}
+        attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'saslMechanisms': 'ANONYMOUS'}
         entity = self.assert_create_ok(LISTENER, 'foo', attributes)
         self.assertEqual(entity['identity'], attributes['name'])
         self.assertEqual(entity['addr'], '0.0.0.0')
@@ -121,7 +121,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         # Connect via the new listener
         node3 = self.cleanup(Node(Url(port=port)))
         router = node3.query(type=ROUTER).get_entities()
-        self.assertEqual(self.__class__.router.name, router[0]['name'])
+        self.assertEqual(self.__class__.router.name, router[0]['routerId'])
 
     def test_create_log(self):
         """Create a log entity"""
@@ -143,13 +143,13 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertEqual('hello', msgr.fetch().body)
 
     def test_create_connector_waypoint(self):
-        """Test creating waypoint, connector and fixed-address
+        """Test creating waypoint, connector and fixedAddress
         Create a waypoint that leads out and back from a second router.
         """
         conf = Qdrouterd.Config([
-            ('router', {'mode': 'standalone', 'router-id': 'wp-router'}),
+            ('router', {'mode': 'standalone', 'routerId': 'wp-router'}),
             ('listener', {'port':self.get_port(), 'role':'normal'}),
-            ('fixed-address', {'prefix':'foo'})
+            ('fixedAddress', {'prefix':'foo'})
         ])
         wp_router = self.qdrouterd('wp-router', conf)
         wp_router.wait_ready()
@@ -158,8 +158,8 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         for c in [
                 (FIXED_ADDRESS, 'a1', {'prefix':'foo', 'phase':0, 'fanout':'single', 'bias':'spread'}),
                 (FIXED_ADDRESS, 'a2', {'prefix':'foo', 'phase':1, 'fanout':'single', 'bias':'spread'}),
-                (CONNECTOR, 'wp_connector', {'port':str(wp_router.ports[0]), 'sasl-mechanisms': 'ANONYMOUS', 'role': 'on-demand'}),
-                (WAYPOINT, 'wp', {'address': 'foo', 'in-phase': 0, 'out-phase': 1, 'connector': 'wp_connector'})
+                (CONNECTOR, 'wp_connector', {'port':str(wp_router.ports[0]), 'saslMechanisms': 'ANONYMOUS', 'role': 'on-demand'}),
+                (WAYPOINT, 'wp', {'address': 'foo', 'inPhase': 0, 'outPhase': 1, 'connector': 'wp_connector'})
         ]:
             self.assert_create_ok(*c)
         assert retry(lambda: self.router.is_connected, wp_router.ports[0])
@@ -269,12 +269,12 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         """Test node entity in a pair of linked routers"""
         # Pair of linked interior routers
         conf1 = Qdrouterd.Config([
-            ('router', { 'mode': 'interior', 'router-id': 'router1'}),
+            ('router', { 'mode': 'interior', 'routerId': 'router1'}),
             ('listener', {'port':self.get_port(), 'role':'normal'}),
             ('listener', {'port':self.get_port(), 'role':'inter-router'})
         ])
         conf2 = Qdrouterd.Config([
-            ('router', { 'mode': 'interior', 'router-id': 'router2'}),
+            ('router', { 'mode': 'interior', 'routerId': 'router2'}),
             ('listener', {'port':self.get_port(), 'role':'normal'}),
             ('connector', {'port':conf1.sections('listener')[1]['port'], 'role':'inter-router'})
         ])

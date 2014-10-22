@@ -56,10 +56,12 @@ from ctypes import c_void_p, py_object, c_long
 from dispatch import IoAdapter, LogAdapter, LOG_DEBUG, LOG_ERROR
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
+from qpid_dispatch.management.entity import camelcase
 from .. import dispatch_c
 from .schema import ValidationError, Entity as SchemaEntity, EntityType
 from .qdrouter import QdSchema
 from ..router.message import Message
+
 
 def dictstr(d):
     """Stringify a dict in the form 'k=v, k=v ...' instead of '{k:v, ...}'"""
@@ -347,8 +349,6 @@ class Agent(object):
             info = traceback.extract_stack(limit=2)[0] # Caller frame info
             self.log_adapter.log(level, text, info[0], info[1])
 
-    SEP_RE = re.compile(r'-|\.')
-
     def activate(self, address):
         """Register the management address to receive management requests"""
         self.io = [IoAdapter(self.receive, address),
@@ -357,11 +357,11 @@ class Agent(object):
 
     def entity_class(self, entity_type):
         """Return the class that implements entity_type"""
-        class_name = ''.join([n.capitalize() for n in re.split(self.SEP_RE, entity_type.short_name)])
-        class_name += 'Entity'
+        class_name = camelcase(entity_type.short_name, capital=True) + 'Entity'
         entity_class = globals().get(class_name)
         if not entity_class:
-            raise InternalServerErrorStatus("Can't find implementation for %s" % entity_type)
+            raise InternalServerErrorStatus(
+                "Can't find implementation '%s' for '%s'" % (class_name, entity_type.name))
         return entity_class
 
     def create_entity(self, attributes):

@@ -93,8 +93,8 @@ qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     const char *default_name = "00000000-0000-0000-0000-000000000000";
-    qd->thread_count   = qd_entity_opt_long(entity, "worker-threads", 1); QD_ERROR_RET();
-    qd->container_name = qd_entity_opt_string(entity, "container-name", default_name); QD_ERROR_RET();
+    qd->thread_count   = qd_entity_opt_long(entity, "workerThreads", 1); QD_ERROR_RET();
+    qd->container_name = qd_entity_opt_string(entity, "containerName", default_name); QD_ERROR_RET();
     return QD_ERROR_NONE;
 }
 
@@ -103,7 +103,7 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_error_clear();
     free(qd->router_id);
-    qd->router_id   = qd_entity_opt_string(entity, "router-id", qd->container_name);
+    qd->router_id   = qd_entity_opt_string(entity, "routerId", qd->container_name);
     QD_ERROR_RET();
     qd->router_mode = qd_entity_long(entity, "mode");
     return qd_error_code();

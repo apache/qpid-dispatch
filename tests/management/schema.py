@@ -34,29 +34,29 @@ def replace_od(thing):
 SCHEMA_1 = {
     "prefix":"org.example",
     "includes": {
-        "entity-id": {
+        "entityId": {
             "attributes": {
                 "name": {"type":"String", "required": True, "unique":True},
                 "type": {"type":"String", "required": True}
             }
         }
     },
-    "entity_types": {
+    "entityTypes": {
         "container": {
             "singleton": True,
-            "include" : ["entity-id"],
+            "include" : ["entityId"],
             "attributes": {
-                "worker-threads" : {"type":"Integer", "default": 1}
+                "workerThreads" : {"type":"Integer", "default": 1}
             }
         },
         "listener": {
-            "include" : ["entity-id"],
+            "include" : ["entityId"],
             "attributes": {
                 "addr" : {"type":"String"}
             }
         },
         "connector": {
-            "include" : ["entity-id"],
+            "include" : ["entityId"],
             "attributes": {
                 "addr" : {"type":"String"}
             }
@@ -128,7 +128,7 @@ class SchemaTest(unittest.TestCase):
 
     def test_entity_refs(self):
         e = EntityType('MyEntity', Schema(), attributes={
-            'type': {'type': 'String', 'required': True, 'value': '$$entity-type'},
+            'type': {'type': 'String', 'required': True, 'value': '$$entityType'},
             'name': {'type':'String', 'default':'$identity'},
             'identity': {'type':'String', 'default':'$name', "required": True}})
 
@@ -160,7 +160,7 @@ class SchemaTest(unittest.TestCase):
             "prefix":"org.example",
 
             "includes": {
-                "entity-id": {
+                "entityId": {
                     "attributes": {
                         "name": {"required": True,
                                  "unique":True,
@@ -169,12 +169,12 @@ class SchemaTest(unittest.TestCase):
                 }
             },
 
-            "entity_types": {
+            "entityTypes": {
                 "container": {
                     "singleton": True,
                     "attributes": {
                         "name": {"type":"String", "unique":True, "required": True},
-                        "worker-threads": {"type":"Integer", "default": 1}
+                        "workerThreads": {"type":"Integer", "default": 1}
                     }
                     },
                     "listener": {

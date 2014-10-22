@@ -36,12 +36,20 @@ void qd_c_entity_add(const char *type, void *object);
 /** Record an entity remove event. */
 void qd_c_entity_remove(const char *type, void *object);
 
-/** Entity type strings */
+/** Short entity type names (no org.apache.qpid.dispatch prefix). */
 extern const char *QD_ALLOCATOR_TYPE;
 extern const char *QD_CONNECTION_TYPE;
 extern const char *QD_ROUTER_TYPE;
 extern const char *QD_ROUTER_NODE_TYPE;
 extern const char *QD_ROUTER_ADDRESS_TYPE;
 extern const char *QD_ROUTER_LINK_TYPE;
+
+/** Long entity type names (with org.apache.qpid.dispatch prefix). */
+extern const char *QD_ALLOCATOR_TYPE_LONG;
+extern const char *QD_CONNECTION_TYPE_LONG;
+extern const char *QD_ROUTER_TYPE_LONG;
+extern const char *QD_ROUTER_NODE_TYPE_LONG;
+extern const char *QD_ROUTER_ADDRESS_TYPE_LONG;
+extern const char *QD_ROUTER_LINK_TYPE_LONG;
 
 #endif

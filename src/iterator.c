@@ -480,7 +480,7 @@ int qd_field_iterator_ncopy(qd_field_iterator_t *iter, unsigned char* buffer, in
     return i;
 }
 
-char* qd_field_iterator_logstr(qd_field_iterator_t *iter, char* buffer, int n) {
+char* qd_field_iterator_strncpy(qd_field_iterator_t *iter, char* buffer, int n) {
     int i = qd_field_iterator_ncopy(iter, (unsigned char*)buffer, n-1);
     buffer[i] = '\0';
     return buffer;
