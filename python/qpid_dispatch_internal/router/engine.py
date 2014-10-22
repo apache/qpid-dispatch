@@ -70,7 +70,6 @@ class RouterEngine:
         self.routing_table_engine  = RoutingTableEngine(self, self.node_tracker)
 
 
-
     ##========================================================================================
     ## Adapter Entry Points - invoked from the adapter
     ##========================================================================================
@@ -221,7 +220,8 @@ class RouterEngine:
         """
         Emit a log message to the host's event log
         """
-        self.log_adapter.log(level, text)
+        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        self.log_adapter.log(level, text, info[0], info[1])
 
 
     def send(self, dest, msg):

@@ -42,9 +42,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         super(ManagementTest, cls).setUpClass()
         # Stand-alone router
         name = cls.__name__
-        cls.log_file = name+".log"
         conf = Qdrouterd.Config([
-            ('log', {'module':'DEFAULT', 'level':'trace', 'output':cls.log_file}),
             ('router', { 'mode': 'standalone', 'router-id': name}),
             ('listener', {'name': 'l0', 'port':cls.get_port(), 'role':'normal'}),
             # Extra listeners to exercise managment query
@@ -149,7 +147,6 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         Create a waypoint that leads out and back from a second router.
         """
         conf = Qdrouterd.Config([
-            ('log', {'module':'DEFAULT', 'level':'trace', 'output':'wp-router.log'}),
             ('router', {'mode': 'standalone', 'router-id': 'wp-router'}),
             ('listener', {'port':self.get_port(), 'role':'normal'}),
             ('fixed-address', {'prefix':'foo'})
@@ -272,13 +269,11 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         """Test node entity in a pair of linked routers"""
         # Pair of linked interior routers
         conf1 = Qdrouterd.Config([
-            ('log', {'module':'DEFAULT', 'level':'trace', 'output':'router1.log'}),
             ('router', { 'mode': 'interior', 'router-id': 'router1'}),
             ('listener', {'port':self.get_port(), 'role':'normal'}),
             ('listener', {'port':self.get_port(), 'role':'inter-router'})
         ])
         conf2 = Qdrouterd.Config([
-            ('log', {'module':'DEFAULT', 'level':'trace', 'output':'router2.log'}),
             ('router', { 'mode': 'interior', 'router-id': 'router2'}),
             ('listener', {'port':self.get_port(), 'role':'normal'}),
             ('connector', {'port':conf1.sections('listener')[1]['port'], 'role':'inter-router'})
@@ -326,4 +321,4 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         for a in ['linkType', 'linkDir', 'owningAddr']: self.assertIn(a, result[LINK])
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(system_test.main_module())

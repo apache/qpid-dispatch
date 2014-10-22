@@ -19,7 +19,7 @@
 
 import unittest, os
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable
-from system_test import TestCase, Qdrouterd
+from system_test import TestCase, Qdrouterd, main_module
 
 
 class RouterTest(TestCase):
@@ -32,7 +32,6 @@ class RouterTest(TestCase):
 
         def router(name, client_server, connection):
             config = Qdrouterd.Config(ssl_config(client_server, connection) + [
-                ('log', {'module':'DEFAULT', 'level':'trace', 'output':name+".log"}),
                 ('container', {'worker-threads': 4, 'container-name': 'Qpid.Dispatch.Router.%s'%name}),
                 ('router', {'mode': 'interior', 'router-id': 'QDR.%s'%name}),
                 ('listener', {'port': cls.tester.get_port()}),
@@ -802,4 +801,4 @@ except SSLUnavailable:
             self.skipTest("Proton SSL support unavailable.")
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(main_module())

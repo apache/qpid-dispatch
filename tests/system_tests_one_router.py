@@ -19,7 +19,7 @@
 
 import unittest
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED
-from system_test import TestCase, Messenger, Qdrouterd
+from system_test import TestCase, Messenger, Qdrouterd, main_module
 
 class RouterTest(TestCase):
     """System tests involving a single router"""
@@ -30,7 +30,6 @@ class RouterTest(TestCase):
         super(RouterTest, cls).setUpClass()
         name = "test-router"
         config = Qdrouterd.Config([
-            ('log', {'module':'DEFAULT', 'level':'trace', 'output':name+".log"}),
             ('container', {'worker-threads': 4, 'container-name': 'Qpid.Dispatch.Router.A'}),
             ('router', {'mode': 'standalone', 'router-id': 'QDR'}),
             ('listener', {'port': cls.tester.get_port()}),
@@ -841,4 +840,4 @@ class RouterTest(TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(main_module())

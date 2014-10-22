@@ -65,4 +65,4 @@ class QdstatTest(system_test.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(system_test.main_module())

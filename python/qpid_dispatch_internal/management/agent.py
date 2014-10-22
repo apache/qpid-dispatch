@@ -48,7 +48,7 @@ Adding/removing/updating entities from C:
   4. unlocks the router.
 """
 
-import re
+import re, traceback
 from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
@@ -239,8 +239,7 @@ class EntityCache(object):
         self.agent = agent
         self.qd = self.agent.qd
         self.schema = agent.schema
-
-    def log(self, *args): self.agent.log(*args)
+        self.log = self.agent.log
 
     def map_filter(self, function, test):
         """Filter with test then apply function."""
@@ -337,11 +336,16 @@ class Agent(object):
         self.entities = EntityCache(self)
         self.name = self.identity = 'self'
         self.type = 'org.amqp.management' # AMQP management node type
-        for attributes in attribute_maps or []:
-            self.add_entity(self.create_entity(attributes))
         self.request_lock = Lock()
+        self.log_adapter = None
+        for attributes in attribute_maps or []:
+            # Note calls self.log, log messages are dropped.
+            self.add_entity(self.create_entity(attributes))
 
-    def log(self, *args): pass         # Replaced in activate.
+    def log(self, level, text):
+        if self.log_adapter:
+            info = traceback.extract_stack(limit=2)[0] # Caller frame info
+            self.log_adapter.log(level, text, info[0], info[1])
 
     SEP_RE = re.compile(r'-|\.')
 
@@ -349,7 +353,7 @@ class Agent(object):
         """Register the management address to receive management requests"""
         self.io = [IoAdapter(self.receive, address),
                    IoAdapter(self.receive, address, True)] # Global
-        self.log = LogAdapter("AGENT").log
+        self.log_adapter = LogAdapter("AGENT")
 
     def entity_class(self, entity_type):
         """Return the class that implements entity_type"""

@@ -18,7 +18,7 @@
 #
 
 import re, json, unittest
-from system_test import TestCase, Process, Qdrouterd
+from system_test import TestCase, Process, Qdrouterd, main_module
 from subprocess import PIPE, STDOUT
 
 
@@ -139,4 +139,4 @@ class QdmanageTest(TestCase):
         self.assertEqual(name_type(qall), name_type(qattr))
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(main_module())

@@ -340,15 +340,17 @@ static void LogAdapter_dealloc(LogAdapter* self)
 static PyObject* qd_python_log(PyObject *self, PyObject *args)
 {
     int level;
-    const char* text;
+    const char *text;
+    const char *file;
+    int line;
 
-    if (!PyArg_ParseTuple(args, "is", &level, &text))
+    if (!PyArg_ParseTuple(args, "issi", &level, &text, &file, &line))
         return 0;
 
     LogAdapter *self_ptr = (LogAdapter*) self;
     //char       *logmod   = PyString_AS_STRING(self_ptr->module_name);
 
-    qd_log(self_ptr->log_source, level, "%s", text);
+    qd_log_impl(self_ptr->log_source, level, file, line, "%s", text);
 
     Py_INCREF(Py_None);
     return Py_None;

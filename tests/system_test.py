@@ -52,7 +52,7 @@ export PYTHONPATH="$PYTHONPATH:/usr/local/lib/proton/bindings/python:/usr/local/
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib64"
 """
 
-import os, time, socket, random, subprocess, shutil, unittest
+import os, time, socket, random, subprocess, shutil, unittest, __main__
 from copy import copy
 import proton
 from proton import Message
@@ -321,7 +321,8 @@ class Qdrouterd(Process):
         """
         self.config = copy(config)
         if not [l for l in config if l[0] == 'log']:
-            config.append(('log', {'module':'DEFAULT', 'level':'info', 'output':name+'.log'}))
+            config.append(
+                ('log', {'module':'DEFAULT', 'level':'trace', 'source': 'true', 'output':name+'.log'}))
         if not pyinclude and os.environ['QPID_DISPATCH_HOME']:
             pyinclude = os.path.join(os.environ['QPID_DISPATCH_HOME'], 'python')
         super(Qdrouterd, self).__init__(
@@ -621,3 +622,13 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
 
     def assertIn(self, item, items):
         assert item in items, "%s not in %s" % (item, items)
+
+def main_module():
+    """
+    Return the module name of the __main__ module - i.e. the filename with the
+    path and .py extension stripped. Useful to run the tests in the current file but
+    using the proper module prefix instead of '__main__', as follows:
+        if __name__ == '__main__':
+            unittest.main(module=main_module())
+    """
+    return os.path.splitext(os.path.basename(__main__.__file__))[0]

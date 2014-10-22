@@ -317,7 +317,6 @@ void qd_log_initialize(void)
     log_source_lock = sys_mutex();
 
     default_log_source = qd_log_source(SOURCE_DEFAULT);
-    // Only report errors until we have configured the logging system.
     default_log_source->mask = levels[INFO].mask;
     default_log_source->timestamp = 1;
     default_log_source->source = 0;
@@ -352,6 +351,10 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
 
     if (qd_entity_has(entity, "timestamp"))
 	copy.timestamp = qd_entity_bool(entity, "timestamp");
+    QD_ERROR_RET();
+
+    if (qd_entity_has(entity, "source"))
+	copy.source = qd_entity_bool(entity, "source");
     QD_ERROR_RET();
 
     if (qd_entity_has(entity, "output")) {

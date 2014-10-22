@@ -27,6 +27,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "mock")) # Mock modules 
 from qpid_dispatch_internal.router.engine import NeighborEngine, PathEngine, NodeTracker
 from qpid_dispatch_internal.router.data import LinkState, MessageHELLO
 from qpid_dispatch.management.entity import Entity
+from system_test import main_module
 
 class Adapter(object):
     def __init__(self, domain):
@@ -661,4 +662,4 @@ class PathTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(main_module())
