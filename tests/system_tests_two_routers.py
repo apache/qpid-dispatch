@@ -105,11 +105,6 @@ class RouterTest(TestCase):
         M3.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M4.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-        M3.timeout = 1.0
-        M4.timeout = 1.0
-
         M1.start()
         M2.start()
         M3.start()
@@ -158,11 +153,6 @@ class RouterTest(TestCase):
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
         M3.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M4.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-        M3.timeout = 1.0
-        M4.timeout = 1.0
 
         M1.outgoing_window = 5
         M2.incoming_window = 5
@@ -221,9 +211,6 @@ class RouterTest(TestCase):
         M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-
         M1.outgoing_window = 5
         M2.incoming_window = 5
 
@@ -264,9 +251,6 @@ class RouterTest(TestCase):
 
         M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.timeout = 1.0
-        M2.timeout = 1.0
 
         M1.outgoing_window = 5
         M2.incoming_window = 5
@@ -326,7 +310,6 @@ class RouterTest(TestCase):
         addr = self.routers[0].addresses[0]+"/unsettled_undeliverable/1"
         M1 = self.messenger()
 
-        M1.timeout = 1.0
         M1.outgoing_window = 5
 
         M1.start()
@@ -349,9 +332,6 @@ class RouterTest(TestCase):
 
         M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.timeout = 1.0
-        M2.timeout = 1.0
 
         M1.outgoing_window = 5
         M2.incoming_window = 5
@@ -415,9 +395,6 @@ class RouterTest(TestCase):
         M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-
         M1.start()
         M2.start()
         M2.subscribe(addr)
@@ -451,7 +428,6 @@ class RouterTest(TestCase):
 
     def test_09_management(self):
         M = self.messenger()
-        M.timeout = 2.0
         M.start()
         M.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         sub = M.subscribe("amqp:/#")
@@ -497,11 +473,6 @@ class RouterTest(TestCase):
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
         M3.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M4.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-        M3.timeout = 1.0
-        M4.timeout = 1.0
 
         M1.start()
         M2.start()
@@ -561,11 +532,6 @@ class RouterTest(TestCase):
         M3.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M4.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-        M3.timeout = 1.0
-        M4.timeout = 1.0
-
         M1.start()
         M2.start()
         M3.start()
@@ -613,11 +579,6 @@ class RouterTest(TestCase):
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
         M3.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M4.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-        M3.timeout = 1.0
-        M4.timeout = 1.0
 
         M1.start()
         M2.start()
@@ -669,11 +630,6 @@ class RouterTest(TestCase):
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
         M3.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M4.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.timeout = 1.0
-        M2.timeout = 0.2
-        M3.timeout = 0.2
-        M4.timeout = 0.2
 
         M1.start()
         M2.start()
@@ -744,9 +700,6 @@ class RouterTest(TestCase):
 
         M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.timeout = 1.0
-        M2.timeout = 1.0
 
         M1.start()
         M2.start()

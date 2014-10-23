@@ -45,8 +45,7 @@ class RouterTest(TestCase):
 
     def test_00_discard(self):
         addr = self.address+"/discard/1"
-        M1 = Messenger()
-        M1.timeout = 1.0
+        M1 = self.messenger()
         M1.start()
         tm = Message()
         tm.address = addr
@@ -59,11 +58,8 @@ class RouterTest(TestCase):
 
     def test_01_pre_settled(self):
         addr = self.address+"/pre_settled/1"
-        M1 = Messenger()
-        M2 = Messenger()
-
-        M1.timeout = 1.0
-        M2.timeout = 1.0
+        M1 = self.messenger()
+        M2 = self.messenger()
 
         M1.start()
         M2.start()
@@ -89,15 +85,11 @@ class RouterTest(TestCase):
 
     def test_02_multicast(self):
         addr = self.address+"/pre_settled/multicast/1"
-        M1 = Messenger()
-        M2 = Messenger()
-        M3 = Messenger()
-        M4 = Messenger()
+        M1 = self.messenger()
+        M2 = self.messenger()
+        M3 = self.messenger()
+        M4 = self.messenger()
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-        M3.timeout = 1.0
-        M4.timeout = 1.0
 
         M1.start()
         M2.start()
@@ -138,15 +130,11 @@ class RouterTest(TestCase):
 
     def test_02a_multicast_unsettled(self):
         addr = self.address+"/pre_settled/multicast/1"
-        M1 = Messenger()
-        M2 = Messenger()
-        M3 = Messenger()
-        M4 = Messenger()
+        M1 = self.messenger()
+        M2 = self.messenger()
+        M3 = self.messenger()
+        M4 = self.messenger()
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-        M3.timeout = 1.0
-        M4.timeout = 1.0
 
         M1.outgoing_window = 5
         M2.incoming_window = 5
@@ -198,11 +186,9 @@ class RouterTest(TestCase):
 
     def test_02b_disp_to_closed_connection(self):
         addr = self.address+"/pre_settled/multicast/1"
-        M1 = Messenger()
-        M2 = Messenger()
+        M1 = self.messenger()
+        M2 = self.messenger()
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
 
         M1.outgoing_window = 5
         M2.incoming_window = 5
@@ -233,11 +219,9 @@ class RouterTest(TestCase):
 
     def test_02c_sender_settles_first(self):
         addr = self.address+"/settled/senderfirst/1"
-        M1 = Messenger()
-        M2 = Messenger()
+        M1 = self.messenger()
+        M2 = self.messenger()
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
 
         M1.outgoing_window = 5
         M2.incoming_window = 5
@@ -273,11 +257,9 @@ class RouterTest(TestCase):
 
     def test_03_propagated_disposition(self):
         addr = self.address+"/unsettled/1"
-        M1 = Messenger()
-        M2 = Messenger()
+        M1 = self.messenger()
+        M2 = self.messenger()
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
         M1.outgoing_window = 5
         M2.incoming_window = 5
 
@@ -333,9 +315,8 @@ class RouterTest(TestCase):
 
     def test_04_unsettled_undeliverable(self):
         addr = self.address+"/unsettled_undeliverable/1"
-        M1 = Messenger()
+        M1 = self.messenger()
 
-        M1.timeout = 1.0
         M1.outgoing_window = 5
 
         M1.start()
@@ -353,11 +334,9 @@ class RouterTest(TestCase):
 
     def test_05_three_ack(self):
         addr = self.address+"/three_ack/1"
-        M1 = Messenger()
-        M2 = Messenger()
+        M1 = self.messenger()
+        M2 = self.messenger()
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
         M1.outgoing_window = 5
         M2.incoming_window = 5
 
@@ -413,11 +392,9 @@ class RouterTest(TestCase):
 
     def test_08_message_annotations(self):
         addr = self.address+"/ma/1"
-        M1 = Messenger()
-        M2 = Messenger()
+        M1 = self.messenger()
+        M2 = self.messenger()
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
 
         M1.start()
         M2.start()
@@ -525,8 +502,7 @@ class RouterTest(TestCase):
     def test_09_management(self):
         addr  = "amqp:/$management"
 
-        M = Messenger()
-        M.timeout = 2.0
+        M = self.messenger()
         M.start()
         M.route("amqp:/*", self.address+"/$1")
         sub = M.subscribe("amqp:/#")
@@ -581,8 +557,7 @@ class RouterTest(TestCase):
     def test_09c_management_get_operations(self):
         addr  = "amqp:/_local/$management"
 
-        M = Messenger()
-        M.timeout = 2.0
+        M = self.messenger()
         M.start()
         M.route("amqp:/*", self.address+"/$1")
         sub = M.subscribe("amqp:/#")
@@ -615,8 +590,7 @@ class RouterTest(TestCase):
     def test_09d_management_not_implemented(self):
         addr  = "amqp:/$management"
 
-        M = Messenger()
-        M.timeout = 2.0
+        M = self.messenger()
         M.start()
         M.route("amqp:/*", self.address+"/$1")
         sub = M.subscribe("amqp:/#")
@@ -644,15 +618,11 @@ class RouterTest(TestCase):
 
     def test_10_semantics_multicast(self):
         addr = self.address+"/multicast/1"
-        M1 = Messenger()
-        M2 = Messenger()
-        M3 = Messenger()
-        M4 = Messenger()
+        M1 = self.messenger()
+        M2 = self.messenger()
+        M3 = self.messenger()
+        M4 = self.messenger()
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-        M3.timeout = 1.0
-        M4.timeout = 1.0
 
         M1.start()
         M2.start()
@@ -692,15 +662,11 @@ class RouterTest(TestCase):
 
     def test_11_semantics_closest(self):
         addr = self.address+"/closest/1"
-        M1 = Messenger()
-        M2 = Messenger()
-        M3 = Messenger()
-        M4 = Messenger()
+        M1 = self.messenger()
+        M2 = self.messenger()
+        M3 = self.messenger()
+        M4 = self.messenger()
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-        M3.timeout = 1.0
-        M4.timeout = 1.0
 
         M1.start()
         M2.start()
@@ -747,15 +713,11 @@ class RouterTest(TestCase):
 
     def test_12_semantics_spread(self):
         addr = self.address+"/spread/1"
-        M1 = Messenger()
-        M2 = Messenger()
-        M3 = Messenger()
-        M4 = Messenger()
+        M1 = self.messenger()
+        M2 = self.messenger()
+        M3 = self.messenger()
+        M4 = self.messenger()
 
-        M1.timeout = 1.0
-        M2.timeout = 1.0
-        M3.timeout = 1.0
-        M4.timeout = 1.0
 
         M1.start()
         M2.start()
@@ -803,11 +765,8 @@ class RouterTest(TestCase):
 
     def test_13_to_override(self):
         addr = self.address+"/toov/1"
-        M1 = Messenger()
-        M2 = Messenger()
-
-        M1.timeout = 1.0
-        M2.timeout = 1.0
+        M1 = self.messenger()
+        M2 = self.messenger()
 
         M1.start()
         M2.start()

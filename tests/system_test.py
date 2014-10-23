@@ -336,7 +336,7 @@ class Qdrouterd(Process):
     def management(self):
         """Return an management agent proxy for this router"""
         if not self._management:
-            self._management = Node(self.addresses[0])
+            self._management = Node(self.addresses[0], timeout=DEFAULT_TIMEOUT)
         return self._management
 
     def teardown(self):
