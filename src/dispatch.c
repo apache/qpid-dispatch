@@ -78,15 +78,16 @@ STATIC_ASSERT(sizeof(long) >= sizeof(void*), pointer_is_bigger_than_long);
 
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 {
+    qd_python_lock_state_t lock_state = qd_python_lock();
     PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.management.config");
-    if (!module) return qd_error_py();
-    PyObject *configure_dispatch = PyObject_GetAttrString(module, "configure_dispatch");
-    Py_DECREF(module);
-    if (!configure_dispatch) return qd_error_py();
-    PyObject *result = PyObject_CallFunction(configure_dispatch, "(ls)", (long)qd, config_path);
-    Py_DECREF(configure_dispatch);
-    if (!result) return qd_error_py();
-    return QD_ERROR_NONE;
+    PyObject *configure_dispatch = module ? PyObject_GetAttrString(module, "configure_dispatch") : NULL;
+    Py_XDECREF(module);
+    PyObject *result = configure_dispatch ? PyObject_CallFunction(configure_dispatch, "(ls)", (long)qd, config_path) : NULL;
+    Py_XDECREF(configure_dispatch);
+    if (!result) qd_error_py();
+    Py_XDECREF(result);
+    qd_python_unlock(lock_state);
+    return qd_error_code();
 }
 
 

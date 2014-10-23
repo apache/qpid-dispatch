@@ -441,7 +441,7 @@ static PyObject *py_iter_parse(qd_field_iterator_t *iter)
         }
         PyObject *value = qd_field_to_py(parsed);
         qd_parse_free(parsed);
-        qd_error_py();
+        if (!value) qd_error_py();
         return value;
     }
     qd_error(QD_ERROR_MESSAGE, "Failed to parse message field");
@@ -489,12 +489,14 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
     if (!qd_message_check(msg, QD_DEPTH_BODY))
         return;
 
+    // This is called from non-python threads so we need to acquire the GIL to use python APIS.
+    qd_python_lock_state_t lock_state = qd_python_lock();
     PyObject *py_msg = PyObject_CallFunction(message_type, NULL);
     if (!py_msg) {
         qd_error_py();
+        qd_python_unlock(lock_state);
         return;
     }
-
     iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_TO), py_iter_copy, py_msg, "address");
     iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_REPLY_TO), py_iter_copy, py_msg, "reply_to");
     // Note: correlation ID requires _typed()
@@ -502,13 +504,12 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
     iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES), py_iter_parse, py_msg, "properties");
     iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_BODY), py_iter_parse, py_msg, "body");
 
-    sys_mutex_lock(ilock);
     PyObject *value = PyObject_CallFunction(self->handler, "Ol", py_msg, link_id);
-    sys_mutex_unlock(ilock);
 
     Py_DECREF(py_msg);
     Py_XDECREF(value);
     qd_error_py();
+    qd_python_unlock(lock_state);
 }
 
 
@@ -730,12 +731,13 @@ static void qd_python_setup(void)
     }
 }
 
-void qd_python_lock(void)
+qd_python_lock_state_t qd_python_lock(void)
 {
     sys_mutex_lock(ilock);
+    return 0;
 }
 
-void qd_python_unlock(void)
+void qd_python_unlock(qd_python_lock_state_t lock_state)
 {
     sys_mutex_unlock(ilock);
 }

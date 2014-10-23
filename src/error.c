@@ -144,16 +144,20 @@ qd_error_t qd_error_py_impl(const char *file, int line) {
 	PyObject *type, *value, *trace;
 	PyErr_Fetch(&type, &value, &trace); /* Note clears the python error indicator */
 
-	PyObject *type_name = type ? PyObject_GetAttrString(type, "__name__") : NULL;
-	PyErr_Print();
-	PyObject *value_str = value ? PyObject_Str(value) : NULL;
-	const char* str = value_str ? PyString_AsString(value_str) : "Unknown";
+	PyObject *py_type_name = type ? PyObject_GetAttrString(type, "__name__") : NULL;
+        const char *type_name = py_type_name ? PyString_AsString(py_type_name) : NULL;
+
+	PyObject *py_value_str = value ? PyObject_Str(value) : NULL;
+        const char *value_str = py_value_str ? PyString_AsString(py_value_str) : NULL;
+        if (!value_str) value_str = "Unknown";
+
+        PyErr_Clear(); /* Ignore errors while we're trying to build the values. */
 	if (type_name)
-	    qd_error_impl(QD_ERROR_PYTHON, file, line, "%s: %s", PyString_AsString(type_name), str);
+	    qd_error_impl(QD_ERROR_PYTHON, file, line, "%s: %s", type_name, value_str);
 	else
-	    qd_error_impl(QD_ERROR_PYTHON, file, line, "%s", str);
-	Py_XDECREF(value_str);
-	Py_XDECREF(type_name);
+	    qd_error_impl(QD_ERROR_PYTHON, file, line, "%s", value_str);
+	Py_XDECREF(py_value_str);
+	Py_XDECREF(py_type_name);
 
 	log_trace_py(type, value, trace, QD_LOG_ERROR, file, line);
 

@@ -24,14 +24,27 @@
 
 struct sys_mutex_t {
     pthread_mutex_t mutex;
+#ifndef NDEBUG
+    // In a debug build, used to assert correct use of mutex.
     int             acquired;
+#endif
 };
+
+// NOTE: normally it is incorrect for an assert expression to have side effects,
+// since it could change the behavior between a debug and a release build.  In
+// this case however the mutex->acquired field only exists in a debug build, so
+// we want operations on mutex->acquired to be compiled out of a release build.
+#define ACQUIRE(mutex) assert(!mutex->acquired++)
+#define RELEASE(mutex) assert(!--mutex->acquired)
+
 
 sys_mutex_t *sys_mutex(void)
 {
     sys_mutex_t *mutex = NEW(sys_mutex_t);
     pthread_mutex_init(&(mutex->mutex), 0);
+#ifndef NDEBUG
     mutex->acquired = 0;
+#endif
     return mutex;
 }
 
@@ -47,15 +60,13 @@ void sys_mutex_free(sys_mutex_t *mutex)
 void sys_mutex_lock(sys_mutex_t *mutex)
 {
     pthread_mutex_lock(&(mutex->mutex));
-    assert(!mutex->acquired);
-    mutex->acquired++;
+    ACQUIRE(mutex);
 }
 
 
 void sys_mutex_unlock(sys_mutex_t *mutex)
 {
-    mutex->acquired--;
-    assert(!mutex->acquired);
+    RELEASE(mutex);
     pthread_mutex_unlock(&(mutex->mutex));
 }
 
@@ -82,10 +93,9 @@ void sys_cond_free(sys_cond_t *cond)
 
 void sys_cond_wait(sys_cond_t *cond, sys_mutex_t *held_mutex)
 {
-    assert(held_mutex->acquired);
-    held_mutex->acquired--;
+    RELEASE(held_mutex);
     pthread_cond_wait(&(cond->cond), &(held_mutex->mutex));
-    held_mutex->acquired++;
+    ACQUIRE(held_mutex);
 }
 
 
@@ -150,6 +160,13 @@ sys_thread_t *sys_thread(void *(*run_function) (void *), void *arg)
     return thread;
 }
 
+long sys_thread_id(sys_thread_t *thread) {
+    return (long) thread->thread;
+}
+
+long sys_thread_self() {
+    return pthread_self();
+}
 
 void sys_thread_free(sys_thread_t *thread)
 {

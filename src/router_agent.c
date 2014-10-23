@@ -256,7 +256,7 @@ qd_error_t qd_c_entity_update_router_link(qd_entity_t* entity, void *impl)
     qd_router_link_t *link = (qd_router_link_t*) impl;
     /* FIXME aconway 2014-10-17: old management used link->bit_mask as name/identity,
      * but even when prefixed with router.link this is not unique. Let python agent
-     * generate a name for now, revisit with a better name later.
+     * generate a name for now. A better ID would be router.link:<remote container>.<link name>.
      */
     if (!qd_entity_set_string(entity, "linkType", qd_link_type_name(link->link_type)) &&
         !qd_entity_set_string(entity, "linkDir", (link->link_direction == QD_INCOMING) ? "in": "out") &&

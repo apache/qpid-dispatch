@@ -76,7 +76,8 @@ PyObject *qd_field_to_py(qd_parsed_field_t *field);
  * These are temporary and will eventually be replaced by having an internal python
  * work queue that feeds a dedicated embedded-python thread.
  */
-void qd_python_lock(void);
-void qd_python_unlock(void);
+typedef PyGILState_STATE qd_python_lock_state_t;
+qd_python_lock_state_t qd_python_lock(void);
+void qd_python_unlock(qd_python_lock_state_t state);
 
 #endif
