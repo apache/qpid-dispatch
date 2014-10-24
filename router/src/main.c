@@ -113,7 +113,10 @@ static void main_process(const char *config_path, const char *python_pkgdir, int
     }
 
     qd_server_run(dispatch);
-    qd_dispatch_free(dispatch);
+
+    qd_dispatch_t *d = dispatch;
+    dispatch = NULL;
+    qd_dispatch_free(d);
 
     if (exit_with_sigint) {
         signal(SIGINT, SIG_DFL);

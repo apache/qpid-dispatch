@@ -309,8 +309,10 @@ class EntityCache(object):
                 except KeyError: pass
 
 
-        with self.qd.scoped_dispatch_router_lock(self.agent.dispatch):
-            self.qd.qd_c_entity_flush(events)
+        # FIXME aconway 2014-10-23: locking is ugly, push it down into C code.
+        self.qd.qd_dispatch_router_lock(self.agent.dispatch)
+        try:
+            self.qd.qd_c_entity_update_begin(events)
             # Collapse sequences of add/remove into a single remove/add/remove_add per pointer.
             actions = {}
             for action, type, pointer in events:
@@ -326,7 +328,9 @@ class EntityCache(object):
                     self.add(entity, pointer)
 
             for e in self.entities: e._update()
-
+        finally:
+            self.qd.qd_c_entity_update_end()
+            self.qd.qd_dispatch_router_unlock(self.agent.dispatch)
 
 class Agent(object):
     """AMQP managment agent"""

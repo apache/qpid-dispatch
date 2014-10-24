@@ -70,8 +70,11 @@ void qd_c_entity_add(const char *type, void *object) { push_event(ADD, type, obj
 
 void qd_c_entity_remove(const char *type, void *object) { push_event(REMOVE, type, object); }
 
-// Flush events in the add/remove cache into a python list of (action, type, pointer)
-qd_error_t qd_c_entity_flush(PyObject *list) {
+// Get events in the add/remove cache into a python list of (action, type, pointer)
+// Locks the entity cache so entities can be updated safely (prevent entities from being deleted.)
+// Do not processs any entities if return error code != 0
+// Must call qd_c_entity_update_end when done, regardless of error code.
+qd_error_t qd_c_entity_update_begin(PyObject *list) {
     if (!event_lock) return QD_ERROR_NONE;    /* Unit tests don't call qd_c_entity_initialize */
     qd_error_clear();
     sys_mutex_lock(event_lock);
@@ -86,8 +89,11 @@ qd_error_t qd_c_entity_flush(PyObject *list) {
         free(event);
         event = DEQ_HEAD(event_list);
     }
-    sys_mutex_unlock(event_lock);
     return qd_error_code();
+}
+
+void qd_c_entity_update_end() {
+    sys_mutex_unlock(event_lock);
 }
 
 const char *QD_ALLOCATOR_TYPE = "allocator";

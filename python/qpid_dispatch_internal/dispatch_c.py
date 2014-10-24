@@ -20,7 +20,6 @@
 """Access to functions in libqpid-dispatch.so"""
 
 import ctypes
-from contextlib import contextmanager
 from ctypes import c_char_p, c_long, py_object
 from qpid_dispatch.site import QPID_DISPATCH_LIB
 
@@ -71,15 +70,8 @@ class QdDll(ctypes.PyDLL):
 
         self._prototype(self.qd_connection_manager_start, None, [self.qd_dispatch_p])
         self._prototype(self.qd_waypoint_activate_all, None, [self.qd_dispatch_p])
-        self._prototype(self.qd_c_entity_flush, c_long, [py_object])
-
-    @contextmanager
-    def scoped_dispatch_router_lock(self, dispatch):
-        self.qd_dispatch_router_lock(dispatch)
-        try:
-            yield
-        finally:
-            self.qd_dispatch_router_unlock(dispatch)
+        self._prototype(self.qd_c_entity_update_begin, c_long, [py_object])
+        self._prototype(self.qd_c_entity_update_end, None, [])
 
     def _errcheck(self, result, func, args):
         if self.qd_error_code():
