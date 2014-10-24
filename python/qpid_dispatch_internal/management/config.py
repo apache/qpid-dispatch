@@ -57,7 +57,6 @@ class Config(object):
         spare_comma = re.compile(r',\s*([]}])') # Strip spare commas
         js_text = re.sub(spare_comma, r'\1', js_text)
         # Convert dictionary keys to camelCase
-        def cameldict(pairs): return dict((camelcase(k), v) for k, v in pairs)
         sections = json.loads(js_text)
         for s in sections:
             s[0] = camelcase(s[0])
@@ -161,7 +160,7 @@ def configure_dispatch(dispatch, filename):
     qd.qd_dispatch_prepare(dispatch)
 
     agent.activate("$management")
-    qd.qd_router_setup_late(dispatch);
+    qd.qd_router_setup_late(dispatch)
 
     # Note must configure addresses, waypoints, listeners and connectors after qd_dispatch_prepare
     for a in config.by_type('fixedAddress'): qd.qd_dispatch_configure_address(dispatch, a)

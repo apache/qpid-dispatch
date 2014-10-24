@@ -154,7 +154,7 @@ class Node(object):
             return Node.CORRELATION_ID
 
     @staticmethod
-    def check_response(response, request, expect=OK):
+    def check_response(response, expect=OK):
         """
         Check a management response message for errors and correlation ID.
         """
@@ -201,7 +201,7 @@ class Node(object):
             response = self.message_impl.fetch()
             # Ignore mismatched correlation IDs, responses to earlier requests that timed out.
             if response.correlation_id == request.correlation_id: break
-        self.check_response(response, request, expect=expect)
+        self.check_response(response, expect=expect)
         return response
 
     class QueryResponse(object):

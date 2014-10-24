@@ -24,7 +24,7 @@ Qpid Dispatch Router management schema and config file parsing.
 import json
 from pkgutil import get_data
 from . import schema
-from ..compat import json_load_kwargs
+from ..compat import JSON_LOAD_KWARGS
 
 class QdSchema(schema.Schema):
     """
@@ -32,8 +32,8 @@ class QdSchema(schema.Schema):
     """
     def __init__(self):
         """Load schema."""
-        schema = get_data('qpid_dispatch.management', 'qdrouter.json')
-        super(QdSchema, self).__init__(**json.loads(schema, **json_load_kwargs))
+        qd_schema = get_data('qpid_dispatch.management', 'qdrouter.json')
+        super(QdSchema, self).__init__(**json.loads(qd_schema, **JSON_LOAD_KWARGS))
 
     def validate(self, entities, full=True, **kwargs):
         """

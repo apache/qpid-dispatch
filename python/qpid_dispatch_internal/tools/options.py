@@ -23,7 +23,7 @@ from optparse import OptionGroup
 def connection_options(options, title="Connection Options"):
     """Return an OptionGroup for connection options."""
     group = OptionGroup(options, title)
-    group.add_option("-b", "--bus",  action="store", type="string", default="0.0.0.0",
+    group.add_option("-b", "--bus", action="store", type="string", default="0.0.0.0",
                      metavar="<url>", help="URL of the messaging bus to connect to (default %default)")
     group.add_option("-r", "--router", action="store", type="string", default=None,
                      metavar="<router-id>", help="Router to be queried")

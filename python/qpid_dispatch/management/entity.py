@@ -57,7 +57,8 @@ class Entity(object):
 
     def __getitem__(self, name): return self.attributes[name]
 
-    def _pyname(self, name): return name.replace('-', '_')
+    @staticmethod
+    def _pyname(name): return name.replace('-', '_')
 
     def _set(self, name, value):
         self.attributes[name] = value
@@ -67,7 +68,7 @@ class Entity(object):
     # e.g. validation.
     def __setitem__(self, name, value): self._set(name, value)
 
-    def __delitem__(self, name, value):
+    def __delitem__(self, name):
         del self.attributes[name]
         del self.__dict__[self._pyname(name)]
 
@@ -86,7 +87,7 @@ def update(entity, values):
     """
     for k, v in values.iteritems(): entity[k] = v
 
-SEPARATOR_RE = re.compile(' |_|-|\.')
+SEPARATOR_RE = re.compile(r' |_|-|\.')
 
 def camelcase(str, capital=False):
     """Convert string str with ' ', '_', '.' or '-' separators to camelCase."""

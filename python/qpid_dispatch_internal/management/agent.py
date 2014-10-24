@@ -48,7 +48,7 @@ Adding/removing/updating entities from C:
   4. unlocks the router.
 """
 
-import re, traceback
+import traceback
 from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
@@ -114,7 +114,7 @@ class Entity(SchemaEntity):
         updatefn = self._qd.function(
             fname, c_long, [py_object, c_void_p])
         def _do_update():
-            updatefn(self.attributes, pointer);
+            updatefn(self.attributes, pointer)
             return True
         self.__dict__['_update'] = _do_update
 
@@ -267,7 +267,7 @@ class EntityCache(object):
 
     def _remove(self, entity):
         try:
-            self.entities.remove(entity);
+            self.entities.remove(entity)
             self.log(LOG_DEBUG, "Remove %s entity: %s" %
                      (entity.entity_type.short_name, entity.attributes['identity']))
         except ValueError: pass
@@ -276,7 +276,7 @@ class EntityCache(object):
         self._remove(entity)
 
     def remove_pointer(self, pointer):
-        self._remove_pointer()
+        self._remove_pointer(pointer)
 
     def _remove_pointer(self, pointer):
         if pointer in self.pointers:
