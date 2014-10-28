@@ -30,13 +30,13 @@ class RouterTest(TestCase):
         super(RouterTest, cls).setUpClass()
         name = "test-router"
         config = Qdrouterd.Config([
-            ('container', {'worker-threads': 4, 'container-name': 'Qpid.Dispatch.Router.A'}),
-            ('router', {'mode': 'standalone', 'router-id': 'QDR'}),
+            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.A'}),
+            ('router', {'mode': 'standalone', 'routerId': 'QDR'}),
             ('listener', {'port': cls.tester.get_port()}),
-            ('fixed-address', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
-            ('fixed-address', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
-            ('fixed-address', {'prefix': '/multicast/', 'fanout': 'multiple'}),
-            ('fixed-address', {'prefix': '/', 'fanout': 'multiple'})
+            ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
+            ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
+            ('fixedAddress', {'prefix': '/multicast/', 'fanout': 'multiple'}),
+            ('fixedAddress', {'prefix': '/', 'fanout': 'multiple'})
         ])
         cls.router = cls.tester.qdrouterd(name, config)
         cls.router.wait_ready()

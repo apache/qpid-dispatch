@@ -32,13 +32,13 @@ class RouterTest(TestCase):
 
         def router(name, client_server, connection):
             config = Qdrouterd.Config(ssl_config(client_server, connection) + [
-                ('container', {'worker-threads': 4, 'container-name': 'Qpid.Dispatch.Router.%s'%name}),
-                ('router', {'mode': 'interior', 'router-id': 'QDR.%s'%name}),
+                ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.%s'%name}),
+                ('router', {'mode': 'interior', 'routerId': 'QDR.%s'%name}),
                 ('listener', {'port': cls.tester.get_port()}),
-                ('fixed-address', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
-                ('fixed-address', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
-                ('fixed-address', {'prefix': '/multicast/', 'fanout': 'multiple'}),
-                ('fixed-address', {'prefix': '/', 'fanout': 'multiple'}),
+                ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
+                ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
+                ('fixedAddress', {'prefix': '/multicast/', 'fanout': 'multiple'}),
+                ('fixedAddress', {'prefix': '/', 'fanout': 'multiple'}),
                 connection
             ])
             cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
@@ -625,6 +625,10 @@ class RouterTest(TestCase):
         M2 = self.messenger()
         M3 = self.messenger()
         M4 = self.messenger()
+
+        M2.timeout = 0.1
+        M3.timeout = 0.1
+        M4.timeout = 0.1
 
         M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
