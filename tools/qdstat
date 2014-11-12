@@ -143,6 +143,14 @@ class BusManager(Node):
             return addr[1]
         return ''
 
+    def _name_clean(self, name):
+        if not name:
+            return "-"
+        pos = name.find(':')
+        if pos >= 0:
+            return name[pos + 1:]
+        return name
+
     def displayGeneral(self):
         disp = Display(prefix="  ")
         heads = []
@@ -155,7 +163,7 @@ class BusManager(Node):
         router = objects[0]
         rows.append(('Mode',          router.mode))
         rows.append(('Area',          router.area))
-        rows.append(('Router Id',     router.name))
+        rows.append(('Router Id',     self._name_clean(router.name)))
         rows.append(('Address Count', router.addrCount))
         rows.append(('Link Count',    router.linkCount))
         rows.append(('Node Count',    router.nodeCount))
@@ -184,7 +192,7 @@ class BusManager(Node):
             row.append(link.linkType)
             row.append(link.linkDir)
             if link.linkType == "inter-router":
-                row.append(link.name)
+                row.append(self._name_clean(link.name))
             else:
                 row.append('-')
             row.append(self._addr_class(link.owningAddr))
@@ -214,10 +222,10 @@ class BusManager(Node):
 
         nodes = {}
         for node in objects:
-            nodes[node.name] = node
+            nodes[self._name_clean(node.name)] = node
             node.addr = self._addr_text(node.addr)
 
-        rows.append([attached.name, '-', '(self)', ''])
+        rows.append([self._name_clean(attached.name), '-', '(self)', ''])
         for node in objects:
             row = []
             row.append(node.addr)
@@ -263,9 +271,9 @@ class BusManager(Node):
 
         for addr in objects:
             row = []
-            row.append(self._addr_class(addr.name))
-            row.append(self._addr_text(addr.name))
-            row.append(self._addr_phase(addr.name))
+            row.append(self._addr_class(self._name_clean(addr.name)))
+            row.append(self._addr_text(self._name_clean(addr.name)))
+            row.append(self._addr_phase(self._name_clean(addr.name)))
             row.append(addr.inProcess)
             row.append(addr.subscriberCount)
             row.append(addr.remoteCount)
@@ -297,7 +305,7 @@ class BusManager(Node):
 
         for t in objects:
             row = []
-            row.append(t.name)
+            row.append(self._name_clean(t.name))
             row.append(t.typeSize)
             row.append(t.transferBatchSize)
             row.append(t.localFreeListMax)
