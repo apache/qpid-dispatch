@@ -78,7 +78,7 @@ static qd_error_t connection_entity_update_host(qd_entity_t* entity, qd_connecti
         return qd_entity_set_string(entity, "host", pn_connector_name(conn->pn_cxtr));
 }
 
-qd_error_t qd_c_entity_update_connection(qd_entity_t* entity, void *impl)
+qd_error_t qd_c_entity_refresh_connection(qd_entity_t* entity, void *impl)
 {
     qd_connection_t *conn = (qd_connection_t*)impl;
     const qd_server_config_t *config =

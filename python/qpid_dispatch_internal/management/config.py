@@ -144,23 +144,26 @@ def configure_dispatch(dispatch, filename):
     dispatch = qd.qd_dispatch_p(dispatch)
     config = Config(filename)
 
-    # NOTE: Can't import agent till till dispatch C extension module is initialized.
-    from .agent import Agent
-    agent = Agent(dispatch, config.entities)
-    qd.qd_dispatch_set_agent(dispatch, agent)
-
     # Configure any DEFAULT log entities first so we can report errors in non-
     # default log configurations to the correct place.
     for l in config.by_type('log'):
         if l['module'].upper() == 'DEFAULT': qd.qd_log_entity(l)
     for l in config.by_type('log'):
         if l['module'].upper() != 'DEFAULT': qd.qd_log_entity(l)
+
+    # NOTE: Can't import agent till till dispatch C extension module is initialized.
+    from .agent import Agent
+    agent = Agent(dispatch, config.entities)
+    qd.qd_dispatch_set_agent(dispatch, agent)
+
+    # Configure and prepare container and router before activating agent
     qd.qd_dispatch_configure_container(dispatch, config.by_type('container').next())
     qd.qd_dispatch_configure_router(dispatch, config.by_type('router').next())
     qd.qd_dispatch_prepare(dispatch)
 
     agent.activate("$management")
-    qd.qd_router_setup_late(dispatch)
+
+    qd.qd_router_setup_late(dispatch) # Actions requiring management agent.
 
     # Note must configure addresses, waypoints, listeners and connectors after qd_dispatch_prepare
     for a in config.by_type('fixedAddress'): qd.qd_dispatch_configure_address(dispatch, a)

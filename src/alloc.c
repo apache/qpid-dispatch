@@ -347,7 +347,7 @@ void qd_alloc_finalize(void)
 }
 
 
-qd_error_t qd_c_entity_update_allocator(qd_entity_t* entity, void *impl) {
+qd_error_t qd_c_entity_refresh_allocator(qd_entity_t* entity, void *impl) {
     qd_alloc_type_t *alloc_type = (qd_alloc_type_t*) impl;
     if ((qd_entity_has(entity, "identity") ||
          qd_entity_set_string(entity, "identity", alloc_type->desc->type_name) == 0) &&

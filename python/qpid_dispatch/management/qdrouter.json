@@ -233,7 +233,7 @@
             "include": [
                 "common"
             ],
-            "operations": ["CREATE", "READ"],
+            "operations": ["CREATE", "READ", "UPDATE", "DELETE"],
             "attributes": {
                 "module": {
                     "type":[

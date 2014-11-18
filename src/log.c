@@ -239,6 +239,14 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
     }
 }
 
+/// Reset the log source to the default state
+static void qd_log_source_defaults(qd_log_source_t *log_source) {
+    log_source->mask = -1;
+    log_source->timestamp = -1;
+    log_source->source = -1;
+    log_source->sink = 0;
+}
+
 /// Caller must hold the log_source_lock
 static qd_log_source_t *qd_log_source_lh(const char *module)
 {
@@ -249,10 +257,7 @@ static qd_log_source_t *qd_log_source_lh(const char *module)
 	memset(log_source, 0, sizeof(qd_log_source_t));
 	DEQ_ITEM_INIT(log_source);
 	log_source->module = module;
-	log_source->mask = -1;
-	log_source->timestamp = -1;
-	log_source->source = -1;
-	log_source->sink = 0;
+        qd_log_source_defaults(log_source);
         DEQ_INSERT_TAIL(source_list, log_source);
     }
     return log_source;
@@ -262,6 +267,15 @@ qd_log_source_t *qd_log_source(const char *module)
 {
     sys_mutex_lock(log_source_lock);
     qd_log_source_t* src = qd_log_source_lh(module);
+    sys_mutex_unlock(log_source_lock);
+    return src;
+}
+
+qd_log_source_t *qd_log_source_reset(const char *module)
+{
+    sys_mutex_lock(log_source_lock);
+    qd_log_source_t* src = qd_log_source_lh(module);
+    qd_log_source_defaults(src);
     sys_mutex_unlock(log_source_lock);
     return src;
 }

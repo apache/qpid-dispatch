@@ -94,7 +94,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in xrange(3)]
         for r in expect: # We might have extras in results due to create tests
             self.assertTrue(r in response.results)
-        for name in ['router:' + self.router.name, 'log:0']:
+        for name in ['router:' + self.router.name, 'log:DEFAULT']:
             self.assertTrue([r for r in response.get_dicts() if r['name'] == name],
                             msg="Can't find result with name '%s'" % name)
 
@@ -123,16 +123,44 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         router = node3.query(type=ROUTER).get_entities()
         self.assertEqual(self.__class__.router.name, router[0]['routerId'])
 
-    def test_create_log(self):
-        """Create a log entity"""
+    def test_log(self):
+        """Create, update and query log entities"""
+
+        self.assertRaises(NotFoundStatus, self.node.read, identity='log:AGENT') # Not configured
+
+        default = self.node.read(identity='log:DEFAULT')
+        self.assertEqual(default.attributes,
+                         {u'identity': u'log:DEFAULT',
+                          u'level': u'trace',
+                          u'module': u'DEFAULT',
+                          u'name': u'log:DEFAULT',
+                          u'output': u'ManagementTest.log',
+                          u'source': True,
+                          u'timestamp': True,
+                          u'type': u'org.apache.qpid.dispatch.log'})
+
+
+        def check_log(log, bad_type='nosuch'):
+            # Cause an error and verify it shows up in the log file.
+            self.assertRaises(ManagementError, self.node.create, type=bad_type, name=bad_type)
+            f = self.cleanup(open(log))
+            logstr = f.read()
+            self.assertTrue(re.search(r'ValidationError.*%s' % bad_type, logstr),
+                            msg="Can't find expected ValidationError.*%s in '%r'" % (bad_type, logstr))
+
+        # Create a log entity, verify logging is as expected
         log = os.path.abspath("test_create_log.log")
-        self.assert_create_ok('log', 'log.1', dict(module='AGENT', level="error", output=log))
-        # Cause an error and verify it shows up in the log file.
-        self.assertRaises(ManagementError, self.node.create, type='nosuch', name='nosuch')
-        f = self.cleanup(open(log))
-        logstr = f.read()
-        self.assertTrue(re.search(r'ValidationError.*nosuch', logstr),
-                        msg="Can't find expected ValidationError.*nosuch in '%r'" % logstr)
+        agent_log = self.assert_create_ok('log', 'log.1', dict(module='AGENT', level="error", output=log))
+        check_log(log)
+
+        # Update the log entity to output to a different file
+        log = os.path.abspath("test_create_log2.log")
+        self.node.update(dict(module='AGENT', level="error", output=log), identity='log:AGENT')
+        check_log(log)
+
+        # Delete the log entity - return to default state.
+        self.node.delete(identity='log:AGENT')
+        self.assertRaises(AssertionError, check_log, log, 'nosuch2')
 
     def test_create_fixed_address(self):
         self.assert_create_ok(FIXED_ADDRESS, 'fixed1', dict(prefix='fixed1'))

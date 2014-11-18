@@ -73,8 +73,8 @@ void qd_c_entity_remove(const char *type, void *object) { push_event(REMOVE, typ
 // Get events in the add/remove cache into a python list of (action, type, pointer)
 // Locks the entity cache so entities can be updated safely (prevent entities from being deleted.)
 // Do not processs any entities if return error code != 0
-// Must call qd_c_entity_update_end when done, regardless of error code.
-qd_error_t qd_c_entity_update_begin(PyObject *list) {
+// Must call qd_c_entity_refresh_end when done, regardless of error code.
+qd_error_t qd_c_entity_refresh_begin(PyObject *list) {
     if (!event_lock) return QD_ERROR_NONE;    /* Unit tests don't call qd_c_entity_initialize */
     qd_error_clear();
     sys_mutex_lock(event_lock);
@@ -92,7 +92,7 @@ qd_error_t qd_c_entity_update_begin(PyObject *list) {
     return qd_error_code();
 }
 
-void qd_c_entity_update_end() {
+void qd_c_entity_refresh_end() {
     sys_mutex_unlock(event_lock);
 }
 

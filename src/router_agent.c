@@ -36,7 +36,7 @@ static const char *qd_router_mode_names[] = {
 };
 ENUM_DEFINE(qd_router_mode, qd_router_mode_names);
 
-qd_error_t qd_c_entity_update_router(qd_entity_t* entity, void *impl) {
+qd_error_t qd_c_entity_refresh_router(qd_entity_t* entity, void *impl) {
     qd_dispatch_t *qd = (qd_dispatch_t*) impl;
     qd_router_t *router = qd->router;
     if (qd_entity_set_stringf(entity, "name", "%s:%s", QD_ROUTER_TYPE, router->router_id) == 0 &&
@@ -57,7 +57,7 @@ static const char *address_text(qd_address_t *addr)
     return addr ? (const char*) qd_hash_key_by_handle(addr->hash_handle) : 0;
 }
 
-qd_error_t qd_c_entity_update_router_address(qd_entity_t* entity, void *impl) {
+qd_error_t qd_c_entity_refresh_router_address(qd_entity_t* entity, void *impl) {
     qd_address_t *addr = (qd_address_t*) impl;
     if ((qd_entity_has(entity, "identity") ||
          qd_entity_set_string(entity, "identity", address_text(addr)) == 0) &&
@@ -76,7 +76,7 @@ qd_error_t qd_c_entity_update_router_address(qd_entity_t* entity, void *impl) {
 
 #define CHECK(err) if (err != 0) return qd_error_code()
 
-qd_error_t qd_c_entity_update_router_node(qd_entity_t* entity, void *impl) {
+qd_error_t qd_c_entity_refresh_router_node(qd_entity_t* entity, void *impl) {
     qd_router_node_t *rnode = (qd_router_node_t*) impl;
 
     if (!qd_entity_has(entity, "identity")) {
@@ -251,7 +251,7 @@ static const char *qd_router_addr_text(qd_address_t *addr)
     return addr ? (const char*)qd_hash_key_by_handle(addr->hash_handle) : NULL;
 }
 
-qd_error_t qd_c_entity_update_router_link(qd_entity_t* entity, void *impl)
+qd_error_t qd_c_entity_refresh_router_link(qd_entity_t* entity, void *impl)
 {
     qd_router_link_t *link = (qd_router_link_t*) impl;
     /* FIXME aconway 2014-10-17: old management used link->bit_mask as name/identity,

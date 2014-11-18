@@ -48,7 +48,7 @@ Adding/removing/updating entities from C:
   4. unlocks the router.
 """
 
-import traceback
+import traceback, sys
 from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
@@ -93,7 +93,9 @@ class Entity(SchemaEntity):
     Base class for agent entities with operations as well as attributes.
     """
 
-    def _update(self): return False # Replaced by _set_pointer
+    def _refresh(self):
+        """Refresh self.attributes from C implementation. No-op if no C impl pointer"""
+        return False # Replaced by _set_pointer
 
     def __init__(self, agent, entity_type, attributes=None, validate=True):
         """
@@ -101,7 +103,7 @@ class Entity(SchemaEntity):
         @param dispatch: Pointer to qd_dispatch C object.
         @param entity_type: L{EntityType}
         @param attributes: Attribute name:value map
-        @param pointer: Pointer to C object that can be used to update attributes.
+        @param pointer: Pointer to C object that can be used to refresh attributes.
         """
         super(Entity, self).__init__(entity_type, attributes, validate=validate)
         # Direct __dict__ access to avoid validation as schema attributes
@@ -110,13 +112,13 @@ class Entity(SchemaEntity):
         self.__dict__['_dispatch'] = agent.dispatch
 
     def _set_pointer(self, pointer):
-        fname = "qd_c_entity_update_" + self.entity_type.short_name.replace('.', '_')
-        updatefn = self._qd.function(
+        fname = "qd_c_entity_refresh_" + self.entity_type.short_name.replace('.', '_')
+        refreshfn = self._qd.function(
             fname, c_long, [py_object, c_void_p])
-        def _do_update():
-            updatefn(self.attributes, pointer)
+        def _do_refresh():
+            refreshfn(self.attributes, pointer)
             return True
-        self.__dict__['_update'] = _do_update
+        self.__dict__['_refresh'] = _do_refresh
 
     def create(self, request):
         """Subclasses can add extra create actions here"""
@@ -135,13 +137,22 @@ class Entity(SchemaEntity):
         newattrs = dict(self.attributes, **request.body)
         self.entity_type.validate(newattrs)
         self.attributes = newattrs
+        self._update()
         return (OK, self.attributes)
+
+    def _update(self):
+        """Subclasses implement update logic here"""
+        pass
 
     def delete(self, request):
         """Handle delete request from client"""
         self._agent.remove(self)
+        self._delete()
         return (NO_CONTENT, {})
 
+    def _delete(self):
+        """Subclasses implement delete logic here"""
+        pass
 
 class ContainerEntity(Entity): pass
 
@@ -153,9 +164,21 @@ class RouterEntity(Entity):
         self._set_pointer(self._dispatch)
 
 class LogEntity(Entity):
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
+        module = attributes.get('module')
+        if module:
+            attributes['identity'] = attributes['name'] = "%s:%s" % (entity_type.short_name, module)
+        super(LogEntity, self).__init__(agent, entity_type, attributes, validate)
+
     def create(self, request):
         self._qd.qd_log_entity(self)
 
+    def _update(self):
+        self._qd.qd_log_entity(self)
+
+    def _delete(self):
+        """Can't actually delete a log source but return it to the default state"""
+        self._qd.qd_log_source_reset(self.attributes['module'])
 
 class ListenerEntity(Entity):
     def create(self, request):
@@ -204,7 +227,7 @@ class CEntity(Entity):
 
         super(CEntity, self).__init__(agent, entity_type, validate=False)
         self._set_pointer(pointer)
-        self._update()
+        self._refresh()
         identity = self.attributes.get('identity')
         if identity is None: identity = str(self.id_count.next())
         self.attributes['identity'] = prefix(entity_type.short_name, identity)
@@ -233,7 +256,7 @@ class AllocatorEntity(CEntity):
 
 class EntityCache(object):
     """
-    Searchable cache of entities, can be updated from C attributes.
+    Searchable cache of entities, can be refreshd from C attributes.
     """
     def __init__(self, agent):
         self.entities = []
@@ -284,8 +307,8 @@ class EntityCache(object):
             del self.pointers[pointer]
             self._remove(entity)
 
-    def update_from_c(self):
-        """Update entities from the C dispatch runtime"""
+    def refresh_from_c(self):
+        """Refresh entities from the C dispatch runtime"""
         events = []
         REMOVE, ADD, REMOVE_ADD = 0, 1, 2
 
@@ -312,7 +335,7 @@ class EntityCache(object):
         # FIXME aconway 2014-10-23: locking is ugly, push it down into C code.
         self.qd.qd_dispatch_router_lock(self.agent.dispatch)
         try:
-            self.qd.qd_c_entity_update_begin(events)
+            self.qd.qd_c_entity_refresh_begin(events)
             # Collapse sequences of add/remove into a single remove/add/remove_add per pointer.
             actions = {}
             for action, type, pointer in events:
@@ -327,9 +350,9 @@ class EntityCache(object):
                     entity = klass(self.agent, entity_type, pointer)
                     self.add(entity, pointer)
 
-            for e in self.entities: e._update()
+            for e in self.entities: e._refresh()
         finally:
-            self.qd.qd_c_entity_update_end()
+            self.qd.qd_c_entity_refresh_end()
             self.qd.qd_dispatch_router_unlock(self.agent.dispatch)
 
 class Agent(object):
@@ -394,7 +417,7 @@ class Agent(object):
         """Called when a management request is received."""
         # Coarse locking, handle one request at a time.
         with self.request_lock:
-            self.entities.update_from_c()
+            self.entities.refresh_from_c()
             self.log(LOG_DEBUG, "Agent request %s on link %s"%(request, link_id))
             def error(e, trace):
                 """Raise an error"""
@@ -525,7 +548,7 @@ class Agent(object):
             raise InternalServerErrorStatus(
                 "Duplicate (%s) entities with %s=%r" % (len(found), k, v))
         else:
-            raise NotFoundStatus("No entity with %s'" % attrvals())
+            raise NotFoundStatus("No entity with %s" % attrvals())
 
         for k, v in ids.iteritems():
             if entity[k] != v: raise BadRequestStatus("Conflicting %s" % attrvals())

@@ -70,8 +70,8 @@ class QdDll(ctypes.PyDLL):
 
         self._prototype(self.qd_connection_manager_start, None, [self.qd_dispatch_p])
         self._prototype(self.qd_waypoint_activate_all, None, [self.qd_dispatch_p])
-        self._prototype(self.qd_c_entity_update_begin, c_long, [py_object])
-        self._prototype(self.qd_c_entity_update_end, None, [])
+        self._prototype(self.qd_c_entity_refresh_begin, c_long, [py_object])
+        self._prototype(self.qd_c_entity_refresh_end, None, [])
 
     def _errcheck(self, result, func, args):
         if self.qd_error_code():
