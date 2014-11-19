@@ -52,7 +52,9 @@ static const unsigned char * const FOOTER_SHORT                 = (unsigned char
 static const unsigned char * const TAGS_LIST                    = (unsigned char*) "\x45\xc0\xd0";
 static const unsigned char * const TAGS_MAP                     = (unsigned char*) "\xc1\xd1";
 static const unsigned char * const TAGS_BINARY                  = (unsigned char*) "\xa0\xb0";
-static const unsigned char * const TAGS_ANY                     = (unsigned char*) "\x45\xc0\xd0\xc1\xd1\xa0\xb0";
+static const unsigned char * const TAGS_ANY                     = (unsigned char*) "\x45\xc0\xd0\xc1\xd1\xa0\xb0"
+    "\xa1\xb1\xa3\xb3\xe0\xf0"
+    "\x40\x56\x41\x42\x50\x60\x70\x52\x43\x80\x53\x44\x51\x61\x71\x54\x81\x55\x72\x82\x74\x84\x94\x73\x83\x98";
 
 ALLOC_DEFINE_CONFIG(qd_message_t, sizeof(qd_message_pvt_t), 0, 0);
 ALLOC_DEFINE(qd_message_content_t);
@@ -70,9 +72,9 @@ int qd_message_repr_len() { return qd_log_max_len(); }
 // Quote non-printable characters suitable for log messages. Output in buffer.
 static void quote(char* bytes, int n, char **begin, char *end) {
     for (char* p = bytes; p < bytes+n; ++p) {
-	if (isprint(*p) || isspace(*p))
+        if (isprint(*p) || isspace(*p))
             aprintf(begin, end, "%c", (int)*p);
-	else
+        else
             aprintf(begin, end, "\\%02hhx", *p);
     }
 }
@@ -81,15 +83,15 @@ static void quote(char* bytes, int n, char **begin, char *end) {
 static void copy_field(qd_message_t *msg,  int field, int max, char *pre, char *post,
                        char **begin, char *end)
 {
-    qd_field_iterator_t* iter =	qd_message_field_iterator(msg, field);
+    qd_field_iterator_t* iter = qd_message_field_iterator(msg, field);
     if (iter) {
-	aprintf(begin, end, "%s", pre);
-	qd_field_iterator_reset(iter);
-	for (int j = 0; !qd_field_iterator_end(iter) && j < max; ++j) {
-	    char byte = qd_field_iterator_octet(iter);
-	    quote(&byte, 1, begin, end);
-	}
-	aprintf(begin, end, "%s", post);
+        aprintf(begin, end, "%s", pre);
+        qd_field_iterator_reset(iter);
+        for (int j = 0; !qd_field_iterator_end(iter) && j < max; ++j) {
+            char byte = qd_field_iterator_octet(iter);
+            quote(&byte, 1, begin, end);
+        }
+        aprintf(begin, end, "%s", post);
     }
 }
 
@@ -104,7 +106,7 @@ char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len) {
     copy_field(msg, QD_FIELD_TO, INT_MAX, "to='", "'", &begin, end);
     copy_field(msg, QD_FIELD_REPLY_TO, INT_MAX, " reply-to='", "'", &begin, end);
     copy_field(msg, QD_FIELD_BODY, 16, " body='", "'", &begin, end);
-    aprintf(&begin, end, "%s", REPR_END);	/* We saved space at the beginning. */
+    aprintf(&begin, end, "%s", REPR_END);   /* We saved space at the beginning. */
     return buffer;
 }
 
@@ -644,12 +646,12 @@ qd_message_t *qd_message_receive(qd_delivery_t *delivery)
             }
             qd_delivery_set_context(delivery, 0);
 
-	    char repr[qd_message_repr_len()];
-	    qd_log(log_source, QD_LOG_TRACE, "%s received, link=%s",
-		   qd_message_repr((qd_message_t*)msg, repr, sizeof(repr)),
-		   pn_link_name(link));
+            char repr[qd_message_repr_len()];
+            qd_log(log_source, QD_LOG_TRACE, "%s received, link=%s",
+                   qd_message_repr((qd_message_t*)msg, repr, sizeof(repr)),
+                   pn_link_name(link));
 
-	    return (qd_message_t*) msg;
+            return (qd_message_t*) msg;
         }
 
         if (rc > 0) {
@@ -697,8 +699,8 @@ void qd_message_send(qd_message_t *in_msg, qd_link_t *link)
 
     char repr[qd_message_repr_len()];
     qd_log(log_source, QD_LOG_TRACE, "%s sending, link=%s",
-	   qd_message_repr(in_msg, repr, sizeof(repr)),
-	   pn_link_name(pnl));
+           qd_message_repr(in_msg, repr, sizeof(repr)),
+           pn_link_name(pnl));
 
     if (DEQ_SIZE(content->new_message_annotations) > 0) {
         //
@@ -712,9 +714,9 @@ void qd_message_send(qd_message_t *in_msg, qd_link_t *link)
         // the message annotations
         //
         if (!qd_message_check(in_msg, QD_DEPTH_MESSAGE_ANNOTATIONS)) {
-	    qd_log(log_source, QD_LOG_ERROR, "Cannot send: %s", qd_error_message);
+            qd_log(log_source, QD_LOG_ERROR, "Cannot send: %s", qd_error_message);
             return;
-	}
+        }
 
         //
         // Send header if present
@@ -791,8 +793,8 @@ static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_
     qd_buffer_t *buffer  = DEQ_HEAD(content->buffers);
 
     if (!buffer) {
-	qd_error(QD_ERROR_MESSAGE, "No data");
-	return false;
+        qd_error(QD_ERROR_MESSAGE, "No data");
+        return false;
     }
 
     if (depth <= content->parse_depth)
@@ -811,8 +813,8 @@ static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_
     //
     if (0 == qd_check_field_LH(content, QD_DEPTH_HEADER,
                                MSG_HDR_LONG, MSG_HDR_SHORT, TAGS_LIST, &content->section_message_header, 0)) {
-	qd_error(QD_ERROR_MESSAGE, "Invalid header");
-	    return false;
+        qd_error(QD_ERROR_MESSAGE, "Invalid header");
+        return false;
     }
     if (depth == QD_DEPTH_HEADER)
         return true;
@@ -822,8 +824,8 @@ static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_
     //
     if (0 == qd_check_field_LH(content, QD_DEPTH_DELIVERY_ANNOTATIONS,
                                DELIVERY_ANNOTATION_LONG, DELIVERY_ANNOTATION_SHORT, TAGS_MAP, &content->section_delivery_annotation, 0)) {
-	qd_error(QD_ERROR_MESSAGE, "Invalid delivery-annotations");
-	return false;
+        qd_error(QD_ERROR_MESSAGE, "Invalid delivery-annotations");
+        return false;
     }
     if (depth == QD_DEPTH_DELIVERY_ANNOTATIONS)
         return true;
@@ -833,8 +835,8 @@ static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_
     //
     if (0 == qd_check_field_LH(content, QD_DEPTH_MESSAGE_ANNOTATIONS,
                                MESSAGE_ANNOTATION_LONG, MESSAGE_ANNOTATION_SHORT, TAGS_MAP, &content->section_message_annotation, 0)) {
-	qd_error(QD_ERROR_MESSAGE, "Invalid annotations");
-	return false;
+        qd_error(QD_ERROR_MESSAGE, "Invalid annotations");
+        return false;
     }
     if (depth == QD_DEPTH_MESSAGE_ANNOTATIONS)
         return true;
@@ -844,8 +846,8 @@ static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_
     //
     if (0 == qd_check_field_LH(content, QD_DEPTH_PROPERTIES,
                                PROPERTIES_LONG, PROPERTIES_SHORT, TAGS_LIST, &content->section_message_properties, 0)) {
-	qd_error(QD_ERROR_MESSAGE, "Invalid message properties");
-	return false;
+        qd_error(QD_ERROR_MESSAGE, "Invalid message properties");
+        return false;
     }
     if (depth == QD_DEPTH_PROPERTIES)
         return true;
@@ -855,8 +857,8 @@ static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_
     //
     if (0 == qd_check_field_LH(content, QD_DEPTH_APPLICATION_PROPERTIES,
                                APPLICATION_PROPERTIES_LONG, APPLICATION_PROPERTIES_SHORT, TAGS_MAP, &content->section_application_properties, 0)) {
-	qd_error(QD_ERROR_MESSAGE, "Invalid application-properties");
-	return false;
+        qd_error(QD_ERROR_MESSAGE, "Invalid application-properties");
+        return false;
     }
     if (depth == QD_DEPTH_APPLICATION_PROPERTIES)
         return true;
@@ -869,18 +871,18 @@ static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_
     //
     if (0 == qd_check_field_LH(content, QD_DEPTH_BODY,
                                BODY_DATA_LONG, BODY_DATA_SHORT, TAGS_BINARY, &content->section_body, 1)) {
-	qd_error(QD_ERROR_MESSAGE, "Invalid body data");
-	return false;
+        qd_error(QD_ERROR_MESSAGE, "Invalid body data");
+        return false;
     }
     if (0 == qd_check_field_LH(content, QD_DEPTH_BODY,
                                BODY_SEQUENCE_LONG, BODY_SEQUENCE_SHORT, TAGS_LIST, &content->section_body, 1)) {
-	qd_error(QD_ERROR_MESSAGE, "Invalid body sequence");
-	return false;
+        qd_error(QD_ERROR_MESSAGE, "Invalid body sequence");
+        return false;
     }
     if (0 == qd_check_field_LH(content, QD_DEPTH_BODY,
                                BODY_VALUE_LONG, BODY_VALUE_SHORT, TAGS_ANY, &content->section_body, 0)) {
-	qd_error(QD_ERROR_MESSAGE, "Invalid body value");
-	return false;
+        qd_error(QD_ERROR_MESSAGE, "Invalid body value");
+        return false;
     }
     if (depth == QD_DEPTH_BODY)
         return true;
@@ -891,8 +893,8 @@ static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_
     if (0 == qd_check_field_LH(content, QD_DEPTH_ALL,
                                FOOTER_LONG, FOOTER_SHORT, TAGS_MAP, &content->section_footer, 0)) {
 
-	qd_error(QD_ERROR_MESSAGE, "Invalid footer");
-	return false;
+        qd_error(QD_ERROR_MESSAGE, "Invalid footer");
+        return false;
     }
 
     return true;
