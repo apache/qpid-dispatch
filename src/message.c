@@ -92,6 +92,7 @@ static void copy_field(qd_message_t *msg,  int field, int max, char *pre, char *
             quote(&byte, 1, begin, end);
         }
         aprintf(begin, end, "%s", post);
+        qd_field_iterator_free(iter);
     }
 }
 
