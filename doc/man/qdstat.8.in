@@ -61,8 +61,7 @@ Display a brief usage message and exit.
 .I /etc/qpid-dispatch/qdstat.conf
 .SH SEE ALSO
 .BR qdrouterd (8),
-.BR qdrouterd.conf (5),
-.BR qdstat.conf (5)
+.BR qdrouterd.conf (5)
 .SH AUTHOR
 Apache Qpid <http://qpid.apache.org/>
 .SH COPYRIGHT
