@@ -118,6 +118,7 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
             // Reject the link
             // TODO - When the API allows, add an error message for "no available node"
             pn_link_close(pn_link);
+            pn_link_free(pn_link);
             return;
         }
     }
@@ -125,6 +126,7 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
     qd_link_t *link = new_qd_link_t();
     if (!link) {
         pn_link_close(pn_link);
+        pn_link_free(pn_link);
         return;
     }
 
@@ -161,6 +163,7 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
             // Reject the link
             // TODO - When the API allows, add an error message for "no available node"
             pn_link_close(pn_link);
+            pn_link_free(pn_link);
             return;
         }
     }
@@ -168,6 +171,7 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
     qd_link_t *link = new_qd_link_t();
     if (!link) {
         pn_link_close(pn_link);
+        pn_link_free(pn_link);
         return;
     }
 
@@ -255,19 +259,24 @@ static int close_handler(void* unused, pn_connection_t *conn)
     pn_link_t *pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE);
     while (pn_link) {
         qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
+        pn_link_t *link_to_free;
         qd_node_t *node = link->node;
         if (node && link)
             node->ntype->link_detach_handler(node->context, link, 0);
         pn_link_close(pn_link);
-        free_qd_link_t(link);
+        link_to_free = pn_link;
         pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE);
+        pn_link_free(link_to_free);
     }
 
     // teardown all sessions
     pn_session_t *ssn = pn_session_head(conn, 0);
+    pn_session_t *ssn_to_free;
     while (ssn) {
         pn_session_close(ssn);
+        ssn_to_free = ssn;
         ssn = pn_session_next(ssn, 0);
+        pn_session_free(ssn_to_free);
     }
 
     // teardown the connection
@@ -280,6 +289,7 @@ static int process_handler(qd_container_t *container, void* unused, qd_connectio
 {
     pn_session_t    *ssn;
     pn_link_t       *pn_link;
+    qd_link_t       *qd_link;
     pn_delivery_t   *delivery;
     pn_collector_t  *collector   = qd_connection_collector(qd_conn);
     pn_connection_t *conn        = qd_connection_pn(qd_conn);
@@ -315,8 +325,10 @@ static int process_handler(qd_container_t *container, void* unused, qd_connectio
 
         case PN_SESSION_REMOTE_CLOSE :
             ssn = pn_event_session(event);
-            if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED))
+            if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
                 pn_session_close(ssn);
+                pn_session_free(ssn);
+            }
             break;
 
         case PN_LINK_REMOTE_OPEN :
@@ -332,12 +344,19 @@ static int process_handler(qd_container_t *container, void* unused, qd_connectio
         case PN_LINK_REMOTE_CLOSE :
             pn_link = pn_event_link(event);
             if (pn_link_state(pn_link) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
-                qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
-                qd_node_t *node = link->node;
+                qd_link = (qd_link_t*) pn_link_get_context(pn_link);
+                qd_node_t *node = qd_link->node;
                 if (node)
-                    node->ntype->link_detach_handler(node->context, link, 1); // TODO - get 'closed' from detach message
+                    node->ntype->link_detach_handler(node->context, qd_link, 1); // TODO - get 'closed' from detach message
                 pn_link_close(pn_link);
+                pn_link_free(pn_link);
             }
+            break;
+
+        case PN_LINK_FINAL :
+            pn_link = pn_event_link(event);
+            qd_link = (qd_link_t*) pn_link_get_context(pn_link);
+            free_qd_link_t(qd_link);
             break;
 
         case PN_DELIVERY :
@@ -752,6 +771,7 @@ void qd_link_activate(qd_link_t *link)
 void qd_link_close(qd_link_t *link)
 {
     pn_link_close(link->pn_link);
+    pn_link_free(link->pn_link);
 }
 
 
