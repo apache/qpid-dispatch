@@ -366,7 +366,7 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
 
         //
         // Check the delivery associated with the queued message.  If it is not
-        // settled, link it to the ougoing delivery for disposition/settlement
+        // settled, link it to the outgoing delivery for disposition/settlement
         // tracking.  If it is (pre-)settled, put it on the incoming link's event
         // queue to be locally settled.  This is done to hold session credit during
         // the time the message is in the outgoing message fifo.

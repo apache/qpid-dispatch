@@ -757,6 +757,7 @@ void qd_message_send(qd_message_t *in_msg, qd_link_t *link)
         }
 
         // Fall through to process the remaining buffers normally
+        // Note that 'advance' will have moved us to the next buffer in the chain.
     }
 
     while (buf) {
