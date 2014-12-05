@@ -113,8 +113,7 @@ class Entity(SchemaEntity):
 
     def _set_pointer(self, pointer):
         fname = "qd_c_entity_refresh_" + self.entity_type.short_name.replace('.', '_')
-        refreshfn = self._qd.function(
-            fname, c_long, [py_object, c_void_p])
+        refreshfn = self._qd.function(fname, c_long, [py_object, c_void_p])
         def _do_refresh():
             refreshfn(self.attributes, pointer)
             return True
@@ -307,49 +306,41 @@ class EntityCache(object):
             del self.pointers[pointer]
             self._remove(entity)
 
+
     def refresh_from_c(self):
         """Refresh entities from the C dispatch runtime"""
-        events = []
-        REMOVE, ADD, REMOVE_ADD = 0, 1, 2
+        REMOVE, ADD = 0, 1
 
-        class Action(object):
-            """Collapse a sequence of add/remove actions down to None, remove, add or remove_add"""
-
-            MATRIX = {          # Collaps pairs of actions
-                (None, ADD): ADD,
-                (None, REMOVE): REMOVE,
-                (REMOVE, ADD): REMOVE_ADD,
-                (ADD, REMOVE): None,
-                (REMOVE_ADD, REMOVE): REMOVE
-            }
-
-            def __init__(self, type):
-                self.action = None
-                self.type = type
-
-            def add(self, action):
-                try: self.action = self.MATRIX[(self.action, action)]
-                except KeyError: pass
-
+        def remove_redundant(events):
+            """Remove redundant add/remove pairs of events."""
+            add = {}            # add[pointer] = index of add event.
+            redundant = []      # List of redundant event indexes.
+            for i in xrange(len(events)):
+                action, type, pointer = events[i]
+                if action == ADD:
+                    add[pointer] = i
+                elif pointer in add: # action == REMOVE and there's an ADD
+                    redundant.append(add[pointer])
+                    redundant.append(i)
+                    del add[pointer]
+            for i in sorted(redundant, reverse=True):
+                events.pop(i)
 
         # FIXME aconway 2014-10-23: locking is ugly, push it down into C code.
         self.qd.qd_dispatch_router_lock(self.agent.dispatch)
         try:
+            events = []
             self.qd.qd_c_entity_refresh_begin(events)
-            # Collapse sequences of add/remove into a single remove/add/remove_add per pointer.
-            actions = {}
+            remove_redundant(events)
             for action, type, pointer in events:
-                if not pointer in actions: actions[pointer] = Action(type)
-                actions[pointer].add(action)
-            for pointer, action in actions.iteritems():
-                if action.action == REMOVE or action.action == REMOVE_ADD:
+                if action == REMOVE:
                     self._remove_pointer(pointer)
-                if action.action == ADD or action.action == REMOVE_ADD:
-                    entity_type = self.schema.entity_type(action.type)
+                elif action == ADD:
+                    entity_type = self.schema.entity_type(type)
                     klass = self.agent.entity_class(entity_type)
                     entity = klass(self.agent, entity_type, pointer)
                     self.add(entity, pointer)
-
+            # Refresh the entity values while the lock is still held.
             for e in self.entities: e._refresh()
         finally:
             self.qd.qd_c_entity_refresh_end()
