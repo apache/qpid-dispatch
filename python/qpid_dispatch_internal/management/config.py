@@ -33,6 +33,8 @@ class Config(object):
 
     def __init__(self, filename=None, schema=QdSchema()):
         self.schema = schema
+        self.config_types = [e for e in schema.entity_types.itervalues()
+                             if schema.is_configuration(e)]
         if filename:
             self.load(filename)
         else:
@@ -66,24 +68,25 @@ class Config(object):
 
     def _expand(self, content):
         """
-        Find include sections (defined by schema) in the content,
-        expand references and remove the include sections.
+        Find annotation sections (defined by schema) in the content,
+        expand references and remove the annotation sections.
         @param content: ((section-name:{name:value...}))
         """
-        def _expand_section(section, includes):
+        def _expand_section(section, annotations):
             """Expand one section"""
             attrs = section[1]
             for k in attrs.keys(): # Iterate over keys() because we will modify attr
-                inc = [i[1] for i in includes if i[0] == k and i[1]['name'] == attrs[k]]
+                inc = [i[1] for i in annotations if i[0] == k and i[1]['name'] == attrs[k]]
                 if inc:
                     assert len(inc) == 1
                     inc = copy(inc[0])
-                    del inc['name'] # Not a real attribute, just an include id.
+                    del inc['name'] # Not a real attribute, just an annotation id.
                     attrs.update(inc)
-                    del attrs[k] # Delete the include attribute.
+                    del attrs[k] # Delete the annotation attribute.
             return section
-        includes = [s for s in content if s[0] in self.schema.includes]
-        return [_expand_section(s, includes) for s in content if s[0] not in self.schema.includes]
+        annotations = [s for s in content if self.schema.annotation(s[0], error=False)]
+        return [_expand_section(s, annotations) for s in content
+                if self.schema.is_configuration(self.schema.entity_type(s[0], False))]
 
     def _default_ids(self, content):
         """
@@ -92,7 +95,7 @@ class Config(object):
         - If entity has one of name/identity set the other to be the same.
         - If entity has both, do nothing
         """
-        counts = dict((et.short_name, 0) for et in self.schema.entity_types.itervalues())
+        counts = dict((et.short_name, 0) for et in self.config_types)
         for section in content:
             section_name, attrs = section
             count = counts[section_name]
@@ -123,7 +126,7 @@ class Config(object):
         else:
             sections = self._parse(source)
             # Add missing singleton sections
-            for et in self.schema.entity_types.itervalues():
+            for et in self.config_types:
                 if et.singleton and not [s for s in sections if s[0] == et.short_name]:
                     sections.append((et.short_name, {}))
             sections = self._expand(sections)

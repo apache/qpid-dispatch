@@ -1,0 +1,57 @@
+Informal desctription of the qdrouter.json schema.
+==================================================
+
+qdrouterd.json defines annotations and entity types of the Qpid Dispatch Router management model.
+The model is based on the AMQP management specification.
+
+The schema is a JSON map with the following keys:
+
+- "description": documentation string
+- "prefix": attribute and annotation names in the schema are short form with no prefix. Names must be prepended with this prefix when they are exposed to outside AMQP management clients or agents.
+
+- "annotations": map of annotation names to definitions.
+- "entityTypes": map of entity type names to definitions.
+
+Annotation and entity type definition maps have the following keys:
+
+- "description": documentation string.
+- "operations": list of allowed operation names.
+- "attributes": map of attribute names to attribute definitions.
+
+Entity type definitions also have these fields:
+
+- "extends": Name of base type, the new type includes all operations and attributes from the base type.
+- "annotations": List of annotation names. The new type includes all operations and attributes from all the annotations.
+
+Attribute definition maps have the following fields:
+
+- "type": one of the following:
+  - "String": a unicode string value.
+  - "Integer": an integer value.
+  - "Boolean": a true/false value.
+  - [...]: a list of strings means an enumeration. Values must be one of the strings or an integer integer index into the list, starting from 0.
+
+- "default": a default value can be a literal value or a reference to another attribute in the form $attributeName.
+
+
+There is the following hierarchy among entity types:
+
+"entity": the base of all entity types.
+- "configurationEntity": base for all types that hold configuration information.
+- "operationalEntity": base for all types that hold operational information.
+
+"Configuration" information is supplied in advance and expresse intent. For
+example "I want the router to listen on port N", or, "I want the router to
+connect to this address" All the entities that can be used in the configuration
+file are now "configurationEntity".
+
+"Operational" information reflects the actual state of the router at a given
+moment in time.  For example, "how many addresses are presently active on the
+router?" All the entities queried by qdstat are now "operationalEntity".
+
+The two types are often related, for example "I want an on-demand connection to
+this address" and "is there presently a live outgoing connection to this
+address?"  As a matter of good practice we separate the two kinds of
+entities. For example "listener" and "connector" are configuration entities
+expressing the intent to make or receive connectoins. The "connection" entity
+holds live operational information about an actual connection.

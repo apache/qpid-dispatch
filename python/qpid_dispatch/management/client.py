@@ -331,6 +331,9 @@ class Node(object):
     def get_types(self, type=None):
         return self.call(self.node_request(operation="GET-TYPES", entityType=type)).body
 
+    def get_annotations(self, type=None):
+        return self.call(self.node_request(operation="GET-ANNOTATIONS", entityType=type)).body
+
     def get_attributes(self, type=None):
         return self.call(self.node_request(operation="GET-ATTRIBUTES", entityType=type)).body
 

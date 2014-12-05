@@ -71,10 +71,10 @@ management name and identity of <section-name>-<n>. For example
 "listener-2". You can provide explicit name and identity attributes in any
 section.
 
-Include sections define a group of attribute values that can be included in
+Annotation sections define a group of attribute values that can be included in
 one or more entity sections.
 
-For example you can define an "ssl-profile" include section with SSL credentials
+For example you can define an "ssl-profile" annotation section with SSL credentials
 that can be included in multiple "listener" entities. Here's an example, note
 how the 'ssl-profile' attribute of 'listener' sections references the 'name'
 attribute of 'ssl-profile' sections.
@@ -98,8 +98,8 @@ listener {
         schema = QdSchema()
 
         def write_attribute(attr, attrs):
-            if attr.include and attr.include != attrs:
-                return          # Don't repeat included attributes
+            if attr.annotation and attr.annotation != attrs:
+                return          # Don't repeat annotationd attributes
             if attr.value is not None:
                 return          # Don't show fixed-value attributes, they can't be set in conf file.
 
@@ -127,19 +127,22 @@ listener {
                 write_attribute(attr, attrs)
             f.write('\n\n')
 
-        f.write(".SH INCLUDE SECTIONS\n\n")
-        for include in schema.includes.itervalues():
-            used_by = [e.name for e in schema.entity_types.itervalues() if include.name in e.include]
-            f.write('.SS "%s"\n'%include.name)
-            write_attributes(include)
-            f.write('.IP "Included by %s."\n'%(', '.join(used_by)))
+        f.write(".SH ANNOTATION SECTIONS\n\n")
+        for annotation in schema.annotations.itervalues():
+            used_by = [e.name for e in schema.entity_types.itervalues()
+                       if annotation in e.annotations]
+            f.write('.SS "%s"\n'%annotation.short_name)
+            write_attributes(annotation)
+            f.write('.IP "Annotationd by %s."\n'%(', '.join(used_by)))
 
         f.write(".SH ENTITY SECTIONS\n\n")
+        config = schema.entity_type("configurationEntity")
         for entity_type in schema.entity_types.itervalues():
-            if "CREATE" in entity_type.operations and not entity_type.short_name == 'dummy':
+            if config in entity_type.all_bases:
                 f.write('.SS "%s"\n'% entity_type.short_name)
                 write_attributes(entity_type)
-                f.write('.IP "Includes %s."\n'%(', '.join(entity_type.include)))
+                f.write('.IP "Annotations %s."\n'%(', '.join(
+                    [a.short_name for a in entity_type.annotations])))
 
 
 if __name__ == '__main__':

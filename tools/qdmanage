@@ -186,9 +186,16 @@ For help with a command: %s <command> --help
     @commands
     def get_types(self):
         self.setup(
-            "Get the list of entity types. Prints a JSON list of type names.",
+            "Get the list of entity types with they types they extend. Prints a JSON map of type names with base types",
             [('type', 'string', 'Restrict types implementing <type>.')])
         self.print_json(self.call_node('get_types'))
+
+    @commands
+    def get_annotations(self):
+        self.setup(
+            "Get the list of entity types with the annotations they include. Prints a JSON map of type names and annotations.",
+            [('type', 'string', 'Restrict types implementing <type>.')])
+        self.print_json(self.call_node('get_annotations'))
 
     @commands
     def get_attributes(self):

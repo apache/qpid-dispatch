@@ -188,11 +188,11 @@ class AttributeType(object):
     @ivar value: Fixed value for the attribute. Can be a reference.
     @ivar unique: True if the attribute value is unique.
     @ivar description: Description of the attribute type.
-    @ivar include: Include section or None
+    @ivar annotation: Annotation section or None
     """
 
     def __init__(self, name, type=None, default=None, required=False, unique=False,
-                 value=None, include=None, description=""):
+                 value=None, annotation=None, description=""):
         """
         See L{AttributeType} instance variables.
         """
@@ -203,7 +203,7 @@ class AttributeType(object):
         self.value = value
         self.unique = unique
         self.description = description
-        self.include = include
+        self.annotation = annotation
         if self.value is not None and self.default is not None:
             raise ValidationError("Attribute '%s' has default value and fixed value"%self.name)
 
@@ -258,14 +258,18 @@ class AttributeType(object):
         return "%s(%s)"%(self.__class__.__name__, self.name)
 
 
-class AttributeTypeHolder(object):
-    """Base class for IncludeType and EntityType - a named holder of attribute types"""
+class RedefinedError(ValueError): pass
 
-    def __init__(self, name, schema, attributes=None, description=""):
-        self.name, self.schema, self.description = name, schema, description
+
+class AttrsAndOps(object):
+    """Base class for Annotation and EntityType - a named holder of attribute types and operations"""
+
+    def __init__(self, name, schema, attributes=None, operations=None, description=""):
+        self.name, self.schema, self.description = schema.long_name(name), schema, description
+        self.short_name = schema.short_name(name)
         self.attributes = OrderedDict()
-        if attributes:
-            self.add_attributes(attributes)
+        if attributes: self.add_attributes(attributes)
+        self.operations = operations or []
 
     def add_attributes(self, attributes):
         """
@@ -283,6 +287,7 @@ class AttributeTypeHolder(object):
             ('attributes', OrderedDict(
                 (k, v.dump()) for k, v in self.attributes.iteritems()
                 if k != 'type')), # Don't dump 'type' attribute, dumped separately.
+            ('operations', self.operations),
             ('description', self.description or None)
         ])
 
@@ -292,16 +297,17 @@ class AttributeTypeHolder(object):
     def __str__(self):
         return self.name
 
-class IncludeType(AttributeTypeHolder):
-    """An include type defines a set of attributes that can be re-used by multiple EntityTypes"""
-    def __init__(self, name, schema, attributes=None, description=""):
-        super(IncludeType, self).__init__(name, schema, attributes, description)
+
+class Annotation(AttrsAndOps):
+    """An annotation type defines a set of attributes that can be re-used by multiple EntityTypes"""
+    def __init__(self, name, schema, attributes=None, operations=None, description=""):
+        super(Annotation, self).__init__(name, schema, attributes, operations, description)
         attributes = attributes or {}
         for a in self.attributes.itervalues():
-            a.include = self
+            a.annotation = self
 
 
-class EntityType(AttributeTypeHolder):
+class EntityType(AttrsAndOps):
     """
     An entity type defines a set of attributes for an entity.
 
@@ -309,31 +315,50 @@ class EntityType(AttributeTypeHolder):
     @ivar short_name: Un-prefixed short name.
     @ivar attributes: Map of L{AttributeType} for entity.
     @ivar singleton: If true only one entity of this type is allowed.
-    #ivar include: List of names of sections included by this entity.
+    #ivar annotation: List of names of sections annotationd by this entity.
     """
-    def __init__(self, name, schema, singleton=False, include=None, attributes=None,
-                 description="", operations=None):
+    def __init__(self, name, schema, singleton=False, annotations=None, attributes=None,
+                 extends=None, description="", operations=None):
         """
         @param name: name of the entity type.
         @param schema: schema for this type.
         @param singleton: True if entity type is a singleton.
-        @param include: List of names of include types for this entity.
+        @param annotation: List of names of annotation types for this entity.
         @param attributes: Map of attributes {name: {type:, default:, required:, unique:}}
         @param description: Human readable description.
         @param operations: Allowed operations, list of operation names.
         """
-        super(EntityType, self).__init__(name, schema, attributes, description)
-        self.short_name = schema.short_name(name)
-        self.refs = {'entityType': name}
+        super(EntityType, self).__init__(name, schema, attributes, operations, description)
+        self.base = None
+        self.all_bases = []
+        if extends:
+            self.base = schema.entity_type(extends)
+            self.all_bases = [self.base] + self.base.all_bases
+            self._extend(self.base, 'extend')
+
+        self.annotations = [ schema.annotation(a) for a in annotations or []]
+        for a in self.annotations:
+            self._extend(a, 'be annotated')
+
+        # This map defines values that can be referred to using $$ in the schema.
+        self.refs = {'entityType': self.name}
         self.singleton = singleton
-        self.include = include
-        self.operations = operations or []
-        if include and self.schema.includes:
-            for i in include:
-                if not i in schema.includes:
-                    raise ValidationError("Include '%s' not found in %s'"%(i, self))
-                for attr in schema.includes[i].attributes.itervalues():
-                    self.attributes[attr.name] = attr
+
+    def _extend(self, other, how):
+        """Add attributes and operations from other"""
+        def check(a, b, what):
+            overlap = set(a) & set(b)
+            if overlap:
+                raise RedefinedError("'%s' cannot %s '%s', re-defines %s: %s"
+                                     % (name, how, other.short_name, what, list(overlap).join(', ')))
+        check(self.operations, other.operations, "operations")
+        self.operations = self.operations + other.operations
+        check(self.attributes.iterkeys(), other.attributes.itervalues(), "attributes")
+        self.attributes.update(other.attributes)
+
+    def extends(self, base): return base in self.all_bases
+
+    def is_a(self, type): return type == self or self.extends(type)
 
     def dump(self):
         """Json friendly representation"""
@@ -418,30 +443,31 @@ class Schema(object):
 
     @ivar prefix: Prefix to prepend to short entity type names.
     @ivar entityTypes: Map of L{EntityType} by name.
-    @ivar includes: Map of L{IncludeType} by name.
+    @ivar annotations: Map of L{Annotation} by name.
     @ivar description: Text description of schema.
     """
-    def __init__(self, prefix="", includes=None, entityTypes=None, description=""):
+    def __init__(self, prefix="", annotations=None, entityTypes=None, description=""):
         """
         @param prefix: Prefix for entity names.
-        @param includes: Map of  { include-name: {attribute-name:value, ... }}
-        @param entity_types: Map of  { entity-type-name: { singleton:, include:[...], attributes:{...}}}
+        @param annotations: Map of  { annotation-name: {attribute-name:value, ... }}
+        @param entity_types: Map of  { entity-type-name: { singleton:, annotation:[...], attributes:{...}}}
         @param description: Human readable description.
         """
-        if prefix.endswith('.'): prefix = prefix[:-1]
-        self.prefix = self.prefixdot = prefix
-        if prefix: self.prefixdot += '.'
+        if prefix:
+            self.prefix = prefix.strip('.')
+            self.prefixdot = self.prefix + '.'
+        else:
+            self.prefix = self.prefixdot = ""
 
         self.description = description
-        self.includes = OrderedDict()
-        if includes:
-            for k, v in includes.iteritems():
-                self.includes[k] = IncludeType(k, self, **v)
+        self.annotations = OrderedDict()
         self.entity_types = OrderedDict()
-        if entityTypes:
-            for k, v in entityTypes.iteritems():
-                name = self.long_name(k)
-                self.entity_types[name] = EntityType(name, self, **v)
+        def add_defs(thing, mymap, defs):
+            for k, v in defs.iteritems():
+                t = thing(k, self, **v)
+                mymap[t.name] = t
+        add_defs(Annotation, self.annotations, annotations or {})
+        add_defs(EntityType, self.entity_types, entityTypes or {})
 
     def short_name(self, name):
         """Remove prefix from name if present"""
@@ -460,22 +486,24 @@ class Schema(object):
         """Return json-friendly representation"""
         return OrderedDict([
             ('prefix', self.prefix),
-            ('includes',
-             OrderedDict((k, v.dump()) for k, v in self.includes.iteritems())),
+            ('annotations',
+             OrderedDict((a.short_name, a.dump()) for a in self.annotations.itervalues())),
             ('entityTypes',
-             OrderedDict((e.short_name, e.dump())
-                         for e in self.entity_types.itervalues()))
+             OrderedDict((e.short_name, e.dump()) for e in self.entity_types.itervalues()))
         ])
 
-    def entity_type(self, name, error=True):
-        """Look up an EntityType by name.
-        If error raise exception if not found else return None
-        """
+    def _lookup(self, map, name, message, error):
         try:
-            return self.entity_types[self.long_name(name)]
+            return map[self.long_name(name)]
         except KeyError:
-            if error: raise ValidationError("No such entity type '%s'" % name)
-        return None
+            if error: raise ValidationError(message % name)
+            else: return None
+
+    def entity_type(self, name, error=True):
+        return self._lookup(self.entity_types, name, "No such entity type '%s'", error)
+
+    def annotation(self, name, error=True):
+        return self._lookup(self.annotations, name, "No such annotation '%s'", error)
 
     def validate_entity(self, attributes, check_required=True, add_default=True,
                         check_unique=None, check_singleton=None):
@@ -530,6 +558,11 @@ class Schema(object):
     def entities(self, attribute_maps):
         """Convert a list of attribute maps into a list of L{Entity}"""
         return [self.entity(m) for m in attribute_maps]
+
+    def by_type(self, type):
+        """Return an iterator over entity types that extend or are type.
+        If type is None return all entities."""
+        return (t for t in self.entity_types.itervalues() if not type or t.is_a(type))
 
 
 class Entity(entity.Entity):

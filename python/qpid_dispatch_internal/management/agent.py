@@ -496,8 +496,13 @@ class Agent(object):
 
     def get_types(self, request):
         type = self.requested_type(request)
-        return (OK, dict((t, []) for t in self.schema.entity_types
-                         if not type or type.name == t))
+        return (OK, dict((t.name, [b.name for b in t.all_bases])
+                         for t in self.schema.by_type(type)))
+
+    def get_annotations(self, request):
+        type = self.requested_type(request)
+        return (OK, dict((t.name, [a.name for a in t.annotations])
+                         for t in self.schema.by_type(type)))
 
     def get_operations(self, request):
         type = self.requested_type(request)

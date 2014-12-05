@@ -24,6 +24,8 @@ from qpid_dispatch.management import Node, ManagementError, Url, BadRequestStatu
 from system_test import Qdrouterd, message, retry
 
 DISPATCH = 'org.apache.qpid.dispatch'
+CONFIGURATION = DISPATCH + '.configurationEntity'
+OPERATIONAL = DISPATCH + '.operationalEntity'
 LISTENER = DISPATCH + '.listener'
 CONNECTOR = DISPATCH + '.connector'
 FIXED_ADDRESS = DISPATCH + '.fixedAddress'
@@ -335,9 +337,14 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
     def test_get_types(self):
         types = self.node.get_types()
-        self.assertIn('org.apache.qpid.dispatch.listener', types)
-        self.assertIn('org.apache.qpid.dispatch.waypoint', types)
-        self.assertIn('org.apache.qpid.dispatch.router.link', types)
+        self.assertIn(CONFIGURATION, types[LISTENER])
+        self.assertIn(WAYPOINT, types)
+        self.assertIn(OPERATIONAL, types[LINK])
+
+    def test_get_attributes(self):
+        types = self.node.get_attributes()
+        self.assertIn(SSL_PROFILE, types[CONNECTOR])
+        self.assertEqual([], types[WAYPOINT])
 
     def test_get_operations(self):
         result = self.node.get_operations(type=DUMMY)

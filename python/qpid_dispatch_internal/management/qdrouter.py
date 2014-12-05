@@ -30,10 +30,16 @@ class QdSchema(schema.Schema):
     """
     Qpid Dispatch Router management schema.
     """
+
+    CONFIGURATION_ENTITY = "configurationEntity"
+    OPERATIONAL_ENTITY = "operationalEntity"
+
     def __init__(self):
         """Load schema."""
         qd_schema = get_data('qpid_dispatch.management', 'qdrouter.json')
         super(QdSchema, self).__init__(**json.loads(qd_schema, **JSON_LOAD_KWARGS))
+        self.configuration_entity = self.entity_type(self.CONFIGURATION_ENTITY)
+        self.operational_entity = self.entity_type(self.OPERATIONAL_ENTITY)
 
     def validate(self, entities, full=True, **kwargs):
         """
@@ -53,3 +59,9 @@ class QdSchema(schema.Schema):
                 for connect in entities.get(entity_type='listeners') + entities.get(entity_type='connector'):
                     if connect['role'] != 'normal':
                         raise schema.ValidationError("Role '%s' for connection '%s' only permitted with 'interior' mode" % (connect['role'], connect.name))
+
+    def is_configuration(self, entity_type):
+        return entity_type and self.configuration_entity in entity_type.all_bases
+
+    def is_operational(self, entity_type):
+        return entity_type and self.operational_entity in entity_type.all_bases

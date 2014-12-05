@@ -33,7 +33,7 @@ def replace_od(thing):
 
 SCHEMA_1 = {
     "prefix":"org.example",
-    "includes": {
+    "annotations": {
         "entityId": {
             "attributes": {
                 "name": {"type":"String", "required": True, "unique":True},
@@ -44,19 +44,19 @@ SCHEMA_1 = {
     "entityTypes": {
         "container": {
             "singleton": True,
-            "include" : ["entityId"],
+            "annotations" : ["entityId"],
             "attributes": {
                 "workerThreads" : {"type":"Integer", "default": 1}
             }
         },
         "listener": {
-            "include" : ["entityId"],
+            "annotations" : ["entityId"],
             "attributes": {
                 "addr" : {"type":"String"}
             }
         },
         "connector": {
-            "include" : ["entityId"],
+            "annotations" : ["entityId"],
             "attributes": {
                 "addr" : {"type":"String"}
             }
@@ -112,7 +112,7 @@ class SchemaTest(unittest.TestCase):
 
 
     def test_entity_type(self):
-        s = Schema(includes={
+        s = Schema(annotations={
             'i1':{'attributes': { 'foo1': {'type':'String', 'default':'FOO1'}}},
             'i2':{'attributes': { 'foo2': {'type':'String', 'default':'FOO2'}}}})
 
@@ -122,8 +122,8 @@ class SchemaTest(unittest.TestCase):
             'e': {'type':['x', 'y']}})
         self.assertRaises(ValidationError, e.validate, {}) # Missing required 'req'
         self.assertEqual(e.validate({'req':42}), {'foo': 'FOO', 'req': 42})
-        # Try with an include
-        e = EntityType('e2', s, attributes={'x':{'type':'Integer'}}, include=['i1', 'i2'])
+        # Try with an annotation
+        e = EntityType('e2', s, attributes={'x':{'type':'Integer'}}, annotations=['i1', 'i2'])
         self.assertEqual(e.validate({'x':1}), {'x':1, 'foo1': 'FOO1', 'foo2': 'FOO2'})
 
     def test_entity_refs(self):
@@ -140,13 +140,13 @@ class SchemaTest(unittest.TestCase):
                          e.validate({'identity': 'x', 'name':'y'}))
         self.assertRaises(ValidationError, e.validate, {}) # Circular reference.
 
-    def test_entity_include_refs(self):
-        s = Schema(includes={
+    def test_entity_annotation_refs(self):
+        s = Schema(annotations={
             'i1': {'attributes': {
                 'name': {'type':'String', 'default':'$identity'},
                 'identity': {'type':'String', 'default':'$name', "required": True}}}})
 
-        e = EntityType('MyEntity', s, attributes={}, include=['i1'])
+        e = EntityType('MyEntity', s, attributes={}, annotations=['i1'])
         self.assertEqual({'identity': 'x', 'name': 'x'}, e.validate({'identity':'x'}))
         self.assertEqual({'identity': 'x', 'name': 'x'}, e.validate({'name':'x'}))
         self.assertEqual({'identity': 'x', 'name': 'y'}, e.validate({'identity': 'x', 'name':'y'}))
@@ -159,7 +159,7 @@ class SchemaTest(unittest.TestCase):
         expect = {
             "prefix":"org.example",
 
-            "includes": {
+            "annotations": {
                 "entityId": {
                     "attributes": {
                         "name": {"required": True,
