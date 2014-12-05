@@ -38,7 +38,6 @@ add_custom_command (
 
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES
-  agent.c
   alloc.c
   amqp.c
   bitmask.c
@@ -49,7 +48,7 @@ set(qpid_dispatch_SOURCES
   container.c
   dispatch.c
   entity.c
-  c_entity.c
+  entity_cache.c
   hash.c
   iovec.c
   iterator.c

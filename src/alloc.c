@@ -21,14 +21,15 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
-#include <qpid/dispatch/agent.h>
 #include <memory.h>
 #include <inttypes.h>
 #include <stdio.h>
-#include "entity_private.h"
-#include "c_entity.h"
+#include "entity.h"
+#include "entity_cache.h"
 
 #define QD_MEMORY_DEBUG 1
+
+const char *QD_ALLOCATOR_TYPE = "allocator";
 
 typedef struct qd_alloc_type_t qd_alloc_type_t;
 typedef struct qd_alloc_item_t qd_alloc_item_t;
@@ -70,9 +71,6 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
 {
     sys_mutex_lock(init_lock);
 
-    //qd_log("ALLOC", QD_LOG_TRACE, "Initialized Allocator - type=%s type-size=%d total-size=%d",
-    //       desc->type_name, desc->type_size, desc->total_size);
-
     if (!desc->global_pool) {
         desc->total_size = desc->type_size;
         if (desc->additional_size)
@@ -98,7 +96,7 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
 
         desc->header  = PATTERN_FRONT;
         desc->trailer = PATTERN_BACK;
-        qd_c_entity_add(QD_ALLOCATOR_TYPE, type_item);
+        qd_entity_cache_add(QD_ALLOCATOR_TYPE, type_item);
     }
 
     sys_mutex_unlock(init_lock);
@@ -288,7 +286,7 @@ void qd_alloc_finalize(void)
     qd_alloc_item_t *item;
     qd_alloc_type_t *type_item = DEQ_HEAD(type_list);
     while (type_item) {
-        qd_c_entity_remove(QD_ALLOCATOR_TYPE, type_item);
+        qd_entity_cache_remove(QD_ALLOCATOR_TYPE, type_item);
         qd_alloc_type_desc_t *desc = type_item->desc;
 
         //
@@ -347,7 +345,7 @@ void qd_alloc_finalize(void)
 }
 
 
-qd_error_t qd_c_entity_refresh_allocator(qd_entity_t* entity, void *impl) {
+qd_error_t qd_entity_refresh_allocator(qd_entity_t* entity, void *impl) {
     qd_alloc_type_t *alloc_type = (qd_alloc_type_t*) impl;
     if ((qd_entity_has(entity, "identity") ||
          qd_entity_set_string(entity, "identity", alloc_type->desc->type_name) == 0) &&
@@ -363,115 +361,3 @@ qd_error_t qd_c_entity_refresh_allocator(qd_entity_t* entity, void *impl) {
         return QD_ERROR_NONE;
     return qd_error_code();
 }
-
-
-static void alloc_attr_name(void *object_handle, void *cor, void *unused)
-{
-    qd_alloc_type_t *alloc_type = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_string(cor, 0, alloc_type->desc->type_name);
-}
-
-
-static void alloc_attr_type_size(void *object_handle, void *cor, void *unused)
-{
-    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_uint(cor, 0, item->desc->total_size);
-}
-
-
-static void alloc_attr_transfer_batch_size(void *object_handle, void *cor, void *unused)
-{
-    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_uint(cor, 0, item->desc->config->transfer_batch_size);
-}
-
-
-static void alloc_attr_local_free_list_max(void *object_handle, void *cor, void *unused)
-{
-    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_uint(cor, 0, item->desc->config->local_free_list_max);
-}
-
-
-static void alloc_attr_global_free_list_max(void *object_handle, void *cor, void *unused)
-{
-    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_uint(cor, 0, item->desc->config->global_free_list_max);
-}
-
-
-static void alloc_attr_total_alloc_from_heap(void *object_handle, void *cor, void *unused)
-{
-    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_uint(cor, 0, item->desc->stats->total_alloc_from_heap);
-}
-
-
-static void alloc_attr_total_free_to_heap(void *object_handle, void *cor, void *unused)
-{
-    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_uint(cor, 0, item->desc->stats->total_free_to_heap);
-}
-
-
-static void alloc_attr_held_by_threads(void *object_handle, void *cor, void *unused)
-{
-    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_uint(cor, 0, item->desc->stats->held_by_threads);
-}
-
-
-static void alloc_attr_batches_rebalanced_to_threads(void *object_handle, void *cor, void *unused)
-{
-    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_uint(cor, 0, item->desc->stats->batches_rebalanced_to_threads);
-}
-
-
-static void alloc_attr_batches_rebalanced_to_global(void *object_handle, void *cor, void *unused)
-{
-    qd_alloc_type_t *item = (qd_alloc_type_t*) object_handle;
-    qd_agent_value_uint(cor, 0, item->desc->stats->batches_rebalanced_to_global);
-}
-
-
-static const qd_agent_attribute_t ALLOC_ATTRIBUTES[] =
-    {{"name", alloc_attr_name, 0},
-     {"identity", alloc_attr_name, 0},
-     {"typeSize", alloc_attr_type_size, 0},
-     {"transferBatchSize", alloc_attr_transfer_batch_size, 0},
-     {"localFreeListMax", alloc_attr_local_free_list_max, 0},
-     {"globalFreeListMax", alloc_attr_global_free_list_max, 0},
-     {"totalAllocFromHeap", alloc_attr_total_alloc_from_heap, 0},
-     {"totalFreeToHeap", alloc_attr_total_free_to_heap, 0},
-     {"heldByThreads", alloc_attr_held_by_threads, 0},
-     {"batchesRebalancedToThreads", alloc_attr_batches_rebalanced_to_threads, 0},
-     {"batchesRebalancedToGlobal", alloc_attr_batches_rebalanced_to_global, 0},
-     {0, 0, 0}};
-
-
-static void alloc_query_handler(void* context, void *cor)
-{
-    qd_alloc_type_t *item = DEQ_HEAD(type_list);
-
-    while (item) {
-        if (!qd_agent_object(cor, (void*) item))
-            break;
-        item = DEQ_NEXT(item);
-    }
-}
-
-
-void qd_alloc_setup_agent(qd_dispatch_t *qd)
-{
-    qd_agent_register_class(qd, QD_ALLOCATOR_TYPE_LONG, 0, ALLOC_ATTRIBUTES, alloc_query_handler);
-}
-
-
-// Entity add/remove event cache.
-
-
-struct event {
-    const char *type;           /* Set for an add event, NULL for a remove event */
-    void *pointer;
-};

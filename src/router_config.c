@@ -22,15 +22,15 @@
 #include <qpid/dispatch/log.h>
 #include "dispatch_private.h"
 #include "router_private.h"
-#include "entity_private.h"
+#include "entity.h"
 #include "schema_enum.h"
 
 qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity) {
     qd_error_clear();
     int   phase  = qd_entity_opt_long(entity, "phase", 0); QD_ERROR_RET();
-    qd_schema_fixedAddress_fanout_t fanout = qd_entity_long(entity, "fanout"); QD_ERROR_RET();
-    qd_schema_fixedAddress_bias_t bias   = qd_entity_long(entity, "bias"); QD_ERROR_RET();
-    char *prefix = qd_entity_string(entity, "prefix"); QD_ERROR_RET();
+    qd_schema_fixedAddress_fanout_t fanout = qd_entity_get_long(entity, "fanout"); QD_ERROR_RET();
+    qd_schema_fixedAddress_bias_t bias   = qd_entity_get_long(entity, "bias"); QD_ERROR_RET();
+    char *prefix = qd_entity_get_string(entity, "prefix"); QD_ERROR_RET();
 
     if (phase < 0 || phase > 9) {
         free(prefix);
@@ -108,8 +108,8 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity)
 {
 
-    char *address = qd_entity_string(entity, "address"); QD_ERROR_RET();
-    char *connector = qd_entity_string(entity, "connector"); QD_ERROR_RET();
+    char *address = qd_entity_get_string(entity, "address"); QD_ERROR_RET();
+    char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
     int   in_phase  = qd_entity_opt_long(entity, "inPhase", 0); QD_ERROR_RET();
     int   out_phase = qd_entity_opt_long(entity, "outPhase", 0);  QD_ERROR_RET();
 

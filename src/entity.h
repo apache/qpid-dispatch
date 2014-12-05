@@ -1,5 +1,5 @@
-#ifndef ENTITY_PRIVATE_H
-#define ENTITY_PRIVATE_H 1
+#ifndef ENTITY_H
+#define ENTITY_H 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,17 +20,18 @@
  */
 
 #include <stdbool.h>
-#include <qpid/dispatch/dispatch.h>
+#include <qpid/dispatch/error.h>
 
 /**
- * @defgroup entity
-xo *
- * Holds attributes of a managed entity.
+ * @defgroup entity-attributes
+ *
+ * Set/get cached attributes of a managed entity.
+ *
  * @{
  */
 
-
-void qd_entity_free(qd_entity_t* entity);
+/** A managed entitie's attributes */
+typedef struct qd_entity_t qd_entity_t;
 
 /** True if the entity has this attribute. */
 bool qd_entity_has(qd_entity_t* entity, const char *attribute);
@@ -39,13 +40,13 @@ bool qd_entity_has(qd_entity_t* entity, const char *attribute);
  * @return New string value, caller must free.
  * Return NULL and set qd_error if there is an error.
  **/
-char *qd_entity_string(qd_entity_t *entity, const char* attribute);
+char *qd_entity_get_string(qd_entity_t *entity, const char* attribute);
 
 /** Get an integer valued attribute. Return -1 and set qd_error if there is an error. */
-long qd_entity_long(qd_entity_t *entity, const char* attribute);
+long qd_entity_get_long(qd_entity_t *entity, const char* attribute);
 
 /** Get a boolean valued attribute. Return false and set qd_error if there is an error. */
-bool qd_entity_bool(qd_entity_t *entity, const char *attribute);
+bool qd_entity_get_bool(qd_entity_t *entity, const char *attribute);
 
 
 /** Get a string valued attribute.

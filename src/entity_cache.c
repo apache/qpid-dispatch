@@ -21,8 +21,8 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/ctools.h>
 #include <structmember.h>
-#include "c_entity.h"
-#include "entity_private.h"
+#include "entity_cache.h"
+#include "entity.h"
 #include "dispatch_private.h"
 #include "router_private.h"
 
@@ -53,29 +53,29 @@ static entity_event_t *entity_event(action_t action, const char *type, void *obj
 static sys_mutex_t *event_lock = 0;
 static entity_event_list_t  event_list;
 
-void qd_c_entity_initialize(void) {
+void qd_entity_cache_initialize(void) {
     event_lock = sys_mutex();
     DEQ_INIT(event_list);
 }
 
 static void push_event(action_t action, const char *type, void *object) {
-    if (!event_lock) return;    /* Unit tests don't call qd_c_entity_initialize */
+    if (!event_lock) return;    /* Unit tests don't call qd_entity_cache_initialize */
     sys_mutex_lock(event_lock);
     entity_event_t *event = entity_event(action, type, object);
     DEQ_INSERT_TAIL(event_list, event);
     sys_mutex_unlock(event_lock);
 }
 
-void qd_c_entity_add(const char *type, void *object) { push_event(ADD, type, object); }
+void qd_entity_cache_add(const char *type, void *object) { push_event(ADD, type, object); }
 
-void qd_c_entity_remove(const char *type, void *object) { push_event(REMOVE, type, object); }
+void qd_entity_cache_remove(const char *type, void *object) { push_event(REMOVE, type, object); }
 
 // Get events in the add/remove cache into a python list of (action, type, pointer)
 // Locks the entity cache so entities can be updated safely (prevent entities from being deleted.)
 // Do not processs any entities if return error code != 0
-// Must call qd_c_entity_refresh_end when done, regardless of error code.
-qd_error_t qd_c_entity_refresh_begin(PyObject *list) {
-    if (!event_lock) return QD_ERROR_NONE;    /* Unit tests don't call qd_c_entity_initialize */
+// Must call qd_entity_refresh_end when done, regardless of error code.
+qd_error_t qd_entity_refresh_begin(PyObject *list) {
+    if (!event_lock) return QD_ERROR_NONE;    /* Unit tests don't call qd_entity_cache_initialize */
     qd_error_clear();
     sys_mutex_lock(event_lock);
     entity_event_t *event = DEQ_HEAD(event_list);
@@ -92,20 +92,6 @@ qd_error_t qd_c_entity_refresh_begin(PyObject *list) {
     return qd_error_code();
 }
 
-void qd_c_entity_refresh_end() {
+void qd_entity_refresh_end() {
     sys_mutex_unlock(event_lock);
 }
-
-const char *QD_ALLOCATOR_TYPE = "allocator";
-const char *QD_CONNECTION_TYPE = "connection";
-const char *QD_ROUTER_TYPE = "router";
-const char *QD_ROUTER_NODE_TYPE = "router.node";
-const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
-const char *QD_ROUTER_LINK_TYPE = "router.link";
-
-const char *QD_ALLOCATOR_TYPE_LONG = "org.apache.qpid.dispatch.allocator";
-const char *QD_CONNECTION_TYPE_LONG = "org.apache.qpid.dispatch.connection";
-const char *QD_ROUTER_TYPE_LONG = "org.apache.qpid.dispatch.router";
-const char *QD_ROUTER_NODE_TYPE_LONG = "org.apache.qpid.dispatch.router.node";
-const char *QD_ROUTER_ADDRESS_TYPE_LONG = "org.apache.qpid.dispatch.router.address";
-const char *QD_ROUTER_LINK_TYPE_LONG = "org.apache.qpid.dispatch.router.link";

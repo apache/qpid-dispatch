@@ -32,7 +32,6 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/log.h>
-#include <qpid/dispatch/agent.h>
 #include "conditionals.h"
 
 /** Instance of a node type in a container */
@@ -463,11 +462,6 @@ qd_container_t *qd_container(qd_dispatch_t *qd)
 
     qd_log(container->log_source, QD_LOG_TRACE, "Container Initialized");
     return container;
-}
-
-
-void qd_container_setup_agent(qd_dispatch_t *qd)
-{
 }
 
 

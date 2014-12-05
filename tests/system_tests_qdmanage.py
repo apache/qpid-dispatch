@@ -141,16 +141,5 @@ class QdmanageTest(TestCase):
                        if e['type'] not in ignore_types)
         self.assertEqual(name_type(qall), name_type(qattr))
 
-
-class OldQdmanageTest(QdmanageTest):
-    """Test with old managment interface"""
-    def address(self): return super(OldQdmanageTest, self).address() + '/$cmanagement'
-
-    def test_crud(self): pass   # Not supported by old management
-
-    def test_query(self): pass  # Not supported by old management
-
-    def test_stdin(self): pass  # Not supported by old management
-
 if __name__ == '__main__':
     unittest.main(main_module())

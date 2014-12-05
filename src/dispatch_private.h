@@ -26,7 +26,6 @@
 typedef struct qd_server_t          qd_server_t;
 typedef struct qd_container_t       qd_container_t;
 typedef struct qd_router_t          qd_router_t;
-typedef struct qd_agent_t           qd_agent_t;
 typedef struct qd_waypoint_t        qd_waypoint_t;
 typedef struct qd_router_link_t     qd_router_link_t;
 typedef struct qd_router_node_t     qd_router_node_t;
@@ -46,8 +45,7 @@ struct qd_dispatch_t {
     qd_server_t             *server;
     qd_container_t          *container;
     qd_router_t             *router;
-    qd_agent_t              *agent;
-    void                    *py_agent;
+    void                    *agent;
     qd_connection_manager_t *connection_manager;
 
     int    thread_count;
@@ -59,6 +57,59 @@ struct qd_dispatch_t {
     qd_log_source_t *log_source;
 };
 
+/**
+ * Configure the AMQP container from a configuration entity.
+ *
+ * @param dispatch The dispatch handle returned by qd_dispatch
+ * @param entity The configuration entity.
+ */
+qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entity);
+
+/**
+ * Configure the router node from a configuration entity.
+ *        If this is not called, the router will run in ENDPOINT mode.
+ *
+ * @param dispatch The dispatch handle returned by qd_dispatch.
+ * @param entity The configuration entity.
+ */
+qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity);
+
+/**
+ * Prepare Dispatch for operation.  This must be called prior to
+ *        calling qd_server_run or qd_server_start.
+ *
+ * @param dispatch The dispatch handle returned by qd_dispatch
+ */
+qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd);
+
+/**
+ * Configure an address, must be called after qd_dispatch_prepare
+ */
+qd_error_t qd_dispatch_configure_address(qd_dispatch_t *qd, qd_entity_t *entity);
+
+/**
+ * Configure a waypoint, must be called after qd_dispatch_prepare
+ */
+qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *qd, qd_entity_t *entity);
+
+/**
+ * \brief Configure the logging module from the
+ *        parsed configuration file.  This must be called after the
+ *        call to qd_dispatch_prepare completes.
+ *
+ * @param dispatch The dispatch handle returned by qd_dispatch
+ */
+qd_error_t qd_dispatch_configure_logging(qd_dispatch_t *qd);
+
+/** Register a managed entity implementation with the management agent.
+ * NOTE: impl must be unregistered before it is freed.
+ */
+void qd_dispatch_register_entity(qd_dispatch_t *qd, const char *type, void *impl);
+
+/** Unregister a managed entity implementation */
+void qd_dispatch_unregister_entity(qd_dispatch_t *qd, void *impl);
+
+/** Set the agent */
 void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent);
 
 #endif

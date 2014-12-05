@@ -24,9 +24,13 @@
 #include <stdlib.h>
 #include <qpid/dispatch.h>
 #include "dispatch_private.h"
-#include "c_entity.h"
+#include "entity_cache.h"
 #include "router_private.h"
 #include "waypoint_private.h"
+
+const char *QD_ROUTER_NODE_TYPE = "router.node";
+const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
+const char *QD_ROUTER_LINK_TYPE = "router.link";
 
 static char *router_role    = "inter-router";
 static char *on_demand_role = "on-demand";
@@ -34,7 +38,6 @@ static char *local_prefix   = "_local/";
 static char *topo_prefix    = "_topo/";
 static char *direct_prefix;
 static char *node_id;
-
 
 /**
  * Address Types and Processing:
@@ -157,7 +160,7 @@ void qd_router_check_addr(qd_router_t *router, qd_address_t *addr, int was_local
         //
         qd_hash_remove_by_handle2(router->addr_hash, addr->hash_handle, &key);
         DEQ_REMOVE(router->addrs, addr);
-        qd_c_entity_remove(QD_ROUTER_ADDRESS_TYPE, addr);
+        qd_entity_cache_remove(QD_ROUTER_ADDRESS_TYPE, addr);
         qd_hash_handle_free(addr->hash_handle);
         free_qd_address_t(addr);
     }
@@ -1004,7 +1007,7 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
 
     sys_mutex_lock(router->lock);
     rlink->mask_bit = is_router ? qd_router_find_mask_bit_LH(router, link) : 0;
-    qd_c_entity_add(QD_ROUTER_LINK_TYPE, rlink);
+    qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
     DEQ_INSERT_TAIL(router->links, rlink);
     sys_mutex_unlock(router->lock);
 
@@ -1137,7 +1140,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
             qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(router->addrs, addr);
             addr->semantics = semantics;
-            qd_c_entity_add(QD_ROUTER_ADDRESS_TYPE, addr);
+            qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
         }
 
         rlink->owning_addr = addr;
@@ -1150,7 +1153,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
         //
         propagate = (!is_dynamic) && (DEQ_SIZE(addr->rlinks) == 1);
     }
-    qd_c_entity_add(QD_ROUTER_LINK_TYPE, rlink);
+    qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
     DEQ_INSERT_TAIL(router->links, rlink);
 
     //
@@ -1226,7 +1229,7 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
     // Remove the link from the master list-of-links.
     //
     DEQ_REMOVE(router->links, rlink);
-    qd_c_entity_remove(QD_ROUTER_LINK_TYPE, rlink);
+    qd_entity_cache_remove(QD_ROUTER_LINK_TYPE, rlink);
     sys_mutex_unlock(router->lock);
 
     //
@@ -1315,7 +1318,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     DEQ_INIT(rlink->msg_fifo);
 
     qd_link_set_context(receiver, rlink);
-    qd_c_entity_add(QD_ROUTER_LINK_TYPE, rlink);
+    qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
     DEQ_INSERT_TAIL(router->links, rlink);
 
     //
@@ -1353,7 +1356,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     router->out_links_by_mask_bit[mask_bit] = rlink;
 
     qd_link_set_context(sender, rlink);
-    qd_c_entity_add(QD_ROUTER_LINK_TYPE, rlink);
+    qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
     DEQ_INSERT_TAIL(router->links, rlink);
     sys_mutex_unlock(router->lock);
 
@@ -1472,14 +1475,11 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     return router;
 }
 
-
 void qd_router_setup_late(qd_dispatch_t *qd)
 {
-    qd_router_agent_setup(qd->router);
     qd_router_python_setup(qd->router);
     qd_timer_schedule(qd->router->timer, 1000);
 }
-
 
 void qd_router_free(qd_router_t *router)
 {
@@ -1500,7 +1500,7 @@ void qd_router_free(qd_router_t *router)
 
         qd_hash_handle_free(addr->hash_handle);
         DEQ_REMOVE_HEAD(router->addrs);
-        qd_c_entity_remove(QD_ROUTER_ADDRESS_TYPE, addr);
+        qd_entity_cache_remove(QD_ROUTER_ADDRESS_TYPE, addr);
         free_qd_address_t(addr);
     }
 
@@ -1549,7 +1549,7 @@ qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
         qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(router->addrs, addr);
-        qd_c_entity_add(QD_ROUTER_ADDRESS_TYPE, addr);
+        qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
     }
     qd_field_iterator_free(iter);
 

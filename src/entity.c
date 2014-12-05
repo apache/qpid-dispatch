@@ -21,15 +21,11 @@
 #include <Python.h>
 #include <qpid/dispatch/error.h>
 #include "dispatch_private.h"
-#include "entity_private.h"
+#include "entity.h"
 
 struct qd_entity_t {
-    PyObject py_object;
+    PyObject py_object;      /* Any object supporting __set/get_item__, e.g. dict. */
 };
-
-void qd_entity_free(qd_entity_t* entity) {
-    Py_XDECREF(entity);
-}
 
 static PyObject* qd_entity_get_py(qd_entity_t* entity, const char* attribute) {
     PyObject *py_key = PyString_FromString(attribute);
@@ -46,7 +42,7 @@ bool qd_entity_has(qd_entity_t* entity, const char *attribute) {
     return value;
 }
 
-char *qd_entity_string(qd_entity_t *entity, const char* attribute) {
+char *qd_entity_get_string(qd_entity_t *entity, const char* attribute) {
     qd_error_clear();
     PyObject *py_obj = qd_entity_get_py(entity, attribute);
     PyObject *py_str = py_obj ? PyObject_Str(py_obj) : NULL;
@@ -58,7 +54,7 @@ char *qd_entity_string(qd_entity_t *entity, const char* attribute) {
     return str;
 }
 
-long qd_entity_long(qd_entity_t *entity, const char* attribute) {
+long qd_entity_get_long(qd_entity_t *entity, const char* attribute) {
     qd_error_clear();
     PyObject *py_obj = qd_entity_get_py(entity, attribute);
     long result = py_obj ? PyInt_AsLong(py_obj) : -1;
@@ -67,7 +63,7 @@ long qd_entity_long(qd_entity_t *entity, const char* attribute) {
     return result;
 }
 
-bool qd_entity_bool(qd_entity_t *entity, const char* attribute) {
+bool qd_entity_get_bool(qd_entity_t *entity, const char* attribute) {
     qd_error_clear();
     PyObject *py_obj = qd_entity_get_py(entity, attribute);
     bool result = py_obj ? PyObject_IsTrue(py_obj) : false;
@@ -80,14 +76,14 @@ bool qd_entity_bool(qd_entity_t *entity, const char* attribute) {
 char *qd_entity_opt_string(qd_entity_t *entity, const char* attribute, const char* default_value)
 {
     if (qd_entity_has(entity, attribute))
-        return qd_entity_string(entity, attribute);
+        return qd_entity_get_string(entity, attribute);
     else
         return default_value ? strdup(default_value) : NULL;
 }
 
 long qd_entity_opt_long(qd_entity_t *entity, const char* attribute, long default_value) {
     if (qd_entity_has(entity, attribute)) {
-        long result = qd_entity_long(entity, attribute);
+        long result = qd_entity_get_long(entity, attribute);
         if (!qd_error_code())
             return result;
     }
@@ -96,7 +92,7 @@ long qd_entity_opt_long(qd_entity_t *entity, const char* attribute, long default
 
 bool qd_entity_opt_bool(qd_entity_t *entity, const char* attribute, bool default_value) {
     if (qd_entity_has(entity, attribute)) {
-        bool result = qd_entity_bool(entity, attribute);
+        bool result = qd_entity_get_bool(entity, attribute);
         if (!qd_error_code())
             return result;
     }

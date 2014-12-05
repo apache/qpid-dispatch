@@ -26,7 +26,7 @@
 #include "dispatch_private.h"
 #include "router_private.h"
 #include "waypoint_private.h"
-#include "c_entity.h"
+#include "entity_cache.h"
 
 static qd_address_semantics_t router_addr_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS | QD_BYPASS_VALID_ORIGINS;
 
@@ -36,8 +36,6 @@ static PyObject        *pyTick     = 0;
 static PyObject        *pyAdded    = 0;
 static PyObject        *pyRemoved  = 0;
 static PyObject        *pyLinkLost = 0;
-
-
 
 typedef struct {
     PyObject_HEAD
@@ -82,7 +80,7 @@ static char *qd_add_router(qd_router_t *router, const char *address, int router_
     addr->semantics = router_addr_semantics;
     qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
     DEQ_INSERT_TAIL(router->addrs, addr);
-    qd_c_entity_add(QD_ROUTER_ADDRESS_TYPE, addr);
+    qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
     qd_field_iterator_free(iter);
 
     //
@@ -98,7 +96,7 @@ static char *qd_add_router(qd_router_t *router, const char *address, int router_
     rnode->valid_origins = qd_bitmask(0);
 
     DEQ_INSERT_TAIL(router->routers, rnode);
-    qd_c_entity_add(QD_ROUTER_NODE_TYPE, rnode);
+    qd_entity_cache_add(QD_ROUTER_NODE_TYPE, rnode);
 
     //
     // Link the router record to the address record.
@@ -142,8 +140,8 @@ static char *qd_del_router(qd_router_t *router, int router_maskbit)
     qd_address_t     *oaddr = rnode->owning_addr;
     assert(oaddr);
 
-    qd_c_entity_remove(QD_ROUTER_ADDRESS_TYPE, oaddr);
-    qd_c_entity_remove(QD_ROUTER_NODE_TYPE, rnode);
+    qd_entity_cache_remove(QD_ROUTER_ADDRESS_TYPE, oaddr);
+    qd_entity_cache_remove(QD_ROUTER_NODE_TYPE, rnode);
 
     //
     // Unlink the router node from the address record
@@ -393,7 +391,7 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
         addr->semantics = router_semantics_for_addr(router, iter, phase, &unused);
         DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(router->addrs, addr);
-        qd_c_entity_add(QD_ROUTER_ADDRESS_TYPE, addr);
+        qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
     }
     qd_field_iterator_free(iter);
 
@@ -469,9 +467,10 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
     return Py_None;
 }
 
+/* FIXME aconway 2014-12-05:  */
 static PyObject* qd_get_agent(PyObject *self, PyObject *args) {
     RouterAdapter *adapter = (RouterAdapter*) self;
-    PyObject *agent = adapter->router->qd->py_agent;
+    PyObject *agent = adapter->router->qd->agent;
     if (agent) {
         Py_INCREF(agent);
         return agent;

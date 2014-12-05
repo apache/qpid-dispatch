@@ -19,11 +19,10 @@
 
 #include <qpid/dispatch/connection_manager.h>
 #include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/agent.h>
 #include "dispatch_private.h"
 #include "server_private.h"
-#include "entity_private.h"
-#include "c_entity.h"
+#include "entity.h"
+#include "entity_cache.h"
 #include "schema_enum.h"
 #include <string.h>
 
@@ -91,11 +90,11 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
 {
     qd_error_clear();
     memset(config, 0, sizeof(*config));
-    config->host           = qd_entity_string(entity, "addr"); CHECK();
-    config->port           = qd_entity_string(entity, "port"); CHECK();
-    config->role           = qd_entity_string(entity, "role"); CHECK();
-    config->max_frame_size = qd_entity_long(entity, "maxFrameSize"); CHECK();
-    config->sasl_mechanisms = qd_entity_string(entity, "saslMechanisms"); CHECK();
+    config->host           = qd_entity_get_string(entity, "addr"); CHECK();
+    config->port           = qd_entity_get_string(entity, "port"); CHECK();
+    config->role           = qd_entity_get_string(entity, "role"); CHECK();
+    config->max_frame_size = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
+    config->sasl_mechanisms = qd_entity_get_string(entity, "saslMechanisms"); CHECK();
     config->ssl_enabled = has_attrs(entity, ssl_attributes, ssl_attributes_count);
     config->allow_no_sasl =
         qd_entity_opt_bool(entity, "allowNoSasl", false); CHECK();
@@ -146,7 +145,7 @@ qd_error_t qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entit
         return qd_error_code();
     DEQ_ITEM_INIT(cc);
     if (strcmp(cc->configuration.role, "on-demand") == 0) {
-        cc->connector_name = qd_entity_string(entity, "name"); QD_ERROR_RET();
+        cc->connector_name = qd_entity_get_string(entity, "name"); QD_ERROR_RET();
         DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
         qd_log(cm->log_source, QD_LOG_INFO, "Configured on-demand connector: %s:%s name=%s",
                cc->configuration.host, cc->configuration.port, cc->connector_name);
@@ -251,124 +250,6 @@ void qd_connection_manager_start_on_demand(qd_dispatch_t *qd, qd_config_connecto
 void qd_connection_manager_stop_on_demand(qd_dispatch_t *qd, qd_config_connector_t *cc)
 {
 }
-
-static void cm_attr_name(void *object_handle, void *cor, void *unused)
-{
-    qd_connection_t *conn = (qd_connection_t*) object_handle;
-    qd_agent_value_string(cor, 0, qdpn_connector_name(conn->pn_cxtr));
-}
-
-
-static void cm_attr_state(void *object_handle, void *cor, void *unused)
-{
-    qd_connection_t *conn = (qd_connection_t*) object_handle;
-    switch (conn->state) {
-    case CONN_STATE_CONNECTING:  qd_agent_value_string(cor, 0, "Connecting");  break;
-    case CONN_STATE_OPENING:     qd_agent_value_string(cor, 0, "Opening");     break;
-    case CONN_STATE_OPERATIONAL: qd_agent_value_string(cor, 0, "Operational"); break;
-    case CONN_STATE_FAILED:      qd_agent_value_string(cor, 0, "Failed");      break;
-    case CONN_STATE_USER:        qd_agent_value_string(cor, 0, "User");        break;
-    default:                     qd_agent_value_string(cor, 0, "undefined");   break;
-    }
-}
-
-
-static void cm_attr_container(void *object_handle, void *cor, void *unused)
-{
-    qd_connection_t *conn = (qd_connection_t*) object_handle;
-    // get remote container name using proton connection
-    const char *container_name = pn_connection_remote_container(conn->pn_conn);
-    if (container_name)
-        qd_agent_value_string(cor, 0, container_name);
-    else
-        qd_agent_value_null(cor, 0);
-}
-
-
-static void cm_attr_host(void *object_handle, void *cor, void *unused)
-{
-    qd_connection_t *conn = (qd_connection_t*) object_handle;
-    const qd_server_config_t *config;
-    if (conn->connector)
-        config = conn->connector->config;
-    else
-        config = conn->listener->config;
-    if (conn->connector) {
-        char host[1000];
-        strcpy(host, config->host);
-        strcat(host, ":");
-        strcat(host, config->port);
-        qd_agent_value_string(cor, 0, host);
-    } else
-        qd_agent_value_string(cor, 0, qdpn_connector_name(conn->pn_cxtr));
-}
-
-
-static void cm_attr_sasl(void *object_handle, void *cor, void *unused)
-{
-    qd_connection_t *conn = (qd_connection_t*) object_handle;
-    const qd_server_config_t *config;
-    if (conn->connector)
-        config = conn->connector->config;
-    else
-        config = conn->listener->config;
-    qd_agent_value_string(cor, 0, config->sasl_mechanisms);
-}
-
-
-static void cm_attr_role(void *object_handle, void *cor, void *unused)
-{
-    qd_connection_t *conn = (qd_connection_t*) object_handle;
-    const qd_server_config_t *config;
-    if (conn->connector)
-        config = conn->connector->config;
-    else
-        config = conn->listener->config;
-    qd_agent_value_string(cor, 0, config->role);
-}
-
-
-static void cm_attr_dir(void *object_handle, void *cor, void *unused)
-{
-    qd_connection_t *conn = (qd_connection_t*) object_handle;
-    if (conn->connector)
-        qd_agent_value_string(cor, 0, "out");
-    else
-        qd_agent_value_string(cor, 0, "in");
-}
-
-
-static const qd_agent_attribute_t CONN_ATTRIBUTES[] =
-    {{"name", cm_attr_name, 0},
-     {"identity", cm_attr_name, 0},
-     {"state", cm_attr_state, 0},
-     {"container", cm_attr_container, 0},
-     {"host", cm_attr_host, 0},
-     {"sasl", cm_attr_sasl, 0},
-     {"role", cm_attr_role, 0},
-     {"dir", cm_attr_dir, 0},
-     {0, 0, 0}};
-
-static void server_query_handler(void* context, void *cor)
-{
-    qd_dispatch_t *qd        = (qd_dispatch_t*) context;
-    qd_server_t   *qd_server = qd->server;
-    sys_mutex_lock(qd_server->lock);
-
-    qd_connection_t *conn = DEQ_HEAD(qd_server->connections);
-    while (conn) {
-        if (!qd_agent_object(cor, (void*) conn))
-            break;
-        conn = DEQ_NEXT(conn);
-    }
-    sys_mutex_unlock(qd_server->lock);
-}
-
-void qd_connection_manager_setup_agent(qd_dispatch_t *qd)
-{
-    qd_agent_register_class(qd, QD_CONNECTION_TYPE_LONG, qd, CONN_ATTRIBUTES, server_query_handler);
-}
-
 
 void *qd_config_connector_context(qd_config_connector_t *cc)
 {

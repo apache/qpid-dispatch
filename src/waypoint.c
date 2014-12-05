@@ -20,7 +20,7 @@
 #include "waypoint_private.h"
 #include "dispatch_private.h"
 #include "router_private.h"
-#include "c_entity.h"
+#include "entity_cache.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/connection_manager.h>
@@ -69,7 +69,7 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
             DEQ_INSERT_TAIL(router->addrs, addr);
             addr->waypoint  = true;
             addr->semantics = router_semantics_for_addr(router, iter, wp->in_phase, &unused);
-            qd_c_entity_add(QD_ROUTER_ADDRESS_TYPE, addr);
+            qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
         }
 
         wp->in_address = addr;
@@ -99,7 +99,7 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         rlink->target         = 0;
         DEQ_INIT(rlink->event_fifo);
         DEQ_INIT(rlink->msg_fifo);
-        qd_c_entity_add(QD_ROUTER_LINK_TYPE, rlink);
+        qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
         DEQ_INSERT_TAIL(router->links, rlink);
         qd_link_set_context(wp->out_link, rlink);
         qd_router_add_link_ref_LH(&addr->rlinks, rlink);
@@ -144,7 +144,7 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
             DEQ_INSERT_TAIL(router->addrs, addr);
             addr->waypoint  = true;
             addr->semantics = router_semantics_for_addr(router, iter, wp->out_phase, &unused);
-            qd_c_entity_add(QD_ROUTER_ADDRESS_TYPE, addr);
+            qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
         }
 
         wp->out_address = addr;
@@ -174,7 +174,7 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         rlink->target         = 0;
         DEQ_INIT(rlink->event_fifo);
         DEQ_INIT(rlink->msg_fifo);
-        qd_c_entity_add(QD_ROUTER_LINK_TYPE, rlink);
+        qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
         DEQ_INSERT_TAIL(router->links, rlink);
         qd_link_set_context(wp->in_link, rlink);
 

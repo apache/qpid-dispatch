@@ -112,7 +112,7 @@ class AgentEntity(SchemaEntity):
         self.__dict__['_dispatch'] = agent.dispatch
 
     def _set_pointer(self, pointer):
-        fname = "qd_c_entity_refresh_" + self.entity_type.short_name.replace('.', '_')
+        fname = "qd_entity_refresh_" + self.entity_type.short_name.replace('.', '_')
         refreshfn = self._qd.function(fname, c_long, [py_object, c_void_p])
         def _do_refresh():
             refreshfn(self.attributes, pointer)
@@ -330,7 +330,7 @@ class EntityCache(object):
         self.qd.qd_dispatch_router_lock(self.agent.dispatch)
         try:
             events = []
-            self.qd.qd_c_entity_refresh_begin(events)
+            self.qd.qd_entity_refresh_begin(events)
             remove_redundant(events)
             for action, type, pointer in events:
                 if action == REMOVE:
@@ -343,7 +343,7 @@ class EntityCache(object):
             # Refresh the entity values while the lock is still held.
             for e in self.entities: e._refresh()
         finally:
-            self.qd.qd_c_entity_refresh_end()
+            self.qd.qd_entity_refresh_end()
             self.qd.qd_dispatch_router_unlock(self.agent.dispatch)
 
 class Agent(object):

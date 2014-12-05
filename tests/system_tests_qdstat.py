@@ -65,10 +65,5 @@ class QdstatTest(system_test.TestCase):
     def test_memory(self):
         self.run_qdstat(['--memory'], r' qd_address_t\s+[0-9]+')
 
-
-class OldQdstatTest(QdstatTest):
-    """Test with old managment interface"""
-    def address(self): return super(OldQdstatTest, self).address() + '/$cmanagement'
-
 if __name__ == '__main__':
     unittest.main(system_test.main_module())

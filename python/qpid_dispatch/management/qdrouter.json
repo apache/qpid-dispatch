@@ -260,7 +260,6 @@
                         "ROUTER",
                         "MESSAGE",
                         "SERVER",
-                        "CAGENT",
                         "AGENT",
                         "CONTAINER",
                         "CONFIG",

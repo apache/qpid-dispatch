@@ -1,5 +1,5 @@
-#ifndef __dispatch_h__
-#define __dispatch_h__ 1
+#ifndef ENTITY_CACHE_H
+#define ENTITY_CACHE_H 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,25 +19,25 @@
  * under the License.
  */
 
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/bitmask.h>
-#include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/hash.h>
-#include <qpid/dispatch/iovec.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/log.h>
-#include <qpid/dispatch/router.h>
-#include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/parse.h>
-#include <qpid/dispatch/compose.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/timer.h>
-#include <qpid/dispatch/user_fd.h>
-#include <qpid/dispatch/server.h>
-#include <qpid/dispatch/message.h>
-#include <qpid/dispatch/container.h>
-#include <qpid/dispatch/connection_manager.h>
-#include <qpid/dispatch/dispatch.h>
+/** @file
+ *
+ * Add/remove runtime operational entities from the cache managed by the Python agent.
+ *
+ * New entities should be registered with qd_entity_cache_add, entities
+ * that are due for deletion should be removed with qd_entity_cache_remove
+ * *before* they are deleted.
+ *
+ * The cache is pure C, entites can be added to it before the python agent has
+ * started.
+ */
+
+/** Initialize the module. */
+void qd_entity_cache_initialize(void);
+
+/** Add an entity to the agent cache. */
+void qd_entity_cache_add(const char *type, void *object);
+
+/** Remove an entity from the agent cache. Must be called before object is deleted. */
+void qd_entity_cache_remove(const char *type, void *object);
 
 #endif

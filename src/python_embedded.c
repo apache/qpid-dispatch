@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "c_entity.h"
+#include "entity_cache.h"
 #include <qpid/dispatch/python_embedded.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>

@@ -21,8 +21,8 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/amqp.h>
-#include "entity_private.h"
-#include "c_entity.h"
+#include "entity.h"
+#include "entity_cache.h"
 #include "dispatch_private.h"
 #include "server_private.h"
 #include "timer_private.h"
@@ -38,6 +38,8 @@ ALLOC_DEFINE(qd_listener_t);
 ALLOC_DEFINE(qd_connector_t);
 ALLOC_DEFINE(qd_connection_t);
 ALLOC_DEFINE(qd_user_fd_t);
+
+const char *QD_CONNECTION_TYPE = "connection";
 
 static const char *conn_state_names[] = {
     "connecting",
@@ -78,7 +80,7 @@ static qd_error_t connection_entity_update_host(qd_entity_t* entity, qd_connecti
         return qd_entity_set_string(entity, "host", qdpn_connector_name(conn->pn_cxtr));
 }
 
-qd_error_t qd_c_entity_refresh_connection(qd_entity_t* entity, void *impl)
+qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
 {
     qd_connection_t *conn = (qd_connection_t*)impl;
     const qd_server_config_t *config =
@@ -141,7 +143,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
 
         // qd_server->lock is already locked
         DEQ_INSERT_TAIL(qd_server->connections, ctx);
-        qd_c_entity_add(QD_CONNECTION_TYPE, ctx);
+        qd_entity_cache_add(QD_CONNECTION_TYPE, ctx);
 
         //
         // Get a pointer to the transport so we can insert security components into it
@@ -546,7 +548,7 @@ static void *thread_run(void *arg)
             // Check to see if the connector was closed during processing
             //
             if (qdpn_connector_closed(cxtr)) {
-                qd_c_entity_remove(QD_CONNECTION_TYPE, ctx);
+                qd_entity_cache_remove(QD_CONNECTION_TYPE, ctx);
                 //
                 // Connector is closed.  Free the context and the connector.
                 //
@@ -663,7 +665,7 @@ static void cxtr_try_open(void *context)
     sys_mutex_lock(ct->server->lock);
     ctx->pn_cxtr = qdpn_connector(ct->server->driver, ct->config->host, ct->config->port, (void*) ctx);
     DEQ_INSERT_TAIL(ct->server->connections, ctx);
-    qd_c_entity_add(QD_CONNECTION_TYPE, ctx);
+    qd_entity_cache_add(QD_CONNECTION_TYPE, ctx);
 
     sys_mutex_unlock(ct->server->lock);
 

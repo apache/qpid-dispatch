@@ -18,7 +18,7 @@
  */
 
 #include "log_private.h"
-#include "entity_private.h"
+#include "entity.h"
 #include "aprintf.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/dispatch.h>
@@ -351,7 +351,7 @@ void qd_log_finalize(void) {
 qd_error_t qd_log_entity(qd_entity_t *entity) {
 
     qd_error_clear();
-    char* module = qd_entity_string(entity, "module"); QD_ERROR_RET();
+    char* module = qd_entity_get_string(entity, "module"); QD_ERROR_RET();
     sys_mutex_lock(log_source_lock);
     qd_log_source_t *src = qd_log_source_lh(module);
     assert(src);
@@ -359,21 +359,21 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     sys_mutex_unlock(log_source_lock);
     free(module);
 
-    char *level = qd_entity_string(entity, "level"); QD_ERROR_RET();
+    char *level = qd_entity_get_string(entity, "level"); QD_ERROR_RET();
     copy.mask = level_for_name(level)->mask;
     free(level);
 
     if (qd_entity_has(entity, "timestamp"))
-        copy.timestamp = qd_entity_bool(entity, "timestamp");
+        copy.timestamp = qd_entity_get_bool(entity, "timestamp");
     QD_ERROR_RET();
 
     if (qd_entity_has(entity, "source"))
-        copy.source = qd_entity_bool(entity, "source");
+        copy.source = qd_entity_get_bool(entity, "source");
     QD_ERROR_RET();
 
     if (qd_entity_has(entity, "output")) {
         log_sink_free_lh(copy.sink); /* DEFAULT source may already have a sink */
-        char* output = qd_entity_string(entity, "output"); QD_ERROR_RET();
+        char* output = qd_entity_get_string(entity, "output"); QD_ERROR_RET();
         copy.sink = log_sink_lh(output);
         free(output);
         if (copy.sink->syslog) /* Timestamp off for syslog. */

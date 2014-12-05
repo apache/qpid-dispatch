@@ -21,10 +21,6 @@
 
 #include <qpid/dispatch/error.h>
 
-typedef struct qd_entity_t qd_entity_t;
-typedef struct qd_c_entity_t  qd_c_entity_t;
-typedef struct qd_c_entity_type_t qd_c_entity_type_t;
-
 /**
  * @defgroup dispatch
  *
@@ -57,58 +53,6 @@ void qd_dispatch_free(qd_dispatch_t *qd);
  * @param config_path The path to the configuration file.
  */
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path);
-
-/**
- * Configure the AMQP container from a configuration entity.
- *
- * @param dispatch The dispatch handle returned by qd_dispatch
- * @param entity The configuration entity.
- */
-qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entity);
-
-/**
- * Configure the router node from a configuration entity.
- *        If this is not called, the router will run in ENDPOINT mode.
- *
- * @param dispatch The dispatch handle returned by qd_dispatch.
- * @param entity The configuration entity.
- */
-qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity);
-
-/**
- * Prepare Dispatch for operation.  This must be called prior to
- *        calling qd_server_run or qd_server_start.
- *
- * @param dispatch The dispatch handle returned by qd_dispatch
- */
-qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd);
-
-/**
- * Configure an address, must be called after qd_dispatch_prepare
- */
-qd_error_t qd_dispatch_configure_address(qd_dispatch_t *qd, qd_entity_t *entity);
-
-/**
- * Configure a waypoint, must be called after qd_dispatch_prepare
- */
-qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *qd, qd_entity_t *entity);
-
-/**
- * \brief Configure the logging module from the
- *        parsed configuration file.  This must be called after the
- *        call to qd_dispatch_prepare completes.
- *
- * @param dispatch The dispatch handle returned by qd_dispatch
- */
-qd_error_t qd_dispatch_configure_logging(qd_dispatch_t *qd);
-
-/** Register a managed entity implementation with the management agent.
- * NOTE: impl must be unregistered before it is freed.
- */
-void qd_dispatch_register_entity(qd_dispatch_t *qd, const char *type, void *impl);
-
-/** Unregister a managed entity implementation */
-void qd_dispatch_unregister_entity(qd_dispatch_t *qd, void *impl);
 
 
 /**

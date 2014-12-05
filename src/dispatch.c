@@ -30,23 +30,19 @@
 #include "router_private.h"
 #include "waypoint_private.h"
 #include "message_private.h"
-#include "entity_private.h"
-#include "c_entity.h"
+#include "entity.h"
+#include "entity_cache.h"
 
 /**
  * Private Function Prototypes
  */
 qd_server_t    *qd_server(qd_dispatch_t *qd, int tc, const char *container_name);
-void            qd_connection_manager_setup_agent(qd_dispatch_t *qd);
 void            qd_server_free(qd_server_t *server);
 qd_container_t *qd_container(qd_dispatch_t *qd);
-void            qd_container_setup_agent(qd_dispatch_t *qd);
 void            qd_container_free(qd_container_t *container);
 qd_router_t    *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id);
 void            qd_router_setup_late(qd_dispatch_t *qd);
 void            qd_router_free(qd_router_t *router);
-qd_agent_t     *qd_agent(qd_dispatch_t *qd);
-void            qd_agent_free(qd_agent_t *agent);
 void            qd_error_initialize();
 
 qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
@@ -54,7 +50,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_dispatch_t *qd = NEW(qd_dispatch_t);
     memset(qd, 0, sizeof(qd_dispatch_t));
 
-    qd_c_entity_initialize();   /* Must be first */
+    qd_entity_cache_initialize();   /* Must be first */
     qd_alloc_initialize();
     qd_log_initialize();
     qd_error_initialize();
@@ -106,7 +102,7 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
     free(qd->router_id);
     qd->router_id   = qd_entity_opt_string(entity, "routerId", qd->container_name);
     QD_ERROR_RET();
-    qd->router_mode = qd_entity_long(entity, "mode");
+    qd->router_mode = qd_entity_get_long(entity, "mode");
     return qd_error_code();
 }
 
@@ -127,19 +123,15 @@ qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
     qd->server             = qd_server(qd, qd->thread_count, qd->container_name);
     qd->container          = qd_container(qd);
     qd->router             = qd_router(qd, qd->router_mode, qd->router_area, qd->router_id);
-    qd->agent              = qd_agent(qd);
     qd->connection_manager = qd_connection_manager(qd);
-
-    qd_alloc_setup_agent(qd);
-    qd_connection_manager_setup_agent(qd);
-    qd_container_setup_agent(qd);
     return qd_error_code();
 }
 
+/* FIXME aconway 2014-12-05: cleanup */
 void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent) {
     assert(agent);
-    assert(!qd->py_agent);
-    qd->py_agent = agent;
+    assert(!qd->agent);
+    qd->agent = agent;
 }
 
 void qd_dispatch_free(qd_dispatch_t *qd)
@@ -149,8 +141,7 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     free(qd->container_name);
     free(qd->router_area);
     qd_connection_manager_free(qd->connection_manager);
-    qd_agent_free(qd->agent);
-    Py_XDECREF((PyObject*) qd->py_agent);
+    Py_XDECREF((PyObject*) qd->agent);
     qd_router_free(qd->router);
     qd_container_free(qd->container);
     qd_server_free(qd->server);

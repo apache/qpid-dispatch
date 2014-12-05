@@ -29,15 +29,13 @@
 #include <qpid/dispatch/message.h>
 #include <qpid/dispatch/bitmask.h>
 #include <qpid/dispatch/hash.h>
-#include <qpid/dispatch/agent.h>
 #include <qpid/dispatch/log.h>
 #include "dispatch_private.h"
-#include "entity_private.h"
+#include "entity.h"
 
 qd_error_t qd_router_python_setup(qd_router_t *router);
 void qd_router_python_free(qd_router_t *router);
 qd_error_t qd_pyrouter_tick(qd_router_t *router);
-qd_error_t qd_router_agent_setup(qd_router_t *router);
 qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity);
 qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity);
 
@@ -66,6 +64,10 @@ typedef struct qd_routed_event_t {
     bool           settle;
     uint64_t       disposition;
 } qd_routed_event_t;
+
+extern const char *QD_ROUTER_NODE_TYPE;
+extern const char *QD_ROUTER_ADDRESS_TYPE;
+extern const char *QD_ROUTER_LINK_TYPE;
 
 ALLOC_DECLARE(qd_routed_event_t);
 DEQ_DECLARE(qd_routed_event_t, qd_routed_event_list_t);
@@ -231,11 +233,6 @@ struct qd_router_t {
 
     qd_config_address_list_t  config_addrs;
     qd_waypoint_list_t        waypoints;
-
-    qd_agent_class_t         *class_router;
-    qd_agent_class_t         *class_link;
-    qd_agent_class_t         *class_node;
-    qd_agent_class_t         *class_address;
 };
 
 
