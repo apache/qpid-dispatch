@@ -97,6 +97,7 @@ struct qdpn_connector_t {
     bool pending_tick;
     bool pending_read;
     bool pending_write;
+    bool socket_error;
     bool closed;
     bool input_done;
     bool output_done;
@@ -351,6 +352,7 @@ qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, int fd, void *context
     c->pending_tick = false;
     c->pending_read = false;
     c->pending_write = false;
+    c->socket_error = false;
     c->name[0] = '\0';
     c->idx = 0;
     c->fd = fd;
@@ -455,13 +457,20 @@ void qdpn_connector_close(qdpn_connector_t *ctor)
     ctor->status = 0;
     if (close(ctor->fd) == -1)
         perror("close");
-    ctor->closed = true;
-    ctor->driver->closed_count++;
+    if (!ctor->closed) {
+        ctor->closed = true;
+        ctor->driver->closed_count++;
+    }
 }
 
 bool qdpn_connector_closed(qdpn_connector_t *ctor)
 {
     return ctor ? ctor->closed : true;
+}
+
+bool qdpn_connector_failed(qdpn_connector_t *ctor)
+{
+    return ctor ? ctor->socket_error : true;
 }
 
 void qdpn_connector_free(qdpn_connector_t *ctor)
@@ -775,7 +784,7 @@ int qdpn_driver_wait_3(qdpn_driver_t *d)
             c->pending_write = (idx && d->fds[idx].revents & POLLOUT);
             c->pending_tick = (c->wakeup &&  c->wakeup <= now);
             if (idx && d->fds[idx].revents & POLLERR)
-                qdpn_connector_close(c);
+                c->socket_error = true;
             else if (idx && (d->fds[idx].revents & POLLHUP)) {
                 if (c->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV)) {
                     fprintf(stderr, "hangup on connector %s\n", c->name);
@@ -847,9 +856,8 @@ qdpn_connector_t *qdpn_driver_connector(qdpn_driver_t *d)
         qdpn_connector_t *c = d->connector_next;
         d->connector_next = DEQ_NEXT(c);
 
-        if (c->closed || c->pending_read || c->pending_write || c->pending_tick) {
+        if (c->closed || c->pending_read || c->pending_write || c->pending_tick || c->socket_error)
             return c;
-        }
     }
 
     return NULL;

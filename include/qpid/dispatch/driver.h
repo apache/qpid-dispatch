@@ -330,6 +330,9 @@ void qdpn_connector_close(qdpn_connector_t *connector);
  */
 bool qdpn_connector_closed(qdpn_connector_t *connector);
 
+bool qdpn_connector_failed(qdpn_connector_t *connector);
+
+
 /** Destructor for the given connector.
  *
  * Assumes the connector's socket has been closed prior to call.

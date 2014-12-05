@@ -535,7 +535,12 @@ static void *thread_run(void *arg)
         // Process the connector that we now have exclusive access to.
         //
         if (cxtr) {
-            int work_done = process_connector(qd_server, cxtr);
+            int work_done = 1;
+
+            if (qdpn_connector_failed(cxtr))
+                qdpn_connector_close(cxtr);
+            else
+                work_done = process_connector(qd_server, cxtr);
 
             //
             // Check to see if the connector was closed during processing
