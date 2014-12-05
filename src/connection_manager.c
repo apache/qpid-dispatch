@@ -60,7 +60,7 @@ struct qd_connection_manager_t {
 // True if entity has any of attributes.
 static bool has_attrs(qd_entity_t *entity, const char **attributes, int n) {
     for (int i = 0; i < n; ++i)
-	if (qd_entity_has(entity, attributes[i])) return true;
+        if (qd_entity_has(entity, attributes[i])) return true;
     return false;
 }
 
@@ -143,17 +143,17 @@ qd_error_t qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entit
     qd_config_connector_t *cc = NEW(qd_config_connector_t);
     memset(cc, 0, sizeof(*cc));
     if (load_server_config(qd, &cc->configuration, entity))
-	return qd_error_code();
+        return qd_error_code();
     DEQ_ITEM_INIT(cc);
     if (strcmp(cc->configuration.role, "on-demand") == 0) {
-	cc->connector_name = qd_entity_string(entity, "name"); QD_ERROR_RET();
-	DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
-	qd_log(cm->log_source, QD_LOG_INFO, "Configured on-demand connector: %s:%s name=%s",
-	       cc->configuration.host, cc->configuration.port, cc->connector_name);
+        cc->connector_name = qd_entity_string(entity, "name"); QD_ERROR_RET();
+        DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
+        qd_log(cm->log_source, QD_LOG_INFO, "Configured on-demand connector: %s:%s name=%s",
+               cc->configuration.host, cc->configuration.port, cc->connector_name);
     } else {
-	DEQ_INSERT_TAIL(cm->config_connectors, cc);
-	qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",
-	       cc->configuration.host, cc->configuration.port, cc->configuration.role);
+        DEQ_INSERT_TAIL(cm->config_connectors, cc);
+        qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",
+               cc->configuration.host, cc->configuration.port, cc->configuration.role);
     }
     return QD_ERROR_NONE;
 }

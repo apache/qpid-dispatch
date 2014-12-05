@@ -476,7 +476,7 @@ int qd_field_iterator_ncopy(qd_field_iterator_t *iter, unsigned char* buffer, in
     qd_field_iterator_reset(iter);
     int i = 0;
     while (!qd_field_iterator_end(iter) && i < n)
-	buffer[i++] = qd_field_iterator_octet(iter);
+        buffer[i++] = qd_field_iterator_octet(iter);
     return i;
 }
 

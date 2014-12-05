@@ -34,7 +34,7 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 
     if (phase < 0 || phase > 9) {
         free(prefix);
-	return qd_error(QD_ERROR_CONFIG, "Invalid phase %d for prefix '%s' must be between 0 and 9.  Ignoring", phase, prefix);
+        return qd_error(QD_ERROR_CONFIG, "Invalid phase %d for prefix '%s' must be between 0 and 9.  Ignoring", phase, prefix);
     }
 
     //
@@ -42,25 +42,25 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
     //
     qd_config_address_t *addr = DEQ_HEAD(router->config_addrs);
     while (addr) {
-	if (strcmp(addr->prefix, prefix) == 0)
-	    break;
-	addr = DEQ_NEXT(addr);
+        if (strcmp(addr->prefix, prefix) == 0)
+            break;
+        addr = DEQ_NEXT(addr);
     }
 
     if (addr == 0) {
-	//
-	// Create a new prefix
-	//
-	addr = NEW(qd_config_address_t);
-	DEQ_ITEM_INIT(addr);
-	addr->prefix = (char*) malloc(strlen(prefix) + 1);
-	addr->last_phase = (char) phase + '0';
-	DEQ_INIT(addr->phases);
-	DEQ_INSERT_TAIL(router->config_addrs, addr);
-	if (prefix[0] == '/')
-	    strcpy(addr->prefix, &prefix[1]);
-	else
-	    strcpy(addr->prefix, prefix);
+        //
+        // Create a new prefix
+        //
+        addr = NEW(qd_config_address_t);
+        DEQ_ITEM_INIT(addr);
+        addr->prefix = (char*) malloc(strlen(prefix) + 1);
+        addr->last_phase = (char) phase + '0';
+        DEQ_INIT(addr->phases);
+        DEQ_INSERT_TAIL(router->config_addrs, addr);
+        if (prefix[0] == '/')
+            strcpy(addr->prefix, &prefix[1]);
+        else
+            strcpy(addr->prefix, prefix);
     }
 
     //
@@ -87,15 +87,15 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
             free(prefix);
             return qd_error(QD_ERROR_CONFIG, "Invalid bias value %d", fanout);
         }
-	qd_log(router->log_source, QD_LOG_INFO,
-		   "Configured Address: prefix=%s phase=%d fanout=%s bias=%s",
-		   prefix, phase,
-		   qd_schema_fixedAddress_fanout_names[fanout],
-		   qd_schema_fixedAddress_bias_names[bias]);
+        qd_log(router->log_source, QD_LOG_INFO,
+               "Configured Address: prefix=%s phase=%d fanout=%s bias=%s",
+               prefix, phase,
+               qd_schema_fixedAddress_fanout_names[fanout],
+               qd_schema_fixedAddress_bias_names[bias]);
     } else {
-	semantics |= QD_BIAS_NONE;
-	qd_log(router->log_source, QD_LOG_INFO, "Configured Address: prefix=%s phase=%d fanout=%s",
-	       prefix, phase, qd_schema_fixedAddress_fanout_names[fanout]);
+        semantics |= QD_BIAS_NONE;
+        qd_log(router->log_source, QD_LOG_INFO, "Configured Address: prefix=%s phase=%d fanout=%s",
+               prefix, phase, qd_schema_fixedAddress_fanout_names[fanout]);
     }
 
     addr_phase->semantics = semantics;
@@ -116,7 +116,7 @@ qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity
     if (in_phase > 9 || out_phase > 9) {
         free(address);
         free(connector);
-	return qd_error(QD_ERROR_CONFIG, "Phases for waypoint '%s' must be between 0 and 9.", address);
+        return qd_error(QD_ERROR_CONFIG, "Phases for waypoint '%s' must be between 0 and 9.", address);
     }
     qd_waypoint_t *waypoint = NEW(qd_waypoint_t);
     memset(waypoint, 0, sizeof(qd_waypoint_t));
@@ -129,8 +129,8 @@ qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity
     DEQ_INSERT_TAIL(router->waypoints, waypoint);
 
     qd_log(router->log_source, QD_LOG_INFO,
-	   "Configured Waypoint: address=%s in_phase=%d out_phase=%d connector=%s",
-	   address, in_phase, out_phase, connector);
+           "Configured Waypoint: address=%s in_phase=%d out_phase=%d connector=%s",
+           address, in_phase, out_phase, connector);
     return qd_error_code();
 }
 

@@ -60,21 +60,21 @@ qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char
     if (code) {
         char *begin = ts.error_message;
         char *end = begin + ERROR_MAX;
-	const char* name = qd_error_name(code);
+        const char* name = qd_error_name(code);
         if (name)
             aprintf(&begin, end, "%s: ", name);
-	else
-	    aprintf(&begin, end, "%d: ", code);
-	va_list arglist;
-	va_start(arglist, fmt);
-	vaprintf(&begin, end, fmt, arglist);
-	va_end(arglist);
+        else
+            aprintf(&begin, end, "%d: ", code);
+        va_list arglist;
+        va_start(arglist, fmt);
+        vaprintf(&begin, end, fmt, arglist);
+        va_end(arglist);
         // NOTE: Use the file/line from the qd_error macro, not this line in error.c
-	qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", qd_error_message());
-	return code;
+        qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", qd_error_message());
+        return code;
     }
     else
-	qd_error_clear();
+        qd_error_clear();
     return 0;
 }
 
@@ -116,56 +116,55 @@ static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_lo
     py_set_item(locals, "trace", trace);
 
     PyObject *result = PyRun_String(
-	"'\\n'.join(traceback.format_exception(type, value, trace))", Py_eval_input, globals, locals);
+                                    "'\\n'.join(traceback.format_exception(type, value, trace))", Py_eval_input, globals, locals);
     Py_DECREF(globals);
     Py_DECREF(locals);
 
 
     if (result) {
-	const char* trace = PyString_AsString(result);
-	if (strlen(trace) < QD_LOG_TEXT_MAX) {
-	    qd_log_impl(log_source, level, file, line, "%s", trace);
-	} else {
-	    // Keep as much of the the tail of the trace as we can.
-	    const char *tail = trace;
-	    while (tail && strlen(tail) > QD_LOG_TEXT_MAX) {
-		tail = strchr(tail, '\n');
-		if (tail) ++tail;
-	    }
-	    qd_log_impl(log_source, level, file, line, "Traceback truncated:\n%s", tail ? tail : "");
-	}
-	Py_DECREF(result);
+        const char* trace = PyString_AsString(result);
+        if (strlen(trace) < QD_LOG_TEXT_MAX) {
+            qd_log_impl(log_source, level, file, line, "%s", trace);
+        } else {
+            // Keep as much of the the tail of the trace as we can.
+            const char *tail = trace;
+            while (tail && strlen(tail) > QD_LOG_TEXT_MAX) {
+                tail = strchr(tail, '\n');
+                if (tail) ++tail;
+            }
+            qd_log_impl(log_source, level, file, line, "Traceback truncated:\n%s", tail ? tail : "");
+        }
+        Py_DECREF(result);
     }
-
 }
 
 qd_error_t qd_error_py_impl(const char *file, int line) {
     if (PyErr_Occurred()) {
-	PyObject *type, *value, *trace;
-	PyErr_Fetch(&type, &value, &trace); /* Note clears the python error indicator */
+        PyObject *type, *value, *trace;
+        PyErr_Fetch(&type, &value, &trace); /* Note clears the python error indicator */
 
-	PyObject *py_type_name = type ? PyObject_GetAttrString(type, "__name__") : NULL;
+        PyObject *py_type_name = type ? PyObject_GetAttrString(type, "__name__") : NULL;
         const char *type_name = py_type_name ? PyString_AsString(py_type_name) : NULL;
 
-	PyObject *py_value_str = value ? PyObject_Str(value) : NULL;
+        PyObject *py_value_str = value ? PyObject_Str(value) : NULL;
         const char *value_str = py_value_str ? PyString_AsString(py_value_str) : NULL;
         if (!value_str) value_str = "Unknown";
 
         PyErr_Clear(); /* Ignore errors while we're trying to build the values. */
-	if (type_name)
-	    qd_error_impl(QD_ERROR_PYTHON, file, line, "%s: %s", type_name, value_str);
-	else
-	    qd_error_impl(QD_ERROR_PYTHON, file, line, "%s", value_str);
-	Py_XDECREF(py_value_str);
-	Py_XDECREF(py_type_name);
+        if (type_name)
+            qd_error_impl(QD_ERROR_PYTHON, file, line, "%s: %s", type_name, value_str);
+        else
+            qd_error_impl(QD_ERROR_PYTHON, file, line, "%s", value_str);
+        Py_XDECREF(py_value_str);
+        Py_XDECREF(py_type_name);
 
-	log_trace_py(type, value, trace, QD_LOG_ERROR, file, line);
+        log_trace_py(type, value, trace, QD_LOG_ERROR, file, line);
 
-	Py_XDECREF(type);
-	Py_XDECREF(value);
-	Py_XDECREF(trace);
+        Py_XDECREF(type);
+        Py_XDECREF(value);
+        Py_XDECREF(trace);
     } else {
-	qd_error_clear();
+        qd_error_clear();
     }
     return qd_error_code();
 }

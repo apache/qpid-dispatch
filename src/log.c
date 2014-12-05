@@ -91,27 +91,27 @@ static log_sink_t* find_log_sink_lh(const char* name) {
 static log_sink_t* log_sink_lh(const char* name) {
     log_sink_t* sink = find_log_sink_lh(name);
     if (sink)
-	sink->refcount++;
+        sink->refcount++;
     else {
-	sink = NEW(log_sink_t);
-	*sink = (log_sink_t){ 1, strdup(name), };
-	if (strcmp(name, SINK_STDERR) == 0) {
-	    sink->file = stderr;
-	}
-	else if (strcmp(name, SINK_SYSLOG) == 0) {
-	    openlog(0, 0, LOG_DAEMON);
-	    sink->syslog = true;
-	}
-	else {
-	    sink->file = fopen(name, "w");
-	    if (!sink->file) {
-		char msg[TEXT_MAX];
-		snprintf(msg, sizeof(msg), "Failed to open log file '%s'", name);
-		perror(msg);
-		exit(1);
-	    }
-	}
-	DEQ_INSERT_TAIL(sink_list, sink);
+        sink = NEW(log_sink_t);
+        *sink = (log_sink_t){ 1, strdup(name), };
+        if (strcmp(name, SINK_STDERR) == 0) {
+            sink->file = stderr;
+        }
+        else if (strcmp(name, SINK_SYSLOG) == 0) {
+            openlog(0, 0, LOG_DAEMON);
+            sink->syslog = true;
+        }
+        else {
+            sink->file = fopen(name, "w");
+            if (!sink->file) {
+                char msg[TEXT_MAX];
+                snprintf(msg, sizeof(msg), "Failed to open log file '%s'", name);
+                perror(msg);
+                exit(1);
+            }
+        }
+        DEQ_INSERT_TAIL(sink_list, sink);
     }
     return sink;
 }
@@ -121,12 +121,12 @@ static void log_sink_free_lh(log_sink_t* sink) {
     if (!sink) return;
     assert(sink->refcount);
     if (--sink->refcount == 0) {
-	DEQ_REMOVE(sink_list, sink);
-	free(sink->name);
-	if (sink->file && sink->file != stderr)
-	    fclose(sink->file);
-	if (sink->syslog) closelog();
-	free(sink);
+        DEQ_REMOVE(sink_list, sink);
+        free(sink->name);
+        if (sink->file && sink->file != stderr)
+            fclose(sink->file);
+        if (sink->syslog) closelog();
+        free(sink);
     }
 }
 
@@ -149,8 +149,8 @@ static qd_log_source_list_t  source_list = {0};
 typedef enum {NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, N_LEVELS} level_index_t;
 typedef struct level {
     const char* name;
-    int bit;			// QD_LOG bit
-    int mask;			// Bit or higher
+    int bit;     // QD_LOG bit
+    int mask;    // Bit or higher
     const int syslog;
 } level;
 #define ALL_BITS (QD_LOG_CRITICAL | (QD_LOG_CRITICAL-1))
@@ -171,9 +171,9 @@ static const level* level_for_bit(int bit) {
     level_index_t i = 0;
     while (i < N_LEVELS && levels[i].bit != bit) ++i;
     if (i == N_LEVELS) {
-	qd_log(logging_log_source, QD_LOG_ERROR, "'%d' is not a valid log level bit. Defaulting to %s", bit, levels[INFO].name);
-	i = INFO;
-	assert(0);
+        qd_log(logging_log_source, QD_LOG_ERROR, "'%d' is not a valid log level bit. Defaulting to %s", bit, levels[INFO].name);
+        i = INFO;
+        assert(0);
     }
     return &levels[i];
 }
@@ -182,8 +182,8 @@ static const level* level_for_name(const char *name) {
     level_index_t i = 0;
     while (i < N_LEVELS && strcasecmp(levels[i].name, name) != 0) ++i;
     if (i == N_LEVELS) {
-	qd_log(logging_log_source, QD_LOG_ERROR, "'%s' is not a valid log level. Should be one of {%s}. Defaulting to %s", name, level_names, levels[INFO].name);
-	i = INFO;
+        qd_log(logging_log_source, QD_LOG_ERROR, "'%s' is not a valid log level. Should be one of {%s}. Defaulting to %s", name, level_names, levels[INFO].name);
+        i = INFO;
     }
     return &levels[i];
 }
@@ -192,7 +192,7 @@ static const level* level_for_name(const char *name) {
 static qd_log_source_t* lookup_log_source_lh(const char *module)
 {
     if (strcasecmp(module, SOURCE_DEFAULT) == 0)
-	return default_log_source;
+        return default_log_source;
     qd_log_source_t *src = DEQ_HEAD(source_list);
     DEQ_FIND(src, strcasecmp(module, src->module) == 0);
     return src;
@@ -216,26 +216,26 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         buf[0] = '\0';
         ctime_r(&entry->time, buf);
         buf[strlen(buf)-1] = '\0'; /* Get rid of trailng \n */
-	aprintf(&begin, end, "%s ", buf);
+        aprintf(&begin, end, "%s ", buf);
     }
     aprintf(&begin, end, "%s (%s) %s", entry->module, level_for_bit(entry->level)->name, entry->text);
     if (default_bool(log_source->source, default_log_source->source))
-	aprintf(&begin, end, " (%s:%d)", entry->file, entry->line);
+        aprintf(&begin, end, " (%s:%d)", entry->file, entry->line);
     aprintf(&begin, end, "\n");
 
     if (sink->file) {
-	if (fputs(log_str, sink->file) == EOF) {
-	    char msg[TEXT_MAX];
-	    snprintf(msg, sizeof(msg), "Cannot write log output to '%s'", sink->name);
-	    perror(msg);
-	    exit(1);
-	};
-	fflush(sink->file);
+        if (fputs(log_str, sink->file) == EOF) {
+            char msg[TEXT_MAX];
+            snprintf(msg, sizeof(msg), "Cannot write log output to '%s'", sink->name);
+            perror(msg);
+            exit(1);
+        };
+        fflush(sink->file);
     }
     if (sink->syslog) {
-	int syslog_level = level_for_bit(entry->level)->syslog;
-	if (syslog_level != -1)
-	    syslog(syslog_level, "%s", log_str);
+        int syslog_level = level_for_bit(entry->level)->syslog;
+        if (syslog_level != -1)
+            syslog(syslog_level, "%s", log_str);
     }
 }
 
@@ -253,10 +253,10 @@ static qd_log_source_t *qd_log_source_lh(const char *module)
     qd_log_source_t *log_source = lookup_log_source_lh(module);
     if (!log_source)
     {
-	log_source = NEW(qd_log_source_t);
-	memset(log_source, 0, sizeof(qd_log_source_t));
-	DEQ_ITEM_INIT(log_source);
-	log_source->module = module;
+        log_source = NEW(qd_log_source_t);
+        memset(log_source, 0, sizeof(qd_log_source_t));
+        DEQ_ITEM_INIT(log_source);
+        log_source->module = module;
         qd_log_source_defaults(log_source);
         DEQ_INSERT_TAIL(source_list, log_source);
     }
@@ -313,7 +313,7 @@ void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line,
     sys_mutex_lock(log_lock);
     DEQ_INSERT_TAIL(entries, entry);
     if (DEQ_SIZE(entries) > LIST_MAX)
-	qd_log_entry_free_lh(entry);
+        qd_log_entry_free_lh(entry);
     sys_mutex_unlock(log_lock);
 }
 
@@ -324,8 +324,8 @@ void qd_log_initialize(void)
     DEQ_INIT(sink_list);
     strcpy((char*)level_names, levels[NONE].name);
     for (level_index_t i = NONE+1; i < N_LEVELS; ++i) {
-	strcat((char*)level_names, ", ");
-	strcat((char*)level_names, levels[i].name);
+        strcat((char*)level_names, ", ");
+        strcat((char*)level_names, levels[i].name);
     }
     log_lock = sys_mutex();
     log_source_lock = sys_mutex();
@@ -341,11 +341,11 @@ void qd_log_initialize(void)
 
 void qd_log_finalize(void) {
     while (DEQ_HEAD(source_list))
-	qd_log_source_free_lh(DEQ_HEAD(source_list));
+        qd_log_source_free_lh(DEQ_HEAD(source_list));
     while (DEQ_HEAD(entries))
         qd_log_entry_free_lh(DEQ_HEAD(entries));
     while (DEQ_HEAD(sink_list))
-	log_sink_free_lh(DEQ_HEAD(sink_list));
+        log_sink_free_lh(DEQ_HEAD(sink_list));
 }
 
 qd_error_t qd_log_entity(qd_entity_t *entity) {
@@ -364,20 +364,20 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     free(level);
 
     if (qd_entity_has(entity, "timestamp"))
-	copy.timestamp = qd_entity_bool(entity, "timestamp");
+        copy.timestamp = qd_entity_bool(entity, "timestamp");
     QD_ERROR_RET();
 
     if (qd_entity_has(entity, "source"))
-	copy.source = qd_entity_bool(entity, "source");
+        copy.source = qd_entity_bool(entity, "source");
     QD_ERROR_RET();
 
     if (qd_entity_has(entity, "output")) {
-	log_sink_free_lh(copy.sink); /* DEFAULT source may already have a sink */
-	char* output = qd_entity_string(entity, "output"); QD_ERROR_RET();
-	copy.sink = log_sink_lh(output);
-	free(output);
-	if (copy.sink->syslog) /* Timestamp off for syslog. */
-	    copy.timestamp = 0;
+        log_sink_free_lh(copy.sink); /* DEFAULT source may already have a sink */
+        char* output = qd_entity_string(entity, "output"); QD_ERROR_RET();
+        copy.sink = log_sink_lh(output);
+        free(output);
+        if (copy.sink->syslog) /* Timestamp off for syslog. */
+            copy.timestamp = 0;
     }
 
     sys_mutex_lock(log_source_lock);

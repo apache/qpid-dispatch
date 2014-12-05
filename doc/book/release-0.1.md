@@ -176,7 +176,7 @@ routers' management addresses.
         Receiver receiver = session.createReceiver("#");
         Address responseAddress = receiver.getAddress();
 
-    	Message request;
+        Message request;
         request.setReplyTo(responseAddress);
         request.setProperty("x-amqp-to", "amqp:/_local/$management");
         request.setProperty("operation", "DISCOVER-MGMT-NODES");

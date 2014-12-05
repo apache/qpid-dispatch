@@ -74,12 +74,12 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
 
         wp->in_address = addr;
         qd_field_iterator_free(iter);
-	LOG(TRACE, "Sink in-address=%s, in-phase=%c",
-	    qd_address_logstr(wp->in_address), wp->in_phase);
+        LOG(TRACE, "Sink in-address=%s, in-phase=%c",
+            qd_address_logstr(wp->in_address), wp->in_phase);
     }
 
     if (!wp->connected) {
-	LOG(TRACE, "Sink start connector %s", wp->connector_name);
+        LOG(TRACE, "Sink start connector %s", wp->connector_name);
         qd_connection_manager_start_on_demand(qd, wp->connector);
     }
     else if (!wp->out_link) {
@@ -114,7 +114,7 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         pn_link_open(qd_link_pn(wp->out_link));
         qd_link_activate(wp->out_link);
 
-	LOG(TRACE, "Sink out-link '%s'", pn_link_name(qd_link_pn(wp->out_link)));
+        LOG(TRACE, "Sink out-link '%s'", pn_link_name(qd_link_pn(wp->out_link)));
     }
 }
 
@@ -149,12 +149,12 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
 
         wp->out_address = addr;
         qd_field_iterator_free(iter);
-	LOG(TRACE, "Source out-address=%s, out-phase=%c",
-	    qd_address_logstr(wp->out_address), wp->out_phase);
+        LOG(TRACE, "Source out-address=%s, out-phase=%c",
+            qd_address_logstr(wp->out_address), wp->out_phase);
     }
 
     if (!wp->connected) {
-	LOG(TRACE, "Source start connector %s", wp->connector_name);
+        LOG(TRACE, "Source start connector %s", wp->connector_name);
         qd_connection_manager_start_on_demand(qd, wp->connector);
     }
     else if (!wp->in_link) {
@@ -181,7 +181,7 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         pn_link_open(qd_link_pn(wp->in_link));
         qd_link_activate(wp->in_link);
 
-	LOG(TRACE, "Source in-link '%s'", pn_link_name(qd_link_pn(wp->in_link)));
+        LOG(TRACE, "Source in-link '%s'", pn_link_name(qd_link_pn(wp->in_link)));
     }
     if (wp->in_link && (DEQ_SIZE(addr->rlinks) + DEQ_SIZE(addr->rnodes) > 0)) {
         //
@@ -319,7 +319,7 @@ void qd_waypoint_address_updated_LH(qd_dispatch_t *qd, qd_address_t *addr)
 {
     qd_waypoint_t *wp = DEQ_HEAD(qd->router->waypoints);
     while (wp) {
-	LOG(TRACE, "Updated address %s", qd_address_logstr(addr));
+        LOG(TRACE, "Updated address %s", qd_address_logstr(addr));
         if (wp->out_address == addr)
             qd_waypoint_visit_LH(qd, wp);
         wp = DEQ_NEXT(wp);

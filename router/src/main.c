@@ -81,10 +81,10 @@ static void server_signal_handler(void* context, int signum)
 
 static void check(int fd) {
     if (qd_error_code()) {
-	qd_log(log_source, QD_LOG_CRITICAL, "Router start-up failed: %s", qd_error_message());
-    if (fd > 0)
+        qd_log(log_source, QD_LOG_CRITICAL, "Router start-up failed: %s", qd_error_message());
+        if (fd > 0)
         write(fd, "X", 1);
-	exit(1);
+        exit(1);
     }
 }
 

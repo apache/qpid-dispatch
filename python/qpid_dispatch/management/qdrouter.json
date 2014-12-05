@@ -162,9 +162,9 @@
                     "default": 60,
                     "description": "Time in seconds after which mobile addresses are declared stale if no RA is received"
                 },
-	            "addrCount": {"type": "Integer", "description":"Number of addresses known to the router"},
-	            "linkCount": {"type": "Integer", "description":"Number of links attached to the router node"},
-	            "nodeCount": {"type": "Integer", "description":"Number of known peer router nodes"}
+                "addrCount": {"type": "Integer", "description":"Number of addresses known to the router"},
+                "linkCount": {"type": "Integer", "description":"Number of links attached to the router node"},
+                "nodeCount": {"type": "Integer", "description":"Number of known peer router nodes"}
             }
         },
 
@@ -241,12 +241,12 @@
                         "MESSAGE",
                         "SERVER",
                         "CAGENT",
-	                    "AGENT",
+                        "AGENT",
                         "CONTAINER",
                         "CONFIG",
                         "DEFAULT",
                         "ERROR",
-	                    "DISPATCH"
+                        "DISPATCH"
                     ],
                     "required": true,
                     "description": "Module to configure logging level. The special module 'DEFAULT' specifies logging for modules that don't have explicit log sections."
@@ -354,8 +354,8 @@
             "attributes": {
                 "arg1": {"type": "String"},
                 "arg2": {"type": "String"},
-	            "num1": {"type": "Integer"},
-	            "num2": {"type": "Integer"}
+                "num1": {"type": "Integer"},
+                "num2": {"type": "Integer"}
             }
         },
 
@@ -364,11 +364,11 @@
             "operations": ["READ"],
             "include": ["common"],
             "attributes": {
-	            "linkType": {"type": ["endpoint", "waypoint", "inter-router", "inter-area"]},
-	            "linkDir": {"type": ["in", "out"]},
-	            "owningAddr": {"type": "String"},
-	            "eventFifoDepth": {"type": "Integer"},
-	            "msgFifoDepth": {"type": "Integer"}
+                "linkType": {"type": ["endpoint", "waypoint", "inter-router", "inter-area"]},
+                "linkDir": {"type": ["in", "out"]},
+                "owningAddr": {"type": "String"},
+                "eventFifoDepth": {"type": "Integer"},
+                "msgFifoDepth": {"type": "Integer"}
             }
         },
 
@@ -377,14 +377,14 @@
             "operations": ["READ"],
             "include": ["common"],
             "attributes": {
-	            "inProcess": {"type": "Boolean"},
-	            "subscriberCount": {"type": "Integer"},
-	            "remoteCount": {"type": "Integer"},
-	            "deliveriesIngress": {"type": "Integer"},
-	            "deliveriesEgress": {"type": "Integer"},
-	            "deliveriesTransit": {"type": "Integer"},
-	            "deliveriesToContainer": {"type": "Integer"},
-	            "deliveriesFromContainer": {"type": "Integer"}
+                "inProcess": {"type": "Boolean"},
+                "subscriberCount": {"type": "Integer"},
+                "remoteCount": {"type": "Integer"},
+                "deliveriesIngress": {"type": "Integer"},
+                "deliveriesEgress": {"type": "Integer"},
+                "deliveriesTransit": {"type": "Integer"},
+                "deliveriesToContainer": {"type": "Integer"},
+                "deliveriesFromContainer": {"type": "Integer"}
             }
         },
 
@@ -393,10 +393,10 @@
             "operations": ["READ"],
             "include": ["common"],
             "attributes": {
-	            "addr": {"type": "String"},
-	            "nextHop": {"type": "Integer"},
-	            "routerLink": {"type": "Integer"},
-	            "validOrigins": {"type": "List"}
+                "addr": {"type": "String"},
+                "nextHop": {"type": "Integer"},
+                "routerLink": {"type": "Integer"},
+                "validOrigins": {"type": "List"}
             }
         },
 
@@ -405,18 +405,18 @@
             "operations": ["READ"],
             "include": ["common"],
             "attributes": {
-	            "container": {"type": "String"} ,
-	            "state": {"type": [
-	                "connecting",
-	                "opening",
-	                "operational",
-	                "failed",
-	                "user"
-	            ]},
-	            "host": {"type": "String"},
-	            "dir": {"type": ["in", "out"]},
-	            "role": {"type": "String"},
-	            "sasl": {"type": "String"}
+                "container": {"type": "String"} ,
+                "state": {"type": [
+                    "connecting",
+                    "opening",
+                    "operational",
+                    "failed",
+                    "user"
+                ]},
+                "host": {"type": "String"},
+                "dir": {"type": ["in", "out"]},
+                "role": {"type": "String"},
+                "sasl": {"type": "String"}
             }
         },
 
@@ -425,15 +425,15 @@
             "operations": ["READ"],
             "include": ["common"],
             "attributes": {
-	            "typeSize": {"type": "Integer"},
-	            "transferBatchSize": {"type": "Integer"},
-	            "localFreeListMax": {"type": "Integer"},
-	            "globalFreeListMax": {"type": "Integer"},
-	            "totalAllocFromHeap": {"type": "Integer"},
-	            "totalFreeToHeap": {"type": "Integer"},
-	            "heldByThreads": {"type": "Integer"},
-	            "batchesRebalancedToThreads": {"type": "Integer"},
-	            "batchesRebalancedToGlobal": {"type": "Integer"}
+                "typeSize": {"type": "Integer"},
+                "transferBatchSize": {"type": "Integer"},
+                "localFreeListMax": {"type": "Integer"},
+                "globalFreeListMax": {"type": "Integer"},
+                "totalAllocFromHeap": {"type": "Integer"},
+                "totalFreeToHeap": {"type": "Integer"},
+                "heldByThreads": {"type": "Integer"},
+                "batchesRebalancedToThreads": {"type": "Integer"},
+                "batchesRebalancedToGlobal": {"type": "Integer"}
             }
         }
     }

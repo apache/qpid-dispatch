@@ -80,25 +80,25 @@ bool qd_entity_bool(qd_entity_t *entity, const char* attribute) {
 char *qd_entity_opt_string(qd_entity_t *entity, const char* attribute, const char* default_value)
 {
     if (qd_entity_has(entity, attribute))
-	return qd_entity_string(entity, attribute);
+        return qd_entity_string(entity, attribute);
     else
-	return default_value ? strdup(default_value) : NULL;
+        return default_value ? strdup(default_value) : NULL;
 }
 
 long qd_entity_opt_long(qd_entity_t *entity, const char* attribute, long default_value) {
     if (qd_entity_has(entity, attribute)) {
-	long result = qd_entity_long(entity, attribute);
-	if (!qd_error_code())
-	    return result;
+        long result = qd_entity_long(entity, attribute);
+        if (!qd_error_code())
+            return result;
     }
     return default_value;
 }
 
 bool qd_entity_opt_bool(qd_entity_t *entity, const char* attribute, bool default_value) {
     if (qd_entity_has(entity, attribute)) {
-	bool result = qd_entity_bool(entity, attribute);
-	if (!qd_error_code())
-	    return result;
+        bool result = qd_entity_bool(entity, attribute);
+        if (!qd_error_code())
+            return result;
     }
     return default_value;
 }

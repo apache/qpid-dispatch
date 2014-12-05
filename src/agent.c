@@ -212,7 +212,7 @@ static void qd_agent_send_error(
     qd_amqp_error_t code, const char *text)
 {
     qd_agent_send_response(agent, qd_agent_setup_error(agent, reply_to, cid, code, text),
-			   0, reply_to);
+                           0, reply_to);
 }
 
 static void qd_agent_insert_attr_names(qd_composed_field_t    *field,
@@ -401,8 +401,8 @@ static void qd_agent_process_object_query(qd_agent_t          *agent,
             // If the entityType was specified but not found, return an error.
             //
             if (cls_record == 0) {
-		char entity[QD_ERROR_MAX];
-		qd_field_iterator_strncpy(cls_string, entity, sizeof(entity));
+                char entity[QD_ERROR_MAX];
+                qd_field_iterator_strncpy(cls_string, entity, sizeof(entity));
                 qd_agent_send_error(agent, reply_to, cid, QD_AMQP_NOT_FOUND, entity);
                 break;
             }
@@ -607,8 +607,8 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
     // Parse the message through the body and exit if the message is not well formed.
     //
     if (!qd_message_check(msg, QD_DEPTH_BODY)) {
-	LOG(ERROR, "Cannot parse request: %s", qd_error_message());
-	return;
+        LOG(ERROR, "Cannot parse request: %s", qd_error_message());
+        return;
     }
 
     //
@@ -616,7 +616,7 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
     //
     qd_field_iterator_t *reply_to = qd_message_field_iterator(msg, QD_FIELD_REPLY_TO);
     if (reply_to == 0) {
-	LOG(ERROR, "Reqeust has no reply-to");
+        LOG(ERROR, "Reqeust has no reply-to");
         return;
     }
 
@@ -630,8 +630,8 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
     //
     qd_field_iterator_t *ap = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
     if (ap == 0) {
-	qd_agent_send_error(agent, reply_to, cid, QD_AMQP_BAD_REQUEST, "No application-properties");
-	return;
+        qd_agent_send_error(agent, reply_to, cid, QD_AMQP_BAD_REQUEST, "No application-properties");
+        return;
     }
 
     //
@@ -641,7 +641,7 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
     if (map == 0) {
         qd_field_iterator_free(ap);
         qd_field_iterator_free(reply_to);
-	qd_agent_send_error(agent, reply_to, cid, QD_AMQP_BAD_REQUEST, "Application-properties not a map");
+        qd_agent_send_error(agent, reply_to, cid, QD_AMQP_BAD_REQUEST, "Application-properties not a map");
         return;
     }
 
@@ -652,7 +652,7 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
         qd_field_iterator_free(ap);
         qd_field_iterator_free(reply_to);
         qd_parse_free(map);
-	qd_agent_send_error(agent, reply_to, cid, QD_AMQP_BAD_REQUEST, "Application-properties not a map");
+        qd_agent_send_error(agent, reply_to, cid, QD_AMQP_BAD_REQUEST, "Application-properties not a map");
         return;
     }
 
@@ -664,7 +664,7 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
         qd_parse_free(map);
         qd_field_iterator_free(ap);
         qd_field_iterator_free(reply_to);
-	qd_agent_send_error(agent, reply_to, cid, QD_AMQP_BAD_REQUEST, "No operation");
+        qd_agent_send_error(agent, reply_to, cid, QD_AMQP_BAD_REQUEST, "No operation");
         return;
     }
 
@@ -687,8 +687,8 @@ static void qd_agent_process_request(qd_agent_t *agent, qd_message_t *msg)
     else if (qd_field_iterator_equal(operation_string, (unsigned char*) OP_GET_MGMT_NODES))
         qd_agent_process_discover_nodes(agent, map, reply_to, cid);
     else {
-	char op[QD_ERROR_MAX];
-	qd_field_iterator_strncpy(operation_string, op, sizeof(op));
+        char op[QD_ERROR_MAX];
+        qd_field_iterator_strncpy(operation_string, op, sizeof(op));
         qd_agent_send_error(agent, reply_to, cid, QD_AMQP_NOT_IMPLEMENTED, op);
     }
 

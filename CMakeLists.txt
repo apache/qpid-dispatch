@@ -131,7 +131,7 @@ install(FILES
   DESTINATION ${DOC_INSTALL_DIR}/qpid-dispatch)
 
 
-add_subdirectory(src)	# Build src first so other subdirs can use QPID_DISPATCH_LIB
+add_subdirectory(src)    # Build src first so other subdirs can use QPID_DISPATCH_LIB
 add_subdirectory(tests)
 add_subdirectory(python)
 add_subdirectory(doc)
