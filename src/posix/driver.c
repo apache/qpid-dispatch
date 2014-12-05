@@ -34,6 +34,7 @@
 #include <string.h>
 
 #include <qpid/dispatch/driver.h>
+#include <qpid/dispatch/alloc.h>
 //#include <proton/driver_extras.h>
 #include <proton/error.h>
 #include <proton/io.h>
@@ -102,6 +103,12 @@ struct qdpn_connector_t {
     bool input_done;
     bool output_done;
 };
+
+ALLOC_DECLARE(qdpn_listener_t);
+ALLOC_DEFINE(qdpn_listener_t);
+
+ALLOC_DECLARE(qdpn_connector_t);
+ALLOC_DEFINE(qdpn_connector_t);
 
 /* Impls */
 
@@ -221,7 +228,7 @@ qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, int fd, void *context)
 {
     if (!driver) return NULL;
 
-    qdpn_listener_t *l = (qdpn_listener_t *) malloc(sizeof(qdpn_listener_t));
+    qdpn_listener_t *l = new_qdpn_listener_t();
     if (!l) return NULL;
     DEQ_ITEM_INIT(l);
     l->driver = driver;
@@ -300,7 +307,7 @@ void qdpn_listener_free(qdpn_listener_t *l)
     if (!l) return;
 
     if (l->driver) qdpn_driver_remove_listener(l->driver, l);
-    free(l);
+    free_qdpn_listener_t(l);
 }
 
 // connector
@@ -345,7 +352,7 @@ qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, int fd, void *context
 {
     if (!driver) return NULL;
 
-    qdpn_connector_t *c = (qdpn_connector_t *) malloc(sizeof(qdpn_connector_t));
+    qdpn_connector_t *c = new_qdpn_connector_t();
     if (!c) return NULL;
     DEQ_ITEM_INIT(c);
     c->driver = driver;
@@ -482,7 +489,7 @@ void qdpn_connector_free(qdpn_connector_t *ctor)
     ctor->transport = NULL;
     if (ctor->connection) pn_class_decref(PN_OBJECT, ctor->connection);
     ctor->connection = NULL;
-    free(ctor);
+    free_qdpn_connector_t(ctor);
 }
 
 void qdpn_connector_activate(qdpn_connector_t *ctor, qdpn_activate_criteria_t crit)
