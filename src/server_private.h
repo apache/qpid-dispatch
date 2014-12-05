@@ -25,10 +25,9 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
-#include <proton/driver.h>
+#include <qpid/dispatch/driver.h>
 #include <proton/engine.h>
 #include <proton/event.h>
-#include <proton/driver_extras.h>
 
 #include "dispatch_private.h"
 #include "timer_private.h"
@@ -62,7 +61,7 @@ struct qd_listener_t {
     qd_server_t              *server;
     const qd_server_config_t *config;
     void                     *context;
-    pn_listener_t            *pn_listener;
+    qdpn_listener_t          *pn_listener;
 };
 
 
@@ -84,29 +83,29 @@ struct qd_connector_t {
  */
 struct qd_connection_t {
     DEQ_LINKS(qd_connection_t);
-    qd_server_t     *server;
-    conn_state_t     state;
-    int              owner_thread;
-    int              enqueued;
-    pn_connector_t  *pn_cxtr;
-    pn_connection_t *pn_conn;
-    pn_collector_t  *collector;
-    qd_listener_t   *listener;
-    qd_connector_t  *connector;
-    void            *context; // Copy of context from listener or connector
-    void            *user_context;
-    void            *link_context; // Context shared by this connection's links
-    qd_user_fd_t    *ufd;
+    qd_server_t      *server;
+    conn_state_t      state;
+    int               owner_thread;
+    int               enqueued;
+    qdpn_connector_t *pn_cxtr;
+    pn_connection_t  *pn_conn;
+    pn_collector_t   *collector;
+    qd_listener_t    *listener;
+    qd_connector_t   *connector;
+    void             *context; // Copy of context from listener or connector
+    void             *user_context;
+    void             *link_context; // Context shared by this connection's links
+    qd_user_fd_t     *ufd;
 };
 
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
 
 
 struct qd_user_fd_t {
-    qd_server_t    *server;
-    void           *context;
-    int             fd;
-    pn_connector_t *pn_conn;
+    qd_server_t      *server;
+    void             *context;
+    int               fd;
+    qdpn_connector_t *pn_conn;
 };
 
 
@@ -122,7 +121,7 @@ typedef struct qd_thread_t {
 
 typedef struct qd_work_item_t {
     DEQ_LINKS(struct qd_work_item_t);
-    pn_connector_t *cxtr;
+    qdpn_connector_t *cxtr;
 } qd_work_item_t;
 
 DEQ_DECLARE(qd_work_item_t, qd_work_list_t);
@@ -132,7 +131,7 @@ struct qd_server_t {
     qd_dispatch_t           *qd;
     int                      thread_count;
     const char              *container_name;
-    pn_driver_t             *driver;
+    qdpn_driver_t           *driver;
     qd_log_source_t         *log_source;
     qd_thread_start_cb_t     start_handler;
     qd_conn_handler_cb_t     conn_handler;

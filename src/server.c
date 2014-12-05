@@ -75,7 +75,7 @@ static qd_error_t connection_entity_update_host(qd_entity_t* entity, qd_connecti
         return qd_entity_set_string(entity, "host", host);
     }
     else
-        return qd_entity_set_string(entity, "host", pn_connector_name(conn->pn_cxtr));
+        return qd_entity_set_string(entity, "host", qdpn_connector_name(conn->pn_cxtr));
 }
 
 qd_error_t qd_c_entity_refresh_connection(qd_entity_t* entity, void *impl)
@@ -85,7 +85,7 @@ qd_error_t qd_c_entity_refresh_connection(qd_entity_t* entity, void *impl)
         conn->connector ? conn->connector->config : conn->listener->config;
 
     if ((qd_entity_has(entity, "identity") ||
-         qd_entity_set_string(entity, "identity", pn_connector_name(conn->pn_cxtr)) == 0) &&
+         qd_entity_set_string(entity, "identity", qdpn_connector_name(conn->pn_cxtr)) == 0) &&
         qd_entity_set_string(entity, "state", conn_state_name(conn->state)) == 0 &&
         qd_entity_set_string(
             entity, "container",
@@ -104,17 +104,17 @@ qd_error_t qd_c_entity_refresh_connection(qd_entity_t* entity, void *impl)
 
 static void thread_process_listeners(qd_server_t *qd_server)
 {
-    pn_driver_t     *driver   = qd_server->driver;
-    pn_listener_t   *listener;
-    pn_connector_t  *cxtr;
+    qdpn_driver_t     *driver   = qd_server->driver;
+    qdpn_listener_t   *listener;
+    qdpn_connector_t  *cxtr;
     qd_connection_t *ctx;
 
-    for (listener = pn_driver_listener(driver); listener; listener = pn_driver_listener(driver)) {
-        cxtr = pn_listener_accept(listener);
+    for (listener = qdpn_driver_listener(driver); listener; listener = qdpn_driver_listener(driver)) {
+        cxtr = qdpn_listener_accept(listener);
         if (!cxtr)
             continue;
 
-        qd_log(qd_server->log_source, QD_LOG_TRACE, "Accepting Connection from %s", pn_connector_name(cxtr));
+        qd_log(qd_server->log_source, QD_LOG_TRACE, "Accepting Connection from %s", qdpn_connector_name(cxtr));
         ctx = new_qd_connection_t();
         DEQ_ITEM_INIT(ctx);
         ctx->state        = CONN_STATE_OPENING;
@@ -122,7 +122,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         ctx->enqueued     = 0;
         ctx->pn_cxtr      = cxtr;
         ctx->collector    = 0;
-        ctx->listener     = (qd_listener_t*) pn_listener_context(listener);
+        ctx->listener     = (qd_listener_t*) qdpn_listener_context(listener);
         ctx->connector    = 0;
         ctx->context      = ctx->listener->context;
         ctx->user_context = 0;
@@ -135,7 +135,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         pn_connection_collect(conn, ctx->collector);
         pn_connection_set_container(conn, qd_server->container_name);
         pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
-        pn_connector_set_connection(cxtr, conn);
+        qdpn_connector_set_connection(cxtr, conn);
         pn_connection_set_context(conn, ctx);
         ctx->pn_conn = conn;
 
@@ -146,7 +146,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         //
         // Get a pointer to the transport so we can insert security components into it
         //
-        pn_transport_t           *tport  = pn_connector_transport(cxtr);
+        pn_transport_t           *tport  = qdpn_connector_transport(cxtr);
         const qd_server_config_t *config = ctx->listener->config;
 
         //
@@ -161,7 +161,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
             pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
             if (!domain) {
                 qd_error(QD_ERROR_RUNTIME, "SSL domain failed for connection from %s",
-                         pn_connector_name(cxtr));
+                         qdpn_connector_name(cxtr));
                 /* TODO aconway 2014-07-15: Close the connection */
                 continue;
             }
@@ -198,7 +198,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         pn_sasl_allow_skip(sasl, config->allow_no_sasl);
         pn_sasl_done(sasl, PN_SASL_OK);  // TODO - This needs to go away
 
-        pn_connector_set_context(cxtr, ctx);
+        qdpn_connector_set_context(cxtr, ctx);
     }
 }
 
@@ -230,9 +230,9 @@ static void block_if_paused_LH(qd_server_t *qd_server)
 }
 
 
-static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
+static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
 {
-    qd_connection_t *ctx = pn_connector_context(cxtr);
+    qd_connection_t *ctx = qdpn_connector_context(cxtr);
     int events = 0;
     int passes = 0;
 
@@ -247,14 +247,14 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
         //
         // Step the engine for pre-handler processing
         //
-        pn_connector_process(cxtr);
+        qdpn_connector_process(cxtr);
 
         //
         // Call the handler that is appropriate for the connector's state.
         //
         switch (ctx->state) {
         case CONN_STATE_CONNECTING: {
-            if (pn_connector_closed(cxtr)) {
+            if (qdpn_connector_closed(cxtr)) {
                 ctx->state = CONN_STATE_FAILED;
                 events = 0;
                 break;
@@ -266,7 +266,7 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
             pn_connection_collect(conn, ctx->collector);
             pn_connection_set_container(conn, qd_server->container_name);
             pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
-            pn_connector_set_connection(cxtr, conn);
+            qdpn_connector_set_connection(cxtr, conn);
             pn_connection_set_context(conn, ctx);
             ctx->pn_conn = conn;
             ctx->state   = CONN_STATE_OPENING;
@@ -277,7 +277,7 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
         }
 
         case CONN_STATE_OPENING: {
-            pn_transport_t *tport = pn_connector_transport(cxtr);
+            pn_transport_t *tport = qdpn_connector_transport(cxtr);
             pn_sasl_t      *sasl  = pn_sasl(tport);
 
             if (pn_sasl_outcome(sasl) == PN_SASL_OK ||
@@ -295,7 +295,7 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
                     assert(0);
 
                 qd_server->conn_handler(qd_server->conn_handler_context,
-                                        ctx->context, ce, (qd_connection_t*) pn_connector_context(cxtr));
+                                        ctx->context, ce, (qd_connection_t*) qdpn_connector_context(cxtr));
                 events = 1;
                 break;
             }
@@ -309,16 +309,16 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
         }
 
         case CONN_STATE_OPERATIONAL:
-            if (pn_connector_closed(cxtr)) {
+            if (qdpn_connector_closed(cxtr)) {
                 qd_server->conn_handler(qd_server->conn_handler_context, ctx->context,
                                         QD_CONN_EVENT_CLOSE,
-                                        (qd_connection_t*) pn_connector_context(cxtr));
+                                        (qd_connection_t*) qdpn_connector_context(cxtr));
                 events = 0;
             }
             else
                 events = qd_server->conn_handler(qd_server->conn_handler_context, ctx->context,
                                                  QD_CONN_EVENT_PROCESS,
-                                                 (qd_connection_t*) pn_connector_context(cxtr));
+                                                 (qd_connection_t*) qdpn_connector_context(cxtr));
             break;
 
         default:
@@ -333,9 +333,9 @@ static int process_connector(qd_server_t *qd_server, pn_connector_t *cxtr)
 //
 // TEMPORARY FUNCTION PROTOTYPES
 //
-void pn_driver_wait_1(pn_driver_t *d);
-int  pn_driver_wait_2(pn_driver_t *d, int timeout);
-void pn_driver_wait_3(pn_driver_t *d);
+void qdpn_driver_wait_1(qdpn_driver_t *d);
+int  qdpn_driver_wait_2(qdpn_driver_t *d, int timeout);
+void qdpn_driver_wait_3(qdpn_driver_t *d);
 //
 // END TEMPORARY
 //
@@ -345,7 +345,7 @@ static void *thread_run(void *arg)
     qd_thread_t     *thread    = (qd_thread_t*) arg;
     qd_server_t     *qd_server = thread->qd_server;
     qd_work_item_t  *work;
-    pn_connector_t  *cxtr;
+    qdpn_connector_t  *cxtr;
     pn_connection_t *conn;
     qd_connection_t *ctx;
     int              error;
@@ -408,7 +408,7 @@ static void *thread_run(void *arg)
             //
             sys_mutex_unlock(qd_server->lock);
             timer->handler(timer->context);
-            pn_driver_wakeup(qd_server->driver);
+            qdpn_driver_wakeup(qd_server->driver);
             continue;
         }
 
@@ -446,22 +446,22 @@ static void *thread_run(void *arg)
                 // the first and third of which need to be non-reentrant, and the second of which
                 // must be reentrant (and blocks).
                 //
-                pn_driver_wait_1(qd_server->driver);
+                qdpn_driver_wait_1(qd_server->driver);
                 sys_mutex_unlock(qd_server->lock);
 
                 do {
                     error = 0;
-                    poll_result = pn_driver_wait_2(qd_server->driver, duration);
+                    poll_result = qdpn_driver_wait_2(qd_server->driver, duration);
                     if (poll_result == -1)
-                        error = pn_driver_errno(qd_server->driver);
+                        error = qdpn_driver_errno(qd_server->driver);
                 } while (error == PN_INTR);
                 if (error) {
-                    qd_log(qd_server->log_source, QD_LOG_ERROR, "Driver Error: %s", pn_driver_error(qd_server->driver));
+                    qd_log(qd_server->log_source, QD_LOG_ERROR, "Driver Error: %s", qdpn_driver_error(qd_server->driver));
                     exit(-1);
                 }
 
                 sys_mutex_lock(qd_server->lock);
-                pn_driver_wait_3(qd_server->driver);
+                qdpn_driver_wait_3(qd_server->driver);
 
                 if (!thread->running) {
                     sys_mutex_unlock(qd_server->lock);
@@ -487,9 +487,9 @@ static void *thread_run(void *arg)
                 // being processed by another thread, put it in the work queue and signal the
                 // condition variable.
                 //
-                cxtr = pn_driver_connector(qd_server->driver);
+                cxtr = qdpn_driver_connector(qd_server->driver);
                 while (cxtr) {
-                    ctx = pn_connector_context(cxtr);
+                    ctx = qdpn_connector_context(cxtr);
                     if (!ctx->enqueued && ctx->owner_thread == CONTEXT_NO_OWNER) {
                         ctx->enqueued = 1;
                         qd_work_item_t *workitem = new_qd_work_item_t();
@@ -498,11 +498,11 @@ static void *thread_run(void *arg)
                         DEQ_INSERT_TAIL(qd_server->work_queue, workitem);
                         sys_cond_signal(qd_server->cond);
                     }
-                    cxtr = pn_driver_connector(qd_server->driver);
+                    cxtr = qdpn_driver_connector(qd_server->driver);
                 }
 
                 //
-                // Release our exclusive claim on pn_driver_wait.
+                // Release our exclusive claim on qdpn_driver_wait.
                 //
                 qd_server->a_thread_is_waiting = false;
             }
@@ -515,7 +515,7 @@ static void *thread_run(void *arg)
         cxtr = 0;
         if (work) {
             DEQ_REMOVE_HEAD(qd_server->work_queue);
-            ctx = pn_connector_context(work->cxtr);
+            ctx = qdpn_connector_context(work->cxtr);
             if (ctx->owner_thread == CONTEXT_NO_OWNER) {
                 ctx->owner_thread = thread->thread_id;
                 ctx->enqueued = 0;
@@ -540,12 +540,12 @@ static void *thread_run(void *arg)
             //
             // Check to see if the connector was closed during processing
             //
-            if (pn_connector_closed(cxtr)) {
+            if (qdpn_connector_closed(cxtr)) {
                 qd_c_entity_remove(QD_CONNECTION_TYPE, ctx);
                 //
                 // Connector is closed.  Free the context and the connector.
                 //
-                conn = pn_connector_connection(cxtr);
+                conn = qdpn_connector_connection(cxtr);
 
                 //
                 // If this is a dispatch connector, schedule the re-connect timer
@@ -559,7 +559,7 @@ static void *thread_run(void *arg)
                 sys_mutex_lock(qd_server->lock);
                 DEQ_REMOVE(qd_server->connections, ctx);
 
-                pn_connector_free(cxtr);
+                qdpn_connector_free(cxtr);
                 if (conn)
                     pn_connection_free(conn);
                 if (ctx->collector)
@@ -582,7 +582,7 @@ static void *thread_run(void *arg)
             // in light of the processing that just occurred.
             //
             if (work_done)
-                pn_driver_wakeup(qd_server->driver);
+                qdpn_driver_wakeup(qd_server->driver);
         }
     }
 
@@ -653,10 +653,10 @@ static void cxtr_try_open(void *context)
     ctx->ufd          = 0;
 
     //
-    // pn_connector is not thread safe
+    // qdpn_connector is not thread safe
     //
     sys_mutex_lock(ct->server->lock);
-    ctx->pn_cxtr = pn_connector(ct->server->driver, ct->config->host, ct->config->port, (void*) ctx);
+    ctx->pn_cxtr = qdpn_connector(ct->server->driver, ct->config->host, ct->config->port, (void*) ctx);
     DEQ_INSERT_TAIL(ct->server->connections, ctx);
     qd_c_entity_add(QD_CONNECTION_TYPE, ctx);
 
@@ -669,7 +669,7 @@ static void cxtr_try_open(void *context)
     //
     // Set up the transport, SASL, and SSL for the connection.
     //
-    pn_transport_t           *tport  = pn_connector_transport(ctx->pn_cxtr);
+    pn_transport_t           *tport  = qdpn_connector_transport(ctx->pn_cxtr);
     const qd_server_config_t *config = ct->config;
 
     //
@@ -724,7 +724,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->log_source      = qd_log_source("SERVER");
     qd_server->thread_count    = thread_count;
     qd_server->container_name  = container_name;
-    qd_server->driver          = pn_driver();
+    qd_server->driver          = qdpn_driver();
     qd_server->start_handler   = 0;
     qd_server->conn_handler    = 0;
     qd_server->signal_handler  = 0;
@@ -766,7 +766,7 @@ void qd_server_free(qd_server_t *qd_server)
     for (i = 0; i < qd_server->thread_count; i++)
         thread_free(qd_server->threads[i]);
 
-    pn_driver_free(qd_server->driver);
+    qdpn_driver_free(qd_server->driver);
     sys_mutex_free(qd_server->lock);
     sys_cond_free(qd_server->cond);
     free(qd_server->threads);
@@ -863,7 +863,7 @@ void qd_server_stop(qd_dispatch_t *qd)
     for (idx = 0; idx < qd_server->thread_count; idx++)
         thread_cancel(qd_server->threads[idx]);
     sys_cond_signal_all(qd_server->cond);
-    pn_driver_wakeup(qd_server->driver);
+    qdpn_driver_wakeup(qd_server->driver);
     sys_mutex_unlock(qd_server->lock);
 
     if (thread_server != qd_server) {
@@ -880,7 +880,7 @@ void qd_server_signal(qd_dispatch_t *qd, int signum)
 
     qd_server->pending_signal = signum;
     sys_cond_signal_all(qd_server->cond);
-    pn_driver_wakeup(qd_server->driver);
+    qdpn_driver_wakeup(qd_server->driver);
 }
 
 
@@ -900,7 +900,7 @@ void qd_server_pause(qd_dispatch_t *qd)
     // Awaken all threads that are currently blocking.
     //
     sys_cond_signal_all(qd_server->cond);
-    pn_driver_wakeup(qd_server->driver);
+    qdpn_driver_wakeup(qd_server->driver);
 
     //
     // Wait for the paused thread count plus the number of threads requesting a pause to equal
@@ -932,12 +932,12 @@ void qd_server_activate(qd_connection_t *ctx)
     if (!ctx)
         return;
 
-    pn_connector_t *ctor = ctx->pn_cxtr;
+    qdpn_connector_t *ctor = ctx->pn_cxtr;
     if (!ctor)
         return;
 
-    if (!pn_connector_closed(ctor))
-        pn_connector_activate(ctor, PN_CONNECTOR_WRITABLE);
+    if (!qdpn_connector_closed(ctor))
+        qdpn_connector_activate(ctor, QDPN_CONNECTOR_WRITABLE);
 }
 
 
@@ -996,11 +996,11 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
     li->server      = qd_server;
     li->config      = config;
     li->context     = context;
-    li->pn_listener = pn_listener(qd_server->driver, config->host, config->port, (void*) li);
+    li->pn_listener = qdpn_listener(qd_server->driver, config->host, config->port, (void*) li);
 
     if (!li->pn_listener) {
         qd_log(qd_server->log_source, QD_LOG_ERROR, "Driver Error %d (%s)",
-               pn_driver_errno(qd_server->driver), pn_driver_error(qd_server->driver));
+               qdpn_driver_errno(qd_server->driver), qdpn_driver_error(qd_server->driver));
         free_qd_listener_t(li);
         return 0;
     }
@@ -1015,14 +1015,14 @@ void qd_server_listener_free(qd_listener_t* li)
     if (!li)
         return;
 
-    pn_listener_free(li->pn_listener);
+    qdpn_listener_free(li->pn_listener);
     free_qd_listener_t(li);
 }
 
 
 void qd_server_listener_close(qd_listener_t* li)
 {
-    pn_listener_close(li->pn_listener);
+    qdpn_listener_close(li->pn_listener);
 }
 
 
@@ -1056,7 +1056,7 @@ void qd_server_connector_free(qd_connector_t* ct)
         return;
 
     if (ct->ctx) {
-        pn_connector_close(ct->ctx->pn_cxtr);
+        qdpn_connector_close(ct->ctx->pn_cxtr);
         ct->ctx->connector = 0;
     }
 
@@ -1091,8 +1091,8 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     ufd->context = context;
     ufd->server  = qd_server;
     ufd->fd      = fd;
-    ufd->pn_conn = pn_connector_fd(qd_server->driver, fd, (void*) ctx);
-    pn_driver_wakeup(qd_server->driver);
+    ufd->pn_conn = qdpn_connector_fd(qd_server->driver, fd, (void*) ctx);
+    qdpn_driver_wakeup(qd_server->driver);
 
     return ufd;
 }
@@ -1101,34 +1101,34 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
 void qd_user_fd_free(qd_user_fd_t *ufd)
 {
     if (!ufd) return;
-    pn_connector_close(ufd->pn_conn);
+    qdpn_connector_close(ufd->pn_conn);
     free_qd_user_fd_t(ufd);
 }
 
 
 void qd_user_fd_activate_read(qd_user_fd_t *ufd)
 {
-    pn_connector_activate(ufd->pn_conn, PN_CONNECTOR_READABLE);
-    pn_driver_wakeup(ufd->server->driver);
+    qdpn_connector_activate(ufd->pn_conn, QDPN_CONNECTOR_READABLE);
+    qdpn_driver_wakeup(ufd->server->driver);
 }
 
 
 void qd_user_fd_activate_write(qd_user_fd_t *ufd)
 {
-    pn_connector_activate(ufd->pn_conn, PN_CONNECTOR_WRITABLE);
-    pn_driver_wakeup(ufd->server->driver);
+    qdpn_connector_activate(ufd->pn_conn, QDPN_CONNECTOR_WRITABLE);
+    qdpn_driver_wakeup(ufd->server->driver);
 }
 
 
 bool qd_user_fd_is_readable(qd_user_fd_t *ufd)
 {
-    return pn_connector_activated(ufd->pn_conn, PN_CONNECTOR_READABLE);
+    return qdpn_connector_activated(ufd->pn_conn, QDPN_CONNECTOR_READABLE);
 }
 
 
 bool qd_user_fd_is_writeable(qd_user_fd_t *ufd)
 {
-    return pn_connector_activated(ufd->pn_conn, PN_CONNECTOR_WRITABLE);
+    return qdpn_connector_activated(ufd->pn_conn, QDPN_CONNECTOR_WRITABLE);
 }
 
 

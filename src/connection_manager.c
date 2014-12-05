@@ -255,7 +255,7 @@ void qd_connection_manager_stop_on_demand(qd_dispatch_t *qd, qd_config_connector
 static void cm_attr_name(void *object_handle, void *cor, void *unused)
 {
     qd_connection_t *conn = (qd_connection_t*) object_handle;
-    qd_agent_value_string(cor, 0, pn_connector_name(conn->pn_cxtr));
+    qd_agent_value_string(cor, 0, qdpn_connector_name(conn->pn_cxtr));
 }
 
 
@@ -300,7 +300,7 @@ static void cm_attr_host(void *object_handle, void *cor, void *unused)
         strcat(host, config->port);
         qd_agent_value_string(cor, 0, host);
     } else
-        qd_agent_value_string(cor, 0, pn_connector_name(conn->pn_cxtr));
+        qd_agent_value_string(cor, 0, qdpn_connector_name(conn->pn_cxtr));
 }
 
 

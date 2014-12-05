@@ -56,6 +56,7 @@ set(qpid_dispatch_SOURCES
   log.c
   message.c
   parse.c
+  posix/driver.c
   posix/threading.c
   python_embedded.c
   router_agent.c
