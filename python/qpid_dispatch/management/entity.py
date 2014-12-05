@@ -32,7 +32,7 @@ def clean_dict(items, **kwargs):
     return dict((unicode(k), v) for k, v in itertools.chain(items, kwargs.iteritems())
                 if v is not None)
 
-class Entity(object):
+class EntityBase(object):
     """
     A collection of named attributes.
 
@@ -43,7 +43,7 @@ class Entity(object):
 
     @ivar attributes: Map of attribute values for this entity.
 
-    NOTE: Entity does not itself implement the python map protocol because map
+    NOTE: EntityBase does not itself implement the python map protocol because map
     methods (in particular 'update') can clash with AMQP methods and attributes.
     """
 

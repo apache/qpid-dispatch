@@ -27,7 +27,7 @@ A Schema can be loaded/dumped to a json file.
 """
 
 import sys
-from qpid_dispatch.management import entity
+from qpid_dispatch.management.entity import EntityBase
 from qpid_dispatch.management.error import ForbiddenStatus
 from ..compat import OrderedDict
 
@@ -399,7 +399,7 @@ class EntityType(AttrsAndOps):
         @param kwargs: See L{Schema.validate_all}
         """
 
-        if isinstance(attributes, Entity): attributes = attributes.attributes
+        if isinstance(attributes, SchemaEntity): attributes = attributes.attributes
 
         if self.singleton and not _is_unique(check_singleton, self.name):
             raise ValidationError("Multiple instances of singleton '%s'"%self.name)
@@ -551,12 +551,12 @@ class Schema(object):
                                  check_singleton=check_singleton)
 
     def entity(self, attributes):
-        """Convert an attribute map into an L{Entity}"""
+        """Convert an attribute map into an L{SchemaEntity}"""
         attributes = dict((k, v) for k, v in attributes.iteritems() if v is not None)
-        return Entity(self.entity_type(attributes['type']), attributes)
+        return SchemaEntity(self.entity_type(attributes['type']), attributes)
 
     def entities(self, attribute_maps):
-        """Convert a list of attribute maps into a list of L{Entity}"""
+        """Convert a list of attribute maps into a list of L{SchemaEntity}"""
         return [self.entity(m) for m in attribute_maps]
 
     def by_type(self, type):
@@ -565,16 +565,16 @@ class Schema(object):
         return (t for t in self.entity_types.itervalues() if not type or t.is_a(type))
 
 
-class Entity(entity.Entity):
+class SchemaEntity(EntityBase):
     """A map of attributes associated with an L{EntityType}"""
     def __init__(self, entity_type, attributes=None, validate=True, **kwattrs):
-        super(Entity, self).__init__(attributes, **kwattrs)
+        super(SchemaEntity, self).__init__(attributes, **kwattrs)
         self.__dict__['entity_type'] = entity_type
         self.attributes.setdefault('type', entity_type.name)
         if validate: self.validate()
 
     def __setitem__(self, name, value):
-        super(Entity, self).__setitem__(name, value)
+        super(SchemaEntity, self).__setitem__(name, value)
         self.validate()
 
     def validate(self):

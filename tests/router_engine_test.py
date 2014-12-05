@@ -26,7 +26,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "mock")) # Mock modules 
 
 from qpid_dispatch_internal.router.engine import NeighborEngine, PathEngine, NodeTracker
 from qpid_dispatch_internal.router.data import LinkState, MessageHELLO
-from qpid_dispatch.management.entity import Entity
+from qpid_dispatch.management.entity import EntityBase
 from system_test import main_module
 
 class Adapter(object):
@@ -268,7 +268,7 @@ class NeighborTest(unittest.TestCase):
         self.id = "R1"
         self.area = "area"
         # Fake configuration
-        self.config = Entity({
+        self.config = EntityBase({
             'helloInterval'      :  1.0,
             'helloMaxAge'       :  3.0,
             'raInterval'         : 30.0,

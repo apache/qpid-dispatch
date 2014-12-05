@@ -18,7 +18,7 @@
 #
 
 import unittest
-from qpid_dispatch.management.entity import Entity, camelcase
+from qpid_dispatch.management.entity import EntityBase, camelcase
 
 class EntityTest(unittest.TestCase):
 
@@ -36,7 +36,7 @@ class EntityTest(unittest.TestCase):
         self.assertEqual('FooBar', camelcase('fooBar', capital=True))
 
     def test_entity(self):
-        e = Entity({'foo-bar': 'baz'}, type='container', name='x')
+        e = EntityBase({'foo-bar': 'baz'}, type='container', name='x')
         self.assertEqual(e.attributes, {'type': 'container', 'name':'x', 'foo-bar': 'baz'})
         self.assertEqual(e.name, 'x')
         self.assertEqual(e['name'], 'x')

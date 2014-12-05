@@ -58,7 +58,7 @@ from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONT
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch.management.entity import camelcase
 from .. import dispatch_c
-from .schema import ValidationError, Entity as SchemaEntity, EntityType
+from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema
 from ..router.message import Message
 
@@ -88,7 +88,7 @@ class AtomicCount(object):
             self.count += 1
             return self.count
 
-class Entity(SchemaEntity):
+class AgentEntity(SchemaEntity):
     """
     Base class for agent entities with operations as well as attributes.
     """
@@ -105,7 +105,7 @@ class Entity(SchemaEntity):
         @param attributes: Attribute name:value map
         @param pointer: Pointer to C object that can be used to refresh attributes.
         """
-        super(Entity, self).__init__(entity_type, attributes, validate=validate)
+        super(AgentEntity, self).__init__(entity_type, attributes, validate=validate)
         # Direct __dict__ access to avoid validation as schema attributes
         self.__dict__['_agent'] = agent
         self.__dict__['_qd'] = agent.qd
@@ -153,16 +153,16 @@ class Entity(SchemaEntity):
         """Subclasses implement delete logic here"""
         pass
 
-class ContainerEntity(Entity): pass
+class ContainerEntity(AgentEntity): pass
 
 
-class RouterEntity(Entity):
+class RouterEntity(AgentEntity):
     def __init__(self, *args, **kwargs):
         kwargs['validate'] = False
         super(RouterEntity, self).__init__(*args, **kwargs)
         self._set_pointer(self._dispatch)
 
-class LogEntity(Entity):
+class LogEntity(AgentEntity):
     def __init__(self, agent, entity_type, attributes=None, validate=True):
         module = attributes.get('module')
         if module:
@@ -179,29 +179,29 @@ class LogEntity(Entity):
         """Can't actually delete a log source but return it to the default state"""
         self._qd.qd_log_source_reset(self.attributes['module'])
 
-class ListenerEntity(Entity):
+class ListenerEntity(AgentEntity):
     def create(self, request):
         self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
 
-class ConnectorEntity(Entity):
+class ConnectorEntity(AgentEntity):
     def create(self, request):
         self._qd.qd_dispatch_configure_connector(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
 
-class FixedAddressEntity(Entity):
+class FixedAddressEntity(AgentEntity):
     def create(self, request):
         self._qd.qd_dispatch_configure_address(self._dispatch, self)
 
 
-class WaypointEntity(Entity):
+class WaypointEntity(AgentEntity):
     def create(self, request):
         self._qd.qd_dispatch_configure_waypoint(self._dispatch, self)
         self._qd.qd_waypoint_activate_all(self._dispatch)
 
-class DummyEntity(Entity):
+class DummyEntity(AgentEntity):
 
     id_count = AtomicCount()
 
@@ -214,7 +214,7 @@ class DummyEntity(Entity):
         return (OK, dict(**request.properties))
 
 
-class CEntity(Entity):
+class CEntity(AgentEntity):
     """
     Entity that is registered from C code rather than created via management.
     """

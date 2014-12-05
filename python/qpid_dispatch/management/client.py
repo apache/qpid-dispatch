@@ -24,7 +24,7 @@ AMQP management client for Qpid dispatch.
 import proton, threading
 from proton import Url
 from .error import *
-from .entity import Entity as BaseEntity, clean_dict
+from .entity import EntityBase, clean_dict
 
 class MessengerImpl(object):
     """
@@ -66,7 +66,7 @@ class MessengerImpl(object):
         self.messenger.stop()
 
 
-class Entity(BaseEntity):
+class Entity(EntityBase):
     """
     Proxy for an AMQP manageable entity.
 
