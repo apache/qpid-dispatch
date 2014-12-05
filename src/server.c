@@ -434,7 +434,7 @@ static void *thread_run(void *arg)
                 qd_server->a_thread_is_waiting = true;
 
                 //
-                // Ask the timer log_handle when its next timer is scheduled to fire.  We'll
+                // Ask the timer module when its next timer is scheduled to fire.  We'll
                 // use this value in driver_wait as the timeout.  If there are no scheduled
                 // timers, the returned value will be -1.
                 //
@@ -469,7 +469,7 @@ static void *thread_run(void *arg)
                 }
 
                 //
-                // Visit the timer log_handle.
+                // Visit the timer module.
                 //
                 struct timespec tv;
                 clock_gettime(CLOCK_REALTIME, &tv);
