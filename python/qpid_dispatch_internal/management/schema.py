@@ -329,20 +329,28 @@ class EntityType(AttrsAndOps):
         @param operations: Allowed operations, list of operation names.
         """
         super(EntityType, self).__init__(name, schema, attributes, operations, description)
-        self.base = None
+        # Bases and annotations are resolved in self.resolve
+        self.base = extends
         self.all_bases = []
-        if extends:
-            self.base = schema.entity_type(extends)
-            self.all_bases = [self.base] + self.base.all_bases
-            self._extend(self.base, 'extend')
-
-        self.annotations = [ schema.annotation(a) for a in annotations or []]
-        for a in self.annotations:
-            self._extend(a, 'be annotated')
-
+        self.annotations = annotations or []
         # This map defines values that can be referred to using $$ in the schema.
         self.refs = {'entityType': self.name}
         self.singleton = singleton
+        self._init = False      # Have not yet initialized from base and attributes.
+
+    def init(self):
+        """Resolve bases and annotations after all types are loaded."""
+        if self._init: return
+        self._init = True
+        if self.base:
+            self.base = self.schema.entity_type(self.base)
+            self.base.init()
+            self.all_bases = [self.base] + self.base.all_bases
+            self._extend(self.base, 'extend')
+        if self.annotations:
+            self.annotations = [self.schema.annotation(a) for a in self.annotations]
+        for a in self.annotations:
+            self._extend(a, 'be annotated')
 
     def _extend(self, other, how):
         """Add attributes and operations from other"""
@@ -458,16 +466,14 @@ class Schema(object):
             self.prefixdot = self.prefix + '.'
         else:
             self.prefix = self.prefixdot = ""
-
         self.description = description
-        self.annotations = OrderedDict()
-        self.entity_types = OrderedDict()
-        def add_defs(thing, mymap, defs):
-            for k, v in defs.iteritems():
-                t = thing(k, self, **v)
-                mymap[t.name] = t
-        add_defs(Annotation, self.annotations, annotations or {})
-        add_defs(EntityType, self.entity_types, entityTypes or {})
+
+        def make_dict(klass, params):
+            if not params: return OrderedDict()
+            return OrderedDict((t.name, t) for t in (klass(k, self, **v) for k, v in params.iteritems()))
+        self.annotations = make_dict(Annotation, annotations)
+        self.entity_types = make_dict(EntityType, entityTypes)
+        for et in self.entity_types.itervalues(): et.init()
 
     def short_name(self, name):
         """Remove prefix from name if present"""
