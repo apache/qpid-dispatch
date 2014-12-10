@@ -467,13 +467,20 @@ class Schema(object):
         else:
             self.prefix = self.prefixdot = ""
         self.description = description
+        self.annotations = OrderedDict()
+        self.entity_types = OrderedDict()
+        self.all_attributes = set()
 
-        def make_dict(klass, params):
-            if not params: return OrderedDict()
-            return OrderedDict((t.name, t) for t in (klass(k, self, **v) for k, v in params.iteritems()))
-        self.annotations = make_dict(Annotation, annotations)
-        self.entity_types = make_dict(EntityType, entityTypes)
-        for et in self.entity_types.itervalues(): et.init()
+        def add_defs(thing, mymap, defs):
+            for k, v in defs.iteritems():
+                t = thing(k, self, **v)
+                mymap[t.name] = t
+        add_defs(Annotation, self.annotations, annotations or {})
+        add_defs(EntityType, self.entity_types, entityTypes or {})
+
+        for e in self.entity_types.itervalues():
+            e.init()
+            self.all_attributes.update(e.attributes.keys())
 
     def short_name(self, name):
         """Remove prefix from name if present"""

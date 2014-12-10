@@ -17,24 +17,60 @@
 ## under the License.
 ##
 
-configure_file(qdrouterd.8.in ${CMAKE_CURRENT_BINARY_DIR}/qdrouterd.8)
-configure_file(qdstat.8.in ${CMAKE_CURRENT_BINARY_DIR}/qdstat.8)
+set(src ${CMAKE_CURRENT_SOURCE_DIR})
+set(bin ${CMAKE_CURRENT_BINARY_DIR})
+set(tools ${CMAKE_SOURCE_DIR}/tools)
+
+find_program(HELP2MAN help2man)
+
+if(HELP2MAN)
+
+  macro(help2man manpage h2mfile program)
+    string(REGEX MATCH "[0-9]*$" section ${manpage})
+    add_custom_command (
+      OUTPUT ${manpage}
+      COMMAND ${RUN} -s ${src}/help2man.py ${HELP2MAN} --version-string ${QPID_DISPATCH_VERSION} -s ${section} -i ${src}/${h2mfile} -N -o ${bin}/${manpage} ${program}
+      DEPENDS ${program} ${h2mfile}
+      )
+  endmacro()
+
+else(HELP2MAN)
+
+  message(WARNING "help2man is not avaliable, cannot update man pages")
+  macro(help2man manpage h2mfile program)
+    # Copy a pre-generated version of the man page.
+    configure_file(${manpage}.in ${manpage})
+  endmacro()
+
+endif(HELP2MAN)
+
+configure_file(qdrouterd.8.in ${bin}/qdrouterd.8)
+help2man(qdstat.8 qdstat.h2m ${tools}/qdstat)
+help2man(qdmanage.8 qdmanage.h2m ${tools}/qdmanage)
 
 # Generate a man page from the qdrouter.json schema.
-set (QDROUTERD_CONF qdrouterd.conf.5)
+set (QDROUTER_CONF_MAN qdrouterd.conf.5)
 
-file (GLOB_RECURSE QDROUTERD_CONF_DEPENDS
-  ${CMAKE_CURRENT_SOURCE_DIR}/qdrouterd_conf_man.py
+file (GLOB_RECURSE QDROUTER_CONF_MAN_DEPENDS
+  ${src}/qdrouterd_conf_man.py
   ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/*.py
   ${CMAKE_SOURCE_DIR}/python/qpid_router/management/qdrouterd.json)
 
-add_custom_command (OUTPUT ${QDROUTERD_CONF}
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${CMAKE_CURRENT_SOURCE_DIR}/qdrouterd_conf_man.py ${QDROUTERD_CONF}
-    DEPENDS ${QDROUTERD_CONF_DEPENDS})
+add_custom_command (OUTPUT ${QDROUTER_CONF_MAN}
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${src}/qdrouterd_conf_man.py ${QDROUTER_CONF_MAN}
+    DEPENDS ${QDROUTER_CONF_MAN_DEPENDS})
 
-add_custom_target(man ALL DEPENDS ${QDROUTERD_CONF})
+# Target to build the generated files by default
+add_custom_target(man ALL DEPENDS ${QDROUTER_CONF_MAN} ${bin}/qdmanage.8 ${bin}/qdstat.8)
+
+# Target to check that checked-in versions of generated files are up to date.
+add_custom_target(check_man ALL DEPENDS man
+  COMMAND ${RUN} -s ${src}/check_help2man.py ${src} ${bin} qdmanage.8 qdstat.8)
+
 
 # Install man pages
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qdrouterd.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${QDROUTERD_CONF} DESTINATION ${MAN_INSTALL_DIR}/man5)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/qdstat.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
+
+install(FILES ${bin}/qdrouterd.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
+install(FILES ${bin}/${QDROUTER_CONF_MAN} DESTINATION ${MAN_INSTALL_DIR}/man5)
+install(FILES ${bin}/qdstat.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
+install(FILES ${bin}/qdmanage.8 DESTINATION ${MAN_INSTALL_DIR}/man8)

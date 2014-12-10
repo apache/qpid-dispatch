@@ -274,9 +274,8 @@ class EntityCache(object):
         if type is None:
             return map(function, self.entities)
         else:
-            if isinstance(type, EntityType): type = type.name
-            else: type = self.schema.long_name(type)
-            return map(function, ifilter(lambda e: e.entity_type.name == type, self.entities))
+            if not isinstance(type, EntityType): type = self.schema.entity_type(type)
+            return map(function, ifilter(lambda e: e.entity_type.is_a(type), self.entities))
 
     def add(self, entity, pointer=None):
         """Add an entity. Provide pointer if it is associated with a C entity"""
@@ -456,21 +455,35 @@ class Agent(object):
 
     def query(self, request):
         """Management node query operation"""
-        type = self.requested_type(request)
-        attribute_names = request.body.get('attributeNames')
-        if not attribute_names:
-            if type:
-                attribute_names = type.attributes.keys()
-            else:               # Every attribute in the schema!
-                names = set()
-                for e in self.schema.entity_types.itervalues():
-                    names.update(e.attributes.keys())
-                attribute_names = list(names)
+        entity_type = self.requested_type(request)
+        if entity_type:
+            all_attrs = set(entity_type.attributes.keys())
+        else:
+            all_attrs = self.schema.all_attributes
 
-        attributes = self.entities.map_type(lambda e: e.attributes, type)
-        results = [[attrs.get(name) for name in attribute_names]
-                   for attrs in attributes]
-        return (OK, {'attributeNames': attribute_names, 'results': results})
+        names = set(request.body.get('attributeNames'))
+        if names:
+            unknown = names - all_attrs
+            if unknown:
+                if entity_type:
+                    for_type =  " for type %s" % entity_type.name
+                else:
+                    for_type = ""
+                raise NotFoundStatus("Unknown attributes %s%s." % (list(unknown), for_type))
+        else:
+            names = all_attrs
+
+        results = []
+        def add_result(entity):
+            result = []
+            non_empty = False
+            for name in names:
+                result.append(entity.attributes.get(name))
+                if result[-1] is not None: non_empty = True
+            if non_empty: results.append(result)
+
+        self.entities.map_type(add_result, entity_type)
+        return (OK, {'attributeNames': list(names), 'results': results})
 
     def create(self, request):
         """

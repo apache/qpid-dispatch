@@ -17,6 +17,26 @@
 ;; under the License.
 ;;
 
+# How man pages are generated.
+
+Command line tools --help option provides a very brief usage and list of options.
+
+Man pages should be more detailed, but we do not want to repeat the information
+from --help as it will easily become out of date.
+
+To solve this we generate man pages using the  help2man utility.
+For each tool there should be a tool.htm with extra details for the man page.
+help2man will combine this with the --help otuput of the tool to create the full man page.
+
+See the help2man macro in CMakeLists.txt and the help2man documentation for more details.
+
+For building distributions when help2man is not available, the generated man page for
+each tool is checked in as "tool.8.in". When help2man is available, running make
+will warn if the checked in version is not  up to date with the generated version.
+
+To update the man page you MUST use help2man, do not edit the checked in file
+as your edits will be lost.
+
 # A really quick guide to nroff and man-page macros
 
 ## The title heading

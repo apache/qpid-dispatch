@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -15,28 +14,29 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
-# under the License.
+# under the License
 #
 
-if [[ -z "$SOURCE_DIR" ]]; then
-    echo "The devel environment isn't ready.  Run 'source config.sh' from"
-    echo "the base of the dispatch source tree"
-    exit 1
-fi
+"""Check that man page checkedd in to source tree matches genated file"""
 
-set -ev
+import sys, os
 
-rm -rf $BUILD_DIR
-rm -rf $INSTALL_DIR
+srcdir, bindir = sys.argv[1:3]
+files = sys.argv[3:]
+failed = []
 
-mkdir $BUILD_DIR
-cd $BUILD_DIR
+def normalize(f):
+    f.readline()
+    f.readline()
+    return f.read()
 
-cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=Debug $SOURCE_DIR
-make -j4
-make install
-cd tests
-# Run unit tests on the build.
-ctest -VV -E system_tests
-# Run system tests on the install.
-python $INSTALL_DIR/lib/qpid-dispatch/tests/run_system_tests.py
+for f in files:
+    src = os.path.join(srcdir, f+".in")
+    gen = os.path.join(bindir, f)
+    if normalize(open(src)) != normalize(open(gen)): failed.append((gen, src))
+
+if failed:
+    print "ERROR: generated man pages do not match checked in versions. To fix do: "
+    for gen, src in failed:
+        print "  cp  %s %s" % (gen, src)
+    sys.exit(1)

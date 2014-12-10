@@ -37,11 +37,9 @@ class QdmanageTest(TestCase):
 
     def address(self): return self.router.hostports[0]
 
-    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, **kwargs):
-        args = filter(None, sum([["--%s" % k.replace('_','-'), v]
-                                 for k, v in kwargs.iteritems()], []))
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
         p = self.popen(
-            ['qdmanage', cmd, '--bus', self.address(), '--indent=-1']+args,
+            ['qdmanage'] + cmd.split(' ') + ['--bus', self.address(), '--indent=-1'],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
         out = p.communicate(input)[0]
         try:
@@ -51,10 +49,10 @@ class QdmanageTest(TestCase):
         return out
 
     def test_help(self):
-        self.run_qdmanage('help', r'Usage: qdmanage', expect=Process.EXIT_FAIL)
+        help_out = self.run_qdmanage('--help', r'Usage: qdmanage', expect=Process.EXIT_OK)
+        assert re.search('Usage: qdmanage', help_out)
         for cmd in ['create', 'read', 'update', 'delete', 'query']:
-            out = self.run_qdmanage(cmd, help=None)
-            assert re.search('Usage: %s \[options\]' % cmd, out, re.I)
+            assert re.search(cmd, help_out)
 
     def assert_entity_equal(self, expect, actual, copy=None):
         """Copy keys in copy from actual to idenity, then assert maps equal."""
@@ -69,38 +67,36 @@ class QdmanageTest(TestCase):
     def test_crud(self):
 
         def check(cmd, expect, copy=None, **kwargs):
-            actual = json.loads(self.run_qdmanage(cmd, **kwargs))
+            actual = json.loads(self.run_qdmanage(cmd))
             self.assert_entity_equal(expect, actual, copy=copy)
 
-        expect = {'arg1': 'foo', 'type': DUMMY, 'name': 'mydummy2' }
+        expect = {'arg1': 'foo', 'type': DUMMY, 'name': 'mydummy2'}
         # create with type, name in attributes
-        check('create', expect, copy=['identity'], attributes=json.dumps(expect))
+        check('create arg1=foo type=dummy name=mydummy2', expect, copy=['identity'], attributes=json.dumps(expect))
         # create with type, name as arguments
         expect['name'] = 'mydummy'
-        check('create', expect, copy=['identity'],
-              type='dummy', name='mydummy', attributes='{"arg1" : "foo"}')
-
-        check('read', expect, name="mydummy")
-        check('read', expect, identity=expect['identity'])
+        check('create name=mydummy type=dummy arg1=foo', expect, copy=['identity'])
+        check('read --name mydummy', expect)
+        check('read --identity %s' % expect['identity'], expect)
         expect.update([], arg1='bar', num1=555)
-        check('update', expect, attributes='{"name":"mydummy", "arg1" : "bar", "num1":555}')
-        check('read', expect, name="mydummy")
+        check('update name=mydummy arg1=bar num1=555', expect)
+        check('read --name=mydummy', expect)
         expect.update([], arg1='xxx', num1=888)
         # name outside attributes
-        check('update', expect, name='mydummy', attributes='{"arg1": "xxx", "num1": 888}')
-        check('read', expect, name="mydummy")
-        self.run_qdmanage('delete', name="mydummy")
-        self.run_qdmanage('read', name="mydummy", expect=Process.EXIT_FAIL)
+        check('update name=mydummy arg1=xxx num1=888', expect)
+        check('read --name=mydummy', expect)
+        self.run_qdmanage('delete --name mydummy')
+        self.run_qdmanage('read --name=mydummy', expect=Process.EXIT_FAIL)
 
 
     def test_stdin(self):
         """Test piping from stdin"""
         def check(cmd, expect, input, copy=None):
-            actual = json.loads(self.run_qdmanage(cmd, input=input, stdin=None))
+            actual = json.loads(self.run_qdmanage(cmd + " --stdin", input=input))
             self.assert_entity_equal(expect, actual, copy=copy)
 
         def check_list(cmd, expect_list, input, copy=None):
-            actual = json.loads(self.run_qdmanage(cmd, input=input, stdin=None))
+            actual = json.loads(self.run_qdmanage(cmd + " --stdin", input=input))
             self.assert_entities_equal(expect_list, actual, copy=copy)
 
         expect = {'type': DUMMY, 'name': 'mydummyx', 'arg1': 'foo'}
@@ -120,19 +116,20 @@ class QdmanageTest(TestCase):
 
     def test_query(self):
         def long_type(name): return u'org.apache.qpid.dispatch.'+name
-        TYPES=['listener', 'log', 'container', 'router', 'router.link']
-        LONG_TYPES=[long_type(name) for name in TYPES]
+        types = ['listener', 'log', 'container', 'router', 'router.link']
+        long_types = [long_type(name) for name in types]
 
         qall = json.loads(self.run_qdmanage('query'))
         qall_types = set([e['type'] for e in qall])
-        for t in LONG_TYPES: self.assertIn(t, qall_types)
+        for t in long_types: self.assertIn(t, qall_types)
 
-        qlistener = json.loads(self.run_qdmanage('query', type='listener'))
+        qlistener = json.loads(self.run_qdmanage('query --type=listener'))
         self.assertEqual([long_type('listener')], [e['type'] for e in qlistener])
         self.assertEqual(self.router.ports[0], int(qlistener[0]['port']))
 
         qattr = json.loads(
-            self.run_qdmanage('query', attribute_names='["type", "name"]'))
+            self.run_qdmanage('query type name'))
+
         for e in qattr: self.assertEqual(2, len(e))
 
         def name_type(entities):

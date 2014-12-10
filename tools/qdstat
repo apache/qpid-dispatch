@@ -30,7 +30,7 @@ import  qpid_dispatch.site
 from qpid_dispatch.management import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
-from qpid_dispatch_internal.tools.options import connection_options
+from qpid_dispatch_internal.tools.command import connection_options, main
 
 
 class Config:
@@ -50,31 +50,23 @@ def OptionsAndArguments(argv):
     global config
     global conn_options
 
-    usage = \
-"""%prog -g [options]
-       %prog -c [options]
-       %prog -l [options]
-       %prog -n [options]
-       %prog -a [options]
-       %prog -m [options]"""
+    usage = "%prog [options]"
 
     parser = OptionParser(usage=usage)
 
     parser.add_option_group(connection_options(parser))
 
-    group2 = OptionGroup(parser, "Command Options")
-    group2.add_option("-g", "--general", help="Show General Router Stats",  action="store_const", const="g",   dest="show")
-    group2.add_option("-c", "--connections", help="Show Connections",       action="store_const", const="c",   dest="show")
-    group2.add_option("-l", "--links", help="Show Router Links",            action="store_const", const="l",   dest="show")
-    group2.add_option("-n", "--nodes", help="Show Router Nodes",            action="store_const", const="n",   dest="show")
-    group2.add_option("-a", "--address", help="Show Router Addresses",      action="store_const", const="a",   dest="show")
-    group2.add_option("-m", "--memory", help="Show Broker Memory Stats",    action="store_const", const="m",   dest="show")
-    parser.add_option_group(group2)
+    parser.add_option("-g", "--general", help="Show General Router Stats",  action="store_const", const="g",   dest="show")
+    parser.add_option("-c", "--connections", help="Show Connections",       action="store_const", const="c",   dest="show")
+    parser.add_option("-l", "--links", help="Show Router Links",            action="store_const", const="l",   dest="show")
+    parser.add_option("-n", "--nodes", help="Show Router Nodes",            action="store_const", const="n",   dest="show")
+    parser.add_option("-a", "--address", help="Show Router Addresses",      action="store_const", const="a",   dest="show")
+    parser.add_option("-m", "--memory", help="Show Broker Memory Stats",    action="store_const", const="m",   dest="show")
 
     opts, args = parser.parse_args(args=argv)
 
     if not opts.show:
-        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, or -m. For details, try $ qdstat --help")
+        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, -m or -h.")
 
     config._types = opts.show
     config._address = opts.bus
@@ -82,7 +74,6 @@ def OptionsAndArguments(argv):
     config._connTimeout = opts.timeout
 
     return args
-
 
 
 class BusManager(Node):
@@ -330,28 +321,13 @@ class BusManager(Node):
     def display(self, names):
         self.displayMain(names, config._types)
 
-
-def main(argv=None):
-
+def run(argv):
     args = OptionsAndArguments(argv)
+    bm = BusManager(config._address, config._router)
     try:
-        bm = BusManager(config._address, config._router)
-        try:
-            bm.display(args)
-        finally:
-            bm.stop()
-        return 0
-    except KeyboardInterrupt:
-        print
-    except Timeout:
-        if config._router:
-            print "No response from router %s after timeout" % config._router
-        else:
-            print "No response after timeout"
-    except Exception,e:
-        print "%s: %s - %s" % (sys.argv[0], e.__class__.__name__, e)
-
-    return 1
+        bm.display(args)
+    finally:
+        bm.stop()
 
 if __name__ == "__main__":
-        sys.exit(main())
+        sys.exit(main(run, sys.argv))

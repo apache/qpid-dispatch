@@ -64,6 +64,7 @@ set(SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 set(DOC_INSTALL_DIR ${SHARE_INSTALL_DIR}/doc CACHE PATH "Shared read-only data directory")
 set(MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 set(QPID_DISPATCH_HOME_INSTALLED ${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME})
+set(RUN ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py)
 
 # define the configuration directory based on whether or not the install prefix is defined
 if(NOT DEFINED SYSCONF_INSTALL_DIR)
@@ -131,8 +132,8 @@ install(FILES
   DESTINATION ${DOC_INSTALL_DIR}/qpid-dispatch)
 
 
-add_subdirectory(src)    # Build src first so other subdirs can use QPID_DISPATCH_LIB
+add_subdirectory(src) # Build src first so other subdirs can use QPID_DISPATCH_LIB
 add_subdirectory(tests)
 add_subdirectory(python)
-add_subdirectory(doc)
 add_subdirectory(router)
+add_subdirectory(doc) # doc last, may run executables via help2man
