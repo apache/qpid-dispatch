@@ -36,7 +36,10 @@ class Config(object):
         self.config_types = [e for e in schema.entity_types.itervalues()
                              if schema.is_configuration(e)]
         if filename:
-            self.load(filename)
+            try:
+                self.load(filename)
+            except Exception, e:
+                raise Exception("Cannot load configuration file %s: %s" % (filename, e))
         else:
             self.entities = []
 

@@ -23,6 +23,7 @@
 #include <qpid/dispatch/log.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <errno.h>
 #include "log_private.h"
 #include "aprintf.h"
 
@@ -36,7 +37,8 @@ static const char *qd_error_names[] = {
  "Configuration",
  "Type",
  "Value",
- "Run Time"
+ "Run Time",
+ "System"
 };
 ENUM_DEFINE(qd_error, qd_error_names);
 
@@ -60,11 +62,13 @@ qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char
     if (code) {
         char *begin = ts.error_message;
         char *end = begin + ERROR_MAX;
-        const char* name = qd_error_name(code);
-        if (name)
-            aprintf(&begin, end, "%s: ", name);
-        else
-            aprintf(&begin, end, "%d: ", code);
+        /* FIXME aconway 2014-12-10:  */
+        (void)aprintf;
+        /* const char* name = qd_error_name(code); */
+        /* if (name) */
+        /*     aprintf(&begin, end, "%s: ", name); */
+        /* else */
+        /*     aprintf(&begin, end, "%d: ", code); */
         va_list arglist;
         va_start(arglist, fmt);
         vaprintf(&begin, end, fmt, arglist);
@@ -78,9 +82,10 @@ qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char
     return 0;
 }
 
-void qd_error_clear() {
+qd_error_t qd_error_clear() {
     ts.error_code = 0;
     snprintf(ts.error_message, ERROR_MAX, "No Error");
+    return QD_ERROR_NONE;
 }
 
 const char* qd_error_message() {
@@ -167,4 +172,24 @@ qd_error_t qd_error_py_impl(const char *file, int line) {
         qd_error_clear();
     }
     return qd_error_code();
+}
+
+qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const char *fmt, ...) {
+    if (errnum) {
+        ts.error_code = QD_ERROR_SYSTEM;
+        char buf[ERROR_MAX];
+        char *errstr = strerror_r(errno, buf, sizeof(buf));
+
+        char *begin = ts.error_message;
+        char *end = begin + ERROR_MAX;
+        va_list arglist;
+        va_start(arglist, fmt);
+        vaprintf(&begin, end, fmt, arglist);
+        va_end(arglist);
+        aprintf(&begin, end, ": %s", errstr);
+        qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", qd_error_message());
+        return qd_error_code();
+    }
+    else
+        return qd_error_clear();
 }

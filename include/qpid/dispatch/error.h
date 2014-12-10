@@ -46,7 +46,8 @@ typedef enum {
     QD_ERROR_CONFIG,            ///< Error in configuration
     QD_ERROR_TYPE,              ///< Value of inappropriate type.
     QD_ERROR_VALUE,             ///< Invalid value.
-    QD_ERROR_RUNTIME            ///< Run-time failure.
+    QD_ERROR_RUNTIME,           ///< Run-time failure.
+    QD_ERROR_SYSTEM             ///< System error from errno
 } qd_error_t;
 ENUM_DECLARE(qd_error);
 
@@ -62,8 +63,9 @@ qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char
 
 /**
  * Clear thread-local error code and message.
+ *@return QD_ERROR_NONE
  */
-void qd_error_clear();
+qd_error_t qd_error_clear();
 
 /**
  * @return Thread local error message. Includes text for error code.
@@ -95,5 +97,15 @@ qd_error_t qd_error_py_impl(const char *file, int line);
 
 #define QD_ERROR_RET() do { if (qd_error_code()) return qd_error_code(); } while(0)
 #define QD_ERROR_PY_RET() do { if (qd_error_py()) return qd_error_code(); } while(0)
+
+/**
+ * Check for an errno error.
+ *
+ * If errnum is non-0, set error code QD_ERROR_SYSTEM with a message including the errno text.
+ * Otherwise, call qd_error_clear() and return QD_ERROR_NONE.
+ */
+#define qd_error_errno(errnum, fmt, ...) qd_error_impl(errnum, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+
+qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const char *fmt, ...);
 
 #endif

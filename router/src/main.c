@@ -25,7 +25,9 @@
 #include <pwd.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 #include <getopt.h>
+#include <errno.h>
 #include "config.h"
 
 static int            exit_with_sigint = 0;
@@ -82,16 +84,31 @@ static void server_signal_handler(void* context, int signum)
 static void check(int fd) {
     if (qd_error_code()) {
         qd_log(log_source, QD_LOG_CRITICAL, "Router start-up failed: %s", qd_error_message());
-        if (fd > 0)
-        write(fd, "X", 1);
+        write(fd, qd_error_message(), strlen(qd_error_message()));
+        char eos = '\0';
+        write(fd, &eos, 1);
+        close(fd);
         exit(1);
     }
 }
 
+#define fail(fd, fmt, ...)                                      \
+    do {                                                        \
+        if (!qd_error_errno(errno, fmt, ##__VA_ARGS__))         \
+            qd_error(QD_ERROR_RUNTIME, fmt, ##__VA_ARGS__);     \
+        check(fd);                                              \
+    } while(false)
 
 static void main_process(const char *config_path, const char *python_pkgdir, int fd)
 {
     qd_error_clear();
+    struct stat st;
+    if (stat(python_pkgdir, &st)) fail(fd, "Cannot stat python library path '%s'", python_pkgdir);
+    if (!S_ISDIR(st.st_mode)) {
+        qd_error(QD_ERROR_RUNTIME, "Python library path '%s' not a directory", python_pkgdir);
+        check(fd);
+    }
+
     dispatch = qd_dispatch(python_pkgdir);
     check(fd);
     log_source = qd_log_source("MAIN"); /* Logging is initialized by qd_dispatch. */
@@ -108,7 +125,7 @@ static void main_process(const char *config_path, const char *python_pkgdir, int
     signal(SIGINT,  signal_handler);
 
     if (fd > 0) {
-        write(fd, "0", 1); // Success signal
+        dprintf(fd, "ok"); // Success signal
         close(fd);
     }
 
@@ -155,11 +172,7 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
         //
         // Detach any terminals and create an independent session
         //
-        if (setsid() < 0) {
-            write(pipefd[1], "1", 1);
-            exit(0);
-        }
-
+        if (setsid() < 0) fail(pipefd[1], "Cannot start a new session");
         //
         // Second fork
         //
@@ -174,45 +187,27 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
             close(1);
             close(0);
             int fd = open("/dev/null", O_RDWR);
-            if (fd != 0) {
-                write(pipefd[1], "2", 1);
-                exit(0);
-            }
-            if (dup(fd) < 0) {
-                write(pipefd[1], "3", 1);
-                exit(0);
-            }
-            if (dup(fd) < 0) {
-                write(pipefd[1], "4", 1);
-                exit(0);
-            }
+            if (fd != 0) fail(pipefd[1], "Can't redirect stdin to /dev/null");
+            if (dup(fd) < 0) fail(pipefd[1], "Can't redirect stdout to /dev/null");
+            if (dup(fd) < 0) fail(pipefd[1], "Can't redirect stderr /dev/null");
 
             //
             // Set the umask to 0
             //
-            if (umask(0) < 0) {
-                write(pipefd[1], "5", 1);
-                exit(0);
-            }
+            if (umask(0) < 0) fail(pipefd[1], "Can't set umask");
 
             //
             // Set the current directory to "/" to avoid blocking
             // mount points
             //
-            if (chdir("/") < 0) {
-                write(pipefd[1], "6", 1);
-                exit(0);
-            }
+            if (chdir("/") < 0) fail(pipefd[1], "Can't chdir /");
 
             //
             // If a pidfile was provided, write the daemon pid there.
             //
             if (pidfile) {
                 FILE *pf = fopen(pidfile, "w");
-                if (pf == 0) {
-                    write(pipefd[1], "7", 1);
-                    exit(0);
-                }
+                if (pf == 0) fail(pipefd[1], "Can't write pidfile %s", pidfile);
                 fprintf(pf, "%d\n", getpid());
                 fclose(pf);
             }
@@ -223,18 +218,9 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
             //
             if (user) {
                 struct passwd *pwd = getpwnam(user);
-                if (pwd == 0) {
-                    write(pipefd[1], "8", 1);
-                    exit(0);
-                }
-                if (setuid(pwd->pw_uid) < 0) {
-                    write(pipefd[1], "9", 1);
-                    exit(0);
-                }
-                if (setgid(pwd->pw_gid) < 0) {
-                    write(pipefd[1], "A", 1);
-                    exit(0);
-                }
+                if (pwd == 0) fail(pipefd[1], "Can't look up user %s", user);
+                if (setuid(pwd->pw_uid) < 0) fail(pipefd[1], "Can't set user ID for user %s", user);
+                if (setgid(pwd->pw_gid) < 0) fail(pipefd[1], "Cant set group ID for user %s", user);
             }
 
             main_process(config_path, python_pkgdir, pipefd[1]);
@@ -249,16 +235,17 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
         // Wait for a success signal ('0') from the daemon process.
         // If we get success, exit with 0.  Otherwise, exit with 1.
         //
-        char code;
         close(pipefd[1]); // Close write end.
-        if (read(pipefd[0], &code, 1) < 0) {
+        char result[256];
+        memset(result, 0, sizeof(result));
+        if (read(pipefd[0], &result, sizeof(result)-1) < 0) {
             perror("Error reading inter-process pipe");
             exit(1);
         }
 
-        if (code == '0')
+        if (strcmp(result, "ok") == 0)
             exit(0);
-        fprintf(stderr, "Error occurred during daemon initialization, please see logs.  [code=%c]\n", code);
+        fprintf(stderr, "Daemon error: %s\n", result);
         exit(1);
     }
 }
@@ -337,6 +324,7 @@ int main(int argc, char **argv)
         usage(argv);
         exit(1);
     }
+
     if (daemon_mode)
         daemon_process(config_path, python_pkgdir, pidfile, user);
     else
