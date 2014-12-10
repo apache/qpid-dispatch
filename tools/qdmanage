@@ -31,7 +31,9 @@ class QdManage():
     def __init__(self):
 
         self.operations = ['query', 'create', 'read', 'update', 'delete',
-                           'get-types', 'get-operations', 'get-attributes', 'get-annotations']
+                           'get-types', 'get-operations', 'get-attributes', 'get-annotations',
+                           'get-mgmt-nodes']
+
         usage = "%prog <operation> [options...] [arguments...]\n\nOperations:"
         for o in self.operations:
             method = o.replace('-', '_')
@@ -139,6 +141,11 @@ class QdManage():
         check_args(self.args, 1)
         if self.args: self.opts.type = self.args[0]
         self.print_json(self.call_node('get_operations', 'type'))
+
+    def get_mgmt_nodes(self):
+        """get-mgmt-nodes         - List of other known management nodes"""
+        check_args(self.args, 0)
+        self.print_json(self.call_node('get_mgmt_nodes'))
 
 if __name__ == "__main__":
     sys.exit(QdManage().main(sys.argv))

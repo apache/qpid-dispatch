@@ -57,15 +57,17 @@ Delete an entity specified by the --name or --identity options.
 get\-types [TYPE]
 List entity types with their base types. With no arguments list all types.
 .TP
-get\-operations [TYPE]:
+get\-operations [TYPE]
 List entity types with their operations. With no arguments list all types.
 .TP
-get\-attributes [TYPE]:
+get\-attributes [TYPE]
 List entity types with their attributes.  With no arguments list all types.
 .TP
-get\-annotations [TYPE]:
+get\-annotations [TYPE]
 List entity types with their annotations.  With no arguments list all types.
-
+.TP
+get\-mgmt\-nodes
+List all other known management nodes connected to this one.
 [FILES]
 .I /etc/qpid-dispatch/qdstat.conf
 
