@@ -332,7 +332,7 @@ void qd_log_initialize(void)
 
     default_log_source = qd_log_source(SOURCE_DEFAULT);
     default_log_source->mask = levels[INFO].mask;
-    default_log_source->timestamp = 1;
+    default_log_source->timestamp = true;
     default_log_source->source = 0;
     default_log_source->sink = log_sink_lh(SINK_STDERR);
     logging_log_source = qd_log_source(SOURCE_LOGGING);
@@ -359,9 +359,12 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     sys_mutex_unlock(log_source_lock);
     free(module);
 
-    char *level = qd_entity_get_string(entity, "level"); QD_ERROR_RET();
-    copy.mask = level_for_name(level)->mask;
-    free(level);
+    if (qd_entity_has(entity, "level")) {
+        char *level = qd_entity_get_string(entity, "level");
+        copy.mask = level_for_name(level)->mask;
+        free(level);
+    }
+    QD_ERROR_RET();
 
     if (qd_entity_has(entity, "timestamp"))
         copy.timestamp = qd_entity_get_bool(entity, "timestamp");
@@ -372,7 +375,7 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     QD_ERROR_RET();
 
     if (qd_entity_has(entity, "output")) {
-        log_sink_free_lh(copy.sink); /* DEFAULT source may already have a sink */
+         log_sink_free_lh(copy.sink); /* DEFAULT source may already have a sink */
         char* output = qd_entity_get_string(entity, "output"); QD_ERROR_RET();
         copy.sink = log_sink_lh(output);
         free(output);

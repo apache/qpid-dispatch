@@ -57,8 +57,6 @@ Client SSL certificate (PEM Format)
 .TP
 \fB\-\-ssl\-key=\fR<key>
 Client SSL private key (PEM Format)
-.SH FILES
-.I /etc/qpid-dispatch/qdstat.conf
 .SH AUTHOR
 Apache Qpid <http://qpid.apache.org/>
 .SH COPYRIGHT

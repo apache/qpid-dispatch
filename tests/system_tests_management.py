@@ -152,24 +152,13 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
         # Create a log entity, verify logging is as expected
         log = os.path.abspath("test_log.log")
-        agent_log = self.assert_create_ok('log', 'log/AGENT', dict(module='AGENT', level="error", output=log))
+        self.node.update(dict(level="error", output=log), name="log/AGENT")
         check_log(log)
 
         # Update the log entity to output to a different file
         log = os.path.abspath("test_log2.log")
-        self.node.update(dict(module='AGENT', level="error", output=log), identity='log/AGENT')
+        self.node.update(dict(level="error", output=log), identity='log/AGENT')
         check_log(log)
-
-        # Delete the log entity - return to default state.
-        self.node.delete(identity='log/AGENT')
-        self.assertRaises(AssertionError, check_log, log, 'nosuch2')
-
-        # Verify that debug logging shows up if enabled for a module
-        self.node.create(dict(module='AGENT', level="debug", output=log), type='log', name="log/AGENT")
-        logstr = self.cleanup(open(log)).read()
-        self.assertTrue(re.search(r'AGENT \(debug\)', logstr),
-                        msg="Can't find 'AGENT (debug)' messages in '%s'" % (logstr))
-
 
     def test_create_fixed_address(self):
         self.assert_create_ok(FIXED_ADDRESS, 'fixed1', dict(prefix='fixed1'))

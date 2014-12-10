@@ -253,7 +253,7 @@
         "log": {
             "description": "Set the level of logging output from a particular module.",
             "extends": "configurationEntity",
-            "operations": ["CREATE", "READ", "UPDATE", "DELETE"],
+            "operations": ["CREATE", "READ", "UPDATE"],
             "attributes": {
                 "module": {
                     "type":[
@@ -268,7 +268,7 @@
                         "DISPATCH"
                     ],
                     "required": true,
-                    "description": "Module to configure logging level. The special module 'DEFAULT' specifies logging for modules that don't have explicit log sections."
+                    "description": "Module to configure logging level. The special module 'DEFAULT' specifies logging defaults for modules that don't have explicit log configuration."
                 },
                 "level": {
                     "type": [
@@ -281,17 +281,14 @@
                         "error",
                         "critical"
                     ],
-                    "default": "info",
                     "description": "Indicates the minimum logging level for the module. E.g. 'warning' means log warning, error and critical messages. 'trace' logs all messages. 'none' disables logging for the module."
                 },
                 "timestamp": {
                     "type": "Boolean",
-                    "default": true,
                     "description": "Include timestamp in log messages."
                 },
                 "source": {
                     "type": "Boolean",
-                    "default": false,
                     "description": "Include source file and line number in log messages."
                 },
                 "output": {

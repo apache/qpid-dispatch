@@ -263,10 +263,22 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
     }
 }
 
+#define DEFAULT_DISPATCH_PYTHON_DIR QPID_DISPATCH_HOME_INSTALLED "/python"
+
+void usage(char **argv) {
+    fprintf(stderr, "Usage: %s [OPTIONS]\n\n", argv[0]);
+    fprintf(stderr, "  -c, --config=PATH (%s)\n", DEFAULT_CONFIG_PATH);
+    fprintf(stderr, "                             Load configuration from file at PATH\n");
+    fprintf(stderr, "  -I, --include=PATH (%s)\n", DEFAULT_DISPATCH_PYTHON_DIR);
+    fprintf(stderr, "                             Location of Dispatch's Python library\n");
+    fprintf(stderr, "  -d, --daemon               Run process as a SysV-style daemon\n");
+    fprintf(stderr, "  -P, --pidfile              If daemon, the file for the stored daemon pid\n");
+    fprintf(stderr, "  -U, --user                 If daemon, the username to run as\n");
+    fprintf(stderr, "  -h, --help                 Print this help\n");
+}
 
 int main(int argc, char **argv)
 {
-#define DEFAULT_DISPATCH_PYTHON_DIR QPID_DISPATCH_HOME_INSTALLED "/python"
     const char *config_path   = DEFAULT_CONFIG_PATH;
     const char *python_pkgdir = DEFAULT_DISPATCH_PYTHON_DIR;
     const char *pidfile = 0;
@@ -310,22 +322,21 @@ int main(int argc, char **argv)
             break;
 
         case 'h' :
-            printf("Usage: %s [OPTIONS]\n\n", argv[0]);
-            printf("  -c, --config=PATH (%s)\n", DEFAULT_CONFIG_PATH);
-            printf("                             Load configuration from file at PATH\n");
-            printf("  -I, --include=PATH (%s)\n", DEFAULT_DISPATCH_PYTHON_DIR);
-            printf("                             Location of Dispatch's Python library\n");
-            printf("  -d, --daemon               Run process as a SysV-style daemon\n");
-            printf("  -P, --pidfile              If daemon, the file for the stored daemon pid\n");
-            printf("  -U, --user                 If daemon, the username to run as\n");
-            printf("  -h, --help                 Print this help\n");
+            usage(argv);
             exit(0);
 
         case '?' :
+            usage(argv);
             exit(1);
         }
     }
-
+    if (optind < argc) {
+        fprintf(stderr, "Unexpected arguments:");
+        for (; optind < argc; ++optind) fprintf(stderr, " %s", argv[optind]);
+        fprintf(stderr, "\n\n");
+        usage(argv);
+        exit(1);
+    }
     if (daemon_mode)
         daemon_process(config_path, python_pkgdir, pidfile, user);
     else

@@ -26,11 +26,12 @@ find_program(HELP2MAN help2man)
 if(HELP2MAN)
 
   macro(help2man manpage h2mfile program)
+    configure_file(${src}/${h2mfile}.in ${bin}/${h2mfile})
     string(REGEX MATCH "[0-9]*$" section ${manpage})
     add_custom_command (
       OUTPUT ${manpage}
-      COMMAND ${RUN} -s ${src}/help2man.py ${HELP2MAN} -s ${section} -i ${src}/${h2mfile} -N -o ${bin}/${manpage} ${program}
-      DEPENDS ${program} ${h2mfile}
+      COMMAND ${RUN} -s ${src}/help2man.py ${HELP2MAN} -s ${section} -i ${bin}/${h2mfile} -N -o ${bin}/${manpage} ${program}
+      DEPENDS ${program} ${bin}/${h2mfile}
       )
   endmacro()
 

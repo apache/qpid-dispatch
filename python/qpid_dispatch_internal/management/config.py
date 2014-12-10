@@ -21,7 +21,7 @@
 Configuration file parsing
 """
 
-import json, re, sys
+import json, re, sys, time
 from copy import copy
 from qpid_dispatch.management.entity import camelcase
 from .schema import ValidationError
@@ -141,38 +141,43 @@ class Config(object):
         for e in self.entities:
             if e['type'] == entity_type: yield e
 
+    def remove(self, entity):
+        self.entities.remove(entity)
+
+
 def configure_dispatch(dispatch, filename):
     """Called by C router code to load configuration file and do configuration"""
     qd = dispatch_c.instance()
     dispatch = qd.qd_dispatch_p(dispatch)
     config = Config(filename)
 
-    # Configure any DEFAULT log entities first so we can report errors in non-
-    # default log configurations to the correct place.
-    for l in config.by_type('log'):
-        if l['module'].upper() == 'DEFAULT': qd.qd_log_entity(l)
-    for l in config.by_type('log'):
-        if l['module'].upper() != 'DEFAULT': qd.qd_log_entity(l)
-
     # NOTE: Can't import agent till till dispatch C extension module is initialized.
     from .agent import Agent
-    agent = Agent(dispatch, config.entities)
+    agent = Agent(dispatch)
     qd.qd_dispatch_set_agent(dispatch, agent)
 
-    # Configure and prepare container and router before activating agent
-    qd.qd_dispatch_configure_container(dispatch, config.by_type('container').next())
-    qd.qd_dispatch_configure_router(dispatch, config.by_type('router').next())
+    def configure(attributes):
+        """Configure an entity and remove it from config"""
+        agent.create(attributes=attributes)
+        config.remove(attributes)
+
+    modules = set(agent.schema.entity_type("log").attributes["module"].atype.tags)
+    for l in config.by_type('log'):
+        configure(l)
+        modules.remove(l["module"])
+    # Add default entities for any log modules not configured.
+    for m in modules: agent.create(attributes=dict(type="log", module=m))
+
+    # Configure and prepare container and router before we can activate the agent.
+    configure(config.by_type('container').next())
+    configure(config.by_type('router').next())
     qd.qd_dispatch_prepare(dispatch)
-
     agent.activate("$management")
+    qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.
 
-    qd.qd_router_setup_late(dispatch) # Actions requiring management agent.
+    # Remaining configuration
+    for t in "fixedAddress", "listener", "connector", "waypoint":
+        for a in list(config.by_type(t)): configure(a)
+    for e in list(config.entities): configure(e)
 
-    # Note must configure addresses, waypoints, listeners and connectors after qd_dispatch_prepare
-    for a in config.by_type('fixedAddress'): qd.qd_dispatch_configure_address(dispatch, a)
-    for w in config.by_type('waypoint'): qd.qd_dispatch_configure_waypoint(dispatch, w)
-    for l in config.by_type('listener'): qd.qd_dispatch_configure_listener(dispatch, l)
-    for c in config.by_type('connector'): qd.qd_dispatch_configure_connector(dispatch, c)
-    qd.qd_connection_manager_start(dispatch)
-    qd.qd_waypoint_activate_all(dispatch)
 

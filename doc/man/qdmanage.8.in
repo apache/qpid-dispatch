@@ -34,6 +34,7 @@ update [ATTR=VALUE...]
 Update the attributes of an existing entity.
 With the --stdin option, read attributes from stdin. This can be a JSON
 map of attributes to update a single entity, or a JSON list of maps to update multiple entitiees.
+If an ATTR name is listed with no =VALUE, that attribute will be deleted from the entity.
 .TP
 delete
 Delete an entity specified by the --name or --identity options.
@@ -95,7 +96,21 @@ Client SSL certificate (PEM Format)
 \fB\-\-ssl\-key=\fR<key>
 Client SSL private key (PEM Format)
 .SH FILES
-.I /etc/qpid-dispatch/qdstat.conf
+.I /usr/local/etc/qpid-dispatch/qdrouter.json
+Management schema for qdrouterd.
+.SH EXAMPLES
+.TP
+Show the logging configuratoin
+qdmanage query --type=log
+.TP
+Change the default log level to debug
+qdmanage udpdate name=log/DEFAULT level=debug
+.TP
+Change the MESSAGE log level to trace and direct MESSAGE logs to the file "test.log"
+qdmanage udpdate name=log/MESSAGE level=trace output=test.log
+.TP
+Set the MESSAGE log level back to the default (delete the log/MESSAGE level attribute)
+qdmanage udpdate name=log/MESSAGE level
 .SH AUTHOR
 Apache Qpid <http://qpid.apache.org/>
 .SH COPYRIGHT

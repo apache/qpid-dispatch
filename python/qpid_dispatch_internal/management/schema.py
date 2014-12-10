@@ -132,7 +132,7 @@ class EnumType(Type):
                 return EnumValue(self.tags[i], i)
             except (ValueError, IndexError):
                 pass
-        raise ValidationError("Invalid value for %s: '%r'"%(self.name, value))
+        raise ValidationError("Invalid value for %s: %r"%(self.name, value))
 
     def dump(self):
         """
@@ -414,9 +414,11 @@ class EntityType(AttrsAndOps):
         try:
             # Add missing values
             for attr in self.attributes.itervalues():
-                if attr.name not in attributes:
+                if attr.name not in attributes or attributes[attr.name] is None:
                     value = attr.missing_value(**kwargs)
                     if value is not None: attributes[attr.name] = value
+                    if value is None and attr.name in attributes:
+                        del attributes[attr.name]
 
             # Validate attributes.
             for name, value in attributes.iteritems():

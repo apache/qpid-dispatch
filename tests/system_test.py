@@ -393,7 +393,7 @@ class Qdrouterd(Process):
         @param retry_kwargs: keyword args for L{retry}
         """
         for c in self.config.sections('connector'):
-            assert retry(lambda: self.is_connected(c['port']), **retry_kwargs)
+            assert retry(lambda: self.is_connected(c['port']), **retry_kwargs), "Port not connected %s" % c['port']
 
     def wait_ready(self):
         """Wait for ports and connectors to be ready"""

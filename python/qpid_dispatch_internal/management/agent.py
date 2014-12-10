@@ -122,7 +122,7 @@ class AgentEntity(SchemaEntity):
             return True
         self.__dict__['_refresh'] = _do_refresh
 
-    def create(self, request):
+    def create(self):
         """Subclasses can add extra create actions here"""
         pass
 
@@ -156,19 +156,28 @@ class AgentEntity(SchemaEntity):
         """Subclasses implement delete logic here"""
         pass
 
-class ContainerEntity(AgentEntity): pass
-
+class ContainerEntity(AgentEntity):
+    def create(self):
+        self._qd.qd_dispatch_configure_container(self._dispatch, self)
 
 class RouterEntity(AgentEntity):
     def __init__(self, agent, entity_type, attributes=None):
         super(RouterEntity, self).__init__(agent, entity_type, attributes, validate=False, base_id=attributes.get('routerId'))
         self._set_pointer(self._dispatch)
 
+    def create(self):
+        self._qd.qd_dispatch_configure_router(self._dispatch, self)
+
+
 class LogEntity(AgentEntity):
     def __init__(self, agent, entity_type, attributes=None, validate=True):
-        super(LogEntity, self).__init__(agent, entity_type, attributes, validate, base_id=attributes.get('module'))
+        # Special defaults for DEFAULT module. 
+        if attributes.get("module") == "DEFAULT":
+            defaults = dict(level="info", timestamp=True, source=False, output="stderr")
+            attributes = dict(defaults, **attributes)
+        super(LogEntity, self).__init__(agent, entity_type, attributes, validate=True, base_id=attributes.get('module'))
 
-    def create(self, request):
+    def create(self):
         self._qd.qd_log_entity(self)
 
     def _update(self):
@@ -179,24 +188,24 @@ class LogEntity(AgentEntity):
         self._qd.qd_log_source_reset(self.attributes['module'])
 
 class ListenerEntity(AgentEntity):
-    def create(self, request):
+    def create(self):
         self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
 
 class ConnectorEntity(AgentEntity):
-    def create(self, request):
+    def create(self):
         self._qd.qd_dispatch_configure_connector(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
 
 class FixedAddressEntity(AgentEntity):
-    def create(self, request):
+    def create(self):
         self._qd.qd_dispatch_configure_address(self._dispatch, self)
 
 
 class WaypointEntity(AgentEntity):
-    def create(self, request):
+    def create(self):
         self._qd.qd_dispatch_configure_waypoint(self._dispatch, self)
         self._qd.qd_waypoint_activate_all(self._dispatch)
 
@@ -204,7 +213,7 @@ class DummyEntity(AgentEntity):
 
     id_count = AtomicCount()
 
-    def create(self, request):
+    def create(self):
         self['identity'] = self.next_id()
 
     def next_id(self): return self.type+str(self.id_count.next())
@@ -347,7 +356,7 @@ class EntityCache(object):
 class Agent(object):
     """AMQP managment agent"""
 
-    def __init__(self, dispatch, attribute_maps=None):
+    def __init__(self, dispatch):
         self.qd = dispatch_c.instance()
         self.dispatch = dispatch
         self.schema = QdSchema()
@@ -356,9 +365,6 @@ class Agent(object):
         self.type = 'org.amqp.management' # AMQP management node type
         self.request_lock = Lock()
         self.log_adapter = None
-        for attributes in attribute_maps or []:
-            # Note calls self.log, log messages are dropped.
-            self.add_entity(self.create_entity(attributes))
 
     def log(self, level, text):
         if self.log_adapter:
@@ -484,22 +490,23 @@ class Agent(object):
         self.entities.map_type(add_result, entity_type)
         return (OK, {'attributeNames': list(names), 'results': results})
 
-    def create(self, request):
+    def create(self, request=None, attributes=None):
         """
         Create is special: it is directed at an entity but the entity
         does not yet exist so it is handled initially by the agent and
         then delegated to the new entity.
         """
-        attributes = request.body
-        for a in ['type', 'name']:
-            value = required_property(a, request)
-            if a in attributes and attributes[a] != value:
-                raise BadRequestStatus("Conflicting values for '%s'"%a)
-            attributes[a] = value
+        if request:
+            attributes = request.body
+            for a in ['type', 'name']:
+                value = required_property(a, request)
+                if a in attributes and attributes[a] != value:
+                    raise BadRequestStatus("Conflicting values for '%s'"%a)
+                attributes[a] = value
+        self.schema.entity_type(attributes['type']).allowed('create')
         entity = self.create_entity(attributes)
-        entity.entity_type.allowed('create')
-        entity.create(request)  # Send the create request to the entity
         self.add_entity(entity)
+        entity.create()
         return (CREATED, entity.attributes)
 
     def add_entity(self, entity): self.entities.add(entity)

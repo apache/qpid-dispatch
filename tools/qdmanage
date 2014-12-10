@@ -26,6 +26,12 @@ from collections import Mapping, Sequence
 from optparse import OptionGroup
 from qpid_dispatch_internal.tools.command import OptionParser, Option, UsageError, connection_options, check_args, main
 
+def attr_split(attrstr):
+    """Split an attribute string of the form name=value or name to indicate None"""
+    nv = attrstr.split("=", 1)
+    if len(nv) == 1: return [nv[0], None]
+    else: return nv
+
 class QdManage():
 
     def __init__(self):
@@ -98,7 +104,7 @@ class QdManage():
     def create(self):
         """create [ATTR=VALUE...] - Create a new entity."""
         if self.args:
-            self.opts.attributes = dict(arg.split('=', 1) for arg in self.args)
+            self.opts.attributes = dict(attr_split(arg) for arg in self.args)
         self.call_bulk(lambda attrs: self.call_node('create', 'type', 'name', attributes=attrs))
 
     def read(self):
@@ -109,7 +115,7 @@ class QdManage():
     def update(self):
         """update [ATTR=VALUE...] - Update an entity."""
         if self.args:
-            self.opts.attributes = dict(arg.split('=', 1) for arg in self.args)
+            self.opts.attributes = dict(attr_split(arg) for arg in self.args)
         self.call_bulk(
             lambda attrs: self.call_node('update', 'type', 'name', 'identity', attributes=attrs))
 

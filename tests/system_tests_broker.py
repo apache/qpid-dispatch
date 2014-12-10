@@ -98,7 +98,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
                     rconf += [
                         ('connector', {'name':q.name, 'port':q.port}),
                         ('waypoint', {'address':self.testq, 'out-phase':1, 'in-phase':0, 'connector':q.name})]
-                return self.qdrouterd(name, rconf)
+                return self.qdrouterd(name, rconf, wait=False)
             routers = [router(i) for i in xrange(len(self.qpidds))]
             for r in routers: r.wait_ready()
             addrs = [r.addresses[0]+"/"+self.testq for r in routers]
