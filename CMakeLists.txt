@@ -64,7 +64,7 @@ set(SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
 set(DOC_INSTALL_DIR ${SHARE_INSTALL_DIR}/doc CACHE PATH "Shared read-only data directory")
 set(MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 set(QPID_DISPATCH_HOME_INSTALLED ${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME})
-set(RUN ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py)
+set(RUN ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/run.py)
 
 # define the configuration directory based on whether or not the install prefix is defined
 if(NOT DEFINED SYSCONF_INSTALL_DIR)
@@ -133,6 +133,12 @@ install(FILES
 
 
 add_subdirectory(src) # Build src first so other subdirs can use QPID_DISPATCH_LIB
+
+# run.py environment runner script - needs QPID_DISPATCH_LIB
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/run.py)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/tests/run.py)
+execute_process(COMMAND ${RUN} --sh OUTPUT_FILE config.sh)
+
 add_subdirectory(tests)
 add_subdirectory(python)
 add_subdirectory(router)

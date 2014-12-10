@@ -50,8 +50,6 @@ set(unit_test_size_SOURCES
 add_executable(unit_tests_size ${unit_test_size_SOURCES})
 target_link_libraries(unit_tests_size qpid-dispatch)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/run.py)
-
 set(TEST_WRAP ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 
 add_test(unit_tests_size_10000 ${TEST_WRAP} --vg unit_tests_size 10000)
