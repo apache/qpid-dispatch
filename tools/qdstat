@@ -20,17 +20,17 @@
 #
 
 import os
-from optparse import OptionParser, OptionGroup
+from optparse import OptionGroup
 import sys
 import locale
 import socket
 import re
 from proton import Messenger, Message, Timeout
-import  qpid_dispatch.site
+import  qpid_dispatch_site
 from qpid_dispatch.management import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
-from qpid_dispatch_internal.tools.command import connection_options, main
+from qpid_dispatch_internal.tools.command import connection_options, main, OptionParser
 
 
 class Config:

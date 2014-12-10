@@ -21,7 +21,7 @@
 
 import ctypes
 from ctypes import c_char_p, c_long, py_object
-from qpid_dispatch.site import QPID_DISPATCH_LIB
+import qpid_dispatch_site
 
 class CError(Exception):
     """Exception raised if there is an error in a C call"""
@@ -42,7 +42,7 @@ class QdDll(ctypes.PyDLL):
         return cls._instance
 
     def __init__(self):
-        lib = QPID_DISPATCH_LIB
+        lib = qpid_dispatch_site.LIB
         assert lib
         super(QdDll, self).__init__(lib)
 

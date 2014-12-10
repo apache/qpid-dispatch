@@ -17,6 +17,9 @@ information.
 \fB\-h\fR, \fB\-\-help\fR
 show this help message and exit
 .TP
+\fB\-\-version\fR
+Print version and exit
+.TP
 \fB\-g\fR, \fB\-\-general\fR
 Show General Router Stats
 .TP

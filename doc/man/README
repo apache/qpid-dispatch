@@ -31,8 +31,10 @@ help2man will combine this with the --help otuput of the tool to create the full
 See the help2man macro in CMakeLists.txt and the help2man documentation for more details.
 
 For building distributions when help2man is not available, the generated man page for
-each tool is checked in as "tool.8.in". When help2man is available, running make
-will warn if the checked in version is not  up to date with the generated version.
+each tool is checked in as "tool.8.in".
+
+Run "make check-man" to check if generated man pages are up to date with the
+checked-in versions.
 
 To update the man page you MUST use help2man, do not edit the checked in file
 as your edits will be lost.

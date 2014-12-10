@@ -14,18 +14,19 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
-# under the License.
+# under the License
 #
 
 """
-INTERNAL USE ONLY - Installed locations for qpid dispatch.
-
-Do not import directly, import site.py which also checks for override by
-environment variables. This file will not be available for uninstalled builds,
-site.py will use env variables instead.
+INTERNAL USE ONLY - Install locations and other site information for qpid dispatch.
 """
 
 from os.path import join
+from os import environ
+import sys
 
-QPID_DISPATCH_HOME = "${QPID_DISPATCH_HOME_INSTALLED}"
-QPID_DISPATCH_LIB = join("${CMAKE_INSTALL_PREFIX}", "${LIB_INSTALL_DIR}", "${QPID_DISPATCH_LIB}")
+HOME = environ.get("QPID_DISPATCH_HOME") or "${QPID_DISPATCH_HOME_INSTALLED}"
+LIB = environ.get("QPID_DISPATCH_LIB") or join("${CMAKE_INSTALL_PREFIX}", "${LIB_INSTALL_DIR}", "${QPID_DISPATCH_LIB}")
+VERSION = "${QPID_DISPATCH_VERSION}"
+
+sys.path.insert(0, join(HOME, 'python'))

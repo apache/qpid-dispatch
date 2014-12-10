@@ -26,17 +26,17 @@ from os.path import join
 """Install public packages and scripts for Qpid Dispatch."""
 
 class BuildPy(build_py):
-    """Extend standard build command, add generated site_data.py file."""
+    """Extend standard build command, add generated modules from binary directory."""
 
-    SITE_DATA_PY = join('qpid_dispatch', 'site_data.py')
+    MODULES = ['qpid_dispatch_site.py']
 
     def run(self):
         build_py.run(self)      # Run the standard build, copies source .py files into builddir
-        copy_file(join('${CMAKE_CURRENT_BINARY_DIR}', self.SITE_DATA_PY),
-                  join(self.build_lib, self.SITE_DATA_PY))
+        for m in self.MODULES:
+            copy_file(join('${CMAKE_CURRENT_BINARY_DIR}', m), join(self.build_lib, m))
 
     def get_outputs(self, **kwargs):
-        return build_py.get_outputs(self, **kwargs) +[join(self.build_lib, self.SITE_DATA_PY)]
+        return build_py.get_outputs(self, **kwargs) + [join(self.build_lib, m) for m in self.MODULES]
 
 # Install public python modules in standard python locations.
 setup(

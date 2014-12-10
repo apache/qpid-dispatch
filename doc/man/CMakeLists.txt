@@ -29,7 +29,7 @@ if(HELP2MAN)
     string(REGEX MATCH "[0-9]*$" section ${manpage})
     add_custom_command (
       OUTPUT ${manpage}
-      COMMAND ${RUN} -s ${src}/help2man.py ${HELP2MAN} --version-string ${QPID_DISPATCH_VERSION} -s ${section} -i ${src}/${h2mfile} -N -o ${bin}/${manpage} ${program}
+      COMMAND ${RUN} -s ${src}/help2man.py ${HELP2MAN} -s ${section} -i ${src}/${h2mfile} -N -o ${bin}/${manpage} ${program}
       DEPENDS ${program} ${h2mfile}
       )
   endmacro()
@@ -39,7 +39,7 @@ else(HELP2MAN)
   message(WARNING "help2man is not avaliable, cannot update man pages")
   macro(help2man manpage h2mfile program)
     # Copy a pre-generated version of the man page.
-    configure_file(${manpage}.in ${manpage})
+    configure_file(${src}/${manpage}.in ${bin}/${manpage})
   endmacro()
 
 endif(HELP2MAN)
@@ -60,16 +60,12 @@ add_custom_command (OUTPUT ${QDROUTER_CONF_MAN}
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${src}/qdrouterd_conf_man.py ${QDROUTER_CONF_MAN}
     DEPENDS ${QDROUTER_CONF_MAN_DEPENDS})
 
-# Target to build the generated files by default
+# Target to build the generated files
 add_custom_target(man ALL DEPENDS ${QDROUTER_CONF_MAN} ${bin}/qdmanage.8 ${bin}/qdstat.8)
-
-# Target to check that checked-in versions of generated files are up to date.
-add_custom_target(check_man ALL DEPENDS man
-  COMMAND ${RUN} -s ${src}/check_help2man.py ${src} ${bin} qdmanage.8 qdstat.8)
-
+# Manual target to check if the generated files differ from the checked-in files
+add_custom_target(check-man COMMAND ${RUN} -s ${src}/check_help2man.py ${src} ${bin} qdmanage.8 qdstat.8)
 
 # Install man pages
-
 install(FILES ${bin}/qdrouterd.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
 install(FILES ${bin}/${QDROUTER_CONF_MAN} DESTINATION ${MAN_INSTALL_DIR}/man5)
 install(FILES ${bin}/qdstat.8 DESTINATION ${MAN_INSTALL_DIR}/man8)

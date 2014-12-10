@@ -23,6 +23,7 @@ Utilities for command-line programs.
 
 import os, sys, json, optparse
 from collections import Sequence, Mapping
+from qpid_dispatch_site import VERSION
 
 class UsageError(Exception):
     """
@@ -76,6 +77,7 @@ def connection_options(options, title="Connection Options"):
                      help="Client SSL private key (PEM Format)")
     return group
 
+
 class Option(optparse.Option):
     """Addes two new types to optparse.Option: json_map, json_list"""
 
@@ -92,3 +94,14 @@ class Option(optparse.Option):
 
     TYPES = optparse.Option.TYPES + ("json_list", "json_map")
     TYPE_CHECKER = dict(optparse.Option.TYPE_CHECKER, json_list=check_json, json_map=check_json)
+
+
+class OptionParser(optparse.OptionParser):
+    """Adds standard --version option to optparse.OptionParser"""
+    def __init__(self, *args, **kwargs):
+        optparse.OptionParser.__init__(self, *args, **kwargs)
+        def version_cb(*args):
+            print VERSION
+            exit(0)
+        self.add_option("--version", help="Print version and exit", action="callback", callback=version_cb)
+
