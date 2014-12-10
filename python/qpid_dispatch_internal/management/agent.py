@@ -93,23 +93,26 @@ class AgentEntity(SchemaEntity):
     Base class for agent entities with operations as well as attributes.
     """
 
-    def _refresh(self):
-        """Refresh self.attributes from C implementation. No-op if no C impl pointer"""
-        return False # Replaced by _set_pointer
-
-    def __init__(self, agent, entity_type, attributes=None, validate=True):
+    def __init__(self, agent, entity_type, attributes=None, validate=True, base_id=None):
         """
         @para agent: Containing L{Agent}
-        @param dispatch: Pointer to qd_dispatch C object.
         @param entity_type: L{EntityType}
         @param attributes: Attribute name:value map
-        @param pointer: Pointer to C object that can be used to refresh attributes.
+        @param validate: If true, validate the entity.
+        @param base_id: Use as base identifier for name and identifier.
         """
+        if base_id:
+            full_id = "%s/%s" % (entity_type.short_name, base_id)
+            attributes['name'] = attributes['identity'] = full_id
         super(AgentEntity, self).__init__(entity_type, attributes, validate=validate)
         # Direct __dict__ access to avoid validation as schema attributes
         self.__dict__['_agent'] = agent
         self.__dict__['_qd'] = agent.qd
         self.__dict__['_dispatch'] = agent.dispatch
+
+    def _refresh(self):
+        """Refresh self.attributes from C implementation. No-op if no C impl pointer"""
+        return False # Replaced by _set_pointer
 
     def _set_pointer(self, pointer):
         fname = "qd_entity_refresh_" + self.entity_type.short_name.replace('.', '_')
@@ -157,17 +160,13 @@ class ContainerEntity(AgentEntity): pass
 
 
 class RouterEntity(AgentEntity):
-    def __init__(self, *args, **kwargs):
-        kwargs['validate'] = False
-        super(RouterEntity, self).__init__(*args, **kwargs)
+    def __init__(self, agent, entity_type, attributes=None):
+        super(RouterEntity, self).__init__(agent, entity_type, attributes, validate=False, base_id=attributes.get('routerId'))
         self._set_pointer(self._dispatch)
 
 class LogEntity(AgentEntity):
     def __init__(self, agent, entity_type, attributes=None, validate=True):
-        module = attributes.get('module')
-        if module:
-            attributes['identity'] = attributes['name'] = "%s:%s" % (entity_type.short_name, module)
-        super(LogEntity, self).__init__(agent, entity_type, attributes, validate)
+        super(LogEntity, self).__init__(agent, entity_type, attributes, validate, base_id=attributes.get('module'))
 
     def create(self, request):
         self._qd.qd_log_entity(self)
@@ -221,7 +220,7 @@ class CEntity(AgentEntity):
     def __init__(self, agent, entity_type, pointer):
         def prefix(prefix, name):
             if not str(name).startswith(prefix):
-                name = "%s:%s" % (prefix, name)
+                name = "%s/%s" % (prefix, name)
             return name
 
         super(CEntity, self).__init__(agent, entity_type, validate=False)

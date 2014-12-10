@@ -102,21 +102,21 @@ class QdrouterTest(unittest.TestCase):
 
         content = conf._default_ids(content)
         self.assertEqual(content, [
-            [u"router", {u"mode":u"standalone", u"name":u"router:0", u"identity":u"router:0"}],
+            [u"router", {u"mode":u"standalone", u"name":u"router/0", u"identity":u"router/0"}],
             [u"listener", {u"name":u"l0", u"identity":u"l0", u"saslMechanisms":u"ANONYMOUS", u"password":u"secret"}],
             [u"listener", {u"name":u"l1", u"identity":u"l1", u"saslMechanisms":u"ANONYMOUS", u"port":u"1234"}],
-            [u"listener", {u"name":u"listener:2", u"identity":u"listener:2", u"saslMechanisms":u"ANONYMOUS", u"port":u"4567"}]
+            [u"listener", {u"name":u"listener/2", u"identity":u"listener/2", u"saslMechanisms":u"ANONYMOUS", u"port":u"4567"}]
         ])
 
         conf.load(text.split(u"\n"))
         router = conf.by_type('router').next()
-        self.assertEqual(router['name'], 'router:0')
-        self.assertEqual(router['identity'], 'router:0')
+        self.assertEqual(router['name'], 'router/0')
+        self.assertEqual(router['identity'], 'router/0')
         listeners = list(conf.by_type('listener'))
         self.assertEqual(len(listeners), 3)
         self.assertEqual(listeners[0]['name'], 'l0')
-        self.assertEqual(listeners[2]['name'], 'listener:2')
-        self.assertEqual(listeners[2]['identity'], 'listener:2')
+        self.assertEqual(listeners[2]['name'], 'listener/2')
+        self.assertEqual(listeners[2]['identity'], 'listener/2')
 
     def test_qdrouter_parse_dash(self):
         self.do_test_qdrouter_parse(conf_text)

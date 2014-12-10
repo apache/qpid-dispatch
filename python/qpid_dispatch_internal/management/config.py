@@ -107,7 +107,7 @@ class Config(object):
             elif 'identity' in attrs:
                 attrs['name'] = attrs['identity']
             else:
-                identity = "%s:%d"%(section_name, count)
+                identity = "%s/%d"%(section_name, count)
                 attrs['name'] = attrs['identity'] = identity
         return content
 

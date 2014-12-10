@@ -96,7 +96,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in xrange(3)]
         for r in expect: # We might have extras in results due to create tests
             self.assertTrue(r in response.results)
-        for name in ['router:' + self.router.name, 'log:DEFAULT']:
+        for name in ['router/' + self.router.name, 'log/DEFAULT']:
             self.assertTrue([r for r in response.get_dicts() if r['name'] == name],
                             msg="Can't find result with name '%s'" % name)
 
@@ -130,12 +130,12 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
         self.assertRaises(NotFoundStatus, self.node.read, identity='log:AGENT') # Not configured
 
-        default = self.node.read(identity='log:DEFAULT')
+        default = self.node.read(identity='log/DEFAULT')
         self.assertEqual(default.attributes,
-                         {u'identity': u'log:DEFAULT',
+                         {u'identity': u'log/DEFAULT',
                           u'level': u'trace',
                           u'module': u'DEFAULT',
-                          u'name': u'log:DEFAULT',
+                          u'name': u'log/DEFAULT',
                           u'output': u'ManagementTest.log',
                           u'source': True,
                           u'timestamp': True,
@@ -152,20 +152,20 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
         # Create a log entity, verify logging is as expected
         log = os.path.abspath("test_log.log")
-        agent_log = self.assert_create_ok('log', 'log:AGENT', dict(module='AGENT', level="error", output=log))
+        agent_log = self.assert_create_ok('log', 'log/AGENT', dict(module='AGENT', level="error", output=log))
         check_log(log)
 
         # Update the log entity to output to a different file
         log = os.path.abspath("test_log2.log")
-        self.node.update(dict(module='AGENT', level="error", output=log), identity='log:AGENT')
+        self.node.update(dict(module='AGENT', level="error", output=log), identity='log/AGENT')
         check_log(log)
 
         # Delete the log entity - return to default state.
-        self.node.delete(identity='log:AGENT')
+        self.node.delete(identity='log/AGENT')
         self.assertRaises(AssertionError, check_log, log, 'nosuch2')
 
         # Verify that debug logging shows up if enabled for a module
-        self.node.create(dict(module='AGENT', level="debug", output=log), type='log', name="log:AGENT")
+        self.node.create(dict(module='AGENT', level="debug", output=log), type='log', name="log/AGENT")
         logstr = self.cleanup(open(log)).read()
         self.assertTrue(re.search(r'AGENT \(debug\)', logstr),
                         msg="Can't find 'AGENT (debug)' messages in '%s'" % (logstr))
