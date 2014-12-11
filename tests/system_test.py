@@ -341,7 +341,7 @@ class Qdrouterd(Process):
 
     def teardown(self):
         if self._management:
-            self._management.stop()
+            self._management.close()
         super(Qdrouterd, self).teardown()
 
     @property

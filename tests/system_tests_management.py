@@ -22,6 +22,7 @@
 import unittest, system_test, re, os
 from qpid_dispatch.management import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
 from system_test import Qdrouterd, message, retry
+from proton import ConnectionException
 
 DISPATCH = 'org.apache.qpid.dispatch'
 CONFIGURATION = DISPATCH + '.configurationEntity'
@@ -350,6 +351,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         result = self.node.get_attributes()
         for type in LISTENER, WAYPOINT, LINK: self.assertIn(type, result)
         for a in ['linkType', 'linkDir', 'owningAddr']: self.assertIn(a, result[LINK])
+
 
 if __name__ == '__main__':
     unittest.main(system_test.main_module())

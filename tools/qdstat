@@ -327,7 +327,7 @@ def run(argv):
     try:
         bm.display(args)
     finally:
-        bm.stop()
+        bm.close()
 
 if __name__ == "__main__":
         sys.exit(main(run, sys.argv))
