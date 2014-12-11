@@ -137,7 +137,7 @@ class BusManager(Node):
     def _name_clean(self, name):
         if not name:
             return "-"
-        pos = name.find(':')
+        pos = name.find('/')
         if pos >= 0:
             return name[pos + 1:]
         return name
