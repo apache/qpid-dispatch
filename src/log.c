@@ -286,13 +286,13 @@ static void qd_log_source_free_lh(qd_log_source_t* src) {
     free(src);
 }
 
-bool qd_log_enabled(qd_log_source_t *source, int level) {
+bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
     if (!source) return false;
     int mask = source->mask == -1 ? default_log_source->mask : source->mask;
     return level & mask;
 }
 
-void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line, const char *fmt, ...)
+void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file, int line, const char *fmt, ...)
 {
     if (!qd_log_enabled(source, level)) return;
 

@@ -22,14 +22,14 @@
 
 /** Logging levels */
 typedef enum {
-    QD_LOG_NONE     =0x00000000,
-    QD_LOG_TRACE    =0x00000001,
-    QD_LOG_DEBUG    =0x00000002,
-    QD_LOG_INFO     =0x00000004,
-    QD_LOG_NOTICE   =0x00000008,
-    QD_LOG_WARNING  =0x00000010,
-    QD_LOG_ERROR    =0x00000020,
-    QD_LOG_CRITICAL =0x00000040,
+    QD_LOG_NONE     =0x00, ///< No logging
+    QD_LOG_TRACE    =0x01, ///< High volume messages, o(n) or more for n message transfers.
+    QD_LOG_DEBUG    =0x02, ///< Debugging messages useful to developers.
+    QD_LOG_INFO     =0x04, ///< Information messages useful to users
+    QD_LOG_NOTICE   =0x08, ///< Notice of important but non-error events.
+    QD_LOG_WARNING  =0x10, ///< Warning of event that may be a problem.
+    QD_LOG_ERROR    =0x20, ///< Error, definitely a problem
+    QD_LOG_CRITICAL =0x40, ///< Critical error, data loss or process shut-down.
 } qd_log_level_t;
 
 typedef struct qd_log_source_t qd_log_source_t;
@@ -37,9 +37,9 @@ typedef struct qd_log_source_t qd_log_source_t;
 qd_log_source_t* qd_log_source(const char *module);
 
 /**@internal*/
-bool qd_log_enabled(qd_log_source_t *source, int level);
+bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level);
 /**@internal*/
-void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line, const char *fmt, ...);
+void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file, int line, const char *fmt, ...);
 
 /** Log a message
  * Note: does not evaluate the format args unless the log message is enabled.
@@ -47,7 +47,11 @@ void qd_log_impl(qd_log_source_t *source, int level, const char *file, int line,
  * @param c qd_log_level_t log level of message
  * @param f printf style format string ...
  */
-#define qd_log(s, c, f, ...) if (qd_log_enabled(s, c)) qd_log_impl(s, c, __FILE__, __LINE__, f , ##__VA_ARGS__)
+#define qd_log(source, level, fmt, ...)                                 \
+    do {                                                                \
+        if (qd_log_enabled(source, level))                              \
+            qd_log_impl(source, level, __FILE__, __LINE__, fmt , ##__VA_ARGS__); \
+    } while(0)
 
 /** Maximum length for a log message */
 int qd_log_max_len();
