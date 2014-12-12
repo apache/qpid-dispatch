@@ -92,11 +92,11 @@ static void check(int fd) {
     }
 }
 
-#define fail(fd, fmt, ...)                                      \
-    do {                                                        \
-        if (!qd_error_errno(errno, fmt, ##__VA_ARGS__))         \
-            qd_error(QD_ERROR_RUNTIME, fmt, ##__VA_ARGS__);     \
-        check(fd);                                              \
+#define fail(fd, ...)                                   \
+    do {                                                \
+        if (!qd_error_errno(errno, __VA_ARGS__))        \
+            qd_error(QD_ERROR_RUNTIME, __VA_ARGS__);    \
+        check(fd);                                      \
     } while(false)
 
 static void main_process(const char *config_path, const char *python_pkgdir, int fd)

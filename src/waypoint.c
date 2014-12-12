@@ -42,7 +42,7 @@ struct qd_waypoint_context_t {
 };
 
 // Convenience for logging waypoint messages, expects qd and wp to be defined.
-#define LOG(LEVEL, MSG, ...) qd_log(qd->router->log_source, QD_LOG_##LEVEL, "waypoint=%s: " MSG, wp->address, ##__VA_ARGS__)
+#define LOG(LEVEL, MSG, ...) qd_log(qd->router->log_source, QD_LOG_##LEVEL, "waypoint=%s: " MSG, wp->address, __VA_ARGS__)
 
 static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
 {

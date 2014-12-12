@@ -57,7 +57,7 @@ ENUM_DECLARE(qd_error);
  *@param fmt printf-stlye format.
  *@return code
  */
-#define qd_error(code, fmt, ...) qd_error_impl(code, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define qd_error(code, ...) qd_error_impl(code, __FILE__, __LINE__, __VA_ARGS__)
 
 qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char *fmt, ...);
 
@@ -104,7 +104,7 @@ qd_error_t qd_error_py_impl(const char *file, int line);
  * If errnum is non-0, set error code QD_ERROR_SYSTEM with a message including the errno text.
  * Otherwise, call qd_error_clear() and return QD_ERROR_NONE.
  */
-#define qd_error_errno(errnum, fmt, ...) qd_error_impl(errnum, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
+#define qd_error_errno(errnum, ...) qd_error_impl(errnum, __FILE__, __LINE__, __VA_ARGS__)
 
 qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const char *fmt, ...);
 
