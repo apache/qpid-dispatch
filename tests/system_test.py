@@ -291,7 +291,8 @@ class Qdrouterd(Process):
 
         DEFAULTS = {
             'listener':{'addr':'0.0.0.0', 'sasl-mechanisms':'ANONYMOUS'},
-            'connector':{'addr':'0.0.0.0', 'sasl-mechanisms':'ANONYMOUS', 'role':'on-demand'}
+            'connector':{'addr':'0.0.0.0', 'sasl-mechanisms':'ANONYMOUS', 'role':'on-demand'},
+            'container':{'debugDump':"qddebug.txt"}
         }
 
         def sections(self, name):

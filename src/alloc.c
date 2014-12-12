@@ -66,6 +66,7 @@ qd_alloc_config_t qd_alloc_default_config_small = {64, 128, 0};
 
 static sys_mutex_t          *init_lock = 0;
 static qd_alloc_type_list_t  type_list;
+static char *debug_dump = 0;
 
 static void qd_alloc_init(qd_alloc_type_desc_t *desc)
 {
@@ -271,7 +272,7 @@ void qd_alloc_finalize(void)
 {
     //
     // Note that the logging facility is already finalized by the time this is called.
-    // We will use fprintf(stderr, ...) for logging.
+    // We will dump debugging information into debug_dump if specified.
     //
     // The assumption coming into this finalizer is that all allocations have been
     // released.  Any non-released objects shall be flagged.
@@ -285,6 +286,13 @@ void qd_alloc_finalize(void)
 
     qd_alloc_item_t *item;
     qd_alloc_type_t *type_item = DEQ_HEAD(type_list);
+
+    FILE *dump_file = 0;
+    if (debug_dump) {
+        dump_file = fopen(debug_dump, "w");
+        free(debug_dump);
+    }
+
     while (type_item) {
         qd_entity_cache_remove(QD_ALLOCATOR_TYPE, type_item);
         qd_alloc_type_desc_t *desc = type_item->desc;
@@ -323,8 +331,9 @@ void qd_alloc_finalize(void)
         //
         // Check the stats for lost items
         //
-        if (desc->stats->total_free_to_heap < desc->stats->total_alloc_from_heap)
-            fprintf(stderr, "alloc.c: Items of type '%s' remain allocated at shutdown: %"PRId64"\n",
+        if (dump_file && desc->stats->total_free_to_heap < desc->stats->total_alloc_from_heap)
+            fprintf(dump_file,
+                    "alloc.c: Items of type '%s' remain allocated at shutdown: %"PRId64"\n", 
                     desc->type_name,
                     desc->stats->total_alloc_from_heap - desc->stats->total_free_to_heap);
 
@@ -342,6 +351,7 @@ void qd_alloc_finalize(void)
     }
 
     sys_mutex_free(init_lock);
+    if (dump_file) fclose(dump_file);
 }
 
 
@@ -360,4 +370,8 @@ qd_error_t qd_entity_refresh_allocator(qd_entity_t* entity, void *impl) {
         qd_entity_set_long(entity, "batchesRebalancedToGlobal", alloc_type->desc->stats->batches_rebalanced_to_global) == 0)
         return QD_ERROR_NONE;
     return qd_error_code();
+}
+
+void qd_alloc_debug_dump(const char *file) {
+    debug_dump = file ? strdup(file) : 0;
 }

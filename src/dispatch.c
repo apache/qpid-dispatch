@@ -92,6 +92,7 @@ qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entit
     const char *default_name = "00000000-0000-0000-0000-000000000000";
     qd->thread_count   = qd_entity_opt_long(entity, "workerThreads", 1); QD_ERROR_RET();
     qd->container_name = qd_entity_opt_string(entity, "containerName", default_name); QD_ERROR_RET();
+    qd_alloc_debug_dump(qd_entity_opt_string(entity, "debugDump", 0)); QD_ERROR_RET();
     return QD_ERROR_NONE;
 }
 

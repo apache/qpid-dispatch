@@ -23,6 +23,7 @@
 #include <qpid/dispatch/dispatch.h>
 
 void qd_alloc_initialize(void);
+void qd_alloc_debug_dump(const char *file);
 void qd_alloc_finalize(void);
 
 #endif

@@ -129,6 +129,10 @@
                     "type": "Integer",
                     "default": 1,
                     "description": "The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) ."
+                },
+                "debugDump": {
+                    "type": "String",
+                    "description": "A file to dump debugging information that can't be logged normally."
                 }
             }
         },
