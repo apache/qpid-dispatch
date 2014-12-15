@@ -624,6 +624,11 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
     def assertIn(self, item, items):
         assert item in items, "%s not in %s" % (item, items)
 
+    if not getattr(unittest.TestCase, 'assertRegexpMatches'):
+        def assertRegexpMatches(self, text, regexp, msg=None):
+            """For python < 2.7: assert re.search(regexp, text)"""
+            assert re.search(regexp, text), msg or "Can't find %r in '%s'" %(regexp, text)
+
 def main_module():
     """
     Return the module name of the __main__ module - i.e. the filename with the

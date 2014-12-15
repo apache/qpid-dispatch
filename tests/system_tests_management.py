@@ -23,19 +23,25 @@ import unittest, system_test, re, os
 from qpid_dispatch.management import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
 from system_test import Qdrouterd, message, retry
 from proton import ConnectionException
+from itertools import chain
 
-DISPATCH = 'org.apache.qpid.dispatch'
-CONFIGURATION = DISPATCH + '.configurationEntity'
-OPERATIONAL = DISPATCH + '.operationalEntity'
-LISTENER = DISPATCH + '.listener'
-CONNECTOR = DISPATCH + '.connector'
-FIXED_ADDRESS = DISPATCH + '.fixedAddress'
-WAYPOINT = DISPATCH + '.waypoint'
-DUMMY = DISPATCH + '.dummy'
-ROUTER = DISPATCH + '.router'
+PREFIX = 'org.apache.qpid.dispatch.'
+CONFIGURATION = PREFIX + 'configurationEntity'
+OPERATIONAL = PREFIX + 'operationalEntity'
+LISTENER = PREFIX + 'listener'
+CONNECTOR = PREFIX + 'connector'
+FIXED_ADDRESS = PREFIX + 'fixedAddress'
+WAYPOINT = PREFIX + 'waypoint'
+DUMMY = PREFIX + 'dummy'
+ROUTER = PREFIX + 'router'
 LINK = ROUTER + '.link'
 ADDRESS = ROUTER + '.address'
 NODE = ROUTER + '.node'
+
+def short_name(name):
+    if name.startswith(PREFIX):
+        return name[len(PREFIX):]
+    return name
 
 
 class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-methods
@@ -324,6 +330,12 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         # FIXME aconway 2014-10-15: verify nextHop and validOrigins updated correctly
         self.assertEqual([u'amqp:/_topo/0/router2/$management', u'amqp:/_topo/0/router1/$management'],
                          sum([n.get_mgmt_nodes() for n in nodes], []))
+
+        # Test that all entities have a consitent identity format: type/name
+        entities = list(chain(
+            *[n.query(attribute_names=['type', 'identity', 'name']).iter_entities() for n in nodes]))
+        for e in entities:
+            self.assertRegexpMatches(e.identity, "^%s/" % short_name(e.type))
 
     def test_get_types(self):
         types = self.node.get_types()

@@ -82,7 +82,7 @@ qd_error_t qd_entity_refresh_router_node(qd_entity_t* entity, void *impl) {
     qd_router_node_t *rnode = (qd_router_node_t*) impl;
 
     if (!qd_entity_has(entity, "identity")) {
-        CHECK(qd_entity_set_stringf(entity, "identity", "%s:%d", QD_ROUTER_NODE_TYPE, rnode->mask_bit));
+        CHECK(qd_entity_set_stringf(entity, "identity", "%s/%d", QD_ROUTER_NODE_TYPE, rnode->mask_bit));
     }
     CHECK(qd_entity_set_string(entity, "addr", address_text(rnode->owning_addr)));
     long next_hop = rnode->next_hop ? rnode->next_hop->mask_bit : 0;
