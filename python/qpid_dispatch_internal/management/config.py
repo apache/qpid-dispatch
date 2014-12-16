@@ -148,15 +148,15 @@ class Config(object):
         self.entities.remove(entity)
 
 
-def configure_dispatch(dispatch, filename):
+def configure_dispatch(dispatch, lib_handle, filename):
     """Called by C router code to load configuration file and do configuration"""
-    qd = dispatch_c.instance()
+    qd = dispatch_c.QdDll(lib_handle)
     dispatch = qd.qd_dispatch_p(dispatch)
     config = Config(filename)
 
     # NOTE: Can't import agent till till dispatch C extension module is initialized.
     from .agent import Agent
-    agent = Agent(dispatch)
+    agent = Agent(dispatch, qd)
     qd.qd_dispatch_set_agent(dispatch, agent)
 
     def configure(attributes):

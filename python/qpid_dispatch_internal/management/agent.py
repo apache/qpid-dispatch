@@ -356,8 +356,8 @@ class EntityCache(object):
 class Agent(object):
     """AMQP managment agent"""
 
-    def __init__(self, dispatch):
-        self.qd = dispatch_c.instance()
+    def __init__(self, dispatch, qd):
+        self.qd = qd
         self.dispatch = dispatch
         self.schema = QdSchema()
         self.entities = EntityCache(self)

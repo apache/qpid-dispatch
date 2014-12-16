@@ -17,6 +17,8 @@
 ## under the License.
 ##
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+
 # Generate code from the management schema.
 set(GENERATED_SOURCES
   schema_enum.h
@@ -74,7 +76,7 @@ set_property(
   )
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
-target_link_libraries(qpid-dispatch ${proton_lib} ${pthread_lib} ${rt_lib} ${PYTHON_LIBRARIES})
+target_link_libraries(qpid-dispatch ${proton_lib} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES})
 set_target_properties(qpid-dispatch PROPERTIES
   VERSION "${SO_VERSION}"
   SOVERSION "${SO_VERSION_MAJOR}"
@@ -83,5 +85,6 @@ set_target_properties(qpid-dispatch PROPERTIES
 install(TARGETS qpid-dispatch
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
-# TODO aconway 2014-09-24: won't work on windows, need portable way to get link name.
-set (QPID_DISPATCH_LIB "libqpid-dispatch.so.${SO_VERSION_MAJOR}" PARENT_SCOPE)
+set (QPID_DISPATCH_LIB "libqpid-dispatch.so.${SO_VERSION_MAJOR}")
+
+

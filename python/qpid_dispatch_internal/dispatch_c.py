@@ -34,17 +34,8 @@ class QdDll(ctypes.PyDLL):
     NOTE: We use the python calling convention because the C library
     internally makes python calls.
     """
-    _instance = None
-    @classmethod
-    def instance(cls):
-        if not cls._instance:
-            cls._instance = QdDll()
-        return cls._instance
-
-    def __init__(self):
-        lib = qpid_dispatch_site.LIB
-        assert lib
-        super(QdDll, self).__init__(lib)
+    def __init__(self, handle):
+        super(QdDll, self).__init__("qpid-dispatch", handle=handle)
 
         # Types
         self.qd_dispatch_p = ctypes.c_void_p
@@ -86,6 +77,3 @@ class QdDll(ctypes.PyDLL):
 
     def function(self, fname, restype, argtypes, check=True):
         return self._prototype(getattr(self, fname), restype, argtypes, check)
-
-def instance():
-    return QdDll.instance()

@@ -82,6 +82,7 @@ set(QPID_DISPATCH_CONFDIR ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
 ##
 find_library(proton_lib qpid-proton)
 find_library(pthread_lib pthread)
+find_library(dl_lib dl)
 find_library(rt_lib rt)
 find_path(proton_include proton/driver.h)
 
