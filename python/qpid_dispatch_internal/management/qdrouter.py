@@ -41,24 +41,28 @@ class QdSchema(schema.Schema):
         self.configuration_entity = self.entity_type(self.CONFIGURATION_ENTITY)
         self.operational_entity = self.entity_type(self.OPERATIONAL_ENTITY)
 
-    def validate(self, entities, full=True, **kwargs):
+    def validate_full(self, entities, **kwargs):
         """
         In addition to L{schema.Schema.validate}, check the following:
 
-        If the operating mode of the router is not 'interior', then the only
-        permitted roles for listeners and connectors is 'normal'.
+        listeners and connectors can only have role=inter-router if the
+        router has mode=interior.
+
 
         @param entities: List of attribute name:value maps.
-        @param full: Perform validation for full configuration.
         @param kwargs: See L{schema.Schema.validate}
         """
+        entities = list(entities) # Need to traverse twice
         super(QdSchema, self).validate_all(entities, **kwargs)
-
-        if full:
-            if entities.router[0].mode != 'interior':
-                for connect in entities.get(entity_type='listeners') + entities.get(entity_type='connector'):
-                    if connect['role'] != 'normal':
-                        raise schema.ValidationError("Role '%s' for connection '%s' only permitted with 'interior' mode" % (connect['role'], connect.name))
+        inter_router = not_interior = None
+        for e in entities:
+            if self.short_name(e.type) == "router" and e.mode != "interior":
+                not_interior = e.mode
+            if self.short_name(e.type) in ["listener", "connector"] and e.role == "inter-router":
+                inter_router = e
+            if not_interior and inter_router:
+                raise schema.ValidationError(
+                    "role='inter-router' only allowed with router mode='interior' for %s." % inter_router)
 
     def is_configuration(self, entity_type):
         return entity_type and self.configuration_entity in entity_type.all_bases

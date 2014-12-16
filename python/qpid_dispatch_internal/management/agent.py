@@ -160,6 +160,7 @@ class ContainerEntity(AgentEntity):
     def create(self):
         self._qd.qd_dispatch_configure_container(self._dispatch, self)
 
+
 class RouterEntity(AgentEntity):
     def __init__(self, agent, entity_type, attributes=None):
         super(RouterEntity, self).__init__(agent, entity_type, attributes, validate=False, base_id=attributes.get('routerId'))
@@ -287,10 +288,9 @@ class EntityCache(object):
 
     def add(self, entity, pointer=None):
         """Add an entity. Provide pointer if it is associated with a C entity"""
-        self.log(LOG_DEBUG, "Add %s entity: %s" %
-                 (entity.entity_type.short_name, entity.attributes['identity']))
+        self.log(LOG_DEBUG, "Add entity: %s" % entity)
         # Validate in the context of the existing entities for uniqueness
-        self.schema.validate_all(chain(iter([entity]), iter(self.entities)))
+        self.schema.validate_full(chain(iter([entity]), iter(self.entities)))
         self.entities.append(entity)
         if pointer: self.pointers[pointer] = entity
 
@@ -364,18 +364,16 @@ class Agent(object):
         self.name = self.identity = 'self'
         self.type = 'org.amqp.management' # AMQP management node type
         self.request_lock = Lock()
-        self.log_adapter = None
+        self.log_adapter = LogAdapter("AGENT")
 
     def log(self, level, text):
-        if self.log_adapter:
-            info = traceback.extract_stack(limit=2)[0] # Caller frame info
-            self.log_adapter.log(level, text, info[0], info[1])
+        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        self.log_adapter.log(level, text, info[0], info[1])
 
     def activate(self, address):
         """Register the management address to receive management requests"""
         self.io = [IoAdapter(self.receive, address),
                    IoAdapter(self.receive, address, True)] # Global
-        self.log_adapter = LogAdapter("AGENT")
 
     def entity_class(self, entity_type):
         """Return the class that implements entity_type"""

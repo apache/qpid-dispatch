@@ -21,7 +21,7 @@
 
 import unittest, system_test, re, os
 from qpid_dispatch.management import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
-from system_test import Qdrouterd, message, retry
+from system_test import Qdrouterd, message, retry, wait_ports, Process
 from proton import ConnectionException
 from itertools import chain
 
@@ -363,6 +363,35 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         result = self.node.get_attributes()
         for type in LISTENER, WAYPOINT, LINK: self.assertIn(type, result)
         for a in ['linkType', 'linkDir', 'owningAddr']: self.assertIn(a, result[LINK])
+
+    def test_standalone_no_inter_router(self):
+        """Verify that we do not allow inter-router connectors or listeners in standalone mode"""
+
+        attrs = dict(role="inter-router", saslMechanisms="ANONYMOUS")
+        self.assertRaises(
+            BadRequestStatus,
+            self.node.create, dict(attrs, type=LISTENER, name="bad1", port=str(self.get_port())))
+
+        self.assertRaises(
+            BadRequestStatus,
+            self.node.create, dict(attrs, type=CONNECTOR, name="bad2", port=str(self.get_port())))
+
+        conf = Qdrouterd.Config([
+            ('router', { 'mode': 'standalone', 'routerId': 'all_by_myself1'}),
+            ('listener', {'port':self.get_port(), 'role':'inter-router'})
+        ])
+        r = self.qdrouterd('routerX', conf, wait=False)
+        r.expect = Process.EXIT_FAIL
+        self.assertTrue(r.wait() != 0)
+
+        conf = Qdrouterd.Config([
+            ('router', { 'mode': 'standalone', 'routerId': 'all_by_myself2'}),
+            ('listener', {'port':self.get_port(), 'role':'normal'}),
+            ('connector', {'port':self.get_port(), 'role':'inter-router'})
+        ])
+        r = self.qdrouterd('routerY', conf, wait=False)
+        r.expect = Process.EXIT_FAIL
+        self.assertTrue(r.wait() != 0)
 
 
 if __name__ == '__main__':

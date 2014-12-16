@@ -77,7 +77,16 @@ class EntityBase(object):
     def __delattr__(self, name):
         self.__delitem__(name)
 
-    def __repr__(self): return "Entity(%r)" % self.attributes
+    def __repr__(self): return "EntityBase(%r)" % self.attributes
+
+    SPECIAL = ["name", "identity", "type"]
+    N_SPECIAL = len(SPECIAL)
+    PRIORITY = dict([(SPECIAL[i], i) for i in xrange(N_SPECIAL)])
+
+    def __str__(self):
+        # Print the name and identity first.
+        keys = sorted(self.attributes.keys(), key=lambda k: self.PRIORITY.get(k, self.N_SPECIAL))
+        return "Entity(%s)" % ", ".join("%s=%s" % (k, self.attributes[k]) for k in keys)
 
 
 def update(entity, values):
