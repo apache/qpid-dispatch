@@ -34,6 +34,7 @@
 
 static qd_dispatch_t   *dispatch   = 0;
 static sys_mutex_t     *ilock      = 0;
+static bool             lock_held  = false;
 static qd_log_source_t *log_source = 0;
 static PyObject        *dispatch_module = 0;
 static PyObject        *message_type = 0;
@@ -71,6 +72,12 @@ PyObject *qd_python_module(void)
 {
     assert(dispatch_module);
     return dispatch_module;
+}
+
+
+void qd_python_check_lock(void)
+{
+    assert(lock_held);
 }
 
 
@@ -120,6 +127,7 @@ static PyObject *parsed_to_py_string(qd_parsed_field_t *field)
 
 qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
 {
+    qd_python_check_lock();
     qd_error_clear();
     if (value == Py_None) {
         qd_compose_insert_null(field);
@@ -195,6 +203,7 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
 
 void qd_py_attr_to_composed(PyObject *object, const char *attr, qd_composed_field_t *field)
 {
+    qd_python_check_lock();
     PyObject *value = PyObject_GetAttrString(object, attr);
     if (value) {
         qd_py_to_composed(value, field);
@@ -207,6 +216,7 @@ void qd_py_attr_to_composed(PyObject *object, const char *attr, qd_composed_fiel
 
 PyObject *qd_field_to_py(qd_parsed_field_t *field)
 {
+    qd_python_check_lock();
     PyObject *result = 0;
     uint8_t   tag    = qd_parse_tag(field);
     switch (tag) {
@@ -734,10 +744,12 @@ static void qd_python_setup(void)
 qd_python_lock_state_t qd_python_lock(void)
 {
     sys_mutex_lock(ilock);
+    lock_held = true;
     return 0;
 }
 
 void qd_python_unlock(qd_python_lock_state_t lock_state)
 {
+    lock_held = false;
     sys_mutex_unlock(ilock);
 }

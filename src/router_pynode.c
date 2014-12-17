@@ -626,6 +626,7 @@ void qd_router_python_free(qd_router_t *router) {
 qd_error_t qd_pyrouter_tick(qd_router_t *router)
 {
     qd_error_clear();
+    qd_error_t err = QD_ERROR_NONE;
 
     PyObject *pArgs;
     PyObject *pValue;
@@ -636,9 +637,10 @@ qd_error_t qd_pyrouter_tick(qd_router_t *router)
         pValue = PyObject_CallObject(pyTick, pArgs);
         Py_DECREF(pArgs);
         Py_XDECREF(pValue);
+        err = qd_error_py();
         qd_python_unlock(lock_state);
     }
-    return qd_error_py();
+    return err;
 }
 
 

@@ -21,6 +21,7 @@
 #include <qpid/dispatch/error.h>
 #include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/log.h>
+#include <qpid/dispatch/python_embedded.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <errno.h>
@@ -144,6 +145,7 @@ static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_lo
 }
 
 qd_error_t qd_error_py_impl(const char *file, int line) {
+    qd_python_check_lock();
     if (PyErr_Occurred()) {
         PyObject *type, *value, *trace;
         PyErr_Fetch(&type, &value, &trace); /* Note clears the python error indicator */
