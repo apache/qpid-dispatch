@@ -86,11 +86,12 @@ find_library(dl_lib dl)
 find_library(rt_lib rt)
 find_path(proton_include proton/driver.h)
 
+##
+## Include directories used by all sub-directories.
+##
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}/src
+    ${CMAKE_CURRENT_BINARY_DIR}/include
     ${proton_include}
     ${PYTHON_INCLUDE_PATH}
     )
@@ -106,9 +107,6 @@ add_compile_options(-Wall)
 add_compile_options(-Werror)
 add_compile_options(-std=gnu99)
 set(CATCH_UNDEFINED "-Wl,--no-undefined")
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/conditionals.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/conditionals.h)
 
 ##
 ## Header file installation

@@ -17,8 +17,6 @@
 ## under the License.
 ##
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-
 # Generate code from the management schema.
 set(GENERATED_SOURCES
   schema_enum.h
@@ -37,6 +35,11 @@ add_custom_command (
   OUTPUT ${GENERATED_SOURCES}
   COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${CMAKE_CURRENT_SOURCE_DIR}/schema_c.py
   DEPENDS ${GENERATOR_DEPENDS})
+
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}
+  )
 
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES
@@ -85,6 +88,7 @@ set_target_properties(qpid-dispatch PROPERTIES
 install(TARGETS qpid-dispatch
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
-set (QPID_DISPATCH_LIB "libqpid-dispatch.so.${SO_VERSION_MAJOR}")
+# Set in parent scope for calling cmake file.
+set (QPID_DISPATCH_LIB "libqpid-dispatch.so.${SO_VERSION_MAJOR}" PARENT_SCOPE)
 
-
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)

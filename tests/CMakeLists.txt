@@ -25,6 +25,11 @@ if (VALGRIND_FOUND)
   option(USE_VALGRIND "Use valgrind when running tests" OFF)
 endif(VALGRIND_FOUND)
 
+include_directories(
+  ${CMAKE_SOURCE_DIR}/src
+  ${CMAKE_BINARY_DIR}/src
+  )
+
 ##
 ## Build test applications
 ##

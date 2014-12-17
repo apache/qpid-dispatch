@@ -32,7 +32,6 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/log.h>
-#include "conditionals.h"
 
 /** Instance of a node type in a container */
 struct qd_node_t {
