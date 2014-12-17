@@ -111,7 +111,7 @@ class NodeTrackerTest(unittest.TestCase):
         self.link_bit   = link_bit
         self.calls     += 1
 
-    def del_neighbor_router(self, router_bit):
+    def del_neighbor_router(self, router_id, router_bit):
         self.address    = None
         self.router_bit = router_bit
         self.link_bit   = None
@@ -123,7 +123,7 @@ class NodeTrackerTest(unittest.TestCase):
         self.link_bit   = None
         self.calls     += 1
 
-    def del_remote_router(self, router_bit):
+    def del_remote_router(self, router_id, router_bit):
         self.address    = None
         self.router_bit = router_bit
         self.link_bit   = None
@@ -140,28 +140,28 @@ class NodeTrackerTest(unittest.TestCase):
         tracker = NodeTracker(self, 5)
 
         self.reset()
-        tracker.new_neighbor('A', 1)
+        tracker.new_neighbor('A', 1, 0)
         self.assertEqual(self.address, 'amqp:/_topo/area/A')
         self.assertEqual(self.link_bit, 1)
         self.assertEqual(self.router_bit, 1)
         self.assertEqual(self.calls, 1)
 
         self.reset()
-        tracker.new_neighbor('B', 5)
+        tracker.new_neighbor('B', 5, 0)
         self.assertEqual(self.address, 'amqp:/_topo/area/B')
         self.assertEqual(self.link_bit, 5)
         self.assertEqual(self.router_bit, 2)
         self.assertEqual(self.calls, 1)
 
         self.reset()
-        tracker.new_neighbor('C', 6)
+        tracker.new_neighbor('C', 6, 0)
         self.assertEqual(self.address, 'amqp:/_topo/area/C')
         self.assertEqual(self.link_bit, 6)
         self.assertEqual(self.router_bit, 3)
         self.assertEqual(self.calls, 1)
 
         self.reset()
-        tracker.new_neighbor('D', 7)
+        tracker.new_neighbor('D', 7, 0)
         self.assertEqual(self.address, 'amqp:/_topo/area/D')
         self.assertEqual(self.link_bit, 7)
         self.assertEqual(self.router_bit, 4)
@@ -169,7 +169,7 @@ class NodeTrackerTest(unittest.TestCase):
 
         self.reset()
         try:
-            tracker.new_neighbor('E', 9)
+            tracker.new_neighbor('E', 9, 0)
             self.fail("We shouldn't be here")
         except:
             pass
@@ -180,7 +180,7 @@ class NodeTrackerTest(unittest.TestCase):
         self.assertEqual(self.calls, 1)
 
         self.reset()
-        tracker.new_neighbor('E', 9)
+        tracker.new_neighbor('E', 9, 0)
         self.assertEqual(self.address, 'amqp:/_topo/area/E')
         self.assertEqual(self.link_bit, 9)
         self.assertEqual(self.router_bit, 3)
@@ -191,14 +191,14 @@ class NodeTrackerTest(unittest.TestCase):
         tracker = NodeTracker(self, 5)
 
         self.reset()
-        tracker.new_node('A')
+        tracker.new_node('A', 0)
         self.assertEqual(self.address, 'amqp:/_topo/area/A')
         self.assertFalse(self.link_bit)
         self.assertEqual(self.router_bit, 1)
         self.assertEqual(self.calls, 1)
 
         self.reset()
-        tracker.new_neighbor('A', 3)
+        tracker.new_neighbor('A', 3, 0)
         self.assertEqual(self.address, 'amqp:/_topo/area/A')
         self.assertEqual(self.link_bit, 3)
         self.assertEqual(self.router_bit, 1)
@@ -221,14 +221,14 @@ class NodeTrackerTest(unittest.TestCase):
         tracker = NodeTracker(self, 5)
 
         self.reset()
-        tracker.new_neighbor('A', 3)
+        tracker.new_neighbor('A', 3, 0)
         self.assertEqual(self.address, 'amqp:/_topo/area/A')
         self.assertEqual(self.link_bit, 3)
         self.assertEqual(self.router_bit, 1)
         self.assertEqual(self.calls, 1)
 
         self.reset()
-        tracker.new_node('A')
+        tracker.new_node('A', 0)
         self.assertFalse(self.address)
         self.assertFalse(self.link_bit)
         self.assertFalse(self.router_bit)
@@ -256,17 +256,21 @@ class NeighborTest(unittest.TestCase):
     def local_link_state_changed(self, link_state):
         self.local_link_state = link_state
 
-    def new_neighbor(self, rid, lbit):
+    def new_neighbor(self, rid, lbit, instance):
         self.neighbors[rid] = None
 
     def lost_neighbor(self, rid):
         self.neighbors.pop(rid)
+
+    def touch_node(self, rid, instance):
+        pass
 
     def setUp(self):
         self.sent = []
         self.local_link_state = None
         self.id = "R1"
         self.area = "area"
+        self.instance = 0
         # Fake configuration
         self.config = EntityBase({
             'helloInterval'      :  1.0,

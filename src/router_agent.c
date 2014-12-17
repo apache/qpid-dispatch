@@ -86,13 +86,13 @@ qd_error_t qd_entity_refresh_router_node(qd_entity_t* entity, void *impl) {
     }
     CHECK(qd_entity_set_string(entity, "addr", address_text(rnode->owning_addr)));
     long next_hop = rnode->next_hop ? rnode->next_hop->mask_bit : 0;
-    CHECK(qd_entity_set_longp(entity, "nextHop", rnode->next_hop ? &next_hop : 0));
+    CHECK(qd_entity_set_stringf(entity, "nextHop", "%ld", rnode->next_hop ? next_hop : 0));
     long router_link = rnode->peer_link ? rnode->peer_link->mask_bit : 0;
-    CHECK(qd_entity_set_longp(entity, "routerLink", rnode->peer_link ? &router_link : 0));
+    CHECK(qd_entity_set_stringf(entity, "routerLink", "%ld", rnode->peer_link ? router_link : 0));
     CHECK(qd_entity_set_list(entity, "validOrigins"));
     for (uint32_t bit = 1; bit < qd_bitmask_width(); bit++) {
         if (qd_bitmask_value(rnode->valid_origins, bit)) {
-            CHECK(qd_entity_set_long(entity, "validOrigins", bit));
+            CHECK(qd_entity_set_stringf(entity, "validOrigins", "%d", bit));
         }
     }
     return QD_ERROR_NONE;

@@ -63,6 +63,8 @@ class LinkStateEngine(object):
             ls.last_seen = now
             if ls.ls_seq < msg.ls_seq:
                 self.needed_lsrs[(msg.area, msg.id)] = None
+            if self.container.touch_node(msg.id, msg.instance):
+                self.needed_lsrs[(msg.area, msg.id)] = None
         else:
             self.needed_lsrs[(msg.area, msg.id)] = None
 
@@ -82,12 +84,12 @@ class LinkStateEngine(object):
             self.collection[msg.id] = ls
             self.collection_changed = True
             ls.last_seen = now
-            self.container.new_node(msg.id)
+            self.container.new_node(msg.id, msg.instance)
             self.container.log(LOG_INFO, "Learned link-state from new router: %s" % msg.id)
         # Schedule LSRs for any routers referenced in this LS that we don't know about
         for _id in msg.ls.peers:
             if _id not in self.collection:
-                self.container.new_node(_id)
+                self.container.new_node(_id, None)
                 self.needed_lsrs[(msg.area, _id)] = None
 
 
@@ -95,9 +97,15 @@ class LinkStateEngine(object):
         if msg.id == self.id:
             return
         if self.id not in self.collection:
+            self.needed_lsrs[(msg.area, msg.id)] = None
             return
         my_ls = self.collection[self.id]
-        self.container.send('amqp:/_topo/%s/%s/qdrouter' % (msg.area, msg.id), MessageLSU(None, self.id, self.area, my_ls.ls_seq, my_ls))
+        self.container.send('amqp:/_topo/%s/%s/qdrouter' % (msg.area, msg.id), 
+                            MessageLSU(None, self.id, self.area, my_ls.ls_seq, my_ls, self.container.instance))
+
+
+    def new_neighbor(self, _id):
+        self.needed_lsrs[(self.area, _id)] = None
 
 
     def new_local_link_state(self, link_state):
@@ -112,6 +120,14 @@ class LinkStateEngine(object):
 
     def get_collection(self):
         return self.collection
+
+
+    def purge_remote(self, _id):
+        try:
+            ls = self.collection[_id]
+            ls.del_all_peers()
+        except:
+            pass
 
 
     def _expire_ls(self, now):
@@ -132,4 +148,5 @@ class LinkStateEngine(object):
         ls_seq = 0
         if self.id in self.collection:
             ls_seq = self.collection[self.id].ls_seq
-        self.container.send('amqp:/_topo/%s/all/qdrouter' % self.area, MessageRA(None, self.id, self.area, ls_seq, self.mobile_seq))
+        self.container.send('amqp:/_topo/%s/all/qdrouter' % self.area,
+                            MessageRA(None, self.id, self.area, ls_seq, self.mobile_seq, self.container.instance))

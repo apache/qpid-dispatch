@@ -38,7 +38,7 @@ class MobileAddressEngine(object):
         self.added_addrs = []
         self.deleted_addrs = []
         self.remote_lists = {}      # map router_id => (sequence, list of addrs)
-        self.remote_last_seen = {}  # map router_id => time of last seen advertizement/update
+        self.remote_last_seen = {}  # map router_id => time of last seen advertisement/update
         self.needed_mars = {}
 
 
@@ -160,12 +160,22 @@ class MobileAddressEngine(object):
                                 MessageMAU(None, self.id, self.area, self.mobile_seq, None, None, self.local_addrs))
 
 
+    def purge_remote(self, _id):
+        try:
+            (add_list, del_list) = self.node_tracker.overwrite_addresses(_id, [])
+            self._activate_remotes(_id, add_list, del_list)
+            self.remote_lists.pop(_id)
+            self.remote_last_seen.pop(_id)
+            self.container.log(LOG_DEBUG, "Purged remote records for node: %s" % _id)
+        except:
+            pass
+
+
     def _expire_remotes(self, now):
         for _id, t in self.remote_last_seen.items():
             if now - t > self.mobile_addr_max_age:
                 self.remote_lists.pop(_id)
                 self.remote_last_seen.pop(_id)
-                self.remote_changed = True
                 self.container.log(LOG_DEBUG, "Expired remote mobile addresses on node: %s" % _id)
 
 

@@ -82,6 +82,7 @@ class LinkState(object):
 
     def del_all_peers(self):
         self.peers = []
+        self.ls_seq = 0
 
     def has_peers(self):
         return len(self.peers) > 0
@@ -97,26 +98,29 @@ class MessageHELLO(object):
     This message is used by directly connected routers to determine with whom they have
     bidirectional connectivity.
     """
-    def __init__(self, body, _id=None, _area=None, _seen_peers=None):
+    def __init__(self, body, _id=None, _area=None, _seen_peers=None, _instance=long(0)):
         if body:
             self.id = getMandatory(body, 'id', str)
             self.area = getMandatory(body, 'area', str)
             self.seen_peers = getMandatory(body, 'seen', list)
+            self.instance = getOptional(body, 'instance', 0, long)
         else:
             self.id   = _id
             self.area = _area
             self.seen_peers = _seen_peers
+            self.instance = _instance
 
     def __repr__(self):
-        return "HELLO(id=%s area=%s seen=%r)" % (self.id, self.area, self.seen_peers)
+        return "HELLO(id=%s area=%s inst=%d seen=%r)" % (self.id, self.area, self.instance, self.seen_peers)
 
     def get_opcode(self):
         return 'HELLO'
 
     def to_dict(self):
-        return {'id'   : self.id,
-                'area' : self.area,
-                'seen' : self.seen_peers}
+        return {'id'       : self.id,
+                'area'     : self.area,
+                'instance' : self.instance,
+                'seen'     : self.seen_peers}
 
     def is_seen(self, _id):
         return self.seen_peers.count(_id) > 0
@@ -129,28 +133,31 @@ class MessageRA(object):
     This message is sent periodically to indicate the originating router's sequence numbers
     for link-state and mobile-address-state.
     """
-    def __init__(self, body, _id=None, _area=None, _ls_seq=None, _mobile_seq=None):
+    def __init__(self, body, _id=None, _area=None, _ls_seq=None, _mobile_seq=None, _instance=long(0)):
         if body:
             self.id = getMandatory(body, 'id', str)
             self.area = getMandatory(body, 'area', str)
             self.ls_seq = getMandatory(body, 'ls_seq', long)
             self.mobile_seq = getMandatory(body, 'mobile_seq', long)
+            self.instance = getOptional(body, 'instance', 0, long)
         else:
             self.id = _id
             self.area = _area
             self.ls_seq = long(_ls_seq)
             self.mobile_seq = long(_mobile_seq)
+            self.instance = _instance
 
     def get_opcode(self):
         return 'RA'
 
     def __repr__(self):
-        return "RA(id=%s area=%s ls_seq=%d mobile_seq=%d)" % \
-                (self.id, self.area, self.ls_seq, self.mobile_seq)
+        return "RA(id=%s area=%s inst=%d ls_seq=%d mobile_seq=%d)" % \
+                (self.id, self.area, self.instance, self.ls_seq, self.mobile_seq)
 
     def to_dict(self):
         return {'id'         : self.id,
                 'area'       : self.area,
+                'instance'   : self.instance,
                 'ls_seq'     : self.ls_seq,
                 'mobile_seq' : self.mobile_seq}
 
@@ -158,30 +165,33 @@ class MessageRA(object):
 class MessageLSU(object):
     """
     """
-    def __init__(self, body, _id=None, _area=None, _ls_seq=None, _ls=None):
+    def __init__(self, body, _id=None, _area=None, _ls_seq=None, _ls=None, _instance=long(0)):
         if body:
             self.id = getMandatory(body, 'id', str)
             self.area = getMandatory(body, 'area', str)
             self.ls_seq = getMandatory(body, 'ls_seq', long)
             self.ls = LinkState(getMandatory(body, 'ls', dict))
+            self.instance = getOptional(body, 'instance', 0, long)
         else:
             self.id = _id
             self.area = _area
             self.ls_seq = long(_ls_seq)
             self.ls = _ls
+            self.instance = _instance
 
     def get_opcode(self):
         return 'LSU'
 
     def __repr__(self):
-        return "LSU(id=%s area=%s ls_seq=%d ls=%r)" % \
-                (self.id, self.area, self.ls_seq, self.ls)
+        return "LSU(id=%s area=%s inst=%d ls_seq=%d ls=%r)" % \
+                (self.id, self.area, self.instance, self.ls_seq, self.ls)
 
     def to_dict(self):
-        return {'id'     : self.id,
-                'area'   : self.area,
-                'ls_seq' : self.ls_seq,
-                'ls'     : self.ls.to_dict()}
+        return {'id'       : self.id,
+                'area'     : self.area,
+                'instance' : self.instance,
+                'ls_seq'   : self.ls_seq,
+                'ls'       : self.ls.to_dict()}
 
 
 class MessageLSR(object):

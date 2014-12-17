@@ -220,14 +220,13 @@ class BusManager(Node):
         for node in objects:
             row = []
             row.append(node.addr)
-            if node.nextHop != None:
+            if node.nextHop != None and node.nextHop in nodes:
                 row.append(nodes[node.nextHop].addr)
+                row.append('-')
             else:
                 row.append('-')
-            if node.routerLink != None:
                 row.append(node.routerLink)
-            else:
-                row.append('-')
+
             vo = None
             for i in node.validOrigins:
                 if not vo:

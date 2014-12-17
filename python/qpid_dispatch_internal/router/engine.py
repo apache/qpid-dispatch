@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from time import time
-
 from data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, MessageLSR
 from neighbor import NeighborEngine
 from link import LinkStateEngine
@@ -30,6 +28,7 @@ from message import Message
 
 import sys
 import traceback
+import time
 
 ##
 ## Import the Dispatch adapters from the environment.  If they are not found
@@ -56,8 +55,9 @@ class RouterEngine:
         self.max_routers    = max_routers
         self.id             = router_id
         self.area           = area
-        self.log(LOG_INFO, "Router Engine Instantiated: area=%s id=%s max_routers=%d" %
-                 (self.area, self.id, self.max_routers))
+        self.instance       = long(time.time())
+        self.log(LOG_INFO, "Router Engine Instantiated: area=%s id=%s instance=%d max_routers=%d" %
+                 (self.area, self.id, self.instance, self.max_routers))
         self._config         = None # Not yet loaded
         ##
         ## Launch the sub-module engines
@@ -125,7 +125,7 @@ class RouterEngine:
         """
         """
         try:
-            now = time()
+            now = time.time()
             self.neighbor_engine.tick(now)
             self.link_state_engine.tick(now)
             self.path_engine.tick(now)
@@ -142,7 +142,7 @@ class RouterEngine:
         """
         """
         try:
-            now = time()
+            now = time.time()
             if   opcode == 'HELLO':
                 msg = MessageHELLO(body)
                 self.log(LOG_TRACE, "RCVD: %r" % msg)
@@ -265,36 +265,44 @@ class RouterEngine:
     def get_next_hops(self):
         return self.routing_table_engine.get_next_hops()
 
-    def new_neighbor(self, rid, link_id):
-        self.log(LOG_DEBUG, "Event: new_neighbor: id=%s link_id=%d" % (rid, link_id))
-        self.node_tracker.new_neighbor(rid, link_id)
+    def new_neighbor(self, rid, link_id, instance):
+        self.log(LOG_DEBUG, "Event: new_neighbor: id=%s link_id=%d inst=%r" % (rid, link_id, instance))
+        self.node_tracker.new_neighbor(rid, link_id, instance)
+        self.link_state_engine.new_neighbor(rid)
 
     def lost_neighbor(self, rid):
         self.log(LOG_DEBUG, "Event: lost_neighbor: id=%s" % rid)
         self.node_tracker.lost_neighbor(rid)
 
-    def new_node(self, rid):
-        self.log(LOG_DEBUG, "Event: new_node: id=%s" % rid)
-        self.node_tracker.new_node(rid)
+    def new_node(self, rid, instance):
+        self.log(LOG_DEBUG, "Event: new_node: id=%s inst=%r" % (rid, instance))
+        self.node_tracker.new_node(rid, instance)
 
     def lost_node(self, rid):
         self.log(LOG_DEBUG, "Event: lost_node: id=%s" % rid)
         self.node_tracker.lost_node(rid)
+
+    def touch_node(self, rid, instance):
+        return self.node_tracker.touch_node(rid, instance)
 
     def add_neighbor_router(self, address, router_bit, link_bit):
         self.log(LOG_DEBUG, "Event: add_neighbor_router: address=%s, router_bit=%d, link_bit=%d" % \
                      (address, router_bit, link_bit))
         self.router_adapter.add_neighbor_router(address, router_bit, link_bit)
 
-    def del_neighbor_router(self, router_bit):
+    def del_neighbor_router(self, router_id, router_bit):
         self.log(LOG_DEBUG, "Event: del_neighbor_router: router_bit=%d" % router_bit)
+        self.link_state_engine.purge_remote(router_id)
+        self.mobile_address_engine.purge_remote(router_id)
         self.router_adapter.del_neighbor_router(router_bit)
 
     def add_remote_router(self, address, router_bit):
         self.log(LOG_DEBUG, "Event: add_remote_router: address=%s, router_bit=%d" % (address, router_bit))
         self.router_adapter.add_remote_router(address, router_bit)
 
-    def del_remote_router(self, router_bit):
+    def del_remote_router(self, router_id, router_bit):
         self.log(LOG_DEBUG, "Event: del_remote_router: router_bit=%d" % router_bit)
+        self.link_state_engine.purge_remote(router_id)
+        self.mobile_address_engine.purge_remote(router_id)
         self.router_adapter.del_remote_router(router_bit)
 

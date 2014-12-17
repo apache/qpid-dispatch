@@ -41,7 +41,7 @@ class NodeTracker(object):
         pass
 
 
-    def new_neighbor(self, node_id, link_maskbit):
+    def new_neighbor(self, node_id, link_maskbit, instance):
         """
         A node, designated by node_id, has been discovered as a neighbor over a link with
         a maskbit of link_maskbit.
@@ -50,25 +50,29 @@ class NodeTracker(object):
         if node_id in self.nodes:
             node = self.nodes[node_id]
             if node.neighbor:
-                return
-            self.container.del_remote_router(node.maskbit)
-            node.neighbor = True
-            node.link_id  = link_maskbit
+                if node.update_instance(instance):
+                    self.container.del_neighbor_router(node.id, node.maskbit)
+                else:
+                    return
+            else:
+                self.container.del_remote_router(node.id, node.maskbit)
+                node.neighbor = True
+                node.link_id  = link_maskbit
         else:
-            node = RemoteNode(node_id, self._allocate_maskbit(), True, link_maskbit)
+            node = RemoteNode(node_id, self._allocate_maskbit(), True, link_maskbit, instance)
             self.nodes[node_id] = node
         self.container.add_neighbor_router(self._address(node_id), node.maskbit, link_maskbit)
 
 
     def lost_neighbor(self, node_id):
         """
-        We have lost contact with a neighboring node node_id.
+        We have lost contact with a neighboring node.
         """
         node = self.nodes[node_id]
         node.neighbor = False
         self.nodes_by_link_id.pop(node.link_id)
         node.link_id = None
-        self.container.del_neighbor_router(node.maskbit)
+        self.container.del_neighbor_router(node.id, node.maskbit)
         if node.remote:
             self.container.add_remote_router(self._address(node.id), node.maskbit)
         else:
@@ -76,18 +80,21 @@ class NodeTracker(object):
             self.nodes.pop(node_id)
 
 
-    def new_node(self, node_id):
+    def new_node(self, node_id, instance):
         """
         A node, designated by node_id, has been discovered through the an advertisement from a
         remote peer.
         """
         if node_id not in self.nodes:
-            node = RemoteNode(node_id, self._allocate_maskbit(), False, None)
+            node = RemoteNode(node_id, self._allocate_maskbit(), False, None, instance)
             self.nodes[node_id] = node
             self.container.add_remote_router(self._address(node.id), node.maskbit)
         else:
             node = self.nodes[node_id]
             node.remote = True
+            if node.update_instance(instance):
+                self.container.del_remote_router(node.id, node.maskbit)
+                self.container.add_remote_router(self._address(node.id), node.maskbit)
 
 
     def lost_node(self, node_id):
@@ -98,9 +105,29 @@ class NodeTracker(object):
         if node.remote:
             node.remote = False
             if not node.neighbor:
-                self.container.del_remote_router(node.maskbit)
+                self.container.del_remote_router(node.id, node.maskbit)
                 self._free_maskbit(node.maskbit)
                 self.nodes.pop(node_id)
+
+
+    def touch_node(self, node_id, instance):
+        """
+        We've received an advertisement or hello from a node.  If the instance has changed,
+        we need to treat the node as though it was lost and regained.
+        """
+        try:
+            node = self.nodes[node_id]
+            if node.update_instance(instance):
+                if node.neighbor:
+                    self.container.del_neighbor_router(node.id, node.maskbit)
+                    self.container.add_neighbor_router(self._address(node_id), node.maskbit, node.link_id)
+                elif node.remote:
+                    self.container.del_remote_router(node.id, node.maskbit)
+                    self.container.add_remote_router(self._address(node.id), node.maskbit)
+                return True
+        except:
+            pass
+        return False
 
 
     def maskbit_for_node(self, node_id):
@@ -134,6 +161,7 @@ class NodeTracker(object):
         for a in node.addrs.keys():
             if a not in addrs:
                 deleted.append(a)
+        node.addrs = {}
         for a in addrs:
             node.addrs[a] = 1
         return (added, deleted)
@@ -170,10 +198,23 @@ class NodeTracker(object):
 
 class RemoteNode(object):
 
-    def __init__(self, node_id, maskbit, neighbor, link_id):
+    def __init__(self, node_id, maskbit, neighbor, link_id, instance):
         self.id       = node_id
         self.maskbit  = maskbit
         self.neighbor = neighbor
         self.remote   = not neighbor
         self.link_id  = link_id
+        self.instance = instance
         self.addrs    = {}  # Address => Count at Node (1 only for the present)
+
+
+    def update_instance(self, instance):
+        if instance == None:
+            return False
+        if self.instance == None:
+            self.instance = instance
+            return False
+        if self.instance == instance:
+            return False
+        self.instance = instance
+        return True

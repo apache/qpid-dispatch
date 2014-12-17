@@ -43,7 +43,8 @@ class NeighborEngine(object):
 
         if now - self.last_hello_time >= self.hello_interval:
             self.last_hello_time = now
-            self.container.send('amqp:/_local/qdhello', MessageHELLO(None, self.id, self.area, self.hellos.keys()))
+            self.container.send('amqp:/_local/qdhello', 
+                                MessageHELLO(None, self.id, self.area, self.hellos.keys(), self.container.instance))
 
         if self.link_state_changed:
             self.link_state_changed = False
@@ -58,7 +59,7 @@ class NeighborEngine(object):
         if msg.is_seen(self.id):
             if self.link_state.add_peer(msg.id):
                 self.link_state_changed = True
-                self.container.new_neighbor(msg.id, link_id)
+                self.container.new_neighbor(msg.id, link_id, msg.instance)
                 self.container.log(LOG_INFO, "New neighbor established: %s on link: %d" % (msg.id, link_id))
 
     def linkLost(self, link_id):
