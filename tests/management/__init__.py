@@ -19,7 +19,6 @@
 
 """Management unit test package"""
 
-from client import *
 from schema import *
 from qdrouter import *
 from entity import *
