@@ -414,7 +414,7 @@ class EntityType(AttrsAndOps):
         try:
             # Add missing values
             for attr in self.attributes.itervalues():
-                if attr.name not in attributes or attributes[attr.name] is None:
+                if attributes.get(attr.name) is None:
                     value = attr.missing_value(**kwargs)
                     if value is not None: attributes[attr.name] = value
                     if value is None and attr.name in attributes:

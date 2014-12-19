@@ -41,9 +41,7 @@ ENUM_DEFINE(qd_router_mode, qd_router_mode_names);
 qd_error_t qd_entity_refresh_router(qd_entity_t* entity, void *impl) {
     qd_dispatch_t *qd = (qd_dispatch_t*) impl;
     qd_router_t *router = qd->router;
-    if (qd_entity_set_stringf(entity, "name", "%s/%s", QD_ROUTER_TYPE, router->router_id) == 0 &&
-        qd_entity_set_stringf(entity, "identity", "%s/%s", QD_ROUTER_TYPE, router->router_id) == 0 &&
-        
+    if ((qd_entity_has(entity, "identity") || qd_entity_set_string(entity, "identity", router->router_id) == 0) &&
         qd_entity_set_string(entity, "area", router->router_area) == 0 &&
         qd_entity_set_string(entity, "mode", qd_router_mode_name(router->router_mode)) == 0 &&
         qd_entity_set_long(entity, "addrCount", DEQ_SIZE(router->addrs)) == 0 &&
@@ -61,8 +59,7 @@ static const char *address_text(qd_address_t *addr)
 
 qd_error_t qd_entity_refresh_router_address(qd_entity_t* entity, void *impl) {
     qd_address_t *addr = (qd_address_t*) impl;
-    if ((qd_entity_has(entity, "identity") ||
-         qd_entity_set_string(entity, "identity", address_text(addr)) == 0) &&
+    if ((qd_entity_has(entity, "identity") || qd_entity_set_string(entity, "identity", address_text(addr)) == 0) &&
         qd_entity_set_bool(entity, "inProcess", addr->handler != 0) == 0 &&
         qd_entity_set_long(entity, "subscriberCount", DEQ_SIZE(addr->rlinks)) == 0 &&
         qd_entity_set_long(entity, "remoteCount", DEQ_SIZE(addr->rnodes)) == 0 &&

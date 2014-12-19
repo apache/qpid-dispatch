@@ -63,13 +63,12 @@ qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char
     if (code) {
         char *begin = ts.error_message;
         char *end = begin + ERROR_MAX;
-        /* FIXME aconway 2014-12-10:  */
         (void)aprintf;
-        /* const char* name = qd_error_name(code); */
-        /* if (name) */
-        /*     aprintf(&begin, end, "%s: ", name); */
-        /* else */
-        /*     aprintf(&begin, end, "%d: ", code); */
+        const char* name = qd_error_name(code);
+        if (name)
+            aprintf(&begin, end, "%s: ", name);
+        else
+            aprintf(&begin, end, "%d: ", code);
         va_list arglist;
         va_start(arglist, fmt);
         vaprintf(&begin, end, fmt, arglist);

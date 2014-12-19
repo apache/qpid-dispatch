@@ -93,7 +93,6 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
             entity, "container",
             conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0) == 0 &&
         connection_entity_update_host(entity, conn) == 0 &&
-        /* FIXME aconway 2014-10-14: change attr name to sasl-mechanisms for consistency? */
         qd_entity_set_string(entity, "sasl", config->sasl_mechanisms) == 0 &&
         qd_entity_set_string(entity, "role", config->role) == 0 &&
         qd_entity_set_string(entity, "dir", conn->connector ? "out" : "in") == 0)

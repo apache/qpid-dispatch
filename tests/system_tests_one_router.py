@@ -521,7 +521,7 @@ class RouterTest(TestCase):
         M.recv()
         M.get(response)
 
-        assert response.properties['statusCode'] == 200, response.properties['statusDescription']
+        assert response.properties['statusCode'] == 200, response.properties['statusCode']
         self.assertEqual(response.correlation_id, "C1")
         self.assertEqual(response.body, [])
 

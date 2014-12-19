@@ -124,7 +124,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         # Note qdrouter schema defines port as string not int, since it can be a service name.
         attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'saslMechanisms': 'ANONYMOUS'}
         entity = self.assert_create_ok(LISTENER, 'foo', attributes)
-        self.assertEqual(entity['identity'], attributes['name'])
+        self.assertEqual(entity['name'], 'foo')
         self.assertEqual(entity['addr'], '0.0.0.0')
 
         # Connect via the new listener
@@ -220,12 +220,10 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
     def test_entity(self):
         entity = self.node.read(type=LISTENER, name='l0')
         self.assertEqual('l0', entity.name)
-        self.assertEqual('l0', entity.identity)
         self.assertEqual(str(self.router.ports[0]), entity.port)
 
-        entity = self.node.read(type=LISTENER, identity='l1')
+        entity = self.node.read(type=LISTENER, identity='listener/1')
         self.assertEqual('l1', entity.name)
-        self.assertEqual('l1', entity.identity)
         self.assertEqual(str(self.router.ports[1]), entity.port)
 
         # Bad type

@@ -134,7 +134,6 @@ qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
     return qd_error_code();
 }
 
-/* FIXME aconway 2014-12-05: cleanup */
 void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent) {
     assert(agent);
     assert(!qd->agent);

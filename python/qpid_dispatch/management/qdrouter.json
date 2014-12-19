@@ -81,16 +81,14 @@
             "attributes": {
                 "name": {
                     "type": "String",
-                    "required": true,
+                    "required": false,
                     "unique": true,
-                    "default": "$identity",
                     "description": "Unique name, can be changed."
                 },
                 "identity": {
                     "type": "String",
-                    "required": true,
+                    "required": false,
                     "unique": true,
-                    "default": "$name",
                     "description": "Unique identity, will not change."
                 },
                 "type": {

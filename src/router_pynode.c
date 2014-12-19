@@ -467,7 +467,6 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
     return Py_None;
 }
 
-/* FIXME aconway 2014-12-05:  */
 static PyObject* qd_get_agent(PyObject *self, PyObject *args) {
     RouterAdapter *adapter = (RouterAdapter*) self;
     PyObject *agent = adapter->router->qd->agent;

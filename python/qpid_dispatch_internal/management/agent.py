@@ -85,30 +85,46 @@ class AtomicCount(object):
 
     def next(self):
         with self.lock:
+            n = self.count
             self.count += 1
-            return self.count
+            return n
 
 class AgentEntity(SchemaEntity):
     """
     Base class for agent entities with operations as well as attributes.
     """
 
-    def __init__(self, agent, entity_type, attributes=None, validate=True, base_id=None):
+    def __init__(self, agent, entity_type, attributes, validate=True):
         """
         @para agent: Containing L{Agent}
         @param entity_type: L{EntityType}
         @param attributes: Attribute name:value map
         @param validate: If true, validate the entity.
-        @param base_id: Use as base identifier for name and identifier.
         """
-        if base_id:
-            full_id = "%s/%s" % (entity_type.short_name, base_id)
-            attributes['name'] = attributes['identity'] = full_id
         super(AgentEntity, self).__init__(entity_type, attributes, validate=validate)
         # Direct __dict__ access to avoid validation as schema attributes
         self.__dict__['_agent'] = agent
         self.__dict__['_qd'] = agent.qd
         self.__dict__['_dispatch'] = agent.dispatch
+
+    def validate(self):
+        # Set default identity and name if not already set.
+        prefix = self.entity_type.short_name + "/"
+        if self.attributes.get('identity') is None:
+            self.attributes['identity'] = prefix + str(self._identifier(self.attributes))
+        elif not self.attributes['identity'].startswith(prefix):
+            self.attributes['identity'] = prefix + self.attributes['identity']
+        self.attributes.setdefault('name', self.attributes['identity'])
+        super(AgentEntity, self).validate()
+
+    def _identifier(self, attributes):
+        """
+        Generate identifier from attributes. identity=type/identifier.
+        Default is per-type counter, derived classes can override.
+        """
+        try: counter = type(self)._identifier_count
+        except AttributeError: counter = type(self)._identifier_count = AtomicCount()
+        return str(counter.next())
 
     def _refresh(self):
         """Refresh self.attributes from C implementation. No-op if no C impl pointer"""
@@ -163,8 +179,14 @@ class ContainerEntity(AgentEntity):
 
 class RouterEntity(AgentEntity):
     def __init__(self, agent, entity_type, attributes=None):
-        super(RouterEntity, self).__init__(agent, entity_type, attributes, validate=False, base_id=attributes.get('routerId'))
+        super(RouterEntity, self).__init__(agent, entity_type, attributes, validate=False)
+        # Router is a mix of configuration and operational entity.
+        # The "area" attribute is operational not configured.
+        # FIXME aconway 2014-12-19: clean this up.
         self._set_pointer(self._dispatch)
+
+    def _identifier(self, attributes):
+        return attributes.get('routerId')
 
     def create(self):
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
@@ -176,7 +198,9 @@ class LogEntity(AgentEntity):
         if attributes.get("module") == "DEFAULT":
             defaults = dict(level="info", timestamp=True, source=False, output="stderr")
             attributes = dict(defaults, **attributes)
-        super(LogEntity, self).__init__(agent, entity_type, attributes, validate=True, base_id=attributes.get('module'))
+        super(LogEntity, self).__init__(agent, entity_type, attributes, validate=True)
+
+    def _identifier(self, attributes): return attributes.get('module')
 
     def create(self):
         self._qd.qd_log_entity(self)
@@ -212,13 +236,6 @@ class WaypointEntity(AgentEntity):
 
 class DummyEntity(AgentEntity):
 
-    id_count = AtomicCount()
-
-    def create(self):
-        self['identity'] = self.next_id()
-
-    def next_id(self): return self.type+str(self.id_count.next())
-
     def callme(self, request):
         return (OK, dict(**request.properties))
 
@@ -228,39 +245,21 @@ class CEntity(AgentEntity):
     Entity that is registered from C code rather than created via management.
     """
     def __init__(self, agent, entity_type, pointer):
-        def prefix(prefix, name):
-            if not str(name).startswith(prefix):
-                name = "%s/%s" % (prefix, name)
-            return name
-
-        super(CEntity, self).__init__(agent, entity_type, validate=False)
+        super(CEntity, self).__init__(agent, entity_type, {}, validate=False)
         self._set_pointer(pointer)
         self._refresh()
-        identity = self.attributes.get('identity')
-        if identity is None: identity = str(self.id_count.next())
-        self.attributes['identity'] = prefix(entity_type.short_name, identity)
         self.validate()
 
 
-class RouterLinkEntity(CEntity):
-    id_count = AtomicCount()
+class RouterLinkEntity(CEntity): pass
 
+class RouterNodeEntity(CEntity): pass
 
-class RouterNodeEntity(CEntity):
-    id_count = AtomicCount()
+class RouterAddressEntity(CEntity): pass
 
+class ConnectionEntity(CEntity): pass
 
-class RouterAddressEntity(CEntity):
-    id_count = AtomicCount()
-
-
-class ConnectionEntity(CEntity):
-    id_count = AtomicCount()
-
-
-class AllocatorEntity(CEntity):
-    id_count = AtomicCount()
-
+class AllocatorEntity(CEntity): pass
 
 class EntityCache(object):
     """
@@ -289,6 +288,7 @@ class EntityCache(object):
     def add(self, entity, pointer=None):
         """Add an entity. Provide pointer if it is associated with a C entity"""
         self.log(LOG_DEBUG, "Add entity: %s" % entity)
+        entity.validate()       # Fill in defaults etc.
         # Validate in the context of the existing entities for uniqueness
         self.schema.validate_full(chain(iter([entity]), iter(self.entities)))
         self.entities.append(entity)
@@ -386,7 +386,10 @@ class Agent(object):
 
     def create_entity(self, attributes):
         """Create an instance of the implementation class for an entity"""
-        if 'type' not in attributes:
+
+        if attributes.get('identity') is not None:
+            raise BadRequestStatus("'identity' attribute cannot be specified %s" % attributes)
+        if attributes.get('type') is None:
             raise BadRequestStatus("No 'type' attribute in %s" % attributes)
         entity_type = self.schema.entity_type(attributes['type'])
         return self.entity_class(entity_type)(self, entity_type, attributes)

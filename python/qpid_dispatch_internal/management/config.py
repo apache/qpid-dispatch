@@ -39,7 +39,7 @@ class Config(object):
             try:
                 self.load(filename)
             except Exception, e:
-                raise Exception("Cannot load configuration file %s: %s" % (filename, e))
+                raise Exception, "Cannot load configuration file %s: %s" % (filename, e), sys.exc_info()[2]
         else:
             self.entities = []
 
@@ -91,29 +91,6 @@ class Config(object):
         return [_expand_section(s, annotations) for s in content
                 if self.schema.is_configuration(self.schema.entity_type(s[0], False))]
 
-    def _default_ids(self, content):
-        """
-        Set default name and identity where missing.
-        - If entity has no name/identity, set both to "<entity-type>:<i>"
-        - If entity has one of name/identity set the other to be the same.
-        - If entity has both, do nothing
-        """
-        counts = dict((et.short_name, 0) for et in self.config_types)
-        for section in content:
-            section_name, attrs = section
-            count = counts[section_name]
-            counts[section_name] += 1
-            if 'name' in attrs and 'identity' in attrs:
-                continue
-            elif 'name' in attrs:
-                attrs['identity'] = attrs['name']
-            elif 'identity' in attrs:
-                attrs['name'] = attrs['identity']
-            else:
-                identity = "%s/%d"%(section_name, count)
-                attrs['name'] = attrs['identity'] = identity
-        return content
-
     def load(self, source):
         """
         Load a configuration file.
@@ -133,7 +110,6 @@ class Config(object):
                 if et.singleton and not [s for s in sections if s[0] == et.short_name]:
                     sections.append((et.short_name, {}))
             sections = self._expand(sections)
-            sections = self._default_ids(sections)
             entities = [dict(type=self.schema.long_name(s[0]), **s[1]) for s in sections]
             self.schema.validate_all(entities)
             self.entities = entities
