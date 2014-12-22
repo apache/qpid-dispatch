@@ -404,7 +404,7 @@ class Qdrouterd(Process):
 
     def wait_connected(self, router_id):
         """Wait till this router is connected to router with router-id"""
-        node = Node(self.addresses[0], router_id, timeout=0.2)
+        node = Node(self.addresses[0], router_id, timeout=DEFAULT_TIMEOUT)
         retry_exception(lambda: node.query('org.apache.qpid.dispatch.router'))
 
 
