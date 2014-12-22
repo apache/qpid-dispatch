@@ -135,8 +135,6 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
     def test_log(self):
         """Create, update and query log entities"""
 
-        self.assertRaises(NotFoundStatus, self.node.read, identity='log:AGENT') # Not configured
-
         default = self.node.read(identity='log/DEFAULT')
         self.assertEqual(default.attributes,
                          {u'identity': u'log/DEFAULT',
