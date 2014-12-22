@@ -53,7 +53,7 @@ from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
 from ctypes import c_void_p, py_object, c_long
-from dispatch import IoAdapter, LogAdapter, LOG_DEBUG, LOG_ERROR
+from dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_DEBUG, LOG_ERROR
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch.management.entity import camelcase
@@ -372,6 +372,8 @@ class Agent(object):
 
     def activate(self, address):
         """Register the management address to receive management requests"""
+        self.entities.refresh_from_c()
+        self.log(LOG_INFO, "Activating management agent on %s" % address)
         self.io = [IoAdapter(self.receive, address),
                    IoAdapter(self.receive, address, True)] # Global
 

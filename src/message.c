@@ -103,7 +103,7 @@ char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len) {
     qd_message_check(msg, QD_DEPTH_BODY);
     char *begin = buffer;
     char *end = buffer + len - sizeof(REPR_END); /* Save space for ending */
-    aprintf(&begin, end, "Message(%p){", msg);
+    aprintf(&begin, end, "Message{", msg);
     copy_field(msg, QD_FIELD_TO, INT_MAX, "to='", "'", &begin, end);
     copy_field(msg, QD_FIELD_REPLY_TO, INT_MAX, " reply-to='", "'", &begin, end);
     copy_field(msg, QD_FIELD_BODY, 16, " body='", "'", &begin, end);
@@ -648,7 +648,7 @@ qd_message_t *qd_message_receive(qd_delivery_t *delivery)
             qd_delivery_set_context(delivery, 0);
 
             char repr[qd_message_repr_len()];
-            qd_log(log_source, QD_LOG_TRACE, "%s received, link=%s",
+            qd_log(log_source, QD_LOG_TRACE, "Received %s on link %s",
                    qd_message_repr((qd_message_t*)msg, repr, sizeof(repr)),
                    pn_link_name(link));
 
@@ -699,7 +699,7 @@ void qd_message_send(qd_message_t *in_msg, qd_link_t *link)
     pn_link_t            *pnl     = qd_link_pn(link);
 
     char repr[qd_message_repr_len()];
-    qd_log(log_source, QD_LOG_TRACE, "%s sending, link=%s",
+    qd_log(log_source, QD_LOG_TRACE, "Sending %s on link %s",
            qd_message_repr(in_msg, repr, sizeof(repr)),
            pn_link_name(pnl));
 
