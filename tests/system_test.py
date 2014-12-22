@@ -342,7 +342,8 @@ class Qdrouterd(Process):
 
     def teardown(self):
         if self._management:
-            self._management.close()
+            try: self._management.close()
+            except: pass
         super(Qdrouterd, self).teardown()
 
     @property
@@ -506,12 +507,18 @@ class Tester(object):
     def teardown(self):
         """Clean up (tear-down, stop or close) objects recorded via cleanup()"""
         self.cleanup_list.reverse()
+        errors = []
         for obj in self.cleanup_list:
-            for method in ["teardown", "tearDown", "stop", "close"]:
-                cleanup = getattr(obj, method, None)
-                if cleanup:
-                    cleanup()
-                    break
+            try:
+                for method in ["teardown", "tearDown", "stop", "close"]:
+                    cleanup = getattr(obj, method, None)
+                    if cleanup:
+                        cleanup()
+                        break
+            except Exception, e:
+                errors.push(e)
+        assert not errors, "Errors during teardown: %s" % errors
+
 
     def cleanup(self, x):
         """Record object x for clean-up during tear-down.
@@ -586,7 +593,12 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
         # Hack to support setUpClass on older python.
         # If the class has not already been set up, do it now.
         if not hasattr(self.__class__, 'tester'):
-            self.setUpClass()
+            try:
+                self.setUpClass()
+            except:
+                if hasattr(self.__class__, 'tester'):
+                    self.__class__.tester.teardown()
+                raise
         Tester.setup(self)
 
     def tearDown(self):
