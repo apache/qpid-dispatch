@@ -1,23 +1,23 @@
-;;
-;; Licensed to the Apache Software Foundation (ASF) under one
-;; or more contributor license agreements.  See the NOTICE file
-;; distributed with this work for additional information
-;; regarding copyright ownership.  The ASF licenses this file
-;; to you under the Apache License, Version 2.0 (the
-;; "License"); you may not use this file except in compliance
-;; with the License.  You may obtain a copy of the License at
-;; 
-;;   http://www.apache.org/licenses/LICENSE-2.0
-;; 
-;; Unless required by applicable law or agreed to in writing,
-;; software distributed under the License is distributed on an
-;; "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-;; KIND, either express or implied.  See the License for the
-;; specific language governing permissions and limitations
-;; under the License.
-;;
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
 
-# Dispatch Addressing
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+# Addressing
 
 AMQP addresses are used to control the flow of messages across a network of
 routers.  Addresses are used in a number of different places in the AMQP 1.0
@@ -33,7 +33,7 @@ Addresses designate various kinds of entities in a messaging network:
    - Queues
    - Durable Topics
    - Exchanges
-   
+
 The syntax of an AMQP address is opaque as far as the router network is concerned.  A
 syntactical structure may be used by the administrator that creates addresses, but the router
 treats them as opaque strings.  Routers consider addresses to be mobile such that
@@ -56,10 +56,11 @@ Address semantics include the following considerations:
 
 Routing patterns constrain the paths that a message can take across a network.
 
-  || *Pattern* || *Description* ||
-  || *Direct* || Direct routing allows for only one consumer to use an address at a time.  Messages (or links) follow the lowest cost path across the network from the sender to the one receiver. ||
-  || *Multicast* || Multicast routing allows multiple consumers to use the same address at the same time.  Messages are routed such that each consumer receives a copy of the message. ||
-  || *Balanced* || Balanced routing also allows multiple consumers to use the same address.  In this case, messages (or links) are routed to exactly one of the consumers, and the network attempts to balance the traffic load across the set of consumers using the same address. ||
+  | *Pattern* | *Description* |
+  |-----------|---------------|
+  | *Direct* | Direct routing allows for only one consumer to use an address at a time.  Messages (or links) follow the lowest cost path across the network from the sender to the one receiver. |
+  | *Multicast* | Multicast routing allows multiple consumers to use the same address at the same time.  Messages are routed such that each consumer receives a copy of the message. |
+  | *Balanced* | Balanced routing also allows multiple consumers to use the same address.  In this case, messages (or links) are routed to exactly one of the consumers, and the network attempts to balance the traffic load across the set of consumers using the same address. |
 
 ## Routing mechanisms
 
@@ -88,9 +89,10 @@ address from the delivered message's `to` field and looks the address up in its
 routing table.  The lookup results in zero or more outgoing links onto which the message
 shall be resent.
 
-  || *Delivery* || *Handling* ||
-  || *pre-settled* || If the arriving delivery is pre-settled (i.e., fire and forget), the incoming delivery shall be settled by the router, and the outgoing deliveries shall also be pre-settled. In other words, the pre-settled nature of the message delivery is propagated across the network to the message's destination. ||
-  || *unsettled* || Unsettled delivery is also propagated across the network.  Because unsettled delivery records cannot be discarded, the router tracks the incoming deliveries and keeps the association of the incoming deliveries to the resulting outgoing deliveries.  This kept association allows the router to continue to propagate changes in delivery state (settlement and disposition) back and forth along the path which the message traveled. ||
+  | *Delivery* | *Handling* |
+  |------------|------------|
+  | *pre-settled* | If the arriving delivery is pre-settled (i.e., fire and forget), the incoming delivery shall be settled by the router, and the outgoing deliveries shall also be pre-settled. In other words, the pre-settled nature of the message delivery is propagated across the network to the message's destination. |
+  | *unsettled* | Unsettled delivery is also propagated across the network.  Because unsettled delivery records cannot be discarded, the router tracks the incoming deliveries and keeps the association of the incoming deliveries to the resulting outgoing deliveries.  This kept association allows the router to continue to propagate changes in delivery state (settlement and disposition) back and forth along the path which the message traveled. |
 
 ### Link routing
 

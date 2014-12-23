@@ -17,6 +17,25 @@
 ## under the License.
 ##
 
-add_subdirectory(api)
-add_subdirectory(man)
-add_subdirectory(book)
+# The dipatch book is written in MarkDown, this generates a HTML  version.
+# Requires pandoc, available on yum-based systems as pandoc.
+
+find_program(PANDOC pandoc)
+
+if (PANDOC)
+  set(src ${CMAKE_CURRENT_SOURCE_DIR})
+  set(BOOK ${src}/introduction.md ${src}/using.md ${src}/addressing.md ${src}/amqp-mapping.md)
+  set(CMD pandoc -s -S --toc -f markdown)
+  set(BASE ${CMAKE_CURRENT_BINARY_DIR}/qpid-dispatch-book)
+  set(HTML ${BASE}.html)
+  set(PDF ${BASE}.pdf)
+
+  add_custom_command (
+      OUTPUT qpid-dispatch-book.html qpid-dispatch-book.pdf
+      COMMAND ${CMD} -f markdown -o ${HTML} ${BOOK}
+      COMMAND ${CMD} -f markdown -o ${PDF} ${BOOK}
+      DEPENDS ${program} ${BOOK}
+      )
+  add_custom_target(book ALL DEPENDS ${HTML} ${BOOK})
+
+endif(PANDOC)
