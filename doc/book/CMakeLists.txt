@@ -38,4 +38,6 @@ if (PANDOC)
       )
   add_custom_target(book ALL DEPENDS ${HTML} ${BOOK})
 
+  install(FILES ${HTML} ${PDF} DESTINATION ${QD_DOC_INSTALL_DIR})
+
 endif(PANDOC)

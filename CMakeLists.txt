@@ -61,7 +61,8 @@ set(INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
 set(QPID_DISPATCH_HOME "lib/qpid-dispatch" CACHE PATH "Private Dispatch library directory")
 set(LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
 set(SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
-set(DOC_INSTALL_DIR ${SHARE_INSTALL_DIR}/doc CACHE PATH "Shared read-only data directory")
+set(DOC_INSTALL_DIR ${SHARE_INSTALL_DIR}/doc CACHE PATH "Documentation directory")
+set(QD_DOC_INSTALL_DIR ${SHARE_INSTALL_DIR}/doc/qpid-dispatch CACHE PATH "Qpid dispatch documentation directory")
 set(MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 set(QPID_DISPATCH_HOME_INSTALLED ${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME})
 set(RUN ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/run.py)
@@ -128,7 +129,7 @@ install(FILES
   LICENSE
   README
   TODO
-  DESTINATION ${DOC_INSTALL_DIR}/qpid-dispatch)
+  DESTINATION ${QD_DOC_INSTALL_DIR})
 
 
 add_subdirectory(src) # Build src first so other subdirs can use QPID_DISPATCH_LIB
