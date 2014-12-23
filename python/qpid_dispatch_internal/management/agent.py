@@ -502,10 +502,14 @@ class Agent(object):
         if request:
             attributes = request.body
             for a in ['type', 'name']:
-                value = required_property(a, request)
-                if a in attributes and attributes[a] != value:
-                    raise BadRequestStatus("Conflicting values for '%s'"%a)
-                attributes[a] = value
+                prop = request.properties.get(a)
+                if prop:
+                    old = attributes.setdefault(a, prop)
+                    if old is not None and old != prop:
+                        raise BadRequestStatus("Conflicting values for '%s'" % a)
+                attributes[a] = prop
+        if attributes.get('type') is None:
+            raise BadRequestStatus("No 'type' attribute in %s" % attributes)
         self.schema.entity_type(attributes['type']).allowed('create')
         entity = self.create_entity(attributes)
         self.add_entity(entity)
