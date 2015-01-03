@@ -1,4 +1,4 @@
-#
+##
 ## Licensed to the Apache Software Foundation (ASF) under one
 ## or more contributor license agreements.  See the NOTICE file
 ## distributed with this work for additional information
@@ -189,14 +189,16 @@ class AttributeType(object):
     @ivar unique: True if the attribute value is unique.
     @ivar description: Description of the attribute type.
     @ivar annotation: Annotation section or None
+    @ivar defined_in: Annotation or EntityType in which this attribute is defined.
     """
 
-    def __init__(self, name, type=None, default=None, required=False, unique=False,
+    def __init__(self, name, type=None, defined_in=None, default=None, required=False, unique=False,
                  value=None, annotation=None, description=""):
         """
         See L{AttributeType} instance variables.
         """
         self.name = name
+        self.defined_in = defined_in
         self.atype = get_type(type)
         self.required = required
         self.default = default
@@ -255,7 +257,7 @@ class AttributeType(object):
         ])
 
     def __str__(self):
-        return "%s(%s)"%(self.__class__.__name__, self.name)
+        return self.name
 
 
 class RedefinedError(ValueError): pass
@@ -279,7 +281,12 @@ class AttrsAndOps(object):
         for k, v in attributes.iteritems():
             if k in self.attributes:
                 raise ValidationError("Duplicate attribute in '%s': '%s'"%(self.name, k))
-            self.attributes[k] = AttributeType(k, **v)
+            self.attributes[k] = AttributeType(k, defined_in=self, **v)
+
+    @property
+    def my_attributes(self):
+        """Return only attribute types defined in this annotation or entity type"""
+        return [a for a in self.attributes.itervalues() if a.defined_in == self]
 
     def dump(self):
         """Json friendly representation"""
@@ -574,11 +581,17 @@ class Schema(object):
         """Convert a list of attribute maps into a list of L{SchemaEntity}"""
         return [self.entity(m) for m in attribute_maps]
 
+    def filter(self, predicate):
+        """Return an iterator over entity types that satisfy predicate."""
+        return (t for t in self.entity_types.itervalues() if predicate(t))
+
     def by_type(self, type):
         """Return an iterator over entity types that extend or are type.
         If type is None return all entities."""
-        return (t for t in self.entity_types.itervalues() if not type or t.is_a(type))
-
+        if not type:
+            return self.entity_types.itervalues()
+        else:
+            return self.filter(lambda t: t.is_a(type))
 
 class SchemaEntity(EntityBase):
     """A map of attributes associated with an L{EntityType}"""

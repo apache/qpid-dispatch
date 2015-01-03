@@ -17,57 +17,88 @@
 ## under the License.
 ##
 
+#
+# Generate man pages with pandoc.
+# Documentation source is in markdown, generate man pages.
+#
+
+find_program(PANDOC pandoc)
+
 set(src ${CMAKE_CURRENT_SOURCE_DIR})
 set(bin ${CMAKE_CURRENT_BINARY_DIR})
 set(tools ${CMAKE_SOURCE_DIR}/tools)
 
-find_program(HELP2MAN help2man)
+# Configure man page sources and combine with --help options output from programs.
+# Install markdown version of man pages in share/doc.
+macro(help2md program section path)
+  set(infile "${src}/${program}.${section}.noopt.md.in")
+  set(manpage "${bin}/${program}.${section}")
+  configure_file(${infile} "${manpage}.noopt.md")
+  add_custom_command (
+    OUTPUT ${manpage}.md
+    COMMAND ${RUN} -s "${src}/help2md.py" "${manpage}.noopt.md" "${manpage}.md" "${path}/${program}" --help
+    DEPENDS ${path}/${program} ${manpage}.noopt.md ${src}/help2md.py ${infile}
+    )
+  set(MANPAGES_MD ${MANPAGES_MD} ${manpage}.md)
+endmacro()
 
-if(HELP2MAN)
-
-  macro(help2man manpage h2mfile program)
-    configure_file(${src}/${h2mfile}.in ${bin}/${h2mfile})
-    string(REGEX MATCH "[0-9]*$" section ${manpage})
+# If pandoc is avaliable generate and install proper man files.
+macro(manpage program section)
+  set(manpage "${bin}/${program}.${section}")
+  string(TIMESTAMP date "%Y-%m-%d")
+  if(PANDOC)
+    if(${section} EQUAL 8)
+      set(header "System Manager's Manual")
+    elseif(${section} EQUAL 5)
+      set(header "File Formats Manual")
+    else()
+      set(header "")
+    endif()
     add_custom_command (
       OUTPUT ${manpage}
-      COMMAND ${RUN} -s ${src}/help2man.py ${HELP2MAN} -s ${section} -i ${bin}/${h2mfile} -N -o ${bin}/${manpage} ${program}
-      DEPENDS ${program} ${bin}/${h2mfile}
+      COMMAND ${PANDOC} --template ${src}/man.template.pd -s -V date="${date}" -V title="${program}" -V section="${section}" -V version="${QPID_DISPATCH_VERSION}" -V header="${header}" -f markdown -t man -o ${manpage} "${manpage}.md"
+      DEPENDS "${manpage}.md" "${src}/man.template.pd"
       )
-  endmacro()
+    set(MANPAGES ${MANPAGES} ${manpage})
+    install(FILES ${manpage} DESTINATION "${MAN_INSTALL_DIR}/man${section}")
+  else(PANDOC)
+    message(WARNING "pandoc is not avaliable, cannot generate ${manpage}")
+  endif(PANDOC)
+endmacro()
 
-else(HELP2MAN)
+# Shortcut to run both help2md and manpage
+macro(help2man program section path)
+  help2md(${program} ${section} ${path})
+  manpage(${program} ${section})
+endmacro()
 
-  message(WARNING "help2man is not avaliable, cannot update man pages")
-  macro(help2man manpage h2mfile program)
-    # Copy a pre-generated version of the man page.
-    configure_file(${src}/${manpage}.in ${bin}/${manpage})
-  endmacro()
-
-endif(HELP2MAN)
-
-configure_file(qdrouterd.8.in ${bin}/qdrouterd.8)
-help2man(qdstat.8 qdstat.h2m ${tools}/qdstat)
-help2man(qdmanage.8 qdmanage.h2m ${tools}/qdmanage)
+# Man pages for executables.
+help2man(qdrouterd 8 ${CMAKE_BINARY_DIR}/router)
+help2man(qdstat 8 ${tools})
+help2man(qdmanage 8 ${tools})
 
 # Generate a man page from the qdrouter.json schema.
-set (QDROUTER_CONF_MAN qdrouterd.conf.5)
+set(schema, "${CMAKE_SOURCE_DIR}/python/qpid_router/management/qdrouterd.json")
+set(qdrouterd_conf_man "${bin}/qdrouterd.conf.5")
+add_custom_command(
+  OUTPUT ${qdrouterd_conf_man}.md
+  COMMAND ${RUN} -s ${src}/qdrouterd_conf_man.py ${qdrouterd_conf_man}.md
+  DEPENDS ${src}/qdrouterd_conf_man.py ${schema}
+  )
+set(MANPAGES_MD ${MANPAGES_MD} ${qdrouterd_conf_man}.md)
+manpage(qdrouterd.conf 5)
 
-file (GLOB_RECURSE QDROUTER_CONF_MAN_DEPENDS
-  ${src}/qdrouterd_conf_man.py
-  ${CMAKE_SOURCE_DIR}/python/qpid_router_internal/management/*.py
-  ${CMAKE_SOURCE_DIR}/python/qpid_router/management/qdrouterd.json)
+# Generate the man page section of the book
 
-add_custom_command (OUTPUT ${QDROUTER_CONF_MAN}
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${src}/qdrouterd_conf_man.py ${QDROUTER_CONF_MAN}
-    DEPENDS ${QDROUTER_CONF_MAN_DEPENDS})
+add_custom_command(
+  OUTPUT manpages.md
+  COMMAND ${RUN} -s ${src}/man2book.py ${MANPAGES_MD} > manpages.md
+  DEPENDS ${src}/man2book.py ${MANPAGES_MD}
+  )
+
+# Install all the markdown files
+install(FILES ${MANPAGES_MD} DESTINATION ${QD_DOC_INSTALL_DIR})
 
 # Target to build the generated files
-add_custom_target(man ALL DEPENDS ${QDROUTER_CONF_MAN} ${bin}/qdmanage.8 ${bin}/qdstat.8)
-# Manual target to check if the generated files differ from the checked-in files
-add_custom_target(check-man COMMAND ${RUN} -s ${src}/check_help2man.py ${src} ${bin} qdmanage.8 qdstat.8)
+add_custom_target(man ALL DEPENDS ${MANPAGES_MD} ${MANPAGES} manpages.md)
 
-# Install man pages
-install(FILES ${bin}/qdrouterd.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
-install(FILES ${bin}/${QDROUTER_CONF_MAN} DESTINATION ${MAN_INSTALL_DIR}/man5)
-install(FILES ${bin}/qdstat.8 DESTINATION ${MAN_INSTALL_DIR}/man8)
-install(FILES ${bin}/qdmanage.8 DESTINATION ${MAN_INSTALL_DIR}/man8)

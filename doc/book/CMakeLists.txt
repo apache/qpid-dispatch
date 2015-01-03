@@ -22,20 +22,35 @@
 
 find_program(PANDOC pandoc)
 
+set(src ${CMAKE_CURRENT_SOURCE_DIR})
+set(bin ${CMAKE_CURRENT_BINARY_DIR})
+
+# Generate the schema chapter of the book.
+set(schema, "${CMAKE_SOURCE_DIR}/python/qpid_router/management/qdrouterd.json")
+add_custom_command(
+  OUTPUT schema.md
+  COMMAND ${RUN} -s ${src}/schema_md.py > schema.md
+  DEPENDS ${src}/schema_md.py ${schema}
+  )
+
+set(BOOK ${src}/introduction.md ${src}/using.md ${src}/addressing.md ${src}/amqp-mapping.md ${bin}/schema.md ${CMAKE_BINARY_DIR}/doc/man/manpages.md)
+
+# Install markdown documentation in the doc directory.
+install(FILES ${BOOK} DESTINATION ${QD_DOC_INSTALL_DIR})
+
 if (PANDOC)
-  set(src ${CMAKE_CURRENT_SOURCE_DIR})
-  set(BOOK ${src}/introduction.md ${src}/using.md ${src}/addressing.md ${src}/amqp-mapping.md)
-  set(CMD pandoc -s -S --toc -f markdown)
+  set(CMD pandoc -s -S --toc -f markdown -V "title=Qpid Dispatch Router Book")
   set(BASE ${CMAKE_CURRENT_BINARY_DIR}/qpid-dispatch-book)
   set(HTML ${BASE}.html)
   set(PDF ${BASE}.pdf)
 
-  add_custom_command (
-      OUTPUT qpid-dispatch-book.html qpid-dispatch-book.pdf
-      COMMAND ${CMD} -f markdown -o ${HTML} ${BOOK}
-      COMMAND ${CMD} -f markdown -o ${PDF} ${BOOK}
-      DEPENDS ${program} ${BOOK}
-      )
+  # Generate HTML and PDF books
+  add_custom_command(
+    OUTPUT qpid-dispatch-book.html qpid-dispatch-book.pdf
+    COMMAND ${CMD} -f markdown -o ${HTML} ${BOOK}
+    COMMAND ${CMD} -f markdown -o ${PDF} ${BOOK}
+    DEPENDS man ${program} ${BOOK}
+    )
   add_custom_target(book ALL DEPENDS ${HTML} ${BOOK})
 
   install(FILES ${HTML} ${PDF} DESTINATION ${QD_DOC_INSTALL_DIR})

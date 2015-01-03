@@ -142,4 +142,4 @@ execute_process(COMMAND ${RUN} --sh OUTPUT_FILE config.sh)
 add_subdirectory(tests)
 add_subdirectory(python)
 add_subdirectory(router)
-add_subdirectory(doc) # doc last, may run executables via help2man
+add_subdirectory(doc) # doc last, runs executables for --help output.

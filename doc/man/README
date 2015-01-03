@@ -1,43 +1,37 @@
-;;
-;; Licensed to the Apache Software Foundation (ASF) under one
-;; or more contributor license agreements.  See the NOTICE file
-;; distributed with this work for additional information
-;; regarding copyright ownership.  The ASF licenses this file
-;; to you under the Apache License, Version 2.0 (the
-;; "License"); you may not use this file except in compliance
-;; with the License.  You may obtain a copy of the License at
-;; 
-;;   http://www.apache.org/licenses/LICENSE-2.0
-;; 
-;; Unless required by applicable law or agreed to in writing,
-;; software distributed under the License is distributed on an
-;; "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-;; KIND, either express or implied.  See the License for the
-;; specific language governing permissions and limitations
-;; under the License.
-;;
+<!-*-markdown-*-
+
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+nspecific language governing permissions and limitations
+under the License.
+
+-->
 
 # How man pages are generated.
 
-Command line tools --help option provides a very brief usage and list of options.
+Man pages are generated from markdown sources.
 
-Man pages should be more detailed, but we do not want to repeat the information
-from --help as it will easily become out of date.
+Command line tools --help option provides a very brief usage and list of
+options.  Man pages should be more detailed, but we do not want to repeat the
+option information from --help as it will easily become out of date.
 
-To solve this we generate man pages using the  help2man utility.
-For each tool there should be a tool.htm with extra details for the man page.
-help2man will combine this with the --help otuput of the tool to create the full man page.
+A small python script helt2md.py combines the manpage markdown source named
+*.noopt.md with the output of "program --help" into a single markdown file.
 
-See the help2man macro in CMakeLists.txt and the help2man documentation for more details.
+The final man page is generated from the markdown by pandoc.
 
-For building distributions when help2man is not available, the generated man page for
-each tool is checked in as "tool.8.in".
-
-Run "make check-man" to check if generated man pages are up to date with the
-checked-in versions.
-
-To update the man page you MUST use help2man, do not edit the checked in file
-as your edits will be lost.
 
 # A really quick guide to nroff and man-page macros
 

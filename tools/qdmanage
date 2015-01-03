@@ -40,12 +40,10 @@ class QdManage():
                            'get-types', 'get-operations', 'get-attributes', 'get-annotations',
                            'get-mgmt-nodes']
 
-        usage = "%prog <operation> [options...] [arguments...]\n\nOperations:"
-        for o in self.operations:
-            method = o.replace('-', '_')
-            usage += "\n  %s" % getattr(self.__class__, method).__doc__
+        usage = "%prog <operation> [options...] [arguments...]"
+        description = "Operations: "+", ".join(self.operations)
 
-        op = OptionParser(usage, option_class=Option)
+        op = OptionParser(usage=usage, option_class=Option, description=description)
         op.add_option('--type', help='Type of entity to operate on.')
         op.add_option('--name', help='Name of entity to operate on.')
         op.add_option('--identity', help='Identity of entity to operate on.', metavar="ID")
@@ -96,60 +94,60 @@ class QdManage():
             self.print_json(func(self.opts.attributes).attributes)
 
     def query(self):
-        """query [ATTR...]        - Print attributes of entities."""
+        """query [ATTR...]          Print attributes of entities."""
         if self.args:  self.opts.attribute_names = self.args
         result = self.call_node('query', 'type', 'attribute_names')
         self.print_json(result.get_dicts(clean=True))
 
     def create(self):
-        """create [ATTR=VALUE...] - Create a new entity."""
+        """create [ATTR=VALUE...]   Create a new entity."""
         if self.args:
             self.opts.attributes = dict(attr_split(arg) for arg in self.args)
         self.call_bulk(lambda attrs: self.call_node('create', 'type', 'name', attributes=attrs))
 
     def read(self):
-        """read                   - Print attributes of selected entity."""
+        """read                     Print attributes of selected entity."""
         check_args(self.args, 0)
         self.print_json(self.call_node('read', 'type', 'name', 'identity').attributes)
 
     def update(self):
-        """update [ATTR=VALUE...] - Update an entity."""
+        """update [ATTR=VALUE...]   Update an entity."""
         if self.args:
             self.opts.attributes = dict(attr_split(arg) for arg in self.args)
         self.call_bulk(
             lambda attrs: self.call_node('update', 'type', 'name', 'identity', attributes=attrs))
 
     def delete(self):
-        """delete                 - Delete an entity"""
+        """delete                   Delete an entity"""
         check_args(self.args, 0)
         self.call_node('delete', 'type', 'name', 'identity')
 
     def get_types(self):
-        """get-types [TYPE]       - List entity types with their base types."""
+        """get-types [TYPE]         List entity types with their base types."""
         check_args(self.args, 1)
         if self.args: self.opts.type = self.args[0]
         self.print_json(self.call_node('get_types', 'type'))
 
     def get_annotations(self):
-        """get-annotations [TYPE] - List entity types with the annotations they implement."""
+        """get-annotations [TYPE]   List entity types with the annotations they implement."""
         check_args(self.args, 1)
         if self.args: self.opts.type = self.args[0]
         self.print_json(self.call_node('get_annotations', 'type'))
 
     def get_attributes(self):
-        """get-attributes [TYPE]  - List entity types with their attributes."""
+        """get-attributes [TYPE]    List entity types with their attributes."""
         check_args(self.args, 1)
         if self.args: self.opts.type = self.args[0]
         self.print_json(self.call_node('get_attributes', 'type'))
 
     def get_operations(self):
-        """get-operations [TYPE]  - List entity types with their operations."""
+        """get-operations [TYPE]    List entity types with their operations."""
         check_args(self.args, 1)
         if self.args: self.opts.type = self.args[0]
         self.print_json(self.call_node('get_operations', 'type'))
 
     def get_mgmt_nodes(self):
-        """get-mgmt-nodes         - List of other known management nodes"""
+        """get-mgmt-nodes           List of other known management nodes"""
         check_args(self.args, 0)
         self.print_json(self.call_node('get_mgmt_nodes'))
 

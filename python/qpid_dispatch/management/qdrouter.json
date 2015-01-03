@@ -1,5 +1,5 @@
 {
-    "description":  "Schema for the Qpid Dispatch Router management model. See qdrouter.txt.",
+    "description":  "Schema for the Qpid Dispatch Router management model. See qdrouter.json.readme.txt.",
 
     "prefix": "org.apache.qpid.dispatch",
 

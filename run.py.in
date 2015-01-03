@@ -53,6 +53,12 @@ sys.path = dedup([
     "${CMAKE_SOURCE_DIR}/tests"
 ] + sys.path)
 
+def getpath(env):
+    path = os.environ.get(env)
+    if path:
+        return path.split(os.pathsep)
+    return []
+
 env_vars = {
     'PYTHONPATH': os.pathsep.join(sys.path),
     'PATH': os.pathsep.join(dedup(["${CMAKE_BINARY_DIR}",
@@ -61,7 +67,9 @@ env_vars = {
                                    os.path.join("${CMAKE_SOURCE_DIR}", 'tools'),
                                    os.path.join("${CMAKE_BINARY_DIR}", 'tools'),
                                    os.path.join("${CMAKE_SOURCE_DIR}", 'bin')] +
-                                  os.environ['PATH'].split(os.pathsep))),
+                                  getpath('PATH'))),
+    'MANPATH' : os.pathsep.join([os.path.join("${CMAKE_BINARY_DIR}",'doc','man')] +
+                                getpath('MANPATH')),
     'SOURCE_DIR': "${CMAKE_SOURCE_DIR}",
     'BUILD_DIR': "${CMAKE_BINARY_DIR}",
     'QPID_DISPATCH_HOME': "${CMAKE_SOURCE_DIR}",

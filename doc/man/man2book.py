@@ -17,8 +17,16 @@
 # under the License
 #
 
-import sys, os
+"""
+Collect markdown man pages in a directory and generate chapters for the book.
+"""
 
-# Set COLUMNS env var to avoid line breaks in help output.
-os.environ['COLUMNS'] = '10000'
-os.execv(sys.argv[1], sys.argv[1:])
+import sys, re, string
+from os import path
+
+man_files = sys.argv[1:]
+assert man_files
+for f in man_files:
+    print "# Manual page %s" % path.splitext(path.basename(f))[0]
+    print re.sub("^#+ .*", lambda m: "#"+string.capwords(m.group(0)),
+                 open(f).read(), flags=re.MULTILINE)
