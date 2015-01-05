@@ -18,11 +18,9 @@
 ##
 
 #
-# Generate man pages with pandoc.
-# Documentation source is in markdown, generate man pages.
+# Generate and install markdown man pages.
+# If pandoc is available, also generate real man pages.
 #
-
-find_program(PANDOC pandoc)
 
 set(src ${CMAKE_CURRENT_SOURCE_DIR})
 set(bin ${CMAKE_CURRENT_BINARY_DIR})
@@ -43,10 +41,11 @@ macro(help2md program section path)
 endmacro()
 
 # If pandoc is avaliable generate and install proper man files.
-macro(manpage program section)
-  set(manpage "${bin}/${program}.${section}")
-  string(TIMESTAMP date "%Y-%m-%d")
-  if(PANDOC)
+find_program(PANDOC pandoc)
+if (PANDOC)
+  macro(manpage program section)
+    set(manpage "${bin}/${program}.${section}")
+    string(TIMESTAMP date "%Y-%m-%d")
     if(${section} EQUAL 8)
       set(header "System Manager's Manual")
     elseif(${section} EQUAL 5)
@@ -61,10 +60,12 @@ macro(manpage program section)
       )
     set(MANPAGES ${MANPAGES} ${manpage})
     install(FILES ${manpage} DESTINATION "${MAN_INSTALL_DIR}/man${section}")
-  else(PANDOC)
-    message(WARNING "pandoc is not avaliable, cannot generate ${manpage}")
-  endif(PANDOC)
-endmacro()
+  endmacro(manpage)
+else(PANDOC)
+  message("Not generating man pages, pandoc is not avaliable.")
+  macro(manpage program section)
+  endmacro()
+endif(PANDOC)
 
 # Shortcut to run both help2md and manpage
 macro(help2man program section path)

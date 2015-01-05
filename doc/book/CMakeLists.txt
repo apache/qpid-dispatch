@@ -17,10 +17,8 @@
 ## under the License.
 ##
 
-# The dipatch book is written in MarkDown, this generates a HTML  version.
+# The dipatch book is written in markdown, this generates a HTML version.
 # Requires pandoc, available on yum-based systems as pandoc.
-
-find_program(PANDOC pandoc)
 
 set(src ${CMAKE_CURRENT_SOURCE_DIR})
 set(bin ${CMAKE_CURRENT_BINARY_DIR})
@@ -38,21 +36,35 @@ set(BOOK ${src}/introduction.md ${src}/using.md ${src}/addressing.md ${src}/amqp
 # Install markdown documentation in the doc directory.
 install(FILES ${BOOK} DESTINATION ${QD_DOC_INSTALL_DIR})
 
+# Generate man pages and book if pandoc is installed
+find_program(PANDOC pandoc)
 if (PANDOC)
   set(CMD pandoc -s -S --toc -f markdown -V "title=Qpid Dispatch Router Book")
-  set(BASE ${CMAKE_CURRENT_BINARY_DIR}/qpid-dispatch-book)
-  set(HTML ${BASE}.html)
-  set(PDF ${BASE}.pdf)
 
-  # Generate HTML and PDF books
-  add_custom_command(
-    OUTPUT qpid-dispatch-book.html qpid-dispatch-book.pdf
-    COMMAND ${CMD} -f markdown -o ${HTML} ${BOOK}
-    COMMAND ${CMD} -f markdown -o ${PDF} ${BOOK}
-    DEPENDS man ${program} ${BOOK}
+  # Generate a book in FORMAT
+  macro(generate_book FORMAT)
+    set(OUTPUT ${bin}/qpid-dispatch-book.${FORMAT})
+    add_custom_command(
+      OUTPUT ${OUTPUT}
+      COMMAND ${CMD} -o ${OUTPUT} ${BOOK}
+      DEPENDS man ${BOOK}
     )
-  add_custom_target(book ALL DEPENDS ${HTML} ${BOOK})
+    install(FILES ${OUTPUT} DESTINATION ${QD_DOC_INSTALL_DIR})
+    set(BOOKS ${BOOKS} ${OUTPUT})
+  endmacro()
 
-  install(FILES ${HTML} ${PDF} DESTINATION ${QD_DOC_INSTALL_DIR})
+  generate_book(html)  # Always generate HTML
 
+  find_program(PDFLATEX pdflatex)
+  if (PDFLATEX)
+    generate_book(pdf)
+  else(PDFLATEX)
+    message("Not generating PDF format book, pdflatex not available.")
+  endif(PDFLATEX)
+else(PANDOC)
+    message("Not generating HTML format book, pandoc not available.")
 endif(PANDOC)
+
+
+# Target to generate all chapters and books.
+add_custom_target(book ALL DEPENDS man ${BOOK} ${BOOKS})
