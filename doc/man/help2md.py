@@ -27,7 +27,7 @@ or append it at the end if there is no # Options section.
 """
 
 import re, sys
-from subprocess import check_output, STDOUT
+from qpid_dispatch_internal.compat.subproc import check_output, STDOUT
 from os import path
 
 def help2md(help_out):
@@ -58,8 +58,8 @@ def main(argv):
     source, target, program = argv[1], argv[2], argv[3:]
     source_md = open(source).read()
     options_md = help2md(check_output(program, stderr=STDOUT))
-    combine_md = re.sub(r"\n# Options.*?(?=(\n# |$))", options_md, source_md, flags=re.IGNORECASE | re.DOTALL)
-    upcase_md = re.sub(r"^#+ .*$", lambda m: m.group(0).upper(), combine_md, flags=re.MULTILINE)
+    combine_md = re.sub(r"\n# Options.*?(?=(\n# |$))(?ims)", options_md, source_md)
+    upcase_md = re.sub(r"^#+ .*$(?m)", lambda m: m.group(0).upper(), combine_md)
     open(target, "w").write(upcase_md)
 
 if __name__ == "__main__":

@@ -67,4 +67,5 @@ endif(PANDOC)
 
 
 # Target to generate all chapters and books.
-add_custom_target(book ALL DEPENDS man ${BOOK} ${BOOKS})
+add_custom_target(book ALL DEPENDS ${BOOK} ${BOOKS})
+add_dependencies(book man) # Note: adding man to book DEPENDS does not work on cmake 2.6.4

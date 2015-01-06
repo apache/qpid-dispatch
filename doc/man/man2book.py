@@ -28,5 +28,4 @@ man_files = sys.argv[1:]
 assert man_files
 for f in man_files:
     print "# Manual page %s" % path.splitext(path.basename(f))[0]
-    print re.sub("^#+ .*", lambda m: "#"+string.capwords(m.group(0)),
-                 open(f).read(), flags=re.MULTILINE)
+    print re.sub("^#+ .*(?m)", lambda m: "#"+string.capwords(m.group(0)), open(f).read())
