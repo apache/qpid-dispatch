@@ -132,7 +132,7 @@ static void log_sink_free_lh(log_sink_t* sink) {
 
 struct qd_log_source_t {
     DEQ_LINKS(qd_log_source_t);
-    const char *module;
+    char *module;
     int mask;
     int timestamp;              /* boolean or -1 means not set */
     int source;                 /* boolean or -1 means not set */
@@ -256,7 +256,8 @@ static qd_log_source_t *qd_log_source_lh(const char *module)
         log_source = NEW(qd_log_source_t);
         memset(log_source, 0, sizeof(qd_log_source_t));
         DEQ_ITEM_INIT(log_source);
-        log_source->module = module;
+        log_source->module = (char*) malloc(strlen(module) + 1);
+        strcpy(log_source->module, module);
         qd_log_source_defaults(log_source);
         DEQ_INSERT_TAIL(source_list, log_source);
     }
@@ -283,6 +284,7 @@ qd_log_source_t *qd_log_source_reset(const char *module)
 static void qd_log_source_free_lh(qd_log_source_t* src) {
     DEQ_REMOVE_HEAD(source_list);
     log_sink_free_lh(src->sink);
+    free(src->module);
     free(src);
 }
 
