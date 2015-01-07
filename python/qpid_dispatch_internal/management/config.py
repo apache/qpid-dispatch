@@ -115,10 +115,9 @@ class Config(object):
             self.entities = entities
 
     def by_type(self, entity_type):
-        """Iterator over entities of given type"""
+        """Return entities of given type"""
         entity_type = self.schema.long_name(entity_type)
-        for e in self.entities:
-            if e['type'] == entity_type: yield e
+        return [e for e in self.entities if e['type'] == entity_type]
 
     def remove(self, entity):
         self.entities.remove(entity)
@@ -148,15 +147,16 @@ def configure_dispatch(dispatch, lib_handle, filename):
     for m in modules: agent.create(attributes=dict(type="log", module=m))
 
     # Configure and prepare container and router before we can activate the agent.
-    configure(config.by_type('container').next())
-    configure(config.by_type('router').next())
+    configure(config.by_type('container')[0])
+    configure(config.by_type('router')[0])
     qd.qd_dispatch_prepare(dispatch)
     agent.activate("$management")
     qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.
 
     # Remaining configuration
     for t in "fixedAddress", "listener", "connector", "waypoint":
-        for a in list(config.by_type(t)): configure(a)
-    for e in list(config.entities): configure(e)
+        for a in config.by_type(t): configure(a)
+    for e in config.entities:
+        configure(e)
 
 

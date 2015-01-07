@@ -101,7 +101,7 @@ class QdrouterTest(unittest.TestCase):
         self.assertEqual(content, expect)
 
         conf.load(text.split(u"\n"))
-        router = conf.by_type('router').next()
+        router = conf.by_type('router')[0]
         listeners = list(conf.by_type('listener'))
         self.assertEqual(len(listeners), 3)
 

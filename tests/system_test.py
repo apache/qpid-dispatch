@@ -300,7 +300,7 @@ class Qdrouterd(Process):
             return [p for n, p in self if n == name]
 
         def defaults(self):
-            """Fill in default values in configuration"""
+            """Fill in default values in gconfiguration"""
             for name, props in self:
                 if name in Qdrouterd.Config.DEFAULTS:
                     for n,p in Qdrouterd.Config.DEFAULTS[name].iteritems():
@@ -321,7 +321,8 @@ class Qdrouterd(Process):
         @keyword wait: wait for router to be ready (call self.wait_ready())
         """
         self.config = copy(config)
-        if not [l for l in config if l[0] == 'log']:
+        default_log = [l for l in config if (l[0] == 'log' and l[1]['module'] == 'DEFAULT')]
+        if not default_log:
             config.append(
                 ('log', {'module':'DEFAULT', 'enable':'trace+', 'source': 'true', 'output':name+'.log'}))
         if not pyinclude and os.environ['QPID_DISPATCH_HOME']:

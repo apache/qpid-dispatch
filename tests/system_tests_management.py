@@ -419,5 +419,14 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertTrue(r.wait() != 0)
 
 
+    def test_config_many_logs(self):
+        """Regression test for DISPATCH-93, multiple log entries in config file cause errors"""
+        conf = Qdrouterd.Config([
+            ('listener', {'port': self.get_port(), 'role':'normal'}),
+            ('log', { 'module': 'AGENT', 'enable': 'debug+'}),
+            ('log', { 'module': 'MESSAGE', 'enable': 'trace+'})])
+        router = self.qdrouterd("multi_log_conf", conf, wait=True)
+
+
 if __name__ == '__main__':
     unittest.main(system_test.main_module())
