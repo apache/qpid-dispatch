@@ -70,17 +70,21 @@ Show the logging configuration
 
     qdmanage query --type=log
 
-Change the default log level to debug
+Enable debug and higher log messages by default:
 
-    qdmanage udpdate name=log/DEFAULT level=debug
+    qdmanage udpdate name=log/DEFAULT enable=debug+
 
-Change the MESSAGE log level to trace and direct MESSAGE logs to the file "test.log"
+Enable trace log messages only for the MESSAGE moudle and direct MESSAGE logs to the file "test.log"
 
-    qdmanage udpdate name=log/MESSAGE level=trace output=test.log
+    qdmanage udpdate name=log/MESSAGE enable=trace output=test.log
 
-Set the MESSAGE log level back to the default (delete the log/MESSAGE level attribute)
+Set MESSAGE logging back to the default:
 
-    qdmanage udpdate name=log/MESSAGE level
+    qdmanage udpdate name=log/MESSAGE enable=default
+
+Disable MESSAGE logging:
+
+    qdmanage udpdate name=log/MESSAGE enable=none
 
 # See also
 

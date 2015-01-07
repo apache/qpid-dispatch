@@ -68,8 +68,8 @@ but modify the configuration of a running dispatch router.
 For example you can query all the connection entities in the route r
     $ qdrouterd query --type connection
 
-You can enable debug logging by default like this:
-    $ qdrouter update log/DEFAULT level=debug
+To enable logging debug and higher level messages by default:
+    $ qdrouter update log/DEFAULT enable=debug+
 
 In fact, everything that can be configured in the configuration file can also be created
 in a running router via management. For example to create a new listener in a running router:
