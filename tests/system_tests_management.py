@@ -138,7 +138,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         default = self.node.read(identity='log/DEFAULT')
         self.assertEqual(default.attributes,
                          {u'identity': u'log/DEFAULT',
-                          u'level': u'trace',
+                          u'enable': u'trace+',
                           u'module': u'DEFAULT',
                           u'name': u'log/DEFAULT',
                           u'output': u'ManagementTest.log',
@@ -147,23 +147,52 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
                           u'type': u'org.apache.qpid.dispatch.log'})
 
 
-        def check_log(log, bad_type='nosuch'):
-            # Cause an error and verify it shows up in the log file.
+        def check_log(log, error=True, debug=False):
+            """Cause an error and check for expected error and debug logs"""
+            bad_type = "nosuch"
             self.assertRaises(ManagementError, self.node.create, type=bad_type, name=bad_type)
             f = self.cleanup(open(log))
             logstr = f.read()
-            self.assertTrue(re.search(r'ValidationError.*%s' % bad_type, logstr),
-                            msg="Can't find expected ValidationError.*%s in '%r'" % (bad_type, logstr))
+            def assert_expected(expect, regex, logstr):
+                match = re.search(regex, logstr)
+                assert bool(expect) == bool(match), "%s %s:\n%s" % (
+                    ((match and "Found") or "Not found"), regex, logstr)
+            assert_expected(error, r'AGENT \(error\).*%s' % bad_type, logstr)
+            assert_expected(debug, r'AGENT \(debug\)', logstr)
 
-        # Create a log entity, verify logging is as expected
-        log = os.path.abspath("test_log.log")
-        self.node.update(dict(level="error", output=log), name="log/AGENT")
-        check_log(log)
+        log_count = [0]         # In list to work-around daft python scoping rules.
 
-        # Update the log entity to output to a different file
-        log = os.path.abspath("test_log2.log")
-        self.node.update(dict(level="error", output=log), identity='log/AGENT')
-        check_log(log)
+        def update_check_log(attributes, error=True, debug=False):
+            log_count[0] += 1
+            log = os.path.abspath("test_log.log%s" % log_count[0])
+            attributes["output"] = log
+            attributes["identity"] = "log/AGENT"
+            self.node.update(attributes)
+            check_log(log, error, debug)
+
+        # Expect error but no debug
+        update_check_log(dict(enable="warning+"))
+        update_check_log(dict(enable="error"))
+        update_check_log(dict(enable="TRACE , Error info")) # Case and space insensitive
+
+        # Expect no error if not enabled.
+        update_check_log(dict(enable="info,critical"), error=False)
+        update_check_log(dict(enable="none"), error=False)
+        update_check_log(dict(enable=""), error=False)
+
+        # Expect debug
+        update_check_log(dict(enable="Debug"), error=False, debug=True)
+        update_check_log(dict(enable="trace+"), debug=True)
+
+        # Check defaults are picked up
+        update_check_log(dict(enable="default"), error=True, debug=True)
+        self.node.update(dict(identity="log/DEFAULT", enable="debug"))
+        update_check_log(dict(enable="DEFAULT"), error=False, debug=True)
+        self.node.update(dict(identity="log/DEFAULT", enable="error"))
+        update_check_log(dict(enable="default"), error=True, debug=False)
+
+        # Invalid values
+        self.assertRaises(ManagementError, self.node.update, dict(identity="log/AGENT", enable="foo"))
 
     def test_create_fixed_address(self):
         self.assert_create_ok(FIXED_ADDRESS, 'fixed1', dict(prefix='fixed1'))

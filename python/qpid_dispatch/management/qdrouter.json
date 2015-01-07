@@ -253,7 +253,7 @@
         },
 
         "log": {
-            "description": "Set the level of logging output from a particular module.",
+            "description": "Configure logging for a particular module.",
             "extends": "configurationEntity",
             "operations": ["CREATE", "READ", "UPDATE"],
             "attributes": {
@@ -265,25 +265,18 @@
                         "AGENT",
                         "CONTAINER",
                         "CONFIG",
-                        "DEFAULT",
                         "ERROR",
-                        "DISPATCH"
+                        "DISPATCH",
+                        "DEFAULT"
                     ],
                     "required": true,
-                    "description": "Module to configure logging level. The special module 'DEFAULT' specifies logging defaults for modules that don't have explicit log configuration."
+                    "description": "Module to configure. The special module 'DEFAULT' specifies defaults for all modules."
                 },
-                "level": {
-                    "type": [
-                        "none",
-                        "trace",
-                        "debug",
-                        "info",
-                        "notice",
-                        "warning",
-                        "error",
-                        "critical"
-                    ],
-                    "description": "Indicates the minimum logging level for the module. E.g. 'warning' means log warning, error and critical messages. 'trace' logs all messages. 'none' disables logging for the module."
+                "enable": {
+                    "type": "String",
+                    "default": "default",
+                    "required": true,
+                    "description": "Levels are: trace, debug, info, notice, warning, error, critical. The enable string is a comma-separated list of levels. A level may have a trailing '+' to enable that level and above. For example 'trace,debug,warning+' means enable trace, debug, warning, error and critical. The value 'none' means disable logging for the module. The value 'default' means use the value from the DEFAULT module."
                 },
                 "timestamp": {
                     "type": "Boolean",

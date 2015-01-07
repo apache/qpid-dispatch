@@ -323,7 +323,7 @@ class Qdrouterd(Process):
         self.config = copy(config)
         if not [l for l in config if l[0] == 'log']:
             config.append(
-                ('log', {'module':'DEFAULT', 'level':'trace', 'source': 'true', 'output':name+'.log'}))
+                ('log', {'module':'DEFAULT', 'enable':'trace+', 'source': 'true', 'output':name+'.log'}))
         if not pyinclude and os.environ['QPID_DISPATCH_HOME']:
             pyinclude = os.path.join(os.environ['QPID_DISPATCH_HOME'], 'python')
         super(Qdrouterd, self).__init__(

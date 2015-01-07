@@ -146,17 +146,22 @@ static sys_mutex_t          *log_lock = 0;
 static sys_mutex_t          *log_source_lock = 0;
 static qd_log_source_list_t  source_list = {0};
 
-typedef enum {NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, N_LEVELS} level_index_t;
-typedef struct level {
+typedef enum {DEFAULT, NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, N_LEVELS} level_index_t;
+
+typedef struct level_t {
     const char* name;
     int bit;     // QD_LOG bit
     int mask;    // Bit or higher
     const int syslog;
-} level;
+} level_t;
+
 #define ALL_BITS (QD_LOG_CRITICAL | (QD_LOG_CRITICAL-1))
+
 #define LEVEL(name, QD_LOG, SYSLOG) { name, QD_LOG,  ALL_BITS & ~(QD_LOG-1), SYSLOG }
-static level levels[] = {
-    {"none", 0, -1, 0},
+
+static level_t levels[] = {
+    {"default", -1, -1, 0},
+    {"none", 0, 0, 0},
     LEVEL("trace",    QD_LOG_TRACE, LOG_DEBUG), /* syslog has no trace level */
     LEVEL("debug",    QD_LOG_DEBUG, LOG_DEBUG),
     LEVEL("info",     QD_LOG_INFO, LOG_INFO),
@@ -165,27 +170,51 @@ static level levels[] = {
     LEVEL("error",    QD_LOG_ERROR, LOG_ERR),
     LEVEL("critical", QD_LOG_CRITICAL, LOG_CRIT)
 };
+
 static const char level_names[TEXT_MAX]; /* Set up in qd_log_initialize */
 
-static const level* level_for_bit(int bit) {
+/// Return NULL and set qd_error if not a valid bit.
+static const level_t* level_for_bit(int bit) {
     level_index_t i = 0;
     while (i < N_LEVELS && levels[i].bit != bit) ++i;
     if (i == N_LEVELS) {
-        qd_log(logging_log_source, QD_LOG_ERROR, "'%d' is not a valid log level bit. Defaulting to %s", bit, levels[INFO].name);
-        i = INFO;
-        assert(0);
+        qd_error(QD_ERROR_CONFIG, "'%d' is not a valid log level bit.", bit);
+        return NULL;
     }
     return &levels[i];
 }
 
-static const level* level_for_name(const char *name) {
+/// Return NULL and set qd_error if not a valid level.
+static const level_t* level_for_name(const char *name, int len) {
     level_index_t i = 0;
-    while (i < N_LEVELS && strcasecmp(levels[i].name, name) != 0) ++i;
+    while (i < N_LEVELS && strncasecmp(levels[i].name, name, len) != 0) ++i;
     if (i == N_LEVELS) {
-        qd_log(logging_log_source, QD_LOG_ERROR, "'%s' is not a valid log level. Should be one of {%s}. Defaulting to %s", name, level_names, levels[INFO].name);
-        i = INFO;
+        qd_error(QD_ERROR_CONFIG, "'%s' is not a valid log level. Should be one of {%s}.",
+                 name, level_names);
+        return NULL;
     }
     return &levels[i];
+}
+
+static const char *SEPARATORS=", ;:";
+
+/// Calculate the bit mask for a log enable string. Return -1 and set qd_error on error.
+static int enable_mask(const char *enable_) {
+    char enable[strlen(enable_)+1]; /* Non-const copy for strtok */
+    strcpy(enable, enable_);
+    char *saveptr = 0;
+    int mask = 0;
+    for (const char *token = strtok_r(enable, SEPARATORS, &saveptr);
+         token;
+         token = strtok_r(NULL, SEPARATORS, &saveptr))
+    {
+        int len = strlen(token);
+        int plus = (len > 0 && token[len-1] == '+') ? 1 : 0;
+        const level_t* level = level_for_name(token, len-plus);
+        if (!level) return -1;  /* qd_error already set */
+        mask |= (plus ? level->mask : level->bit);
+    }
+    return mask;
 }
 
 /// Caller must hold log_source_lock
@@ -211,6 +240,12 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
     char *begin = log_str;
     char *end = log_str + LOG_MAX;
 
+    const level_t *level = level_for_bit(entry->level);
+    if (!level) {
+        level = &levels[INFO];
+        qd_error_clear();
+    }
+
     if (default_bool(log_source->timestamp, default_log_source->timestamp)) {
         char buf[100];
         buf[0] = '\0';
@@ -218,7 +253,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         buf[strlen(buf)-1] = '\0'; /* Get rid of trailng \n */
         aprintf(&begin, end, "%s ", buf);
     }
-    aprintf(&begin, end, "%s (%s) %s", entry->module, level_for_bit(entry->level)->name, entry->text);
+    aprintf(&begin, end, "%s (%s) %s", entry->module, level->name, entry->text);
     if (default_bool(log_source->source, default_log_source->source))
         aprintf(&begin, end, " (%s:%d)", entry->file, entry->line);
     aprintf(&begin, end, "\n");
@@ -233,7 +268,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         fflush(sink->file);
     }
     if (sink->syslog) {
-        int syslog_level = level_for_bit(entry->level)->syslog;
+        int syslog_level = level->syslog;
         if (syslog_level != -1)
             syslog(syslog_level, "%s", log_str);
     }
@@ -361,10 +396,10 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     sys_mutex_unlock(log_source_lock);
     free(module);
 
-    if (qd_entity_has(entity, "level")) {
-        char *level = qd_entity_get_string(entity, "level");
-        copy.mask = level_for_name(level)->mask;
-        free(level);
+    if (qd_entity_has(entity, "enable")) {
+        char *enable = qd_entity_get_string(entity, "enable");
+        copy.mask = enable_mask(enable);
+        free(enable);
     }
     QD_ERROR_RET();
 

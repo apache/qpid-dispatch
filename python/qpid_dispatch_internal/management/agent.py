@@ -196,7 +196,7 @@ class LogEntity(AgentEntity):
     def __init__(self, agent, entity_type, attributes=None, validate=True):
         # Special defaults for DEFAULT module. 
         if attributes.get("module") == "DEFAULT":
-            defaults = dict(level="info", timestamp=True, source=False, output="stderr")
+            defaults = dict(enable="info+", timestamp=True, source=False, output="stderr")
             attributes = dict(defaults, **attributes)
         super(LogEntity, self).__init__(agent, entity_type, attributes, validate=True)
 
