@@ -65,16 +65,16 @@ def connection_options(options, title="Connection Options"):
     """Return an OptionGroup for connection options."""
     group = optparse.OptionGroup(options, title)
     group.add_option("-b", "--bus", action="store", type="string", default="0.0.0.0",
-                     metavar="<url>", help="URL of the messaging bus to connect to (default %default)")
+                     metavar="URL", help="URL of the messaging bus to connect to (default %default)")
     group.add_option("-r", "--router", action="store", type="string", default=None,
-                     metavar="<router-id>", help="Router to be queried")
-    group.add_option("-t", "--timeout", action="store", type="float", default=5, metavar="<secs>",
+                     metavar="ROUTER-ID", help="Router to be queried")
+    group.add_option("-t", "--timeout", action="store", type="float", default=5, metavar="SECS",
                       help="Maximum time to wait for connection in seconds (default %default)")
-    group.add_option("--sasl-mechanism", action="store", type="string", metavar="<mech>",
+    group.add_option("--sasl-mechanism", action="store", type="string", metavar="MECH",
                       help="Force SASL mechanism (e.g. EXTERNAL, ANONYMOUS, PLAIN, CRAM-MD5, DIGEST-MD5, GSSAPI).")
-    group.add_option("--ssl-certificate", action="store", type="string", metavar="<cert>",
+    group.add_option("--ssl-certificate", action="store", type="string", metavar="CERT",
                      help="Client SSL certificate (PEM Format)")
-    group.add_option("--ssl-key", action="store", type="string", metavar="<key>",
+    group.add_option("--ssl-key", action="store", type="string", metavar="KEY",
                      help="Client SSL private key (PEM Format)")
     return group
 

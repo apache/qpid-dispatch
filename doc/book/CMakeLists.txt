@@ -39,25 +39,26 @@ install(FILES ${BOOK} DESTINATION ${QD_DOC_INSTALL_DIR})
 # Generate man pages and book if pandoc is installed
 find_program(PANDOC pandoc)
 if (PANDOC)
-  set(CMD pandoc -s -S --toc -f markdown -V "title=Qpid Dispatch Router Book")
+  set(PD_ARGS --standalone --toc --number-sections -f markdown -V "title=Qpid Dispatch Router Book")
 
-  # Generate a book in FORMAT
-  macro(generate_book FORMAT)
-    set(OUTPUT ${bin}/qpid-dispatch-book.${FORMAT})
+  # Generate a book with the given suffix. Extra arguments are passed to pandoc
+  macro(generate_book SUFFIX)
+    set(OUTPUT ${bin}/qpid-dispatch-book${SUFFIX})
     add_custom_command(
       OUTPUT ${OUTPUT}
-      COMMAND ${CMD} -o ${OUTPUT} ${BOOK}
+      COMMAND ${PANDOC} ${PD_ARGS} -o ${OUTPUT} ${ARGN} ${BOOK}
       DEPENDS man ${BOOK}
     )
     install(FILES ${OUTPUT} DESTINATION ${QD_DOC_INSTALL_DIR})
     set(BOOKS ${BOOKS} ${OUTPUT})
   endmacro()
 
-  generate_book(html)  # Always generate HTML
+  generate_book(.html)          # Complete HTML document.
+  generate_book(.html.in --template ${src}/site-html.pd) # Headless fragment for Qpid website.
 
   find_program(PDFLATEX pdflatex)
   if (PDFLATEX)
-    generate_book(pdf)
+    generate_book(.pdf)      # Complete PDF document.
   else(PDFLATEX)
     message("Not generating PDF format book, pdflatex not available.")
   endif(PDFLATEX)
