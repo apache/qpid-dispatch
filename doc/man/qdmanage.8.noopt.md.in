@@ -59,9 +59,9 @@ Run `qdmanage --help` to see options.
 
 # Files
 
-*${QPID_DISPATCH_CONFDIR}/qdrouter.json*
+*${QD_DOC_INSTALL_DIR}/qdrouter.json*
 :    Management schema for qdrouterd.
-*${QPID_DISPATCH_CONFDIR}/qdrouter.json.readme.txt*
+*${QD_DOC_INSTALL_DIR}/qdrouter.json.readme.txt*
 :    Explanation of the management schema.
 
 # Examples

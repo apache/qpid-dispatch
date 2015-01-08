@@ -32,5 +32,5 @@ install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} setup.py -v install -
 install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/qpid_dispatch/management/qdrouter.json
   ${CMAKE_CURRENT_SOURCE_DIR}/qpid_dispatch/management/qdrouter.json.readme.txt
-  DESTINATION ${QPID_DISPATCH_CONFDIR}
+  DESTINATION ${QD_DOC_INSTALL_DIR}
   )
