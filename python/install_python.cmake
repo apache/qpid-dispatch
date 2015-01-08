@@ -22,11 +22,9 @@
 
 include(FindPythonInterp)
 
-set(PYTHON_MANIFEST ${CMAKE_CURRENT_BINARY_DIR}/python/python_manifest.txt)
+set(PYTHON_MANIFEST ${CMAKE_BINARY_DIR}/python_manifest.txt)
 
-execute_process(COMMAND ${PYTHON_EXECUTABLE}
-  setup.py -v install --prefix=${CMAKE_INSTALL_PREFIX} --record=${PYTHON_MANIFEST}
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/python)
+
 
 file(READ ${PYTHON_MANIFEST} PYTHON_MANIFEST_FILES)
 list(APPEND CMAKE_INSTALL_MANIFEST_FILES ${PYTHON_MANIFEST_FILES})
