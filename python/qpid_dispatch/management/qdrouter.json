@@ -371,11 +371,13 @@
             "description": "Link to another AMQP endpoint: router node, client or other AMQP process.",
             "extends": "operationalEntity",
             "attributes": {
+                "linkName": {"type": "String"},
                 "linkType": {"type": ["endpoint", "waypoint", "inter-router", "inter-area"]},
                 "linkDir": {"type": ["in", "out"]},
                 "owningAddr": {"type": "String"},
                 "eventFifoDepth": {"type": "Integer"},
-                "msgFifoDepth": {"type": "Integer"}
+                "msgFifoDepth": {"type": "Integer"},
+                "remoteContainer": {"type": "String"}
             }
         },
 

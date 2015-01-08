@@ -157,6 +157,7 @@ void *qd_link_get_conn_context(qd_link_t *link);
 
 qd_connection_t *qd_link_connection(qd_link_t *link);
 pn_link_t *qd_link_pn(qd_link_t *link);
+pn_session_t *qd_link_pn_session(qd_link_t *link);
 pn_terminus_t *qd_link_source(qd_link_t *link);
 pn_terminus_t *qd_link_target(qd_link_t *link);
 pn_terminus_t *qd_link_remote_source(qd_link_t *link);

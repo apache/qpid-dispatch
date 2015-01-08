@@ -694,6 +694,11 @@ pn_link_t *qd_link_pn(qd_link_t *link)
     return link->pn_link;
 }
 
+pn_session_t *qd_link_pn_session(qd_link_t *link)
+{
+    return link->pn_sess;
+}
+
 
 qd_connection_t *qd_link_connection(qd_link_t *link)
 {

@@ -103,18 +103,25 @@ static const char *qd_router_addr_text(qd_address_t *addr)
     return addr ? (const char*)qd_hash_key_by_handle(addr->hash_handle) : NULL;
 }
 
+static const char* qd_router_link_remote_container(qd_router_link_t* link) {
+    return pn_connection_remote_container(
+        pn_session_connection(qd_link_pn_session(link->link)));
+}
+
+static const char* qd_router_link_name(qd_router_link_t* link) {
+    return pn_link_name(qd_link_pn(link->link));
+}
+
 qd_error_t qd_entity_refresh_router_link(qd_entity_t* entity, void *impl)
 {
     qd_router_link_t *link = (qd_router_link_t*) impl;
-    /* FIXME aconway 2014-10-17: old management used link->bit_mask as name/identity,
-     * but even when prefixed with router.link this is not unique. Let python agent
-     * generate a name for now. A better ID would be router.link:<remote container>.<link name>.
-     */
     if (!qd_entity_set_string(entity, "linkType", qd_link_type_name(link->link_type)) &&
         !qd_entity_set_string(entity, "linkDir", (link->link_direction == QD_INCOMING) ? "in": "out") &&
+        !qd_entity_set_string(entity, "linkName", qd_router_link_name(link)) &&
         !qd_entity_set_string(entity, "owningAddr", qd_router_addr_text(link->owning_addr)) &&
         !qd_entity_set_long(entity, "eventFifoDepth", DEQ_SIZE(link->event_fifo)) &&
-        !qd_entity_set_long(entity, "msgFifoDepth", DEQ_SIZE(link->msg_fifo))
+        !qd_entity_set_long(entity, "msgFifoDepth", DEQ_SIZE(link->msg_fifo)) &&
+        !qd_entity_set_string(entity, "remoteContainer", qd_router_link_remote_container(link))
     )
         return QD_ERROR_NONE;
     return qd_error_code();

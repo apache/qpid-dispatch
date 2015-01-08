@@ -173,9 +173,13 @@ class AgentEntity(SchemaEntity):
         pass
 
 class ContainerEntity(AgentEntity):
+
     def create(self):
         self._qd.qd_dispatch_configure_container(self._dispatch, self)
 
+    def _identifier(self):
+        self.attributes.setdefault("containerName", "00000000-0000-0000-0000-000000000000")
+        return self.attributes["containerName"]
 
 class RouterEntity(AgentEntity):
     def __init__(self, agent, entity_type, attributes=None):
