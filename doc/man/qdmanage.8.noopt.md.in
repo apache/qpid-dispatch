@@ -59,9 +59,9 @@ Run `qdmanage --help` to see options.
 
 # Files
 
-*${QD_DOC_INSTALL_DIR}/qdrouter.json*
+*${CMAKE_INSTALL_PREFIX}/${QD_DOC_INSTALL_DIR}/qdrouter.json*
 :    Management schema for qdrouterd.
-*${QD_DOC_INSTALL_DIR}/qdrouter.json.readme.txt*
+*${CMAKE_INSTALL_PREFIX}/${QD_DOC_INSTALL_DIR}/qdrouter.json.readme.txt*
 :    Explanation of the management schema.
 
 # Examples
