@@ -23,8 +23,8 @@ if [[ ! -f config.sh ]]; then
 fi
 
 export SOURCE_DIR=$(pwd)
-export BUILD_DIR=$SOURCE_DIR/build
-export INSTALL_DIR=$SOURCE_DIR/install
+export BUILD_DIR=$SOURCE_DIR/${1:-build}
+export INSTALL_DIR=$SOURCE_DIR/${2:-install}
 
 PYTHON_LIB=$(python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(prefix='$INSTALL_DIR')")
 

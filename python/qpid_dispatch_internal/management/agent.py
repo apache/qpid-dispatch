@@ -111,15 +111,15 @@ class AgentEntity(SchemaEntity):
         # Set default identity and name if not already set.
         prefix = self.entity_type.short_name + "/"
         if self.attributes.get('identity') is None:
-            self.attributes['identity'] = prefix + str(self._identifier(self.attributes))
+            self.attributes['identity'] = prefix + str(self._identifier())
         elif not self.attributes['identity'].startswith(prefix):
             self.attributes['identity'] = prefix + self.attributes['identity']
         self.attributes.setdefault('name', self.attributes['identity'])
         super(AgentEntity, self).validate()
 
-    def _identifier(self, attributes):
+    def _identifier(self):
         """
-        Generate identifier from attributes. identity=type/identifier.
+        Generate identifier. identity=type/identifier.
         Default is per-type counter, derived classes can override.
         """
         try: counter = type(self)._identifier_count
@@ -185,8 +185,8 @@ class RouterEntity(AgentEntity):
         # FIXME aconway 2014-12-19: clean this up.
         self._set_pointer(self._dispatch)
 
-    def _identifier(self, attributes):
-        return attributes.get('routerId')
+    def _identifier(self):
+        return self.attributes.get('routerId')
 
     def create(self):
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
@@ -200,7 +200,7 @@ class LogEntity(AgentEntity):
             attributes = dict(defaults, **attributes)
         super(LogEntity, self).__init__(agent, entity_type, attributes, validate=True)
 
-    def _identifier(self, attributes): return attributes.get('module')
+    def _identifier(self): return self.attributes.get('module')
 
     def create(self):
         self._qd.qd_log_entity(self)
@@ -212,17 +212,25 @@ class LogEntity(AgentEntity):
         """Can't actually delete a log source but return it to the default state"""
         self._qd.qd_log_source_reset(self.attributes['module'])
 
+def _addr_port_identifier(entity):
+    for attr in ['addr', 'port']: # Set default values if need be
+        entity.attributes.setdefault(
+            attr, entity.entity_type.attribute(attr).missing_value())
+    return "%s:%s" % (entity.attributes['addr'], entity.attributes['port'])
+
 class ListenerEntity(AgentEntity):
     def create(self):
         self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
+    def _identifier(self): return _addr_port_identifier(self)
 
 class ConnectorEntity(AgentEntity):
     def create(self):
         self._qd.qd_dispatch_configure_connector(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
+    def _identifier(self): return _addr_port_identifier(self)
 
 class FixedAddressEntity(AgentEntity):
     def create(self):

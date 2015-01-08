@@ -207,7 +207,8 @@ class AttributeType(object):
         self.description = description
         self.annotation = annotation
         if self.value is not None and self.default is not None:
-            raise ValidationError("Attribute '%s' has default value and fixed value"%self.name)
+            raise ValidationError("Attribute '%s' has default value and fixed value" %
+                                  self.name)
 
     def missing_value(self, check_required=True, add_default=True, **kwargs):
         """
@@ -221,8 +222,7 @@ class AttributeType(object):
         if add_default and self.default is not None:
             return self.default
         if check_required and self.required:
-            raise ValidationError("Missing required attribute '%s'"%(self.name))
-
+            raise ValidationError("Missing required attribute '%s'" % (self.name))
 
     def validate(self, value, resolve=lambda x: x, check_unique=None, **kwargs):
         """
@@ -403,6 +403,11 @@ class EntityType(AttrsAndOps):
                 raise ValidationError("Unresolved circular reference '%s'"%values)
             values.append(value)
 
+    def attribute(self, name):
+        """Get the AttributeType for name"""
+        if not name in self.attributes:
+            raise ValidationError("Unknown attribute '%s' for '%s'" % (name, self))
+        return self.attributes[name]
 
     def validate(self, attributes, check_singleton=None, **kwargs):
         """
@@ -429,11 +434,9 @@ class EntityType(AttrsAndOps):
 
             # Validate attributes.
             for name, value in attributes.iteritems():
-                if name not in self.attributes:
-                    raise ValidationError("%s has unknown attribute '%s'"%(self, name))
                 if name == 'type':
                     value = self.schema.long_name(value)
-                attributes[name] = self.attributes[name].validate(
+                attributes[name] = self.attribute(name).validate(
                     value, lambda v: self.resolve(v, attributes), **kwargs)
         except ValidationError, e:
             raise  ValidationError, "%s: %s"%(self, e), sys.exc_info()[2]
@@ -493,6 +496,7 @@ class Schema(object):
 
     def short_name(self, name):
         """Remove prefix from name if present"""
+        if not name: return name
         if name.startswith(self.prefixdot):
             name = name[len(self.prefixdot):]
         return name

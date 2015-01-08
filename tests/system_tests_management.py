@@ -224,6 +224,13 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
             self.assert_create_ok(*c)
         assert retry(lambda: self.router.is_connected, wp_router.ports[0])
 
+        # Verify the entities
+        id = 'connector/0.0.0.0:%s' % wp_router.ports[0]
+        connector = self.node.read(identity=id)
+        self.assertEqual(
+            [connector.name, connector.addr, connector.port, connector.role],
+            ['wp_connector', '0.0.0.0', str(wp_router.ports[0]), 'on-demand'])
+
         # Send a message through self.router, verify it goes via wp_router
         address=self.router.addresses[0]+"/foo"
         mr = self.messenger()
@@ -249,7 +256,8 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertEqual('l0', entity.name)
         self.assertEqual(str(self.router.ports[0]), entity.port)
 
-        entity = self.node.read(type=LISTENER, identity='listener/1')
+        entity = self.node.read(
+            type=LISTENER, identity='listener/0.0.0.0:%s' % self.router.ports[1])
         self.assertEqual('l1', entity.name)
         self.assertEqual(str(self.router.ports[1]), entity.port)
 
