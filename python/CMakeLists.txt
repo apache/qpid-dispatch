@@ -27,9 +27,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/qpid_dispatch_site.py.in
                ${CMAKE_CURRENT_BINARY_DIR}/qpid_dispatch_site.py)
 
 # Install script for public python modules
-install(SCRIPT install_python.cmake)
-install(
-  FILES
+install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} setup.py -v install --prefix=${CMAKE_INSTALL_PREFIX} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
+
+install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/qpid_dispatch/management/qdrouter.json
   ${CMAKE_CURRENT_SOURCE_DIR}/qpid_dispatch/management/qdrouter.json.readme.txt
   DESTINATION ${QPID_DISPATCH_CONFDIR}
