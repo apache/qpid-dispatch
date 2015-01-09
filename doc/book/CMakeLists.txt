@@ -31,7 +31,7 @@ add_custom_command(
   DEPENDS ${src}/schema_md.py ${schema}
   )
 
-set(BOOK ${src}/introduction.md ${src}/using.md ${src}/addressing.md ${src}/amqp-mapping.md ${bin}/schema.md ${CMAKE_BINARY_DIR}/doc/man/manpages.md)
+set(BOOK ${src}/introduction.md ${src}/using.md ${src}/addressing.md ${src}/amqp-mapping.md ${bin}/schema.md)
 
 # Install markdown documentation in the doc directory.
 install(FILES ${BOOK} DESTINATION ${QD_DOC_INSTALL_DIR})
