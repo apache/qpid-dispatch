@@ -1,11 +1,28 @@
-This directory contains different kinds of documentation for Dispatch.
+<!--*-markdown-*-->
 
-  book/   - Book-format documentation.  This is published to the Qpid
-            website with each new Dispatch release.
+# Documentation for dispatch
 
-  man/    - Unix man pages.  These are included in the installed files.
+Documentation is written in [markdown][] format with [pandoc][] extensions. We
+use [pandoc][] to generate formatted documentation such as man pages, HTML and
+PDF.
 
-  notes/  - Developer notes: project information, design notes, or
-            anything else that's primarily of developer interest.
+All markdown, HTML and PDF documentation is installed in the share/doc
+directory. Man pages are also installed in the standard share/man location.
 
-  api/    - Generated API documentation.
+The Qpid website also has documentation for each release.
+
+Sub-directories:
+
+`book/`: Book-format documentation.
+
+`man/`: Unix man pages.
+
+`api/`: Generated API documentation.
+
+`notes/`: Developer notes: project information, design notes, or anything else
+that's primarily of developer interest. These are not installed.
+
+
+[markdown]: http://daringfireball.net/projects/markdown/syntax "Makrdown syntax"
+
+[pandoc]: http://johnmacfarlane.net/pandoc/README.html#pandocs-markdown "Pandoc markdown syntax"

@@ -22,6 +22,8 @@
 # If pandoc is available, also generate real man pages.
 #
 
+find_program(PANDOC pandoc)
+
 set(src ${CMAKE_CURRENT_SOURCE_DIR})
 set(bin ${CMAKE_CURRENT_BINARY_DIR})
 set(tools ${CMAKE_SOURCE_DIR}/tools)
@@ -37,14 +39,29 @@ macro(help2md program section path)
     COMMAND ${RUN} -s "${src}/help2md.py" "${manpage}.noopt.md" "${manpage}.md" "${path}/${program}" --help
     DEPENDS ${path}/${program} ${manpage}.noopt.md ${src}/help2md.py ${infile}
     )
-  set(MANPAGES_MD ${MANPAGES_MD} ${manpage}.md)
 endmacro()
 
-# If pandoc is avaliable generate and install proper man files.
-find_program(PANDOC pandoc)
-if (PANDOC)
-  macro(manpage program section)
-    set(manpage "${bin}/${program}.${section}")
+# Generate and install a man page from markdown source
+macro(manpage program section)
+
+  set(manpage "${bin}/${program}.${section}")
+
+  # Install the plain markdown manpage.
+  install(FILES ${manpage}.md DESTINATION ${QD_DOC_INSTALL_DIR})
+  set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage}.md)
+
+  # Generate HTML man page
+  add_custom_command (
+    OUTPUT ${manpage}.html ${manpage}.html.in
+    DEPENDS ${manpage}.md
+    COMMAND ${PANDOC} -f markdown -t html -o ${manpage}.html ${manpage}.md -s # Full page
+    COMMAND ${PANDOC} -f markdown -t html -o ${manpage}.html.in ${manpage}.md # Fragment
+    )
+  install(FILES ${manpage}.html DESTINATION ${QD_DOC_INSTALL_DIR})
+  set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage}.html ${manpage}.html.in)
+
+  # Generate proper man pages
+  if (PANDOC)
     string(TIMESTAMP date "%Y-%m-%d")
     if(${section} EQUAL 8)
       set(header "System Manager's Manual")
@@ -55,17 +72,14 @@ if (PANDOC)
     endif()
     add_custom_command (
       OUTPUT ${manpage}
-      COMMAND ${PANDOC} --template ${src}/man.template.pd -s -V date="${date}" -V title="${program}" -V section="${section}" -V version="${QPID_DISPATCH_VERSION}" -V header="${header}" -f markdown -t man -o ${manpage} "${manpage}.md"
-      DEPENDS "${manpage}.md" "${src}/man.template.pd"
+      DEPENDS ${manpage}.md ${src}/man.template.pd
+      COMMAND ${PANDOC} --template ${src}/man.template.pd -s -V date="${date}" -V title="${program}" -V section="${section}" -V version="${QPID_DISPATCH_VERSION}" -V header="${header}" -f markdown -t man -o ${manpage} ${manpage}.md
       )
-    set(MANPAGES ${MANPAGES} ${manpage})
     install(FILES ${manpage} DESTINATION "${MAN_INSTALL_DIR}/man${section}")
-  endmacro(manpage)
-else(PANDOC)
-  message("Not generating man pages, pandoc is not avaliable.")
-  macro(manpage program section)
-  endmacro()
-endif(PANDOC)
+    set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage})
+  endif(PANDOC)
+endmacro(manpage)
+
 
 # Shortcut to run both help2md and manpage
 macro(help2man program section path)
@@ -86,20 +100,8 @@ add_custom_command(
   COMMAND ${RUN} -s ${src}/qdrouterd_conf_man.py ${qdrouterd_conf_man}.md
   DEPENDS ${src}/qdrouterd_conf_man.py ${schema}
   )
-set(MANPAGES_MD ${MANPAGES_MD} ${qdrouterd_conf_man}.md)
 manpage(qdrouterd.conf 5)
 
-# Generate the man page section of the book
-
-add_custom_command(
-  OUTPUT manpages.md
-  COMMAND ${RUN} -s ${src}/man2book.py ${MANPAGES_MD} > manpages.md
-  DEPENDS ${src}/man2book.py ${MANPAGES_MD}
-  )
-
-# Install all the markdown files
-install(FILES ${MANPAGES_MD} DESTINATION ${QD_DOC_INSTALL_DIR})
-
 # Target to build the generated files
-add_custom_target(man ALL DEPENDS ${MANPAGES_MD} ${MANPAGES} manpages.md)
-
+message("FIXME" ${MANPAGES_OUT})
+add_custom_target(man ALL DEPENDS ${MANPAGES_OUT})
