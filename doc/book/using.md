@@ -29,8 +29,7 @@ to use a different path, the "-c" command line option will instruct Dispatch Rou
 which configuration to load.
 
 To run the router, invoke the executable:
-o
-    $ qdrouterd [-c my-config-file]
+    qdrouterd [-c my-config-file]
 
 For more details of the configuration file see the `qdrouterd.conf(5)` man page.
 
@@ -53,7 +52,7 @@ Router.  The following options are useful for seeing that the router is doing:
 
   | *Option* | *Description* |
   |----------|---------------|
-  | -l | Print a list of AMQP links attached to the router.  Links are unidirectional. Outgoing links are usually associated with a subscription address.  The tool distinguishes between _endpoint_ links and _router_ links.  Endpoint links are attached to clients using the router.  Router links are attached to other routers in a network of routers. |
+  | -l | Print a list of AMQP links attached to the router.  Links are unidirectional. Outgoing links are usually associated with a subscription address.  The tool distinguishes between _endpoint_ links and _router_ links.  Endpoint links are attached to clients using the router.  Router links are attached to other routers in a network of routbers. |
   | -a | Print a list of addresses known to the router. |
   | -n | Print a list of known routers in the network. |
   | -c | Print a list of connections to the router. |
@@ -222,25 +221,3 @@ The equivalent program written in Python against the Proton Messenger API:
         messenger.stop()
 
     main()
-
-
-## Known Issues and Limitations
-
-This is an early test release.  It is expected that users will find bugs and other
-various instabilities.  The main goal of this release is to prove that the process can be
-run and that users can demonstrate basic functionality as described in this document.
-Nevertheless, the following are known issues with the 0.1 release:
-
- - Subscriber addresses are not always cleaned up after a consumer disconnects.  See
-   <https://issues.apache.org/jira/browse/QPID-4964>.
- - Dispatch Router does not currently use the target address of a client's sender link to
-   route messages.  It only looks at the "to" field in the message's headers.  See
-   <https://issues.apache.org/jira/browse/QPID-5175>.
- - All subscription sources are treated as multicast addresses.  There is currently no
-   facility for provisioning different types of addresses.  Multicast means that if there
-   are multiple subscribers to the same address, they will all receive a copy of each
-   message sent to that address.
- - SSL connectors and listeners are supported but very lightly (and not recently) tested.
- - SASL authentication is not currently integrated into any authentication framework.  Use
-   ANONYMOUS for testing.
-
