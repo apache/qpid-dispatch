@@ -18,12 +18,13 @@
 ##
 
 """
-Generate the schema.md makrdown documentation for management schema.
+Generate the schema.md chapter for the dispatch book from the qdrouter.json schema.
 """
 
 import sys, re
 from pkgutil import get_data
 from qpid_dispatch_internal.management.qdrouter import QdSchema
+from qpid_dispatch_internal.management.schema import quotestr
 
 class SchemaWriter(object):
     """Write the schema as a markdown document"""
@@ -43,69 +44,88 @@ class SchemaWriter(object):
         default = attr.default
         if isinstance(default, basestring) and default.startswith('$'):
             default = None  # Don't show defaults that are references, confusing.
-        self.write('\n`%s` '%(attr.name))
+        self.write('\n*%s* '%(attr.name))
         self.write('(%s)\n'%(', '.join(
             filter(None, [str(attr.atype),
                           attr.required and "required",
                           attr.unique and "unique",
-                          default and "default=%s"%default]))))
+                          default and "default=%s" % quotestr(default)]))))
         if attr.description:
             self.write(":   %s\n"%attr.description)
         else:
             self.warn("Warning: No description for %s in %s" % (attr, thing.short_name))
 
-    def preface(self, thing):
-        self.write('\n### `%s`\n' % thing.short_name)
-        if thing.description:
-            self.write('\n%s\n' % thing.description)
-        else:
-            self.warn("Warning no description for %s" % thing)
-
     def attributes(self, thing):
         for attr in thing.my_attributes:
             self.attribute(attr, thing)
 
-    def annotation(self, annotation):
-        self.preface(annotation)
-        used_by = ["`%s`" % e.short_name
-                   for e in self.schema.filter(lambda e: annotation in e.annotations)]
-        if used_by:
-            self.write('\nUsed by %s.\n'%(', '.join(used_by)))
-        self.attributes(annotation)
-
-    def summary(self, thing):
-        return "`%s` (%s)" % (thing.short_name, ", ".join("`%s`" % a for a in thing.attributes))
+    def preface(self, thing):
+        self.write('\n### %s\n' % thing.short_name)
+        if thing.description:
+            self.write('\n%s\n' % thing.description)
+        else:
+            self.warn("Warning no description for %s" % entity_type)
 
     def entity_type(self, entity_type):
         self.preface(entity_type)
-        if entity_type.base:
-            self.write('\nExtends: %s.\n' % self.summary(entity_type.base))
-        if entity_type.annotations:
-            self.write('\nAnnotations: %s.\n' % (
-                ', '.join([self.summary(a) for a in entity_type.annotations])))
+        for a in entity_type.annotations: self.attributes(a)
         self.attributes(entity_type)
+        ops = entity_type.operations
+        if entity_type.singleton: ops.remove('CREATE')
+        if ops:
+            self.write("\nOperations allowed: %s\n\n" % ", ".join(entity_type.operations))
 
     def entity_types(self, base_name):
         base = self.schema.entity_type(base_name)
-        self.entity_type(base)
         for entity_type in self.schema.filter(lambda t: t.extends(base)):
             self.entity_type(entity_type)
 
     def run(self):
-        self.write(get_data('qpid_dispatch.management', 'qdrouter.json.readme.txt')) # Preface
-        self.write("The rest of this section provides the schema documentation in readable format.\n")
+        self.write("""
+# Management Schema
 
-        self.write("\n## Annotations\n")
-        for annotation in self.schema.annotations.itervalues():
-            self.annotation(annotation)
+This chapter documents the set of *management entity types* that define configuration and
+management of a Dispatch Router.
 
-        self.write("\n## Base Entity Type\n")
-        self.entity_type(self.schema.entity_type("entity"))
+All management entity types have the following attributes:
 
-        self.write("\n## Configuration Entities\n")
+- *type*: The fully qualified type of the entity,
+  e.g. `org.apache.qpid.dispatch.router`. In this documentation and when using
+  dispatch tools you can use the short name of the type, e.g. `router`
+
+- *identity*: A system-generated identity of the entity. It includes
+  the short type name and some identifying information. E.g. `log/AGENT` or
+  `listener/localhost:amqp`
+
+There are two kinds of management entity type.
+
+- *Configuration* Entities: Parameters that can be set in the configuration file
+(see `qdrouterd.conf(5)` man page) or set at run-time with the `qdmanage(8)`
+tool.
+
+- *Operational* Entities: Run-time status values that can be queried using `qdstat(8)` or
+`qdmanage(8)` tools.
+
+
+""")
+
+        self.write("""## Configuration Entities
+
+Configuration entities define the attributes allowed in the configuration file
+(see `qdrouterd.conf(5)`) but you can also create entities once the router is
+running using the `qdrouterd(8)` tool's `create` operation. Some entities can also
+be modified using the `update` operation, see the entity descriptions below.
+
+""")
         self.entity_types("configurationEntity")
 
-        self.write("\n## Operational Entities\n")
+        self.write("""\n## Operational Entities
+
+Operational entities provide statistics and other run-time attributes of the router.
+The `qdstat(8)` tool provides a convenient way to query run-time statistics.
+You can also use the general-purpose management tool `qdmanage(8)` to query 
+operational attributes.
+""")
         self.entity_types("operationalEntity")
 
 def main():

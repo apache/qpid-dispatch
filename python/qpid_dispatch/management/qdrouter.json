@@ -195,10 +195,10 @@
             "extends": "configurationEntity",
             "operations": ["CREATE", "READ"],
             "annotations": [
-                "sslProfile",
                 "addrPort",
-                "saslMechanisms",
-                "connectionRole"
+                "connectionRole",
+                "sslProfile",
+                "saslMechanisms"
             ],
             "attributes": {
                 "requirePeerAuth": {
@@ -233,10 +233,10 @@
             "extends": "configurationEntity",
             "operations": ["CREATE", "READ"],
             "annotations": [
-                "sslProfile",
                 "addrPort",
-                "saslMechanisms",
-                "connectionRole"
+                "connectionRole",
+                "sslProfile",
+                "saslMechanisms"
             ],
             "attributes": {
                 "allowRedirect": {

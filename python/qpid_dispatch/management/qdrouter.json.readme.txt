@@ -1,3 +1,22 @@
+<!--*-markdown-*-
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
 # The qdrouter management schema
 
 The schema `qdrouterd.json` is a JSON format file that defines annotations and
@@ -8,7 +27,7 @@ The schema is a JSON map with the following keys:
 
 - "description": documentation string for the schema
 - "prefix": Prefix prepended to schema names when they are exposed to AMQP management clients.
-- "annotations": map of annotation names to definitions (see below)
+
 - "entityTypes": map of entity type names to definitions (see below)
 
 Annotation and entity type definition maps have the following keys:

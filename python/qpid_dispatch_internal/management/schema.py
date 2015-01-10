@@ -35,6 +35,11 @@ class ValidationError(Exception):
     """Error raised if schema validation fails"""
     pass
 
+def quotestr(value, quote="'"):
+    """Quote value if it is a string type, str() it if not """
+    if isinstance(value, basestring): return "'%s'" % value
+    else: return str(value)
+
 
 class Type(object):
     """Base class for schema types.
@@ -142,10 +147,13 @@ class EnumType(Type):
 
     def __str__(self):
         """String description of enum type."""
-        return "One of [%s]"%(', '.join(self.tags))
+        return "One of [%s]" % ', '.join([quotestr(tag) for tag in self.tags])
 
-BUILTIN_TYPES = dict((t.name, t) for t in
-                     [Type("String", str), Type("Integer", int), Type("List", list), BooleanType()])
+BUILTIN_TYPES = OrderedDict(
+    (t.name, t) for t in [Type("String", str),
+                          Type("Integer", int),
+                          Type("List", list),
+                          BooleanType()])
 
 def get_type(rep):
     """
@@ -309,7 +317,7 @@ class Annotation(AttrsAndOps):
     """An annotation type defines a set of attributes that can be re-used by multiple EntityTypes"""
     def __init__(self, name, schema, attributes=None, operations=None, description=""):
         super(Annotation, self).__init__(name, schema, attributes, operations, description)
-        attributes = attributes or {}
+        attributes = attributes or OrderedDict()
         for a in self.attributes.itervalues():
             a.annotation = self
 
@@ -487,8 +495,8 @@ class Schema(object):
             for k, v in defs.iteritems():
                 t = thing(k, self, **v)
                 mymap[t.name] = t
-        add_defs(Annotation, self.annotations, annotations or {})
-        add_defs(EntityType, self.entity_types, entityTypes or {})
+        add_defs(Annotation, self.annotations, annotations or OrderedDict())
+        add_defs(EntityType, self.entity_types, entityTypes or OrderedDict())
 
         for e in self.entity_types.itervalues():
             e.init()
