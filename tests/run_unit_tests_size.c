@@ -25,7 +25,7 @@ int field_tests();
 
 int main(int argc, char** argv)
 {
-    ssize_t buffer_size = 512;
+    size_t buffer_size = 512;
 
     if (argc > 1) {
         buffer_size = atoi(argv[1]);
