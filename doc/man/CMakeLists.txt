@@ -50,18 +50,18 @@ macro(manpage program section)
   install(FILES ${manpage}.md DESTINATION ${QD_DOC_INSTALL_DIR})
   set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage}.md)
 
-  # Generate HTML man page
-  add_custom_command (
-    OUTPUT ${manpage}.html ${manpage}.html.in
-    DEPENDS ${manpage}.md
-    COMMAND ${PANDOC} -f markdown -t html -o ${manpage}.html ${manpage}.md -s # Full page
-    COMMAND ${PANDOC} -f markdown -t html -o ${manpage}.html.in ${manpage}.md # Fragment
-    )
-  install(FILES ${manpage}.html DESTINATION ${QD_DOC_INSTALL_DIR})
-  set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage}.html ${manpage}.html.in)
-
-  # Generate proper man pages
   if (PANDOC)
+    # Generate HTML man page
+    add_custom_command (
+      OUTPUT ${manpage}.html ${manpage}.html.in
+      DEPENDS ${manpage}.md
+      COMMAND ${PANDOC} -f markdown -t html -o ${manpage}.html ${manpage}.md -s # Full page
+      COMMAND ${PANDOC} -f markdown -t html -o ${manpage}.html.in ${manpage}.md # Fragment
+      )
+    install(FILES ${manpage}.html DESTINATION ${QD_DOC_INSTALL_DIR})
+    set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage}.html ${manpage}.html.in)
+
+    # Generate proper man pages
     string(TIMESTAMP date "%Y-%m-%d")
     if(${section} EQUAL 8)
       set(header "System Manager's Manual")
@@ -103,5 +103,4 @@ add_custom_command(
 manpage(qdrouterd.conf 5)
 
 # Target to build the generated files
-message("FIXME" ${MANPAGES_OUT})
 add_custom_target(man ALL DEPENDS ${MANPAGES_OUT})
