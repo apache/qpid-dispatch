@@ -686,6 +686,61 @@ static void router_forward_to_remote_subscribers_LH(qd_router_t *router, qd_addr
     }
 }
 
+int router_forward_message_LH(qd_router_t *router,
+                              qd_message_t *msg,
+                              qd_delivery_t *delivery,
+                              qd_address_t *addr,
+                              qd_field_iterator_t *ingress_iter,
+                              int is_direct)
+{
+    int fanout = 0;
+
+    //
+    // Handle the various fanout and bias cases:
+    //
+    if (QD_FANOUT(addr->semantics) == QD_FANOUT_MULTIPLE) {
+        //
+        // Forward to all of the local links receiving this address.
+        //
+        router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
+
+        //
+        // If the address form is direct to this router node, don't relay it on
+        // to any other part of the network.
+        //
+        if (!is_direct)
+            router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
+
+    } else if (QD_FANOUT(addr->semantics) == QD_FANOUT_SINGLE) {
+        if (QD_BIAS(addr->semantics) == QD_BIAS_CLOSEST) {
+            //
+            // Bias is "closest".  First, try to find a directly connected consumer for the address.
+            // If there is none, then look for the closest remote consumer.
+            //
+            router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
+            if (fanout == 0 && !is_direct)
+                router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
+
+        } else if (QD_BIAS(addr->semantics) == QD_BIAS_SPREAD) {
+            //
+            // Bias is "spread".  Alternate between looking first for a local consumer and looking
+            // first for a remote consumer.
+            //
+            addr->toggle = !addr->toggle;
+            if (addr->toggle) {
+                router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
+                if (fanout == 0 && !is_direct)
+                    router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
+            } else {
+                if (!is_direct)
+                    router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
+                if (fanout == 0)
+                    router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
+            }
+        }
+    }
+    return fanout;
+}
 
 /**
  * Inbound Delivery Handler
@@ -847,49 +902,18 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
                 // outside of the router process.
                 //
                 if (!drop && !is_local && router->router_mode != QD_ROUTER_MODE_ENDPOINT) {
-                    //
-                    // Handle the various fanout and bias cases:
-                    //
-                    if (QD_FANOUT(addr->semantics) == QD_FANOUT_MULTIPLE) {
-                        //
-                        // Forward to all of the local links receiving this address.
-                        //
-                        router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
 
-                        //
-                        // If the address form is direct to this router node, don't relay it on
-                        // to any other part of the network.
-                        //
-                        if (!is_direct)
-                            router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
+                    // allow custom forwarder to handle the message (if present)
+                    bool fwd = true;
 
-                    } else if (QD_FANOUT(addr->semantics) == QD_FANOUT_SINGLE) {
-                        if (QD_BIAS(addr->semantics) == QD_BIAS_CLOSEST) {
-                            //
-                            // Bias is "closest".  First, try to find a directly connected consumer for the address.
-                            // If there is none, then look for the closest remote consumer.
-                            //
-                            router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
-                            if (fanout == 0 && !is_direct)
-                                router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
+                    if (addr->forwarder) {
+                        fwd = !(addr->forwarder(addr->forwarder_context, router, msg, delivery,
+                                                addr, ingress_iter, is_direct));
+                    }
 
-                        } else if (QD_BIAS(addr->semantics) == QD_BIAS_SPREAD) {
-                            //
-                            // Bias is "spread".  Alternate between looking first for a local consumer and looking
-                            // first for a remote consumer.
-                            //
-                            addr->toggle = !addr->toggle;
-                            if (addr->toggle) {
-                                router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
-                                if (fanout == 0 && !is_direct)
-                                    router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
-                            } else {
-                                if (!is_direct)
-                                    router_forward_to_remote_subscribers_LH(router, addr, delivery, msg, &fanout, ingress_iter);
-                                if (fanout == 0)
-                                    router_forward_to_direct_subscribers_LH(addr, delivery, msg, &fanout);
-                            }
-                        }
+                    if (fwd) {
+                        fanout = router_forward_message_LH(router, msg, delivery, addr,
+                                                           ingress_iter, is_direct);
                     }
                 }
             }
@@ -1586,6 +1610,29 @@ void qd_address_set_static_cc(qd_address_t *address, qd_address_t *cc)
 void qd_address_set_dynamic_cc(qd_address_t *address, qd_address_t *cc)
 {
     address->dynamic_cc = cc;
+}
+
+
+qd_address_t *qd_router_set_forwarder(qd_router_t            *router,
+                                      const char             *address,
+                                      qd_router_route_hook_t  forwarder,
+                                      void                   *context)
+{
+    qd_address_t        *addr = 0;
+    qd_field_iterator_t *iter = qd_field_iterator_string(address,
+                                                         ITER_VIEW_ADDRESS_HASH);
+    if (iter) {
+        sys_mutex_lock(router->lock);
+        qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
+        if (addr) {
+            addr->forwarder         = forwarder;
+            addr->forwarder_context = context;
+        }
+        sys_mutex_unlock(router->lock);
+        qd_field_iterator_free(iter);
+    }
+
+    return addr;
 }
 
 
