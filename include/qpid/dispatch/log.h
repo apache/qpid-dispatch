@@ -20,6 +20,10 @@
  */
 #include <stdbool.h>
 
+/**@file
+ * Sending debug/administrative log messages.
+ */
+
 /** Logging levels */
 typedef enum {
     QD_LOG_NONE     =0x00, ///< No logging

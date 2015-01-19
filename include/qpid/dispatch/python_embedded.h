@@ -19,6 +19,10 @@
  * under the License.
  */
 
+/**@file
+ * Embedded python interpreter.
+ */
+
 #include <Python.h>
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/compose.h>

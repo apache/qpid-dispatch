@@ -22,8 +22,11 @@
 #include <qpid/dispatch/buffer.h>
 #include <qpid/dispatch/iterator.h>
 
-/** @defgroup parse
- * 
+/**@file
+ * Parse raw data fields into AMQP data trees.
+ *
+ * @defgroup parse
+ *
  * Parse data from qd_field_iterator_t into a tree structure represeniting
  * an AMQP data type tree.
  */

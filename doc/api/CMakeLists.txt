@@ -17,12 +17,8 @@
 ## under the License.
 ##
 
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
-  option(BUILD_DOCS "Build documentation with doxygen" ON)
-endif (DOXYGEN_FOUND)
+if(USE_DOXYGEN)
 
-if (BUILD_DOCS)
   # Create doxygen configuration files.
   function(configure_doxygen DOXYGEN_OUTPUT_DIRECTORY DOXYGEN_INPUT DOXYGEN_MORE)
     configure_file(
@@ -42,9 +38,13 @@ if (BUILD_DOCS)
   add_custom_command (OUTPUT user
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.py ${DOXYGEN_EXECUTABLE} user.doxygen
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in ${API_SOURCES})
+
   add_custom_command (OUTPUT dev
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.py ${DOXYGEN_EXECUTABLE} dev.doxygen
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in ${API_SOURCES})
 
   add_custom_target(apidocs ALL DEPENDS user dev)
-endif (BUILD_DOCS)
+
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/user/html/ DESTINATION ${QD_DOC_INSTALL_DIR}/api)
+
+endif(USE_DOXYGEN)

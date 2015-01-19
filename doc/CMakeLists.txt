@@ -17,6 +17,32 @@
 ## under the License.
 ##
 
+find_package(Doxygen)
+find_program(PANDOC pandoc)
+find_program(PDFLATEX pdflatex)
+
+# Create an option to enable/disable a doc tool and check if the tool is present.
+# If tool is present, option defaults to ON else OFF.
+# If option is set ON by user and tool is not present, that is an error.
+# If tool is not present and option is not set on just issue a status message.
+# 
+macro(doc_tool tool use var what)
+  if(${var})
+    option(${use} "Generate ${what} with ${tool}" ON)
+  else(${var})
+    option(${use} "Generate ${what} with ${tool}" OFF)
+    if(${use})
+      message(SEND_ERROR "${use} enabled but ${tool} not found.")
+    else(${use})
+      message(STATUS "${tool} not found, not generating ${what}.")
+    endif(${use})
+  endif(${var})
+endmacro()
+
+doc_tool(pandoc USE_PANDOC PANDOC "HTML and man page documentation")
+doc_tool(doxygen USE_DOXYGEN DOXYGEN_FOUND "API documentation")
+doc_tool(pdflatex USE_PDFLATEX PDFLATEX "PDF documentation (also requires pandoc)")
+
 add_subdirectory(api)
 add_subdirectory(man)
 add_subdirectory(book)

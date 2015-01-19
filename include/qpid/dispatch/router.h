@@ -19,8 +19,10 @@
  * under the License.
  */
 
-/** @defgroup router
- * 
+/**@file
+ * Register addresses, send messages.
+ *
+ * @defgroup router
  * Register addresses, send messages.
  */
 #include <qpid/dispatch/dispatch.h>

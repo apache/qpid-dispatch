@@ -19,7 +19,10 @@
  * under the License.
  */
 
-/** @defgroup container
+/**@file
+ * Container for nodes, links and deliveries.
+ *
+ * @defgroup container
  *
  * Container for nodes, links and deliveries.
  * @{

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,10 +18,14 @@
 # under the License.
 #
 
-PROJECT_NAME           = "Qpid Dispatch Library"
-OUTPUT_DIRECTORY       = ${DOXYGEN_OUTPUT_DIRECTORY}
-INPUT                  = ${DOXYGEN_INPUT}
-RECURSIVE              = yes
-JAVADOC_AUTOBRIEF      = yes
-GENERATE_LATEX         = no
-${DOXYGEN_MORE}
+set -ev
+
+rm -rf $BUILD_DIR
+rm -rf $INSTALL_DIR
+
+mkdir $BUILD_DIR
+cd $BUILD_DIR
+
+cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=Debug "$@" $SOURCE_DIR
+make -j4
+make install

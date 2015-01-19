@@ -19,6 +19,10 @@
  * under the License.
  */
 
+/**@file
+ * Large bit-sets.
+ */
+
 typedef struct qd_bitmask_t qd_bitmask_t;
 
 int qd_bitmask_width();

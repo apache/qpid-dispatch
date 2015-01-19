@@ -21,7 +21,9 @@
 
 #include <qpid/dispatch/error.h>
 
-/**
+/**@file
+ * Configure and prepare a dispatch instance.
+ *
  * @defgroup dispatch
  *
  * Configure and prepare a dispatch instance.

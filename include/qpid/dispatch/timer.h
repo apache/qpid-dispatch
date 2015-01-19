@@ -22,7 +22,9 @@
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/server.h>
 
-/**
+/**@file
+ * Server Timer Functions
+ * 
  * @defgroup timer
  *
  * Server Timer Functions

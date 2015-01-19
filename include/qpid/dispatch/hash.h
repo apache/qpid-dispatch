@@ -19,6 +19,10 @@
  * under the License.
  */
 
+/**@file
+ * Hash table.
+ */
+
 #include <stdlib.h>
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/error.h>

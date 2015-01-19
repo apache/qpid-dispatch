@@ -22,8 +22,6 @@
 # If pandoc is available, also generate real man pages.
 #
 
-find_program(PANDOC pandoc)
-
 set(src ${CMAKE_CURRENT_SOURCE_DIR})
 set(bin ${CMAKE_CURRENT_BINARY_DIR})
 set(tools ${CMAKE_SOURCE_DIR}/tools)
@@ -50,7 +48,7 @@ macro(manpage program section)
   install(FILES ${manpage}.md DESTINATION ${QD_DOC_INSTALL_DIR})
   set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage}.md)
 
-  if (PANDOC)
+  if (USE_PANDOC)
     # Generate HTML man page
     add_custom_command (
       OUTPUT ${manpage}.html ${manpage}.html.in
@@ -77,9 +75,8 @@ macro(manpage program section)
       )
     install(FILES ${manpage} DESTINATION "${MAN_INSTALL_DIR}/man${section}")
     set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage})
-  endif(PANDOC)
+  endif(USE_PANDOC)
 endmacro(manpage)
-
 
 # Shortcut to run both help2md and manpage
 macro(help2man program section path)
