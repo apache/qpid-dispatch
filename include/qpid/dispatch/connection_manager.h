@@ -19,6 +19,10 @@
  * under the License.
  */
 
+/**@file
+ * Manage listeners and connectors.
+ */
+
 #include <qpid/dispatch/dispatch.h>
 
 typedef struct qd_connection_manager_t qd_connection_manager_t;

@@ -19,6 +19,10 @@
  * under the License.
  */
 
+/**@file
+ * Double-ended queues and other useful macros.
+ */
+
 #include <stdlib.h>
 #include <assert.h>
 

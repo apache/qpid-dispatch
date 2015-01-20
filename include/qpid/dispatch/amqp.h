@@ -19,7 +19,10 @@
  * under the License.
  */
 
-/** @defgroup amqp AMQP
+/**@file
+ * AMQP constants.
+ *
+ *@defgroup amqp AMQP
  *
  * AMQP related constant definitions.
  */

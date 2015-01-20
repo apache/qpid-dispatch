@@ -19,6 +19,10 @@
  * under the License.
  */
 
+/**@file
+ * Portable threading and locking API.
+ */
+
 typedef struct sys_mutex_t sys_mutex_t;
 
 sys_mutex_t *sys_mutex(void);

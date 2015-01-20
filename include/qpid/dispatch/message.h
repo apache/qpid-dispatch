@@ -27,7 +27,9 @@
 #include <qpid/dispatch/parse.h>
 #include <qpid/dispatch/container.h>
 
-/** 
+/**@file
+ * Message representation. 
+ *
  * @defgroup message
  *
  * Message representation.

@@ -19,6 +19,24 @@
  * under the License.
  */
 
+/**@file
+ * Includes all dispatch library headers.
+ *
+ * @mainpage API documentation for the Qpid Dispatch library.
+ *
+ * @section intro Introduction
+ *
+ * This library allows you to send, receive, parse, construct, route and otherwise
+ * manipulate AMQP messages.
+ *
+ * The [Qpid Dispatch Router](http://qpid.apache.org/components/dispatch-router)
+ * is a flexible AMQP messaging router based on this library. It should meet
+ * most general-purpose message routing needs.
+ *
+ * If you want to build your own custom router-like application, this library
+ * provides the tools to do so.
+*/
+
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/bitmask.h>
 #include <qpid/dispatch/buffer.h>

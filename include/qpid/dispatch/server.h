@@ -22,6 +22,10 @@
 #include <qpid/dispatch/dispatch.h>
 #include <proton/engine.h>
 
+/**@file
+ * Control server threads, signals and connections.
+ */
+
 /**
  * @defgroup server
  *

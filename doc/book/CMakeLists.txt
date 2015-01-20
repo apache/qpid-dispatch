@@ -36,9 +36,7 @@ set(BOOK ${src}/introduction.md ${src}/using.md ${src}/addressing.md ${src}/amqp
 # Install markdown documentation in the doc directory.
 install(FILES ${BOOK} DESTINATION ${QD_DOC_INSTALL_DIR})
 
-# Generate man pages and book if pandoc is installed
-find_program(PANDOC pandoc)
-if (PANDOC)
+if(USE_PANDOC)
   set(PD_ARGS --standalone --toc --number-sections -f markdown -V "title=Qpid Dispatch Router Book")
 
   # Generate a book with the given suffix. Extra arguments are passed to pandoc
@@ -62,10 +60,7 @@ if (PANDOC)
   else(PDFLATEX)
     message("Not generating PDF format book, pdflatex not available.")
   endif(PDFLATEX)
-else(PANDOC)
-    message("Not generating HTML format book, pandoc not available.")
-endif(PANDOC)
-
+endif(USE_PANDOC)
 
 # Target to generate all chapters and books.
 add_custom_target(book ALL DEPENDS ${BOOK} ${BOOKS})
