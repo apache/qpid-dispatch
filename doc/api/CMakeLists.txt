@@ -21,13 +21,19 @@ if(USE_DOXYGEN)
 
   # Create doxygen configuration files.
   function(configure_doxygen  HTML_OUTPUT INPUT MORE_CONFIG)
+    if(USE_DOT)
+      set(HAVE_DOT yes)
+    else()
+      set(HAVE_DOT no)
+    endif()
+    # Arguments and local variables are used to configure doxygen.in
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in
       ${CMAKE_CURRENT_BINARY_DIR}/${HTML_OUTPUT}.doxygen)
   endfunction(configure_doxygen)
 
-  configure_doxygen(user "${CMAKE_SOURCE_DIR}/include" "")
-  configure_doxygen(dev "${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src"
+  configure_doxygen(api "${CMAKE_SOURCE_DIR}/include" "")
+  configure_doxygen(api_dev "${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src"
     "ENABLED_SECTIONS=INTERNAL\nINTERNAL_DOCS=yes\nEXTRACT_ALL=yes")
 
   # This is not ideal: if files are added/removed it won't be detected til we re-run cmake.
@@ -36,17 +42,17 @@ if(USE_DOXYGEN)
     ${CMAKE_SOURCE_DIR}/src/*.h
     ${CMAKE_SOURCE_DIR}/src/*.c)
 
-  add_custom_command (OUTPUT user
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.py ${DOXYGEN_EXECUTABLE} user.doxygen
+  add_custom_command (OUTPUT api
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.py ${DOXYGEN_EXECUTABLE} api.doxygen
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in ${API_SOURCES})
 
-  add_custom_command (OUTPUT dev
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.py ${DOXYGEN_EXECUTABLE} dev.doxygen
+  add_custom_command (OUTPUT api_dev
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.py ${DOXYGEN_EXECUTABLE} api_dev.doxygen
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in ${API_SOURCES})
 
-  add_custom_target(apidocs ALL DEPENDS user dev)
+  add_custom_target(apidocs ALL DEPENDS api api_dev)
 
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/user/ DESTINATION ${QD_DOC_INSTALL_DIR}/api)
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dev/ DESTINATION ${QD_DOC_INSTALL_DIR}/api_dev)
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/api DESTINATION ${QD_DOC_INSTALL_DIR})
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/api_dev DESTINATION ${QD_DOC_INSTALL_DIR})
 
 endif(USE_DOXYGEN)

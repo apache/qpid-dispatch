@@ -41,7 +41,7 @@ if(USE_PANDOC)
 
   # Generate a book with the given suffix. Extra arguments are passed to pandoc
   macro(generate_book SUFFIX)
-    set(OUTPUT ${bin}/qpid-dispatch-book${SUFFIX})
+    set(OUTPUT ${bin}/book${SUFFIX})
     add_custom_command(
       OUTPUT ${OUTPUT}
       COMMAND ${PANDOC} ${PD_ARGS} -o ${OUTPUT} ${ARGN} ${BOOK}
@@ -54,12 +54,10 @@ if(USE_PANDOC)
   generate_book(.html)          # Complete HTML document.
   generate_book(.html.in --template ${src}/site-html.pd) # Headless fragment for Qpid website.
 
-  find_program(PDFLATEX pdflatex)
-  if (PDFLATEX)
+  if (USE_PDFLATEX)
     generate_book(.pdf)      # Complete PDF document.
-  else(PDFLATEX)
-    message("Not generating PDF format book, pdflatex not available.")
-  endif(PDFLATEX)
+  endif(USE_PDFLATEX)
+
 endif(USE_PANDOC)
 
 # Target to generate all chapters and books.

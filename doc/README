@@ -9,7 +9,8 @@ PDF.
 All markdown, HTML and PDF documentation is installed in the share/doc
 directory. Man pages are also installed in the standard share/man location.
 
-The Qpid website also has documentation for each release.
+The [dispatch web site](http://qpid.apache.org/components/dispatch-router) has
+documentation for each release.
 
 Sub-directories:
 
@@ -23,6 +24,6 @@ Sub-directories:
 that's primarily of developer interest. These are not installed.
 
 
-[markdown]: http://daringfireball.net/projects/markdown/syntax "Makrdown syntax"
+[markdown]: http://daringfireball.net/projects/markdown/syntax "Markdown syntax"
 
 [pandoc]: http://johnmacfarlane.net/pandoc/README.html#pandocs-markdown "Pandoc markdown syntax"
