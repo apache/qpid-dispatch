@@ -40,8 +40,9 @@ macro(doc_tool tool use var what)
 endmacro()
 
 doc_tool(pandoc USE_PANDOC PANDOC "HTML and man page documentation")
-doc_tool(doxygen USE_DOXYGEN DOXYGEN_FOUND "API documentation")
 doc_tool(pdflatex USE_PDFLATEX PDFLATEX "PDF documentation (also requires pandoc)")
+doc_tool(doxygen USE_DOXYGEN DOXYGEN_FOUND "API documentation")
+doc_tool(dot USE_DOT DOT "Generate diagrams in API documentation (also requires doxygen)")
 
 add_subdirectory(api)
 add_subdirectory(man)

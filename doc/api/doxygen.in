@@ -17,10 +17,17 @@
 # under the License.
 #
 
-PROJECT_NAME           = "Qpid Dispatch Library"
-OUTPUT_DIRECTORY       = ${DOXYGEN_OUTPUT_DIRECTORY}
-INPUT                  = ${DOXYGEN_INPUT}
-RECURSIVE              = yes
-JAVADOC_AUTOBRIEF      = yes
-GENERATE_LATEX         = no
-${DOXYGEN_MORE}
+PROJECT_NAME            = "Qpid Dispatch Library"
+PROJECT_NUMBER          = ${QPID_DISPATCH_VERSION}
+INPUT                   = ${INPUT}
+HTML_OUTPUT             = ${HTML_OUTPUT}
+
+STRIP_FROM_PATH         = ${CMAKE_SOURCE_DIR}/include
+DISABLE_INDEX           = yes
+GENERATE_LATEX          = no
+GENERATE_TREEVIEW       = yes
+HAVE_DOT                = ${USE_DOT}
+JAVADOC_AUTOBRIEF       = yes
+QUIET                   = yes
+RECURSIVE               = yes
+${MORE_CONFIG}

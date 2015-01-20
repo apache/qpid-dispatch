@@ -20,14 +20,15 @@
 if(USE_DOXYGEN)
 
   # Create doxygen configuration files.
-  function(configure_doxygen DOXYGEN_OUTPUT_DIRECTORY DOXYGEN_INPUT DOXYGEN_MORE)
+  function(configure_doxygen  HTML_OUTPUT INPUT MORE_CONFIG)
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in
-      ${CMAKE_CURRENT_BINARY_DIR}/${DOXYGEN_OUTPUT_DIRECTORY}.doxygen)
+      ${CMAKE_CURRENT_BINARY_DIR}/${HTML_OUTPUT}.doxygen)
   endfunction(configure_doxygen)
+
   configure_doxygen(user "${CMAKE_SOURCE_DIR}/include" "")
   configure_doxygen(dev "${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src"
-    "ENABLED_SECTIONS=INTERNAL\nINTERNAL_DOCS=yes")
+    "ENABLED_SECTIONS=INTERNAL\nINTERNAL_DOCS=yes\nEXTRACT_ALL=yes")
 
   # This is not ideal: if files are added/removed it won't be detected til we re-run cmake.
   file(GLOB_RECURSE API_SOURCES
@@ -45,6 +46,7 @@ if(USE_DOXYGEN)
 
   add_custom_target(apidocs ALL DEPENDS user dev)
 
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/user/html/ DESTINATION ${QD_DOC_INSTALL_DIR}/api)
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/user/ DESTINATION ${QD_DOC_INSTALL_DIR}/api)
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dev/ DESTINATION ${QD_DOC_INSTALL_DIR}/api_dev)
 
 endif(USE_DOXYGEN)
