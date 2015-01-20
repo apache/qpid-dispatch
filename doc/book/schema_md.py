@@ -29,16 +29,17 @@ from qpid_dispatch_internal.management.schema import quotestr
 class SchemaWriter(object):
     """Write the schema as a markdown document"""
 
-    def __init__(self, out):
+    def __init__(self, out, quiet=True):
         self.out = out
         self.schema = QdSchema()
+        self.quiet = quiet
 
 
     def write(self, value):
         self.out.write(value)
 
     def warn(self, message):
-        print >>sys.stderr, message
+        if not self.quiet: print >>sys.stderr, message
 
     def attribute(self, attr, thing):
         default = attr.default
