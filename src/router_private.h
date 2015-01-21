@@ -219,6 +219,7 @@ struct qd_router_t {
     qd_address_list_t         addrs;
     qd_hash_t                *addr_hash;
     qd_address_t             *router_addr;
+    qd_address_t             *routerma_addr;
     qd_address_t             *hello_addr;
 
     qd_router_link_list_t     links;

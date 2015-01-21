@@ -260,6 +260,9 @@
                 "module": {
                     "type":[
                         "ROUTER",
+                        "ROUTER_HELLO",
+                        "ROUTER_LS",
+                        "ROUTER_MA",
                         "MESSAGE",
                         "SERVER",
                         "AGENT",

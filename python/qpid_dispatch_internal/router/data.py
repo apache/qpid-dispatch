@@ -46,16 +46,16 @@ class LinkState(object):
     The link-state of a single router.  The link state consists of a list of neighbor routers reachable from
     the reporting router.  The link-state-sequence number is incremented each time the link state changes.
     """
-    def __init__(self, body, _id=None, _area=None, _ls_seq=None, _peers=None):
+    def __init__(self, body, _id=None, _ls_seq=None, _peers=None):
         self.last_seen = 0
         if body:
             self.id = getMandatory(body, 'id', str)
-            self.area = getMandatory(body, 'area', str)
+            self.area = '0'
             self.ls_seq = getMandatory(body, 'ls_seq', long)
             self.peers = getMandatory(body, 'peers', list)
         else:
             self.id = _id
-            self.area = _area
+            self.area = '0'
             self.ls_seq = long(_ls_seq)
             self.peers = _peers
 
@@ -87,6 +87,9 @@ class LinkState(object):
     def has_peers(self):
         return len(self.peers) > 0
 
+    def is_peer(self, _id):
+        return _id in self.peers
+
     def bump_sequence(self):
         self.ls_seq += 1
 
@@ -98,15 +101,15 @@ class MessageHELLO(object):
     This message is used by directly connected routers to determine with whom they have
     bidirectional connectivity.
     """
-    def __init__(self, body, _id=None, _area=None, _seen_peers=None, _instance=long(0)):
+    def __init__(self, body, _id=None, _seen_peers=None, _instance=long(0)):
         if body:
             self.id = getMandatory(body, 'id', str)
-            self.area = getMandatory(body, 'area', str)
+            self.area = '0'
             self.seen_peers = getMandatory(body, 'seen', list)
             self.instance = getOptional(body, 'instance', 0, long)
         else:
             self.id   = _id
-            self.area = _area
+            self.area = '0'
             self.seen_peers = _seen_peers
             self.instance = _instance
 
@@ -133,16 +136,16 @@ class MessageRA(object):
     This message is sent periodically to indicate the originating router's sequence numbers
     for link-state and mobile-address-state.
     """
-    def __init__(self, body, _id=None, _area=None, _ls_seq=None, _mobile_seq=None, _instance=long(0)):
+    def __init__(self, body, _id=None, _ls_seq=None, _mobile_seq=None, _instance=long(0)):
         if body:
             self.id = getMandatory(body, 'id', str)
-            self.area = getMandatory(body, 'area', str)
+            self.area = '0'
             self.ls_seq = getMandatory(body, 'ls_seq', long)
             self.mobile_seq = getMandatory(body, 'mobile_seq', long)
             self.instance = getOptional(body, 'instance', 0, long)
         else:
             self.id = _id
-            self.area = _area
+            self.area = '0'
             self.ls_seq = long(_ls_seq)
             self.mobile_seq = long(_mobile_seq)
             self.instance = _instance
@@ -165,16 +168,16 @@ class MessageRA(object):
 class MessageLSU(object):
     """
     """
-    def __init__(self, body, _id=None, _area=None, _ls_seq=None, _ls=None, _instance=long(0)):
+    def __init__(self, body, _id=None, _ls_seq=None, _ls=None, _instance=long(0)):
         if body:
             self.id = getMandatory(body, 'id', str)
-            self.area = getMandatory(body, 'area', str)
+            self.area = '0'
             self.ls_seq = getMandatory(body, 'ls_seq', long)
             self.ls = LinkState(getMandatory(body, 'ls', dict))
             self.instance = getOptional(body, 'instance', 0, long)
         else:
             self.id = _id
-            self.area = _area
+            self.area = '0'
             self.ls_seq = long(_ls_seq)
             self.ls = _ls
             self.instance = _instance
@@ -197,13 +200,13 @@ class MessageLSU(object):
 class MessageLSR(object):
     """
     """
-    def __init__(self, body, _id=None, _area=None):
+    def __init__(self, body, _id=None):
         if body:
             self.id = getMandatory(body, 'id', str)
-            self.area = getMandatory(body, 'area', str)
+            self.area = '0'
         else:
             self.id = _id
-            self.area = _area
+            self.area = '0'
 
     def get_opcode(self):
         return 'LSR'
@@ -219,17 +222,17 @@ class MessageLSR(object):
 class MessageMAU(object):
     """
     """
-    def __init__(self, body, _id=None, _area=None, _seq=None, _add_list=None, _del_list=None, _exist_list=None):
+    def __init__(self, body, _id=None, _seq=None, _add_list=None, _del_list=None, _exist_list=None):
         if body:
             self.id = getMandatory(body, 'id', str)
-            self.area = getMandatory(body, 'area', str)
+            self.area = '0'
             self.mobile_seq = getMandatory(body, 'mobile_seq', long)
             self.add_list = getOptional(body, 'add', None, list)
             self.del_list = getOptional(body, 'del', None, list)
             self.exist_list = getOptional(body, 'exist', None, list)
         else:
             self.id = _id
-            self.area = _area
+            self.area = '0'
             self.mobile_seq = long(_seq)
             self.add_list = _add_list
             self.del_list = _del_list
@@ -261,14 +264,14 @@ class MessageMAU(object):
 class MessageMAR(object):
     """
     """
-    def __init__(self, body, _id=None, _area=None, _have_seq=None):
+    def __init__(self, body, _id=None, _have_seq=None):
         if body:
             self.id = getMandatory(body, 'id', str)
-            self.area = getMandatory(body, 'area', str)
+            self.area = '0'
             self.have_seq = getMandatory(body, 'have_seq', long)
         else:
             self.id = _id
-            self.area = _area
+            self.area = '0'
             self.have_seq = long(_have_seq)
 
     def get_opcode(self):

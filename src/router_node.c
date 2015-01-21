@@ -1449,8 +1449,9 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     // locally later in the initialization sequence.
     //
     if (router->router_mode == QD_ROUTER_MODE_INTERIOR) {
-        router->router_addr = qd_router_register_address(qd, "qdrouter", 0, QD_SEMANTICS_ROUTER_CONTROL, false, 0);
-        router->hello_addr  = qd_router_register_address(qd, "qdhello", 0, QD_SEMANTICS_ROUTER_CONTROL, false, 0);
+        router->router_addr   = qd_router_register_address(qd, "qdrouter", 0, QD_SEMANTICS_ROUTER_CONTROL, false, 0);
+        router->routerma_addr = qd_router_register_address(qd, "qdrouter.ma", 0, QD_SEMANTICS_DEFAULT, false, 0);
+        router->hello_addr    = qd_router_register_address(qd, "qdhello", 0, QD_SEMANTICS_ROUTER_CONTROL, false, 0);
     }
 
     //

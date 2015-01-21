@@ -52,9 +52,11 @@ void qd_python_initialize(qd_dispatch_t *qd, const char *python_pkgdir)
     ilock = sys_mutex();
     if (python_pkgdir)
         dispatch_python_pkgdir = PyString_FromString(python_pkgdir);
-    Py_Initialize();
 
+    qd_python_lock_state_t ls = qd_python_lock();
+    Py_Initialize();
     qd_python_setup();
+    qd_python_unlock(ls);
 }
 
 

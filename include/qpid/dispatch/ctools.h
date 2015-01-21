@@ -54,7 +54,7 @@
  *@pre ptr points to first element of deq
  *@post ptr points to first element of deq that passes test, or 0. Test should involve ptr.
  */
-#define DEQ_FIND(ptr, test) while((ptr) && !(test)) ptr = DEQ_NEXT(ptr);
+#define DEQ_FIND(ptr,test) while((ptr) && !(test)) ptr = DEQ_NEXT(ptr);
 
 #define DEQ_INSERT_HEAD(d,i)      \
 do {                              \

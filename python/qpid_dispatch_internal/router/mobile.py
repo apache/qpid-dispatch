@@ -18,7 +18,9 @@
 #
 
 from data import MessageMAR, MessageMAU
-from dispatch import LOG_DEBUG
+from dispatch import LOG_DEBUG, LOG_TRACE
+
+MAX_KEPT_DELTAS = 10
 
 class MobileAddressEngine(object):
     """
@@ -28,38 +30,37 @@ class MobileAddressEngine(object):
     is directly bound.
     """
     def __init__(self, container, node_tracker):
-        self.container = container
-        self.node_tracker = node_tracker
-        self.id = self.container.id
-        self.area = self.container.area
-        self.mobile_addr_max_age = self.container.config.mobileAddrMaxAge
-        self.mobile_seq = 0
-        self.local_addrs = []
-        self.added_addrs = []
+        self.container     = container
+        self.node_tracker  = node_tracker
+        self.id            = self.container.id
+        self.mobile_seq    = 0
+        self.local_addrs   = []
+        self.added_addrs   = []
         self.deleted_addrs = []
-        self.remote_lists = {}      # map router_id => (sequence, list of addrs)
-        self.remote_last_seen = {}  # map router_id => time of last seen advertisement/update
-        self.needed_mars = {}
+        self.sent_deltas   = {}
 
 
     def tick(self, now):
-        self._expire_remotes(now)
-        self._send_mars()
-
         ##
         ## If local addrs have changed, collect the changes and send a MAU with the diffs
         ## Note: it is important that the differential-MAU be sent before a RA is sent
         ##
         if len(self.added_addrs) > 0 or len(self.deleted_addrs) > 0:
             self.mobile_seq += 1
-            self.container.send('amqp:/_topo/%s/all/qdrouter' % self.area,
-                                MessageMAU(None, self.id, self.area, self.mobile_seq, self.added_addrs, self.deleted_addrs))
+            msg = MessageMAU(None, self.id, self.mobile_seq, self.added_addrs, self.deleted_addrs)
+
+            self.sent_deltas[self.mobile_seq] = msg
+            if len(self.sent_deltas) > MAX_KEPT_DELTAS:
+                self.sent_deltas.pop(self.mobile_seq - MAX_KEPT_DELTAS)
+
+            self.container.send('amqp:/_topo/0/all/qdrouter.ma', msg)
+            self.container.log_ma(LOG_TRACE, "SENT: %r" % msg)
             self.local_addrs.extend(self.added_addrs)
             for addr in self.deleted_addrs:
                 self.local_addrs.remove(addr)
-            self.added_addrs = []
+            self.added_addrs   = []
             self.deleted_addrs = []
-            self.container.mobile_sequence_changed(self.mobile_seq)
+        return self.mobile_seq
 
 
     def add_local_address(self, addr):
@@ -84,22 +85,6 @@ class MobileAddressEngine(object):
                 self.added_addrs.remove(addr)
 
 
-    def handle_ra(self, msg, now):
-        if msg.id == self.id:
-            return
-
-        if msg.mobile_seq == 0:
-            return
-
-        if msg.id in self.remote_lists:
-            _seq, _list = self.remote_lists[msg.id]
-            self.remote_last_seen[msg.id] = now
-            if _seq < msg.mobile_seq:
-                self.needed_mars[(msg.id, msg.area, _seq)] = None
-        else:
-            self.needed_mars[(msg.id, msg.area, 0)] = None
-
-
     def handle_mau(self, msg, now):
         ##
         ## If the MAU is differential, we can only use it if its sequence is exactly one greater
@@ -109,87 +94,69 @@ class MobileAddressEngine(object):
         ##
         if msg.id == self.id:
             return
+        node = self.node_tracker.router_node(msg.id)
 
         if msg.exist_list != None:
             ##
             ## Absolute MAU
             ##
-            if msg.id in self.remote_lists:
-                _seq, _list = self.remote_lists[msg.id]
-                if _seq >= msg.mobile_seq:  # ignore duplicates
-                    return
-            self.remote_lists[msg.id] = (msg.mobile_seq, msg.exist_list)
-            self.remote_last_seen[msg.id] = now
-            (add_list, del_list) = self.node_tracker.overwrite_addresses(msg.id, msg.exist_list)
-            self._activate_remotes(msg.id, add_list, del_list)
+            if msg.mobile_seq == node.mobile_address_sequence:
+                return
+            node.mobile_address_sequence = msg.mobile_seq
+            node.overwrite_addresses(msg.exist_list)
         else:
             ##
             ## Differential MAU
             ##
-            if msg.id in self.remote_lists:
-                _seq, _list = self.remote_lists[msg.id]
-                if _seq == msg.mobile_seq:  # ignore duplicates
-                    return
-                self.remote_last_seen[msg.id] = now
-                if _seq + 1 == msg.mobile_seq:
-                    ##
-                    ## This is one greater than our stored value, incorporate the deltas
-                    ##
-                    if msg.add_list and msg.add_list.__class__ == list:
-                        _list.extend(msg.add_list)
-                    if msg.del_list and msg.del_list.__class__ == list:
-                        for addr in msg.del_list:
-                            _list.remove(addr)
-                    self.remote_lists[msg.id] = (msg.mobile_seq, _list)
-                    if msg.add_list != None:
-                        self.node_tracker.add_addresses(msg.id, msg.add_list)
-                    if msg.del_list != None:
-                        self.node_tracker.del_addresses(msg.id, msg.del_list)
-                    self._activate_remotes(msg.id, msg.add_list, msg.del_list)
-                else:
-                    self.needed_mars[(msg.id, msg.area, _seq)] = None
+            if node.mobile_address_sequence + 1 == msg.mobile_seq:
+                ##
+                ## This message represents the next expected sequence, incorporate the deltas
+                ##
+                node.mobile_address_sequence += 1
+                for a in msg.add_list:
+                    node.map_address(a)
+                for a in msg.del_list:
+                    node.unmap_address(a)
+
+            elif node.mobile_address_sequence == msg.mobile_seq:
+                ##
+                ## Ignore duplicates
+                ##
+                return
+
             else:
-                self.needed_mars[(msg.id, msg.area, 0)] = None
+                ##
+                ## This is an out-of-sequence delta.  Don't use it.  Schedule a MAR to
+                ## get back on track.
+                ##
+                node.mobile_address_request()
 
 
     def handle_mar(self, msg, now):
         if msg.id == self.id:
             return
-        if msg.have_seq < self.mobile_seq:
-            self.container.send('amqp:/_topo/%s/%s/qdrouter' % (msg.area, msg.id),
-                                MessageMAU(None, self.id, self.area, self.mobile_seq, None, None, self.local_addrs))
+        if msg.have_seq == self.mobile_seq:
+            return
+        if self.mobile_seq - (msg.have_seq + 1) < len(self.sent_deltas):
+            ##
+            ## We can catch the peer up with a series of stored differential updates
+            ##
+            for s in range(msg.have_seq + 1, self.mobile_seq + 1):
+                self.container.send('amqp:/_topo/0/%s/qdrouter.ma' % msg.id, self.sent_deltas[s])
+                self.container.log_ma(LOG_TRACE, "SENT: %r" % self.sent_deltas[s])
+            return
+
+        ##
+        ## The peer needs to be sent an absolute update with the whole address list
+        ##
+        smsg = MessageMAU(None, self.id, self.mobile_seq, None, None, self.local_addrs)
+        self.container.send('amqp:/_topo/0/%s/qdrouter.ma' % msg.id, smsg)
+        self.container.log_ma(LOG_TRACE, "SENT: %r" % smsg)
 
 
-    def purge_remote(self, _id):
-        try:
-            (add_list, del_list) = self.node_tracker.overwrite_addresses(_id, [])
-            self._activate_remotes(_id, add_list, del_list)
-            self.remote_lists.pop(_id)
-            self.remote_last_seen.pop(_id)
-            self.container.log(LOG_DEBUG, "Purged remote records for node: %s" % _id)
-        except:
-            pass
+    def send_mar(self, node_id, seq):
+        msg = MessageMAR(None, self.id, seq)
+        self.container.send('amqp:/_topo/0/%s/qdrouter.ma' % node_id, msg)
+        self.container.log_ma(LOG_TRACE, "SENT: %r" % msg)
 
 
-    def _expire_remotes(self, now):
-        for _id, t in self.remote_last_seen.items():
-            if now - t > self.mobile_addr_max_age:
-                self.remote_lists.pop(_id)
-                self.remote_last_seen.pop(_id)
-                self.container.log(LOG_DEBUG, "Expired remote mobile addresses on node: %s" % _id)
-
-
-    def _send_mars(self):
-        for _id, _area, _seq in self.needed_mars.keys():
-            self.container.send('amqp:/_topo/%s/%s/qdrouter' % (_area, _id), MessageMAR(None, self.id, self.area, _seq))
-        self.needed_mars = {}
-
-
-    def _activate_remotes(self, _id, added, deleted):
-        bit = self.node_tracker.maskbit_for_node(_id)
-        if added != None:
-            for a in added:
-                self.container.router_adapter.map_destination(a[0], a[1:], bit)
-        if deleted != None:
-            for d in deleted:
-                self.container.router_adapter.unmap_destination(d[0], d[1:], bit)

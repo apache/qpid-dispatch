@@ -43,151 +43,85 @@ typedef struct {
 } RouterAdapter;
 
 
-static char *qd_add_router(qd_router_t *router, const char *address, int router_maskbit, int link_maskbit)
-{
-    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0)
-        return "Router bit mask out of range";
-
-    if (link_maskbit >= qd_bitmask_width() || link_maskbit < -1)
-        return "Link bit mask out of range";
-
-    sys_mutex_lock(router->lock);
-    if (router->routers_by_mask_bit[router_maskbit] != 0) {
-        sys_mutex_unlock(router->lock);
-        return "Adding router over already existing router";
-    }
-
-    if (link_maskbit >= 0 && router->out_links_by_mask_bit[link_maskbit] == 0) {
-        sys_mutex_unlock(router->lock);
-        return "Adding neighbor router with invalid link reference";
-    }
-
-    //
-    // Hash lookup the address to ensure there isn't an existing router address.
-    //
-    qd_field_iterator_t *iter = qd_field_iterator_string(address, ITER_VIEW_ADDRESS_HASH);
-    qd_address_t        *addr;
-
-    qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
-    assert(addr == 0);
-
-    //
-    // Create an address record for this router and insert it in the hash table.
-    // This record will be found whenever a "foreign" topological address to this
-    // remote router is looked up.
-    //
-    addr = qd_address();
-    addr->semantics = router_addr_semantics;
-    qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
-    DEQ_INSERT_TAIL(router->addrs, addr);
-    qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
-    qd_field_iterator_free(iter);
-
-    //
-    // Create a router-node record to represent the remote router.
-    //
-    qd_router_node_t *rnode = new_qd_router_node_t();
-    DEQ_ITEM_INIT(rnode);
-    rnode->owning_addr   = addr;
-    rnode->mask_bit      = router_maskbit;
-    rnode->next_hop      = 0;
-    rnode->peer_link     = 0;
-    rnode->ref_count     = 0;
-    rnode->valid_origins = qd_bitmask(0);
-
-    DEQ_INSERT_TAIL(router->routers, rnode);
-    qd_entity_cache_add(QD_ROUTER_NODE_TYPE, rnode);
-
-    //
-    // Link the router record to the address record.
-    //
-    qd_router_add_node_ref_LH(&addr->rnodes, rnode);
-
-    //
-    // Link the router record to the router address record.
-    //
-    qd_router_add_node_ref_LH(&router->router_addr->rnodes, rnode);
-
-    //
-    // Add the router record to the mask-bit index.
-    //
-    router->routers_by_mask_bit[router_maskbit] = rnode;
-
-    //
-    // If this is a neighbor router, add the peer_link reference to the
-    // router record.
-    //
-    if (link_maskbit >= 0)
-        rnode->peer_link = router->out_links_by_mask_bit[link_maskbit];
-
-    sys_mutex_unlock(router->lock);
-    return 0;
-}
-
-
-static char *qd_del_router(qd_router_t *router, int router_maskbit)
-{
-    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0)
-        return "Router bit mask out of range";
-
-    sys_mutex_lock(router->lock);
-    if (router->routers_by_mask_bit[router_maskbit] == 0) {
-        sys_mutex_unlock(router->lock);
-        return "Deleting nonexistent router";
-    }
-
-    qd_router_node_t *rnode = router->routers_by_mask_bit[router_maskbit];
-    qd_address_t     *oaddr = rnode->owning_addr;
-    assert(oaddr);
-
-    qd_entity_cache_remove(QD_ROUTER_ADDRESS_TYPE, oaddr);
-    qd_entity_cache_remove(QD_ROUTER_NODE_TYPE, rnode);
-
-    //
-    // Unlink the router node from the address record
-    //
-    qd_router_del_node_ref_LH(&oaddr->rnodes, rnode);
-
-    //
-    // While the router node has a non-zero reference count, look for addresses
-    // to unlink the node from.
-    //
-    qd_address_t *addr = DEQ_HEAD(router->addrs);
-    while (addr && rnode->ref_count > 0) {
-        qd_router_del_node_ref_LH(&addr->rnodes, rnode);
-        addr = DEQ_NEXT(addr);
-    }
-    assert(rnode->ref_count == 0);
-
-    //
-    // Free the router node and the owning address records.
-    //
-    qd_bitmask_free(rnode->valid_origins);
-    DEQ_REMOVE(router->routers, rnode);
-    free_qd_router_node_t(rnode);
-
-    qd_hash_remove_by_handle(router->addr_hash, oaddr->hash_handle);
-    DEQ_REMOVE(router->addrs, oaddr);
-    qd_hash_handle_free(oaddr->hash_handle);
-    router->routers_by_mask_bit[router_maskbit] = 0;
-    free_qd_address_t(oaddr);
-
-    sys_mutex_unlock(router->lock);
-    return 0;
-}
-
-
-static PyObject* qd_add_remote_router(PyObject *self, PyObject *args)
+static PyObject *qd_add_router(PyObject *self, PyObject *args)
 {
     RouterAdapter *adapter = (RouterAdapter*) self;
     qd_router_t   *router  = adapter->router;
     const char    *address;
     int            router_maskbit;
+    char          *error = 0;
 
     if (!PyArg_ParseTuple(args, "si", &address, &router_maskbit))
         return 0;
 
-    char *error = qd_add_router(router, address, router_maskbit, -1);
+    do {
+        if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+            error = "Router bit mask out of range";
+            break;
+        }
+
+        sys_mutex_lock(router->lock);
+        if (router->routers_by_mask_bit[router_maskbit] != 0) {
+            sys_mutex_unlock(router->lock);
+            error = "Adding router over already existing router";
+            break;
+        }
+
+        //
+        // Hash lookup the address to ensure there isn't an existing router address.
+        //
+        qd_field_iterator_t *iter = qd_field_iterator_string(address, ITER_VIEW_ADDRESS_HASH);
+        qd_address_t        *addr;
+
+        qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
+        assert(addr == 0);
+
+        //
+        // Create an address record for this router and insert it in the hash table.
+        // This record will be found whenever a "foreign" topological address to this
+        // remote router is looked up.
+        //
+        addr = qd_address();
+        addr->semantics = router_addr_semantics;
+        qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
+        DEQ_INSERT_TAIL(router->addrs, addr);
+        qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
+        qd_field_iterator_free(iter);
+
+        //
+        // Create a router-node record to represent the remote router.
+        //
+        qd_router_node_t *rnode = new_qd_router_node_t();
+        DEQ_ITEM_INIT(rnode);
+        rnode->owning_addr   = addr;
+        rnode->mask_bit      = router_maskbit;
+        rnode->next_hop      = 0;
+        rnode->peer_link     = 0;
+        rnode->ref_count     = 0;
+        rnode->valid_origins = qd_bitmask(0);
+
+        DEQ_INSERT_TAIL(router->routers, rnode);
+        qd_entity_cache_add(QD_ROUTER_NODE_TYPE, rnode);
+
+        //
+        // Link the router record to the address record.
+        //
+        qd_router_add_node_ref_LH(&addr->rnodes, rnode);
+
+        //
+        // Link the router record to the router address records.
+        //
+        qd_router_add_node_ref_LH(&router->router_addr->rnodes, rnode);
+        qd_router_add_node_ref_LH(&router->routerma_addr->rnodes, rnode);
+
+        //
+        // Add the router record to the mask-bit index.
+        //
+        router->routers_by_mask_bit[router_maskbit] = rnode;
+
+        sys_mutex_unlock(router->lock);
+    } while (0);
+
     if (error) {
         PyErr_SetString(PyExc_Exception, error);
         return 0;
@@ -198,16 +132,138 @@ static PyObject* qd_add_remote_router(PyObject *self, PyObject *args)
 }
 
 
-static PyObject* qd_del_remote_router(PyObject *self, PyObject *args)
+static PyObject* qd_del_router(PyObject *self, PyObject *args)
 {
     RouterAdapter *adapter = (RouterAdapter*) self;
     qd_router_t   *router  = adapter->router;
     int router_maskbit;
+    char *error = 0;
 
     if (!PyArg_ParseTuple(args, "i", &router_maskbit))
         return 0;
 
-    char *error = qd_del_router(router, router_maskbit);
+    do {
+        if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+            error = "Router bit mask out of range";
+            break;
+        }
+
+        sys_mutex_lock(router->lock);
+        if (router->routers_by_mask_bit[router_maskbit] == 0) {
+            sys_mutex_unlock(router->lock);
+            error = "Deleting nonexistent router";
+            break;
+        }
+
+        qd_router_node_t *rnode = router->routers_by_mask_bit[router_maskbit];
+        qd_address_t     *oaddr = rnode->owning_addr;
+        assert(oaddr);
+
+        qd_entity_cache_remove(QD_ROUTER_ADDRESS_TYPE, oaddr);
+        qd_entity_cache_remove(QD_ROUTER_NODE_TYPE, rnode);
+
+        //
+        // Unlink the router node from the address record
+        //
+        qd_router_del_node_ref_LH(&oaddr->rnodes, rnode);
+
+        //
+        // While the router node has a non-zero reference count, look for addresses
+        // to unlink the node from.
+        //
+        qd_address_t *addr = DEQ_HEAD(router->addrs);
+        while (addr && rnode->ref_count > 0) {
+            qd_router_del_node_ref_LH(&addr->rnodes, rnode);
+            addr = DEQ_NEXT(addr);
+        }
+        assert(rnode->ref_count == 0);
+
+        //
+        // Free the router node and the owning address records.
+        //
+        qd_bitmask_free(rnode->valid_origins);
+        DEQ_REMOVE(router->routers, rnode);
+        free_qd_router_node_t(rnode);
+
+        qd_hash_remove_by_handle(router->addr_hash, oaddr->hash_handle);
+        DEQ_REMOVE(router->addrs, oaddr);
+        qd_hash_handle_free(oaddr->hash_handle);
+        router->routers_by_mask_bit[router_maskbit] = 0;
+        free_qd_address_t(oaddr);
+
+        sys_mutex_unlock(router->lock);
+    } while(0);
+
+    if (error) {
+        PyErr_SetString(PyExc_Exception, error);
+        return 0;
+    }
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
+static PyObject* qd_set_link(PyObject *self, PyObject *args)
+{
+    RouterAdapter *adapter = (RouterAdapter*) self;
+    qd_router_t   *router  = adapter->router;
+    int            router_maskbit;
+    int            link_maskbit;
+    char          *error = 0;
+
+    if (!PyArg_ParseTuple(args, "ii", &router_maskbit, &link_maskbit))
+        return 0;
+
+    do {
+        if (link_maskbit >= qd_bitmask_width() || link_maskbit < 0) {
+            error = "Link bit mask out of range";
+            break;
+        }
+
+        sys_mutex_lock(router->lock);
+        if (router->out_links_by_mask_bit[link_maskbit] == 0) {
+            sys_mutex_unlock(router->lock);
+            error = "Adding neighbor router with invalid link reference";
+            break;
+        }
+
+        //
+        // Add the peer_link reference to the router record.
+        //
+        qd_router_node_t *rnode = router->routers_by_mask_bit[router_maskbit];
+        rnode->peer_link = router->out_links_by_mask_bit[link_maskbit];
+
+        sys_mutex_unlock(router->lock);
+    } while (0);
+
+    if (error) {
+        PyErr_SetString(PyExc_Exception, error);
+        return 0;
+    }
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
+static PyObject* qd_remove_link(PyObject *self, PyObject *args)
+{
+    RouterAdapter *adapter = (RouterAdapter*) self;
+    qd_router_t   *router  = adapter->router;
+    int            router_maskbit;
+    char          *error = 0;
+
+    if (!PyArg_ParseTuple(args, "i", &router_maskbit))
+        return 0;
+
+    do {
+        sys_mutex_lock(router->lock);
+        qd_router_node_t *rnode = router->routers_by_mask_bit[router_maskbit];
+        rnode->peer_link = 0;
+        sys_mutex_unlock(router->lock);
+    } while (0);
+
     if (error) {
         PyErr_SetString(PyExc_Exception, error);
         return 0;
@@ -224,33 +280,84 @@ static PyObject* qd_set_next_hop(PyObject *self, PyObject *args)
     qd_router_t   *router  = adapter->router;
     int            router_maskbit;
     int            next_hop_maskbit;
+    char          *error = 0;
 
     if (!PyArg_ParseTuple(args, "ii", &router_maskbit, &next_hop_maskbit))
         return 0;
 
-    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
-        PyErr_SetString(PyExc_Exception, "Router bit mask out of range");
+    do {
+        if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+            error = "Router bit mask out of range";
+            break;
+        }
+
+        if (next_hop_maskbit >= qd_bitmask_width() || next_hop_maskbit < 0) {
+            error = "Next Hop bit mask out of range";
+            break;
+        }
+
+        sys_mutex_lock(router->lock);
+        if (router->routers_by_mask_bit[router_maskbit] == 0) {
+            sys_mutex_unlock(router->lock);
+            error = "Router Not Found";
+            break;
+        }
+
+        if (router->routers_by_mask_bit[next_hop_maskbit] == 0) {
+            sys_mutex_unlock(router->lock);
+            error = "Next Hop Not Found";
+            break;
+        }
+
+        if (router_maskbit != next_hop_maskbit) {
+            qd_router_node_t *rnode = router->routers_by_mask_bit[router_maskbit];
+            rnode->next_hop = router->routers_by_mask_bit[next_hop_maskbit];
+        }
+        sys_mutex_unlock(router->lock);
+    } while (0);
+
+    if (error) {
+        PyErr_SetString(PyExc_Exception, error);
         return 0;
     }
 
-    if (next_hop_maskbit >= qd_bitmask_width() || next_hop_maskbit < 0) {
-        PyErr_SetString(PyExc_Exception, "Next Hop bit mask out of range");
-        return 0;
-    }
+    Py_INCREF(Py_None);
+    return Py_None;
+}
 
-    if (router->routers_by_mask_bit[router_maskbit] == 0) {
-        PyErr_SetString(PyExc_Exception, "Router Not Found");
-        return 0;
-    }
 
-    if (router->routers_by_mask_bit[next_hop_maskbit] == 0) {
-        PyErr_SetString(PyExc_Exception, "Next Hop Not Found");
-        return 0;
-    }
+static PyObject* qd_remove_next_hop(PyObject *self, PyObject *args)
+{
+    RouterAdapter *adapter = (RouterAdapter*) self;
+    qd_router_t   *router  = adapter->router;
+    int            router_maskbit;
+    char          *error = 0;
 
-    if (router_maskbit != next_hop_maskbit) {
+    if (!PyArg_ParseTuple(args, "i", &router_maskbit))
+        return 0;
+
+    do {
+        if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+            error = "Router bit mask out of range";
+            break;
+        }
+
+        sys_mutex_lock(router->lock);
+        if (router->routers_by_mask_bit[router_maskbit] == 0) {
+            sys_mutex_unlock(router->lock);
+            error = "Router Not Found";
+            break;
+        }
+
         qd_router_node_t *rnode = router->routers_by_mask_bit[router_maskbit];
-        rnode->next_hop = router->routers_by_mask_bit[next_hop_maskbit];
+        rnode->next_hop = 0;
+
+        sys_mutex_unlock(router->lock);
+    } while (0);
+
+    if (error) {
+        PyErr_SetString(PyExc_Exception, error);
+        return 0;
     }
 
     Py_INCREF(Py_None);
@@ -265,87 +372,59 @@ static PyObject* qd_set_valid_origins(PyObject *self, PyObject *args)
     int            router_maskbit;
     PyObject      *origin_list;
     Py_ssize_t     idx;
+    char          *error = 0;
 
     if (!PyArg_ParseTuple(args, "iO", &router_maskbit, &origin_list))
         return 0;
 
-    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
-        PyErr_SetString(PyExc_Exception, "Router bit mask out of range");
-        return 0;
-    }
-
-    if (router->routers_by_mask_bit[router_maskbit] == 0) {
-        PyErr_SetString(PyExc_Exception, "Router Not Found");
-        return 0;
-    }
-
-    if (!PyList_Check(origin_list)) {
-        PyErr_SetString(PyExc_Exception, "Expected List as argument 2");
-        return 0;
-    }
-
-    Py_ssize_t        origin_count = PyList_Size(origin_list);
-    qd_router_node_t *rnode        = router->routers_by_mask_bit[router_maskbit];
-    int               maskbit;
-
-    for (idx = 0; idx < origin_count; idx++) {
-        maskbit = PyInt_AS_LONG(PyList_GetItem(origin_list, idx));
-
-        if (maskbit >= qd_bitmask_width() || maskbit < 0) {
-            PyErr_SetString(PyExc_Exception, "Origin bit mask out of range");
-            return 0;
+    do {
+        if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+            error = "Router bit mask out of range";
+            break;
         }
 
-        if (router->routers_by_mask_bit[maskbit] == 0) {
-            PyErr_SetString(PyExc_Exception, "Origin router Not Found");
-            return 0;
+        if (!PyList_Check(origin_list)) {
+            error = "Expected List as argument 2";
+            break;
         }
-    }
 
-    qd_bitmask_clear_all(rnode->valid_origins);
-    qd_bitmask_set_bit(rnode->valid_origins, 0);  // This router is a valid origin for all destinations
-    for (idx = 0; idx < origin_count; idx++) {
-        maskbit = PyInt_AS_LONG(PyList_GetItem(origin_list, idx));
-        qd_bitmask_set_bit(rnode->valid_origins, maskbit);
-    }
+        sys_mutex_lock(router->lock);
+        if (router->routers_by_mask_bit[router_maskbit] == 0) {
+            sys_mutex_unlock(router->lock);
+            error = "Router Not Found";
+            break;
+        }
 
-    Py_INCREF(Py_None);
-    return Py_None;
-}
+        Py_ssize_t        origin_count = PyList_Size(origin_list);
+        qd_router_node_t *rnode        = router->routers_by_mask_bit[router_maskbit];
+        int               maskbit;
 
+        for (idx = 0; idx < origin_count; idx++) {
+            maskbit = PyInt_AS_LONG(PyList_GetItem(origin_list, idx));
 
-static PyObject* qd_add_neighbor_router(PyObject *self, PyObject *args)
-{
-    RouterAdapter *adapter = (RouterAdapter*) self;
-    qd_router_t   *router  = adapter->router;
-    const char    *address;
-    int            router_maskbit;
-    int            link_maskbit;
+            if (maskbit >= qd_bitmask_width() || maskbit < 0) {
+                error = "Origin bit mask out of range";
+                break;
+            }
 
-    if (!PyArg_ParseTuple(args, "sii", &address, &router_maskbit, &link_maskbit))
-        return 0;
+            if (router->routers_by_mask_bit[maskbit] == 0) {
+                error = "Origin router Not Found";
+                break;
+            }
+        }
 
-    char *error = qd_add_router(router, address, router_maskbit, link_maskbit);
-    if (error) {
-        PyErr_SetString(PyExc_Exception, error);
-        return 0;
-    }
+        if (error == 0) {
+            qd_bitmask_clear_all(rnode->valid_origins);
+            qd_bitmask_set_bit(rnode->valid_origins, 0);  // This router is a valid origin for all destinations
+            for (idx = 0; idx < origin_count; idx++) {
+                maskbit = PyInt_AS_LONG(PyList_GetItem(origin_list, idx));
+                qd_bitmask_set_bit(rnode->valid_origins, maskbit);
+            }
+        }
 
-    Py_INCREF(Py_None);
-    return Py_None;
-}
+        sys_mutex_unlock(router->lock);
+    } while (0);
 
-
-static PyObject* qd_del_neighbor_router(PyObject *self, PyObject *args)
-{
-    RouterAdapter *adapter = (RouterAdapter*) self;
-    qd_router_t   *router  = adapter->router;
-    int router_maskbit;
-
-    if (!PyArg_ParseTuple(args, "i", &router_maskbit))
-        return 0;
-
-    char *error = qd_del_router(router, router_maskbit);
     if (error) {
         PyErr_SetString(PyExc_Exception, error);
         return 0;
@@ -478,15 +557,16 @@ static PyObject* qd_get_agent(PyObject *self, PyObject *args) {
 }
 
 static PyMethodDef RouterAdapter_methods[] = {
-    {"add_remote_router",   qd_add_remote_router,   METH_VARARGS, "A new remote/reachable router has been discovered"},
-    {"del_remote_router",   qd_del_remote_router,   METH_VARARGS, "We've lost reachability to a remote router"},
-    {"set_next_hop",        qd_set_next_hop,        METH_VARARGS, "Set the next hop for a remote router"},
-    {"set_valid_origins",   qd_set_valid_origins,   METH_VARARGS, "Set the valid origins for a remote router"},
-    {"add_neighbor_router", qd_add_neighbor_router, METH_VARARGS, "A new neighbor router has been discovered"},
-    {"del_neighbor_router", qd_del_neighbor_router, METH_VARARGS, "We've lost reachability to a neighbor router"},
-    {"map_destination",     qd_map_destination,     METH_VARARGS, "Add a newly discovered destination mapping"},
-    {"unmap_destination",   qd_unmap_destination,   METH_VARARGS, "Delete a destination mapping"},
-    {"get_agent",           qd_get_agent,           METH_VARARGS, "Get the management agent"},
+    {"add_router",          qd_add_router,        METH_VARARGS, "A new remote/reachable router has been discovered"},
+    {"del_router",          qd_del_router,        METH_VARARGS, "We've lost reachability to a remote router"},
+    {"set_link",            qd_set_link,          METH_VARARGS, "Set the link for a neighbor router"},
+    {"remove_link",         qd_remove_link,       METH_VARARGS, "Remove the link for a neighbor router"},
+    {"set_next_hop",        qd_set_next_hop,      METH_VARARGS, "Set the next hop for a remote router"},
+    {"remove_next_hop",     qd_remove_next_hop,   METH_VARARGS, "Remove the next hop for a remote router"},
+    {"set_valid_origins",   qd_set_valid_origins, METH_VARARGS, "Set the valid origins for a remote router"},
+    {"map_destination",     qd_map_destination,   METH_VARARGS, "Add a newly discovered destination mapping"},
+    {"unmap_destination",   qd_unmap_destination, METH_VARARGS, "Delete a destination mapping"},
+    {"get_agent",           qd_get_agent,         METH_VARARGS, "Get the management agent"},
     {0, 0, 0, 0}
 };
 
@@ -544,7 +624,7 @@ static PyTypeObject RouterAdapterType = {
 qd_error_t qd_router_python_setup(qd_router_t *router)
 {
     qd_error_clear();
-    log_source = qd_log_source("PYROUTER");
+    log_source = qd_log_source("ROUTER");
 
     //
     // If we are not operating as an interior router, don't start the

@@ -24,7 +24,7 @@ import unittest
 sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "mock")) # Mock modules for tests
 
-from qpid_dispatch_internal.router.engine import NeighborEngine, PathEngine, NodeTracker
+from qpid_dispatch_internal.router.engine import HelloProtocol, PathEngine, NodeTracker
 from qpid_dispatch_internal.router.data import LinkState, MessageHELLO
 from qpid_dispatch.management.entity import EntityBase
 from system_test import main_module
@@ -52,14 +52,12 @@ class Adapter(object):
 
 class DataTest(unittest.TestCase):
     def test_link_state(self):
-        ls = LinkState(None, 'R1', 'area', 1, ['R2', 'R3'])
+        ls = LinkState(None, 'R1', 1, ['R2', 'R3'])
         self.assertEqual(ls.id, 'R1')
-        self.assertEqual(ls.area, 'area')
         self.assertEqual(ls.ls_seq, 1)
         self.assertEqual(ls.peers, ['R2', 'R3'])
         ls.bump_sequence()
         self.assertEqual(ls.id, 'R1')
-        self.assertEqual(ls.area, 'area')
         self.assertEqual(ls.ls_seq, 2)
         self.assertEqual(ls.peers, ['R2', 'R3'])
 
@@ -80,22 +78,19 @@ class DataTest(unittest.TestCase):
         encoded = ls.to_dict()
         new_ls = LinkState(encoded)
         self.assertEqual(new_ls.id, 'R1')
-        self.assertEqual(new_ls.area, 'area')
         self.assertEqual(new_ls.ls_seq, 2)
         self.assertEqual(new_ls.peers, ['R2', 'R4'])
 
 
     def test_hello_message(self):
-        msg1 = MessageHELLO(None, 'R1', 'area', ['R2', 'R3', 'R4'])
+        msg1 = MessageHELLO(None, 'R1', ['R2', 'R3', 'R4'])
         self.assertEqual(msg1.get_opcode(), "HELLO")
         self.assertEqual(msg1.id, 'R1')
-        self.assertEqual(msg1.area, 'area')
         self.assertEqual(msg1.seen_peers, ['R2', 'R3', 'R4'])
         encoded = msg1.to_dict()
         msg2 = MessageHELLO(encoded)
         self.assertEqual(msg2.get_opcode(), "HELLO")
         self.assertEqual(msg2.id, 'R1')
-        self.assertEqual(msg2.area, 'area')
         self.assertEqual(msg2.seen_peers, ['R2', 'R3', 'R4'])
         self.assertTrue(msg2.is_seen('R3'))
         self.assertFalse(msg2.is_seen('R9'))
@@ -133,149 +128,32 @@ class NodeTrackerTest(unittest.TestCase):
         self.address    = None
         self.router_bit = None
         self.link_bit   = None
-        self.area       = "area"
         self.calls      = 0
-
-    def test_node_tracker_limits(self):
-        tracker = NodeTracker(self, 5)
-
-        self.reset()
-        tracker.new_neighbor('A', 1, 0)
-        self.assertEqual(self.address, 'amqp:/_topo/area/A')
-        self.assertEqual(self.link_bit, 1)
-        self.assertEqual(self.router_bit, 1)
-        self.assertEqual(self.calls, 1)
-
-        self.reset()
-        tracker.new_neighbor('B', 5, 0)
-        self.assertEqual(self.address, 'amqp:/_topo/area/B')
-        self.assertEqual(self.link_bit, 5)
-        self.assertEqual(self.router_bit, 2)
-        self.assertEqual(self.calls, 1)
-
-        self.reset()
-        tracker.new_neighbor('C', 6, 0)
-        self.assertEqual(self.address, 'amqp:/_topo/area/C')
-        self.assertEqual(self.link_bit, 6)
-        self.assertEqual(self.router_bit, 3)
-        self.assertEqual(self.calls, 1)
-
-        self.reset()
-        tracker.new_neighbor('D', 7, 0)
-        self.assertEqual(self.address, 'amqp:/_topo/area/D')
-        self.assertEqual(self.link_bit, 7)
-        self.assertEqual(self.router_bit, 4)
-        self.assertEqual(self.calls, 1)
-
-        self.reset()
-        try:
-            tracker.new_neighbor('E', 9, 0)
-            self.fail("We shouldn't be here")
-        except:
-            pass
-
-        self.reset()
-        tracker.lost_neighbor('C')
-        self.assertEqual(self.router_bit, 3)
-        self.assertEqual(self.calls, 1)
-
-        self.reset()
-        tracker.new_neighbor('E', 9, 0)
-        self.assertEqual(self.address, 'amqp:/_topo/area/E')
-        self.assertEqual(self.link_bit, 9)
-        self.assertEqual(self.router_bit, 3)
-        self.assertEqual(self.calls, 1)
-
-
-    def test_node_tracker_remote_neighbor(self):
-        tracker = NodeTracker(self, 5)
-
-        self.reset()
-        tracker.new_node('A', 0)
-        self.assertEqual(self.address, 'amqp:/_topo/area/A')
-        self.assertFalse(self.link_bit)
-        self.assertEqual(self.router_bit, 1)
-        self.assertEqual(self.calls, 1)
-
-        self.reset()
-        tracker.new_neighbor('A', 3, 0)
-        self.assertEqual(self.address, 'amqp:/_topo/area/A')
-        self.assertEqual(self.link_bit, 3)
-        self.assertEqual(self.router_bit, 1)
-        self.assertEqual(self.calls, 2)
-
-        self.reset()
-        tracker.lost_node('A')
-        self.assertFalse(self.address)
-        self.assertFalse(self.link_bit)
-        self.assertFalse(self.router_bit)
-        self.assertEqual(self.calls, 0)
-
-        self.reset()
-        tracker.lost_neighbor('A')
-        self.assertEqual(self.router_bit, 1)
-        self.assertEqual(self.calls, 1)
-
-
-    def test_node_tracker_neighbor_remote(self):
-        tracker = NodeTracker(self, 5)
-
-        self.reset()
-        tracker.new_neighbor('A', 3, 0)
-        self.assertEqual(self.address, 'amqp:/_topo/area/A')
-        self.assertEqual(self.link_bit, 3)
-        self.assertEqual(self.router_bit, 1)
-        self.assertEqual(self.calls, 1)
-
-        self.reset()
-        tracker.new_node('A', 0)
-        self.assertFalse(self.address)
-        self.assertFalse(self.link_bit)
-        self.assertFalse(self.router_bit)
-        self.assertEqual(self.calls, 0)
-
-        self.reset()
-        tracker.lost_neighbor('A')
-        self.assertEqual(self.address, 'amqp:/_topo/area/A')
-        self.assertEqual(self.router_bit, 1)
-        self.assertEqual(self.calls, 2)
-
-        self.reset()
-        tracker.lost_node('A')
-        self.assertEqual(self.router_bit, 1)
-        self.assertEqual(self.calls, 1)
 
 
 class NeighborTest(unittest.TestCase):
     def log(self, level, text):
         pass
 
+    def log_hello(self, level, text):
+        pass
+
     def send(self, dest, msg):
         self.sent.append((dest, msg))
 
-    def local_link_state_changed(self, link_state):
-        self.local_link_state = link_state
-
-    def new_neighbor(self, rid, lbit, instance):
-        self.neighbors[rid] = None
-
-    def lost_neighbor(self, rid):
-        self.neighbors.pop(rid)
-
-    def touch_node(self, rid, instance):
-        pass
+    def neighbor_refresh(self, node_id, instance, link_id, now):
+        self.neighbors[node_id] = (instance, link_id, now)
 
     def setUp(self):
         self.sent = []
-        self.local_link_state = None
+        self.neighbors = {}
         self.id = "R1"
-        self.area = "area"
         self.instance = 0
         # Fake configuration
         self.config = EntityBase({
-            'helloInterval'      :  1.0,
-            'helloMaxAge'       :  3.0,
-            'raInterval'         : 30.0,
+            'helloInterval'    :  1.0,
+            'helloMaxAge'      :  3.0,
+            'raInterval'       : 30.0,
             'remoteLsMaxAge'   : 60.0,
             'mobileAddrMaxAge' : 60.0  })
         self.neighbors = {}
@@ -283,7 +161,7 @@ class NeighborTest(unittest.TestCase):
     def test_hello_sent(self):
         self.sent = []
         self.local_link_state = None
-        self.engine = NeighborEngine(self)
+        self.engine = HelloProtocol(self, self)
         self.engine.tick(0.5)
         self.assertEqual(self.sent, [])
         self.engine.tick(1.5)
@@ -292,15 +170,14 @@ class NeighborTest(unittest.TestCase):
         self.assertEqual(dest, "amqp:/_local/qdhello")
         self.assertEqual(msg.get_opcode(), "HELLO")
         self.assertEqual(msg.id, self.id)
-        self.assertEqual(msg.area, self.area)
         self.assertEqual(msg.seen_peers, [])
         self.assertEqual(self.local_link_state, None)
 
     def test_sees_peer(self):
         self.sent = []
-        self.local_link_state = None
-        self.engine = NeighborEngine(self)
-        self.engine.handle_hello(MessageHELLO(None, 'R2', 'area', []), 2.0, 0)
+        self.neighbors = {}
+        self.engine = HelloProtocol(self, self)
+        self.engine.handle_hello(MessageHELLO(None, 'R2', []), 2.0, 0)
         self.engine.tick(5.0)
         self.assertEqual(len(self.sent), 1)
         dest, msg = self.sent.pop(0)
@@ -308,64 +185,39 @@ class NeighborTest(unittest.TestCase):
 
     def test_establish_peer(self):
         self.sent = []
-        self.local_link_state = None
-        self.engine = NeighborEngine(self)
-        self.engine.handle_hello(MessageHELLO(None, 'R2', 'area', ['R1']), 0.5, 0)
+        self.neighbors = {}
+        self.engine = HelloProtocol(self, self)
+        self.engine.handle_hello(MessageHELLO(None, 'R2', ['R1']), 0.5, 0)
         self.engine.tick(1.0)
         self.engine.tick(2.0)
         self.engine.tick(3.0)
-        self.assertEqual(self.local_link_state.id, 'R1')
-        self.assertEqual(self.local_link_state.area, 'area')
-        self.assertEqual(self.local_link_state.ls_seq, 1)
-        self.assertEqual(self.local_link_state.peers, ['R2'])
+        self.assertEqual(len(self.neighbors), 1)
+        self.assertEqual(self.neighbors.keys(), ['R2'])
 
     def test_establish_multiple_peers(self):
         self.sent = []
-        self.local_link_state = None
-        self.engine = NeighborEngine(self)
-        self.engine.handle_hello(MessageHELLO(None, 'R2', 'area', ['R1']), 0.5, 0)
+        self.neighbors = {}
+        self.engine = HelloProtocol(self, self)
+        self.engine.handle_hello(MessageHELLO(None, 'R2', ['R1']), 0.5, 0)
         self.engine.tick(1.0)
-        self.engine.handle_hello(MessageHELLO(None, 'R3', 'area', ['R1', 'R2']), 1.5, 0)
+        self.engine.handle_hello(MessageHELLO(None, 'R3', ['R1', 'R2']), 1.5, 0)
         self.engine.tick(2.0)
-        self.engine.handle_hello(MessageHELLO(None, 'R4', 'area', ['R1']), 2.5, 0)
-        self.engine.handle_hello(MessageHELLO(None, 'R5', 'area', ['R2']), 2.5, 0)
-        self.engine.handle_hello(MessageHELLO(None, 'R6', 'area', ['R1']), 2.5, 0)
+        self.engine.handle_hello(MessageHELLO(None, 'R4', ['R1']), 2.5, 0)
+        self.engine.handle_hello(MessageHELLO(None, 'R5', ['R2']), 2.5, 0)
+        self.engine.handle_hello(MessageHELLO(None, 'R6', ['R1']), 2.5, 0)
         self.engine.tick(3.0)
-        self.assertEqual(self.local_link_state.id, 'R1')
-        self.assertEqual(self.local_link_state.area, 'area')
-        self.assertEqual(self.local_link_state.ls_seq, 3)
-        self.local_link_state.peers.sort()
-        self.assertEqual(self.local_link_state.peers, ['R2', 'R3', 'R4', 'R6'])
-
-    def test_timeout_peer(self):
-        self.sent = []
-        self.local_link_state = None
-        self.engine = NeighborEngine(self)
-        self.engine.handle_hello(MessageHELLO(None, 'R2', 'area', ['R3', 'R1']), 2.0, 0)
-        self.engine.tick(5.0)
-        self.engine.tick(17.1)
-        self.assertEqual(self.local_link_state.id, 'R1')
-        self.assertEqual(self.local_link_state.area, 'area')
-        self.assertEqual(self.local_link_state.ls_seq, 2)
-        self.assertEqual(self.local_link_state.peers, [])
+        keys = self.neighbors.keys()
+        keys.sort()
+        self.assertEqual(keys, ['R2', 'R3', 'R4', 'R6'])
 
 
 class PathTest(unittest.TestCase):
     def setUp(self):
         self.id = 'R1'
-        self.area = 'area'
-        self.next_hops = None
-        self.valid_origins = None
         self.engine = PathEngine(self)
 
     def log(self, level, text):
         pass
-
-    def next_hops_changed(self, nh):
-        self.next_hops = nh
-
-    def valid_origins_changed(self, vo):
-        self.valid_origins = vo
 
     def test_topology1(self):
         """
@@ -375,19 +227,18 @@ class PathTest(unittest.TestCase):
         +====+      +----+      +----+
 
         """
-        collection = { 'R1': LinkState(None, 'R1', 'area', 1, ['R2']),
-                       'R2': LinkState(None, 'R2', 'area', 1, ['R1', 'R3']),
-                       'R3': LinkState(None, 'R3', 'area', 1, ['R2']) }
-        self.engine.ls_collection_changed(collection)
-        self.engine.tick(1.0)
-        self.assertEqual(len(self.next_hops), 2)
-        self.assertEqual(self.next_hops['R2'], 'R2')
-        self.assertEqual(self.next_hops['R3'], 'R2')
+        collection = { 'R1': LinkState(None, 'R1', 1, ['R2']),
+                       'R2': LinkState(None, 'R2', 1, ['R1', 'R3']),
+                       'R3': LinkState(None, 'R3', 1, ['R2']) }
+        next_hops, valid_origins = self.engine.calculate_routes(collection)
+        self.assertEqual(len(next_hops), 2)
+        self.assertEqual(next_hops['R2'], 'R2')
+        self.assertEqual(next_hops['R3'], 'R2')
 
-        self.valid_origins['R2'].sort()
-        self.valid_origins['R3'].sort()
-        self.assertEqual(self.valid_origins['R2'], [])
-        self.assertEqual(self.valid_origins['R3'], [])
+        valid_origins['R2'].sort()
+        valid_origins['R3'].sort()
+        self.assertEqual(valid_origins['R2'], [])
+        self.assertEqual(valid_origins['R3'], [])
 
     def test_topology2(self):
         """
@@ -401,31 +252,30 @@ class PathTest(unittest.TestCase):
                     +----+      +----+      +----+
 
         """
-        collection = { 'R1': LinkState(None, 'R1', 'area', 1, ['R2']),
-                       'R2': LinkState(None, 'R2', 'area', 1, ['R1', 'R3', 'R4']),
-                       'R3': LinkState(None, 'R3', 'area', 1, ['R2', 'R5']),
-                       'R4': LinkState(None, 'R4', 'area', 1, ['R2', 'R5']),
-                       'R5': LinkState(None, 'R5', 'area', 1, ['R3', 'R4', 'R6']),
-                       'R6': LinkState(None, 'R6', 'area', 1, ['R5']) }
-        self.engine.ls_collection_changed(collection)
-        self.engine.tick(1.0)
-        self.assertEqual(len(self.next_hops), 5)
-        self.assertEqual(self.next_hops['R2'], 'R2')
-        self.assertEqual(self.next_hops['R3'], 'R2')
-        self.assertEqual(self.next_hops['R4'], 'R2')
-        self.assertEqual(self.next_hops['R5'], 'R2')
-        self.assertEqual(self.next_hops['R6'], 'R2')
+        collection = { 'R1': LinkState(None, 'R1', 1, ['R2']),
+                       'R2': LinkState(None, 'R2', 1, ['R1', 'R3', 'R4']),
+                       'R3': LinkState(None, 'R3', 1, ['R2', 'R5']),
+                       'R4': LinkState(None, 'R4', 1, ['R2', 'R5']),
+                       'R5': LinkState(None, 'R5', 1, ['R3', 'R4', 'R6']),
+                       'R6': LinkState(None, 'R6', 1, ['R5']) }
+        next_hops, valid_origins = self.engine.calculate_routes(collection)
+        self.assertEqual(len(next_hops), 5)
+        self.assertEqual(next_hops['R2'], 'R2')
+        self.assertEqual(next_hops['R3'], 'R2')
+        self.assertEqual(next_hops['R4'], 'R2')
+        self.assertEqual(next_hops['R5'], 'R2')
+        self.assertEqual(next_hops['R6'], 'R2')
 
-        self.valid_origins['R2'].sort()
-        self.valid_origins['R3'].sort()
-        self.valid_origins['R4'].sort()
-        self.valid_origins['R5'].sort()
-        self.valid_origins['R6'].sort()
-        self.assertEqual(self.valid_origins['R2'], [])
-        self.assertEqual(self.valid_origins['R3'], [])
-        self.assertEqual(self.valid_origins['R4'], [])
-        self.assertEqual(self.valid_origins['R5'], [])
-        self.assertEqual(self.valid_origins['R6'], [])
+        valid_origins['R2'].sort()
+        valid_origins['R3'].sort()
+        valid_origins['R4'].sort()
+        valid_origins['R5'].sort()
+        valid_origins['R6'].sort()
+        self.assertEqual(valid_origins['R2'], [])
+        self.assertEqual(valid_origins['R3'], [])
+        self.assertEqual(valid_origins['R4'], [])
+        self.assertEqual(valid_origins['R5'], [])
+        self.assertEqual(valid_origins['R6'], [])
 
     def test_topology3(self):
         """
@@ -439,31 +289,30 @@ class PathTest(unittest.TestCase):
                     +====+      +----+      +----+
 
         """
-        collection = { 'R2': LinkState(None, 'R2', 'area', 1, ['R3']),
-                       'R3': LinkState(None, 'R3', 'area', 1, ['R1', 'R2', 'R4']),
-                       'R4': LinkState(None, 'R4', 'area', 1, ['R3', 'R5']),
-                       'R1': LinkState(None, 'R1', 'area', 1, ['R3', 'R5']),
-                       'R5': LinkState(None, 'R5', 'area', 1, ['R1', 'R4', 'R6']),
-                       'R6': LinkState(None, 'R6', 'area', 1, ['R5']) }
-        self.engine.ls_collection_changed(collection)
-        self.engine.tick(1.0)
-        self.assertEqual(len(self.next_hops), 5)
-        self.assertEqual(self.next_hops['R2'], 'R3')
-        self.assertEqual(self.next_hops['R3'], 'R3')
-        self.assertEqual(self.next_hops['R4'], 'R3')
-        self.assertEqual(self.next_hops['R5'], 'R5')
-        self.assertEqual(self.next_hops['R6'], 'R5')
+        collection = { 'R2': LinkState(None, 'R2', 1, ['R3']),
+                       'R3': LinkState(None, 'R3', 1, ['R1', 'R2', 'R4']),
+                       'R4': LinkState(None, 'R4', 1, ['R3', 'R5']),
+                       'R1': LinkState(None, 'R1', 1, ['R3', 'R5']),
+                       'R5': LinkState(None, 'R5', 1, ['R1', 'R4', 'R6']),
+                       'R6': LinkState(None, 'R6', 1, ['R5']) }
+        next_hops, valid_origins = self.engine.calculate_routes(collection)
+        self.assertEqual(len(next_hops), 5)
+        self.assertEqual(next_hops['R2'], 'R3')
+        self.assertEqual(next_hops['R3'], 'R3')
+        self.assertEqual(next_hops['R4'], 'R3')
+        self.assertEqual(next_hops['R5'], 'R5')
+        self.assertEqual(next_hops['R6'], 'R5')
 
-        self.valid_origins['R2'].sort()
-        self.valid_origins['R3'].sort()
-        self.valid_origins['R4'].sort()
-        self.valid_origins['R5'].sort()
-        self.valid_origins['R6'].sort()
-        self.assertEqual(self.valid_origins['R2'], ['R5', 'R6'])
-        self.assertEqual(self.valid_origins['R3'], ['R5', 'R6'])
-        self.assertEqual(self.valid_origins['R4'], [])
-        self.assertEqual(self.valid_origins['R5'], ['R2', 'R3'])
-        self.assertEqual(self.valid_origins['R6'], ['R2', 'R3'])
+        valid_origins['R2'].sort()
+        valid_origins['R3'].sort()
+        valid_origins['R4'].sort()
+        valid_origins['R5'].sort()
+        valid_origins['R6'].sort()
+        self.assertEqual(valid_origins['R2'], ['R5', 'R6'])
+        self.assertEqual(valid_origins['R3'], ['R5', 'R6'])
+        self.assertEqual(valid_origins['R4'], [])
+        self.assertEqual(valid_origins['R5'], ['R2', 'R3'])
+        self.assertEqual(valid_origins['R6'], ['R2', 'R3'])
 
     def test_topology4(self):
         """
@@ -477,34 +326,33 @@ class PathTest(unittest.TestCase):
                     +====+      +----+      +----+
 
         """
-        collection = { 'R2': LinkState(None, 'R2', 'area', 1, ['R3']),
-                       'R3': LinkState(None, 'R3', 'area', 1, ['R1', 'R2', 'R4']),
-                       'R4': LinkState(None, 'R4', 'area', 1, ['R3', 'R5']),
-                       'R1': LinkState(None, 'R1', 'area', 1, ['R3', 'R5']),
-                       'R5': LinkState(None, 'R5', 'area', 1, ['R1', 'R4', 'R6']),
-                       'R6': LinkState(None, 'R6', 'area', 1, ['R5', 'R7']) }
-        self.engine.ls_collection_changed(collection)
-        self.engine.tick(1.0)
-        self.assertEqual(len(self.next_hops), 6)
-        self.assertEqual(self.next_hops['R2'], 'R3')
-        self.assertEqual(self.next_hops['R3'], 'R3')
-        self.assertEqual(self.next_hops['R4'], 'R3')
-        self.assertEqual(self.next_hops['R5'], 'R5')
-        self.assertEqual(self.next_hops['R6'], 'R5')
-        self.assertEqual(self.next_hops['R7'], 'R5')
+        collection = { 'R2': LinkState(None, 'R2', 1, ['R3']),
+                       'R3': LinkState(None, 'R3', 1, ['R1', 'R2', 'R4']),
+                       'R4': LinkState(None, 'R4', 1, ['R3', 'R5']),
+                       'R1': LinkState(None, 'R1', 1, ['R3', 'R5']),
+                       'R5': LinkState(None, 'R5', 1, ['R1', 'R4', 'R6']),
+                       'R6': LinkState(None, 'R6', 1, ['R5', 'R7']) }
+        next_hops, valid_origins = self.engine.calculate_routes(collection)
+        self.assertEqual(len(next_hops), 6)
+        self.assertEqual(next_hops['R2'], 'R3')
+        self.assertEqual(next_hops['R3'], 'R3')
+        self.assertEqual(next_hops['R4'], 'R3')
+        self.assertEqual(next_hops['R5'], 'R5')
+        self.assertEqual(next_hops['R6'], 'R5')
+        self.assertEqual(next_hops['R7'], 'R5')
 
-        self.valid_origins['R2'].sort()
-        self.valid_origins['R3'].sort()
-        self.valid_origins['R4'].sort()
-        self.valid_origins['R5'].sort()
-        self.valid_origins['R6'].sort()
-        self.valid_origins['R7'].sort()
-        self.assertEqual(self.valid_origins['R2'], ['R5', 'R6', 'R7'])
-        self.assertEqual(self.valid_origins['R3'], ['R5', 'R6', 'R7'])
-        self.assertEqual(self.valid_origins['R4'], [])
-        self.assertEqual(self.valid_origins['R5'], ['R2', 'R3'])
-        self.assertEqual(self.valid_origins['R6'], ['R2', 'R3'])
-        self.assertEqual(self.valid_origins['R7'], ['R2', 'R3'])
+        valid_origins['R2'].sort()
+        valid_origins['R3'].sort()
+        valid_origins['R4'].sort()
+        valid_origins['R5'].sort()
+        valid_origins['R6'].sort()
+        valid_origins['R7'].sort()
+        self.assertEqual(valid_origins['R2'], ['R5', 'R6', 'R7'])
+        self.assertEqual(valid_origins['R3'], ['R5', 'R6', 'R7'])
+        self.assertEqual(valid_origins['R4'], [])
+        self.assertEqual(valid_origins['R5'], ['R2', 'R3'])
+        self.assertEqual(valid_origins['R6'], ['R2', 'R3'])
+        self.assertEqual(valid_origins['R7'], ['R2', 'R3'])
 
     def test_topology5(self):
         """
@@ -518,34 +366,33 @@ class PathTest(unittest.TestCase):
                     +====+      +----+      +----+
 
         """
-        collection = { 'R2': LinkState(None, 'R2', 'area', 1, ['R3', 'R1']),
-                       'R3': LinkState(None, 'R3', 'area', 1, ['R1', 'R2', 'R4']),
-                       'R4': LinkState(None, 'R4', 'area', 1, ['R3', 'R5']),
-                       'R1': LinkState(None, 'R1', 'area', 1, ['R3', 'R5', 'R2']),
-                       'R5': LinkState(None, 'R5', 'area', 1, ['R1', 'R4', 'R6']),
-                       'R6': LinkState(None, 'R6', 'area', 1, ['R5', 'R7']) }
-        self.engine.ls_collection_changed(collection)
-        self.engine.tick(1.0)
-        self.assertEqual(len(self.next_hops), 6)
-        self.assertEqual(self.next_hops['R2'], 'R2')
-        self.assertEqual(self.next_hops['R3'], 'R3')
-        self.assertEqual(self.next_hops['R4'], 'R3')
-        self.assertEqual(self.next_hops['R5'], 'R5')
-        self.assertEqual(self.next_hops['R6'], 'R5')
-        self.assertEqual(self.next_hops['R7'], 'R5')
+        collection = { 'R2': LinkState(None, 'R2', 1, ['R3', 'R1']),
+                       'R3': LinkState(None, 'R3', 1, ['R1', 'R2', 'R4']),
+                       'R4': LinkState(None, 'R4', 1, ['R3', 'R5']),
+                       'R1': LinkState(None, 'R1', 1, ['R3', 'R5', 'R2']),
+                       'R5': LinkState(None, 'R5', 1, ['R1', 'R4', 'R6']),
+                       'R6': LinkState(None, 'R6', 1, ['R5', 'R7']) }
+        next_hops, valid_origins = self.engine.calculate_routes(collection)
+        self.assertEqual(len(next_hops), 6)
+        self.assertEqual(next_hops['R2'], 'R2')
+        self.assertEqual(next_hops['R3'], 'R3')
+        self.assertEqual(next_hops['R4'], 'R3')
+        self.assertEqual(next_hops['R5'], 'R5')
+        self.assertEqual(next_hops['R6'], 'R5')
+        self.assertEqual(next_hops['R7'], 'R5')
 
-        self.valid_origins['R2'].sort()
-        self.valid_origins['R3'].sort()
-        self.valid_origins['R4'].sort()
-        self.valid_origins['R5'].sort()
-        self.valid_origins['R6'].sort()
-        self.valid_origins['R7'].sort()
-        self.assertEqual(self.valid_origins['R2'], ['R5', 'R6', 'R7'])
-        self.assertEqual(self.valid_origins['R3'], ['R5', 'R6', 'R7'])
-        self.assertEqual(self.valid_origins['R4'], [])
-        self.assertEqual(self.valid_origins['R5'], ['R2', 'R3'])
-        self.assertEqual(self.valid_origins['R6'], ['R2', 'R3'])
-        self.assertEqual(self.valid_origins['R7'], ['R2', 'R3'])
+        valid_origins['R2'].sort()
+        valid_origins['R3'].sort()
+        valid_origins['R4'].sort()
+        valid_origins['R5'].sort()
+        valid_origins['R6'].sort()
+        valid_origins['R7'].sort()
+        self.assertEqual(valid_origins['R2'], ['R5', 'R6', 'R7'])
+        self.assertEqual(valid_origins['R3'], ['R5', 'R6', 'R7'])
+        self.assertEqual(valid_origins['R4'], [])
+        self.assertEqual(valid_origins['R5'], ['R2', 'R3'])
+        self.assertEqual(valid_origins['R6'], ['R2', 'R3'])
+        self.assertEqual(valid_origins['R7'], ['R2', 'R3'])
 
     def test_topology5_with_asymmetry1(self):
         """
@@ -559,34 +406,33 @@ class PathTest(unittest.TestCase):
                     +====+      +----+      +----+
 
         """
-        collection = { 'R2': LinkState(None, 'R2', 'area', 1, ['R3']),
-                       'R3': LinkState(None, 'R3', 'area', 1, ['R1', 'R2', 'R4']),
-                       'R4': LinkState(None, 'R4', 'area', 1, ['R3', 'R5']),
-                       'R1': LinkState(None, 'R1', 'area', 1, ['R3', 'R5', 'R2']),
-                       'R5': LinkState(None, 'R5', 'area', 1, ['R1', 'R4', 'R6']),
-                       'R6': LinkState(None, 'R6', 'area', 1, ['R5', 'R7']) }
-        self.engine.ls_collection_changed(collection)
-        self.engine.tick(1.0)
-        self.assertEqual(len(self.next_hops), 6)
-        self.assertEqual(self.next_hops['R2'], 'R2')
-        self.assertEqual(self.next_hops['R3'], 'R3')
-        self.assertEqual(self.next_hops['R4'], 'R3')
-        self.assertEqual(self.next_hops['R5'], 'R5')
-        self.assertEqual(self.next_hops['R6'], 'R5')
-        self.assertEqual(self.next_hops['R7'], 'R5')
+        collection = { 'R2': LinkState(None, 'R2', 1, ['R3']),
+                       'R3': LinkState(None, 'R3', 1, ['R1', 'R2', 'R4']),
+                       'R4': LinkState(None, 'R4', 1, ['R3', 'R5']),
+                       'R1': LinkState(None, 'R1', 1, ['R3', 'R5', 'R2']),
+                       'R5': LinkState(None, 'R5', 1, ['R1', 'R4', 'R6']),
+                       'R6': LinkState(None, 'R6', 1, ['R5', 'R7']) }
+        next_hops, valid_origins = self.engine.calculate_routes(collection)
+        self.assertEqual(len(next_hops), 6)
+        self.assertEqual(next_hops['R2'], 'R2')
+        self.assertEqual(next_hops['R3'], 'R3')
+        self.assertEqual(next_hops['R4'], 'R3')
+        self.assertEqual(next_hops['R5'], 'R5')
+        self.assertEqual(next_hops['R6'], 'R5')
+        self.assertEqual(next_hops['R7'], 'R5')
 
-        self.valid_origins['R2'].sort()
-        self.valid_origins['R3'].sort()
-        self.valid_origins['R4'].sort()
-        self.valid_origins['R5'].sort()
-        self.valid_origins['R6'].sort()
-        self.valid_origins['R7'].sort()
-        self.assertEqual(self.valid_origins['R2'], ['R5', 'R6', 'R7'])
-        self.assertEqual(self.valid_origins['R3'], ['R5', 'R6', 'R7'])
-        self.assertEqual(self.valid_origins['R4'], [])
-        self.assertEqual(self.valid_origins['R5'], ['R2', 'R3'])
-        self.assertEqual(self.valid_origins['R6'], ['R2', 'R3'])
-        self.assertEqual(self.valid_origins['R7'], ['R2', 'R3'])
+        valid_origins['R2'].sort()
+        valid_origins['R3'].sort()
+        valid_origins['R4'].sort()
+        valid_origins['R5'].sort()
+        valid_origins['R6'].sort()
+        valid_origins['R7'].sort()
+        self.assertEqual(valid_origins['R2'], ['R5', 'R6', 'R7'])
+        self.assertEqual(valid_origins['R3'], ['R5', 'R6', 'R7'])
+        self.assertEqual(valid_origins['R4'], [])
+        self.assertEqual(valid_origins['R5'], ['R2', 'R3'])
+        self.assertEqual(valid_origins['R6'], ['R2', 'R3'])
+        self.assertEqual(valid_origins['R7'], ['R2', 'R3'])
 
     def test_topology5_with_asymmetry2(self):
         """
@@ -600,34 +446,33 @@ class PathTest(unittest.TestCase):
                     +====+      +----+      +----+
 
         """
-        collection = { 'R2': LinkState(None, 'R2', 'area', 1, ['R3', 'R1']),
-                       'R3': LinkState(None, 'R3', 'area', 1, ['R1', 'R2', 'R4']),
-                       'R4': LinkState(None, 'R4', 'area', 1, ['R3', 'R5']),
-                       'R1': LinkState(None, 'R1', 'area', 1, ['R3', 'R5']),
-                       'R5': LinkState(None, 'R5', 'area', 1, ['R1', 'R4', 'R6']),
-                       'R6': LinkState(None, 'R6', 'area', 1, ['R5', 'R7']) }
-        self.engine.ls_collection_changed(collection)
-        self.engine.tick(1.0)
-        self.assertEqual(len(self.next_hops), 6)
-        self.assertEqual(self.next_hops['R2'], 'R3')
-        self.assertEqual(self.next_hops['R3'], 'R3')
-        self.assertEqual(self.next_hops['R4'], 'R3')
-        self.assertEqual(self.next_hops['R5'], 'R5')
-        self.assertEqual(self.next_hops['R6'], 'R5')
-        self.assertEqual(self.next_hops['R7'], 'R5')
+        collection = { 'R2': LinkState(None, 'R2', 1, ['R3', 'R1']),
+                       'R3': LinkState(None, 'R3', 1, ['R1', 'R2', 'R4']),
+                       'R4': LinkState(None, 'R4', 1, ['R3', 'R5']),
+                       'R1': LinkState(None, 'R1', 1, ['R3', 'R5']),
+                       'R5': LinkState(None, 'R5', 1, ['R1', 'R4', 'R6']),
+                       'R6': LinkState(None, 'R6', 1, ['R5', 'R7']) }
+        next_hops, valid_origins = self.engine.calculate_routes(collection)
+        self.assertEqual(len(next_hops), 6)
+        self.assertEqual(next_hops['R2'], 'R3')
+        self.assertEqual(next_hops['R3'], 'R3')
+        self.assertEqual(next_hops['R4'], 'R3')
+        self.assertEqual(next_hops['R5'], 'R5')
+        self.assertEqual(next_hops['R6'], 'R5')
+        self.assertEqual(next_hops['R7'], 'R5')
 
-        self.valid_origins['R2'].sort()
-        self.valid_origins['R3'].sort()
-        self.valid_origins['R4'].sort()
-        self.valid_origins['R5'].sort()
-        self.valid_origins['R6'].sort()
-        self.valid_origins['R7'].sort()
-        self.assertEqual(self.valid_origins['R2'], ['R5', 'R6', 'R7'])
-        self.assertEqual(self.valid_origins['R3'], ['R5', 'R6', 'R7'])
-        self.assertEqual(self.valid_origins['R4'], [])
-        self.assertEqual(self.valid_origins['R5'], ['R2', 'R3'])
-        self.assertEqual(self.valid_origins['R6'], ['R2', 'R3'])
-        self.assertEqual(self.valid_origins['R7'], ['R2', 'R3'])
+        valid_origins['R2'].sort()
+        valid_origins['R3'].sort()
+        valid_origins['R4'].sort()
+        valid_origins['R5'].sort()
+        valid_origins['R6'].sort()
+        valid_origins['R7'].sort()
+        self.assertEqual(valid_origins['R2'], ['R5', 'R6', 'R7'])
+        self.assertEqual(valid_origins['R3'], ['R5', 'R6', 'R7'])
+        self.assertEqual(valid_origins['R4'], [])
+        self.assertEqual(valid_origins['R5'], ['R2', 'R3'])
+        self.assertEqual(valid_origins['R6'], ['R2', 'R3'])
+        self.assertEqual(valid_origins['R7'], ['R2', 'R3'])
 
     def test_topology5_with_asymmetry3(self):
         """
@@ -641,28 +486,27 @@ class PathTest(unittest.TestCase):
                     +====+      +----+      +----+
 
         """
-        collection = { 'R2': LinkState(None, 'R2', 'area', 1, ['R3', 'R1']),
-                       'R3': LinkState(None, 'R3', 'area', 1, ['R1', 'R2', 'R4']),
-                       'R4': LinkState(None, 'R4', 'area', 1, ['R3', 'R5']),
-                       'R1': LinkState(None, 'R1', 'area', 1, ['R3', 'R5']),
-                       'R5': LinkState(None, 'R5', 'area', 1, ['R1', 'R4']),
-                       'R6': LinkState(None, 'R6', 'area', 1, ['R5', 'R7']) }
-        self.engine.ls_collection_changed(collection)
-        self.engine.tick(1.0)
-        self.assertEqual(len(self.next_hops), 4)
-        self.assertEqual(self.next_hops['R2'], 'R3')
-        self.assertEqual(self.next_hops['R3'], 'R3')
-        self.assertEqual(self.next_hops['R4'], 'R3')
-        self.assertEqual(self.next_hops['R5'], 'R5')
+        collection = { 'R2': LinkState(None, 'R2', 1, ['R3', 'R1']),
+                       'R3': LinkState(None, 'R3', 1, ['R1', 'R2', 'R4']),
+                       'R4': LinkState(None, 'R4', 1, ['R3', 'R5']),
+                       'R1': LinkState(None, 'R1', 1, ['R3', 'R5']),
+                       'R5': LinkState(None, 'R5', 1, ['R1', 'R4']),
+                       'R6': LinkState(None, 'R6', 1, ['R5', 'R7']) }
+        next_hops, valid_origins = self.engine.calculate_routes(collection)
+        self.assertEqual(len(next_hops), 4)
+        self.assertEqual(next_hops['R2'], 'R3')
+        self.assertEqual(next_hops['R3'], 'R3')
+        self.assertEqual(next_hops['R4'], 'R3')
+        self.assertEqual(next_hops['R5'], 'R5')
 
-        self.valid_origins['R2'].sort()
-        self.valid_origins['R3'].sort()
-        self.valid_origins['R4'].sort()
-        self.valid_origins['R5'].sort()
-        self.assertEqual(self.valid_origins['R2'], ['R5'])
-        self.assertEqual(self.valid_origins['R3'], ['R5'])
-        self.assertEqual(self.valid_origins['R4'], [])
-        self.assertEqual(self.valid_origins['R5'], ['R2', 'R3'])
+        valid_origins['R2'].sort()
+        valid_origins['R3'].sort()
+        valid_origins['R4'].sort()
+        valid_origins['R5'].sort()
+        self.assertEqual(valid_origins['R2'], ['R5'])
+        self.assertEqual(valid_origins['R3'], ['R5'])
+        self.assertEqual(valid_origins['R4'], [])
+        self.assertEqual(valid_origins['R5'], ['R2', 'R3'])
 
 
 if __name__ == '__main__':

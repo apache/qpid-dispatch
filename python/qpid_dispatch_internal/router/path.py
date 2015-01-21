@@ -20,29 +20,15 @@
 
 class PathEngine(object):
     """
-    This module is responsible for computing the next-hop for every router/area in the domain
+    This module is responsible for computing the next-hop for every router in the domain
     based on the collection of link states that have been gathered.
     """
     def __init__(self, container):
         self.container = container
         self.id = self.container.id
-        self.area = self.container.area
-        self.recalculate = False
-        self.collection = None
 
 
-    def tick(self, now_unused):
-        if self.recalculate:
-            self.recalculate = False
-            self._calculate_routes()
-
-
-    def ls_collection_changed(self, collection):
-        self.recalculate = True
-        self.collection = collection
-
-
-    def _calculate_tree_from_root(self, root):
+    def _calculate_tree_from_root(self, root, collection):
         ##
         ## Make a copy of the current collection of link-states that contains
         ## a fake link-state for nodes that are known-peers but are not in the
@@ -50,7 +36,7 @@ class PathEngine(object):
         ## so we can trade link-state information with them.
         ##
         link_states = {}
-        for _id, ls in self.collection.items():
+        for _id, ls in collection.items():
             link_states[_id] = ls.peers
             for p in ls.peers:
                 if p not in link_states:
@@ -98,7 +84,7 @@ class PathEngine(object):
         return prev
 
 
-    def _calculate_valid_origins(self, nodeset):
+    def _calculate_valid_origins(self, nodeset, collection):
         ##
         ## Calculate the tree from each origin, determine the set of origins-per-dest
         ## for which the path from origin to dest passes through us.  This is the set
@@ -110,7 +96,7 @@ class PathEngine(object):
                 valid_origin[node] = []
 
         for root in valid_origin.keys():
-            prev  = self._calculate_tree_from_root(root)
+            prev  = self._calculate_tree_from_root(root, collection)
             nodes = prev.keys()
             while len(nodes) > 0:
                 u = nodes[0]
@@ -129,11 +115,11 @@ class PathEngine(object):
         return valid_origin
 
 
-    def _calculate_routes(self):
+    def calculate_routes(self, collection):
         ##
         ## Generate the shortest-path tree with the local node as root
         ##
-        prev  = self._calculate_tree_from_root(self.id)
+        prev  = self._calculate_tree_from_root(self.id, collection)
         nodes = prev.keys()
 
         ##
@@ -154,13 +140,12 @@ class PathEngine(object):
             for w in path:        # mark each node in the path as reachable via the next hop
                 next_hops[w] = u
 
-        self.container.next_hops_changed(next_hops)
-
         ##
         ## Calculate the valid origins for remote routers
         ##
-        valid_origin = self._calculate_valid_origins(prev.keys())
-        self.container.valid_origins_changed(valid_origin)
+        valid_origins = self._calculate_valid_origins(prev.keys(), collection)
+
+        return (next_hops, valid_origins)
 
 
 
