@@ -28,7 +28,8 @@ class LinkStateEngine(object):
         self.container = container
         self.node_tracker = container.node_tracker
         self.id = self.container.id
-        self.ra_interval = self.container.config.raInterval
+        self.ra_interval_stable = self.container.config.raInterval
+        self.ra_interval_flux   = self.container.config.raIntervalFlux
         self.last_ra_time = 0
         self.mobile_seq   = 0
 
@@ -38,7 +39,10 @@ class LinkStateEngine(object):
 
 
     def tick(self, now):
-        if now - self.last_ra_time >= self.ra_interval:
+        interval = self.ra_interval_stable
+        if self.node_tracker.in_flux_mode(now):
+            interval = self.ra_interval_flux
+        if now - self.last_ra_time >= interval:
             self.send_ra(now)
 
 

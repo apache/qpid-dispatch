@@ -35,6 +35,8 @@ class NodeTracker(object):
         self.link_state            = LinkState(None, self.my_id, 0, [])
         self.link_state_changed    = False
         self.recompute_topology    = False
+        self.last_topology_change  = 0
+        self.flux_mode             = False
         self.nodes                 = {}  # id => RouterNode
         self.nodes_by_link_id      = {}  # link-id => node-id
         self.maskbits              = []
@@ -44,6 +46,7 @@ class NodeTracker(object):
         self.maskbits[0]      = True
         self.neighbor_max_age = self.container.config.helloMaxAge
         self.ls_max_age       = self.container.config.remoteLsMaxAge
+        self.flux_interval    = self.container.config.raIntervalFlux * 2
 
 
     def _do_expirations(self, now):
@@ -101,6 +104,15 @@ class NodeTracker(object):
         ## Expire neighbors and link state
         ##
         self._do_expirations(now)
+
+        ##
+        ## Enter flux mode if things are changing
+        ##
+        if self.link_state_changed or self.recompute_topology:
+            self.last_topology_change = now
+            if not self.flux_mode:
+                self.flux_mode = True
+                self.container.log(LOG_TRACE, "Entered Router Flux Mode")
 
         ##
         ## Handle local link state changes
@@ -207,6 +219,14 @@ class NodeTracker(object):
             node.remove_link()
             if self.link_state.del_peer(node_id):
                 self.link_state_changed = True
+
+
+    def in_flux_mode(self, now):
+        result = (now - self.last_topology_change) <= self.flux_interval
+        if not result and self.flux_mode:
+            self.flux_mode = False
+            self.container.log(LOG_TRACE, "Exited Router Flux Mode")
+        return result
 
 
     def ra_received(self, node_id, ls_seq, mobile_seq, instance, now):

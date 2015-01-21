@@ -172,7 +172,12 @@
                 "raInterval": {
                     "type": "Integer",
                     "default": 30,
-                    "description": "Interval in seconds between Router-Advertisements sent to all routers."
+                    "description": "Interval in seconds between Router-Advertisements sent to all routers in a stable network."
+                },
+                "raIntervalFlux": {
+                    "type": "Integer",
+                    "default": 4,
+                    "description": "Interval in seconds between Router-Advertisements sent to all routers during topology fluctuations."
                 },
                 "remoteLsMaxAge": {
                     "type": "Integer",
