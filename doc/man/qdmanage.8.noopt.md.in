@@ -16,8 +16,8 @@ with qdrouter.
 # Operations
 
 `query` [*ATTR*...]
-:   Prints the named attributes of all entities. With no arguments prints all attributes.
-    The --type option restricts the result to entities extending the type.
+:   Print the attributes named in the ATTR list or all attributes if none are listed.
+    Print attributes for all entities by default, use --type, --name and --identity options to restrict what is printed.
 
 `create` [*ATTR=VALUE*...]
 :   Create a new entity with the specified attributes.

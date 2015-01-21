@@ -19,9 +19,7 @@ packages installed:
 
 Dispatch will not build on Windows.
 
-To build formatted documentation (man pages, HTML, PDF) you will need
-- pandoc (1.12 or later) for HTML and man pages.
-- pdflatex (3.1 or later) for PDF (available via pandoc-pdf on yum based systems)
+To build formatted documentation (man pages, HTML, PDF) see the requirements in doc/README
 
 Building and testing
 ====================
