@@ -22,9 +22,10 @@
 /**@file
  * Container for nodes, links and deliveries.
  *
- * @defgroup container
+ * @defgroup container container
  *
  * Container for nodes, links and deliveries.
+ *
  * @{
  */
 
@@ -191,17 +192,6 @@ bool qd_delivery_settled(qd_delivery_t *delivery);
 bool qd_delivery_disp_changed(qd_delivery_t *delivery);
 uint64_t qd_delivery_disp(qd_delivery_t *delivery);
 qd_link_t *qd_delivery_link(qd_delivery_t *delivery);
-
-
-typedef struct qd_link_item_t qd_link_item_t;
-
-struct qd_link_item_t {
-    DEQ_LINKS(qd_link_item_t);
-    qd_link_t *link;
-};
-
-ALLOC_DECLARE(qd_link_item_t);
-DEQ_DECLARE(qd_link_item_t, qd_link_list_t);
 
 ///@}
 #endif

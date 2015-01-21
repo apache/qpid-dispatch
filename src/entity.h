@@ -23,9 +23,7 @@
 #include <qpid/dispatch/error.h>
 
 /**
- * @defgroup entity-attributes
- *
- * Set/get cached attributes of a managed entity.
+ * @defgroup entity-attributes Set/get cached attributes of a managed entity.
  *
  * @{
  */

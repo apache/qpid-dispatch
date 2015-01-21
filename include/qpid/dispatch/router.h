@@ -22,8 +22,10 @@
 /**@file
  * Register addresses, send messages.
  *
- * @defgroup router
+ * @defgroup router router
+ *
  * Register addresses, send messages.
+ * @{
  */
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/message.h>
@@ -99,9 +101,11 @@ typedef void (*qd_router_message_cb_t)(void *context, qd_message_t *msg, int lin
 const char *qd_router_id(const qd_dispatch_t *qd);
 
 /** Register an address in the router's hash table.
+ * @param qd Pointer to the dispatch instance.
  * @param address String form of address
  * @param handler Callback to be called when a message is received for the address.
  * @param semantics Semantics for the address.
+ * @param global True if the address is global.
  * @param context Context to be passed to the handler.
  */
 qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
@@ -133,4 +137,7 @@ void qd_router_build_node_list(qd_dispatch_t *qd, qd_composed_field_t *field);
 
 /** String form of address for logging */
 const char* qd_address_logstr(qd_address_t* address);
+
+///@}
+
 #endif

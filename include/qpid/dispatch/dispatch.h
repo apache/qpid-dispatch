@@ -24,9 +24,7 @@
 /**@file
  * Configure and prepare a dispatch instance.
  *
- * @defgroup dispatch
- *
- * Configure and prepare a dispatch instance.
+ * @defgroup dispatch dispatch
  * @{
  */
 
@@ -44,14 +42,14 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir);
 /**
  * Finalize the Dispatch library after it has stopped running.
  *
- * @param dispatch The dispatch handle returned by qd_dispatch
+ * @param qd The dispatch handle returned by qd_dispatch
  */
 void qd_dispatch_free(qd_dispatch_t *qd);
 
 /**
  * Load the configuration file.
  *
- * @param dispatch The dispatch handle returned by qd_dispatch
+ * @param qd The dispatch handle returned by qd_dispatch
  * @param config_path The path to the configuration file.
  */
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path);

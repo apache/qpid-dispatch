@@ -35,8 +35,8 @@
  * The driver library provides a simple implementation of a driver for
  * the proton engine. A driver is responsible for providing input,
  * output, and tick events to the bottom half of the engine API. See
- * ::qdpn_transport_input, ::qdpn_transport_output, and
- * ::qdpn_transport_tick. The driver also provides an interface for the
+ * pn_transport_input, pn_transport_output, and
+ * pn_transport_tick. The driver also provides an interface for the
  * application to access the top half of the API when the state of the
  * engine may have changed due to I/O or timing events. Additionally
  * the driver incorporates the SASL engine as well in order to provide

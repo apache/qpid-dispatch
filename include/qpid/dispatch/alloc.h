@@ -33,16 +33,19 @@
  * @internal
  */
 
+/** Allocation pool */
 typedef struct qd_alloc_pool_t qd_alloc_pool_t;
 
 DEQ_DECLARE(qd_alloc_pool_t, qd_alloc_pool_list_t);
 
+/** Allocation configuration. */
 typedef struct {
     int  transfer_batch_size;
     int  local_free_list_max;
     int  global_free_list_max;
 } qd_alloc_config_t;
 
+/** Allocation statistics. */
 typedef struct {
     uint64_t total_alloc_from_heap;
     uint64_t total_free_to_heap;
@@ -51,6 +54,7 @@ typedef struct {
     uint64_t batches_rebalanced_to_global;
 } qd_alloc_stats_t;
 
+/** Allocation type descriptor. */
 typedef struct {
     uint32_t              header;
     char                 *type_name;
@@ -78,6 +82,10 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p);
     T *new_##T(void);    \
     void free_##T(T *p)
 
+/**
+ * Define allocator configuration.
+ *@internal
+ */
 #define ALLOC_DEFINE_CONFIG(T,S,A,C)                                \
     qd_alloc_type_desc_t __desc_##T = {0, #T, S, A, 0, C, 0, 0, 0, {0,0}, 0}; \
     __thread qd_alloc_pool_t *__local_pool_##T = 0;                     \

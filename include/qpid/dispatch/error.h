@@ -54,7 +54,7 @@ ENUM_DECLARE(qd_error);
 /**
  * Store thread-local error code and message.
  *@param code Error code. If 0 this is equivalent to calling qd_error_clear()
- *@param fmt printf-stlye format.
+ *@param ... printf-stlye format and arguments.
  *@return code
  */
 #define qd_error(code, ...) qd_error_impl(code, __FILE__, __LINE__, __VA_ARGS__)

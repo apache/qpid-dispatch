@@ -60,25 +60,25 @@ struct qd_dispatch_t {
 /**
  * Configure the AMQP container from a configuration entity.
  *
- * @param dispatch The dispatch handle returned by qd_dispatch
+ * @param qd The dispatch handle returned by qd_dispatch
  * @param entity The configuration entity.
  */
 qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * Configure the router node from a configuration entity.
- *        If this is not called, the router will run in ENDPOINT mode.
+ * If this is not called, the router will run in ENDPOINT mode.
  *
- * @param dispatch The dispatch handle returned by qd_dispatch.
+ * @param qd The dispatch handle returned by qd_dispatch.
  * @param entity The configuration entity.
  */
 qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * Prepare Dispatch for operation.  This must be called prior to
- *        calling qd_server_run or qd_server_start.
+ * calling qd_server_run or qd_server_start.
  *
- * @param dispatch The dispatch handle returned by qd_dispatch
+ * @param qd The dispatch handle returned by qd_dispatch
  */
 qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd);
 
@@ -97,7 +97,7 @@ qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *qd, qd_entity_t *entity
  *        parsed configuration file.  This must be called after the
  *        call to qd_dispatch_prepare completes.
  *
- * @param dispatch The dispatch handle returned by qd_dispatch
+ * @param qd The dispatch handle returned by qd_dispatch
  */
 qd_error_t qd_dispatch_configure_logging(qd_dispatch_t *qd);
 

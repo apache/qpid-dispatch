@@ -29,7 +29,7 @@ typedef struct qd_composed_field_t qd_composed_field_t;
 /**@file
  * Composing AMQP data trees.
  * 
- * @defgroup compose
+ * @defgroup compose compose
  *
  * Compose a tree-structure representing an AMQP datatype that can
  * be serialized into a message.
@@ -51,7 +51,7 @@ qd_composed_field_t *qd_compose(uint64_t performative, qd_composed_field_t *exte
 /**
  * Free the resources associated with a composed field.
  *
- * @param A field pointer returned by qd_compose.
+ * @param field A field pointer returned by qd_compose.
  */
 void qd_compose_free(qd_composed_field_t *field);
 
@@ -208,6 +208,8 @@ void qd_compose_insert_symbol(qd_composed_field_t *field, const char *value);
  *        this iterator after the call is complete.
  */
 void qd_compose_insert_typed_iterator(qd_composed_field_t *field, qd_field_iterator_t *iter);
+
+///@}
 
 #endif
 

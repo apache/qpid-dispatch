@@ -47,9 +47,9 @@ void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file
 
 /** Log a message
  * Note: does not evaluate the format args unless the log message is enabled.
- * @param s qd_log_source_t* source of log message.
- * @param c qd_log_level_t log level of message
- * @param f printf style format string ...
+ * @param source qd_log_source_t* source of log message.
+ * @param level qd_log_level_t log level of message.
+ * @param ... printf style format string and arguments.
  */
 #define qd_log(source, level, ...)                                      \
     do {                                                                \

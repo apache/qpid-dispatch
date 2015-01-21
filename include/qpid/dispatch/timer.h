@@ -25,7 +25,7 @@
 /**@file
  * Server Timer Functions
  * 
- * @defgroup timer
+ * @defgroup timer timer
  *
  * Server Timer Functions
  * @{
@@ -45,7 +45,8 @@ typedef void (*qd_timer_cb_t)(void* context);
 
 /**
  * Create a new timer object.
- *
+ * 
+ * @param qd Pointer to the dispatch instance.
  * @param cb The callback function to be invoked when the timer expires.
  * @param context An opaque, user-supplied context to be passed into the callback.
  * @return A pointer to the new timer object or NULL if memory is exhausted.

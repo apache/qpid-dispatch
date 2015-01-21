@@ -27,7 +27,7 @@
  */
 
 /**
- * @defgroup server
+ * @defgroup server server
  *
  * Control server threads, starting and stopping the server.
  * @{
@@ -127,7 +127,7 @@ void qd_server_resume(qd_dispatch_t *qd);
 
 /**
  * @}
- * @defgroup server_signal Server Signal
+ * @defgroup server_signal server_signal
  *
  * Server Signal Handling
  * 
@@ -175,7 +175,7 @@ void qd_server_signal(qd_dispatch_t *qd, int signum);
 
 /**
  * @}
- * @defgroup server_connection Server Connection
+ * @defgroup connection connection
  *
  * Server AMQP Connection Handling
  *
@@ -362,7 +362,8 @@ typedef int (*qd_conn_handler_cb_t)(void *handler_context, void* conn_context, q
  * mandatory and must be set prior to the invocation of qd_server_run.
  *
  * @param qd The dispatch handle returned by qd_dispatch.
- * @param conn_hander The handler for processing connection-related events.
+ * @param conn_handler The handler for processing connection-related events.
+ * @param handler_context Context data to associate with the handler.
  */
 void qd_server_set_conn_handler(qd_dispatch_t *qd, qd_conn_handler_cb_t conn_handler, void *handler_context);
 

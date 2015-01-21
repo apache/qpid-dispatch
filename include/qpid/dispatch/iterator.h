@@ -8,9 +8,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -26,70 +26,72 @@
 /**@file
  * Iterate over message buffer chains and addresse fields.
  *
- * @defgroup iterator
+ *
+ * @defgroup iterator iterator
  *
  * Used to access fields within a message buffer chain, in particular address
  * fields.
  *
  * Iterator shields the user from the fact that the field may be split across
  * one or more physical buffers.
+ *
  * @{
  */
 typedef struct qd_field_iterator_t qd_field_iterator_t;
 
 /**
- * Iterator views allow the code traversing the field to see a transformed
- * view of the raw field.
+ * Type of iterator view. Iterator views allow the code traversing an address
+ * field to see a transformed view of the raw field.
  *
  * ITER_VIEW_ALL - No transformation of the raw field data
  *
  * ITER_VIEW_NO_HOST - Remove the scheme and host fields from the view
  *
- *    amqp://host.domain.com:port/node-id/node/specific
- *                                ^^^^^^^^^^^^^^^^^^^^^
- *    node-id/node/specific
- *    ^^^^^^^^^^^^^^^^^^^^^
+ *     amqp://host.domain.com:port/node-id/node/specific
+ *                                 ^^^^^^^^^^^^^^^^^^^^^
+ *     node-id/node/specific
+ *     ^^^^^^^^^^^^^^^^^^^^^
  *
  * ITER_VIEW_NODE_ID - Isolate the node identifier from an address
  *
- *    amqp://host.domain.com:port/node-id/node/specific
+ *     amqp://host.domain.com:port/node-id/node/specific
  *                                ^^^^^^^
- *    node-id/node/specific
- *    ^^^^^^^
+ *     node-id/node/specific
+ *     ^^^^^^^
  *
  * ITER_VIEW_NODE_SPECIFIC - Isolate node-specific text from an address
  *
- *    amqp://host.domain.com:port/node-id/node/specific
- *                                        ^^^^^^^^^^^^^
- *    node-id/node/specific
- *            ^^^^^^^^^^^^^
+ *     amqp://host.domain.com:port/node-id/node/specific
+ *                                         ^^^^^^^^^^^^^
+ *     node-id/node/specific
+ *             ^^^^^^^^^^^^^
  *
  * ITER_VIEW_ADDRESS_HASH - Isolate the hashable part of the address depending on address syntax
  *
- *    amqp:/_local/<local>
- *                L^^^^^^^
- *    amqp:/_topo/<area>/<router>/<local>
- *               A^^^^^^
- *    amqp:/_topo/<my-area>/<router>/<local>
- *                         R^^^^^^^^
- *    amqp:/_topo/<my_area>/<my-router>/<local>
- *                                     L^^^^^^^
- *    amqp:/_topo/<area>/all/<local>
- *               A^^^^^^
- *    amqp:/_topo/<my-area>/all/<local>
- *                             L^^^^^^^
- *    amqp:/_topo/all/all/<local>
- *                       L^^^^^^^
- *    amqp:/<mobile>
- *         M^^^^^^^^
+ *     amqp:/_local/<local>
+ *                 L^^^^^^^
+ *     amqp:/_topo/<area>/<router>/<local>
+ *                A^^^^^^
+ *     amqp:/_topo/<my-area>/<router>/<local>
+ *                          R^^^^^^^^
+ *     amqp:/_topo/<my_area>/<my-router>/<local>
+ *                                      L^^^^^^^
+ *     amqp:/_topo/<area>/all/<local>
+ *                A^^^^^^
+ *     amqp:/_topo/<my-area>/all/<local>
+ *                              L^^^^^^^
+ *     amqp:/_topo/all/all/<local>
+ *                        L^^^^^^^
+ *     amqp:/<mobile>
+ *          M^^^^^^^^
  *
  * ITER_VIEW_NODE_HASH - Isolate the hashable part of a router-id, used for headers
  *
- *    <area>/<router>
- *   A^^^^^^
+ *      <area>/<router>
+ *     A^^^^^^
  *
- *    <my_area>/<router>
- *             R^^^^^^^^
+ *      <my_area>/<router>
+ *               R^^^^^^^^
  *
  */
 typedef enum {

@@ -22,6 +22,8 @@ PROJECT_NUMBER          = ${QPID_DISPATCH_VERSION}
 INPUT                   = ${INPUT}
 HTML_OUTPUT             = ${HTML_OUTPUT}
 
+WARN_IF_UNDOCUMENTED    = NO    # This should be YES, need to fill in missing doc.
+
 STRIP_FROM_PATH         = ${CMAKE_SOURCE_DIR}/include
 DISABLE_INDEX           = yes
 GENERATE_LATEX          = no
@@ -30,4 +32,6 @@ HAVE_DOT                = ${HAVE_DOT}
 JAVADOC_AUTOBRIEF       = yes
 QUIET                   = yes
 RECURSIVE               = yes
+
 ${MORE_CONFIG}
+

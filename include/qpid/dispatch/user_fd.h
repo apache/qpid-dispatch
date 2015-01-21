@@ -25,7 +25,7 @@
 /**@file
  * Server User-File-Descriptor functions.
  * 
- * @defgroup user_fd User FD
+ * @defgroup user_fd user_fd
  *
  * Server User-File-Descriptor Functions
  * @{
@@ -60,6 +60,7 @@ void qd_server_set_user_fd_handler(qd_dispatch_t *qd, qd_user_fd_handler_cb_t uf
  * for purposes other than AMQP communication.  Registering a user fd with the dispatch server
  * controls processing of the FD alongside the FDs used for messaging.
  *
+ * @param qd Pointer to the dispatch instance.
  * @param fd The open file descriptor being managed by the application.
  * @param context User context passed back in the connection handler.
  * @return A pointer to the new user_fd.

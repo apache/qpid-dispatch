@@ -68,7 +68,8 @@ qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, c
 /**
  * Start an on-demand connector.
  *
- * @param od The pointer to an on-demand connector returned by qd_connections_find_on_demand.
+ * @param qd Pointer to the dispatch instance.
+ * @param cc The pointer to an on-demand connector returned by qd_connections_find_on_demand.
  */
 void qd_connection_manager_start_on_demand(qd_dispatch_t *qd, qd_config_connector_t *cc);
 
@@ -76,7 +77,8 @@ void qd_connection_manager_start_on_demand(qd_dispatch_t *qd, qd_config_connecto
 /**
  * Stop an on-demand connector.
  *
- * @param od The pointer to an on-demand connector returned by qd_connections_find_on_demand.
+ * @param qd Pointer to the dispatch instance.
+ * @param cc The pointer to an on-demand connector returned by qd_connections_find_on_demand.
  */
 void qd_connection_manager_stop_on_demand(qd_dispatch_t *qd, qd_config_connector_t *cc);
 

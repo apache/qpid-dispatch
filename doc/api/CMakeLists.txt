@@ -17,6 +17,8 @@
 ## under the License.
 ##
 
+set(bin ${CMAKE_CURRENT_BINARY_DIR})
+
 if(USE_DOXYGEN)
 
   # Create doxygen configuration files.
@@ -36,18 +38,20 @@ if(USE_DOXYGEN)
   configure_doxygen(api_dev "${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src"
     "ENABLED_SECTIONS=INTERNAL\nINTERNAL_DOCS=yes\nEXTRACT_ALL=yes")
 
-  # This is not ideal: if files are added/removed it won't be detected til we re-run cmake.
+  # Dependencies: calculated at configuration time so we won't detect
+  # new/removed files till re-configuration. Usually adding/removing sources
+  # will force a re-configuration so by deleting the output to force a re-build
+  # after re-configuration we should catch most cases.
   file(GLOB_RECURSE API_SOURCES
     ${CMAKE_SOURCE_DIR}/include/*.h
     ${CMAKE_SOURCE_DIR}/src/*.h
     ${CMAKE_SOURCE_DIR}/src/*.c)
+  file(REMOVE_RECURSE ${bin}/api ${bin}/api_dev) # Force rebuild after re-configuration.
 
-  add_custom_command (OUTPUT api
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.py ${DOXYGEN_EXECUTABLE} api.doxygen
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in ${API_SOURCES})
-
-  add_custom_command (OUTPUT api_dev
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/doxygen-wrapper.py ${DOXYGEN_EXECUTABLE} api_dev.doxygen
+  add_custom_command (OUTPUT api api_dev
+    COMMAND ${DOXYGEN_EXECUTABLE} api.doxygen
+    COMMAND ${DOXYGEN_EXECUTABLE} api_dev.doxygen
+    COMMAND ${CMAKE_COMMAND} -E touch api api_dev
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in ${API_SOURCES})
 
   add_custom_target(apidocs ALL DEPENDS api api_dev)

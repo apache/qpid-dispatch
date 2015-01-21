@@ -22,7 +22,7 @@
 /**@file
  * AMQP constants.
  *
- *@defgroup amqp AMQP
+ *@defgroup amqp amqp
  *
  * AMQP related constant definitions.
  */
@@ -115,6 +115,7 @@ const char * const QD_INTERNODE_LINK_NAME_2;
 
 /** @name AMQP error codes. */
 /// @{
+/** An AMQP error status code and string description  */
 typedef struct qd_amqp_error_t { int status; const char* description; } qd_amqp_error_t;
 extern const qd_amqp_error_t QD_AMQP_OK;
 extern const qd_amqp_error_t QD_AMQP_BAD_REQUEST;

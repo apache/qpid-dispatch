@@ -39,19 +39,19 @@ static char *topo_prefix    = "_topo/";
 static char *direct_prefix;
 static char *node_id;
 
-/**
+/*
  * Address Types and Processing:
  *
- *   Address                              Hash Key       onReceive
- *   ===================================================================
- *   _local/<local>                       L<local>               handler
- *   _topo/<area>/<router>/<local>        A<area>        forward
- *   _topo/<my-area>/<router>/<local>     R<router>      forward
- *   _topo/<my-area>/<my-router>/<local>  L<local>               handler
- *   _topo/<area>/all/<local>             A<area>        forward
- *   _topo/<my-area>/all/<local>          L<local>       forward handler
- *   _topo/all/all/<local>                L<local>       forward handler
- *   <mobile>                             M<mobile>      forward handler
+ *     Address                              Hash Key       onReceive
+ *     ===================================================================
+ *     _local/<local>                       L<local>               handler
+ *     _topo/<area>/<router>/<local>        A<area>        forward
+ *     _topo/<my-area>/<router>/<local>     R<router>      forward
+ *     _topo/<my-area>/<my-router>/<local>  L<local>               handler
+ *     _topo/<area>/all/<local>             A<area>        forward
+ *     _topo/<my-area>/all/<local>          L<local>       forward handler
+ *     _topo/all/all/<local>                L<local>       forward handler
+ *     <mobile>                             M<mobile>      forward handler
  */
 
 ALLOC_DEFINE(qd_routed_event_t);
@@ -61,7 +61,6 @@ ALLOC_DEFINE(qd_router_ref_t);
 ALLOC_DEFINE(qd_router_link_ref_t);
 ALLOC_DEFINE(qd_address_t);
 ALLOC_DEFINE(qd_router_conn_t);
-
 
 qd_address_t* qd_address() {
     qd_address_t* addr = new_qd_address_t();

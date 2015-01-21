@@ -22,6 +22,8 @@
 /** @file
  * Buffer chains.
  * @internal
+ * @defgroup buffer buffer
+ * @{
  */
 
 #include <qpid/dispatch/ctools.h>
@@ -30,6 +32,7 @@ typedef struct qd_buffer_t qd_buffer_t;
 
 DEQ_DECLARE(qd_buffer_t, qd_buffer_list_t);
 
+/** A raw byte buffer .*/
 struct qd_buffer_t {
     DEQ_LINKS(qd_buffer_t);
     unsigned int size;          ///< Size of data content
@@ -88,5 +91,7 @@ size_t qd_buffer_size(qd_buffer_t *buf);
  * @param len The number of octets that have been appended to the buffer
  */
 void qd_buffer_insert(qd_buffer_t *buf, size_t len);
+
+///@}
 
 #endif

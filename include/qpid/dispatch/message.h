@@ -30,7 +30,7 @@
 /**@file
  * Message representation. 
  *
- * @defgroup message
+ * @defgroup message message
  *
  * Message representation.
  * @{
@@ -42,11 +42,15 @@ typedef struct qd_message_t qd_message_t;
 
 DEQ_DECLARE(qd_message_t, qd_message_list_t);
 
+/** Message representation.
+ *@internal
+ */
 struct qd_message_t {
     DEQ_LINKS(qd_message_t);
     // Private members not listed here.
 };
 
+/** Amount of message to be parsed.  */
 typedef enum {
     QD_DEPTH_NONE,
     QD_DEPTH_HEADER,
@@ -59,6 +63,7 @@ typedef enum {
 } qd_message_depth_t;
 
 
+/** Message fields */
 typedef enum {
     //
     // Message Sections

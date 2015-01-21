@@ -25,10 +25,11 @@
 /**@file
  * Parse raw data fields into AMQP data trees.
  *
- * @defgroup parse
+ * @defgroup parse parse
  *
  * Parse data from qd_field_iterator_t into a tree structure represeniting
  * an AMQP data type tree.
+ *@{
  */
 
 typedef struct qd_parsed_field_t qd_parsed_field_t;
@@ -44,7 +45,7 @@ qd_parsed_field_t *qd_parse(qd_field_iterator_t *iter);
 /**
  * Free the resources associated with a parsed field.
  *
- * @param A field pointer returned by qd_parse.
+ * @param field A field pointer returned by qd_parse.
  */
 void qd_parse_free(qd_parsed_field_t *field);
 
@@ -199,6 +200,8 @@ int qd_parse_is_scalar(qd_parsed_field_t *field);
  * @return The value field corresponding to the key or NULL.
  */
 qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *key);
+
+///@}
 
 #endif
 

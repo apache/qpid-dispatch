@@ -21,11 +21,21 @@
 
 /**@file
  * Large bit-sets.
+
+ *@defgroup bitmask bitmask
+ *
+ *@{
  */
 
+/** A bit mask */
 typedef struct qd_bitmask_t qd_bitmask_t;
 
+/** Number of bits in a bitmask. */
 int qd_bitmask_width();
+
+/** Create a bitmask.
+ *@param initial if non-zero set all bits, else clear all bits.
+ */
 qd_bitmask_t *qd_bitmask(int initial);
 void qd_bitmask_free(qd_bitmask_t *b);
 void qd_bitmask_set_all(qd_bitmask_t *b);
@@ -35,7 +45,7 @@ void qd_bitmask_clear_bit(qd_bitmask_t *b, int bitnum);
 int qd_bitmask_value(qd_bitmask_t *b, int bitnum);
 int qd_bitmask_first_set(qd_bitmask_t *b, int *bitnum);
 
-
+///@}
 
 #endif
 
