@@ -182,7 +182,7 @@
                 "mobileAddrMaxAge": {
                     "type": "Integer",
                     "default": 60,
-                    "description": "Time in seconds after which mobile addresses are declared stale if no RA is received."
+                    "description": "Deprecated - This value is no longer used in the router."
                 },
 	        "addrCount": {"type": "Integer", "description":"Number of addresses known to the router."},
 	        "linkCount": {"type": "Integer", "description":"Number of links attached to the router node."},
