@@ -82,7 +82,6 @@ struct qd_router_link_t {
     qd_waypoint_t          *waypoint;        ///< [ref] Waypoint that owns this link
     qd_link_t              *link;            ///< [own] Link pointer
     qd_router_link_t       *connected_link;  ///< [ref] If this is a link-route, reference the connected link
-    qd_router_link_t       *peer_link;       ///< [ref] If this is a bidirectional link-route, reference the peer link
     qd_router_link_ref_t   *ref;             ///< Pointer to a containing reference object
     char                   *target;          ///< Target address for incoming links
     qd_routed_event_list_t  event_fifo;      ///< FIFO of outgoing delivery/link events (no messages)

@@ -94,7 +94,6 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         rlink->waypoint       = wp;
         rlink->link           = wp->out_link;
         rlink->connected_link = 0;
-        rlink->peer_link      = 0;
         rlink->ref            = 0;
         rlink->target         = 0;
         DEQ_INIT(rlink->event_fifo);
@@ -169,7 +168,6 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         rlink->waypoint       = wp;
         rlink->link           = wp->in_link;
         rlink->connected_link = 0;
-        rlink->peer_link      = 0;
         rlink->ref            = 0;
         rlink->target         = 0;
         DEQ_INIT(rlink->event_fifo);

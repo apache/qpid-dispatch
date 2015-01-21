@@ -992,7 +992,6 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
     rlink->waypoint       = 0;
     rlink->link           = link;
     rlink->connected_link = 0;
-    rlink->peer_link      = 0;
     rlink->ref            = 0;
     rlink->target         = 0;
     DEQ_INIT(rlink->event_fifo);
@@ -1086,7 +1085,6 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     rlink->waypoint       = 0;
     rlink->link           = link;
     rlink->connected_link = 0;
-    rlink->peer_link      = 0;
     rlink->ref            = 0;
     rlink->target         = 0;
     DEQ_INIT(rlink->event_fifo);
@@ -1311,7 +1309,6 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     rlink->waypoint       = 0;
     rlink->link           = receiver;
     rlink->connected_link = 0;
-    rlink->peer_link      = 0;
     rlink->ref            = 0;
     rlink->target         = 0;
     DEQ_INIT(rlink->event_fifo);
@@ -1338,7 +1335,6 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     rlink->waypoint       = 0;
     rlink->link           = sender;
     rlink->connected_link = 0;
-    rlink->peer_link      = 0;
     rlink->ref            = 0;
     rlink->target         = 0;
     DEQ_INIT(rlink->event_fifo);
