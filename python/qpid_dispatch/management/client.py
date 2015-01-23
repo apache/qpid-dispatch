@@ -26,7 +26,10 @@ import proton, threading
 from proton import Url
 from .error import *
 from .entity import EntityBase, clean_dict
-from qpid_dispatch_internal.proton_future.utils import SyncRequestResponse, BlockingConnection
+try:
+    from proton.utils import SyncRequestResponse, BlockingConnection
+except ImportError:
+    from qpid_dispatch_internal.proton_future.utils import SyncRequestResponse, BlockingConnection
 
 
 class Entity(EntityBase):
@@ -96,7 +99,7 @@ class Node(object):
     def close(self):
         """Shut down the node"""
         if self.client:
-            self.client.close()
+            self.client.connection.close()
             self.client = None
 
     def __repr__(self):
