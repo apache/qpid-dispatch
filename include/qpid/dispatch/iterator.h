@@ -158,6 +158,11 @@ void qd_field_iterator_reset_view(qd_field_iterator_t *iter,
 void qd_field_iterator_set_phase(qd_field_iterator_t *iter, char phase);
 
 /**
+ * Override the hash-prefix with a custom character.
+ */
+void qd_field_iterator_override_prefix(qd_field_iterator_t *iter, char prefix);
+
+/**
  * Return the current octet in the iterator's view and step to the next.
  */
 unsigned char qd_field_iterator_octet(qd_field_iterator_t *iter);

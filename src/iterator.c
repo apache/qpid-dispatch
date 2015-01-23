@@ -53,6 +53,7 @@ struct qd_field_iterator_t {
     addr_state_t        state;
     bool                view_prefix;
     unsigned char       prefix;
+    unsigned char       prefix_override;
     unsigned char       phase;
 };
 
@@ -83,7 +84,7 @@ static void parse_address_view(qd_field_iterator_t *iter)
     // to aid the router in looking up addresses.
     //
 
-    if (qd_field_iterator_prefix(iter, "_")) {
+    if (iter->prefix_override == '\0' && qd_field_iterator_prefix(iter, "_")) {
         if (qd_field_iterator_prefix(iter, "local/")) {
             iter->prefix      = 'L';
             iter->state       = STATE_AT_PREFIX;
@@ -115,7 +116,7 @@ static void parse_address_view(qd_field_iterator_t *iter)
         }
     }
 
-    iter->prefix      = 'M';
+    iter->prefix      = iter->prefix_override ? iter->prefix_override : 'M';
     iter->state       = STATE_AT_PREFIX;
     iter->view_prefix = true;
 }
@@ -280,6 +281,7 @@ qd_field_iterator_t* qd_field_iterator_string(const char *text, qd_iterator_view
     iter->start_pointer.cursor = (unsigned char*) text;
     iter->start_pointer.length = strlen(text);
     iter->phase                = '0';
+    iter->prefix_override      = '\0';
 
     qd_field_iterator_reset_view(iter, view);
 
@@ -297,6 +299,7 @@ qd_field_iterator_t* qd_field_iterator_binary(const char *text, int length, qd_i
     iter->start_pointer.cursor = (unsigned char*) text;
     iter->start_pointer.length = length;
     iter->phase                = '0';
+    iter->prefix_override      = '\0';
 
     qd_field_iterator_reset_view(iter, view);
 
@@ -314,6 +317,7 @@ qd_field_iterator_t *qd_field_iterator_buffer(qd_buffer_t *buffer, int offset, i
     iter->start_pointer.cursor = qd_buffer_base(buffer) + offset;
     iter->start_pointer.length = length;
     iter->phase                = '0';
+    iter->prefix_override      = '\0';
 
     qd_field_iterator_reset_view(iter, view);
 
@@ -349,6 +353,13 @@ void qd_field_iterator_reset_view(qd_field_iterator_t *iter, qd_iterator_view_t 
 void qd_field_iterator_set_phase(qd_field_iterator_t *iter, char phase)
 {
     iter->phase = phase;
+}
+
+
+void qd_field_iterator_override_prefix(qd_field_iterator_t *iter, char prefix)
+{
+    iter->prefix_override = prefix;
+    qd_field_iterator_reset_view(iter, iter->view);
 }
 
 
@@ -410,6 +421,7 @@ qd_field_iterator_t *qd_field_iterator_sub(qd_field_iterator_t *iter, uint32_t l
     sub->mode                 = iter->mode;
     sub->state                = STATE_IN_ADDRESS;
     sub->view_prefix          = false;
+    sub->prefix_override      = '\0';
     sub->phase                = '0';
 
     return sub;

@@ -139,6 +139,30 @@ static char* test_view_address_hash(void *context)
 }
 
 
+static char* test_view_address_hash_override(void *context)
+{
+    struct {const char *addr; const char *view;} cases[] = {
+    {"amqp:/link-target",        "Clink-target"},
+    {"amqp:/domain/link-target", "Cdomain/link-target"},
+    {0, 0}
+    };
+    int idx;
+
+    for (idx = 0; cases[idx].addr; idx++) {
+        qd_field_iterator_t *iter = qd_field_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_HASH);
+        qd_field_iterator_override_prefix(iter, 'C');
+        if (!qd_field_iterator_equal(iter, (unsigned char*) cases[idx].view)) {
+            char *got = (char*) qd_field_iterator_copy(iter);
+            snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
+                     cases[idx].addr, cases[idx].view, got);
+            return fail_text;
+        }
+    }
+
+    return 0;
+}
+
+
 static char* test_view_node_hash(void *context)
 {
     struct {const char *addr; const char *view;} cases[] = {
@@ -173,6 +197,7 @@ int field_tests(void)
     TEST_CASE(test_view_global_non_dns, 0);
     TEST_CASE(test_view_global_no_host, 0);
     TEST_CASE(test_view_address_hash, 0);
+    TEST_CASE(test_view_address_hash_override, 0);
     TEST_CASE(test_view_node_hash, 0);
 
     return result;
