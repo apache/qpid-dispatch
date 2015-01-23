@@ -23,17 +23,18 @@
 // The following declarations are for types that are shared between modules yet are
 // not in the public API.
 //
-typedef struct qd_server_t          qd_server_t;
-typedef struct qd_container_t       qd_container_t;
-typedef struct qd_router_t          qd_router_t;
-typedef struct qd_waypoint_t        qd_waypoint_t;
-typedef struct qd_router_link_t     qd_router_link_t;
-typedef struct qd_router_node_t     qd_router_node_t;
-typedef struct qd_router_ref_t      qd_router_ref_t;
-typedef struct qd_router_link_ref_t qd_router_link_ref_t;
-typedef struct qd_router_conn_t     qd_router_conn_t;
-typedef struct qd_config_phase_t    qd_config_phase_t;
-typedef struct qd_config_address_t  qd_config_address_t;
+typedef struct qd_server_t             qd_server_t;
+typedef struct qd_container_t          qd_container_t;
+typedef struct qd_router_t             qd_router_t;
+typedef struct qd_waypoint_t           qd_waypoint_t;
+typedef struct qd_external_container_t qd_external_container_t;
+typedef struct qd_router_link_t        qd_router_link_t;
+typedef struct qd_router_node_t        qd_router_node_t;
+typedef struct qd_router_ref_t         qd_router_ref_t;
+typedef struct qd_router_link_ref_t    qd_router_link_ref_t;
+typedef struct qd_router_conn_t        qd_router_conn_t;
+typedef struct qd_config_phase_t       qd_config_phase_t;
+typedef struct qd_config_address_t     qd_config_address_t;
 
 #include <qpid/dispatch/container.h>
 #include <qpid/dispatch/router.h>
@@ -91,6 +92,11 @@ qd_error_t qd_dispatch_configure_address(qd_dispatch_t *qd, qd_entity_t *entity)
  * Configure a waypoint, must be called after qd_dispatch_prepare
  */
 qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *qd, qd_entity_t *entity);
+
+/**
+ * Configure an external container, must be called after qd_dispatch_prepare
+ */
+qd_error_t qd_dispatch_configure_external_container(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * \brief Configure the logging module from the

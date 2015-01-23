@@ -246,6 +246,10 @@ class WaypointEntity(AgentEntity):
         self._qd.qd_dispatch_configure_waypoint(self._dispatch, self)
         self._qd.qd_waypoint_activate_all(self._dispatch)
 
+class ExternalContainerEntity(AgentEntity):
+    def create(self):
+        self._qd.qd_dispatch_configure_external_container(self._dispatch, self)
+
 class DummyEntity(AgentEntity):
 
     def callme(self, request):

@@ -42,6 +42,7 @@
     } d
 
 #define DEQ_LINKS(t) t *prev; t *next
+#define DEQ_EMPTY {0,0,0,0}
 
 #define DEQ_INIT(d) do { (d).head = 0; (d).tail = 0; (d).scratch = 0; (d).size = 0; } while (0)
 #define DEQ_ITEM_INIT(i) do { (i)->next = 0; (i)->prev = 0; } while(0)

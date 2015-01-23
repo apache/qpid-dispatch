@@ -22,6 +22,7 @@
 #include <qpid/dispatch/log.h>
 #include "dispatch_private.h"
 #include "router_private.h"
+#include "ext_container_private.h"
 #include "entity.h"
 #include "schema_enum.h"
 
@@ -135,6 +136,30 @@ qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity
 }
 
 
+qd_error_t qd_router_configure_external_container(qd_router_t *router, qd_entity_t *entity)
+{
+
+    char *prefix    = qd_entity_get_string(entity, "prefix"); QD_ERROR_RET();
+    char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
+
+    qd_external_container_t *ec = qd_external_container(router, prefix, connector);
+
+    if (!ec) {
+        free(prefix);
+        free(connector);
+        return qd_error(QD_ERROR_CONFIG, "Failed to create external container: prefix=%s connector=%s",
+                        prefix, connector);
+    }
+
+    qd_log(router->log_source, QD_LOG_INFO,
+           "Configured External Container: prefix=%s connector=%s",
+           prefix, connector);
+    free(prefix);
+    free(connector);
+    return qd_error_code();
+}
+
+
 void qd_router_configure_free(qd_router_t *router)
 {
     if (!router) return;
@@ -155,6 +180,8 @@ void qd_router_configure_free(qd_router_t *router)
         free(wp->connector_name);
         free(wp);
     }
+
+    qd_external_container_free_all();
 }
 
 

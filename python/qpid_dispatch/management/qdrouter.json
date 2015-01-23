@@ -362,6 +362,24 @@
             }
         },
 
+        "externalContainer": {
+            "description":"A remote AMQP container that holds nodes that are endpoints for routed links.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "READ"],
+            "attributes": {
+                "prefix": {
+                    "description":"The AMQP address prefix for nodes on the container.",
+                    "type": "String",
+                    "required": true
+                },
+                "connector": {
+                    "description":"The name of the on-demand connector used to reach the waypoint's container.",
+                    "type": "String",
+                    "required": true
+                }
+            }
+        },
+
         "dummy": {
             "description": "Dummy entity for test purposes.",
             "extends": "entity",
