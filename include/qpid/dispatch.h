@@ -22,9 +22,11 @@
 /**@file
  * Includes all dispatch library headers.
  *
- * @mainpage API documentation for the Qpid Dispatch library.
+ * @mainpage API documentation for the experimental Qpid Dispatch Library.
  *
  * @section intro Introduction
+ *
+ * @warning __This is not yet a stable API. It is provided for experimental use only.__
  *
  * This library allows you to send, receive, parse, construct, route and otherwise
  * manipulate AMQP messages.

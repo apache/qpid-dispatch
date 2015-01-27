@@ -17,7 +17,7 @@
 # under the License.
 #
 
-PROJECT_NAME            = "Qpid Dispatch Library"
+PROJECT_NAME            = "Qpid Dispatch Library (experimental)"
 PROJECT_NUMBER          = ${QPID_DISPATCH_VERSION}
 INPUT                   = ${INPUT}
 HTML_OUTPUT             = ${HTML_OUTPUT}
