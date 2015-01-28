@@ -517,7 +517,7 @@ class Tester(object):
                         cleanup()
                         break
             except Exception, e:
-                errors.push(e)
+                errors.append(e)
         assert not errors, "Errors during teardown: %s" % errors
 
 
