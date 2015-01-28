@@ -20,13 +20,16 @@
 #include <qpid/dispatch/connection_manager.h>
 #include <qpid/dispatch/ctools.h>
 #include "dispatch_private.h"
+#include "connection_manager_private.h"
 #include "server_private.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include "schema_enum.h"
 #include <string.h>
+#include <stdio.h>
 
 struct qd_config_listener_t {
+    bool is_connector;
     DEQ_LINKS(qd_config_listener_t);
     qd_listener_t      *listener;
     qd_server_config_t  configuration;
@@ -36,12 +39,16 @@ DEQ_DECLARE(qd_config_listener_t, qd_config_listener_list_t);
 
 
 struct qd_config_connector_t {
+    bool is_connector;
     DEQ_LINKS(qd_config_connector_t);
-    void               *context;
-    const char         *connector_name;
-    qd_connector_t     *connector;
-    qd_server_config_t  configuration;
-    bool                started;
+    void                            *context;
+    const char                      *connector_name;
+    qd_connector_t                  *connector;
+    qd_server_config_t               configuration;
+    bool                             started;
+    qd_connection_manager_handler_t  open_handler;
+    qd_connection_manager_handler_t  close_handler;
+    void                            *handler_context;
 };
 
 DEQ_DECLARE(qd_config_connector_t, qd_config_connector_list_t);
@@ -126,6 +133,7 @@ void qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_config_listener_t *cl = NEW(qd_config_listener_t);
+    cl->is_connector = false;
     cl->listener = 0;
     load_server_config(qd, &cl->configuration, entity);
     DEQ_ITEM_INIT(cl);
@@ -141,6 +149,7 @@ qd_error_t qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entit
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_config_connector_t *cc = NEW(qd_config_connector_t);
     memset(cc, 0, sizeof(*cc));
+    cc->is_connector = true;
     if (load_server_config(qd, &cc->configuration, entity))
         return qd_error_code();
     DEQ_ITEM_INIT(cc);
@@ -240,10 +249,26 @@ qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, c
 }
 
 
+void qd_connection_manager_set_handlers(qd_config_connector_t *cc,
+                                        qd_connection_manager_handler_t open_handler,
+                                        qd_connection_manager_handler_t close_handler,
+                                        void *context)
+{
+    if (cc) {
+        cc->open_handler    = open_handler;
+        cc->close_handler   = close_handler;
+        cc->handler_context = context;
+    }
+}
+
+
 void qd_connection_manager_start_on_demand(qd_dispatch_t *qd, qd_config_connector_t *cc)
 {
-    if (cc && cc->connector == 0)
+    if (cc && cc->connector == 0) {
+        qd_log(qd->connection_manager->log_source, QD_LOG_INFO, "Starting on-demand connector: %s",
+               cc->connector_name);
         cc->connector = qd_server_connect(qd, &cc->configuration, cc);
+    }
 }
 
 
@@ -268,3 +293,20 @@ const char *qd_config_connector_name(qd_config_connector_t *cc)
 {
     return cc ? cc->connector_name : 0;
 }
+
+
+void qd_connection_manager_connection_opened(qd_connection_t *conn)
+{
+    qd_config_connector_t *cc = (qd_config_connector_t*) qd_connection_get_config_context(conn);
+    if (cc && cc->is_connector && cc->open_handler)
+        cc->open_handler(cc->handler_context, conn);
+}
+
+
+void qd_connection_manager_connection_closed(qd_connection_t *conn)
+{
+    qd_config_connector_t *cc = (qd_config_connector_t*) qd_connection_get_config_context(conn);
+    if (cc && cc->is_connector && cc->close_handler)
+        cc->close_handler(cc->handler_context, conn);
+}
+

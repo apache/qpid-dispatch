@@ -282,6 +282,8 @@ void qd_waypoint_activate_all(qd_dispatch_t *qd)
 void qd_waypoint_connection_opened(qd_dispatch_t *qd, qd_config_connector_t *cc, qd_connection_t *conn)
 {
     qd_waypoint_context_t *context = (qd_waypoint_context_t*) qd_config_connector_context(cc);
+    if (!context)
+        return;
 
     qd_log(qd->router->log_source, QD_LOG_INFO, "On-demand connector '%s' opened",
            qd_config_connector_name(cc));

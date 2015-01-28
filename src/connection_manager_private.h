@@ -1,5 +1,5 @@
-#ifndef __ext_container_private_h__
-#define __ext_container_private_h__ 1
+#ifndef __ext_connection_manager_private_h__
+#define __ext_connection_manager_private_h__ 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,23 +19,15 @@
  * under the License.
  */
 
-#include "dispatch_private.h"
+#include <qpid/dispatch/server.h>
 
 /**
  * @file
  *
- * An external container is an object that defines an address prefix for link-routing
- * and associates that prefix with an on-demand connector.
- *
- * The address prefix is propagated across the network and can be used as a target for
- * routed links destined for this external container.
+ * Private/inter-module API for connection manager.
  */
 
-qd_external_container_t *qd_external_container(qd_dispatch_t *qd, const char *prefix, const char *connector_name);
-
-void qd_external_container_free(qd_external_container_t *ec);
-
-void qd_external_container_free_all(void);
-
+void qd_connection_manager_connection_opened(qd_connection_t *conn);
+void qd_connection_manager_connection_closed(qd_connection_t *conn);
 
 #endif

@@ -387,6 +387,15 @@ void *qd_connection_get_context(qd_connection_t *conn);
 
 
 /**
+ * Get the configuration context (connector or listener) for this connection.
+ *
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @return The context supplied at the creation of the listener or connector.
+ */
+void *qd_connection_get_config_context(qd_connection_t *conn);
+
+
+/**
  * Set the link context for a connection.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN

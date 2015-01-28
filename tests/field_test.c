@@ -144,6 +144,7 @@ static char* test_view_address_hash_override(void *context)
     struct {const char *addr; const char *view;} cases[] = {
     {"amqp:/link-target",        "Clink-target"},
     {"amqp:/domain/link-target", "Cdomain/link-target"},
+    {"domain/link-target",       "Cdomain/link-target"},
     {0, 0}
     };
     int idx;

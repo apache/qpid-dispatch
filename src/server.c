@@ -959,6 +959,12 @@ void *qd_connection_get_context(qd_connection_t *conn)
 }
 
 
+void *qd_connection_get_config_context(qd_connection_t *conn)
+{
+    return conn->context;
+}
+
+
 void qd_connection_set_link_context(qd_connection_t *conn, void *context)
 {
     conn->link_context = context;

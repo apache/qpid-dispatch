@@ -18,32 +18,64 @@
  */
 
 #include "dispatch_private.h"
-#include "router_private.h"
 #include "entity_cache.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/connection_manager.h>
+#include <qpid/dispatch/timer.h>
 #include <memory.h>
 #include <stdio.h>
 
 struct qd_external_container_t {
     DEQ_LINKS(qd_external_container_t);
-    char *prefix;
-    char *connector_name;
+    qd_dispatch_t *qd;
+    char          *prefix;
+    char          *connector_name;
+    qd_timer_t    *timer;
 };
 
 DEQ_DECLARE(qd_external_container_t, qd_external_container_list_t);
 
 static qd_external_container_list_t ec_list = DEQ_EMPTY;
 
-qd_external_container_t *qd_external_container(qd_router_t *router, const char *prefix, const char *connector_name)
+
+static void qd_external_container_open_handler(void *context, qd_connection_t *conn)
+{
+    //const char *name = (char*) context;
+}
+
+
+static void qd_external_container_close_handler(void *context, qd_connection_t *conn)
+{
+    //const char *name = (char*) context;
+}
+
+
+static void qd_external_container_timer_handler(void *context)
+{
+    qd_external_container_t *ec = (qd_external_container_t*) context;
+    qd_config_connector_t   *cc = qd_connection_manager_find_on_demand(ec->qd, ec->connector_name);
+    if (cc) {
+        qd_connection_manager_set_handlers(cc,
+                                           qd_external_container_open_handler,
+                                           qd_external_container_close_handler,
+                                           (void*) ec->connector_name);
+        qd_connection_manager_start_on_demand(ec->qd, cc);
+    }
+}
+
+
+qd_external_container_t *qd_external_container(qd_dispatch_t *qd, const char *prefix, const char *connector_name)
 {
     qd_external_container_t *ec = NEW(qd_external_container_t);
 
     if (ec) {
         DEQ_ITEM_INIT(ec);
+        ec->qd             = qd;
         ec->prefix         = strdup(prefix);
         ec->connector_name = strdup(connector_name);
+        ec->timer          = qd_timer(qd, qd_external_container_timer_handler, ec);
         DEQ_INSERT_TAIL(ec_list, ec);
+        qd_timer_schedule(ec->timer, 0);
     }
 
     return ec;
@@ -55,6 +87,7 @@ void qd_external_container_free(qd_external_container_t *ec)
     if (ec) {
         free(ec->prefix);
         free(ec->connector_name);
+        qd_timer_free(ec->timer);
         DEQ_REMOVE(ec_list, ec);
         free(ec);
     }

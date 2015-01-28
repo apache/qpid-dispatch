@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "dispatch_private.h"
+#include "connection_manager_private.h"
 #include <qpid/dispatch/container.h>
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/message.h>
@@ -247,8 +248,10 @@ static void do_updated(pn_delivery_t *pnd)
 }
 
 
-static int close_handler(void* unused, pn_connection_t *conn)
+static int close_handler(void* unused, pn_connection_t *conn, qd_connection_t* qd_conn)
 {
+    qd_connection_manager_connection_closed(qd_conn);
+
     //
     // Close all links, passing False as the 'closed' argument.  These links are not
     // being properly 'detached'.  They are being orphaned.
@@ -305,11 +308,13 @@ static int process_handler(qd_container_t *container, void* unused, qd_connectio
         case PN_CONNECTION_REMOTE_OPEN :
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
                 pn_connection_open(conn);
+            qd_connection_manager_connection_opened(qd_conn);
             break;
 
         case PN_CONNECTION_REMOTE_CLOSE :
             if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED))
                 pn_connection_close(conn);
+            qd_connection_manager_connection_closed(qd_conn);
             break;
 
         case PN_SESSION_REMOTE_OPEN :
@@ -434,7 +439,7 @@ static int handler(void *handler_context, void *conn_context, qd_conn_event_t ev
     switch (event) {
     case QD_CONN_EVENT_LISTENER_OPEN:  open_handler(container, qd_conn, QD_INCOMING, conn_context);   break;
     case QD_CONN_EVENT_CONNECTOR_OPEN: open_handler(container, qd_conn, QD_OUTGOING, conn_context);   break;
-    case QD_CONN_EVENT_CLOSE:          return close_handler(conn_context, conn);
+    case QD_CONN_EVENT_CLOSE:          return close_handler(conn_context, conn, qd_conn);
     case QD_CONN_EVENT_PROCESS:        return process_handler(container, conn_context, qd_conn);
     }
 

@@ -24,10 +24,13 @@
  */
 
 #include <qpid/dispatch/dispatch.h>
+#include <qpid/dispatch/server.h>
 
 typedef struct qd_connection_manager_t qd_connection_manager_t;
 typedef struct qd_config_connector_t qd_config_connector_t;
 typedef struct qd_config_listener_t qd_config_listener_t;
+
+typedef void (*qd_connection_manager_handler_t) (void *context, qd_connection_t *conn);
 
 /**
  * Allocate a connection manager
@@ -63,6 +66,20 @@ void qd_connection_manager_start(qd_dispatch_t *qd);
  * @return The matching on-demand connector or NULL if the name is not found.
  */
 qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, const char *name);
+
+
+/**
+ * Set open and close handlers for a connector.
+ *
+ * @param cxtr A configured connector.
+ * @param open_handler A handler callback
+ * @param close_handler A handler callback
+ * @param context Context to be passed back to the handler
+ */
+void qd_connection_manager_set_handlers(qd_config_connector_t *cc,
+                                        qd_connection_manager_handler_t open_handler,
+                                        qd_connection_manager_handler_t close_handler,
+                                        void *context);
 
 
 /**

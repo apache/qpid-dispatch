@@ -142,7 +142,7 @@ qd_error_t qd_router_configure_external_container(qd_router_t *router, qd_entity
     char *prefix    = qd_entity_get_string(entity, "prefix"); QD_ERROR_RET();
     char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
 
-    qd_external_container_t *ec = qd_external_container(router, prefix, connector);
+    qd_external_container_t *ec = qd_external_container(router->qd, prefix, connector);
 
     if (!ec) {
         free(prefix);
