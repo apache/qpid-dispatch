@@ -19,13 +19,14 @@
 
 """System tests for management of qdrouter"""
 
-import unittest, system_test, re, os
+import unittest, system_test, re, os, json, sys
 from qpid_dispatch.management import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
 from system_test import Qdrouterd, message, retry, wait_ports, Process
 from proton import ConnectionException
 from itertools import chain
 
-PREFIX = 'org.apache.qpid.dispatch.'
+PREFIX = u'org.apache.qpid.dispatch.'
+MANAGEMENT = PREFIX + 'management'
 CONFIGURATION = PREFIX + 'configurationEntity'
 OPERATIONAL = PREFIX + 'operationalEntity'
 LISTENER = PREFIX + 'listener'
@@ -251,7 +252,8 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         finally:
             f.close()
 
-    def test_entity(self):
+    def test_dummy(self):
+        """Test all operations on the dummy test entity"""
         entity = self.node.read(type=LISTENER, name='l0')
         self.assertEqual('l0', entity.name)
         self.assertEqual(str(self.router.ports[0]), entity.port)
@@ -300,8 +302,16 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         dummy2 = self.node.read(type=DUMMY, name='MyDummy')
         self.assertEqual(dummy.attributes, dummy2.attributes)
 
-        self.assertEqual({'operation': 'callme', 'foo': 'bar', 'type': DUMMY, 'identity': identity},
-                         dummy.call('callme', foo='bar'))
+        integers = [0, 1, 42, (2**63)-1, -1, -42, -(2**63)]
+        test_data = ["bytes", u"string"] + integers
+        for data in test_data:
+            try:
+                self.assertEqual(
+                    {u'operation': u'callme', u'type': DUMMY, u'identity': identity, u'data': data},
+                    dummy.call('callme', data=data))
+            except TypeError, e:
+                extype, value, trace = sys.exc_info()
+                raise extype, "data=%r: %s" % (data, value), trace
 
         dummy.badattribute = 'Bad'
         self.assertRaises(BadRequestStatus, dummy.update)

@@ -257,7 +257,7 @@ PyObject *qd_field_to_py(qd_parsed_field_t *field)
 
       case QD_AMQP_LONG:
       case QD_AMQP_SMALLLONG:
-        result = PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) qd_parse_as_long(field));
+        result = PyLong_FromLongLong((PY_LONG_LONG)qd_parse_as_long(field));
         break;
 
       case QD_AMQP_FLOAT:
