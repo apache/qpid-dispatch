@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from dispatch import LOG_INFO, LOG_ERROR, LOG_TRACE
+from dispatch import LOG_INFO, LOG_ERROR, LOG_TRACE, LOG_DEBUG
 from data import LinkState
 
 class NodeTracker(object):
@@ -362,6 +362,15 @@ class RouterNode(object):
         self.log(LOG_TRACE, "Node %s created: maskbit=%d" % (self.id, self.maskbit))
 
 
+    def _logify(self, addr):
+        cls   = addr[0]
+        phase = None
+        if cls == 'M':
+            phase = addr[1]
+            return "%s;class=%c;phase=%c" % (addr[2:], cls, phase)
+        return "%s;class=%c" % (addr[1:], cls)
+
+
     def set_link_id(self, link_id):
         if self.peer_link_id == link_id:
             return False
@@ -450,12 +459,17 @@ class RouterNode(object):
 
     def map_address(self, addr):
         self.mobile_addresses.append(addr)
-        self.adapter.map_destination(addr[0], addr[1:], self.maskbit)
+        phase = '0'
+        if addr[0] == 'M':
+            phase = addr[1]
+        self.adapter.map_destination(phase, addr, self.maskbit)
+        self.log(LOG_DEBUG, "Remote destination %s mapped to router %s" % (self._logify(addr), self.id))
 
 
     def unmap_address(self, addr):
         self.mobile_addresses.remove(addr)
-        self.adapter.unmap_destination(addr[0], addr[1:], self.maskbit)
+        self.adapter.unmap_destination(addr, self.maskbit)
+        self.log(LOG_DEBUG, "Remote destination %s unmapped from router %s" % (self._logify(addr), self.id))
 
 
     def unmap_all_addresses(self):

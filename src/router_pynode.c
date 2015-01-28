@@ -459,8 +459,7 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
         return 0;
     }
 
-    iter = qd_field_iterator_string(addr_string, ITER_VIEW_ADDRESS_HASH);
-    qd_field_iterator_set_phase(iter, phase);
+    iter = qd_field_iterator_string(addr_string, ITER_VIEW_ALL);
 
     sys_mutex_lock(router->lock);
     qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
@@ -484,9 +483,6 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
         qd_waypoint_address_updated_LH(router->qd, addr);
 
     sys_mutex_unlock(router->lock);
-
-    qd_log(log_source, QD_LOG_DEBUG, "Remote Destination '%s' Mapped to router %d", addr_string, maskbit);
-
     Py_INCREF(Py_None);
     return Py_None;
 }
@@ -496,12 +492,11 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
 {
     RouterAdapter *adapter = (RouterAdapter*) self;
     qd_router_t   *router  = adapter->router;
-    char           phase;
     const char    *addr_string;
     int            maskbit;
     qd_address_t  *addr;
 
-    if (!PyArg_ParseTuple(args, "csi", &phase, &addr_string, &maskbit))
+    if (!PyArg_ParseTuple(args, "si", &addr_string, &maskbit))
         return 0;
 
     if (maskbit >= qd_bitmask_width() || maskbit < 0) {
@@ -515,8 +510,7 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
     }
 
     qd_router_node_t    *rnode = router->routers_by_mask_bit[maskbit];
-    qd_field_iterator_t *iter  = qd_field_iterator_string(addr_string, ITER_VIEW_ADDRESS_HASH);
-    qd_field_iterator_set_phase(iter, phase);
+    qd_field_iterator_t *iter  = qd_field_iterator_string(addr_string, ITER_VIEW_ALL);
 
     sys_mutex_lock(router->lock);
     qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
@@ -539,8 +533,6 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
     sys_mutex_unlock(router->lock);
 
     qd_router_check_addr(router, addr, 0);
-
-    qd_log(log_source, QD_LOG_DEBUG, "Remote Destination '%s' Unmapped from router %d", addr_string, maskbit);
 
     Py_INCREF(Py_None);
     return Py_None;

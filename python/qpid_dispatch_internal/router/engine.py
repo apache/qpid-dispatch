@@ -92,8 +92,8 @@ class RouterEngine:
         """
         """
         try:
-            if addr.find('M') == 0:
-                self.mobile_address_engine.add_local_address(addr[1:])
+            if addr[0] in 'MC':
+                self.mobile_address_engine.add_local_address(addr)
         except Exception, e:
             self.log_ma(LOG_ERROR, "Exception in new-address processing: exception=%r" % e)
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -104,8 +104,8 @@ class RouterEngine:
         """
         """
         try:
-            if addr.find('M') == 0:
-                self.mobile_address_engine.del_local_address(addr[1:])
+            if addr[0] in 'MC':
+                self.mobile_address_engine.del_local_address(addr)
         except Exception, e:
             self.log_ma(LOG_ERROR, "Exception in del-address processing: exception=%r" % e)
             exc_type, exc_value, exc_traceback = sys.exc_info()
