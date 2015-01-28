@@ -48,12 +48,6 @@ class QdmanageTest(TestCase):
             raise Exception("%s\n%s" % (e, out))
         return out
 
-    def test_help(self):
-        help_out = self.run_qdmanage('--help', r'Usage: qdmanage', expect=Process.EXIT_OK)
-        assert re.search('Usage: qdmanage', help_out)
-        for cmd in ['create', 'read', 'update', 'delete', 'query']:
-            assert re.search(cmd, help_out)
-
     def assert_entity_equal(self, expect, actual, copy=None):
         """Copy keys in copy from actual to idenity, then assert maps equal."""
         if copy:

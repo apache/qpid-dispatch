@@ -100,6 +100,20 @@
             }
         },
 
+        "org.amqp.management": {
+            "description": "The standard AMQP management node interface.",
+            "fullName": true,
+            "extends": "entity",
+            "operations": ["QUERY", "GET-TYPES", "GET-ANNOTATIONS", "GET-OPERATIONS", "GET-ATTRIBUTES", "GET-MGMT-NODES"]
+        },
+
+        "management": {
+            "description": "Extends the standard org.amqp.management node interface.",
+            "extends": "org.amqp.management",
+            "singleton": true,
+            "operations": ["CREATE", "GET-SCHEMA", "GET-JSON-SCHEMA"]
+        },
+
         "configurationEntity": {
             "description": "Base type for entities containing configuration information.",
             "extends": "entity",

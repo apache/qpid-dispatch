@@ -21,7 +21,7 @@
 Configuration file parsing
 """
 
-import json, re, sys, time
+import json, re, sys
 from copy import copy
 from qpid_dispatch.management.entity import camelcase
 from .schema import ValidationError
@@ -33,8 +33,8 @@ class Config(object):
 
     def __init__(self, filename=None, schema=QdSchema()):
         self.schema = schema
-        self.config_types = [e for e in schema.entity_types.itervalues()
-                             if schema.is_configuration(e)]
+        self.config_types = [et for et in schema.entity_types.itervalues()
+                             if schema.is_configuration(et)]
         if filename:
             try:
                 self.load(filename)

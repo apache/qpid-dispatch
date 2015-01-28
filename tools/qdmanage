@@ -36,12 +36,13 @@ class QdManage():
 
     def __init__(self):
 
-        self.operations = ['query', 'create', 'read', 'update', 'delete',
-                           'get-types', 'get-operations', 'get-attributes', 'get-annotations',
-                           'get-mgmt-nodes']
+        self.operations = ['QUERY', 'CREATE', 'READ', 'UPDATE', 'DELETE',
+                           'GET-TYPES', 'GET-OPERATIONS', 'GET-ATTRIBUTES', 'GET-ANNOTATIONS',
+                           'GET-MGMT-NODES']
 
         usage = "%prog <operation> [options...] [arguments...]"
-        description = "Operations: "+", ".join(self.operations)
+        description = "Standard operations: %s. Use GET-OPERATIONS to find additional operations." \
+                      % (", ".join(self.operations))
 
         op = OptionParser(usage=usage, option_class=Option, description=description)
         op.add_option('--type', help='Type of entity to operate on.')
@@ -51,20 +52,19 @@ class QdManage():
                      help="Pretty-printing indent. -1 means don't pretty-print (default %default)")
         op.add_option('--stdin', action='store_true',
                       help='Read attributes as JSON map or list of maps from stdin.')
-
-
         op.add_option_group(connection_options(op))
-
         self.op = op
 
     def run(self, argv):
         self.opts, self.args = self.op.parse_args(argv[1:])
         if len(self.args) == 0: raise UsageError("No operation specified")
         operation = self.args.pop(0)
-        if operation not in self.operations: raise UsageError("Unknown operation: %s" % operation)
         self.node = Node(Url(self.opts.bus), self.opts.router)
-        method = getattr(self, operation.replace('-','_'))
-        method()
+        if operation.upper() in self.operations:
+            method = getattr(self, operation.lower().replace('-','_'))
+            method()
+        else:                   # Custom operation
+            self.operation(operation)
 
     def main(self, argv):
         return main(self.run, argv, self.op)
@@ -150,6 +150,12 @@ class QdManage():
         """get-mgmt-nodes           List of other known management nodes"""
         check_args(self.args, 0)
         self.print_json(self.call_node('get_mgmt_nodes'))
+
+    def operation(self, operation):
+        """operation [ATTR=VALUE...]   Call custom operation with ATTR=VALUE as request properties."""
+        properties = dict(attr_split(arg) for arg in self.args or [])
+        request = self.call_node('request', 'type', 'name', 'identity', operation=operation, **properties)
+        print self.node.call(request).body
 
 if __name__ == "__main__":
     sys.exit(QdManage().main(sys.argv))

@@ -35,6 +35,7 @@ Annotation and entity type definition maps have the following keys:
 - "description": documentation string.
 - "operations": list of allowed operation names.
 - "attributes": map of attribute names to attribute definitions (see below)
+- "fullName": if true use the type name as-is, do not apply the schema prefix.
 
 Entity type definitions also have these fields:
 

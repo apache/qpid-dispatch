@@ -26,9 +26,9 @@ check for uniqueness of enties/attributes that are specified to be unique.
 A Schema can be loaded/dumped to a json file.
 """
 
-import sys
+import sys, json
 from qpid_dispatch.management.entity import EntityBase
-from qpid_dispatch.management.error import ForbiddenStatus
+from qpid_dispatch.management.error import NotImplementedStatus
 from ..compat import OrderedDict
 
 class ValidationError(Exception):
@@ -274,9 +274,13 @@ class RedefinedError(ValueError): pass
 class AttrsAndOps(object):
     """Base class for Annotation and EntityType - a named holder of attribute types and operations"""
 
-    def __init__(self, name, schema, attributes=None, operations=None, description=""):
-        self.name, self.schema, self.description = schema.long_name(name), schema, description
-        self.short_name = schema.short_name(name)
+    def __init__(self, name, schema, attributes=None, operations=None, description="", fullName=True):
+        self.schema, self.description = schema, description
+        if fullName:
+            self.name = schema.long_name(name)
+            self.short_name = schema.short_name(name)
+        else:
+            self.name = self.short_name = name
         self.attributes = OrderedDict()
         if attributes: self.add_attributes(attributes)
         self.operations = operations or []
@@ -315,9 +319,8 @@ class AttrsAndOps(object):
 
 class Annotation(AttrsAndOps):
     """An annotation type defines a set of attributes that can be re-used by multiple EntityTypes"""
-    def __init__(self, name, schema, attributes=None, operations=None, description=""):
-        super(Annotation, self).__init__(name, schema, attributes, operations, description)
-        attributes = attributes or OrderedDict()
+    def __init__(self, name, schema, **kwargs):
+        super(Annotation, self).__init__(name, schema, **kwargs)
         for a in self.attributes.itervalues():
             a.annotation = self
 
@@ -332,8 +335,7 @@ class EntityType(AttrsAndOps):
     @ivar singleton: If true only one entity of this type is allowed.
     #ivar annotation: List of names of sections annotationd by this entity.
     """
-    def __init__(self, name, schema, singleton=False, annotations=None, attributes=None,
-                 extends=None, description="", operations=None):
+    def __init__(self, name, schema, singleton=False, annotations=None, extends=None, **kwargs):
         """
         @param name: name of the entity type.
         @param schema: schema for this type.
@@ -343,7 +345,7 @@ class EntityType(AttrsAndOps):
         @param description: Human readable description.
         @param operations: Allowed operations, list of operation names.
         """
-        super(EntityType, self).__init__(name, schema, attributes, operations, description)
+        super(EntityType, self).__init__(name, schema, **kwargs)
         # Bases and annotations are resolved in self.resolve
         self.base = extends
         self.all_bases = []
@@ -373,7 +375,7 @@ class EntityType(AttrsAndOps):
             overlap = set(a) & set(b)
             if overlap:
                 raise RedefinedError("'%s' cannot %s '%s', re-defines %s: %s"
-                                     % (name, how, other.short_name, what, list(overlap).join(', ')))
+                                     % (self.name, how, other.short_name, what, list(overlap).join(', ')))
         check(self.operations, other.operations, "operations")
         self.operations = self.operations + other.operations
         check(self.attributes.iterkeys(), other.attributes.itervalues(), "attributes")
@@ -455,7 +457,7 @@ class EntityType(AttrsAndOps):
         """Raise excepiton if op is not a valid operation on entity."""
         op = op.upper()
         if op not in self.operations:
-            raise ForbiddenStatus("Operation '%s' not allowed for '%s'" % (op, self.name))
+            raise NotImplementedStatus("Operation '%s' not implemented for '%s'" % (op, self.name))
 
     def __repr__(self): return "%s(%s)" % (type(self).__name__, self.name)
 
@@ -493,8 +495,14 @@ class Schema(object):
 
         def add_defs(thing, mymap, defs):
             for k, v in defs.iteritems():
-                t = thing(k, self, **v)
+                try:
+                    t = thing(k, self, **v)
+                except:
+                    ex_type, ex_value, ex_trace = sys.exc_info()
+                    raise ValidationError, "Adding %s%s: %s %s" % (
+                        thing.__name__, json.dumps(v), ex_type.__name__, ex_value), ex_trace
                 mymap[t.name] = t
+
         add_defs(Annotation, self.annotations, annotations or OrderedDict())
         add_defs(EntityType, self.entity_types, entityTypes or OrderedDict())
 
@@ -527,11 +535,10 @@ class Schema(object):
         ])
 
     def _lookup(self, map, name, message, error):
-        try:
-            return map[self.long_name(name)]
-        except KeyError:
-            if error: raise ValidationError(message % name)
-            else: return None
+        found = map.get(name) or map.get(self.long_name(name))
+        if not found and error:
+            raise ValidationError(message % name)
+        return found
 
     def entity_type(self, name, error=True):
         return self._lookup(self.entity_types, name, "No such entity type '%s'", error)
@@ -595,6 +602,7 @@ class Schema(object):
 
     def filter(self, predicate):
         """Return an iterator over entity types that satisfy predicate."""
+        if predicate is None: return self.entity_types.itervalues()
         return (t for t in self.entity_types.itervalues() if predicate(t))
 
     def by_type(self, type):

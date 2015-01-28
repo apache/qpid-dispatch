@@ -30,3 +30,10 @@ if sys.version_info >= (2, 7):
     JSON_LOAD_KWARGS = {'object_pairs_hook':OrderedDict}
 else:
     JSON_LOAD_KWARGS = {}
+
+def dictify(od):
+    """Recursively replace OrderedDict with dict"""
+    if isinstance(od, OrderedDict):
+        return dict((k, dictify(v)) for k, v in od.iteritems())
+    else:
+        return od

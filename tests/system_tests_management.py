@@ -21,6 +21,8 @@
 
 import unittest, system_test, re, os, json, sys
 from qpid_dispatch.management import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
+from qpid_dispatch_internal.management.qdrouter import QdSchema
+from qpid_dispatch_internal.compat import OrderedDict, dictify
 from system_test import Qdrouterd, message, retry, wait_ports, Process
 from proton import ConnectionException
 from itertools import chain
@@ -43,7 +45,6 @@ def short_name(name):
     if name.startswith(PREFIX):
         return name[len(PREFIX):]
     return name
-
 
 class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-methods
 
@@ -264,17 +265,17 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         self.assertEqual(str(self.router.ports[1]), entity.port)
 
         # Bad type
-        self.assertRaises(NotFoundStatus, self.node.read, type=CONNECTOR, name='l0')
+        self.assertRaises(BadRequestStatus, self.node.read, type=CONNECTOR, name='l0')
 
         # Unknown entity
         self.assertRaises(NotFoundStatus, self.node.read, type=LISTENER, name='nosuch')
 
         # Update and delete are not allowed by the schema
-        self.assertRaises(ForbiddenStatus, entity.update)
-        self.assertRaises(ForbiddenStatus, entity.delete)
+        self.assertRaises(NotImplementedStatus, entity.update)
+        self.assertRaises(NotImplementedStatus, entity.delete)
 
         # Non-standard request is not allowed by schema.
-        self.assertRaises(ForbiddenStatus, entity.call, 'nosuchop', foo="bar")
+        self.assertRaises(NotImplementedStatus, entity.call, 'nosuchop', foo="bar")
 
         # Dummy entity supports all CRUD operations
         dummy = self.node.create({'arg1': 'START'}, type=DUMMY, name='MyDummy', )
@@ -378,7 +379,10 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         entities = list(chain(
             *[n.query(attribute_names=['type', 'identity', 'name']).iter_entities() for n in nodes]))
         for e in entities:
-            self.assertRegexpMatches(e.identity, "^%s/" % short_name(e.type))
+            if e.type == MANAGEMENT:
+                self.assertEqual(e.identity, "self")
+            else:
+                self.assertRegexpMatches(e.identity, "^%s/" % short_name(e.type), e)
 
     def test_get_types(self):
         types = self.node.get_types()
@@ -445,6 +449,14 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
             ('log', { 'module': 'MESSAGE', 'enable': 'trace+'})])
         router = self.qdrouterd("multi_log_conf", conf, wait=True)
 
+
+    def test_get_schema(self):
+        schema = dictify(QdSchema().dump())
+        # FIXME aconway 2015-01-26: improve node API.
+        got = self.node.call(self.node.request(operation="GET-JSON-SCHEMA", identity="self")).body
+        self.assertEquals(schema, dictify(json.loads(got)))
+        got = self.node.call(self.node.request(operation="GET-SCHEMA", identity="self")).body
+        self.assertEquals(schema, got)
 
 if __name__ == '__main__':
     unittest.main(system_test.main_module())

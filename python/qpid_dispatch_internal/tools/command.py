@@ -21,10 +21,9 @@
 Utilities for command-line programs.
 """
 
-import os, sys, json, optparse
+import sys, json, optparse
 from collections import Sequence, Mapping
 from qpid_dispatch_site import VERSION
-from textwrap import fill
 
 class UsageError(Exception):
     """

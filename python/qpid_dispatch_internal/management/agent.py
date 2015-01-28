@@ -48,7 +48,7 @@ Adding/removing/updating entities from C:
   4. unlocks the router.
 """
 
-import traceback, sys
+import traceback, json
 from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
@@ -57,7 +57,6 @@ from dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_DEBUG, LOG_ERROR
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch.management.entity import camelcase
-from .. import dispatch_c
 from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema
 from ..router.message import Message
@@ -110,9 +109,10 @@ class AgentEntity(SchemaEntity):
     def validate(self):
         # Set default identity and name if not already set.
         prefix = self.entity_type.short_name + "/"
-        if self.attributes.get('identity') is None:
+        identity = self.attributes.get('identity')
+        if identity is None:
             self.attributes['identity'] = prefix + str(self._identifier())
-        elif not self.attributes['identity'].startswith(prefix):
+        elif not identity.startswith(prefix) and identity != 'self':
             self.attributes['identity'] = prefix + self.attributes['identity']
         self.attributes.setdefault('name', self.attributes['identity'])
         super(AgentEntity, self).validate()
@@ -198,7 +198,7 @@ class RouterEntity(AgentEntity):
 
 class LogEntity(AgentEntity):
     def __init__(self, agent, entity_type, attributes=None, validate=True):
-        # Special defaults for DEFAULT module. 
+        # Special defaults for DEFAULT module.
         if attributes.get("module") == "DEFAULT":
             defaults = dict(enable="info+", timestamp=True, source=False, output="stderr")
             attributes = dict(defaults, **attributes)
@@ -276,6 +276,7 @@ class RouterAddressEntity(CEntity): pass
 class ConnectionEntity(CEntity): pass
 
 class AllocatorEntity(CEntity): pass
+
 
 class EntityCache(object):
     """
@@ -369,18 +370,102 @@ class EntityCache(object):
             self.qd.qd_entity_refresh_end()
             self.qd.qd_dispatch_router_unlock(self.agent.dispatch)
 
+class ManagementEntity(AgentEntity):
+    """An entity representing the agent itself. It is a singleton created by the agent."""
+
+    def __init__(self, agent, entity_type, attributes, validate=True):
+        attributes = {"identity": "self", "name": "self"}
+        super(ManagementEntity, self).__init__(agent, entity_type, attributes, validate=validate)
+        self.__dict__["_schema"] = entity_type.schema
+
+    def requested_type(self, request):
+        type = request.properties.get('entityType')
+        if type: return self._schema.entity_type(type)
+        else: return None
+
+    def query(self, request):
+        """Management node query operation"""
+        entity_type = self.requested_type(request)
+        if entity_type:
+            all_attrs = set(entity_type.attributes.keys())
+        else:
+            all_attrs = self._schema.all_attributes
+
+        names = set(request.body.get('attributeNames'))
+        if names:
+            unknown = names - all_attrs
+            if unknown:
+                if entity_type:
+                    for_type = " for type %s" % entity_type.name
+                else:
+                    for_type = ""
+                raise NotFoundStatus("Unknown attributes %s%s." % (list(unknown), for_type))
+        else:
+            names = all_attrs
+
+        results = []
+        def add_result(entity):
+            result = []
+            non_empty = False
+            for name in names:
+                result.append(entity.attributes.get(name))
+                if result[-1] is not None: non_empty = True
+            if non_empty: results.append(result)
+
+        self._agent.entities.map_type(add_result, entity_type)
+        return (OK, {'attributeNames': list(names), 'results': results})
+
+    def get_types(self, request):
+        type = self.requested_type(request)
+        return (OK, dict((t.name, [b.name for b in t.all_bases])
+                         for t in self._schema.by_type(type)))
+
+    def get_annotations(self, request):
+        type = self.requested_type(request)
+        return (OK, dict((t.name, [a.name for a in t.annotations])
+                         for t in self._schema.by_type(type)))
+
+    def get_operations(self, request):
+        type = self.requested_type(request)
+        return (OK, dict((t, et.operations)
+                         for t, et in self._schema.entity_types.iteritems()
+                         if not type or type.name == t))
+
+    def get_attributes(self, request):
+        type = self.requested_type(request)
+        return (OK, dict((t, [a for a in et.attributes])
+                         for t, et in self._schema.entity_types.iteritems()
+                         if not type or type.name == t))
+
+    def get_mgmt_nodes(self, request):
+        router = self._agent.entities.map_type(None, 'router')[0]
+        area = router.attributes['area']
+        def node_address(node):
+            return "amqp:/_topo/%s/%s/$management" % (area, node.attributes['addr'][1:])
+        return (OK, self._agent.entities.map_type(node_address, 'router.node'))
+
+
+    def get_schema(self, request):
+        return (OK, self._schema.dump())
+
+    def get_json_schema(self, request):
+        indent = request.properties.get("indent")
+        if indent is not None: indent = int(indent)
+        return (OK, json.dumps(self._schema.dump(), indent=indent))
+
+
 class Agent(object):
-    """AMQP managment agent"""
+    """AMQP managment agent. Manages entities, directs requests to the correct entity."""
 
     def __init__(self, dispatch, qd):
         self.qd = qd
         self.dispatch = dispatch
         self.schema = QdSchema()
         self.entities = EntityCache(self)
-        self.name = self.identity = 'self'
-        self.type = 'org.amqp.management' # AMQP management node type
         self.request_lock = Lock()
         self.log_adapter = LogAdapter("AGENT")
+        self.management = self.create_entity({"type": "management"})
+        self.add_entity(self.management)
 
     def log(self, level, text):
         info = traceback.extract_stack(limit=2)[0] # Caller frame info
@@ -458,56 +543,18 @@ class Agent(object):
         @return: (response-code, body)
         """
         operation = required_property('operation', request)
-        type = request.properties.get('type') # Allow absent type for requests with a name.
-        if type == self.type or operation.lower() == 'create':
+        if operation.lower() == 'create':
             # Create requests are entity requests but must be handled by the agent since
             # the entity does not yet exist.
-            target = self
+            return self.create(request)
         else:
             target = self.find_entity(request)
             target.entity_type.allowed(operation)
-        try:
-            method = getattr(target, operation.lower().replace("-", "_"))
-        except AttributeError:
-            not_implemented(operation, target.type)
-        return method(request)
-
-    def requested_type(self, request):
-        type = request.properties.get('entityType')
-        if type: return self.entity_type(type)
-        else: return None
-
-    def query(self, request):
-        """Management node query operation"""
-        entity_type = self.requested_type(request)
-        if entity_type:
-            all_attrs = set(entity_type.attributes.keys())
-        else:
-            all_attrs = self.schema.all_attributes
-
-        names = set(request.body.get('attributeNames'))
-        if names:
-            unknown = names - all_attrs
-            if unknown:
-                if entity_type:
-                    for_type =  " for type %s" % entity_type.name
-                else:
-                    for_type = ""
-                raise NotFoundStatus("Unknown attributes %s%s." % (list(unknown), for_type))
-        else:
-            names = all_attrs
-
-        results = []
-        def add_result(entity):
-            result = []
-            non_empty = False
-            for name in names:
-                result.append(entity.attributes.get(name))
-                if result[-1] is not None: non_empty = True
-            if non_empty: results.append(result)
-
-        self.entities.map_type(add_result, entity_type)
-        return (OK, {'attributeNames': list(names), 'results': results})
+            try:
+                method = getattr(target, operation.lower().replace("-", "_"))
+            except AttributeError:
+                not_implemented(operation, target.type)
+            return method(request)
 
     def create(self, request=None, attributes=None):
         """
@@ -536,38 +583,15 @@ class Agent(object):
 
     def remove(self, entity): self.entities.remove(entity)
 
-    def get_types(self, request):
-        type = self.requested_type(request)
-        return (OK, dict((t.name, [b.name for b in t.all_bases])
-                         for t in self.schema.by_type(type)))
-
-    def get_annotations(self, request):
-        type = self.requested_type(request)
-        return (OK, dict((t.name, [a.name for a in t.annotations])
-                         for t in self.schema.by_type(type)))
-
-    def get_operations(self, request):
-        type = self.requested_type(request)
-        return (OK, dict((t, et.operations)
-                         for t, et in self.schema.entity_types.iteritems()
-                         if not type or type.name == t))
-
-    def get_attributes(self, request):
-        type = self.requested_type(request)
-        return (OK, dict((t, [a for a in et.attributes])
-                         for t, et in self.schema.entity_types.iteritems()
-                         if not type or type.name == t))
-
-    def get_mgmt_nodes(self, request):
-        router = self.entities.map_type(None, 'router')[0]
-        area = router.attributes['area']
-        def node_address(node):
-            return "amqp:/_topo/%s/%s/$management" % (area, node.attributes['addr'][1:])
-        return (OK, self.entities.map_type(node_address, 'router.node'))
-
-
     def find_entity(self, request):
         """Find the entity addressed by request"""
+
+        requested_type = request.properties.get('type')
+        if requested_type:
+            requested_type = self.schema.entity_type(requested_type)
+            # Special case for management object, allow just type with no name/id
+            if self.management.entity_type.is_a(requested_type):
+                return self.management
 
         # ids is a map of identifying attribute values
         ids = dict((k, request.properties.get(k))
@@ -591,10 +615,10 @@ class Agent(object):
         for k, v in ids.iteritems():
             if entity[k] != v: raise BadRequestStatus("Conflicting %s" % attrvals())
 
-        request_type = request.properties.get('type')
-        if request_type and not entity.entity_type.name_is(request_type):
-            raise NotFoundStatus("Entity type '%s' does match requested type '%s'" %
-                           (entity.entity_type.name, request_type))
+        if requested_type:
+            if not entity.entity_type.is_a(requested_type):
+                raise BadRequestStatus("Entity type '%s' does not extend requested type '%s'" %
+                                       (entity.entity_type.name, requested_type))
 
         return entity
 

@@ -22,7 +22,7 @@ AMQP management client for Qpid dispatch.
 """
 
 import qpid_dispatch_site
-import proton, threading
+import proton
 from proton import Url
 from .error import *
 from .entity import EntityBase, clean_dict
@@ -92,7 +92,7 @@ class Node(object):
                 self.url.path = '_topo/0/%s/$management' % router
             else:
                 self.url.path = '$management'
-        connection=connection or BlockingConnection(url, timeout)
+        connection = connection or BlockingConnection(url, timeout)
         self.client = SyncRequestResponse(connection, self.url.path)
         self.reply_to = self.client.reply_to
 
@@ -281,6 +281,6 @@ class Node(object):
     def get_operations(self, type=None):
         return self.call(self.node_request(operation="GET-OPERATIONS", entityType=type)).body
 
-    def get_mgmt_nodes(self):
-        return self.call(self.node_request(operation="GET-MGMT-NODES")).body
+    def get_mgmt_nodes(self, type=None):
+        return self.call(self.node_request(operation="GET-MGMT-NODES", entityType=type)).body
 
