@@ -115,7 +115,7 @@ def retry_delay(deadline, delay, max_delay):
     return min(delay*2, max_delay)
 
 
-DEFAULT_TIMEOUT = float(os.environ.get("QPID_SYSTEM_TEST_TIMEOUT", 5))
+DEFAULT_TIMEOUT = float(os.environ.get("QPID_SYSTEM_TEST_TIMEOUT", 10))
 
 def retry(function, timeout=DEFAULT_TIMEOUT, delay=.001, max_delay=1):
     """Call function until it returns a true value or timeout expires.
