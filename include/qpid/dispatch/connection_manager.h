@@ -71,7 +71,7 @@ qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, c
 /**
  * Set open and close handlers for a connector.
  *
- * @param cxtr A configured connector.
+ * @param cc A configured connector.
  * @param open_handler A handler callback
  * @param close_handler A handler callback
  * @param context Context to be passed back to the handler
