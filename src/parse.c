@@ -257,15 +257,19 @@ int32_t qd_parse_as_int(qd_parsed_field_t *field)
     case QD_AMQP_INT:
         result |= ((int32_t) qd_field_iterator_octet(field->raw_iter)) << 24;
         result |= ((int32_t) qd_field_iterator_octet(field->raw_iter)) << 16;
+        // Fall Through...
 
     case QD_AMQP_SHORT:
         result |= ((int32_t) qd_field_iterator_octet(field->raw_iter)) << 8;
         // Fall Through...
 
     case QD_AMQP_BYTE:
-    case QD_AMQP_SMALLINT:
     case QD_AMQP_BOOLEAN:
         result |= (int32_t) qd_field_iterator_octet(field->raw_iter);
+        break;
+
+    case QD_AMQP_SMALLINT:
+        result = (int8_t) qd_field_iterator_octet(field->raw_iter);
         break;
 
     case QD_AMQP_TRUE:
@@ -292,10 +296,11 @@ int64_t qd_parse_as_long(qd_parsed_field_t *field)
         result |= ((int64_t) qd_field_iterator_octet(field->raw_iter)) << 24;
         result |= ((int64_t) qd_field_iterator_octet(field->raw_iter)) << 16;
         result |= ((int64_t) qd_field_iterator_octet(field->raw_iter)) << 8;
-        // Fall Through...
+        result |= (uint64_t) qd_field_iterator_octet(field->raw_iter);
+        break;
 
     case QD_AMQP_SMALLLONG:
-        result |= (uint64_t) qd_field_iterator_octet(field->raw_iter);
+        result = (int8_t) qd_field_iterator_octet(field->raw_iter);
         break;
     }
 
