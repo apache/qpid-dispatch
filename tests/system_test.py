@@ -299,6 +299,9 @@ class Qdrouterd(Process):
             """Return list of sections named name"""
             return [p for n, p in self if n == name]
 
+        @property
+        def router_id(self): return self.sections("router")[0]["routerId"]
+
         def defaults(self):
             """Fill in default values in gconfiguration"""
             for name, props in self:
@@ -316,11 +319,13 @@ class Qdrouterd(Process):
 
     def __init__(self, name=None, config=Config(), pyinclude=None, wait=True):
         """
-        @param name: name used for for output files.
+        @param name: name used for for output files, default to routerId from config.
         @param config: router configuration
         @keyword wait: wait for router to be ready (call self.wait_ready())
         """
         self.config = copy(config)
+        if not name: name = self.config.router_id
+        assert name
         default_log = [l for l in config if (l[0] == 'log' and l[1]['module'] == 'DEFAULT')]
         if not default_log:
             config.append(
@@ -331,8 +336,10 @@ class Qdrouterd(Process):
             ['qdrouterd', '-c', config.write(name), '-I', pyinclude],
             name=name, expect=Process.RUNNING)
         self._management = None
+        self._wait_ready = False
         if wait:
             self.wait_ready()
+
 
     @property
     def management(self):
@@ -400,8 +407,11 @@ class Qdrouterd(Process):
 
     def wait_ready(self):
         """Wait for ports and connectors to be ready"""
-        wait_ports(self.ports)
-        self.wait_connectors()
+        if not self._wait_ready:
+            self._wait_ready = True
+            wait_ports(self.ports)
+            self.wait_connectors()
+        return self
 
     def wait_connected(self, router_id):
         """Wait till this router is connected to router with router-id"""

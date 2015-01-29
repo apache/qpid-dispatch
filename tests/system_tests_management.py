@@ -46,28 +46,65 @@ def short_name(name):
         return name[len(PREFIX):]
     return name
 
-class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-methods
+
+class ManagementTest(system_test.TestCase):
 
     @classmethod
     def setUpClass(cls):
         super(ManagementTest, cls).setUpClass()
+        cls.all_routers = []
         # Stand-alone router
-        name = cls.__name__
-        conf = Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'routerId': name}),
+        conf0=Qdrouterd.Config([
+            ('router', { 'mode': 'standalone', 'routerId': 'router0'}),
             ('listener', {'name': 'l0', 'port':cls.get_port(), 'role':'normal'}),
             # Extra listeners to exercise managment query
             ('listener', {'name': 'l1', 'port':cls.get_port(), 'role':'normal'}),
             ('listener', {'name': 'l2', 'port':cls.get_port(), 'role':'normal'})
         ])
-        cls.router = cls.tester.qdrouterd('%s'%name, conf)
-        cls.router.wait_ready()
+        cls._router = cls.tester.qdrouterd(config=conf0, wait=False)
+
+        # Pair of linked interior routers
+        conf1 = Qdrouterd.Config([
+            ('router', { 'mode': 'interior', 'routerId': 'router1'}),
+            ('listener', {'port':cls.get_port(), 'role':'normal'}),
+            ('listener', {'port':cls.get_port(), 'role':'inter-router'})
+        ])
+        conf2 = Qdrouterd.Config([
+            ('router', { 'mode': 'interior', 'routerId': 'router2'}),
+            ('listener', {'port':cls.get_port(), 'role':'normal'}),
+            ('connector', {'port':conf1.sections('listener')[1]['port'], 'role':'inter-router'})
+        ])
+        cls._routers = [cls.tester.qdrouterd(config=c, wait=False) for c in [conf1, conf2]]
+
+        # Stand-alone router for logging tests (avoid interfering with logging for other tests.)
+        conflog=Qdrouterd.Config([
+            ('router', { 'mode': 'standalone', 'routerId': 'logrouter'}),
+            ('listener', {'port':cls.get_port(), 'role':'normal'}),
+        ])
+        cls._logrouter = cls.tester.qdrouterd(config=conflog, wait=False)
+
+
+    @property
+    def router(self): return self.__class__._router.wait_ready()
+
+    @property
+    def logrouter(self): return self.__class__._logrouter.wait_ready()
+
+    @property
+    def routers(self):
+        """Wait on demand and return the linked interior routers"""
+        if not self._routers:
+            self._routers = self.__class__._routers
+            self._routers[0].wait_connected('router2')
+            self._routers[1].wait_connected('router1')
+        return self._routers
 
     def setUp(self):
         super(ManagementTest, self).setUp()
-        self.node = self.cleanup(Node(self.router.addresses[0]))
+        self._routers = None # Wait on demand
         self.maxDiff = None
         self.longMessage = True
+        self.node = self.cleanup(Node(self.router.addresses[0]))
 
     def test_bad_query(self):
         """Test that various badly formed queries get the proper response"""
@@ -132,18 +169,19 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         # Connect via the new listener
         node3 = self.cleanup(Node(Url(port=port)))
         router = node3.query(type=ROUTER).get_entities()
-        self.assertEqual(self.__class__.router.name, router[0]['routerId'])
+        self.assertEqual(self.router.name, router[0]['routerId'])
 
     def test_log(self):
         """Create, update and query log entities"""
 
-        default = self.node.read(identity='log/DEFAULT')
+        node = self.cleanup(Node(self.logrouter.addresses[0]))
+        default = node.read(identity='log/DEFAULT')
         self.assertEqual(default.attributes,
                          {u'identity': u'log/DEFAULT',
                           u'enable': u'trace+',
                           u'module': u'DEFAULT',
                           u'name': u'log/DEFAULT',
-                          u'output': u'ManagementTest.log',
+                          u'output': u'logrouter.log',
                           u'source': True,
                           u'timestamp': True,
                           u'type': u'org.apache.qpid.dispatch.log'})
@@ -152,7 +190,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         def check_log(log, error=True, debug=False):
             """Cause an error and check for expected error and debug logs"""
             bad_type = "nosuch"
-            self.assertRaises(ManagementError, self.node.create, type=bad_type, name=bad_type)
+            self.assertRaises(ManagementError, node.create, type=bad_type, name=bad_type)
             f = self.cleanup(open(log))
             logstr = f.read()
             def assert_expected(expect, regex, logstr):
@@ -169,7 +207,7 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
             log = os.path.abspath("test_log.log%s" % log_count[0])
             attributes["output"] = log
             attributes["identity"] = "log/AGENT"
-            self.node.update(attributes)
+            node.update(attributes)
             check_log(log, error, debug)
 
         # Expect error but no debug
@@ -188,13 +226,13 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
         # Check defaults are picked up
         update_check_log(dict(enable="default"), error=True, debug=True)
-        self.node.update(dict(identity="log/DEFAULT", enable="debug"))
+        node.update(dict(identity="log/DEFAULT", enable="debug"))
         update_check_log(dict(enable="DEFAULT"), error=False, debug=True)
-        self.node.update(dict(identity="log/DEFAULT", enable="error"))
+        node.update(dict(identity="log/DEFAULT", enable="error"))
         update_check_log(dict(enable="default"), error=True, debug=False)
 
         # Invalid values
-        self.assertRaises(ManagementError, self.node.update, dict(identity="log/AGENT", enable="foo"))
+        self.assertRaises(ManagementError, node.update, dict(identity="log/AGENT", enable="foo"))
 
     def test_create_fixed_address(self):
         self.assert_create_ok(FIXED_ADDRESS, 'fixed1', dict(prefix='fixed1'))
@@ -344,36 +382,11 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
 
     def test_router_node(self):
         """Test node entity in a pair of linked routers"""
-        # Pair of linked interior routers
-        conf1 = Qdrouterd.Config([
-            ('router', { 'mode': 'interior', 'routerId': 'router1'}),
-            ('listener', {'port':self.get_port(), 'role':'normal'}),
-            ('listener', {'port':self.get_port(), 'role':'inter-router'})
-        ])
-        conf2 = Qdrouterd.Config([
-            ('router', { 'mode': 'interior', 'routerId': 'router2'}),
-            ('listener', {'port':self.get_port(), 'role':'normal'}),
-            ('connector', {'port':conf1.sections('listener')[1]['port'], 'role':'inter-router'})
-        ])
-        routers = [self.qdrouterd('router1', conf1, wait=False),
-                   self.qdrouterd('router2', conf2, wait=False)]
-        for r in routers: r.wait_ready()
-        routers[0].wait_connected('router2')
-        routers[1].wait_connected('router1')
-
-        nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in routers]
-
-        class RNodes(list):
-            def __call__(self):
-                self[:] = sum([n.query(type=NODE).get_entities() for n in nodes], [])
-                return self
-        rnodes = RNodes()
-
-        assert retry(lambda: len(rnodes()) >= 2)
+        nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
+        rnodes = sum([n.query(type=NODE).get_entities() for n in nodes], [])
         self.assertEqual(['Rrouter2', 'Rrouter1'], [r.addr for r in rnodes])
-        # FIXME aconway 2014-10-15: verify nextHop and validOrigins updated correctly
-        self.assertEqual([u'amqp:/_topo/0/router2/$management', u'amqp:/_topo/0/router1/$management'],
-                         sum([n.get_mgmt_nodes() for n in nodes], []))
+        self.assertEqual(['0', '0'], [r.nextHop for r in rnodes])
+        self.assertEqual([[], []], [r.validOrigins for r in rnodes])
 
         # Test that all entities have a consitent identity format: type/name
         entities = list(chain(
@@ -383,6 +396,16 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
                 self.assertEqual(e.identity, "self")
             else:
                 self.assertRegexpMatches(e.identity, "^%s/" % short_name(e.type), e)
+
+    def test_remote_node(self):
+        """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""
+        nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
+        remotes = sum([n.get_mgmt_nodes() for n in nodes], [])
+        self.assertEqual([u'amqp:/_topo/0/router2/$management', u'amqp:/_topo/0/router1/$management'], remotes)
+        # Query router2 indirectly via router1
+        remote_url = Url(self.routers[0].addresses[0], path=Url(remotes[0]).path)
+        remote = self.cleanup(Node(remote_url))
+        self.assertEqual(["router2"], [r.routerId for r in remote.query(type=ROUTER).get_entities()])
 
     def test_get_types(self):
         types = self.node.get_types()
@@ -439,16 +462,6 @@ class ManagementTest(system_test.TestCase): # pylint: disable=too-many-public-me
         r = self.qdrouterd('routerY', conf, wait=False)
         r.expect = Process.EXIT_FAIL
         self.assertTrue(r.wait() != 0)
-
-
-    def test_config_many_logs(self):
-        """Regression test for DISPATCH-93, multiple log entries in config file cause errors"""
-        conf = Qdrouterd.Config([
-            ('listener', {'port': self.get_port(), 'role':'normal'}),
-            ('log', { 'module': 'AGENT', 'enable': 'debug+'}),
-            ('log', { 'module': 'MESSAGE', 'enable': 'trace+'})])
-        router = self.qdrouterd("multi_log_conf", conf, wait=True)
-
 
     def test_get_schema(self):
         schema = dictify(QdSchema().dump())
