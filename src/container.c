@@ -328,6 +328,27 @@ static int process_handler(qd_container_t *container, void* unused, qd_connectio
         case PN_SESSION_REMOTE_CLOSE :
             ssn = pn_event_session(event);
             if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
+                // remote has nuked our session.  Check for any links that were
+                // left open and forcibly detach them, since no detaches will
+                // arrive on this session.
+                pn_connection_t *conn = pn_session_connection(ssn);
+                pn_link_t *pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
+                while (pn_link) {
+                    if (pn_link_session(pn_link) == ssn) {
+                        qd_link_t *qd_link = (qd_link_t *)pn_link_get_context(pn_link);
+                        if (qd_link && qd_link->node) {
+                            qd_log(container->log_source, QD_LOG_NOTICE,
+                                   "Aborting link '%s' due to parent session end",
+                                   pn_link_name(pn_link));
+                            qd_link->node->ntype->link_detach_handler(qd_link->node->context,
+                                                                      qd_link, 1); // assume
+                                                                                   // closed?
+                            pn_link_close(pn_link);
+                            pn_link_free(pn_link);
+                        }
+                    }
+                    pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
+                }
                 pn_session_close(ssn);
                 pn_session_free(ssn);
             }
