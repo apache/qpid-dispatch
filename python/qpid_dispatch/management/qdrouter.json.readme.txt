@@ -44,12 +44,17 @@ Entity type definitions also have these fields:
 
 Attribute definition maps have the following fields:
 
+- "description": documentation string.
 - "type": one of the following:
   - "String": a unicode string value.
   - "Integer": an integer value.
   - "Boolean": a true/false value.
   - [...]: A list of strings is an enumeration. Values must be one of the strings or an integer integer index into the list, starting from 0.
 - "default": a default can be a literal value or a reference to another attribute in the form `$attributeName`.
+- "fixed": if true the attribute cannot be updated.
+- "create": if true the attribute can be set by CREATE.
+- "update": if true the attribute can be changed by UPDATE.
+Attributes with neither "create" nor "update" are set automatically by the system.
 
 There is the following hierarchy among entity types:
 

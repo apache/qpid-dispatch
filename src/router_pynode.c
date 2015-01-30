@@ -101,7 +101,6 @@ static PyObject *qd_add_router(PyObject *self, PyObject *args)
         rnode->valid_origins = qd_bitmask(0);
 
         DEQ_INSERT_TAIL(router->routers, rnode);
-        qd_entity_cache_add(QD_ROUTER_NODE_TYPE, rnode);
 
         //
         // Link the router record to the address record.
@@ -118,6 +117,8 @@ static PyObject *qd_add_router(PyObject *self, PyObject *args)
         // Add the router record to the mask-bit index.
         //
         router->routers_by_mask_bit[router_maskbit] = rnode;
+
+        qd_entity_cache_add(QD_ROUTER_NODE_TYPE, rnode);
 
         sys_mutex_unlock(router->lock);
     } while (0);

@@ -372,11 +372,10 @@ class Qdrouterd(Process):
     def is_connected(self, port, host='0.0.0.0'):
         """If router has a connection to host:port return the management info.
         Otherwise return None"""
-        connections = self.management.query('org.apache.qpid.dispatch.connection').get_entities()
-        for c in connections:
-            if c['name'].endswith('%s:%s'%(host, port)):
-                return c
-        return None
+        try:
+            return self.management.read(identity="connection/%s:%s" % (host, port))
+        except:
+            return False
 
     def wait_address(self, address, subscribers=0, remotes=0, **retry_kwargs):
         """
@@ -396,7 +395,6 @@ class Qdrouterd(Process):
             return addrs and addrs[0]['subscriberCount'] >= subscribers and addrs[0]['remoteCount'] >= remotes
         assert retry(check, **retry_kwargs)
 
-
     def wait_connectors(self, **retry_kwargs):
         """
         Wait for all connectors to be connected
@@ -405,19 +403,30 @@ class Qdrouterd(Process):
         for c in self.config.sections('connector'):
             assert retry(lambda: self.is_connected(c['port']), **retry_kwargs), "Port not connected %s" % c['port']
 
-    def wait_ready(self):
+    def wait_ready(self, **retry_kwargs):
         """Wait for ports and connectors to be ready"""
         if not self._wait_ready:
             self._wait_ready = True
-            wait_ports(self.ports)
-            self.wait_connectors()
+            wait_ports(self.ports, **retry_kwargs)
+            self.wait_connectors(**retry_kwargs)
         return self
 
-    def wait_connected(self, router_id):
-        """Wait till this router is connected to router with router-id"""
-        node = Node(self.addresses[0], router_id, timeout=1)
-        retry_exception(lambda: node.query('org.apache.qpid.dispatch.router'))
+    def is_router_connected(self, router_id, **retry_kwargs):
+        try:
+            self.management.read(identity="router.node/%s" % router_id)
+            # TODO aconway 2015-01-29: The above check should be enough, we
+            # should not advertise a remote router in managment till it is fully
+            # connected. However we still get a race where the router is not
+            # actually ready for traffic. Investigate.
+            # Meantime the following actually tests send-thru to the router.
+            node = Node(self.addresses[0], router_id, timeout=1)
+            return retry_exception(lambda: node.query('org.apache.qpid.dispatch.router'))
+        except:
+            return False
 
+
+    def wait_router_connected(self, router_id, **retry_kwargs):
+        retry(lambda: self.is_router_connected(router_id), **retry_kwargs)
 
 class Qpidd(Process):
     """Run a Qpid Daemon"""

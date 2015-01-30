@@ -106,16 +106,13 @@ class AgentEntity(SchemaEntity):
         self.__dict__['_qd'] = agent.qd
         self.__dict__['_dispatch'] = agent.dispatch
 
-    def validate(self):
-        # Set default identity and name if not already set.
-        prefix = self.entity_type.short_name + "/"
-        identity = self.attributes.get('identity')
-        if identity is None:
-            self.attributes['identity'] = prefix + str(self._identifier())
-        elif not identity.startswith(prefix) and identity != 'self':
-            self.attributes['identity'] = prefix + self.attributes['identity']
+    def validate(self, **kwargs):
+        """Set default identity and name if not already set, then do schema validation"""
+        identity = self.attributes.get("identity")
+        if not identity:
+            self.attributes["identity"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
         self.attributes.setdefault('name', self.attributes['identity'])
-        super(AgentEntity, self).validate()
+        super(AgentEntity, self).validate(**kwargs)
 
     def _identifier(self):
         """
@@ -152,8 +149,9 @@ class AgentEntity(SchemaEntity):
 
     def update(self, request):
         """Handle update request with new attributes from management client"""
+        self.entity_type.update_check(request.body, self.attributes)
         newattrs = dict(self.attributes, **request.body)
-        self.entity_type.validate(newattrs)
+        self.entity_type.validate(newattrs, update=True)
         self.attributes = newattrs
         self._update()
         return (OK, self.attributes)
@@ -186,11 +184,9 @@ class RouterEntity(AgentEntity):
         super(RouterEntity, self).__init__(agent, entity_type, attributes, validate=False)
         # Router is a mix of configuration and operational entity.
         # The "area" attribute is operational not configured.
-        # FIXME aconway 2014-12-19: clean this up.
         self._set_pointer(self._dispatch)
 
-    def _identifier(self):
-        return self.attributes.get('routerId')
+    def _identifier(self): return self.attributes.get('routerId')
 
     def create(self):
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
@@ -222,12 +218,14 @@ def _addr_port_identifier(entity):
             attr, entity.entity_type.attribute(attr).missing_value())
     return "%s:%s" % (entity.attributes['addr'], entity.attributes['port'])
 
+
 class ListenerEntity(AgentEntity):
     def create(self):
         self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
     def _identifier(self): return _addr_port_identifier(self)
+
 
 class ConnectorEntity(AgentEntity):
     def create(self):
@@ -246,12 +244,13 @@ class WaypointEntity(AgentEntity):
         self._qd.qd_dispatch_configure_waypoint(self._dispatch, self)
         self._qd.qd_waypoint_activate_all(self._dispatch)
 
+
 class ExternalContainerEntity(AgentEntity):
     def create(self):
         self._qd.qd_dispatch_configure_external_container(self._dispatch, self)
 
-class DummyEntity(AgentEntity):
 
+class DummyEntity(AgentEntity):
     def callme(self, request):
         return (OK, dict(**request.properties))
 
@@ -260,23 +259,31 @@ class CEntity(AgentEntity):
     """
     Entity that is registered from C code rather than created via management.
     """
-    def __init__(self, agent, entity_type, pointer):
+    def __init__(self, agent, entity_type, pointer, validate=True):
         super(CEntity, self).__init__(agent, entity_type, {}, validate=False)
         self._set_pointer(pointer)
         self._refresh()
-        self.validate()
+        if validate: self.validate()
 
 
 class RouterLinkEntity(CEntity): pass
 
-class RouterNodeEntity(CEntity): pass
+class RouterNodeEntity(CEntity):
+    def _identifier(self):
+        return self.attributes.get('routerId')
 
-class RouterAddressEntity(CEntity): pass
+class RouterAddressEntity(CEntity):
+    def _identifier(self):
+        return self.attributes.get('hash')
 
-class ConnectionEntity(CEntity): pass
+class ConnectionEntity(CEntity):
+    def _identifier(self):
+        return self.attributes.get('host')
 
-class AllocatorEntity(CEntity): pass
 
+class AllocatorEntity(CEntity):
+    def _identifier(self):
+        return self.attributes.get('typeName')
 
 class EntityCache(object):
     """
@@ -549,35 +556,45 @@ class Agent(object):
             return self.create(request)
         else:
             target = self.find_entity(request)
-            target.entity_type.allowed(operation)
+            target.entity_type.allowed(operation, request.body)
             try:
                 method = getattr(target, operation.lower().replace("-", "_"))
             except AttributeError:
                 not_implemented(operation, target.type)
             return method(request)
 
-    def create(self, request=None, attributes=None):
+    def _create(self, attributes):
+        """Create an entity, called externally or from configuration file."""
+        entity = self.create_entity(attributes)
+        self.add_entity(entity)
+        entity.create()
+        return entity
+
+    def create(self, request):
         """
+        Create operation called from an external client.
         Create is special: it is directed at an entity but the entity
         does not yet exist so it is handled initially by the agent and
         then delegated to the new entity.
         """
-        if request:
-            attributes = request.body
-            for a in ['type', 'name']:
-                prop = request.properties.get(a)
-                if prop:
-                    old = attributes.setdefault(a, prop)
-                    if old is not None and old != prop:
-                        raise BadRequestStatus("Conflicting values for '%s'" % a)
-                attributes[a] = prop
+        attributes = request.body
+        for a in ['type', 'name']:
+            prop = request.properties.get(a)
+            if prop:
+                old = attributes.setdefault(a, prop)
+                if old is not None and old != prop:
+                    raise BadRequestStatus("Conflicting values for '%s'" % a)
+            attributes[a] = prop
         if attributes.get('type') is None:
             raise BadRequestStatus("No 'type' attribute in %s" % attributes)
-        self.schema.entity_type(attributes['type']).allowed('create')
-        entity = self.create_entity(attributes)
-        self.add_entity(entity)
-        entity.create()
-        return (CREATED, entity.attributes)
+        et = self.schema.entity_type(attributes['type'])
+        et.allowed("CREATE", attributes)
+        et.create_check(attributes)
+        return (CREATED, self._create(attributes).attributes)
+
+    def configure(self, attributes):
+        """Created via configuration file"""
+        self._create(attributes)
 
     def add_entity(self, entity): self.entities.add(entity)
 

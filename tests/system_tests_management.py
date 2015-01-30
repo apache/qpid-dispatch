@@ -95,8 +95,8 @@ class ManagementTest(system_test.TestCase):
         """Wait on demand and return the linked interior routers"""
         if not self._routers:
             self._routers = self.__class__._routers
-            self._routers[0].wait_connected('router2')
-            self._routers[1].wait_connected('router1')
+            self._routers[0].wait_router_connected('router2')
+            self._routers[1].wait_router_connected('router1')
         return self._routers
 
     def setUp(self):
@@ -369,7 +369,8 @@ class ManagementTest(system_test.TestCase):
     def test_connection(self):
         """Verify there is at least one connection"""
         response = self.node.query(type='connection')
-        self.assertTrue(response.get_dicts())
+        print "FIXME", response.get_dicts()
+        self.assertTrue(response.results)
 
     def test_router(self):
         """Verify router counts match entity counts"""
@@ -385,6 +386,8 @@ class ManagementTest(system_test.TestCase):
         nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
         rnodes = sum([n.query(type=NODE).get_entities() for n in nodes], [])
         self.assertEqual(['Rrouter2', 'Rrouter1'], [r.addr for r in rnodes])
+        self.assertEqual(['router2', 'router1'], [r.routerId for r in rnodes])
+        self.assertEqual(['router.node/router2', 'router.node/router1'], [r.identity for r in rnodes])
         self.assertEqual(['0', '0'], [r.nextHop for r in rnodes])
         self.assertEqual([[], []], [r.validOrigins for r in rnodes])
 

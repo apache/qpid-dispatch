@@ -357,8 +357,7 @@ void qd_alloc_finalize(void)
 
 qd_error_t qd_entity_refresh_allocator(qd_entity_t* entity, void *impl) {
     qd_alloc_type_t *alloc_type = (qd_alloc_type_t*) impl;
-    if ((qd_entity_has(entity, "identity") ||
-         qd_entity_set_string(entity, "identity", alloc_type->desc->type_name) == 0) &&
+    if (qd_entity_set_string(entity, "typeName", alloc_type->desc->type_name) == 0 &&
         qd_entity_set_long(entity, "typeSize", alloc_type->desc->total_size) == 0 &&
         qd_entity_set_long(entity, "transferBatchSize", alloc_type->desc->config->transfer_batch_size) == 0 &&
         qd_entity_set_long(entity, "localFreeListMax", alloc_type->desc->config->local_free_list_max) == 0 &&

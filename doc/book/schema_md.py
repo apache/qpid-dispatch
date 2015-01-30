@@ -22,64 +22,10 @@ Generate the schema.md chapter for the dispatch book from the qdrouter.json sche
 """
 
 import sys, re
-from pkgutil import get_data
 from qpid_dispatch_internal.management.qdrouter import QdSchema
-from qpid_dispatch_internal.management.schema import quotestr
+from qpid_dispatch_internal.management.markdown import SchemaWriter
 
-class SchemaWriter(object):
-    """Write the schema as a markdown document"""
-
-    def __init__(self, out, quiet=True):
-        self.out = out
-        self.schema = QdSchema()
-        self.quiet = quiet
-
-
-    def write(self, value):
-        self.out.write(value)
-
-    def warn(self, message):
-        if not self.quiet: print >>sys.stderr, message
-
-    def attribute(self, attr, thing):
-        default = attr.default
-        if isinstance(default, basestring) and default.startswith('$'):
-            default = None  # Don't show defaults that are references, confusing.
-        self.write('\n*%s* '%(attr.name))
-        self.write('(%s)\n'%(', '.join(
-            filter(None, [str(attr.atype),
-                          attr.required and "required",
-                          attr.unique and "unique",
-                          default and "default=%s" % quotestr(default)]))))
-        if attr.description:
-            self.write(":   %s\n"%attr.description)
-        else:
-            self.warn("Warning: No description for %s in %s" % (attr, thing.short_name))
-
-    def attributes(self, thing):
-        for attr in thing.my_attributes:
-            self.attribute(attr, thing)
-
-    def preface(self, thing):
-        self.write('\n### %s\n' % thing.short_name)
-        if thing.description:
-            self.write('\n%s\n' % thing.description)
-        else:
-            self.warn("Warning no description for %s" % entity_type)
-
-    def entity_type(self, entity_type):
-        self.preface(entity_type)
-        for a in entity_type.annotations: self.attributes(a)
-        self.attributes(entity_type)
-        ops = entity_type.operations
-        if entity_type.singleton: ops.remove('CREATE')
-        if ops:
-            self.write("\nOperations allowed: %s\n\n" % ", ".join(entity_type.operations))
-
-    def entity_types(self, base_name):
-        base = self.schema.entity_type(base_name)
-        for entity_type in self.schema.filter(lambda t: t.extends(base)):
-            self.entity_type(entity_type)
+class BookSchemaWriter(SchemaWriter):
 
     def run(self):
         self.write("""
@@ -118,7 +64,7 @@ running using the `qdrouterd(8)` tool's `create` operation. Some entities can al
 be modified using the `update` operation, see the entity descriptions below.
 
 """)
-        self.entity_types("configurationEntity")
+        self.entity_types_extending("configurationEntity")
 
         self.write("""\n## Operational Entities
 
@@ -127,11 +73,11 @@ The `qdstat(8)` tool provides a convenient way to query run-time statistics.
 You can also use the general-purpose management tool `qdmanage(8)` to query 
 operational attributes.
 """)
-        self.entity_types("operationalEntity")
+        self.entity_types_extending("operationalEntity")
 
 def main():
     """Generate schema markdown documentation from L{QdSchema}"""
-    SchemaWriter(sys.stdout).run()
+    BookSchemaWriter(sys.stdout, QdSchema()).run()
 
 if __name__ == '__main__':
     main()

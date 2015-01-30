@@ -136,7 +136,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
 
     def configure(attributes):
         """Configure an entity and remove it from config"""
-        agent.create(attributes=attributes)
+        agent.configure(attributes)
         config.remove(attributes)
 
     modules = set(agent.schema.entity_type("log").attributes["module"].atype.tags)
@@ -144,7 +144,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
         configure(l)
         modules.remove(l["module"])
     # Add default entities for any log modules not configured.
-    for m in modules: agent.create(attributes=dict(type="log", module=m))
+    for m in modules: agent.configure(attributes=dict(type="log", module=m))
 
     # Configure and prepare container and router before we can activate the agent.
     configure(config.by_type('container')[0])

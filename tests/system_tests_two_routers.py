@@ -49,8 +49,8 @@ class RouterTest(TestCase):
         router('B', 'client',
                ('connector', {'role': 'inter-router', 'port': cls.routers[0].ports[1]}))
 
-        cls.routers[0].wait_connected('QDR.B')
-        cls.routers[1].wait_connected('QDR.A')
+        cls.routers[0].wait_router_connected('QDR.B')
+        cls.routers[1].wait_router_connected('QDR.A')
 
 
     def test_00_discard(self):

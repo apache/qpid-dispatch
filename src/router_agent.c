@@ -41,8 +41,7 @@ ENUM_DEFINE(qd_router_mode, qd_router_mode_names);
 qd_error_t qd_entity_refresh_router(qd_entity_t* entity, void *impl) {
     qd_dispatch_t *qd = (qd_dispatch_t*) impl;
     qd_router_t *router = qd->router;
-    if ((qd_entity_has(entity, "identity") || qd_entity_set_string(entity, "identity", router->router_id) == 0) &&
-        qd_entity_set_string(entity, "area", router->router_area) == 0 &&
+    if (qd_entity_set_string(entity, "area", router->router_area) == 0 &&
         qd_entity_set_string(entity, "mode", qd_router_mode_name(router->router_mode)) == 0 &&
         qd_entity_set_long(entity, "addrCount", DEQ_SIZE(router->addrs)) == 0 &&
         qd_entity_set_long(entity, "linkCount", DEQ_SIZE(router->links)) == 0 &&
@@ -52,22 +51,26 @@ qd_error_t qd_entity_refresh_router(qd_entity_t* entity, void *impl) {
     return qd_error_code();
 }
 
-static const char *address_text(qd_address_t *addr)
-{
+static const char *address_hash(qd_address_t *addr) {
     return addr ? (const char*) qd_hash_key_by_handle(addr->hash_handle) : 0;
+}
+
+static const char *address_router_id(qd_address_t *addr) {
+    const char* hash = address_hash(addr);
+    return hash && hash[0] == 'R' ? hash+1 : "";
 }
 
 qd_error_t qd_entity_refresh_router_address(qd_entity_t* entity, void *impl) {
     qd_address_t *addr = (qd_address_t*) impl;
-    if ((qd_entity_has(entity, "identity") || qd_entity_set_string(entity, "identity", address_text(addr)) == 0) &&
-        qd_entity_set_bool(entity, "inProcess", addr->handler != 0) == 0 &&
+    if (qd_entity_set_bool(entity, "inProcess", addr->handler != 0) == 0 &&
         qd_entity_set_long(entity, "subscriberCount", DEQ_SIZE(addr->rlinks)) == 0 &&
         qd_entity_set_long(entity, "remoteCount", DEQ_SIZE(addr->rnodes)) == 0 &&
         qd_entity_set_long(entity, "deliveriesIngress", addr->deliveries_ingress) == 0 &&
         qd_entity_set_long(entity, "deliveriesEgress", addr->deliveries_egress) == 0 &&
         qd_entity_set_long(entity, "deliveriesTransit", addr->deliveries_transit) == 0 &&
         qd_entity_set_long(entity, "deliveriesToContainer", addr->deliveries_to_container) == 0 &&
-        qd_entity_set_long(entity, "deliveriesFromContainer", addr->deliveries_from_container) == 0
+        qd_entity_set_long(entity, "deliveriesFromContainer", addr->deliveries_from_container) == 0 &&
+        qd_entity_set_string(entity, "hash", address_hash(addr))
     )
         return QD_ERROR_NONE;
     return qd_error_code();
@@ -78,10 +81,9 @@ qd_error_t qd_entity_refresh_router_address(qd_entity_t* entity, void *impl) {
 qd_error_t qd_entity_refresh_router_node(qd_entity_t* entity, void *impl) {
     qd_router_node_t *rnode = (qd_router_node_t*) impl;
 
-    if (!qd_entity_has(entity, "identity")) {
-        CHECK(qd_entity_set_stringf(entity, "identity", "%s/%d", QD_ROUTER_NODE_TYPE, rnode->mask_bit));
-    }
-    CHECK(qd_entity_set_string(entity, "addr", address_text(rnode->owning_addr)));
+    /* FIXME aconway 2015-01-29: Fix all "identity settings in C" */
+    CHECK(qd_entity_set_string(entity, "routerId", address_router_id(rnode->owning_addr)));
+    CHECK(qd_entity_set_string(entity, "addr", address_hash(rnode->owning_addr)));
     long next_hop = rnode->next_hop ? rnode->next_hop->mask_bit : 0;
     CHECK(qd_entity_set_stringf(entity, "nextHop", "%ld", rnode->next_hop ? next_hop : 0));
     long router_link = rnode->peer_link ? rnode->peer_link->mask_bit : 0;

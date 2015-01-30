@@ -86,9 +86,7 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
     const qd_server_config_t *config =
         conn->connector ? conn->connector->config : conn->listener->config;
 
-    if ((qd_entity_has(entity, "identity") ||
-         qd_entity_set_string(entity, "identity", qdpn_connector_name(conn->pn_cxtr)) == 0) &&
-        qd_entity_set_string(entity, "state", conn_state_name(conn->state)) == 0 &&
+    if (qd_entity_set_string(entity, "state", conn_state_name(conn->state)) == 0 &&
         qd_entity_set_string(
             entity, "container",
             conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0) == 0 &&

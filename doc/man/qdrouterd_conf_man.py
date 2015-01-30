@@ -23,8 +23,21 @@ Generate the qdrouterd.conf.md man page from the qdrouterd management schema.
 
 import sys
 from qpid_dispatch_internal.management.qdrouter import QdSchema
+from qpid_dispatch_internal.management.markdown import SchemaWriter
 
-PREFACE = r"""
+class ManPageWriter(SchemaWriter):
+
+    def __init__(self, filename):
+        super(ManPageWriter, self).__init__(open(filename, 'w'), QdSchema())
+
+    def attribute_type(self, attr, holder):
+        # Don't repeat annotationd attributes or show non-create attributes.
+        if (attr.annotation and attr.annotation != holder) or not attr.create:
+            return
+        super(ManPageWriter, self).attribute_type(attr, holder, show_create=False, show_update=False)
+
+    def man_page(self):
+        self.write(r"""
 # Name
 
 qdrouterd.conf - Configuration file for the Qpid Dispatch router
@@ -65,64 +78,25 @@ attribute of 'ssl-profile' sections.
         port: 20102
         sasl-mechanisms: ANONYMOUS
     }
-"""
+""")
 
-def make_man_page(filename):
-    """Generate a man page for the configuration file from L{QdSchema} descriptions"""
-
-    with open(filename, 'w') as f:
-        f.write(PREFACE)
-
-        schema = QdSchema()
-
-        def write_attribute(attr, attrs):
-            if attr.annotation and attr.annotation != attrs:
-                return          # Don't repeat annotationd attributes
-            if attr.value is not None:
-                return          # Don't show fixed-value attributes, they can't be set in conf file.
-
-            default = attr.default
-            if isinstance(default, basestring) and default.startswith('$'):
-                default = None  # Don't show defaults that are references, confusing.
-
-            f.write('\n%s '%(attr.name))
-            f.write('(%s)\n'%(', '.join(
-                filter(None, [str(attr.atype),
-                              attr.required and "required",
-                              attr.unique and "unique",
-                              default and "default=%s"%default]))))
-            if attr.description:
-                f.write(":   %s\n"%attr.description)
-            else:
-                print "Warning no description for", attr, "in", attrs
-
-        def write_attributes(attrs):
-            if attrs.description:
-                f.write('\n%s\n'%attrs.description)
-            else:
-                print "Warning no description for ", attrs
-            for attr in attrs.attributes.itervalues():
-                write_attribute(attr, attrs)
-            f.write('\n\n')
-
-        f.write("\n\n# Annotation Sections\n\n")
-        for annotation in schema.annotations.itervalues():
-            used_by = [e.short_name for e in schema.entity_types.itervalues()
+        self.write("\n\n# Annotation Sections\n\n")
+        for annotation in self.schema.annotations.itervalues():
+            used_by = [e.short_name for e in self.schema.entity_types.itervalues()
                        if annotation in e.annotations]
-            f.write('\n\n## %s\n'%annotation.short_name)
-            write_attributes(annotation)
-            if used_by: f.write('Used by %s.\n'%(', '.join(used_by)))
+            self.write('\n\n## %s\n'%annotation.short_name)
+            if used_by: self.write('Used by: **%s**.\n'%('**, **'.join(used_by)))
+            self.attribute_types(annotation)
 
-        f.write("\n\n# Configuration Sections\n\n")
-        config = schema.entity_type("configurationEntity")
-        for entity_type in schema.entity_types.itervalues():
+        self.write("\n\n# Configuration Sections\n\n")
+        config = self.schema.entity_type("configurationEntity")
+        for entity_type in self.schema.entity_types.itervalues():
             if config in entity_type.all_bases:
-                f.write('\n## %s\n'% entity_type.short_name)
-                write_attributes(entity_type)
+                self.write('\n## %s\n'% entity_type.short_name)
                 if entity_type.annotations:
-                    f.write('Annotations %s.\n'%(', '.join(
+                    self.write('Annotations: **%s**.\n'%('**, **'.join(
                         [a.short_name for a in entity_type.annotations])))
-
+                self.attribute_types(entity_type)
 
 if __name__ == '__main__':
-    make_man_page(sys.argv[1])
+    ManPageWriter(sys.argv[1]).man_page()

@@ -201,7 +201,7 @@ class AttributeType(object):
     """
 
     def __init__(self, name, type=None, defined_in=None, default=None, required=False, unique=False,
-                 value=None, annotation=None, description=""):
+                 value=None, annotation=None, description="", create=False, update=False):
         """
         See L{AttributeType} instance variables.
         """
@@ -217,6 +217,8 @@ class AttributeType(object):
         if self.value is not None and self.default is not None:
             raise ValidationError("Attribute '%s' has default value and fixed value" %
                                   self.name)
+        self.create=create
+        self.update=update
 
     def missing_value(self, check_required=True, add_default=True, **kwargs):
         """
@@ -239,6 +241,8 @@ class AttributeType(object):
         @param resolve: function to resolve value references.
         @keyword check_unique: set of (name, value) to check for attribute uniqueness.
             None means don't check for uniqueness.
+        @param create: if true, check that the attribute allows create
+        @param update: if true, check that the attribute allows update
         @param kwargs: See L{Schema.validate_all}
         @return: value converted to the correct python type. Rais exception if any check fails.
         """
@@ -375,9 +379,9 @@ class EntityType(AttrsAndOps):
             overlap = set(a) & set(b)
             if overlap:
                 raise RedefinedError("'%s' cannot %s '%s', re-defines %s: %s"
-                                     % (self.name, how, other.short_name, what, list(overlap).join(', ')))
+                                     % (self.name, how, other.short_name, what, ",".join(overlap)))
         check(self.operations, other.operations, "operations")
-        self.operations = self.operations + other.operations
+        self.operations += other.operations
         check(self.attributes.iterkeys(), other.attributes.itervalues(), "attributes")
         self.attributes.update(other.attributes)
 
@@ -453,11 +457,24 @@ class EntityType(AttrsAndOps):
 
         return attributes
 
-    def allowed(self, op):
-        """Raise excepiton if op is not a valid operation on entity."""
+    def allowed(self, op, body):
+        """Raise exception if op is not a valid operation on entity."""
         op = op.upper()
-        if op not in self.operations:
-            raise NotImplementedStatus("Operation '%s' not implemented for '%s'" % (op, self.name))
+        if not op in self.operations:
+            raise NotImplementedStatus("Operation '%s' not implemented for '%s' %s" % (
+                op, self.name, self.operations))
+
+    def create_check(self, attributes):
+        for a in attributes:
+            if not self.attribute(a).create:
+                raise ValidationError("Cannot set attribute '%s' in CREATE" % a)
+
+    def update_check(self, new_attributes, old_attributes):
+        for a, v in new_attributes.iteritems():
+            # Its not an error to include an attribute in UPDATE if the value is not changed.
+            if not self.attribute(a).update and \
+               not (a in old_attributes and old_attributes[a] == v):
+                raise ValidationError("Cannot update attribute '%s' in UPDATE" % a)
 
     def __repr__(self): return "%s(%s)" % (type(self).__name__, self.name)
 
@@ -625,5 +642,5 @@ class SchemaEntity(EntityBase):
         super(SchemaEntity, self).__setitem__(name, value)
         self.validate()
 
-    def validate(self):
-        self.entity_type.validate(self.attributes)
+    def validate(self, **kwargs):
+        self.entity_type.validate(self.attributes, **kwargs)
