@@ -52,7 +52,7 @@ class QdDll(ctypes.PyDLL):
         self._prototype(self.qd_dispatch_configure_connector, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_address, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_waypoint, None, [self.qd_dispatch_p, py_object])
-        self._prototype(self.qd_dispatch_configure_external_container, None, [self.qd_dispatch_p, py_object])
+        self._prototype(self.qd_dispatch_configure_lrp, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_set_agent, None, [self.qd_dispatch_p, py_object])
 
         self._prototype(self.qd_router_setup_late, None, [self.qd_dispatch_p])

@@ -59,6 +59,7 @@ ALLOC_DEFINE(qd_router_link_t);
 ALLOC_DEFINE(qd_router_node_t);
 ALLOC_DEFINE(qd_router_ref_t);
 ALLOC_DEFINE(qd_router_link_ref_t);
+ALLOC_DEFINE(qd_router_lrp_ref_t);
 ALLOC_DEFINE(qd_address_t);
 ALLOC_DEFINE(qd_router_conn_t);
 
@@ -66,6 +67,7 @@ qd_address_t* qd_address() {
     qd_address_t* addr = new_qd_address_t();
     memset(addr, 0, sizeof(qd_address_t));
     DEQ_ITEM_INIT(addr);
+    DEQ_INIT(addr->lrps);
     DEQ_INIT(addr->rlinks);
     DEQ_INIT(addr->rnodes);
     return addr;
@@ -113,6 +115,29 @@ void qd_router_del_node_ref_LH(qd_router_ref_list_t *ref_list, qd_router_node_t 
             DEQ_REMOVE(*ref_list, ref);
             free_qd_router_ref_t(ref);
             rnode->ref_count--;
+            break;
+        }
+        ref = DEQ_NEXT(ref);
+    }
+}
+
+
+void qd_router_add_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp)
+{
+    qd_router_lrp_ref_t *ref = new_qd_router_lrp_ref_t();
+    DEQ_ITEM_INIT(ref);
+    ref->lrp = lrp;
+    DEQ_INSERT_TAIL(*ref_list, ref);
+}
+
+
+void qd_router_del_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp)
+{
+    qd_router_lrp_ref_t *ref = DEQ_HEAD(*ref_list);
+    while (ref) {
+        if (ref->lrp == lrp) {
+            DEQ_REMOVE(*ref_list, ref);
+            free_qd_router_lrp_ref_t(ref);
             break;
         }
         ref = DEQ_NEXT(ref);
@@ -1424,6 +1449,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 
     DEQ_INIT(router->links);
     DEQ_INIT(router->routers);
+    DEQ_INIT(router->lrp_containers);
 
     router->out_links_by_mask_bit = NEW_PTR_ARRAY(qd_router_link_t, qd_bitmask_width());
     router->routers_by_mask_bit   = NEW_PTR_ARRAY(qd_router_node_t, qd_bitmask_width());

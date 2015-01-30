@@ -1,5 +1,5 @@
-#ifndef __ext_container_private_h__
-#define __ext_container_private_h__ 1
+#ifndef __lrp_private_h__
+#define __lrp_private_h__ 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,18 +24,17 @@
 /**
  * @file
  *
- * An external container is an object that defines an address prefix for link-routing
+ * An link-route-pattern is an object that defines an address prefix for link-routing
  * and associates that prefix with an on-demand connector.
  *
  * The address prefix is propagated across the network and can be used as a target for
- * routed links destined for this external container.
+ * routed links destined for this LRP.
  */
 
-qd_external_container_t *qd_external_container(qd_dispatch_t *qd, const char *prefix, const char *connector_name);
+qd_lrp_t *qd_lrp_LH(const char *prefix, qd_lrp_container_t *lrpc);
 
-void qd_external_container_free(qd_external_container_t *ec);
+void qd_lrp_free(qd_lrp_t *lrp);
 
-void qd_external_container_free_all(void);
-
+void qd_lrpc_timer_handler(void *context);
 
 #endif

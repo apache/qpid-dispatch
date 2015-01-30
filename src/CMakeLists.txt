@@ -54,7 +54,7 @@ set(qpid_dispatch_SOURCES
   dispatch.c
   entity.c
   entity_cache.c
-  ext_container.c
+  lrp.c
   hash.c
   iovec.c
   iterator.c

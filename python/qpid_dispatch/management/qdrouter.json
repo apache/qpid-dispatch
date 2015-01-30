@@ -433,8 +433,8 @@
             }
         },
 
-        "externalContainer": {
-            "description":"A remote AMQP container that holds nodes that are endpoints for routed links.",
+        "linkRoutePattern": {
+            "description":"A pattern to match a connected container to endpoints for routed links.",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {

@@ -22,7 +22,7 @@
 #include <qpid/dispatch/log.h>
 #include "dispatch_private.h"
 #include "router_private.h"
-#include "ext_container_private.h"
+#include "lrp_private.h"
 #include "entity.h"
 #include "schema_enum.h"
 
@@ -136,24 +136,64 @@ qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity
 }
 
 
-qd_error_t qd_router_configure_external_container(qd_router_t *router, qd_entity_t *entity)
+qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 {
-
     char *prefix    = qd_entity_get_string(entity, "prefix"); QD_ERROR_RET();
     char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
 
-    qd_external_container_t *ec = qd_external_container(router->qd, prefix, connector);
+    sys_mutex_lock(router->lock);
+    //
+    // Look for an existing lrp_container for the same connector name
+    //
+    qd_lrp_container_t *lrpc = DEQ_HEAD(router->lrp_containers);
+    while (lrpc) {
+        if (strcmp(qd_config_connector_name(lrpc->cc), connector) == 0)
+            break;
+        lrpc = DEQ_NEXT(lrpc);
+    }
 
-    if (!ec) {
+    //
+    // If no lrp_container was found, create one and add it to the list
+    //
+    if (lrpc == 0) {
+        qd_config_connector_t *cc = qd_connection_manager_find_on_demand(router->qd, connector);
+        if (cc) {
+            lrpc = NEW(qd_lrp_container_t);
+            DEQ_ITEM_INIT(lrpc);
+            lrpc->qd    = router->qd;
+            lrpc->cc    = cc;
+            lrpc->timer = qd_timer(router->qd, qd_lrpc_timer_handler, lrpc);
+            lrpc->conn  = 0;
+            DEQ_INIT(lrpc->lrps);
+            DEQ_INSERT_TAIL(router->lrp_containers, lrpc);
+
+            qd_timer_schedule(lrpc->timer, 0);
+        }
+    }
+
+    if (lrpc == 0) {
+        sys_mutex_unlock(router->lock);
         free(prefix);
         free(connector);
-        return qd_error(QD_ERROR_CONFIG, "Failed to create external container: prefix=%s connector=%s",
+        return qd_error(QD_ERROR_CONFIG, "Link-route-pattern configured with unknown connector: %s", connector);
+    }
+
+    qd_lrp_t *lrp = qd_lrp_LH(prefix, lrpc);
+
+    if (!lrp) {
+        sys_mutex_unlock(router->lock);
+        free(prefix);
+        free(connector);
+        return qd_error(QD_ERROR_CONFIG, "Failed to create link-route-pattern: prefix=%s connector=%s",
                         prefix, connector);
     }
 
+    sys_mutex_unlock(router->lock);
+
     qd_log(router->log_source, QD_LOG_INFO,
-           "Configured External Container: prefix=%s connector=%s",
+           "Configured Link-route-pattern: prefix=%s connector=%s",
            prefix, connector);
+
     free(prefix);
     free(connector);
     return qd_error_code();
@@ -181,7 +221,13 @@ void qd_router_configure_free(qd_router_t *router)
         free(wp);
     }
 
-    qd_external_container_free_all();
+    for (qd_lrp_container_t *lrpc = DEQ_HEAD(router->lrp_containers); lrpc; lrpc = DEQ_HEAD(router->lrp_containers)) {
+        for (qd_lrp_t *lrp = DEQ_HEAD(lrpc->lrps); lrp; lrp = DEQ_HEAD(lrpc->lrps))
+            qd_lrp_free(lrp);
+        qd_timer_free(lrpc->timer);
+        DEQ_REMOVE_HEAD(router->lrp_containers);
+        free(lrpc);
+    }
 }
 
 

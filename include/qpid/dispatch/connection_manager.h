@@ -118,6 +118,12 @@ void *qd_config_connector_context(qd_config_connector_t *cc);
 void qd_config_connector_set_context(qd_config_connector_t *cc, void *context);
 
 
+/**
+ * Get the connector's name.
+ *
+ * @param cc Connector handle
+ * @return The name of the connector
+ */
 const char *qd_config_connector_name(qd_config_connector_t *cc);
 
 #endif

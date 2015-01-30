@@ -154,7 +154,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.
 
     # Remaining configuration
-    for t in "fixedAddress", "listener", "connector", "waypoint", "externalContainer":
+    for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern":
         for a in config.by_type(t): configure(a)
     for e in config.entities:
         configure(e)

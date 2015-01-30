@@ -38,7 +38,7 @@ void qd_router_python_free(qd_router_t *router);
 qd_error_t qd_pyrouter_tick(qd_router_t *router);
 qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity);
 qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity);
-qd_error_t qd_router_configure_external_container(qd_router_t *router, qd_entity_t *entity);
+qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity);
 
 void qd_router_configure_free(qd_router_t *router);
 
@@ -123,6 +123,36 @@ ALLOC_DECLARE(qd_router_link_ref_t);
 DEQ_DECLARE(qd_router_link_ref_t, qd_router_link_ref_list_t);
 
 
+struct qd_lrp_t {
+    DEQ_LINKS(qd_lrp_t);
+    char               *prefix;
+    qd_lrp_container_t *container;
+};
+
+DEQ_DECLARE(qd_lrp_t, qd_lrp_list_t);
+
+
+struct qd_lrp_container_t {
+    DEQ_LINKS(qd_lrp_container_t);
+    qd_dispatch_t         *qd;
+    qd_config_connector_t *cc;
+    qd_lrp_list_t          lrps;
+    qd_timer_t            *timer;
+    qd_connection_t       *conn;
+};
+
+DEQ_DECLARE(qd_lrp_container_t, qd_lrp_container_list_t);
+
+
+struct qd_router_lrp_ref_t {
+    DEQ_LINKS(qd_router_lrp_ref_t);
+    qd_lrp_t *lrp;
+};
+
+ALLOC_DECLARE(qd_router_lrp_ref_t);
+DEQ_DECLARE(qd_router_lrp_ref_t, qd_router_lrp_ref_list_t);
+
+
 struct qd_router_conn_t {
     int ref_count;
     int mask_bit;
@@ -136,6 +166,7 @@ struct qd_address_t {
     DEQ_LINKS(qd_address_t);
     qd_router_message_cb_t     handler;          ///< In-Process Consumer
     void                      *handler_context;  ///< In-Process Consumer context
+    qd_router_lrp_ref_list_t   lrps;             ///< Local link-route destinations
     qd_router_link_ref_list_t  rlinks;           ///< Locally-Connected Consumers
     qd_router_ref_list_t       rnodes;           ///< Remotely-Connected Consumers
     qd_hash_handle_t          *hash_handle;      ///< Linkage back to the hash table entry
@@ -224,6 +255,7 @@ struct qd_router_t {
 
     qd_router_link_list_t     links;
     qd_router_node_list_t     routers;
+    qd_lrp_container_list_t   lrp_containers;
     qd_router_link_t        **out_links_by_mask_bit;
     qd_router_node_t        **routers_by_mask_bit;
 
@@ -244,6 +276,9 @@ void qd_router_del_link_ref_LH(qd_router_link_ref_list_t *ref_list, qd_router_li
 
 void qd_router_add_node_ref_LH(qd_router_ref_list_t *ref_list, qd_router_node_t *rnode);
 void qd_router_del_node_ref_LH(qd_router_ref_list_t *ref_list, qd_router_node_t *rnode);
+
+void qd_router_add_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp);
+void qd_router_del_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp);
 
 void qd_router_mobile_added(qd_router_t *router, qd_field_iterator_t *iter);
 void qd_router_mobile_removed(qd_router_t *router, const char *addr);
