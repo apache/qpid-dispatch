@@ -410,6 +410,16 @@ class ManagementTest(system_test.TestCase):
         remote = self.cleanup(Node(remote_url))
         self.assertEqual(["router2"], [r.routerId for r in remote.query(type=ROUTER).get_entities()])
 
+    def test_remote_node(self):
+        """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""
+        nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
+        remotes = sum([n.get_mgmt_nodes() for n in nodes], [])
+        self.assertEqual([u'amqp:/_topo/0/router2/$management', u'amqp:/_topo/0/router1/$management'], remotes)
+        # Query router2 indirectly via router1
+        remote_url = Url(self.routers[0].addresses[0], path=Url(remotes[0]).path)
+        remote = self.cleanup(Node(remote_url))
+        self.assertEqual(["router2"], [r.routerId for r in remote.query(type=ROUTER).get_entities()])
+
     def test_get_types(self):
         types = self.node.get_types()
         self.assertIn(CONFIGURATION, types[LISTENER])
