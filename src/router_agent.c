@@ -61,9 +61,12 @@ static const char *address_router_id(qd_address_t *addr) {
 }
 
 qd_error_t qd_entity_refresh_router_address(qd_entity_t* entity, void *impl) {
-    qd_address_t *addr = (qd_address_t*) impl;
+    qd_address_t *addr     = (qd_address_t*) impl;
+    uint32_t      subCount = DEQ_SIZE(addr->rlinks);
+    if (DEQ_SIZE(addr->lrps) > 0)
+        subCount = DEQ_SIZE(addr->lrps);
     if (qd_entity_set_bool(entity, "inProcess", addr->handler != 0) == 0 &&
-        qd_entity_set_long(entity, "subscriberCount", DEQ_SIZE(addr->rlinks)) == 0 &&
+        qd_entity_set_long(entity, "subscriberCount", subCount) == 0 &&
         qd_entity_set_long(entity, "remoteCount", DEQ_SIZE(addr->rnodes)) == 0 &&
         qd_entity_set_long(entity, "deliveriesIngress", addr->deliveries_ingress) == 0 &&
         qd_entity_set_long(entity, "deliveriesEgress", addr->deliveries_egress) == 0 &&
