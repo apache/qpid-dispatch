@@ -49,6 +49,19 @@ typedef void (*qd_thread_start_cb_t)(void* context, int thread_id);
 
 
 /**
+ * Deferred callback
+ *
+ * This type is for calls that are deferred until they can be invoked on
+ * a specific connection's thread.
+ *
+ * @param context An opaque context to be passed back with the call.
+ * @param discard If true, the call should be discarded because the connection it
+ *        was pending on was deleted.
+ */
+typedef void (*qd_deferred_t)(void *context, bool discard);
+
+
+/**
  * Set the optional thread-start handler.
  *
  * This handler is called once on each worker thread at the time the thread is
@@ -452,6 +465,17 @@ pn_collector_t *qd_connection_collector(qd_connection_t *conn);
  * @return A pointer to the server configuration used in the establishment of this connection.
  */
 const qd_server_config_t *qd_connection_config(const qd_connection_t *conn);
+
+
+/**
+ * Schedule a call to be invoked on a thread that has ownership of this connection.
+ * It will be safe for the callback to perform operations related to this connection.
+ *
+ * @param conn Connection object
+ * @param call The function to be invoked on the connection's thread
+ * @param context The context to be passed back in the callback
+ */
+void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, void *context);
 
 
 /**

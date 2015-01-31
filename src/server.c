@@ -36,6 +36,7 @@ static __thread qd_server_t *thread_server = 0;
 ALLOC_DEFINE(qd_work_item_t);
 ALLOC_DEFINE(qd_listener_t);
 ALLOC_DEFINE(qd_connector_t);
+ALLOC_DEFINE(qd_deferred_call_t);
 ALLOC_DEFINE(qd_connection_t);
 ALLOC_DEFINE(qd_user_fd_t);
 
@@ -103,10 +104,10 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
 
 static void thread_process_listeners(qd_server_t *qd_server)
 {
-    qdpn_driver_t     *driver   = qd_server->driver;
-    qdpn_listener_t   *listener;
-    qdpn_connector_t  *cxtr;
-    qd_connection_t *ctx;
+    qdpn_driver_t    *driver = qd_server->driver;
+    qdpn_listener_t  *listener;
+    qdpn_connector_t *cxtr;
+    qd_connection_t  *ctx;
 
     for (listener = qdpn_driver_listener(driver); listener; listener = qdpn_driver_listener(driver)) {
         cxtr = qdpn_listener_accept(listener);
@@ -127,6 +128,8 @@ static void thread_process_listeners(qd_server_t *qd_server)
         ctx->user_context = 0;
         ctx->link_context = 0;
         ctx->ufd          = 0;
+        DEQ_INIT(ctx->deferred_calls);
+        ctx->deferred_call_lock = sys_mutex();
 
         size_t clen = strlen(QD_CAPABILITY_ANONYMOUS_RELAY);
         pn_connection_t *conn = pn_connection();
@@ -229,6 +232,37 @@ static void block_if_paused_LH(qd_server_t *qd_server)
 }
 
 
+static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
+{
+    qd_deferred_call_list_t  calls;
+    qd_deferred_call_t      *dc;
+
+    //
+    // Copy the deferred calls out of the connection under lock.
+    //
+    DEQ_INIT(calls);
+    sys_mutex_lock(conn->deferred_call_lock);
+    dc = DEQ_HEAD(conn->deferred_calls);
+    while (dc) {
+        DEQ_REMOVE_HEAD(conn->deferred_calls);
+        DEQ_INSERT_TAIL(calls, dc);
+        dc = DEQ_HEAD(conn->deferred_calls);
+    }
+    sys_mutex_unlock(conn->deferred_call_lock);
+
+    //
+    // Invoke the calls outside of the critical section.
+    //
+    dc = DEQ_HEAD(calls);
+    while (dc) {
+        DEQ_REMOVE_HEAD(calls);
+        dc->call(dc->context, discard);
+        free_qd_deferred_call_t(dc);
+        dc = DEQ_HEAD(calls);
+    }
+}
+
+
 static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
 {
     qd_connection_t *ctx = qdpn_connector_context(cxtr);
@@ -314,10 +348,12 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
                                         (qd_connection_t*) qdpn_connector_context(cxtr));
                 events = 0;
             }
-            else
+            else {
+                invoke_deferred_calls(ctx, false);
                 events = qd_server->conn_handler(qd_server->conn_handler_context, ctx->context,
                                                  QD_CONN_EVENT_PROCESS,
                                                  (qd_connection_t*) qdpn_connector_context(cxtr));
+            }
             break;
 
         default:
@@ -568,6 +604,8 @@ static void *thread_run(void *arg)
                     pn_connection_free(conn);
                 if (ctx->collector)
                     pn_collector_free(ctx->collector);
+                invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
+                sys_mutex_free(ctx->deferred_call_lock);
                 free_qd_connection_t(ctx);
                 qd_server->threads_active--;
                 sys_mutex_unlock(qd_server->lock);
@@ -655,6 +693,8 @@ static void cxtr_try_open(void *context)
     ctx->user_context = 0;
     ctx->link_context = 0;
     ctx->ufd          = 0;
+    DEQ_INIT(ctx->deferred_calls);
+    ctx->deferred_call_lock = sys_mutex();
 
     //
     // qdpn_connector is not thread safe
@@ -995,6 +1035,21 @@ const qd_server_config_t *qd_connection_config(const qd_connection_t *conn)
 }
 
 
+void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, void *context)
+{
+    qd_deferred_call_t *dc = new_qd_deferred_call_t();
+    DEQ_ITEM_INIT(dc);
+    dc->call    = call;
+    dc->context = context;
+
+    sys_mutex_lock(conn->deferred_call_lock);
+    DEQ_INSERT_TAIL(conn->deferred_calls, dc);
+    sys_mutex_unlock(conn->deferred_call_lock);
+
+    qd_server_activate(conn);
+}
+
+
 qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *config, void *context)
 {
     qd_server_t   *qd_server = qd->server;
@@ -1097,6 +1152,8 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     ctx->user_context = 0;
     ctx->link_context = 0;
     ctx->ufd          = ufd;
+    DEQ_INIT(ctx->deferred_calls);
+    ctx->deferred_call_lock = sys_mutex();
 
     ufd->context = context;
     ufd->server  = qd_server;

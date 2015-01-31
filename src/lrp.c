@@ -33,6 +33,8 @@ static void qd_lrpc_open_handler(void *context, qd_connection_t *conn)
     qd_lrp_t           *lrp    = DEQ_HEAD(lrpc->lrps);
     qd_router_t        *router = lrpc->qd->router;
 
+    lrpc->conn = conn;
+
     while (lrp) {
         qd_address_t        *addr;
         qd_field_iterator_t *iter;
@@ -89,6 +91,8 @@ static void qd_lrpc_close_handler(void *context, qd_connection_t *conn)
     qd_lrp_container_t *lrpc   = (qd_lrp_container_t*) context;
     qd_lrp_t           *lrp    = DEQ_HEAD(lrpc->lrps);
     qd_router_t        *router = lrpc->qd->router;
+
+    lrpc->conn = 0;
 
     while (lrp) {
         qd_address_t        *addr;

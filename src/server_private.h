@@ -78,6 +78,15 @@ struct qd_connector_t {
     long                      delay;
 };
 
+
+typedef struct qd_deferred_call_t {
+    DEQ_LINKS(struct qd_deferred_call_t);
+    qd_deferred_t  call;
+    void          *context;
+} qd_deferred_call_t;
+
+DEQ_DECLARE(qd_deferred_call_t, qd_deferred_call_list_t);
+
 /**
  * Connection objects wrap Proton connection objects.
  */
@@ -96,6 +105,9 @@ struct qd_connection_t {
     void             *user_context;
     void             *link_context; // Context shared by this connection's links
     qd_user_fd_t     *ufd;
+
+    qd_deferred_call_list_t  deferred_calls;
+    sys_mutex_t             *deferred_call_lock;
 };
 
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
@@ -157,6 +169,7 @@ struct qd_server_t {
 
 ALLOC_DECLARE(qd_work_item_t);
 ALLOC_DECLARE(qd_listener_t);
+ALLOC_DECLARE(qd_deferred_call_t);
 ALLOC_DECLARE(qd_connector_t);
 ALLOC_DECLARE(qd_connection_t);
 ALLOC_DECLARE(qd_user_fd_t);
