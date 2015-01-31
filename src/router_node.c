@@ -1034,6 +1034,12 @@ typedef struct link_attach_t {
 ALLOC_DECLARE(link_attach_t);
 ALLOC_DEFINE(link_attach_t);
 
+typedef enum {
+    LINK_ATTACH_FORWARDED = 1,  ///< The attach was forwarded
+    LINK_ATTACH_NO_MATCH  = 2,  ///< No link-route address was found
+    LINK_ATTACH_NO_PATH   = 3   ///< Link-route exists but there's no reachable destination
+} link_attach_result_t;
+
 
 static void qd_router_attach_routed_link(void *context, bool discard)
 {
@@ -1057,6 +1063,7 @@ static void qd_router_attach_routed_link(void *context, bool discard)
         sys_mutex_lock(la->router->lock);
         rlink->connected_link = la->peer_link;
         la->peer_link->connected_link = rlink;
+        qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
         DEQ_INSERT_TAIL(la->router->links, rlink);
         sys_mutex_unlock(la->router->lock);
 
@@ -1064,11 +1071,75 @@ static void qd_router_attach_routed_link(void *context, bool discard)
         pn_terminus_copy(qd_link_target(link), qd_link_remote_target(la->peer_qd_link));
 
         pn_link_open(qd_link_pn(link));
+
+        if (la->dir == QD_INCOMING)
+            pn_link_flow(qd_link_pn(link), 100);
     }
 
     if (la->link_name)
         free(la->link_name);
     free_link_attach_t(la);
+}
+
+
+link_attach_result_t qd_router_link_route(qd_router_t      *router,
+                                          qd_router_link_t *rlink,
+                                          const char       *term_addr,
+                                          qd_direction_t    dir)
+{
+    //
+    // Lookup the target address to see if we can link-route this attach.
+    //
+    qd_address_t *addr = router_lookup_terminus_LH(router, term_addr);
+    if (addr) {
+        //
+        // This is a link-attach routable target.  Propagate the attach downrange.
+        // Check first for a locally connected container.
+        //
+        qd_link_t           *link    = rlink->link;
+        pn_link_t           *pn_link = qd_link_pn(link);
+        qd_router_lrp_ref_t *lrpref  = DEQ_HEAD(addr->lrps);
+        if (lrpref) {
+            qd_connection_t *conn = lrpref->lrp->container->conn;
+            if (conn) {
+                link_attach_t *la = new_link_attach_t();
+                la->router       = router;
+                la->peer_link    = rlink;
+                la->peer_qd_link = link;
+                la->link_name    = strdup(pn_link_name(pn_link));
+                la->dir          = dir;
+                la->conn         = conn;
+                qd_connection_invoke_deferred(conn, qd_router_attach_routed_link, la);
+            }
+        } else if (DEQ_SIZE(addr->rnodes) > 0) {
+            //
+            // There are no locally connected containers for this link but there is at
+            // least one on a remote router.  Forward the attach toward the remote destination.
+            //
+            qd_router_node_t *remote_router = DEQ_HEAD(addr->rnodes)->router;
+            qd_router_link_t *out_link;
+            if (remote_router)
+                out_link = remote_router->peer_link;
+            if (!out_link && remote_router && remote_router->next_hop)
+                out_link = remote_router->next_hop->peer_link;
+            if (out_link) {
+                qd_connection_t *out_conn = qd_link_connection(out_link->link);
+                if (out_conn) {
+                    link_attach_t *la = new_link_attach_t();
+                    la->router       = router;
+                    la->peer_link    = rlink;
+                    la->peer_qd_link = link;
+                    la->link_name    = strdup(pn_link_name(pn_link));
+                    la->dir          = dir;
+                    la->conn         = out_conn;
+                    qd_connection_invoke_deferred(out_conn, qd_router_attach_routed_link, la);
+                }
+            }
+        } else
+            return LINK_ATTACH_NO_PATH;
+    } else
+        return LINK_ATTACH_NO_MATCH;
+    return LINK_ATTACH_FORWARDED;
 }
 
 
@@ -1115,60 +1186,27 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
     DEQ_INSERT_TAIL(router->links, rlink);
 
     //
-    // Lookup the target address to see if we can link-route this attach.
+    // Attempt to link-route this attach
     //
-    qd_address_t *addr = router_lookup_terminus_LH(router, r_tgt);
-    if (addr && !is_router) {
-        //
-        // This is a link-attach routable target.  Propagate the attach downrange.
-        // Check first for a locally connected container.
-        //
-        qd_router_lrp_ref_t *lrpref = DEQ_HEAD(addr->lrps);
-        if (lrpref) {
-            qd_connection_t *conn = lrpref->lrp->container->conn;
-            if (conn) {
-                link_attach_t *la = new_link_attach_t();
-                la->router       = router;
-                la->peer_link    = rlink;
-                la->peer_qd_link = link;
-                la->link_name    = strdup(pn_link_name(pn_link));
-                la->dir          = QD_OUTGOING;
-                la->conn         = conn;
-                qd_connection_invoke_deferred(conn, qd_router_attach_routed_link, la);
-            }
-        } else if (DEQ_SIZE(addr->rnodes) > 0) {
-            //
-            // There are no locally connected containers for this link but there is at
-            // least one on a remote router.  Forward the attach toward the remote destination.
-            //
-            qd_router_node_t *remote_router = DEQ_HEAD(addr->rnodes)->router;
-            qd_router_link_t *out_link;
-            if (remote_router)
-                out_link = remote_router->peer_link;
-            if (!out_link && remote_router && remote_router->next_hop)
-                out_link = remote_router->next_hop->peer_link;
-            if (out_link) {
-                qd_connection_t *out_conn = qd_link_connection(out_link->link);
-                if (out_conn) {
-                    link_attach_t *la = new_link_attach_t();
-                    la->router       = router;
-                    la->peer_link    = rlink;
-                    la->peer_qd_link = link;
-                    la->link_name    = strdup(pn_link_name(pn_link));
-                    la->dir          = QD_OUTGOING;
-                    la->conn         = out_conn;
-                    qd_connection_invoke_deferred(out_conn, qd_router_attach_routed_link, la);
-                }
-            }
-        }
-    }
-
+    link_attach_result_t la_result = LINK_ATTACH_NO_MATCH;
+    if (!is_router)
+        la_result = qd_router_link_route(router, rlink, r_tgt, QD_OUTGOING);
     sys_mutex_unlock(router->lock);
 
     pn_terminus_copy(qd_link_source(link), qd_link_remote_source(link));
     pn_terminus_copy(qd_link_target(link), qd_link_remote_target(link));
-    pn_link_flow(pn_link, 1000);
-    pn_link_open(pn_link);
+
+    //
+    // If link-routing was successful or there was no matching link-route
+    // address, open the link.  If link-routing was supposed to work but
+    // there was no reachable destination, close the link.
+    //
+    if (la_result == LINK_ATTACH_NO_PATH)
+        pn_link_close(pn_link);
+    else {
+        pn_link_flow(pn_link, 1000);
+        pn_link_open(pn_link);
+    }
 
     return 0;
 }
@@ -1189,6 +1227,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     char                    phase = '0';
     qd_address_semantics_t  semantics;
     qd_address_t           *addr = 0;
+    link_attach_result_t    la_result = LINK_ATTACH_NO_MATCH;
 
     if (is_router && !qd_router_connection_is_inter_router(qd_link_connection(link))) {
         qd_log(router->log_source, QD_LOG_WARNING,
@@ -1275,33 +1314,36 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
         // address, that address needs to be set up in the address list.
         //
         char temp_addr[1000]; // TODO: Use pn_string or aprintf.
+        la_result = qd_router_link_route(router, rlink, r_src, QD_INCOMING);
 
-        if (is_dynamic) {
-            qd_router_generate_temp_addr(router, temp_addr, 1000);
-            iter = qd_field_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
-            pn_terminus_set_address(qd_link_source(link), temp_addr);
-            qd_log(router->log_source, QD_LOG_INFO, "Assigned temporary routable address=%s", temp_addr);
-        } else
-            qd_log(router->log_source, QD_LOG_INFO, "Registered local address=%s phase=%c", r_src, phase);
+        if (la_result == LINK_ATTACH_NO_MATCH) {
+            if (is_dynamic) {
+                qd_router_generate_temp_addr(router, temp_addr, 1000);
+                iter = qd_field_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
+                pn_terminus_set_address(qd_link_source(link), temp_addr);
+                qd_log(router->log_source, QD_LOG_INFO, "Assigned temporary routable address=%s", temp_addr);
+            } else
+                qd_log(router->log_source, QD_LOG_INFO, "Registered local address=%s phase=%c", r_src, phase);
 
-        qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
-        if (!addr) {
-            addr = qd_address();
-            qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
-            DEQ_INSERT_TAIL(router->addrs, addr);
-            addr->semantics = semantics;
-            qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
+            qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
+            if (!addr) {
+                addr = qd_address();
+                qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
+                DEQ_INSERT_TAIL(router->addrs, addr);
+                addr->semantics = semantics;
+                qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
+            }
+
+            rlink->owning_addr = addr;
+            qd_router_add_link_ref_LH(&addr->rlinks, rlink);
+
+            //
+            // If this is not a dynamic address and it is the first local subscription
+            // to the address, supply the address to the router module for propagation
+            // to other nodes.
+            //
+            propagate = (!is_dynamic) && (DEQ_SIZE(addr->rlinks) == 1);
         }
-
-        rlink->owning_addr = addr;
-        qd_router_add_link_ref_LH(&addr->rlinks, rlink);
-
-        //
-        // If this is not a dynamic address and it is the first local subscription
-        // to the address, supply the address to the router module for propagation
-        // to other nodes.
-        //
-        propagate = (!is_dynamic) && (DEQ_SIZE(addr->rlinks) == 1);
     }
     qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
     DEQ_INSERT_TAIL(router->links, rlink);
