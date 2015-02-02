@@ -1034,6 +1034,16 @@ typedef struct link_attach_t {
 ALLOC_DECLARE(link_attach_t);
 ALLOC_DEFINE(link_attach_t);
 
+
+typedef struct link_detach_t {
+    qd_router_t      *router;
+    qd_router_link_t *rlink;
+} link_detach_t;
+
+ALLOC_DECLARE(link_detach_t);
+ALLOC_DEFINE(link_detach_t);
+
+
 typedef enum {
     LINK_ATTACH_FORWARDED = 1,  ///< The attach was forwarded
     LINK_ATTACH_NO_MATCH  = 2,  ///< No link-route address was found
@@ -1079,6 +1089,24 @@ static void qd_router_attach_routed_link(void *context, bool discard)
     if (la->link_name)
         free(la->link_name);
     free_link_attach_t(la);
+}
+
+
+static void qd_router_detach_routed_link(void *context, bool discard)
+{
+    link_detach_t *ld = (link_detach_t*) context;
+
+    if (!discard) {
+        qd_link_t *link = ld->rlink->link;
+        qd_link_close(link);
+
+        sys_mutex_lock(ld->router->lock);
+        qd_entity_cache_remove(QD_ROUTER_LINK_TYPE, ld->rlink);
+        DEQ_REMOVE(ld->router->links, ld->rlink);
+        sys_mutex_unlock(ld->router->lock);
+    }
+
+    free_link_detach_t(ld);
 }
 
 
@@ -1382,6 +1410,15 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
         return 0;
 
     sys_mutex_lock(router->lock);
+
+    if (rlink->connected_link) {
+        qd_connection_t *out_conn = qd_link_connection(rlink->connected_link->link);
+        link_detach_t   *ld       = new_link_detach_t();
+        ld->router  = router;
+        ld->rlink   = rlink->connected_link;
+        rlink->connected_link->connected_link = 0;
+        qd_connection_invoke_deferred(out_conn, qd_router_detach_routed_link, ld);
+    }
 
     //
     // If this link is part of an inter-router connection, drop the
