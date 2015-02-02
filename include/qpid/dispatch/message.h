@@ -65,6 +65,8 @@ typedef enum {
 
 /** Message fields */
 typedef enum {
+    QD_FIELD_NONE,   // reserved
+
     //
     // Message Sections
     //

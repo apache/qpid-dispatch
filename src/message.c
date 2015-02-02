@@ -354,124 +354,244 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
 }
 
 
-static qd_field_location_t *qd_message_field_location(qd_message_t *msg, qd_message_field_t field)
+// translate a field into its proper section of the message
+static qd_message_field_t qd_field_section(qd_message_field_t field)
+{
+    switch (field) {
+
+    case QD_FIELD_HEADER:
+    case QD_FIELD_DELIVERY_ANNOTATION:
+    case QD_FIELD_MESSAGE_ANNOTATION:
+    case QD_FIELD_PROPERTIES:
+    case QD_FIELD_APPLICATION_PROPERTIES:
+    case QD_FIELD_BODY:
+    case QD_FIELD_FOOTER:
+        return field;
+
+    case QD_FIELD_DURABLE:
+    case QD_FIELD_PRIORITY:
+    case QD_FIELD_TTL:
+    case QD_FIELD_FIRST_ACQUIRER:
+    case QD_FIELD_DELIVERY_COUNT:
+        return QD_FIELD_HEADER;
+
+    case QD_FIELD_MESSAGE_ID:
+    case QD_FIELD_USER_ID:
+    case QD_FIELD_TO:
+    case QD_FIELD_SUBJECT:
+    case QD_FIELD_REPLY_TO:
+    case QD_FIELD_CORRELATION_ID:
+    case QD_FIELD_CONTENT_TYPE:
+    case QD_FIELD_CONTENT_ENCODING:
+    case QD_FIELD_ABSOLUTE_EXPIRY_TIME:
+    case QD_FIELD_CREATION_TIME:
+    case QD_FIELD_GROUP_ID:
+    case QD_FIELD_GROUP_SEQUENCE:
+    case QD_FIELD_REPLY_TO_GROUP_ID:
+        return QD_FIELD_PROPERTIES;
+
+    default:
+        assert(false);  // TBD: add new fields here
+        return QD_FIELD_NONE;
+    }
+}
+
+
+// get the field location of a field in the message properties (if it exists,
+// else 0)
+static qd_field_location_t *qd_message_properties_field(qd_message_t *msg, qd_message_field_t field)
 {
     qd_message_content_t *content = MSG_CONTENT(msg);
 
+    if (!content->section_message_properties.parsed) {
+        if (!qd_message_check(msg, QD_DEPTH_PROPERTIES) || !content->section_message_properties.parsed)
+            return 0;
+    }
+
+    int index = 0;
     switch (field) {
+    case QD_FIELD_PROPERTIES:
+        return &content->section_message_properties;
+    case QD_FIELD_MESSAGE_ID:
+        if (content->field_message_id.parsed)
+            return &content->field_message_id;
+        break;
+    case QD_FIELD_USER_ID:
+        if (content->field_user_id.parsed)
+            return &content->field_user_id;
+        index = 1;
+        break;
     case QD_FIELD_TO:
-        while (1) {
-            if (content->field_to.parsed)
-                return &content->field_to;
-
-            if (content->section_message_properties.parsed == 0)
-                break;
-
-            qd_buffer_t   *buffer = content->section_message_properties.buffer;
-            unsigned char *cursor = qd_buffer_base(buffer) + content->section_message_properties.offset;
-            advance(&cursor, &buffer, content->section_message_properties.hdr_length, 0, 0);
-
-            int count = start_list(&cursor, &buffer);
-            int result;
-
-            if (count < 3)
-                break;
-
-            result = traverse_field(&cursor, &buffer, 0); // message_id
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, &content->field_user_id); // user_id
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, &content->field_to); // to
-            if (!result) return 0;
-        }
+        if (content->field_to.parsed)
+            return &content->field_to;
+        index = 2;
         break;
-
+    case QD_FIELD_SUBJECT:
+        if (content->field_subject.parsed)
+            return &content->field_subject;
+        index = 3;
+        break;
     case QD_FIELD_REPLY_TO:
-        while (1) {
-            if (content->field_reply_to.parsed)
-                return &content->field_reply_to;
-
-            if (content->section_message_properties.parsed == 0)
-                break;
-
-            qd_buffer_t   *buffer = content->section_message_properties.buffer;
-            unsigned char *cursor = qd_buffer_base(buffer) + content->section_message_properties.offset;
-            advance(&cursor, &buffer, content->section_message_properties.hdr_length, 0, 0);
-
-            int count = start_list(&cursor, &buffer);
-            int result;
-
-            if (count < 5)
-                break;
-
-            result = traverse_field(&cursor, &buffer, 0); // message_id
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, &content->field_user_id); // user_id
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, &content->field_to); // to
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, 0); // subject
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, &content->field_reply_to); // reply_to
-            if (!result) return 0;
-        }
+        if (content->field_reply_to.parsed)
+            return &content->field_reply_to;
+        index = 4;
         break;
-
     case QD_FIELD_CORRELATION_ID:
-        while (1) {
-            if (content->field_correlation_id.parsed)
-                return &content->field_correlation_id;
-
-            if (content->section_message_properties.parsed == 0)
-                break;
-
-            qd_buffer_t   *buffer = content->section_message_properties.buffer;
-            unsigned char *cursor = qd_buffer_base(buffer) + content->section_message_properties.offset;
-            advance(&cursor, &buffer, content->section_message_properties.hdr_length, 0, 0);
-
-            int count = start_list(&cursor, &buffer);
-            int result;
-
-            if (count < 6)
-                break;
-
-            result = traverse_field(&cursor, &buffer, 0); // message_id
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, &content->field_user_id); // user_id
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, &content->field_to); // to
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, 0); // subject
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, &content->field_reply_to); // reply_to
-            if (!result) return 0;
-            result = traverse_field(&cursor, &buffer, &content->field_correlation_id); // correlation_id
-            if (!result) return 0;
-        }
+        if (content->field_correlation_id.parsed)
+            return &content->field_correlation_id;
+        index = 5;
         break;
+
+    case QD_FIELD_CONTENT_TYPE:
+    case QD_FIELD_CONTENT_ENCODING:
+    case QD_FIELD_ABSOLUTE_EXPIRY_TIME:
+    case QD_FIELD_CREATION_TIME:
+    case QD_FIELD_GROUP_ID:
+    case QD_FIELD_GROUP_SEQUENCE:
+    case QD_FIELD_REPLY_TO_GROUP_ID:
+        return 0;  // TBD as needed
+
+    default:  // Bad field id
+        assert(false);
+        return 0;
+    }
+
+    // requested field not parsed out.  Need to parse out up to the requested field:
+
+    qd_buffer_t   *buffer = content->section_message_properties.buffer;
+    unsigned char *cursor = qd_buffer_base(buffer) + content->section_message_properties.offset;
+    advance(&cursor, &buffer, content->section_message_properties.hdr_length, 0, 0);
+    const int count = start_list(&cursor, &buffer);
+    if (count <= index) return 0;
+
+    if (content->field_message_id.parsed) {
+        advance(&cursor, &buffer,
+                content->field_message_id.hdr_length + content->field_message_id.length,
+                0, 0);
+    } else {
+        if (!traverse_field(&cursor, &buffer, &content->field_message_id)) return 0;
+        if (field == QD_FIELD_MESSAGE_ID)
+            return &content->field_message_id;
+    }
+
+    if (content->field_user_id.parsed) {
+        advance(&cursor, &buffer,
+                content->field_user_id.hdr_length + content->field_user_id.length,
+                0, 0);
+    } else {
+        if (!traverse_field(&cursor, &buffer, &content->field_user_id)) return 0;
+        if (field == QD_FIELD_USER_ID)
+            return &content->field_user_id;
+    }
+
+    if (content->field_to.parsed) {
+        advance(&cursor, &buffer,
+                content->field_to.hdr_length + content->field_to.length,
+                0, 0);
+    } else {
+        if (!traverse_field(&cursor, &buffer, &content->field_to)) return 0;
+        if (field == QD_FIELD_TO)
+            return &content->field_to;
+    }
+
+    if (content->field_subject.parsed) {
+        advance(&cursor, &buffer,
+                content->field_subject.hdr_length +
+                content->field_subject.length, 0, 0);
+    } else {
+        if (!traverse_field(&cursor, &buffer, &content->field_subject)) return 0;
+        if (field == QD_FIELD_SUBJECT)
+            return &content->field_subject;
+    }
+
+    if (content->field_reply_to.parsed) {
+        advance(&cursor, &buffer,
+                content->field_reply_to.hdr_length +
+                content->field_reply_to.length,
+                0, 0);
+    } else {
+        if (!traverse_field(&cursor, &buffer, &content->field_reply_to)) return 0;
+        if (field == QD_FIELD_REPLY_TO)
+            return &content->field_reply_to;
+    }
+
+    // TBD: add remaining fields as needed:
+    if (!traverse_field(&cursor, &buffer, &content->field_correlation_id)) return 0;
+    if (field == QD_FIELD_CORRELATION_ID)
+        return &content->field_correlation_id;
+
+    return 0;
+}
+
+
+// get the field location of a field in the message header (if it exists,
+// else 0)
+static qd_field_location_t *qd_message_header_field(qd_message_t *msg, qd_message_field_t field)
+{
+    qd_message_content_t *content = MSG_CONTENT(msg);
+
+    if (!content->section_message_header.parsed) {
+        if (!qd_message_check(msg, QD_DEPTH_HEADER) || !content->section_message_header.parsed)
+            return 0;
+    }
+
+    switch (field) {
+    case QD_FIELD_HEADER:
+        return &content->section_message_properties;
+    default:
+        // TBD: add header fields as needed (see qd_message_properties_field()
+        // as an example)
+        assert(false);
+        return 0;
+    }
+}
+
+
+static qd_field_location_t *qd_message_field_location(qd_message_t *msg, qd_message_field_t field)
+{
+    qd_message_content_t *content = MSG_CONTENT(msg);
+    qd_message_field_t section = qd_field_section(field);
+
+    switch (section) {
+    case QD_FIELD_HEADER:
+        return qd_message_header_field(msg, field);
+
+    case QD_FIELD_PROPERTIES:
+        return qd_message_properties_field(msg, field);
 
     case QD_FIELD_DELIVERY_ANNOTATION:
-        if (content->section_delivery_annotation.parsed)
+        if (content->section_delivery_annotation.parsed ||
+            (qd_message_check(msg, QD_DEPTH_DELIVERY_ANNOTATIONS) && content->section_delivery_annotation.parsed))
             return &content->section_delivery_annotation;
         break;
 
     case QD_FIELD_MESSAGE_ANNOTATION:
-        if (content->section_message_annotation.parsed)
+        if (content->section_message_annotation.parsed ||
+            (qd_message_check(msg, QD_DEPTH_MESSAGE_ANNOTATIONS) && content->section_message_annotation.parsed))
             return &content->section_message_annotation;
         break;
 
     case QD_FIELD_APPLICATION_PROPERTIES:
-        if (content->section_application_properties.parsed)
+        if (content->section_application_properties.parsed ||
+            (qd_message_check(msg, QD_DEPTH_APPLICATION_PROPERTIES) && content->section_application_properties.parsed))
             return &content->section_application_properties;
         break;
 
     case QD_FIELD_BODY:
-        if (content->section_body.parsed)
+        if (content->section_body.parsed ||
+            (qd_message_check(msg, QD_DEPTH_BODY) && content->section_body.parsed))
             return &content->section_body;
         break;
 
-    default:
+    case QD_FIELD_FOOTER:
+        if (content->section_footer.parsed ||
+            (qd_message_check(msg, QD_DEPTH_ALL) && content->section_footer.parsed))
+            return &content->section_footer;
         break;
+
+    default:
+        assert(false); // TBD: add support as needed
+        return 0;
     }
 
     return 0;
@@ -1051,3 +1171,4 @@ void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_com
         buf = DEQ_HEAD(*field2_buffers);
     }
 }
+
