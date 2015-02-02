@@ -80,8 +80,10 @@ typedef struct {
     qd_field_location_t  section_application_properties;  // The application properties list
     qd_field_location_t  section_body;                    // The message body: Data
     qd_field_location_t  section_footer;                  // The footer
+    qd_field_location_t  field_message_id;                // The string value of the message-id
     qd_field_location_t  field_user_id;                   // The string value of the user-id
     qd_field_location_t  field_to;                        // The string value of the to field
+    qd_field_location_t  field_subject;                   // The string value of the subject field
     qd_field_location_t  field_reply_to;                  // The string value of the reply_to field
     qd_field_location_t  field_correlation_id;            // The string value of the correlation_id field
     qd_field_location_t  body;                            // The body of the message

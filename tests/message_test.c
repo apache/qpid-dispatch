@@ -125,10 +125,20 @@ static char* test_receive_from_messenger(void *context)
 }
 
 
-static char* test_insufficient_check_depth(void *context)
+// load a few interesting message properties and validate
+static char* test_message_properties(void *context)
 {
+    pn_atom_t id = {.type = PN_STRING,
+                    .u.as_bytes.start = "messageId",
+                    .u.as_bytes.size = 9};
+    pn_atom_t cid = {.type = PN_STRING,
+                     .u.as_bytes.start = "correlationId",
+                     .u.as_bytes.size = 13};
+    const char *subject = "A Subject";
     pn_message_t *pn_msg = pn_message();
-    pn_message_set_address(pn_msg, "test_addr_2");
+    pn_message_set_id(pn_msg, id);
+    pn_message_set_subject(pn_msg, subject);
+    pn_message_set_correlation_id(pn_msg, cid);
 
     size_t       size = 10000;
     int result = pn_message_encode(pn_msg, buffer, &size);
@@ -139,10 +149,20 @@ static char* test_insufficient_check_depth(void *context)
 
     set_content(content, size);
 
-    int valid = qd_message_check(msg, QD_DEPTH_DELIVERY_ANNOTATIONS);
-    if (!valid) return "qd_message_check returns 'invalid'";
+    qd_field_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_CORRELATION_ID);
+    if (!iter) return "Expected iterator for the 'correlation-id' field";
+    if (qd_field_iterator_length(iter) != 13) return "Bad length for correlation-id";
 
-    qd_field_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_TO);
+    iter = qd_message_field_iterator(msg, QD_FIELD_SUBJECT);
+    if (!iter) return "Expected iterator for the 'subject' field";
+    if (!qd_field_iterator_equal(iter, (const unsigned char*)subject))
+        return "Bad value for subject";
+
+    iter = qd_message_field_iterator(msg, QD_FIELD_MESSAGE_ID);
+    if (!iter) return "Expected iterator for the 'message-id' field";
+    if (qd_field_iterator_length(iter) != 9) return "Bad length for message-id";
+
+    iter = qd_message_field_iterator(msg, QD_FIELD_TO);
     if (iter) return "Expected no iterator for the 'to' field";
 
     qd_message_free(msg);
@@ -186,7 +206,7 @@ int message_tests(void)
 
     TEST_CASE(test_send_to_messenger, 0);
     TEST_CASE(test_receive_from_messenger, 0);
-    TEST_CASE(test_insufficient_check_depth, 0);
+    TEST_CASE(test_message_properties, 0);
     TEST_CASE(test_check_multiple, 0);
 
     return result;
