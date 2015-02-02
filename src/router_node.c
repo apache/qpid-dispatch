@@ -1145,7 +1145,7 @@ link_attach_result_t qd_router_link_route(qd_router_t      *router,
             // least one on a remote router.  Forward the attach toward the remote destination.
             //
             qd_router_node_t *remote_router = DEQ_HEAD(addr->rnodes)->router;
-            qd_router_link_t *out_link;
+            qd_router_link_t *out_link      = 0;
             if (remote_router)
                 out_link = remote_router->peer_link;
             if (!out_link && remote_router && remote_router->next_hop)
