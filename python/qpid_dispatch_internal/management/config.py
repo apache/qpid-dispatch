@@ -98,11 +98,7 @@ class Config(object):
         """
         if isinstance(source, basestring):
             with open(source) as f:
-                try:
-                    self.load(f)
-                except:
-                    ex_type, ex_value, ex_trace = sys.exc_info()
-                    raise ValidationError, "Loading '%s', %s: %s"%(source, ex_type.__name__, ex_value), ex_trace
+                self.load(f)
         else:
             sections = self._parse(source)
             # Add missing singleton sections

@@ -22,10 +22,12 @@
 
 import unittest, json
 from qpid_dispatch_internal.management.schema import Schema, BooleanType, EnumType, AttributeType, ValidationError, EnumValue, EntityType
+from qpid_dispatch_internal.compat import OrderedDict
 import collections
 
 def replace_od(thing):
-    if isinstance(thing, collections.Mapping):
+    """Replace OrderedDict with dict"""
+    if isinstance(thing, OrderedDict):
         return dict((k, replace_od(v)) for k,v in thing.iteritems())
     if isinstance(thing, list):
         return [replace_od(t) for t in thing]
@@ -36,8 +38,8 @@ SCHEMA_1 = {
     "annotations": {
         "entityId": {
             "attributes": {
-                "name": {"type":"String", "required": True, "unique":True},
-                "type": {"type":"String", "required": True}
+                "name": {"type":"string", "required": True, "unique":True},
+                "type": {"type":"string", "required": True}
             }
         }
     },
@@ -46,19 +48,19 @@ SCHEMA_1 = {
             "singleton": True,
             "annotations" : ["entityId"],
             "attributes": {
-                "workerThreads" : {"type":"Integer", "default": 1}
+                "workerThreads" : {"type":"integer", "default": 1}
             }
         },
         "listener": {
             "annotations" : ["entityId"],
             "attributes": {
-                "addr" : {"type":"String"}
+                "addr" : {"type":"string"}
             }
         },
         "connector": {
             "annotations" : ["entityId"],
             "attributes": {
-                "addr" : {"type":"String"}
+                "addr" : {"type":"string"}
             }
         }
     }
@@ -86,24 +88,24 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual('["x"]', json.dumps([EnumValue('x',3)]))
 
     def test_attribute_def(self):
-        a = AttributeType('foo', 'String', default='FOO')
+        a = AttributeType('foo', 'string', default='FOO')
         self.assertEqual('FOO', a.missing_value())
         self.assertEqual(a.validate('x'), 'x')
 
-        a = AttributeType('foo', 'String', default='FOO', required=True)
+        a = AttributeType('foo', 'string', default='FOO', required=True)
         self.assertEqual('FOO', a.missing_value())
 
-        a = AttributeType('foo', 'String', required=True)
+        a = AttributeType('foo', 'string', required=True)
         self.assertRaises(ValidationError, a.missing_value) # Missing required value.
 
-        a = AttributeType('foo', 'String', value='FOO') # Fixed value
+        a = AttributeType('foo', 'string', value='FOO') # Fixed value
         self.assertEqual('FOO', a.missing_value())
         self.assertEqual(a.validate('FOO'), 'FOO')
         self.assertRaises(ValidationError, a.validate, 'XXX') # Bad fixed value
 
-        self.assertRaises(ValidationError, AttributeType, 'foo', 'String', value='FOO', default='BAR') # Illegal
+        self.assertRaises(ValidationError, AttributeType, 'foo', 'string', value='FOO', default='BAR') # Illegal
 
-        a = AttributeType('foo', 'Integer')
+        a = AttributeType('foo', 'integer')
         self.assertEqual(3, a.validate(3))
         self.assertEqual(3, a.validate('3'))
         self.assertEqual(3, a.validate(3.0))
@@ -113,26 +115,26 @@ class SchemaTest(unittest.TestCase):
 
     def test_entity_type(self):
         s = Schema(annotations={
-            'i1':{'attributes': { 'foo1': {'type':'String', 'default':'FOO1'}}},
-            'i2':{'attributes': { 'foo2': {'type':'String', 'default':'FOO2'}}}})
+            'i1':{'attributes': { 'foo1': {'type':'string', 'default':'FOO1'}}},
+            'i2':{'attributes': { 'foo2': {'type':'string', 'default':'FOO2'}}}})
 
         e = EntityType('MyEntity', s, attributes={
-            'foo': {'type':'String', 'default':'FOO'},
-            'req': {'type':'Integer', 'required':True},
+            'foo': {'type':'string', 'default':'FOO'},
+            'req': {'type':'integer', 'required':True},
             'e': {'type':['x', 'y']}})
         e.init()
         self.assertRaises(ValidationError, e.validate, {}) # Missing required 'req'
         self.assertEqual(e.validate({'req':42}), {'foo': 'FOO', 'req': 42})
         # Try with an annotation
-        e = EntityType('e2', s, attributes={'x':{'type':'Integer'}}, annotations=['i1', 'i2'])
+        e = EntityType('e2', s, attributes={'x':{'type':'integer'}}, annotations=['i1', 'i2'])
         e.init()
         self.assertEqual(e.validate({'x':1}), {'x':1, 'foo1': 'FOO1', 'foo2': 'FOO2'})
 
     def test_entity_refs(self):
         e = EntityType('MyEntity', Schema(), attributes={
-            'type': {'type': 'String', 'required': True, 'value': '$$entityType'},
-            'name': {'type':'String', 'default':'$identity'},
-            'identity': {'type':'String', 'default':'$name', "required": True}})
+            'type': {'type': 'string', 'required': True, 'value': '$$entityType'},
+            'name': {'type':'string', 'default':'$identity'},
+            'identity': {'type':'string', 'default':'$name', "required": True}})
 
         self.assertEqual({'type': 'MyEntity', 'identity': 'x', 'name': 'x'},
                          e.validate({'identity':'x'}))
@@ -145,8 +147,8 @@ class SchemaTest(unittest.TestCase):
     def test_entity_annotation_refs(self):
         s = Schema(annotations={
             'i1': {'attributes': {
-                'name': {'type':'String', 'default':'$identity'},
-                'identity': {'type':'String', 'default':'$name', "required": True}}}})
+                'name': {'type':'string', 'default':'$identity'},
+                'identity': {'type':'string', 'default':'$name', "required": True}}}})
 
         e = EntityType('MyEntity', s, attributes={}, annotations=['i1'])
         e.init()
@@ -154,53 +156,6 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual({'identity': 'x', 'name': 'x'}, e.validate({'name':'x'}))
         self.assertEqual({'identity': 'x', 'name': 'y'}, e.validate({'identity': 'x', 'name':'y'}))
         self.assertRaises(ValidationError, e.validate, {})
-
-    def test_schema_dump(self):
-        s = Schema(**SCHEMA_1)
-        self.maxDiff = None     # pylint: disable=invalid-name
-        self.longMessage = True     # pylint: disable=invalid-name
-        expect = {
-            "prefix":"org.example",
-
-            "annotations": {
-                "entityId": {
-                    "attributes": {
-                        "name": {"required": True,
-                                 "unique":True,
-                                 "type": "String"}
-                    }
-                }
-            },
-
-            "entityTypes": {
-                "container": {
-                    "singleton": True,
-                    "attributes": {
-                        "name": {"type":"String", "unique":True, "required": True},
-                        "workerThreads": {"type":"Integer", "default": 1}
-                    }
-                    },
-                    "listener": {
-                        "attributes": {
-                            "name": {"type":"String", "unique":True, "required": True},
-                            "addr" : {"type":"String"}
-                        }
-                    },
-                "connector": {
-                    "attributes": {
-                        "name": {"type":"String", "unique":True, "required": True},
-                        "addr" : {"type":"String"}
-                    }
-                }
-            }
-        }
-        def jsontof(j,fname):
-            with open(fname,'w') as f:
-                json.dump(j, f, indent=4)
-        self.assertDictEqual(expect, replace_od(s.dump()))
-
-        s2 = Schema(**s.dump())
-        self.assertEqual(s.dump(), s2.dump())
 
     def test_schema_validate(self):
         s = Schema(**SCHEMA_1)

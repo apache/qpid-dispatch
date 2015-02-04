@@ -77,6 +77,6 @@ Differences from the specification:
 - The "name" attribute is not required when an entity is created. If not
   supplied it will be set to the same value as the system-generated "identity"
   attribute. Otherwise it is treated as per the standard.
-- The REGISTER operation is not implementd. The router has its own mechansm to discover peers that does not require this operation.
-- The DEREGISTER operation is not implementd. The router has its own mechansm to discover peers that does not require this operation.
-
+- The REGISTER and DEREGISTER operations are not implementd. The router
+  automatically discovers peer routers via the router network and makes their
+  managment addresses available via the standard GET-MGMT-NODES operation.

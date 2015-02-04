@@ -273,7 +273,7 @@ class RouterNodeEntity(CEntity):
 
 class RouterAddressEntity(CEntity):
     def _identifier(self):
-        return self.attributes.get('hash')
+        return self.attributes.get('key')
 
 class ConnectionEntity(CEntity):
     def _identifier(self):

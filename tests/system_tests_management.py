@@ -369,7 +369,6 @@ class ManagementTest(system_test.TestCase):
     def test_connection(self):
         """Verify there is at least one connection"""
         response = self.node.query(type='connection')
-        print "FIXME", response.get_dicts()
         self.assertTrue(response.results)
 
     def test_router(self):
@@ -478,7 +477,6 @@ class ManagementTest(system_test.TestCase):
 
     def test_get_schema(self):
         schema = dictify(QdSchema().dump())
-        # FIXME aconway 2015-01-26: improve node API.
         got = self.node.call(self.node.request(operation="GET-JSON-SCHEMA", identity="self")).body
         self.assertEquals(schema, dictify(json.loads(got)))
         got = self.node.call(self.node.request(operation="GET-SCHEMA", identity="self")).body

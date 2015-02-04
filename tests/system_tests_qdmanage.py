@@ -20,7 +20,8 @@
 import re, json, unittest
 from system_test import TestCase, Process, Qdrouterd, main_module
 from subprocess import PIPE, STDOUT
-
+from qpid_dispatch_internal.compat import OrderedDict, dictify
+from qpid_dispatch_internal.management.qdrouter import QdSchema
 
 DUMMY = "org.apache.qpid.dispatch.dummy"
 
@@ -131,6 +132,11 @@ class QdmanageTest(TestCase):
             return set((e['name'], e['type']) for e in entities
                        if e['type'] not in ignore_types)
         self.assertEqual(name_type(qall), name_type(qattr))
+
+    def test_get_schema(self):
+        schema = dictify(QdSchema().dump())
+        actual = self.run_qdmanage("GET-JSON-SCHEMA")
+        self.assertEquals(schema, dictify(json.loads(actual)))
 
 if __name__ == '__main__':
     unittest.main(main_module())

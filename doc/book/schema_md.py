@@ -23,57 +23,72 @@ Generate the schema.md chapter for the dispatch book from the qdrouter.json sche
 
 import sys, re
 from qpid_dispatch_internal.management.qdrouter import QdSchema
-from qpid_dispatch_internal.management.markdown import SchemaWriter
+from qpid_dispatch_internal.management.schema_doc import SchemaWriter
 
 class BookSchemaWriter(SchemaWriter):
 
     def run(self):
-        self.write("""
-# Management Schema
+        self.heading("Management Schema")
+        self.writeln("""
+This chapter documents the set of *management entity types* that define
+configuration and management of a Dispatch Router. A management entity type has
+a set of *attributes* that can be read, some attributes can also be
+updated. Some entity types also support *operations* that can be called.
 
-This chapter documents the set of *management entity types* that define configuration and
-management of a Dispatch Router.
-
-All management entity types have the following attributes:
+All management entity types have the following standard attributes:
 
 - *type*: The fully qualified type of the entity,
-  e.g. `org.apache.qpid.dispatch.router`. In this documentation and when using
-  dispatch tools you can use the short name of the type, e.g. `router`
+  e.g. `org.apache.qpid.dispatch.router`. This document uses the short name
+  without the `org.apache.qpid.dispatch` prefix e.g. `router`. The dispatch
+  tools will accept the short or long name.
 
 - *identity*: A system-generated identity of the entity. It includes
   the short type name and some identifying information. E.g. `log/AGENT` or
   `listener/localhost:amqp`
 
-There are two kinds of management entity type.
+There are two main categories of management entity type.
 
 - *Configuration* Entities: Parameters that can be set in the configuration file
-(see `qdrouterd.conf(5)` man page) or set at run-time with the `qdmanage(8)`
-tool.
+  (see `qdrouterd.conf(5)` man page) or set at run-time with the `qdmanage(8)`
+  tool.
 
-- *Operational* Entities: Run-time status values that can be queried using `qdstat(8)` or
-`qdmanage(8)` tools.
-
-
+- *Operational* Entities: Run-time status values that can be queried using
+  `qdstat(8)` or `qdmanage(8)` tools.
 """)
 
-        self.write("""## Configuration Entities
-
+        with self.section("Configuration Entities"):
+            self.writeln("""
 Configuration entities define the attributes allowed in the configuration file
 (see `qdrouterd.conf(5)`) but you can also create entities once the router is
 running using the `qdrouterd(8)` tool's `create` operation. Some entities can also
 be modified using the `update` operation, see the entity descriptions below.
-
 """)
-        self.entity_types_extending("configurationEntity")
+            self.entity_types_extending("configurationEntity")
 
-        self.write("""\n## Operational Entities
+        with self.section("Operational Entities"):
 
+            self.writeln("""
 Operational entities provide statistics and other run-time attributes of the router.
 The `qdstat(8)` tool provides a convenient way to query run-time statistics.
 You can also use the general-purpose management tool `qdmanage(8)` to query 
 operational attributes.
 """)
-        self.entity_types_extending("operationalEntity")
+            self.entity_types_extending("operationalEntity")
+
+        with self.section("Management Operations"):
+            self.writeln("""
+The `qdstat(8)` and `qdmanage(8)` tools allow you to view or modify management entity
+attributes. They work by invoking *management operations*. You can invoke these operations
+from any AMQP client by sending a message with the appropriate properties and body to the
+`$management` address. The message should have a `reply-to` address indicating where the
+response should be sent.
+""")
+            def operation_section(title, entity_type):
+                with self.section(title):
+                    self.operation_defs(entity_type)
+            operation_section("Operations for all entity types", self.schema.entity_type("entity"))
+            for e in self.schema.filter(lambda et: et.operation_defs and not et.name_is("entity")):
+                operation_section("Operations for `%s` entity type" % e.short_name, e)
 
 def main():
     """Generate schema markdown documentation from L{QdSchema}"""

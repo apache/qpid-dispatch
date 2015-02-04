@@ -78,7 +78,7 @@ class BooleanType(Type):
     """A boolean schema type"""
 
     def __init__(self):
-        super(BooleanType, self).__init__("Boolean", bool)
+        super(BooleanType, self).__init__("boolean", bool)
 
     VALUES = {"yes":1, "true":1, "on":1, "no":0, "false":0, "off":0}
 
@@ -150,9 +150,10 @@ class EnumType(Type):
         return "One of [%s]" % ', '.join([quotestr(tag) for tag in self.tags])
 
 BUILTIN_TYPES = OrderedDict(
-    (t.name, t) for t in [Type("String", str),
-                          Type("Integer", int),
-                          Type("List", list),
+    (t.name, t) for t in [Type("string", str),
+                          Type("integer", int),
+                          Type("list", list),
+                          Type("map", map),
                           BooleanType()])
 
 def get_type(rep):
@@ -164,7 +165,7 @@ def get_type(rep):
         return EnumType(rep)
     if rep in BUILTIN_TYPES:
         return BUILTIN_TYPES[rep]
-    raise ValidationError("No such schema type: %s"%rep)
+    raise ValidationError("No such schema type: %s" % rep)
 
 def _dump_dict(items):
     """
@@ -191,34 +192,39 @@ class AttributeType(object):
 
     @ivar name: Attribute name.
     @ivar atype: Attribute L{Type}
-    @ivar required: True if the attribute is reqiured.
+    @ivar required: True if the attribute is required.
     @ivar default: Default value for the attribute or None if no default. Can be a reference.
     @ivar value: Fixed value for the attribute. Can be a reference.
     @ivar unique: True if the attribute value is unique.
     @ivar description: Description of the attribute type.
     @ivar annotation: Annotation section or None
     @ivar defined_in: Annotation or EntityType in which this attribute is defined.
+    @ivar create: If true the attribute can be set by CREATE.
+    @ivar update: If true the attribute can be modified by UPDATE.
     """
 
     def __init__(self, name, type=None, defined_in=None, default=None, required=False, unique=False,
-                 value=None, annotation=None, description="", create=False, update=False):
+                 value=None, description="", create=False, update=False):
         """
         See L{AttributeType} instance variables.
         """
-        self.name = name
-        self.defined_in = defined_in
-        self.atype = get_type(type)
-        self.required = required
-        self.default = default
-        self.value = value
-        self.unique = unique
-        self.description = description
-        self.annotation = annotation
-        if self.value is not None and self.default is not None:
-            raise ValidationError("Attribute '%s' has default value and fixed value" %
-                                  self.name)
-        self.create=create
-        self.update=update
+        try:
+            self.name = name
+            self.defined_in = defined_in
+            self.atype = get_type(type)
+            self.required = required
+            self.default = default
+            self.value = value
+            self.unique = unique
+            self.description = description
+            if self.value is not None and self.default is not None:
+                raise ValidationError("Attribute '%s' has default value and fixed value" %
+                                      self.name)
+            self.create=create
+            self.update=update
+        except:
+            ex, msg, trace = sys.exc_info()
+            raise ValidationError, "Attribute '%s': %s" % (name, msg), trace
 
     def missing_value(self, check_required=True, add_default=True, **kwargs):
         """
@@ -272,64 +278,30 @@ class AttributeType(object):
         return self.name
 
 
-class RedefinedError(ValueError): pass
+class MessageDef(object):
+    """A request or response message"""
+    def __init__(self, body=None, properties=None):
+        self.body = None
+        if body: self.body = AttributeType("body", **body)
+        self.properties = dict((name, AttributeType(name, **value))
+                               for name, value in (properties or {}).iteritems())
 
 
-class AttrsAndOps(object):
-    """Base class for Annotation and EntityType - a named holder of attribute types and operations"""
-
-    def __init__(self, name, schema, attributes=None, operations=None, description="", fullName=True):
-        self.schema, self.description = schema, description
-        if fullName:
-            self.name = schema.long_name(name)
-            self.short_name = schema.short_name(name)
-        else:
-            self.name = self.short_name = name
-        self.attributes = OrderedDict()
-        if attributes: self.add_attributes(attributes)
-        self.operations = operations or []
-
-    def add_attributes(self, attributes):
-        """
-        Add attributes.
-        @param attributes: Map of attributes {name: {type:, default:, required:, unique:}}
-        """
-        for k, v in attributes.iteritems():
-            if k in self.attributes:
-                raise ValidationError("Duplicate attribute in '%s': '%s'"%(self.name, k))
-            self.attributes[k] = AttributeType(k, defined_in=self, **v)
-
-    @property
-    def my_attributes(self):
-        """Return only attribute types defined in this annotation or entity type"""
-        return [a for a in self.attributes.itervalues() if a.defined_in == self]
-
-    def dump(self):
-        """Json friendly representation"""
-        return _dump_dict([
-            ('attributes', OrderedDict(
-                (k, v.dump()) for k, v in self.attributes.iteritems()
-                if k != 'type')), # Don't dump 'type' attribute, dumped separately.
-            ('operations', self.operations),
-            ('description', self.description or None)
-        ])
-
-    def __repr__(self):
-        return "%s(%s)"%(self.__class__.__name__, self.name)
-
-    def __str__(self):
-        return self.name
+class OperationDef(object):
+    """An operation definition"""
+    def __init__(self, name, description=None, request=None, response=None):
+        try:
+            self.name = name
+            self.description = description
+            self.request = self.response = None
+            if request: self.request = MessageDef(**request)
+            if response: self.response = MessageDef(**response)
+        except:
+            ex, msg, trace = sys.exc_info()
+            raise ValidationError, "Operation '%s': %s" % (name, msg), trace
 
 
-class Annotation(AttrsAndOps):
-    """An annotation type defines a set of attributes that can be re-used by multiple EntityTypes"""
-    def __init__(self, name, schema, **kwargs):
-        super(Annotation, self).__init__(name, schema, **kwargs)
-        for a in self.attributes.itervalues():
-            a.annotation = self
-
-
-class EntityType(AttrsAndOps):
+class EntityType(object):
     """
     An entity type defines a set of attributes for an entity.
 
@@ -339,7 +311,7 @@ class EntityType(AttrsAndOps):
     @ivar singleton: If true only one entity of this type is allowed.
     #ivar annotation: List of names of sections annotationd by this entity.
     """
-    def __init__(self, name, schema, singleton=False, annotations=None, extends=None, **kwargs):
+    def __init__(self, name, schema, attributes=None, operations=None, operationDefs=None, description="", fullName=True, singleton=False, annotations=None, extends=None, **kwargs):
         """
         @param name: name of the entity type.
         @param schema: schema for this type.
@@ -349,15 +321,31 @@ class EntityType(AttrsAndOps):
         @param description: Human readable description.
         @param operations: Allowed operations, list of operation names.
         """
-        super(EntityType, self).__init__(name, schema, **kwargs)
-        # Bases and annotations are resolved in self.resolve
-        self.base = extends
-        self.all_bases = []
-        self.annotations = annotations or []
-        # This map defines values that can be referred to using $$ in the schema.
-        self.refs = {'entityType': self.name}
-        self.singleton = singleton
-        self._init = False      # Have not yet initialized from base and attributes.
+        try:
+            self.schema = schema
+            self.description = description
+            if fullName:
+                self.name = schema.long_name(name)
+                self.short_name = schema.short_name(name)
+            else:
+                self.name = self.short_name = name
+            self.attributes = OrderedDict((k, AttributeType(k, defined_in=self, **v))
+                                              for k, v in (attributes or {}).iteritems())
+            self.operations = operations or []
+            # Bases and annotations are resolved in self.resolve
+            self.base = extends
+            self.all_bases = []
+            self.annotations = annotations or []
+            # This map defines values that can be referred to using $$ in the schema.
+            self.refs = {'entityType': self.name}
+            self.singleton = singleton
+            self._init = False      # Have not yet initialized from base and attributes.
+            # Operation definitions
+            self.operation_defs = dict((name, OperationDef(name, **op))
+                                  for name, op in (operationDefs or {}).iteritems())
+        except:
+            ex, msg, trace = sys.exc_info()
+            raise ValidationError, "%s '%s': %s" % (type(self).__name__, name, msg), trace
 
     def init(self):
         """Resolve bases and annotations after all types are loaded."""
@@ -389,12 +377,6 @@ class EntityType(AttrsAndOps):
 
     def is_a(self, type): return type == self or self.extends(type)
 
-    def dump(self):
-        """Json friendly representation"""
-        d = super(EntityType, self).dump()
-        if self.singleton: d['singleton'] = True
-        return d
-
     def resolve(self, value, attributes):
         """
         Resolve a $ or $$ reference.
@@ -422,6 +404,11 @@ class EntityType(AttrsAndOps):
         if not name in self.attributes:
             raise ValidationError("Unknown attribute '%s' for '%s'" % (name, self))
         return self.attributes[name]
+
+    @property
+    def my_attributes(self):
+        """Return only attribute types defined in this annotation or entity type"""
+        return [a for a in self.attributes.itervalues() if a.defined_in == self]
 
     def validate(self, attributes, check_singleton=None, **kwargs):
         """
@@ -476,12 +463,31 @@ class EntityType(AttrsAndOps):
                not (a in old_attributes and old_attributes[a] == v):
                 raise ValidationError("Cannot update attribute '%s' in UPDATE" % a)
 
+    def dump(self):
+        """Json friendly representation"""
+        return _dump_dict([
+            ('attributes', OrderedDict(
+                (k, v.dump()) for k, v in self.attributes.iteritems()
+                if k != 'type')), # Don't dump 'type' attribute, dumped separately.
+            ('operations', self.operations),
+            ('description', self.description or None)
+        ])
+        if self.singleton: d['singleton'] = True
+        return d
+
+
     def __repr__(self): return "%s(%s)" % (type(self).__name__, self.name)
 
     def __str__(self): return self.name
 
     def name_is(self, name):
         return self.name == self.schema.long_name(name)
+
+class Annotation(EntityType):
+    """An annotation defines attributes, operations etc. that can be re-used by multiple EntityTypes."""
+    pass
+
+
 
 class Schema(object):
     """
@@ -506,22 +512,12 @@ class Schema(object):
         else:
             self.prefix = self.prefixdot = ""
         self.description = description
-        self.annotations = OrderedDict()
-        self.entity_types = OrderedDict()
+        def parsedefs(cls, defs):
+            return OrderedDict((self.long_name(k), cls(k, self, **v))
+                               for k, v in (defs or {}).iteritems())
+        self.annotations = parsedefs(Annotation, annotations)
+        self.entity_types = parsedefs(EntityType, entityTypes)
         self.all_attributes = set()
-
-        def add_defs(thing, mymap, defs):
-            for k, v in defs.iteritems():
-                try:
-                    t = thing(k, self, **v)
-                except:
-                    ex_type, ex_value, ex_trace = sys.exc_info()
-                    raise ValidationError, "Adding %s%s: %s %s" % (
-                        thing.__name__, json.dumps(v), ex_type.__name__, ex_value), ex_trace
-                mymap[t.name] = t
-
-        add_defs(Annotation, self.annotations, annotations or OrderedDict())
-        add_defs(EntityType, self.entity_types, entityTypes or OrderedDict())
 
         for e in self.entity_types.itervalues():
             e.init()
@@ -575,9 +571,7 @@ class Schema(object):
         @keyword check_singleton: Used by L{validate_all}
         """
         attributes['type'] = self.long_name(attributes['type'])
-        if not attributes['type'] in self.entity_types:
-            raise ValidationError("No such entity type: '%s'" % attributes['type'])
-        entity_type = self.entity_types[attributes['type']]
+        entity_type = self.entity_type(attributes['type'])
         entity_type.validate(
             attributes,
             check_required=check_required,

@@ -385,7 +385,7 @@ class Qdrouterd(Process):
         @param retry_kwargs: keyword args for L{retry}
         """
         def check():
-            # FIXME aconway 2014-06-12: this should be a request by name, not a query.
+            # TODO aconway 2014-06-12: this should be a request by name, not a query.
             # Need to rationalize addresses in management attributes.
             # endswith check is because of M0/L/R prefixes
             addrs = self.management.query(

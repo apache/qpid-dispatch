@@ -21,7 +21,7 @@
 Utilities for command-line programs.
 """
 
-import sys, json, optparse
+import sys, json, optparse, os
 from collections import Sequence, Mapping
 from qpid_dispatch_site import VERSION
 
@@ -46,6 +46,8 @@ def main(run, argv=sys.argv, op=None):
     except UsageError, e:
         op.error(e)
     except Exception, e:
+        if "_QPID_DISPATCH_TOOLS_DEBUG_" in os.environ:
+            raise
         print "%s: %s" % (type(e).__name__, e)
     return 1
 

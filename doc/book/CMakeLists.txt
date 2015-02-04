@@ -25,11 +25,12 @@ set(bin ${CMAKE_CURRENT_BINARY_DIR})
 
 # Generate the schema chapter of the book.
 set(schema, "${CMAKE_SOURCE_DIR}/python/qpid_router/management/qdrouterd.json")
+set(py_management ${CMAKE_SOURCE_DIR}/python/qpid_dispatch_internal/management)
+
 add_custom_command(
   OUTPUT schema.md
-  COMMAND ${RUN} -s ${src}/schema_md.py > schema.md
-  DEPENDS ${src}/schema_md.py ${schema}
-  )
+  COMMAND ${RUN} -s ${src}/schema_md.py 1> schema.md
+  DEPENDS ${py_management}/schema_doc.py ${py_management}/schema.py ${schema} ${src}/schema_md.py ${schema})
 
 set(BOOK ${src}/introduction.md ${src}/using.md ${src}/addressing.md ${src}/amqp-mapping.md ${bin}/schema.md)
 

@@ -18,6 +18,8 @@
 # under the License.
 #
 
+test -z "$SOURCE_DIR" -a -f config.sh && source config.sh
+
 if [[ -z "$SOURCE_DIR" ]]; then
     echo "The devel environment isn't ready.  Run 'source config.sh' from"
     echo "the base of the dispatch source tree"

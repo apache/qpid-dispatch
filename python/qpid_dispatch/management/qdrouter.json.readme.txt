@@ -26,29 +26,39 @@ on the AMQP management specification.
 The schema is a JSON map with the following keys:
 
 - "description": documentation string for the schema
-- "prefix": Prefix prepended to schema names when they are exposed to AMQP management clients.
+- "prefix": Prefix for schema names when they are exposed to AMQP management clients.
 
 - "entityTypes": map of entity type names to definitions (see below)
 
 Annotation and entity type definition maps have the following keys:
 
 - "description": documentation string.
-- "operations": list of allowed operation names.
-- "attributes": map of attribute names to attribute definitions (see below)
 - "fullName": if true use the type name as-is, do not apply the schema prefix.
+- "attributes": map of attribute names to attribute definitions (see below)
+- "operations": list of allowed operation names.
+- "operationsDefs": map of operation names to operation definitions.
 
 Entity type definitions also have these fields:
 
-- "extends": Name of base type. The new type includes operations and attributes from the base type.
+- "extends": Name of base type. The new type includes attributes, operations and operationDefs from the base type.
 - "annotations": List of annotation names. The new type includes operations and attributes from all the annotations.
 
-Attribute definition maps have the following fields:
+Operation definitions are optional, you can call an operation in the operations
+list without an operation definition. They have the following fields:
+
+- "properties": map of property names to property definition maps.
+  Defines the set of message properties expected by the operation.
+- "body": a property definition map.
+
+Attribute or property definition maps have the following fields:
 
 - "description": documentation string.
 - "type": one of the following:
-  - "String": a unicode string value.
+  - "String": a Unicode string value.
   - "Integer": an integer value.
   - "Boolean": a true/false value.
+  - "Map": a map.
+  - "List": a list.
   - [...]: A list of strings is an enumeration. Values must be one of the strings or an integer integer index into the list, starting from 0.
 - "default": a default can be a literal value or a reference to another attribute in the form `$attributeName`.
 - "fixed": if true the attribute cannot be updated.
@@ -58,10 +68,11 @@ Attributes with neither "create" nor "update" are set automatically by the syste
 
 There is the following hierarchy among entity types:
 
-`entity`: The base of all entity types.
+- `entity`: The base of all entity types.
+
 - `configurationEntity`: base for all types that hold *configuration information*.
 
-  Configuration information is supplied in advance and expresse *intent*. For
+  Configuration information is supplied in advance and express *intent*. For
   example "I want the router to listen on port N". All the entities that can be
   used in the configuration file extend `configurationEntity`.
 

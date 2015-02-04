@@ -19,7 +19,7 @@
 # under the License.
 #
 
-import sys, json
+import sys, json, re
 import  qpid_dispatch_site
 from qpid_dispatch.management import Node, Url
 from collections import Mapping, Sequence
@@ -38,7 +38,7 @@ class QdManage():
 
         self.operations = ['QUERY', 'CREATE', 'READ', 'UPDATE', 'DELETE',
                            'GET-TYPES', 'GET-OPERATIONS', 'GET-ATTRIBUTES', 'GET-ANNOTATIONS',
-                           'GET-MGMT-NODES']
+                           'GET-MGMT-NODES', 'GET-JSON-SCHEMA']
 
         usage = "%prog <operation> [options...] [arguments...]"
         description = "Standard operations: %s. Use GET-OPERATIONS to find additional operations." \
@@ -52,6 +52,8 @@ class QdManage():
                      help="Pretty-printing indent. -1 means don't pretty-print (default %default)")
         op.add_option('--stdin', action='store_true',
                       help='Read attributes as JSON map or list of maps from stdin.')
+        op.add_option('--body', help='JSON value to use as body of a non-standard operation call.')
+        op.add_option('--properties', help='JSON map to use as properties for a non-standard operation call.')
         op.add_option_group(connection_options(op))
         self.op = op
 
@@ -151,10 +153,33 @@ class QdManage():
         check_args(self.args, 0)
         self.print_json(self.call_node('get_mgmt_nodes'))
 
+    def get_json_schema(self):
+        """get-schema-json [INDENT] Get the router schema in JSON format. Optional integer indent for formatted output."""
+        check_args(self.args, 1, 0)
+        indent = None
+        if self.args: indent = self.args[0]
+        print self.node.call(self.node.request(
+            operation='GET-JSON-SCHEMA', identity='self', indent=indent)).body
+
+    def json_arg(self, value):
+        try:
+            print "FIXME"  , value, json.loads(value)
+            return json.loads(value)
+        except ValueError, e:
+            if not re.search(r'["{}\[\]]', value): # Doesn't look like attempted JSON.
+                print "FIXME as string"  , value
+                return value    # Just treat as plain string
+            raise ValueError("Invalid JSON '%s': %s" % (value, e))
+
     def operation(self, operation):
-        """operation [ATTR=VALUE...]   Call custom operation with ATTR=VALUE as request properties."""
+        """operation [ATTR=VALUE...]   Call custom operation with ATTR=VALUE as request properties. Use --body and --properties if specified."""
         properties = dict(attr_split(arg) for arg in self.args or [])
-        request = self.call_node('request', 'type', 'name', 'identity', operation=operation, **properties)
+        if self.opts.properties:
+            properties.update(self.json_arg(self.opts.properties))
+        body = None
+        if self.opts.body:
+            body = self.json_arg(self.opts.body)
+        request = self.call_node('request', 'type', 'name', 'identity', operation=operation, body=body, **properties)
         print self.node.call(request).body
 
 if __name__ == "__main__":

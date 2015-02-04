@@ -25,6 +25,7 @@
 set(src ${CMAKE_CURRENT_SOURCE_DIR})
 set(bin ${CMAKE_CURRENT_BINARY_DIR})
 set(tools ${CMAKE_SOURCE_DIR}/tools)
+set(markdown_lib ${CMAKE_SOURCE_DIR}/python/qpid_dispatch_internal/management/markdown.py)
 
 # Configure man page sources and combine with --help options output from programs.
 # Install markdown version of man pages in share/doc.
@@ -35,7 +36,7 @@ macro(help2md program section path)
   add_custom_command (
     OUTPUT ${manpage}.md
     COMMAND ${RUN} -s "${src}/help2md.py" "${manpage}.noopt.md" "${manpage}.md" "${path}/${program}" --help
-    DEPENDS ${path}/${program} ${manpage}.noopt.md ${src}/help2md.py ${infile}
+    DEPENDS ${path}/${program} ${manpage}.noopt.md ${src}/help2md.py ${infile} ${schema_doc}
     )
 endmacro()
 
