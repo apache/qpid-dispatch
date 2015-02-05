@@ -574,8 +574,12 @@ static void *thread_run(void *arg)
 
             if (qdpn_connector_failed(cxtr))
                 qdpn_connector_close(cxtr);
-            else
-                work_done = process_connector(qd_server, cxtr);
+
+            //
+            // Even if the connector has failed there are still events that 
+            // must be processed so that associated links will be cleaned up.
+            //
+            work_done = process_connector(qd_server, cxtr);
 
             //
             // Check to see if the connector was closed during processing
