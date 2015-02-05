@@ -106,6 +106,9 @@ typedef struct {
     qd_container_link_detach_handler_t link_detach_handler;
     ///@}
 
+    /** Invoked when a link we created was opened by the peer */
+    qd_container_link_handler_t link_attach_handler;
+
     /** @name Node-Type Handlers
      * @{
      */

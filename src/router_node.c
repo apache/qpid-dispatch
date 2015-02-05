@@ -268,6 +268,33 @@ static int qd_router_terminus_is_router(pn_terminus_t *term)
 
 
 /**
+ * If the terminus has a dynamic-node-property for a node address,
+ * return an interator for the content of that property.
+ */
+static const char *qd_router_terminus_dnp_address(pn_terminus_t *term)
+{
+    pn_data_t *props = pn_terminus_properties(term);
+
+    if (!props)
+        return 0;
+
+    pn_data_rewind(props);
+    if (pn_data_next(props) && pn_data_enter(props) && pn_data_next(props)) {
+        pn_bytes_t sym = pn_data_get_symbol(props);
+        if (sym.start && strcmp(QD_DYNAMIC_NODE_PROPERTY_ADDRESS, sym.start) == 0) {
+            if (pn_data_next(props)) {
+                pn_bytes_t val = pn_data_get_string(props);
+                if (val.start && *val.start != '\0')
+                    return val.start;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/**
  * Generate a temporary routable address for a destination connected to this
  * router node.
  */
@@ -775,6 +802,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
     sys_mutex_lock(router->lock);
     qd_router_link_t *clink = rlink->connected_link;
     if (clink) {
+        pn_link_flow(pn_link, 1); // TODO - remove this when link-propagation is complete
         router_do_link_route_LH(clink, delivery, msg);
         sys_mutex_unlock(router->lock);
         return;
@@ -1035,13 +1063,13 @@ ALLOC_DECLARE(link_attach_t);
 ALLOC_DEFINE(link_attach_t);
 
 
-typedef struct link_detach_t {
+typedef struct link_event_t {
     qd_router_t      *router;
     qd_router_link_t *rlink;
-} link_detach_t;
+} link_event_t;
 
-ALLOC_DECLARE(link_detach_t);
-ALLOC_DEFINE(link_detach_t);
+ALLOC_DECLARE(link_event_t);
+ALLOC_DEFINE(link_event_t);
 
 
 typedef enum {
@@ -1094,26 +1122,45 @@ static void qd_router_attach_routed_link(void *context, bool discard)
 
 static void qd_router_detach_routed_link(void *context, bool discard)
 {
-    link_detach_t *ld = (link_detach_t*) context;
+    link_event_t *le = (link_event_t*) context;
 
     if (!discard) {
-        qd_link_t *link = ld->rlink->link;
+        qd_link_t *link = le->rlink->link;
         qd_link_close(link);
 
-        sys_mutex_lock(ld->router->lock);
-        qd_entity_cache_remove(QD_ROUTER_LINK_TYPE, ld->rlink);
-        DEQ_REMOVE(ld->router->links, ld->rlink);
-        sys_mutex_unlock(ld->router->lock);
+        sys_mutex_lock(le->router->lock);
+        qd_entity_cache_remove(QD_ROUTER_LINK_TYPE, le->rlink);
+        DEQ_REMOVE(le->router->links, le->rlink);
+        sys_mutex_unlock(le->router->lock);
     }
 
-    free_link_detach_t(ld);
+    free_link_event_t(le);
 }
 
 
-link_attach_result_t qd_router_link_route(qd_router_t      *router,
-                                          qd_router_link_t *rlink,
-                                          const char       *term_addr,
-                                          qd_direction_t    dir)
+static void qd_router_open_routed_link(void *context, bool discard)
+{
+    link_event_t *le = (link_event_t*) context;
+
+    if (!discard) {
+        qd_link_t *link = le->rlink->link;
+
+        if (le->rlink->connected_link) {
+            qd_link_t *peer = le->rlink->connected_link->link;
+            pn_terminus_copy(qd_link_source(link), qd_link_remote_source(peer));
+            pn_terminus_copy(qd_link_target(link), qd_link_remote_target(peer));
+            pn_link_open(qd_link_pn(link));
+        }
+    }
+
+    free_link_event_t(le);
+}
+
+
+link_attach_result_t qd_router_link_route_LH(qd_router_t      *router,
+                                             qd_router_link_t *rlink,
+                                             const char       *term_addr,
+                                             qd_direction_t    dir)
 {
     //
     // Lookup the target address to see if we can link-route this attach.
@@ -1218,22 +1265,37 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
     //
     link_attach_result_t la_result = LINK_ATTACH_NO_MATCH;
     if (!is_router)
-        la_result = qd_router_link_route(router, rlink, r_tgt, QD_OUTGOING);
+        la_result = qd_router_link_route_LH(router, rlink, r_tgt, QD_OUTGOING);
     sys_mutex_unlock(router->lock);
 
     pn_terminus_copy(qd_link_source(link), qd_link_remote_source(link));
     pn_terminus_copy(qd_link_target(link), qd_link_remote_target(link));
 
-    //
-    // If link-routing was successful or there was no matching link-route
-    // address, open the link.  If link-routing was supposed to work but
-    // there was no reachable destination, close the link.
-    //
-    if (la_result == LINK_ATTACH_NO_PATH)
-        pn_link_close(pn_link);
-    else {
+    switch (la_result) {
+    case LINK_ATTACH_NO_MATCH:
+        //
+        // We didn't link-route this attach.  It terminates here.
+        // Open it in the reverse direction.
+        //
         pn_link_flow(pn_link, 1000);
         pn_link_open(pn_link);
+        break;
+
+    case LINK_ATTACH_NO_PATH:
+        //
+        // The link should be routable but there is no path to the
+        // destination.  Close the link.
+        //
+        pn_link_close(pn_link);
+        break;
+
+    case LINK_ATTACH_FORWARDED:
+        //
+        // We routed the attach outbound.  Don't open the link back until
+        // the downstream link is opened.
+        //
+        pn_link_flow(pn_link, 1000);  // TODO - remove this when flow propagation is complete
+        break;
     }
 
     return 0;
@@ -1342,7 +1404,11 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
         // address, that address needs to be set up in the address list.
         //
         char temp_addr[1000]; // TODO: Use pn_string or aprintf.
-        la_result = qd_router_link_route(router, rlink, r_src, QD_INCOMING);
+        const char *link_route_address = qd_router_terminus_dnp_address(qd_link_remote_source(link));
+
+        if (link_route_address == 0)
+            link_route_address = r_src;
+        la_result = qd_router_link_route_LH(router, rlink, link_route_address, QD_INCOMING);
 
         if (la_result == LINK_ATTACH_NO_MATCH) {
             if (is_dynamic) {
@@ -1390,7 +1456,55 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
 
     if (iter)
         qd_field_iterator_free(iter);
-    pn_link_open(pn_link);
+
+    switch (la_result) {
+    case LINK_ATTACH_NO_MATCH:
+        //
+        // We didn't link-route this attach.  It terminates here.
+        // Open it in the reverse direction.
+        //
+        pn_link_open(pn_link);
+        break;
+
+    case LINK_ATTACH_NO_PATH:
+        //
+        // The link should be routable but there is no path to the
+        // destination.  Close the link.
+        //
+        pn_link_close(pn_link);
+        break;
+
+    case LINK_ATTACH_FORWARDED:
+        //
+        // We routed the attach outbound.  Don't open the link back until
+        // the downstream link is opened.
+        //
+        break;
+    }
+
+    return 0;
+}
+
+
+/**
+ * Handler for remote opening of links that we initiated.
+ */
+static int router_link_attach_handler(void* context, qd_link_t *link)
+{
+    qd_router_t      *router     = (qd_router_t*) context;
+    qd_router_link_t *rlink      = (qd_router_link_t*) qd_link_get_context(link);
+    qd_router_link_t *peer_rlink = rlink->connected_link;
+
+    if (peer_rlink) {
+        qd_connection_t *out_conn = qd_link_connection(peer_rlink->link);
+        link_event_t    *le       = new_link_event_t();
+
+        le->router = router;
+        le->rlink  = peer_rlink;
+
+        qd_connection_invoke_deferred(out_conn, qd_router_open_routed_link, le);
+    }
+    
     return 0;
 }
 
@@ -1413,11 +1527,11 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
 
     if (rlink->connected_link) {
         qd_connection_t *out_conn = qd_link_connection(rlink->connected_link->link);
-        link_detach_t   *ld       = new_link_detach_t();
-        ld->router  = router;
-        ld->rlink   = rlink->connected_link;
+        link_event_t    *le       = new_link_event_t();
+        le->router  = router;
+        le->rlink   = rlink->connected_link;
         rlink->connected_link->connected_link = 0;
-        qd_connection_invoke_deferred(out_conn, qd_router_detach_routed_link, ld);
+        qd_connection_invoke_deferred(out_conn, qd_router_detach_routed_link, le);
     }
 
     //
@@ -1615,6 +1729,7 @@ static qd_node_type_t router_node = {"router", 0, 0,
                                      router_outgoing_link_handler,
                                      router_writable_link_handler,
                                      router_link_detach_handler,
+                                     router_link_attach_handler,
                                      0,   // node_created_handler
                                      0,   // node_destroyed_handler
                                      router_inbound_open_handler,

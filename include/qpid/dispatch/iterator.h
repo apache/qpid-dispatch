@@ -83,7 +83,7 @@ typedef struct qd_field_iterator_t qd_field_iterator_t;
  *     amqp:/_topo/all/all/<local>
  *                        L^^^^^^^
  *     amqp:/<mobile>
- *          M^^^^^^^^
+ *         M0^^^^^^^^
  *
  * ITER_VIEW_NODE_HASH - Isolate the hashable part of a router-id, used for headers
  *

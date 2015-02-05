@@ -107,6 +107,11 @@ const char * const QD_CAPABILITY_ANONYMOUS_RELAY;
 const char * const QD_CAPABILITY_ROUTER;
 /// @}
 
+/** @name Dynamic Node Properties */
+/// @{
+const char * const QD_DYNAMIC_NODE_PROPERTY_ADDRESS;  ///< Address for routing dynamic sources
+/// @}
+
 /** @name Miscellaneous Strings */
 /// @{
 const char * const QD_INTERNODE_LINK_NAME_1;

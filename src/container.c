@@ -184,6 +184,16 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
 }
 
 
+static void handle_link_open(qd_container_t *container, pn_link_t *pn_link)
+{
+    qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
+    if (link == 0)
+        return;
+    if (link->node->ntype->link_attach_handler)
+        link->node->ntype->link_attach_handler(link->node->context, link);
+}
+
+
 static int do_writable(pn_link_t *pn_link)
 {
     qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
@@ -361,7 +371,8 @@ static int process_handler(qd_container_t *container, void* unused, qd_connectio
                     setup_outgoing_link(container, pn_link);
                 else
                     setup_incoming_link(container, pn_link);
-            }
+            } else if (pn_link_state(pn_link) & PN_LOCAL_ACTIVE)
+                handle_link_open(container, pn_link);
             break;
 
         case PN_LINK_REMOTE_CLOSE :
