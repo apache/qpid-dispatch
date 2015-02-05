@@ -160,6 +160,15 @@ struct qd_router_conn_t {
 
 ALLOC_DECLARE(qd_router_conn_t);
 
+// custom routing hook - returns true if msg routed.
+// NOTE: called with router lock held
+typedef bool (*qd_router_route_hook_t)(void *context,
+                                       qd_router_t *router,
+                                       qd_message_t *msg,
+                                       qd_delivery_t *delivery,
+                                       qd_address_t *addr,
+                                       qd_field_iterator_t *ingress_iterator,
+                                       bool is_direct);
 
 /** A router address */
 struct qd_address_t {
@@ -176,6 +185,8 @@ struct qd_address_t {
     qd_address_t              *dynamic_cc;
     bool                       toggle;
     bool                       waypoint;
+    qd_router_route_hook_t     forwarder;       ///< Custom forwarding method
+    void                      *forwarder_context;
 
     //
     // TODO - Add support for asynchronous address lookup:
@@ -268,7 +279,13 @@ struct qd_router_t {
     qd_waypoint_list_t        waypoints;
 };
 
-
+// Forward a message, handling the various fanout and bias semantics
+int router_forward_message_LH(qd_router_t *router,
+                              qd_message_t *msg,
+                              qd_delivery_t *delivery,
+                              qd_address_t *addr,
+                              qd_field_iterator_t *ingress_iter,
+                              int is_direct);
 
 void qd_router_check_addr(qd_router_t *router, qd_address_t *addr, int was_local);
 void qd_router_add_link_ref_LH(qd_router_link_ref_list_t *ref_list, qd_router_link_t *link);
@@ -286,4 +303,10 @@ void qd_router_link_lost(qd_router_t *router, int link_mask_bit);
 
 qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_iterator_t *iter,
                                                  char in_phase, char *out_phase);
+// override the default message forwarding logic
+qd_address_t *qd_router_set_forwarder(qd_router_t *router,
+                                      const char *address,
+                                      qd_router_route_hook_t  forwarder,
+                                      void *context);
+
 #endif
