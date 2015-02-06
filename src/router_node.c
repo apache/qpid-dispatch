@@ -802,7 +802,6 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
     sys_mutex_lock(router->lock);
     qd_router_link_t *clink = rlink->connected_link;
     if (clink) {
-        pn_link_flow(pn_link, 1); // TODO - remove this when link-propagation is complete
         router_do_link_route_LH(clink, delivery, msg);
         sys_mutex_unlock(router->lock);
         return;
@@ -1057,6 +1056,7 @@ typedef struct link_attach_t {
     char             *link_name;
     qd_direction_t    dir;
     qd_connection_t  *conn;
+    int               credit;
 } link_attach_t;
 
 ALLOC_DECLARE(link_attach_t);
@@ -1066,6 +1066,8 @@ ALLOC_DEFINE(link_attach_t);
 typedef struct link_event_t {
     qd_router_t      *router;
     qd_router_link_t *rlink;
+    int               credit;
+    bool              drain;
 } link_event_t;
 
 ALLOC_DECLARE(link_event_t);
@@ -1082,6 +1084,7 @@ typedef enum {
 static void qd_router_attach_routed_link(void *context, bool discard)
 {
     link_attach_t *la = (link_attach_t*) context;
+    printf("qd_router_attach_routed_link:  credit=%d\n", la->credit);
 
     if (!discard) {
         qd_link_t        *link  = qd_link(la->router->node, la->conn, la->dir, la->link_name);
@@ -1109,9 +1112,8 @@ static void qd_router_attach_routed_link(void *context, bool discard)
         pn_terminus_copy(qd_link_target(link), qd_link_remote_target(la->peer_qd_link));
 
         pn_link_open(qd_link_pn(link));
-
-        if (la->dir == QD_INCOMING)
-            pn_link_flow(qd_link_pn(link), 100);
+        if (la->credit > 0)
+            pn_link_flow(qd_link_pn(link), la->credit);
     }
 
     if (la->link_name)
@@ -1157,6 +1159,26 @@ static void qd_router_open_routed_link(void *context, bool discard)
 }
 
 
+static void qd_router_flow(void *context, bool discard)
+{
+    link_event_t *le = (link_event_t*) context;
+    printf("qd_router_flow\n");
+
+    if (!discard) {
+        qd_link_t *link    = le->rlink->link;
+        pn_link_t *pn_link = qd_link_pn(link);
+        int delta          = le->credit - pn_link_credit(pn_link);
+        printf("    delta=%d\n", delta);
+        if (delta > 0) {
+            pn_link_flow(pn_link, delta);
+            qd_link_activate(link);
+        }
+    }
+
+    free_link_event_t(le);
+}
+
+
 link_attach_result_t qd_router_link_route_LH(qd_router_t      *router,
                                              qd_router_link_t *rlink,
                                              const char       *term_addr,
@@ -1184,6 +1206,7 @@ link_attach_result_t qd_router_link_route_LH(qd_router_t      *router,
                 la->link_name    = strdup(pn_link_name(pn_link));
                 la->dir          = dir;
                 la->conn         = conn;
+                la->credit       = pn_link_credit(pn_link);
                 qd_connection_invoke_deferred(conn, qd_router_attach_routed_link, la);
             }
         } else if (DEQ_SIZE(addr->rnodes) > 0) {
@@ -1207,6 +1230,7 @@ link_attach_result_t qd_router_link_route_LH(qd_router_t      *router,
                     la->link_name    = strdup(pn_link_name(pn_link));
                     la->dir          = dir;
                     la->conn         = out_conn;
+                    la->credit       = pn_link_credit(pn_link);
                     qd_connection_invoke_deferred(out_conn, qd_router_attach_routed_link, la);
                 }
             }
@@ -1294,7 +1318,6 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
         // We routed the attach outbound.  Don't open the link back until
         // the downstream link is opened.
         //
-        pn_link_flow(pn_link, 1000);  // TODO - remove this when flow propagation is complete
         break;
     }
 
@@ -1497,14 +1520,51 @@ static int router_link_attach_handler(void* context, qd_link_t *link)
 
     if (peer_rlink) {
         qd_connection_t *out_conn = qd_link_connection(peer_rlink->link);
-        link_event_t    *le       = new_link_event_t();
-
-        le->router = router;
-        le->rlink  = peer_rlink;
-
-        qd_connection_invoke_deferred(out_conn, qd_router_open_routed_link, le);
+        if (out_conn) {
+            link_event_t *le = new_link_event_t();
+            le->router = router;
+            le->rlink  = peer_rlink;
+            qd_connection_invoke_deferred(out_conn, qd_router_open_routed_link, le);
+        }
     }
     
+    return 0;
+}
+
+
+/**
+ * Handler for flow events on links
+ */
+static int router_link_flow_handler(void* context, qd_link_t *link)
+{
+    qd_router_t      *router     = (qd_router_t*) context;
+    qd_router_link_t *rlink      = (qd_router_link_t*) qd_link_get_context(link);
+    pn_link_t        *pn_link    = qd_link_pn(link);
+    qd_router_link_t *peer_rlink = rlink->connected_link;
+
+    if (peer_rlink == 0)
+        return 0;
+
+    qd_connection_t *out_conn = qd_link_connection(peer_rlink->link);
+    if (out_conn) {
+        if (rlink->link_direction == QD_OUTGOING) {
+            //
+            // Outgoing link handling
+            //
+            link_event_t *le = new_link_event_t();
+            le->router = router;
+            le->rlink  = peer_rlink;
+            le->credit = pn_link_remote_credit(pn_link) - DEQ_SIZE(rlink->msg_fifo);
+            le->drain  = false;
+
+            qd_connection_invoke_deferred(out_conn, qd_router_flow, le);
+        } else {
+            //
+            // Incoming link handling
+            //
+        }
+    }
+
     return 0;
 }
 
@@ -1527,11 +1587,13 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
 
     if (rlink->connected_link) {
         qd_connection_t *out_conn = qd_link_connection(rlink->connected_link->link);
-        link_event_t    *le       = new_link_event_t();
-        le->router  = router;
-        le->rlink   = rlink->connected_link;
-        rlink->connected_link->connected_link = 0;
-        qd_connection_invoke_deferred(out_conn, qd_router_detach_routed_link, le);
+        if (out_conn) {
+            link_event_t *le = new_link_event_t();
+            le->router = router;
+            le->rlink  = rlink->connected_link;
+            rlink->connected_link->connected_link = 0;
+            qd_connection_invoke_deferred(out_conn, qd_router_detach_routed_link, le);
+        }
     }
 
     //
@@ -1730,6 +1792,7 @@ static qd_node_type_t router_node = {"router", 0, 0,
                                      router_writable_link_handler,
                                      router_link_detach_handler,
                                      router_link_attach_handler,
+                                     router_link_flow_handler,
                                      0,   // node_created_handler
                                      0,   // node_destroyed_handler
                                      router_inbound_open_handler,

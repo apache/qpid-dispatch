@@ -109,6 +109,9 @@ typedef struct {
     /** Invoked when a link we created was opened by the peer */
     qd_container_link_handler_t link_attach_handler;
 
+    /** Invoked when a link receives a flow event */
+    qd_container_link_handler_t link_flow_handler;
+
     /** @name Node-Type Handlers
      * @{
      */

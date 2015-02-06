@@ -45,6 +45,15 @@ The following Capability values are used in Sources and Targets.
   | qd.router | This capability is added to sources and targets that are used for inter-router message exchange. |
 
 
+## Dynamic-Node-Properties
+
+The following dynamic-node-properties are used by Dispatch in Sources.
+
+  | *Property* | *Description* |
+  |------------|---------------|
+  | x-opt-qd.address | The node address describing the destination desired for a dynamic source.  If this is absent, the router will terminate any dynamic receivers.  If this address is present, the router will use the address to route the dynamic link attach to the proper destination container. |
+
+
 ## Addresses and Address Formats
 
 The following AMQP addresses and address patterns are used within Dispatch Router.
