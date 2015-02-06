@@ -1511,10 +1511,11 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
  */
 static int router_link_attach_handler(void* context, qd_link_t *link)
 {
-    qd_router_t      *router     = (qd_router_t*) context;
-    qd_router_link_t *rlink      = (qd_router_link_t*) qd_link_get_context(link);
-    qd_router_link_t *peer_rlink = rlink->connected_link;
+    qd_router_t      *router = (qd_router_t*) context;
+    qd_router_link_t *rlink  = (qd_router_link_t*) qd_link_get_context(link);
 
+    sys_mutex_lock(router->lock);
+    qd_router_link_t *peer_rlink = rlink->connected_link;
     if (peer_rlink) {
         qd_connection_t *out_conn = qd_link_connection(peer_rlink->link);
         if (out_conn) {
@@ -1524,6 +1525,7 @@ static int router_link_attach_handler(void* context, qd_link_t *link)
             qd_connection_invoke_deferred(out_conn, qd_router_open_routed_link, le);
         }
     }
+    sys_mutex_unlock(router->lock);
     
     return 0;
 }
@@ -1537,33 +1539,35 @@ static int router_link_flow_handler(void* context, qd_link_t *link)
     qd_router_t      *router     = (qd_router_t*) context;
     qd_router_link_t *rlink      = (qd_router_link_t*) qd_link_get_context(link);
     pn_link_t        *pn_link    = qd_link_pn(link);
+
+    sys_mutex_lock(router->lock);
     qd_router_link_t *peer_rlink = rlink->connected_link;
 
-    if (peer_rlink == 0)
-        return 0;
-
-    qd_connection_t *out_conn = qd_link_connection(peer_rlink->link);
-    if (out_conn) {
-        if (rlink->link_direction == QD_OUTGOING) {
-            //
-            // Outgoing link handling
-            //
-            int credit = pn_link_remote_credit(pn_link) - DEQ_SIZE(rlink->msg_fifo);
-            if (credit > 0) {
-                link_event_t *le = new_link_event_t();
-                le->router = router;
-                le->rlink  = peer_rlink;
-                le->credit = credit;
-                le->drain  = false;
-                qd_connection_invoke_deferred(out_conn, qd_router_flow, le);
+    if (peer_rlink) {
+        qd_connection_t *out_conn = qd_link_connection(peer_rlink->link);
+        if (out_conn) {
+            if (rlink->link_direction == QD_OUTGOING) {
+                //
+                // Outgoing link handling
+                //
+                int credit = pn_link_remote_credit(pn_link) - DEQ_SIZE(rlink->msg_fifo);
+                if (credit > 0) {
+                    link_event_t *le = new_link_event_t();
+                    le->router = router;
+                    le->rlink  = peer_rlink;
+                    le->credit = credit;
+                    le->drain  = false;
+                    qd_connection_invoke_deferred(out_conn, qd_router_flow, le);
+                }
+            } else {
+                //
+                // Incoming link handling
+                //
             }
-        } else {
-            //
-            // Incoming link handling
-            //
         }
     }
 
+    sys_mutex_unlock(router->lock);
     return 0;
 }
 
