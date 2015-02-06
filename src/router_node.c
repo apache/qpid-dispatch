@@ -1548,13 +1548,15 @@ static int router_link_flow_handler(void* context, qd_link_t *link)
             //
             // Outgoing link handling
             //
-            link_event_t *le = new_link_event_t();
-            le->router = router;
-            le->rlink  = peer_rlink;
-            le->credit = pn_link_remote_credit(pn_link) - DEQ_SIZE(rlink->msg_fifo);
-            le->drain  = false;
-
-            qd_connection_invoke_deferred(out_conn, qd_router_flow, le);
+            int credit = pn_link_remote_credit(pn_link) - DEQ_SIZE(rlink->msg_fifo);
+            if (credit > 0) {
+                link_event_t *le = new_link_event_t();
+                le->router = router;
+                le->rlink  = peer_rlink;
+                le->credit = credit;
+                le->drain  = false;
+                qd_connection_invoke_deferred(out_conn, qd_router_flow, le);
+            }
         } else {
             //
             // Incoming link handling
