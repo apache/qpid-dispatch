@@ -65,6 +65,8 @@ typedef enum {
 
 /** Message fields */
 typedef enum {
+    QD_FIELD_NONE,   // reserved
+
     //
     // Message Sections
     //
@@ -78,6 +80,7 @@ typedef enum {
 
     //
     // Fields of the Header Section
+    // Ordered by list position
     //
     QD_FIELD_DURABLE,
     QD_FIELD_PRIORITY,
@@ -87,6 +90,7 @@ typedef enum {
 
     //
     // Fields of the Properties Section
+    // Ordered by list position
     //
     QD_FIELD_MESSAGE_ID,
     QD_FIELD_USER_ID,
