@@ -1084,7 +1084,6 @@ typedef enum {
 static void qd_router_attach_routed_link(void *context, bool discard)
 {
     link_attach_t *la = (link_attach_t*) context;
-    printf("qd_router_attach_routed_link:  credit=%d\n", la->credit);
 
     if (!discard) {
         qd_link_t        *link  = qd_link(la->router->node, la->conn, la->dir, la->link_name);
@@ -1162,13 +1161,11 @@ static void qd_router_open_routed_link(void *context, bool discard)
 static void qd_router_flow(void *context, bool discard)
 {
     link_event_t *le = (link_event_t*) context;
-    printf("qd_router_flow\n");
 
     if (!discard) {
         qd_link_t *link    = le->rlink->link;
         pn_link_t *pn_link = qd_link_pn(link);
         int delta          = le->credit - pn_link_credit(pn_link);
-        printf("    delta=%d\n", delta);
         if (delta > 0) {
             pn_link_flow(pn_link, delta);
             qd_link_activate(link);
