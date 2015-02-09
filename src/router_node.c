@@ -1063,6 +1063,21 @@ ALLOC_DECLARE(link_attach_t);
 ALLOC_DEFINE(link_attach_t);
 
 
+#define COND_NAME_LEN        127
+#define COND_DESCRIPTION_LEN 511
+
+typedef struct link_detach_t {
+    qd_router_t      *router;
+    qd_router_link_t *rlink;
+    char              condition_name[COND_NAME_LEN + 1];
+    char              condition_description[COND_DESCRIPTION_LEN + 1];
+    pn_data_t        *condition_info;
+} link_detach_t;
+
+ALLOC_DECLARE(link_detach_t);
+ALLOC_DEFINE(link_detach_t);
+
+
 typedef struct link_event_t {
     qd_router_t      *router;
     qd_router_link_t *rlink;
@@ -1123,19 +1138,30 @@ static void qd_router_attach_routed_link(void *context, bool discard)
 
 static void qd_router_detach_routed_link(void *context, bool discard)
 {
-    link_event_t *le = (link_event_t*) context;
+    link_detach_t *ld = (link_detach_t*) context;
 
     if (!discard) {
-        qd_link_t *link = le->rlink->link;
+        qd_link_t *link = ld->rlink->link;
+
+        if (ld->condition_name[0]) {
+            pn_condition_t *cond = pn_link_condition(qd_link_pn(link));
+            pn_condition_set_name(cond, ld->condition_name);
+            pn_condition_set_description(cond, ld->condition_description);
+            if (ld->condition_info)
+                pn_data_copy(pn_condition_info(cond), ld->condition_info);
+        }
+
         qd_link_close(link);
 
-        sys_mutex_lock(le->router->lock);
-        qd_entity_cache_remove(QD_ROUTER_LINK_TYPE, le->rlink);
-        DEQ_REMOVE(le->router->links, le->rlink);
-        sys_mutex_unlock(le->router->lock);
+        sys_mutex_lock(ld->router->lock);
+        qd_entity_cache_remove(QD_ROUTER_LINK_TYPE, ld->rlink);
+        DEQ_REMOVE(ld->router->links, ld->rlink);
+        sys_mutex_unlock(ld->router->lock);
     }
 
-    free_link_event_t(le);
+    if (ld->condition_info)
+        pn_data_free(ld->condition_info);
+    free_link_detach_t(ld);
 }
 
 
@@ -1520,6 +1546,7 @@ static int router_link_attach_handler(void* context, qd_link_t *link)
         qd_connection_t *out_conn = qd_link_connection(peer_rlink->link);
         if (out_conn) {
             link_event_t *le = new_link_event_t();
+            memset(le, 0, sizeof(link_event_t));
             le->router = router;
             le->rlink  = peer_rlink;
             qd_connection_invoke_deferred(out_conn, qd_router_open_routed_link, le);
@@ -1553,6 +1580,7 @@ static int router_link_flow_handler(void* context, qd_link_t *link)
                 int credit = pn_link_remote_credit(pn_link) - DEQ_SIZE(rlink->msg_fifo);
                 if (credit > 0) {
                     link_event_t *le = new_link_event_t();
+                    memset(le, 0, sizeof(link_event_t));
                     le->router = router;
                     le->rlink  = peer_rlink;
                     le->credit = credit;
@@ -1591,11 +1619,27 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
     if (rlink->connected_link) {
         qd_connection_t *out_conn = qd_link_connection(rlink->connected_link->link);
         if (out_conn) {
-            link_event_t *le = new_link_event_t();
-            le->router = router;
-            le->rlink  = rlink->connected_link;
+            link_detach_t *ld = new_link_detach_t();
+            memset(ld, 0, sizeof(link_detach_t));
+            ld->router = router;
+            ld->rlink  = rlink->connected_link;
+            pn_condition_t *cond = pn_link_remote_condition(qd_link_pn(link));
+            if (pn_condition_is_set(cond)) {
+                if (pn_condition_get_name(cond)) {
+                    strncpy(ld->condition_name, pn_condition_get_name(cond), COND_NAME_LEN);
+                    ld->condition_name[COND_NAME_LEN] = '\0';
+                }
+                if (pn_condition_get_description(cond)) {
+                    strncpy(ld->condition_description, pn_condition_get_description(cond), COND_DESCRIPTION_LEN);
+                    ld->condition_description[COND_DESCRIPTION_LEN] = '\0';
+                }
+                if (pn_condition_info(cond)) {
+                    ld->condition_info = pn_data(0);
+                    pn_data_copy(ld->condition_info, pn_condition_info(cond));
+                }
+            }
             rlink->connected_link->connected_link = 0;
-            qd_connection_invoke_deferred(out_conn, qd_router_detach_routed_link, le);
+            qd_connection_invoke_deferred(out_conn, qd_router_detach_routed_link, ld);
         }
     }
 
