@@ -151,6 +151,7 @@ class EnumType(Type):
 
 BUILTIN_TYPES = OrderedDict(
     (t.name, t) for t in [Type("string", str),
+                          Type("entityId", str),
                           Type("integer", int),
                           Type("list", list),
                           Type("map", map),

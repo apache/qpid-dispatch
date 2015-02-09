@@ -397,7 +397,6 @@ class ManagementTest(system_test.TestCase):
             self.assertEqual(attrs['name'], 'router.node/%s' % name)
             self.assertEqual(attrs['type'], 'org.apache.qpid.dispatch.router.node')
             self.assertEqual(attrs['address'], 'amqp:/_topo/0/%s' % name)
-            self.assertEqual(attrs['addr'], 'R%s' % name)
             return name
 
         self.assertEqual(set(["router1", "router2"]), set([check(n) for n in rnode_lists[0]]))

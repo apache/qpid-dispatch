@@ -55,11 +55,6 @@ static const char *address_key(qd_address_t *addr) {
     return addr && addr->hash_handle ? (const char*) qd_hash_key_by_handle(addr->hash_handle) : NULL;
 }
 
-static const char *address_router_id(qd_address_t *addr) {
-    const char* key = address_key(addr);
-    return key && key[0] == 'R' ? key+1 : "";
-}
-
 qd_error_t qd_entity_refresh_router_address(qd_entity_t* entity, void *impl) {
     qd_address_t *addr     = (qd_address_t*) impl;
     uint32_t      subCount = DEQ_SIZE(addr->rlinks);
@@ -77,26 +72,6 @@ qd_error_t qd_entity_refresh_router_address(qd_entity_t* entity, void *impl) {
     )
         return QD_ERROR_NONE;
     return qd_error_code();
-}
-
-#define CHECK(err) if (err != 0) return qd_error_code()
-
-qd_error_t qd_entity_refresh_router_node(qd_entity_t* entity, void *impl) {
-    qd_router_node_t *rnode = (qd_router_node_t*) impl;
-
-    CHECK(qd_entity_set_string(entity, "routerId", address_router_id(rnode->owning_addr)));
-    CHECK(qd_entity_set_string(entity, "addr", address_key(rnode->owning_addr)));
-    long next_hop = rnode->next_hop ? rnode->next_hop->mask_bit : 0;
-    CHECK(qd_entity_set_stringf(entity, "nextHop", "%ld", rnode->next_hop ? next_hop : 0));
-    long router_link = rnode->peer_link ? rnode->peer_link->mask_bit : 0;
-    CHECK(qd_entity_set_stringf(entity, "routerLink", "%ld", rnode->peer_link ? router_link : 0));
-    CHECK(qd_entity_set_list(entity, "validOrigins"));
-    for (uint32_t bit = 1; bit < qd_bitmask_width(); bit++) {
-        if (qd_bitmask_value(rnode->valid_origins, bit)) {
-            CHECK(qd_entity_set_stringf(entity, "validOrigins", "%d", bit));
-        }
-    }
-    return QD_ERROR_NONE;
 }
 
 static const char *qd_link_type_names[] = { "endpoint", "waypoint", "inter-router", "inter-area" };

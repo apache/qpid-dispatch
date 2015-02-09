@@ -806,13 +806,9 @@
                     "description": "Address of the remote node",
                     "type": "string"
                 },
-                "addr": {
-                    "description": "Internal address key for the remote node",
-                    "type": "string"
-                },
                 "routerLink": {
                     "description": "Local link to remote node",
-                    "type": "string"
+                    "type": "entityId"
                 }
             }
         },

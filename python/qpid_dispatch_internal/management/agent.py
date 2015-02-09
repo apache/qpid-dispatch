@@ -114,8 +114,6 @@ class Implementation(object):
     def __init__(self, entity_type, key):
         self.entity_type, self.key = entity_type, key
 
-    def refresh(self): pass
-
 
 class CImplementation(Implementation):
     """Wrapper for a C implementation pointer"""
@@ -124,16 +122,16 @@ class CImplementation(Implementation):
         fname = "qd_entity_refresh_" + entity_type.short_name.replace('.', '_')
         self.refreshfn = qd.function(fname, c_long, [py_object, c_void_p])
 
-    def refresh(self, attributes):
+    def refresh_entity(self, attributes):
         return self.refreshfn(attributes, self.key) or True
 
 
 class PythonImplementation(Implementation):
     """Wrapper for a Python implementation object"""
     def __init__(self, entity_type, impl):
-        """impl.refresh(attributes) must be a valid function call"""
+        """impl.refresh_entity(attributes) must be a valid function call"""
         super(PythonImplementation, self).__init__(entity_type, id(impl))
-        self.refresh = impl.refresh
+        self.refresh_entity = impl.refresh_entity
 
 
 
@@ -176,7 +174,7 @@ class EntityAdapter(SchemaEntity):
     def _refresh(self):
         """Refresh self.attributes from implementation object(s)."""
         for impl in self._implementations:
-            impl.refresh(self.attributes)
+            impl.refresh_entity(self.attributes)
         return bool(self._implementations)
 
     def _add_implementation(self, impl):
@@ -306,8 +304,9 @@ class DummyEntity(EntityAdapter):
         return (OK, dict(**request.properties))
 
 
-class RouterLinkEntity(EntityAdapter): pass
-
+class RouterLinkEntity(EntityAdapter):
+    def _identifier(self):
+        return self.attributes.get('linkName')
 
 class RouterNodeEntity(EntityAdapter):
     def _identifier(self):
@@ -573,15 +572,15 @@ class Agent(object):
 
     def receive(self, request, link_id):
         """Called when a management request is received."""
+        def error(e, trace):
+            """Raise an error"""
+            self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
+            self.respond(request, e.status, e.description)
         # Coarse locking, handle one request at a time.
         with self.request_lock:
             try:
                 self.entities.refresh_from_c()
                 self.log(LOG_DEBUG, "Agent request %s on link %s"%(request, link_id))
-                def error(e, trace):
-                    """Raise an error"""
-                    self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
-                    self.respond(request, e.status, e.description)
                 status, body = self.handle(request)
                 self.respond(request, status=status, body=body)
             except ManagementError, e:

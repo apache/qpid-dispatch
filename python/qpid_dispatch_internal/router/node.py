@@ -363,8 +363,7 @@ class RouterNode(object):
         self.log(LOG_TRACE, "Node %s created: maskbit=%d" % (self.id, self.maskbit))
         self.adapter.get_agent().add_implementation(self, "router.node")
 
-    # FIXME aconway 2015-02-09: naming, refresh used for other purposes??
-    def refresh(self, attributes):
+    def refresh_entity(self, attributes):
         """Refresh management attributes"""
         attributes.update({
             "routerId": self.id,
@@ -372,7 +371,6 @@ class RouterNode(object):
             "linkState": [ls for ls in self.link_state.peers], # List of neighbour nodes
             "nextHop":  self.next_hop_router and self.next_hop_router.id,
             "validOrigins": self.valid_origins,
-            "addr": "R%s" % self.id, # FIXME aconway 2015-02-09: deprecate.
             "address": Address.topological(self.id, area=self.parent.container.area),
             "routerLink": self.peer_link_id
         })
