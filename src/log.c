@@ -254,7 +254,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         aprintf(&begin, end, "%s ", buf);
     }
     aprintf(&begin, end, "%s (%s) %s", entry->module, level->name, entry->text);
-    if (default_bool(log_source->source, default_log_source->source))
+    if (default_bool(log_source->source, default_log_source->source) && entry->file)
         aprintf(&begin, end, " (%s:%d)", entry->file, entry->line);
     aprintf(&begin, end, "\n");
 

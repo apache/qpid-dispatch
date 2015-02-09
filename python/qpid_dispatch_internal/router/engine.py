@@ -26,7 +26,7 @@ from node import NodeTracker
 from message import Message
 
 import sys
-import traceback
+from traceback import format_exc, extract_stack
 import time
 
 ##
@@ -95,10 +95,7 @@ class RouterEngine:
             if addr[0] in 'MC':
                 self.mobile_address_engine.add_local_address(addr)
         except Exception, e:
-            self.log_ma(LOG_ERROR, "Exception in new-address processing: exception=%r" % e)
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_tb(exc_traceback)
-
+            self.log_ma(LOG_ERROR, "Exception in new-address processing\n%s" % format_exc())
 
     def addressRemoved(self, addr):
         """
@@ -107,10 +104,7 @@ class RouterEngine:
             if addr[0] in 'MC':
                 self.mobile_address_engine.del_local_address(addr)
         except Exception, e:
-            self.log_ma(LOG_ERROR, "Exception in del-address processing: exception=%r" % e)
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_tb(exc_traceback)
-
+            self.log_ma(LOG_ERROR, "Exception in del-address processing\n%s" % format_exc())
 
     def linkLost(self, link_id):
         """
@@ -127,10 +121,7 @@ class RouterEngine:
             self.link_state_engine.tick(now)
             self.node_tracker.tick(now)
         except Exception, e:
-            self.log(LOG_ERROR, "Exception in timer processing: exception=%r" % e)
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_tb(exc_traceback)
-
+            self.log(LOG_ERROR, "Exception in timer processing\n%s" % format_exc())
 
     def handleControlMessage(self, opcode, body, link_id):
         """
@@ -168,10 +159,7 @@ class RouterEngine:
                 self.mobile_address_engine.handle_mar(msg, now)
 
         except Exception, e:
-            self.log(LOG_ERROR, "Exception in message processing: opcode=%s body=%r exception=%r" % (opcode, body, e))
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_tb(exc_traceback)
-
+            self.log(LOG_ERROR, "Control message error: opcode=%s body=%r\n%s" % (opcode, body, format_exc()))
 
     def receive(self, message, link_id):
         """
@@ -180,11 +168,8 @@ class RouterEngine:
         try:
             self.handleControlMessage(message.properties['opcode'], message.body, link_id)
         except Exception, e:
-            self.log(LOG_ERROR, "Exception in raw message processing: properties=%r body=%r exception=%r" %
-                     (message.properties, message.body, e))
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_tb(exc_traceback)
-
+            self.log(LOG_ERROR, "Exception in raw message processing: properties=%r body=%r\n%s" %
+                     (message.properties, message.body, format_exc()))
 
     def getRouterData(self, kind):
         """
@@ -212,7 +197,7 @@ class RouterEngine:
         """
         Emit a log message to the host's event log
         """
-        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        info = extract_stack(limit=2)[0] # Caller frame info
         self._log_general.log(level, text, info[0], info[1])
 
 
@@ -220,7 +205,7 @@ class RouterEngine:
         """
         Emit a log message to the host's event log
         """
-        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        info = extract_stack(limit=2)[0] # Caller frame info
         self._log_hello.log(level, text, info[0], info[1])
 
 
@@ -228,7 +213,7 @@ class RouterEngine:
         """
         Emit a log message to the host's event log
         """
-        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        info = extract_stack(limit=2)[0] # Caller frame info
         self._log_ls.log(level, text, info[0], info[1])
 
 
@@ -236,7 +221,7 @@ class RouterEngine:
         """
         Emit a log message to the host's event log
         """
-        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        info = extract_stack(limit=2)[0] # Caller frame info
         self._log_ma.log(level, text, info[0], info[1])
 
 
