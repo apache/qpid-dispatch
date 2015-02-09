@@ -485,7 +485,8 @@
                 },
                 "area": {
                     "type": "string",
-                    "description": "Unused placeholder."
+                    "description": "Unused placeholder.",
+                    "default": 0
                 },
                 "helloInterval": {
                     "type": "integer",
@@ -782,16 +783,37 @@
             "extends": "operationalEntity",
             "attributes": {
                 "routerId": {
-                    "description": "Router ID of the remote router",
+                    "description": "Remote node identifier.",
+                    "type": "string"
+                },
+                "instance": {
+                    "description": "Remote node boot number.",
+                    "type": "integer"
+                },
+                "linkState": {
+                    "description": "List of remote node's neighbours.",
+                    "type": "list"
+                },
+                "nextHop": {
+                    "description": "Neighbour ID of next hop to remote node from here.",
+                    "type": "string"
+                },
+                "validOrigins": {
+                    "description": "List of valid origin nodes for messages arriving via the remote node, used for duplicate elimination in redundant networks.",
+                    "type": "list"
+                },
+                "address": {
+                    "description": "Address of the remote node",
                     "type": "string"
                 },
                 "addr": {
-                    "description": "Address key of the remote router",
+                    "description": "Internal address key for the remote node",
                     "type": "string"
                 },
-                "nextHop": {"type": "integer", "update": "automatic"},
-                "routerLink": {"type": "integer", "update": "automatic"},
-                "validOrigins": {"type": "list", "update": "automatic"}
+                "routerLink": {
+                    "description": "Local link to remote node",
+                    "type": "string"
+                }
             }
         },
 

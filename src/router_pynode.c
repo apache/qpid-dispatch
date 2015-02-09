@@ -118,8 +118,6 @@ static PyObject *qd_add_router(PyObject *self, PyObject *args)
         //
         router->routers_by_mask_bit[router_maskbit] = rnode;
 
-        qd_entity_cache_add(QD_ROUTER_NODE_TYPE, rnode);
-
         sys_mutex_unlock(router->lock);
     } while (0);
 
@@ -161,7 +159,6 @@ static PyObject* qd_del_router(PyObject *self, PyObject *args)
         assert(oaddr);
 
         qd_entity_cache_remove(QD_ROUTER_ADDRESS_TYPE, oaddr);
-        qd_entity_cache_remove(QD_ROUTER_NODE_TYPE, rnode);
 
         //
         // Unlink the router node from the address record

@@ -18,5 +18,6 @@
 #
 
 from .engine import RouterEngine
+from address import Address
 
-__all__ = ["RouterEngine"]
+__all__ = ["RouterEngine", "Address"]

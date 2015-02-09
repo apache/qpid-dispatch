@@ -27,6 +27,7 @@ LOG_NOTICE   = 8
 LOG_WARNING  = 16
 LOG_ERROR    = 32
 LOG_CRITICAL = 64
+LOG_STACK_LIMIT = 8
 
 class LogAdapter:
   def __init__(self, mod_name):

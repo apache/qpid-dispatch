@@ -84,7 +84,6 @@ qd_error_t qd_entity_refresh_router_address(qd_entity_t* entity, void *impl) {
 qd_error_t qd_entity_refresh_router_node(qd_entity_t* entity, void *impl) {
     qd_router_node_t *rnode = (qd_router_node_t*) impl;
 
-    /* FIXME aconway 2015-01-29: Fix all "identity settings in C" */
     CHECK(qd_entity_set_string(entity, "routerId", address_router_id(rnode->owning_addr)));
     CHECK(qd_entity_set_string(entity, "addr", address_key(rnode->owning_addr)));
     long next_hop = rnode->next_hop ? rnode->next_hop->mask_bit : 0;

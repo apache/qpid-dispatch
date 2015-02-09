@@ -722,6 +722,8 @@ static void qd_python_setup(void)
         qd_register_constant(m, "LOG_ERROR",    QD_LOG_ERROR);
         qd_register_constant(m, "LOG_CRITICAL", QD_LOG_CRITICAL);
 
+        qd_register_constant(m, "LOG_STACK_LIMIT", 8); /* Limit stack traces for logging. */
+
         PyTypeObject *ioaType = &IoAdapterType;
         Py_INCREF(ioaType);
         PyModule_AddObject(m, "IoAdapter", (PyObject*) &IoAdapterType);

@@ -33,13 +33,13 @@ import time
 ## Import the Dispatch adapters from the environment.  If they are not found
 ## (i.e. we are in a test bench, etc.), load the stub versions.
 ##
-from dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_ERROR
+from dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_ERROR, LOG_STACK_LIMIT
 
 class RouterEngine:
     """
     """
 
-    def __init__(self, router_adapter, router_id, area_unused, max_routers, config_override={}):
+    def __init__(self, router_adapter, router_id, area, max_routers, config_override={}):
         """
         Initialize an instance of a router for a domain.
         """
@@ -59,6 +59,7 @@ class RouterEngine:
         self.max_routers    = max_routers
         self.id             = router_id
         self.instance       = long(time.time())
+        self.area           = area
         self.log(LOG_INFO, "Router Engine Instantiated: id=%s instance=%d max_routers=%d" %
                  (self.id, self.instance, self.max_routers))
 
@@ -95,7 +96,7 @@ class RouterEngine:
             if addr[0] in 'MC':
                 self.mobile_address_engine.add_local_address(addr)
         except Exception, e:
-            self.log_ma(LOG_ERROR, "Exception in new-address processing\n%s" % format_exc())
+            self.log_ma(LOG_ERROR, "Exception in new-address processing\n%s" % format_exc(LOG_STACK_LIMIT))
 
     def addressRemoved(self, addr):
         """
@@ -104,7 +105,7 @@ class RouterEngine:
             if addr[0] in 'MC':
                 self.mobile_address_engine.del_local_address(addr)
         except Exception, e:
-            self.log_ma(LOG_ERROR, "Exception in del-address processing\n%s" % format_exc())
+            self.log_ma(LOG_ERROR, "Exception in del-address processing\n%s" % format_exc(LOG_STACK_LIMIT))
 
     def linkLost(self, link_id):
         """
@@ -121,7 +122,7 @@ class RouterEngine:
             self.link_state_engine.tick(now)
             self.node_tracker.tick(now)
         except Exception, e:
-            self.log(LOG_ERROR, "Exception in timer processing\n%s" % format_exc())
+            self.log(LOG_ERROR, "Exception in timer processing\n%s" % format_exc(LOG_STACK_LIMIT))
 
     def handleControlMessage(self, opcode, body, link_id):
         """
@@ -159,7 +160,7 @@ class RouterEngine:
                 self.mobile_address_engine.handle_mar(msg, now)
 
         except Exception, e:
-            self.log(LOG_ERROR, "Control message error: opcode=%s body=%r\n%s" % (opcode, body, format_exc()))
+            self.log(LOG_ERROR, "Control message error: opcode=%s body=%r\n%s" % (opcode, body, format_exc(LOG_STACK_LIMIT)))
 
     def receive(self, message, link_id):
         """
@@ -169,7 +170,7 @@ class RouterEngine:
             self.handleControlMessage(message.properties['opcode'], message.body, link_id)
         except Exception, e:
             self.log(LOG_ERROR, "Exception in raw message processing: properties=%r body=%r\n%s" %
-                     (message.properties, message.body, format_exc()))
+                     (message.properties, message.body, format_exc(LOG_STACK_LIMIT)))
 
     def getRouterData(self, kind):
         """

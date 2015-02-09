@@ -163,11 +163,9 @@ class QdManage():
 
     def json_arg(self, value):
         try:
-            print "FIXME"  , value, json.loads(value)
             return json.loads(value)
         except ValueError, e:
             if not re.search(r'["{}\[\]]', value): # Doesn't look like attempted JSON.
-                print "FIXME as string"  , value
                 return value    # Just treat as plain string
             raise ValueError("Invalid JSON '%s': %s" % (value, e))
 

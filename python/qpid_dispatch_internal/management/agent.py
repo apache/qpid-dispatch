@@ -17,38 +17,56 @@
 # under the License
 #
 
-"""
-Python agent for dispatch router.
+"""Agent implementing the server side of the AMQP management protocol.
 
-Implements the server side of the AMQP management protocol for the dispatch router.
-Manages a set of manageable Entities that can be Created, Read, Updated and Deleted.
-Entity types are described by the schema in qdrouter.json.
+Adapter layer between external attribute-value maps sent/received via the AMQP
+management protocol and implementation objects (C or python) of the dispatch
+router. Entity types are as described in qdrouter.json schema. Reading
+configuration files is treated as a set of CREATE operations.
 
-HOW IT WORKS:
+Maintains a set of L{EntityAdapter} that hold attribute maps reflecting the last
+known attribute values of the implementation objects. Delegates management
+operations to the correct adapter.
 
-There are 3 types of entity:
-1 .Entities created via this agent, e.g. configuration entities.
-   Attributes are pushed into C code and cached by the agent.
-2. Entities created in C code and registered with the agent.
-   Attributes are pulled from C code before handling an operation.
-3. Combined: created as 1. and later registered via 2.
-   Attributes pulled from C overide the initial attributes.
+EntityAdapters are created/deleted in two ways:
 
-THREAD SAFETY:
+- Externally by CREATE/DELETE operations (or loading config file)
+- Internally by creation or deletion of corresponding implementation object.
 
-The agent is always driven by requests arriving in connection threads.
-Handling requests is serialized.
+Memory managment: The implementation is reponsible for informing the L{Agent}
+when an implementation object is created and *before* it is deleted in the case
+of a C object.
 
-Adding/removing/updating entities from C:
-- C code registers add/remove of C entities in a thread safe C cache.
-- Before handling an operation, the agent:
-  1. locks the router
-  2. flushes the add/remove cache and adds/removes entities in python cache.
-  3. updates *all* known entites with a C implementation.
-  4. unlocks the router.
+EntityAdapters can:
+
+- Receive attribute maps via CREATE or UPDATE operations (reading configuration
+  files is treated as a set of CREATE operations) and set configuration in the
+  implementation objects.
+
+- Refresh the adapters attribute map to reflect the current state of the
+  implementation objects, to respond to READ or QUERY operations with up-to-date values.
+
+To avoid confusion the term "update" is only used for the EntityAdapter updating
+the implementation object. The term "refresh" is used for the EntityAdapter
+getting current information from the implementation object.
+
+## Threading:
+
+The agent is locked to be thread safe, called in the following threads:
+- Reading configuration file in initialization thread (no contention).
+- Management requests arriving in multiple, concurrent connection threads.
+- Implementation objects created/deleted in multiple, concurrent connection threads.
+
+When refreshing attributes, the agent must also read C implementation object
+data that may be updated in other threads.
+
+# FIXME aconway 2015-02-09:
+Temporary solution is to lock the entire dispatch router lock during full refresh.
+Better solution coming soon...
 """
 
 import traceback, json
+from collections import namedtuple
 from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
@@ -60,6 +78,7 @@ from qpid_dispatch.management.entity import camelcase
 from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema
 from ..router.message import Message
+from ..router.address import Address
 
 
 def dictstr(d):
@@ -76,6 +95,7 @@ def not_implemented(operation, entity_type):
     """Raise NOT_IMPLEMENTED exception"""
     raise NotImplementedStatus("Operation '%s' not implemented on %s"  % (operation, entity_type))
 
+
 class AtomicCount(object):
     """Simple atomic counter"""
     def __init__(self, count=0):
@@ -88,23 +108,53 @@ class AtomicCount(object):
             self.count += 1
             return n
 
-class AgentEntity(SchemaEntity):
+
+class Implementation(object):
+    """Abstract implementation wrapper"""
+    def __init__(self, entity_type, key):
+        self.entity_type, self.key = entity_type, key
+
+    def refresh(self): pass
+
+
+class CImplementation(Implementation):
+    """Wrapper for a C implementation pointer"""
+    def __init__(self, qd, entity_type, pointer):
+        super(CImplementation, self).__init__(entity_type, pointer)
+        fname = "qd_entity_refresh_" + entity_type.short_name.replace('.', '_')
+        self.refreshfn = qd.function(fname, c_long, [py_object, c_void_p])
+
+    def refresh(self, attributes):
+        return self.refreshfn(attributes, self.key) or True
+
+
+class PythonImplementation(Implementation):
+    """Wrapper for a Python implementation object"""
+    def __init__(self, entity_type, impl):
+        """impl.refresh(attributes) must be a valid function call"""
+        super(PythonImplementation, self).__init__(entity_type, id(impl))
+        self.refresh = impl.refresh
+
+
+
+class EntityAdapter(SchemaEntity):
     """
     Base class for agent entities with operations as well as attributes.
     """
 
-    def __init__(self, agent, entity_type, attributes, validate=True):
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
         """
         @para agent: Containing L{Agent}
         @param entity_type: L{EntityType}
         @param attributes: Attribute name:value map
         @param validate: If true, validate the entity.
         """
-        super(AgentEntity, self).__init__(entity_type, attributes, validate=validate)
+        super(EntityAdapter, self).__init__(entity_type, attributes or {}, validate=validate)
         # Direct __dict__ access to avoid validation as schema attributes
         self.__dict__['_agent'] = agent
         self.__dict__['_qd'] = agent.qd
         self.__dict__['_dispatch'] = agent.dispatch
+        self.__dict__['_implementations'] = []
 
     def validate(self, **kwargs):
         """Set default identity and name if not already set, then do schema validation"""
@@ -112,7 +162,7 @@ class AgentEntity(SchemaEntity):
         if not identity:
             self.attributes["identity"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
         self.attributes.setdefault('name', self.attributes['identity'])
-        super(AgentEntity, self).validate(**kwargs)
+        super(EntityAdapter, self).validate(**kwargs)
 
     def _identifier(self):
         """
@@ -124,16 +174,14 @@ class AgentEntity(SchemaEntity):
         return str(counter.next())
 
     def _refresh(self):
-        """Refresh self.attributes from C implementation. No-op if no C impl pointer"""
-        return False # Replaced by _set_pointer
+        """Refresh self.attributes from implementation object(s)."""
+        for impl in self._implementations:
+            impl.refresh(self.attributes)
+        return bool(self._implementations)
 
-    def _set_pointer(self, pointer):
-        fname = "qd_entity_refresh_" + self.entity_type.short_name.replace('.', '_')
-        refreshfn = self._qd.function(fname, c_long, [py_object, c_void_p])
-        def _do_refresh():
-            refreshfn(self.attributes, pointer)
-            return True
-        self.__dict__['_refresh'] = _do_refresh
+    def _add_implementation(self, impl):
+        """Add an implementaiton object to use to refresh our attributes"""
+        self._implementations.append(impl)
 
     def create(self):
         """Subclasses can add extra create actions here"""
@@ -170,7 +218,8 @@ class AgentEntity(SchemaEntity):
         """Subclasses implement delete logic here"""
         pass
 
-class ContainerEntity(AgentEntity):
+
+class ContainerEntity(EntityAdapter):
 
     def create(self):
         self._qd.qd_dispatch_configure_container(self._dispatch, self)
@@ -179,12 +228,14 @@ class ContainerEntity(AgentEntity):
         self.attributes.setdefault("containerName", "00000000-0000-0000-0000-000000000000")
         return self.attributes["containerName"]
 
-class RouterEntity(AgentEntity):
+
+class RouterEntity(EntityAdapter):
     def __init__(self, agent, entity_type, attributes=None):
         super(RouterEntity, self).__init__(agent, entity_type, attributes, validate=False)
         # Router is a mix of configuration and operational entity.
-        # The "area" attribute is operational not configured.
-        self._set_pointer(self._dispatch)
+        # The statistics attributes are operational not configured.
+        self._add_implementation(
+            CImplementation(agent.qd, entity_type, self._dispatch))
 
     def _identifier(self): return self.attributes.get('routerId')
 
@@ -192,7 +243,8 @@ class RouterEntity(AgentEntity):
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
 
 
-class LogEntity(AgentEntity):
+class LogEntity(EntityAdapter):
+
     def __init__(self, agent, entity_type, attributes=None, validate=True):
         # Special defaults for DEFAULT module.
         if attributes.get("module") == "DEFAULT":
@@ -219,7 +271,7 @@ def _addr_port_identifier(entity):
     return "%s:%s" % (entity.attributes['addr'], entity.attributes['port'])
 
 
-class ListenerEntity(AgentEntity):
+class ListenerEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
@@ -227,70 +279,64 @@ class ListenerEntity(AgentEntity):
     def _identifier(self): return _addr_port_identifier(self)
 
 
-class ConnectorEntity(AgentEntity):
+class ConnectorEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_connector(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
     def _identifier(self): return _addr_port_identifier(self)
 
-class FixedAddressEntity(AgentEntity):
+class FixedAddressEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_address(self._dispatch, self)
 
 
-class WaypointEntity(AgentEntity):
+class WaypointEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_waypoint(self._dispatch, self)
         self._qd.qd_waypoint_activate_all(self._dispatch)
 
-class LinkRoutePatternEntity(AgentEntity):
+class LinkRoutePatternEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_lrp(self._dispatch, self)
 
 
-class DummyEntity(AgentEntity):
+class DummyEntity(EntityAdapter):
     def callme(self, request):
         return (OK, dict(**request.properties))
 
 
-class CEntity(AgentEntity):
-    """
-    Entity that is registered from C code rather than created via management.
-    """
-    def __init__(self, agent, entity_type, pointer, validate=True):
-        super(CEntity, self).__init__(agent, entity_type, {}, validate=False)
-        self._set_pointer(pointer)
-        self._refresh()
-        if validate: self.validate()
+class RouterLinkEntity(EntityAdapter): pass
 
 
-class RouterLinkEntity(CEntity): pass
-
-class RouterNodeEntity(CEntity):
+class RouterNodeEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('routerId')
 
-class RouterAddressEntity(CEntity):
+
+class RouterAddressEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('key')
 
-class ConnectionEntity(CEntity):
+
+class ConnectionEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('host')
 
 
-class AllocatorEntity(CEntity):
+class AllocatorEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('typeName')
 
+
 class EntityCache(object):
     """
-    Searchable cache of entities, can be refreshd from C attributes.
+    Searchable cache of entities, can be refreshed from implementation objects.
     """
+
     def __init__(self, agent):
         self.entities = []
-        self.pointers = {}
+        self.implementations = {}
         self.agent = agent
         self.qd = self.agent.qd
         self.schema = agent.schema
@@ -308,14 +354,24 @@ class EntityCache(object):
             if not isinstance(type, EntityType): type = self.schema.entity_type(type)
             return map(function, ifilter(lambda e: e.entity_type.is_a(type), self.entities))
 
-    def add(self, entity, pointer=None):
-        """Add an entity. Provide pointer if it is associated with a C entity"""
+    def add(self, entity):
+        """Add an entity to the agent"""
         self.log(LOG_DEBUG, "Add entity: %s" % entity)
         entity.validate()       # Fill in defaults etc.
         # Validate in the context of the existing entities for uniqueness
         self.schema.validate_full(chain(iter([entity]), iter(self.entities)))
         self.entities.append(entity)
-        if pointer: self.pointers[pointer] = entity
+
+    def _add_implementation(self, implementation):
+        """Create an adapter to wrap the implementation object and add it"""
+        cls = self.agent.entity_class(implementation.entity_type)
+        adapter = cls(self.agent, implementation.entity_type, validate=False)
+        self.implementations[implementation.key] = adapter
+        adapter._add_implementation(implementation)
+        adapter._refresh()
+        self.add(adapter)
+
+    def add_implementation(self, implementation): self._add_implementation(implementation)
 
     def _remove(self, entity):
         try:
@@ -327,15 +383,14 @@ class EntityCache(object):
     def remove(self, entity):
         self._remove(entity)
 
-    def remove_pointer(self, pointer):
-        self._remove_pointer(pointer)
-
-    def _remove_pointer(self, pointer):
-        if pointer in self.pointers:
-            entity = self.pointers[pointer]
-            del self.pointers[pointer]
+    def _remove_implementation(self, key):
+        if key in self.implementations:
+            entity = self.implementations[key]
+            del self.implementations[key]
             self._remove(entity)
 
+    def remove_implementation(self, key):
+        self._remove_implementation(key)
 
     def refresh_from_c(self):
         """Refresh entities from the C dispatch runtime"""
@@ -364,19 +419,17 @@ class EntityCache(object):
             remove_redundant(events)
             for action, type, pointer in events:
                 if action == REMOVE:
-                    self._remove_pointer(pointer)
+                    self._remove_implementation(pointer)
                 elif action == ADD:
                     entity_type = self.schema.entity_type(type)
-                    klass = self.agent.entity_class(entity_type)
-                    entity = klass(self.agent, entity_type, pointer)
-                    self.add(entity, pointer)
+                    self._add_implementation(CImplementation(self.qd, entity_type, pointer))
             # Refresh the entity values while the lock is still held.
             for e in self.entities: e._refresh()
         finally:
             self.qd.qd_entity_refresh_end()
             self.qd.qd_dispatch_router_unlock(self.agent.dispatch)
 
-class ManagementEntity(AgentEntity):
+class ManagementEntity(EntityAdapter):
     """An entity representing the agent itself. It is a singleton created by the agent."""
 
     def __init__(self, agent, entity_type, attributes, validate=True):
@@ -447,7 +500,7 @@ class ManagementEntity(AgentEntity):
         router = self._agent.entities.map_type(None, 'router')[0]
         area = router.attributes['area']
         def node_address(node):
-            return "amqp:/_topo/%s/%s/$management" % (area, node.attributes['addr'][1:])
+            return str(Address.topological(node.attributes['routerId'], "$management", area))
         return (OK, self._agent.entities.map_type(node_address, 'router.node'))
 
 
@@ -522,13 +575,13 @@ class Agent(object):
         """Called when a management request is received."""
         # Coarse locking, handle one request at a time.
         with self.request_lock:
-            self.entities.refresh_from_c()
-            self.log(LOG_DEBUG, "Agent request %s on link %s"%(request, link_id))
-            def error(e, trace):
-                """Raise an error"""
-                self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
-                self.respond(request, e.status, e.description)
             try:
+                self.entities.refresh_from_c()
+                self.log(LOG_DEBUG, "Agent request %s on link %s"%(request, link_id))
+                def error(e, trace):
+                    """Raise an error"""
+                    self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
+                    self.respond(request, e.status, e.description)
                 status, body = self.handle(request)
                 self.respond(request, status=status, body=body)
             except ManagementError, e:
@@ -595,9 +648,21 @@ class Agent(object):
         """Created via configuration file"""
         self._create(attributes)
 
-    def add_entity(self, entity): self.entities.add(entity)
+    def add_entity(self, entity):
+        """Add an entity adapter"""
+        self.entities.add(entity)
 
-    def remove(self, entity): self.entities.remove(entity)
+    def remove(self, entity):
+        self.entities.remove(entity)
+
+    def add_implementation(self, implementation, entity_type_name):
+        """Add an internal python implementation object, it will be wrapped with an entity adapter"""
+        self.entities.add_implementation(
+            PythonImplementation(self.entity_type(entity_type_name), implementation))
+
+    def remove_implementation(self, implementation):
+        """Remove and internal python implementation object."""
+        self.entities.remove_implementation(id(implementation))
 
     def find_entity(self, request):
         """Find the entity addressed by request"""

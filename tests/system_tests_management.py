@@ -23,7 +23,7 @@ import unittest, system_test, re, os, json, sys
 from qpid_dispatch.management import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.compat import OrderedDict, dictify
-from system_test import Qdrouterd, message, retry, wait_ports, Process
+from system_test import Qdrouterd, message, retry, retry_exception, wait_ports, Process
 from proton import ConnectionException
 from itertools import chain
 
@@ -52,10 +52,9 @@ class ManagementTest(system_test.TestCase):
     @classmethod
     def setUpClass(cls):
         super(ManagementTest, cls).setUpClass()
-        cls.all_routers = []
         # Stand-alone router
         conf0=Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'routerId': 'router0'}),
+            ('router', { 'mode': 'standalone', 'routerId': 'solo'}),
             ('listener', {'name': 'l0', 'port':cls.get_port(), 'role':'normal'}),
             # Extra listeners to exercise managment query
             ('listener', {'name': 'l1', 'port':cls.get_port(), 'role':'normal'}),
@@ -63,10 +62,16 @@ class ManagementTest(system_test.TestCase):
         ])
         cls._router = cls.tester.qdrouterd(config=conf0, wait=False)
 
-        # Pair of linked interior routers
+        # Trio of interior routers linked in a line so we can see some next-hop values.
+        conf0 = Qdrouterd.Config([
+            ('router', { 'mode': 'interior', 'routerId': 'router0'}),
+            ('listener', {'port':cls.get_port(), 'role':'normal'}),
+            ('listener', {'port':cls.get_port(), 'role':'inter-router'})
+        ])
         conf1 = Qdrouterd.Config([
             ('router', { 'mode': 'interior', 'routerId': 'router1'}),
             ('listener', {'port':cls.get_port(), 'role':'normal'}),
+            ('connector', {'port':conf0.sections('listener')[1]['port'], 'role':'inter-router'}),
             ('listener', {'port':cls.get_port(), 'role':'inter-router'})
         ])
         conf2 = Qdrouterd.Config([
@@ -74,7 +79,7 @@ class ManagementTest(system_test.TestCase):
             ('listener', {'port':cls.get_port(), 'role':'normal'}),
             ('connector', {'port':conf1.sections('listener')[1]['port'], 'role':'inter-router'})
         ])
-        cls._routers = [cls.tester.qdrouterd(config=c, wait=False) for c in [conf1, conf2]]
+        cls._routers = [cls.tester.qdrouterd(config=c, wait=False) for c in [conf0, conf1, conf2]]
 
         # Stand-alone router for logging tests (avoid interfering with logging for other tests.)
         conflog=Qdrouterd.Config([
@@ -95,8 +100,9 @@ class ManagementTest(system_test.TestCase):
         """Wait on demand and return the linked interior routers"""
         if not self._routers:
             self._routers = self.__class__._routers
-            self._routers[0].wait_router_connected('router2')
-            self._routers[1].wait_router_connected('router1')
+            self._routers[0].wait_router_connected('router1')
+            self._routers[1].wait_router_connected('router2')
+            self._routers[2].wait_router_connected('router0')
         return self._routers
 
     def setUp(self):
@@ -381,15 +387,25 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(router.addrCount, len([e for e in entities if e.type == ADDRESS]))
 
     def test_router_node(self):
-        """Test node entity in a pair of linked routers"""
+        """Test node entity in a trio of linked routers"""
         nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
-        rnodes = sum([n.query(type=NODE).get_entities() for n in nodes], [])
-        self.assertEqual(['Rrouter2', 'Rrouter1'], [r.addr for r in rnodes])
-        self.assertEqual(['router2', 'router1'], [r.routerId for r in rnodes])
-        self.assertEqual(['router.node/router2', 'router.node/router1'], [r.identity for r in rnodes])
-        self.assertEqual(['0', '0'], [r.nextHop for r in rnodes])
-        self.assertEqual([[], []], [r.validOrigins for r in rnodes])
+        rnode_lists = [n.query(type=NODE).get_dicts() for n in nodes]
 
+        def check(attrs):
+            name = attrs['routerId']
+            self.assertEqual(attrs['identity'], 'router.node/%s' % name)
+            self.assertEqual(attrs['name'], 'router.node/%s' % name)
+            self.assertEqual(attrs['type'], 'org.apache.qpid.dispatch.router.node')
+            self.assertEqual(attrs['address'], 'amqp:/_topo/0/%s' % name)
+            self.assertEqual(attrs['addr'], 'R%s' % name)
+            return name
+
+        self.assertEqual(set(["router1", "router2"]), set([check(n) for n in rnode_lists[0]]))
+        self.assertEqual(set(["router0", "router2"]), set([check(n) for n in rnode_lists[1]]))
+        self.assertEqual(set(["router1", "router0"]), set([check(n) for n in rnode_lists[2]]))
+
+    def test_entity_names(self):
+        nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
         # Test that all entities have a consitent identity format: type/name
         entities = list(chain(
             *[n.query(attribute_names=['type', 'identity', 'name']).iter_entities() for n in nodes]))
@@ -413,11 +429,15 @@ class ManagementTest(system_test.TestCase):
         """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""
         nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
         remotes = sum([n.get_mgmt_nodes() for n in nodes], [])
-        self.assertEqual([u'amqp:/_topo/0/router2/$management', u'amqp:/_topo/0/router1/$management'], remotes)
+        self.assertEqual(set([u'amqp:/_topo/0/router%s/$management' % i for i in [0, 1, 2]]),
+                         set(remotes))
+        self.assertEqual(6, len(remotes))
         # Query router2 indirectly via router1
         remote_url = Url(self.routers[0].addresses[0], path=Url(remotes[0]).path)
         remote = self.cleanup(Node(remote_url))
-        self.assertEqual(["router2"], [r.routerId for r in remote.query(type=ROUTER).get_entities()])
+        router_id = remotes[0].split("/")[3]
+        assert router_id in ['router1', 'router2']
+        self.assertEqual([router_id], [r.routerId for r in remote.query(type=ROUTER).get_entities()])
 
     def test_get_types(self):
         types = self.node.get_types()
