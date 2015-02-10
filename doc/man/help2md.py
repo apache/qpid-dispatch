@@ -27,7 +27,7 @@ or append it at the end if there is no # Options section.
 """
 
 import re, sys
-from qpid_dispatch_internal.compat.subproc import check_output, STDOUT
+from qpid_dispatch_internal.compat.subproc import check_output, STDOUT, CalledProcessError
 from os import path
 
 def help2md(help_out):
@@ -63,4 +63,10 @@ def main(argv):
     open(target, "w").write(upcase_md)
 
 if __name__ == "__main__":
-    main(sys.argv)
+    try:
+        main(sys.argv)
+    except CalledProcessError, e:
+        if hasattr(e, "output") and e.output:
+            print "\n%s\n\n%s\n" % (e, e.output)
+        raise
+

@@ -38,5 +38,7 @@ except ImportError:
         p = Popen(args, stdout=PIPE, stdin=stdin, stderr=stderr, shell=shell, universal_newlines=universal_newlines, **kwargs)
         out, err = p.communicate()
         if p.returncode:
-            raise CalledProcessError(p.returncode, args)
+            e = CalledProcessError(p.returncode, args)
+            e.output = err or out
+            raise e
         return out
