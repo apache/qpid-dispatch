@@ -1328,13 +1328,17 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
         pn_link_open(pn_link);
         break;
 
-    case LINK_ATTACH_NO_PATH:
+    case LINK_ATTACH_NO_PATH: {
         //
         // The link should be routable but there is no path to the
         // destination.  Close the link.
         //
+        pn_condition_t *cond = pn_link_condition(pn_link);
+        pn_condition_set_name(cond, "qd:no-route-to-dest");
+        pn_condition_set_description(cond, "No route to the destination node");
         pn_link_close(pn_link);
         break;
+    }
 
     case LINK_ATTACH_FORWARDED:
         //
@@ -1512,13 +1516,17 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
         pn_link_open(pn_link);
         break;
 
-    case LINK_ATTACH_NO_PATH:
+    case LINK_ATTACH_NO_PATH: {
         //
         // The link should be routable but there is no path to the
         // destination.  Close the link.
         //
+        pn_condition_t *cond = pn_link_condition(qd_link_pn(link));
+        pn_condition_set_name(cond, "qd:no-route-to-dest");
+        pn_condition_set_description(cond, "No route to the destination node");
         pn_link_close(pn_link);
         break;
+    }
 
     case LINK_ATTACH_FORWARDED:
         //
@@ -1637,6 +1645,9 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
                     ld->condition_info = pn_data(0);
                     pn_data_copy(ld->condition_info, pn_condition_info(cond));
                 }
+            } else if (!closed) {
+                strcpy(ld->condition_name, "qd:routed-link-lost");
+                strcpy(ld->condition_description, "Connectivity to the peer container was lost");
             }
             rlink->connected_link->connected_link = 0;
             qd_connection_invoke_deferred(out_conn, qd_router_detach_routed_link, ld);
