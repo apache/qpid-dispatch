@@ -626,7 +626,7 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
  * Note also that this function does not perform any message validation.  For link-routing,
  * there is no need to look into the transferred message.
  */
-static void router_do_link_route_LH(qd_router_link_t *peer_link, qd_delivery_t *delivery, qd_message_t *msg)
+static void router_link_route_delivery_LH(qd_router_link_t *peer_link, qd_delivery_t *delivery, qd_message_t *msg)
 {
     qd_routed_event_t *re = new_qd_routed_event_t();
 
@@ -802,7 +802,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
     sys_mutex_lock(router->lock);
     qd_router_link_t *clink = rlink->connected_link;
     if (clink) {
-        router_do_link_route_LH(clink, delivery, msg);
+        router_link_route_delivery_LH(clink, delivery, msg);
         sys_mutex_unlock(router->lock);
         return;
     }
@@ -1255,8 +1255,10 @@ link_attach_result_t qd_router_link_route_LH(qd_router_t      *router,
                     la->conn         = out_conn;
                     la->credit       = pn_link_credit(pn_link);
                     qd_connection_invoke_deferred(out_conn, qd_router_attach_routed_link, la);
-                }
-            }
+                } else
+                    return LINK_ATTACH_NO_PATH;
+            } else
+                return LINK_ATTACH_NO_PATH;
         } else
             return LINK_ATTACH_NO_PATH;
     } else
