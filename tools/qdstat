@@ -206,36 +206,24 @@ class BusManager(Node):
         heads.append(Header("router-id"))
         heads.append(Header("next-hop"))
         heads.append(Header("link"))
-        heads.append(Header("valid-origins"))
+        #heads.append(Header("neighbors"))
+        #heads.append(Header("valid-origins"))
         rows = []
 
         objects  = self.query('org.apache.qpid.dispatch.router.node')
-        attached = self.query('org.apache.qpid.dispatch.router')[0]
 
-        nodes = {}
-        for node in objects:
-            nodes[self._identity_clean(node.identity)] = node
-            node.addr = self._addr_text(node.addr)
-
-        rows.append([self._identity_clean(attached.identity), '-', '(self)', ''])
         for node in objects:
             row = []
-            row.append(node.addr)
-            if node.nextHop != None and node.nextHop in nodes:
-                row.append(nodes[node.nextHop].addr)
+            row.append(node.routerId)
+            if node.nextHop != None:
+                row.append(node.nextHop)
                 row.append('-')
             else:
                 row.append('-')
                 row.append(node.routerLink)
 
-            vo = None
-            for i in node.validOrigins:
-                if not vo:
-                    vo = ""
-                else:
-                    vo += ", "
-                vo += nodes[i].addr
-            row.append(vo)
+            #row.append('%r' % node.linkState)
+            #row.append('%r' % node.validOrigins)
             rows.append(row)
         title = "Router Nodes"
         sort = Sorter(heads, rows, 'router-id')

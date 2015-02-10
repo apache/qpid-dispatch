@@ -403,6 +403,7 @@ class RouterNode(object):
 
 
     def delete(self):
+        self.adapter.get_agent().remove_implementation(self)
         self.unmap_all_addresses()
         self.adapter.del_router(self.maskbit)
         self.parent._free_maskbit(self.maskbit)
