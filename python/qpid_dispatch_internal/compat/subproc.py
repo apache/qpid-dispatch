@@ -33,10 +33,10 @@ except ImportError:
         @return: stdout of command (mixed with stderr if stderr=STDOUT)
         @raise L{CalledProcessError}: If command returns non-0 exit status.
         """
-        if "stdoutxo" in kwargs:
+        if "stdout" in kwargs:
             raise ValueError("Must not specify stdout in check_output")
         p = Popen(args, stdout=PIPE, stdin=stdin, stderr=stderr, shell=shell, universal_newlines=universal_newlines, **kwargs)
         out, err = p.communicate()
         if p.returncode:
-            raise CalledProcessError(args, p.returncode, err or out)
+            raise CalledProcessError(args, p.returncode)
         return out
