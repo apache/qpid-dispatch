@@ -22,6 +22,7 @@ from distutils.core import setup
 from distutils.command.build_py import build_py
 from distutils.file_util import copy_file
 from os.path import join
+from os import environ
 
 """Install public packages and scripts for Qpid Dispatch."""
 
@@ -38,8 +39,14 @@ class BuildPy(build_py):
     def get_outputs(self, **kwargs):
         return build_py.get_outputs(self, **kwargs) + [join(self.build_lib, m) for m in self.MODULES]
 
-# Install public python modules in standard python locations.
+options={}
+destdir = environ.get("DESTDIR")
+if destdir:
+    options["install"] = {"root": destdir}
+
 setup(
+    options=options,
+
     name='qpid_dispatch',
     description='Apache Qpid Dispatch tools and libraries.',
     package_dir={'' : '${CMAKE_SOURCE_DIR}/python'},
