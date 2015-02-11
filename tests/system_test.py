@@ -56,7 +56,7 @@ import os, time, socket, random, subprocess, shutil, unittest, __main__, re
 from copy import copy
 import proton
 from proton import Message
-from qpid_dispatch.management import Node
+from qpid_dispatch.management.client import Node
 from run import with_valgrind
 
 # Optional modules

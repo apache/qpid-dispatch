@@ -21,7 +21,7 @@
 
 import sys, json, re
 import  qpid_dispatch_site
-from qpid_dispatch.management import Node, Url
+from qpid_dispatch.management.client import Node, Url
 from collections import Mapping, Sequence
 from optparse import OptionGroup
 from qpid_dispatch_internal.tools.command import OptionParser, Option, UsageError, connection_options, check_args, main

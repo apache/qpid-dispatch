@@ -20,7 +20,7 @@
 """System tests for management of qdrouter"""
 
 import unittest, system_test, re, os, json, sys
-from qpid_dispatch.management import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
+from qpid_dispatch.management.client import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.compat import OrderedDict, dictify
 from system_test import Qdrouterd, message, retry, retry_exception, wait_ports, Process

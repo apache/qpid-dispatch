@@ -17,5 +17,3 @@
 # under the License
 #
 """AMQP management client package."""
-
-from .client import *
