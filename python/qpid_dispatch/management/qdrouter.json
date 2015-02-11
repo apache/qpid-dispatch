@@ -739,7 +739,8 @@
                 "connector": {
                     "description":"The name of the on-demand connector used to reach the waypoint's container.",
                     "type": "string",
-                    "required": true,
+                    "required": false,
+                    "default": "",
                     "create": true
                 }
             }

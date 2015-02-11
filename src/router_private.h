@@ -176,6 +176,7 @@ struct qd_address_t {
     qd_address_t              *dynamic_cc;
     bool                       toggle;
     bool                       waypoint;
+    bool                       block_deletion;
 
     //
     // TODO - Add support for asynchronous address lookup:

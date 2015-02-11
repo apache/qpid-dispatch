@@ -166,7 +166,7 @@ void qd_router_check_addr(qd_router_t *router, qd_address_t *addr, int was_local
     //
     if (addr->handler == 0 &&
         DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->rnodes) == 0 &&
-        !addr->waypoint)
+        !addr->waypoint && !addr->block_deletion)
         to_delete = 1;
 
     //
