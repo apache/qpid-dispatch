@@ -304,9 +304,8 @@ class DummyEntity(EntityAdapter):
         return (OK, dict(**request.properties))
 
 
-class RouterLinkEntity(EntityAdapter):
-    def _identifier(self):
-        return self.attributes.get('linkName')
+class RouterLinkEntity(EntityAdapter): pass
+
 
 class RouterNodeEntity(EntityAdapter):
     def _identifier(self):
