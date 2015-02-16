@@ -57,7 +57,12 @@ from copy import copy
 import proton
 from proton import Message
 from qpid_dispatch.management.client import Node
-from run import with_valgrind
+try:
+    # NOTE: the tests can be run outside a build to test an installed dispatch.
+    # In this case we won't have access to the run.py module so no valgrind.
+    from run import with_valgrind
+except ImportError:
+    def with_valgrind(args, outfile): return args
 
 # Optional modules
 MISSING_MODULES = []
@@ -330,11 +335,13 @@ class Qdrouterd(Process):
         if not default_log:
             config.append(
                 ('log', {'module':'DEFAULT', 'enable':'trace+', 'source': 'true', 'output':name+'.log'}))
-        if not pyinclude and os.environ['QPID_DISPATCH_HOME']:
-            pyinclude = os.path.join(os.environ['QPID_DISPATCH_HOME'], 'python')
-        super(Qdrouterd, self).__init__(
-            ['qdrouterd', '-c', config.write(name), '-I', pyinclude],
-            name=name, expect=Process.RUNNING)
+        args = ['qdrouterd', '-c', config.write(name)]
+        env_home = os.environ.get('QPID_DISPATCH_HOME')
+        if pyinclude:
+            args += ['-I', pyinclude]
+        elif env_home:
+            args += ['-I', os.path.join(env_home, 'python')]
+        super(Qdrouterd, self).__init__(args, name=name, expect=Process.RUNNING)
         self._management = None
         self._wait_ready = False
         if wait:

@@ -20,6 +20,9 @@
 """
 Runs all scripts named system_tests_*.py in the same directory as this script.
 Note that each system test is an executable script, you can run them directly.
+
+Run without any environment settings, this will test a dispatch router installed in
+the standard system places. Use run.py or config.sh to run against dispatch build.
 """
 
 import os
