@@ -369,7 +369,7 @@ class Qdrouterd(Process):
     @property
     def addresses(self):
         """Return amqp://host:port addresses for all listeners"""
-        return ["amqp://%s:%s"%(l['addr'], l['port']) for l in self.config.sections('listener')]
+        return ["amqp://anonymous@%s:%s"%(l['addr'], l['port']) for l in self.config.sections('listener')]
 
     @property
     def hostports(self):
@@ -478,7 +478,7 @@ class Qpidd(Process):
     def wait_ready(self):
         wait_port(self.port)
 
-class Messenger(proton.Messenger): # pylint: disable=too-many-public-methods
+class Messenger(proton.Messenger):
     """Convenience additions to proton.Messenger"""
 
     def __init__(self, name=None, timeout=DEFAULT_TIMEOUT, blocking=True):

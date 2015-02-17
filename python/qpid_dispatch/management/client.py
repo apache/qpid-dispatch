@@ -86,13 +86,19 @@ class Node(object):
         self.name = self.identity = 'self'
         self.type = 'org.amqp.management' # AMQP management node type
         self.url = Url(url).defaults()
+
+        # Dispatch requires SASL, default to anonymous user to trigger ANONYMOUS mechanism.
+        # FIXME aconway 2015-02-17: this may change when proton SASL support is implemented.
+        if not self.url.username:
+            self.url.username = "anonymous"
+
         self.locales = locales
         if self.url.path is None:
             if router:
                 self.url.path = '_topo/0/%s/$management' % router
             else:
                 self.url.path = '$management'
-        connection = connection or BlockingConnection(url, timeout)
+        connection = connection or BlockingConnection(self.url, timeout)
         self.client = SyncRequestResponse(connection, self.url.path)
         self.reply_to = self.client.reply_to
 
