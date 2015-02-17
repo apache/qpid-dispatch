@@ -33,6 +33,7 @@
 static int            exit_with_sigint = 0;
 static qd_dispatch_t *dispatch = 0;
 static qd_log_source_t *log_source = 0;
+static const char* argv0 = 0;
 
 /**
  * The thread_start_handler is invoked once for each server thread at thread startup.
@@ -84,9 +85,7 @@ static void server_signal_handler(void* context, int signum)
 static void check(int fd) {
     if (qd_error_code()) {
         qd_log(log_source, QD_LOG_CRITICAL, "Router start-up failed: %s", qd_error_message());
-        if(write(fd, qd_error_message(), strlen(qd_error_message())));
-        char eos = '\0';
-        if(write(fd, &eos, 1));
+        dprintf(fd, "%s: %s\n", argv0, qd_error_message());
         close(fd);
         exit(1);
     }
@@ -94,7 +93,9 @@ static void check(int fd) {
 
 #define fail(fd, ...)                                   \
     do {                                                \
-        if (!qd_error_errno(errno, __VA_ARGS__))        \
+        if (errno)                                      \
+            qd_error_errno(errno, __VA_ARGS__);         \
+        else                                            \
             qd_error(QD_ERROR_RUNTIME, __VA_ARGS__);    \
         check(fd);                                      \
     } while(false)
@@ -103,7 +104,8 @@ static void main_process(const char *config_path, const char *python_pkgdir, int
 {
     qd_error_clear();
     struct stat st;
-    if (stat(python_pkgdir, &st)) fail(fd, "Cannot stat python library path '%s'", python_pkgdir);
+    if (stat(python_pkgdir, &st))
+        fail(fd, "Cannot find python library path '%s'", python_pkgdir);
     if (!S_ISDIR(st.st_mode)) {
         qd_error(QD_ERROR_RUNTIME, "Python library path '%s' not a directory", python_pkgdir);
         check(fd);
@@ -124,7 +126,7 @@ static void main_process(const char *config_path, const char *python_pkgdir, int
     signal(SIGTERM, signal_handler);
     signal(SIGINT,  signal_handler);
 
-    if (fd > 0) {
+    if (fd > 2) {               /* Daemon mode, fd is one end of a pipe not stdout or stderr */
         dprintf(fd, "ok"); // Success signal
         close(fd);
     }
@@ -245,7 +247,7 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
 
         if (strcmp(result, "ok") == 0)
             exit(0);
-        fprintf(stderr, "Daemon error: %s\n", result);
+        fprintf(stderr, "%s", result);
         exit(1);
     }
 }
@@ -266,6 +268,7 @@ void usage(char **argv) {
 
 int main(int argc, char **argv)
 {
+    argv0 = argv[0];
     const char *config_path   = DEFAULT_CONFIG_PATH;
     const char *python_pkgdir = DEFAULT_DISPATCH_PYTHON_DIR;
     const char *pidfile = 0;
@@ -328,9 +331,7 @@ int main(int argc, char **argv)
     if (daemon_mode)
         daemon_process(config_path, python_pkgdir, pidfile, user);
     else
-        main_process(config_path, python_pkgdir, -1);
+        main_process(config_path, python_pkgdir, 2);
 
     return 0;
 }
-
-
