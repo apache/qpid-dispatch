@@ -169,22 +169,37 @@ static void thread_process_listeners(qd_server_t *qd_server)
             }
 
             /* TODO aconway 2014-07-15: error handling on all calls. */
-            pn_ssl_domain_set_credentials(domain,
-                                          config->ssl_certificate_file,
-                                          config->ssl_private_key_file,
-                                          config->ssl_password);
+            // setup my identifying cert:
+            if (pn_ssl_domain_set_credentials(domain,
+                                              config->ssl_certificate_file,
+                                              config->ssl_private_key_file,
+                                              config->ssl_password)) {
+                qd_log(qd_server->log_source, QD_LOG_ERROR,
+                       "SSL configuration failed for connection %s", qdpn_connector_name(cxtr));
+            }
             if (config->ssl_allow_unsecured_client)
                 pn_ssl_domain_allow_unsecured_client(domain);
 
-            if (config->ssl_trusted_certificate_db)
-                pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db);
+            // for peer authentication:
+            if (config->ssl_trusted_certificate_db) {
+                if (pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db)) {
+                    qd_log(qd_server->log_source, QD_LOG_ERROR,
+                           "SSL CA configuration failed for connection %s", qdpn_connector_name(cxtr));
+                }
+            }
 
             const char *trusted = config->ssl_trusted_certificate_db;
             if (config->ssl_trusted_certificates)
                 trusted = config->ssl_trusted_certificates;
 
-            if (config->ssl_require_peer_authentication)
-                pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER, trusted);
+            // do we force the peer to send a cert?
+            if (config->ssl_require_peer_authentication) {
+                if (pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER, trusted)) {
+                    qd_log(qd_server->log_source, QD_LOG_ERROR,
+                           "SSL Authentication configuration failed for connection %s",
+                           qdpn_connector_name(cxtr));
+                }
+            }
 
             pn_ssl_t *ssl = pn_ssl(tport);
             pn_ssl_init(ssl, domain, 0);
@@ -737,13 +752,40 @@ static void cxtr_try_open(void *context)
             return;
         }
         /* TODO aconway 2014-07-15: error handling on all SSL calls. */
-        pn_ssl_domain_set_credentials(domain,
-                                      config->ssl_certificate_file,
-                                      config->ssl_private_key_file,
-                                      config->ssl_password);
 
-        if (config->ssl_require_peer_authentication)
-            pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER, config->ssl_trusted_certificate_db);
+        // set our trusted database for checking the peer's cert:
+        if (config->ssl_trusted_certificate_db) {
+            if (pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db)) {
+                qd_log(ct->server->log_source, QD_LOG_ERROR,
+                       "SSL CA configuration failed for %s:%s",
+                       ct->config->host, ct->config->port);
+            }
+        }
+        // should we force the peer to provide a cert?
+        if (config->ssl_require_peer_authentication) {
+            const char *trusted = (config->ssl_trusted_certificates)
+                ? config->ssl_trusted_certificates
+                : config->ssl_trusted_certificate_db;
+            if (pn_ssl_domain_set_peer_authentication(domain,
+                                                      PN_SSL_VERIFY_PEER,
+                                                      trusted)) {
+                qd_log(ct->server->log_source, QD_LOG_ERROR,
+                       "SSL peer auth configuration failed for %s:%s",
+                       ct->config->host, ct->config->port);
+            }
+        }
+
+        // configure our certificate if the peer requests one:
+        if (config->ssl_certificate_file) {
+            if (pn_ssl_domain_set_credentials(domain,
+                                              config->ssl_certificate_file,
+                                              config->ssl_private_key_file,
+                                              config->ssl_password)) {
+                qd_log(ct->server->log_source, QD_LOG_ERROR,
+                       "SSL local configuration failed for %s:%s",
+                       ct->config->host, ct->config->port);
+            }
+        }
 
         pn_ssl_t *ssl = pn_ssl(tport);
         pn_ssl_init(ssl, domain, 0);

@@ -71,7 +71,7 @@ static bool has_attrs(qd_entity_t *entity, const char **attributes, int n) {
 }
 
 static const char *ssl_attributes[] = {
-  "cert-db", "cert-file", "key-file", "password-file", "password"
+  "certDb", "certFile", "keyFile", "passwordFile", "password"
 };
 static const int ssl_attributes_count = sizeof(ssl_attributes)/sizeof(ssl_attributes[0]);
 
