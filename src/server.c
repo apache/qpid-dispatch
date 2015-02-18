@@ -21,6 +21,7 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/amqp.h>
+#include <qpid/dispatch/server.h>
 #include "entity.h"
 #include "entity_cache.h"
 #include "dispatch_private.h"
@@ -114,7 +115,9 @@ static void thread_process_listeners(qd_server_t *qd_server)
         if (!cxtr)
             continue;
 
-        qd_log(qd_server->log_source, QD_LOG_TRACE, "Accepting Connection from %s", qdpn_connector_name(cxtr));
+        qd_listener_t *qd_listener = qdpn_listener_context(listener);
+        qd_log(qd_server->log_source, QD_LOG_DEBUG, "Accepting Connection from %s on %s:%s",
+               qdpn_connector_name(cxtr), qd_listener->config->host, qd_listener->config->port);
         ctx = new_qd_connection_t();
         DEQ_ITEM_INIT(ctx);
         ctx->state        = CONN_STATE_OPENING;
@@ -122,7 +125,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         ctx->enqueued     = 0;
         ctx->pn_cxtr      = cxtr;
         ctx->collector    = 0;
-        ctx->listener     = (qd_listener_t*) qdpn_listener_context(listener);
+        ctx->listener     = qd_listener;
         ctx->connector    = 0;
         ctx->context      = ctx->listener->context;
         ctx->user_context = 0;
@@ -204,6 +207,10 @@ static void thread_process_listeners(qd_server_t *qd_server)
             pn_ssl_t *ssl = pn_ssl(tport);
             pn_ssl_init(ssl, domain, 0);
             pn_ssl_domain_free(domain);
+
+            qd_log(qd_server->log_source, QD_LOG_DEBUG, "Configured SSL from %s to %s:%s",
+               qdpn_connector_name(cxtr), qd_listener->config->host, qd_listener->config->port);
+
         }
 
         //

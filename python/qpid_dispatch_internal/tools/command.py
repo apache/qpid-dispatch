@@ -24,6 +24,12 @@ Utilities for command-line programs.
 import sys, json, optparse, os
 from collections import Sequence, Mapping
 from qpid_dispatch_site import VERSION
+from proton import SSLDomain
+try:
+    from proton.utils import SyncRequestResponse, BlockingConnection, SSLDomain
+except ImportError:
+    from qpid_dispatch_internal.proton_future.utils import SyncRequestResponse, BlockingConnection
+
 
 class UsageError(Exception):
     """
@@ -71,14 +77,29 @@ def connection_options(options, title="Connection Options"):
                      metavar="ROUTER-ID", help="Router to be queried")
     group.add_option("-t", "--timeout", action="store", type="float", default=5, metavar="SECS",
                       help="Maximum time to wait for connection in seconds (default %default)")
-    group.add_option("--sasl-mechanism", action="store", type="string", metavar="MECH",
-                      help="Force SASL mechanism (e.g. EXTERNAL, ANONYMOUS, PLAIN, CRAM-MD5, DIGEST-MD5, GSSAPI).")
     group.add_option("--ssl-certificate", action="store", type="string", metavar="CERT",
                      help="Client SSL certificate (PEM Format)")
     group.add_option("--ssl-key", action="store", type="string", metavar="KEY",
                      help="Client SSL private key (PEM Format)")
+    group.add_option("--ssl-trustfile", action="store", type="string", metavar="TRUSTED-CA-DB",
+                     help="Trusted Certificate Authority Database file (PEM Format)")
+    group.add_option("--ssl-password", action="store", type="string", metavar="TRUSTED-CA-DB",
+                     help="Certificate password, will be prompted if not specifed.")
     return group
 
+def ssl_domain(options, mode=SSLDomain.MODE_CLIENT):
+    """Return proton.SSLDomain from command line options or None if no SSL options specified.
+    @param options: Parsed optoins including connection_options()
+    """
+    certificate, key, trustfile, password = options.ssl_certificate, options.ssl_key, options.ssl_trustfile, options.ssl_password
+    if not (certificate or trustfile): return None
+    domain = SSLDomain(mode)
+    if trustfile:
+        domain.set_trusted_ca_db(trustfile)
+        domain.set_peer_authentication(SSLDomain.VERIFY_PEER, trustfile)
+    if certificate:
+        domain.set_credentials(certificate, key, password)
+    return domain
 
 class Option(optparse.Option):
     """Addes two new types to optparse.Option: json_map, json_list"""
