@@ -180,7 +180,6 @@ static void thread_process_listeners(qd_server_t *qd_server)
 
 #define ERROR(MSG) do {                                                 \
                 qd_log(qd_server->log_source, QD_LOG_ERROR, MSG FROM_TO); \
-                pn_ssl_domain_free(domain);                             \
                 goto ssl_error;                                         \
             } while(0)
 
