@@ -17,26 +17,54 @@
 # under the License
 #
 
+import os
 import re
 import system_test
 import unittest
 from subprocess import PIPE
+from proton import Url
 
 class QdstatTest(system_test.TestCase):
     """Test qdstat tool output"""
+
+    @staticmethod
+    def ssl_file(name):
+        return os.path.join(os.path.dirname(__file__), 'ssl_certs', name)
 
     @classmethod
     def setUpClass(cls):
         super(QdstatTest, cls).setUpClass()
         config = system_test.Qdrouterd.Config([
+            ('ssl-profile', {'name': 'server-ssl-strict',
+                             'cert-db': cls.ssl_file('ca-certificate.pem'),
+                             'cert-file': cls.ssl_file('server-certificate.pem'),
+                             'key-file': cls.ssl_file('server-private-key.pem'),
+                             'password': 'server-password',
+                             'allow-unsecured': False,
+                             'require-peer-auth': False}),
+            ('ssl-profile', {'name': 'server-ssl-unsecured',
+                             'cert-db': cls.ssl_file('ca-certificate.pem'),
+                             'cert-file': cls.ssl_file('server-certificate.pem'),
+                             'key-file': cls.ssl_file('server-private-key.pem'),
+                             'password': 'server-password',
+                             'allow-unsecured': True,
+                             'require-peer-auth': False}),
+            ('ssl-profile', {'name': 'server-ssl-auth',
+                             'cert-db': cls.ssl_file('ca-certificate.pem'),
+                             'cert-file': cls.ssl_file('server-certificate.pem'),
+                             'key-file': cls.ssl_file('server-private-key.pem'),
+                             'password': 'server-password',
+                             'allow-unsecured': False,
+                             'require-peer-auth': True}),
             ('listener', {'port': cls.tester.get_port()}),
+            ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-strict'}),
+            ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-unsecured'}),
+            ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-auth'})
         ])
         cls.router = cls.tester.qdrouterd('test-router', config)
 
-    def address(self): return self.router.hostports[0] # Overridden by subclasses
-
-    def run_qdstat(self, args, regexp=None):
-        p = self.popen(['qdstat', '--bus', self.address()] + args,
+    def run_qdstat(self, args, regexp=None, address=None):
+        p = self.popen(['qdstat', '--bus', str(address or self.router.addresses[0])] + args,
                        name='qdstat-'+self.id(), stdout=PIPE, expect=None)
         out = p.communicate()[0]
         assert p.returncode == 0, \
@@ -64,6 +92,59 @@ class QdstatTest(system_test.TestCase):
 
     def test_memory(self):
         self.run_qdstat(['--memory'], r'qd_address_t\s+[0-9]+')
+
+    def do_test(self, url, args):
+        # FIXME aconway 2015-02-18: shouldn't be timing out, should be rejected.
+        self.run_qdstat(['--general', '--timeout=0.5'] + args, 
+                        regexp=r'(?s)Router Statistics.*Mode\s*Standalone',
+                        address=str(url))
+
+    def test_ssl(self):
+        """
+        Test the matrix of dispatch and client SSL configuratoin and ensure we 
+        can/can't connect as expected.
+        """
+        trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')]
+        bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')]
+        client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')]
+        client_key = ['--ssl-key', self.ssl_file('client-private-key.pem')]
+        client_pass = ['--ssl-password', 'client-password']
+        client_cert_all = client_cert + client_key + client_pass
+
+        addrs = [self.router.addresses[i] for i in xrange(4)];
+        none, strict, unsecured, auth = addrs
+        none_s, strict_s, unsecured_s, auth_s = (Url(a, scheme="amqps") for a in addrs)
+
+        # Non-SSL enabled listener should fail SSL connections.
+        self.do_test(none, [])
+        self.assertRaises(AssertionError, self.do_test, none_s, [])
+        self.assertRaises(AssertionError, self.do_test, none, client_cert)
+
+        # Strict SSL listener, SSL only
+        self.assertRaises(AssertionError, self.do_test, strict, [])
+        self.do_test(strict_s, [])
+        self.do_test(strict_s, client_cert_all)
+        self.do_test(strict, client_cert_all)
+        self.do_test(strict, trustfile)
+        self.do_test(strict, trustfile + client_cert_all)
+        self.assertRaises(AssertionError, self.do_test, strict, bad_trustfile)
+
+        # Requre-auth SSL listener
+        self.assertRaises(AssertionError, self.do_test, auth, [])
+        self.assertRaises(AssertionError, self.do_test, auth_s, [])
+        self.assertRaises(AssertionError, self.do_test, auth, trustfile)
+        self.do_test(auth, client_cert_all)
+        self.do_test(auth, client_cert_all + trustfile)
+        self.assertRaises(AssertionError, self.do_test, auth, client_cert_all + bad_trustfile)
+
+        # Unsecured SSL listener, allows non-SSL
+        self.do_test(unsecured_s, [])
+        self.do_test(unsecured_s, client_cert_all)
+        self.do_test(unsecured_s, trustfile)
+        self.do_test(unsecured_s, client_cert_all + trustfile)
+        self.do_test(unsecured_s, [])
+        self.do_test(unsecured, []) # Allow unsecured
+        self.assertRaises(AssertionError, self.do_test, auth, client_cert_all + bad_trustfile)
 
 if __name__ == '__main__':
     unittest.main(system_test.main_module())

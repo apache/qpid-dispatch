@@ -21,6 +21,7 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/amqp.h>
+#include <qpid/dispatch/server.h>
 #include "entity.h"
 #include "entity_cache.h"
 #include "dispatch_private.h"
@@ -101,7 +102,6 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
 
 
 
-
 static void thread_process_listeners(qd_server_t *qd_server)
 {
     qdpn_driver_t    *driver = qd_server->driver;
@@ -114,7 +114,17 @@ static void thread_process_listeners(qd_server_t *qd_server)
         if (!cxtr)
             continue;
 
-        qd_log(qd_server->log_source, QD_LOG_TRACE, "Accepting Connection from %s", qdpn_connector_name(cxtr));
+        // Information for error messages
+        qd_listener_t *qd_listener = qdpn_listener_context(listener);
+        assert(qd_listener);
+        const char *cname = qdpn_connector_name(cxtr);
+        const char *host = qd_listener->config->host;
+        const char *port = qd_listener->config->port;
+        assert(cname && host && port);
+
+#define FROM_TO " connection from %s to %s:%s", cname, host, port
+
+        qd_log(qd_server->log_source, QD_LOG_DEBUG, "Accepting" FROM_TO);
         ctx = new_qd_connection_t();
         DEQ_ITEM_INIT(ctx);
         ctx->state        = CONN_STATE_OPENING;
@@ -122,7 +132,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         ctx->enqueued     = 0;
         ctx->pn_cxtr      = cxtr;
         ctx->collector    = 0;
-        ctx->listener     = (qd_listener_t*) qdpn_listener_context(listener);
+        ctx->listener     = qd_listener;
         ctx->connector    = 0;
         ctx->context      = ctx->listener->context;
         ctx->user_context = 0;
@@ -154,37 +164,43 @@ static void thread_process_listeners(qd_server_t *qd_server)
         //
         // Configure the transport.
         //
+        pn_transport_set_server(tport);
         pn_transport_set_max_frame(tport, config->max_frame_size);
 
         //
         // Set up SSL if appropriate
         //
         if (config->ssl_enabled) {
+
             pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
             if (!domain) {
-                qd_error(QD_ERROR_RUNTIME, "SSL domain failed for connection from %s",
-                         qdpn_connector_name(cxtr));
-                /* TODO aconway 2014-07-15: Close the connection */
+                qd_log(qd_server->log_source, QD_LOG_ERROR, "SSL setup failed on" FROM_TO);
                 continue;
             }
 
-            /* TODO aconway 2014-07-15: error handling on all calls. */
+#define ERROR(MSG) do {                                                 \
+                qd_log(qd_server->log_source, QD_LOG_ERROR, MSG FROM_TO); \
+                pn_ssl_domain_free(domain);                             \
+                goto ssl_error;                                         \
+            } while(0)
+
             // setup my identifying cert:
             if (pn_ssl_domain_set_credentials(domain,
                                               config->ssl_certificate_file,
                                               config->ssl_private_key_file,
                                               config->ssl_password)) {
-                qd_log(qd_server->log_source, QD_LOG_ERROR,
-                       "SSL configuration failed for connection %s", qdpn_connector_name(cxtr));
+                ERROR("SSL credentials failed on");
             }
-            if (config->ssl_allow_unsecured_client)
-                pn_ssl_domain_allow_unsecured_client(domain);
+            if (config->ssl_allow_unsecured_client) {
+                if (pn_ssl_domain_allow_unsecured_client(domain)) {
+                    ERROR("SSL cannot allow unsecured client on");
+                }
+            }
 
             // for peer authentication:
             if (config->ssl_trusted_certificate_db) {
                 if (pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db)) {
-                    qd_log(qd_server->log_source, QD_LOG_ERROR,
-                           "SSL CA configuration failed for connection %s", qdpn_connector_name(cxtr));
+                    ERROR("SSL CA configuration failed on" );
                 }
             }
 
@@ -195,14 +211,16 @@ static void thread_process_listeners(qd_server_t *qd_server)
             // do we force the peer to send a cert?
             if (config->ssl_require_peer_authentication) {
                 if (pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER, trusted)) {
-                    qd_log(qd_server->log_source, QD_LOG_ERROR,
-                           "SSL Authentication configuration failed for connection %s",
-                           qdpn_connector_name(cxtr));
+                    ERROR("SSL Authentication configuration failed on");
                 }
             }
-
             pn_ssl_t *ssl = pn_ssl(tport);
-            pn_ssl_init(ssl, domain, 0);
+            if (!ssl || pn_ssl_init(ssl, domain, 0)) {
+                ERROR("SSL setup failed");
+            }
+            qd_log(qd_server->log_source, QD_LOG_TRACE, "Configured SSL on" FROM_TO);
+
+        ssl_error:
             pn_ssl_domain_free(domain);
         }
 

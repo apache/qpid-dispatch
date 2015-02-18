@@ -110,7 +110,7 @@ class ManagementTest(system_test.TestCase):
         self._routers = None # Wait on demand
         self.maxDiff = None
         self.longMessage = True
-        self.node = self.cleanup(Node(self.router.addresses[0]))
+        self.node = self.cleanup(Node.connect(self.router.addresses[0]))
 
     def test_bad_query(self):
         """Test that various badly formed queries get the proper response"""
@@ -173,14 +173,14 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(entity['addr'], '0.0.0.0')
 
         # Connect via the new listener
-        node3 = self.cleanup(Node(Url(port=port)))
+        node3 = self.cleanup(Node.connect(Url(port=port)))
         router = node3.query(type=ROUTER).get_entities()
         self.assertEqual(self.router.name, router[0]['routerId'])
 
     def test_log(self):
         """Create, update and query log entities"""
 
-        node = self.cleanup(Node(self.logrouter.addresses[0]))
+        node = self.cleanup(Node.connect(self.logrouter.addresses[0]))
         default = node.read(identity='log/DEFAULT')
         self.assertEqual(default.attributes,
                          {u'identity': u'log/DEFAULT',
@@ -388,7 +388,7 @@ class ManagementTest(system_test.TestCase):
 
     def test_router_node(self):
         """Test node entity in a trio of linked routers"""
-        nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
+        nodes = [self.cleanup(Node.connect(Url(r.addresses[0]))) for r in self.routers]
         rnode_lists = [n.query(type=NODE).get_dicts() for n in nodes]
 
         def check(attrs):
@@ -404,7 +404,7 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(set(["router1", "router0"]), set([check(n) for n in rnode_lists[2]]))
 
     def test_entity_names(self):
-        nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
+        nodes = [self.cleanup(Node.connect(Url(r.addresses[0]))) for r in self.routers]
         # Test that all entities have a consitent identity format: type/name
         entities = list(chain(
             *[n.query(attribute_names=['type', 'identity', 'name']).iter_entities() for n in nodes]))
@@ -416,24 +416,24 @@ class ManagementTest(system_test.TestCase):
 
     def test_remote_node(self):
         """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""
-        nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
+        nodes = [self.cleanup(Node.connect(Url(r.addresses[0]))) for r in self.routers]
         remotes = sum([n.get_mgmt_nodes() for n in nodes], [])
         self.assertEqual([u'amqp:/_topo/0/router2/$management', u'amqp:/_topo/0/router1/$management'], remotes)
         # Query router2 indirectly via router1
         remote_url = Url(self.routers[0].addresses[0], path=Url(remotes[0]).path)
-        remote = self.cleanup(Node(remote_url))
+        remote = self.cleanup(Node.connect(remote_url))
         self.assertEqual(["router2"], [r.routerId for r in remote.query(type=ROUTER).get_entities()])
 
     def test_remote_node(self):
         """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""
-        nodes = [self.cleanup(Node(Url(r.addresses[0]))) for r in self.routers]
+        nodes = [self.cleanup(Node.connect(Url(r.addresses[0]))) for r in self.routers]
         remotes = sum([n.get_mgmt_nodes() for n in nodes], [])
         self.assertEqual(set([u'amqp:/_topo/0/router%s/$management' % i for i in [0, 1, 2]]),
                          set(remotes))
         self.assertEqual(6, len(remotes))
         # Query router2 indirectly via router1
         remote_url = Url(self.routers[0].addresses[0], path=Url(remotes[0]).path)
-        remote = self.cleanup(Node(remote_url))
+        remote = self.cleanup(Node.connect(remote_url))
         router_id = remotes[0].split("/")[3]
         assert router_id in ['router1', 'router2']
         self.assertEqual([router_id], [r.routerId for r in remote.query(type=ROUTER).get_entities()])

@@ -17,30 +17,43 @@
 # under the License
 #
 
-import re, json, unittest
+import re, json, unittest, os
 from system_test import TestCase, Process, Qdrouterd, main_module
 from subprocess import PIPE, STDOUT
 from qpid_dispatch_internal.compat import OrderedDict, dictify
 from qpid_dispatch_internal.management.qdrouter import QdSchema
+from proton import Url
 
 DUMMY = "org.apache.qpid.dispatch.dummy"
 
 class QdmanageTest(TestCase):
     """Test qdmanage tool output"""
 
+    @staticmethod
+    def ssl_file(name):
+        return os.path.join(os.path.dirname(__file__), 'ssl_certs', name)
+
     @classmethod
     def setUpClass(cls):
         super(QdmanageTest, cls).setUpClass()
         config = Qdrouterd.Config([
-            ('listener', {'port': cls.tester.get_port()})
+            ('ssl-profile', {'name': 'server-ssl',
+                             'cert-db': cls.ssl_file('ca-certificate.pem'),
+                             'cert-file': cls.ssl_file('server-certificate.pem'),
+                             'key-file': cls.ssl_file('server-private-key.pem'),
+                             'password': 'server-password',
+                             'allow-unsecured': False,
+                             'require-peer-auth': False}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl'})
         ])
         cls.router = cls.tester.qdrouterd('test-router', config, wait=True)
 
-    def address(self): return self.router.hostports[0]
+    def address(self): return self.router.addresses[0]
 
-    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
         p = self.popen(
-            ['qdmanage'] + cmd.split(' ') + ['--bus', self.address(), '--indent=-1'],
+            ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(), '--indent=-1'],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
         out = p.communicate(input)[0]
         try:
@@ -119,7 +132,7 @@ class QdmanageTest(TestCase):
         for t in long_types: self.assertIn(t, qall_types)
 
         qlistener = json.loads(self.run_qdmanage('query --type=listener'))
-        self.assertEqual([long_type('listener')], [e['type'] for e in qlistener])
+        self.assertEqual([long_type('listener')]*2, [e['type'] for e in qlistener])
         self.assertEqual(self.router.ports[0], int(qlistener[0]['port']))
 
         qattr = json.loads(
@@ -134,6 +147,13 @@ class QdmanageTest(TestCase):
         self.assertEqual(name_type(qall), name_type(qattr))
 
     def test_get_schema(self):
+        schema = dictify(QdSchema().dump())
+        actual = self.run_qdmanage("GET-JSON-SCHEMA")
+        self.assertEquals(schema, dictify(json.loads(actual)))
+
+    def test_ssl(self):
+        """Simple test for SSL connection. Note system_tests_qdstat has a more complete SSL test"""
+        url = Url(self.router.addresses[1], scheme="amqps")
         schema = dictify(QdSchema().dump())
         actual = self.run_qdmanage("GET-JSON-SCHEMA")
         self.assertEquals(schema, dictify(json.loads(actual)))

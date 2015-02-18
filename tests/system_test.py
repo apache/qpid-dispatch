@@ -352,7 +352,7 @@ class Qdrouterd(Process):
     def management(self):
         """Return a management agent proxy for this router"""
         if not self._management:
-            self._management = Node(self.addresses[0], timeout=DEFAULT_TIMEOUT)
+            self._management = Node.connect(self.addresses[0], timeout=DEFAULT_TIMEOUT)
         return self._management
 
     def teardown(self):
@@ -426,7 +426,7 @@ class Qdrouterd(Process):
             # connected. However we still get a race where the router is not
             # actually ready for traffic. Investigate.
             # Meantime the following actually tests send-thru to the router.
-            node = Node(self.addresses[0], router_id, timeout=1)
+            node = Node.connect(self.addresses[0], router_id, timeout=1)
             return retry_exception(lambda: node.query('org.apache.qpid.dispatch.router'))
         except:
             return False

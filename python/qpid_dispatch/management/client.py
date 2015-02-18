@@ -75,30 +75,40 @@ class Entity(EntityBase):
 class Node(object):
     """Client proxy for an AMQP management node"""
 
-    def __init__(self, url=None, router=None, locales=None, timeout=10, connection=None):
-        """
+    @staticmethod
+    def connection(url=None, router=None, timeout=10, ssl_domain=None):
+        """Return a BlockingConnection suitable for connecting to a management node
         @param url: URL of the management node.
         @param router: If address does not contain a path, use the management node for this router ID.
             If not specified and address does not contain a path, use the default management node.
+        """
+        url = Url(url)          # Convert string to Url class.
+
+        if url.path is None:
+            if router:
+                url.path = '_topo/0/%s/$management' % router
+            else:
+                url.path = '$management'
+
+        return BlockingConnection(url, timeout=timeout, ssl_domain=ssl_domain)
+
+    @staticmethod
+    def connect(url=None, router=None, timeout=10, ssl_domain=None):
+        """Return a Node connected with the given parameters, see L{connection}"""
+        return Node(Node.connection(url, router, timeout, ssl_domain))
+
+    def __init__(self, connection, locales=None):
+        """
+        Create a management node proxy using the given connection.
         @param locales: Default list of locales for management operations.
-        @param client: a L{BlockingConnection}
+        @param connection: a L{BlockingConnection} to the management agent.
         """
         self.name = self.identity = 'self'
         self.type = 'org.amqp.management' # AMQP management node type
-        self.url = Url(url).defaults()
-
-        # Dispatch requires SASL, default to anonymous user to trigger ANONYMOUS mechanism.
-        # FIXME aconway 2015-02-17: this may change when proton SASL support is implemented.
-        if not self.url.username:
-            self.url.username = "anonymous"
+        self.locales = locales
 
         self.locales = locales
-        if self.url.path is None:
-            if router:
-                self.url.path = '_topo/0/%s/$management' % router
-            else:
-                self.url.path = '$management'
-        connection = connection or BlockingConnection(self.url, timeout)
+        self.url = connection.url
         self.client = SyncRequestResponse(connection, self.url.path)
         self.reply_to = self.client.reply_to
 
