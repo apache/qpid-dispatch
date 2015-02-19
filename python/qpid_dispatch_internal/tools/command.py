@@ -26,7 +26,7 @@ from collections import Sequence, Mapping
 from qpid_dispatch_site import VERSION
 from proton import SSLDomain, Url
 try:
-    from proton.utils import SyncRequestResponse, BlockingConnection, SSLDomain
+    from proton.utils import SyncRequestResponse, BlockingConnection
 except ImportError:
     from qpid_dispatch_internal.proton_future.utils import SyncRequestResponse, BlockingConnection
 
