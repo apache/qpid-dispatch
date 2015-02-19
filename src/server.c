@@ -128,7 +128,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         ctx = new_qd_connection_t();
         DEQ_ITEM_INIT(ctx);
         ctx->state        = CONN_STATE_OPENING;
-        ctx->owner_thread = CONTEXT_NO_OWNER;
+        ctx->owner_thread = CONTEXT_UNSPECIFIED_OWNER;
         ctx->enqueued     = 0;
         ctx->pn_cxtr      = cxtr;
         ctx->collector    = 0;
@@ -233,6 +233,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         pn_sasl_done(sasl, PN_SASL_OK);  // TODO - This needs to go away
 
         qdpn_connector_set_context(cxtr, ctx);
+        ctx->owner_thread = CONTEXT_NO_OWNER;
     }
 }
 
@@ -719,7 +720,7 @@ static void cxtr_try_open(void *context)
     DEQ_ITEM_INIT(ctx);
     ctx->server       = ct->server;
     ctx->state        = CONN_STATE_CONNECTING;
-    ctx->owner_thread = CONTEXT_NO_OWNER;
+    ctx->owner_thread = CONTEXT_UNSPECIFIED_OWNER;
     ctx->enqueued     = 0;
     ctx->pn_conn      = 0;
     ctx->collector    = 0;
@@ -815,6 +816,7 @@ static void cxtr_try_open(void *context)
     pn_sasl_t *sasl = pn_sasl(tport);
     pn_sasl_mechanisms(sasl, config->sasl_mechanisms);
     pn_sasl_client(sasl);
+    ctx->owner_thread = CONTEXT_NO_OWNER;
 }
 
 

@@ -46,6 +46,7 @@ typedef enum {
 ENUM_DECLARE(conn_state);
 
 #define CONTEXT_NO_OWNER -1
+#define CONTEXT_UNSPECIFIED_OWNER -2
 
 typedef enum {
     CXTR_STATE_CONNECTING = 0,
