@@ -26,7 +26,6 @@ from os import environ
 import sys
 
 HOME = environ.get("QPID_DISPATCH_HOME") or "${QPID_DISPATCH_HOME_INSTALLED}"
-LIB = environ.get("QPID_DISPATCH_LIB") or join("${CMAKE_INSTALL_PREFIX}", "${LIB_INSTALL_DIR}", "${QPID_DISPATCH_LIB}")
 VERSION = "${QPID_DISPATCH_VERSION}"
 
 sys.path.insert(0, join(HOME, 'python'))
