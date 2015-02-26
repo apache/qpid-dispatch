@@ -55,6 +55,7 @@ Attribute or property definition maps have the following fields:
 - "description": documentation string.
 - "type": one of the following:
   - "string": a Unicode string value.
+  - "path": A string c
   - "entityId": a string that holds the `identity` of a management entity.
   - "integer": an integer value.
   - "boolean": a true/false value.

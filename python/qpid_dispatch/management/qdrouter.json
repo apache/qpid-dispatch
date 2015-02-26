@@ -57,24 +57,24 @@
             "description":"Attributes for setting TLS/SSL configuration for connections.",
             "attributes": {
                 "certDb": {
-                    "type": "string",
+                    "type": "path",
                     "description": "The path to the database that contains the public certificates of trusted certificate authorities (CA).",
                     "create": true
                 },
                 "certFile": {
-                    "type": "string",
+                    "type": "path",
                     "description": "The path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.",
                     "create": true
 
                 },
                 "keyFile": {
-                    "type": "string",
+                    "type": "path",
                     "description": "The path to the file containing the PEM-formatted private key for the above certificate.",
                     "create": true
 
                 },
                 "passwordFile": {
-                    "type": "string",
+                    "type": "path",
                     "description": "If the above private key is password protected, this is the path to a file containing the password that unlocks the certificate key.",
                     "create": true
 
@@ -454,7 +454,7 @@
 
                 },
                 "debugDump": {
-                    "type": "string",
+                    "type": "path",
                     "description": "A file to dump debugging information that can't be logged normally.",
                     "create": true
 
@@ -557,7 +557,7 @@
                     "create": true
                 },
                 "trustedCerts": {
-                    "type": "string",
+                    "type": "path",
                     "description": "This optional setting can be used to reduce the set of available CAs for client authentication.  If used, this setting must provide a path to a PEM file that contains the trusted certificates.",
                     "create": true
                 },
