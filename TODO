@@ -20,7 +20,7 @@
 # Qpid Dispatch TODO List
 
 Beyond this simple laundry list, you can find the list of bugs and
-enhancements at the [Apache Qpid JIRA instance](http://issues.apache.org/jira/browse/QPID)
+enhancements at the [Qpid Dispatch JIRA instance](http://issues.apache.org/jira/browse/DISPATCH)
 
 - Router Mode
   - Stand-Alone-Router - Does not participate in routing protocol, does not permit inter-router
