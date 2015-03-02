@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
+#include <errno.h>
 
 static __thread qd_server_t *thread_server = 0;
 
@@ -410,14 +411,14 @@ void qdpn_driver_wait_3(qdpn_driver_t *d);
 
 static void *thread_run(void *arg)
 {
-    qd_thread_t     *thread    = (qd_thread_t*) arg;
-    qd_server_t     *qd_server = thread->qd_server;
-    qd_work_item_t  *work;
-    qdpn_connector_t  *cxtr;
-    pn_connection_t *conn;
-    qd_connection_t *ctx;
-    int              error;
-    int              poll_result;
+    qd_thread_t      *thread    = (qd_thread_t*) arg;
+    qd_server_t      *qd_server = thread->qd_server;
+    qd_work_item_t   *work;
+    qdpn_connector_t *cxtr;
+    pn_connection_t  *conn;
+    qd_connection_t  *ctx;
+    int               error;
+    int               poll_result;
 
     if (!thread)
         return 0;
@@ -521,10 +522,9 @@ static void *thread_run(void *arg)
                     error = 0;
                     poll_result = qdpn_driver_wait_2(qd_server->driver, duration);
                     if (poll_result == -1)
-                        error = qdpn_driver_errno(qd_server->driver);
-                } while (error == PN_INTR);
+                        error = errno;
+                } while (error == EINTR);
                 if (error) {
-                    qd_log(qd_server->log_source, QD_LOG_ERROR, "Driver Error: %s", qdpn_driver_error(qd_server->driver));
                     exit(-1);
                 }
 
@@ -1129,8 +1129,6 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
     li->pn_listener = qdpn_listener(qd_server->driver, config->host, config->port, (void*) li);
 
     if (!li->pn_listener) {
-        qd_log(qd_server->log_source, QD_LOG_ERROR, "Driver Error %d (%s)",
-               qdpn_driver_errno(qd_server->driver), qdpn_driver_error(qd_server->driver));
         free_qd_listener_t(li);
         return 0;
     }
