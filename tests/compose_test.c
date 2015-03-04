@@ -129,9 +129,9 @@ static char *test_compose_list_of_maps(void *context)
 static char *vector1 =
     "\x00\x53\x71"                             // delivery annotations
     "\xd1\x00\x00\x00\x3d\x00\x00\x00\x04"     // map32 with two item pairs
-    "\xa1\x06key001"                           // str8-utf8
+    "\xa3\x06key001"                           // sym8
     "\x52\x0a"                                 // smalluint
-    "\xa1\x06key002"                           // str8-utf8
+    "\xa3\x06key002"                           // sym8
     "\xd0\x00\x00\x00\x22\x00\x00\x00\x04"     // list32 with four items
     "\xa1\x05item1"                            // str8-utf8
     "\xa1\x05item2"                            // str8-utf8
@@ -147,10 +147,10 @@ static char *test_compose_nested_composites(void *context)
 
     qd_compose_start_map(field);
 
-    qd_compose_insert_string(field, "key001");
+    qd_compose_insert_symbol(field, "key001");
     qd_compose_insert_uint(field, 10);
 
-    qd_compose_insert_string(field, "key002");
+    qd_compose_insert_symbol(field, "key002");
     qd_compose_start_list(field);
 
     qd_compose_insert_string(field, "item1");
@@ -159,7 +159,7 @@ static char *test_compose_nested_composites(void *context)
 
     qd_compose_start_list(field);
     qd_compose_end_list(field);
-   
+
     qd_compose_end_list(field);
     qd_compose_end_map(field);
 

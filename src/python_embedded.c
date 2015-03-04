@@ -562,10 +562,10 @@ static qd_error_t compose_python_message(qd_composed_field_t **field, PyObject *
     *field = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, *field);
     qd_compose_start_map(*field);
 
-    qd_compose_insert_string(*field, QD_MA_INGRESS);
+    qd_compose_insert_symbol(*field, QD_MA_INGRESS);
     qd_compose_insert_string(*field, qd_router_id(qd));
 
-    qd_compose_insert_string(*field, QD_MA_TRACE);
+    qd_compose_insert_symbol(*field, QD_MA_TRACE);
     qd_compose_start_list(*field);
     qd_compose_insert_string(*field, qd_router_id(qd));
     qd_compose_end_list(*field);

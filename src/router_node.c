@@ -560,17 +560,17 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
     // If there is a to_override provided, insert a TO field.
     //
     if (to_override) {
-        qd_compose_insert_string(out_ma, QD_MA_TO);
+        qd_compose_insert_symbol(out_ma, QD_MA_TO);
         qd_compose_insert_string(out_ma, to_override);
     } else if (to) {
-        qd_compose_insert_string(out_ma, QD_MA_TO);
+        qd_compose_insert_symbol(out_ma, QD_MA_TO);
         qd_compose_insert_string_iterator(out_ma, qd_parse_raw(to));
     }
 
     //
     // If there is a trace field, append this router's ID to the trace.
     //
-    qd_compose_insert_string(out_ma, QD_MA_TRACE);
+    qd_compose_insert_symbol(out_ma, QD_MA_TRACE);
     qd_compose_start_list(out_ma);
     if (trace) {
         if (qd_parse_is_list(trace)) {
@@ -595,7 +595,7 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
     // If there is no ingress field, annotate the ingress as this router else
     // keep the original field.
     //
-    qd_compose_insert_string(out_ma, QD_MA_INGRESS);
+    qd_compose_insert_symbol(out_ma, QD_MA_INGRESS);
     if (ingress && qd_parse_is_scalar(ingress)) {
         ingress_iter = qd_parse_raw(ingress);
         qd_compose_insert_string_iterator(out_ma, ingress_iter);
