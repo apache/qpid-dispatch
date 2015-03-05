@@ -430,6 +430,7 @@ qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver, const char *host,
 
     int sock = qdpn_create_socket(addr->ai_family);
     if (sock == PN_INVALID_SOCKET) {
+        freeaddrinfo(addr);
         qdpn_log_errno(driver, "pn_create_socket");
         return 0;
     }

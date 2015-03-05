@@ -65,6 +65,7 @@ static void server_signal_handler(void* context, int signum)
     switch (signum) {
     case SIGINT:
         exit_with_sigint = 1;
+        // fallthrough
 
     case SIGQUIT:
     case SIGTERM:

@@ -35,8 +35,10 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
     char *prefix = qd_entity_get_string(entity, "prefix"); QD_ERROR_RET();
 
     if (phase < 0 || phase > 9) {
+        qd_error_t err = qd_error(QD_ERROR_CONFIG,
+                                  "Invalid phase %d for prefix '%s' must be between 0 and 9.  Ignoring", phase, prefix);
         free(prefix);
-        return qd_error(QD_ERROR_CONFIG, "Invalid phase %d for prefix '%s' must be between 0 and 9.  Ignoring", phase, prefix);
+        return err;
     }
 
     //
@@ -78,6 +80,7 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
       case QD_SCHEMA_FIXEDADDRESS_FANOUT_SINGLE: semantics |= QD_FANOUT_SINGLE; break;
       default:
         free(prefix);
+        free(addr_phase);
         return qd_error(QD_ERROR_CONFIG, "Invalid fanout value %d", fanout);
     }
 
@@ -87,6 +90,7 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
           case QD_SCHEMA_FIXEDADDRESS_BIAS_SPREAD: semantics |= QD_BIAS_SPREAD; break;
           default:
             free(prefix);
+            free(addr_phase);
             return qd_error(QD_ERROR_CONFIG, "Invalid bias value %d", fanout);
         }
         qd_log(router->log_source, QD_LOG_INFO,
@@ -116,9 +120,11 @@ qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity
     int   out_phase = qd_entity_opt_long(entity, "outPhase", 0);  QD_ERROR_RET();
 
     if (in_phase > 9 || out_phase > 9) {
+        qd_error_t err = qd_error(QD_ERROR_CONFIG,
+                                  "Phases for waypoint '%s' must be between 0 and 9.", address);
         free(address);
         free(connector);
-        return qd_error(QD_ERROR_CONFIG, "Phases for waypoint '%s' must be between 0 and 9.", address);
+        return err;
     }
     qd_waypoint_t *waypoint = NEW(qd_waypoint_t);
     memset(waypoint, 0, sizeof(qd_waypoint_t));
@@ -184,10 +190,12 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 
         if (!lrp) {
             sys_mutex_unlock(router->lock);
+            qd_error_t err = qd_error(QD_ERROR_CONFIG,
+                                      "Failed to create link-route-pattern: prefix=%s connector=%s",
+                                      prefix, connector);
             free(prefix);
             free(connector);
-            return qd_error(QD_ERROR_CONFIG,
-                            "Failed to create link-route-pattern: prefix=%s connector=%s", prefix, connector);
+            return err;
         }
 
         qd_log(router->log_source, QD_LOG_INFO,

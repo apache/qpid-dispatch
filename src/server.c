@@ -412,7 +412,6 @@ void qdpn_driver_wait_3(qdpn_driver_t *d);
 static void *thread_run(void *arg)
 {
     qd_thread_t      *thread    = (qd_thread_t*) arg;
-    qd_server_t      *qd_server = thread->qd_server;
     qd_work_item_t   *work;
     qdpn_connector_t *cxtr;
     pn_connection_t  *conn;
@@ -423,6 +422,7 @@ static void *thread_run(void *arg)
     if (!thread)
         return 0;
 
+    qd_server_t      *qd_server = thread->qd_server;
     thread_server   = qd_server;
     thread->running = 1;
 
@@ -869,8 +869,6 @@ void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
     int i;
-    if (!qd_server)
-        return;
 
     for (i = 0; i < qd_server->thread_count; i++)
         thread_free(qd_server->threads[i]);

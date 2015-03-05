@@ -56,7 +56,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_alloc_initialize();
     qd_log_initialize();
     qd_error_initialize();
-    if (qd_error_code()) return 0;
+    if (qd_error_code()) { qd_dispatch_free(qd); return 0; }
 
     qd->router_area = strdup("0");
     qd->router_id   = strdup("0");
@@ -98,7 +98,11 @@ qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entit
     const char *default_name = "00000000-0000-0000-0000-000000000000";
     qd->thread_count   = qd_entity_opt_long(entity, "workerThreads", 1); QD_ERROR_RET();
     qd->container_name = qd_entity_opt_string(entity, "containerName", default_name); QD_ERROR_RET();
-    qd_alloc_debug_dump(qd_entity_opt_string(entity, "debugDump", 0)); QD_ERROR_RET();
+    char *dump_file = qd_entity_opt_string(entity, "debugDump", 0);
+    if (dump_file) {
+        qd_alloc_debug_dump(dump_file); QD_ERROR_RET();
+        free(dump_file);
+    }
     return QD_ERROR_NONE;
 }
 

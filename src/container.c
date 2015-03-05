@@ -269,12 +269,13 @@ static int close_handler(void* unused, pn_connection_t *conn, qd_connection_t* q
     pn_link_t *pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE);
     while (pn_link) {
         qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
-        pn_link_t *link_to_free;
-        qd_node_t *node = link->node;
-        if (node && link)
-            node->ntype->link_detach_handler(node->context, link, 0);
+        if (link) {
+            qd_node_t *node = link->node;
+            if (node)
+                node->ntype->link_detach_handler(node->context, link, 0);
+        }
         pn_link_close(pn_link);
-        link_to_free = pn_link;
+        pn_link_t *link_to_free = pn_link;
         pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE);
         pn_link_free(link_to_free);
     }

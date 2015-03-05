@@ -197,6 +197,7 @@ uint32_t qd_parse_as_uint(qd_parsed_field_t *field)
     case QD_AMQP_UINT:
         result |= ((uint32_t) qd_field_iterator_octet(field->raw_iter)) << 24;
         result |= ((uint32_t) qd_field_iterator_octet(field->raw_iter)) << 16;
+        // fallthrough
 
     case QD_AMQP_USHORT:
         result |= ((uint32_t) qd_field_iterator_octet(field->raw_iter)) << 8;
