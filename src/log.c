@@ -359,11 +359,14 @@ void qd_log_initialize(void)
     DEQ_INIT(entries);
     DEQ_INIT(source_list);
     DEQ_INIT(sink_list);
-    strcpy((char*)level_names, levels[NONE].name);
-    for (level_index_t i = NONE+1; i < N_LEVELS; ++i) {
-        strcat((char*)level_names, ", ");
-        strcat((char*)level_names, levels[i].name);
-    }
+
+    // Set up level_names for use in error messages.
+    ZERO((char*)level_names);
+    char *begin = (char*)level_names, *end = (char*)level_names+sizeof(level_names);
+    aprintf(&begin, end, "%s", levels[NONE].name);
+    for (level_index_t i = NONE + 1; i < N_LEVELS; ++i)
+        aprintf(&begin, end, ", %s", levels[i].name);
+
     log_lock = sys_mutex();
     log_source_lock = sys_mutex();
 
@@ -390,11 +393,10 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     qd_error_clear();
     char* module = qd_entity_get_string(entity, "module"); QD_ERROR_RET();
     sys_mutex_lock(log_source_lock);
-    qd_log_source_t *src = qd_log_source_lh(module);
-    assert(src);
-    qd_log_source_t copy = *src;
-    sys_mutex_unlock(log_source_lock);
+    qd_log_source_t *src = qd_log_source_lh(module); /* The original log source */
     free(module);
+    qd_log_source_t copy = *src; /* A copy to modify outside the lock. */
+    sys_mutex_unlock(log_source_lock);
 
     if (qd_entity_has(entity, "enable")) {
         char *enable = qd_entity_get_string(entity, "enable");

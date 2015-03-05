@@ -109,12 +109,9 @@ void qd_router_build_node_list(qd_dispatch_t *qd, qd_composed_field_t *field)
     sys_mutex_lock(router->lock);
     qd_router_node_t *rnode = DEQ_HEAD(router->routers);
     while (rnode) {
-        strcpy(temp, "amqp:/_topo/");
-        strcat(temp, router->router_area);
-        strcat(temp, "/");
         const unsigned char* addr = qd_hash_key_by_handle(rnode->owning_addr->hash_handle);
-        strcat(temp, &((char*) addr)[1]);
-        strcat(temp, "/$management");
+        snprintf(temp, sizeof(temp), "amqp:/_topo/%s/%s/$management",
+                router->router_area, &((char*) addr)[1]);
         qd_compose_insert_string(field, temp);
         rnode = DEQ_NEXT(rnode);
     }

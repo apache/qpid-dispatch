@@ -2007,8 +2007,7 @@ qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
     qd_address_t        *addr = 0;
     qd_field_iterator_t *iter = 0;
 
-    strcpy(addr_string, global ? "M0" : "L");
-    strcat(addr_string, address);
+    snprintf(addr_string, sizeof(addr_string), "%s%s", global ? "M0" : "L", address);
     iter = qd_field_iterator_string(addr_string, ITER_VIEW_NO_HOST);
 
     sys_mutex_lock(router->lock);
