@@ -65,10 +65,12 @@ Temporary solution is to lock the entire dispatch router lock during full refres
 Better solution coming soon...
 """
 
-import traceback, json
+import traceback, json, pstats
 from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
+from cProfile import Profile
+from cStringIO import StringIO
 from ctypes import c_void_p, py_object, c_long
 from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_DEBUG, LOG_ERROR
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
@@ -149,6 +151,7 @@ class EntityAdapter(SchemaEntity):
         super(EntityAdapter, self).__init__(entity_type, attributes or {}, validate=validate)
         # Direct __dict__ access to avoid validation as schema attributes
         self.__dict__['_agent'] = agent
+        self.__dict__['_log'] = agent.log
         self.__dict__['_qd'] = agent.qd
         self.__dict__['_dispatch'] = agent.dispatch
         self.__dict__['_implementations'] = []
@@ -514,6 +517,37 @@ class ManagementEntity(EntityAdapter):
     def get_log(self, request):
         logs = self._qd.qd_log_recent_py(self._intprop(request, "limit") or -1)
         return (OK, logs)
+
+    def profile(self, request):
+        """Start/stop the python profiler, returns profile results"""
+        profile = self.__dict__.get("_profile")
+        if "start" in request.properties:
+            if not profile:
+                profile = self.__dict__["_profile"] = Profile()
+            profile.enable()
+            self._log(LOG_INFO, "Started python profiler")
+            return (OK, None)
+        if not profile:
+            raise BadRequestStatus("Profiler not started")
+        if "stop" in request.properties:
+            profile.create_stats()
+            self._log(LOG_INFO, "Stopped python profiler")
+            out = StringIO()
+            stats = pstats.Stats(profile, stream=out)
+            try:
+                stop = request.properties["stop"]
+                if stop == "kgrind": # Generate kcachegrind output using pyprof2calltree
+                    from pyprof2calltree import convert
+                    convert(stats, out)
+                elif stop == "visualize": # Start kcachegrind using pyprof2calltree
+                    from pyprof2calltree import visualize
+                    visualize(stats)
+                else:
+                    stats.print_stats() # Plain python profile stats
+                return (OK, out.getvalue())
+            finally:
+                out.close()
+        raise BadRequestStatus("Bad profile request %s" % (request))
 
 class Agent(object):
     """AMQP managment agent. Manages entities, directs requests to the correct entity."""

@@ -377,7 +377,7 @@
             "description": "Qpid dispatch router extensions to the standard org.amqp.management interface.",
             "extends": "org.amqp.management",
             "singleton": true,
-            "operations": ["GET-SCHEMA", "GET-JSON-SCHEMA", "GET-LOG"],
+            "operations": ["GET-SCHEMA", "GET-JSON-SCHEMA", "GET-LOG", "PROFILE"],
             "operationDefs": {
                 "GET-SCHEMA": {
                     "description": "Get the qdrouterd schema for this router in AMQP map format",
