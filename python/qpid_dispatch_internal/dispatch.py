@@ -76,9 +76,12 @@ class QdDll(ctypes.PyDLL):
         self._prototype(self.qd_entity_refresh_begin, c_long, [py_object])
         self._prototype(self.qd_entity_refresh_end, None, [])
 
+        self._prototype(self.qd_log_recent_py, py_object, [c_long])
+
     def _errcheck(self, result, func, args):
         if self.qd_error_code():
             raise CError(self.qd_error_message())
+        return result
 
     def _prototype(self, f, restype, argtypes, check=True):
         """Set up the return and argument types and the error checker for a ctypes function"""

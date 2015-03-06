@@ -24,7 +24,7 @@ Configuration file parsing
 import json, re, sys
 from copy import copy
 from qpid_dispatch.management.entity import camelcase
-from .. import dispatch_c
+from ..dispatch import QdDll
 from .qdrouter import QdSchema
 
 class Config(object):
@@ -120,7 +120,7 @@ class Config(object):
 
 def configure_dispatch(dispatch, lib_handle, filename):
     """Called by C router code to load configuration file and do configuration"""
-    qd = dispatch_c.QdDll(lib_handle)
+    qd = QdDll(lib_handle)
     dispatch = qd.qd_dispatch_p(dispatch)
     config = Config(filename)
 

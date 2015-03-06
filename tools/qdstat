@@ -25,6 +25,7 @@ import sys
 import locale
 import socket
 import re
+from time import ctime
 from proton import Messenger, Message, Timeout
 import  qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
@@ -47,11 +48,13 @@ def parse_args(argv):
     parser.add_option("-n", "--nodes", help="Show Router Nodes",            action="store_const", const="n",   dest="show")
     parser.add_option("-a", "--address", help="Show Router Addresses",      action="store_const", const="a",   dest="show")
     parser.add_option("-m", "--memory", help="Show Broker Memory Stats",    action="store_const", const="m",   dest="show")
+    parser.add_option("--log", help="Show recent log entries", action="store_const", const="log", dest="show")
+    parser.add_option("--limit", help="Limit number of log entries", type="int")
 
     opts, args = parser.parse_args(args=argv)
 
     if not opts.show:
-        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, -m or -h.")
+        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, -m, -h or --log.")
 
     return opts, args
 
@@ -284,6 +287,11 @@ class BusManager(Node):
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
+    def displayLog(self):
+        log = self.get_log(limit=self.opts.limit)
+        for line in log:
+            print "%s %s (%s) %s" % (ctime(line[5]), line[0], line[1], line[2])
+
     def displayMain(self, identitys, main):
         if   main == 'l': self.displayRouterLinks()
         elif main == 'n': self.displayRouterNodes()
@@ -291,12 +299,15 @@ class BusManager(Node):
         elif main == 'm': self.displayMemory()
         elif main == 'g': self.displayGeneral()
         elif main == 'c': self.displayConnections()
+        elif main == 'log': self.displayLog()
 
     def display(self, identitys):
         self.displayMain(identitys, self.opts.show)
 
 def run(argv):
     opts, args = parse_args(argv)
+    if args[1:]:
+        raise Exception("Unexpected arguments: %s" % " ".join(args[1:]))
     bm = BusManager(opts)
     try:
         bm.display(args)

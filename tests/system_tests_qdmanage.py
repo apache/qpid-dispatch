@@ -148,8 +148,15 @@ class QdmanageTest(TestCase):
 
     def test_get_schema(self):
         schema = dictify(QdSchema().dump())
-        actual = self.run_qdmanage("GET-JSON-SCHEMA")
+        actual = self.run_qdmanage("get-json-schema")
         self.assertEquals(schema, dictify(json.loads(actual)))
+        actual = self.run_qdmanage("get-schema")
+        self.assertEquals(schema, dictify(json.loads(actual)))
+
+    def test_get_log(self):
+        log = json.loads(self.run_qdmanage("get-log limit=1"))[0]
+        self.assertEquals(['AGENT', 'trace'], log[0:2])
+        self.assertRegexpMatches(log[2], 'get-log')
 
     def test_ssl(self):
         """Simple test for SSL connection. Note system_tests_qdstat has a more complete SSL test"""

@@ -62,11 +62,13 @@ def check_args(args, maxargs=0, minargs=0):
     Check number of arguments, raise UsageError if in correct.
     @param maxargs: max number of allowed args after command or None to skip check.
     @param minargs: min number of allowed args after command or None to skip check.
+    @return args padded with None to maxargs.
     """
     if minargs is not None and len(args) < minargs:
         raise UsageError("Not enough arguments, got %s need %s" % (len(args), minargs))
     if maxargs is not None and len(args) > maxargs:
         raise UsageError("Unexpected arguments: %s" % (" ".join(args[maxargs:])))
+    return args + [None] * (maxargs - len(args))
 
 def connection_options(options, title="Connection Options"):
     """Return an OptionGroup for connection options."""

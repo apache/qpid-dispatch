@@ -377,7 +377,7 @@
             "description": "Qpid dispatch router extensions to the standard org.amqp.management interface.",
             "extends": "org.amqp.management",
             "singleton": true,
-            "operations": ["GET-SCHEMA", "GET-JSON-SCHEMA"],
+            "operations": ["GET-SCHEMA", "GET-JSON-SCHEMA", "GET-LOG"],
             "operationDefs": {
                 "GET-SCHEMA": {
                     "description": "Get the qdrouterd schema for this router in AMQP map format",
@@ -413,6 +413,27 @@
                     "response": {
                         "body": {
                             "description": "The qdrouter schema as a JSON string.",
+                            "type": "string"
+                        }
+                    }
+                },
+                "GET-LOG": {
+                    "description": "Get recent log entries from the router.",
+                    "request": {
+                        "properties": {
+                            "identity": {
+                                "description": "Set to the value `self`",
+                                "type": "string"
+                            },
+                            "limit": {
+                                "description": "Maximum number of log entries to get.",
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "response": {
+                        "body": {
+                            "description": "A list of log entries where each entry is a list of: module name(string), level name(string), message text(string), file name(string or None), line number(integer or None) , timestamp(integer)",
                             "type": "string"
                         }
                     }

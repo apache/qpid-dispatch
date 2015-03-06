@@ -65,7 +65,7 @@ Temporary solution is to lock the entire dispatch router lock during full refres
 Better solution coming soon...
 """
 
-yimport traceback, json
+import traceback, json
 from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
@@ -500,15 +500,20 @@ class ManagementEntity(EntityAdapter):
             return str(Address.topological(node.attributes['routerId'], "$management", area))
         return (OK, self._agent.entities.map_type(node_address, 'router.node'))
 
-
     def get_schema(self, request):
         return (OK, self._schema.dump())
 
-    def get_json_schema(self, request):
-        indent = request.properties.get("indent")
-        if indent is not None: indent = int(indent)
-        return (OK, json.dumps(self._schema.dump(), indent=indent))
+    def _intprop(self, request, prop):
+        value = request.properties.get(prop)
+        if value is not None: value = int(value)
+        return value
 
+    def get_json_schema(self, request):
+        return (OK, json.dumps(self._schema.dump(), indent=self._intprop(request, "indent")))
+
+    def get_log(self, request):
+        logs = self._qd.qd_log_recent_py(self._intprop(request, "limit") or -1)
+        return (OK, logs)
 
 class Agent(object):
     """AMQP managment agent. Manages entities, directs requests to the correct entity."""
@@ -667,14 +672,17 @@ class Agent(object):
         requested_type = request.properties.get('type')
         if requested_type:
             requested_type = self.schema.entity_type(requested_type)
-            # Special case for management object, allow just type with no name/id
-            if self.management.entity_type.is_a(requested_type):
-                return self.management
-
         # ids is a map of identifying attribute values
         ids = dict((k, request.properties.get(k))
                    for k in ['name', 'identity'] if k in request.properties)
-        if not len(ids): raise BadRequestStatus("No name or identity provided")
+
+        # Special case for management object: if no name/id and no conflicting type
+        # then assume this is for "self"
+        if not ids:
+            if not requested_type or self.management.entity_type.is_a(requested_type):
+                return self.management
+            else:
+                raise BadRequestStatus("No name or identity provided")
 
         def attrvals():
             """String form of the id attribute values for error messages"""

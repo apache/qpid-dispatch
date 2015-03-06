@@ -300,3 +300,5 @@ class Node(object):
     def get_mgmt_nodes(self, type=None):
         return self.call(self.node_request(operation="GET-MGMT-NODES", entityType=type)).body
 
+    def get_log(self, limit=None, type=None):
+        return self.call(self.node_request(operation="GET-LOG", entityType=type, limit=limit)).body

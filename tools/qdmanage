@@ -38,7 +38,7 @@ class QdManage():
 
         self.operations = ['QUERY', 'CREATE', 'READ', 'UPDATE', 'DELETE',
                            'GET-TYPES', 'GET-OPERATIONS', 'GET-ATTRIBUTES', 'GET-ANNOTATIONS',
-                           'GET-MGMT-NODES', 'GET-JSON-SCHEMA']
+                           'GET-MGMT-NODES', 'GET-SCHEMA', 'GET-LOG']
 
         usage = "%prog <operation> [options...] [arguments...]"
         description = "Standard operations: %s. Use GET-OPERATIONS to find additional operations." \
@@ -59,15 +59,16 @@ class QdManage():
 
     def run(self, argv):
         self.opts, self.args = self.op.parse_args(argv[1:])
+        if self.opts.indent == -1: self.opts.indent = None
         if len(self.args) == 0: raise UsageError("No operation specified")
-        operation = self.args.pop(0)
         self.node = Node.connect(
             opts_url(self.opts), self.opts.router, self.opts.timeout, opts_ssl_domain(self.opts))
-        if operation.upper() in self.operations:
-            method = getattr(self, operation.lower().replace('-','_'))
-            method()
-        else:                   # Custom operation
-            self.operation(operation)
+        operation = self.args.pop(0)
+        method = operation.lower().replace('-','_')
+        if operation.upper() in self.operations and hasattr(self, method):
+            getattr(self, method)() # Built-in operation
+        else:
+            self.operation(operation) # Custom operation
 
     def main(self, argv):
         return main(self.run, argv, self.op)
@@ -75,6 +76,17 @@ class QdManage():
     def print_json(self, data):
         """Print data as JSON"""
         print json.dumps(data, indent=self.opts.indent)
+
+    def print_result(self, result):
+        """Print a string result as-is, else try json dump, else print as-is"""
+        if not result: return
+        if isinstance(result, basestring):
+            print result
+        else:
+            try:
+                self.print_json(result)
+            except ValueError:
+                print result
 
     def call_node(self, method, *argnames, **kwargs):
         """Call method on node, use opts named in argnames"""
@@ -127,40 +139,28 @@ class QdManage():
 
     def get_types(self):
         """get-types [TYPE]         List entity types with their base types."""
-        check_args(self.args, 1)
-        if self.args: self.opts.type = self.args[0]
+        self.opts.type = check_args(self.args, 1)[0]
         self.print_json(self.call_node('get_types', 'type'))
 
     def get_annotations(self):
         """get-annotations [TYPE]   List entity types with the annotations they implement."""
-        check_args(self.args, 1)
-        if self.args: self.opts.type = self.args[0]
+        self.opts.type = check_args(self.args, 1)[0]
         self.print_json(self.call_node('get_annotations', 'type'))
 
     def get_attributes(self):
         """get-attributes [TYPE]    List entity types with their attributes."""
-        check_args(self.args, 1)
-        if self.args: self.opts.type = self.args[0]
+        self.opts.type = check_args(self.args, 1)[0]
         self.print_json(self.call_node('get_attributes', 'type'))
 
     def get_operations(self):
         """get-operations [TYPE]    List entity types with their operations."""
-        check_args(self.args, 1)
-        if self.args: self.opts.type = self.args[0]
+        self.opts.type = check_args(self.args, 1)[0]
         self.print_json(self.call_node('get_operations', 'type'))
 
     def get_mgmt_nodes(self):
         """get-mgmt-nodes           List of other known management nodes"""
         check_args(self.args, 0)
         self.print_json(self.call_node('get_mgmt_nodes'))
-
-    def get_json_schema(self):
-        """get-schema-json [INDENT] Get the router schema in JSON format. Optional integer indent for formatted output."""
-        check_args(self.args, 1, 0)
-        indent = None
-        if self.args: indent = self.args[0]
-        print self.node.call(self.node.request(
-            operation='GET-JSON-SCHEMA', identity='self', indent=indent)).body
 
     def json_arg(self, value):
         try:
@@ -179,7 +179,7 @@ class QdManage():
         if self.opts.body:
             body = self.json_arg(self.opts.body)
         request = self.call_node('request', 'type', 'name', 'identity', operation=operation, body=body, **properties)
-        print self.node.call(request).body
+        self.print_result(self.node.call(request).body)
 
 if __name__ == "__main__":
     sys.exit(QdManage().main(sys.argv))

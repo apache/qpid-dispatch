@@ -93,17 +93,20 @@ class QdstatTest(system_test.TestCase):
     def test_memory(self):
         self.run_qdstat(['--memory'], r'qd_address_t\s+[0-9]+')
 
-    def do_test(self, url, args):
-        # FIXME aconway 2015-02-18: shouldn't be timing out, should be rejected.
-        self.run_qdstat(['--general', '--timeout=0.5'] + args, 
-                        regexp=r'(?s)Router Statistics.*Mode\s*Standalone',
-                        address=str(url))
+    def test_log(self):
+        self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(trace\).*GET-LOG')
 
     def test_ssl(self):
         """
         Test the matrix of dispatch and client SSL configuratoin and ensure we 
         can/can't connect as expected.
         """
+
+        def do_test(url, args):
+            self.run_qdstat(['--general'] + args,
+                            regexp=r'(?s)Router Statistics.*Mode\s*Standalone',
+                            address=str(url))
+
         trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')]
         bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')]
         client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')]
@@ -116,35 +119,35 @@ class QdstatTest(system_test.TestCase):
         none_s, strict_s, unsecured_s, auth_s = (Url(a, scheme="amqps") for a in addrs)
 
         # Non-SSL enabled listener should fail SSL connections.
-        self.do_test(none, [])
-        self.assertRaises(AssertionError, self.do_test, none_s, [])
-        self.assertRaises(AssertionError, self.do_test, none, client_cert)
+        do_test(none, [])
+        self.assertRaises(AssertionError, do_test, none_s, [])
+        self.assertRaises(AssertionError, do_test, none, client_cert)
 
         # Strict SSL listener, SSL only
-        self.assertRaises(AssertionError, self.do_test, strict, [])
-        self.do_test(strict_s, [])
-        self.do_test(strict_s, client_cert_all)
-        self.do_test(strict, client_cert_all)
-        self.do_test(strict, trustfile)
-        self.do_test(strict, trustfile + client_cert_all)
-        self.assertRaises(AssertionError, self.do_test, strict, bad_trustfile)
+        self.assertRaises(AssertionError, do_test, strict, [])
+        do_test(strict_s, [])
+        do_test(strict_s, client_cert_all)
+        do_test(strict, client_cert_all)
+        do_test(strict, trustfile)
+        do_test(strict, trustfile + client_cert_all)
+        self.assertRaises(AssertionError, do_test, strict, bad_trustfile)
 
         # Requre-auth SSL listener
-        self.assertRaises(AssertionError, self.do_test, auth, [])
-        self.assertRaises(AssertionError, self.do_test, auth_s, [])
-        self.assertRaises(AssertionError, self.do_test, auth, trustfile)
-        self.do_test(auth, client_cert_all)
-        self.do_test(auth, client_cert_all + trustfile)
-        self.assertRaises(AssertionError, self.do_test, auth, client_cert_all + bad_trustfile)
+        self.assertRaises(AssertionError, do_test, auth, [])
+        self.assertRaises(AssertionError, do_test, auth_s, [])
+        self.assertRaises(AssertionError, do_test, auth, trustfile)
+        do_test(auth, client_cert_all)
+        do_test(auth, client_cert_all + trustfile)
+        self.assertRaises(AssertionError, do_test, auth, client_cert_all + bad_trustfile)
 
         # Unsecured SSL listener, allows non-SSL
-        self.do_test(unsecured_s, [])
-        self.do_test(unsecured_s, client_cert_all)
-        self.do_test(unsecured_s, trustfile)
-        self.do_test(unsecured_s, client_cert_all + trustfile)
-        self.do_test(unsecured_s, [])
-        self.do_test(unsecured, []) # Allow unsecured
-        self.assertRaises(AssertionError, self.do_test, auth, client_cert_all + bad_trustfile)
+        do_test(unsecured_s, [])
+        do_test(unsecured_s, client_cert_all)
+        do_test(unsecured_s, trustfile)
+        do_test(unsecured_s, client_cert_all + trustfile)
+        do_test(unsecured_s, [])
+        do_test(unsecured, []) # Allow unsecured
+        self.assertRaises(AssertionError, do_test, auth, client_cert_all + bad_trustfile)
 
 if __name__ == '__main__':
     unittest.main(system_test.main_module())

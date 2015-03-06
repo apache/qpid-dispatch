@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include <Python.h>
+
 #include "log_private.h"
 #include "entity.h"
 #include "aprintf.h"
@@ -196,6 +198,11 @@ static const level_t* level_for_name(const char *name, int len) {
     return &levels[i];
 }
 
+/// Return the name of log level or 0 if not found.
+static const char* level_name(int level) {
+    return (0 <= level && level < N_LEVELS) ? levels[level].name : NULL;
+}
+
 static const char *SEPARATORS=", ;:";
 
 /// Calculate the bit mask for a log enable string. Return -1 and set qd_error on error.
@@ -347,11 +354,48 @@ void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file
 
     write_log(source, entry);
 
+    // Bounded buffer of log entries, keep most recent.
     sys_mutex_lock(log_lock);
     DEQ_INSERT_TAIL(entries, entry);
     if (DEQ_SIZE(entries) > LIST_MAX)
-        qd_log_entry_free_lh(entry);
+        qd_log_entry_free_lh(DEQ_HEAD(entries));
     sys_mutex_unlock(log_lock);
+}
+
+static PyObject *inc_none() { Py_INCREF(Py_None); return Py_None; }
+
+/// Return the log buffer up to limit as a python list. Called by management agent.
+PyObject *qd_log_recent_py(long limit) {
+    if (PyErr_Occurred()) return NULL;
+    PyObject *list = PyList_New(0);
+    PyObject *py_entry = NULL;
+    if (!list) goto error;
+    qd_log_entry_t *entry = DEQ_TAIL(entries);
+    while (entry && limit) {
+        const int ENTRY_SIZE=6;
+        py_entry = PyList_New(ENTRY_SIZE);
+        if (!py_entry) goto error;
+        int i = 0;
+        // NOTE: PyList_SetItem steals a reference so no leak here.
+        PyList_SetItem(py_entry, i++, PyString_FromString(entry->module));
+        const char* level = level_name(entry->level);
+        PyList_SetItem(py_entry, i++, level ? PyString_FromString(level) : inc_none());
+        PyList_SetItem(py_entry, i++, PyString_FromString(entry->text));
+        PyList_SetItem(py_entry, i++, entry->file ? PyString_FromString(entry->file) : inc_none());
+        PyList_SetItem(py_entry, i++, entry->file ? PyLong_FromLong(entry->line) : inc_none());
+        PyList_SetItem(py_entry, i++, PyLong_FromLongLong((PY_LONG_LONG)entry->time));
+        assert(i == ENTRY_SIZE);
+        if (PyErr_Occurred()) goto error;
+        PyList_Insert(list, 0, py_entry);
+        Py_DECREF(py_entry);
+        if (limit > 0) --limit;
+        entry = DEQ_PREV(entry);
+    }
+    return list;
+ error:
+    Py_XDECREF(list);
+    Py_XDECREF(py_entry);
+    return NULL;
 }
 
 void qd_log_initialize(void)

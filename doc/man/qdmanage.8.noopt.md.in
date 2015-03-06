@@ -56,6 +56,9 @@ with qdrouter.
 `get-json-schema` [*INDENT*]
 :    Get the router schema in JSON format. Optional integer indent for formatted  output.
 
+`get-log` [*INDENT*]
+:    Get recent log entries from the router.
+
 # Options
 
 Run `qdmanage --help` to see options.
