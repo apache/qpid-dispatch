@@ -81,7 +81,7 @@ class ManagementTest(system_test.TestCase):
         ])
         cls._routers = [cls.tester.qdrouterd(config=c, wait=False) for c in [conf0, conf1, conf2]]
 
-        # Stand-alone router for logging tests (avoid interfering with logging for other tests.)
+        # Standalone router for logging tests (avoid interfering with logging for other tests.)
         conflog=Qdrouterd.Config([
             ('router', { 'mode': 'standalone', 'routerId': 'logrouter'}),
             ('listener', {'port':cls.get_port(), 'role':'normal'}),

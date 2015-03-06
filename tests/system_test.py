@@ -295,8 +295,8 @@ class Qdrouterd(Process):
         """
 
         DEFAULTS = {
-            'listener':{'addr':'0.0.0.0', 'sasl-mechanisms':'ANONYMOUS'},
-            'connector':{'addr':'127.0.0.1', 'sasl-mechanisms':'ANONYMOUS', 'role':'on-demand'},
+            'listener':{'addr':'0.0.0.0', 'saslMechanisms':'ANONYMOUS'},
+            'connector':{'addr':'127.0.0.1', 'saslMechanisms':'ANONYMOUS', 'role':'on-demand'},
             'container':{'debugDump':"qddebug.txt"}
         }
 
