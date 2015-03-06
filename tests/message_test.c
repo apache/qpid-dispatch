@@ -106,6 +106,7 @@ static char* test_receive_from_messenger(void *context)
 
     if (!qd_field_iterator_equal(iter, (unsigned char*) "test_addr_1"))
         return "Mismatched 'to' field contents";
+    qd_field_iterator_free(iter);
 
     ssize_t test_len = qd_message_field_length(msg, QD_FIELD_TO);
     if (test_len != 11) return "Incorrect field length";
@@ -142,6 +143,8 @@ static char* test_message_properties(void *context)
 
     size_t       size = 10000;
     int result = pn_message_encode(pn_msg, buffer, &size);
+    pn_message_free(pn_msg);
+
     if (result != 0) return "Error in pn_message_encode";
 
     qd_message_t         *msg     = qd_message();
@@ -154,20 +157,24 @@ static char* test_message_properties(void *context)
     if (qd_field_iterator_length(iter) != 13) return "Bad length for correlation-id";
     if (!qd_field_iterator_equal(iter, (const unsigned char *)"correlationId"))
         return "Invalid correlation-id";
+    qd_field_iterator_free(iter);
 
     iter = qd_message_field_iterator(msg, QD_FIELD_SUBJECT);
     if (!iter) return "Expected iterator for the 'subject' field";
     if (!qd_field_iterator_equal(iter, (const unsigned char *)subject))
         return "Bad value for subject";
+    qd_field_iterator_free(iter);
 
     iter = qd_message_field_iterator(msg, QD_FIELD_MESSAGE_ID);
     if (!iter) return "Expected iterator for the 'message-id' field";
     if (qd_field_iterator_length(iter) != 9) return "Bad length for message-id";
     if (!qd_field_iterator_equal(iter, (const unsigned char *)"messageId"))
         return "Invalid message-id";
+    qd_field_iterator_free(iter);
 
     iter = qd_message_field_iterator(msg, QD_FIELD_TO);
     if (iter) return "Expected no iterator for the 'to' field";
+    qd_field_iterator_free(iter);
 
     qd_message_free(msg);
 
@@ -182,6 +189,7 @@ static char* test_check_multiple(void *context)
 
     size_t size = 10000;
     int result = pn_message_encode(pn_msg, buffer, &size);
+    pn_message_free(pn_msg);
     if (result != 0) return "Error in pn_message_encode";
 
     qd_message_t         *msg     = qd_message();

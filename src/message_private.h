@@ -20,7 +20,7 @@
  */
 
 #include <qpid/dispatch/message.h>
-#include <qpid/dispatch/alloc.h>
+#include "alloc.h"
 #include <qpid/dispatch/threading.h>
 
 /** @file

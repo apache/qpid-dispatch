@@ -19,7 +19,7 @@
 
 #include <qpid/dispatch/hash.h>
 #include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/alloc.h>
+#include "alloc.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -109,8 +109,8 @@ void qd_hash_free(qd_hash_t *h)
         item = DEQ_HEAD(h->buckets[idx].items);
         while (item) {
             free(item->key);
-            free_qd_hash_item_t(item);
             DEQ_REMOVE_HEAD(h->buckets[idx].items);
+            free_qd_hash_item_t(item);
             item = DEQ_HEAD(h->buckets[idx].items);
         }
     }

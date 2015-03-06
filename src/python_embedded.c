@@ -23,7 +23,7 @@
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/error.h>
 #include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/alloc.h>
+#include "alloc.h"
 #include <qpid/dispatch/router.h>
 #include <qpid/dispatch/error.h>
 

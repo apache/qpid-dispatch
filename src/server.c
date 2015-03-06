@@ -27,7 +27,7 @@
 #include "dispatch_private.h"
 #include "server_private.h"
 #include "timer_private.h"
-#include "alloc_private.h"
+#include "alloc.h"
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -868,11 +868,9 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
-    int i;
-
-    for (i = 0; i < qd_server->thread_count; i++)
+    for (int i = 0; i < qd_server->thread_count; i++)
         thread_free(qd_server->threads[i]);
-
+    qd_timer_finalize();
     qdpn_driver_free(qd_server->driver);
     sys_mutex_free(qd_server->lock);
     sys_cond_free(qd_server->cond);

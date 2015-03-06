@@ -22,7 +22,7 @@
 #include "server_private.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/alloc.h>
+#include "alloc.h"
 #include <assert.h>
 #include <stdio.h>
 
@@ -33,6 +33,9 @@ static long             time_base;
 
 ALLOC_DECLARE(qd_timer_t);
 ALLOC_DEFINE(qd_timer_t);
+
+/// For tests only
+sys_mutex_t* qd_timer_lock() { return lock; }
 
 //=========================================================================
 // Private static functions

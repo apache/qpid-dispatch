@@ -146,6 +146,8 @@ static char *test_parser_errors(void *context)
                     err_vectors[idx].expected_error, qd_parse_error(parsed));
             return error;
         }
+        qd_parse_free(parsed);
+        qd_field_iterator_free(field);
         idx++;
     }
 

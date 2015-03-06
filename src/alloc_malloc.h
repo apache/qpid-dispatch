@@ -1,3 +1,5 @@
+#ifndef ALLOC_MALLOC_H
+#define ALLOC_MALLOC_H
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,5 +19,26 @@
  * under the License.
  */
 
-#define QPID_DISPATCH_LIB "${QPID_DISPATCH_LIB}"
-#cmakedefine01 USE_MEMORY_POOL
+/**
+ *@file
+ *
+ * Use simple malloc/free allocation in place of allocation pools.
+ * Useful for debugging with tools like valgrind.
+ */
+
+#define ALLOC_DECLARE(T)                        \
+    T *new_##T(void);                           \
+    void free_##T(T *p);
+
+#define ALLOC_DEFINE_CONFIG(T,S,A,C)                                    \
+    T *new_##T(void) { size_t *a = (A); return (T*) malloc((S)+ (a ? *a : 0)); } \
+    void free_##T(T *p) { free(p); } \
+
+#define ALLOC_DEFINE(T) ALLOC_DEFINE_CONFIG(T, sizeof(T), 0, 0)
+
+static inline void qd_alloc_initialize(void) {}
+static inline void qd_alloc_debug_dump(const char *file) {}
+static inline void qd_alloc_finalize(void) {}
+
+
+#endif // ALLOC_MALLOC_H

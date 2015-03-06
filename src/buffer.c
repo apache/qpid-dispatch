@@ -18,7 +18,7 @@
  */
 
 #include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/alloc.h>
+#include "alloc.h"
 
 static size_t buffer_size = 512;
 static int    size_locked = 0;

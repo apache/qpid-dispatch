@@ -21,9 +21,7 @@
 find_program(VALGRIND_EXECUTABLE valgrind DOC "Location of the valgrind program")
 mark_as_advanced(VALGRIND_EXECUTABLE)
 find_package_handle_standard_args(VALGRIND DEFAULT_MSG VALGRIND_EXECUTABLE)
-if (VALGRIND_FOUND)
-  option(USE_VALGRIND "Use valgrind when running tests" OFF)
-endif(VALGRIND_FOUND)
+option(USE_VALGRIND "Use valgrind when running tests" OFF)
 
 include_directories(
   ${CMAKE_SOURCE_DIR}/src
@@ -34,7 +32,6 @@ include_directories(
 ## Build test applications
 ##
 set(unit_test_SOURCES
-    alloc_test.c
     compose_test.c
     parse_test.c
     run_unit_tests.c
@@ -42,6 +39,9 @@ set(unit_test_SOURCES
     timer_test.c
     tool_test.c
     )
+if (USE_MEMORY_POOL)
+  list(APPEND unit_test_SOURCES alloc_test.c)
+endif()
 
 add_executable(unit_tests ${unit_test_SOURCES})
 target_link_libraries(unit_tests qpid-dispatch)

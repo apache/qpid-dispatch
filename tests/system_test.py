@@ -120,9 +120,9 @@ def retry_delay(deadline, delay, max_delay):
     return min(delay*2, max_delay)
 
 
-DEFAULT_TIMEOUT = float(os.environ.get("QPID_SYSTEM_TEST_TIMEOUT", 10))
+TIMEOUT = float(os.environ.get("QPID_SYSTEM_TEST_TIMEOUT", 10))
 
-def retry(function, timeout=DEFAULT_TIMEOUT, delay=.001, max_delay=1):
+def retry(function, timeout=TIMEOUT, delay=.001, max_delay=1):
     """Call function until it returns a true value or timeout expires.
     Double the delay for each retry up to max_delay.
     Returns what function returns or None if timeout expires.
@@ -137,7 +137,7 @@ def retry(function, timeout=DEFAULT_TIMEOUT, delay=.001, max_delay=1):
             if delay is None:
                 return None
 
-def retry_exception(function, timeout=DEFAULT_TIMEOUT, delay=.001, max_delay=1, exception_test=None):
+def retry_exception(function, timeout=TIMEOUT, delay=.001, max_delay=1, exception_test=None):
     """Call function until it returns without exception or timeout expires.
     Double the delay for each retry up to max_delay.
     Calls exception_test with any exception raised by function, exception_test
@@ -352,7 +352,7 @@ class Qdrouterd(Process):
     def management(self):
         """Return a management agent proxy for this router"""
         if not self._management:
-            self._management = Node.connect(self.addresses[0], timeout=DEFAULT_TIMEOUT)
+            self._management = Node.connect(self.addresses[0], timeout=TIMEOUT)
         return self._management
 
     def teardown(self):
@@ -481,7 +481,7 @@ class Qpidd(Process):
 class Messenger(proton.Messenger):
     """Convenience additions to proton.Messenger"""
 
-    def __init__(self, name=None, timeout=DEFAULT_TIMEOUT, blocking=True):
+    def __init__(self, name=None, timeout=TIMEOUT, blocking=True):
         super(Messenger, self).__init__(name)
         self.timeout = timeout
         self.blocking = blocking

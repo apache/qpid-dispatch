@@ -20,7 +20,6 @@
  */
 
 #include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/buffer.h>
 #include <qpid/dispatch/compose.h>

@@ -18,7 +18,7 @@
  */
 
 #include <Python.h>
-#include <qpid/dispatch/alloc.h>
+#include "alloc.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
 #include <memory.h>
@@ -27,7 +27,9 @@
 #include "entity.h"
 #include "entity_cache.h"
 
+#if !defined(NDEBUG)
 #define QD_MEMORY_DEBUG 1
+#endif
 
 const char *QD_ALLOCATOR_TYPE = "allocator";
 
@@ -280,7 +282,7 @@ void qd_alloc_finalize(void)
 
     //
     // Note: By the time we get here, the server threads have been joined and there is
-    //       only the main thread remaining.  There is therefore no reason to be 
+    //       only the main thread remaining.  There is therefore no reason to be
     //       concerned about locking.
     //
 
@@ -333,7 +335,7 @@ void qd_alloc_finalize(void)
         //
         if (dump_file && desc->stats->total_free_to_heap < desc->stats->total_alloc_from_heap)
             fprintf(dump_file,
-                    "alloc.c: Items of type '%s' remain allocated at shutdown: %"PRId64"\n", 
+                    "alloc.c: Items of type '%s' remain allocated at shutdown: %"PRId64"\n",
                     desc->type_name,
                     desc->stats->total_alloc_from_heap - desc->stats->total_free_to_heap);
 

@@ -24,7 +24,7 @@
 #include "aprintf.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/dispatch.h>
-#include <qpid/dispatch/alloc.h>
+#include "alloc.h"
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
 #include <stdarg.h>

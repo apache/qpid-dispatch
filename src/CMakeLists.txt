@@ -43,7 +43,6 @@ include_directories(
 
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES
-  alloc.c
   amqp.c
   bitmask.c
   buffer.c
@@ -73,6 +72,10 @@ set(qpid_dispatch_SOURCES
   timer.c
   waypoint.c
   )
+
+if(USE_MEMORY_POOL)
+  list(APPEND qpid_dispatch_SOURCES alloc_pool.c)
+endif()
 
 set_property(
   SOURCE python_embedded.c router_pynode.c

@@ -48,5 +48,7 @@ long qd_timer_next_duration_LH(void);
 void qd_timer_visit_LH(long current_time);
 void qd_timer_idle_LH(qd_timer_t *timer);
 
+/// For tests only
+sys_mutex_t* qd_timer_lock();
 
 #endif

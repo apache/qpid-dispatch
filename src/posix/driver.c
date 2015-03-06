@@ -37,7 +37,7 @@
 #include <assert.h>
 
 #include <qpid/dispatch/driver.h>
-#include <qpid/dispatch/alloc.h>
+#include "alloc.h"
 #include <proton/error.h>
 #include <proton/sasl.h>
 #include <proton/ssl.h>

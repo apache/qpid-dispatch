@@ -1,5 +1,5 @@
-#ifndef __dispatch_alloc_private_h__
-#define __dispatch_alloc_private_h__ 1
+#ifndef ALLOC_H
+#define ALLOC_H
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,11 +19,12 @@
  * under the License.
  */
 
-#include <qpid/dispatch/alloc.h>
-#include <qpid/dispatch/dispatch.h>
+#include "config.h"
 
-void qd_alloc_initialize(void);
-void qd_alloc_debug_dump(const char *file);
-void qd_alloc_finalize(void);
-
+#if USE_MEMORY_POOL
+#include "alloc_pool.h"
+#else
+#include "alloc_malloc.h"
 #endif
+
+#endif // ALLOC_H

@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "alloc.h"
+
 #include <qpid/dispatch.h>
 #include <qpid/dispatch/buffer.h>
 #include <stdio.h>
@@ -34,17 +36,24 @@ int main(int argc, char** argv)
         fprintf(stderr, "usage: %s <config-file>\n", argv[0]);
         exit(1);
     }
+    int result = 0;
 
+    // Call qd_dispatch() first initialize allocator used by other tests.
     qd_dispatch_t *qd = qd_dispatch(0);
     qd_dispatch_load_config(qd, argv[1]);
-
-    int result = 0;
-    result += tool_tests();
-    result += alloc_tests();
+    if (qd_error_code()) {
+        printf("Config failed: %s\n", qd_error_message());
+        return 1;
+    }
+    result += timer_tests();
     result += server_tests(qd);
+    result += tool_tests();
     result += parse_tests();
     result += compose_tests();
-    qd_dispatch_free(qd);
-    result += timer_tests();
+#if USE_MEMORY_POOL
+    result += alloc_tests();
+#endif
+    qd_dispatch_free(qd);       // dispatch_free last.
+
     return result;
 }

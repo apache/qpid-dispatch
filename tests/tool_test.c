@@ -22,7 +22,7 @@
 #include <string.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/bitmask.h>
-#include "alloc_private.h"
+#include "alloc.h"
 
 typedef struct item_t {
     DEQ_LINKS(struct item_t);
@@ -222,7 +222,6 @@ static char* test_bitmask(void *context)
 int tool_tests(void)
 {
     int result = 0;
-    qd_alloc_initialize();
 
     TEST_CASE(test_deq_basic, 0);
     TEST_CASE(test_deq_basic2, 0);

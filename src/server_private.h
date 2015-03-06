@@ -22,7 +22,7 @@
 #include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/user_fd.h>
-#include <qpid/dispatch/alloc.h>
+#include "alloc.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/driver.h>

@@ -27,6 +27,9 @@ message("Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
 
 project(qpid-dispatch C)
 
+# Build time switch to turn off memory pooling.
+option(USE_MEMORY_POOL "Use per-thread memory pools" ON)
+
 file(STRINGS "${CMAKE_SOURCE_DIR}/VERSION.txt" QPID_DISPATCH_VERSION)
 
 cmake_minimum_required(VERSION 2.6)

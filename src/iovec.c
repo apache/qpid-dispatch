@@ -17,9 +17,10 @@
  * under the License.
  */
 
+#include "alloc.h"
 #include <qpid/dispatch/iovec.h>
-#include <qpid/dispatch/alloc.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define QD_IOVEC_MAX 64
 

@@ -18,9 +18,9 @@
  */
 
 #include "test_case.h"
+#include "alloc.h"
 #include <stdio.h>
 #include <string.h>
-#include "alloc_private.h"
 
 typedef struct {
     int A;
@@ -49,30 +49,28 @@ static char* test_alloc_basic(void *context)
     object_t         *obj[50];
     int               idx;
     qd_alloc_stats_t *stats;
-    char             *error;
+    char             *error = 0;
 
     for (idx = 0; idx < 20; idx++)
         obj[idx] = new_object_t();
-
     stats = alloc_stats_object_t();
     error = check_stats(stats, 21, 0, 21, 0, 0);
-    if (error) return error;
-
     for (idx = 0; idx < 20; idx++)
         free_object_t(obj[idx]);
+    if (error) return error;
 
     error = check_stats(stats, 21, 5, 6, 0, 5);
     if (error) return error;
 
     for (idx = 0; idx < 20; idx++)
         obj[idx] = new_object_t();
-
     error = check_stats(stats, 27, 5, 21, 3, 5);
+    for (idx = 0; idx < 20; idx++)
+        free_object_t(obj[idx]);
     if (error) return error;
 
     return 0;
 }
-
 
 int alloc_tests(void)
 {

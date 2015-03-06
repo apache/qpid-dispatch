@@ -17,9 +17,12 @@
  * under the License.
  */
 
+#include "alloc.h"
 #include <qpid/dispatch/bitmask.h>
-#include <qpid/dispatch/alloc.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <sys/types.h>
 
 #define QD_BITMASK_LONGS 16
 #define QD_BITMASK_BITS  (QD_BITMASK_LONGS * 64)

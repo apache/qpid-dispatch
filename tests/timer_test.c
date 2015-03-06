@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <qpid/dispatch/timer.h>
 #include "dispatch_private.h"
-#include "alloc_private.h"
+#include "alloc.h"
 #include "timer_private.h"
 #include "test_case.h"
 #include <qpid/dispatch/threading.h>
@@ -367,12 +367,10 @@ static char* test_big(void *context)
 int timer_tests(void)
 {
     int result = 0;
-    qd_alloc_initialize();
 
     fire_mask = 0;
     DEQ_INIT(pending_timers);
-    lock = sys_mutex();
-    qd_timer_initialize(lock);
+    lock = qd_timer_lock();
     time = 1;
 
     timers[0]  = qd_timer(0, 0, (void*) 0x00000001);
@@ -406,9 +404,6 @@ int timer_tests(void)
     int i;
     for (i = 0; i < 16; i++)
         qd_timer_free(timers[i]);
-
-    qd_timer_finalize();
-    sys_mutex_free(lock);
 
     return result;
 }

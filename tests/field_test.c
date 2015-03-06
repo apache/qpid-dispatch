@@ -47,6 +47,8 @@ static char* test_view_global_dns(void *context)
     if (!qd_field_iterator_equal(iter, (unsigned char*) "M0global/sub"))
         return "ITER_VIEW_ADDRESS_HASH failed";
 
+    qd_field_iterator_free(iter);
+
     return 0;
 }
 
@@ -73,6 +75,8 @@ static char* test_view_global_non_dns(void *context)
     if (!qd_field_iterator_equal(iter, (unsigned char*) "M0global/sub"))
         return "ITER_VIEW_ADDRESS_HASH failed";
 
+    qd_field_iterator_free(iter);
+
     return 0;
 }
 
@@ -98,6 +102,8 @@ static char* test_view_global_no_host(void *context)
     qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
     if (!qd_field_iterator_equal(iter, (unsigned char*) "M0global/sub"))
         return "ITER_VIEW_ADDRESS_HASH failed";
+
+    qd_field_iterator_free(iter);
 
     return 0;
 }
@@ -133,6 +139,7 @@ static char* test_view_address_hash(void *context)
                      cases[idx].addr, cases[idx].view, got);
             return fail_text;
         }
+        qd_field_iterator_free(iter);
     }
 
     return 0;
@@ -158,6 +165,7 @@ static char* test_view_address_hash_override(void *context)
                      cases[idx].addr, cases[idx].view, got);
             return fail_text;
         }
+        qd_field_iterator_free(iter);
     }
 
     return 0;
@@ -181,7 +189,9 @@ static char* test_view_node_hash(void *context)
             snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
                      cases[idx].addr, cases[idx].view, got);
             return fail_text;
+            qd_field_iterator_free(iter);
         }
+        qd_field_iterator_free(iter);
     }
 
     return 0;

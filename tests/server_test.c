@@ -121,6 +121,9 @@ static char* test_user_fd(void *context)
     close(fd[0]);
     close(fd[1]);
 
+    qd_user_fd_free(ufd_read);
+    qd_user_fd_free(ufd_write);
+
     if (stored_error[0])            return stored_error;
     if (write_count - OCTET_COUNT > 2) sprintf(stored_error, "Excessively high Write Count: %d", write_count);
     if (read_count != OCTET_COUNT)  sprintf(stored_error, "Incorrect Read Count: %d", read_count);;
