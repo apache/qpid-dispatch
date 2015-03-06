@@ -20,9 +20,9 @@
 import os
 import sys
 import unittest
+import mock                     # Mock definitions for tests.
 
 sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "mock")) # Mock modules for tests
 
 from qpid_dispatch_internal.router.engine import HelloProtocol, PathEngine, NodeTracker
 from qpid_dispatch_internal.router.data import LinkState, MessageHELLO

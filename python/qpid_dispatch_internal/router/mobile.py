@@ -18,7 +18,7 @@
 #
 
 from data import MessageMAR, MessageMAU
-from dispatch import LOG_DEBUG, LOG_TRACE
+from ..dispatch import LOG_DEBUG, LOG_TRACE
 
 MAX_KEPT_DELTAS = 10
 

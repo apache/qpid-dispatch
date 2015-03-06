@@ -18,7 +18,7 @@
 #
 
 from data import LinkState, MessageHELLO
-from dispatch import LOG_INFO, LOG_TRACE
+from qpid_dispatch_internal.dispatch import LOG_INFO, LOG_TRACE
 
 class HelloProtocol(object):
     """

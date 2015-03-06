@@ -17,7 +17,16 @@
 # under the License
 #
 
-"""Access to functions in libqpid-dispatch.so"""
+"""Interface between python and libqpid-dispatch.so.
+
+This module contains python ctypes definitions to directly call functions in the
+libqpid-dispatch.so library from python.
+
+The C library also adds the following C extension types to this module:
+
+- LogAdapter: Logs to the C logging system.
+- IoAdapter: Receives messages from the router into python.
+"""
 
 import ctypes
 from ctypes import c_char_p, c_long, py_object

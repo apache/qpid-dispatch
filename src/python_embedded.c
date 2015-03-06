@@ -28,6 +28,8 @@
 #include <qpid/dispatch/error.h>
 
 
+#define DISPATCH_MODULE "qpid_dispatch_internal.dispatch"
+
 //===============================================================================
 // Control Functions
 //===============================================================================
@@ -374,14 +376,10 @@ static PyMethodDef LogAdapter_methods[] = {
     {0, 0, 0, 0}
 };
 
-static PyMethodDef empty_methods[] = {
-    {0, 0, 0, 0}
-};
-
 static PyTypeObject LogAdapterType = {
     PyObject_HEAD_INIT(0)
     0,                         /* ob_size*/
-    "dispatch.LogAdapter",     /* tp_name*/
+    DISPATCH_MODULE ".LogAdapter",  /* tp_name*/
     sizeof(LogAdapter),        /* tp_basicsize*/
     0,                         /* tp_itemsize*/
     (destructor)LogAdapter_dealloc, /* tp_dealloc*/
@@ -627,7 +625,7 @@ static PyMethodDef IoAdapter_methods[] = {
 static PyTypeObject IoAdapterType = {
     PyObject_HEAD_INIT(0)
     0,                         /* ob_size*/
-    "dispatch.IoAdapter",      /* tp_name*/
+    DISPATCH_MODULE ".IoAdapter",  /* tp_name*/
     sizeof(IoAdapter),         /* tp_basicsize*/
     0,                         /* tp_itemsize*/
     (destructor)IoAdapter_dealloc, /* tp_dealloc*/
@@ -687,7 +685,6 @@ static void qd_register_constant(PyObject *module, const char *name, uint32_t va
     PyModule_AddObject(module, name, const_object);
 }
 
-
 static void qd_python_setup(void)
 {
     LogAdapterType.tp_new = PyType_GenericNew;
@@ -697,8 +694,6 @@ static void qd_python_setup(void)
         qd_log(log_source, QD_LOG_ERROR, "Unable to initialize Adapters");
         abort();
     } else {
-        PyObject *m = Py_InitModule3("dispatch", empty_methods, "Dispatch Adapter Module");
-
         //
         // Append sys.path to include location of Dispatch libraries
         //
@@ -706,6 +701,9 @@ static void qd_python_setup(void)
             PyObject *sys_path = PySys_GetObject("path");
             PyList_Append(sys_path, dispatch_python_pkgdir);
         }
+
+        // Import the initial dispatch module (we will add C extensions to it)
+        PyObject *m = PyImport_ImportModule(DISPATCH_MODULE);
 
         //
         // Add LogAdapter
