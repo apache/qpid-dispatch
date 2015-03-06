@@ -24,7 +24,7 @@ AMQP management client for Qpid dispatch.
 import qpid_dispatch_site
 import proton
 from proton import Url
-from .error import *
+from .error import *        # import all error symbols for convenience to users.
 from .entity import EntityBase, clean_dict
 try:
     from proton.utils import SyncRequestResponse, BlockingConnection

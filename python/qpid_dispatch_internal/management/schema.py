@@ -26,7 +26,7 @@ check for uniqueness of enties/attributes that are specified to be unique.
 A Schema can be loaded/dumped to a json file.
 """
 
-import sys, json
+import sys
 from qpid_dispatch.management.entity import EntityBase
 from qpid_dispatch.management.error import NotImplementedStatus
 from ..compat import OrderedDict
@@ -368,8 +368,8 @@ class EntityType(object):
         def check(a, b, what):
             overlap = set(a) & set(b)
             if overlap:
-                raise RedefinedError("'%s' cannot %s '%s', re-defines %s: %s"
-                                     % (self.name, how, other.short_name, what, ",".join(overlap)))
+                raise ValidationError("'%s' cannot %s '%s', re-defines %s: %s"
+                                      % (self.name, how, other.short_name, what, ",".join(overlap)))
         check(self.operations, other.operations, "operations")
         self.operations += other.operations
         check(self.attributes.iterkeys(), other.attributes.itervalues(), "attributes")
@@ -474,9 +474,6 @@ class EntityType(object):
             ('operations', self.operations),
             ('description', self.description or None)
         ])
-        if self.singleton: d['singleton'] = True
-        return d
-
 
     def __repr__(self): return "%s(%s)" % (type(self).__name__, self.name)
 

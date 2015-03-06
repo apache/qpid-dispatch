@@ -20,7 +20,7 @@
 """Library for generating markdown documentation from a L{schema.Schema}"""
 
 from collections import namedtuple
-import sys, re
+import sys
 from .schema import quotestr
 
 

@@ -24,7 +24,6 @@ Configuration file parsing
 import json, re, sys
 from copy import copy
 from qpid_dispatch.management.entity import camelcase
-from .schema import ValidationError
 from .. import dispatch_c
 from .qdrouter import QdSchema
 

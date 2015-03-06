@@ -25,7 +25,6 @@ from mobile import MobileAddressEngine
 from node import NodeTracker
 from message import Message
 
-import sys
 from traceback import format_exc, extract_stack
 import time
 
@@ -33,7 +32,7 @@ import time
 ## Import the Dispatch adapters from the environment.  If they are not found
 ## (i.e. we are in a test bench, etc.), load the stub versions.
 ##
-from ..dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_ERROR, LOG_STACK_LIMIT
+from ..dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_INFO, LOG_ERROR, LOG_STACK_LIMIT
 
 class RouterEngine:
     """
@@ -95,7 +94,7 @@ class RouterEngine:
         try:
             if addr[0] in 'MC':
                 self.mobile_address_engine.add_local_address(addr)
-        except Exception, e:
+        except Exception:
             self.log_ma(LOG_ERROR, "Exception in new-address processing\n%s" % format_exc(LOG_STACK_LIMIT))
 
     def addressRemoved(self, addr):
@@ -104,7 +103,7 @@ class RouterEngine:
         try:
             if addr[0] in 'MC':
                 self.mobile_address_engine.del_local_address(addr)
-        except Exception, e:
+        except Exception:
             self.log_ma(LOG_ERROR, "Exception in del-address processing\n%s" % format_exc(LOG_STACK_LIMIT))
 
     def linkLost(self, link_id):
@@ -121,7 +120,7 @@ class RouterEngine:
             self.hello_protocol.tick(now)
             self.link_state_engine.tick(now)
             self.node_tracker.tick(now)
-        except Exception, e:
+        except Exception:
             self.log(LOG_ERROR, "Exception in timer processing\n%s" % format_exc(LOG_STACK_LIMIT))
 
     def handleControlMessage(self, opcode, body, link_id):
@@ -159,7 +158,7 @@ class RouterEngine:
                 self.log_ma(LOG_TRACE, "RCVD: %r" % msg)
                 self.mobile_address_engine.handle_mar(msg, now)
 
-        except Exception, e:
+        except Exception:
             self.log(LOG_ERROR, "Control message error: opcode=%s body=%r\n%s" % (opcode, body, format_exc(LOG_STACK_LIMIT)))
 
     def receive(self, message, link_id):
@@ -168,7 +167,7 @@ class RouterEngine:
         """
         try:
             self.handleControlMessage(message.properties['opcode'], message.body, link_id)
-        except Exception, e:
+        except Exception:
             self.log(LOG_ERROR, "Exception in raw message processing: properties=%r body=%r\n%s" %
                      (message.properties, message.body, format_exc(LOG_STACK_LIMIT)))
 

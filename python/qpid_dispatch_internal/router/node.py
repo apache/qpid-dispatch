@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from ..dispatch import LOG_INFO, LOG_ERROR, LOG_TRACE, LOG_DEBUG
+from ..dispatch import LOG_INFO, LOG_TRACE, LOG_DEBUG
 from data import LinkState
 from .address import Address
 

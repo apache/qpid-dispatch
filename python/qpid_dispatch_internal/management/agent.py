@@ -65,8 +65,7 @@ Temporary solution is to lock the entire dispatch router lock during full refres
 Better solution coming soon...
 """
 
-import traceback, json
-from collections import namedtuple
+yimport traceback, json
 from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock

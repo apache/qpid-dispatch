@@ -18,7 +18,7 @@
 #
 
 from data import MessageRA, MessageLSU, MessageLSR
-from ..dispatch import LOG_INFO, LOG_TRACE
+from ..dispatch import LOG_TRACE
 
 class LinkStateEngine(object):
     """
