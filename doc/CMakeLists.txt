@@ -18,12 +18,26 @@
 ##
 
 
+# In recent versions of cmake the documentation is not built automatically, you need to
+# run "make doc", so you can leave this ON. In older (< 2.8) versions, documentation
+# is built by "make all" so you need to turn BUILD_DOCS OFF if you don't want that.
 option(BUILD_DOCS "Generate documentation" ON)
 
 set(src ${CMAKE_CURRENT_SOURCE_DIR})
 set(bin ${CMAKE_CURRENT_BINARY_DIR})
 
 if(BUILD_DOCS)
+
+  if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_LESS "2.8")
+    # OPTIONAL does not exist in install before 2.8 so always make docs and install
+    add_custom_target(doc ALL)
+  else()
+    set (OPTIONAL OPTIONAL)
+    add_custom_target(doc)
+  endif()
+  macro(install_doc)
+    install(${ARGN} ${OPTIONAL})
+  endmacro()
 
   find_package(Doxygen)
   find_program(PANDOC pandoc)
@@ -57,15 +71,16 @@ if(BUILD_DOCS)
   add_subdirectory(book)
 
   # Index for installed doc
-  install(FILES ${src}/index.md DESTINATION ${QD_DOC_INSTALL_DIR})
+  install_doc(FILES ${src}/index.md DESTINATION ${QD_DOC_INSTALL_DIR})
   if(USE_PANDOC)
     add_custom_command(
       OUTPUT ${bin}/index.html
       COMMAND ${PANDOC} --standalone -f markdown -t html -o ${bin}/index.html ${src}/index.md
       DEPENDS ${src}/index.md
       )
-    add_custom_target(doc-index ALL DEPENDS ${bin}/index.html)
-    install(FILES ${bin}/index.html DESTINATION ${QD_DOC_INSTALL_DIR})
+    add_custom_target(doc-index DEPENDS ${bin}/index.html)
+    add_dependencies(doc doc-index)
+    install_doc(FILES ${bin}/index.html DESTINATION ${QD_DOC_INSTALL_DIR})
   endif(USE_PANDOC)
 
 endif(BUILD_DOCS)

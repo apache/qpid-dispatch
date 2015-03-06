@@ -54,9 +54,10 @@ if(USE_DOXYGEN)
     COMMAND ${CMAKE_COMMAND} -E touch api api_dev
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doxygen.in ${API_SOURCES})
 
-  add_custom_target(apidocs ALL DEPENDS api api_dev)
+  add_custom_target(apidocs DEPENDS api api_dev)
+  add_dependencies(doc apidocs)
 
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/api DESTINATION ${QD_DOC_INSTALL_DIR})
-  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/api_dev DESTINATION ${QD_DOC_INSTALL_DIR})
+  install_doc(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/api DESTINATION ${QD_DOC_INSTALL_DIR})
+  install_doc(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/api_dev DESTINATION ${QD_DOC_INSTALL_DIR})
 
 endif(USE_DOXYGEN)

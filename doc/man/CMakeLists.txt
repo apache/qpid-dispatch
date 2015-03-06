@@ -46,7 +46,7 @@ macro(manpage program section)
   set(manpage "${bin}/${program}.${section}")
 
   # Install the plain markdown manpage.
-  install(FILES ${manpage}.md DESTINATION ${QD_DOC_INSTALL_DIR})
+  install_doc(FILES ${manpage}.md DESTINATION ${QD_DOC_INSTALL_DIR})
   set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage}.md)
 
   if (USE_PANDOC)
@@ -57,7 +57,7 @@ macro(manpage program section)
       COMMAND ${PANDOC} -f markdown -t html -o ${manpage}.html ${manpage}.md -s # Full page
       COMMAND ${PANDOC} -f markdown -t html -o ${manpage}.html.in ${manpage}.md # Fragment
       )
-    install(FILES ${manpage}.html DESTINATION ${QD_DOC_INSTALL_DIR})
+    install_doc(FILES ${manpage}.html DESTINATION ${QD_DOC_INSTALL_DIR})
     set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage}.html ${manpage}.html.in)
 
     # Generate proper man pages
@@ -74,7 +74,7 @@ macro(manpage program section)
       DEPENDS ${manpage}.md ${src}/man.template.pd
       COMMAND ${PANDOC} --template ${src}/man.template.pd -s -V date="${date}" -V title="${program}" -V section="${section}" -V version="${QPID_DISPATCH_VERSION}" -V header="${header}" -f markdown -t man -o ${manpage} ${manpage}.md
       )
-    install(FILES ${manpage} DESTINATION "${MAN_INSTALL_DIR}/man${section}")
+    install_doc(FILES ${manpage} DESTINATION "${MAN_INSTALL_DIR}/man${section}")
     set(MANPAGES_OUT ${MANPAGES_OUT} ${manpage})
   endif(USE_PANDOC)
 endmacro(manpage)
@@ -101,4 +101,5 @@ add_custom_command(
 manpage(qdrouterd.conf 5)
 
 # Target to build the generated files
-add_custom_target(man ALL DEPENDS ${MANPAGES_OUT})
+add_custom_target(man DEPENDS ${MANPAGES_OUT})
+add_dependencies(doc man)

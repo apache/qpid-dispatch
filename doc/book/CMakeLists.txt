@@ -35,7 +35,7 @@ add_custom_command(
 set(BOOK ${src}/introduction.md ${src}/using.md ${src}/addressing.md ${src}/amqp-mapping.md ${bin}/schema.md)
 
 # Install markdown documentation in the doc directory.
-install(FILES ${BOOK} DESTINATION ${QD_DOC_INSTALL_DIR})
+install_doc(FILES ${BOOK} DESTINATION ${QD_DOC_INSTALL_DIR})
 
 if(USE_PANDOC)
   set(PD_ARGS --standalone --toc --number-sections -f markdown -V "title=Qpid Dispatch Router Book")
@@ -48,7 +48,7 @@ if(USE_PANDOC)
       COMMAND ${PANDOC} ${PD_ARGS} -o ${OUTPUT} ${ARGN} ${BOOK}
       DEPENDS man ${BOOK}
     )
-    install(FILES ${OUTPUT} DESTINATION ${QD_DOC_INSTALL_DIR})
+    install_doc(FILES ${OUTPUT} DESTINATION ${QD_DOC_INSTALL_DIR})
     set(BOOKS ${BOOKS} ${OUTPUT})
   endmacro()
 
@@ -62,5 +62,6 @@ if(USE_PANDOC)
 endif(USE_PANDOC)
 
 # Target to generate all chapters and books.
-add_custom_target(book ALL DEPENDS ${BOOK} ${BOOKS})
+add_custom_target(book DEPENDS ${BOOK} ${BOOKS})
 add_dependencies(book man) # Note: adding man to book DEPENDS does not work on cmake 2.6.4
+add_dependencies(doc book) # Note: adding man to book DEPENDS does not work on cmake 2.6.4
