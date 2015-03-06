@@ -144,3 +144,13 @@ add_subdirectory(python)
 add_subdirectory(router)
 add_subdirectory(doc)
 add_subdirectory(site)
+
+# reconfigure.in is a workaround to force cmake re-configuration. For example,
+# we use GLOB to collect .h files for install and apidoc, so if you _remove_ a
+# .h file it won't trigger automatic re-configure and everybody's builds will
+# fail till they run cmake manually.
+#
+# If you do check in such a change, increase the number in this file by 1.
+# That will force automatic re-configure and everybody will be happy.
+#
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/reconfigure.in ${CMAKE_CURRENT_BINARY_DIR}/reconfigure)
