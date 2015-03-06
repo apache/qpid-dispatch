@@ -156,7 +156,7 @@ def retry_exception(function, timeout=DEFAULT_TIMEOUT, delay=.001, max_delay=1, 
             if delay is None:
                 raise
 
-def port_available(port, host='0.0.0.0'):
+def port_available(port, host='127.0.0.1'):
     """Return true if connecting to host:port gives 'connection refused'."""
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -168,7 +168,7 @@ def port_available(port, host='0.0.0.0'):
         pass
     return False
 
-def wait_port(port, host='0.0.0.0', **retry_kwargs):
+def wait_port(port, host='127.0.0.1', **retry_kwargs):
     """Wait up to timeout for port (on host) to be connectable.
     Takes same keyword arguments as retry to control the timeout"""
     def check(e):
@@ -296,7 +296,7 @@ class Qdrouterd(Process):
 
         DEFAULTS = {
             'listener':{'addr':'0.0.0.0', 'sasl-mechanisms':'ANONYMOUS'},
-            'connector':{'addr':'0.0.0.0', 'sasl-mechanisms':'ANONYMOUS', 'role':'on-demand'},
+            'connector':{'addr':'127.0.0.1', 'sasl-mechanisms':'ANONYMOUS', 'role':'on-demand'},
             'container':{'debugDump':"qddebug.txt"}
         }
 
@@ -376,7 +376,7 @@ class Qdrouterd(Process):
         """Return host:port for all listeners"""
         return ["%s:%s"%(l['addr'], l['port']) for l in self.config.sections('listener')]
 
-    def is_connected(self, port, host='0.0.0.0'):
+    def is_connected(self, port, host='127.0.0.1'):
         """If router has a connection to host:port return the management info.
         Otherwise return None"""
         try:

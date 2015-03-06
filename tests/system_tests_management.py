@@ -170,7 +170,7 @@ class ManagementTest(system_test.TestCase):
         attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'saslMechanisms': 'ANONYMOUS'}
         entity = self.assert_create_ok(LISTENER, 'foo', attributes)
         self.assertEqual(entity['name'], 'foo')
-        self.assertEqual(entity['addr'], '0.0.0.0')
+        self.assertEqual(entity['addr'], '127.0.0.1')
 
         # Connect via the new listener
         node3 = self.cleanup(Node.connect(Url(port=port)))
@@ -264,18 +264,18 @@ class ManagementTest(system_test.TestCase):
         for c in [
                 (FIXED_ADDRESS, 'a1', {'prefix':'foo', 'phase':0, 'fanout':'single', 'bias':'spread'}),
                 (FIXED_ADDRESS, 'a2', {'prefix':'foo', 'phase':1, 'fanout':'single', 'bias':'spread'}),
-                (CONNECTOR, 'wp_connector', {'port':str(wp_router.ports[0]), 'saslMechanisms': 'ANONYMOUS', 'role': 'on-demand'}),
+                (CONNECTOR, 'wp_connector', {'addr': '127.0.0.1', 'port':str(wp_router.ports[0]), 'saslMechanisms': 'ANONYMOUS', 'role': 'on-demand'}),
                 (WAYPOINT, 'wp', {'address': 'foo', 'inPhase': 0, 'outPhase': 1, 'connector': 'wp_connector'})
         ]:
             self.assert_create_ok(*c)
         assert retry(lambda: self.router.is_connected, wp_router.ports[0])
 
         # Verify the entities
-        id = 'connector/0.0.0.0:%s' % wp_router.ports[0]
+        id = 'connector/127.0.0.1:%s' % wp_router.ports[0]
         connector = self.node.read(identity=id)
         self.assertEqual(
             [connector.name, connector.addr, connector.port, connector.role],
-            ['wp_connector', '0.0.0.0', str(wp_router.ports[0]), 'on-demand'])
+            ['wp_connector', '127.0.0.1', str(wp_router.ports[0]), 'on-demand'])
 
         # Send a message through self.router, verify it goes via wp_router
         address=self.router.addresses[0]+"/foo"
