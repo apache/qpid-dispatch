@@ -399,7 +399,7 @@ static int process_handler(qd_container_t *container, void* unused, qd_connectio
             qd_link = (qd_link_t*) pn_link_get_context(pn_link);
             if (qd_link && qd_link->node && qd_link->node->ntype->link_flow_handler)
                 qd_link->node->ntype->link_flow_handler(qd_link->node->context, qd_link);
-            
+            break;
 
         case PN_DELIVERY :
             delivery = pn_event_delivery(event);
