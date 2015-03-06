@@ -691,7 +691,7 @@ static void qd_python_setup(void)
     IoAdapterType.tp_new  = PyType_GenericNew;
     if ((PyType_Ready(&LogAdapterType) < 0) || (PyType_Ready(&IoAdapterType) < 0)) {
         qd_error_py();
-        qd_log(log_source, QD_LOG_ERROR, "Unable to initialize Adapters");
+        qd_log(log_source, QD_LOG_CRITICAL, "Unable to initialize Adapters");
         abort();
     } else {
         //
@@ -704,6 +704,11 @@ static void qd_python_setup(void)
 
         // Import the initial dispatch module (we will add C extensions to it)
         PyObject *m = PyImport_ImportModule(DISPATCH_MODULE);
+        if (!m) {
+            qd_error_py();
+            qd_log(log_source, QD_LOG_CRITICAL, "Cannot load dispatch extension module '%s'", DISPATCH_MODULE);
+            abort();
+        }
 
         //
         // Add LogAdapter

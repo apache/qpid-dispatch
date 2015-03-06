@@ -26,9 +26,11 @@ The C library also adds the following C extension types to this module:
 
 - LogAdapter: Logs to the C logging system.
 - IoAdapter: Receives messages from the router into python.
+
+This module also prevents the proton python module from being accidentally loaded.
 """
 
-import ctypes
+import sys, ctypes
 from ctypes import c_char_p, c_long, py_object
 import qpid_dispatch_site
 
@@ -87,3 +89,23 @@ class QdDll(ctypes.PyDLL):
 
     def function(self, fname, restype, argtypes, check=True):
         return self._prototype(getattr(self, fname), restype, argtypes, check)
+
+
+# Prevent accidental loading of the proton module.
+
+FORBIDDEN = ["proton"]
+
+def check_forbidden():
+    bad = set(FORBIDDEN) & set(sys.modules)
+    if bad:
+        raise ImportError("Forbidden modules loaded: '%s'." % "', '".join(bad))
+
+def import_check(name, *args, **kw):
+    if name in FORBIDDEN:
+        raise ImportError("Attempted to load forbidden module '%s'." % name)
+    return builtin_import(name, *args, **kw)
+
+check_forbidden()
+import __builtin__
+builtin_import = __builtin__.__import__
+__builtin__.__import__ = import_check
