@@ -80,8 +80,11 @@ add_system_test(system_tests_qdmanage)
 add_system_test(system_tests_qdstat)
 add_system_test(system_tests_two_routers)
 
+# NOTE: Don't install run.py. A system test of a dispatch installation should pick everything
+# up from standard install locations.
+#
 set(SYSTEM_TEST_FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/run.py run_system_tests.py system_test.py
+  run_system_tests.py system_test.py
   system_tests_one_router.py system_tests_two_routers.py
   system_tests_broker.py system_tests_management.py
   system_tests_qdstat.py system_tests_qdmanage.py)

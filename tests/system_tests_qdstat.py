@@ -96,58 +96,99 @@ class QdstatTest(system_test.TestCase):
     def test_log(self):
         self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(trace\).*GET-LOG')
 
-    def test_ssl(self):
+    def ssl_test(self, url_name, arg_names):
+        """Run simple SSL connection test with supplied parameters.
+        See test_ssl_* below.
         """
-        Test the matrix of dispatch and client SSL configuratoin and ensure we 
-        can/can't connect as expected.
-        """
-
-        def do_test(url, args):
-            self.run_qdstat(['--general'] + args,
-                            regexp=r'(?s)Router Statistics.*Mode\s*Standalone',
-                            address=str(url))
-
-        trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')]
-        bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')]
-        client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')]
-        client_key = ['--ssl-key', self.ssl_file('client-private-key.pem')]
-        client_pass = ['--ssl-password', 'client-password']
-        client_cert_all = client_cert + client_key + client_pass
+        args = dict(
+            trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
+            bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
+            client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')],
+            client_key = ['--ssl-key', self.ssl_file('client-private-key.pem')],
+            client_pass = ['--ssl-password', 'client-password'])
+        args['client_cert_all'] = args['client_cert'] + args['client_key'] + args['client_pass']
 
         addrs = [self.router.addresses[i] for i in xrange(4)];
-        none, strict, unsecured, auth = addrs
-        none_s, strict_s, unsecured_s, auth_s = (Url(a, scheme="amqps") for a in addrs)
+        urls = dict(zip(['none', 'strict', 'unsecured', 'auth'], addrs) +
+                    zip(['none_s', 'strict_s', 'unsecured_s', 'auth_s'],
+                        (Url(a, scheme="amqps") for a in addrs)))
 
-        # Non-SSL enabled listener should fail SSL connections.
-        do_test(none, [])
-        self.assertRaises(AssertionError, do_test, none_s, [])
-        self.assertRaises(AssertionError, do_test, none, client_cert)
+        self.run_qdstat(['--general'] + sum([args[n] for n in arg_names], []),
+                        regexp=r'(?s)Router Statistics.*Mode\s*Standalone',
+                        address=str(urls[url_name]))
 
-        # Strict SSL listener, SSL only
-        self.assertRaises(AssertionError, do_test, strict, [])
-        do_test(strict_s, [])
-        do_test(strict_s, client_cert_all)
-        do_test(strict, client_cert_all)
-        do_test(strict, trustfile)
-        do_test(strict, trustfile + client_cert_all)
-        self.assertRaises(AssertionError, do_test, strict, bad_trustfile)
+    def ssl_test_bad(self, url_name, arg_names):
+        self.assertRaises(AssertionError, self.ssl_test, url_name, arg_names)
 
-        # Requre-auth SSL listener
-        self.assertRaises(AssertionError, do_test, auth, [])
-        self.assertRaises(AssertionError, do_test, auth_s, [])
-        self.assertRaises(AssertionError, do_test, auth, trustfile)
-        do_test(auth, client_cert_all)
-        do_test(auth, client_cert_all + trustfile)
-        self.assertRaises(AssertionError, do_test, auth, client_cert_all + bad_trustfile)
+    # Non-SSL enabled listener should fail SSL connections.
+    def test_ssl_none(self):
+        self.ssl_test('none', [])
 
-        # Unsecured SSL listener, allows non-SSL
-        do_test(unsecured_s, [])
-        do_test(unsecured_s, client_cert_all)
-        do_test(unsecured_s, trustfile)
-        do_test(unsecured_s, client_cert_all + trustfile)
-        do_test(unsecured_s, [])
-        do_test(unsecured, []) # Allow unsecured
-        self.assertRaises(AssertionError, do_test, auth, client_cert_all + bad_trustfile)
+    def test_ssl_scheme_to_none(self):
+        self.ssl_test_bad('none_s', [])
+
+    def test_ssl_cert_to_none(self):
+        self.ssl_test_bad('none', ['client_cert'])
+
+    # Strict SSL listener, SSL only
+    def test_ssl_none_to_strict(self):
+        self.ssl_test_bad('strict', [])
+
+    def test_ssl_schema_to_strict(self):
+        self.ssl_test('strict_s', [])
+
+    def test_ssl_cert_to_strict(self):
+        self.ssl_test('strict_s', ['client_cert_all'])
+
+    def test_ssl_trustfile_to_strict(self):
+        self.ssl_test('strict_s', ['trustfile'])
+
+    def test_ssl_trustfile_cert_to_strict(self):
+        self.ssl_test('strict_s', ['trustfile', 'client_cert_all'])
+
+    def test_ssl_bad_trustfile_to_strict(self):
+        self.ssl_test_bad('strict_s', ['bad_trustfile'])
+
+
+    # Require-auth SSL listener
+    def test_ssl_none_to_auth(self):
+        self.ssl_test_bad('auth', [])
+
+    def test_ssl_schema_to_auth(self):
+        self.ssl_test_bad('auth_s', [])
+
+    def test_ssl_trustfile_to_auth(self):
+        self.ssl_test_bad('auth_s', ['trustfile'])
+
+    def test_ssl_cert_to_auth(self):
+        self.ssl_test('auth_s', ['client_cert_all'])
+
+    def test_ssl_trustfile_cert_to_auth(self):
+        self.ssl_test('auth_s', ['trustfile', 'client_cert_all'])
+
+    def test_ssl_bad_trustfile_to_auth(self):
+        self.ssl_test_bad('auth_s', ['bad_trustfile', 'client_cert_all'])
+
+
+    # Unsecured SSL listener, allows non-SSL
+    def test_ssl_none_to_unsecured(self):
+        self.ssl_test('unsecured', [])
+
+    def test_ssl_schema_to_unsecured(self):
+        self.ssl_test('unsecured_s', [])
+
+    def test_ssl_cert_to_unsecured(self):
+        self.ssl_test('unsecured_s', ['client_cert_all'])
+
+    def test_ssl_trustfile_to_unsecured(self):
+        self.ssl_test('unsecured_s', ['trustfile'])
+
+    def test_ssl_trustfile_cert_to_unsecured(self):
+        self.ssl_test('unsecured_s', ['trustfile', 'client_cert_all'])
+
+    def test_ssl_bad_trustfile_to_unsecured(self):
+        self.ssl_test_bad('unsecured_s', ['bad_trustfile'])
+
 
 if __name__ == '__main__':
     unittest.main(system_test.main_module())
