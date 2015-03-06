@@ -87,6 +87,7 @@ test "$VERSION" == "$BUILD_VERSION" || {
     echo "Version mismatch: $VERSION != $BUILD_VERSION. Please update VERSION.txt in SVN"
     exit 1
 }
+echo $SVNREV > $WORKDIR/$BASENAME/SVN_REVISION.txt
 
 echo "Building source tarball $FILENAME"
 cd $WORKDIR
