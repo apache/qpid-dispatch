@@ -103,7 +103,7 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
     // TODO - Extract the name from the structured source
 
     if (source) {
-        iter   = qd_field_iterator_string(source, ITER_VIEW_NODE_ID);
+        iter   = qd_address_iterator_string(source, ITER_VIEW_NODE_ID);
         qd_hash_retrieve(container->node_map, iter, (void*) &node);
         qd_field_iterator_free(iter);
     }
@@ -148,7 +148,7 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
     // TODO - Extract the name from the structured target
 
     if (target) {
-        iter   = qd_field_iterator_string(target, ITER_VIEW_NODE_ID);
+        iter   = qd_address_iterator_string(target, ITER_VIEW_NODE_ID);
         qd_hash_retrieve(container->node_map, iter, (void*) &node);
         qd_field_iterator_free(iter);
     }
@@ -538,7 +538,7 @@ int qd_container_register_node_type(qd_dispatch_t *qd, const qd_node_type_t *nt)
     qd_container_t *container = qd->container;
 
     int result;
-    qd_field_iterator_t *iter = qd_field_iterator_string(nt->type_name, ITER_VIEW_ALL);
+    qd_field_iterator_t *iter = qd_field_iterator_string(nt->type_name);
     qdc_node_type_t     *nt_item = NEW(qdc_node_type_t);
     DEQ_ITEM_INIT(nt_item);
     nt_item->ntype = nt;
@@ -601,7 +601,7 @@ qd_node_t *qd_container_create_node(qd_dispatch_t        *qd,
     node->life_policy    = life_policy;
 
     if (name) {
-        qd_field_iterator_t *iter = qd_field_iterator_string(name, ITER_VIEW_ALL);
+        qd_field_iterator_t *iter = qd_field_iterator_string(name);
         sys_mutex_lock(container->lock);
         result = qd_hash_insert(container->node_map, iter, node, 0);
         if (result >= 0)
@@ -629,7 +629,7 @@ void qd_container_destroy_node(qd_node_t *node)
     qd_container_t *container = node->container;
 
     if (node->name) {
-        qd_field_iterator_t *iter = qd_field_iterator_string(node->name, ITER_VIEW_ALL);
+        qd_field_iterator_t *iter = qd_field_iterator_string(node->name);
         sys_mutex_lock(container->lock);
         qd_hash_remove(container->node_map, iter);
         DEQ_REMOVE(container->nodes, node);

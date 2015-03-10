@@ -110,19 +110,28 @@ typedef enum {
  * The "text" string must stay intact for the whole life of the iterator.  The iterator
  * does not copy the string, it references it.
  */
-qd_field_iterator_t* qd_field_iterator_string(const char         *text,
-                                              qd_iterator_view_t  view);
+qd_field_iterator_t* qd_address_iterator_string(const char         *text,
+                                                qd_iterator_view_t  view);
+static inline qd_field_iterator_t* qd_field_iterator_string(const char *text)
+{
+    return qd_address_iterator_string(text, ITER_VIEW_ALL);
+}
 
 
 /**
- * Create an iterator from binar data.
+ * Create an iterator from binary data.
  *
  * The "text" string must stay intact for the whole life of the iterator.  The iterator
  * does not copy the data, it references it.
  */
-qd_field_iterator_t* qd_field_iterator_binary(const char         *text,
-                                              int                 length,
-                                              qd_iterator_view_t  view);
+qd_field_iterator_t* qd_address_iterator_binary(const char         *text,
+                                                int                 length,
+                                                qd_iterator_view_t  view);
+static inline qd_field_iterator_t *qd_field_iterator_binary(const char *text,
+                                                            int         length)
+{
+    return qd_address_iterator_binary(text, length, ITER_VIEW_ALL);
+}
 
 
 /**
@@ -131,10 +140,16 @@ qd_field_iterator_t* qd_field_iterator_binary(const char         *text,
  * The buffer chain must stay intact for the whole life of the iterator.  The iterator
  * does not copy the buffer, it references it.
  */
-qd_field_iterator_t *qd_field_iterator_buffer(qd_buffer_t        *buffer,
-                                              int                 offset,
-                                              int                 length,
-                                              qd_iterator_view_t  view);
+qd_field_iterator_t *qd_address_iterator_buffer(qd_buffer_t        *buffer,
+                                                int                 offset,
+                                                int                 length,
+                                                qd_iterator_view_t  view);
+static inline qd_field_iterator_t *qd_field_iterator_buffer(qd_buffer_t *buffer,
+                                                            int          offset,
+                                                            int          length)
+{
+    return qd_address_iterator_buffer(buffer, offset, length, ITER_VIEW_ALL);
+}
 
 /**
  * Free an iterator
@@ -152,15 +167,15 @@ void qd_field_iterator_set_address(const char *area, const char *router);
  */
 void qd_field_iterator_reset(qd_field_iterator_t *iter);
 
-void qd_field_iterator_reset_view(qd_field_iterator_t *iter,
+void qd_address_iterator_reset_view(qd_field_iterator_t *iter,
                                   qd_iterator_view_t   view);
 
-void qd_field_iterator_set_phase(qd_field_iterator_t *iter, char phase);
+void qd_address_iterator_set_phase(qd_field_iterator_t *iter, char phase);
 
 /**
  * Override the hash-prefix with a custom character.
  */
-void qd_field_iterator_override_prefix(qd_field_iterator_t *iter, char prefix);
+void qd_address_iterator_override_prefix(qd_field_iterator_t *iter, char prefix);
 
 /**
  * Return the current octet in the iterator's view and step to the next.
@@ -170,14 +185,17 @@ unsigned char qd_field_iterator_octet(qd_field_iterator_t *iter);
 /**
  * Return true iff the iterator has no more octets in the view.
  */
-int qd_field_iterator_end(qd_field_iterator_t *iter);
+int qd_field_iterator_end(const qd_field_iterator_t *iter);
 
 /**
  * Return a sub-iterator that equals the supplied iterator except that it
  * starts at the supplied iterator's current position.
  */
-qd_field_iterator_t *qd_field_iterator_sub(qd_field_iterator_t *iter, uint32_t length);
+qd_field_iterator_t *qd_field_iterator_sub(const qd_field_iterator_t *iter, uint32_t length);
 
+/**
+ * Move the iterator's cursor forward up to length bytes
+ */
 void qd_field_iterator_advance(qd_field_iterator_t *iter, uint32_t length);
 
 /**
@@ -190,7 +208,7 @@ void qd_field_iterator_advance(qd_field_iterator_t *iter, uint32_t length);
  * @param iter A field iterator
  * @return The number of octets remaining in the view (or more)
  */
-uint32_t qd_field_iterator_remaining(qd_field_iterator_t *iter);
+uint32_t qd_field_iterator_remaining(const qd_field_iterator_t *iter);
 
 /**
  * Compare an input string to the iterator's view.  Return true iff they are equal.
@@ -208,24 +226,26 @@ int qd_field_iterator_prefix(qd_field_iterator_t *iter, const char *prefix);
 /**
  * Return the exact length of the iterator's view.
  */
-int qd_field_iterator_length(qd_field_iterator_t *iter);
+int qd_field_iterator_length(const qd_field_iterator_t *iter);
 
 /**
- * Copy the iterator's view into buffer up to a maximum of n bytes.
- * There is no trailing '\0' added.
+ * Copy the iterator's view into buffer up to a maximum of n bytes.  Cursor is
+ * advanced by the number of bytes copied. There is no trailing '\0' added.
  * @return number of bytes copied.
  */
 int qd_field_iterator_ncopy(qd_field_iterator_t *iter, unsigned char* buffer, int n);
 
 /**
- * Return a new copy of the iterator's view, with a trailing '\0' added.
+ * Return a new copy of the iterator's view, with a trailing '\0' added.  The
+ * cursor is advanced to the end of the view.
  * @return Copy of the view, free with free()
  */
 unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter);
 
 /**
  * Copy the iterator's view into buffer as a null terminated string,
- * up to a maximum of n bytes. Useful for log messages.
+ * up to a maximum of n bytes. Cursor is advanced by the number of bytes
+ * copied.  Useful for log messages.
  * @return buffer.
  */
 char* qd_field_iterator_strncpy(qd_field_iterator_t *iter, char* buffer, int n);

@@ -48,8 +48,8 @@ static void qd_lrpc_open_handler(void *context, qd_connection_t *conn)
         // Create an address iterator for the prefix address with the namespace
         // prefix for link-attach routed addresses.
         //
-        iter = qd_field_iterator_string(lrp->prefix, ITER_VIEW_ADDRESS_HASH);
-        qd_field_iterator_override_prefix(iter, qd_link_route_addr_prefix);
+        iter = qd_address_iterator_string(lrp->prefix, ITER_VIEW_ADDRESS_HASH);
+        qd_address_iterator_override_prefix(iter, qd_link_route_addr_prefix);
 
         //
         // Find the address in the router's hash table.  If not found, create one
@@ -106,8 +106,8 @@ static void qd_lrpc_close_handler(void *context, qd_connection_t *conn)
         // Create an address iterator for the prefix address with the namespace
         // prefix for link-attach routed addresses.
         //
-        iter = qd_field_iterator_string(lrp->prefix, ITER_VIEW_ADDRESS_HASH);
-        qd_field_iterator_override_prefix(iter, qd_link_route_addr_prefix);
+        iter = qd_address_iterator_string(lrp->prefix, ITER_VIEW_ADDRESS_HASH);
+        qd_address_iterator_override_prefix(iter, qd_link_route_addr_prefix);
 
         //
         // Find the address in the router's hash table.

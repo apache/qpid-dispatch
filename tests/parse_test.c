@@ -66,8 +66,7 @@ static char *test_parser_fixed_scalars(void *context)
 
     while (fs_vectors[idx].data) {
         qd_field_iterator_t *field  = qd_field_iterator_binary(fs_vectors[idx].data,
-                                                               fs_vectors[idx].length,
-                                                               ITER_VIEW_ALL);
+                                                               fs_vectors[idx].length);
         qd_parsed_field_t *parsed = qd_parse(field);
         if (!qd_parse_ok(parsed)) return "Unexpected Parse Error";
         if (qd_parse_tag(parsed) != fs_vectors[idx].expected_tag) {
@@ -134,8 +133,7 @@ static char *test_parser_errors(void *context)
 
     while (err_vectors[idx].data) {
         qd_field_iterator_t *field  = qd_field_iterator_binary(err_vectors[idx].data,
-                                                               err_vectors[idx].length,
-                                                               ITER_VIEW_ALL);
+                                                               err_vectors[idx].length);
         qd_parsed_field_t *parsed = qd_parse(field);
         if (qd_parse_ok(parsed)) {
             sprintf(error, "(%d) Unexpected Parse Success", idx);

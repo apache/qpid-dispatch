@@ -973,7 +973,7 @@ qd_field_iterator_t *qd_message_field_iterator_typed(qd_message_t *msg, qd_messa
     if (!loc)
         return 0;
 
-    return qd_field_iterator_buffer(loc->buffer, loc->offset, loc->length + loc->hdr_length, ITER_VIEW_ALL);
+    return qd_field_iterator_buffer(loc->buffer, loc->offset, loc->length + loc->hdr_length);
 }
 
 
@@ -990,7 +990,7 @@ qd_field_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_fie
     unsigned char *cursor = qd_buffer_base(loc->buffer) + loc->offset;
     advance(&cursor, &buffer, loc->hdr_length, 0, 0);
 
-    return qd_field_iterator_buffer(buffer, cursor - qd_buffer_base(buffer), loc->length, ITER_VIEW_ALL);
+    return qd_field_iterator_buffer(buffer, cursor - qd_buffer_base(buffer), loc->length);
 }
 
 

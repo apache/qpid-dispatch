@@ -364,8 +364,8 @@ static qd_address_t *router_lookup_terminus_LH(qd_router_t *router, const char *
         cursor++;
     int len = (int) (cursor - taddr);
 
-    qd_field_iterator_t *iter = qd_field_iterator_binary(taddr, len, ITER_VIEW_ADDRESS_HASH);
-    qd_field_iterator_override_prefix(iter, 'C');
+    qd_field_iterator_t *iter = qd_address_iterator_binary(taddr, len, ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(iter, 'C');
 
     qd_address_t *addr;
     qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
@@ -580,7 +580,6 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
                 qd_field_iterator_t *iter = qd_parse_raw(trace_item);
                 if (qd_field_iterator_equal(iter, (unsigned char*) node_id))
                     *drop = 1;
-                qd_field_iterator_reset(iter);
                 qd_compose_insert_string_iterator(out_ma, iter);
                 idx++;
                 trace_item = qd_parse_sub_value(trace, idx);
@@ -700,7 +699,7 @@ static void router_forward_to_remote_subscribers_LH(qd_router_t *router, qd_addr
     //
     int origin = -1;
     if (ingress_iter && !(addr->semantics & QD_BYPASS_VALID_ORIGINS)) {
-        qd_field_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
+        qd_address_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
         qd_address_t *origin_addr;
         qd_hash_retrieve(router->addr_hash, ingress_iter, (void*) &origin_addr);
         if (origin_addr && DEQ_SIZE(origin_addr->rnodes) == 1) {
@@ -851,8 +850,8 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
         // address for the link.
         //
         if (!iter && rlink->waypoint) {
-            iter = qd_field_iterator_string(rlink->waypoint->address, ITER_VIEW_ADDRESS_HASH);
-            qd_field_iterator_set_phase(iter, rlink->waypoint->out_phase);
+            iter = qd_address_iterator_string(rlink->waypoint->address, ITER_VIEW_ADDRESS_HASH);
+            qd_address_iterator_set_phase(iter, rlink->waypoint->out_phase);
         }
 
         //
@@ -870,12 +869,12 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
         // ref: https://issues.apache.org/jira/browse/DISPATCH-1
         //
         if (!iter && rlink->target) {
-            iter = qd_field_iterator_string(rlink->target, ITER_VIEW_ALL);
+            iter = qd_address_iterator_string(rlink->target, ITER_VIEW_ALL);
             to_override = rlink->target;
         }
 
         if (iter) {
-            qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+            qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
 
             //
             // Note: This function is going to need to be refactored so we can put an
@@ -887,7 +886,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
             //
 
             qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
-            qd_field_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
+            qd_address_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
             int is_local  = qd_field_iterator_prefix(iter, local_prefix);
             int is_direct = qd_field_iterator_prefix(iter, direct_prefix);
             if (free_iter)
@@ -1393,7 +1392,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     // bound to an endpoint link.
     //
     if (r_src && !is_router && !is_dynamic) {
-        iter = qd_field_iterator_string(r_src, ITER_VIEW_ADDRESS_HASH);
+        iter = qd_address_iterator_string(r_src, ITER_VIEW_ADDRESS_HASH);
         unsigned char prefix = qd_field_iterator_octet(iter);
         qd_field_iterator_reset(iter);
 
@@ -1434,8 +1433,8 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
         semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_BACKPRESSURE;
     else {
         semantics = router_semantics_for_addr(router, iter, '\0', &phase);
-        qd_field_iterator_set_phase(iter, phase);
-        qd_field_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+        qd_address_iterator_set_phase(iter, phase);
+        qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
     }
 
     sys_mutex_lock(router->lock);
@@ -1465,7 +1464,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
         if (la_result == LINK_ATTACH_NO_MATCH) {
             if (is_dynamic) {
                 qd_router_generate_temp_addr(router, temp_addr, 1000);
-                iter = qd_field_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
+                iter = qd_address_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
                 pn_terminus_set_address(qd_link_source(link), temp_addr);
                 qd_log(router->log_source, QD_LOG_INFO, "Assigned temporary routable address=%s", temp_addr);
             } else
@@ -2008,7 +2007,7 @@ qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
     qd_field_iterator_t *iter = 0;
 
     snprintf(addr_string, sizeof(addr_string), "%s%s", global ? "M0" : "L", address);
-    iter = qd_field_iterator_string(addr_string, ITER_VIEW_NO_HOST);
+    iter = qd_address_iterator_string(addr_string, ITER_VIEW_NO_HOST);
 
     sys_mutex_lock(router->lock);
     qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
@@ -2065,7 +2064,7 @@ void qd_router_send(qd_dispatch_t       *qd,
     qd_router_t  *router = qd->router;
     qd_address_t *addr;
 
-    qd_field_iterator_reset_view(address, ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_reset_view(address, ITER_VIEW_ADDRESS_HASH);
     sys_mutex_lock(router->lock);
     qd_hash_retrieve(router->addr_hash, address, (void*) &addr);
     if (addr) {
@@ -2133,7 +2132,7 @@ void qd_router_send2(qd_dispatch_t *qd,
                      const char    *address,
                      qd_message_t  *msg)
 {
-    qd_field_iterator_t *iter = qd_field_iterator_string(address, ITER_VIEW_ADDRESS_HASH);
+    qd_field_iterator_t *iter = qd_address_iterator_string(address, ITER_VIEW_ADDRESS_HASH);
     qd_router_send(qd, iter, msg);
     qd_field_iterator_free(iter);
 }

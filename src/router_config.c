@@ -210,8 +210,8 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
     //
     char                 unused;
     qd_address_t        *addr;
-    qd_field_iterator_t *iter = qd_field_iterator_string(prefix, ITER_VIEW_ADDRESS_HASH);
-    qd_field_iterator_override_prefix(iter, 'C');
+    qd_field_iterator_t *iter = qd_address_iterator_string(prefix, ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(iter, 'C');
 
     //
     // Find the address in the router's hash table.  If not found, create one
@@ -272,7 +272,7 @@ void qd_router_configure_free(qd_router_t *router)
 qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_iterator_t *iter,
                                                  char in_phase, char *out_phase)
 {
-    qd_field_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
+    qd_address_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
 
     qd_config_address_t *addr  = DEQ_HEAD(router->config_addrs);
     qd_config_phase_t   *phase = 0;

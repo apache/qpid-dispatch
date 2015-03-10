@@ -76,6 +76,7 @@ static char *my_area    = "";
 static char *my_router  = "";
 
 
+
 static void parse_address_view(qd_field_iterator_t *iter)
 {
     //
@@ -259,6 +260,40 @@ static void view_initialize(qd_field_iterator_t *iter)
 }
 
 
+static inline void field_iterator_move_cursor(qd_field_iterator_t *iter, uint32_t length)
+{
+    // Only safe to call this help method if the cursor is parsing the data,
+    // i.e. if iter is an address iterator, the cursor must be 'past' the
+    // prefix
+    assert(iter->state == STATE_IN_ADDRESS);
+    uint32_t count = ((length > iter->pointer.length)
+                      ? iter->pointer.length
+                      : length);
+
+    if (iter->pointer.buffer) {
+        while (count) {
+            uint32_t remaining = qd_buffer_cursor(iter->pointer.buffer) - iter->pointer.cursor;
+            remaining = (remaining > count) ? count : remaining;
+            iter->pointer.cursor += remaining;
+            iter->pointer.length -= remaining;
+            count -= remaining;
+            if (iter->pointer.cursor == qd_buffer_cursor(iter->pointer.buffer)) {
+                iter->pointer.buffer = iter->pointer.buffer->next;
+                if (iter->pointer.buffer == 0) {
+                    iter->pointer.length = 0;
+                    iter->pointer.cursor = 0;
+                    break;
+                } else {
+                    iter->pointer.cursor = qd_buffer_base(iter->pointer.buffer);
+                }
+            }
+        }
+    } else {    // string/binary data
+        iter->pointer.cursor += count;
+        iter->pointer.length -= count;
+    }
+}
+
 void qd_field_iterator_set_address(const char *area, const char *router)
 {
     my_area = (char*) malloc(strlen(area) + 2);
@@ -271,7 +306,7 @@ void qd_field_iterator_set_address(const char *area, const char *router)
 }
 
 
-qd_field_iterator_t* qd_field_iterator_string(const char *text, qd_iterator_view_t view)
+qd_field_iterator_t* qd_address_iterator_string(const char *text, qd_iterator_view_t view)
 {
     qd_field_iterator_t *iter = new_qd_field_iterator_t();
     if (!iter)
@@ -283,13 +318,13 @@ qd_field_iterator_t* qd_field_iterator_string(const char *text, qd_iterator_view
     iter->phase                = '0';
     iter->prefix_override      = '\0';
 
-    qd_field_iterator_reset_view(iter, view);
+    qd_address_iterator_reset_view(iter, view);
 
     return iter;
 }
 
 
-qd_field_iterator_t* qd_field_iterator_binary(const char *text, int length, qd_iterator_view_t view)
+qd_field_iterator_t* qd_address_iterator_binary(const char *text, int length, qd_iterator_view_t view)
 {
     qd_field_iterator_t *iter = new_qd_field_iterator_t();
     if (!iter)
@@ -301,13 +336,13 @@ qd_field_iterator_t* qd_field_iterator_binary(const char *text, int length, qd_i
     iter->phase                = '0';
     iter->prefix_override      = '\0';
 
-    qd_field_iterator_reset_view(iter, view);
+    qd_address_iterator_reset_view(iter, view);
 
     return iter;
 }
 
 
-qd_field_iterator_t *qd_field_iterator_buffer(qd_buffer_t *buffer, int offset, int length, qd_iterator_view_t view)
+qd_field_iterator_t *qd_address_iterator_buffer(qd_buffer_t *buffer, int offset, int length, qd_iterator_view_t view)
 {
     qd_field_iterator_t *iter = new_qd_field_iterator_t();
     if (!iter)
@@ -319,7 +354,7 @@ qd_field_iterator_t *qd_field_iterator_buffer(qd_buffer_t *buffer, int offset, i
     iter->phase                = '0';
     iter->prefix_override      = '\0';
 
-    qd_field_iterator_reset_view(iter, view);
+    qd_address_iterator_reset_view(iter, view);
 
     return iter;
 }
@@ -339,7 +374,7 @@ void qd_field_iterator_reset(qd_field_iterator_t *iter)
 }
 
 
-void qd_field_iterator_reset_view(qd_field_iterator_t *iter, qd_iterator_view_t  view)
+void qd_address_iterator_reset_view(qd_field_iterator_t *iter, qd_iterator_view_t  view)
 {
     iter->pointer = iter->start_pointer;
     iter->view    = view;
@@ -350,16 +385,16 @@ void qd_field_iterator_reset_view(qd_field_iterator_t *iter, qd_iterator_view_t 
 }
 
 
-void qd_field_iterator_set_phase(qd_field_iterator_t *iter, char phase)
+void qd_address_iterator_set_phase(qd_field_iterator_t *iter, char phase)
 {
     iter->phase = phase;
 }
 
 
-void qd_field_iterator_override_prefix(qd_field_iterator_t *iter, char prefix)
+void qd_address_iterator_override_prefix(qd_field_iterator_t *iter, char prefix)
 {
     iter->prefix_override = prefix;
-    qd_field_iterator_reset_view(iter, iter->view);
+    qd_address_iterator_reset_view(iter, iter->view);
 }
 
 
@@ -380,20 +415,7 @@ unsigned char qd_field_iterator_octet(qd_field_iterator_t *iter)
 
     unsigned char result = *(iter->pointer.cursor);
 
-    iter->pointer.cursor++;
-    iter->pointer.length--;
-
-    if (iter->pointer.length > 0) {
-        if (iter->pointer.buffer) {
-            if (iter->pointer.cursor - qd_buffer_base(iter->pointer.buffer) == qd_buffer_size(iter->pointer.buffer)) {
-                iter->pointer.buffer = iter->pointer.buffer->next;
-                if (iter->pointer.buffer == 0)
-                    iter->pointer.length = 0;
-                iter->pointer.cursor = qd_buffer_base(iter->pointer.buffer);
-            }
-        }
-    }
-
+    field_iterator_move_cursor(iter, 1);
     if (iter->pointer.length && iter->mode == MODE_TO_SLASH && *(iter->pointer.cursor) == '/')
         iter->pointer.length = 0;
 
@@ -401,13 +423,13 @@ unsigned char qd_field_iterator_octet(qd_field_iterator_t *iter)
 }
 
 
-int qd_field_iterator_end(qd_field_iterator_t *iter)
+int qd_field_iterator_end(const qd_field_iterator_t *iter)
 {
     return iter->pointer.length == 0;
 }
 
 
-qd_field_iterator_t *qd_field_iterator_sub(qd_field_iterator_t *iter, uint32_t length)
+qd_field_iterator_t *qd_field_iterator_sub(const qd_field_iterator_t *iter, uint32_t length)
 {
     qd_field_iterator_t *sub = new_qd_field_iterator_t();
     if (!sub)
@@ -430,13 +452,19 @@ qd_field_iterator_t *qd_field_iterator_sub(qd_field_iterator_t *iter, uint32_t l
 
 void qd_field_iterator_advance(qd_field_iterator_t *iter, uint32_t length)
 {
-    // TODO - Make this more efficient.
-    for (uint8_t idx = 0; idx < length && !qd_field_iterator_end(iter); idx++)
-        qd_field_iterator_octet(iter);
+    while (length > 0 && !qd_field_iterator_end(iter)) {
+        if (iter->state == STATE_IN_ADDRESS) {
+            field_iterator_move_cursor(iter, length);
+            break;
+        } else {
+            qd_field_iterator_octet(iter);
+            length--;
+        }
+    }
 }
 
 
-uint32_t qd_field_iterator_remaining(qd_field_iterator_t *iter)
+uint32_t qd_field_iterator_remaining(const qd_field_iterator_t *iter)
 {
     return iter->pointer.length;
 }
@@ -447,11 +475,13 @@ int qd_field_iterator_equal(qd_field_iterator_t *iter, const unsigned char *stri
     qd_field_iterator_reset(iter);
     while (!qd_field_iterator_end(iter) && *string) {
         if (*string != qd_field_iterator_octet(iter))
-            return 0;
+            break;
         string++;
     }
 
-    return (qd_field_iterator_end(iter) && (*string == 0));
+    int match = (qd_field_iterator_end(iter) && (*string == 0));
+    qd_field_iterator_reset(iter);
+    return match;
 }
 
 
@@ -474,11 +504,13 @@ int qd_field_iterator_prefix(qd_field_iterator_t *iter, const char *prefix)
     return 1;
 }
 
-int qd_field_iterator_length(qd_field_iterator_t *iter) {
+int qd_field_iterator_length(const qd_field_iterator_t *iter)
+{
+    qd_field_iterator_t copy = *iter;
     int length = 0;
-    qd_field_iterator_reset(iter);
-    while (!qd_field_iterator_end(iter)) {
-        qd_field_iterator_octet(iter);
+    qd_field_iterator_reset(&copy);
+    while (!qd_field_iterator_end(&copy)) {
+        qd_field_iterator_octet(&copy);
         length++;
     }
     return length;
