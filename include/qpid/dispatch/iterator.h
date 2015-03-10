@@ -169,6 +169,7 @@ void qd_field_iterator_reset(qd_field_iterator_t *iter);
 
 void qd_address_iterator_reset_view(qd_field_iterator_t *iter,
                                   qd_iterator_view_t   view);
+qd_iterator_view_t qd_address_iterator_get_view(const qd_field_iterator_t *iter);
 
 void qd_address_iterator_set_phase(qd_field_iterator_t *iter, char phase);
 

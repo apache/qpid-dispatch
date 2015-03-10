@@ -21,6 +21,12 @@ import unittest, os
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable
 from system_test import TestCase, Qdrouterd, main_module
 
+# PROTON-828:
+try:
+    from proton import MODIFIED
+except ImportError:
+    from proton import PN_STATUS_MODIFIED as MODIFIED
+
 
 class RouterTest(TestCase):
     @classmethod
@@ -320,7 +326,7 @@ class RouterTest(TestCase):
         tx_tracker = M1.put(tm)
         M1.send(0)
         M1.flush()
-        self.assertEqual(RELEASED, M1.status(tx_tracker))
+        self.assertEqual(MODIFIED, M1.status(tx_tracker))
 
         M1.stop()
 

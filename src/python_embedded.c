@@ -539,7 +539,8 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     if (!address) return -1;
     qd_error_clear();
     self->addr =
-        qd_router_register_address(self->qd, address, qd_io_rx_handler, py_semantics, global, self);
+        qd_router_register_address(self->qd, address, qd_io_rx_handler, self,
+                                   py_semantics, global, 0);
     if (qd_error_code()) {
         PyErr_SetString(PyExc_RuntimeError, qd_error_message());
         return -1;

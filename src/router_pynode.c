@@ -81,8 +81,7 @@ static PyObject *qd_add_router(PyObject *self, PyObject *args)
         // This record will be found whenever a "foreign" topological address to this
         // remote router is looked up.
         //
-        addr = qd_address();
-        addr->semantics = router_addr_semantics;
+        addr = qd_address(router_addr_semantics);
         qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(router->addrs, addr);
         qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
@@ -462,9 +461,8 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
     sys_mutex_lock(router->lock);
     qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
     if (!addr) {
-        addr = qd_address();
+        addr = qd_address(router_semantics_for_addr(router, iter, phase, &unused));
         qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
-        addr->semantics = router_semantics_for_addr(router, iter, phase, &unused);
         DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(router->addrs, addr);
         qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);

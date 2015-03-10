@@ -64,11 +64,10 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
 
         if (!addr) {
-            addr = qd_address();
+            addr = qd_address(router_semantics_for_addr(router, iter, wp->in_phase, &unused));
             qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(router->addrs, addr);
             addr->waypoint  = true;
-            addr->semantics = router_semantics_for_addr(router, iter, wp->in_phase, &unused);
             qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
         }
 
@@ -138,11 +137,10 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
 
         if (!addr) {
-            addr = qd_address();
+            addr = qd_address(router_semantics_for_addr(router, iter, wp->out_phase, &unused));
             qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(router->addrs, addr);
             addr->waypoint  = true;
-            addr->semantics = router_semantics_for_addr(router, iter, wp->out_phase, &unused);
             qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
         }
 

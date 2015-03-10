@@ -219,10 +219,9 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
     //
     qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
     if (!addr) {
-        addr = qd_address();
+        addr = qd_address(router_semantics_for_addr(router, iter, '\0', &unused));
         qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(router->addrs, addr);
-        addr->semantics = router_semantics_for_addr(router, iter, '\0', &unused);
         qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
     }
 
@@ -272,6 +271,7 @@ void qd_router_configure_free(qd_router_t *router)
 qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_iterator_t *iter,
                                                  char in_phase, char *out_phase)
 {
+    const qd_iterator_view_t old_view = qd_address_iterator_get_view(iter);
     qd_address_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
 
     qd_config_address_t *addr  = DEQ_HEAD(router->config_addrs);
@@ -294,5 +294,6 @@ qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_i
         }
     }
 
+    qd_address_iterator_reset_view(iter, old_view);
     return phase ? phase->semantics : QD_SEMANTICS_DEFAULT;
 }

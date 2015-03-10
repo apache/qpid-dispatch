@@ -160,16 +160,15 @@ struct qd_router_conn_t {
 
 ALLOC_DECLARE(qd_router_conn_t);
 
-
 /** A router address */
 struct qd_address_t {
     DEQ_LINKS(qd_address_t);
-    qd_router_message_cb_t     handler;          ///< In-Process Consumer
-    void                      *handler_context;  ///< In-Process Consumer context
-    qd_router_lrp_ref_list_t   lrps;             ///< Local link-route destinations
-    qd_router_link_ref_list_t  rlinks;           ///< Locally-Connected Consumers
-    qd_router_ref_list_t       rnodes;           ///< Remotely-Connected Consumers
-    qd_hash_handle_t          *hash_handle;      ///< Linkage back to the hash table entry
+    qd_router_message_cb_t     on_message;          ///< In-Process Message Consumer
+    void                      *on_message_context;  ///< In-Process Consumer context
+    qd_router_lrp_ref_list_t   lrps;              ///< Local link-route destinations
+    qd_router_link_ref_list_t  rlinks;            ///< Locally-Connected Consumers
+    qd_router_ref_list_t       rnodes;            ///< Remotely-Connected Consumers
+    qd_hash_handle_t          *hash_handle;       ///< Linkage back to the hash table entry
     qd_address_semantics_t     semantics;
     qd_address_t              *redirect;
     qd_address_t              *static_cc;
@@ -177,6 +176,7 @@ struct qd_address_t {
     bool                       toggle;
     bool                       waypoint;
     bool                       block_deletion;
+    qd_router_forwarder_t     *forwarder;
 
     //
     // TODO - Add support for asynchronous address lookup:
@@ -198,7 +198,7 @@ ALLOC_DECLARE(qd_address_t);
 DEQ_DECLARE(qd_address_t, qd_address_list_t);
 
 /** Constructor for qd_address_t */
-qd_address_t* qd_address();
+qd_address_t* qd_address(qd_address_semantics_t semantics);
 
 struct qd_config_phase_t {
     DEQ_LINKS(qd_config_phase_t);
@@ -269,8 +269,6 @@ struct qd_router_t {
     qd_waypoint_list_t        waypoints;
 };
 
-
-
 void qd_router_check_addr(qd_router_t *router, qd_address_t *addr, int was_local);
 void qd_router_add_link_ref_LH(qd_router_link_ref_list_t *ref_list, qd_router_link_t *link);
 void qd_router_del_link_ref_LH(qd_router_link_ref_list_t *ref_list, qd_router_link_t *link);
@@ -287,4 +285,8 @@ void qd_router_link_lost(qd_router_t *router, int link_mask_bit);
 
 qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_iterator_t *iter,
                                                  char in_phase, char *out_phase);
+qd_address_t *qd_router_address_lookup_LH(qd_router_t *router,
+                                          qd_field_iterator_t *addr_iter,
+                                          bool *is_local, bool *is_direct);
+
 #endif

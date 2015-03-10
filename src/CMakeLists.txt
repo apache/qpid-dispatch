@@ -66,6 +66,7 @@ set(qpid_dispatch_SOURCES
   router_agent.c
   router_config.c
   router_node.c
+  router_forwarders.c
   router_pynode.c
   schema_enum.c
   server.c

@@ -860,6 +860,17 @@ qd_delivery_t *qd_delivery(qd_link_t *link, pn_delivery_tag_t tag)
     return delivery;
 }
 
+// mark the delivery as 'undeliverable-here' so peers won't re-forward it to
+// us.
+void qd_delivery_set_undeliverable_LH(qd_delivery_t *delivery)
+{
+    if (delivery->pn_delivery) {
+        pn_disposition_t *dp = pn_delivery_local(delivery->pn_delivery);
+        if (dp) {
+            pn_disposition_set_undeliverable(dp, true);
+        }
+    }
+}
 
 void qd_delivery_free_LH(qd_delivery_t *delivery, uint64_t final_disposition)
 {

@@ -183,6 +183,7 @@ bool qd_link_drain_changed(qd_link_t *link, bool *mode);
  *            thrown.
  */
 qd_delivery_t *qd_delivery(qd_link_t *link, pn_delivery_tag_t tag);
+void qd_delivery_set_undeliverable_LH(qd_delivery_t *delivery);
 void qd_delivery_free_LH(qd_delivery_t *delivery, uint64_t final_disposition);
 void qd_delivery_link_peers_LH(qd_delivery_t *left, qd_delivery_t *right);
 void qd_delivery_unlink_LH(qd_delivery_t *delivery);
