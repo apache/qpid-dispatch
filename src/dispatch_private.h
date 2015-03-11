@@ -25,7 +25,6 @@
 //
 typedef struct qd_server_t           qd_server_t;
 typedef struct qd_container_t        qd_container_t;
-typedef struct qd_router_t           qd_router_t;
 typedef struct qd_waypoint_t         qd_waypoint_t;
 typedef struct qd_lrp_container_t    qd_lrp_container_t;
 typedef struct qd_lrp_t              qd_lrp_t;
