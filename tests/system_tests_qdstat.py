@@ -22,44 +22,15 @@ import re
 import system_test
 import unittest
 from subprocess import PIPE
-from proton import Url
+from proton import Url, SSLDomain, SSLUnavailable
 
 class QdstatTest(system_test.TestCase):
     """Test qdstat tool output"""
-
-    @staticmethod
-    def ssl_file(name):
-        return os.path.join(os.path.dirname(__file__), 'ssl_certs', name)
-
     @classmethod
     def setUpClass(cls):
         super(QdstatTest, cls).setUpClass()
         config = system_test.Qdrouterd.Config([
-            ('ssl-profile', {'name': 'server-ssl-strict',
-                             'cert-db': cls.ssl_file('ca-certificate.pem'),
-                             'cert-file': cls.ssl_file('server-certificate.pem'),
-                             'key-file': cls.ssl_file('server-private-key.pem'),
-                             'password': 'server-password',
-                             'allow-unsecured': False,
-                             'require-peer-auth': False}),
-            ('ssl-profile', {'name': 'server-ssl-unsecured',
-                             'cert-db': cls.ssl_file('ca-certificate.pem'),
-                             'cert-file': cls.ssl_file('server-certificate.pem'),
-                             'key-file': cls.ssl_file('server-private-key.pem'),
-                             'password': 'server-password',
-                             'allow-unsecured': True,
-                             'require-peer-auth': False}),
-            ('ssl-profile', {'name': 'server-ssl-auth',
-                             'cert-db': cls.ssl_file('ca-certificate.pem'),
-                             'cert-file': cls.ssl_file('server-certificate.pem'),
-                             'key-file': cls.ssl_file('server-private-key.pem'),
-                             'password': 'server-password',
-                             'allow-unsecured': False,
-                             'require-peer-auth': True}),
             ('listener', {'port': cls.tester.get_port()}),
-            ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-strict'}),
-            ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-unsecured'}),
-            ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-auth'})
         ])
         cls.router = cls.tester.qdrouterd('test-router', config)
 
@@ -97,98 +68,154 @@ class QdstatTest(system_test.TestCase):
     def test_log(self):
         self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(trace\).*GET-LOG')
 
-    def ssl_test(self, url_name, arg_names):
-        """Run simple SSL connection test with supplied parameters.
-        See test_ssl_* below.
-        """
-        args = dict(
-            trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
-            bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
-            client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')],
-            client_key = ['--ssl-key', self.ssl_file('client-private-key.pem')],
-            client_pass = ['--ssl-password', 'client-password'])
-        args['client_cert_all'] = args['client_cert'] + args['client_key'] + args['client_pass']
+try:
+    SSLDomain(SSLDomain.MODE_CLIENT)
+    class QdstatSslTest(system_test.TestCase):
+        """Test qdstat tool output"""
 
-        addrs = [self.router.addresses[i] for i in xrange(4)];
-        urls = dict(zip(['none', 'strict', 'unsecured', 'auth'], addrs) +
-                    zip(['none_s', 'strict_s', 'unsecured_s', 'auth_s'],
-                        (Url(a, scheme="amqps") for a in addrs)))
+        @staticmethod
+        def ssl_file(name):
+            return os.path.join(os.path.dirname(__file__), 'ssl_certs', name)
 
-        self.run_qdstat(['--general'] + sum([args[n] for n in arg_names], []),
-                        regexp=r'(?s)Router Statistics.*Mode\s*Standalone',
-                        address=str(urls[url_name]))
+        @classmethod
+        def setUpClass(cls):
+            super(QdstatSslTest, cls).setUpClass()
+            config = system_test.Qdrouterd.Config([
+                ('ssl-profile', {'name': 'server-ssl-strict',
+                                 'cert-db': cls.ssl_file('ca-certificate.pem'),
+                                 'cert-file': cls.ssl_file('server-certificate.pem'),
+                                 'key-file': cls.ssl_file('server-private-key.pem'),
+                                 'password': 'server-password',
+                                 'allow-unsecured': False,
+                                 'require-peer-auth': False}),
+                ('ssl-profile', {'name': 'server-ssl-unsecured',
+                                 'cert-db': cls.ssl_file('ca-certificate.pem'),
+                                 'cert-file': cls.ssl_file('server-certificate.pem'),
+                                 'key-file': cls.ssl_file('server-private-key.pem'),
+                                 'password': 'server-password',
+                                 'allow-unsecured': True,
+                                 'require-peer-auth': False}),
+                ('ssl-profile', {'name': 'server-ssl-auth',
+                                 'cert-db': cls.ssl_file('ca-certificate.pem'),
+                                 'cert-file': cls.ssl_file('server-certificate.pem'),
+                                 'key-file': cls.ssl_file('server-private-key.pem'),
+                                 'password': 'server-password',
+                                 'allow-unsecured': False,
+                                 'require-peer-auth': True}),
+                ('listener', {'port': cls.tester.get_port()}),
+                ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-strict'}),
+                ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-unsecured'}),
+                ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-auth'})
+            ])
+            cls.router = cls.tester.qdrouterd('test-router', config)
 
-    def ssl_test_bad(self, url_name, arg_names):
-        self.assertRaises(AssertionError, self.ssl_test, url_name, arg_names)
+        def run_qdstat(self, args, regexp=None, address=None):
+            p = self.popen(
+                ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args,
+                name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            out = p.communicate()[0]
+            assert p.returncode == 0, \
+                "qdstat exit status %s, output:\n%s" % (p.returncode, out)
+            if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+            return out
 
-    # Non-SSL enabled listener should fail SSL connections.
-    def test_ssl_none(self):
-        self.ssl_test('none', [])
+        def ssl_test(self, url_name, arg_names):
+            """Run simple SSL connection test with supplied parameters.
+            See test_ssl_* below.
+            """
+            args = dict(
+                trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
+                bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
+                client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')],
+                client_key = ['--ssl-key', self.ssl_file('client-private-key.pem')],
+                client_pass = ['--ssl-password', 'client-password'])
+            args['client_cert_all'] = args['client_cert'] + args['client_key'] + args['client_pass']
 
-    def test_ssl_scheme_to_none(self):
-        self.ssl_test_bad('none_s', [])
+            addrs = [self.router.addresses[i] for i in xrange(4)];
+            urls = dict(zip(['none', 'strict', 'unsecured', 'auth'], addrs) +
+                        zip(['none_s', 'strict_s', 'unsecured_s', 'auth_s'],
+                            (Url(a, scheme="amqps") for a in addrs)))
 
-    def test_ssl_cert_to_none(self):
-        self.ssl_test_bad('none', ['client_cert'])
+            self.run_qdstat(['--general'] + sum([args[n] for n in arg_names], []),
+                            regexp=r'(?s)Router Statistics.*Mode\s*Standalone',
+                            address=str(urls[url_name]))
 
-    # Strict SSL listener, SSL only
-    def test_ssl_none_to_strict(self):
-        self.ssl_test_bad('strict', [])
+        def ssl_test_bad(self, url_name, arg_names):
+            self.assertRaises(AssertionError, self.ssl_test, url_name, arg_names)
 
-    def test_ssl_schema_to_strict(self):
-        self.ssl_test('strict_s', [])
+        # Non-SSL enabled listener should fail SSL connections.
+        def test_ssl_none(self):
+            self.ssl_test('none', [])
 
-    def test_ssl_cert_to_strict(self):
-        self.ssl_test('strict_s', ['client_cert_all'])
+        def test_ssl_scheme_to_none(self):
+            self.ssl_test_bad('none_s', [])
 
-    def test_ssl_trustfile_to_strict(self):
-        self.ssl_test('strict_s', ['trustfile'])
+        def test_ssl_cert_to_none(self):
+            self.ssl_test_bad('none', ['client_cert'])
 
-    def test_ssl_trustfile_cert_to_strict(self):
-        self.ssl_test('strict_s', ['trustfile', 'client_cert_all'])
+        # Strict SSL listener, SSL only
+        def test_ssl_none_to_strict(self):
+            self.ssl_test_bad('strict', [])
 
-    def test_ssl_bad_trustfile_to_strict(self):
-        self.ssl_test_bad('strict_s', ['bad_trustfile'])
+        def test_ssl_schema_to_strict(self):
+            self.ssl_test('strict_s', [])
 
+        def test_ssl_cert_to_strict(self):
+            self.ssl_test('strict_s', ['client_cert_all'])
 
-    # Require-auth SSL listener
-    def test_ssl_none_to_auth(self):
-        self.ssl_test_bad('auth', [])
+        def test_ssl_trustfile_to_strict(self):
+            self.ssl_test('strict_s', ['trustfile'])
 
-    def test_ssl_schema_to_auth(self):
-        self.ssl_test_bad('auth_s', [])
+        def test_ssl_trustfile_cert_to_strict(self):
+            self.ssl_test('strict_s', ['trustfile', 'client_cert_all'])
 
-    def test_ssl_trustfile_to_auth(self):
-        self.ssl_test_bad('auth_s', ['trustfile'])
-
-    def test_ssl_cert_to_auth(self):
-        self.ssl_test('auth_s', ['client_cert_all'])
-
-    def test_ssl_trustfile_cert_to_auth(self):
-        self.ssl_test('auth_s', ['trustfile', 'client_cert_all'])
-
-    def test_ssl_bad_trustfile_to_auth(self):
-        self.ssl_test_bad('auth_s', ['bad_trustfile', 'client_cert_all'])
+        def test_ssl_bad_trustfile_to_strict(self):
+            self.ssl_test_bad('strict_s', ['bad_trustfile'])
 
 
-    # Unsecured SSL listener, allows non-SSL
-    def test_ssl_none_to_unsecured(self):
-        self.ssl_test('unsecured', [])
+        # Require-auth SSL listener
+        def test_ssl_none_to_auth(self):
+            self.ssl_test_bad('auth', [])
 
-    def test_ssl_schema_to_unsecured(self):
-        self.ssl_test('unsecured_s', [])
+        def test_ssl_schema_to_auth(self):
+            self.ssl_test_bad('auth_s', [])
 
-    def test_ssl_cert_to_unsecured(self):
-        self.ssl_test('unsecured_s', ['client_cert_all'])
+        def test_ssl_trustfile_to_auth(self):
+            self.ssl_test_bad('auth_s', ['trustfile'])
 
-    def test_ssl_trustfile_to_unsecured(self):
-        self.ssl_test('unsecured_s', ['trustfile'])
+        def test_ssl_cert_to_auth(self):
+            self.ssl_test('auth_s', ['client_cert_all'])
 
-    def test_ssl_trustfile_cert_to_unsecured(self):
-        self.ssl_test('unsecured_s', ['trustfile', 'client_cert_all'])
+        def test_ssl_trustfile_cert_to_auth(self):
+            self.ssl_test('auth_s', ['trustfile', 'client_cert_all'])
 
-    def test_ssl_bad_trustfile_to_unsecured(self):
-        self.ssl_test_bad('unsecured_s', ['bad_trustfile'])
+        def test_ssl_bad_trustfile_to_auth(self):
+            self.ssl_test_bad('auth_s', ['bad_trustfile', 'client_cert_all'])
+
+
+        # Unsecured SSL listener, allows non-SSL
+        def test_ssl_none_to_unsecured(self):
+            self.ssl_test('unsecured', [])
+
+        def test_ssl_schema_to_unsecured(self):
+            self.ssl_test('unsecured_s', [])
+
+        def test_ssl_cert_to_unsecured(self):
+            self.ssl_test('unsecured_s', ['client_cert_all'])
+
+        def test_ssl_trustfile_to_unsecured(self):
+            self.ssl_test('unsecured_s', ['trustfile'])
+
+        def test_ssl_trustfile_cert_to_unsecured(self):
+            self.ssl_test('unsecured_s', ['trustfile', 'client_cert_all'])
+
+        def test_ssl_bad_trustfile_to_unsecured(self):
+            self.ssl_test_bad('unsecured_s', ['bad_trustfile'])
+
+except SSLUnavailable:
+    class QdstatSslTest(system_test.TestCase):
+        def test_skip(self):
+            self.skipTest("Proton SSL support unavailable.")
 
 
 if __name__ == '__main__':
