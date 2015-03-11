@@ -27,8 +27,8 @@ from qpid_dispatch_internal.management.schema_doc import SchemaWriter
 
 class ManPageWriter(SchemaWriter):
 
-    def __init__(self, filename):
-        super(ManPageWriter, self).__init__(open(filename, 'w'), QdSchema())
+    def __init__(self):
+        super(ManPageWriter, self).__init__(sys.stdout, QdSchema())
 
     def attribute_type(self, attr, holder):
         # Don't show read-only attributes
@@ -37,13 +37,22 @@ class ManPageWriter(SchemaWriter):
 
     def man_page(self):
         self.writeln(r"""
-# Name
+:orphan:
 
-qdrouterd.conf - Configuration file for the Qpid Dispatch router
+qdrouterd.conf manual page
+==========================
 
-# Description
+Synopsis
+--------
+
+qdroutered.conf is the configuration file for the dispatch router.
+
+Description
+-----------
 
 The configuration file is made up of sections with this syntax:
+
+::
 
     SECTION-NAME {
         ATTRIBUTE-NAME: ATTRIBUTE-VALUE
@@ -63,6 +72,8 @@ For example you can define an "ssl-profile" annotation section with SSL credenti
 that can be included in multiple "listener" entities. Here's an example, note
 how the 'ssl-profile' attribute of 'listener' sections references the 'name'
 attribute of 'ssl-profile' sections.
+
+::
 
     ssl-profile {
         name: ssl-profile-one
@@ -100,5 +111,14 @@ attribute of 'ssl-profile' sections.
                             for a in entity_type.annotations: self.attribute_types(a)
                         self.attribute_types(entity_type)
 
+        self.writeln("""
+See also
+--------
+
+*qdrouterd(8)*, *qdmanage(8)*
+
+http://qpid.apache.org/components/dispatch-router
+        """)
+
 if __name__ == '__main__':
-    ManPageWriter(sys.argv[1]).man_page()
+    ManPageWriter().man_page()

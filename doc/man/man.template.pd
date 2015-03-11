@@ -1,9 +1,0 @@
-$if(has-tables)$
-.\"t
-$endif$
-.TH "$title$" "$section$" "$date$" "Qpid Dispatch $version$" "$header$"
-$body$
-.SH AUTHOR
-Apache Qpid <http://qpid.apache.org/>
-.SH COPYRIGHT
-Copyright 2013 The Apache Software Foundation
