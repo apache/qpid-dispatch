@@ -1,0 +1,330 @@
+
+:orphan:
+
+qdrouterd.conf manual page
+==========================
+
+Synopsis
+--------
+
+qdroutered.conf is the configuration file for the dispatch router.
+
+Description
+-----------
+
+The configuration file is made up of sections with this syntax:
+
+::
+
+    SECTION-NAME {
+        ATTRIBUTE-NAME: ATTRIBUTE-VALUE
+        ATTRIBUTE-NAME: ATTRIBUTE-VALUE
+        ...
+    }
+
+There are two types of sections:
+
+*Configuration sections* correspond to configuration entities. They can be queried and
+configured via management tools as well as via the configuration file.
+
+*Annotation sections* define a group of attribute values that can be included in
+one or more entity sections.
+
+For example you can define an "ssl-profile" annotation section with SSL credentials
+that can be included in multiple "listener" entities. Here's an example, note
+how the 'ssl-profile' attribute of 'listener' sections references the 'name'
+attribute of 'ssl-profile' sections.
+
+::
+
+    ssl-profile {
+        name: ssl-profile-one
+        cert-db: ca-certificate-1.pem
+        cert-file: server-certificate-1.pem
+        key-file: server-private-key.pem
+    }
+
+    listener {
+        ssl-profile: ssl-profile-one
+        addr: 0.0.0.0
+        port: 20102
+        sasl-mechanisms: ANONYMOUS
+    }
+
+
+Annotation Sections
+-------------------
+
+
+addrPort
+++++++++
+
+Attributes for internet address and port.
+
+Used by: **listener**, **connector**.
+
+*addr* (string, default='0.0.0.0')
+  IP address: ipv4 or ipv6 literal or a host name.
+
+*port* (string, default='amqp')
+  Port number or symbolic service name.
+
+
+saslMechanisms
+++++++++++++++
+
+Attribute for a list of SASL mechanisms.
+
+Used by: **listener**, **connector**.
+
+*saslMechanisms* (string, required)
+  Comma separated list of accepted SASL authentication mechanisms.
+
+
+connectionRole
+++++++++++++++
+
+Attribute for the role of a connection.
+
+Used by: **listener**, **connector**.
+
+*role* (One of ['normal', 'inter-router', 'on-demand'], default='normal')
+  The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.
+
+
+sslProfile
+++++++++++
+
+Attributes for setting TLS/SSL configuration for connections.
+
+Used by: **listener**, **connector**.
+
+*certDb* (path)
+  The path to the database that contains the public certificates of trusted certificate authorities (CA).
+
+*certFile* (path)
+  The path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.
+
+*keyFile* (path)
+  The path to the file containing the PEM-formatted private key for the above certificate.
+
+*passwordFile* (path)
+  If the above private key is password protected, this is the path to a file containing the password that unlocks the certificate key.
+
+*password* (string)
+  An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This option can be used by supplying the password in the 'password' option.  Don't use both password and passwordFile in the same profile.
+
+
+Configuration Sections
+----------------------
+
+
+container
++++++++++
+
+Attributes related to the AMQP container.
+
+*containerName* (string)
+  The  name of the AMQP container.  If not specified, the container name will be set to a value of the container's choosing.  The automatically assigned container name is not guaranteed to be persistent across restarts of the container.
+
+*workerThreads* (integer, default=1)
+  The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .
+
+*debugDump* (path)
+  A file to dump debugging information that can't be logged normally.
+
+
+router
+++++++
+
+Tracks peer routers and computes routes to destinations.
+
+*routerId* (string)
+  Router's unique identity.
+
+*mode* (One of ['standalone', 'interior', 'edge', 'endpoint'], default='standalone')
+  In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network.  In edge mode, the router operates with an up link into an interior router network. Edge routers are typically used as connection concentrators or as security firewalls for access into the interior network.
+
+*helloInterval* (integer, default=1)
+  Interval in seconds between HELLO messages sent to neighbor routers.
+
+*helloMaxAge* (integer, default=3)
+  Time in seconds after which a neighbor is declared lost if no HELLO is received.
+
+*raInterval* (integer, default=30)
+  Interval in seconds between Router-Advertisements sent to all routers in a stable network.
+
+*raIntervalFlux* (integer, default=4)
+  Interval in seconds between Router-Advertisements sent to all routers during topology fluctuations.
+
+*remoteLsMaxAge* (integer, default=60)
+  Time in seconds after which link state is declared stale if no RA is received.
+
+*mobileAddrMaxAge* (integer, default=60)
+  Deprecated - This value is no longer used in the router.
+
+
+listener
+++++++++
+
+Listens for incoming connections to the router.
+
+Annotations: **addrPort**, **connectionRole**, **sslProfile**, **saslMechanisms**.
+
+*addr* (string, default='0.0.0.0')
+  IP address: ipv4 or ipv6 literal or a host name.
+
+*port* (string, default='amqp')
+  Port number or symbolic service name.
+
+*role* (One of ['normal', 'inter-router', 'on-demand'], default='normal')
+  The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.
+
+*certDb* (path)
+  The path to the database that contains the public certificates of trusted certificate authorities (CA).
+
+*certFile* (path)
+  The path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.
+
+*keyFile* (path)
+  The path to the file containing the PEM-formatted private key for the above certificate.
+
+*passwordFile* (path)
+  If the above private key is password protected, this is the path to a file containing the password that unlocks the certificate key.
+
+*password* (string)
+  An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This option can be used by supplying the password in the 'password' option.  Don't use both password and passwordFile in the same profile.
+
+*saslMechanisms* (string, required)
+  Comma separated list of accepted SASL authentication mechanisms.
+
+*requirePeerAuth* (boolean, default=True)
+  Only for listeners using SSL.  If set to 'yes', attached clients will be required to supply a certificate.  If the certificate is not traceable to a CA in the ssl profile's cert-db, authentication fails for the connection.
+
+*trustedCerts* (path)
+  This optional setting can be used to reduce the set of available CAs for client authentication.  If used, this setting must provide a path to a PEM file that contains the trusted certificates.
+
+*allowUnsecured* (boolean)
+  For listeners using SSL only.  If set to 'yes' the listener will allow both SSL-secured clients and non-SSL clients to connect.
+
+*allowNoSasl* (boolean)
+  If set to 'yes', this option causes the listener to allow clients to connect even if they skip the SASL authentication protocol.
+
+*maxFrameSize* (integer, default=65536)
+  Defaults to 65536.  If specified, it is the maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.
+
+
+connector
++++++++++
+
+Establishes an outgoing connections from the router.
+
+Annotations: **addrPort**, **connectionRole**, **sslProfile**, **saslMechanisms**.
+
+*addr* (string, default='0.0.0.0')
+  IP address: ipv4 or ipv6 literal or a host name.
+
+*port* (string, default='amqp')
+  Port number or symbolic service name.
+
+*role* (One of ['normal', 'inter-router', 'on-demand'], default='normal')
+  The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.
+
+*certDb* (path)
+  The path to the database that contains the public certificates of trusted certificate authorities (CA).
+
+*certFile* (path)
+  The path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.
+
+*keyFile* (path)
+  The path to the file containing the PEM-formatted private key for the above certificate.
+
+*passwordFile* (path)
+  If the above private key is password protected, this is the path to a file containing the password that unlocks the certificate key.
+
+*password* (string)
+  An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This option can be used by supplying the password in the 'password' option.  Don't use both password and passwordFile in the same profile.
+
+*saslMechanisms* (string, required)
+  Comma separated list of accepted SASL authentication mechanisms.
+
+*allowRedirect* (boolean, default=True)
+  Allow the peer to redirect this connection to another address.
+
+*maxFrameSize* (integer, default=65536)
+  Maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.
+
+
+log
++++
+
+Configure logging for a particular module. You can use the `UPDATE` operation to change log settings while the router is running.
+
+*enable* (string, default='default', required)
+  Levels are: trace, debug, info, notice, warning, error, critical. The enable string is a comma-separated list of levels. A level may have a trailing '+' to enable that level and above. For example 'trace,debug,warning+' means enable trace, debug, warning, error and critical. The value 'none' means disable logging for the module. The value 'default' means use the value from the DEFAULT module.
+
+*timestamp* (boolean)
+  Include timestamp in log messages.
+
+*source* (boolean)
+  Include source file and line number in log messages.
+
+*output* (string)
+  Where to send log messages. Can be 'stderr', 'syslog' or a file name.
+
+
+fixedAddress
+++++++++++++
+
+Establishes semantics for addresses starting with a prefix.
+
+*prefix* (string, required)
+  The address prefix (always starting with '/').
+
+*phase* (integer)
+  The phase of a multi-hop address passing through one or more waypoints.
+
+*fanout* (One of ['multiple', 'single'], default='multiple')
+  One of 'multiple' or 'single'.  Multiple fanout is a non-competing pattern.  If there are multiple consumers using the same address, each consumer will receive its own copy of every message sent to the address.  Single fanout is a competing pattern where each message is sent to only one consumer.
+
+*bias* (One of ['closest', 'spread'], default='closest')
+  Only if fanout is single.  One of 'closest' or 'spread'.  Closest bias means that messages to an address will always be delivered to the closest (lowest cost) subscribed consumer. Spread bias will distribute the messages across subscribers in an approximately even manner.
+
+
+waypoint
+++++++++
+
+A remote node that messages for an address pass through.
+
+*address* (string, required)
+  The AMQP address of the waypoint.
+
+*connector* (string, required)
+  The name of the on-demand connector used to reach the waypoint's container.
+
+*inPhase* (integer, default=-1)
+  The phase of the address as it is routed _to_ the waypoint.
+
+*outPhase* (integer, default=-1)
+  The phase of the address as it is routed _from_ the waypoint.
+
+
+linkRoutePattern
+++++++++++++++++
+
+A pattern to match a connected container to endpoints for routed links.
+
+*prefix* (string, required)
+  The AMQP address prefix for nodes on the container.
+
+*connector* (string)
+  The name of the on-demand connector used to reach the waypoint's container.
+
+
+See also
+--------
+
+*qdrouterd(8)*, *qdmanage(8)*
+
+http://qpid.apache.org/components/dispatch-router
+        

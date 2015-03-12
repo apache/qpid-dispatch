@@ -1,0 +1,307 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>4. AMQP Mapping &mdash; Qpid Dispatch 0.4 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Qpid Dispatch 0.4 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">4. AMQP Mapping</a><ul>
+<li><a class="reference internal" href="#message-annotations">4.1. Message Annotations</a></li>
+<li><a class="reference internal" href="#source-target-capabilities">4.2. Source/Target Capabilities</a></li>
+<li><a class="reference internal" href="#dynamic-node-properties">4.3. Dynamic-Node-Properties</a></li>
+<li><a class="reference internal" href="#addresses-and-address-formats">4.4. Addresses and Address Formats</a><ul>
+<li><a class="reference internal" href="#address-patterns">4.4.1. Address Patterns</a></li>
+<li><a class="reference internal" href="#supported-addresses">4.4.2. Supported Addresses</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#implementation-of-the-amqp-management-specification">4.5. Implementation of the AMQP Management Specification</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/book/amqp-mapping.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="amqp-mapping">
+<h1>4. AMQP Mapping<a class="headerlink" href="#amqp-mapping" title="Permalink to this headline">¶</a></h1>
+<p>Dispatch Router is an AMQP router and as such, it provides extensions,
+code-points, and semantics for routing over AMQP. This page documents the
+details of Dispatch Router&#8217;s use of AMQP.</p>
+<div class="section" id="message-annotations">
+<h2>4.1. Message Annotations<a class="headerlink" href="#message-annotations" title="Permalink to this headline">¶</a></h2>
+<p>The following Message Annotation fields are defined by Dispatch Router:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="19%" />
+<col width="59%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><em>Field</em></th>
+<th class="head"><em>Type</em></th>
+<th class="head"><em>Description</em></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>x-opt-qd.ingress</td>
+<td>string</td>
+<td>The identity of the ingress router for a message-routed
+message. The ingress router is the first router
+encountered by a transiting message. The router will,
+if this field is present, leave it unaltered. If the
+field is not present, the router shall insert the field
+with its own identity.</td>
+</tr>
+<tr class="row-odd"><td>x-opt-qd.trace</td>
+<td>list of string</td>
+<td>The list of routers through which this message-routed
+message has transited. If this field is not present,
+the router shall do nothing. If the field is present,
+the router shall append its own identity to the end of
+the list.</td>
+</tr>
+<tr class="row-even"><td>x-opt-qd.to</td>
+<td>string</td>
+<td>To-Override for message-routed messages. If this field
+is present, the address in this field shall be used for
+routing in lieu of the <em>to</em> field in the message
+properties. A router may append, remove, or modify this
+annotation field depending on the policy in place for
+routing the message.</td>
+</tr>
+<tr class="row-odd"><td>x-opt-qd.class</td>
+<td>string</td>
+<td>Message class. This is used to allow the router to
+provide separate paths for different classes of
+traffic.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="source-target-capabilities">
+<h2>4.2. Source/Target Capabilities<a class="headerlink" href="#source-target-capabilities" title="Permalink to this headline">¶</a></h2>
+<p>The following Capability values are used in Sources and Targets.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="17%" />
+<col width="83%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><em>Capability</em></th>
+<th class="head"><em>Description</em></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>qd.router</td>
+<td>This capability is added to sources and targets that are used for
+inter-router message exchange.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="dynamic-node-properties">
+<h2>4.3. Dynamic-Node-Properties<a class="headerlink" href="#dynamic-node-properties" title="Permalink to this headline">¶</a></h2>
+<p>The following dynamic-node-properties are used by Dispatch in Sources.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="78%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><em>Property</em></th>
+<th class="head"><em>Description</em></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>x-opt-qd.address</td>
+<td>The node address describing the destination desired for a dynamic
+source. If this is absent, the router will terminate any dynamic
+receivers. If this address is present, the router will use the address
+to route the dynamic link attach to the proper destination container.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="addresses-and-address-formats">
+<h2>4.4. Addresses and Address Formats<a class="headerlink" href="#addresses-and-address-formats" title="Permalink to this headline">¶</a></h2>
+<p>The following AMQP addresses and address patterns are used within
+Dispatch Router.</p>
+<div class="section" id="address-patterns">
+<h3>4.4.1. Address Patterns<a class="headerlink" href="#address-patterns" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="37%" />
+<col width="63%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><em>Pattern</em></th>
+<th class="head"><em>Description</em></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><cite>_local/&lt;addr&gt;</cite></td>
+<td>An address that references a locally attached
+endpoint. Messages using this address pattern shall not
+be routed over more than one link.</td>
+</tr>
+<tr class="row-odd"><td><cite>_topo/&lt;area&gt;/&lt;router&gt;/&lt;addr&gt;</cite></td>
+<td>An address that references an endpoint attached to a
+specific router node in the network topology. Messages
+with addresses that follow this pattern shall be routed
+along the shortest path to the specified router. Note
+that addresses of this form are a-priori routable in
+that the address itself contains enough information to
+route the message to its destination.</td>
+</tr>
+<tr class="row-even"><td><cite>&lt;addr&gt;</cite></td>
+<td>A mobile address. An address of this format represents
+an endpoint or a set of distinct endpoints that are
+attached to the network in arbitrary locations. It is
+the responsibility of the router network to determine
+which router nodes are valid destinations for mobile
+addresses.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="supported-addresses">
+<h3>4.4.2. Supported Addresses<a class="headerlink" href="#supported-addresses" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="33%" />
+<col width="67%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><em>Address</em></th>
+<th class="head"><em>Description</em></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><cite>_local/$management</cite></td>
+<td>The management agent on the attached router/container. This
+address would be used by an endpoint that is a management
+client/console/tool wishing to access management data from
+the attached container.</td>
+</tr>
+<tr class="row-odd"><td><cite>_topo/0/Router.E/agent</cite></td>
+<td>The management agent at Router.E in area 0. This address
+would be used by a management client wishing to access
+management data from a specific container that is reachable
+within the network.</td>
+</tr>
+<tr class="row-even"><td><cite>_local/qdhello</cite></td>
+<td>The router entity in each of the connected routers. This
+address is used to communicate with neighbor routers and is
+exclusively for the HELLO discovery protocol.</td>
+</tr>
+<tr class="row-odd"><td><cite>_local/qdrouter</cite></td>
+<td>The router entity in each of the connected routers. This
+address is used by a router to communicate with other
+routers in the network.</td>
+</tr>
+<tr class="row-even"><td><cite>_topo/0/Router.E/qdxrouter</cite></td>
+<td>The router entity at the specifically indicated router. This
+address form is used by a router to communicate with a
+specific router that may or may not be a neighbor.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="implementation-of-the-amqp-management-specification">
+<h2>4.5. Implementation of the AMQP Management Specification<a class="headerlink" href="#implementation-of-the-amqp-management-specification" title="Permalink to this headline">¶</a></h2>
+<p>Qpid Dispatch is manageable remotely via AMQP. It is compliant with the
+emerging AMQP Management specification (draft 9).</p>
+<p>Differences from the specification:</p>
+<ul class="simple">
+<li>The <cite>name</cite> attribute is not required when an entity is created. If
+not supplied it will be set to the same value as the system-generated
+&#8220;identity&#8221; attribute. Otherwise it is treated as per the standard.</li>
+<li>The <cite>REGISTER</cite> and <cite>DEREGISTER</cite> operations are not implemented. The router
+automatically discovers peer routers via the router network and makes
+their management addresses available via the standard GET-MGMT-NODES
+operation.</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Apache Qpid &lt;http://qpid.apache.org/&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

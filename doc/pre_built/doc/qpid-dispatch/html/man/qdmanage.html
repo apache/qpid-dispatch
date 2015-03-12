@@ -1,0 +1,237 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>qdmanage manual page &mdash; Qpid Dispatch 0.4 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Qpid Dispatch 0.4 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">qdmanage manual page</a><ul>
+<li><a class="reference internal" href="#synopsis">Synopsis</a></li>
+<li><a class="reference internal" href="#description">Description</a></li>
+<li><a class="reference internal" href="#operations">Operations</a></li>
+<li><a class="reference internal" href="#options">Options</a><ul>
+<li><a class="reference internal" href="#connection-options">Connection Options</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#files">Files</a></li>
+<li><a class="reference internal" href="#examples">Examples</a></li>
+<li><a class="reference internal" href="#see-also">See also</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/man/qdmanage.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="qdmanage-manual-page">
+<h1>qdmanage manual page<a class="headerlink" href="#qdmanage-manual-page" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="synopsis">
+<h2>Synopsis<a class="headerlink" href="#synopsis" title="Permalink to this headline">¶</a></h2>
+<p>qdmanage <em>operation</em> [<em>options...</em>] [<em>arguments...</em>]</p>
+</div>
+<div class="section" id="description">
+<h2>Description<a class="headerlink" href="#description" title="Permalink to this headline">¶</a></h2>
+<p>An AMQP management client for use with qdrouterd. Sends AMQP management
+operations requests and prints the response in JSON format. This is a
+generic AMQP management tool and can be used with any standard AMQP
+managed endpoint, not just with qdrouter.</p>
+</div>
+<div class="section" id="operations">
+<h2>Operations<a class="headerlink" href="#operations" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt><cite>query</cite> [<em>ATTR</em>...]</dt>
+<dd>Print the attributes named in the ATTR list or all attributes if
+none are listed. Print attributes for all entities by default, use
+&#8211;type, &#8211;name and &#8211;identity options to restrict what is printed.</dd>
+<dt><cite>create</cite> [<em>ATTR=VALUE</em>...]</dt>
+<dd>Create a new entity with the specified attributes. With the &#8211;stdin
+option, read attributes from stdin. This can be a JSON map of
+attributes to create a single entity, or a JSON list of maps to
+create multiple entitiees.</dd>
+<dt><cite>read</cite></dt>
+<dd>Print the attributes of an entity specified by the &#8211;name or
+&#8211;identity options. With the &#8211;stdin option, create entities based
+on data from stdin. This can be a JSON map of attributes to create a
+single entity, or a JSON list of maps to create multiple entitiees.</dd>
+<dt><cite>update</cite> [<em>ATTR=VALUE</em>...]</dt>
+<dd>Update the attributes of an existing entity. With the &#8211;stdin
+option, read attributes from stdin. This can be a JSON map of
+attributes to update a single entity, or a JSON list of maps to
+update multiple entitiees. If an ATTR name is listed with no =VALUE,
+that attribute will be deleted from the entity.</dd>
+<dt><cite>delete</cite></dt>
+<dd>Delete an entity specified by the &#8211;name or &#8211;identity options.</dd>
+<dt><cite>get-types</cite> [<em>TYPE</em>]</dt>
+<dd>List entity types with their base types. With no arguments list all
+types.</dd>
+<dt><cite>get-operations</cite> [<em>TYPE</em>]</dt>
+<dd>List entity types with their operations. With no arguments list all
+types.</dd>
+<dt><cite>get-attributes</cite> [<em>TYPE</em>]</dt>
+<dd>List entity types with their attributes. With no arguments list all
+types.</dd>
+<dt><cite>get-annotations</cite> [<em>TYPE</em>]</dt>
+<dd>List entity types with their annotations. With no arguments list all
+types.</dd>
+<dt><cite>get-mgmt-nodes</cite></dt>
+<dd>List all other known management nodes connected to this one.</dd>
+<dt><cite>get-json-schema</cite> [<em>INDENT</em>]</dt>
+<dd>Get the router schema in JSON format. Optional integer indent for
+formatted output.</dd>
+<dt><cite>get-log</cite> [<em>INDENT</em>]</dt>
+<dd>Get recent log entries from the router.</dd>
+</dl>
+</div>
+<div class="section" id="options">
+<h2>Options<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h2>
+<p>-h, &#8211;help
+:   show this help message and exit</p>
+<p>&#8211;version
+:   Print version and exit.</p>
+<p>&#8211;type=TYPE
+:   Type of entity to operate on.</p>
+<p>&#8211;name=NAME
+:   Name of entity to operate on.</p>
+<p>&#8211;identity=ID
+:   Identity of entity to operate on.</p>
+<p>&#8211;indent=INDENT
+:   Pretty-printing indent. -1 means don&#8217;t pretty-print (default 2)</p>
+<p>&#8211;stdin
+:   Read attributes as JSON map or list of maps from stdin.</p>
+<p>&#8211;body=BODY
+:   JSON value to use as body of a non-standard operation call.</p>
+<p>&#8211;properties=PROPERTIES
+:   JSON map to use as properties for a non-standard operation call.</p>
+<div class="section" id="connection-options">
+<h3>Connection Options<a class="headerlink" href="#connection-options" title="Permalink to this headline">¶</a></h3>
+<p>-b URL, &#8211;bus=URL
+:   URL of the messaging bus to connect to (default 0.0.0.0)</p>
+<p>-r ROUTER-ID, &#8211;router=ROUTER-ID
+:   Router to be queried</p>
+<p>-t SECS, &#8211;timeout=SECS
+:   Maximum time to wait for connection in seconds (default 5)</p>
+<p>&#8211;ssl-certificate=CERT
+:   Client SSL certificate (PEM Format)</p>
+<p>&#8211;ssl-key=KEY
+:   Client SSL private key (PEM Format)</p>
+<p>&#8211;ssl-trustfile=TRUSTED-CA-DB
+:   Trusted Certificate Authority Database file (PEM Format)</p>
+<p>&#8211;ssl-password=PASSWORD
+:   Certificate password, will be prompted if not specifed.</p>
+</div>
+</div>
+<div class="section" id="files">
+<h2>Files<a class="headerlink" href="#files" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt>/home/aconway/dispatch/install/share/doc/qpid-dispatch/qdrouter.json</dt>
+<dd>Management schema for qdrouterd.</dd>
+<dt>/home/aconway/dispatch/install/share/doc/qpid-dispatch/qdrouter.json.readme.txt</dt>
+<dd>Explanation of the management schema.</dd>
+</dl>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>Show the logging configuration</p>
+<div class="highlight-python"><pre>qdmanage query --type=log</pre>
+</div>
+<p>Enable debug and higher log messages by default:</p>
+<div class="highlight-python"><pre>qdmanage udpdate name=log/DEFAULT enable=debug+</pre>
+</div>
+<p>Enable trace log messages only for the MESSAGE moudle and direct MESSAGE
+logs to the file &#8220;test.log&#8221;</p>
+<div class="highlight-python"><pre>qdmanage udpdate name=log/MESSAGE enable=trace output=test.log</pre>
+</div>
+<p>Set MESSAGE logging back to the default:</p>
+<div class="highlight-python"><pre>qdmanage udpdate name=log/MESSAGE enable=default</pre>
+</div>
+<p>Disable MESSAGE logging:</p>
+<div class="highlight-python"><pre>qdmanage udpdate name=log/MESSAGE enable=none</pre>
+</div>
+</div>
+<div class="section" id="see-also">
+<h2>See also<a class="headerlink" href="#see-also" title="Permalink to this headline">¶</a></h2>
+<p><em>qdrouterd(8)</em>, <em>qdstat(8)</em>, <em>qdrouterd.conf(5)</em></p>
+<p><a class="reference external" href="http://qpid.apache.org/components/dispatch-router">http://qpid.apache.org/components/dispatch-router</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Apache Qpid &lt;http://qpid.apache.org/&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

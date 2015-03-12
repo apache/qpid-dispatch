@@ -1,0 +1,90 @@
+<!--*-markdown-*-
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+# The qdrouter management schema
+
+The schema `qdrouterd.json` is a JSON format file that defines annotations and
+entity types of the Qpid Dispatch Router management model.  The model is based
+on the AMQP management specification.
+
+The schema is a JSON map with the following keys:
+
+- "description": documentation string for the schema
+- "prefix": Prefix for schema names when they are exposed to AMQP management clients.
+
+- "entityTypes": map of entity type names to definitions (see below)
+
+Annotation and entity type definition maps have the following keys:
+
+- "description": documentation string.
+- "fullName": if true use the type name as-is, do not apply the schema prefix.
+- "attributes": map of attribute names to attribute definitions (see below)
+- "operations": list of allowed operation names.
+- "operationsDefs": map of operation names to operation definitions.
+
+Entity type definitions also have these fields:
+
+- "extends": Name of base type. The new type includes attributes, operations and operationDefs from the base type.
+- "annotations": List of annotation names. The new type includes operations and attributes from all the annotations.
+
+Operation definitions are optional, you can call an operation in the operations
+list without an operation definition. They have the following fields:
+
+- "properties": map of property names to property definition maps.
+  Defines the set of message properties expected by the operation.
+- "body": a property definition map.
+
+Attribute or property definition maps have the following fields:
+
+- "description": documentation string.
+- "type": one of the following:
+  - "string": a Unicode string value.
+  - "path": A string c
+  - "entityId": a string that holds the `identity` of a management entity.
+  - "integer": an integer value.
+  - "boolean": a true/false value.
+  - "map": a map.
+  - "list": a list.
+  - [...]: A list of strings is an enumeration. Values must be one of the strings or an integer integer index into the list, starting from 0.
+- "default": a default can be a literal value or a reference to another attribute in the form `$attributeName`.
+- "create": if true the attribute can be set by CREATE.
+- "update": if true the attribute can be changed by UPDATE.
+Attributes with neither "create" nor "update" are set automatically by the system.
+
+There is the following hierarchy among entity types:
+
+- `entity`: The base of all entity types.
+
+- `configurationEntity`: base for all types that hold *configuration information*.
+
+  Configuration information is supplied in advance and express *intent*. For
+  example "I want the router to listen on port N". All the entities that can be
+  used in the configuration file extend `configurationEntity`.
+
+- `operationalEntity`: base for all types that hold *operational information*.
+
+  Operational information reflects the actual current state of the router.  For
+  example, "how many addresses are presently active?" All the entities queried
+  by the `qdstat` tool extend `operationalEntity`.
+
+The two types are often related. For example `listener` and `connector` extend
+`configurationEntity`, they express the intent to make or receive
+connections. `connection` extends `operationalEntity`, it holds information
+the actual connection status.
+

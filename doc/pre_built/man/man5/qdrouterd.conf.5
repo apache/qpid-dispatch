@@ -1,0 +1,374 @@
+.\" Man page generated from reStructuredText.
+.
+.TH "QDROUTERD.CONF" "5" "March 12, 2015" "0.4" "Qpid Dispatch"
+.SH NAME
+qdrouterd.conf \- dispatch router configuration
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH SYNOPSIS
+.sp
+qdroutered.conf is the configuration file for the dispatch router.
+.SH DESCRIPTION
+.sp
+The configuration file is made up of sections with this syntax:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+SECTION\-NAME {
+    ATTRIBUTE\-NAME: ATTRIBUTE\-VALUE
+    ATTRIBUTE\-NAME: ATTRIBUTE\-VALUE
+    ...
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+There are two types of sections:
+.sp
+\fIConfiguration sections\fP correspond to configuration entities. They can be queried and
+configured via management tools as well as via the configuration file.
+.sp
+\fIAnnotation sections\fP define a group of attribute values that can be included in
+one or more entity sections.
+.sp
+For example you can define an "ssl\-profile" annotation section with SSL credentials
+that can be included in multiple "listener" entities. Here\(aqs an example, note
+how the \(aqssl\-profile\(aq attribute of \(aqlistener\(aq sections references the \(aqname\(aq
+attribute of \(aqssl\-profile\(aq sections.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+ssl\-profile {
+    name: ssl\-profile\-one
+    cert\-db: ca\-certificate\-1.pem
+    cert\-file: server\-certificate\-1.pem
+    key\-file: server\-private\-key.pem
+}
+
+listener {
+    ssl\-profile: ssl\-profile\-one
+    addr: 0.0.0.0
+    port: 20102
+    sasl\-mechanisms: ANONYMOUS
+}
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH ANNOTATION SECTIONS
+.SS addrPort
+.sp
+Attributes for internet address and port.
+.sp
+Used by: \fBlistener\fP, \fBconnector\fP\&.
+.INDENT 0.0
+.TP
+.B \fIaddr\fP (string, default=\(aq0.0.0.0\(aq)
+IP address: ipv4 or ipv6 literal or a host name.
+.TP
+.B \fIport\fP (string, default=\(aqamqp\(aq)
+Port number or symbolic service name.
+.UNINDENT
+.SS saslMechanisms
+.sp
+Attribute for a list of SASL mechanisms.
+.sp
+Used by: \fBlistener\fP, \fBconnector\fP\&.
+.INDENT 0.0
+.TP
+.B \fIsaslMechanisms\fP (string, required)
+Comma separated list of accepted SASL authentication mechanisms.
+.UNINDENT
+.SS connectionRole
+.sp
+Attribute for the role of a connection.
+.sp
+Used by: \fBlistener\fP, \fBconnector\fP\&.
+.INDENT 0.0
+.TP
+.B \fIrole\fP (One of [\(aqnormal\(aq, \(aqinter\-router\(aq, \(aqon\-demand\(aq], default=\(aqnormal\(aq)
+The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter\-router role, the connection is assumed to be to another router in the network.  Inter\-router discovery and routing protocols can only be used over inter\-router connections.
+.UNINDENT
+.SS sslProfile
+.sp
+Attributes for setting TLS/SSL configuration for connections.
+.sp
+Used by: \fBlistener\fP, \fBconnector\fP\&.
+.INDENT 0.0
+.TP
+.B \fIcertDb\fP (path)
+The path to the database that contains the public certificates of trusted certificate authorities (CA).
+.TP
+.B \fIcertFile\fP (path)
+The path to the file containing the PEM\-formatted public certificate to be used on the local end of any connections using this profile.
+.TP
+.B \fIkeyFile\fP (path)
+The path to the file containing the PEM\-formatted private key for the above certificate.
+.TP
+.B \fIpasswordFile\fP (path)
+If the above private key is password protected, this is the path to a file containing the password that unlocks the certificate key.
+.TP
+.B \fIpassword\fP (string)
+An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This option can be used by supplying the password in the \(aqpassword\(aq option.  Don\(aqt use both password and passwordFile in the same profile.
+.UNINDENT
+.SH CONFIGURATION SECTIONS
+.SS container
+.sp
+Attributes related to the AMQP container.
+.INDENT 0.0
+.TP
+.B \fIcontainerName\fP (string)
+The  name of the AMQP container.  If not specified, the container name will be set to a value of the container\(aqs choosing.  The automatically assigned container name is not guaranteed to be persistent across restarts of the container.
+.TP
+.B \fIworkerThreads\fP (integer, default=1)
+The number of threads that will be created to process message traffic and other application work (timers, non\-amqp file descriptors, etc.) .
+.TP
+.B \fIdebugDump\fP (path)
+A file to dump debugging information that can\(aqt be logged normally.
+.UNINDENT
+.SS router
+.sp
+Tracks peer routers and computes routes to destinations.
+.INDENT 0.0
+.TP
+.B \fIrouterId\fP (string)
+Router\(aqs unique identity.
+.TP
+.B \fImode\fP (One of [\(aqstandalone\(aq, \(aqinterior\(aq, \(aqedge\(aq, \(aqendpoint\(aq], default=\(aqstandalone\(aq)
+In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network.  In edge mode, the router operates with an up link into an interior router network. Edge routers are typically used as connection concentrators or as security firewalls for access into the interior network.
+.TP
+.B \fIhelloInterval\fP (integer, default=1)
+Interval in seconds between HELLO messages sent to neighbor routers.
+.TP
+.B \fIhelloMaxAge\fP (integer, default=3)
+Time in seconds after which a neighbor is declared lost if no HELLO is received.
+.TP
+.B \fIraInterval\fP (integer, default=30)
+Interval in seconds between Router\-Advertisements sent to all routers in a stable network.
+.TP
+.B \fIraIntervalFlux\fP (integer, default=4)
+Interval in seconds between Router\-Advertisements sent to all routers during topology fluctuations.
+.TP
+.B \fIremoteLsMaxAge\fP (integer, default=60)
+Time in seconds after which link state is declared stale if no RA is received.
+.TP
+.B \fImobileAddrMaxAge\fP (integer, default=60)
+Deprecated \- This value is no longer used in the router.
+.UNINDENT
+.SS listener
+.sp
+Listens for incoming connections to the router.
+.sp
+Annotations: \fBaddrPort\fP, \fBconnectionRole\fP, \fBsslProfile\fP, \fBsaslMechanisms\fP\&.
+.INDENT 0.0
+.TP
+.B \fIaddr\fP (string, default=\(aq0.0.0.0\(aq)
+IP address: ipv4 or ipv6 literal or a host name.
+.TP
+.B \fIport\fP (string, default=\(aqamqp\(aq)
+Port number or symbolic service name.
+.TP
+.B \fIrole\fP (One of [\(aqnormal\(aq, \(aqinter\-router\(aq, \(aqon\-demand\(aq], default=\(aqnormal\(aq)
+The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter\-router role, the connection is assumed to be to another router in the network.  Inter\-router discovery and routing protocols can only be used over inter\-router connections.
+.TP
+.B \fIcertDb\fP (path)
+The path to the database that contains the public certificates of trusted certificate authorities (CA).
+.TP
+.B \fIcertFile\fP (path)
+The path to the file containing the PEM\-formatted public certificate to be used on the local end of any connections using this profile.
+.TP
+.B \fIkeyFile\fP (path)
+The path to the file containing the PEM\-formatted private key for the above certificate.
+.TP
+.B \fIpasswordFile\fP (path)
+If the above private key is password protected, this is the path to a file containing the password that unlocks the certificate key.
+.TP
+.B \fIpassword\fP (string)
+An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This option can be used by supplying the password in the \(aqpassword\(aq option.  Don\(aqt use both password and passwordFile in the same profile.
+.TP
+.B \fIsaslMechanisms\fP (string, required)
+Comma separated list of accepted SASL authentication mechanisms.
+.TP
+.B \fIrequirePeerAuth\fP (boolean, default=True)
+Only for listeners using SSL.  If set to \(aqyes\(aq, attached clients will be required to supply a certificate.  If the certificate is not traceable to a CA in the ssl profile\(aqs cert\-db, authentication fails for the connection.
+.TP
+.B \fItrustedCerts\fP (path)
+This optional setting can be used to reduce the set of available CAs for client authentication.  If used, this setting must provide a path to a PEM file that contains the trusted certificates.
+.TP
+.B \fIallowUnsecured\fP (boolean)
+For listeners using SSL only.  If set to \(aqyes\(aq the listener will allow both SSL\-secured clients and non\-SSL clients to connect.
+.TP
+.B \fIallowNoSasl\fP (boolean)
+If set to \(aqyes\(aq, this option causes the listener to allow clients to connect even if they skip the SASL authentication protocol.
+.TP
+.B \fImaxFrameSize\fP (integer, default=65536)
+Defaults to 65536.  If specified, it is the maximum frame size in octets that will be used in the connection\-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.
+.UNINDENT
+.SS connector
+.sp
+Establishes an outgoing connections from the router.
+.sp
+Annotations: \fBaddrPort\fP, \fBconnectionRole\fP, \fBsslProfile\fP, \fBsaslMechanisms\fP\&.
+.INDENT 0.0
+.TP
+.B \fIaddr\fP (string, default=\(aq0.0.0.0\(aq)
+IP address: ipv4 or ipv6 literal or a host name.
+.TP
+.B \fIport\fP (string, default=\(aqamqp\(aq)
+Port number or symbolic service name.
+.TP
+.B \fIrole\fP (One of [\(aqnormal\(aq, \(aqinter\-router\(aq, \(aqon\-demand\(aq], default=\(aqnormal\(aq)
+The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter\-router role, the connection is assumed to be to another router in the network.  Inter\-router discovery and routing protocols can only be used over inter\-router connections.
+.TP
+.B \fIcertDb\fP (path)
+The path to the database that contains the public certificates of trusted certificate authorities (CA).
+.TP
+.B \fIcertFile\fP (path)
+The path to the file containing the PEM\-formatted public certificate to be used on the local end of any connections using this profile.
+.TP
+.B \fIkeyFile\fP (path)
+The path to the file containing the PEM\-formatted private key for the above certificate.
+.TP
+.B \fIpasswordFile\fP (path)
+If the above private key is password protected, this is the path to a file containing the password that unlocks the certificate key.
+.TP
+.B \fIpassword\fP (string)
+An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This option can be used by supplying the password in the \(aqpassword\(aq option.  Don\(aqt use both password and passwordFile in the same profile.
+.TP
+.B \fIsaslMechanisms\fP (string, required)
+Comma separated list of accepted SASL authentication mechanisms.
+.TP
+.B \fIallowRedirect\fP (boolean, default=True)
+Allow the peer to redirect this connection to another address.
+.TP
+.B \fImaxFrameSize\fP (integer, default=65536)
+Maximum frame size in octets that will be used in the connection\-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.
+.UNINDENT
+.SS log
+.sp
+Configure logging for a particular module. You can use the \fIUPDATE\fP operation to change log settings while the router is running.
+.INDENT 0.0
+.TP
+.B \fIenable\fP (string, default=\(aqdefault\(aq, required)
+Levels are: trace, debug, info, notice, warning, error, critical. The enable string is a comma\-separated list of levels. A level may have a trailing \(aq+\(aq to enable that level and above. For example \(aqtrace,debug,warning+\(aq means enable trace, debug, warning, error and critical. The value \(aqnone\(aq means disable logging for the module. The value \(aqdefault\(aq means use the value from the DEFAULT module.
+.TP
+.B \fItimestamp\fP (boolean)
+Include timestamp in log messages.
+.TP
+.B \fIsource\fP (boolean)
+Include source file and line number in log messages.
+.TP
+.B \fIoutput\fP (string)
+Where to send log messages. Can be \(aqstderr\(aq, \(aqsyslog\(aq or a file name.
+.UNINDENT
+.SS fixedAddress
+.sp
+Establishes semantics for addresses starting with a prefix.
+.INDENT 0.0
+.TP
+.B \fIprefix\fP (string, required)
+The address prefix (always starting with \(aq/\(aq).
+.TP
+.B \fIphase\fP (integer)
+The phase of a multi\-hop address passing through one or more waypoints.
+.TP
+.B \fIfanout\fP (One of [\(aqmultiple\(aq, \(aqsingle\(aq], default=\(aqmultiple\(aq)
+One of \(aqmultiple\(aq or \(aqsingle\(aq.  Multiple fanout is a non\-competing pattern.  If there are multiple consumers using the same address, each consumer will receive its own copy of every message sent to the address.  Single fanout is a competing pattern where each message is sent to only one consumer.
+.TP
+.B \fIbias\fP (One of [\(aqclosest\(aq, \(aqspread\(aq], default=\(aqclosest\(aq)
+Only if fanout is single.  One of \(aqclosest\(aq or \(aqspread\(aq.  Closest bias means that messages to an address will always be delivered to the closest (lowest cost) subscribed consumer. Spread bias will distribute the messages across subscribers in an approximately even manner.
+.UNINDENT
+.SS waypoint
+.sp
+A remote node that messages for an address pass through.
+.INDENT 0.0
+.TP
+.B \fIaddress\fP (string, required)
+The AMQP address of the waypoint.
+.TP
+.B \fIconnector\fP (string, required)
+The name of the on\-demand connector used to reach the waypoint\(aqs container.
+.TP
+.B \fIinPhase\fP (integer, default=\-1)
+The phase of the address as it is routed _to_ the waypoint.
+.TP
+.B \fIoutPhase\fP (integer, default=\-1)
+The phase of the address as it is routed _from_ the waypoint.
+.UNINDENT
+.SS linkRoutePattern
+.sp
+A pattern to match a connected container to endpoints for routed links.
+.INDENT 0.0
+.TP
+.B \fIprefix\fP (string, required)
+The AMQP address prefix for nodes on the container.
+.TP
+.B \fIconnector\fP (string)
+The name of the on\-demand connector used to reach the waypoint\(aqs container.
+.UNINDENT
+.SH SEE ALSO
+.sp
+\fIqdrouterd(8)\fP, \fIqdmanage(8)\fP
+.sp
+\fI\%http://qpid.apache.org/components/dispatch-router\fP
+.SH COPYRIGHT
+2013, Apache Qpid <http://qpid.apache.org/>
+.\" Generated by docutils manpage writer.
+.

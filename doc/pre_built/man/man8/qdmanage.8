@@ -1,0 +1,254 @@
+.\" Man page generated from reStructuredText.
+.
+.TH "QDMANAGE" "8" "March 12, 2015" "0.4" "Qpid Dispatch"
+.SH NAME
+qdmanage \- dispatch management tool
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH SYNOPSIS
+.sp
+qdmanage \fIoperation\fP [\fIoptions...\fP] [\fIarguments...\fP]
+.SH DESCRIPTION
+.sp
+An AMQP management client for use with qdrouterd. Sends AMQP management
+operations requests and prints the response in JSON format. This is a
+generic AMQP management tool and can be used with any standard AMQP
+managed endpoint, not just with qdrouter.
+.SH OPERATIONS
+.INDENT 0.0
+.TP
+.B \fIquery\fP [\fIATTR\fP\&...]
+Print the attributes named in the ATTR list or all attributes if
+none are listed. Print attributes for all entities by default, use
+\-\-type, \-\-name and \-\-identity options to restrict what is printed.
+.TP
+.B \fIcreate\fP [\fIATTR=VALUE\fP\&...]
+Create a new entity with the specified attributes. With the \-\-stdin
+option, read attributes from stdin. This can be a JSON map of
+attributes to create a single entity, or a JSON list of maps to
+create multiple entitiees.
+.TP
+.B \fIread\fP
+Print the attributes of an entity specified by the \-\-name or
+\-\-identity options. With the \-\-stdin option, create entities based
+on data from stdin. This can be a JSON map of attributes to create a
+single entity, or a JSON list of maps to create multiple entitiees.
+.TP
+.B \fIupdate\fP [\fIATTR=VALUE\fP\&...]
+Update the attributes of an existing entity. With the \-\-stdin
+option, read attributes from stdin. This can be a JSON map of
+attributes to update a single entity, or a JSON list of maps to
+update multiple entitiees. If an ATTR name is listed with no =VALUE,
+that attribute will be deleted from the entity.
+.TP
+.B \fIdelete\fP
+Delete an entity specified by the \-\-name or \-\-identity options.
+.TP
+.B \fIget\-types\fP [\fITYPE\fP]
+List entity types with their base types. With no arguments list all
+types.
+.TP
+.B \fIget\-operations\fP [\fITYPE\fP]
+List entity types with their operations. With no arguments list all
+types.
+.TP
+.B \fIget\-attributes\fP [\fITYPE\fP]
+List entity types with their attributes. With no arguments list all
+types.
+.TP
+.B \fIget\-annotations\fP [\fITYPE\fP]
+List entity types with their annotations. With no arguments list all
+types.
+.TP
+.B \fIget\-mgmt\-nodes\fP
+List all other known management nodes connected to this one.
+.TP
+.B \fIget\-json\-schema\fP [\fIINDENT\fP]
+Get the router schema in JSON format. Optional integer indent for
+formatted output.
+.TP
+.B \fIget\-log\fP [\fIINDENT\fP]
+Get recent log entries from the router.
+.UNINDENT
+.SH OPTIONS
+.sp
+\-h, \-\-help
+:   show this help message and exit
+.sp
+\-\-version
+:   Print version and exit.
+.sp
+\-\-type=TYPE
+:   Type of entity to operate on.
+.sp
+\-\-name=NAME
+:   Name of entity to operate on.
+.sp
+\-\-identity=ID
+:   Identity of entity to operate on.
+.sp
+\-\-indent=INDENT
+:   Pretty\-printing indent. \-1 means don\(aqt pretty\-print (default 2)
+.sp
+\-\-stdin
+:   Read attributes as JSON map or list of maps from stdin.
+.sp
+\-\-body=BODY
+:   JSON value to use as body of a non\-standard operation call.
+.sp
+\-\-properties=PROPERTIES
+:   JSON map to use as properties for a non\-standard operation call.
+.SS Connection Options
+.sp
+\-b URL, \-\-bus=URL
+:   URL of the messaging bus to connect to (default 0.0.0.0)
+.sp
+\-r ROUTER\-ID, \-\-router=ROUTER\-ID
+:   Router to be queried
+.sp
+\-t SECS, \-\-timeout=SECS
+:   Maximum time to wait for connection in seconds (default 5)
+.sp
+\-\-ssl\-certificate=CERT
+:   Client SSL certificate (PEM Format)
+.sp
+\-\-ssl\-key=KEY
+:   Client SSL private key (PEM Format)
+.sp
+\-\-ssl\-trustfile=TRUSTED\-CA\-DB
+:   Trusted Certificate Authority Database file (PEM Format)
+.sp
+\-\-ssl\-password=PASSWORD
+:   Certificate password, will be prompted if not specifed.
+.SH FILES
+.INDENT 0.0
+.TP
+.B /home/aconway/dispatch/install/share/doc/qpid\-dispatch/qdrouter.json
+Management schema for qdrouterd.
+.TP
+.B /home/aconway/dispatch/install/share/doc/qpid\-dispatch/qdrouter.json.readme.txt
+Explanation of the management schema.
+.UNINDENT
+.SH EXAMPLES
+.sp
+Show the logging configuration
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+qdmanage query \-\-type=log
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Enable debug and higher log messages by default:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+qdmanage udpdate name=log/DEFAULT enable=debug+
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Enable trace log messages only for the MESSAGE moudle and direct MESSAGE
+logs to the file "test.log"
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+qdmanage udpdate name=log/MESSAGE enable=trace output=test.log
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Set MESSAGE logging back to the default:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+qdmanage udpdate name=log/MESSAGE enable=default
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Disable MESSAGE logging:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+qdmanage udpdate name=log/MESSAGE enable=none
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH SEE ALSO
+.sp
+\fIqdrouterd(8)\fP, \fIqdstat(8)\fP, \fIqdrouterd.conf(5)\fP
+.sp
+\fI\%http://qpid.apache.org/components/dispatch-router\fP
+.SH COPYRIGHT
+2013, Apache Qpid <http://qpid.apache.org/>
+.\" Generated by docutils manpage writer.
+.

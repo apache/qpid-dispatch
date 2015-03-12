@@ -1,0 +1,735 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>5. Management Schema &mdash; Qpid Dispatch 0.4 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Qpid Dispatch 0.4 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">5. Management Schema</a><ul>
+<li><a class="reference internal" href="#configuration-entities">5.1. Configuration Entities</a><ul>
+<li><a class="reference internal" href="#container">5.1.1. container</a></li>
+<li><a class="reference internal" href="#router">5.1.2. router</a></li>
+<li><a class="reference internal" href="#listener">5.1.3. listener</a></li>
+<li><a class="reference internal" href="#connector">5.1.4. connector</a></li>
+<li><a class="reference internal" href="#log">5.1.5. log</a></li>
+<li><a class="reference internal" href="#fixedaddress">5.1.6. fixedAddress</a></li>
+<li><a class="reference internal" href="#waypoint">5.1.7. waypoint</a></li>
+<li><a class="reference internal" href="#linkroutepattern">5.1.8. linkRoutePattern</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#operational-entities">5.2. Operational Entities</a><ul>
+<li><a class="reference internal" href="#org-amqp-management">5.2.1. org.amqp.management</a><ul>
+<li><a class="reference internal" href="#operation-get-types">5.2.1.1. Operation GET-TYPES</a></li>
+<li><a class="reference internal" href="#operation-get-attributes">5.2.1.2. Operation GET-ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#operation-get-operations">5.2.1.3. Operation GET-OPERATIONS</a></li>
+<li><a class="reference internal" href="#operation-get-annotations">5.2.1.4. Operation GET-ANNOTATIONS</a></li>
+<li><a class="reference internal" href="#operation-query">5.2.1.5. Operation QUERY</a></li>
+<li><a class="reference internal" href="#operation-get-mgmt-nodes">5.2.1.6. Operation GET-MGMT-NODES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#management">5.2.2. management</a><ul>
+<li><a class="reference internal" href="#operation-get-schema-json">5.2.2.1. Operation GET-SCHEMA-JSON</a></li>
+<li><a class="reference internal" href="#operation-get-schema">5.2.2.2. Operation GET-SCHEMA</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#router-link">5.2.3. router.link</a></li>
+<li><a class="reference internal" href="#router-address">5.2.4. router.address</a></li>
+<li><a class="reference internal" href="#router-node">5.2.5. router.node</a></li>
+<li><a class="reference internal" href="#connection">5.2.6. connection</a></li>
+<li><a class="reference internal" href="#allocator">5.2.7. allocator</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#management-operations">5.3. Management Operations</a><ul>
+<li><a class="reference internal" href="#operations-for-all-entity-types">5.3.1. Operations for all entity types</a><ul>
+<li><a class="reference internal" href="#operation-read">5.3.1.1. Operation READ</a></li>
+<li><a class="reference internal" href="#operation-create">5.3.1.2. Operation CREATE</a></li>
+<li><a class="reference internal" href="#operation-update">5.3.1.3. Operation UPDATE</a></li>
+<li><a class="reference internal" href="#operation-delete">5.3.1.4. Operation DELETE</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#operations-for-org-amqp-management-entity-type">5.3.2. Operations for <cite>org.amqp.management</cite> entity type</a><ul>
+<li><a class="reference internal" href="#id1">5.3.2.1. Operation GET-TYPES</a></li>
+<li><a class="reference internal" href="#id2">5.3.2.2. Operation GET-ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id3">5.3.2.3. Operation GET-OPERATIONS</a></li>
+<li><a class="reference internal" href="#id4">5.3.2.4. Operation GET-ANNOTATIONS</a></li>
+<li><a class="reference internal" href="#id5">5.3.2.5. Operation QUERY</a></li>
+<li><a class="reference internal" href="#id6">5.3.2.6. Operation GET-MGMT-NODES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#operations-for-management-entity-type">5.3.3. Operations for <cite>management</cite> entity type</a><ul>
+<li><a class="reference internal" href="#id7">5.3.3.1. Operation GET-SCHEMA-JSON</a></li>
+<li><a class="reference internal" href="#id8">5.3.3.2. Operation GET-SCHEMA</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/book/schema.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="management-schema">
+<h1>5. Management Schema<a class="headerlink" href="#management-schema" title="Permalink to this headline">¶</a></h1>
+<p>This chapter documents the set of <em>management entity types</em> that define
+configuration and management of a Dispatch Router. A management entity type has
+a set of <em>attributes</em> that can be read, some attributes can also be
+updated. Some entity types also support <em>operations</em> that can be called.</p>
+<p>All management entity types have the following standard attributes:</p>
+<dl class="docutils">
+<dt><em>type</em></dt>
+<dd>The fully qualified type of the entity,
+e.g. <cite>org.apache.qpid.dispatch.router</cite>. This document uses the short name
+without the <cite>org.apache.qpid.dispatch</cite> prefix e.g. <cite>router</cite>. The dispatch
+tools will accept the short or long name.</dd>
+<dt><em>identity</em></dt>
+<dd>A system-generated identity of the entity. It includes
+the short type name and some identifying information. E.g. <cite>log/AGENT</cite> or
+<cite>listener/localhost:amqp</cite></dd>
+</dl>
+<p>There are two main categories of management entity type.</p>
+<dl class="docutils">
+<dt><em>Configuration</em> Entities</dt>
+<dd>Parameters that can be set in the configuration file
+(see <cite>qdrouterd.conf(5)</cite> man page) or set at run-time with the <cite>qdmanage(8)</cite>
+tool.</dd>
+<dt><em>Operational</em> Entities</dt>
+<dd>Run-time status values that can be queried using <cite>qdstat(8)</cite> or <cite>qdmanage(8)</cite> tools.</dd>
+</dl>
+<div class="section" id="configuration-entities">
+<h2>5.1. Configuration Entities<a class="headerlink" href="#configuration-entities" title="Permalink to this headline">¶</a></h2>
+<p>Configuration entities define the attributes allowed in the configuration file
+(see <cite>qdrouterd.conf(5)</cite>) but you can also create entities once the router is
+running using the <cite>qdrouterd(8)</cite> tool&#8217;s <cite>create</cite> operation. Some entities can also
+be modified using the <cite>update</cite> operation, see the entity descriptions below.</p>
+<div class="section" id="container">
+<h3>5.1.1. container<a class="headerlink" href="#container" title="Permalink to this headline">¶</a></h3>
+<p>Attributes related to the AMQP container.</p>
+<p>Operations allowed: <cite>READ</cite></p>
+<dl class="docutils">
+<dt><em>containerName</em> (string, <cite>CREATE</cite>)</dt>
+<dd>The  name of the AMQP container.  If not specified, the container name will be set to a value of the container&#8217;s choosing.  The automatically assigned container name is not guaranteed to be persistent across restarts of the container.</dd>
+<dt><em>workerThreads</em> (integer, default=1, <cite>CREATE</cite>)</dt>
+<dd>The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .</dd>
+<dt><em>debugDump</em> (path, <cite>CREATE</cite>)</dt>
+<dd>A file to dump debugging information that can&#8217;t be logged normally.</dd>
+</dl>
+</div>
+<div class="section" id="router">
+<h3>5.1.2. router<a class="headerlink" href="#router" title="Permalink to this headline">¶</a></h3>
+<p>Tracks peer routers and computes routes to destinations.</p>
+<p>Operations allowed: <cite>READ</cite></p>
+<dl class="docutils">
+<dt><em>routerId</em> (string, <cite>CREATE</cite>)</dt>
+<dd>Router&#8217;s unique identity.</dd>
+<dt><em>mode</em> (One of [&#8216;standalone&#8217;, &#8216;interior&#8217;, &#8216;edge&#8217;, &#8216;endpoint&#8217;], default=&#8217;standalone&#8217;, <cite>CREATE</cite>)</dt>
+<dd>In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network.  In edge mode, the router operates with an up link into an interior router network. Edge routers are typically used as connection concentrators or as security firewalls for access into the interior network.</dd>
+<dt><em>area</em> (string)</dt>
+<dd>Unused placeholder.</dd>
+<dt><em>helloInterval</em> (integer, default=1, <cite>CREATE</cite>)</dt>
+<dd>Interval in seconds between HELLO messages sent to neighbor routers.</dd>
+<dt><em>helloMaxAge</em> (integer, default=3, <cite>CREATE</cite>)</dt>
+<dd>Time in seconds after which a neighbor is declared lost if no HELLO is received.</dd>
+<dt><em>raInterval</em> (integer, default=30, <cite>CREATE</cite>)</dt>
+<dd>Interval in seconds between Router-Advertisements sent to all routers in a stable network.</dd>
+<dt><em>raIntervalFlux</em> (integer, default=4, <cite>CREATE</cite>)</dt>
+<dd>Interval in seconds between Router-Advertisements sent to all routers during topology fluctuations.</dd>
+<dt><em>remoteLsMaxAge</em> (integer, default=60, <cite>CREATE</cite>)</dt>
+<dd>Time in seconds after which link state is declared stale if no RA is received.</dd>
+<dt><em>mobileAddrMaxAge</em> (integer, default=60, <cite>CREATE</cite>)</dt>
+<dd>Deprecated - This value is no longer used in the router.</dd>
+<dt><em>addrCount</em> (integer)</dt>
+<dd>Number of addresses known to the router.</dd>
+<dt><em>linkCount</em> (integer)</dt>
+<dd>Number of links attached to the router node.</dd>
+<dt><em>nodeCount</em> (integer)</dt>
+<dd>Number of known peer router nodes.</dd>
+</dl>
+</div>
+<div class="section" id="listener">
+<h3>5.1.3. listener<a class="headerlink" href="#listener" title="Permalink to this headline">¶</a></h3>
+<p>Listens for incoming connections to the router.</p>
+<p>Operations allowed: <cite>CREATE</cite>, <cite>READ</cite></p>
+<dl class="docutils">
+<dt><em>addr</em> (string, default=&#8216;0.0.0.0&#8217;, <cite>CREATE</cite>)</dt>
+<dd>IP address: ipv4 or ipv6 literal or a host name.</dd>
+<dt><em>port</em> (string, default=&#8217;amqp&#8217;, <cite>CREATE</cite>)</dt>
+<dd>Port number or symbolic service name.</dd>
+<dt><em>role</em> (One of [&#8216;normal&#8217;, &#8216;inter-router&#8217;, &#8216;on-demand&#8217;], default=&#8217;normal&#8217;, <cite>CREATE</cite>)</dt>
+<dd>The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.</dd>
+<dt><em>certDb</em> (path, <cite>CREATE</cite>)</dt>
+<dd>The path to the database that contains the public certificates of trusted certificate authorities (CA).</dd>
+<dt><em>certFile</em> (path, <cite>CREATE</cite>)</dt>
+<dd>The path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.</dd>
+<dt><em>keyFile</em> (path, <cite>CREATE</cite>)</dt>
+<dd>The path to the file containing the PEM-formatted private key for the above certificate.</dd>
+<dt><em>passwordFile</em> (path, <cite>CREATE</cite>)</dt>
+<dd>If the above private key is password protected, this is the path to a file containing the password that unlocks the certificate key.</dd>
+<dt><em>password</em> (string, <cite>CREATE</cite>)</dt>
+<dd>An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This option can be used by supplying the password in the &#8216;password&#8217; option.  Don&#8217;t use both password and passwordFile in the same profile.</dd>
+<dt><em>saslMechanisms</em> (string, required, <cite>CREATE</cite>)</dt>
+<dd>Comma separated list of accepted SASL authentication mechanisms.</dd>
+<dt><em>requirePeerAuth</em> (boolean, default=True, <cite>CREATE</cite>)</dt>
+<dd>Only for listeners using SSL.  If set to &#8216;yes&#8217;, attached clients will be required to supply a certificate.  If the certificate is not traceable to a CA in the ssl profile&#8217;s cert-db, authentication fails for the connection.</dd>
+<dt><em>trustedCerts</em> (path, <cite>CREATE</cite>)</dt>
+<dd>This optional setting can be used to reduce the set of available CAs for client authentication.  If used, this setting must provide a path to a PEM file that contains the trusted certificates.</dd>
+<dt><em>allowUnsecured</em> (boolean, <cite>CREATE</cite>)</dt>
+<dd>For listeners using SSL only.  If set to &#8216;yes&#8217; the listener will allow both SSL-secured clients and non-SSL clients to connect.</dd>
+<dt><em>allowNoSasl</em> (boolean, <cite>CREATE</cite>)</dt>
+<dd>If set to &#8216;yes&#8217;, this option causes the listener to allow clients to connect even if they skip the SASL authentication protocol.</dd>
+<dt><em>maxFrameSize</em> (integer, default=65536, <cite>CREATE</cite>)</dt>
+<dd>Defaults to 65536.  If specified, it is the maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.</dd>
+</dl>
+</div>
+<div class="section" id="connector">
+<h3>5.1.4. connector<a class="headerlink" href="#connector" title="Permalink to this headline">¶</a></h3>
+<p>Establishes an outgoing connections from the router.</p>
+<p>Operations allowed: <cite>CREATE</cite>, <cite>READ</cite></p>
+<dl class="docutils">
+<dt><em>addr</em> (string, default=&#8216;0.0.0.0&#8217;, <cite>CREATE</cite>)</dt>
+<dd>IP address: ipv4 or ipv6 literal or a host name.</dd>
+<dt><em>port</em> (string, default=&#8217;amqp&#8217;, <cite>CREATE</cite>)</dt>
+<dd>Port number or symbolic service name.</dd>
+<dt><em>role</em> (One of [&#8216;normal&#8217;, &#8216;inter-router&#8217;, &#8216;on-demand&#8217;], default=&#8217;normal&#8217;, <cite>CREATE</cite>)</dt>
+<dd>The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.</dd>
+<dt><em>certDb</em> (path, <cite>CREATE</cite>)</dt>
+<dd>The path to the database that contains the public certificates of trusted certificate authorities (CA).</dd>
+<dt><em>certFile</em> (path, <cite>CREATE</cite>)</dt>
+<dd>The path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.</dd>
+<dt><em>keyFile</em> (path, <cite>CREATE</cite>)</dt>
+<dd>The path to the file containing the PEM-formatted private key for the above certificate.</dd>
+<dt><em>passwordFile</em> (path, <cite>CREATE</cite>)</dt>
+<dd>If the above private key is password protected, this is the path to a file containing the password that unlocks the certificate key.</dd>
+<dt><em>password</em> (string, <cite>CREATE</cite>)</dt>
+<dd>An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This option can be used by supplying the password in the &#8216;password&#8217; option.  Don&#8217;t use both password and passwordFile in the same profile.</dd>
+<dt><em>saslMechanisms</em> (string, required, <cite>CREATE</cite>)</dt>
+<dd>Comma separated list of accepted SASL authentication mechanisms.</dd>
+<dt><em>allowRedirect</em> (boolean, default=True, <cite>CREATE</cite>)</dt>
+<dd>Allow the peer to redirect this connection to another address.</dd>
+<dt><em>maxFrameSize</em> (integer, default=65536, <cite>CREATE</cite>)</dt>
+<dd>Maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.</dd>
+</dl>
+</div>
+<div class="section" id="log">
+<h3>5.1.5. log<a class="headerlink" href="#log" title="Permalink to this headline">¶</a></h3>
+<p>Configure logging for a particular module. You can use the <cite>UPDATE</cite> operation to change log settings while the router is running.</p>
+<p>Operations allowed: <cite>UPDATE</cite>, <cite>READ</cite></p>
+<dl class="docutils">
+<dt><em>module</em> (One of [&#8216;ROUTER&#8217;, &#8216;ROUTER_HELLO&#8217;, &#8216;ROUTER_LS&#8217;, &#8216;ROUTER_MA&#8217;, &#8216;MESSAGE&#8217;, &#8216;SERVER&#8217;, &#8216;AGENT&#8217;, &#8216;CONTAINER&#8217;, &#8216;CONFIG&#8217;, &#8216;ERROR&#8217;, &#8216;DISPATCH&#8217;, &#8216;DEFAULT&#8217;], required)</dt>
+<dd>Module to configure. The special module &#8216;DEFAULT&#8217; specifies defaults for all modules.</dd>
+<dt><em>enable</em> (string, default=&#8217;default&#8217;, required, <cite>UPDATE</cite>)</dt>
+<dd>Levels are: trace, debug, info, notice, warning, error, critical. The enable string is a comma-separated list of levels. A level may have a trailing &#8216;+&#8217; to enable that level and above. For example &#8216;trace,debug,warning+&#8217; means enable trace, debug, warning, error and critical. The value &#8216;none&#8217; means disable logging for the module. The value &#8216;default&#8217; means use the value from the DEFAULT module.</dd>
+<dt><em>timestamp</em> (boolean, <cite>UPDATE</cite>)</dt>
+<dd>Include timestamp in log messages.</dd>
+<dt><em>source</em> (boolean, <cite>UPDATE</cite>)</dt>
+<dd>Include source file and line number in log messages.</dd>
+<dt><em>output</em> (string, <cite>UPDATE</cite>)</dt>
+<dd>Where to send log messages. Can be &#8216;stderr&#8217;, &#8216;syslog&#8217; or a file name.</dd>
+</dl>
+</div>
+<div class="section" id="fixedaddress">
+<h3>5.1.6. fixedAddress<a class="headerlink" href="#fixedaddress" title="Permalink to this headline">¶</a></h3>
+<p>Establishes semantics for addresses starting with a prefix.</p>
+<p>Operations allowed: <cite>CREATE</cite>, <cite>READ</cite></p>
+<dl class="docutils">
+<dt><em>prefix</em> (string, required, <cite>CREATE</cite>)</dt>
+<dd>The address prefix (always starting with &#8216;/&#8217;).</dd>
+<dt><em>phase</em> (integer, <cite>CREATE</cite>)</dt>
+<dd>The phase of a multi-hop address passing through one or more waypoints.</dd>
+<dt><em>fanout</em> (One of [&#8216;multiple&#8217;, &#8216;single&#8217;], default=&#8217;multiple&#8217;, <cite>CREATE</cite>)</dt>
+<dd>One of &#8216;multiple&#8217; or &#8216;single&#8217;.  Multiple fanout is a non-competing pattern.  If there are multiple consumers using the same address, each consumer will receive its own copy of every message sent to the address.  Single fanout is a competing pattern where each message is sent to only one consumer.</dd>
+<dt><em>bias</em> (One of [&#8216;closest&#8217;, &#8216;spread&#8217;], default=&#8217;closest&#8217;, <cite>CREATE</cite>)</dt>
+<dd>Only if fanout is single.  One of &#8216;closest&#8217; or &#8216;spread&#8217;.  Closest bias means that messages to an address will always be delivered to the closest (lowest cost) subscribed consumer. Spread bias will distribute the messages across subscribers in an approximately even manner.</dd>
+</dl>
+</div>
+<div class="section" id="waypoint">
+<h3>5.1.7. waypoint<a class="headerlink" href="#waypoint" title="Permalink to this headline">¶</a></h3>
+<p>A remote node that messages for an address pass through.</p>
+<p>Operations allowed: <cite>CREATE</cite>, <cite>READ</cite></p>
+<dl class="docutils">
+<dt><em>address</em> (string, required, <cite>CREATE</cite>)</dt>
+<dd>The AMQP address of the waypoint.</dd>
+<dt><em>connector</em> (string, required, <cite>CREATE</cite>)</dt>
+<dd>The name of the on-demand connector used to reach the waypoint&#8217;s container.</dd>
+<dt><em>inPhase</em> (integer, default=-1, <cite>CREATE</cite>)</dt>
+<dd>The phase of the address as it is routed _to_ the waypoint.</dd>
+<dt><em>outPhase</em> (integer, default=-1, <cite>CREATE</cite>)</dt>
+<dd>The phase of the address as it is routed _from_ the waypoint.</dd>
+</dl>
+</div>
+<div class="section" id="linkroutepattern">
+<h3>5.1.8. linkRoutePattern<a class="headerlink" href="#linkroutepattern" title="Permalink to this headline">¶</a></h3>
+<p>A pattern to match a connected container to endpoints for routed links.</p>
+<p>Operations allowed: <cite>CREATE</cite>, <cite>READ</cite></p>
+<dl class="docutils">
+<dt><em>prefix</em> (string, required, <cite>CREATE</cite>)</dt>
+<dd>The AMQP address prefix for nodes on the container.</dd>
+<dt><em>connector</em> (string, <cite>CREATE</cite>)</dt>
+<dd>The name of the on-demand connector used to reach the waypoint&#8217;s container.</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="operational-entities">
+<h2>5.2. Operational Entities<a class="headerlink" href="#operational-entities" title="Permalink to this headline">¶</a></h2>
+<p>Operational entities provide statistics and other run-time attributes of the router.
+The <cite>qdstat(8)</cite> tool provides a convenient way to query run-time statistics.
+You can also use the general-purpose management tool <cite>qdmanage(8)</cite> to query
+operational attributes.</p>
+<div class="section" id="org-amqp-management">
+<h3>5.2.1. org.amqp.management<a class="headerlink" href="#org-amqp-management" title="Permalink to this headline">¶</a></h3>
+<p>The standard AMQP management node interface.</p>
+<p>Operations allowed: <cite>QUERY</cite>, <cite>GET-TYPES</cite>, <cite>GET-ANNOTATIONS</cite>, <cite>GET-OPERATIONS</cite>, <cite>GET-ATTRIBUTES</cite>, <cite>GET-MGMT-NODES</cite>, <cite>READ</cite></p>
+<div class="section" id="operation-get-types">
+<h4>5.2.1.1. Operation GET-TYPES<a class="headerlink" href="#operation-get-types" title="Permalink to this headline">¶</a></h4>
+<p>Get the set of entity types and their inheritance relationships</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>entityType</em> (string)</dt>
+<dd>If set, restrict query results to entities that extend (directly or indirectly) this type</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (map)A map where each key is an entity type name (string) and the corresponding value is the list of the entity types (strings) that it extends.</p>
+</div>
+<div class="section" id="operation-get-attributes">
+<h4>5.2.1.2. Operation GET-ATTRIBUTES<a class="headerlink" href="#operation-get-attributes" title="Permalink to this headline">¶</a></h4>
+<p>Get the set of entity types and the annotations they implement</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>entityType</em> (string)</dt>
+<dd>If set, restrict query results to entities that extend (directly or indirectly) this type</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (map)A map where each key is an entity type name (string) and the corresponding value is a list (of strings) of attributes on that entity type.</p>
+</div>
+<div class="section" id="operation-get-operations">
+<h4>5.2.1.3. Operation GET-OPERATIONS<a class="headerlink" href="#operation-get-operations" title="Permalink to this headline">¶</a></h4>
+<p>Get the set of entity types and the operations they support</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>entityType</em> (string)</dt>
+<dd>If set, restrict query results to entities that extend (directly or indirectly) this type</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (map)A map where each key is an entity type name (string) and the corresponding value is the list of operation names (strings) that it supports.</p>
+</div>
+<div class="section" id="operation-get-annotations">
+<h4>5.2.1.4. Operation GET-ANNOTATIONS<a class="headerlink" href="#operation-get-annotations" title="Permalink to this headline">¶</a></h4>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>entityType</em> (string)</dt>
+<dd>If set, restrict query results to entities that extend (directly or indirectly) this type</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (map)A map where each key is an entity type name (string) and the corresponding value is the list of annotations (strings) that it  implements.</p>
+</div>
+<div class="section" id="operation-query">
+<h4>5.2.1.5. Operation QUERY<a class="headerlink" href="#operation-query" title="Permalink to this headline">¶</a></h4>
+<p>Query for attribute values of multiple entities.</p>
+<p><strong>Request body</strong>  (map)A map containing the key <cite>attributeNames</cite> with value a list of (string) attribute names to return. If the list or the map is empty or the body is missing all attributes are returned.</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>count</em> (integer)</dt>
+<dd>If set, specifies the number of entries from the result set to return. If not set return all from <cite>offset</cite></dd>
+<dt><em>entityType</em> (string)</dt>
+<dd>If set, restrict query results to entities that extend (directly or indirectly) this type</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+<dt><em>offset</em> (integer)</dt>
+<dd>If set, specifies the number of the first element of the result set to be returned.</dd>
+</dl>
+<p><strong>Response body</strong>  (map)A map with two entries. <cite>attributeNames</cite> is a list of the attribute names returned. <cite>results</cite> is a list of lists each containing the attribute values for a single entity in the same order as the names in the <cite>attributeNames</cite> entry. If an attribute name is not applicable for an entity then the corresponding value is <cite>null</cite></p>
+<p><strong>Response properties:</strong></p>
+<dl class="docutils">
+<dt><em>count</em> (integer)</dt>
+<dd>Number of results returned</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+</div>
+<div class="section" id="operation-get-mgmt-nodes">
+<h4>5.2.1.6. Operation GET-MGMT-NODES<a class="headerlink" href="#operation-get-mgmt-nodes" title="Permalink to this headline">¶</a></h4>
+<p>Get the addresses of all management nodes known to this router</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (list)A list of addresses (strings) of management nodes known to this management node.</p>
+</div>
+</div>
+<div class="section" id="management">
+<h3>5.2.2. management<a class="headerlink" href="#management" title="Permalink to this headline">¶</a></h3>
+<p>Qpid dispatch router extensions to the standard org.amqp.management interface.</p>
+<p>Operations allowed: <cite>GET-SCHEMA</cite>, <cite>GET-JSON-SCHEMA</cite>, <cite>QUERY</cite>, <cite>GET-TYPES</cite>, <cite>GET-ANNOTATIONS</cite>, <cite>GET-OPERATIONS</cite>, <cite>GET-ATTRIBUTES</cite>, <cite>GET-MGMT-NODES</cite>, <cite>READ</cite></p>
+<div class="section" id="operation-get-schema-json">
+<h4>5.2.2.1. Operation GET-SCHEMA-JSON<a class="headerlink" href="#operation-get-schema-json" title="Permalink to this headline">¶</a></h4>
+<p>Get the qdrouterd schema for this router in JSON format</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>indent</em> (integer)</dt>
+<dd>Number of spaces to indent the formatted result. If not specified, the result is in minimal format, no unnecessary spaces or newlines.</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (string)The qdrouter schema as a JSON string.</p>
+</div>
+<div class="section" id="operation-get-schema">
+<h4>5.2.2.2. Operation GET-SCHEMA<a class="headerlink" href="#operation-get-schema" title="Permalink to this headline">¶</a></h4>
+<p>Get the qdrouterd schema for this router in AMQP map format</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (map)The qdrouter schema as a map.</p>
+</div>
+</div>
+<div class="section" id="router-link">
+<h3>5.2.3. router.link<a class="headerlink" href="#router-link" title="Permalink to this headline">¶</a></h3>
+<p>Link to another AMQP endpoint: router node, client or other AMQP process.</p>
+<p>Operations allowed: <cite>READ</cite></p>
+<p><em>linkName</em> (string)</p>
+<p><em>linkType</em> (One of [&#8216;endpoint&#8217;, &#8216;waypoint&#8217;, &#8216;inter-router&#8217;, &#8216;inter-area&#8217;])</p>
+<p><em>linkDir</em> (One of [&#8216;in&#8217;, &#8216;out&#8217;])</p>
+<p><em>owningAddr</em> (string)</p>
+<p><em>eventFifoDepth</em> (integer)</p>
+<p><em>msgFifoDepth</em> (integer)</p>
+<p><em>remoteContainer</em> (string)</p>
+</div>
+<div class="section" id="router-address">
+<h3>5.2.4. router.address<a class="headerlink" href="#router-address" title="Permalink to this headline">¶</a></h3>
+<p>AMQP address managed by the router.</p>
+<p>Operations allowed: <cite>READ</cite></p>
+<p><em>inProcess</em> (boolean)</p>
+<p><em>subscriberCount</em> (integer)</p>
+<p><em>remoteCount</em> (integer)</p>
+<p><em>deliveriesIngress</em> (integer)</p>
+<p><em>deliveriesEgress</em> (integer)</p>
+<p><em>deliveriesTransit</em> (integer)</p>
+<p><em>deliveriesToContainer</em> (integer)</p>
+<p><em>deliveriesFromContainer</em> (integer)</p>
+<dl class="docutils">
+<dt><em>key</em> (string)</dt>
+<dd>Internal unique (to this router) key to identify the address</dd>
+</dl>
+</div>
+<div class="section" id="router-node">
+<h3>5.2.5. router.node<a class="headerlink" href="#router-node" title="Permalink to this headline">¶</a></h3>
+<p>Remote router node connected to this router.</p>
+<p>Operations allowed: <cite>READ</cite></p>
+<dl class="docutils">
+<dt><em>routerId</em> (string)</dt>
+<dd>Remote node identifier.</dd>
+<dt><em>instance</em> (integer)</dt>
+<dd>Remote node boot number.</dd>
+<dt><em>linkState</em> (list)</dt>
+<dd>List of remote node&#8217;s neighbours.</dd>
+<dt><em>nextHop</em> (string)</dt>
+<dd>Neighbour ID of next hop to remote node from here.</dd>
+<dt><em>validOrigins</em> (list)</dt>
+<dd>List of valid origin nodes for messages arriving via the remote node, used for duplicate elimination in redundant networks.</dd>
+<dt><em>address</em> (string)</dt>
+<dd>Address of the remote node</dd>
+<dt><em>routerLink</em> (entityId)</dt>
+<dd>Local link to remote node</dd>
+</dl>
+</div>
+<div class="section" id="connection">
+<h3>5.2.6. connection<a class="headerlink" href="#connection" title="Permalink to this headline">¶</a></h3>
+<p>Connections to the router&#8217;s container.</p>
+<p>Operations allowed: <cite>READ</cite></p>
+<dl class="docutils">
+<dt><em>container</em> (string)</dt>
+<dd>The container for this connection</dd>
+</dl>
+<p><em>state</em> (One of [&#8216;connecting&#8217;, &#8216;opening&#8217;, &#8216;operational&#8217;, &#8216;failed&#8217;, &#8216;user&#8217;])</p>
+<dl class="docutils">
+<dt><em>host</em> (string)</dt>
+<dd>IP address and port number in the form addr:port.</dd>
+<dt><em>dir</em> (One of [&#8216;in&#8217;, &#8216;out&#8217;])</dt>
+<dd>Direction of connection establishment in or out of the router.</dd>
+</dl>
+<p><em>role</em> (string)</p>
+<dl class="docutils">
+<dt><em>sasl</em> (string)</dt>
+<dd>SASL mechanism used for authentication.</dd>
+</dl>
+</div>
+<div class="section" id="allocator">
+<h3>5.2.7. allocator<a class="headerlink" href="#allocator" title="Permalink to this headline">¶</a></h3>
+<p>Memory allocation pool.</p>
+<p>Operations allowed: <cite>READ</cite></p>
+<p><em>typeName</em> (string)</p>
+<p><em>typeSize</em> (integer)</p>
+<p><em>transferBatchSize</em> (integer)</p>
+<p><em>localFreeListMax</em> (integer)</p>
+<p><em>globalFreeListMax</em> (integer)</p>
+<p><em>totalAllocFromHeap</em> (integer)</p>
+<p><em>totalFreeToHeap</em> (integer)</p>
+<p><em>heldByThreads</em> (integer)</p>
+<p><em>batchesRebalancedToThreads</em> (integer)</p>
+<p><em>batchesRebalancedToGlobal</em> (integer)</p>
+</div>
+</div>
+<div class="section" id="management-operations">
+<h2>5.3. Management Operations<a class="headerlink" href="#management-operations" title="Permalink to this headline">¶</a></h2>
+<p>The <cite>qdstat(8)</cite> and <cite>qdmanage(8)</cite> tools allow you to view or modify management entity
+attributes. They work by invoking <em>management operations</em>. You can invoke these operations
+from any AMQP client by sending a message with the appropriate properties and body to the
+<cite>$management</cite> address. The message should have a <cite>reply-to</cite> address indicating where the
+response should be sent.</p>
+<div class="section" id="operations-for-all-entity-types">
+<h3>5.3.1. Operations for all entity types<a class="headerlink" href="#operations-for-all-entity-types" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="operation-read">
+<h4>5.3.1.1. Operation READ<a class="headerlink" href="#operation-read" title="Permalink to this headline">¶</a></h4>
+<p>Read attributes of an entity</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>type</em> (string)</dt>
+<dd>Type of desired entity.</dd>
+<dt><em>name</em> (string)</dt>
+<dd>Name of desired entity. Must supply name or identity.</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Identity of desired entity. Must supply name or identity.</dd>
+</dl>
+<p><strong>Response body</strong>  (map)Attributes of the entity</p>
+</div>
+<div class="section" id="operation-create">
+<h4>5.3.1.2. Operation CREATE<a class="headerlink" href="#operation-create" title="Permalink to this headline">¶</a></h4>
+<p>Create a new entity.</p>
+<p><strong>Request body</strong>  (map, required)Attributes for the new entity. Can include name and/or type.</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>type</em> (string, required)</dt>
+<dd>Type of new entity.</dd>
+<dt><em>name</em> (string)</dt>
+<dd>Name of new entity. Optional, defaults to identity.</dd>
+</dl>
+<p><strong>Response body</strong>  (map)Attributes of the entity</p>
+</div>
+<div class="section" id="operation-update">
+<h4>5.3.1.3. Operation UPDATE<a class="headerlink" href="#operation-update" title="Permalink to this headline">¶</a></h4>
+<p>Update attributes of an entity</p>
+<p><strong>Request body</strong>  (map)Attributes to update for the entity. Can include name or identity.</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>type</em> (string)</dt>
+<dd>Type of desired entity.</dd>
+<dt><em>name</em> (string)</dt>
+<dd>Name of desired entity. Must supply name or identity.</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Identity of desired entity. Must supply name or identity.</dd>
+</dl>
+<p><strong>Response body</strong>  (map)Updated attributes of the entity</p>
+</div>
+<div class="section" id="operation-delete">
+<h4>5.3.1.4. Operation DELETE<a class="headerlink" href="#operation-delete" title="Permalink to this headline">¶</a></h4>
+<p>Delete an entity</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>type</em> (string)</dt>
+<dd>Type of desired entity.</dd>
+<dt><em>name</em> (string)</dt>
+<dd>Name of desired entity. Must supply name or identity.</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Identity of desired entity. Must supply name or identity.</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="operations-for-org-amqp-management-entity-type">
+<h3>5.3.2. Operations for <cite>org.amqp.management</cite> entity type<a class="headerlink" href="#operations-for-org-amqp-management-entity-type" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id1">
+<h4>5.3.2.1. Operation GET-TYPES<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
+<p>Get the set of entity types and their inheritance relationships</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>entityType</em> (string)</dt>
+<dd>If set, restrict query results to entities that extend (directly or indirectly) this type</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (map)A map where each key is an entity type name (string) and the corresponding value is the list of the entity types (strings) that it extends.</p>
+</div>
+<div class="section" id="id2">
+<h4>5.3.2.2. Operation GET-ATTRIBUTES<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
+<p>Get the set of entity types and the annotations they implement</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>entityType</em> (string)</dt>
+<dd>If set, restrict query results to entities that extend (directly or indirectly) this type</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (map)A map where each key is an entity type name (string) and the corresponding value is a list (of strings) of attributes on that entity type.</p>
+</div>
+<div class="section" id="id3">
+<h4>5.3.2.3. Operation GET-OPERATIONS<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
+<p>Get the set of entity types and the operations they support</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>entityType</em> (string)</dt>
+<dd>If set, restrict query results to entities that extend (directly or indirectly) this type</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (map)A map where each key is an entity type name (string) and the corresponding value is the list of operation names (strings) that it supports.</p>
+</div>
+<div class="section" id="id4">
+<h4>5.3.2.4. Operation GET-ANNOTATIONS<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h4>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>entityType</em> (string)</dt>
+<dd>If set, restrict query results to entities that extend (directly or indirectly) this type</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (map)A map where each key is an entity type name (string) and the corresponding value is the list of annotations (strings) that it  implements.</p>
+</div>
+<div class="section" id="id5">
+<h4>5.3.2.5. Operation QUERY<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h4>
+<p>Query for attribute values of multiple entities.</p>
+<p><strong>Request body</strong>  (map)A map containing the key <cite>attributeNames</cite> with value a list of (string) attribute names to return. If the list or the map is empty or the body is missing all attributes are returned.</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>count</em> (integer)</dt>
+<dd>If set, specifies the number of entries from the result set to return. If not set return all from <cite>offset</cite></dd>
+<dt><em>entityType</em> (string)</dt>
+<dd>If set, restrict query results to entities that extend (directly or indirectly) this type</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+<dt><em>offset</em> (integer)</dt>
+<dd>If set, specifies the number of the first element of the result set to be returned.</dd>
+</dl>
+<p><strong>Response body</strong>  (map)A map with two entries. <cite>attributeNames</cite> is a list of the attribute names returned. <cite>results</cite> is a list of lists each containing the attribute values for a single entity in the same order as the names in the <cite>attributeNames</cite> entry. If an attribute name is not applicable for an entity then the corresponding value is <cite>null</cite></p>
+<p><strong>Response properties:</strong></p>
+<dl class="docutils">
+<dt><em>count</em> (integer)</dt>
+<dd>Number of results returned</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+</div>
+<div class="section" id="id6">
+<h4>5.3.2.6. Operation GET-MGMT-NODES<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h4>
+<p>Get the addresses of all management nodes known to this router</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (list)A list of addresses (strings) of management nodes known to this management node.</p>
+</div>
+</div>
+<div class="section" id="operations-for-management-entity-type">
+<h3>5.3.3. Operations for <cite>management</cite> entity type<a class="headerlink" href="#operations-for-management-entity-type" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id7">
+<h4>5.3.3.1. Operation GET-SCHEMA-JSON<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h4>
+<p>Get the qdrouterd schema for this router in JSON format</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>indent</em> (integer)</dt>
+<dd>Number of spaces to indent the formatted result. If not specified, the result is in minimal format, no unnecessary spaces or newlines.</dd>
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (string)The qdrouter schema as a JSON string.</p>
+</div>
+<div class="section" id="id8">
+<h4>5.3.3.2. Operation GET-SCHEMA<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h4>
+<p>Get the qdrouterd schema for this router in AMQP map format</p>
+<p><strong>Request properties:</strong></p>
+<dl class="docutils">
+<dt><em>identity</em> (string)</dt>
+<dd>Set to the value <cite>self</cite></dd>
+</dl>
+<p><strong>Response body</strong>  (map)The qdrouter schema as a map.</p>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Apache Qpid &lt;http://qpid.apache.org/&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

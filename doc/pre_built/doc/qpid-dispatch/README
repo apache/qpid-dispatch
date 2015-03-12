@@ -1,0 +1,72 @@
+Qpid Dispatch
+=============
+
+A lightweight AMQP router for building scalable, available, and performant messaging
+interconnect.
+
+Dependencies
+============
+
+To build dispatch on a yum-based Linux system, you will need the following
+packages installed:
+
+- qpid-proton-c-devel (0.9 or later)
+- python-qpid-proton  (0.9 or later)
+- cmake
+- make
+- gcc
+- python-devel
+
+Dispatch will not build on Windows.
+
+To build formatted documentation (man pages, HTML, PDF) see the requirements in doc/README
+
+Building and testing
+====================
+
+From the dispatch directory:
+
+$ mkdir my_build    # or directory of your choice.
+$ cd my_build
+$ cmake ..
+$ make
+$ ctest -VV
+
+
+Running The Tests
+=================
+
+From the <build> directory you can run all the system and tests with:
+$ ctest -VV
+
+ctest uses the script <build>/test/run.py to set up the correct environment for
+tests. You can use it to run tests individually from the <build>/tests
+directory, for example:
+
+$ ./run.py unit_tests_size 3
+$ ./run.py -m unittest system_tests_qdstat
+
+Run it without arguments to get a summary of how it can be used:
+$ ./run.py
+
+
+Clean build, install and test
+=============================
+
+$ source config.sh; test.sh
+
+This does the following:
+- NOTE: delete any existing directories 'build' and 'install'
+- Do a fresh cmake and make in directory 'build'
+- Run unit tests (not system tests) in 'build'
+- Do 'make install' into the directory 'install'
+- Run system tests on the installation in 'install'.
+
+
+Valgrind support
+================
+
+If valgrind is installed it will be used by default when running the tests.
+Set the cmake option 'USE_VALGRIND' to 'ON' or 'OFF' to enable/disable valgrind.
+You can also set the environment variable 'USE_VALGRIND' to 'ON or 'OFF'.
+If set the environment variable takes precendence over the cmake option.

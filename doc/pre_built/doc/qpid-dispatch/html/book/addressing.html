@@ -1,0 +1,225 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>3. Addressing &mdash; Qpid Dispatch 0.4 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Qpid Dispatch 0.4 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">3. Addressing</a><ul>
+<li><a class="reference internal" href="#routing-patterns">3.1. Routing patterns</a></li>
+<li><a class="reference internal" href="#routing-mechanisms">3.2. Routing mechanisms</a><ul>
+<li><a class="reference internal" href="#message-routing">3.2.1. Message routing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/book/addressing.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="addressing">
+<h1>3. Addressing<a class="headerlink" href="#addressing" title="Permalink to this headline">¶</a></h1>
+<p>AMQP addresses are used to control the flow of messages across a network
+of routers. Addresses are used in a number of different places in the
+AMQP 1.0 protocol. They can be used in a specific message in the <cite>to</cite>
+and <cite>reply-to</cite> fields of a message&#8217;s properties. They are also used
+during the creation of links in the <cite>address</cite> field of a <cite>source</cite> or
+a <cite>target</cite>.</p>
+<p>Addresses designate various kinds of entities in a messaging network:</p>
+<ul class="simple">
+<li>Endpoint processes that consume data or offer a service</li>
+<li>Topics that match multiple consumers to multiple producers</li>
+<li>Entities within a messaging broker:
+-  Queues
+-  Durable Topics
+-  Exchanges</li>
+</ul>
+<p>The syntax of an AMQP address is opaque as far as the router network is
+concerned. A syntactical structure may be used by the administrator that
+creates addresses, but the router treats them as opaque strings. Routers
+consider addresses to be mobile such that any address may be directly
+connected to any router in a network and may move around the topology.
+In cases where messages are broadcast to or balanced across multiple
+consumers, an address may be connected to multiple routers in the
+network.</p>
+<p>Addresses have semantics associated with them. When an address is
+created in the network, it is assigned a set of semantics (and access
+rules) during a process called provisioning. The semantics of an address
+control how routers behave when they see the address being used.</p>
+<p>Address semantics include the following considerations:</p>
+<ul class="simple">
+<li><em>Routing pattern</em> - direct, multicast, balanced</li>
+<li><em>Undeliverable action</em> - drop, hold and retry, redirect</li>
+<li><em>Reliability</em> - N destinations, etc.</li>
+</ul>
+<div class="section" id="routing-patterns">
+<h2>3.1. Routing patterns<a class="headerlink" href="#routing-patterns" title="Permalink to this headline">¶</a></h2>
+<p>Routing patterns constrain the paths that a message can take across a
+network.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="17%" />
+<col width="83%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><em>Pattern</em></th>
+<th class="head"><em>Description</em></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><em>Direct</em></td>
+<td>Direct routing allows for only one consumer to use an address at a
+time. Messages (or links) follow the lowest cost path across the network
+from the sender to the one receiver.</td>
+</tr>
+<tr class="row-odd"><td><em>Multicast</em></td>
+<td>Multicast routing allows multiple consumers to use the same address at
+the same time. Messages are routed such that each consumer receives a
+copy of the message.</td>
+</tr>
+<tr class="row-even"><td><em>Balanced</em></td>
+<td>Balanced routing also allows multiple consumers to use the same
+address. In this case, messages are routed to exactly one of the
+consumers, and the network attempts to balance the traffic load across
+the set of consumers using the same address.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="routing-mechanisms">
+<h2>3.2. Routing mechanisms<a class="headerlink" href="#routing-mechanisms" title="Permalink to this headline">¶</a></h2>
+<p>The fact that addresses can be used in different ways suggests that
+message routing can be accomplished in different ways. Before going into
+the specifics of the different routing mechanisms, it would be good to
+first define what is meant by the term <em>routing</em>:</p>
+<blockquote>
+<div>In a network built of multiple routers connected by connections
+(i.e., nodes and edges in a graph), <em>routing</em> determines which
+connection to use to send a message directly to its destination or
+one step closer to its destination.</div></blockquote>
+<p>Each router serves as the terminus of a collection of incoming and
+outgoing links. The links either connect directly to endpoints that
+produce and consume messages, or they connect to other routers in the
+network along previously established connections.</p>
+<div class="section" id="message-routing">
+<h3>3.2.1. Message routing<a class="headerlink" href="#message-routing" title="Permalink to this headline">¶</a></h3>
+<p>Message routing occurs upon delivery of a message and is done based on
+the address in the message&#8217;s <cite>to</cite> field.</p>
+<p>When a delivery arrives on an incoming link, the router extracts the
+address from the delivered message&#8217;s <cite>to</cite> field and looks the address
+up in its routing table. The lookup results in zero or more outgoing
+links onto which the message shall be resent.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="19%" />
+<col width="81%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><em>Delivery</em></th>
+<th class="head"><em>Handling</em></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><em>pre-settled</em></td>
+<td>If the arriving delivery is pre-settled (i.e., fire and forget), the
+incoming delivery shall be settled by the router, and the outgoing
+deliveries shall also be pre-settled. In other words, the pre-settled
+nature of the message delivery is propagated across the network to the
+message&#8217;s destination.</td>
+</tr>
+<tr class="row-odd"><td><em>unsettled</em></td>
+<td>Unsettled delivery is also propagated across the network. Because
+unsettled delivery records cannot be discarded, the router tracks the
+incoming deliveries and keeps the association of the incoming
+deliveries to the resulting outgoing deliveries. This kept association
+allows the router to continue to propagate changes in delivery state
+(settlement and disposition) back and forth along the path which the
+message traveled.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Apache Qpid &lt;http://qpid.apache.org/&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

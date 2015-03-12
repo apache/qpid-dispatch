@@ -1,0 +1,360 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>2. Using Qpid Dispatch &mdash; Qpid Dispatch 0.4 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Qpid Dispatch 0.4 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">2. Using Qpid Dispatch</a><ul>
+<li><a class="reference internal" href="#configuration">2.1. Configuration</a></li>
+<li><a class="reference internal" href="#client-compatibility">2.2. Client Compatibility</a></li>
+<li><a class="reference internal" href="#tools">2.3. Tools</a><ul>
+<li><a class="reference internal" href="#qdstat">2.3.1. qdstat</a></li>
+<li><a class="reference internal" href="#qdmanage">2.3.2. qdmanage</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#features-and-examples">2.4. Features and Examples</a><ul>
+<li><a class="reference internal" href="#standalone-and-interior-modes">2.4.1. Standalone and Interior Modes</a></li>
+<li><a class="reference internal" href="#mobile-subscribers">2.4.2. Mobile Subscribers</a></li>
+<li><a class="reference internal" href="#dynamic-reply-to">2.4.3. Dynamic Reply-To</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/book/using.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="using-qpid-dispatch">
+<h1>2. Using Qpid Dispatch<a class="headerlink" href="#using-qpid-dispatch" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="configuration">
+<h2>2.1. Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
+<p>The default configuration file is installed in
+<cite>install-prefix</cite>/etc/qpid/qdrouterd.conf. This configuration file will
+cause the router to run in standalone mode, listening on the standard
+AMQP port (5672). Dispatch Router looks for the configuration file in
+the installed location by default. If you wish to use a different path,
+the &#8220;-c&#8221; command line option will instruct Dispatch Router as to which
+configuration to load.</p>
+<p>To run the router, invoke the executable: qdrouterd [-c my-config-file]</p>
+<p>For more details of the configuration file see the <cite>qdrouterd.conf(5)</cite>
+man page.</p>
+</div>
+<div class="section" id="client-compatibility">
+<h2>2.2. Client Compatibility<a class="headerlink" href="#client-compatibility" title="Permalink to this headline">¶</a></h2>
+<p>Dispatch Router should, in theory, work with any client that is
+compatible with AMQP 1.0. The following clients have been tested:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><em>Client</em></th>
+<th class="head"><em>Notes</em></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>qpid::messaging</td>
+<td>The Qpid messaging clients work with Dispatch Router as long as
+they are configured to use the 1.0 version of the protocol. To
+enable AMQP 1.0 in the C++ client, use the {protocol:amqp1.0}
+connection option.</td>
+</tr>
+<tr class="row-odd"><td>Proton Messenger</td>
+<td>Messenger works with Dispatch Router.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="tools">
+<h2>2.3. Tools<a class="headerlink" href="#tools" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="qdstat">
+<h3>2.3.1. qdstat<a class="headerlink" href="#qdstat" title="Permalink to this headline">¶</a></h3>
+<p><em>qdstat</em> is a command line tool that lets you view the status of a
+Dispatch Router. The following options are useful for seeing that the
+router is doing:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="11%" />
+<col width="89%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><em>Option</em></th>
+<th class="head"><em>Description</em></th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>-l</td>
+<td>Print a list of AMQP links attached to the router. Links are
+unidirectional. Outgoing links are usually associated with a subscription
+address. The tool distinguishes between <em>endpoint</em> links and <em>router</em>
+links. Endpoint links are attached to clients using the router. Router links
+are attached to other routers in a network of routbers.</td>
+</tr>
+<tr class="row-odd"><td>-a</td>
+<td>Print a list of addresses known to the router.</td>
+</tr>
+<tr class="row-even"><td>-n</td>
+<td>Print a list of known routers in the network.</td>
+</tr>
+<tr class="row-odd"><td>-c</td>
+<td>Print a list of connections to the router.</td>
+</tr>
+</tbody>
+</table>
+<p>For complete details see the <cite>qdstat(8)</cite> man page and the output of
+<cite>qdstat &#8211;help</cite>.</p>
+</div>
+<div class="section" id="qdmanage">
+<h3>2.3.2. qdmanage<a class="headerlink" href="#qdmanage" title="Permalink to this headline">¶</a></h3>
+<p><em>qdmanage</em> is a general-purpose AMQP management client that allows you
+to not only view but modify the configuration of a running dispatch
+router.</p>
+<p>For example you can query all the connection entities in the router:</p>
+<div class="highlight-python"><pre>$ qdrouterd query --type connection</pre>
+</div>
+<p>To enable logging debug and higher level messages by default:</p>
+<div class="highlight-python"><pre>$ qdrouter update log/DEFAULT enable=debug+</pre>
+</div>
+<p>In fact, everything that can be configured in the configuration file can
+also be created in a running router via management. For example to
+create a new listener in a running router:</p>
+<div class="highlight-python"><pre>$ qdrouter create type=listener port=5555</pre>
+</div>
+<p>Now you can connect to port 5555, for exampple:</p>
+<div class="highlight-python"><pre>$ qdrouterd query -b localhost:5555 --type listener</pre>
+</div>
+<p>For complete details see the <cite>qdmanage(8)</cite> man page and the output of
+<cite>qdmanage &#8211;help</cite>. Also for details of what can be configured see the
+<cite>qdrouterd.conf(5)</cite> man page.</p>
+</div>
+</div>
+<div class="section" id="features-and-examples">
+<h2>2.4. Features and Examples<a class="headerlink" href="#features-and-examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="standalone-and-interior-modes">
+<h3>2.4.1. Standalone and Interior Modes<a class="headerlink" href="#standalone-and-interior-modes" title="Permalink to this headline">¶</a></h3>
+<p>The router can operate stand-alone or as a node in a network of routers.
+The mode is configured in the <em>router</em> section of the configuration
+file. In stand-alone mode, the router does not attempt to collaborate
+with any other routers and only routes messages among directly connected
+endpoints.</p>
+<p>If your router is running in stand-alone mode, <em>qdstat -a</em> will look
+like the following:</p>
+<div class="highlight-python"><pre>$ qdstat -a
+Router Addresses
+  class  address      in-proc  local  remote  in  out  thru  to-proc  from-proc
+  ===============================================================================
+  local  $management  Y        0      0       1   0    0     1        0
+  local  temp.AY81ga           1      0       0   0    0     0        0</pre>
+</div>
+<p>Note that there are two known addresses. <em>$management</em> is the address of
+the router&#8217;s embedded management agent. <em>temp.AY81ga</em> is the temporary
+reply-to address of the <em>qdstat</em> client making requests to the agent.</p>
+<p>If you change the mode to interior and restart the processs, the same
+command will yield two additional addresses which are used for
+inter-router communication:</p>
+<div class="highlight-python"><pre>$ qdstat -a
+Router Addresses
+  class  address      in-proc  local  remote  in  out  thru  to-proc  from-proc
+  ===============================================================================
+  local  $management  Y        0      0       1   0    0     1        0
+  local  qdhello      Y        0      0       0   0    0     0        3
+  local  qdrouter     Y        0      0       0   0    0     0        1
+  local  temp.khOpGb           1      0       0   0    0     0        0</pre>
+</div>
+</div>
+<div class="section" id="mobile-subscribers">
+<h3>2.4.2. Mobile Subscribers<a class="headerlink" href="#mobile-subscribers" title="Permalink to this headline">¶</a></h3>
+<p>The term &#8220;mobile subscriber&#8221; simply refers to the fact that a client may
+connect to the router and subscribe to an address to receive messages
+sent to that address. No matter where in the network the subscriber
+attaches, the messages will be routed to the appropriate destination.</p>
+<p>To illustrate a subscription on a stand-alone router, you can use the
+examples that are provided with Qpid Proton. Using the <em>recv.py</em> example
+receiver:</p>
+<div class="highlight-python"><pre>$ recv.py amqp://0.0.0.0/my-address</pre>
+</div>
+<p>This command creates a receiving link subscribed to the specified
+address. To verify the subscription:</p>
+<div class="highlight-python"><pre>$ qdstat -a
+Router Addresses
+  class   address      in-proc  local  remote  in  out  thru  to-proc  from-proc
+  ================================================================================
+  local   $management  Y        0      0       1   0    0     1        0
+  mobile  my-address            1      0       0   0    0     0        0
+  local   temp.fDt8_a           1      0       0   0    0     0        0</pre>
+</div>
+<p>You can then, in a separate command window, run a sender to produce
+messages to that address:</p>
+<div class="highlight-python"><pre>$ send.py -a amqp://0.0.0.0/my-address</pre>
+</div>
+</div>
+<div class="section" id="dynamic-reply-to">
+<h3>2.4.3. Dynamic Reply-To<a class="headerlink" href="#dynamic-reply-to" title="Permalink to this headline">¶</a></h3>
+<p>Dynamic reply-to can be used to obtain a reply-to address that routes
+back to a client&#8217;s receiving link regardless of how many hops it has to
+take to get there. To illustrate this feature, see below a simple
+program (written in C++ against the qpid::messaging API) that queries
+the management agent of the attached router for a list of other known
+routers&#8217; management addresses.</p>
+<div class="highlight-python"><pre>#include &lt;qpid/messaging/Address.h&gt;
+#include &lt;qpid/messaging/Connection.h&gt;
+#include &lt;qpid/messaging/Message.h&gt;
+#include &lt;qpid/messaging/Receiver.h&gt;
+#include &lt;qpid/messaging/Sender.h&gt;
+#include &lt;qpid/messaging/Session.h&gt;
+
+using namespace qpid::messaging;
+using namespace qpid::types;
+
+using std::stringstream;
+using std::string;
+
+int main() {
+    const char* url = "amqp:tcp:127.0.0.1:5672";
+    std::string connectionOptions = "{protocol:amqp1.0}";
+
+    Connection connection(url, connectionOptions);
+    connection.open();
+    Session session = connection.createSession();
+    Sender sender = session.createSender("mgmt");
+
+    // create reply receiver and get the reply-to address
+    Receiver receiver = session.createReceiver("#");
+    Address responseAddress = receiver.getAddress();
+
+    Message request;
+    request.setReplyTo(responseAddress);
+    request.setProperty("x-amqp-to", "amqp:/_local/$management");
+    request.setProperty("operation", "DISCOVER-MGMT-NODES");
+    request.setProperty("type", "org.amqp.management");
+    request.setProperty("name, "self");
+
+    sender.send(request);
+    Message response = receiver.fetch();
+    Variant content(response.getContentObject());
+    std::cout &lt;&lt; "Response: " &lt;&lt; content &lt;&lt; std::endl &lt;&lt; std::endl;
+
+    connection.close();
+}</pre>
+</div>
+<p>The equivalent program written in Python against the Proton Messenger
+API:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">proton</span> <span class="kn">import</span> <span class="n">Messenger</span><span class="p">,</span> <span class="n">Message</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="s">&quot;0.0.0.0:5672&quot;</span>
+
+    <span class="n">messenger</span> <span class="o">=</span> <span class="n">Messenger</span><span class="p">()</span>
+    <span class="n">messenger</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">messenger</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s">&quot;amqp:/*&quot;</span><span class="p">,</span> <span class="s">&quot;amqp://</span><span class="si">%s</span><span class="s">/$1&quot;</span> <span class="o">%</span> <span class="n">host</span><span class="p">)</span>
+    <span class="n">reply_subscription</span> <span class="o">=</span> <span class="n">messenger</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s">&quot;amqp:/#&quot;</span><span class="p">)</span>
+    <span class="n">reply_address</span> <span class="o">=</span> <span class="n">reply_subscription</span><span class="o">.</span><span class="n">address</span>
+
+    <span class="n">request</span>  <span class="o">=</span> <span class="n">Message</span><span class="p">()</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">Message</span><span class="p">()</span>
+
+    <span class="n">request</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="s">&quot;amqp:/_local/$management&quot;</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">reply_to</span> <span class="o">=</span> <span class="n">reply_address</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">properties</span> <span class="o">=</span> <span class="p">{</span><span class="s">u&#39;operation&#39;</span> <span class="p">:</span> <span class="s">u&#39;DISCOVER-MGMT-NODES&#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;type&#39;</span>      <span class="p">:</span> <span class="s">u&#39;org.amqp.management&#39;</span><span class="p">,</span>
+                          <span class="s">u&#39;name&#39;</span>      <span class="p">:</span> <span class="s">u&#39;self&#39;</span><span class="p">}</span>
+
+    <span class="n">messenger</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="n">messenger</span><span class="o">.</span><span class="n">send</span><span class="p">()</span>
+    <span class="n">messenger</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+    <span class="n">messenger</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+
+    <span class="k">print</span> <span class="s">&quot;Response: </span><span class="si">%r</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">response</span><span class="o">.</span><span class="n">body</span>
+
+    <span class="n">messenger</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+<span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Apache Qpid &lt;http://qpid.apache.org/&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,168 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Qpid Dispatch Router Book &mdash; Qpid Dispatch 0.4 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Qpid Dispatch 0.4 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/book/book.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="qpid-dispatch-router-book">
+<h1>Qpid Dispatch Router Book<a class="headerlink" href="#qpid-dispatch-router-book" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">1. Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#overview">1.1. Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#benefits">1.2. Benefits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#features">1.3. Features</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="using.html">2. Using Qpid Dispatch</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="using.html#configuration">2.1. Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using.html#client-compatibility">2.2. Client Compatibility</a></li>
+<li class="toctree-l2"><a class="reference internal" href="using.html#tools">2.3. Tools</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="using.html#qdstat">2.3.1. qdstat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="using.html#qdmanage">2.3.2. qdmanage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="using.html#features-and-examples">2.4. Features and Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="using.html#standalone-and-interior-modes">2.4.1. Standalone and Interior Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="using.html#mobile-subscribers">2.4.2. Mobile Subscribers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="using.html#dynamic-reply-to">2.4.3. Dynamic Reply-To</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="addressing.html">3. Addressing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="addressing.html#routing-patterns">3.1. Routing patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="addressing.html#routing-mechanisms">3.2. Routing mechanisms</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="addressing.html#message-routing">3.2.1. Message routing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="amqp-mapping.html">4. AMQP Mapping</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="amqp-mapping.html#message-annotations">4.1. Message Annotations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="amqp-mapping.html#source-target-capabilities">4.2. Source/Target Capabilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="amqp-mapping.html#dynamic-node-properties">4.3. Dynamic-Node-Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="amqp-mapping.html#addresses-and-address-formats">4.4. Addresses and Address Formats</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="amqp-mapping.html#address-patterns">4.4.1. Address Patterns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="amqp-mapping.html#supported-addresses">4.4.2. Supported Addresses</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="amqp-mapping.html#implementation-of-the-amqp-management-specification">4.5. Implementation of the AMQP Management Specification</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="schema.html">5. Management Schema</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="schema.html#configuration-entities">5.1. Configuration Entities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#container">5.1.1. container</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#router">5.1.2. router</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#listener">5.1.3. listener</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#connector">5.1.4. connector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#log">5.1.5. log</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#fixedaddress">5.1.6. fixedAddress</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#waypoint">5.1.7. waypoint</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#linkroutepattern">5.1.8. linkRoutePattern</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="schema.html#operational-entities">5.2. Operational Entities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#org-amqp-management">5.2.1. org.amqp.management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#management">5.2.2. management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#router-link">5.2.3. router.link</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#router-address">5.2.4. router.address</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#router-node">5.2.5. router.node</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#connection">5.2.6. connection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#allocator">5.2.7. allocator</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="schema.html#management-operations">5.3. Management Operations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#operations-for-all-entity-types">5.3.1. Operations for all entity types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#operations-for-org-amqp-management-entity-type">5.3.2. Operations for <cite>org.amqp.management</cite> entity type</a></li>
+<li class="toctree-l3"><a class="reference internal" href="schema.html#operations-for-management-entity-type">5.3.3. Operations for <cite>management</cite> entity type</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Apache Qpid &lt;http://qpid.apache.org/&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

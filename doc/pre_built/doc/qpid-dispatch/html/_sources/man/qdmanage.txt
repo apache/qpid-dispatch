@@ -1,0 +1,143 @@
+.. Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+     http://www.apache.org/licenses/LICENSE-2.0
+   Unless required by applicable law or agreed to in writing,
+   software distributed under the License is distributed on an
+   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+   KIND, either express or implied.  See the License for the
+   specific language governing permissions and limitations
+   under the License
+
+:orphan:
+
+qdmanage manual page
+====================
+
+Synopsis
+--------
+
+qdmanage *operation* [*options...*] [*arguments...*]
+
+Description
+-----------
+
+An AMQP management client for use with qdrouterd. Sends AMQP management
+operations requests and prints the response in JSON format. This is a
+generic AMQP management tool and can be used with any standard AMQP
+managed endpoint, not just with qdrouter.
+
+Operations
+----------
+
+`query` [*ATTR*...]
+    Print the attributes named in the ATTR list or all attributes if
+    none are listed. Print attributes for all entities by default, use
+    --type, --name and --identity options to restrict what is printed.
+
+`create` [*ATTR=VALUE*...]
+    Create a new entity with the specified attributes. With the --stdin
+    option, read attributes from stdin. This can be a JSON map of
+    attributes to create a single entity, or a JSON list of maps to
+    create multiple entitiees.
+
+`read`
+    Print the attributes of an entity specified by the --name or
+    --identity options. With the --stdin option, create entities based
+    on data from stdin. This can be a JSON map of attributes to create a
+    single entity, or a JSON list of maps to create multiple entitiees.
+
+`update` [*ATTR=VALUE*...]
+    Update the attributes of an existing entity. With the --stdin
+    option, read attributes from stdin. This can be a JSON map of
+    attributes to update a single entity, or a JSON list of maps to
+    update multiple entitiees. If an ATTR name is listed with no =VALUE,
+    that attribute will be deleted from the entity.
+
+`delete`
+    Delete an entity specified by the --name or --identity options.
+
+`get-types` [*TYPE*]
+    List entity types with their base types. With no arguments list all
+    types.
+
+`get-operations` [*TYPE*]
+    List entity types with their operations. With no arguments list all
+    types.
+
+`get-attributes` [*TYPE*]
+    List entity types with their attributes. With no arguments list all
+    types.
+
+`get-annotations` [*TYPE*]
+    List entity types with their annotations. With no arguments list all
+    types.
+
+`get-mgmt-nodes`
+    List all other known management nodes connected to this one.
+
+`get-json-schema` [*INDENT*]
+    Get the router schema in JSON format. Optional integer indent for
+    formatted output.
+
+`get-log` [*INDENT*]
+    Get recent log entries from the router.
+
+Options
+-------
+
+.. include:: qdmanage_help.rst
+
+Files
+-----
+
+/home/aconway/dispatch/install/share/doc/qpid-dispatch/qdrouter.json
+    Management schema for qdrouterd.
+
+/home/aconway/dispatch/install/share/doc/qpid-dispatch/qdrouter.json.readme.txt
+    Explanation of the management schema.
+
+Examples
+--------
+
+Show the logging configuration
+
+::
+
+    qdmanage query --type=log
+
+Enable debug and higher log messages by default:
+
+::
+
+    qdmanage udpdate name=log/DEFAULT enable=debug+
+
+Enable trace log messages only for the MESSAGE moudle and direct MESSAGE
+logs to the file "test.log"
+
+::
+
+    qdmanage udpdate name=log/MESSAGE enable=trace output=test.log
+
+Set MESSAGE logging back to the default:
+
+::
+
+    qdmanage udpdate name=log/MESSAGE enable=default
+
+Disable MESSAGE logging:
+
+::
+
+    qdmanage udpdate name=log/MESSAGE enable=none
+
+See also
+--------
+
+*qdrouterd(8)*, *qdstat(8)*, *qdrouterd.conf(5)*
+
+http://qpid.apache.org/components/dispatch-router

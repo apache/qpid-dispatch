@@ -1,0 +1,190 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>1. Introduction &mdash; Qpid Dispatch 0.4 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Qpid Dispatch 0.4 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">1. Introduction</a><ul>
+<li><a class="reference internal" href="#overview">1.1. Overview</a></li>
+<li><a class="reference internal" href="#benefits">1.2. Benefits</a></li>
+<li><a class="reference internal" href="#features">1.3. Features</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/book/introduction.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="introduction">
+<h1>1. Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="overview">
+<h2>1.1. Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>The Dispatch router is an AMQP message message router that provides
+advanced interconnect capabilities. It allows flexible routing of
+messages between any AMQP-enabled endpoints, whether they be clients,
+servers, brokers or any other entity that can send or receive standard
+AMQP messages.</p>
+<p>A messaging client can make a single AMQP connection into a messaging
+bus built of Dispatch routers and, over that connection, exchange
+messages with one or more message brokers, and at the same time exchange
+messages directly with other endpoints without involving a broker at
+all.</p>
+<p>The router is an intermediary for messages but it is <em>not</em> a broker. It
+does not <em>take responsibility for</em> messages. It will, however, propagate
+settlement and disposition across a network such that delivery
+guarantees are met. In other words: the router network will deliver the
+message, possibly via several intermediate routers, <em>and</em> it will route
+the acknowledgement of that message by the ultimate reciever back across
+the same path. This means that <em>responsibility</em> for the message is
+transfered from the original sender to the ultimate receiver <em>as if they
+were directly connected</em>. However this is done via a flexible network
+that allows highly configurable routing of the message transparent to
+both sender and receiver.</p>
+<p>There are some patterns where this enables &#8220;brokerless messaging&#8221;
+approaches that are preferable to brokered approaches. In other cases a
+broker is essential (in particular where you need the separation of
+responsibility and/or the buffering provided by store-and-forward) but a
+dispatch network can still be useful to tie brokers and clients together
+into patterns that are difficult with a single broker.</p>
+<p>For a &#8220;brokerless&#8221; example, consider the common brokered implementation
+of the request-response pattern, a client puts a request on a queue and
+then waits for a reply on another queue. In this case the broker can be
+a hindrance - the client may want to know immediatly if there is nobody
+to serve the request, but typically it can only wait for a timeout to
+discover this. With a dispatch network, the client can be informed
+immediately if its message cannot be delivered because nobody is
+listening. When the client receives acknowledgement of the request it
+knows not just that it is sitting on a queue, but that it has actually
+been received by the server.</p>
+<p>For an exampe of using dispatch to enhance the use of brokers, consider
+using an array of brokers to implement a scalable distributed work
+queue. A dispatch network can make this appear as a single queue, with
+senders publishing to a single address and receivers subscribing to a
+single address. The dispatch network can distribute work to any broker
+in the array and collect work from any broker for any receiver. Brokers
+can be shut down or added without affecting clients. This elegantly
+solves the common difficult of &#8220;stuck messages&#8221; when implementing this
+pattern with brokers alone. If a receiver is connected to a broker that
+has no messages, but there are messages on another broker, you have to
+somehow transfer them or leave them &#8220;stuck&#8221;. With a dispatch network,
+<em>all</em> the receivers are connected to <em>all</em> the brokers. If there is a
+message anywhere it can be delivered to any receiver.</p>
+<p>The router is meant to be deployed in topologies of multiple routers,
+preferably with redundant paths. It uses link-state routing protocols
+and algorithms (similar to OSPF or IS-IS from the networking world) to
+calculate the best path from every point to every other point and to
+recover quickly from failures. It does not need to use clustering for
+high availability; rather, it relies on redundant paths to provide
+continued connectivity in the face of system or network failure. Because
+it never takes responsibility for messages it is effectively stateless,
+messages not delivered to their final destination will not be
+acknowledged to the sender and therefore the sender can re-send such
+messages if it is disconnected from the network.</p>
+</div>
+<div class="section" id="benefits">
+<h2>1.2. Benefits<a class="headerlink" href="#benefits" title="Permalink to this headline">¶</a></h2>
+<p>Simplifies connectivity</p>
+<ul class="simple">
+<li>An endpoint can do all of its messaging through a single transport connection</li>
+<li>Avoid opening holes in firewalls for incoming connections</li>
+</ul>
+<p>Simplifies reliability</p>
+<ul class="simple">
+<li>Reliability and availability are provided using redundant topology, not server clustering</li>
+<li>Reliable end-to-end messaging without persistent stores</li>
+<li>Use a message broker only when you need store-and-forward semantics</li>
+</ul>
+</div>
+<div class="section" id="features">
+<h2>1.3. Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Supports arbitrary topology - no restrictions on redundancy</li>
+<li>Automatic route computation - adjusts quickly to changes in topology</li>
+<li>Cost-based route computation</li>
+<li><a class="reference external" href="#addressing">Rich addressing semantics</a></li>
+<li>Security</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../index.html">Qpid Dispatch 0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Apache Qpid &lt;http://qpid.apache.org/&gt;.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
