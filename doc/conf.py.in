@@ -1,0 +1,48 @@
+# -*- coding: utf-8 -*-
+# Sphinx configuration file.
+
+import sys, os
+
+# The suffix of source filenames.
+source_suffix = '.rst'
+
+# The master toctree document.
+master_doc = 'index'
+
+# General information about the project.
+project = u'Qpid Dispatch'
+copyright = u'2013, Apache Qpid <http://qpid.apache.org/>'
+
+# The short X.Y version.
+version = '${QPID_DISPATCH_VERSION}'
+# The full version, including alpha/beta/rc tags.
+release = version
+
+# List of patterns, relative to source directory, that match files and
+# directories to ignore when looking for source files.
+exclude_patterns = ["**/*_help.rst"]
+
+# The name of the Pygments (syntax highlighting) style to use.
+pygments_style = 'sphinx'
+
+# -- Options for HTML output ---------------------------------------------------
+
+# The theme to use for HTML and HTML Help pages.  See the documentation for
+# a list of builtin themes.
+html_theme = 'sphinxdoc'
+
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ['_static']
+
+# -- Options for manual page output --------------------------------------------
+
+# One entry per manual page. List of tuples
+# (source start file, name, description, authors, manual section).
+man_pages = [
+  ('man/qdrouterd', 'qdrouterd', u'dispatch router', None, '8'),
+  ('man/qdrouterd.conf', 'qdrouterd.conf', u'dispatch router configuration', None, '5'),
+  ('man/qdstat', 'qdstat', u'dispatch router status', None, '8'),
+  ('man/qdmanage', 'qdmanage', u'dispatch management tool', None, '8'),
+]

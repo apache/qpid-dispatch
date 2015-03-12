@@ -37,23 +37,26 @@ updated. Some entity types also support *operations* that can be called.
 
 All management entity types have the following standard attributes:
 
-- *type*: The fully qualified type of the entity,
+*type*
+  The fully qualified type of the entity,
   e.g. `org.apache.qpid.dispatch.router`. This document uses the short name
   without the `org.apache.qpid.dispatch` prefix e.g. `router`. The dispatch
   tools will accept the short or long name.
 
-- *identity*: A system-generated identity of the entity. It includes
+*identity*
+  A system-generated identity of the entity. It includes
   the short type name and some identifying information. E.g. `log/AGENT` or
   `listener/localhost:amqp`
 
 There are two main categories of management entity type.
 
-- *Configuration* Entities: Parameters that can be set in the configuration file
+*Configuration* Entities
+  Parameters that can be set in the configuration file
   (see `qdrouterd.conf(5)` man page) or set at run-time with the `qdmanage(8)`
   tool.
 
-- *Operational* Entities: Run-time status values that can be queried using
-  `qdstat(8)` or `qdmanage(8)` tools.
+*Operational* Entities
+   Run-time status values that can be queried using `qdstat(8)` or `qdmanage(8)` tools.
 """)
 
         with self.section("Configuration Entities"):
@@ -70,7 +73,7 @@ be modified using the `update` operation, see the entity descriptions below.
             self.writeln("""
 Operational entities provide statistics and other run-time attributes of the router.
 The `qdstat(8)` tool provides a convenient way to query run-time statistics.
-You can also use the general-purpose management tool `qdmanage(8)` to query 
+You can also use the general-purpose management tool `qdmanage(8)` to query
 operational attributes.
 """)
             self.entity_types_extending("operationalEntity")

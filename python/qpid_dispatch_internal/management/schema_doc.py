@@ -27,9 +27,11 @@ from .schema import quotestr
 class SchemaWriter(object):
     """Write the schema as a markdown document"""
 
+    HEADINGS=r'=-+^*`:"~_#<>'
+
     def __init__(self, output, schema, quiet=True):
         self.output, self.schema, self.quiet = output, schema, quiet
-        self._heading = 1
+        self._heading = 0
         # Options affecting how output is written
 
     def warn(self, message):
@@ -43,7 +45,7 @@ class SchemaWriter(object):
 
     def heading(self, text=None, sub=0):
         self._heading += sub
-        if text: self.para("\n%s %s" % (self._heading*"#", text))
+        if text: self.para("\n%s\n%s" % (text, self.HEADINGS[self._heading]*len(text)))
 
     class Section(namedtuple("Section", ["writer", "heading"])):
         def __enter__(self): self.writer.heading(self.heading, sub=+1)
@@ -68,7 +70,7 @@ class SchemaWriter(object):
         self.writeln('*%s*%s' % (
             attr.name, self.attribute_qualifiers(attr, show_create, show_update)))
         if attr.description:
-            self.writeln(":   %s" % attr.description)
+            self.writeln("  %s" % attr.description)
         else:
             self.warn("Warning: No description for %s in %s" % (attr, attr.defined_in.short_name))
         self.writeln()

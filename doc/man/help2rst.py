@@ -18,19 +18,14 @@
 #
 
 """
-Generate markdown man pages by combining a markdown document with the
-the --help output of the program.
-
-Extract the options section of help output and convert to markdown format for
-inclusion in a man page. Replace the # Options section of the source document
-or append it at the end if there is no # Options section.
+Convett --help output of a program into rst text format.
 """
 
 import re, sys
 from qpid_dispatch_internal.compat.subproc import check_output, STDOUT, CalledProcessError
 from os import path
 
-def help2md(help_out):
+def help2rst(help_out):
     VALUE = r"(?:[\w-]+|<[^>]+>)"
     DEFAULT = r"(?: +\([^)]+\))?"
     OPTION = r"-[\w-]+(?:[ =]%s)?%s" % (VALUE, DEFAULT) # -opt[(=| )value][(default)]
@@ -43,24 +38,20 @@ def help2md(help_out):
     if (options): help_out = help_out[options.end():]
     result = ""
 
-    result += "# Options\n\n"
+    def heading(text, underline):
+        return "%s\n%s\n\n" % (text, underline*len(text))
+
     for item in re.finditer(r"%s|%s" % (OPT_HELP, SUBHEAD), help_out, re.IGNORECASE | re.MULTILINE):
         if item.group(3):
-            result += "## %s\n\n" % item.group(3).strip() # Sub-heading
+            result += heading(item.group(3).strip(), "~")
         else:
             result += "%s\n:   %s\n\n" % (item.group(1), re.sub("\s+", " ", item.group(2)).strip())
     return result
 
-usage = "Usage: %s manpage_in.md manpage_out.md program [help-args...]"
-
 def main(argv):
-    if len(argv) < 4: raise ValueError("Wrong number of arguments: "+usage)
-    source, target, program = argv[1], argv[2], argv[3:]
-    source_md = open(source).read()
-    options_md = help2md(check_output(program, stderr=STDOUT))
-    combine_md = re.sub(r"\n# Options.*?(?=(\n# |$))(?ims)", options_md, source_md)
-    upcase_md = re.sub(r"^#+ .*$(?m)", lambda m: m.group(0).upper(), combine_md)
-    open(target, "w").write(upcase_md)
+    if len(argv) < 2: raise ValueError("Wrong number of arguments: "+usage)
+    program = argv[1:]
+    print help2rst(check_output(program, stderr=STDOUT))
 
 if __name__ == "__main__":
     try:
@@ -69,4 +60,3 @@ if __name__ == "__main__":
         if hasattr(e, "output") and e.output:
             print "\n%s\n\n%s\n" % (e, e.output)
         raise
-
