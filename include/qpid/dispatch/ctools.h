@@ -45,6 +45,7 @@
 #define DEQ_EMPTY {0,0,0,0}
 
 #define DEQ_INIT(d) do { (d).head = 0; (d).tail = 0; (d).scratch = 0; (d).size = 0; } while (0)
+#define DEQ_IS_EMPTY(d) ((d).head == 0)
 #define DEQ_ITEM_INIT(i) do { (i)->next = 0; (i)->prev = 0; } while(0)
 #define DEQ_HEAD(d) ((d).head)
 #define DEQ_TAIL(d) ((d).tail)
@@ -154,6 +155,19 @@ do {                                           \
     (i)->next = 0;                             \
     (i)->prev = 0;                             \
     CT_ASSERT((d).size || (!(d).head && !(d).tail)); \
+} while (0)
+
+#define DEQ_APPEND(d1,d2)               \
+do {                                    \
+    if (!(d1).head)                     \
+        (d1) = (d2);                    \
+    else if ((d2).head) {               \
+        (d1).tail->next = (d2).head;    \
+        (d2).head->prev = (d1).tail;    \
+        (d1).tail = (d2).tail;          \
+        (d1).size += (d2).size;         \
+    }                                   \
+    DEQ_INIT(d2);                       \
 } while (0)
 
 #endif

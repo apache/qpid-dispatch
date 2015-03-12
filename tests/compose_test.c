@@ -278,6 +278,67 @@ static char *test_compose_scalars(void *context)
 }
 
 
+// verify composition via a set of sub-fields
+static char *vector3 =
+    "\x00\x53\x72"                              // message annotations
+    "\xD1\x00\x00\x00\x1A\x00\x00\x00\x04"      // map32, 26 bytes, 4 fields
+    "\xA1\x04Key1"                              // str8
+    "\x70\x00\x00\x03\xE7"                      // uint 999
+    "\xA1\x04Key2"                              // str8
+    "\x70\x00\x00\x03\x78";                     // uint 888
+static int vector3_length = 34;
+
+static char *test_compose_subfields(void *context)
+{
+    qd_composed_field_t *sub1 = qd_compose_subfield(0);
+    qd_compose_insert_string(sub1, "Key1");
+    qd_composed_field_t *sub2 = qd_compose_subfield(0);
+    qd_compose_insert_uint(sub2, 999);
+
+    qd_composed_field_t *sub3 = qd_compose_subfield(0);
+    qd_compose_insert_string(sub3, "Key2");
+
+    //
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
+    qd_compose_start_map(field);
+    qd_compose_insert_buffers(field, &sub1->buffers);
+    if (!DEQ_IS_EMPTY(sub1->buffers)) return "Buffer chain ownership not transferred!";
+    qd_compose_free(sub1);
+    qd_compose_insert_buffers(field, &sub2->buffers);
+    qd_compose_free(sub2);
+
+    qd_compose_insert_buffers(field, &sub3->buffers);
+    qd_compose_free(sub3);
+    qd_compose_insert_uint(field, 888);
+    qd_compose_end_map(field);
+
+    qd_buffer_list_t list;
+    qd_compose_take_buffers(field, &list);
+    if (!DEQ_IS_EMPTY(field->buffers)) return "Buffer list not removed!";
+
+    qd_compose_free(field);
+
+    if (qd_buffer_list_length(&list) != vector3_length)
+        return "Improper encoded length";
+
+    unsigned char *src = (unsigned char *)vector3;
+    qd_buffer_t *buf = DEQ_HEAD(list);
+    while (buf) {
+        unsigned char *c = qd_buffer_base(buf);
+        while (c != (qd_buffer_base(buf) + qd_buffer_size(buf))) {
+            if (*c != *src) return "Pattern Mismatch";
+            c++;
+            src++;
+        }
+        buf = DEQ_NEXT(buf);
+    }
+
+    qd_buffer_list_free_buffers(&list);
+
+    return 0;
+}
+
+
 int compose_tests()
 {
     int result = 0;
@@ -285,6 +346,7 @@ int compose_tests()
     TEST_CASE(test_compose_list_of_maps, 0);
     TEST_CASE(test_compose_nested_composites, 0);
     TEST_CASE(test_compose_scalars, 0);
+    TEST_CASE(test_compose_subfields, 0);
 
     return result;
 }

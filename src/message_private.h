@@ -59,11 +59,6 @@ typedef struct {
 
 
 // TODO - consider using pointers to qd_field_location_t below to save memory
-// TODO - we need a second buffer list for modified annotations and header
-//        There are three message scenarios:
-//            1) Received message is held and forwarded unmodified - single buffer list
-//            2) Received message is held and modified before forwarding - two buffer lists
-//            3) Message is composed internally - single buffer list
 // TODO - provide a way to allocate a message without a lock for the link-routing case.
 //        It's likely that link-routing will cause no contention for the message content.
 //
@@ -72,7 +67,6 @@ typedef struct {
     sys_mutex_t         *lock;
     uint32_t             ref_count;                       // The number of messages referencing this
     qd_buffer_list_t     buffers;                         // The buffer chain containing the message
-    qd_buffer_list_t     new_message_annotations;         // The buffer chain containing the new message annotations (MOVE TO MSG_PVT)
     qd_field_location_t  section_message_header;          // The message header list
     qd_field_location_t  section_delivery_annotation;     // The delivery annotation map
     qd_field_location_t  section_message_annotation;      // The message annotation map
@@ -96,6 +90,10 @@ typedef struct {
 typedef struct {
     DEQ_LINKS(qd_message_t);   // Deque linkage that overlays the qd_message_t
     qd_message_content_t *content;
+    qd_buffer_list_t      ma_to_override;  // to field in outgoing message annotations.
+    qd_buffer_list_t      ma_trace;        // trace list in outgoing message annotations
+    qd_buffer_list_t      ma_ingress;      // ingress field in outgoing message annotations
+
 } qd_message_pvt_t;
 
 ALLOC_DECLARE(qd_message_t);

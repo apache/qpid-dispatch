@@ -20,6 +20,8 @@
 #include <qpid/dispatch/buffer.h>
 #include "alloc.h"
 
+#include <string.h>
+
 static size_t buffer_size = 512;
 static int    size_locked = 0;
 
@@ -80,4 +82,53 @@ void qd_buffer_insert(qd_buffer_t *buf, size_t len)
 {
     buf->size += len;
     assert(buf->size <= buffer_size);
+}
+
+unsigned int qd_buffer_list_clone(qd_buffer_list_t *dst, const qd_buffer_list_t *src)
+{
+    uint32_t len = 0;
+    DEQ_INIT(*dst);
+    qd_buffer_t *buf = DEQ_HEAD(*src);
+    while (buf) {
+        size_t to_copy = qd_buffer_size(buf);
+        unsigned char *src = qd_buffer_base(buf);
+        len += to_copy;
+        while (to_copy) {
+            qd_buffer_t *newbuf = qd_buffer();
+            size_t count = qd_buffer_capacity(newbuf);
+            // default buffer capacity may have changed,
+            // so don't assume it will fit:
+            if (count > to_copy) count = to_copy;
+            memcpy(qd_buffer_cursor(newbuf), src, count);
+            qd_buffer_insert(newbuf, count);
+            DEQ_INSERT_TAIL(*dst, newbuf);
+            src += count;
+            to_copy -= count;
+        }
+        buf = DEQ_NEXT(buf);
+    }
+    return len;
+}
+
+
+void qd_buffer_list_free_buffers(qd_buffer_list_t *list)
+{
+    qd_buffer_t *buf = DEQ_HEAD(*list);
+    while (buf) {
+        DEQ_REMOVE_HEAD(*list);
+        qd_buffer_free(buf);
+        buf = DEQ_HEAD(*list);
+    }
+}
+
+
+unsigned int qd_buffer_list_length(const qd_buffer_list_t *list)
+{
+    unsigned int len = 0;
+    qd_buffer_t *buf = DEQ_HEAD(*list);
+    while (buf) {
+        len += qd_buffer_size(buf);
+        buf = DEQ_NEXT(buf);
+    }
+    return len;
 }

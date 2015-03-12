@@ -35,6 +35,14 @@ static void bump_count(qd_composed_field_t *field)
         comp->count++;
 }
 
+static void bump_length(qd_composed_field_t *field,
+                        uint32_t length)
+{
+    qd_composite_t *comp = DEQ_HEAD(field->fieldStack);
+    if (comp)
+        comp->length += length;
+}
+
 
 static void qd_insert(qd_composed_field_t *field, const uint8_t *seq, size_t len)
 {
@@ -185,7 +193,7 @@ static void qd_compose_end_composite(qd_composed_field_t *field)
 }
 
 
-qd_composed_field_t *qd_compose(uint64_t performative, qd_composed_field_t *extend)
+qd_composed_field_t *qd_compose_subfield(qd_composed_field_t *extend)
 {
     qd_composed_field_t *field = extend;
 
@@ -200,8 +208,18 @@ qd_composed_field_t *qd_compose(uint64_t performative, qd_composed_field_t *exte
         DEQ_INIT(field->fieldStack);
     }
 
-    qd_insert_8(field, 0x00);
-    qd_compose_insert_ulong(field, performative);
+    return field;
+}
+
+
+qd_composed_field_t *qd_compose(uint64_t performative, qd_composed_field_t *extend)
+{
+    qd_composed_field_t *field = qd_compose_subfield(extend);
+
+    if (field) {
+        qd_insert_8(field, 0x00);
+        qd_compose_insert_ulong(field, performative);
+    }
 
     return field;
 }
@@ -392,6 +410,8 @@ void qd_compose_insert_binary_buffers(qd_composed_field_t *field, qd_buffer_list
         DEQ_INSERT_TAIL(field->buffers, buf);
         buf = DEQ_HEAD(*buffers);
     }
+    bump_length(field, len);
+    bump_count(field);
 }
 
 
@@ -470,3 +490,24 @@ qd_buffer_list_t *qd_compose_buffers(qd_composed_field_t *field)
 {
     return &field->buffers;
 }
+
+void qd_compose_take_buffers(qd_composed_field_t *field,
+                             qd_buffer_list_t *list)
+{
+    // assumption: extracting partially built containers is wrong:
+    assert(DEQ_SIZE(field->fieldStack) == 0);
+    *list = *qd_compose_buffers(field);
+    DEQ_INIT(field->buffers); // Zero out the linkage to the now moved buffers.
+}
+
+void qd_compose_insert_buffers(qd_composed_field_t *field,
+                               qd_buffer_list_t *list)
+{
+    uint32_t len = qd_buffer_list_length(list);
+    if (len) {
+        DEQ_APPEND(field->buffers, *list);
+        bump_length(field, len);
+        bump_count(field);
+    }
+}
+

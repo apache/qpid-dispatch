@@ -92,6 +92,32 @@ size_t qd_buffer_size(qd_buffer_t *buf);
  */
 void qd_buffer_insert(qd_buffer_t *buf, size_t len);
 
+/**
+ * Create a new buffer list by cloning an existing one.
+ *
+ * @param dst A pointer to a list to contain the new buffers
+ * @param src A pointer to an existing buffer list
+ * @return the number of bytes of data in the new chain
+ */
+unsigned int qd_buffer_list_clone(qd_buffer_list_t *dst, const qd_buffer_list_t *src);
+
+/**
+ * Free all the buffers contained in a buffer list
+ *
+ * @param list A pointer to a list containing buffers.  On return this list
+ * will be set to an empty list.
+ */
+void qd_buffer_list_free_buffers(qd_buffer_list_t *list);
+
+/**
+ * Return the total number of data bytes in a buffer list
+ *
+ * @param list A pointer to a list containing buffers.
+ * @return total number of bytes of data in the buffer list
+ */
+unsigned int qd_buffer_list_length(const qd_buffer_list_t *list);
+
+
 ///@}
 
 #endif

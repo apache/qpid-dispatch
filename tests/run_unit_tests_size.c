@@ -22,6 +22,7 @@
 
 int message_tests();
 int field_tests();
+int buffer_tests();
 
 int main(int argc, char** argv)
 {
@@ -39,8 +40,9 @@ int main(int argc, char** argv)
     int result = 0;
     result += message_tests();
     result += field_tests();
-    qd_alloc_finalize();
+    result += buffer_tests();
 
+    qd_alloc_finalize();
     return result;
 }
 

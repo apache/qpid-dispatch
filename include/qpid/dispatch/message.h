@@ -144,18 +144,52 @@ qd_message_t *qd_message_copy(qd_message_t *msg);
 qd_parsed_field_t *qd_message_message_annotations(qd_message_t *msg);
 
 /**
- * Set the message annotations for the message.  If the message already has message annotations,
- * they will be overwritten/replaced by the new field.
+ * Set the value for the QD_MA_TRACE field in the outgoing message annotations
+ * for the message.
  *
- * @param msg Pointer to a receiver message.
- * @param da Pointer to a composed field representing the new message annotations of the message.
- *           If null, the message will not have a message annotations field.
- *           IMPORTANT: The message will not take ownership of the composed field.  The
- *                      caller is responsible for freeing it after this call.  Since the contents
- *                      are copied into the message, it is safe to free the composed field
- *                      any time after the call to this function.
+ * IMPORTANT: This method takes ownership of the trace_field - the calling
+ * method must not reference it after this call.
+ *
+ * @param msg Pointer to an outgoing message.
+ * @param trace_field Pointer to a composed field representing the list that
+ * will be used as the value for the QD_MA_TRACE map entry.  If null, the
+ * message will not have a QA_MA_TRACE message annotation field.  Ownership of
+ * this field is transferred to the message.
+ *
  */
-void qd_message_set_message_annotations(qd_message_t *msg, qd_composed_field_t *da);
+void qd_message_set_trace_annotation(qd_message_t *msg, qd_composed_field_t *trace_field);
+
+/**
+ * Set the value for the QD_MA_TO field in the outgoing message annotations for
+ * the message.
+ *
+ * IMPORTANT: This method takes ownership of the to_field - the calling
+ * method must not reference it after this call.
+ *
+ * @param msg Pointer to an outgoing message.
+ * @param to_field Pointer to a composed field representing the to overrid
+ * address that will be used as the value for the QD_MA_TO map entry.  If null,
+ * the message will not have a QA_MA_TO message annotation field.  Ownership of
+ * this field is transferred to the message.
+ *
+ */
+void qd_message_set_to_override_annotation(qd_message_t *msg, qd_composed_field_t *to_field);
+
+/**
+ * Set the value for the QD_MA_INGRESS field in the outgoing message
+ * annotations for the message.
+ *
+ * IMPORTANT: This method takes ownership of the ingress_field - the calling
+ * method must not reference it after this call.
+ *
+ * @param msg Pointer to an outgoing message.
+ * @param ingress_field Pointer to a composed field representing ingress router
+ * that will be used as the value for the QD_MA_INGRESS map entry.  If null,
+ * the message will not have a QA_MA_INGRESS message annotation field.
+ * Ownership of this field is transferred to the message.
+ *
+ */
+void qd_message_set_ingress_annotation(qd_message_t *msg, qd_composed_field_t *ingress_field);
 
 /**
  * Receive message data via a delivery.  This function may be called more than once on the same

@@ -209,6 +209,33 @@ void qd_compose_insert_symbol(qd_composed_field_t *field, const char *value);
  */
 void qd_compose_insert_typed_iterator(qd_composed_field_t *field, qd_field_iterator_t *iter);
 
+/**
+ * Begin composing a new sub field that can be appended to a composed field.
+ *
+ * @param extend An existing field onto which to append the new field or NULL to
+ *        create a standalone field.
+ * @return A pointer to the newly created field.
+ */
+qd_composed_field_t *qd_compose_subfield(qd_composed_field_t *extend);
+
+/**
+ * Steal the underlying buffers away from a composed field.
+ *
+ * @param field A composed field whose buffers will be taken
+ * @param list To hold the extracted buffers
+ */
+void qd_compose_take_buffers(qd_composed_field_t *field,
+                             qd_buffer_list_t *list);
+/**
+ * Append a buffer list into a composed field.  If field is a container type
+ * (list, map), the container's count will be incremented by one.
+ *
+ * @param field A field created by ::qd_compose().
+ * @param list A list of buffers containing a single completely encoded data
+ * object.  Ownership of these buffers is given to field.
+ */
+void qd_compose_insert_buffers(qd_composed_field_t *field, qd_buffer_list_t *list);
+
 ///@}
 
 #endif
