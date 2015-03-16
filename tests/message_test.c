@@ -224,17 +224,14 @@ static char* test_send_message_annotations(void *context)
     qd_compose_insert_string(trace, "Node2");
     qd_compose_end_list(trace);
     qd_message_set_trace_annotation(msg, trace);
-    qd_compose_free(trace);
 
     qd_composed_field_t *to_override = qd_compose_subfield(0);
     qd_compose_insert_string(to_override, "to/address");
     qd_message_set_to_override_annotation(msg, to_override);
-    qd_compose_free(to_override);
 
     qd_composed_field_t *ingress = qd_compose_subfield(0);
     qd_compose_insert_string(ingress, "distress");
     qd_message_set_ingress_annotation(msg, ingress);
-    qd_compose_free(ingress);
 
     qd_message_compose_1(msg, "test_addr_0", 0);
     qd_buffer_t *buf = DEQ_HEAD(content->buffers);
