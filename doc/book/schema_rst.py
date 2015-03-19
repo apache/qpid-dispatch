@@ -43,6 +43,10 @@ All management entity types have the following standard attributes:
   without the `org.apache.qpid.dispatch` prefix e.g. `router`. The dispatch
   tools will accept the short or long name.
 
+*name*
+  A user-generated identity for the entity.  This can be used in other entities
+  that need to refer to the named entity.
+
 *identity*
   A system-generated identity of the entity. It includes
   the short type name and some identifying information. E.g. `log/AGENT` or
