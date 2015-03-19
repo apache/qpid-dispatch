@@ -38,7 +38,7 @@ does not *take responsibility for* messages. It will, however, propagate
 settlement and disposition across a network such that delivery
 guarantees are met. In other words: the router network will deliver the
 message, possibly via several intermediate routers, *and* it will route
-the acknowledgement of that message by the ultimate reciever back across
+the acknowledgement of that message by the ultimate receiver back across
 the same path. This means that *responsibility* for the message is
 transfered from the original sender to the ultimate receiver *as if they
 were directly connected*. However this is done via a flexible network
@@ -70,7 +70,7 @@ senders publishing to a single address and receivers subscribing to a
 single address. The dispatch network can distribute work to any broker
 in the array and collect work from any broker for any receiver. Brokers
 can be shut down or added without affecting clients. This elegantly
-solves the common difficult of "stuck messages" when implementing this
+solves the common difficulty of "stuck messages" when implementing this
 pattern with brokers alone. If a receiver is connected to a broker that
 has no messages, but there are messages on another broker, you have to
 somehow transfer them or leave them "stuck". With a dispatch network,
@@ -84,8 +84,8 @@ calculate the best path from every point to every other point and to
 recover quickly from failures. It does not need to use clustering for
 high availability; rather, it relies on redundant paths to provide
 continued connectivity in the face of system or network failure. Because
-it never takes responsibility for messages it is effectively stateless,
-messages not delivered to their final destination will not be
+it never takes responsibility for messages it is effectively stateless.
+Messages not delivered to their final destination will not be
 acknowledged to the sender and therefore the sender can re-send such
 messages if it is disconnected from the network.
 
@@ -97,6 +97,10 @@ Simplifies connectivity
 - An endpoint can do all of its messaging through a single transport connection
 - Avoid opening holes in firewalls for incoming connections
 
+Provides messaging connectivity where there is no TCP/IP connectivity
+
+- A server or broker can be in a private IP network (behind a NAT firewall) and be accessible by messaging endpoints in other networks (learn more).
+
 Simplifies reliability
 
 - Reliability and availability are provided using redundant topology, not server clustering
@@ -106,8 +110,8 @@ Simplifies reliability
 Features
 --------
 
--  Supports arbitrary topology - no restrictions on redundancy
--  Automatic route computation - adjusts quickly to changes in topology
--  Cost-based route computation
--  `Rich addressing semantics <#addressing>`__
+-  Can be deployed stand-alone or in a network of routers
+  -  Supports arbitrary network topology - no restrictions on redundancy
+  -  Automatic route computation - adjusts quickly to changes in topology
+-  Provides remote access to brokers or other AMQP servers
 -  Security

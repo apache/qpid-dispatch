@@ -20,13 +20,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Qpid Dispatch Router Book
-=========================
+Technical Details and Specifications
+====================================
 
 .. toctree::
-   :numbered:
    :maxdepth: 3
 
-   introduction
-   using
-   technical_details
+   client_compatibility
+   addressing
+   amqp-mapping
+   schema

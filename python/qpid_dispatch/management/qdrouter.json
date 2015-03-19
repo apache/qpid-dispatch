@@ -726,18 +726,18 @@
         },
 
         "linkRoutePattern": {
-            "description":"A pattern to match a connected container to endpoints for routed links.",
+            "description":"An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node.",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
                 "prefix": {
-                    "description":"The AMQP address prefix for nodes on the container.",
+                    "description":"An address prefix to match against target and source addresses.  For Dispatch 0.4, this pattern must be of the form '<text>.' and matches any address that contains that prefix.  Note that the prefix *must* end with a period (.) and *must not* contain any other periods.",
                     "type": "string",
                     "required": true,
                     "create": true
                 },
                 "connector": {
-                    "description":"The name of the on-demand connector used to reach the waypoint's container.",
+                    "description":"The name of the on-demand connector used to reach the target node's container.  If this value is not provided, it means that the target container is expected to be connected to a different router in the network.  This prevents links to a link-routable address from being misinterpreted as message-routing links when there is no route to a valid destination available.",
                     "type": "string",
                     "required": false,
                     "default": "",

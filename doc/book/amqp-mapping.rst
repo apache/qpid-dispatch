@@ -164,7 +164,7 @@ Supported Addresses
 +------------------------------+------------------------------------------------------------+
 | *Address*                    | *Description*                                              |
 +==============================+============================================================+
-| `_local/$management`         |The management agent on the attached router/container. This |
+| `$management`                |The management agent on the attached router/container. This |
 |                              |address would be used by an endpoint that is a management   |
 |                              |client/console/tool wishing to access management data from  |
 |                              |the attached container.                                     |
@@ -182,7 +182,7 @@ Supported Addresses
 |                              |address is used by a router to communicate with other       |
 |                              |routers in the network.                                     |
 +------------------------------+------------------------------------------------------------+
-| `_topo/0/Router.E/qdxrouter` |The router entity at the specifically indicated router. This|
+| `_topo/0/Router.E/qdrouter`  |The router entity at the specifically indicated router. This|
 |                              |address form is used by a router to communicate with a      |
 |                              |specific router that may or may not be a neighbor.          |
 +------------------------------+------------------------------------------------------------+

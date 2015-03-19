@@ -1,0 +1,145 @@
+.. Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing,
+   software distributed under the License is distributed on an
+   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+   KIND, either express or implied.  See the License for the
+   specific language governing permissions and limitations
+   under the License.
+
+Link Routing
+============
+
+This feature was introduced in Qpid Dispatch 0.4.
+
+Link-routing is an alternative strategy for routing messages across a
+network of routers.  With the existing message-routing strategy, each
+router makes a routing decision on a per-message basis when the
+message is delivered.  Link-routing is different because it makes
+routing decisions when link-attach frames arrive.  A link is
+effectively chained across the network of routers from the
+establishing node to the destination node.  Once the link is
+established, the transfer of message deliveries, flow frames, and
+dispositions is performed across the routed link.
+
+The main benefit to link-routing is that endpoints can use the full link
+protocol to interact with other endpoints in far-flung parts of the
+network.  For example, a client can establish a receiver across the
+network to a queue on a remote broker and use link credit to control
+the flow of messages from the broker.
+
+Why would one want to do this?  One reason is to provide client
+isolation.  A network like the following can be deployed:
+
+::
+
+                        Public Network
+                       +-----------------+
+                       |      +-----+    |
+                       | B1   | Rp  |    |
+                       |      +/--\-+    |
+                       |      /    \     |
+                       |     /      \    |
+                       +----/--------\---+
+                           /          \
+                          /            \
+                         /              \
+         Private Net A  /                \ Private Net B
+        +--------------/--+           +---\-------------+
+        |         +---/-+ |           | +--\--+         |
+        |  B2     | Ra  | |           | | Rb  |   C1    |
+        |         +-----+ |           | +-----+         |
+        |                 |           |                 |
+        |                 |           |                 |
+        +-----------------+           +-----------------+
+
+The clients in Private Net B can be constrained (by firewall policy)
+to only connect to the Router in their own network.  Using
+link-routing, these clients can access queues, topics, and other AMQP
+services that are in the Public Network or even in Private Net A.
+
+For example, The router Ra can be configured to expose queues in
+broker B2 to the network.  Client C1 can then establish a connection
+to Rb, the local router, open a subscribing link to "b2.event-queue",
+and receive messages stored on that queue in broker B2.
+
+C1 is unable to create a TCP/IP connection to B1 because of its
+isolation (and because B2 is itself in a private network).  However,
+with link routing, C1 can interact with B2 using the AMQP link
+protocol.
+
+Note that in this case, neither C1 nor B2 have been modified in any
+way and neither need be aware of the fact that there is a
+message-router network between them.
+
+Configuration
+-------------
+
+Starting with the configured topology shown above, how is link-routing
+configured to support the example described above?
+
+First, router Ra needs to be told how to make a connection to the
+broker B2:
+
+::
+
+    connector {
+        name: broker
+        role: on-demand
+        addr: <B2-url>
+        port: <B2-port>
+        sasl-mechanisms: ANONYMOUS
+    }
+
+This *on-demand* connector tells the router how to connect to an
+external AMQP container when it is needed.  The name "broker" will be
+used later to refer to this connection.
+
+Now, the router must be configured to route certain addresses to B2:
+
+::
+
+    linkRoutePattern {
+        prefix: b2.
+        connector: broker
+    }
+
+
+The linkRoutePattern tells router Ra that any sender or receiver that
+is attached with a target or source (respectively) whos address begins
+with "b2.", should be routed to the broker B2 (via the on-demand
+connector).
+
+When the on-demand connector is configured, router Ra establishes a
+connection to the broker.  Once the connection is open, Ra tells the
+other routers (Rp and Rb) that it is a valid destination for
+link-routes to the "b2." prefix.  This means that sender or receiver
+links attached to Rb or Rp will be routed via the shortest path to Ra
+where they are then routed outbound to the broker B2.
+
+On Rp and Rb, it is advisable to add the following configuration:
+
+::
+
+    linkRoutePattern {
+        prefix: b2.
+    }
+
+This configuration tells the routers that link-routing is intended to
+be available for targets and sources starting with "b2.".  This is
+important because it is possible that B2 might be unavailable or shut
+off.  If B2 is unreachable, Ra will not advertize itself as a
+destination for "b2." and the other routers might never know that
+"b2." was intended for link-routing.
+
+The above configuration allows Rb and Rp to reject attaches that
+should be routed to B2 with an error message that indicates that there
+is no route available to the destination.

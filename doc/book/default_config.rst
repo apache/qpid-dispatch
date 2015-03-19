@@ -15,18 +15,19 @@
    specific language governing permissions and limitations
    under the License.
 
-.. Qpid Dispatch documentation master file, created by
-   sphinx-quickstart on Tue Feb 24 11:25:59 2015.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Configuration
+=============
 
-Qpid Dispatch Router Book
-=========================
+The default configuration file is installed in
+`install-prefix`/etc/qpid/qdrouterd.conf. This configuration file will
+cause the router to run in standalone mode, listening on the standard
+AMQP port (5672). Dispatch Router looks for the configuration file in
+the installed location by default. If you wish to use a different path,
+the "-c" command line option will instruct Dispatch Router as to which
+configuration to load.
 
-.. toctree::
-   :numbered:
-   :maxdepth: 3
+To run the router, invoke the executable: qdrouterd [-c my-config-file]
 
-   introduction
-   using
-   technical_details
+For more details of the configuration file see the `qdrouterd.conf(5)`
+man page.
+
