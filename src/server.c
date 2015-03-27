@@ -203,6 +203,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         qdpn_connector_set_connection(cxtr, conn);
         pn_connection_set_context(conn, ctx);
         ctx->pn_conn = conn;
+        ctx->owner_thread = CONTEXT_NO_OWNER;
         qdpn_connector_set_context(cxtr, ctx);
 
         // qd_server->lock is already locked
@@ -229,6 +230,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
                 qd_log(qd_server->log_source, QD_LOG_ERROR, "%s on %s",
                        qd_error_message(), log_incoming(logbuf, sizeof(logbuf), cxtr));
                 qdpn_connector_close(cxtr);
+                continue;
             }
         }
 
@@ -240,8 +242,6 @@ static void thread_process_listeners(qd_server_t *qd_server)
         pn_sasl_server(sasl);
         pn_sasl_allow_skip(sasl, config->allow_no_sasl);
         pn_sasl_done(sasl, PN_SASL_OK);  // TODO - This needs to go away
-
-        ctx->owner_thread = CONTEXT_NO_OWNER;
     }
 }
 
