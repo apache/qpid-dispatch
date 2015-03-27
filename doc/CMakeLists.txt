@@ -65,9 +65,6 @@ if(BUILD_DOCS)
   doc_tool(doxygen USE_DOXYGEN DOXYGEN_FOUND "API documentation")
   doc_tool(dot USE_DOT DOT "diagrams in API documentation (also requires doxygen)")
 
-  file(REMOVE_RECURSE ${bin})     # Force rebuild after re-configuration.
-  file(MAKE_DIRECTORY ${bin}/book ${bin}/man)
-
   # Copy configuration and rst sources to build directory to generate book.
   # Use configure_file to ensure we re-copy if the source changes.
   configure_file(${src}/conf.py.in ${bin}/conf.py)
