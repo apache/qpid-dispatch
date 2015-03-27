@@ -106,6 +106,7 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
 }
 
 
+/* coverity[+alloc] */
 void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
 {
     int idx;
@@ -198,6 +199,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
 }
 
 
+/* coverity[+free : arg-2] */
 void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p)
 {
     if (!p) return;

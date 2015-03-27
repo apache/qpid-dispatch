@@ -231,6 +231,7 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
     addr->block_deletion = true;
 
     sys_mutex_unlock(router->lock);
+    qd_field_iterator_free(iter);
     free(prefix);
     free(connector);
     return qd_error_code();
