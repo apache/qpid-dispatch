@@ -18,7 +18,7 @@
 #
 
 import re, json, unittest, os
-from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT
+from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
 from qpid_dispatch_internal.compat import OrderedDict, dictify
 from qpid_dispatch_internal.management.qdrouter import QdSchema
@@ -31,7 +31,7 @@ class QdmanageTest(TestCase):
 
     @staticmethod
     def ssl_file(name):
-        return os.path.join(os.path.dirname(__file__), 'ssl_certs', name)
+        return os.path.join(DIR, 'ssl_certs', name)
 
     @classmethod
     def setUpClass(cls):

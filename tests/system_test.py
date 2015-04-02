@@ -95,6 +95,8 @@ def find_exe(program):
                 return exe_file
     return None
 
+# The directory where this module lives. Used to locate static configuration files etc.
+DIR = os.path.dirname(__file__)
 
 def _check_requirements():
     """If requirements are missing, return a message, else return empty string."""

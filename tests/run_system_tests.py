@@ -29,11 +29,12 @@ import os
 import sys
 from fnmatch import fnmatch
 import unittest
+import system_test
 
 # Collect all system_tests_*.py scripts in the same directory as this script.
-test_dir = os.path.normpath(os.path.dirname(__file__))
-test_modules = [os.path.splitext(f)[0] for f in os.listdir(test_dir) if fnmatch(f, "system_tests_*.py")]
-sys.path = [test_dir] + sys.path # Find test modules in sys.path
+test_modules = [os.path.splitext(f)[0] for f in os.listdir(system_test.DIR)
+                if fnmatch(f, "system_tests_*.py")]
+sys.path = [system_test.DIR] + sys.path # Find test modules in sys.path
 
 # python < 2.7 unittest main won't load tests from modules, so use the loader:
 all_tests = unittest.TestSuite()

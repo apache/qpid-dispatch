@@ -75,7 +75,7 @@ try:
 
         @staticmethod
         def ssl_file(name):
-            return os.path.join(os.path.dirname(__file__), 'ssl_certs', name)
+            return os.path.join(system_test.DIR, 'ssl_certs', name)
 
         @classmethod
         def setUpClass(cls):

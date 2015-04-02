@@ -749,7 +749,7 @@ try:
         def ssl_config(self, client_server, connection):
             connection[1]['ssl-profile'] = 'ssl-profile-name'
             def ssl_file(name):
-                return os.path.join(os.path.dirname(__file__), 'config-2', name)
+                return os.path.join(system_test.DIR, 'config-2', name)
             return [
                 ('ssl-profile', {
                     'name': 'ssl-profile-name',
