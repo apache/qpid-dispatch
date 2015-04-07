@@ -91,6 +91,14 @@ find_library(rt_lib rt)
 find_path(proton_include proton/version.h)
 
 ##
+## Find Valgrind
+##
+find_program(VALGRIND_EXECUTABLE valgrind DOC "Location of the valgrind program")
+mark_as_advanced(VALGRIND_EXECUTABLE)
+find_package_handle_standard_args(VALGRIND DEFAULT_MSG VALGRIND_EXECUTABLE)
+option(USE_VALGRIND "Use valgrind when running tests" OFF)
+
+##
 ## Include directories used by all sub-directories.
 ##
 include_directories(

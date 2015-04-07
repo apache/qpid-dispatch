@@ -62,7 +62,7 @@ try:
     # In this case we won't have access to the run.py module so no valgrind.
     from run import with_valgrind
 except ImportError:
-    def with_valgrind(args, outfile): return args
+    def with_valgrind(args, outfile): return (args, 0)
 
 # Optional modules
 MISSING_MODULES = []
@@ -121,8 +121,9 @@ def retry_delay(deadline, delay, max_delay):
     time.sleep(min(delay, remaining))
     return min(delay*2, max_delay)
 
-
-TIMEOUT = float(os.environ.get("QPID_SYSTEM_TEST_TIMEOUT", 10))
+# Valgrind significantly slows down the response time of the router, so use a
+# long default timeout
+TIMEOUT = float(os.environ.get("QPID_SYSTEM_TEST_TIMEOUT", 60))
 
 def retry(function, timeout=TIMEOUT, delay=.001, max_delay=1):
     """Call function until it returns a true value or timeout expires.
@@ -229,13 +230,14 @@ class Process(subprocess.Popen):
         """
         self.name = name or os.path.basename(args[0])
         self.args, self.expect = args, expect
+        self.outdir = os.getcwd()
         self.outfile = self.unique(self.name)
         self.out = open(self.outfile + '.out', 'w')
         with open(self.outfile + '.cmd', 'w') as f: f.write("%s\n" % ' '.join(args))
         self.torndown = False
         kwargs.setdefault('stdout', self.out)
         kwargs.setdefault('stderr', subprocess.STDOUT)
-        args = with_valgrind(args, self.outfile + '.vg')
+        args, self.valgrind_error = with_valgrind(args, self.outfile + '.vg')
         try:
             super(Process, self).__init__(args, **kwargs)
         except Exception, e:
@@ -252,10 +254,14 @@ class Process(subprocess.Popen):
             return
         self.torndown = True
         status = self.poll()
-        if status is None:
+        if status is None:    # still running
             self.terminate()
-            if self.wait() is None:
+            rc = self.wait()
+            if rc is None:
                 self.kill()
+            if self.valgrind_error and rc == self.valgrind_error:
+                # Report that valgrind found errors
+                status = rc;
         self.out.close()
         self.check_exit(status)
 
@@ -268,6 +274,8 @@ class Process(subprocess.Popen):
             else:
                 actual = "exit %s"%status
             assert condition, "Expected %s but %s: %s"%(expect, actual, self.name)
+        assert not self.valgrind_error or status != self.valgrind_error, \
+            "Valgrind detected errors!  See log file %s/%s.vg" % (self.outdir, self.outfile)
         if self.expect == Process.RUNNING:
             check(status is None, "still running")
         elif self.expect == Process.EXIT_OK:

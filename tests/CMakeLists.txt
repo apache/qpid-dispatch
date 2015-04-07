@@ -17,12 +17,6 @@
 ## under the License.
 ##
 
-# Check for valgrind
-find_program(VALGRIND_EXECUTABLE valgrind DOC "Location of the valgrind program")
-mark_as_advanced(VALGRIND_EXECUTABLE)
-find_package_handle_standard_args(VALGRIND DEFAULT_MSG VALGRIND_EXECUTABLE)
-option(USE_VALGRIND "Use valgrind when running tests" OFF)
-
 include_directories(
   ${CMAKE_SOURCE_DIR}/src
   ${CMAKE_BINARY_DIR}/src

@@ -108,17 +108,19 @@ def is_binary_exe(program):
     p = Popen(['file', '-bi', program], stdout=PIPE, stderr=PIPE)
     return p.communicate()[0].startswith('application/x-executable')
 
+VALGRIND_ERROR = 42   # magic number indicating valgrind found errors
 def with_valgrind(args, outfile=None):
     if use_valgrind() and is_binary_exe(find_exe(args[0])):
-        opts = ['--leak-check=full',
+        opts = ['--trace-children=yes',
+                #  '--leak-check=full',  way too noisy due to Python leaks
                 '--demangle=yes',
                 '--suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp',
                 '--num-callers=12',
-                '--error-exitcode=42',
+                '--error-exitcode=%d' % VALGRIND_ERROR,
                 '--quiet']
         if outfile: opts.append('--log-file=%s' % outfile)
-        return [valgrind_exe]+opts+args
-    return args
+        return ([valgrind_exe]+opts+args, VALGRIND_ERROR)
+    return (args, 0)
 
 def run_path(file_path, run_name=None):
     """Wrapper for run path that falls back to exec python for python < 2.7"""
@@ -144,7 +146,7 @@ if __name__ == "__main__":
             for name, value in env_vars.iteritems(): print "%s=%s"%(name, value)
             print "export %s"%' '.join(env_vars.keys())
         elif sys.argv[1] == '--vg':
-            args = with_valgrind(sys.argv[2:])
+            args, ignore = with_valgrind(sys.argv[2:])
             error_prefix = "Run executable '%s' with valgrind: "%(args[0])
             os.execvp(args[0], args)
         elif sys.argv[1].startswith('-'):

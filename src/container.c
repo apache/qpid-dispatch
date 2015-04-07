@@ -814,6 +814,7 @@ void qd_link_close(qd_link_t *link)
 {
     pn_link_close(link->pn_link);
     pn_link_free(link->pn_link);
+    link->pn_link = 0;
 }
 
 
