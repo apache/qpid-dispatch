@@ -34,11 +34,10 @@ rm -rf $INSTALL_DIR
 mkdir $BUILD_DIR
 cd $BUILD_DIR
 
-cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=Debug $SOURCE_DIR
+cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=Debug ${DISPATCH_CMAKE_EXTRA_ARGS} $SOURCE_DIR
 make -j4
-make install
-cd tests
-# Run unit tests on the build.
-ctest -VV -E system_tests
+# Test the build.
+ctest -VV
 # Run system tests on the install.
+make install
 python $INSTALL_DIR/lib/qpid-dispatch/tests/run_system_tests.py
