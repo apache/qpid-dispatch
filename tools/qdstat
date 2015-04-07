@@ -282,6 +282,10 @@ class BusManager(Node):
             row.append(t.batchesRebalancedToThreads)
             row.append(t.batchesRebalancedToGlobal)
             rows.append(row)
+        if not rows:
+            # router built w/o memory pools:
+            print "No memory statistics available"
+            return
         title = "Types"
         sorter = Sorter(heads, rows, 'type', 0, True)
         dispRows = sorter.getSorted()

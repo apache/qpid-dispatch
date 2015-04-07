@@ -63,7 +63,12 @@ class QdstatTest(system_test.TestCase):
         self.run_qdstat(['--address'], r'\$management')
 
     def test_memory(self):
-        self.run_qdstat(['--memory'], r'qd_address_t\s+[0-9]+')
+        out = self.run_qdstat(['--memory'])
+        if out.strip() == "No memory statistics available":
+            # router built w/o memory pools enabled]
+            self.skipTest("Router's memory pools disabled")
+        regexp = r'qd_address_t\s+[0-9]+'
+        assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
 
     def test_log(self):
         self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(trace\).*GET-LOG')
