@@ -514,7 +514,7 @@ static void *thread_run(void *arg)
                 // use this value in driver_wait as the timeout.  If there are no scheduled
                 // timers, the returned value will be -1.
                 //
-                long duration = qd_timer_next_duration_LH();
+                qd_timestamp_t duration = qd_timer_next_duration_LH();
 
                 //
                 // Invoke the proton driver's wait sequence.  This is a bit of a hack for now
@@ -548,7 +548,7 @@ static void *thread_run(void *arg)
                 //
                 struct timespec tv;
                 clock_gettime(CLOCK_REALTIME, &tv);
-                long milliseconds = tv.tv_sec * 1000 + tv.tv_nsec / 1000000;
+                qd_timestamp_t milliseconds = ((qd_timestamp_t)tv.tv_sec) * 1000 + tv.tv_nsec / 1000000;
                 qd_timer_visit_LH(milliseconds);
 
                 //

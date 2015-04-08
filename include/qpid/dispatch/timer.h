@@ -21,6 +21,7 @@
 
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/server.h>
+#include <stdint.h>
 
 /**@file
  * Server Timer Functions
@@ -32,6 +33,7 @@
  */
 
 typedef struct qd_timer_t qd_timer_t;
+typedef int64_t qd_timestamp_t;
 
 /**
  * Timer Callback
@@ -75,7 +77,7 @@ void qd_timer_free(qd_timer_t *timer);
  * @param msec The minimum number of milliseconds of delay until the timer fires.
  *             If 0 is supplied, the timer will be scheduled to fire immediately.
  */
-void qd_timer_schedule(qd_timer_t *timer, long msec);
+void qd_timer_schedule(qd_timer_t *timer, qd_timestamp_t msec);
 
 
 /**

@@ -36,7 +36,7 @@ struct qd_timer_t {
     qd_server_t      *server;
     qd_timer_cb_t     handler;
     void             *context;
-    long              delta_time;
+    qd_timestamp_t    delta_time;
     qd_timer_state_t  state;
 };
 
@@ -44,8 +44,8 @@ DEQ_DECLARE(qd_timer_t, qd_timer_list_t);
 
 void qd_timer_initialize(sys_mutex_t *server_lock);
 void qd_timer_finalize(void);
-long qd_timer_next_duration_LH(void);
-void qd_timer_visit_LH(long current_time);
+qd_timestamp_t qd_timer_next_duration_LH(void);
+void qd_timer_visit_LH(qd_timestamp_t current_time);
 void qd_timer_idle_LH(qd_timer_t *timer);
 
 /// For tests only
