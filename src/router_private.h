@@ -91,6 +91,7 @@ struct qd_router_link_t {
 
 ALLOC_DECLARE(qd_router_link_t);
 DEQ_DECLARE(qd_router_link_t, qd_router_link_list_t);
+void qd_router_link_free_LH(qd_router_link_t *);
 
 struct qd_router_node_t {
     DEQ_LINKS(qd_router_node_t);

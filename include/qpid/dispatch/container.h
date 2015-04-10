@@ -198,6 +198,7 @@ bool qd_delivery_settled(qd_delivery_t *delivery);
 bool qd_delivery_disp_changed(qd_delivery_t *delivery);
 uint64_t qd_delivery_disp(qd_delivery_t *delivery);
 qd_link_t *qd_delivery_link(qd_delivery_t *delivery);
+void qd_link_free_LH(qd_link_t *link);
 
 ///@}
 #endif

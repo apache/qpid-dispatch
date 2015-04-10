@@ -380,6 +380,50 @@ static qd_address_t *router_lookup_terminus_LH(qd_router_t *router, const char *
 }
 
 
+
+void qd_router_link_free_LH(qd_router_link_t *rlink)
+{
+    qd_link_t *link = rlink->link;
+    if (link) {
+        qd_link_set_context(link, 0);
+        qd_link_free_LH(link);
+        rlink->link = 0;
+    }
+
+    if (rlink->target)
+        free(rlink->target);
+
+    assert(rlink->ref == 0);
+
+    qd_routed_event_t      *re;
+
+    re = DEQ_HEAD(rlink->event_fifo);
+    while (re) {
+        DEQ_REMOVE_HEAD(rlink->event_fifo);
+        if (re->delivery && qd_delivery_fifo_exit_LH(re->delivery)) {
+            qd_delivery_unlink_LH(re->delivery);
+            qd_delivery_free_LH(re->delivery, re->disposition);
+        }
+        free_qd_routed_event_t(re);
+        re = DEQ_HEAD(rlink->event_fifo);
+    }
+
+    re = DEQ_HEAD(rlink->msg_fifo);
+    while (re) {
+        DEQ_REMOVE_HEAD(rlink->msg_fifo);
+        if (re->delivery)
+            qd_delivery_fifo_exit_LH(re->delivery);
+        // we can't delete this delivery (it belongs to the receive link)
+        if (re->message)
+            qd_message_free(re->message);
+        free_qd_routed_event_t(re);
+        re = DEQ_HEAD(rlink->msg_fifo);
+    }
+
+    free_qd_router_link_t(rlink);
+}
+
+
 /**
  * Outgoing Link Writable Handler
  */
@@ -1546,20 +1590,18 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
     }
 
     //
-    // Remove the link from the master list-of-links.
+    // Remove the link from the master list-of-links and deallocate
     //
     DEQ_REMOVE(router->links, rlink);
     qd_entity_cache_remove(QD_ROUTER_LINK_TYPE, rlink);
+    qd_router_link_free_LH(rlink);
+
     sys_mutex_unlock(router->lock);
 
     //
     // Check to see if the owning address should be deleted
     //
     qd_router_check_addr(router, oaddr, 1);
-
-    if (rlink->target)
-        free(rlink->target);
-    free_qd_router_link_t(rlink);
 
     //
     // If we lost the link to a neighbor router, notify the route engine so it doesn't

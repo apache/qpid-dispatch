@@ -49,20 +49,9 @@ DEQ_DECLARE(qd_node_t, qd_node_list_t);
 ALLOC_DECLARE(qd_node_t);
 ALLOC_DEFINE(qd_node_t);
 
-/** Encapsulates a proton link for sending and receiving messages */
-struct qd_link_t {
-    pn_session_t *pn_sess;
-    pn_link_t    *pn_link;
-    void         *context;
-    qd_node_t    *node;
-    bool          drain_mode;
-};
-
-ALLOC_DECLARE(qd_link_t);
-ALLOC_DEFINE(qd_link_t);
-
 /** Encapsulates a proton message delivery */
 struct qd_delivery_t {
+    DEQ_LINKS(qd_delivery_t);
     pn_delivery_t *pn_delivery;
     qd_delivery_t *peer;
     void          *context;
@@ -71,9 +60,23 @@ struct qd_delivery_t {
     int            in_fifo;
     bool           pending_delete;
 };
-
 ALLOC_DECLARE(qd_delivery_t);
 ALLOC_DEFINE(qd_delivery_t);
+DEQ_DECLARE(qd_delivery_t, qd_delivery_list_t);
+
+
+/** Encapsulates a proton link for sending and receiving messages */
+struct qd_link_t {
+    pn_session_t       *pn_sess;
+    pn_link_t          *pn_link;
+    void               *context;
+    qd_node_t          *node;
+    bool               drain_mode;
+    qd_delivery_list_t deliveries;
+};
+
+ALLOC_DECLARE(qd_link_t);
+ALLOC_DEFINE(qd_link_t);
 
 
 typedef struct qdc_node_type_t {
@@ -133,6 +136,7 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
     link->context    = 0;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(pn_link);
+    DEQ_INIT(link->deliveries);
 
     pn_link_set_context(pn_link, link);
     node->ntype->outgoing_handler(node->context, link);
@@ -178,6 +182,7 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
     link->context    = 0;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(pn_link);
+    DEQ_INIT(link->deliveries);
 
     pn_link_set_context(pn_link, link);
     node->ntype->incoming_handler(node->context, link);
@@ -219,6 +224,7 @@ static void do_receive(pn_delivery_t *pnd)
         if (node) {
             if (!delivery) {
                 delivery = new_qd_delivery_t();
+                DEQ_ITEM_INIT(delivery);
                 delivery->pn_delivery    = pnd;
                 delivery->peer           = 0;
                 delivery->context        = 0;
@@ -226,6 +232,7 @@ static void do_receive(pn_delivery_t *pnd)
                 delivery->link           = link;
                 delivery->in_fifo        = 0;
                 delivery->pending_delete = false;
+                DEQ_INSERT_TAIL(link->deliveries, delivery);
                 pn_delivery_set_context(pnd, delivery);
             }
 
@@ -241,6 +248,7 @@ static void do_receive(pn_delivery_t *pnd)
     pn_link_flow(pn_link, 1);
     pn_delivery_update(pnd, PN_REJECTED);
     pn_delivery_settle(pnd);
+    if (delivery) delivery->pn_delivery = 0;
 }
 
 
@@ -391,7 +399,6 @@ static int process_handler(qd_container_t *container, void* unused, qd_connectio
         case PN_LINK_FINAL :
             pn_link = pn_event_link(event);
             qd_link = (qd_link_t*) pn_link_get_context(pn_link);
-            free_qd_link_t(qd_link);
             break;
 
         case PN_LINK_FLOW :
@@ -675,6 +682,7 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     link->context    = node->context;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(link->pn_link);
+    DEQ_INIT(link->deliveries);
 
     pn_link_set_context(link->pn_link, link);
 
@@ -684,9 +692,14 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
 }
 
 
-void qd_link_free(qd_link_t *link)
+void qd_link_free_LH(qd_link_t *link)
 {
     if (!link) return;
+    qd_delivery_t *d = DEQ_HEAD(link->deliveries);
+    while (d) {
+        qd_delivery_free_LH(d, 0);  // removes itself from list
+        d = DEQ_HEAD(link->deliveries);
+    }
     free_qd_link_t(link);
 }
 
@@ -849,6 +862,7 @@ qd_delivery_t *qd_delivery(qd_link_t *link, pn_delivery_tag_t tag)
         return 0;
 
     qd_delivery_t *delivery = new_qd_delivery_t();
+    DEQ_ITEM_INIT(delivery);
     delivery->pn_delivery    = pnd;
     delivery->peer           = 0;
     delivery->context        = 0;
@@ -856,6 +870,7 @@ qd_delivery_t *qd_delivery(qd_link_t *link, pn_delivery_tag_t tag)
     delivery->link           = link;
     delivery->in_fifo        = 0;
     delivery->pending_delete = false;
+    DEQ_INSERT_TAIL(link->deliveries, delivery);
     pn_delivery_set_context(pnd, delivery);
 
     return delivery;
@@ -883,8 +898,14 @@ void qd_delivery_free_LH(qd_delivery_t *delivery, uint64_t final_disposition)
         delivery->pn_delivery = 0;
     }
 
-    assert(!delivery->peer);
+    //assert(!delivery->peer);
+    if (delivery->peer)
+        qd_delivery_unlink_LH(delivery);
 
+    if (delivery->link) {
+        DEQ_REMOVE(delivery->link->deliveries, delivery);
+        delivery->link = 0;
+    }
     if (delivery->in_fifo)
         delivery->pending_delete = true;
     else {
