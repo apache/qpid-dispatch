@@ -123,18 +123,24 @@ if(BUILD_DOCS)
 
     add_custom_command(
       OUTPUT ${SPHINX_OUTPUT}
-      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b html ${bin} ${bin}/html
-      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b man  ${bin} ${bin}/man 
-      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b singlehtml -Dmaster_doc=book/book ${bin} ${bin}/htmlsingle
+      # html/ contains plain HTML suitable for embedding in the Qpid website.
+      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b html -D html_theme=basic ${bin} ${bin}/html
+      # dochtml/ is a self-contained site with searching, navigation etc. installed with the docs.
+      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b html ${bin} ${bin}/dochtml
+      # man/ contains Unix man pages.
+      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b man  ${bin} ${bin}/man
       DEPENDS ${RST_SRC} ${HELP_GEN} ${SCHEMA_GEN} 
       )
     add_custom_target(doc-sphinx DEPENDS ${SPHINX_OUTPUT})
     add_dependencies(doc doc-sphinx)
 
-    install_doc(DIRECTORY ${bin}/html  DESTINATION ${QD_DOC_INSTALL_DIR})
+    install_doc(DIRECTORY ${bin}/dochtml/  DESTINATION ${QD_DOC_INSTALL_DIR}/html)
   endif(USE_SPHINX)
 
   # Install rst documentation as baseline in case we have no generator
-  install_doc(DIRECTORY ${bin}/book DESTINATION ${QD_DOC_INSTALL_DIR})
+  install(DIRECTORY ${bin}/ DESTINATION ${QD_DOC_INSTALL_DIR}/rst ${OPTIONAL} FILES_MATCHING PATTERN "*.rst")
+
 
 endif(BUILD_DOCS)
+
+
