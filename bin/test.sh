@@ -37,7 +37,7 @@ cd $BUILD_DIR
 cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=Debug ${DISPATCH_CMAKE_EXTRA_ARGS} $SOURCE_DIR
 make -j4
 # Test the build.
-ctest -VV
+ctest -VV ${DISPATCH_CTEST_EXTRA_ARGS}
 # Run system tests on the install.
 make install
 python $INSTALL_DIR/lib/qpid-dispatch/tests/run_system_tests.py
