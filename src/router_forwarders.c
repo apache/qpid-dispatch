@@ -25,7 +25,7 @@
 
 
 static void forward_to_direct_subscribers_LH(qd_address_t *addr,
-                                             qd_delivery_t *delivery,
+                                             qd_router_delivery_t *delivery,
                                              qd_message_t *msg,
                                              int *fanout)
 {
@@ -42,7 +42,7 @@ static void forward_to_direct_subscribers_LH(qd_address_t *addr,
         (*fanout)++;
         if (*fanout == 1) {
             re->delivery = delivery;
-            qd_delivery_fifo_enter_LH(delivery);
+            qd_router_delivery_fifo_enter_LH(delivery);
         }
 
         addr->deliveries_egress++;
@@ -72,7 +72,7 @@ static void forward_to_direct_subscribers_LH(qd_address_t *addr,
 
 static void forward_to_remote_subscribers_LH(qd_router_t *router,
                                              qd_address_t *addr,
-                                             qd_delivery_t *delivery,
+                                             qd_router_delivery_t *delivery,
                                              qd_message_t *msg,
                                              int *fanout,
                                              qd_field_iterator_t *ingress_iter)
@@ -139,7 +139,7 @@ static void forward_to_remote_subscribers_LH(qd_router_t *router,
                 (*fanout)++;
                 if (*fanout == 1) {
                     re->delivery = delivery;
-                    qd_delivery_fifo_enter_LH(delivery);
+                    qd_router_delivery_fifo_enter_LH(delivery);
                 }
 
                 addr->deliveries_transit++;
@@ -157,7 +157,7 @@ static void forward_to_remote_subscribers_LH(qd_router_t *router,
 static bool forwarder_multicast_LH(qd_router_forwarder_t *forwarder,
                                    qd_router_t *router,
                                    qd_message_t *msg,
-                                   qd_delivery_t *delivery,
+                                   qd_router_delivery_t *delivery,
                                    qd_address_t *addr,
                                    qd_field_iterator_t *ingress_iter,
                                    bool is_direct)
@@ -184,7 +184,7 @@ static bool forwarder_multicast_LH(qd_router_forwarder_t *forwarder,
 static bool forwarder_anycast_closest_LH(qd_router_forwarder_t *forwarder,
                                          qd_router_t *router,
                                          qd_message_t *msg,
-                                         qd_delivery_t *delivery,
+                                         qd_router_delivery_t *delivery,
                                          qd_address_t *addr,
                                          qd_field_iterator_t *ingress_iter,
                                          bool is_direct)
@@ -207,7 +207,7 @@ static bool forwarder_anycast_closest_LH(qd_router_forwarder_t *forwarder,
 static bool forwarder_anycast_balanced_LH(qd_router_forwarder_t *forwarder,
                                           qd_router_t *router,
                                           qd_message_t *msg,
-                                          qd_delivery_t *delivery,
+                                          qd_router_delivery_t *delivery,
                                           qd_address_t *addr,
                                           qd_field_iterator_t *ingress_iter,
                                           bool is_direct)

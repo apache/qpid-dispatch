@@ -666,13 +666,12 @@ void qd_message_set_ingress_annotation(qd_message_t *in_msg, qd_composed_field_t
     qd_compose_free(ingress_field);
 }
 
-qd_message_t *qd_message_receive(qd_delivery_t *delivery)
+qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 {
-    pn_delivery_t    *pnd  = qd_delivery_pn(delivery);
-    qd_message_pvt_t *msg  = (qd_message_pvt_t*) qd_delivery_context(delivery);
-    pn_link_t        *link = pn_delivery_link(pnd);
+    pn_link_t        *link = pn_delivery_link(delivery);
     ssize_t           rc;
     qd_buffer_t      *buf;
+    qd_message_pvt_t *msg  = (qd_message_pvt_t*) pn_delivery_get_context(delivery);
 
     //
     // If there is no message associated with the delivery, this is the first time
@@ -681,7 +680,7 @@ qd_message_t *qd_message_receive(qd_delivery_t *delivery)
     //
     if (!msg) {
         msg = (qd_message_pvt_t*) qd_message();
-        qd_delivery_set_context(delivery, (void*) msg);
+        pn_delivery_set_context(delivery, (void*) msg);
     }
 
     //
@@ -714,7 +713,7 @@ qd_message_t *qd_message_receive(qd_delivery_t *delivery)
                 DEQ_REMOVE_TAIL(msg->content->buffers);
                 qd_buffer_free(buf);
             }
-            qd_delivery_set_context(delivery, 0);
+            pn_delivery_set_context(delivery, 0);
 
             char repr[qd_message_repr_len()];
             qd_log(log_source, QD_LOG_TRACE, "Received %s on link %s",

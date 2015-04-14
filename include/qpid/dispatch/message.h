@@ -199,7 +199,7 @@ void qd_message_set_ingress_annotation(qd_message_t *msg, qd_composed_field_t *i
  * @param delivery An incoming delivery from a link
  * @return A pointer to the complete message or 0 if the message is not yet complete.
  */
-qd_message_t *qd_message_receive(qd_delivery_t *delivery);
+qd_message_t *qd_message_receive(pn_delivery_t *delivery);
 
 /**
  * Send the message outbound on an outgoing link.

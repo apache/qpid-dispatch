@@ -97,6 +97,8 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         rlink->target         = 0;
         DEQ_INIT(rlink->event_fifo);
         DEQ_INIT(rlink->msg_fifo);
+        DEQ_INIT(rlink->deliveries);
+
         qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
         DEQ_INSERT_TAIL(router->links, rlink);
         qd_link_set_context(wp->out_link, rlink);
@@ -170,6 +172,8 @@ static void qd_waypoint_visit_source_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         rlink->target         = 0;
         DEQ_INIT(rlink->event_fifo);
         DEQ_INIT(rlink->msg_fifo);
+        DEQ_INIT(rlink->deliveries);
+
         qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
         DEQ_INSERT_TAIL(router->links, rlink);
         qd_link_set_context(wp->in_link, rlink);

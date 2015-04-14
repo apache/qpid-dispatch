@@ -62,9 +62,8 @@ typedef enum {
 
 typedef struct qd_node_t     qd_node_t;
 typedef struct qd_link_t     qd_link_t;
-typedef struct qd_delivery_t qd_delivery_t;
 
-typedef void (*qd_container_delivery_handler_t)    (void *node_context, qd_link_t *link, qd_delivery_t *delivery);
+typedef void (*qd_container_delivery_handler_t)    (void *node_context, qd_link_t *link, pn_delivery_t *delivery);
 typedef int  (*qd_container_link_handler_t)        (void *node_context, qd_link_t *link);
 typedef int  (*qd_container_link_detach_handler_t) (void *node_context, qd_link_t *link, int closed);
 typedef void (*qd_container_node_handler_t)        (void *type_context, qd_node_t *node);
@@ -174,30 +173,6 @@ pn_terminus_t *qd_link_remote_target(qd_link_t *link);
 void qd_link_activate(qd_link_t *link);
 void qd_link_close(qd_link_t *link);
 bool qd_link_drain_changed(qd_link_t *link, bool *mode);
-
-/**
- * Important: qd_delivery must never be called twice in a row without an intervening pn_link_advance.
- *            The Disatch architecture provides a hook for discovering when an outgoing link is writable
- *            and has credit.  When a link is writable, a delivery is allocated, written, and advanced
- *            in one operation.  If a backlog of pending deliveries is created, an assertion will be
- *            thrown.
- */
-qd_delivery_t *qd_delivery(qd_link_t *link, pn_delivery_tag_t tag);
-void qd_delivery_set_undeliverable_LH(qd_delivery_t *delivery);
-void qd_delivery_free_LH(qd_delivery_t *delivery, uint64_t final_disposition);
-void qd_delivery_link_peers_LH(qd_delivery_t *left, qd_delivery_t *right);
-void qd_delivery_unlink_LH(qd_delivery_t *delivery);
-void qd_delivery_fifo_enter_LH(qd_delivery_t *delivery);
-bool qd_delivery_fifo_exit_LH(qd_delivery_t *delivery);
-qd_delivery_t *qd_delivery_peer(qd_delivery_t *delivery);
-void qd_delivery_set_context(qd_delivery_t *delivery, void *context);
-void *qd_delivery_context(qd_delivery_t *delivery);
-pn_delivery_t *qd_delivery_pn(qd_delivery_t *delivery);
-void qd_delivery_settle(qd_delivery_t *delivery);
-bool qd_delivery_settled(qd_delivery_t *delivery);
-bool qd_delivery_disp_changed(qd_delivery_t *delivery);
-uint64_t qd_delivery_disp(qd_delivery_t *delivery);
-qd_link_t *qd_delivery_link(qd_delivery_t *delivery);
 void qd_link_free_LH(qd_link_t *link);
 
 ///@}

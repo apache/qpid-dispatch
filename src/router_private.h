@@ -60,7 +60,7 @@ ENUM_DECLARE(qd_link_type);
 
 typedef struct qd_routed_event_t {
     DEQ_LINKS(struct qd_routed_event_t);
-    qd_delivery_t *delivery;
+    qd_router_delivery_t *delivery;
     qd_message_t  *message;
     bool           settle;
     uint64_t       disposition;
@@ -73,20 +73,22 @@ extern const char *QD_ROUTER_LINK_TYPE;
 ALLOC_DECLARE(qd_routed_event_t);
 DEQ_DECLARE(qd_routed_event_t, qd_routed_event_list_t);
 
+DEQ_DECLARE(qd_router_delivery_t, qd_router_delivery_list_t);
 
 struct qd_router_link_t {
     DEQ_LINKS(qd_router_link_t);
-    int                     mask_bit;        ///< Unique mask bit if this is an inter-router link
-    qd_link_type_t          link_type;
-    qd_direction_t          link_direction;
-    qd_address_t           *owning_addr;     ///< [ref] Address record that owns this link
-    qd_waypoint_t          *waypoint;        ///< [ref] Waypoint that owns this link
-    qd_link_t              *link;            ///< [own] Link pointer
-    qd_router_link_t       *connected_link;  ///< [ref] If this is a link-route, reference the connected link
-    qd_router_link_ref_t   *ref;             ///< Pointer to a containing reference object
-    char                   *target;          ///< Target address for incoming links
-    qd_routed_event_list_t  event_fifo;      ///< FIFO of outgoing delivery/link events (no messages)
-    qd_routed_event_list_t  msg_fifo;        ///< FIFO of outgoing message deliveries
+    int                       mask_bit;        ///< Unique mask bit if this is an inter-router link
+    qd_link_type_t            link_type;
+    qd_direction_t            link_direction;
+    qd_address_t             *owning_addr;     ///< [ref] Address record that owns this link
+    qd_waypoint_t            *waypoint;        ///< [ref] Waypoint that owns this link
+    qd_link_t                *link;            ///< [own] Link pointer
+    qd_router_link_t         *connected_link;  ///< [ref] If this is a link-route, reference the connected link
+    qd_router_link_ref_t     *ref;             ///< Pointer to a containing reference object
+    char                     *target;          ///< Target address for incoming links
+    qd_routed_event_list_t    event_fifo;      ///< FIFO of outgoing delivery/link events (no messages)
+    qd_routed_event_list_t    msg_fifo;        ///< FIFO of outgoing message deliveries
+    qd_router_delivery_list_t deliveries;      ///< [own] outstanding unsettled deliveries
 };
 
 ALLOC_DECLARE(qd_router_link_t);
@@ -289,5 +291,31 @@ qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_i
 qd_address_t *qd_router_address_lookup_LH(qd_router_t *router,
                                           qd_field_iterator_t *addr_iter,
                                           bool *is_local, bool *is_direct);
+
+/**
+ * Important: qd_router_link_new_delivery must never be called twice in a row
+ *            without an intervening pn_link_advance.  The Disatch architecture
+ *            provides a hook for discovering when an outgoing link is writable
+ *            and has credit.  When a link is writable, a delivery is
+ *            allocated, written, and advanced in one operation.  If a backlog
+ *            of pending deliveries is created, an assertion will be thrown.
+ */
+qd_router_delivery_t *qd_router_link_new_delivery(qd_router_link_t *link, pn_delivery_tag_t tag);
+qd_router_delivery_t *qd_router_delivery(qd_router_link_t *link, pn_delivery_t *pnd);
+void qd_router_delivery_set_undeliverable_LH(qd_router_delivery_t *delivery);
+void qd_router_delivery_free_LH(qd_router_delivery_t *delivery, uint64_t final_disposition);
+void qd_router_delivery_link_peers_LH(qd_router_delivery_t *left, qd_router_delivery_t *right);
+void qd_router_delivery_unlink_LH(qd_router_delivery_t *delivery);
+void qd_router_delivery_fifo_enter_LH(qd_router_delivery_t *delivery);
+bool qd_router_delivery_fifo_exit_LH(qd_router_delivery_t *delivery);
+qd_router_delivery_t *qd_router_delivery_peer(qd_router_delivery_t *delivery);
+void qd_router_delivery_set_context(qd_router_delivery_t *delivery, void *context);
+void *qd_router_delivery_context(qd_router_delivery_t *delivery);
+pn_delivery_t *qd_router_delivery_pn(qd_router_delivery_t *delivery);
+void qd_router_delivery_settle(qd_router_delivery_t *delivery);
+bool qd_router_delivery_settled(qd_router_delivery_t *delivery);
+bool qd_router_delivery_disp_changed(qd_router_delivery_t *delivery);
+uint64_t qd_router_delivery_disp(qd_router_delivery_t *delivery);
+qd_router_link_t *qd_router_delivery_link(qd_router_delivery_t *delivery);
 
 #endif

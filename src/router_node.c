@@ -400,9 +400,8 @@ void qd_router_link_free_LH(qd_router_link_t *rlink)
     re = DEQ_HEAD(rlink->event_fifo);
     while (re) {
         DEQ_REMOVE_HEAD(rlink->event_fifo);
-        if (re->delivery && qd_delivery_fifo_exit_LH(re->delivery)) {
-            qd_delivery_unlink_LH(re->delivery);
-            qd_delivery_free_LH(re->delivery, re->disposition);
+        if (re->delivery && qd_router_delivery_fifo_exit_LH(re->delivery)) {
+            qd_router_delivery_unlink_LH(re->delivery);
         }
         free_qd_routed_event_t(re);
         re = DEQ_HEAD(rlink->event_fifo);
@@ -412,14 +411,19 @@ void qd_router_link_free_LH(qd_router_link_t *rlink)
     while (re) {
         DEQ_REMOVE_HEAD(rlink->msg_fifo);
         if (re->delivery)
-            qd_delivery_fifo_exit_LH(re->delivery);
-        // we can't delete this delivery (it belongs to the receive link)
+            qd_router_delivery_fifo_exit_LH(re->delivery);
         if (re->message)
             qd_message_free(re->message);
         free_qd_routed_event_t(re);
         re = DEQ_HEAD(rlink->msg_fifo);
     }
 
+    qd_router_delivery_t *delivery = DEQ_HEAD(rlink->deliveries);
+    while (delivery) {
+        // this unlinks the delivery from the rlink:
+        qd_router_delivery_free_LH(delivery, PN_RELEASED);
+        delivery = DEQ_HEAD(rlink->deliveries);
+    }
     free_qd_router_link_t(rlink);
 }
 
@@ -430,7 +434,7 @@ void qd_router_link_free_LH(qd_router_link_t *rlink)
 static int router_writable_link_handler(void* context, qd_link_t *link)
 {
     qd_router_t            *router = (qd_router_t*) context;
-    qd_delivery_t          *delivery;
+    qd_router_delivery_t          *delivery;
     qd_router_link_t       *rlink = (qd_router_link_t*) qd_link_get_context(link);
     pn_link_t              *pn_link = qd_link_pn(link);
     uint64_t                tag;
@@ -490,7 +494,7 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
         // Get a delivery for the send.  This will be the current delivery on the link.
         //
         tag++;
-        delivery = qd_delivery(link, pn_dtag((char*) &tag, 8));
+        delivery = qd_router_link_new_delivery(rlink, pn_dtag((char*) &tag, 8));
 
         //
         // Send the message
@@ -506,24 +510,23 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
         //
         sys_mutex_lock(router->lock);
         if (re->delivery) {
-            if (qd_delivery_fifo_exit_LH(re->delivery)) {
-                if (qd_delivery_settled(re->delivery)) {
-                    qd_link_t         *peer_link  = qd_delivery_link(re->delivery);
-                    qd_router_link_t  *peer_rlink = (qd_router_link_t*) qd_link_get_context(peer_link);
+            if (qd_router_delivery_fifo_exit_LH(re->delivery)) {
+                if (qd_router_delivery_settled(re->delivery)) {
+                    qd_router_link_t  *peer_rlink = qd_router_delivery_link(re->delivery);
                     qd_routed_event_t *return_re  = new_qd_routed_event_t();
                     DEQ_ITEM_INIT(return_re);
                     return_re->delivery    = re->delivery;
                     return_re->message     = 0;
                     return_re->settle      = true;
                     return_re->disposition = 0;
-                    qd_delivery_fifo_enter_LH(re->delivery);
+                    qd_router_delivery_fifo_enter_LH(re->delivery);
                     DEQ_INSERT_TAIL(peer_rlink->event_fifo, return_re);
-                    qd_link_activate(peer_link);
+                    qd_link_activate(peer_rlink->link);
                 } else
-                    qd_delivery_link_peers_LH(re->delivery, delivery);
+                    qd_router_delivery_link_peers_LH(re->delivery, delivery);
             }
         } else
-            qd_delivery_free_LH(delivery, 0);  // settle and free
+            qd_router_delivery_free_LH(delivery, 0);  // settle and free
         sys_mutex_unlock(router->lock);
 
         pn_link_advance(pn_link);
@@ -543,16 +546,16 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
 
         if (re->delivery) {
             if (re->disposition) {
-                pn_delivery_update(qd_delivery_pn(re->delivery), re->disposition);
+                pn_delivery_update(qd_router_delivery_pn(re->delivery), re->disposition);
                 event_count++;
             }
 
             sys_mutex_lock(router->lock);
 
-            bool ok = qd_delivery_fifo_exit_LH(re->delivery);
+            bool ok = qd_router_delivery_fifo_exit_LH(re->delivery);
             if (ok && re->settle) {
-                qd_delivery_unlink_LH(re->delivery);
-                qd_delivery_free_LH(re->delivery, re->disposition);
+                qd_router_delivery_unlink_LH(re->delivery);
+                qd_router_delivery_free_LH(re->delivery, re->disposition);
                 event_count++;
             }
 
@@ -692,7 +695,7 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
  * Note also that this function does not perform any message validation.  For link-routing,
  * there is no need to look into the transferred message.
  */
-static void router_link_route_delivery_LH(qd_router_link_t *peer_link, qd_delivery_t *delivery, qd_message_t *msg)
+static void router_link_route_delivery_LH(qd_router_link_t *peer_link, qd_router_delivery_t *delivery, qd_message_t *msg)
 {
     qd_routed_event_t *re = new_qd_routed_event_t();
 
@@ -707,7 +710,7 @@ static void router_link_route_delivery_LH(qd_router_link_t *peer_link, qd_delive
     // Link the incoming delivery into the event for deferred processing
     //
     re->delivery = delivery;
-    qd_delivery_fifo_enter_LH(delivery);
+    qd_router_delivery_fifo_enter_LH(delivery);
 
     qd_link_activate(peer_link->link);
 }
@@ -716,7 +719,7 @@ static void router_link_route_delivery_LH(qd_router_link_t *peer_link, qd_delive
 /**
  * Inbound Delivery Handler
  */
-static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *delivery)
+static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 {
     qd_router_t      *router  = (qd_router_t*) context;
     pn_link_t        *pn_link = qd_link_pn(link);
@@ -732,7 +735,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
     //        no reason to wait for the whole message to be received before starting to
     //        send it.
     //
-    msg = qd_message_receive(delivery);
+    msg = qd_message_receive(pnd);
     if (!msg)
         return;
 
@@ -747,7 +750,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
     sys_mutex_lock(router->lock);
     qd_router_link_t *clink = rlink->connected_link;
     if (clink) {
-        router_link_route_delivery_LH(clink, delivery, msg);
+        router_link_route_delivery_LH(clink, qd_router_delivery(rlink, pnd), msg);
         sys_mutex_unlock(router->lock);
         return;
     }
@@ -772,6 +775,7 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
         bool                 free_iter = true;
         char                *to_override  = 0;
         bool                 forwarded = false;
+        qd_router_delivery_t *delivery = qd_router_delivery(rlink, pnd);
 
         //
         // Only respect the delivery annotations if the message came from another router.
@@ -879,18 +883,19 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
         if (!forwarded) {
             if (on_message)
                 // our local in-process handler will accept it:
-                qd_delivery_free_LH(delivery, PN_ACCEPTED);
+                qd_router_delivery_free_LH(delivery, PN_ACCEPTED);
             else {
                 // no one has accepted it, so inform sender
-                qd_delivery_set_undeliverable_LH(delivery);
-                qd_delivery_free_LH(delivery, PN_MODIFIED);
+                qd_router_delivery_set_undeliverable_LH(delivery);
+                qd_router_delivery_free_LH(delivery, PN_MODIFIED);
             }
         }
     } else {
         //
         // Message is invalid.  Reject the message.
         //
-        qd_delivery_free_LH(delivery, PN_REJECTED);
+        pn_delivery_update(pnd, PN_REJECTED);
+        pn_delivery_settle(pnd);
     }
 
     sys_mutex_unlock(router->lock);
@@ -909,22 +914,24 @@ static void router_rx_handler(void* context, qd_link_t *link, qd_delivery_t *del
 /**
  * Delivery Disposition Handler
  */
-static void router_disposition_handler(void* context, qd_link_t *link, qd_delivery_t *delivery)
+static void router_disposition_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 {
     qd_router_t   *router  = (qd_router_t*) context;
-    bool           changed = qd_delivery_disp_changed(delivery);
-    uint64_t       disp    = qd_delivery_disp(delivery);
-    bool           settled = qd_delivery_settled(delivery);
+    qd_router_delivery_t *delivery = (qd_router_delivery_t *)pn_delivery_get_context(pnd);
+    if (!delivery) return;
+
+    bool           changed = qd_router_delivery_disp_changed(delivery);
+    uint64_t       disp    = qd_router_delivery_disp(delivery);
+    bool           settled = qd_router_delivery_settled(delivery);
 
     sys_mutex_lock(router->lock);
-    qd_delivery_t *peer = qd_delivery_peer(delivery);
+    qd_router_delivery_t *peer = qd_router_delivery_peer(delivery);
     if (peer) {
         //
         // The case where this delivery has a peer.
         //
         if (changed || settled) {
-            qd_link_t         *peer_link = qd_delivery_link(peer);
-            qd_router_link_t  *prl       = (qd_router_link_t*) qd_link_get_context(peer_link);
+            qd_router_link_t  *peer_link = qd_router_delivery_link(peer);
             qd_routed_event_t *re        = new_qd_routed_event_t();
             DEQ_ITEM_INIT(re);
             re->delivery    = peer;
@@ -932,17 +939,17 @@ static void router_disposition_handler(void* context, qd_link_t *link, qd_delive
             re->settle      = settled;
             re->disposition = changed ? disp : 0;
 
-            qd_delivery_fifo_enter_LH(peer);
-            DEQ_INSERT_TAIL(prl->event_fifo, re);
+            qd_router_delivery_fifo_enter_LH(peer);
+            DEQ_INSERT_TAIL(peer_link->event_fifo, re);
             if (settled) {
-                qd_delivery_unlink_LH(delivery);
-                qd_delivery_free_LH(delivery, 0);
+                qd_router_delivery_unlink_LH(delivery);
+                qd_router_delivery_free_LH(delivery, 0);
             }
 
-            qd_link_activate(peer_link);
+            qd_link_activate(peer_link->link);
         }
     } else if (settled)
-        qd_delivery_free_LH(delivery, 0);
+        qd_router_delivery_free_LH(delivery, 0);
 
     sys_mutex_unlock(router->lock);
 }
@@ -1012,6 +1019,7 @@ static void qd_router_attach_routed_link(void *context, bool discard)
         rlink->target         = 0;
         DEQ_INIT(rlink->event_fifo);
         DEQ_INIT(rlink->msg_fifo);
+        DEQ_INIT(rlink->deliveries);
         qd_link_set_context(link, rlink);
 
         sys_mutex_lock(la->router->lock);
@@ -1195,6 +1203,7 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
     rlink->target         = 0;
     DEQ_INIT(rlink->event_fifo);
     DEQ_INIT(rlink->msg_fifo);
+    DEQ_INIT(rlink->deliveries);
 
     if (!is_router && r_tgt) {
         rlink->target = (char*) malloc(strlen(r_tgt) + 1);
@@ -1321,6 +1330,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     rlink->target         = 0;
     DEQ_INIT(rlink->event_fifo);
     DEQ_INIT(rlink->msg_fifo);
+    DEQ_INIT(rlink->deliveries);
 
     qd_link_set_context(link, rlink);
     pn_terminus_copy(qd_link_source(link), qd_link_remote_source(link));
@@ -1678,6 +1688,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     rlink->target         = 0;
     DEQ_INIT(rlink->event_fifo);
     DEQ_INIT(rlink->msg_fifo);
+    DEQ_INIT(rlink->deliveries);
 
     qd_link_set_context(receiver, rlink);
     qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
@@ -1705,6 +1716,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     rlink->target         = 0;
     DEQ_INIT(rlink->event_fifo);
     DEQ_INIT(rlink->msg_fifo);
+    DEQ_INIT(rlink->deliveries);
 
     //
     // Add the new outgoing link to the hello_address's list of links.

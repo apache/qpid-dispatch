@@ -35,6 +35,7 @@
 typedef struct qd_router_t  qd_router_t;
 typedef struct qd_address_t qd_address_t;
 typedef uint8_t             qd_address_semantics_t;
+typedef struct qd_router_delivery_t qd_router_delivery_t;
 
 /**
  * @name Address fanout semantics
@@ -122,7 +123,7 @@ struct qd_router_forwarder_t {
     bool (*forward)(qd_router_forwarder_t *forwarder,
                     qd_router_t *router,
                     qd_message_t *msg,
-                    qd_delivery_t *delivery,
+                    qd_router_delivery_t *delivery,
                     qd_address_t *addr,
                     qd_field_iterator_t *ingress_iterator,
                     bool is_direct);
