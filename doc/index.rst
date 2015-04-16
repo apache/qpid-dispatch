@@ -18,17 +18,22 @@
 Documentation for dispatch
 ==========================
 
-See also the `dispatch router website <http://qpid.apache.org/components/dispatch-router>`_
-
 Documentation
 
--  `Dispatch router book <book/book.html>`__
+.. toctree::
+   :maxdepth: 1
+
+   book/book
 
 Manual pages
 
--  `qdrouterd <man/qdrouterd.html>`__ The router daemon
--  `qdrouterd.conf <man/qdrouterd.conf.html>`__ Router daemon
-   configuration
--  `qdstat <man/qdstat.html>`__ Check statistics for a running router
--  `qdmanage <man/qdmanage.html>`__ Query and set management attributes of
-   a running router.
+.. toctree::
+   :maxdepth: 1
+
+   man/qdrouterd
+   man/qdrouterd.conf.rst
+   man/qdstat.rst
+   man/qdmanage.rst
+
+See also the `dispatch router website <http://qpid.apache.org/components/dispatch-router>`_
+
