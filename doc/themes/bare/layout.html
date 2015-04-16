@@ -1,0 +1,15 @@
+{#
+    basic/layout.html
+    ~~~~~~~~~~~~~~~~~
+
+    Generate HTML for the Qpid site - just bare content with no html, head or body tags.
+
+    :copyright: Copyright 2007-2014 by the Sphinx team, see AUTHORS.
+    :license: BSD, see LICENSE for details.
+#}
+
+{%- block content %}
+  {%- block document %}
+  {% block body %} {% endblock %}
+  {%- endblock %}
+{%- endblock %}

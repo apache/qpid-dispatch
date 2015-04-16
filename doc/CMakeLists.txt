@@ -121,10 +121,11 @@ if(BUILD_DOCS)
 
     set(SPHINX_OUTPUT ${bin}/html/index.html ${bin}/singlehtml/book/book.html ${MAN_PAGES})
 
+    set(html_raw_options -D html_theme=bare -D html_add_permalinks=".")
     add_custom_command(
       OUTPUT ${SPHINX_OUTPUT}
       # html/ contains plain HTML suitable for embedding in the Qpid website.
-      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b html -D html_theme=basic ${bin} ${bin}/html
+      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b html ${html_raw_options} ${bin} ${bin}/html
       # dochtml/ is a self-contained site with searching, navigation etc. installed with the docs.
       COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b html ${bin} ${bin}/dochtml
       # man/ contains Unix man pages.

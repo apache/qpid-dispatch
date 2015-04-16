@@ -20,7 +20,7 @@ release = version
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["**/*_help.rst"]
+exclude_patterns = ["**/*_help.rst", "notes"]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -30,6 +30,7 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'sphinxdoc'
+html_theme_path = [ '${CMAKE_CURRENT_SOURCE_DIR}/themes' ]
 html_show_sourcelink = False
 
 # -- Options for manual page output --------------------------------------------

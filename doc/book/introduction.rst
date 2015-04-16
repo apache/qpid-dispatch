@@ -110,8 +110,8 @@ Simplifies reliability
 Features
 --------
 
--  Can be deployed stand-alone or in a network of routers
-  -  Supports arbitrary network topology - no restrictions on redundancy
-  -  Automatic route computation - adjusts quickly to changes in topology
--  Provides remote access to brokers or other AMQP servers
--  Security
+- Can be deployed stand-alone or in a network of routers
+  - Supports arbitrary network topology - no restrictions on redundancy
+  - Automatic route computation - adjusts quickly to changes in topology
+- Provides remote access to brokers or other AMQP servers
+- Security
