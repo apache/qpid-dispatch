@@ -48,6 +48,19 @@ class NodeTracker(object):
         self.neighbor_max_age = self.container.config.helloMaxAge
         self.ls_max_age       = self.container.config.remoteLsMaxAge
         self.flux_interval    = self.container.config.raIntervalFlux * 2
+        self.container.router_adapter.get_agent().add_implementation(self, "router.node")
+
+
+    def refresh_entity(self, attributes):
+        """Refresh management attributes"""
+        attributes.update({
+            "routerId": self.my_id,
+            "instance": self.container.instance, # Boot number, integer
+            "linkState": [ls for ls in self.link_state.peers], # List of neighbour nodes
+            "nextHop":  "(self)",
+            "validOrigins": [],
+            "address": Address.topological(self.my_id, area=self.container.area)
+        })
 
 
     def _do_expirations(self, now):

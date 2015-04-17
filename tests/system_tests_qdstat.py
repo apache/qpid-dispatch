@@ -57,7 +57,7 @@ class QdstatTest(system_test.TestCase):
         self.run_qdstat(['--links'], r'endpoint.*out.*local.*temp.')
 
     def test_nodes(self):
-        self.run_qdstat(['--nodes'], r'Router Nodes')
+        self.run_qdstat(['--nodes'], r'No Router List')
 
     def test_address(self):
         self.run_qdstat(['--address'], r'\$management')

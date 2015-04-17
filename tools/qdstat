@@ -48,6 +48,7 @@ def parse_args(argv):
     parser.add_option("-n", "--nodes", help="Show Router Nodes",            action="store_const", const="n",   dest="show")
     parser.add_option("-a", "--address", help="Show Router Addresses",      action="store_const", const="a",   dest="show")
     parser.add_option("-m", "--memory", help="Show Broker Memory Stats",    action="store_const", const="m",   dest="show")
+    parser.add_option("-v", "--verbose", help="Show maximum detail",        action="store_true", dest="verbose")
     parser.add_option("--log", help="Show recent log entries", action="store_const", const="log", dest="show")
     parser.add_option("--limit", help="Limit number of log entries", type="int")
 
@@ -132,6 +133,12 @@ class BusManager(Node):
             return identity[pos + 1:]
         return identity
 
+    def _list_clean(self, inlist):
+        outlist = []
+        for i in inlist:
+            outlist.append(str(i))
+        return outlist
+
     def displayGeneral(self):
         disp = Display(prefix="  ")
         heads = []
@@ -195,8 +202,9 @@ class BusManager(Node):
         heads.append(Header("router-id"))
         heads.append(Header("next-hop"))
         heads.append(Header("link"))
-        #heads.append(Header("neighbors"))
-        #heads.append(Header("valid-origins"))
+        if self.opts.verbose:
+            heads.append(Header("neighbors"))
+            heads.append(Header("valid-origins"))
         rows = []
 
         objects  = self.query('org.apache.qpid.dispatch.router.node')
@@ -211,13 +219,17 @@ class BusManager(Node):
                 row.append('-')
                 row.append(node.routerLink)
 
-            #row.append('%r' % node.linkState)
-            #row.append('%r' % node.validOrigins)
+            if self.opts.verbose:
+                row.append('%r' % self._list_clean(node.linkState))
+                row.append('%r' % self._list_clean(node.validOrigins))
             rows.append(row)
-        title = "Router Nodes"
-        sort = Sorter(heads, rows, 'router-id')
-        dispRows = sort.getSorted()
-        disp.formattedTable(title, heads, dispRows)
+        if len(rows) > 0:
+            title = "Routers in the Network"
+            sort = Sorter(heads, rows, 'router-id')
+            dispRows = sort.getSorted()
+            disp.formattedTable(title, heads, dispRows)
+        else:
+            print "Router is Standalone - No Router List"
 
     def displayAddresses(self):
         disp = Display(prefix="  ")
