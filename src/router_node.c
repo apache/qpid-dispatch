@@ -434,7 +434,7 @@ void qd_router_link_free_LH(qd_router_link_t *rlink)
 static int router_writable_link_handler(void* context, qd_link_t *link)
 {
     qd_router_t            *router = (qd_router_t*) context;
-    qd_router_delivery_t          *delivery;
+    qd_router_delivery_t   *delivery;
     qd_router_link_t       *rlink = (qd_router_link_t*) qd_link_get_context(link);
     pn_link_t              *pn_link = qd_link_pn(link);
     uint64_t                tag;
@@ -446,6 +446,9 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
     int                     event_count = 0;
     bool                    drain_mode;
     bool                    drain_changed = qd_link_drain_changed(link, &drain_mode);
+
+    if (!rlink)
+        return 0;
 
     DEQ_INIT(to_send);
     DEQ_INIT(events);
@@ -743,6 +746,11 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
     // Consume the delivery.
     //
     pn_link_advance(pn_link);
+
+    if (!rlink) {
+        qd_message_free(msg);
+        return;
+    }
 
     //
     // Handle the Link-Routing case.
@@ -1458,6 +1466,9 @@ static int router_link_attach_handler(void* context, qd_link_t *link)
     qd_router_t      *router = (qd_router_t*) context;
     qd_router_link_t *rlink  = (qd_router_link_t*) qd_link_get_context(link);
 
+    if (!rlink)
+        return 0;
+
     sys_mutex_lock(router->lock);
     qd_router_link_t *peer_rlink = rlink->connected_link;
     if (peer_rlink) {
@@ -1484,6 +1495,9 @@ static int router_link_flow_handler(void* context, qd_link_t *link)
     qd_router_t      *router     = (qd_router_t*) context;
     qd_router_link_t *rlink      = (qd_router_link_t*) qd_link_get_context(link);
     pn_link_t        *pn_link    = qd_link_pn(link);
+
+    if (!rlink)
+        return 0;
 
     sys_mutex_lock(router->lock);
     qd_router_link_t *peer_rlink = rlink->connected_link;
