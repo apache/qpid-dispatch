@@ -56,7 +56,8 @@ struct qd_link_t {
     pn_link_t          *pn_link;
     void               *context;
     qd_node_t          *node;
-    bool               drain_mode;
+    bool                drain_mode;
+    bool                close_sess_with_link;
 };
 
 ALLOC_DECLARE(qd_link_t);
@@ -120,6 +121,7 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
     link->context    = 0;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(pn_link);
+    link->close_sess_with_link = false;
 
     pn_link_set_context(pn_link, link);
     node->ntype->outgoing_handler(node->context, link);
@@ -165,6 +167,7 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
     link->context    = 0;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(pn_link);
+    link->close_sess_with_link = false;
 
     pn_link_set_context(pn_link, link);
     node->ntype->incoming_handler(node->context, link);
@@ -246,6 +249,7 @@ static int close_handler(void* unused, pn_connection_t *conn, qd_connection_t* q
             qd_node_t *node = link->node;
             if (node)
                 node->ntype->link_detach_handler(node->context, link, 0);
+            link->pn_link = 0;
         }
         pn_link_close(pn_link);
         pn_link_t *link_to_free = pn_link;
@@ -340,6 +344,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                         qd_link->node->ntype->link_detach_handler(qd_link->node->context,
                                                                   qd_link, 1); // assume
                         // closed?
+                        qd_link->pn_link = 0;
                         pn_link_close(pn_link);
                         pn_link_free(pn_link);
                     }
@@ -369,6 +374,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             qd_node_t *node = qd_link->node;
             if (node)
                 node->ntype->link_detach_handler(node->context, qd_link, 1); // TODO - get 'closed' from detach message
+            qd_link->pn_link = 0;
             pn_link_close(pn_link);
             pn_link_free(pn_link);
         }
@@ -641,6 +647,7 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     link->context    = node->context;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(link->pn_link);
+    link->close_sess_with_link = true;
 
     pn_link_set_context(link->pn_link, link);
 
@@ -778,9 +785,15 @@ void qd_link_activate(qd_link_t *link)
 
 void qd_link_close(qd_link_t *link)
 {
-    pn_link_close(link->pn_link);
-    pn_link_free(link->pn_link);
-    link->pn_link = 0;
+    if (link->pn_link) {
+        pn_link_close(link->pn_link);
+        pn_link_free(link->pn_link);
+        link->pn_link = 0;
+    }
+    if (link->close_sess_with_link && link->pn_sess) {
+        pn_session_close(link->pn_sess);
+        pn_session_free(link->pn_sess);
+    }
 }
 
 

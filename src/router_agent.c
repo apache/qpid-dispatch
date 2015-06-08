@@ -78,11 +78,15 @@ static const char *qd_link_type_names[] = { "endpoint", "waypoint", "inter-route
 ENUM_DEFINE(qd_link_type, qd_link_type_names);
 
 static const char* qd_router_link_remote_container(qd_router_link_t* link) {
+    if (!link->link || !qd_link_pn(link->link))
+        return "";
     return pn_connection_remote_container(
         pn_session_connection(qd_link_pn_session(link->link)));
 }
 
 static const char* qd_router_link_name(qd_router_link_t* link) {
+    if (!link->link || !qd_link_pn(link->link))
+        return "";
     return pn_link_name(qd_link_pn(link->link));
 }
 

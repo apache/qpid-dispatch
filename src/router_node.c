@@ -274,7 +274,7 @@ static int qd_router_terminus_is_router(pn_terminus_t *term)
 
 /**
  * If the terminus has a dynamic-node-property for a node address,
- * return an interator for the content of that property.
+ * return an iterator for the content of that property.
  */
 static const char *qd_router_terminus_dnp_address(pn_terminus_t *term)
 {
@@ -1071,6 +1071,7 @@ static void qd_router_detach_routed_link(void *context, bool discard)
         sys_mutex_lock(ld->router->lock);
         qd_entity_cache_remove(QD_ROUTER_LINK_TYPE, ld->rlink);
         DEQ_REMOVE(ld->router->links, ld->rlink);
+        qd_router_link_free_LH(ld->rlink);
         sys_mutex_unlock(ld->router->lock);
     }
 
