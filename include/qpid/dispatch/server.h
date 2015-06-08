@@ -21,6 +21,7 @@
 
 #include <qpid/dispatch/dispatch.h>
 #include <proton/engine.h>
+#include <proton/event.h>
 
 /**@file
  * Control server threads, signals and connections.
@@ -224,8 +225,8 @@ typedef enum {
     /// The connection was closed at the transport level (not cleanly).
     QD_CONN_EVENT_CLOSE,
 
-    /// The connection requires processing.
-    QD_CONN_EVENT_PROCESS
+    /// The connection is writable
+    QD_CONN_EVENT_WRITABLE
 } qd_conn_event_t;
 
 
@@ -367,6 +368,19 @@ typedef struct qd_server_config_t {
  */
 typedef int (*qd_conn_handler_cb_t)(void *handler_context, void* conn_context, qd_conn_event_t event, qd_connection_t *conn);
 
+/**
+ * Proton Event Handler
+ *
+ * This callback is invoked when proton events for a connection require
+ * processing.
+ *
+ * @param handler_context The handler context supplied in qd_server_set_conn_handler.
+ * @param conn_context The handler context supplied in qd_server_{connect,listen}.
+ * @param event The proton event being raised.
+ * @param conn The connection associated with this proton event.
+ */
+typedef int (*qd_pn_event_handler_cb_t)(void *handler_context, void* conn_context, pn_event_t *event, qd_connection_t *conn);
+
 
 /**
  * Set the connection event handler callback.
@@ -376,9 +390,10 @@ typedef int (*qd_conn_handler_cb_t)(void *handler_context, void* conn_context, q
  *
  * @param qd The dispatch handle returned by qd_dispatch.
  * @param conn_handler The handler for processing connection-related events.
+ * @param pn_event_handler The handler for proton events.
  * @param handler_context Context data to associate with the handler.
  */
-void qd_server_set_conn_handler(qd_dispatch_t *qd, qd_conn_handler_cb_t conn_handler, void *handler_context);
+void qd_server_set_conn_handler(qd_dispatch_t *qd, qd_conn_handler_cb_t conn_handler, qd_pn_event_handler_cb_t pn_event_handler, void *handler_context);
 
 
 /**

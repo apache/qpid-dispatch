@@ -358,15 +358,13 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
                 pn_sasl_outcome(sasl) == PN_SASL_SKIPPED) {
                 ctx->state = CONN_STATE_OPERATIONAL;
 
-                qd_conn_event_t ce = QD_CONN_EVENT_PROCESS; // Initialize to keep the compiler happy
+                qd_conn_event_t ce = QD_CONN_EVENT_LISTENER_OPEN;
 
-                if (ctx->listener) {
-                    ce = QD_CONN_EVENT_LISTENER_OPEN;
-                } else if (ctx->connector) {
+                if (ctx->connector) {
                     ce = QD_CONN_EVENT_CONNECTOR_OPEN;
                     ctx->connector->delay = 0;
                 } else
-                    assert(0);
+                    assert(ctx->listener);
 
                 qd_server->conn_handler(qd_server->conn_handler_context,
                                         ctx->context, ce, (qd_connection_t*) qdpn_connector_context(cxtr));
@@ -391,9 +389,19 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
             }
             else {
                 invoke_deferred_calls(ctx, false);
-                events = qd_server->conn_handler(qd_server->conn_handler_context, ctx->context,
-                                                 QD_CONN_EVENT_PROCESS,
-                                                 (qd_connection_t*) qdpn_connector_context(cxtr));
+
+                qd_connection_t *qd_conn   = (qd_connection_t*) qdpn_connector_context(cxtr);
+                pn_collector_t  *collector = qd_connection_collector(qd_conn);
+                pn_event_t      *event;
+
+                events = 0;
+                event = pn_collector_peek(collector);
+                while (event) {
+                    events += qd_server->pn_event_handler(qd_server->conn_handler_context, ctx->context, event, qd_conn);
+                    pn_collector_pop(collector);
+                    event = pn_collector_peek(collector);
+                }
+                events += qd_server->conn_handler(qd_server->conn_handler_context, ctx->context, QD_CONN_EVENT_WRITABLE, qd_conn);
             }
             break;
 
@@ -836,19 +844,20 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
         return 0;
 
     DEQ_INIT(qd_server->connections);
-    qd_server->qd              = qd;
-    qd_server->log_source      = qd_log_source("SERVER");
-    qd_server->thread_count    = thread_count;
-    qd_server->container_name  = container_name;
-    qd_server->driver          = qdpn_driver();
-    qd_server->start_handler   = 0;
-    qd_server->conn_handler    = 0;
-    qd_server->signal_handler  = 0;
-    qd_server->ufd_handler     = 0;
-    qd_server->start_context   = 0;
-    qd_server->signal_context  = 0;
-    qd_server->lock            = sys_mutex();
-    qd_server->cond            = sys_cond();
+    qd_server->qd               = qd;
+    qd_server->log_source       = qd_log_source("SERVER");
+    qd_server->thread_count     = thread_count;
+    qd_server->container_name   = container_name;
+    qd_server->driver           = qdpn_driver();
+    qd_server->start_handler    = 0;
+    qd_server->conn_handler     = 0;
+    qd_server->pn_event_handler = 0;
+    qd_server->signal_handler   = 0;
+    qd_server->ufd_handler      = 0;
+    qd_server->start_context    = 0;
+    qd_server->signal_context   = 0;
+    qd_server->lock             = sys_mutex();
+    qd_server->cond             = sys_cond();
 
     qd_timer_initialize(qd_server->lock);
 
@@ -886,9 +895,13 @@ void qd_server_free(qd_server_t *qd_server)
 }
 
 
-void qd_server_set_conn_handler(qd_dispatch_t *qd, qd_conn_handler_cb_t handler, void *handler_context)
+void qd_server_set_conn_handler(qd_dispatch_t            *qd,
+                                qd_conn_handler_cb_t      handler,
+                                qd_pn_event_handler_cb_t  pn_event_handler,
+                                void                     *handler_context)
 {
     qd->server->conn_handler         = handler;
+    qd->server->pn_event_handler     = pn_event_handler;
     qd->server->conn_handler_context = handler_context;
 }
 
