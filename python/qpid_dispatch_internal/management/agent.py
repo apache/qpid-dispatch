@@ -160,8 +160,8 @@ class EntityAdapter(SchemaEntity):
         """Set default identity and name if not already set, then do schema validation"""
         identity = self.attributes.get("identity")
         if not identity:
-            self.attributes["identity"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
-        self.attributes.setdefault('name', self.attributes['identity'])
+            self.attributes[u"identity"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
+        self.attributes.setdefault(u'name', self.attributes[u'identity'])
         super(EntityAdapter, self).validate(**kwargs)
 
     def _identifier(self):

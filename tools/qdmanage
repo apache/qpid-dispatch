@@ -58,7 +58,8 @@ class QdManage():
         self.op = op
 
     def run(self, argv):
-        self.opts, self.args = self.op.parse_args(argv[1:])
+        # Make all args unicode to avoid encoding arg values as AMQP bytes.
+        self.opts, self.args = self.op.parse_args([unicode(x) for x in argv[1:]])
         if self.opts.indent == -1: self.opts.indent = None
         if len(self.args) == 0: raise UsageError("No operation specified")
         self.node = Node.connect(

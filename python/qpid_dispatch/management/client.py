@@ -61,15 +61,15 @@ class Entity(EntityBase):
 
     def read(self):
         """Read the remote entity attributes into the local attributes."""
-        self.attributes = self.call('READ', expect=OK)
+        self.attributes = self.call(u'READ', expect=OK)
 
     def update(self):
         """Update the remote entity attributes from the local attributes."""
-        self.attributes = self.call('UPDATE', expect=OK, body=self.attributes)
+        self.attributes = self.call(u'UPDATE', expect=OK, body=self.attributes)
 
     def delete(self):
         """Delete the remote entity"""
-        self.call('DELETE', expect=NO_CONTENT)
+        self.call(u'DELETE', expect=NO_CONTENT)
 
 
 class Node(object):
@@ -86,9 +86,9 @@ class Node(object):
 
         if url.path is None:
             if router:
-                url.path = '_topo/0/%s/$management' % router
+                url.path = u'_topo/0/%s/$management' % router
             else:
-                url.path = '$management'
+                url.path = u'$management'
 
         return BlockingConnection(url, timeout=timeout, ssl_domain=ssl_domain)
 
@@ -103,8 +103,8 @@ class Node(object):
         @param locales: Default list of locales for management operations.
         @param connection: a L{BlockingConnection} to the management agent.
         """
-        self.name = self.identity = 'self'
-        self.type = 'org.amqp.management' # AMQP management node type
+        self.name = self.identity = u'self'
+        self.type = u'org.amqp.management' # AMQP management node type
         self.locales = locales
 
         self.locales = locales
@@ -126,14 +126,14 @@ class Node(object):
         """
         Check a management response message for errors and correlation ID.
         """
-        code = response.properties.get('statusCode')
+        code = response.properties.get(u'statusCode')
         if code != expect:
             if 200 <= code <= 299:
                 raise ValueError("Response was %s(%s) but expected %s(%s): %s" % (
                     code, STATUS_TEXT[code], expect, STATUS_TEXT[expect],
-                    response.properties.get('statusDescription')))
+                    response.properties.get(u'statusDescription')))
             else:
-                raise ManagementError.create(code, response.properties.get('statusDescription'))
+                raise ManagementError.create(code, response.properties.get(u'statusDescription'))
 
     def request(self, body=None, **properties):
         """
@@ -142,7 +142,7 @@ class Node(object):
         @param properties: Keyword arguments for application-properties of the request.
         @return: L{proton.Message} containining the management request.
         """
-        if self.locales: properties.setdefault('locales', self.locales)
+        if self.locales: properties.setdefault(u'locales', self.locales)
         request = proton.Message()
         request.properties = clean_dict(properties)
         request.body = body or {}
@@ -213,11 +213,11 @@ class Node(object):
         @return: A L{QueryResponse}
         """
         request = self.node_request(
-            {'attributeNames': attribute_names or []},
-            operation='QUERY', entityType=type, offset=offset, count=count)
+            {u'attributeNames': attribute_names or []},
+            operation=u'QUERY', entityType=type, offset=offset, count=count)
 
         response = self.call(request)
-        return Node.QueryResponse(self, response.body['attributeNames'], response.body['results'])
+        return Node.QueryResponse(self, response.body[u'attributeNames'], response.body[u'results'])
 
     def create(self, attributes=None, type=None, name=None):
         """
@@ -230,9 +230,9 @@ class Node(object):
         @return: Entity proxy for the new entity.
         """
         attributes = attributes or {}
-        type = type or attributes.get('type')
-        name = name or attributes.get('name')
-        request = self.request(operation='CREATE', type=type, name=name, body=attributes)
+        type = type or attributes.get(u'type')
+        name = name or attributes.get(u'name')
+        request = self.request(operation=u'CREATE', type=type, name=name, body=attributes)
         return Entity(self, self.call(request, expect=CREATED).body)
 
     def read(self, type=None, name=None, identity=None):
@@ -246,7 +246,7 @@ class Node(object):
         @return: An L{Entity}
         """
         if name and identity: name = None # Only specify one
-        request = self.request(operation='READ', type=type, name=name, identity=identity)
+        request = self.request(operation=u'READ', type=type, name=name, identity=identity)
         return Entity(self, self.call(request).body)
 
     def update(self, attributes, type=None, name=None, identity=None):
@@ -263,11 +263,11 @@ class Node(object):
 
         """
         attributes = attributes or {}
-        type = type or attributes.get('type')
-        name = name or attributes.get('name')
-        identity = identity or attributes.get('identity')
+        type = type or attributes.get(u'type')
+        name = name or attributes.get(u'name')
+        identity = identity or attributes.get(u'identity')
         if name and identity: name = None # Only send one
-        request = self.request(operation='UPDATE', type=type, name=name,
+        request = self.request(operation=U'UPDATE', type=type, name=name,
                                identity=identity, body=attributes)
         return Entity(self, self.call(request).body)
 
@@ -281,24 +281,24 @@ class Node(object):
         @param identity: Entity identity.
         """
         if name and identity: name = None # Only specify one
-        request = self.request(operation='DELETE', type=type, name=name,
+        request = self.request(operation=U'DELETE', type=type, name=name,
                                identity=identity)
         self.call(request, expect=NO_CONTENT)
 
     def get_types(self, type=None):
-        return self.call(self.node_request(operation="GET-TYPES", entityType=type)).body
+        return self.call(self.node_request(operation=u"GET-TYPES", entityType=type)).body
 
     def get_annotations(self, type=None):
-        return self.call(self.node_request(operation="GET-ANNOTATIONS", entityType=type)).body
+        return self.call(self.node_request(operation=u"GET-ANNOTATIONS", entityType=type)).body
 
     def get_attributes(self, type=None):
-        return self.call(self.node_request(operation="GET-ATTRIBUTES", entityType=type)).body
+        return self.call(self.node_request(operation=u"GET-ATTRIBUTES", entityType=type)).body
 
     def get_operations(self, type=None):
-        return self.call(self.node_request(operation="GET-OPERATIONS", entityType=type)).body
+        return self.call(self.node_request(operation=u"GET-OPERATIONS", entityType=type)).body
 
     def get_mgmt_nodes(self, type=None):
-        return self.call(self.node_request(operation="GET-MGMT-NODES", entityType=type)).body
+        return self.call(self.node_request(operation=u"GET-MGMT-NODES", entityType=type)).body
 
     def get_log(self, limit=None, type=None):
-        return self.call(self.node_request(operation="GET-LOG", entityType=type, limit=limit)).body
+        return self.call(self.node_request(operation=u"GET-LOG", entityType=type, limit=limit)).body

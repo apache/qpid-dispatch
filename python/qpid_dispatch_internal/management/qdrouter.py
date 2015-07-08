@@ -31,8 +31,8 @@ class QdSchema(schema.Schema):
     Qpid Dispatch Router management schema.
     """
 
-    CONFIGURATION_ENTITY = "configurationEntity"
-    OPERATIONAL_ENTITY = "operationalEntity"
+    CONFIGURATION_ENTITY = u"configurationEntity"
+    OPERATIONAL_ENTITY = u"operationalEntity"
 
     def __init__(self):
         """Load schema."""

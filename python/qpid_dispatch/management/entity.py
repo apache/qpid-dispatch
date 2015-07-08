@@ -79,7 +79,7 @@ class EntityBase(object):
 
     def __repr__(self): return "EntityBase(%r)" % self.attributes
 
-    SPECIAL = ["name", "identity", "type"]
+    SPECIAL = [u"name", u"identity", u"type"]
     N_SPECIAL = len(SPECIAL)
     PRIORITY = dict([(SPECIAL[i], i) for i in xrange(N_SPECIAL)])
 

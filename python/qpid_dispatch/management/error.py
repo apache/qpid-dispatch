@@ -59,9 +59,9 @@ class InternalServerErrorStatus(_error_class(INTERNAL_SERVER_ERROR)): pass
 class NotImplementedStatus(_error_class(NOT_IMPLEMENTED)): pass
 
 __all__ = [
-    "STATUS_TEXT", "OK", "NO_CONTENT", "CREATED",
-    "BAD_REQUEST", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND",
-    "INTERNAL_SERVER_ERROR", "NOT_IMPLEMENTED",
-    "ManagementError",
-    "BadRequestStatus", "UnauthorizedStatus", "ForbiddenStatus",
-    "NotFoundStatus", "InternalServerErrorStatus", "NotImplementedStatus"]
+    u"STATUS_TEXT", u"OK", u"NO_CONTENT", u"CREATED",
+    u"BAD_REQUEST", u"UNAUTHORIZED", u"FORBIDDEN", u"NOT_FOUND",
+    u"INTERNAL_SERVER_ERROR", u"NOT_IMPLEMENTED",
+    u"ManagementError",
+    u"BadRequestStatus", u"UnauthorizedStatus", u"ForbiddenStatus",
+    u"NotFoundStatus", u"InternalServerErrorStatus", u"NotImplementedStatus"]
