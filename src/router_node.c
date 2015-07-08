@@ -1536,7 +1536,7 @@ static int router_link_flow_handler(void* context, qd_link_t *link)
 /**
  * Link Detached Handler
  */
-static int router_link_detach_handler(void* context, qd_link_t *link, int closed)
+static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_type_t dt)
 {
     qd_router_t      *router = (qd_router_t*) context;
     qd_router_link_t *rlink  = (qd_router_link_t*) qd_link_get_context(link);
@@ -1570,7 +1570,7 @@ static int router_link_detach_handler(void* context, qd_link_t *link, int closed
                     ld->condition_info = pn_data(0);
                     pn_data_copy(ld->condition_info, pn_condition_info(cond));
                 }
-            } else if (!closed) {
+            } else if (dt == QD_LOST) {
                 strcpy(ld->condition_name, "qd:routed-link-lost");
                 strcpy(ld->condition_description, "Connectivity to the peer container was lost");
             }
