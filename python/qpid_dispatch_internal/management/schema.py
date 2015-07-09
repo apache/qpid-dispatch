@@ -203,10 +203,11 @@ class AttributeType(object):
     @ivar defined_in: Annotation or EntityType in which this attribute is defined.
     @ivar create: If true the attribute can be set by CREATE.
     @ivar update: If true the attribute can be modified by UPDATE.
+    @ivar graph: If true the attribute could be graphed by a console.
     """
 
     def __init__(self, name, type=None, defined_in=None, default=None, required=False, unique=False,
-                 value=None, description="", create=False, update=False):
+                 value=None, description="", create=False, update=False, graph=False):
         """
         See L{AttributeType} instance variables.
         """
@@ -224,6 +225,7 @@ class AttributeType(object):
                                       self.name)
             self.create=create
             self.update=update
+            self.graph=graph
         except:
             ex, msg, trace = sys.exc_info()
             raise ValidationError, "Attribute '%s': %s" % (name, msg), trace
@@ -273,7 +275,8 @@ class AttributeType(object):
             ('default', self.default),
             ('required', self.required),
             ('unique', self.unique),
-            ('description', self.description)
+            ('description', self.description),
+            ('graph', self.graph)
         ])
 
     def __str__(self):

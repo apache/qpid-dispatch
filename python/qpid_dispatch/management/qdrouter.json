@@ -547,15 +547,18 @@
                 },
 	        "addrCount": {
                     "type":
-                    "integer", "description":"Number of addresses known to the router."
+                    "integer", "description":"Number of addresses known to the router.",
+                    "graph": true
                 },
 	        "linkCount": {
                     "type": "integer",
-                    "description":"Number of links attached to the router node."
-                },
+                    "description":"Number of links attached to the router node.",
+                     "graph": true
+               },
 	        "nodeCount": {
                     "type": "integer",
-                    "description":"Number of known peer router nodes."
+                    "description":"Number of known peer router nodes.",
+                    "graph": true
                 }
             }
         },
@@ -775,8 +778,8 @@
                 "linkType": {"type": ["endpoint", "waypoint", "inter-router", "inter-area"]},
                 "linkDir": {"type": ["in", "out"]},
                 "owningAddr": {"type": "string"},
-                "eventFifoDepth": {"type": "integer"},
-                "msgFifoDepth": {"type": "integer"},
+                "eventFifoDepth": {"type": "integer", "graph": true},
+                "msgFifoDepth": {"type": "integer", "graph": true},
                 "remoteContainer": {"type": "string"}
             }
         },
@@ -786,13 +789,13 @@
             "extends": "operationalEntity",
             "attributes": {
                 "inProcess": {"type": "boolean"},
-                "subscriberCount": {"type": "integer"},
-                "remoteCount": {"type": "integer"},
-                "deliveriesIngress": {"type": "integer"},
-                "deliveriesEgress": {"type": "integer"},
-                "deliveriesTransit": {"type": "integer"},
-                "deliveriesToContainer": {"type": "integer"},
-                "deliveriesFromContainer": {"type": "integer"},
+                "subscriberCount": {"type": "integer", "graph": true},
+                "remoteCount": {"type": "integer", "graph": true},
+                "deliveriesIngress": {"type": "integer", "graph": true},
+                "deliveriesEgress": {"type": "integer", "graph": true},
+                "deliveriesTransit": {"type": "integer", "graph": true},
+                "deliveriesToContainer": {"type": "integer", "graph": true},
+                "deliveriesFromContainer": {"type": "integer", "graph": true},
                 "key": {
                     "description": "Internal unique (to this router) key to identify the address",
                     "type": "string"
@@ -874,13 +877,13 @@
                 "typeName": {"type": "string"},
                 "typeSize": {"type": "integer"},
                 "transferBatchSize": {"type": "integer"},
-                "localFreeListMax": {"type": "integer"},
-                "globalFreeListMax": {"type": "integer"},
-                "totalAllocFromHeap": {"type": "integer"},
-                "totalFreeToHeap": {"type": "integer"},
-                "heldByThreads": {"type": "integer"},
-                "batchesRebalancedToThreads": {"type": "integer"},
-                "batchesRebalancedToGlobal": {"type": "integer"}
+                "localFreeListMax": {"type": "integer", "graph": true},
+                "globalFreeListMax": {"type": "integer", "graph": true},
+                "totalAllocFromHeap": {"type": "integer", "graph": true},
+                "totalFreeToHeap": {"type": "integer", "graph": true},
+                "heldByThreads": {"type": "integer", "graph": true},
+                "batchesRebalancedToThreads": {"type": "integer", "graph": true},
+                "batchesRebalancedToGlobal": {"type": "integer", "graph": true}
             }
         },
 
