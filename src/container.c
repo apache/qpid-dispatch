@@ -432,6 +432,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
     case PN_TRANSPORT_HEAD_CLOSED :
     case PN_TRANSPORT_TAIL_CLOSED :
     case PN_TRANSPORT_CLOSED :
+    case PN_TRANSPORT_AUTHENTICATED :
     case PN_SELECTABLE_INIT :
     case PN_SELECTABLE_UPDATED :
     case PN_SELECTABLE_READABLE :
@@ -458,8 +459,6 @@ static void open_handler(qd_container_t *container, qd_connection_t *conn, qd_di
     sys_mutex_lock(container->lock);
     qdc_node_type_t *nt_item = DEQ_HEAD(container->node_type_list);
     sys_mutex_unlock(container->lock);
-
-    pn_connection_open(qd_connection_pn(conn));
 
     while (nt_item) {
         nt = nt_item->ntype;

@@ -167,7 +167,7 @@ class ManagementTest(system_test.TestCase):
 
         port = self.get_port()
         # Note qdrouter schema defines port as string not int, since it can be a service name.
-        attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'saslMechanisms': 'ANONYMOUS'}
+        attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'saslMechanisms': 'ANONYMOUS', 'allowNoSasl': True}
         entity = self.assert_create_ok(LISTENER, 'foo', attributes)
         self.assertEqual(entity['name'], 'foo')
         self.assertEqual(entity['addr'], '127.0.0.1')

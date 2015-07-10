@@ -174,10 +174,10 @@ static void thread_process_listeners(qd_server_t *qd_server)
         if (!cxtr)
             continue;
 
-	char logbuf[qd_log_max_len()];
+        char logbuf[qd_log_max_len()];
 
         qd_log(qd_server->log_source, QD_LOG_DEBUG, "Accepting %s",
-	       log_incoming(logbuf, sizeof(logbuf), cxtr));
+               log_incoming(logbuf, sizeof(logbuf), cxtr));
         ctx = new_qd_connection_t();
         DEQ_ITEM_INIT(ctx);
         ctx->state        = CONN_STATE_OPENING;
@@ -224,8 +224,8 @@ static void thread_process_listeners(qd_server_t *qd_server)
 
         // Set up SSL if configured
         if (config->ssl_enabled) {
-	    qd_log(qd_server->log_source, QD_LOG_TRACE, "Configuring SSL on %s",
-		   log_incoming(logbuf, sizeof(logbuf), cxtr));
+            qd_log(qd_server->log_source, QD_LOG_TRACE, "Configuring SSL on %s",
+                   log_incoming(logbuf, sizeof(logbuf), cxtr));
             if (listener_setup_ssl(config, tport) != QD_ERROR_NONE) {
                 qd_log(qd_server->log_source, QD_LOG_ERROR, "%s on %s",
                        qd_error_message(), log_incoming(logbuf, sizeof(logbuf), cxtr));
@@ -238,10 +238,8 @@ static void thread_process_listeners(qd_server_t *qd_server)
         // Set up SASL
         //
         pn_sasl_t *sasl = pn_sasl(tport);
-        pn_sasl_mechanisms(sasl, config->sasl_mechanisms);
-        pn_sasl_server(sasl);
-        pn_sasl_allow_skip(sasl, config->allow_no_sasl);
-        pn_sasl_done(sasl, PN_SASL_OK);  // TODO - This needs to go away
+        pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
+        pn_transport_require_auth(tport, !config->allow_no_sasl);
     }
 }
 
@@ -342,6 +340,7 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
             pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
             qdpn_connector_set_connection(cxtr, conn);
             pn_connection_set_context(conn, ctx);
+            pn_connection_open(conn);
             ctx->pn_conn = conn;
             ctx->state   = CONN_STATE_OPENING;
             assert(ctx->connector);
@@ -351,33 +350,38 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
         }
 
         case CONN_STATE_OPENING: {
-            pn_transport_t *tport = qdpn_connector_transport(cxtr);
-            pn_sasl_t      *sasl  = pn_sasl(tport);
+            qd_connection_t *qd_conn   = (qd_connection_t*) qdpn_connector_context(cxtr);
+            pn_collector_t  *collector = qd_connection_collector(qd_conn);
+            pn_event_t      *event;
 
-            if (pn_sasl_outcome(sasl) == PN_SASL_OK ||
-                pn_sasl_outcome(sasl) == PN_SASL_SKIPPED) {
-                ctx->state = CONN_STATE_OPERATIONAL;
+            events = 0;
+            event = pn_collector_peek(collector);
+            while (event) {
+                if (pn_event_type(event) == PN_CONNECTION_REMOTE_OPEN) {
+                    ctx->state = CONN_STATE_OPERATIONAL;
+                    qd_conn_event_t ce = QD_CONN_EVENT_LISTENER_OPEN;
 
-                qd_conn_event_t ce = QD_CONN_EVENT_LISTENER_OPEN;
+                    if (ctx->connector) {
+                        ce = QD_CONN_EVENT_CONNECTOR_OPEN;
+                        ctx->connector->delay = 0;
+                    } else
+                        assert(ctx->listener);
 
-                if (ctx->connector) {
-                    ce = QD_CONN_EVENT_CONNECTOR_OPEN;
-                    ctx->connector->delay = 0;
-                } else
-                    assert(ctx->listener);
-
-                qd_server->conn_handler(qd_server->conn_handler_context,
-                                        ctx->context, ce, (qd_connection_t*) qdpn_connector_context(cxtr));
-                events = 1;
-                break;
-            }
-            else if (pn_sasl_outcome(sasl) != PN_SASL_NONE) {
-                ctx->state = CONN_STATE_FAILED;
-                if (ctx->connector) {
-                    const qd_server_config_t *config = ctx->connector->config;
-                    qd_log(qd_server->log_source, QD_LOG_TRACE, "Connection to %s:%s failed", config->host, config->port);
+                    qd_server->conn_handler(qd_server->conn_handler_context,
+                                            ctx->context, ce, (qd_connection_t*) qdpn_connector_context(cxtr));
+                    events = 1;
+                    break;  // Break without popping this event.  It will be re-processed in OPERATIONAL state.
+                } else if (pn_event_type(event) == PN_TRANSPORT_ERROR) {
+                    ctx->state = CONN_STATE_FAILED;
+                    if (ctx->connector) {
+                        const qd_server_config_t *config = ctx->connector->config;
+                        qd_log(qd_server->log_source, QD_LOG_TRACE, "Connection to %s:%s failed", config->host, config->port);
+                    }
                 }
+                pn_collector_pop(collector);
+                event = pn_collector_peek(collector);
             }
+            break;
         }
 
         case CONN_STATE_OPERATIONAL:
@@ -829,8 +833,9 @@ static void cxtr_try_open(void *context)
     // Set up SASL
     //
     pn_sasl_t *sasl = pn_sasl(tport);
-    pn_sasl_mechanisms(sasl, config->sasl_mechanisms);
-    pn_sasl_client(sasl);
+    pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
+    pn_transport_require_auth(tport, !config->allow_no_sasl);
+
     ctx->owner_thread = CONTEXT_NO_OWNER;
 }
 

@@ -40,7 +40,6 @@
 #include <qpid/dispatch/threading.h>
 #include "alloc.h"
 #include <proton/error.h>
-#include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/object.h>
 #include <qpid/dispatch/ctools.h>
@@ -101,7 +100,6 @@ struct qdpn_connector_t {
     pn_timestamp_t wakeup;
     pn_connection_t *connection;
     pn_transport_t *transport;
-    pn_sasl_t *sasl;
     qdpn_listener_t *listener;
     void *context;
     int idx;
@@ -507,7 +505,6 @@ qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, int fd, void *context
     c->wakeup = 0;
     c->connection = NULL;
     c->transport = pn_transport();
-    c->sasl = pn_sasl(c->transport);
     c->input_done = false;
     c->output_done = false;
     c->context = context;
@@ -551,11 +548,6 @@ void qdpn_connector_trace(qdpn_connector_t *ctor, pn_trace_t trace)
     if (!ctor) return;
     ctor->trace = trace;
     if (ctor->transport) pn_transport_trace(ctor->transport, trace);
-}
-
-pn_sasl_t *qdpn_connector_sasl(qdpn_connector_t *ctor)
-{
-    return ctor ? ctor->sasl : NULL;
 }
 
 pn_transport_t *qdpn_connector_transport(qdpn_connector_t *ctor)
