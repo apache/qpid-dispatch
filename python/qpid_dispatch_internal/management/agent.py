@@ -72,6 +72,7 @@ from threading import Lock
 from cProfile import Profile
 from cStringIO import StringIO
 from ctypes import c_void_p, py_object, c_long
+from subprocess import Popen
 from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_DEBUG, LOG_ERROR
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
@@ -300,6 +301,38 @@ class LinkRoutePatternEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_lrp(self._dispatch, self)
 
+class ConsoleEntity(EntityAdapter):
+    def create(self):
+        # if a named listener is present, use its addr:port 
+        name = self.attributes.get('listener')
+        if name:
+            listeners = self._agent.find_entity_by_type("listener")
+            for listener in listeners:
+                if listener.name == name:
+                    try:
+                        #required
+                        host   = listener.attributes['addr']
+                        port   = listener.attributes['port']
+                        wsport = self.attributes['wsport']
+                        #optional
+                        home   = self.attributes.get('home')
+                        args   = self.attributes.get('args')
+
+                        pargs = []
+                        pargs.append(self.attributes['proxy'])
+                        pargs.append(str(self.attributes['wsport']))
+                        pargs.append("%s:%s" % (host, port))
+                        if home:
+                            pargs.append("--web")
+                            pargs.append(self.attributes['home'])
+                        if args:
+                            pargs.append(args)
+
+                        #run the external program
+                        Popen(pargs)
+                    except:
+                        self._agent.log(LOG_ERROR, "Can't parse console entity: %s" % (format_exc()))
+                    break
 
 class DummyEntity(EntityAdapter):
     def callme(self, request):
