@@ -100,6 +100,7 @@ struct qd_connection_t {
     qdpn_connector_t *pn_cxtr;
     pn_connection_t  *pn_conn;
     pn_collector_t   *collector;
+    pn_ssl_t         *ssl;
     qd_listener_t    *listener;
     qd_connector_t   *connector;
     void             *context; // Copy of context from listener or connector

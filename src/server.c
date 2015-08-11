@@ -88,63 +88,93 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
     qd_connection_t *conn = (qd_connection_t*)impl;
     const qd_server_config_t *config =
         conn->connector ? conn->connector->config : conn->listener->config;
+    pn_transport_t *tport = 0;
+    pn_sasl_t      *sasl  = 0;
+    pn_ssl_t       *ssl   = 0;
+    const char     *mech  = 0;
+    const char     *user  = 0;
+
+    if (conn->pn_conn) {
+        tport = pn_connection_transport(conn->pn_conn);
+        ssl   = conn->ssl;
+    }
+    if (tport) {
+        sasl = pn_sasl(tport);
+        user = pn_transport_get_user(tport);
+    }
+    if (sasl)
+        mech = pn_sasl_get_mech(sasl);
 
     if (qd_entity_set_string(entity, "state", conn_state_name(conn->state)) == 0 &&
-        qd_entity_set_string(
-            entity, "container",
-            conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0) == 0 &&
+        qd_entity_set_string(entity, "container",
+                             conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0) == 0 &&
         connection_entity_update_host(entity, conn) == 0 &&
-        qd_entity_set_string(entity, "sasl", config->sasl_mechanisms) == 0 &&
+        qd_entity_set_string(entity, "sasl", mech) == 0 &&
         qd_entity_set_string(entity, "role", config->role) == 0 &&
-        qd_entity_set_string(entity, "dir", conn->connector ? "out" : "in") == 0)
+        qd_entity_set_string(entity, "dir", conn->connector ? "out" : "in") == 0 &&
+        qd_entity_set_string(entity, "user", user) == 0 &&
+        qd_entity_set_bool(entity, "isAuthenticated", tport && pn_transport_is_authenticated(tport)) == 0 &&
+        qd_entity_set_bool(entity, "isEncrypted", tport && pn_transport_is_encrypted(tport)) == 0 &&
+        qd_entity_set_bool(entity, "ssl", ssl != 0) == 0) {
+        if (ssl) {
+#define SSL_ATTR_SIZE 50
+            char proto[SSL_ATTR_SIZE];
+            char cipher[SSL_ATTR_SIZE];
+            pn_ssl_get_protocol_name(ssl, proto, SSL_ATTR_SIZE);
+            pn_ssl_get_cipher_name(ssl, cipher, SSL_ATTR_SIZE);
+            qd_entity_set_string(entity, "sslProto", proto);
+            qd_entity_set_string(entity, "sslCipher", cipher);
+            qd_entity_set_long(entity, "sslSsf", pn_ssl_get_ssf(ssl));
+        }
         return QD_ERROR_NONE;
+    }
     return qd_error_code();
 }
 
-static qd_error_t listener_setup_ssl(const qd_server_config_t *config, pn_transport_t *tport) {
-
+static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_config_t *config, pn_transport_t *tport)
+{
     pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
     if (!domain) return qd_error(QD_ERROR_RUNTIME, "No SSL support");
 
     // setup my identifying cert:
     if (pn_ssl_domain_set_credentials(domain,
-				      config->ssl_certificate_file,
-				      config->ssl_private_key_file,
-				      config->ssl_password)) {
-	pn_ssl_domain_free(domain);
-	return qd_error(QD_ERROR_RUNTIME, "Cannot set SSL credentials");
+                                      config->ssl_certificate_file,
+                                      config->ssl_private_key_file,
+                                      config->ssl_password)) {
+        pn_ssl_domain_free(domain);
+        return qd_error(QD_ERROR_RUNTIME, "Cannot set SSL credentials");
     }
-    if (config->ssl_allow_unsecured_client) {
-	if (pn_ssl_domain_allow_unsecured_client(domain)) {
-	    pn_ssl_domain_free(domain);
-	    return qd_error(QD_ERROR_RUNTIME, "Cannot allow unsecured client");
-	}
+    if (!config->ssl_required) {
+        if (pn_ssl_domain_allow_unsecured_client(domain)) {
+            pn_ssl_domain_free(domain);
+            return qd_error(QD_ERROR_RUNTIME, "Cannot allow unsecured client");
+        }
     }
 
     // for peer authentication:
     if (config->ssl_trusted_certificate_db) {
-	if (pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db)) {
-	    pn_ssl_domain_free(domain);
-	    return qd_error(QD_ERROR_RUNTIME, "Cannot set truested SSL CA" );
-	}
+        if (pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db)) {
+            pn_ssl_domain_free(domain);
+            return qd_error(QD_ERROR_RUNTIME, "Cannot set trusted SSL CA" );
+        }
     }
 
     const char *trusted = config->ssl_trusted_certificate_db;
     if (config->ssl_trusted_certificates)
-	trusted = config->ssl_trusted_certificates;
+        trusted = config->ssl_trusted_certificates;
 
     // do we force the peer to send a cert?
     if (config->ssl_require_peer_authentication) {
-	if (!trusted || pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER, trusted)) {
-	    pn_ssl_domain_free(domain);
-	    return qd_error(QD_ERROR_RUNTIME, "Cannot set peer authentication");
-	}
+        if (!trusted || pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER, trusted)) {
+            pn_ssl_domain_free(domain);
+            return qd_error(QD_ERROR_RUNTIME, "Cannot set peer authentication");
+        }
     }
 
-    pn_ssl_t *ssl = pn_ssl(tport);
-    if (!ssl || pn_ssl_init(ssl, domain, 0)) {
-	pn_ssl_domain_free(domain);
-	return qd_error(QD_ERROR_RUNTIME, "Cannot initialize SSL");
+    ctx->ssl = pn_ssl(tport);
+    if (!ctx->ssl || pn_ssl_init(ctx->ssl, domain, 0)) {
+        pn_ssl_domain_free(domain);
+        return qd_error(QD_ERROR_RUNTIME, "Cannot initialize SSL");
     }
 
     return QD_ERROR_NONE;
@@ -185,6 +215,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         ctx->enqueued     = 0;
         ctx->pn_cxtr      = cxtr;
         ctx->collector    = 0;
+        ctx->ssl          = 0;
         ctx->listener     = qdpn_listener_context(listener);
         ctx->connector    = 0;
         ctx->context      = ctx->listener->context;
@@ -226,7 +257,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         if (config->ssl_enabled) {
             qd_log(qd_server->log_source, QD_LOG_TRACE, "Configuring SSL on %s",
                    log_incoming(logbuf, sizeof(logbuf), cxtr));
-            if (listener_setup_ssl(config, tport) != QD_ERROR_NONE) {
+            if (listener_setup_ssl(ctx, config, tport) != QD_ERROR_NONE) {
                 qd_log(qd_server->log_source, QD_LOG_ERROR, "%s on %s",
                        qd_error_message(), log_incoming(logbuf, sizeof(logbuf), cxtr));
                 qdpn_connector_close(cxtr);
@@ -238,8 +269,11 @@ static void thread_process_listeners(qd_server_t *qd_server)
         // Set up SASL
         //
         pn_sasl_t *sasl = pn_sasl(tport);
+        pn_sasl_config_name(sasl, "qdrouterd");
         pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
-        pn_transport_require_auth(tport, !config->allow_no_sasl);
+        pn_transport_require_auth(tport, config->requireAuthentication);
+        pn_transport_require_encryption(tport, config->requireEncryption);
+        pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
     }
 }
 
@@ -743,6 +777,7 @@ static void cxtr_try_open(void *context)
     ctx->enqueued     = 0;
     ctx->pn_conn      = 0;
     ctx->collector    = 0;
+    ctx->ssl          = 0;
     ctx->listener     = 0;
     ctx->connector    = ct;
     ctx->context      = ct->context;
@@ -824,8 +859,8 @@ static void cxtr_try_open(void *context)
             }
         }
 
-        pn_ssl_t *ssl = pn_ssl(tport);
-        pn_ssl_init(ssl, domain, 0);
+        ctx->ssl = pn_ssl(tport);
+        pn_ssl_init(ctx->ssl, domain, 0);
         pn_ssl_domain_free(domain);
     }
 
@@ -834,7 +869,6 @@ static void cxtr_try_open(void *context)
     //
     pn_sasl_t *sasl = pn_sasl(tport);
     pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
-    pn_transport_require_auth(tport, !config->allow_no_sasl);
 
     ctx->owner_thread = CONTEXT_NO_OWNER;
 }
@@ -1230,6 +1264,7 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     ctx->enqueued     = 0;
     ctx->pn_conn      = 0;
     ctx->collector    = 0;
+    ctx->ssl          = 0;
     ctx->listener     = 0;
     ctx->connector    = 0;
     ctx->context      = 0;

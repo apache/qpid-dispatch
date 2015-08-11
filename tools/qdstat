@@ -26,7 +26,6 @@ import locale
 import socket
 import re
 from time import ctime
-from proton import Messenger, Message, Timeout
 import  qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
@@ -73,15 +72,48 @@ class BusManager(Node):
     def query(self, entity_type):
         return super(BusManager, self).query(entity_type).get_entities()
 
+    def connAuth(self, conn):
+        ##
+        ## Summarize the authentication for a connection:
+        ##   no-auth
+        ##   anonymous-user
+        ##   <user>(PLAIN)
+        ##   <user>(kerberos)
+        ##   <user>(x.509)
+        ##
+        if not conn.isAuthenticated:
+            return "no-auth"
+        sasl = conn.sasl
+        if sasl == "GSSAPI":   sasl = "Kerberos"
+        if sasl == "EXTERNAL": sasl = "x.509"
+        if sasl == "ANONYMOUS":
+            return "anonymous-user"
+        return "%s(%s)" % (conn.user, sasl)
+
+    def connSecurity(self, conn):
+        ##
+        ## Summarize the security of a connection:
+        ##   no-security
+        ##   SSLv3 (cipher)
+        ##   TLS (cipher)
+        ##   Kerberos
+        ##
+        if not conn.isEncrypted:
+            return "no-security"
+        if conn.sasl == "GSSAPI":
+            return "Kerberos"
+        return "%s(%s)" % (conn.sslProto, conn.sslCipher)
+
     def displayConnections(self):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("state"))
         heads.append(Header("host"))
         heads.append(Header("container"))
-        heads.append(Header("sasl-mechanisms"))
         heads.append(Header("role"))
         heads.append(Header("dir"))
+        heads.append(Header("security"))
+        heads.append(Header("authentication"))
 
         rows = []
 
@@ -92,9 +124,10 @@ class BusManager(Node):
             row.append(conn.state)
             row.append(conn.host)
             row.append(conn.container)
-            row.append(conn.sasl)
             row.append(conn.role)
             row.append(conn.dir)
+            row.append(self.connSecurity(conn))
+            row.append(self.connAuth(conn))
             rows.append(row)
         title = "Connections"
         dispRows = rows

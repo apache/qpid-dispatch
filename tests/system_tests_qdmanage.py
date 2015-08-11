@@ -41,9 +41,7 @@ class QdmanageTest(TestCase):
                              'cert-db': cls.ssl_file('ca-certificate.pem'),
                              'cert-file': cls.ssl_file('server-certificate.pem'),
                              'key-file': cls.ssl_file('server-private-key.pem'),
-                             'password': 'server-password',
-                             'allow-unsecured': False,
-                             'require-peer-auth': False}),
+                             'password': 'server-password'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl'})
         ])

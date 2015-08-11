@@ -272,27 +272,29 @@ typedef struct qd_server_config_t {
     int sasl_maxssf;
 
     /**
-     * SSL is enabled for this connection iff non-zero.
+     * SSL is enabled for this connection iff true.
      */
-    int ssl_enabled;
+    bool ssl_enabled;
 
     /**
-     * Connection will take on the role of SSL server iff non-zero.
+     * Iff true, SSL/TLS must be used on the connection.
      */
-    int ssl_server;
+    bool ssl_required;
 
     /**
-     * Iff non-zero AND ssl_enabled is non-zero, this listener will detect the client's use
-     * of SSL or non-SSL and conform to the client's protocol.
-     * (listener only)
+     * Iff true, the client of the connection must authenticate with the server.
      */
-    int ssl_allow_unsecured_client;
+    bool requireAuthentication;
 
     /**
-     * Iff non-zero, this listener will allow clients to connect even if they skip the
-     * SASL authentication protocol.
+     * Iff true, client authentication _may_ be insecure (i.e. PLAIN over plaintext).
      */
-    int allow_no_sasl;
+    bool allowInsecureAuthentication;
+
+    /**
+     * Iff true, the payload of the connection must be encrypted.
+     */
+    bool requireEncryption;
 
     /**
      * Path to the file containing the PEM-formatted public certificate for the local end
@@ -325,16 +327,16 @@ typedef struct qd_server_config_t {
     char *ssl_trusted_certificates;
 
     /**
-     * Iff non-zero, require that the peer's certificate be supplied and that it be authentic
+     * Iff true, require that the peer's certificate be supplied and that it be authentic
      * according to the set of trusted CAs.
      */
-    int ssl_require_peer_authentication;
+    bool ssl_require_peer_authentication;
 
     /**
      * Allow the connection to be redirected by the peer (via CLOSE->Redirect).  This is
      * meaningful for outgoing (connector) connections only.
      */
-    int allow_redirect;
+    bool allow_redirect;
 
     /**
      * The specified role of the connection.  This can be used to control the behavior and

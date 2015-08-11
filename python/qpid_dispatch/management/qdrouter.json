@@ -24,19 +24,6 @@
             }
         },
 
-        "saslMechanisms": {
-            "description": "Attribute for a list of SASL mechanisms.",
-            "attributes": {
-                "saslMechanisms": {
-                    "type": "string",
-                    "required": true,
-                    "description": "Comma separated list of accepted SASL authentication mechanisms.",
-                    "create": true
-
-                }
-            }
-        },
-
         "connectionRole": {
             "description": "Attribute for the role of a connection.",
             "attributes": {
@@ -545,17 +532,18 @@
                     "description": "Deprecated - This value is no longer used in the router.",
                     "create": true
                 },
-	        "addrCount": {
+
+                "addrCount": {
                     "type":
                     "integer", "description":"Number of addresses known to the router.",
                     "graph": true
                 },
-	        "linkCount": {
+                "linkCount": {
                     "type": "integer",
                     "description":"Number of links attached to the router node.",
-                     "graph": true
-               },
-	        "nodeCount": {
+                    "graph": true
+                },
+                "nodeCount": {
                     "type": "integer",
                     "description":"Number of known peer router nodes.",
                     "graph": true
@@ -570,14 +558,30 @@
             "annotations": [
                 "addrPort",
                 "connectionRole",
-                "sslProfile",
-                "saslMechanisms"
+                "sslProfile"
             ],
             "attributes": {
-                "requirePeerAuth": {
+                "saslMechanisms": {
+                    "type": "string",
+                    "description": "Comma separated list of accepted SASL authentication mechanisms.",
+                    "create": true
+                },
+                "authenticatePeer": {
+                    "type": ["yes", "no", "insecureOk"],
+                    "default": "yes",
+                    "description": "['yes', 'no', 'insecureOk'] yes: Require the peer's identity to be authenticated in a secure way; no: Do not require any authentication; insecureOk: Require the peer's identity to be authenticated but allow insecure mechanisms (i.e. PLAIN over clear-text).",
+                    "create": true
+                },
+                "requireEncryption": {
                     "type": "boolean",
-                    "default": true,
-                    "description": "Only for listeners using SSL.  If set to 'yes', attached clients will be required to supply a certificate.  If the certificate is not traceable to a CA in the ssl profile's cert-db, authentication fails for the connection.",
+                    "default": false,
+                    "description": "yes: Require the connection to the peer to be encrypted; no: Permit non-encrypted communication with the peer",
+                    "create": true
+                },
+                "requireSsl": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "yes: Require the use of SSL or TLS on the connection; no: Allow clients to connect without SSL or TLS.",
                     "create": true
                 },
                 "trustedCerts": {
@@ -585,23 +589,27 @@
                     "description": "This optional setting can be used to reduce the set of available CAs for client authentication.  If used, this setting must provide a path to a PEM file that contains the trusted certificates.",
                     "create": true
                 },
-                "allowUnsecured": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "For listeners using SSL only.  If set to 'yes' the listener will allow both SSL-secured clients and non-SSL clients to connect.",
-                    "create": true
-                },
-                "allowNoSasl": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "If set to 'yes', this option causes the listener to allow clients to connect even if they skip the SASL authentication protocol.",
-                    "create": true
-                },
                 "maxFrameSize": {
                     "type": "integer",
                     "default": 65536,
                     "description": "Defaults to 65536.  If specified, it is the maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.",
                     "create": true
+                },
+
+                "requirePeerAuth": {
+                    "type": "boolean",
+                    "create": true,
+                    "description": "Deprecated - This attribute is now controlled by the authenticatePeer attribute."
+                },
+                "allowUnsecured": {
+                    "type": "boolean",
+                    "create": true,
+                    "description": "Deprecated - This attribute is now controlled by the requireEncryption attribute."
+                },
+                "allowNoSasl": {
+                    "type": "boolean",
+                    "create": true,
+                    "description": "Deprecated - This attribute is now controlled by the authenticatePeer attribute."
                 }
             }
         },
@@ -613,10 +621,15 @@
             "annotations": [
                 "addrPort",
                 "connectionRole",
-                "sslProfile",
-                "saslMechanisms"
+                "sslProfile"
             ],
             "attributes": {
+                "saslMechanisms": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Comma separated list of accepted SASL authentication mechanisms.",
+                    "create": true
+                },
                 "allowRedirect": {
                     "type": "boolean",
                     "default": true,
@@ -863,9 +876,41 @@
                     "type": ["in", "out"]
                 },
                 "role": {"type": "string"},
+                "isAuthenticated": {
+                    "description": "Indicates whether the identity of the connection's user is authentic.",
+                    "type": "boolean"
+                },
+                "isEncrypted": {
+                    "description": "Indicates whether the connection content is encrypted.",
+                    "type": "boolean"
+                },
                 "sasl": {
-                    "description": "SASL mechanism used for authentication.",
+                    "description": "SASL mechanism in effect for authentication.",
                     "type": "string"
+                },
+                "user": {
+                    "description": "Identity of the authenticated user.",
+                    "type": "string"
+                },
+                "ssl": {
+                    "description": "True iff SSL/TLS is in effect for this connection.",
+                    "type": "boolean"
+                },
+                "sslProto": {
+                    "description": "SSL protocol name",
+                    "type": "string"
+                },
+                "sslCipher": {
+                    "description": "SSL cipher name",
+                    "type": "string"
+                },
+                "sslSsf": {
+                    "description": "SSL strength factor in effect",
+                    "type": "integer"
+                },
+                "properties": {
+                    "description": "Connection properties supplied by the peer.",
+                    "type": "map"
                 }
             }
         },

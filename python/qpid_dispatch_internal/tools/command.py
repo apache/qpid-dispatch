@@ -93,12 +93,6 @@ def opts_url(opts):
     """Fix up default URL settings based on options"""
     url = Url(opts.bus)
 
-    # Dispatch always allows SASL and requires it unless allow-no-sasl is configured.
-    # Add anonymous@ if no other username is specified to tell proton we want SASL ANONYMOUS.
-    # FIXME aconway 2015-02-17: this may change when proton supports more SASL mechs.
-    if not url.username:
-        url.username = "anonymous"
-
     # If the options indicate SSL, make sure we use the amqps scheme.
     if opts.ssl_certificate or opts.ssl_trustfile:
         url.scheme = "amqps"

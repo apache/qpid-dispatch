@@ -26,6 +26,7 @@ from qpid_dispatch_internal.compat import OrderedDict, dictify
 from system_test import Qdrouterd, message, retry, retry_exception, wait_ports, Process
 from proton import ConnectionException
 from itertools import chain
+from time import sleep
 
 PREFIX = u'org.apache.qpid.dispatch.'
 MANAGEMENT = PREFIX + 'management'
@@ -167,7 +168,7 @@ class ManagementTest(system_test.TestCase):
 
         port = self.get_port()
         # Note qdrouter schema defines port as string not int, since it can be a service name.
-        attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'saslMechanisms': 'ANONYMOUS', 'allowNoSasl': True}
+        attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'saslMechanisms': 'ANONYMOUS', 'authenticatePeer': 'no'}
         entity = self.assert_create_ok(LISTENER, 'foo', attributes)
         self.assertEqual(entity['name'], 'foo')
         self.assertEqual(entity['addr'], '127.0.0.1')
@@ -276,6 +277,9 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(
             [connector.name, connector.addr, connector.port, connector.role],
             ['wp_connector', '127.0.0.1', str(wp_router.ports[0]), 'on-demand'])
+
+        # Pause to allow the waypoint to settle down
+        sleep(1)
 
         # Send a message through self.router, verify it goes via wp_router
         address=self.router.addresses[0]+"/foo"

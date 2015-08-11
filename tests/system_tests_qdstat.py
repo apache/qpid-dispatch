@@ -86,31 +86,16 @@ try:
         def setUpClass(cls):
             super(QdstatSslTest, cls).setUpClass()
             config = system_test.Qdrouterd.Config([
-                ('ssl-profile', {'name': 'server-ssl-strict',
+                ('ssl-profile', {'name': 'server-ssl',
                                  'cert-db': cls.ssl_file('ca-certificate.pem'),
                                  'cert-file': cls.ssl_file('server-certificate.pem'),
                                  'key-file': cls.ssl_file('server-private-key.pem'),
-                                 'password': 'server-password',
-                                 'allow-unsecured': False,
-                                 'require-peer-auth': False}),
-                ('ssl-profile', {'name': 'server-ssl-unsecured',
-                                 'cert-db': cls.ssl_file('ca-certificate.pem'),
-                                 'cert-file': cls.ssl_file('server-certificate.pem'),
-                                 'key-file': cls.ssl_file('server-private-key.pem'),
-                                 'password': 'server-password',
-                                 'allow-unsecured': True,
-                                 'require-peer-auth': False}),
-                ('ssl-profile', {'name': 'server-ssl-auth',
-                                 'cert-db': cls.ssl_file('ca-certificate.pem'),
-                                 'cert-file': cls.ssl_file('server-certificate.pem'),
-                                 'key-file': cls.ssl_file('server-private-key.pem'),
-                                 'password': 'server-password',
-                                 'allow-unsecured': False,
-                                 'require-peer-auth': True}),
+                                 'password': 'server-password'}),
                 ('listener', {'port': cls.tester.get_port()}),
-                ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-strict'}),
-                ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-unsecured'}),
-                ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl-auth'})
+                ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl', 'authenticatePeer': 'no', 'requireSsl': 'yes'}),
+                ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl', 'authenticatePeer': 'no', 'requireSsl': 'no'}),
+                ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl', 'authenticatePeer': 'yes', 'requireSsl': 'yes',
+                              'saslMechanisms:': 'EXTERNAL'})
             ])
             cls.router = cls.tester.qdrouterd('test-router', config)
 

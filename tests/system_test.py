@@ -305,7 +305,7 @@ class Qdrouterd(Process):
         """
 
         DEFAULTS = {
-            'listener':{'addr':'0.0.0.0', 'saslMechanisms':'ANONYMOUS', 'allowNoSasl': True},
+            'listener':{'addr':'0.0.0.0', 'saslMechanisms':'ANONYMOUS', 'authenticatePeer': 'no'},
             'connector':{'addr':'127.0.0.1', 'saslMechanisms':'ANONYMOUS', 'role':'on-demand'},
             'container':{'debugDump':"qddebug.txt"}
         }
@@ -379,7 +379,7 @@ class Qdrouterd(Process):
     @property
     def addresses(self):
         """Return amqp://host:port addresses for all listeners"""
-        return ["amqp://anonymous@%s:%s"%(l['addr'], l['port']) for l in self.config.sections('listener')]
+        return ["amqp://%s:%s"%(l['addr'], l['port']) for l in self.config.sections('listener')]
 
     @property
     def hostports(self):

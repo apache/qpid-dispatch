@@ -1,8 +1,5 @@
 #!/bin/bash -ex
 
-#export SERVER=mrg14.lab.bos.redhat.com
-#export CLIENT=mrg38.lab.bos.redhat.com
-
 export SERVER=A1.Good.Server.domain.com
 export CLIENT=127.0.0.1
 
