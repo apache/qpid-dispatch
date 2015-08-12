@@ -54,21 +54,21 @@ router.
 
 For example you can query all the connection entities in the router::
 
-   $ qdrouterd query --type connection
+   $ qdmanage query --type connection
 
 To enable logging debug and higher level messages by default::
 
-   $ qdrouter update log/DEFAULT enable=debug+
+   $ qdmanage update log/DEFAULT enable=debug+
 
 In fact, everything that can be configured in the configuration file can
 also be created in a running router via management. For example to
 create a new listener in a running router::
 
-   $ qdrouter create type=listener port=5555
+   $ qdmanage create type=listener port=5555
 
 Now you can connect to port 5555, for exampple::
 
-   $ qdrouterd query -b localhost:5555 --type listener
+   $ qdmanage query -b localhost:5555 --type listener
 
 For complete details see the `qdmanage(8)` man page and the output of
 `qdmanage --help`. Also for details of what can be configured see the
