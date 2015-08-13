@@ -85,7 +85,7 @@ set_property(
   )
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
-target_link_libraries(qpid-dispatch ${proton_lib} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES})
+target_link_libraries(qpid-dispatch ${Proton_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES})
 set_target_properties(qpid-dispatch PROPERTIES
   VERSION "${SO_VERSION}"
   SOVERSION "${SO_VERSION_MAJOR}"

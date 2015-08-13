@@ -23,7 +23,6 @@ set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
 if (CMAKE_BUILD_TYPE MATCHES "Deb")
   set (has_debug_symbols " (has debug symbols)")
 endif (CMAKE_BUILD_TYPE MATCHES "Deb")
-message("Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
 
 project(qpid-dispatch C)
 
@@ -84,11 +83,10 @@ set(QPID_DISPATCH_CONFDIR ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
 ##
 ## Find dependencies
 ##
-find_library(proton_lib qpid-proton)
 find_library(pthread_lib pthread)
 find_library(dl_lib dl)
 find_library(rt_lib rt)
-find_path(proton_include proton/version.h)
+find_package(Proton 0.10 REQUIRED)
 
 ##
 ## Find Valgrind
@@ -104,7 +102,7 @@ option(USE_VALGRIND "Use valgrind when running tests" OFF)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
-    ${proton_include}
+    ${Proton_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_PATH}
     )
 

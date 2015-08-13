@@ -10,8 +10,8 @@ Dependencies
 To build dispatch on a yum-based Linux system, you will need the following
 packages installed:
 
-- qpid-proton-c-devel (0.9 or later)
-- python-qpid-proton  (0.9 or later)
+- qpid-proton-c-devel (0.10 or later)
+- python-qpid-proton  (0.10 or later)
 - cmake
 - make
 - gcc
@@ -30,7 +30,6 @@ $ mkdir my_build    # or directory of your choice.
 $ cd my_build
 $ cmake ..
 $ make
-$ ctest -VV
 
 
 Running The Tests
