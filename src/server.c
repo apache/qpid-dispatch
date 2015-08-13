@@ -28,6 +28,7 @@
 #include "server_private.h"
 #include "timer_private.h"
 #include "alloc.h"
+#include "config.h"
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -192,6 +193,26 @@ static const char *log_incoming(char *buf, size_t size, qdpn_connector_t *cxtr)
     return buf;
 }
 
+
+static void add_connection_properties(pn_connection_t *conn)
+{
+    static char *product_key = "product";
+    static char *product_val = "qpid-dispatch-router";
+    static char *version_key = "version";
+
+    pn_data_put_map(pn_connection_properties(conn));
+    pn_data_enter(pn_connection_properties(conn));
+
+    pn_data_put_symbol(pn_connection_properties(conn), pn_bytes(strlen(product_key), product_key));
+    pn_data_put_string(pn_connection_properties(conn), pn_bytes(strlen(product_val), product_val));
+
+    pn_data_put_symbol(pn_connection_properties(conn), pn_bytes(strlen(version_key), version_key));
+    pn_data_put_string(pn_connection_properties(conn), pn_bytes(strlen(QPID_DISPATCH_VERSION), QPID_DISPATCH_VERSION));
+
+    pn_data_exit(pn_connection_properties(conn));
+}
+
+
 static void thread_process_listeners(qd_server_t *qd_server)
 {
     qdpn_driver_t    *driver = qd_server->driver;
@@ -231,6 +252,7 @@ static void thread_process_listeners(qd_server_t *qd_server)
         pn_connection_collect(conn, ctx->collector);
         pn_connection_set_container(conn, qd_server->container_name);
         pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
+        add_connection_properties(conn);
         qdpn_connector_set_connection(cxtr, conn);
         pn_connection_set_context(conn, ctx);
         ctx->pn_conn = conn;
@@ -372,6 +394,7 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
             pn_connection_collect(conn, ctx->collector);
             pn_connection_set_container(conn, qd_server->container_name);
             pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
+            add_connection_properties(conn);
             qdpn_connector_set_connection(cxtr, conn);
             pn_connection_set_context(conn, ctx);
             pn_connection_open(conn);
