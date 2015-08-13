@@ -810,19 +810,29 @@ static void cxtr_try_open(void *context)
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
 
+    qd_log(ct->server->log_source, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
+
     //
     // qdpn_connector is not thread safe
     //
     sys_mutex_lock(ct->server->lock);
     ctx->pn_cxtr = qdpn_connector(ct->server->driver, ct->config->host, ct->config->port, (void*) ctx);
-    DEQ_INSERT_TAIL(ct->server->connections, ctx);
-    qd_entity_cache_add(QD_CONNECTION_TYPE, ctx);
-
+    if (ctx->pn_cxtr) {
+        DEQ_INSERT_TAIL(ct->server->connections, ctx);
+        qd_entity_cache_add(QD_CONNECTION_TYPE, ctx);
+    }
     sys_mutex_unlock(ct->server->lock);
+
+    if (ctx->pn_cxtr == 0) {
+        sys_mutex_free(ctx->deferred_call_lock);
+        free_qd_connection_t(ctx);
+        ct->delay = 10000;
+        qd_timer_schedule(ct->timer, ct->delay);
+        return;
+    }
 
     ct->ctx   = ctx;
     ct->delay = 5000;
-    qd_log(ct->server->log_source, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
 
     //
     // Set up the transport, SASL, and SSL for the connection.
