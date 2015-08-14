@@ -466,6 +466,19 @@
                     "description": "A file to dump debugging information that can't be logged normally.",
                     "create": true
 
+                },
+                "saslConfigPath": {
+                    "type": "path",
+                    "description": "Absolute path to the SASL configuration file.",
+                    "required": false,
+                    "create": true
+                },
+                "saslConfigName": {
+                    "type": "string",
+                    "description": "Name of the SASL configuration.  This string + '.conf' is the name of the configuration file.",
+                    "required": false,
+                    "default": "qdrouterd",
+                    "create": true
                 }
             }
         },

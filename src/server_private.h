@@ -145,6 +145,8 @@ struct qd_server_t {
     qd_dispatch_t            *qd;
     int                       thread_count;
     const char               *container_name;
+    const char               *sasl_config_path;
+    const char               *sasl_config_name;
     qdpn_driver_t            *driver;
     qd_log_source_t          *log_source;
     qd_thread_start_cb_t      start_handler;

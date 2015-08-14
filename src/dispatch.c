@@ -38,7 +38,8 @@
 /**
  * Private Function Prototypes
  */
-qd_server_t    *qd_server(qd_dispatch_t *qd, int tc, const char *container_name);
+qd_server_t    *qd_server(qd_dispatch_t *qd, int tc, const char *container_name,
+                          const char *sasl_config_path, const char *sasl_config_name);
 void            qd_server_free(qd_server_t *server);
 qd_container_t *qd_container(qd_dispatch_t *qd);
 void            qd_container_free(qd_container_t *container);
@@ -98,6 +99,8 @@ qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entit
     const char *default_name = "00000000-0000-0000-0000-000000000000";
     qd->thread_count   = qd_entity_opt_long(entity, "workerThreads", 1); QD_ERROR_RET();
     qd->container_name = qd_entity_opt_string(entity, "containerName", default_name); QD_ERROR_RET();
+    qd->sasl_config_path = qd_entity_opt_string(entity, "saslConfigPath", 0); QD_ERROR_RET();
+    qd->sasl_config_name = qd_entity_opt_string(entity, "saslConfigName", "qdrouterd"); QD_ERROR_RET();
     char *dump_file = qd_entity_opt_string(entity, "debugDump", 0);
     if (dump_file) {
         qd_alloc_debug_dump(dump_file); QD_ERROR_RET();
@@ -137,7 +140,7 @@ qd_error_t qd_dispatch_configure_lrp(qd_dispatch_t *qd, qd_entity_t *entity) {
 
 qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
 {
-    qd->server             = qd_server(qd, qd->thread_count, qd->container_name);
+    qd->server             = qd_server(qd, qd->thread_count, qd->container_name, qd->sasl_config_path, qd->sasl_config_name);
     qd->container          = qd_container(qd);
     qd->router             = qd_router(qd, qd->router_mode, qd->router_area, qd->router_id);
     qd->connection_manager = qd_connection_manager(qd);

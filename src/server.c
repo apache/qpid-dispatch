@@ -291,7 +291,9 @@ static void thread_process_listeners(qd_server_t *qd_server)
         // Set up SASL
         //
         pn_sasl_t *sasl = pn_sasl(tport);
-        pn_sasl_config_name(sasl, "qdrouterd");
+        if (qd_server->sasl_config_path)
+            pn_sasl_config_path(sasl, qd_server->sasl_config_path);
+        pn_sasl_config_name(sasl, qd_server->sasl_config_name);
         pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
         pn_transport_require_auth(tport, config->requireAuthentication);
         pn_transport_require_encryption(tport, config->requireEncryption);
@@ -907,7 +909,8 @@ static void cxtr_try_open(void *context)
 }
 
 
-qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *container_name)
+qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *container_name,
+                       const char *sasl_config_path, const char *sasl_config_name)
 {
     int i;
 
@@ -920,6 +923,8 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->log_source       = qd_log_source("SERVER");
     qd_server->thread_count     = thread_count;
     qd_server->container_name   = container_name;
+    qd_server->sasl_config_path = sasl_config_path;
+    qd_server->sasl_config_name = sasl_config_name;
     qd_server->driver           = qdpn_driver();
     qd_server->start_handler    = 0;
     qd_server->conn_handler     = 0;

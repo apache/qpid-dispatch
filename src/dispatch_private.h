@@ -52,6 +52,8 @@ struct qd_dispatch_t {
 
     int    thread_count;
     char  *container_name;
+    char  *sasl_config_path;
+    char  *sasl_config_name;
     char  *router_area;
     char  *router_id;
     qd_router_mode_t  router_mode;
