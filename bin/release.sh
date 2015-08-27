@@ -25,12 +25,11 @@ ME=$(basename $0)
 
 usage() {
     cat <<-EOF
-USAGE: ${ME} [options] SVNPATH SVNREV VERSION
+USAGE: ${ME} [options] BRANCH VERSION
 Creates an Apache release tarball.
 
 Mandatory arguments:
-  SVNPATH  The path within the source code repository.
-  SVNREV   The revision at which to create the release.
+  BRANCH   The git branch/tag for the build
   VERSION  The release version.
 
 Optional arguments:
@@ -59,38 +58,38 @@ while getopts "h" opt; do
     esac
 done
 
-SVNPATH=${1-}
-SVNREV=${2-}
-VERSION=${3-}
+BRANCH=${1-}
+VERSION=${2-}
 
-if [[ -z "$SVNPATH" ]] || [[ -z "$SVNREV" ]] || [[ -z "$VERSION" ]]; then
+if [[ -z "$BRANCH" ]] || [[ -z "$VERSION" ]]; then
     printf "Missing one or more required argument.\n\n" >&2
     usage
     exit 1
 fi
 
-URL=http://svn.apache.org/repos/asf/qpid/${SVNPATH}
+URL=https://git-wip-us.apache.org/repos/asf/qpid-dispatch.git
 
 WORKDIR=$(mktemp -d)
 BASENAME=qpid-dispatch-${VERSION}
+GITDIR=$WORKDIR/$BASENAME
 FILENAME=$PWD/${BASENAME}.tar.gz
 
 if [ -f $FILENAME ]; then rm -f $FILENAME; fi
 
 echo "Checking out to ${WORKDIR}..."
 cd $WORKDIR
+git clone $URL $BASENAME >/dev/null || exit 1
+cd $GITDIR
+git checkout $BRANCH >/dev/null || exit 1
 
-svn export -r ${SVNREV} ${URL} ${BASENAME} >/dev/null || exit 1
-
-BUILD_VERSION=$(cat $WORKDIR/$BASENAME/VERSION.txt) || exit 1
+BUILD_VERSION=$(cat $GITDIR/VERSION.txt) || exit 1
 test "$VERSION" == "$BUILD_VERSION" || {
-    echo "Version mismatch: $VERSION != $BUILD_VERSION. Please update VERSION.txt in SVN"
+    echo "Version mismatch: $VERSION != $BUILD_VERSION. Please update VERSION.txt in the source"
     exit 1
 }
-echo $SVNREV > $WORKDIR/$BASENAME/SVN_REVISION.txt
 
 echo "Building source tarball $FILENAME"
 cd $WORKDIR
-tar --exclude release.sh -zcvf $FILENAME ${BASENAME} >/dev/null || exit 1
+tar --exclude release.sh --exclude .git --exclude .gitignore -zcvf $FILENAME ${BASENAME} >/dev/null || exit 1
 
 echo "Done!"
