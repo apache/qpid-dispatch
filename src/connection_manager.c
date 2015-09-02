@@ -93,11 +93,46 @@ static void qd_server_config_free(qd_server_config_t *cf)
 }
 
 #define CHECK() if (qd_error_code()) goto error
+
+/**
+ * Private function to set the values of booleans strip_inbound_annotations and strip_outbound_annotations
+ * based on the corresponding values for the settings in qdrouter.json
+ * strip_inbound_annotations and strip_outbound_annotations are defaulted to true
+ */
+static void load_strip_annotations(qd_server_config_t *config, const char* stripAnnotations)
+{
+    if(stripAnnotations) {
+    	if (strcmp(stripAnnotations, "both") == 0) {
+    		config->strip_inbound_annotations  = true;
+    		config->strip_outbound_annotations = true;
+    	}
+    	else if (strcmp(stripAnnotations, "in") == 0) {
+    		config->strip_inbound_annotations  = true;
+    		config->strip_outbound_annotations = false;
+    	}
+    	else if (strcmp(stripAnnotations, "out") == 0) {
+    		config->strip_inbound_annotations  = false;
+    		config->strip_outbound_annotations = true;
+    	}
+    	else if (strcmp(stripAnnotations, "no") == 0) {
+    		config->strip_inbound_annotations  = false;
+    		config->strip_outbound_annotations = false;
+    	}
+    }
+    else {
+    	assert(stripAnnotations);
+    	//This is just for safety. Default to stripInboundAnnotations and stripOutboundAnnotations to true (to "both").
+		config->strip_inbound_annotations  = true;
+		config->strip_outbound_annotations = true;
+    }
+}
+
 static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, qd_entity_t* entity)
 {
     qd_error_clear();
 
     char *authenticatePeer   = qd_entity_opt_string(entity, "authenticatePeer",  0);     CHECK();
+    char *stripAnnotations   = qd_entity_opt_string(entity, "stripAnnotations",  0);     CHECK();
     bool  requireEncryption  = qd_entity_opt_bool(entity,   "requireEncryption", false); CHECK();
     bool  requireSsl         = qd_entity_opt_bool(entity,   "requireSsl",        false); CHECK();
     bool  depRequirePeerAuth = qd_entity_opt_bool(entity,   "requirePeerAuth",   false); CHECK();
@@ -112,8 +147,10 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->sasl_mechanisms = qd_entity_get_string(entity, "saslMechanisms"); CHECK();
     config->ssl_enabled = has_attrs(entity, ssl_attributes, ssl_attributes_count);
 
+    load_strip_annotations(config, stripAnnotations);
+
     if (authenticatePeer) {
-        if        (strcmp(authenticatePeer, "yes") == 0) {
+    	if (strcmp(authenticatePeer, "yes") == 0) {
             config->requireAuthentication       = true;
             config->allowInsecureAuthentication = false;
         } else if (strcmp(authenticatePeer, "insecureOk") == 0) {
@@ -145,6 +182,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             qd_entity_opt_string(entity, "trustedCerts", 0); CHECK();
     }
 
+    free(stripAnnotations);
     free(authenticatePeer);
     return QD_ERROR_NONE;
 

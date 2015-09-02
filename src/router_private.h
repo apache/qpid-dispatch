@@ -89,6 +89,8 @@ struct qd_router_link_t {
     qd_routed_event_list_t    event_fifo;      ///< FIFO of outgoing delivery/link events (no messages)
     qd_routed_event_list_t    msg_fifo;        ///< FIFO of outgoing message deliveries
     qd_router_delivery_list_t deliveries;      ///< [own] outstanding unsettled deliveries
+    bool                      strip_inbound_annotations;  ///<should the dispatch specific inbound annotations be stripped at the ingress router
+    bool                      strip_outbound_annotations; ///<should the dispatch specific outbound annotations be stripped at the egress router
 };
 
 ALLOC_DECLARE(qd_router_link_t);
@@ -317,5 +319,10 @@ bool qd_router_delivery_settled(qd_router_delivery_t *delivery);
 bool qd_router_delivery_disp_changed(qd_router_delivery_t *delivery);
 uint64_t qd_router_delivery_disp(qd_router_delivery_t *delivery);
 qd_router_link_t *qd_router_delivery_link(qd_router_delivery_t *delivery);
+
+/**
+ * Instanciates, initializes and returns a pointer to qd_router_link_t.
+ */
+qd_router_link_t* qd_router_link(qd_link_t *link, qd_link_type_t link_type, qd_direction_t direction, qd_address_t *owning_addr);
 
 #endif

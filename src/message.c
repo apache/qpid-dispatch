@@ -760,7 +760,6 @@ static void send_handler(void *context, const unsigned char *start, int length)
 // create a buffer chain holding the outgoing message annotations section
 static bool compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t *out)
 {
-    DEQ_INIT(*out);
     if (!DEQ_IS_EMPTY(msg->ma_to_override) ||
         !DEQ_IS_EMPTY(msg->ma_trace) ||
         !DEQ_IS_EMPTY(msg->ma_ingress)) {
@@ -793,7 +792,9 @@ static bool compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
     return false;
 }
 
-void qd_message_send(qd_message_t *in_msg, qd_link_t *link)
+void qd_message_send(qd_message_t *in_msg,
+					qd_link_t *link,
+					bool strip_annotations)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     qd_message_content_t *content = msg->content;
@@ -807,7 +808,9 @@ void qd_message_send(qd_message_t *in_msg, qd_link_t *link)
            pn_link_name(pnl));
 
     qd_buffer_list_t new_ma;
-    if (compose_message_annotations(msg, &new_ma)) {
+    DEQ_INIT(new_ma);
+
+    if (strip_annotations || compose_message_annotations(msg, &new_ma)) {
         //
         // This is the case where the message annotations have been modified.
         // The message send must be divided into sections:  The existing header;
