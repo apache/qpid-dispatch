@@ -576,13 +576,14 @@
             "attributes": {
                 "saslMechanisms": {
                     "type": "string",
+                    "required": false,
                     "description": "Comma separated list of accepted SASL authentication mechanisms.",
                     "create": true
                 },
                 "authenticatePeer": {
-                    "type": ["yes", "no", "insecureOk"],
-                    "default": "yes",
-                    "description": "['yes', 'no', 'insecureOk'] yes: Require the peer's identity to be authenticated in a secure way; no: Do not require any authentication; insecureOk: Require the peer's identity to be authenticated but allow insecure mechanisms (i.e. PLAIN over clear-text).",
+                    "type": "boolean",
+                    "default": false,
+                    "description": "yes: Require the peer's identity to be authenticated; no: Do not require any authentication.",
                     "create": true
                 },
                 "requireEncryption": {
@@ -639,7 +640,7 @@
             "attributes": {
                 "saslMechanisms": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "description": "Comma separated list of accepted SASL authentication mechanisms.",
                     "create": true
                 },
