@@ -97,42 +97,33 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
 {
     qd_error_clear();
 
-    char *authenticatePeer   = qd_entity_opt_string(entity, "authenticatePeer",  0);     CHECK();
-    bool  requireEncryption  = qd_entity_opt_bool(entity,   "requireEncryption", false); CHECK();
-    bool  requireSsl         = qd_entity_opt_bool(entity,   "requireSsl",        false); CHECK();
-    bool  depRequirePeerAuth = qd_entity_opt_bool(entity,   "requirePeerAuth",   false); CHECK();
-    bool  depAllowUnsecured  = qd_entity_opt_bool(entity,   "allowUnsecured", !requireSsl); CHECK();
-    bool  depAllowNoSasl     = qd_entity_opt_bool(entity,   "allowNoSasl",       false); CHECK();
+    bool authenticatePeer   = qd_entity_opt_bool(entity, "authenticatePeer",  false); CHECK();
+    bool requireEncryption  = qd_entity_opt_bool(entity, "requireEncryption", false); CHECK();
+    bool requireSsl         = qd_entity_opt_bool(entity, "requireSsl",        false); CHECK();
+    bool depRequirePeerAuth = qd_entity_opt_bool(entity, "requirePeerAuth",   false); CHECK();
+    bool depAllowUnsecured  = qd_entity_opt_bool(entity, "allowUnsecured", !requireSsl); CHECK();
 
     memset(config, 0, sizeof(*config));
-    config->host           = qd_entity_get_string(entity, "addr"); CHECK();
-    config->port           = qd_entity_get_string(entity, "port"); CHECK();
-    config->role           = qd_entity_get_string(entity, "role"); CHECK();
-    config->max_frame_size = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
-    config->sasl_mechanisms = qd_entity_get_string(entity, "saslMechanisms"); CHECK();
+    config->host            = qd_entity_get_string(entity, "addr"); CHECK();
+    config->port            = qd_entity_get_string(entity, "port"); CHECK();
+    config->role            = qd_entity_get_string(entity, "role"); CHECK();
+    config->max_frame_size  = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
+    config->sasl_mechanisms = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
     config->ssl_enabled = has_attrs(entity, ssl_attributes, ssl_attributes_count);
 
-    if (authenticatePeer) {
-        if        (strcmp(authenticatePeer, "yes") == 0) {
-            config->requireAuthentication       = true;
-            config->allowInsecureAuthentication = false;
-        } else if (strcmp(authenticatePeer, "insecureOk") == 0) {
-            config->requireAuthentication       = true;
-            config->allowInsecureAuthentication = true;
-        } else {
-            config->requireAuthentication       = false;
-            config->allowInsecureAuthentication = true;
-        }
-    } else {
-        config->requireAuthentication       = !depAllowNoSasl;
-        config->allowInsecureAuthentication = !depRequirePeerAuth;
-    }
+    //
+    // For now we are hardwiring this attribute to true.  If there's an outcry from the
+    // user community, we can revisit this later.
+    //
+    config->allowInsecureAuthentication = true;
 
-    config->requireEncryption = requireEncryption || !depAllowUnsecured;
+    config->requireAuthentication = authenticatePeer || depRequirePeerAuth;
+    config->requireEncryption     = requireEncryption || !depAllowUnsecured;
 
     if (config->ssl_enabled) {
         config->ssl_required = requireSsl || !depAllowUnsecured;
-        config->ssl_require_peer_authentication = strstr(config->sasl_mechanisms, "EXTERNAL") != 0;
+        config->ssl_require_peer_authentication = config->sasl_mechanisms &&
+            strstr(config->sasl_mechanisms, "EXTERNAL") != 0;
         config->ssl_certificate_file =
             qd_entity_opt_string(entity, "certFile", 0); CHECK();
         config->ssl_private_key_file =
@@ -145,7 +136,6 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             qd_entity_opt_string(entity, "trustedCerts", 0); CHECK();
     }
 
-    free(authenticatePeer);
     return QD_ERROR_NONE;
 
   error:

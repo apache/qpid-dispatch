@@ -294,7 +294,8 @@ static void thread_process_listeners(qd_server_t *qd_server)
         if (qd_server->sasl_config_path)
             pn_sasl_config_path(sasl, qd_server->sasl_config_path);
         pn_sasl_config_name(sasl, qd_server->sasl_config_name);
-        pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
+        if (config->sasl_mechanisms)
+            pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
         pn_transport_require_auth(tport, config->requireAuthentication);
         pn_transport_require_encryption(tport, config->requireEncryption);
         pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
@@ -903,7 +904,9 @@ static void cxtr_try_open(void *context)
     // Set up SASL
     //
     pn_sasl_t *sasl = pn_sasl(tport);
-    pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
+    if (config->sasl_mechanisms)
+        pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
+    pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
 
     ctx->owner_thread = CONTEXT_NO_OWNER;
 }
