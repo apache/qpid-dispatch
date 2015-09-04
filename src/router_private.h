@@ -323,6 +323,6 @@ qd_router_link_t *qd_router_delivery_link(qd_router_delivery_t *delivery);
 /**
  * Instanciates, initializes and returns a pointer to qd_router_link_t.
  */
-qd_router_link_t* qd_router_link(qd_link_t *link, qd_link_type_t link_type, qd_direction_t direction, qd_address_t *owning_addr, qd_waypoint_t *wp);
+qd_router_link_t* qd_router_link(qd_link_t *link, qd_link_type_t link_type, qd_direction_t direction, qd_address_t *owning_addr, qd_waypoint_t *wp, int mask_bit);
 
 #endif

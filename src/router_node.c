@@ -1016,18 +1016,9 @@ static void qd_router_attach_routed_link(void *context, bool discard)
 
     if (!discard) {
         qd_link_t        *link  = qd_link(la->router->node, la->conn, la->dir, la->link_name);
-        qd_router_link_t *rlink = new_qd_router_link_t();
-        DEQ_ITEM_INIT(rlink);
-        rlink->link_type      = QD_LINK_ENDPOINT;
-        rlink->link_direction = la->dir;
-        rlink->owning_addr    = 0;
-        rlink->waypoint       = 0;
-        rlink->link           = link;
-        rlink->ref            = 0;
-        rlink->target         = 0;
-        DEQ_INIT(rlink->event_fifo);
-        DEQ_INIT(rlink->msg_fifo);
-        DEQ_INIT(rlink->deliveries);
+
+        qd_router_link_t *rlink = qd_router_link(link, QD_LINK_ENDPOINT, la->dir, 0, 0, 0);
+
         qd_link_set_context(link, rlink);
 
         sys_mutex_lock(la->router->lock);
@@ -1183,9 +1174,11 @@ link_attach_result_t qd_router_link_route_LH(qd_router_t      *router,
 }
 
 
-qd_router_link_t* qd_router_link(qd_link_t *link, qd_link_type_t link_type, qd_direction_t direction, qd_address_t *owning_addr, qd_waypoint_t *wp) {
+qd_router_link_t* qd_router_link(qd_link_t *link, qd_link_type_t link_type, qd_direction_t direction, qd_address_t *owning_addr, qd_waypoint_t *wp, int mask_bit)
+{
     qd_router_link_t *rlink = new_qd_router_link_t();
     DEQ_ITEM_INIT(rlink);
+    rlink->mask_bit       = mask_bit;
     rlink->link_type      = link_type;
     rlink->link_direction = direction;
     rlink->owning_addr    = owning_addr;
@@ -1238,7 +1231,7 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
         return 0;
     }
 
-    qd_router_link_t *rlink = qd_router_link(link, is_router ? QD_LINK_ROUTER : QD_LINK_ENDPOINT, QD_INCOMING, 0, 0);
+    qd_router_link_t *rlink = qd_router_link(link, is_router ? QD_LINK_ROUTER : QD_LINK_ENDPOINT, QD_INCOMING, 0, 0, 0);
 
     if (!is_router && r_tgt) {
         rlink->target = (char*) malloc(strlen(r_tgt) + 1);
@@ -1353,7 +1346,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     // Create a router_link record for this link.  Some of the fields will be
     // modified in the different cases below.
     //
-    qd_router_link_t *rlink = qd_router_link(link, is_router ? QD_LINK_ROUTER : QD_LINK_ENDPOINT, QD_OUTGOING, 0, 0);
+    qd_router_link_t *rlink = qd_router_link(link, is_router ? QD_LINK_ROUTER : QD_LINK_ENDPOINT, QD_OUTGOING, 0, 0, 0);
 
     qd_link_set_context(link, rlink);
     pn_terminus_copy(qd_link_source(link), qd_link_remote_source(link));
@@ -1704,20 +1697,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     pn_data_put_symbol(pn_terminus_capabilities(qd_link_target(receiver)),
                        pn_bytes(clen, (char*) QD_CAPABILITY_ROUTER));
 
-    rlink = new_qd_router_link_t();
-    DEQ_ITEM_INIT(rlink);
-    rlink->mask_bit       = mask_bit;
-    rlink->link_type      = QD_LINK_ROUTER;
-    rlink->link_direction = QD_INCOMING;
-    rlink->owning_addr    = 0;
-    rlink->waypoint       = 0;
-    rlink->link           = receiver;
-    rlink->connected_link = 0;
-    rlink->ref            = 0;
-    rlink->target         = 0;
-    DEQ_INIT(rlink->event_fifo);
-    DEQ_INIT(rlink->msg_fifo);
-    DEQ_INIT(rlink->deliveries);
+    rlink = qd_router_link(receiver, QD_LINK_ROUTER, QD_INCOMING, 0, 0, mask_bit);
 
     qd_link_set_context(receiver, rlink);
     qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
@@ -1732,20 +1712,7 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
     pn_data_put_symbol(pn_terminus_capabilities(qd_link_source(sender)),
                        pn_bytes(clen, (char *) QD_CAPABILITY_ROUTER));
 
-    rlink = new_qd_router_link_t();
-    DEQ_ITEM_INIT(rlink);
-    rlink->mask_bit       = mask_bit;
-    rlink->link_type      = QD_LINK_ROUTER;
-    rlink->link_direction = QD_OUTGOING;
-    rlink->owning_addr    = router->hello_addr;
-    rlink->waypoint       = 0;
-    rlink->link           = sender;
-    rlink->connected_link = 0;
-    rlink->ref            = 0;
-    rlink->target         = 0;
-    DEQ_INIT(rlink->event_fifo);
-    DEQ_INIT(rlink->msg_fifo);
-    DEQ_INIT(rlink->deliveries);
+    rlink = qd_router_link(sender, QD_LINK_ROUTER, QD_OUTGOING, router->hello_addr, 0, mask_bit);
 
     //
     // Add the new outgoing link to the hello_address's list of links.
