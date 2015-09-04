@@ -2,3 +2,7 @@ build
 install
 *.pyc
 *.pyo
+.cproject
+.project
+.pydevproject
+tests/system_test.dir/

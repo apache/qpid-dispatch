@@ -93,11 +93,46 @@ static void qd_server_config_free(qd_server_config_t *cf)
 }
 
 #define CHECK() if (qd_error_code()) goto error
+
+/**
+ * Private function to set the values of booleans strip_inbound_annotations and strip_outbound_annotations
+ * based on the corresponding values for the settings in qdrouter.json
+ * strip_inbound_annotations and strip_outbound_annotations are defaulted to true
+ */
+static void load_strip_annotations(qd_server_config_t *config, const char* stripAnnotations)
+{
+    if(stripAnnotations) {
+    	if (strcmp(stripAnnotations, "both") == 0) {
+    		config->strip_inbound_annotations  = true;
+    		config->strip_outbound_annotations = true;
+    	}
+    	else if (strcmp(stripAnnotations, "in") == 0) {
+    		config->strip_inbound_annotations  = true;
+    		config->strip_outbound_annotations = false;
+    	}
+    	else if (strcmp(stripAnnotations, "out") == 0) {
+    		config->strip_inbound_annotations  = false;
+    		config->strip_outbound_annotations = true;
+    	}
+    	else if (strcmp(stripAnnotations, "no") == 0) {
+    		config->strip_inbound_annotations  = false;
+    		config->strip_outbound_annotations = false;
+    	}
+    }
+    else {
+    	assert(stripAnnotations);
+    	//This is just for safety. Default to stripInboundAnnotations and stripOutboundAnnotations to true (to "both").
+		config->strip_inbound_annotations  = true;
+		config->strip_outbound_annotations = true;
+    }
+}
+
 static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, qd_entity_t* entity)
 {
     qd_error_clear();
 
     bool authenticatePeer   = qd_entity_opt_bool(entity, "authenticatePeer",  false); CHECK();
+    char *stripAnnotations  = qd_entity_opt_string(entity, "stripAnnotations", 0);    CHECK();
     bool requireEncryption  = qd_entity_opt_bool(entity, "requireEncryption", false); CHECK();
     bool requireSsl         = qd_entity_opt_bool(entity, "requireSsl",        false); CHECK();
     bool depRequirePeerAuth = qd_entity_opt_bool(entity, "requirePeerAuth",   false); CHECK();
@@ -116,6 +151,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     // user community, we can revisit this later.
     //
     config->allowInsecureAuthentication = true;
+
+    load_strip_annotations(config, stripAnnotations);
 
     config->requireAuthentication = authenticatePeer || depRequirePeerAuth;
     config->requireEncryption     = requireEncryption || !depAllowUnsecured;
@@ -136,6 +173,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             qd_entity_opt_string(entity, "trustedCerts", 0); CHECK();
     }
 
+    free(stripAnnotations);
     return QD_ERROR_NONE;
 
   error:

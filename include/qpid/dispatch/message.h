@@ -207,7 +207,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery);
  * @param msg A pointer to a message to be sent.
  * @param link The outgoing link on which to send the message.
  */
-void qd_message_send(qd_message_t *msg, qd_link_t *link);
+void qd_message_send(qd_message_t *msg, qd_link_t *link, bool strip_outbound_annotations);
 
 /**
  * Check that the message is well-formed up to a certain depth.  Any part of the message that is

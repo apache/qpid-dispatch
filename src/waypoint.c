@@ -85,19 +85,7 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         wp->out_link = qd_link(router->node, wp->connection, QD_OUTGOING, wp->address);
         pn_terminus_set_address(qd_link_target(wp->out_link), wp->address);
 
-        qd_router_link_t *rlink = new_qd_router_link_t();
-        DEQ_ITEM_INIT(rlink);
-        rlink->link_type      = QD_LINK_WAYPOINT;
-        rlink->link_direction = QD_OUTGOING;
-        rlink->owning_addr    = addr;
-        rlink->waypoint       = wp;
-        rlink->link           = wp->out_link;
-        rlink->connected_link = 0;
-        rlink->ref            = 0;
-        rlink->target         = 0;
-        DEQ_INIT(rlink->event_fifo);
-        DEQ_INIT(rlink->msg_fifo);
-        DEQ_INIT(rlink->deliveries);
+        qd_router_link_t *rlink = qd_router_link(wp->out_link, QD_LINK_WAYPOINT, QD_OUTGOING, addr, wp);
 
         qd_entity_cache_add(QD_ROUTER_LINK_TYPE, rlink);
         DEQ_INSERT_TAIL(router->links, rlink);
