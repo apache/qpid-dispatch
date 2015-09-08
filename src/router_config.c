@@ -147,6 +147,14 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 {
     char *prefix    = qd_entity_get_string(entity, "prefix"); QD_ERROR_RET();
     char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
+    char *direction = qd_entity_get_string(entity, "dir"); QD_ERROR_RET();
+    bool inbound    = true;
+    bool outbound   = true;
+
+    if (direction && strcmp(direction, "in") == 0)
+        outbound = false;
+    if (direction && strcmp(direction, "out") == 0)
+        inbound = false;
 
     sys_mutex_lock(router->lock);
     if (connector && connector[0]) {
@@ -186,7 +194,7 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
             return qd_error(QD_ERROR_CONFIG, "Link-route-pattern configured with unknown connector: %s", connector);
         }
 
-        qd_lrp_t *lrp = qd_lrp_LH(prefix, lrpc);
+        qd_lrp_t *lrp = qd_lrp_LH(prefix, inbound, outbound, lrpc);
 
         if (!lrp) {
             sys_mutex_unlock(router->lock);
@@ -199,10 +207,10 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
         }
 
         qd_log(router->log_source, QD_LOG_INFO,
-               "Configured Link-route-pattern: prefix=%s connector=%s", prefix, connector);
+               "Configured Link-route-pattern: prefix=%s dir=%s connector=%s", prefix, direction, connector);
     } else
         qd_log(router->log_source, QD_LOG_INFO,
-               "Configured Remote Link-route-pattern: prefix=%s", prefix);
+               "Configured Remote Link-route-pattern: prefix=%s dir=%s", prefix, direction);
 
     //
     // Create an address iterator for the prefix address with the namespace
@@ -211,24 +219,47 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
     char                 unused;
     qd_address_t        *addr;
     qd_field_iterator_t *iter = qd_address_iterator_string(prefix, ITER_VIEW_ADDRESS_HASH);
-    qd_address_iterator_override_prefix(iter, 'C');
 
-    //
-    // Find the address in the router's hash table.  If not found, create one
-    // and hash it into the table.
-    //
-    qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
-    if (!addr) {
-        addr = qd_address(router_semantics_for_addr(router, iter, '\0', &unused));
-        qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
-        DEQ_INSERT_TAIL(router->addrs, addr);
-        qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
+    if (inbound) {
+        //
+        // Find the address in the router's hash table.  If not found, create one
+        // and hash it into the table.
+        //
+        qd_address_iterator_override_prefix(iter, 'C');
+        qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
+        if (!addr) {
+            addr = qd_address(router_semantics_for_addr(router, iter, '\0', &unused));
+            qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
+            DEQ_INSERT_TAIL(router->addrs, addr);
+            qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
+        }
+
+        //
+        // Since this is a configured address, block its deletion.
+        //
+        addr->block_deletion = true;
     }
 
-    //
-    // Since this is a configured address, block its deletion.
-    //
-    addr->block_deletion = true;
+    if (outbound) {
+        //
+        // Find the address in the router's hash table.  If not found, create one
+        // and hash it into the table.
+        //
+        qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+        qd_address_iterator_override_prefix(iter, 'D');
+        qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
+        if (!addr) {
+            addr = qd_address(router_semantics_for_addr(router, iter, '\0', &unused));
+            qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
+            DEQ_INSERT_TAIL(router->addrs, addr);
+            qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
+        }
+
+        //
+        // Since this is a configured address, block its deletion.
+        //
+        addr->block_deletion = true;
+    }
 
     sys_mutex_unlock(router->lock);
     qd_field_iterator_free(iter);

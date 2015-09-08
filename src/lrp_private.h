@@ -31,7 +31,7 @@
  * routed links destined for this LRP.
  */
 
-qd_lrp_t *qd_lrp_LH(const char *prefix, qd_lrp_container_t *lrpc);
+qd_lrp_t *qd_lrp_LH(const char *prefix, bool inbound, bool outbound, qd_lrp_container_t *lrpc);
 
 void qd_lrp_free(qd_lrp_t *lrp);
 

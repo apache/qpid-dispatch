@@ -353,8 +353,10 @@ static int qd_router_find_mask_bit_LH(qd_router_t *router, qd_link_t *link)
 /**
  *
  */
-static qd_address_t *router_lookup_terminus_LH(qd_router_t *router, const char *taddr)
+static qd_address_t *router_lookup_terminus_LH(qd_router_t *router, const char *taddr, qd_direction_t dir)
 {
+    char addr_prefix = (dir == QD_INCOMING) ? 'C' : 'D';
+
     //
     // For now: Find the first instance of a '.' in the address and search for the text
     // up to and including this instance.
@@ -370,7 +372,7 @@ static qd_address_t *router_lookup_terminus_LH(qd_router_t *router, const char *
     int len = (int) (cursor - taddr);
 
     qd_field_iterator_t *iter = qd_address_iterator_binary(taddr, len, ITER_VIEW_ADDRESS_HASH);
-    qd_address_iterator_override_prefix(iter, 'C');
+    qd_address_iterator_override_prefix(iter, addr_prefix);
 
     qd_address_t *addr;
     qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
@@ -1117,7 +1119,7 @@ link_attach_result_t qd_router_link_route_LH(qd_router_t      *router,
     //
     // Lookup the target address to see if we can link-route this attach.
     //
-    qd_address_t *addr = router_lookup_terminus_LH(router, term_addr);
+    qd_address_t *addr = router_lookup_terminus_LH(router, term_addr, dir);
     if (addr) {
         //
         // This is a link-attach routable target.  Propagate the attach downrange.

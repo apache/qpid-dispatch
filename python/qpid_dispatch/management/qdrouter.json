@@ -794,9 +794,16 @@
             "operations": ["CREATE"],
             "attributes": {
                 "prefix": {
-                    "description":"An address prefix to match against target and source addresses.  For Dispatch 0.4, this pattern must be of the form '<text>.' and matches any address that contains that prefix.  Note that the prefix *must* end with a period (.) and *must not* contain any other periods.",
+                    "description":"An address prefix to match against target and source addresses.  For Dispatch 0.4, this pattern must be of the form '<text>.' and matches any address that contains that prefix.  Note that a prefix *must* end with a period (.) and *must not* contain any other periods.  If the string does not end in a period, it will match only addresses that are exactly equal.",
                     "type": "string",
                     "required": true,
+                    "create": true
+                },
+                "dir": {
+                    "description":"Link direction for match: 'in' matches only links inbound to the client; 'out' matches only links outbound from the client; 'both' matches any link.",
+                    "type": ["in", "out", "both"],
+                    "required": false,
+                    "default": "both",
                     "create": true
                 },
                 "connector": {

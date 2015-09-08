@@ -25,7 +25,8 @@
 #include <memory.h>
 #include <stdio.h>
 
-static const char qd_link_route_addr_prefix = 'C';
+static const char qd_link_route_addr_prefix_inbound  = 'C';
+static const char qd_link_route_addr_prefix_outbound = 'D';
 
 static void qd_lrpc_open_handler(void *context, qd_connection_t *conn)
 {
@@ -49,35 +50,71 @@ static void qd_lrpc_open_handler(void *context, qd_connection_t *conn)
         // prefix for link-attach routed addresses.
         //
         iter = qd_address_iterator_string(lrp->prefix, ITER_VIEW_ADDRESS_HASH);
-        qd_address_iterator_override_prefix(iter, qd_link_route_addr_prefix);
 
-        //
-        // Find the address in the router's hash table.  If not found, create one
-        // and hash it into the table.
-        //
-        sys_mutex_lock(router->lock);
-        qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
-        if (!addr) {
-            addr = qd_address(router_semantics_for_addr(router, iter, '\0', &unused));
-            qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
-            DEQ_INSERT_TAIL(router->addrs, addr);
-            qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
+        if (lrp->inbound) {
+            qd_address_iterator_override_prefix(iter, qd_link_route_addr_prefix_inbound);
+
+            //
+            // Find the address in the router's hash table.  If not found, create one
+            // and hash it into the table.
+            //
+            sys_mutex_lock(router->lock);
+            qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
+            if (!addr) {
+                addr = qd_address(router_semantics_for_addr(router, iter, '\0', &unused));
+                qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
+                DEQ_INSERT_TAIL(router->addrs, addr);
+                qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
+            }
+
+            //
+            // Link the LRP record into the address as a local endpoint for routed link-attaches.
+            // If this is the first instance for this address, flag the address for propagation
+            // across the network.
+            //
+            qd_router_add_lrp_ref_LH(&addr->lrps, lrp);
+            propagate = DEQ_SIZE(addr->lrps) == 1;
+            sys_mutex_unlock(router->lock);
+
+            //
+            // Propagate the address if appropriate
+            //
+            if (propagate)
+                qd_router_mobile_added(router, iter);
         }
 
-        //
-        // Link the LRP record into the address as a local endpoint for routed link-attaches.
-        // If this is the first instance for this address, flag the address for propagation
-        // across the network.
-        //
-        qd_router_add_lrp_ref_LH(&addr->lrps, lrp);
-        propagate = DEQ_SIZE(addr->lrps) == 1;
-        sys_mutex_unlock(router->lock);
+        if (lrp->outbound) {
+            qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+            qd_address_iterator_override_prefix(iter, qd_link_route_addr_prefix_outbound);
 
-        //
-        // Propagate the address if appropriate
-        //
-        if (propagate)
-            qd_router_mobile_added(router, iter);
+            //
+            // Find the address in the router's hash table.  If not found, create one
+            // and hash it into the table.
+            //
+            sys_mutex_lock(router->lock);
+            qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
+            if (!addr) {
+                addr = qd_address(router_semantics_for_addr(router, iter, '\0', &unused));
+                qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
+                DEQ_INSERT_TAIL(router->addrs, addr);
+                qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
+            }
+
+            //
+            // Link the LRP record into the address as a local endpoint for routed link-attaches.
+            // If this is the first instance for this address, flag the address for propagation
+            // across the network.
+            //
+            qd_router_add_lrp_ref_LH(&addr->lrps, lrp);
+            propagate = DEQ_SIZE(addr->lrps) == 1;
+            sys_mutex_unlock(router->lock);
+
+            //
+            // Propagate the address if appropriate
+            //
+            if (propagate)
+                qd_router_mobile_added(router, iter);
+        }
 
         qd_field_iterator_free(iter);
         lrp = DEQ_NEXT(lrp);
@@ -106,30 +143,60 @@ static void qd_lrpc_close_handler(void *context, qd_connection_t *conn)
         // prefix for link-attach routed addresses.
         //
         iter = qd_address_iterator_string(lrp->prefix, ITER_VIEW_ADDRESS_HASH);
-        qd_address_iterator_override_prefix(iter, qd_link_route_addr_prefix);
 
-        //
-        // Find the address in the router's hash table.
-        //
-        sys_mutex_lock(router->lock);
-        qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
-        if (addr) {
+        if (lrp->inbound) {
             //
-            // Unlink the lrp from the address.  If this is the last lrp in the address, we need
-            // to tell the other routers.
+            // Find the address in the router's hash table.
             //
-            qd_router_del_lrp_ref_LH(&addr->lrps, lrp);
-            propagate = DEQ_SIZE(addr->lrps) == 0;
+            qd_address_iterator_override_prefix(iter, qd_link_route_addr_prefix_inbound);
+            sys_mutex_lock(router->lock);
+            qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
+            if (addr) {
+                //
+                // Unlink the lrp from the address.  If this is the last lrp in the address, we need
+                // to tell the other routers.
+                //
+                qd_router_del_lrp_ref_LH(&addr->lrps, lrp);
+                propagate = DEQ_SIZE(addr->lrps) == 0;
+            }
+            sys_mutex_unlock(router->lock);
+
+            //
+            // Propagate the address if appropriate
+            //
+            if (propagate) {
+                char *text = (char*) qd_field_iterator_copy(iter);
+                qd_router_mobile_removed(router, text);
+                free(text);
+            }
         }
-        sys_mutex_unlock(router->lock);
 
-        //
-        // Propagate the address if appropriate
-        //
-        if (propagate) {
-            char *text = (char*) qd_field_iterator_copy(iter);
-            qd_router_mobile_removed(router, text);
-            free(text);
+        if (lrp->outbound) {
+            //
+            // Find the address in the router's hash table.
+            //
+            qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+            qd_address_iterator_override_prefix(iter, qd_link_route_addr_prefix_outbound);
+            sys_mutex_lock(router->lock);
+            qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
+            if (addr) {
+                //
+                // Unlink the lrp from the address.  If this is the last lrp in the address, we need
+                // to tell the other routers.
+                //
+                qd_router_del_lrp_ref_LH(&addr->lrps, lrp);
+                propagate = DEQ_SIZE(addr->lrps) == 0;
+            }
+            sys_mutex_unlock(router->lock);
+
+            //
+            // Propagate the address if appropriate
+            //
+            if (propagate) {
+                char *text = (char*) qd_field_iterator_copy(iter);
+                qd_router_mobile_removed(router, text);
+                free(text);
+            }
         }
 
         qd_field_iterator_free(iter);
@@ -149,13 +216,15 @@ void qd_lrpc_timer_handler(void *context)
 }
 
 
-qd_lrp_t *qd_lrp_LH(const char *prefix, qd_lrp_container_t *lrpc)
+qd_lrp_t *qd_lrp_LH(const char *prefix, bool inbound, bool outbound, qd_lrp_container_t *lrpc)
 {
     qd_lrp_t *lrp = NEW(qd_lrp_t);
 
     if (lrp) {
         DEQ_ITEM_INIT(lrp);
         lrp->prefix    = strdup(prefix);
+        lrp->inbound   = inbound;
+        lrp->outbound  = outbound;
         lrp->container = lrpc;
         DEQ_INSERT_TAIL(lrpc->lrps, lrp);
     }

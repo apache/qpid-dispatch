@@ -92,7 +92,7 @@ class RouterEngine:
         """
         """
         try:
-            if addr[0] in 'MC':
+            if addr[0] in 'MCD':
                 self.mobile_address_engine.add_local_address(addr)
         except Exception:
             self.log_ma(LOG_ERROR, "Exception in new-address processing\n%s" % format_exc(LOG_STACK_LIMIT))
@@ -101,7 +101,7 @@ class RouterEngine:
         """
         """
         try:
-            if addr[0] in 'MC':
+            if addr[0] in 'MCD':
                 self.mobile_address_engine.del_local_address(addr)
         except Exception:
             self.log_ma(LOG_ERROR, "Exception in del-address processing\n%s" % format_exc(LOG_STACK_LIMIT))

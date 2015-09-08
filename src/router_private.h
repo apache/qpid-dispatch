@@ -131,6 +131,8 @@ DEQ_DECLARE(qd_router_link_ref_t, qd_router_link_ref_list_t);
 struct qd_lrp_t {
     DEQ_LINKS(qd_lrp_t);
     char               *prefix;
+    bool                inbound;
+    bool                outbound;
     qd_lrp_container_t *container;
 };
 
