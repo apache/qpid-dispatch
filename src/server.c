@@ -213,7 +213,7 @@ static void add_connection_properties(pn_connection_t *conn)
 }
 
 
-static void thread_process_listeners(qd_server_t *qd_server)
+static void thread_process_listeners_LH(qd_server_t *qd_server)
 {
     qdpn_driver_t    *driver = qd_server->driver;
     qdpn_listener_t  *listener;
@@ -626,7 +626,7 @@ static void *thread_run(void *arg)
                 //
                 // Process listeners (incoming connections).
                 //
-                thread_process_listeners(qd_server);
+                thread_process_listeners_LH(qd_server);
 
                 //
                 // Traverse the list of connectors-needing-service from the proton driver.
@@ -903,10 +903,12 @@ static void cxtr_try_open(void *context)
     //
     // Set up SASL
     //
+    sys_mutex_lock(ct->server->lock);
     pn_sasl_t *sasl = pn_sasl(tport);
     if (config->sasl_mechanisms)
         pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
     pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
+    sys_mutex_unlock(ct->server->lock);
 
     ctx->owner_thread = CONTEXT_NO_OWNER;
 }
