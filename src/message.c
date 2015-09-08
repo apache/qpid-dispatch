@@ -25,6 +25,7 @@
 #include <qpid/dispatch/log.h>
 #include "message_private.h"
 #include "compose_private.h"
+#include "annotation_private.h"
 #include "aprintf.h"
 #include <string.h>
 #include <ctype.h>
@@ -614,58 +615,6 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     return (qd_message_t*) copy;
 }
 
-
-qd_parsed_field_t *qd_message_message_annotations(qd_message_t *in_msg)
-{
-    qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
-    qd_message_content_t *content = msg->content;
-
-    if (content->parsed_message_annotations)
-        return content->parsed_message_annotations;
-
-    qd_field_iterator_t *ma = qd_message_field_iterator(in_msg, QD_FIELD_MESSAGE_ANNOTATION);
-    if (ma == 0)
-        return 0;
-
-    content->parsed_message_annotations = qd_parse(ma);
-    if (content->parsed_message_annotations == 0 ||
-        !qd_parse_ok(content->parsed_message_annotations) ||
-        !qd_parse_is_map(content->parsed_message_annotations)) {
-        qd_field_iterator_free(ma);
-        qd_parse_free(content->parsed_message_annotations);
-        content->parsed_message_annotations = 0;
-        return 0;
-    }
-
-    qd_field_iterator_free(ma);
-    return content->parsed_message_annotations;
-}
-
-
-void qd_message_set_trace_annotation(qd_message_t *in_msg, qd_composed_field_t *trace_field)
-{
-    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    qd_buffer_list_free_buffers(&msg->ma_trace);
-    qd_compose_take_buffers(trace_field, &msg->ma_trace);
-    qd_compose_free(trace_field);
-}
-
-void qd_message_set_to_override_annotation(qd_message_t *in_msg, qd_composed_field_t *to_field)
-{
-    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    qd_buffer_list_free_buffers(&msg->ma_to_override);
-    qd_compose_take_buffers(to_field, &msg->ma_to_override);
-    qd_compose_free(to_field);
-}
-
-void qd_message_set_ingress_annotation(qd_message_t *in_msg, qd_composed_field_t *ingress_field)
-{
-    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    qd_buffer_list_free_buffers(&msg->ma_ingress);
-    qd_compose_take_buffers(ingress_field, &msg->ma_ingress);
-    qd_compose_free(ingress_field);
-}
-
 qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 {
     pn_link_t        *link = pn_delivery_link(delivery);
@@ -755,41 +704,6 @@ static void send_handler(void *context, const unsigned char *start, int length)
 {
     pn_link_t *pnl = (pn_link_t*) context;
     pn_link_send(pnl, (const char*) start, length);
-}
-
-// create a buffer chain holding the outgoing message annotations section
-static bool compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t *out)
-{
-    if (!DEQ_IS_EMPTY(msg->ma_to_override) ||
-        !DEQ_IS_EMPTY(msg->ma_trace) ||
-        !DEQ_IS_EMPTY(msg->ma_ingress)) {
-
-        qd_composed_field_t *out_ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
-        qd_compose_start_map(out_ma);
-
-        if (!DEQ_IS_EMPTY(msg->ma_to_override)) {
-            qd_compose_insert_symbol(out_ma, QD_MA_TO);
-            qd_compose_insert_buffers(out_ma, &msg->ma_to_override);
-        }
-
-        if (!DEQ_IS_EMPTY(msg->ma_trace)) {
-            qd_compose_insert_symbol(out_ma, QD_MA_TRACE);
-            qd_compose_insert_buffers(out_ma, &msg->ma_trace);
-        }
-
-        if (!DEQ_IS_EMPTY(msg->ma_ingress)) {
-            qd_compose_insert_symbol(out_ma, QD_MA_INGRESS);
-            qd_compose_insert_buffers(out_ma, &msg->ma_ingress);
-        }
-
-        qd_compose_end_map(out_ma);
-
-        qd_compose_take_buffers(out_ma, out);
-        qd_compose_free(out_ma);
-        return true;
-    }
-
-    return false;
 }
 
 void qd_message_send(qd_message_t *in_msg,

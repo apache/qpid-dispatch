@@ -44,6 +44,7 @@ include_directories(
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES
   amqp.c
+  annotation.c
   bitmask.c
   buffer.c
   error.c
