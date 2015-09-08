@@ -23,6 +23,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <qpid/dispatch.h>
+
+#include "annotation_private.h"
 #include "dispatch_private.h"
 #include "entity_cache.h"
 #include "router_private.h"
@@ -589,102 +591,6 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
     return event_count;
 }
 
-static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
-                                                    qd_parsed_field_t *in_ma,
-                                                    qd_message_t      *msg,
-                                                    int               *drop,
-                                                    const char        *to_override,
-                                                    bool strip_inbound_annotations)
-{
-    qd_field_iterator_t *ingress_iter = 0;
-
-    qd_parsed_field_t *trace   = 0;
-    qd_parsed_field_t *ingress = 0;
-    qd_parsed_field_t *to      = 0;
-
-    if (in_ma && !strip_inbound_annotations) {
-        uint32_t count = qd_parse_sub_count(in_ma);
-        bool done = false;
-
-        for (uint32_t idx = 0; idx < count && !done; idx++) {
-            qd_parsed_field_t *sub  = qd_parse_sub_key(in_ma, idx);
-            if (!sub) continue;
-            qd_field_iterator_t *iter = qd_parse_raw(sub);
-            if (!iter) continue;
-
-            if (qd_field_iterator_equal(iter, (unsigned char *)QD_MA_TRACE)) {
-                trace = qd_parse_sub_value(in_ma, idx);
-            } else if (qd_field_iterator_equal(iter, (unsigned char *)QD_MA_INGRESS)) {
-                ingress = qd_parse_sub_value(in_ma, idx);
-            } else if (qd_field_iterator_equal(iter, (unsigned char *)QD_MA_TO)) {
-                to = qd_parse_sub_value(in_ma, idx);
-            }
-            done = trace && ingress && to;
-        }
-    }
-
-    //
-    // QD_MA_TRACE:
-    // If there is a trace field, append this router's ID to the trace.
-    // If the router ID is already in the trace the msg has looped.
-    //
-    qd_composed_field_t *trace_field = qd_compose_subfield(0);
-    qd_compose_start_list(trace_field);
-    if (trace) {
-        if (qd_parse_is_list(trace)) {
-            uint32_t idx = 0;
-            qd_parsed_field_t *trace_item = qd_parse_sub_value(trace, idx);
-            while (trace_item) {
-                qd_field_iterator_t *iter = qd_parse_raw(trace_item);
-                if (qd_field_iterator_equal(iter, (unsigned char*) node_id)) {
-                    *drop = 1;
-                    return 0;  // no further processing necessary
-                }
-                qd_field_iterator_reset(iter);
-                qd_compose_insert_string_iterator(trace_field, iter);
-                idx++;
-                trace_item = qd_parse_sub_value(trace, idx);
-            }
-        }
-    }
-    qd_compose_insert_string(trace_field, node_id);
-    qd_compose_end_list(trace_field);
-    qd_message_set_trace_annotation(msg, trace_field);
-
-    //
-    // QD_MA_TO:
-    // The supplied to override takes precedence over any existing
-    // value.
-    //
-    if (to_override) {  // takes precedence over existing value
-        qd_composed_field_t *to_field = qd_compose_subfield(0);
-        qd_compose_insert_string(to_field, to_override);
-        qd_message_set_to_override_annotation(msg, to_field);
-    } else if (to) {
-        qd_composed_field_t *to_field = qd_compose_subfield(0);
-        qd_compose_insert_string_iterator(to_field, qd_parse_raw(to));
-        qd_message_set_to_override_annotation(msg, to_field);
-    }
-
-    //
-    // QD_MA_INGRESS:
-    // If there is no ingress field, annotate the ingress as
-    // this router else keep the original field.
-    //
-    qd_composed_field_t *ingress_field = qd_compose_subfield(0);
-    if (ingress && qd_parse_is_scalar(ingress)) {
-        ingress_iter = qd_parse_raw(ingress);
-        qd_compose_insert_string_iterator(ingress_field, ingress_iter);
-    } else
-        qd_compose_insert_string(ingress_field, node_id);
-    qd_message_set_ingress_annotation(msg, ingress_field);
-
-    //
-    // Return the iterator to the ingress field _if_ it was present.
-    // If we added the ingress, return NULL.
-    //
-    return ingress_iter;
-}
 
 
 /**
@@ -861,7 +767,7 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
                 // returns a 'drop' indication if it detects that the message will loop.
                 //
                 int drop = 0;
-                qd_field_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &drop, to_override, rlink->strip_inbound_annotations);
+                qd_field_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &drop, to_override, node_id, rlink->strip_inbound_annotations);
 
                 if (!drop) {
                     //

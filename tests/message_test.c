@@ -23,6 +23,7 @@
 #include "message_private.h"
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/amqp.h>
+#include <qpid/dispatch/annotation.h>
 #include <proton/message.h>
 
 static char buffer[10000];
