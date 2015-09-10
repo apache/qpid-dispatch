@@ -496,8 +496,7 @@ class RouterTest(TestCase):
         
     #This unit test is currently skipped because dispatch router do not pass thru custom message annotations. Once the feature is added the @unittest.skip decorator can be removed.
     #The stripAnnotations property is set to 'no'
-    @unittest.skip("Currently, custom annotations are not handled by the dispatch router. Intentionally skipping this test for now")
-    def test_08a_test_strip_message_annotations_no_custom_not_implemented(self):
+    def notest_08a_test_strip_message_annotations_no_custom_not_implemented(self):
         addr = "amqp:/message_annotations_strip_no_custom/1"
         
         M1 = self.messenger()

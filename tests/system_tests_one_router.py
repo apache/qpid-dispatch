@@ -524,9 +524,7 @@ class RouterTest(TestCase):
     # This test will test the stripAnnotations = no option - meaning no annotations must be stripped.
     # We will send in a custom annotation and make that we get back 3 annotations on the received message
     # Skipping this test temporarily
-    #@unittest.expectedFailure
-    @unittest.skip("Currently, custom annotations are not handled by the dispatch router. Intentionally skipping this test for now")
-    def test_08a_test_strip_message_annotations_no_custom_not_implemented(self):
+    def notest_08a_test_strip_message_annotations_no_custom_not_implemented(self):
         addr = self.router.addresses[1]+"/strip_message_annotations_no_custom/1"
         
         M1 = self.messenger()
