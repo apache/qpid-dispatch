@@ -2069,7 +2069,9 @@ void qd_router_send2(qd_dispatch_t *qd,
                      const char    *address,
                      qd_message_t  *msg)
 {
-    qd_field_iterator_t *iter = qd_address_iterator_string(address, ITER_VIEW_ADDRESS_HASH);
-    qd_router_send(qd, iter, msg);
-    qd_field_iterator_free(iter);
+    if (address && msg) {
+        qd_field_iterator_t *iter = qd_address_iterator_string(address, ITER_VIEW_ADDRESS_HASH);
+        qd_router_send(qd, iter, msg);
+        qd_field_iterator_free(iter);
+    }
 }

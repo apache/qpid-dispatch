@@ -646,6 +646,11 @@ class Agent(object):
             """Raise an error"""
             self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
             self.respond(request, e.status, e.description)
+
+        # If there's no reply_to, don't bother to process the request.
+        if not request.reply_to:
+            return
+
         # Coarse locking, handle one request at a time.
         with self.request_lock:
             try:

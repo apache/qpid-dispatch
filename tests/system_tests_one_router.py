@@ -844,6 +844,28 @@ class RouterTest(TestCase):
         M.stop()
 
 
+    def test_09a_management_no_reply(self):
+        addr  = "amqp:/$management"
+
+        M = self.messenger()
+        M.start()
+        M.route("amqp:/*", self.address+"/$1")
+
+        request  = Message()
+
+        request.address        = addr
+        request.correlation_id = "C1"
+        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
+
+        M.put(request)
+        M.send()
+
+        M.put(request)
+        M.send()
+
+        M.stop()
+
+
     def test_09c_management_get_operations(self):
         addr  = "amqp:/_local/$management"
 
