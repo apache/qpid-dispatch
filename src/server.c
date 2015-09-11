@@ -45,15 +45,6 @@ ALLOC_DEFINE(qd_user_fd_t);
 
 const char *QD_CONNECTION_TYPE = "connection";
 
-static const char *conn_state_names[] = {
-    "connecting",
-    "opening",
-    "operational",
-    "failed",
-    "user"
-};
-ENUM_DEFINE(conn_state, conn_state_names);
-
 static qd_thread_t *thread(qd_server_t *qd_server, int id)
 {
     qd_thread_t *thread = NEW(qd_thread_t);
@@ -106,7 +97,7 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
     if (sasl)
         mech = pn_sasl_get_mech(sasl);
 
-    if (qd_entity_set_string(entity, "state", conn_state_name(conn->state)) == 0 &&
+    if (qd_entity_set_bool(entity, "opened", conn->opened) == 0 &&
         qd_entity_set_string(entity, "container",
                              conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0) == 0 &&
         connection_entity_update_host(entity, conn) == 0 &&
@@ -194,12 +185,26 @@ static const char *log_incoming(char *buf, size_t size, qdpn_connector_t *cxtr)
 }
 
 
-static void add_connection_properties(pn_connection_t *conn)
+static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn)
 {
+    size_t clen = strlen(QD_CAPABILITY_ANONYMOUS_RELAY);
     static char *product_key = "product";
     static char *product_val = "qpid-dispatch-router";
     static char *version_key = "version";
 
+    //
+    // Set the container name
+    //
+    pn_connection_set_container(conn, qd_server->container_name);
+
+    //
+    // Offer ANONYMOUS_RELAY capability
+    //
+    pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
+
+    //
+    // Create the connection properties map
+    //
     pn_data_put_map(pn_connection_properties(conn));
     pn_data_enter(pn_connection_properties(conn));
 
@@ -231,7 +236,8 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
                log_incoming(logbuf, sizeof(logbuf), cxtr));
         ctx = new_qd_connection_t();
         DEQ_ITEM_INIT(ctx);
-        ctx->state        = CONN_STATE_OPENING;
+        ctx->opened       = false;
+        ctx->closed       = false;
         ctx->owner_thread = CONTEXT_UNSPECIFIED_OWNER;
         ctx->enqueued     = 0;
         ctx->pn_cxtr      = cxtr;
@@ -246,13 +252,10 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         DEQ_INIT(ctx->deferred_calls);
         ctx->deferred_call_lock = sys_mutex();
 
-        size_t clen = strlen(QD_CAPABILITY_ANONYMOUS_RELAY);
         pn_connection_t *conn = pn_connection();
         ctx->collector = pn_collector();
         pn_connection_collect(conn, ctx->collector);
-        pn_connection_set_container(conn, qd_server->container_name);
-        pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
-        add_connection_properties(conn);
+        decorate_connection(qd_server, conn);
         qdpn_connector_set_connection(cxtr, conn);
         pn_connection_set_context(conn, ctx);
         ctx->pn_conn = conn;
@@ -367,7 +370,14 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
     int events = 0;
     int passes = 0;
 
-    if (ctx->state == CONN_STATE_USER) {
+    if (ctx->closed)
+        return 0;
+
+    //
+    // If this is a user connection, bypass the AMQP processing and invoke the
+    // UserFD handler instead.
+    //
+    if (ctx->ufd) {
         qd_server->ufd_handler(ctx->ufd->context, ctx->ufd);
         return 1;
     }
@@ -381,97 +391,58 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
         qdpn_connector_process(cxtr);
 
         //
-        // Call the handler that is appropriate for the connector's state.
+        // If the connector has closed, notify the client via callback.
         //
-        switch (ctx->state) {
-        case CONN_STATE_CONNECTING: {
-            if (qdpn_connector_closed(cxtr)) {
-                ctx->state = CONN_STATE_FAILED;
-                events = 0;
-                break;
-            }
-
-            size_t clen = strlen(QD_CAPABILITY_ANONYMOUS_RELAY);
-            pn_connection_t *conn = pn_connection();
-            ctx->collector = pn_collector();
-            pn_connection_collect(conn, ctx->collector);
-            pn_connection_set_container(conn, qd_server->container_name);
-            pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
-            add_connection_properties(conn);
-            qdpn_connector_set_connection(cxtr, conn);
-            pn_connection_set_context(conn, ctx);
-            pn_connection_open(conn);
-            ctx->pn_conn = conn;
-            ctx->state   = CONN_STATE_OPENING;
-            assert(ctx->connector);
-            ctx->connector->state = CXTR_STATE_OPEN;
-            events = 1;
-            break;
-        }
-
-        case CONN_STATE_OPENING: {
-            qd_connection_t *qd_conn   = (qd_connection_t*) qdpn_connector_context(cxtr);
-            pn_collector_t  *collector = qd_connection_collector(qd_conn);
-            pn_event_t      *event;
-
-            events = 0;
-            event = pn_collector_peek(collector);
-            while (event) {
-                if (pn_event_type(event) == PN_CONNECTION_REMOTE_OPEN) {
-                    ctx->state = CONN_STATE_OPERATIONAL;
-                    qd_conn_event_t ce = QD_CONN_EVENT_LISTENER_OPEN;
-
-                    if (ctx->connector) {
-                        ce = QD_CONN_EVENT_CONNECTOR_OPEN;
-                        ctx->connector->delay = 0;
-                    } else
-                        assert(ctx->listener);
-
-                    qd_server->conn_handler(qd_server->conn_handler_context,
-                                            ctx->context, ce, (qd_connection_t*) qdpn_connector_context(cxtr));
-                    events = 1;
-                    break;  // Break without popping this event.  It will be re-processed in OPERATIONAL state.
-                } else if (pn_event_type(event) == PN_TRANSPORT_ERROR) {
-                    ctx->state = CONN_STATE_FAILED;
-                    if (ctx->connector) {
-                        const qd_server_config_t *config = ctx->connector->config;
-                        qd_log(qd_server->log_source, QD_LOG_TRACE, "Connection to %s:%s failed", config->host, config->port);
-                    }
-                }
-                pn_collector_pop(collector);
-                event = pn_collector_peek(collector);
-            }
-            break;
-        }
-
-        case CONN_STATE_OPERATIONAL:
-            if (qdpn_connector_closed(cxtr)) {
+        if (qdpn_connector_closed(cxtr)) {
+            if (ctx->opened)
                 qd_server->conn_handler(qd_server->conn_handler_context, ctx->context,
                                         QD_CONN_EVENT_CLOSE,
                                         (qd_connection_t*) qdpn_connector_context(cxtr));
-                events = 0;
-            }
-            else {
-                invoke_deferred_calls(ctx, false);
-
-                qd_connection_t *qd_conn   = (qd_connection_t*) qdpn_connector_context(cxtr);
-                pn_collector_t  *collector = qd_connection_collector(qd_conn);
-                pn_event_t      *event;
-
-                events = 0;
-                event = pn_collector_peek(collector);
-                while (event) {
-                    events += qd_server->pn_event_handler(qd_server->conn_handler_context, ctx->context, event, qd_conn);
-                    pn_collector_pop(collector);
-                    event = pn_collector_peek(collector);
-                }
-                events += qd_server->conn_handler(qd_server->conn_handler_context, ctx->context, QD_CONN_EVENT_WRITABLE, qd_conn);
-            }
-            break;
-
-        default:
+            ctx->closed = true;
+            events = 0;
             break;
         }
+
+        invoke_deferred_calls(ctx, false);
+
+        qd_connection_t *qd_conn   = (qd_connection_t*) qdpn_connector_context(cxtr);
+        pn_collector_t  *collector = qd_connection_collector(qd_conn);
+        pn_event_t      *event;
+
+        events = 0;
+        event = pn_collector_peek(collector);
+        while (event) {
+            //
+            // If we are transitioning to the open state, notify the client via callback.
+            //
+            if (!ctx->opened && pn_event_type(event) == PN_CONNECTION_REMOTE_OPEN) {
+                ctx->opened = true;
+                qd_conn_event_t ce = QD_CONN_EVENT_LISTENER_OPEN;
+
+                if (ctx->connector) {
+                    ce = QD_CONN_EVENT_CONNECTOR_OPEN;
+                    ctx->connector->delay = 0;
+                } else
+                    assert(ctx->listener);
+
+                qd_server->conn_handler(qd_server->conn_handler_context,
+                                        ctx->context, ce, (qd_connection_t*) qdpn_connector_context(cxtr));
+                events = 1;
+                break;  // Break without popping this event.  It will be re-processed in OPERATIONAL state.
+            } else if (pn_event_type(event) == PN_TRANSPORT_ERROR) {
+                ctx->closed = true;
+                if (ctx->connector) {
+                    const qd_server_config_t *config = ctx->connector->config;
+                    qd_log(qd_server->log_source, QD_LOG_TRACE, "Connection to %s:%s failed", config->host, config->port);
+                }
+            }
+
+            events += qd_server->pn_event_handler(qd_server->conn_handler_context, ctx->context, event, qd_conn);
+            pn_collector_pop(collector);
+            event = pn_collector_peek(collector);
+        }
+
+        events += qd_server->conn_handler(qd_server->conn_handler_context, ctx->context, QD_CONN_EVENT_WRITABLE, qd_conn);
     } while (events > 0);
 
     return passes > 1;
@@ -798,11 +769,12 @@ static void cxtr_try_open(void *context)
     qd_connection_t *ctx = new_qd_connection_t();
     DEQ_ITEM_INIT(ctx);
     ctx->server       = ct->server;
-    ctx->state        = CONN_STATE_CONNECTING;
+    ctx->opened       = false;
+    ctx->closed       = false;
     ctx->owner_thread = CONTEXT_UNSPECIFIED_OWNER;
     ctx->enqueued     = 0;
-    ctx->pn_conn      = 0;
-    ctx->collector    = 0;
+    ctx->pn_conn      = pn_connection();
+    ctx->collector    = pn_collector();
     ctx->ssl          = 0;
     ctx->listener     = 0;
     ctx->connector    = ct;
@@ -814,6 +786,9 @@ static void cxtr_try_open(void *context)
     ctx->deferred_call_lock = sys_mutex();
 
     qd_log(ct->server->log_source, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
+
+    pn_connection_collect(ctx->pn_conn, ctx->collector);
+    decorate_connection(ctx->server, ctx->pn_conn);
 
     //
     // qdpn_connector is not thread safe
@@ -833,6 +808,11 @@ static void cxtr_try_open(void *context)
         qd_timer_schedule(ct->timer, ct->delay);
         return;
     }
+
+    qdpn_connector_set_connection(ctx->pn_cxtr, ctx->pn_conn);
+    pn_connection_set_context(ctx->pn_conn, ctx);
+
+    ctx->connector->state = CXTR_STATE_OPEN;
 
     ct->ctx   = ctx;
     ct->delay = 5000;
@@ -909,6 +889,8 @@ static void cxtr_try_open(void *context)
         pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
     pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
     sys_mutex_unlock(ct->server->lock);
+
+    pn_connection_open(ctx->pn_conn);
 
     ctx->owner_thread = CONTEXT_NO_OWNER;
 }
@@ -1302,7 +1284,8 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     qd_connection_t *ctx = new_qd_connection_t();
     DEQ_ITEM_INIT(ctx);
     ctx->server       = qd_server;
-    ctx->state        = CONN_STATE_USER;
+    ctx->opened       = false;
+    ctx->closed       = false;
     ctx->owner_thread = CONTEXT_NO_OWNER;
     ctx->enqueued     = 0;
     ctx->pn_conn      = 0;

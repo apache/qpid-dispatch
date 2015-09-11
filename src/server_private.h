@@ -35,16 +35,6 @@
 void qd_server_timer_pending_LH(qd_timer_t *timer);
 void qd_server_timer_cancel_LH(qd_timer_t *timer);
 
-
-typedef enum {
-    CONN_STATE_CONNECTING = 0,
-    CONN_STATE_OPENING,
-    CONN_STATE_OPERATIONAL,
-    CONN_STATE_FAILED,
-    CONN_STATE_USER
-} conn_state_t;
-ENUM_DECLARE(conn_state);
-
 #define CONTEXT_NO_OWNER -1
 #define CONTEXT_UNSPECIFIED_OWNER -2
 
@@ -94,7 +84,8 @@ DEQ_DECLARE(qd_deferred_call_t, qd_deferred_call_list_t);
 struct qd_connection_t {
     DEQ_LINKS(qd_connection_t);
     qd_server_t      *server;
-    conn_state_t      state;
+    bool              opened; // An open callback was invoked for this connection
+    bool              closed;
     int               owner_thread;
     int               enqueued;
     qdpn_connector_t *pn_cxtr;

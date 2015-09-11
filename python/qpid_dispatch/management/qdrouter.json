@@ -892,14 +892,10 @@
                     "description": "The container for this connection",
                     "type": "string"
                 } ,
-                "state": {
-                    "type": [
-                    "connecting",
-                    "opening",
-                    "operational",
-                    "failed",
-                    "user"
-                ]},
+                "opened": {
+                    "type": "boolean",
+                    "description": "The connection has been opened (i.e. AMQP OPEN)"
+                },
                 "host": {
                     "description": "IP address and port number in the form addr:port.",
                     "type": "string"

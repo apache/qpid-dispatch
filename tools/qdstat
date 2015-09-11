@@ -107,7 +107,6 @@ class BusManager(Node):
     def displayConnections(self):
         disp = Display(prefix="  ")
         heads = []
-        heads.append(Header("state"))
         heads.append(Header("host"))
         heads.append(Header("container"))
         heads.append(Header("role"))
@@ -121,7 +120,6 @@ class BusManager(Node):
 
         for conn in objects:
             row = []
-            row.append(conn.state)
             row.append(conn.host)
             row.append(conn.container)
             row.append(conn.role)
@@ -141,7 +139,7 @@ class BusManager(Node):
         if addr[0] == 'A' : return "area"
         if addr[0] == 'L' : return "local"
         if addr[0] == 'C' : return "link-incoming"
-        if addr[0] == 'C' : return "link-outgoing"
+        if addr[0] == 'D' : return "link-outgoing"
         return "unknown: %s" % addr[0]
 
     def _addr_text(self, addr):

@@ -51,7 +51,7 @@ class QdstatTest(system_test.TestCase):
         self.run_qdstat(['--general'], r'(?s)Router Statistics.*Mode\s*Standalone')
 
     def test_connections(self):
-        self.run_qdstat(['--connections'], r'state.*host.*container')
+        self.run_qdstat(['--connections'], r'host.*container.*role')
 
     def test_links(self):
         self.run_qdstat(['--links'], r'endpoint.*out.*local.*temp.')
