@@ -26,6 +26,7 @@
 
 #include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/router.h>
+#include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/message.h>
 #include <qpid/dispatch/bitmask.h>
 #include <qpid/dispatch/hash.h>
@@ -87,7 +88,7 @@ struct qd_router_link_t {
     qd_router_link_ref_t     *ref;             ///< Pointer to a containing reference object
     char                     *target;          ///< Target address for incoming links
     qd_routed_event_list_t    event_fifo;      ///< FIFO of outgoing delivery/link events (no messages)
-    qd_routed_event_list_t    msg_fifo;        ///< FIFO of outgoing message deliveries
+    qd_routed_event_list_t    msg_fifo;        ///< FIFO of incoming or outgoing message deliveries
     qd_router_delivery_list_t deliveries;      ///< [own] outstanding unsettled deliveries
     bool                      strip_inbound_annotations;  ///<should the dispatch specific inbound annotations be stripped at the ingress router
     bool                      strip_outbound_annotations; ///<should the dispatch specific outbound annotations be stripped at the egress router
@@ -177,9 +178,6 @@ struct qd_address_t {
     qd_router_ref_list_t       rnodes;            ///< Remotely-Connected Consumers
     qd_hash_handle_t          *hash_handle;       ///< Linkage back to the hash table entry
     qd_address_semantics_t     semantics;
-    qd_address_t              *redirect;
-    qd_address_t              *static_cc;
-    qd_address_t              *dynamic_cc;
     bool                       toggle;
     bool                       waypoint;
     bool                       block_deletion;
@@ -249,6 +247,7 @@ DEQ_DECLARE(qd_waypoint_t, qd_waypoint_list_t);
 
 struct qd_router_t {
     qd_dispatch_t            *qd;
+    qd_router_core_t         *router_core;
     qd_log_source_t          *log_source;
     qd_router_mode_t          router_mode;
     const char               *router_area;
