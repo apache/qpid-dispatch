@@ -108,20 +108,25 @@ Now, the router must be configured to route certain addresses to B2:
 ::
 
     linkRoutePattern {
-        prefix: b2.
+        prefix: b2
         connector: broker
     }
 
 
 The linkRoutePattern tells router Ra that any sender or receiver that
 is attached with a target or source (respectively) whos address begins
-with "b2.", should be routed to the broker B2 (via the on-demand
+with "b2", should be routed to the broker B2 (via the on-demand
 connector).
+
+Examples of addresses that "begin with 'b2'" include:
+ - b2
+ - b2/queues
+ - b2/queues/app1
 
 When the on-demand connector is configured, router Ra establishes a
 connection to the broker.  Once the connection is open, Ra tells the
 other routers (Rp and Rb) that it is a valid destination for
-link-routes to the "b2." prefix.  This means that sender or receiver
+link-routes to the "b2" prefix.  This means that sender or receiver
 links attached to Rb or Rp will be routed via the shortest path to Ra
 where they are then routed outbound to the broker B2.
 
@@ -130,15 +135,15 @@ On Rp and Rb, it is advisable to add the following configuration:
 ::
 
     linkRoutePattern {
-        prefix: b2.
+        prefix: b2
     }
 
 This configuration tells the routers that link-routing is intended to
-be available for targets and sources starting with "b2.".  This is
+be available for targets and sources starting with "b2".  This is
 important because it is possible that B2 might be unavailable or shut
 off.  If B2 is unreachable, Ra will not advertize itself as a
-destination for "b2." and the other routers might never know that
-"b2." was intended for link-routing.
+destination for "b2" and the other routers might never know that
+"b2" was intended for link-routing.
 
 The above configuration allows Rb and Rp to reject attaches that
 should be routed to B2 with an error message that indicates that there
