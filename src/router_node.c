@@ -350,9 +350,6 @@ static int qd_router_find_mask_bit_LH(qd_router_t *router, qd_link_t *link)
 }
 
 
-/**
- *
- */
 static qd_address_t *router_lookup_terminus_LH(qd_router_t *router, const char *taddr, qd_direction_t dir)
 {
     char                 addr_prefix = (dir == QD_INCOMING) ? 'C' : 'D';
@@ -363,30 +360,17 @@ static qd_address_t *router_lookup_terminus_LH(qd_router_t *router, const char *
         return 0;
 
     //
-    // Start by searching for the entire address for a match
+    // Initialize the iterator with taddr so we can traverse through taddr by traversing the iterator.
     //
     iter = qd_address_iterator_string(taddr, ITER_VIEW_ADDRESS_HASH);
+
+    //Set the iter->prefix_override to addr_prefix
     qd_address_iterator_override_prefix(iter, addr_prefix);
-    qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
-    qd_field_iterator_free(iter);
 
-    if (addr)
-        return addr;
+    //Populate addr with the appropriate qd_address_t if the string in the iterator generated a hash
+    //that is present in the addr_hash
+    qd_hash_retrieve_prefix(router->addr_hash, iter, (void*) &addr);
 
-    //
-    // If there was no match on the entire address, do a prefix search for the address up to
-    // and including the first '.'
-    //
-    const char *cursor = taddr;
-    while (*cursor && *cursor != '.')
-        cursor++;
-    if (*cursor == '.')
-        cursor++;
-    int len = (int) (cursor - taddr);
-
-    iter = qd_address_iterator_binary(taddr, len, ITER_VIEW_ADDRESS_HASH);
-    qd_address_iterator_override_prefix(iter, addr_prefix);
-    qd_hash_retrieve(router->addr_hash, iter, (void*) &addr);
     qd_field_iterator_free(iter);
 
     return addr;

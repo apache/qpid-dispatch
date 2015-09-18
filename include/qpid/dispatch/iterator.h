@@ -20,6 +20,7 @@
  */
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <qpid/dispatch/buffer.h>
 #include <qpid/dispatch/iovec.h>
 
@@ -112,6 +113,7 @@ typedef enum {
  */
 qd_field_iterator_t* qd_address_iterator_string(const char         *text,
                                                 qd_iterator_view_t  view);
+
 static inline qd_field_iterator_t* qd_field_iterator_string(const char *text)
 {
     return qd_address_iterator_string(text, ITER_VIEW_ALL);
@@ -260,6 +262,46 @@ char* qd_field_iterator_strncpy(qd_field_iterator_t *iter, char* buffer, int n);
  * @return An iovec structure that references the data in the iterator's buffers.
  */
 qd_iovec_t *qd_field_iterator_iovec(const qd_field_iterator_t *iter);
+
+/**
+ * Steps through the iterator hashing each octet and also trying to find a separator. The separator is hardcoded to be a '/'.
+ * It stores the hash of each segment as a node (qd_hash_segment_t) in the linked list qd_hash_segment_list_t of the iterator.
+ * The linked list contains as many nodes as there are segments.
+ *
+ *     +------------------------+
+ *     |                        |
+ *     | qd_hash_segment_list_t |----------->+
+ *     |                        |            |
+ *     +------------------------+            |       "policy"              "policy/org"            "policy/org/apache"
+ *                                           |    +-------------------+   +-------------------+   +-------------------+
+ *                                           +--->| qd_hash_segment_t |-->| qd_hash_segment_t |-->| qd_hash_segment_t |--/
+ *                                                +-------------------+   +-------------------+   +-------------------+
+ *
+ * In the above example the first qd_hash_segment_t stores the hash of the string "policy" and the next qd_hash_segment_t contains \
+ * the hash to "policy/org" and so on. The purpose of doing this is to pre-generate the hash and hash length and store
+ * it so matches can be quickly made.
+ *
+ *
+ * @param iter An address iterator
+ */
+void qd_iterator_hash_segments(qd_field_iterator_t *iter);
+
+/**
+ * Populates the passed in hash with the hash from the tail hash segment and deletes and frees it.
+ * This hash can be further used arrive at the hash bucket.
+ * Returns false if it cannot find anymore tail hash_segments, true otherwise.
+ *
+ * @param iter A field iterator
+ */
+bool qd_iterator_hash_and_reset(qd_field_iterator_t *iter, uint32_t *hash);
+
+/**
+ * Generates and returns a hash of the contents of the iterator by stepping through the iterator octet by octet.
+ * Uses the djb2 algorithm for hashing - can be found at http://www.cse.yorku.ca/~oz/hash.html
+ *
+ * @param iter A field iterator
+ */
+uint32_t qd_iterator_hash_function(qd_field_iterator_t *iter);
 
 /** @} */
 

@@ -21,6 +21,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <qpid/dispatch/iterator.h>
+#include <qpid/dispatch/hash.h>
+#include <qpid/dispatch/router.h>
 
 #define FAIL_TEXT_SIZE 10000
 static char fail_text[FAIL_TEXT_SIZE];
@@ -165,6 +167,23 @@ static char* test_view_address_hash(void *context)
     {"_topo/my-area/my-router/my-addr",         "Lmy-addr"},
     {"_topo/my-area/router",                    "Rrouter"},
     {"amqp:/mobile",                            "M1mobile"},
+
+    // Re-run the above tests to make sure trailing slashes are ignored.
+    {"amqp:/_local/my-addr/sub/",                "Lmy-addr/sub"},
+    {"amqp:/_local/my-addr/",                    "Lmy-addr"},
+    {"amqp:/_topo/area/router/local/sub/",       "Aarea"},
+    {"amqp:/_topo/my-area/router/local/sub/",    "Rrouter"},
+    {"amqp:/_topo/my-area/my-router/local/sub/", "Llocal/sub"},
+    {"amqp:/_topo/area/all/local/sub/",          "Aarea"},
+    {"amqp:/_topo/my-area/all/local/sub/",       "Llocal/sub"},
+    {"amqp:/_topo/all/all/local/sub/",           "Llocal/sub"},
+    {"amqp://host:port/_local/my-addr/",         "Lmy-addr"},
+    {"_topo/area/router/my-addr/",               "Aarea"},
+    {"_topo/my-area/router/my-addr/",            "Rrouter"},
+    {"_topo/my-area/my-router/my-addr/",         "Lmy-addr"},
+    {"_topo/my-area/router/",                    "Rrouter"},
+    {"_topo/my-area/router:",                    "Rrouter:"},
+
     {0, 0}
     };
     int idx;
@@ -305,6 +324,134 @@ static char* test_field_advance_buffer(void *context)
     return ret;
 }
 
+static char *test_qd_hash_retrieve_prefix_separator(void *context)
+{
+    qd_hash_t *hash = qd_hash(10, 32, 0);
+    qd_field_iterator_t *iter = qd_address_iterator_string("policy/org/apache", ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(iter, 'C');
+
+    // Insert that hash
+    qd_error_t error_string = qd_hash_insert(hash, iter, "TEST", 0);
+
+    // There should be no error on the insert hash
+    assert(error_string == QD_ERROR_NONE);
+
+    const char *taddr = "policy/org/apache/dev";
+
+    qd_field_iterator_t *address_iter = qd_address_iterator_string(taddr, ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(address_iter, 'C');
+
+    qd_address_t *addr;
+
+    qd_hash_retrieve_prefix(hash, address_iter, (void*) &addr);
+
+    qd_field_iterator_free(iter);
+    qd_field_iterator_free(address_iter);
+
+    if(addr)
+        return 0;
+
+    return "test_qd_hash_retrieve_prefix_separator() failed";
+}
+
+
+static char *test_qd_hash_retrieve_prefix(void *context)
+{
+    qd_hash_t *hash = qd_hash(10, 32, 0);
+
+    qd_field_iterator_t *iter = qd_address_iterator_string("policy", ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(iter, 'C');
+
+    // Insert that hash
+    qd_error_t error_string = qd_hash_insert(hash, iter, "TEST", 0);
+
+    // There should be no error on the insert hash
+    assert(error_string == QD_ERROR_NONE);
+
+    const char *taddr = "policy/org/apache/dev";
+
+    qd_field_iterator_t *address_iter = qd_address_iterator_string(taddr, ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(address_iter, 'C');
+
+    qd_address_t *addr;
+
+    qd_hash_retrieve_prefix(hash, address_iter, (void*) &addr);
+
+    qd_field_iterator_free(iter);
+    qd_field_iterator_free(address_iter);
+
+    if(addr)
+        return 0;
+
+    return "test_qd_hash_retrieve_prefix() failed";
+}
+
+
+static char *test_qd_hash_retrieve_prefix_no_match(void *context)
+{
+    qd_hash_t *hash = qd_hash(10, 32, 0);
+
+    // No 'y' in policy. There should be no match.
+    qd_field_iterator_t *iter = qd_address_iterator_string("polic", ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(iter, 'C');
+
+    // Insert that hash
+    qd_error_t error_string = qd_hash_insert(hash, iter, "TEST", 0);
+
+    // There should be no error on the insert hash
+    assert(error_string == QD_ERROR_NONE);
+
+    const char *taddr = "policy/org/apache/dev";
+
+    qd_field_iterator_t *address_iter = qd_address_iterator_string(taddr, ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(address_iter, 'C');
+
+    qd_address_t *addr;
+
+    qd_hash_retrieve_prefix(hash, address_iter, (void*) &addr);
+
+    qd_field_iterator_free(iter);
+    qd_field_iterator_free(address_iter);
+
+    if(addr)
+        return "test_qd_hash_retrieve_prefix_no_match() failed";
+
+    return 0;
+}
+
+
+static char *test_qd_hash_retrieve_prefix_no_match_separator(void *context)
+{
+    qd_hash_t *hash = qd_hash(10, 32, 0);
+
+    // No 'y' in policy. There should be no match.
+    qd_field_iterator_t *iter = qd_address_iterator_string("policy/org/apach", ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(iter, 'C');
+
+    // Insert that hash
+    qd_error_t error_string = qd_hash_insert(hash, iter, "TEST", 0);
+
+    // There should be no error on the insert hash
+    assert(error_string == QD_ERROR_NONE);
+
+    const char *taddr = "policy/org/apache/dev";
+
+    qd_field_iterator_t *address_iter = qd_address_iterator_string(taddr, ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(address_iter, 'C');
+
+    qd_address_t *addr;
+
+    qd_hash_retrieve_prefix(hash, address_iter, (void*) &addr);
+
+    qd_field_iterator_free(iter);
+    qd_field_iterator_free(address_iter);
+
+    if(addr)
+        return "test_qd_hash_retrieve_prefix_no_match_separator() failed";
+
+    return 0;
+}
+
 
 int field_tests(void)
 {
@@ -320,6 +467,10 @@ int field_tests(void)
     TEST_CASE(test_view_node_hash, 0);
     TEST_CASE(test_field_advance_string, 0);
     TEST_CASE(test_field_advance_buffer, 0);
+    TEST_CASE(test_qd_hash_retrieve_prefix_separator, 0);
+    TEST_CASE(test_qd_hash_retrieve_prefix, 0);
+    TEST_CASE(test_qd_hash_retrieve_prefix_no_match, 0);
+    TEST_CASE(test_qd_hash_retrieve_prefix_no_match_separator, 0);
 
     return result;
 }

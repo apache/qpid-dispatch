@@ -45,5 +45,24 @@ const unsigned char *qd_hash_key_by_handle(const qd_hash_handle_t *handle);
 qd_error_t qd_hash_remove_by_handle(qd_hash_t *h, qd_hash_handle_t *handle);
 qd_error_t qd_hash_remove_by_handle2(qd_hash_t *h, qd_hash_handle_t *handle, unsigned char **key);
 
+/**
+ * Retrieves the value (qd_address_t) based on the hash by progressively first exact matching or prefix matching the address components.
+ * If the iterator contains an address string 'policy/org/apache/dev' and the hashtable contains the hash for 'policy/org',
+ * this function will look for the following in that order
+ *  1. 'policy/org/apache/dev' - no match, proceed to step 2
+ *  2. 'policy/org/apache' - no match, proceed to step 3
+ *  3. 'policy/org' - We got a match here. This match is a prefix match - return the qd_address_t associated with this
+ *
+ * @param qd_hash_t
+ * @param iter An iterator containing the address string to search on.
+ * @param **val The qd_address_t value if there is a full or prefix match.
+ */
+void qd_hash_retrieve_prefix(qd_hash_t *h, qd_field_iterator_t *iter, void **val);
+
+/**
+ * Same as qd_hash_retrieve_prefix but returns the value as a constant which cannot be modified.
+ * @see qd_hash_retrieve_prefix
+ */
+void qd_hash_retrieve_prefix_const(qd_hash_t *h, qd_field_iterator_t *iter, const void **val);
 
 #endif

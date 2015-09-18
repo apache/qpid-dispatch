@@ -794,7 +794,7 @@
             "operations": ["CREATE"],
             "attributes": {
                 "prefix": {
-                    "description":"An address prefix to match against target and source addresses.  For Dispatch 0.4, this pattern must be of the form '<text>.' and matches any address that contains that prefix.  Note that a prefix *must* end with a period (.) and *must not* contain any other periods.  If the string does not end in a period, it will match only addresses that are exactly equal.",
+                    "description":"An address prefix to match against target and source addresses.  From Dispatch 0.6 onwards, this pattern must be of the form '<text>/<text1>/...' or just '<text>' and matches any address that contains that prefix.  For example, if the prefix is set to org/apache any address that has the prefix 'org/apache' like org/apache/dev will match. Note that a prefix must not start or end with a slash (/) and can contain zero or more slashes (/).  Any characters between the slashes are simply treated as part of the address",
                     "type": "string",
                     "required": true,
                     "create": true
@@ -870,7 +870,7 @@
                     "type": "string"
                 },
                 "validOrigins": {
-                    "description": "List of valid origin nodes for messages arriving via the remote node, used for duplicate elimination in redundant networks.",
+                    "description": "List of valid origin nodes for messages arriving via the re mote node, used for duplicate elimination in redundant networks.",
                     "type": "list"
                 },
                 "address": {
