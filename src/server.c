@@ -169,6 +169,7 @@ static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_confi
         return qd_error(QD_ERROR_RUNTIME, "Cannot initialize SSL");
     }
 
+    pn_ssl_domain_free(domain);
     return QD_ERROR_NONE;
 }
 
