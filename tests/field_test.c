@@ -331,10 +331,11 @@ static char *test_qd_hash_retrieve_prefix_separator(void *context)
     qd_address_iterator_override_prefix(iter, 'C');
 
     // Insert that hash
-    qd_error_t error_string = qd_hash_insert(hash, iter, "TEST", 0);
+    qd_error_t error = qd_hash_insert(hash, iter, "TEST", 0);
 
     // There should be no error on the insert hash
-    assert(error_string == QD_ERROR_NONE);
+    if (error != QD_ERROR_NONE)
+        return "qd_hash_insert failed";
 
     const char *taddr = "policy/org/apache/dev";
 
@@ -363,10 +364,11 @@ static char *test_qd_hash_retrieve_prefix(void *context)
     qd_address_iterator_override_prefix(iter, 'C');
 
     // Insert that hash
-    qd_error_t error_string = qd_hash_insert(hash, iter, "TEST", 0);
+    qd_error_t error = qd_hash_insert(hash, iter, "TEST", 0);
 
     // There should be no error on the insert hash
-    assert(error_string == QD_ERROR_NONE);
+    if (error != QD_ERROR_NONE)
+        return "qd_hash_insert failed";
 
     const char *taddr = "policy/org/apache/dev";
 
@@ -396,10 +398,11 @@ static char *test_qd_hash_retrieve_prefix_no_match(void *context)
     qd_address_iterator_override_prefix(iter, 'C');
 
     // Insert that hash
-    qd_error_t error_string = qd_hash_insert(hash, iter, "TEST", 0);
+    qd_error_t error = qd_hash_insert(hash, iter, "TEST", 0);
 
     // There should be no error on the insert hash
-    assert(error_string == QD_ERROR_NONE);
+    if (error != QD_ERROR_NONE)
+        return "qd_hash_insert failed";
 
     const char *taddr = "policy/org/apache/dev";
 
@@ -429,10 +432,11 @@ static char *test_qd_hash_retrieve_prefix_no_match_separator(void *context)
     qd_address_iterator_override_prefix(iter, 'C');
 
     // Insert that hash
-    qd_error_t error_string = qd_hash_insert(hash, iter, "TEST", 0);
+    qd_error_t error = qd_hash_insert(hash, iter, "TEST", 0);
 
     // There should be no error on the insert hash
-    assert(error_string == QD_ERROR_NONE);
+    if (error != QD_ERROR_NONE)
+        return "qd_hash_insert failed";
 
     const char *taddr = "policy/org/apache/dev";
 
