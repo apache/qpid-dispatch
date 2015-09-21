@@ -166,7 +166,7 @@ static void qd_address_iterator_check_trailing_octet(qd_field_iterator_t *iter, 
     // Save the iterator's pointer so we can apply it back before returning from this function.
     pointer_t save_pointer = iter->pointer;
 
-    char current_octet;
+    char current_octet = 0;
     while(!qd_field_iterator_end(iter)) {
         current_octet = qd_field_iterator_octet(iter);
     }
