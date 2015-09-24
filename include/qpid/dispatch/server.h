@@ -363,6 +363,12 @@ typedef struct qd_server_config_t {
      * The maximum size of an AMQP frame in octets.
      */
     uint32_t max_frame_size;
+
+    /**
+     * The idle timeout, in seconds.  If the peer sends no data frames in this many seconds, the
+     * connection will be automatically closed.
+     */
+    int idle_timeout_seconds;
 } qd_server_config_t;
 
 

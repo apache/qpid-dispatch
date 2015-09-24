@@ -609,7 +609,12 @@
                     "description": "Defaults to 65536.  If specified, it is the maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.",
                     "create": true
                 },
-
+                "idleTimeoutSeconds": {
+                    "type": "integer",
+                    "default": 16,
+                    "description": "The idle timeout, in seconds, for connections through this listener.  If no frames are received on the connection for this time interval, the connection shall be closed.",
+                    "create": true
+                },
                 "requirePeerAuth": {
                     "type": "boolean",
                     "create": true,
@@ -660,6 +665,12 @@
                     "type": "integer",
                     "default": 65536,
                     "description": "Maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.",
+                    "create": true
+                },
+                "idleTimeoutSeconds": {
+                    "type": "integer",
+                    "default": 16,
+                    "description": "The idle timeout, in seconds, for connections through this connector.  If no frames are received on the connection for this time interval, the connection shall be closed.",
                     "create": true
                 },
                 "stripAnnotations": {

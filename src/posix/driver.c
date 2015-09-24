@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <time.h>
 
 #include <qpid/dispatch/driver.h>
 #include <qpid/dispatch/threading.h>
@@ -129,35 +130,17 @@ static void pni_fatal(const char *text)
     exit(1);
 }
 
-#ifdef USE_CLOCK_GETTIME
-#include <time.h>
 pn_timestamp_t pn_i_now(void)
 {
     struct timespec now;
-    if (clock_gettime(CLOCK_REALTIME, &now)) pni_fatal("clock_gettime() failed");
+#ifdef CLOCK_MONOTONIC_COARSE
+    int cid = CLOCK_MONOTONIC_COARSE;
+#else
+    int cid = CLOCK_MONOTONIC;
+#endif
+    if (clock_gettime(cid, &now)) pni_fatal("clock_gettime() failed");
     return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_nsec / 1000000);
 }
-#elif defined(USE_WIN_FILETIME)
-#include <windows.h>
-pn_timestamp_t pn_i_now(void)
-{
-    FILETIME now;
-    GetSystemTimeAsFileTime(&now);
-    ULARGE_INTEGER t;
-    t.u.HighPart = now.dwHighDateTime;
-    t.u.LowPart = now.dwLowDateTime;
-    // Convert to milliseconds and adjust base epoch
-    return t.QuadPart / 10000 - 11644473600000;
-}
-#else
-#include <sys/time.h>
-pn_timestamp_t pn_i_now(void)
-{
-    struct timeval now;
-    if (gettimeofday(&now, NULL)) pni_fatal("gettimeofday failed");
-    return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
-}
-#endif
 
 static bool pni_eq_nocase(const char *a, const char *b)
 {
@@ -646,6 +629,18 @@ void qdpn_connector_activate(qdpn_connector_t *ctor, qdpn_activate_criteria_t cr
         ctor->status |= PN_SEL_RD;
         break;
     }
+}
+
+
+void qdpn_activate_all(qdpn_driver_t *d)
+{
+    sys_mutex_lock(d->lock);
+    qdpn_connector_t *c = DEQ_HEAD(d->connectors);
+    while (c) {
+        c->status |= PN_SEL_WR;
+        c = DEQ_NEXT(c);
+    }
+    sys_mutex_unlock(d->lock);
 }
 
 

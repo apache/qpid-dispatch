@@ -161,6 +161,7 @@ struct qd_server_t {
     void                     *signal_context;
     int                       pending_signal;
     qd_connection_list_t      connections;
+    qd_timer_t               *heartbeat_timer;
 };
 
 ALLOC_DECLARE(qd_work_item_t);

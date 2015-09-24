@@ -352,6 +352,10 @@ void qdpn_connector_free(qdpn_connector_t *connector);
  */
 void qdpn_connector_activate(qdpn_connector_t *connector, qdpn_activate_criteria_t criteria);
 
+/** Activate all of the open file descriptors
+ */
+void qdpn_activate_all(qdpn_driver_t *driver);
+
 /** Return the activation status of the connector for a criteria
  *
  * Return the activation status (i.e. readable, writable) for the connector.  This function

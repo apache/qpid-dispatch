@@ -1074,14 +1074,15 @@ static void qd_router_open_routed_link(void *context, bool discard)
     link_event_t *le = (link_event_t*) context;
 
     if (!discard) {
+        sys_mutex_lock(le->router->lock);
         qd_link_t *link = le->rlink->link;
-
         if (le->rlink->connected_link) {
             qd_link_t *peer = le->rlink->connected_link->link;
             pn_terminus_copy(qd_link_source(link), qd_link_remote_source(peer));
             pn_terminus_copy(qd_link_target(link), qd_link_remote_target(peer));
             pn_link_open(qd_link_pn(link));
         }
+        sys_mutex_unlock(le->router->lock);
     }
 
     free_link_event_t(le);

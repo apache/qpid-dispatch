@@ -36,6 +36,8 @@
 
 static __thread qd_server_t *thread_server = 0;
 
+#define HEARTBEAT_INTERVAL 1000
+
 ALLOC_DEFINE(qd_work_item_t);
 ALLOC_DEFINE(qd_listener_t);
 ALLOC_DEFINE(qd_connector_t);
@@ -278,6 +280,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         //
         pn_transport_set_server(tport);
         pn_transport_set_max_frame(tport, config->max_frame_size);
+        pn_transport_set_idle_timeout(tport, config->idle_timeout_seconds * 1000);
 
         // Set up SSL if configured
         if (config->ssl_enabled) {
@@ -829,6 +832,7 @@ static void cxtr_try_open(void *context)
     // Configure the transport
     //
     pn_transport_set_max_frame(tport, config->max_frame_size);
+    pn_transport_set_idle_timeout(tport, config->idle_timeout_seconds * 1000);
 
     //
     // Set up SSL if appropriate
@@ -898,6 +902,14 @@ static void cxtr_try_open(void *context)
 }
 
 
+static void heartbeat_cb(void *context)
+{
+    qd_server_t *qd_server = (qd_server_t*) context;
+    qdpn_activate_all(qd_server->driver);
+    qd_timer_schedule(qd_server->heartbeat_timer, HEARTBEAT_INTERVAL);
+}
+
+
 qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *container_name,
                        const char *sasl_config_path, const char *sasl_config_name)
 {
@@ -940,6 +952,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->pause_next_sequence = 0;
     qd_server->pause_now_serving   = 0;
     qd_server->pending_signal      = 0;
+    qd_server->heartbeat_timer     = 0;
 
     qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 
@@ -1014,6 +1027,9 @@ void qd_server_run(qd_dispatch_t *qd)
     for (i = 1; i < qd_server->thread_count; i++)
         thread_start(qd_server->threads[i]);
 
+    qd_server->heartbeat_timer = qd_timer(qd, heartbeat_cb, qd_server);
+    qd_timer_schedule(qd_server->heartbeat_timer, HEARTBEAT_INTERVAL);
+
     qd_server_announce(qd_server);
 
     thread_run((void*) qd_server->threads[0]);
@@ -1040,6 +1056,9 @@ void qd_server_start(qd_dispatch_t *qd)
 
     for (i = 0; i < qd_server->thread_count; i++)
         thread_start(qd_server->threads[i]);
+
+    qd_server->heartbeat_timer = qd_timer(qd, heartbeat_cb, qd_server);
+    qd_timer_schedule(qd_server->heartbeat_timer, HEARTBEAT_INTERVAL);
 
     qd_server_announce(qd_server);
 }
