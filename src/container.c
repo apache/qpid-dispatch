@@ -54,6 +54,7 @@ ALLOC_DEFINE(qd_node_t);
 struct qd_link_t {
     pn_session_t       *pn_sess;
     pn_link_t          *pn_link;
+    qd_direction_t      direction;
     void               *context;
     qd_node_t          *node;
     bool                drain_mode;
@@ -122,6 +123,7 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
 
     link->pn_sess    = pn_link_session(pn_link);
     link->pn_link    = pn_link;
+    link->direction  = QD_OUTGOING;
     link->context    = 0;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(pn_link);
@@ -171,6 +173,7 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
 
     link->pn_sess    = pn_link_session(pn_link);
     link->pn_link    = pn_link;
+    link->direction  = QD_INCOMING;
     link->context    = 0;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(pn_link);
@@ -685,6 +688,7 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     else
         link->pn_link = pn_receiver(link->pn_sess, name);
 
+    link->direction  = dir;
     link->context    = node->context;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(link->pn_link);
@@ -759,6 +763,12 @@ pn_link_t *qd_link_pn(qd_link_t *link)
 pn_session_t *qd_link_pn_session(qd_link_t *link)
 {
     return link->pn_sess;
+}
+
+
+qd_direction_t qd_link_direction(const qd_link_t *link)
+{
+    return link->direction;
 }
 
 

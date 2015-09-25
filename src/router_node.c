@@ -1547,12 +1547,18 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
     qd_router_link_t *rlink  = (qd_router_link_t*) qd_link_get_context(link);
     qd_router_conn_t *shared = (qd_router_conn_t*) qd_link_get_conn_context(link);
     qd_address_t     *oaddr  = 0;
+    qd_waypoint_t    *wp     = 0;
     int               lost_link_mask_bit = -1;
 
     if (!rlink)
         return 0;
 
     sys_mutex_lock(router->lock);
+
+    //
+    // Save this so we can check it after the lock is released.
+    //
+    wp = rlink->waypoint;
 
     if (rlink->connected_link) {
         qd_connection_t *out_conn = qd_link_connection(rlink->connected_link->link);
@@ -1627,6 +1633,12 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
     qd_router_link_free_LH(rlink);
 
     sys_mutex_unlock(router->lock);
+
+    //
+    // If this was a waypoint link, notify the waypoint module.
+    //
+    if (wp)
+        qd_waypoint_link_closed(router->qd, wp, link);
 
     //
     // Check to see if the owning address should be deleted

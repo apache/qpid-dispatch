@@ -290,6 +290,10 @@ void qd_waypoint_new_outgoing_link(qd_dispatch_t *qd, qd_waypoint_t *wp, qd_link
 
 void qd_waypoint_link_closed(qd_dispatch_t *qd, qd_waypoint_t *wp, qd_link_t *link)
 {
+    if (qd_link_direction(link) == QD_INCOMING)
+        wp->in_link = 0;
+    else
+        wp->out_link = 0;
 }
 
 

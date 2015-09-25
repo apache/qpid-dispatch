@@ -170,6 +170,7 @@ void *qd_link_get_context(qd_link_t *link);
 void qd_link_set_conn_context(qd_link_t *link, void *link_context);
 void *qd_link_get_conn_context(qd_link_t *link);
 
+qd_direction_t qd_link_direction(const qd_link_t *link);
 qd_connection_t *qd_link_connection(qd_link_t *link);
 pn_link_t *qd_link_pn(qd_link_t *link);
 pn_session_t *qd_link_pn_session(qd_link_t *link);
