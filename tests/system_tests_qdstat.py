@@ -95,7 +95,7 @@ try:
                 ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl', 'authenticatePeer': 'no', 'requireSsl': 'yes'}),
                 ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl', 'authenticatePeer': 'no', 'requireSsl': 'no'}),
                 ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl', 'authenticatePeer': 'yes', 'requireSsl': 'yes',
-                              'saslMechanisms:': 'EXTERNAL'})
+                              'saslMechanisms': 'EXTERNAL'})
             ])
             cls.router = cls.tester.qdrouterd('test-router', config)
 
