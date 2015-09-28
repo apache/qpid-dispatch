@@ -749,7 +749,8 @@ void qdpn_connector_process(qdpn_connector_t *c)
                 c->output_done = true;
                 c->status &= ~PN_SEL_WR;
             }
-        }
+        } else
+            c->status &= ~PN_SEL_WR;
 
         // Closed?
 
