@@ -441,11 +441,12 @@ static int router_writable_link_handler(void* context, qd_link_t *link)
     qd_routed_event_t      *re;
     size_t                  offer;
     int                     event_count = 0;
-    bool                    drain_mode;
-    bool                    drain_changed = qd_link_drain_changed(link, &drain_mode);
 
     if (!rlink)
         return 0;
+
+    bool drain_mode;
+    bool drain_changed = qd_link_drain_changed(link, &drain_mode);
 
     DEQ_INIT(to_send);
     DEQ_INIT(events);
@@ -1567,8 +1568,8 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
             memset(ld, 0, sizeof(link_detach_t));
             ld->router = router;
             ld->rlink  = rlink->connected_link;
-            pn_condition_t *cond = pn_link_remote_condition(qd_link_pn(link));
-            if (pn_condition_is_set(cond)) {
+            pn_condition_t *cond = qd_link_pn(link) ? pn_link_remote_condition(qd_link_pn(link)) : 0;
+            if (cond && pn_condition_is_set(cond)) {
                 if (pn_condition_get_name(cond)) {
                     strncpy(ld->condition_name, pn_condition_get_name(cond), COND_NAME_LEN);
                     ld->condition_name[COND_NAME_LEN] = '\0';
