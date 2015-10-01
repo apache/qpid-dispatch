@@ -87,7 +87,7 @@ typedef enum {
 static char *my_area    = "";
 static char *my_router  = "";
 
-const char SEPARATOR_SLASH = '/';
+const char SEPARATOR_DOT = '.';
 
 const uint32_t HASH_INIT = 5381;
 
@@ -275,7 +275,7 @@ static void view_initialize(qd_field_iterator_t *iter)
 
     if (iter->view == ITER_VIEW_ADDRESS_HASH) {
         iter->mode = MODE_TO_END;
-        qd_address_iterator_check_trailing_octet(iter, '/');
+        qd_address_iterator_check_trailing_octet(iter, SEPARATOR_DOT);
         parse_address_view(iter);
         return;
     }
@@ -521,7 +521,7 @@ int qd_field_iterator_equal(qd_field_iterator_t *iter, const unsigned char *stri
     qd_field_iterator_reset(iter);
 
     while (!qd_field_iterator_end(iter) && *string) {
-    	if (*string != qd_field_iterator_octet(iter))
+        if (*string != qd_field_iterator_octet(iter))
             break;
         string++;
     }
@@ -680,7 +680,8 @@ static void qd_insert_hash_segment(qd_field_iterator_t *iter, uint32_t *hash, in
 
     // While storing the segment, don't include the hash of the separator in the segment but do include it in the overall hash.
     hash_segment->hash = *hash;
-    hash_segment->segment_length = segment_length - 1;
+
+    hash_segment->segment_length = segment_length;
     DEQ_INSERT_TAIL(iter->hash_segments, hash_segment);
 }
 
@@ -692,23 +693,24 @@ void qd_iterator_hash_segments(qd_field_iterator_t *iter)
     uint32_t hash = HASH_INIT;
     char octet;
     int segment_length=0;
+
     while (!qd_field_iterator_end(iter)) {
         // Get the octet at which the iterator is currently pointing to.
         octet = qd_field_iterator_octet(iter);
         segment_length += 1;
 
-        if (octet == SEPARATOR_SLASH) {
-            qd_insert_hash_segment(iter, &hash, segment_length);
+        if (octet == SEPARATOR_DOT) {
+            qd_insert_hash_segment(iter, &hash, segment_length-1);
         }
 
         hash = ((hash << 5) + hash) + octet; /* hash * 33 + c */
     }
 
     // Segments should never end with a separator. see view_initialize which in turn calls qd_address_iterator_check_trailing_octet
-    // Insert the last segment
+    // Insert the last segment which was not inserted in the previous while loop
     qd_insert_hash_segment(iter, &hash, segment_length);
 
-    // Return the pointers in the iterator back to the original state.
+    // Return the pointers in the iterator back to the original state before returning from this function.
     qd_field_iterator_reset(iter);
 }
 
