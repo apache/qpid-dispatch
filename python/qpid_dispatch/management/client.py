@@ -119,7 +119,7 @@ class Node(object):
             self.client = None
 
     def __repr__(self):
-        return "%s(%s)"%(self.__class__.__name__, self.address)
+        return "%s(%s)"%(self.__class__.__name__, self.url)
 
     @staticmethod
     def check_response(response, expect=OK):
