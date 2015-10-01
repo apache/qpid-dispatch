@@ -87,7 +87,7 @@ typedef enum {
 static char *my_area    = "";
 static char *my_router  = "";
 
-const char SEPARATOR_DOT = '.';
+const char SEPARATOR    = '.';
 
 const uint32_t HASH_INIT = 5381;
 
@@ -275,7 +275,7 @@ static void view_initialize(qd_field_iterator_t *iter)
 
     if (iter->view == ITER_VIEW_ADDRESS_HASH) {
         iter->mode = MODE_TO_END;
-        qd_address_iterator_check_trailing_octet(iter, SEPARATOR_DOT);
+        qd_address_iterator_check_trailing_octet(iter, SEPARATOR);
         parse_address_view(iter);
         return;
     }
@@ -699,7 +699,7 @@ void qd_iterator_hash_segments(qd_field_iterator_t *iter)
         octet = qd_field_iterator_octet(iter);
         segment_length += 1;
 
-        if (octet == SEPARATOR_DOT) {
+        if (octet == SEPARATOR) {
             qd_insert_hash_segment(iter, &hash, segment_length-1);
         }
 
