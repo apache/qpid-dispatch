@@ -64,6 +64,15 @@ static qd_thread_t *thread(qd_server_t *qd_server, int id)
 
 qd_error_t qd_entity_update_connection(qd_entity_t* entity, void *impl);
 
+/**
+ * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer
+ */
+static void qd_transport_tracer(pn_transport_t *transport, const char *message)
+{
+    qd_connection_t *ctx = (qd_connection_t*) pn_transport_get_context(transport);
+    qd_log(ctx->server->log_source, QD_LOG_TRACE, "[%d]:%s", ctx->connection_id, message);
+}
+
 static qd_error_t connection_entity_update_host(qd_entity_t* entity, qd_connection_t *conn)
 {
     const qd_server_config_t *config;
@@ -239,19 +248,21 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
                log_incoming(logbuf, sizeof(logbuf), cxtr));
         ctx = new_qd_connection_t();
         DEQ_ITEM_INIT(ctx);
-        ctx->opened       = false;
-        ctx->closed       = false;
-        ctx->owner_thread = CONTEXT_UNSPECIFIED_OWNER;
-        ctx->enqueued     = 0;
-        ctx->pn_cxtr      = cxtr;
-        ctx->collector    = 0;
-        ctx->ssl          = 0;
-        ctx->listener     = qdpn_listener_context(listener);
-        ctx->connector    = 0;
-        ctx->context      = ctx->listener->context;
-        ctx->user_context = 0;
-        ctx->link_context = 0;
-        ctx->ufd          = 0;
+        ctx->server        = qd_server;
+        ctx->opened        = false;
+        ctx->closed        = false;
+        ctx->owner_thread  = CONTEXT_UNSPECIFIED_OWNER;
+        ctx->enqueued      = 0;
+        ctx->pn_cxtr       = cxtr;
+        ctx->collector     = 0;
+        ctx->ssl           = 0;
+        ctx->listener      = qdpn_listener_context(listener);
+        ctx->connector     = 0;
+        ctx->context       = ctx->listener->context;
+        ctx->user_context  = 0;
+        ctx->link_context  = 0;
+        ctx->ufd           = 0;
+        ctx->connection_id = qd_server->next_connection_id++; // Increment the connection id so the next connection can use it
         DEQ_INIT(ctx->deferred_calls);
         ctx->deferred_call_lock = sys_mutex();
 
@@ -281,6 +292,16 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         pn_transport_set_server(tport);
         pn_transport_set_max_frame(tport, config->max_frame_size);
         pn_transport_set_idle_timeout(tport, config->idle_timeout_seconds * 1000);
+
+        //
+        // Proton pushes out its trace to qd_transport_tracer() which in turn writes a trace message to the qdrouter log
+        // If trace level logging is enabled on the router set PN_TRACE_FRM on the proton transport
+        //
+        pn_transport_set_context(tport, ctx);
+        if (qd_log_enabled(qd_server->log_source, QD_LOG_TRACE)) {
+            pn_transport_trace(tport, PN_TRACE_FRM);
+            pn_transport_set_tracer(tport, qd_transport_tracer);
+        }
 
         // Set up SSL if configured
         if (config->ssl_enabled) {
@@ -787,6 +808,7 @@ static void cxtr_try_open(void *context)
     ctx->user_context = 0;
     ctx->link_context = 0;
     ctx->ufd          = 0;
+
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
 
@@ -799,6 +821,8 @@ static void cxtr_try_open(void *context)
     // qdpn_connector is not thread safe
     //
     sys_mutex_lock(ct->server->lock);
+    // Increment the connection id so the next connection can use it
+    ctx->connection_id = ct->server->next_connection_id++;
     ctx->pn_cxtr = qdpn_connector(ct->server->driver, ct->config->host, ct->config->port, (void*) ctx);
     if (ctx->pn_cxtr) {
         DEQ_INSERT_TAIL(ct->server->connections, ctx);
@@ -833,6 +857,16 @@ static void cxtr_try_open(void *context)
     //
     pn_transport_set_max_frame(tport, config->max_frame_size);
     pn_transport_set_idle_timeout(tport, config->idle_timeout_seconds * 1000);
+
+    //
+    // Proton pushes out its trace to qd_transport_tracer() which in turn writes a trace message to the qdrouter log
+    //
+    // If trace level logging is enabled on the router set PN_TRACE_FRM on the proton transport
+    pn_transport_set_context(tport, ctx);
+    if (qd_log_enabled(ct->server->log_source, QD_LOG_TRACE)) {
+        pn_transport_trace(tport, PN_TRACE_FRM);
+        pn_transport_set_tracer(tport, qd_transport_tracer);
+    }
 
     //
     // Set up SSL if appropriate
@@ -953,6 +987,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->pause_now_serving   = 0;
     qd_server->pending_signal      = 0;
     qd_server->heartbeat_timer     = 0;
+    qd_server->next_connection_id  = 1;
 
     qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 
