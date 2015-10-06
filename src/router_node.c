@@ -1869,7 +1869,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 void qd_router_setup_late(qd_dispatch_t *qd)
 {
     qd_router_python_setup(qd->router);
-    qd->router->router_core = qd_router_core();
+    qd->router->router_core = qdr_core();
     qd_timer_schedule(qd->router->timer, 1000);
 }
 
@@ -1896,7 +1896,7 @@ void qd_router_free(qd_router_t *router)
         free_qd_address_t(addr);
     }
 
-    qd_router_core_free(router->router_core);
+    qdr_core_free(router->router_core);
     qd_timer_free(router->timer);
     sys_mutex_free(router->lock);
     qd_bitmask_free(router->neighbor_free_mask);

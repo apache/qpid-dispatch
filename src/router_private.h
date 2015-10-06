@@ -247,7 +247,7 @@ DEQ_DECLARE(qd_waypoint_t, qd_waypoint_list_t);
 
 struct qd_router_t {
     qd_dispatch_t            *qd;
-    qd_router_core_t         *router_core;
+    qdr_core_t               *router_core;
     qd_log_source_t          *log_source;
     qd_router_mode_t          router_mode;
     const char               *router_area;

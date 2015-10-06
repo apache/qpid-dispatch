@@ -37,34 +37,34 @@
  * here to ensure their invisibiliy outside the core.
  */
 
-typedef struct qd_router_core_work_t {
-    DEQ_LINKS(struct qd_router_core_work_t);
-} qd_router_core_work_t;
+typedef struct qdr_core_work_t {
+    DEQ_LINKS(struct qdr_core_work_t);
+} qdr_core_work_t;
 
-ALLOC_DECLARE(qd_router_core_work_t);
-ALLOC_DEFINE(qd_router_core_work_t);
-DEQ_DECLARE(qd_router_core_work_t, qd_router_core_work_list_t);
+ALLOC_DECLARE(qdr_core_work_t);
+ALLOC_DEFINE(qdr_core_work_t);
+DEQ_DECLARE(qdr_core_work_t, qdr_core_work_list_t);
 
-struct qd_router_core_t {
-    qd_log_source_t            *log;
-    sys_cond_t                 *cond;
-    sys_mutex_t                *lock;
-    sys_thread_t               *thread;
-    bool                        running;
-    qd_router_core_work_list_t  work_list;
+struct qdr_core_t {
+    qd_log_source_t      *log;
+    sys_cond_t           *cond;
+    sys_mutex_t          *lock;
+    sys_thread_t         *thread;
+    bool                  running;
+    qdr_core_work_list_t  work_list;
 };
 
 
-static void router_core_do_work(qd_router_core_t *core, qd_router_core_work_t *work)
+static void router_core_do_work(qdr_core_t *core, qdr_core_work_t *work)
 {
 }
 
 
 static void *router_core_thread(void *arg)
 {
-    qd_router_core_t           *core = (qd_router_core_t*) arg;
-    qd_router_core_work_list_t  work_list;
-    qd_router_core_work_t      *work;
+    qdr_core_t           *core = (qdr_core_t*) arg;
+    qdr_core_work_list_t  work_list;
+    qdr_core_work_t      *work;
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread running");
     while (core->running) {
@@ -96,7 +96,7 @@ static void *router_core_thread(void *arg)
             if (core->running)
                 router_core_do_work(core, work);
 
-            free_qd_router_core_work_t(work);
+            free_qdr_core_work_t(work);
             work = DEQ_HEAD(work_list);
         }
     }
@@ -106,9 +106,9 @@ static void *router_core_thread(void *arg)
 }
 
 
-qd_router_core_t *qd_router_core(void)
+qdr_core_t *qdr_core(void)
 {
-    qd_router_core_t *core = NEW(qd_router_core_t);
+    qdr_core_t *core = NEW(qdr_core_t);
     ZERO(core);
 
     //
@@ -129,7 +129,7 @@ qd_router_core_t *qd_router_core(void)
 }
 
 
-void qd_router_core_free(qd_router_core_t *core)
+void qdr_core_free(qdr_core_t *core)
 {
     //
     // Stop and join the thread
