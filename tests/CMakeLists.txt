@@ -74,6 +74,7 @@ add_system_test(system_tests_one_router)
 add_system_test(system_tests_qdmanage)
 add_system_test(system_tests_qdstat)
 add_system_test(system_tests_two_routers)
+add_system_test(system_tests_link_routes)
 
 # NOTE: Don't install run.py. A system test of a dispatch installation should pick everything
 # up from standard install locations.
@@ -82,7 +83,8 @@ set(SYSTEM_TEST_FILES
   run_system_tests.py system_test.py
   system_tests_one_router.py system_tests_two_routers.py
   system_tests_broker.py system_tests_management.py
-  system_tests_qdstat.py system_tests_qdmanage.py)
+  system_tests_qdstat.py system_tests_qdmanage.py
+  system_tests_link_routes.py)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/A-ssl.conf)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/B-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/B-ssl.conf)
