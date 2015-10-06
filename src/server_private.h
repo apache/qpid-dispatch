@@ -98,6 +98,7 @@ struct qd_connection_t {
     void             *user_context;
     void             *link_context; // Context shared by this connection's links
     qd_user_fd_t     *ufd;
+    uint64_t         uid; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
 
     qd_deferred_call_list_t  deferred_calls;
     sys_mutex_t             *deferred_call_lock;
@@ -162,6 +163,7 @@ struct qd_server_t {
     int                       pending_signal;
     qd_connection_list_t      connections;
     qd_timer_t               *heartbeat_timer;
+    uint64_t                 next_connection_id;
 };
 
 ALLOC_DECLARE(qd_work_item_t);
