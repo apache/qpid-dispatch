@@ -52,6 +52,7 @@
 #define DEQ_SIZE(d) ((d).size)
 #define DEQ_NEXT(i) (i)->next
 #define DEQ_PREV(i) (i)->prev
+#define DEQ_MOVE(d1,d2) do {d2 = d1; DEQ_INIT(d1);} while (0)
 /**
  *@pre ptr points to first element of deq
  *@post ptr points to first element of deq that passes test, or 0. Test should involve ptr.

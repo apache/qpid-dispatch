@@ -18,6 +18,7 @@
  */
 
 #include <qpid/dispatch/python_embedded.h>
+#include <qpid/dispatch/router_core.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -745,6 +746,10 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
     //
     pn_link_advance(pn_link);
 
+    //
+    // If there's no router link, free the message and finish.  It's likely that the link
+    // is closing.
+    //
     if (!rlink) {
         qd_message_free(msg);
         return;
@@ -1802,6 +1807,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 
     qd->router = router;
     router->qd           = qd;
+    router->router_core  = 0;
     router->log_source   = qd_log_source("ROUTER");
     router->router_mode  = mode;
     router->router_area  = area;
@@ -1863,6 +1869,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 void qd_router_setup_late(qd_dispatch_t *qd)
 {
     qd_router_python_setup(qd->router);
+    qd->router->router_core = qdr_core();
     qd_timer_schedule(qd->router->timer, 1000);
 }
 
@@ -1889,6 +1896,7 @@ void qd_router_free(qd_router_t *router)
         free_qd_address_t(addr);
     }
 
+    qdr_core_free(router->router_core);
     qd_timer_free(router->timer);
     sys_mutex_free(router->lock);
     qd_bitmask_free(router->neighbor_free_mask);
@@ -1957,24 +1965,6 @@ void qd_router_unregister_address(qd_address_t *ad)
 {
     // if (ad->forwarder) ad->forwarder->release(ad->forwarder);
     //free_qd_address_t(ad);
-}
-
-
-void qd_address_set_redirect(qd_address_t *address, qd_address_t *redirect)
-{
-    address->redirect = redirect;
-}
-
-
-void qd_address_set_static_cc(qd_address_t *address, qd_address_t *cc)
-{
-    address->static_cc = cc;
-}
-
-
-void qd_address_set_dynamic_cc(qd_address_t *address, qd_address_t *cc)
-{
-    address->dynamic_cc = cc;
 }
 
 
