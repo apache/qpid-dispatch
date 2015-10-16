@@ -830,12 +830,21 @@ static void cxtr_try_open(void *context)
     }
     sys_mutex_unlock(ct->server->lock);
 
+    const qd_server_config_t *config = ct->config;
+
     if (ctx->pn_cxtr == 0) {
         sys_mutex_free(ctx->deferred_call_lock);
         free_qd_connection_t(ctx);
         ct->delay = 10000;
         qd_timer_schedule(ct->timer, ct->delay);
         return;
+    }
+
+    // Set the sasl user name and password on the proton connection object. This has to be done before the call to qdpn_connector_transport() which
+    // binds the transport to the connection
+    if(config->sasl_username && config->sasl_password) {
+        pn_connection_set_user(ctx->pn_conn, config->sasl_username);
+        pn_connection_set_password(ctx->pn_conn, config->sasl_password);
     }
 
     qdpn_connector_set_connection(ctx->pn_cxtr, ctx->pn_conn);
@@ -850,7 +859,6 @@ static void cxtr_try_open(void *context)
     // Set up the transport, SASL, and SSL for the connection.
     //
     pn_transport_t           *tport  = qdpn_connector_transport(ctx->pn_cxtr);
-    const qd_server_config_t *config = ct->config;
 
     //
     // Configure the transport
