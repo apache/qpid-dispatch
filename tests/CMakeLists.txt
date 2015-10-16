@@ -75,6 +75,7 @@ add_system_test(system_tests_qdmanage)
 add_system_test(system_tests_qdstat)
 add_system_test(system_tests_two_routers)
 add_system_test(system_tests_link_routes)
+add_system_test(system_tests_sasl_plain)
 
 # NOTE: Don't install run.py. A system test of a dispatch installation should pick everything
 # up from standard install locations.
@@ -84,10 +85,13 @@ set(SYSTEM_TEST_FILES
   system_tests_one_router.py system_tests_two_routers.py
   system_tests_broker.py system_tests_management.py
   system_tests_qdstat.py system_tests_qdmanage.py
-  system_tests_link_routes.py)
+  system_tests_link_routes.py system_tests_sasl_plain.py)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/A-ssl.conf)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/B-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/B-ssl.conf)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/qdrouterd.sasldb DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/sasl_configs)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/tests-mech-PLAIN.conf.in ${CMAKE_CURRENT_BINARY_DIR}/sasl_configs/tests-mech-PLAIN.conf)
+
 
 install(FILES ${SYSTEM_TEST_FILES}
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests
