@@ -30,11 +30,6 @@
 ALLOC_DEFINE(qdr_action_t);
 
 
-static void router_core_do_action(qdr_core_t *core, qdr_action_t *action)
-{
-}
-
-
 void *router_core_thread(void *arg)
 {
     qdr_core_t      *core = (qdr_core_t*) arg;
@@ -69,7 +64,7 @@ void *router_core_thread(void *arg)
             DEQ_REMOVE_HEAD(action_list);
 
             if (core->running)
-                router_core_do_action(core, action);
+                action->action_handler(core, action);
 
             free_qdr_action_t(action);
             action = DEQ_HEAD(action_list);

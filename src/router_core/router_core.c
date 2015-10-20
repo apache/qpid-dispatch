@@ -62,4 +62,38 @@ void qdr_core_free(qdr_core_t *core)
 }
 
 
+ALLOC_DECLARE(qdr_field_t);
+ALLOC_DEFINE(qdr_field_t);
+
+qdr_field_t *qdr_field(const char *text)
+{
+    size_t       length  = strlen(text);
+    size_t       ilength = length;
+    qdr_field_t *field   = new_qdr_field_t();
+    qd_buffer_t *buf;
+    ZERO(field);
+
+    while (length > 0) {
+        buf = qd_buffer();
+        size_t cap  = qd_buffer_capacity(buf);
+        size_t copy = length > cap ? cap : length;
+        memcpy(qd_buffer_cursor(buf), text, copy);
+        qd_buffer_insert(buf, copy);
+        length -= copy;
+        text   += copy;
+        DEQ_INSERT_TAIL(field->buffers, buf);
+    }
+
+    field->iterator = qd_field_iterator_buffer(DEQ_HEAD(field->buffers), 0, ilength);
+
+    return field;
+}
+
+
+void qdr_field_free(qdr_field_t *field)
+{
+    qd_field_iterator_free(field->iterator);
+    qd_buffer_list_free_buffers(&field->buffers);
+    free_qdr_field_t(field);
+}
 

@@ -52,15 +52,16 @@ void qdr_core_set_link(qdr_core_t *core, int router_maskbit, int link_maskbit);
 void qdr_core_remove_link(qdr_core_t *core, int router_maskbit);
 void qdr_core_set_next_hop(qdr_core_t *core, int router_maskbit, int nh_router_maskbit);
 void qdr_core_remove_next_hop(qdr_core_t *core, int router_maskbit);
-void qdr_core_set_valid_origins(qdr_core_t *core, const qd_bitmask_t *routers);
-void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address, char phase);
-void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address, char phase);
+void qdr_core_set_valid_origins(qdr_core_t *core, int router_maskbit, qd_bitmask_t *routers);
+void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase);
+void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase);
 
 typedef void (*qdr_mobile_added_t)   (void *context, const char *address);
 typedef void (*qdr_mobile_removed_t) (void *context, const char *address);
 typedef void (*qdr_link_lost_t)      (void *context, int link_maskbit);
 
-void qdr_core_route_table_handlers(void                 *context,
+void qdr_core_route_table_handlers(qdr_core_t           *core, 
+                                   void                 *context,
                                    qdr_mobile_added_t    mobile_added,
                                    qdr_mobile_removed_t  mobile_removed,
                                    qdr_link_lost_t       link_lost);
