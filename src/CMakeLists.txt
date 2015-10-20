@@ -65,7 +65,8 @@ set(qpid_dispatch_SOURCES
   python_embedded.c
   router_agent.c
   router_config.c
-  router_core.c
+  router_core/router_core.c
+  router_core/router_core_thread.c
   router_delivery.c
   router_node.c
   router_forwarders.c

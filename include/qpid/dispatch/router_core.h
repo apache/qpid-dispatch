@@ -22,6 +22,10 @@
 #include <qpid/dispatch.h>
 #include <qpid/dispatch/bitmask.h>
 
+//
+// All callbacks in this module shall be invoked on a connection thread from the server thread pool.
+//
+
 typedef struct qdr_core_t qdr_core_t;
 typedef struct qdr_connection_t qdr_connection_t;
 typedef struct qdr_link_t qdr_link_t;
@@ -42,14 +46,6 @@ void qdr_core_free(qdr_core_t *core);
  * Route table maintenance functions
  ******************************************************************************
  */
-typedef enum {
-    QD_WAYPOINT_SOURCE,
-    QD_WAYPOINT_SINK,
-    QD_WAYPOINT_THROUGH,
-    QD_WAYPOINT_BYPASS,
-    QD_WAYPOINT_TAP
-} qd_waypoint_style_t;
-
 void qdr_core_add_router(qdr_core_t *core, const char *address, int router_maskbit);
 void qdr_core_del_router(qdr_core_t *core, int router_maskbit);
 void qdr_core_set_link(qdr_core_t *core, int router_maskbit, int link_maskbit);
@@ -60,25 +56,21 @@ void qdr_core_set_valid_origins(qdr_core_t *core, const qd_bitmask_t *routers);
 void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address, char phase);
 void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address, char phase);
 
-void qdr_core_add_link_route(qdr_core_t *core, qd_field_iterator_t *conn_label, qd_field_iterator_t *prefix);
-void qdr_core_del_link_route(qdr_core_t *core, qd_field_iterator_t *conn_label, qd_field_iterator_t *prefix);
+typedef void (*qdr_mobile_added_t)   (void *context, const char *address);
+typedef void (*qdr_mobile_removed_t) (void *context, const char *address);
+typedef void (*qdr_link_lost_t)      (void *context, int link_maskbit);
 
-void qdr_core_add_waypoint(qdr_core_t *core, qd_field_iterator_t *conn_label, qd_field_iterator_t *address, qd_waypoint_style_t style, char in_phase, char out_phase);
+void qdr_core_route_table_handlers(void                 *context,
+                                   qdr_mobile_added_t    mobile_added,
+                                   qdr_mobile_removed_t  mobile_removed,
+                                   qdr_link_lost_t       link_lost);
 
-//
-// The following callbacks shall be invoked on a connection thread from the server thread pool.
-//
-typedef void (*qdr_mobile_added_t)        (void *context, qd_field_iterator_t *address);
-typedef void (*qdr_mobile_removed_t)      (void *context, qd_field_iterator_t *address);
-typedef void (*qdr_link_lost_t)           (void *context, int link_maskbit);
-typedef void (*qdr_connection_activate_t) (void *context, const qdr_connection_t *connection);
-typedef void (*qdr_receive_t)             (void *context, qd_message_t *msg, int link_maskbit);
-
-void qdr_core_route_table_handlers(void                      *context,
-                                   qdr_mobile_added_t         mobile_added,
-                                   qdr_mobile_removed_t       mobile_removed,
-                                   qdr_link_lost_t            link_lost,
-                                   qdr_connection_activate_t  connection_activate);
+/**
+ ******************************************************************************
+ * In-process message-receiver functions
+ ******************************************************************************
+ */
+typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit);
 
 void qdr_core_subscribe(qdr_core_t *core, const char *address, bool local, bool mobile, qdr_receive_t on_message, void *context);
 
@@ -109,6 +101,9 @@ void qdr_connection_set_context(qdr_connection_t *conn, void *context);
 void *qdr_connection_get_context(qdr_connection_t *conn);
 qdr_work_t *qdr_connection_work(qdr_connection_t *conn);
 
+typedef void (*qdr_connection_activate_t) (void *context, const qdr_connection_t *connection);
+void qdr_connection_activate_handler(qdr_core_t *core, qdr_connection_activate_t handler, void *context);
+
 /**
  ******************************************************************************
  * Link functions
@@ -133,15 +128,29 @@ void qdr_delivery_process(qdr_delivery_t *delivery);
 
 /**
  ******************************************************************************
- * Management instrumentation functions
+ * Management functions
  ******************************************************************************
  */
 typedef enum {
     QD_ROUTER_CONNECTION,
     QD_ROUTER_LINK,
-    QD_ROUTER_ADDRESS
+    QD_ROUTER_ADDRESS,
+    QD_ROUTER_WAYPOINT,
+    QD_ROUTER_EXCHANGE,
+    QD_ROUTER_BINDING
 } qd_router_entity_type_t;
 
-void qdr_core_query(qdr_core_t *core, qd_router_entity_type_t type, const char *filter, void *context);
+typedef struct qdr_query_t qdr_query_t;
+
+void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes);
+void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes);
+void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes);
+
+qdr_query_t *qdr_manage_get_first(qdr_core_t *core, void *context, qd_router_entity_type_t type, int offset);
+void qdr_manage_get_next(qdr_query_t *query);
+void qdr_query_cancel(qdr_query_t *query);
+
+typedef void (*qdr_manage_response_t) (void *context, int status_code, qd_composed_field_t *body);
+void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler);
 
 #endif
