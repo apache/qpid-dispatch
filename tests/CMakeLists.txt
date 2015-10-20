@@ -50,6 +50,18 @@ set(unit_test_size_SOURCES
 add_executable(unit_tests_size ${unit_test_size_SOURCES})
 target_link_libraries(unit_tests_size qpid-dispatch)
 
+# Move all the python system tests from the src/tests dir to the build/tests dir and execute the tests from there.
+# While moving the files make sure that configure_file() is called on any .py.in files resulting in .py file
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/system_tests_sasl_plain.py.in ${CMAKE_CURRENT_BINARY_DIR}/system_tests_sasl_plain.py)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_broker.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_management.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_one_router.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_qdmanage.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_qdstat.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_two_routers.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_link_routes.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+
 set(TEST_WRAP ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 
 add_test(unit_tests_size_10000 ${TEST_WRAP} --vg unit_tests_size 10000)
@@ -61,20 +73,22 @@ add_test(unit_tests_size_3     ${TEST_WRAP} --vg unit_tests_size 3)
 add_test(unit_tests_size_2     ${TEST_WRAP} --vg unit_tests_size 2)
 add_test(unit_tests_size_1     ${TEST_WRAP} --vg unit_tests_size 1)
 add_test(unit_tests            ${TEST_WRAP} --vg unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
-add_test(router_tests          ${TEST_WRAP} -s ${CMAKE_CURRENT_SOURCE_DIR}/router_engine_test.py -v)
-add_test(management_tests      ${TEST_WRAP} -m unittest -v management)
 
-macro(add_system_test test)
-  add_test(${test} ${TEST_WRAP} -m ${test} -v)
-endmacro(add_system_test)
+# Add all sytem_tests* using add_test
+add_test(router_tests             ${TEST_WRAP} -s ${CMAKE_CURRENT_SOURCE_DIR}/router_engine_test.py -v)
+add_test(system_tests_broker      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_broker.py -v)
+add_test(system_tests_management  ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_management.py -v)
+add_test(system_tests_one_router  ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_one_router.py -v)
+add_test(system_tests_qdmanage    ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdmanage.py -v)
+add_test(system_tests_qdstat      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdstat.py -v)
+add_test(system_tests_two_routers ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_two_routers.py -v)
+add_test(system_tests_link_routes ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_link_routes.py -v)
+add_test(system_tests_sasl_plain  ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_sasl_plain.py -v)
+add_test(management_tests         ${TEST_WRAP} -m unittest -v management)
 
-add_system_test(system_tests_broker)
-add_system_test(system_tests_management)
-add_system_test(system_tests_one_router)
-add_system_test(system_tests_qdmanage)
-add_system_test(system_tests_qdstat)
-add_system_test(system_tests_two_routers)
-add_system_test(system_tests_link_routes)
+#macro(add_system_test test)
+#  add_test(${test} ${TEST_WRAP} -m ${test} -v)
+#endmacro(add_system_test)
 
 # NOTE: Don't install run.py. A system test of a dispatch installation should pick everything
 # up from standard install locations.
@@ -84,11 +98,14 @@ set(SYSTEM_TEST_FILES
   system_tests_one_router.py system_tests_two_routers.py
   system_tests_broker.py system_tests_management.py
   system_tests_qdstat.py system_tests_qdmanage.py
-  system_tests_link_routes.py)
+  system_tests_link_routes.py ${CMAKE_CURRENT_BINARY_DIR}/system_tests_sasl_plain.py)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/A-ssl.conf)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/B-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/B-ssl.conf)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/qdrouterd.sasldb DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/sasl_configs)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/tests-mech-PLAIN.conf.in ${CMAKE_CURRENT_BINARY_DIR}/sasl_configs/tests-mech-PLAIN.conf)
 
+# following install() functions will be called only if you do a make "install"
 install(FILES ${SYSTEM_TEST_FILES}
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests
         )
