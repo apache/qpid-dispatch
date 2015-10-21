@@ -18,7 +18,6 @@
  */
 
 #include "router_core_private.h"
-//#include "route_tables.h"
 
 static qdr_action_t *qdr_action(qdr_action_handler_t action_handler);
 static void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
@@ -32,6 +31,8 @@ static void qdrh_remove_next_hop(qdr_core_t *core, qdr_action_t *action);
 static void qdrh_set_valid_origins(qdr_core_t *core, qdr_action_t *action);
 static void qdrh_map_destination(qdr_core_t *core, qdr_action_t *action);
 static void qdrh_unmap_destination(qdr_core_t *core, qdr_action_t *action);
+
+static qd_address_semantics_t router_addr_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS | QD_BYPASS_VALID_ORIGINS;
 
 
 //==================================================================================
@@ -156,8 +157,87 @@ static void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 // In-Thread Functions
 //==================================================================================
 
+void qdr_route_table_setup(qdr_core_t *core)
+{
+    DEQ_INIT(core->addrs);
+    //DEQ_INIT(core->links);
+    DEQ_INIT(core->routers);
+    core->addr_hash = qd_hash(10, 32, 0);
+
+    core->router_addr   = qdr_add_local_address(core, "qdrouter",    QD_SEMANTICS_ROUTER_CONTROL);
+    core->routerma_addr = qdr_add_local_address(core, "qdrouter.ma", QD_SEMANTICS_DEFAULT);
+    core->hello_addr    = qdr_add_local_address(core, "qdhello",     QD_SEMANTICS_ROUTER_CONTROL);
+
+    core->routers_by_mask_bit = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());
+    for (int idx = 0; idx < qd_bitmask_width(); idx++)
+        core->routers_by_mask_bit[idx] = 0;
+}
+
+
 static void qdrh_add_router(qdr_core_t *core, qdr_action_t *action)
 {
+    int router_maskbit = action->args.route_table.router_maskbit;
+
+    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "add_router: Router maskbit out of range: %d", router_maskbit);
+        return;
+    }
+
+    if (core->routers_by_mask_bit[router_maskbit] != 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "add_router: Router maskbit already in use: %d", router_maskbit);
+        return;
+    }
+
+    //
+    // Hash lookup the address to ensure there isn't an existing router address.
+    //
+    qd_field_iterator_t *iter = action->args.route_table.address->iterator;
+    qdr_address_t       *addr;
+
+    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
+    assert(addr == 0);
+
+    //
+    // Create an address record for this router and insert it in the hash table.
+    // This record will be found whenever a "foreign" topological address to this
+    // remote router is looked up.
+    //
+    addr = qdr_address(router_addr_semantics);
+    qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
+    DEQ_INSERT_TAIL(core->addrs, addr);
+
+    //
+    // Create a router-node record to represent the remote router.
+    //
+    qdr_node_t *rnode = new_qdr_node_t();
+    DEQ_ITEM_INIT(rnode);
+    rnode->owning_addr   = addr;
+    rnode->mask_bit      = router_maskbit;
+    rnode->next_hop      = 0;
+    rnode->peer_link     = 0;
+    rnode->ref_count     = 0;
+    rnode->valid_origins = qd_bitmask(0);
+
+    DEQ_INSERT_TAIL(core->routers, rnode);
+
+    //
+    // Link the router record to the address record.
+    //
+    qdr_add_node_ref(&addr->rnodes, rnode);
+
+    //
+    // Link the router record to the router address records.
+    //
+    qdr_add_node_ref(&core->router_addr->rnodes, rnode);
+    qdr_add_node_ref(&core->routerma_addr->rnodes, rnode);
+
+    //
+    // Add the router record to the mask-bit index.
+    //
+    core->routers_by_mask_bit[router_maskbit] = rnode;
+
+    qdr_field_free(action->args.route_table.address);
 }
 
 
