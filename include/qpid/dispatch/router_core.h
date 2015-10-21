@@ -53,7 +53,7 @@ void qdr_core_remove_link(qdr_core_t *core, int router_maskbit);
 void qdr_core_set_next_hop(qdr_core_t *core, int router_maskbit, int nh_router_maskbit);
 void qdr_core_remove_next_hop(qdr_core_t *core, int router_maskbit);
 void qdr_core_set_valid_origins(qdr_core_t *core, int router_maskbit, qd_bitmask_t *routers);
-void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase);
+void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase, qd_address_semantics_t sem);
 void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase);
 
 typedef void (*qdr_mobile_added_t)   (void *context, const char *address);

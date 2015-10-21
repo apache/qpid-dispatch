@@ -49,13 +49,14 @@ struct qdr_action_t {
     qdr_action_handler_t action_handler;
     union {
         struct {
-            int           link_maskbit;
-            int           router_maskbit;
-            int           nh_router_maskbit;
-            qd_bitmask_t *router_set;
-            qdr_field_t  *address;
-            char          address_class;
-            char          address_phase;
+            int                     link_maskbit;
+            int                     router_maskbit;
+            int                     nh_router_maskbit;
+            qd_bitmask_t           *router_set;
+            qdr_field_t            *address;
+            char                    address_class;
+            char                    address_phase;
+            qd_address_semantics_t  semantics;
         } route_table;
     } args;
 };
@@ -110,6 +111,9 @@ struct qdr_link_t {
     bool                      strip_inbound_annotations;  ///<should the dispatch specific inbound annotations be stripped at the ingress router
     bool                      strip_outbound_annotations; ///<should the dispatch specific outbound annotations be stripped at the egress router
 };
+
+ALLOC_DECLARE(qdr_link_t);
+DEQ_DECLARE(qdr_link_t, qdr_link_list_t);
 
 struct qdr_link_ref_t {
     DEQ_LINKS(qdr_link_ref_t);
@@ -198,9 +202,10 @@ struct qdr_core_t {
     qdr_address_t        *routerma_addr;
     qdr_address_t        *hello_addr;
 
-    //qdr_link_list_t       links;
+    qdr_link_list_t       links;
     qdr_node_list_t       routers;
     qdr_node_t          **routers_by_mask_bit;
+    qdr_link_t          **out_links_by_mask_bit;
 };
 
 void *router_core_thread(void *arg);

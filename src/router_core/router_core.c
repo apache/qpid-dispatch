@@ -23,6 +23,7 @@
 
 ALLOC_DEFINE(qdr_address_t);
 ALLOC_DEFINE(qdr_node_t);
+ALLOC_DEFINE(qdr_link_t);
 ALLOC_DEFINE(qdr_link_ref_t);
 
 

@@ -99,13 +99,14 @@ void qdr_core_set_valid_origins(qdr_core_t *core, int router_maskbit, qd_bitmask
 }
 
 
-void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase)
+void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase, qd_address_semantics_t sem)
 {
     qdr_action_t *action = qdr_action(qdrh_map_destination);
     action->args.route_table.router_maskbit = router_maskbit;
     action->args.route_table.address        = qdr_field(address);
     action->args.route_table.address_phase  = phase;
     action->args.route_table.address_class  = aclass;
+    action->args.route_table.semantics      = sem;
     qdr_action_enqueue(core, action);
 }
 
@@ -160,7 +161,7 @@ static void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 void qdr_route_table_setup(qdr_core_t *core)
 {
     DEQ_INIT(core->addrs);
-    //DEQ_INIT(core->links);
+    DEQ_INIT(core->links);
     DEQ_INIT(core->routers);
     core->addr_hash = qd_hash(10, 32, 0);
 
@@ -168,116 +169,348 @@ void qdr_route_table_setup(qdr_core_t *core)
     core->routerma_addr = qdr_add_local_address(core, "qdrouter.ma", QD_SEMANTICS_DEFAULT);
     core->hello_addr    = qdr_add_local_address(core, "qdhello",     QD_SEMANTICS_ROUTER_CONTROL);
 
-    core->routers_by_mask_bit = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());
-    for (int idx = 0; idx < qd_bitmask_width(); idx++)
-        core->routers_by_mask_bit[idx] = 0;
+    core->routers_by_mask_bit   = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());
+    core->out_links_by_mask_bit = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
+    for (int idx = 0; idx < qd_bitmask_width(); idx++) {
+        core->routers_by_mask_bit[idx]   = 0;
+        core->out_links_by_mask_bit[idx] = 0;
+    }
 }
 
 
 static void qdrh_add_router(qdr_core_t *core, qdr_action_t *action)
 {
-    int router_maskbit = action->args.route_table.router_maskbit;
+    int          router_maskbit = action->args.route_table.router_maskbit;
+    qdr_field_t *address        = action->args.route_table.address;
 
-    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
-        qd_log(core->log, QD_LOG_CRITICAL, "add_router: Router maskbit out of range: %d", router_maskbit);
-        return;
-    }
+    do {
+        if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+            qd_log(core->log, QD_LOG_CRITICAL, "add_router: Router maskbit out of range: %d", router_maskbit);
+            break;
+        }
 
-    if (core->routers_by_mask_bit[router_maskbit] != 0) {
-        qd_log(core->log, QD_LOG_CRITICAL, "add_router: Router maskbit already in use: %d", router_maskbit);
-        return;
-    }
+        if (core->routers_by_mask_bit[router_maskbit] != 0) {
+            qd_log(core->log, QD_LOG_CRITICAL, "add_router: Router maskbit already in use: %d", router_maskbit);
+            break;
+        }
 
-    //
-    // Hash lookup the address to ensure there isn't an existing router address.
-    //
-    qd_field_iterator_t *iter = action->args.route_table.address->iterator;
-    qdr_address_t       *addr;
+        //
+        // Hash lookup the address to ensure there isn't an existing router address.
+        //
+        qd_field_iterator_t *iter = address->iterator;
+        qdr_address_t       *addr;
 
-    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
-    assert(addr == 0);
+        qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+        qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
 
-    //
-    // Create an address record for this router and insert it in the hash table.
-    // This record will be found whenever a "foreign" topological address to this
-    // remote router is looked up.
-    //
-    addr = qdr_address(router_addr_semantics);
-    qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
-    DEQ_INSERT_TAIL(core->addrs, addr);
+        if (addr) {
+            qd_log(core->log, QD_LOG_CRITICAL, "add_router: Data inconsistency for router-maskbit %d", router_maskbit);
+            assert(addr == 0);  // Crash in debug mode.  This should never happen
+            break;
+        }
 
-    //
-    // Create a router-node record to represent the remote router.
-    //
-    qdr_node_t *rnode = new_qdr_node_t();
-    DEQ_ITEM_INIT(rnode);
-    rnode->owning_addr   = addr;
-    rnode->mask_bit      = router_maskbit;
-    rnode->next_hop      = 0;
-    rnode->peer_link     = 0;
-    rnode->ref_count     = 0;
-    rnode->valid_origins = qd_bitmask(0);
+        //
+        // Create an address record for this router and insert it in the hash table.
+        // This record will be found whenever a "foreign" topological address to this
+        // remote router is looked up.
+        //
+        addr = qdr_address(router_addr_semantics);
+        qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
+        DEQ_INSERT_TAIL(core->addrs, addr);
 
-    DEQ_INSERT_TAIL(core->routers, rnode);
+        //
+        // Create a router-node record to represent the remote router.
+        //
+        qdr_node_t *rnode = new_qdr_node_t();
+        DEQ_ITEM_INIT(rnode);
+        rnode->owning_addr   = addr;
+        rnode->mask_bit      = router_maskbit;
+        rnode->next_hop      = 0;
+        rnode->peer_link     = 0;
+        rnode->ref_count     = 0;
+        rnode->valid_origins = qd_bitmask(0);
 
-    //
-    // Link the router record to the address record.
-    //
-    qdr_add_node_ref(&addr->rnodes, rnode);
+        DEQ_INSERT_TAIL(core->routers, rnode);
 
-    //
-    // Link the router record to the router address records.
-    //
-    qdr_add_node_ref(&core->router_addr->rnodes, rnode);
-    qdr_add_node_ref(&core->routerma_addr->rnodes, rnode);
+        //
+        // Link the router record to the address record.
+        //
+        qdr_add_node_ref(&addr->rnodes, rnode);
 
-    //
-    // Add the router record to the mask-bit index.
-    //
-    core->routers_by_mask_bit[router_maskbit] = rnode;
+        //
+        // Link the router record to the router address records.
+        //
+        qdr_add_node_ref(&core->router_addr->rnodes, rnode);
+        qdr_add_node_ref(&core->routerma_addr->rnodes, rnode);
 
-    qdr_field_free(action->args.route_table.address);
+        //
+        // Add the router record to the mask-bit index.
+        //
+        core->routers_by_mask_bit[router_maskbit] = rnode;
+    } while (false);
+
+    qdr_field_free(address);
 }
 
 
 static void qdrh_del_router(qdr_core_t *core, qdr_action_t *action)
 {
+    int router_maskbit = action->args.route_table.router_maskbit;
+
+    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "del_router: Router maskbit out of range: %d", router_maskbit);
+        return;
+    }
+
+    if (core->routers_by_mask_bit[router_maskbit] == 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "del_router: Deleting nonexistent router: %d", router_maskbit);
+        return;
+    }
+
+    qdr_node_t    *rnode = core->routers_by_mask_bit[router_maskbit];
+    qdr_address_t *oaddr = rnode->owning_addr;
+    assert(oaddr);
+
+    //
+    // Unlink the router node from the address record
+    //
+    qdr_del_node_ref(&oaddr->rnodes, rnode);
+
+    //
+    // While the router node has a non-zero reference count, look for addresses
+    // to unlink the node from.
+    //
+    qdr_address_t *addr = DEQ_HEAD(core->addrs);
+    while (addr && rnode->ref_count > 0) {
+        qdr_del_node_ref(&addr->rnodes, rnode);
+        addr = DEQ_NEXT(addr);
+    }
+    assert(rnode->ref_count == 0);
+
+    //
+    // Free the router node and the owning address records.
+    //
+    qd_bitmask_free(rnode->valid_origins);
+    DEQ_REMOVE(core->routers, rnode);
+    free_qdr_node_t(rnode);
+
+    qd_hash_remove_by_handle(core->addr_hash, oaddr->hash_handle);
+    DEQ_REMOVE(core->addrs, oaddr);
+    qd_hash_handle_free(oaddr->hash_handle);
+    core->routers_by_mask_bit[router_maskbit] = 0;
+    free_qdr_address_t(oaddr);
 }
 
 
 static void qdrh_set_link(qdr_core_t *core, qdr_action_t *action)
 {
+    int router_maskbit = action->args.route_table.router_maskbit;
+    int link_maskbit   = action->args.route_table.link_maskbit;
+
+    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_link: Router maskbit out of range: %d", router_maskbit);
+        return;
+    }
+
+    if (link_maskbit >= qd_bitmask_width() || link_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_link: Link maskbit out of range: %d", link_maskbit);
+        return;
+    }
+
+    if (core->out_links_by_mask_bit[link_maskbit] == 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_link: Invalid link reference: %d", link_maskbit);
+        return;
+    }
+
+    if (core->routers_by_mask_bit[router_maskbit] == 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_link: Router not found");
+        return;
+    }
+
+    //
+    // Add the peer_link reference to the router record.
+    //
+    qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
+    rnode->peer_link = core->out_links_by_mask_bit[link_maskbit];
 }
 
 
 static void qdrh_remove_link(qdr_core_t *core, qdr_action_t *action)
 {
+    int router_maskbit = action->args.route_table.router_maskbit;
+
+    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "remove_link: Router maskbit out of range: %d", router_maskbit);
+        return;
+    }
+
+    if (core->routers_by_mask_bit[router_maskbit] == 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "remove_link: Router not found");
+        return;
+    }
+
+    qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
+    rnode->peer_link = 0;
 }
 
 
 static void qdrh_set_next_hop(qdr_core_t *core, qdr_action_t *action)
 {
+    int router_maskbit    = action->args.route_table.router_maskbit;
+    int nh_router_maskbit = action->args.route_table.nh_router_maskbit;
+
+    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_next_hop: Router maskbit out of range: %d", router_maskbit);
+        return;
+    }
+
+    if (nh_router_maskbit >= qd_bitmask_width() || nh_router_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_next_hop: Next hop router maskbit out of range: %d", router_maskbit);
+        return;
+    }
+
+    if (core->routers_by_mask_bit[router_maskbit] == 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_next_hop: Router not found");
+        return;
+    }
+
+    if (core->routers_by_mask_bit[nh_router_maskbit] == 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_next_hop: Next hop router not found");
+        return;
+    }
+
+    if (router_maskbit != nh_router_maskbit) {
+        qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
+        rnode->next_hop   = core->routers_by_mask_bit[nh_router_maskbit];
+    }
 }
 
 
 static void qdrh_remove_next_hop(qdr_core_t *core, qdr_action_t *action)
 {
+    int router_maskbit = action->args.route_table.router_maskbit;
+
+    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "remove_next_hop: Router maskbit out of range: %d", router_maskbit);
+        return;
+    }
+
+    qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
+    rnode->next_hop = 0;
 }
 
 
 static void qdrh_set_valid_origins(qdr_core_t *core, qdr_action_t *action)
 {
+    int           router_maskbit = action->args.route_table.router_maskbit;
+    qd_bitmask_t *valid_origins  = action->args.route_table.router_set;
+
+    do {
+        if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+            qd_log(core->log, QD_LOG_CRITICAL, "set_valid_origins: Router maskbit out of range: %d", router_maskbit);
+            break;
+        }
+
+        if (core->routers_by_mask_bit[router_maskbit] == 0) {
+            qd_log(core->log, QD_LOG_CRITICAL, "set_valid_origins: Router not found");
+            break;
+        }
+
+        qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
+        if (rnode->valid_origins)
+            qd_bitmask_free(rnode->valid_origins);
+        rnode->valid_origins = valid_origins;
+        valid_origins = 0;
+    } while (false);
+
+    if (valid_origins)
+        qd_bitmask_free(valid_origins);
 }
 
 
 static void qdrh_map_destination(qdr_core_t *core, qdr_action_t *action)
 {
+    //
+    // TODO - handle the class-prefix and phase explicitly
+    //
+
+    int          router_maskbit = action->args.route_table.router_maskbit;
+    qdr_field_t *address        = action->args.route_table.address;
+
+    do {
+        if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+            qd_log(core->log, QD_LOG_CRITICAL, "map_destination: Router maskbit out of range: %d", router_maskbit);
+            break;
+        }
+
+        if (core->routers_by_mask_bit[router_maskbit] == 0) {
+            qd_log(core->log, QD_LOG_CRITICAL, "map_destination: Router not found");
+            break;
+        }
+
+        qd_field_iterator_t *iter = address->iterator;
+        qdr_address_t       *addr = 0;
+
+        qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
+        if (!addr) {
+            addr = qdr_address(action->args.route_table.semantics);
+            qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
+            DEQ_ITEM_INIT(addr);
+            DEQ_INSERT_TAIL(core->addrs, addr);
+        }
+
+        qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
+        qdr_add_node_ref(&addr->rnodes, rnode);
+
+        //
+        // TODO - If this affects a waypoint, create the proper side effects
+        //
+    } while (false);
+
+    qdr_field_free(address);
 }
 
 
 static void qdrh_unmap_destination(qdr_core_t *core, qdr_action_t *action)
 {
+    int          router_maskbit = action->args.route_table.router_maskbit;
+    qdr_field_t *address        = action->args.route_table.address;
+
+    do {
+        if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+            qd_log(core->log, QD_LOG_CRITICAL, "unmap_destination: Router maskbit out of range: %d", router_maskbit);
+            break;
+        }
+
+        if (core->routers_by_mask_bit[router_maskbit] == 0) {
+            qd_log(core->log, QD_LOG_CRITICAL, "unmap_destination: Router not found");
+            break;
+        }
+
+        qdr_node_t          *rnode = core->routers_by_mask_bit[router_maskbit];
+        qd_field_iterator_t *iter  = address->iterator;
+        qdr_address_t       *addr  = 0;
+
+        qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
+
+        if (!addr) {
+            qd_log(core->log, QD_LOG_CRITICAL, "unmap_destination: Address not found");
+            break;
+        }
+
+        qdr_del_node_ref(&addr->rnodes, rnode);
+
+        //
+        // TODO - If this affects a waypoint, create the proper side effects
+        //
+
+        //
+        // TODO - Port "check-addr" into this module
+        //
+        //qd_router_check_addr(router, addr, 0);
+    } while (false);
+
+    qdr_field_free(address);
 }
 
 
