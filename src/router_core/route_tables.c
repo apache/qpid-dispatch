@@ -178,6 +178,64 @@ void qdr_route_table_setup(qdr_core_t *core)
 }
 
 
+/**
+ * Check an address to see if it no longer has any associated destinations.
+ * Depending on its policy, the address may be eligible for being closed out
+ * (i.e. Logging its terminal statistics and freeing its resources).
+ */
+static void qdr_check_addr(qdr_core_t *core, qdr_address_t *addr, bool was_local)
+{
+    if (addr == 0)
+        return;
+
+    bool         to_delete      = false;
+    bool         no_more_locals = false;
+    qdr_field_t *key_field      = 0;
+
+    //
+    // If the address has no in-process consumer or destinations, it should be
+    // deleted.
+    //
+    if (addr->on_message == 0 &&
+        DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->rnodes) == 0 &&
+        !addr->waypoint && !addr->block_deletion)
+        to_delete = true;
+
+    //
+    // If we have just removed a local linkage and it was the last local linkage,
+    // we need to notify the router module that there is no longer a local
+    // presence of this address.
+    //
+    if (was_local && DEQ_SIZE(addr->rlinks) == 0) {
+        no_more_locals = true;
+        const unsigned char *key = qd_hash_key_by_handle(addr->hash_handle);
+        if (key && (key[0] == 'M' || key[0] == 'C' || key[0] == 'D'))
+            key_field = qdr_field((const char*) key);
+    }
+
+    if (to_delete) {
+        //
+        // Delete the address but grab the hash key so we can use it outside the
+        // critical section.
+        //
+        qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
+        DEQ_REMOVE(core->addrs, addr);
+        qd_hash_handle_free(addr->hash_handle);
+        free_qdr_address_t(addr);
+    }
+
+    //
+    // If the address is mobile-class and it was just removed from a local link,
+    // tell the router module that it is no longer attached locally.
+    //
+    if (no_more_locals && key_field) {
+        //
+        // TODO - Defer-call mobile-removed
+        //
+    }
+}
+
+
 static void qdrh_add_router(qdr_core_t *core, qdr_action_t *action)
 {
     int          router_maskbit = action->args.route_table.router_maskbit;
@@ -504,10 +562,7 @@ static void qdrh_unmap_destination(qdr_core_t *core, qdr_action_t *action)
         // TODO - If this affects a waypoint, create the proper side effects
         //
 
-        //
-        // TODO - Port "check-addr" into this module
-        //
-        //qd_router_check_addr(router, addr, 0);
+        qdr_check_addr(core, addr, false);
     } while (false);
 
     qdr_field_free(address);
