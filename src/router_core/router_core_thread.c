@@ -32,9 +32,11 @@ ALLOC_DEFINE(qdr_action_t);
 
 void *router_core_thread(void *arg)
 {
-    qdr_core_t      *core = (qdr_core_t*) arg;
+    qdr_core_t        *core = (qdr_core_t*) arg;
     qdr_action_list_t  action_list;
     qdr_action_t      *action;
+
+    qdr_route_table_setup(core);
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread running");
     while (core->running) {

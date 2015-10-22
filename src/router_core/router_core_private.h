@@ -209,5 +209,6 @@ struct qdr_core_t {
 };
 
 void *router_core_thread(void *arg);
+void  qdr_route_table_setup(qdr_core_t *core);
 
 #endif

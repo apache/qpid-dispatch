@@ -18,6 +18,7 @@
  */
 
 #include "router_core_private.h"
+#include <stdio.h>
 
 static qdr_action_t *qdr_action(qdr_action_handler_t action_handler);
 static void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
@@ -150,6 +151,7 @@ static void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 {
     sys_mutex_lock(core->lock);
     DEQ_INSERT_TAIL(core->action_list, action);
+    sys_cond_signal(core->cond);
     sys_mutex_unlock(core->lock);
 }
 

@@ -54,6 +54,8 @@ static PyObject *qd_add_router(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "si", &address, &router_maskbit))
         return 0;
 
+    qdr_core_add_router(router->router_core, address, router_maskbit);
+
     do {
         if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
             error = "Router bit mask out of range";
@@ -140,6 +142,8 @@ static PyObject* qd_del_router(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "i", &router_maskbit))
         return 0;
 
+    qdr_core_del_router(router->router_core, router_maskbit);
+
     do {
         if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
             error = "Router bit mask out of range";
@@ -212,6 +216,8 @@ static PyObject* qd_set_link(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "ii", &router_maskbit, &link_maskbit))
         return 0;
 
+    qdr_core_set_link(router->router_core, router_maskbit, link_maskbit);
+
     do {
         if (link_maskbit >= qd_bitmask_width() || link_maskbit < 0) {
             error = "Link bit mask out of range";
@@ -254,6 +260,8 @@ static PyObject* qd_remove_link(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "i", &router_maskbit))
         return 0;
 
+    qdr_core_remove_link(router->router_core, router_maskbit);
+
     do {
         sys_mutex_lock(router->lock);
         qd_router_node_t *rnode = router->routers_by_mask_bit[router_maskbit];
@@ -281,6 +289,8 @@ static PyObject* qd_set_next_hop(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "ii", &router_maskbit, &next_hop_maskbit))
         return 0;
+
+    qdr_core_set_next_hop(router->router_core, router_maskbit, next_hop_maskbit);
 
     do {
         if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
@@ -332,6 +342,8 @@ static PyObject* qd_remove_next_hop(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "i", &router_maskbit))
         return 0;
+
+    qdr_core_remove_next_hop(router->router_core, router_maskbit);
 
     do {
         if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
