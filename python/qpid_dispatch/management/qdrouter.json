@@ -640,7 +640,7 @@
         },
 
         "connector": {
-            "description": "Establishes an outgoing connections from the router.",
+            "description": "Establishes an outgoing connection from the router.",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "annotations": [
@@ -689,7 +689,8 @@
                     "type": "string",
                     "required": false,
                     "description": "The password that the connector is using to connect to a peer.",
-                    "create": true
+                    "create": true,
+                    "hidden": true
                 }                                
             }
         },

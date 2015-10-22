@@ -206,7 +206,7 @@ class AttributeType(object):
     @ivar graph: If true the attribute could be graphed by a console.
     """
 
-    def __init__(self, name, type=None, defined_in=None, default=None, required=False, unique=False,
+    def __init__(self, name, type=None, defined_in=None, default=None, required=False, unique=False, hidden=False,
                  value=None, description="", create=False, update=False, graph=False):
         """
         See L{AttributeType} instance variables.
@@ -216,6 +216,7 @@ class AttributeType(object):
             self.defined_in = defined_in
             self.atype = get_type(type)
             self.required = required
+            self.hidden = hidden
             self.default = default
             self.value = value
             self.unique = unique
@@ -514,9 +515,11 @@ class Schema(object):
         else:
             self.prefix = self.prefixdot = ""
         self.description = description
+
         def parsedefs(cls, defs):
             return OrderedDict((self.long_name(k), cls(k, self, **v))
                                for k, v in (defs or {}).iteritems())
+
         self.annotations = parsedefs(Annotation, annotations)
         self.entity_types = parsedefs(EntityType, entityTypes)
         self.all_attributes = set()

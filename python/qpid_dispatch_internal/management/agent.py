@@ -136,7 +136,6 @@ class PythonImplementation(Implementation):
         self.refresh_entity = impl.refresh_entity
 
 
-
 class EntityAdapter(SchemaEntity):
     """
     Base class for agent entities with operations as well as attributes.
@@ -218,6 +217,11 @@ class EntityAdapter(SchemaEntity):
     def _delete(self):
         """Subclasses implement delete logic here"""
         pass
+
+    def __str__(self):
+        keys = sorted(self.attributes.keys())
+        # If the attribute is hidden the attribute value will show up as stars ('*******').
+        return "Entity(%s)" % ", ".join("%s=%s" % (k, '*******' if self.entity_type.attribute(k).hidden else self.attributes[k]) for k in keys)
 
 
 class ContainerEntity(EntityAdapter):
