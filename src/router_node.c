@@ -1869,7 +1869,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 void qd_router_setup_late(qd_dispatch_t *qd)
 {
     qd_router_python_setup(qd->router);
-    qd->router->router_core = qdr_core();
+    qd->router->router_core = qdr_core(qd);
     qd_timer_schedule(qd->router->timer, 1000);
 }
 

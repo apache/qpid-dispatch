@@ -20,6 +20,7 @@
  */
 
 #include <qpid/dispatch.h>
+#include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/bitmask.h>
 
 //
@@ -34,7 +35,7 @@ typedef struct qdr_delivery_t qdr_delivery_t;
 /**
  * Allocate and start an instance of the router core module.
  */
-qdr_core_t *qdr_core(void);
+qdr_core_t *qdr_core(qd_dispatch_t *qd);
 
 /**
  * Stop and deallocate an instance of the router core.
@@ -147,11 +148,11 @@ void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t 
 void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes);
 void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes);
 
-qdr_query_t *qdr_manage_get_first(qdr_core_t *core, void *context, qd_router_entity_type_t type, int offset);
+qdr_query_t *qdr_manage_get_first(qdr_core_t *core, void *context, qd_router_entity_type_t type, int offset, qd_composed_field_t *body);
 void qdr_manage_get_next(qdr_query_t *query);
 void qdr_query_cancel(qdr_query_t *query);
 
-typedef void (*qdr_manage_response_t) (void *context, int status_code, qd_composed_field_t *body);
+typedef void (*qdr_manage_response_t) (void *context, const qd_amqp_error_t *status, bool more);
 void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler);
 
 #endif

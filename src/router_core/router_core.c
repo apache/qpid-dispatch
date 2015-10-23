@@ -20,7 +20,7 @@
 #include "router_core_private.h"
 #include <stdio.h>
 
-
+ALLOC_DEFINE(qdr_query_t);
 ALLOC_DEFINE(qdr_address_t);
 ALLOC_DEFINE(qdr_node_t);
 ALLOC_DEFINE(qdr_link_t);
@@ -28,10 +28,12 @@ ALLOC_DEFINE(qdr_router_ref_t);
 ALLOC_DEFINE(qdr_link_ref_t);
 
 
-qdr_core_t *qdr_core(void)
+qdr_core_t *qdr_core(qd_dispatch_t *qd)
 {
     qdr_core_t *core = NEW(qdr_core_t);
     ZERO(core);
+
+    core->qd = qd;
 
     //
     // Set up the logging source for the router core
@@ -41,11 +43,15 @@ qdr_core_t *qdr_core(void)
     //
     // Set up the threading support
     //
-    core->cond    = sys_cond();
-    core->lock    = sys_mutex();
-    core->running = true;
+    core->action_cond = sys_cond();
+    core->action_lock = sys_mutex();
+    core->running     = true;
     DEQ_INIT(core->action_list);
-    core->thread  = sys_thread(router_core_thread, core);
+
+    //
+    // Launch the core thread
+    //
+    core->thread = sys_thread(router_core_thread, core);
 
     return core;
 }
@@ -57,15 +63,15 @@ void qdr_core_free(qdr_core_t *core)
     // Stop and join the thread
     //
     core->running = false;
-    sys_cond_signal(core->cond);
+    sys_cond_signal(core->action_cond);
     sys_thread_join(core->thread);
 
     //
     // Free the core resources
     //
     sys_thread_free(core->thread);
-    sys_cond_free(core->cond);
-    sys_mutex_free(core->lock);
+    sys_cond_free(core->action_cond);
+    sys_mutex_free(core->action_lock);
     free(core);
 }
 
@@ -109,6 +115,23 @@ void qdr_field_free(qdr_field_t *field)
         qd_buffer_list_free_buffers(&field->buffers);
         free_qdr_field_t(field);
     }
+}
+
+
+qdr_action_t *qdr_action(qdr_action_handler_t action_handler)
+{
+    qdr_action_t *action = new_qdr_action_t();
+    ZERO(action);
+    action->action_handler = action_handler;
+    return action;
+}
+
+void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
+{
+    sys_mutex_lock(core->action_lock);
+    DEQ_INSERT_TAIL(core->action_list, action);
+    sys_cond_signal(core->action_cond);
+    sys_mutex_unlock(core->action_lock);
 }
 
 

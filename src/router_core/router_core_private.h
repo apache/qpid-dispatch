@@ -58,11 +58,29 @@ struct qdr_action_t {
             char                    address_phase;
             qd_address_semantics_t  semantics;
         } route_table;
+        struct {
+            qdr_query_t *query;
+            int          offset;
+        } agent;
     } args;
 };
 
 ALLOC_DECLARE(qdr_action_t);
 DEQ_DECLARE(qdr_action_t, qdr_action_list_t);
+
+struct qdr_query_t {
+    DEQ_LINKS(qdr_query_t);
+    qd_router_entity_type_t  entity_type;
+    void                    *context;
+    qd_composed_field_t     *body;
+    qdr_field_t             *next_key;
+    bool                     more;
+    const qd_amqp_error_t   *status;
+};
+
+ALLOC_DECLARE(qdr_query_t);
+DEQ_DECLARE(qdr_query_t, qdr_query_list_t); 
+
 
 typedef struct qdr_address_t     qdr_address_t;
 typedef struct qdr_node_t        qdr_node_t;
@@ -181,13 +199,25 @@ void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 
 
 struct qdr_core_t {
+    qd_dispatch_t     *qd;
     qd_log_source_t   *log;
-    sys_cond_t        *cond;
-    sys_mutex_t       *lock;
     sys_thread_t      *thread;
     bool               running;
     qdr_action_list_t  action_list;
+    sys_cond_t        *action_cond;
+    sys_mutex_t       *action_lock;
 
+    //
+    // Agent section
+    //
+    qdr_query_list_t       outgoing_query_list;
+    sys_mutex_t           *query_lock;
+    qd_timer_t            *agent_timer;
+    qdr_manage_response_t  agent_response_handler;
+
+    //
+    // Route table section
+    //
     void                 *rt_context;
     qdr_mobile_added_t    rt_mobile_added;
     qdr_mobile_removed_t  rt_mobile_removed;
@@ -210,5 +240,8 @@ struct qdr_core_t {
 
 void *router_core_thread(void *arg);
 void  qdr_route_table_setup(qdr_core_t *core);
+void  qdr_agent_setup(qdr_core_t *core);
+qdr_action_t *qdr_action(qdr_action_handler_t action_handler);
+void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 
 #endif

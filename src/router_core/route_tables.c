@@ -20,9 +20,6 @@
 #include "router_core_private.h"
 #include <stdio.h>
 
-static qdr_action_t *qdr_action(qdr_action_handler_t action_handler);
-static void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
-
 static void qdrh_add_router       (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdrh_del_router       (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdrh_set_link         (qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -132,27 +129,6 @@ void qdr_core_route_table_handlers(qdr_core_t           *core,
     core->rt_mobile_added   = mobile_added;
     core->rt_mobile_removed = mobile_removed;
     core->rt_link_lost      = link_lost;
-}
-
-
-//==================================================================================
-// Internal Functions
-//==================================================================================
-
-static qdr_action_t *qdr_action(qdr_action_handler_t action_handler)
-{
-    qdr_action_t *action = new_qdr_action_t();
-    ZERO(action);
-    action->action_handler = action_handler;
-    return action;
-}
-
-static void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
-{
-    sys_mutex_lock(core->lock);
-    DEQ_INSERT_TAIL(core->action_list, action);
-    sys_cond_signal(core->cond);
-    sys_mutex_unlock(core->lock);
 }
 
 
