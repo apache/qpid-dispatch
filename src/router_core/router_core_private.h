@@ -42,7 +42,7 @@ void qdr_field_free(qdr_field_t *field);
  * qdr_action_t - This type represents one work item to be performed by the router-core thread.
  */
 typedef struct qdr_action_t qdr_action_t;
-typedef void (*qdr_action_handler_t) (qdr_core_t *core, qdr_action_t *action);
+typedef void (*qdr_action_handler_t) (qdr_core_t *core, qdr_action_t *action, bool discard);
 
 struct qdr_action_t {
     DEQ_LINKS(qdr_action_t);

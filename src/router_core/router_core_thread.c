@@ -64,10 +64,7 @@ void *router_core_thread(void *arg)
         action = DEQ_HEAD(action_list);
         while (action) {
             DEQ_REMOVE_HEAD(action_list);
-
-            if (core->running)
-                action->action_handler(core, action);
-
+            action->action_handler(core, action, !core->running);
             free_qdr_action_t(action);
             action = DEQ_HEAD(action_list);
         }

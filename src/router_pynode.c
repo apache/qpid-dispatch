@@ -406,6 +406,7 @@ static PyObject* qd_set_valid_origins(PyObject *self, PyObject *args)
 
         Py_ssize_t        origin_count = PyList_Size(origin_list);
         qd_router_node_t *rnode        = router->routers_by_mask_bit[router_maskbit];
+        qd_bitmask_t     *core_bitmask = qd_bitmask(0);
         int               maskbit;
 
         for (idx = 0; idx < origin_count; idx++) {
@@ -428,10 +429,13 @@ static PyObject* qd_set_valid_origins(PyObject *self, PyObject *args)
             for (idx = 0; idx < origin_count; idx++) {
                 maskbit = PyInt_AS_LONG(PyList_GetItem(origin_list, idx));
                 qd_bitmask_set_bit(rnode->valid_origins, maskbit);
+                qd_bitmask_set_bit(core_bitmask, maskbit);
             }
         }
 
         sys_mutex_unlock(router->lock);
+
+        qdr_core_set_valid_origins(router->router_core, router_maskbit, core_bitmask);
     } while (0);
 
     if (error) {
