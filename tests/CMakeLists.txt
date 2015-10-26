@@ -112,6 +112,9 @@ set(SYSTEM_TEST_FILES
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/A-ssl.conf)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/B-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/B-ssl.conf)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/qdrouterd.sasldb DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/sasl_configs)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/tests-mech-EXTERNAL.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/sasl_configs)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/tests-mech-NOEXTERNAL.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/sasl_configs)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_certs DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/tests-mech-PLAIN.conf.in ${CMAKE_CURRENT_BINARY_DIR}/sasl_configs/tests-mech-PLAIN.conf)
 
 # following install() functions will be called only if you do a make "install"
