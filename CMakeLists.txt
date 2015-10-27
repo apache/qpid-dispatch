@@ -36,8 +36,8 @@ include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
 include(CheckIncludeFiles)
-include(FindPythonInterp)
-include(FindPythonLibs)
+
+find_package(PythonLibs 2 REQUIRED)
 
 enable_testing()
 include (CTest)
