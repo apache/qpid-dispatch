@@ -76,7 +76,8 @@ void qdr_core_route_table_handlers(qdr_core_t           *core,
  */
 typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit);
 
-void qdr_core_subscribe(qdr_core_t *core, const char *address, bool local, bool mobile, qdr_receive_t on_message, void *context);
+void qdr_core_subscribe(qdr_core_t *core, const char *address, char aclass, char phase,
+                        qd_address_semantics_t sem, qdr_receive_t on_message, void *context);
 
 
 /**

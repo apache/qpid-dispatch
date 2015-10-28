@@ -29,6 +29,7 @@ static void qdrh_remove_next_hop_CT   (qdr_core_t *core, qdr_action_t *action, b
 static void qdrh_set_valid_origins_CT (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdrh_map_destination_CT   (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdrh_unmap_destination_CT (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_subscribe_CT         (qdr_core_t *core, qdr_action_t *action, bool discard);
 
 static qd_address_semantics_t router_addr_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS | QD_BYPASS_VALID_ORIGINS;
 
@@ -129,6 +130,20 @@ void qdr_core_route_table_handlers(qdr_core_t           *core,
     core->rt_mobile_added   = mobile_added;
     core->rt_mobile_removed = mobile_removed;
     core->rt_link_lost      = link_lost;
+}
+
+
+void qdr_core_subscribe(qdr_core_t *core, const char *address, char aclass, char phase,
+                        qd_address_semantics_t sem, qdr_receive_t on_message, void *context)
+{
+    qdr_action_t *action = qdr_action(qdrh_subscribe_CT);
+    action->args.subscribe.address    = qdr_field(address);
+    action->args.subscribe.semantics  = sem;
+    action->args.subscribe.aclass     = aclass;
+    action->args.subscribe.phase      = phase;
+    action->args.subscribe.on_message = on_message;
+    action->args.subscribe.context    = context;
+    qdr_action_enqueue(core, action);
 }
 
 
@@ -566,4 +581,37 @@ static void qdrh_unmap_destination_CT(qdr_core_t *core, qdr_action_t *action, bo
     qdr_field_free(address);
 }
 
+
+static void qdrh_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    qdr_field_t *address = action->args.subscribe.address;
+
+    if (!discard) {
+        char aclass         = action->args.subscribe.aclass;
+        char phase          = action->args.subscribe.phase;
+        qdr_address_t *addr = 0;
+
+        qd_address_iterator_override_prefix(address->iterator, aclass);
+        if (aclass == 'M')
+            qd_address_iterator_set_phase(address->iterator, phase);
+        qd_address_iterator_reset_view(address->iterator, ITER_VIEW_ADDRESS_HASH);
+
+        qd_hash_retrieve(core->addr_hash, address->iterator, (void**) &addr);
+        if (!addr) {
+            addr = qdr_address(action->args.subscribe.semantics);
+            qd_hash_insert(core->addr_hash, address->iterator, addr, &addr->hash_handle);
+            DEQ_ITEM_INIT(addr);
+            DEQ_INSERT_TAIL(core->addrs, addr);
+        }
+
+        if (!addr->on_message) {
+            addr->on_message         = action->args.subscribe.on_message;
+            addr->on_message_context = action->args.subscribe.context;
+        } else
+            qd_log(core->log, QD_LOG_CRITICAL,
+                   "qdr_core_subscribe: Multiple in-process subscriptions on the same address");
+    }
+
+    qdr_field_free(address);
+}
 

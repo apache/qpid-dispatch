@@ -48,6 +48,9 @@ struct qdr_action_t {
     DEQ_LINKS(qdr_action_t);
     qdr_action_handler_t action_handler;
     union {
+        //
+        // Arguments for router control-plane actions
+        //
         struct {
             int                     link_maskbit;
             int                     router_maskbit;
@@ -58,9 +61,25 @@ struct qdr_action_t {
             char                    address_phase;
             qd_address_semantics_t  semantics;
         } route_table;
+
+        //
+        // Arguments for in-process subscriptions
+        //
+        struct {
+            qdr_field_t            *address;
+            qd_address_semantics_t  semantics;
+            char                    aclass;
+            char                    phase;
+            qdr_receive_t           on_message;
+            void                   *context;
+        } subscribe;
+
+        //
+        // Arguments for management-agent actions
+        //
         struct {
             qdr_query_t *query;
-           int          offset;
+            int          offset;
         } agent;
     } args;
 };
