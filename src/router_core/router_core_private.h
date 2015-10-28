@@ -60,7 +60,7 @@ struct qdr_action_t {
         } route_table;
         struct {
             qdr_query_t *query;
-            int          offset;
+           int          offset;
         } agent;
     } args;
 };
@@ -68,12 +68,17 @@ struct qdr_action_t {
 ALLOC_DECLARE(qdr_action_t);
 DEQ_DECLARE(qdr_action_t, qdr_action_list_t);
 
+#define QDR_AGENT_MAX_COLUMNS 64
+#define QDR_AGENT_COLUMN_NULL (QDR_AGENT_MAX_COLUMNS + 1)
+
 struct qdr_query_t {
     DEQ_LINKS(qdr_query_t);
     qd_router_entity_type_t  entity_type;
     void                    *context;
+    int                      columns[QDR_AGENT_MAX_COLUMNS];
     qd_composed_field_t     *body;
     qdr_field_t             *next_key;
+    int                      next_offset;
     bool                     more;
     const qd_amqp_error_t   *status;
 };
@@ -189,7 +194,7 @@ ALLOC_DECLARE(qdr_address_t);
 DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
 qdr_address_t *qdr_address(qd_address_semantics_t semantics);
-qdr_address_t *qdr_add_local_address(qdr_core_t *core, const char *addr, qd_address_semantics_t semantics);
+qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, const char *addr, qd_address_semantics_t semantics);
 
 void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link);
 void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link);
@@ -239,9 +244,10 @@ struct qdr_core_t {
 };
 
 void *router_core_thread(void *arg);
-void  qdr_route_table_setup(qdr_core_t *core);
-void  qdr_agent_setup(qdr_core_t *core);
+void  qdr_route_table_setup_CT(qdr_core_t *core);
+void  qdr_agent_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
+void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
 #endif

@@ -18,67 +18,8 @@
  */
 
 #include <qpid/dispatch/amqp.h>
-#include "router_core_private.h"
+#include "agent_address.h"
 #include <stdio.h>
-
-static void qdrh_manage_get_first(qdr_core_t *core, qdr_action_t *action, bool discard);
-
-//==================================================================================
-// Interface Functions
-//==================================================================================
-
-void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes)
-{
-}
-
-
-void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes)
-{
-}
-
-
-void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes)
-{
-}
-
-
-qdr_query_t *qdr_manage_get_first(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                                  int offset, qd_composed_field_t *body)
-{
-    qdr_action_t *action = qdr_action(qdrh_manage_get_first);
-    qdr_query_t  *query  = new_qdr_query_t();
-
-    query->entity_type = type;
-    query->context     = context;
-    query->body        = body;
-    query->next_key    = 0;
-    query->more        = false;
-    query->status      = 0;
-
-    action->args.agent.query  = query;
-    action->args.agent.offset = offset;
-
-    qdr_action_enqueue(core, action);
-
-    return query;
-}
-
-
-void qdr_manage_get_next(qdr_query_t *query)
-{
-}
-
-
-void qdr_query_cancel(qdr_query_t *query)
-{
-}
-
-
-void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler)
-{
-    core->agent_response_handler = response_handler;
-}
-
 
 //==================================================================================
 // Internal Functions
@@ -110,7 +51,7 @@ static void qdr_agent_response_handler(void *context)
 }
 
 
-static void qdr_agent_enqueue_response(qdr_core_t *core, qdr_query_t *query)
+void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query)
 {
     sys_mutex_lock(core->query_lock);
     DEQ_INSERT_TAIL(core->outgoing_query_list, query);
@@ -121,15 +62,77 @@ static void qdr_agent_enqueue_response(qdr_core_t *core, qdr_query_t *query)
         qd_timer_schedule(core->agent_timer, 0);
 }
 
+static void qdrh_manage_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_manage_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
-static void qdr_manage_get_first_address(qdr_core_t *core, qdr_query_t *query, int offset)
+
+//==================================================================================
+// Interface Functions
+//==================================================================================
+
+void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes)
 {
-    if (offset >= DEQ_SIZE(core->addrs)) {
-        query->more        = false;
-        query->status      = &QD_AMQP_OK;
-        qdr_agent_enqueue_response(core, query);
-        return;
+}
+
+
+void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes)
+{
+}
+
+
+void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes)
+{
+}
+
+
+qdr_query_t *qdr_manage_get_first(qdr_core_t *core, void *context, qd_router_entity_type_t type,
+                                  int offset, qd_parsed_field_t *attribute_names, qd_composed_field_t *body)
+{
+    qdr_action_t *action = qdr_action(qdrh_manage_get_first_CT);
+    qdr_query_t  *query  = new_qdr_query_t();
+
+    query->entity_type = type;
+    query->context     = context;
+    query->body        = body;
+    query->next_key    = 0;
+    query->next_offset = 0;
+    query->more        = false;
+    query->status      = 0;
+
+    switch (query->entity_type) {
+    case QD_ROUTER_CONNECTION: break;
+    case QD_ROUTER_LINK:       break;
+    case QD_ROUTER_ADDRESS:    qdra_address_set_columns(query, attribute_names);
+    case QD_ROUTER_WAYPOINT:   break;
+    case QD_ROUTER_EXCHANGE:   break;
+    case QD_ROUTER_BINDING:    break;
     }
+
+    action->args.agent.query  = query;
+    action->args.agent.offset = offset;
+
+    qdr_action_enqueue(core, action);
+
+    return query;
+}
+
+
+void qdr_manage_get_next(qdr_core_t *core, qdr_query_t *query)
+{
+    qdr_action_t *action = qdr_action(qdrh_manage_get_next_CT);
+    action->args.agent.query = query;
+    qdr_action_enqueue(core, action);
+}
+
+
+void qdr_query_cancel(qdr_core_t *core, qdr_query_t *query)
+{
+}
+
+
+void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler)
+{
+    core->agent_response_handler = response_handler;
 }
 
 
@@ -137,7 +140,7 @@ static void qdr_manage_get_first_address(qdr_core_t *core, qdr_query_t *query, i
 // In-Thread Functions
 //==================================================================================
 
-void qdr_agent_setup(qdr_core_t *core)
+void qdr_agent_setup_CT(qdr_core_t *core)
 {
     DEQ_INIT(core->outgoing_query_list);
     core->query_lock  = sys_mutex();
@@ -145,31 +148,35 @@ void qdr_agent_setup(qdr_core_t *core)
 }
 
 
-static void qdrh_manage_get_first(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_manage_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     qdr_query_t *query  = action->args.agent.query;
     int          offset = action->args.agent.offset;
 
     if (!discard)
         switch (query->entity_type) {
-        case QD_ROUTER_CONNECTION :
-            break;
+        case QD_ROUTER_CONNECTION: break;
+        case QD_ROUTER_LINK:       break;
+        case QD_ROUTER_ADDRESS:    qdra_address_get_first_CT(core, query, offset); break;
+        case QD_ROUTER_WAYPOINT:   break;
+        case QD_ROUTER_EXCHANGE:   break;
+        case QD_ROUTER_BINDING:    break;
+        }
+}
 
-        case QD_ROUTER_LINK :
-            break;
 
-        case QD_ROUTER_ADDRESS :
-            qdr_manage_get_first_address(core, query, offset);
-            break;
+static void qdrh_manage_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    qdr_query_t *query  = action->args.agent.query;
 
-        case QD_ROUTER_WAYPOINT :
-            break;
-
-        case QD_ROUTER_EXCHANGE :
-            break;
-
-        case QD_ROUTER_BINDING :
-            break;
+    if (!discard)
+        switch (query->entity_type) {
+        case QD_ROUTER_CONNECTION: break;
+        case QD_ROUTER_LINK:       break;
+        case QD_ROUTER_ADDRESS:    qdra_address_get_next_CT(core, query); break;
+        case QD_ROUTER_WAYPOINT:   break;
+        case QD_ROUTER_EXCHANGE:   break;
+        case QD_ROUTER_BINDING:    break;
         }
 }
 

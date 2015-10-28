@@ -20,15 +20,15 @@
 #include "router_core_private.h"
 #include <stdio.h>
 
-static void qdrh_add_router       (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdrh_del_router       (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdrh_set_link         (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdrh_remove_link      (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdrh_set_next_hop     (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdrh_remove_next_hop  (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdrh_set_valid_origins(qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdrh_map_destination  (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdrh_unmap_destination(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_add_router_CT        (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_del_router_CT        (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_set_link_CT          (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_remove_link_CT       (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_set_next_hop_CT      (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_remove_next_hop_CT   (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_set_valid_origins_CT (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_map_destination_CT   (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_unmap_destination_CT (qdr_core_t *core, qdr_action_t *action, bool discard);
 
 static qd_address_semantics_t router_addr_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS | QD_BYPASS_VALID_ORIGINS;
 
@@ -39,7 +39,7 @@ static qd_address_semantics_t router_addr_semantics = QD_FANOUT_SINGLE | QD_BIAS
 
 void qdr_core_add_router(qdr_core_t *core, const char *address, int router_maskbit)
 {
-    qdr_action_t *action = qdr_action(qdrh_add_router);
+    qdr_action_t *action = qdr_action(qdrh_add_router_CT);
     action->args.route_table.router_maskbit = router_maskbit;
     action->args.route_table.address        = qdr_field(address);
     qdr_action_enqueue(core, action);
@@ -48,7 +48,7 @@ void qdr_core_add_router(qdr_core_t *core, const char *address, int router_maskb
 
 void qdr_core_del_router(qdr_core_t *core, int router_maskbit)
 {
-    qdr_action_t *action = qdr_action(qdrh_del_router);
+    qdr_action_t *action = qdr_action(qdrh_del_router_CT);
     action->args.route_table.router_maskbit = router_maskbit;
     qdr_action_enqueue(core, action);
 }
@@ -56,7 +56,7 @@ void qdr_core_del_router(qdr_core_t *core, int router_maskbit)
 
 void qdr_core_set_link(qdr_core_t *core, int router_maskbit, int link_maskbit)
 {
-    qdr_action_t *action = qdr_action(qdrh_set_link);
+    qdr_action_t *action = qdr_action(qdrh_set_link_CT);
     action->args.route_table.router_maskbit = router_maskbit;
     action->args.route_table.link_maskbit   = link_maskbit;
     qdr_action_enqueue(core, action);
@@ -65,7 +65,7 @@ void qdr_core_set_link(qdr_core_t *core, int router_maskbit, int link_maskbit)
 
 void qdr_core_remove_link(qdr_core_t *core, int router_maskbit)
 {
-    qdr_action_t *action = qdr_action(qdrh_remove_link);
+    qdr_action_t *action = qdr_action(qdrh_remove_link_CT);
     action->args.route_table.router_maskbit = router_maskbit;
     qdr_action_enqueue(core, action);
 }
@@ -73,7 +73,7 @@ void qdr_core_remove_link(qdr_core_t *core, int router_maskbit)
 
 void qdr_core_set_next_hop(qdr_core_t *core, int router_maskbit, int nh_router_maskbit)
 {
-    qdr_action_t *action = qdr_action(qdrh_set_next_hop);
+    qdr_action_t *action = qdr_action(qdrh_set_next_hop_CT);
     action->args.route_table.router_maskbit    = router_maskbit;
     action->args.route_table.nh_router_maskbit = nh_router_maskbit;
     qdr_action_enqueue(core, action);
@@ -82,7 +82,7 @@ void qdr_core_set_next_hop(qdr_core_t *core, int router_maskbit, int nh_router_m
 
 void qdr_core_remove_next_hop(qdr_core_t *core, int router_maskbit)
 {
-    qdr_action_t *action = qdr_action(qdrh_remove_next_hop);
+    qdr_action_t *action = qdr_action(qdrh_remove_next_hop_CT);
     action->args.route_table.router_maskbit = router_maskbit;
     qdr_action_enqueue(core, action);
 }
@@ -90,7 +90,7 @@ void qdr_core_remove_next_hop(qdr_core_t *core, int router_maskbit)
 
 void qdr_core_set_valid_origins(qdr_core_t *core, int router_maskbit, qd_bitmask_t *routers)
 {
-    qdr_action_t *action = qdr_action(qdrh_set_valid_origins);
+    qdr_action_t *action = qdr_action(qdrh_set_valid_origins_CT);
     action->args.route_table.router_maskbit = router_maskbit;
     action->args.route_table.router_set     = routers;
     qdr_action_enqueue(core, action);
@@ -99,7 +99,7 @@ void qdr_core_set_valid_origins(qdr_core_t *core, int router_maskbit, qd_bitmask
 
 void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase, qd_address_semantics_t sem)
 {
-    qdr_action_t *action = qdr_action(qdrh_map_destination);
+    qdr_action_t *action = qdr_action(qdrh_map_destination_CT);
     action->args.route_table.router_maskbit = router_maskbit;
     action->args.route_table.address        = qdr_field(address);
     action->args.route_table.address_phase  = phase;
@@ -111,7 +111,7 @@ void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *
 
 void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase)
 {
-    qdr_action_t *action = qdr_action(qdrh_unmap_destination);
+    qdr_action_t *action = qdr_action(qdrh_unmap_destination_CT);
     action->args.route_table.router_maskbit = router_maskbit;
     action->args.route_table.address        = qdr_field(address);
     action->args.route_table.address_phase  = phase;
@@ -136,16 +136,16 @@ void qdr_core_route_table_handlers(qdr_core_t           *core,
 // In-Thread Functions
 //==================================================================================
 
-void qdr_route_table_setup(qdr_core_t *core)
+void qdr_route_table_setup_CT(qdr_core_t *core)
 {
     DEQ_INIT(core->addrs);
     DEQ_INIT(core->links);
     DEQ_INIT(core->routers);
     core->addr_hash = qd_hash(10, 32, 0);
 
-    core->router_addr   = qdr_add_local_address(core, "qdrouter",    QD_SEMANTICS_ROUTER_CONTROL);
-    core->routerma_addr = qdr_add_local_address(core, "qdrouter.ma", QD_SEMANTICS_DEFAULT);
-    core->hello_addr    = qdr_add_local_address(core, "qdhello",     QD_SEMANTICS_ROUTER_CONTROL);
+    core->router_addr   = qdr_add_local_address_CT(core, "qdrouter",    QD_SEMANTICS_ROUTER_CONTROL);
+    core->routerma_addr = qdr_add_local_address_CT(core, "qdrouter.ma", QD_SEMANTICS_DEFAULT);
+    core->hello_addr    = qdr_add_local_address_CT(core, "qdhello",     QD_SEMANTICS_ROUTER_CONTROL);
 
     core->routers_by_mask_bit   = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());
     core->out_links_by_mask_bit = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
@@ -161,7 +161,7 @@ void qdr_route_table_setup(qdr_core_t *core)
  * Depending on its policy, the address may be eligible for being closed out
  * (i.e. Logging its terminal statistics and freeing its resources).
  */
-static void qdr_check_addr(qdr_core_t *core, qdr_address_t *addr, bool was_local)
+static void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
 {
     if (addr == 0)
         return;
@@ -214,7 +214,7 @@ static void qdr_check_addr(qdr_core_t *core, qdr_address_t *addr, bool was_local
 }
 
 
-static void qdrh_add_router(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     int          router_maskbit = action->args.route_table.router_maskbit;
     qdr_field_t *address        = action->args.route_table.address;
@@ -294,7 +294,7 @@ static void qdrh_add_router(qdr_core_t *core, qdr_action_t *action, bool discard
 }
 
 
-static void qdrh_del_router(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     int router_maskbit = action->args.route_table.router_maskbit;
 
@@ -343,7 +343,7 @@ static void qdrh_del_router(qdr_core_t *core, qdr_action_t *action, bool discard
 }
 
 
-static void qdrh_set_link(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_set_link_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     int router_maskbit = action->args.route_table.router_maskbit;
     int link_maskbit   = action->args.route_table.link_maskbit;
@@ -376,7 +376,7 @@ static void qdrh_set_link(qdr_core_t *core, qdr_action_t *action, bool discard)
 }
 
 
-static void qdrh_remove_link(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_remove_link_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     int router_maskbit = action->args.route_table.router_maskbit;
 
@@ -395,7 +395,7 @@ static void qdrh_remove_link(qdr_core_t *core, qdr_action_t *action, bool discar
 }
 
 
-static void qdrh_set_next_hop(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_set_next_hop_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     int router_maskbit    = action->args.route_table.router_maskbit;
     int nh_router_maskbit = action->args.route_table.nh_router_maskbit;
@@ -427,7 +427,7 @@ static void qdrh_set_next_hop(qdr_core_t *core, qdr_action_t *action, bool disca
 }
 
 
-static void qdrh_remove_next_hop(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_remove_next_hop_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     int router_maskbit = action->args.route_table.router_maskbit;
 
@@ -441,7 +441,7 @@ static void qdrh_remove_next_hop(qdr_core_t *core, qdr_action_t *action, bool di
 }
 
 
-static void qdrh_set_valid_origins(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_set_valid_origins_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     int           router_maskbit = action->args.route_table.router_maskbit;
     qd_bitmask_t *valid_origins  = action->args.route_table.router_set;
@@ -474,7 +474,7 @@ static void qdrh_set_valid_origins(qdr_core_t *core, qdr_action_t *action, bool 
 }
 
 
-static void qdrh_map_destination(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     //
     // TODO - handle the class-prefix and phase explicitly
@@ -522,7 +522,7 @@ static void qdrh_map_destination(qdr_core_t *core, qdr_action_t *action, bool di
 }
 
 
-static void qdrh_unmap_destination(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_unmap_destination_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     int          router_maskbit = action->args.route_table.router_maskbit;
     qdr_field_t *address        = action->args.route_table.address;
@@ -560,7 +560,7 @@ static void qdrh_unmap_destination(qdr_core_t *core, qdr_action_t *action, bool 
         // TODO - If this affects a waypoint, create the proper side effects
         //
 
-        qdr_check_addr(core, addr, false);
+        qdr_check_addr_CT(core, addr, false);
     } while (false);
 
     qdr_field_free(address);

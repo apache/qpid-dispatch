@@ -857,7 +857,8 @@
                 "key": {
                     "description": "Internal unique (to this router) key to identify the address",
                     "type": "string"
-                }
+                },
+                "hostRouters": {"type": "list", "description": "List of remote routers on which there is a destination for this address."}
             }
         },
 

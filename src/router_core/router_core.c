@@ -145,7 +145,7 @@ qdr_address_t *qdr_address(qd_address_semantics_t semantics)
 }
 
 
-qdr_address_t *qdr_add_local_address(qdr_core_t *core, const char *address, qd_address_semantics_t semantics)
+qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, const char *address, qd_address_semantics_t semantics)
 {
     char                 addr_string[1000];
     qdr_address_t       *addr = 0;
