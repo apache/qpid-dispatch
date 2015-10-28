@@ -517,6 +517,18 @@ void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, vo
 
 
 /**
+ * Write accessor to the connection's proton-event stall flag.
+ * When set no further events are processed on this connection.
+ * Used during processing of policy decisions to hold off incoming
+ * pipeline of amqp events.
+ *
+ * @param conn Connection object
+ * @param stall Value of stall flag
+ */
+void qd_connection_set_event_stall(qd_connection_t *conn, bool stall);
+
+
+/**
  * Create a listener for incoming connections.
  *
  * @param qd The dispatch handle returned by qd_dispatch.

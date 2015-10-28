@@ -436,40 +436,41 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
         pn_event_t      *event;
 
         events = 0;
-        event = pn_collector_peek(collector);
-        while (event) {
-            //
-            // If we are transitioning to the open state, notify the client via callback.
-            //
-            if (!ctx->opened && pn_event_type(event) == PN_CONNECTION_REMOTE_OPEN) {
-                ctx->opened = true;
-                qd_conn_event_t ce = QD_CONN_EVENT_LISTENER_OPEN;
-
-                if (ctx->connector) {
-                    ce = QD_CONN_EVENT_CONNECTOR_OPEN;
-                    ctx->connector->delay = 0;
-                } else
-                    assert(ctx->listener);
-
-                qd_server->conn_handler(qd_server->conn_handler_context,
-                                        ctx->context, ce, (qd_connection_t*) qdpn_connector_context(cxtr));
-                events = 1;
-                break;  // Break without popping this event.  It will be re-processed in OPERATIONAL state.
-            } else if (pn_event_type(event) == PN_TRANSPORT_ERROR) {
-                ctx->closed = true;
-                qdpn_connector_close(cxtr);
-                if (ctx->connector) {
-                    const qd_server_config_t *config = ctx->connector->config;
-                    qd_log(qd_server->log_source, QD_LOG_TRACE, "Connection to %s:%s failed", config->host, config->port);
-                }
-            }
-
-            events += qd_server->pn_event_handler(qd_server->conn_handler_context, ctx->context, event, qd_conn);
-            pn_collector_pop(collector);
+        if (!ctx->event_stall) {
             event = pn_collector_peek(collector);
-        }
+            while (event) {
+                //
+                // If we are transitioning to the open state, notify the client via callback.
+                //
+                if (!ctx->opened && pn_event_type(event) == PN_CONNECTION_REMOTE_OPEN) {
+                    ctx->opened = true;
+                    qd_conn_event_t ce = QD_CONN_EVENT_LISTENER_OPEN;
 
-        events += qd_server->conn_handler(qd_server->conn_handler_context, ctx->context, QD_CONN_EVENT_WRITABLE, qd_conn);
+                    if (ctx->connector) {
+                        ce = QD_CONN_EVENT_CONNECTOR_OPEN;
+                        ctx->connector->delay = 0;
+                    } else
+                        assert(ctx->listener);
+
+                    qd_server->conn_handler(qd_server->conn_handler_context,
+                                            ctx->context, ce, (qd_connection_t*) qdpn_connector_context(cxtr));
+                    events = 1;
+                } else if (pn_event_type(event) == PN_TRANSPORT_ERROR) {
+                    ctx->closed = true;
+                    qdpn_connector_close(cxtr);
+                    if (ctx->connector) {
+                        const qd_server_config_t *config = ctx->connector->config;
+                        qd_log(qd_server->log_source, QD_LOG_TRACE, "Connection to %s:%s failed", config->host, config->port);
+                    }
+                }
+
+                events += qd_server->pn_event_handler(qd_server->conn_handler_context, ctx->context, event, qd_conn);
+                pn_collector_pop(collector);
+
+                event = ctx->event_stall ? 0 : pn_collector_peek(collector);
+            }
+            events += qd_server->conn_handler(qd_server->conn_handler_context, ctx->context, QD_CONN_EVENT_WRITABLE, qd_conn);
+        }
     } while (events > 0);
 
     return passes > 1;
@@ -1260,6 +1261,12 @@ void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, vo
 }
 
 
+void qd_connection_set_event_stall(qd_connection_t *conn, bool stall)
+{
+    conn->event_stall = stall;
+}
+
+
 qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *config, void *context)
 {
     qd_server_t   *qd_server = qd->server;
@@ -1364,6 +1371,7 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     ctx->ufd          = ufd;
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
+    ctx->event_stall  = false;
 
     ufd->context = context;
     ufd->server  = qd_server;
