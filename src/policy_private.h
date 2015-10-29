@@ -1,3 +1,5 @@
+#ifndef __policy_private_h__
+#define __policy_private_h__
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -37,3 +39,5 @@
  * @param[in] discard callback switch
  **/
 void qd_policy_handle_open(void *context, bool discard);
+
+#endif
