@@ -137,12 +137,12 @@ void qdr_core_subscribe(qdr_core_t *core, const char *address, char aclass, char
                         qd_address_semantics_t sem, qdr_receive_t on_message, void *context)
 {
     qdr_action_t *action = qdr_action(qdrh_subscribe_CT);
-    action->args.subscribe.address    = qdr_field(address);
-    action->args.subscribe.semantics  = sem;
-    action->args.subscribe.aclass     = aclass;
-    action->args.subscribe.phase      = phase;
-    action->args.subscribe.on_message = on_message;
-    action->args.subscribe.context    = context;
+    action->args.subscribe.address        = qdr_field(address);
+    action->args.subscribe.semantics      = sem;
+    action->args.subscribe.address_class  = aclass;
+    action->args.subscribe.address_phase  = phase;
+    action->args.subscribe.on_message     = on_message;
+    action->args.subscribe.context        = context;
     qdr_action_enqueue(core, action);
 }
 
@@ -587,8 +587,8 @@ static void qdrh_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     qdr_field_t *address = action->args.subscribe.address;
 
     if (!discard) {
-        char aclass         = action->args.subscribe.aclass;
-        char phase          = action->args.subscribe.phase;
+        char aclass         = action->args.subscribe.address_class;
+        char phase          = action->args.subscribe.address_phase;
         qdr_address_t *addr = 0;
 
         qd_address_iterator_override_prefix(address->iterator, aclass);

@@ -68,8 +68,8 @@ struct qdr_action_t {
         struct {
             qdr_field_t            *address;
             qd_address_semantics_t  semantics;
-            char                    aclass;
-            char                    phase;
+            char                    address_class;
+            char                    address_phase;
             qdr_receive_t           on_message;
             void                   *context;
         } subscribe;
