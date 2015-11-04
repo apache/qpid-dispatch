@@ -714,8 +714,10 @@ static void *thread_run(void *arg)
                 DEQ_REMOVE(qd_server->connections, ctx);
 
                 qdpn_connector_free(cxtr);
-                if (conn)
+                if (conn) {
+                    pn_connection_set_context(conn, 0);
                     pn_connection_free(conn);
+                }
                 if (ctx->collector)
                     pn_collector_free(ctx->collector);
                 invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls

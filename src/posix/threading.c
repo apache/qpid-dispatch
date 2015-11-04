@@ -17,10 +17,17 @@
  * under the License.
  */
 
+//
+// Enable debug for asserts in this module regardless of what the project-wide
+// setting is.
+//
+#undef NDEBUG
+
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/ctools.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <assert.h>
 
 struct sys_mutex_t {
     pthread_mutex_t mutex;
@@ -29,6 +36,7 @@ struct sys_mutex_t {
     int             acquired;
 #endif
 };
+
 
 // NOTE: normally it is incorrect for an assert expression to have side effects,
 // since it could change the behavior between a debug and a release build.  In
@@ -59,7 +67,8 @@ void sys_mutex_free(sys_mutex_t *mutex)
 
 void sys_mutex_lock(sys_mutex_t *mutex)
 {
-    pthread_mutex_lock(&(mutex->mutex));
+    int result = pthread_mutex_lock(&(mutex->mutex));
+    assert(result == 0);
     ACQUIRE(mutex);
 }
 
@@ -67,7 +76,8 @@ void sys_mutex_lock(sys_mutex_t *mutex)
 void sys_mutex_unlock(sys_mutex_t *mutex)
 {
     RELEASE(mutex);
-    pthread_mutex_unlock(&(mutex->mutex));
+    int result = pthread_mutex_unlock(&(mutex->mutex));
+    assert(result == 0);
 }
 
 
@@ -94,20 +104,23 @@ void sys_cond_free(sys_cond_t *cond)
 void sys_cond_wait(sys_cond_t *cond, sys_mutex_t *held_mutex)
 {
     RELEASE(held_mutex);
-    pthread_cond_wait(&(cond->cond), &(held_mutex->mutex));
+    int result = pthread_cond_wait(&(cond->cond), &(held_mutex->mutex));
+    assert(result == 0);
     ACQUIRE(held_mutex);
 }
 
 
 void sys_cond_signal(sys_cond_t *cond)
 {
-    pthread_cond_signal(&(cond->cond));
+    int result = pthread_cond_signal(&(cond->cond));
+    assert(result == 0);
 }
 
 
 void sys_cond_signal_all(sys_cond_t *cond)
 {
-    pthread_cond_broadcast(&(cond->cond));
+    int result = pthread_cond_broadcast(&(cond->cond));
+    assert(result == 0);
 }
 
 
@@ -133,19 +146,22 @@ void sys_rwlock_free(sys_rwlock_t *lock)
 
 void sys_rwlock_wrlock(sys_rwlock_t *lock)
 {
-    pthread_rwlock_wrlock(&(lock->lock));
+    int result = pthread_rwlock_wrlock(&(lock->lock));
+    assert(result == 0);
 }
 
 
 void sys_rwlock_rdlock(sys_rwlock_t *lock)
 {
-    pthread_rwlock_rdlock(&(lock->lock));
+    int result = pthread_rwlock_rdlock(&(lock->lock));
+    assert(result == 0);
 }
 
 
 void sys_rwlock_unlock(sys_rwlock_t *lock)
 {
-    pthread_rwlock_unlock(&(lock->lock));
+    int result = pthread_rwlock_unlock(&(lock->lock));
+    assert(result == 0);
 }
 
 
