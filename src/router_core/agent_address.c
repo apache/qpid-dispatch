@@ -173,12 +173,14 @@ void qdra_address_set_columns(qdr_query_t *query, qd_parsed_field_t *attribute_n
 
 void qdra_address_emit_columns(qdr_query_t *query)
 {
+    qd_compose_start_list(query->body);
     int i = 0;
     while (query->columns[i] >= 0) {
         assert(query->columns[i] < QDR_ADDRESS_COLUMN_COUNT);
         qd_compose_insert_string(query->body, qdr_address_columns[query->columns[i]]);
         i++;
     }
+    qd_compose_end_list(query->body);
 }
 
 

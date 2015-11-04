@@ -157,12 +157,11 @@ void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t ty
  * 1) Locate the attributeNames field in the body of the QUERY request
  * 2) Create a composed field for the body of the reply message
  * 3) Call qdr_manage_query with the attributeNames field and the response body
- * 4) Start the body map, add the "attributeNames" key, start the value list
- * 5) Call qdr_query_add_attribute_names.  This will fill in the attribute names
- * 6) Close out the list
- * 7) Add the "results" key, start the outer list
- * 8) Call qdr_query_get_first.  This will asynchronously add the first inner list.
- * 9) When the qdr_manage_response_t callback is invoked:
+ * 4) Start the body map, add the "attributeNames" key
+ * 5) Call qdr_query_add_attribute_names.  This will add the attribute names list
+ * 6) Add the "results" key, start the outer list
+ * 7) Call qdr_query_get_first.  This will asynchronously add the first inner list.
+ * 8) When the qdr_manage_response_t callback is invoked:
  *    a) if more is true and count is not exceeded, call qdr_query_get_next
  *    b) if more is false or count is exceeded, call qdr_query_free, close the outer list, close the map
  */
