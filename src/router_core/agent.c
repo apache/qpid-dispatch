@@ -62,8 +62,8 @@ void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query)
         qd_timer_schedule(core->agent_timer, 0);
 }
 
-static void qdrh_manage_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdrh_manage_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_query_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdrh_query_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 
 //==================================================================================
@@ -85,12 +85,12 @@ void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t ty
 }
 
 
-qdr_query_t *qdr_manage_get_first(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                                  int offset, qd_parsed_field_t *attribute_names, qd_composed_field_t *body)
+qdr_query_t *qdr_manage_query(qdr_core_t *core, void *context, qd_router_entity_type_t type,
+                              qd_parsed_field_t *attribute_names, qd_composed_field_t *body)
 {
-    qdr_action_t *action = qdr_action(qdrh_manage_get_first_CT);
-    qdr_query_t  *query  = new_qdr_query_t();
+    qdr_query_t *query = new_qdr_query_t();
 
+    query->core        = core;
     query->entity_type = type;
     query->context     = context;
     query->body        = body;
@@ -108,24 +108,41 @@ qdr_query_t *qdr_manage_get_first(qdr_core_t *core, void *context, qd_router_ent
     case QD_ROUTER_BINDING:    break;
     }
 
-    action->args.agent.query  = query;
-    action->args.agent.offset = offset;
-
-    qdr_action_enqueue(core, action);
-
     return query;
 }
 
 
-void qdr_manage_get_next(qdr_core_t *core, qdr_query_t *query)
+void qdr_query_add_attribute_names(qdr_query_t *query)
 {
-    qdr_action_t *action = qdr_action(qdrh_manage_get_next_CT);
-    action->args.agent.query = query;
-    qdr_action_enqueue(core, action);
+    switch (query->entity_type) {
+    case QD_ROUTER_CONNECTION: break;
+    case QD_ROUTER_LINK:       break;
+    case QD_ROUTER_ADDRESS:    qdra_address_emit_columns(query);
+    case QD_ROUTER_WAYPOINT:   break;
+    case QD_ROUTER_EXCHANGE:   break;
+    case QD_ROUTER_BINDING:    break;
+    }
 }
 
 
-void qdr_query_cancel(qdr_core_t *core, qdr_query_t *query)
+void qdr_query_get_first(qdr_query_t *query, int offset)
+{
+    qdr_action_t *action = qdr_action(qdrh_query_get_first_CT);
+    action->args.agent.query  = query;
+    action->args.agent.offset = offset;
+    qdr_action_enqueue(query->core, action);
+}
+
+
+void qdr_query_get_next(qdr_query_t *query)
+{
+    qdr_action_t *action = qdr_action(qdrh_query_get_next_CT);
+    action->args.agent.query = query;
+    qdr_action_enqueue(query->core, action);
+}
+
+
+void qdr_query_free(qdr_query_t *query)
 {
 }
 
@@ -148,7 +165,7 @@ void qdr_agent_setup_CT(qdr_core_t *core)
 }
 
 
-static void qdrh_manage_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_query_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     qdr_query_t *query  = action->args.agent.query;
     int          offset = action->args.agent.offset;
@@ -165,7 +182,7 @@ static void qdrh_manage_get_first_CT(qdr_core_t *core, qdr_action_t *action, boo
 }
 
 
-static void qdrh_manage_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdrh_query_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     qdr_query_t *query  = action->args.agent.query;
 

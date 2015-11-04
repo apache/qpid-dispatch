@@ -22,6 +22,7 @@
 #include "router_core_private.h"
 
 void qdra_address_set_columns(qdr_query_t *query, qd_parsed_field_t *attribute_names);
+void qdra_address_emit_columns(qdr_query_t *query);
 void qdra_address_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
 void qdra_address_get_next_CT(qdr_core_t *core, qdr_query_t *query);
 

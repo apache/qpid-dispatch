@@ -151,10 +151,28 @@ void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t 
 void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes);
 void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes);
 
-qdr_query_t *qdr_manage_get_first(qdr_core_t *core, void *context, qd_router_entity_type_t type, int offset,
-                                  qd_parsed_field_t *attribute_names, qd_composed_field_t *body);
-void qdr_manage_get_next(qdr_core_t *core, qdr_query_t *query);
-void qdr_query_cancel(qdr_core_t *core, qdr_query_t *query);
+/**
+ * Sequence for running a query:
+ *
+ * 1) Locate the attributeNames field in the body of the QUERY request
+ * 2) Create a composed field for the body of the reply message
+ * 3) Call qdr_manage_query with the attributeNames field and the response body
+ * 4) Start the body map, add the "attributeNames" key, start the value list
+ * 5) Call qdr_query_add_attribute_names.  This will fill in the attribute names
+ * 6) Close out the list
+ * 7) Add the "results" key, start the outer list
+ * 8) Call qdr_query_get_first.  This will asynchronously add the first inner list.
+ * 9) When the qdr_manage_response_t callback is invoked:
+ *    a) if more is true and count is not exceeded, call qdr_query_get_next
+ *    b) if more is false or count is exceeded, call qdr_query_free, close the outer list, close the map
+ */
+
+qdr_query_t *qdr_manage_query(qdr_core_t *core, void *context, qd_router_entity_type_t type, 
+                              qd_parsed_field_t *attribute_names, qd_composed_field_t *body);
+void qdr_query_add_attribute_names(qdr_query_t *query);
+void qdr_query_get_first(qdr_query_t *query, int offset);
+void qdr_query_get_next(qdr_query_t *query);
+void qdr_query_free(qdr_query_t *query);
 
 typedef void (*qdr_manage_response_t) (void *context, const qd_amqp_error_t *status, bool more);
 void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler);

@@ -92,6 +92,7 @@ DEQ_DECLARE(qdr_action_t, qdr_action_list_t);
 
 struct qdr_query_t {
     DEQ_LINKS(qdr_query_t);
+    qdr_core_t              *core;
     qd_router_entity_type_t  entity_type;
     void                    *context;
     int                      columns[QDR_AGENT_MAX_COLUMNS];

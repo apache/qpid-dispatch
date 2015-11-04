@@ -171,6 +171,17 @@ void qdra_address_set_columns(qdr_query_t *query, qd_parsed_field_t *attribute_n
 }
 
 
+void qdra_address_emit_columns(qdr_query_t *query)
+{
+    int i = 0;
+    while (query->columns[i] >= 0) {
+        assert(query->columns[i] < QDR_ADDRESS_COLUMN_COUNT);
+        qd_compose_insert_string(query->body, qdr_address_columns[query->columns[i]]);
+        i++;
+    }
+}
+
+
 void qdra_address_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
 {
     //
