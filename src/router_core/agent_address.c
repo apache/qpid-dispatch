@@ -60,17 +60,15 @@ static void qdr_manage_write_address_CT(qdr_query_t *query, qdr_address_t *addr)
         switch(query->columns[i]) {
         case QDR_ADDRESS_NAME:
         case QDR_ADDRESS_IDENTITY:
-            break;
-
-        case QDR_ADDRESS_TYPE:
-            qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.address");
-            break;
-
         case QDR_ADDRESS_KEY:
             if (addr->hash_handle)
                 qd_compose_insert_string(body, (const char*) qd_hash_key_by_handle(addr->hash_handle));
             else
                 qd_compose_insert_null(body);
+            break;
+
+        case QDR_ADDRESS_TYPE:
+            qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.address");
             break;
 
         case QDR_ADDRESS_IN_PROCESS:
