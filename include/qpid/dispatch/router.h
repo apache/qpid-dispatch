@@ -37,6 +37,8 @@ typedef struct qd_address_t qd_address_t;
 typedef uint8_t             qd_address_semantics_t;
 typedef struct qd_router_delivery_t qd_router_delivery_t;
 
+#include <qpid/dispatch/router_core.h>
+
 /**
  * @name Address fanout semantics
  * @{
@@ -139,6 +141,8 @@ struct qd_router_forwarder_t {
 typedef void (*qd_router_message_cb_t)(void *context, qd_message_t *msg, int link_id);
 
 const char *qd_router_id(const qd_dispatch_t *qd);
+
+qdr_core_t *qd_router_core(qd_dispatch_t *qd);
 
 /** Register an address in the router's hash table.
  * @param qd Pointer to the dispatch instance.

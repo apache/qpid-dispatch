@@ -18,7 +18,6 @@
  */
 
 #include <qpid/dispatch/python_embedded.h>
-#include <qpid/dispatch/router_core.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -1915,6 +1914,12 @@ void qd_router_free(qd_router_t *router)
 const char *qd_router_id(const qd_dispatch_t *qd)
 {
     return node_id;
+}
+
+
+qdr_core_t *qd_router_core(qd_dispatch_t *qd)
+{
+    return qd->router->router_core;
 }
 
 

@@ -19,15 +19,16 @@
  * under the License.
  */
 
-#include <qpid/dispatch.h>
 #include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/bitmask.h>
 #include <qpid/dispatch/compose.h>
 #include <qpid/dispatch/parse.h>
+#include <qpid/dispatch/router.h>
 
-//
-// All callbacks in this module shall be invoked on a connection thread from the server thread pool.
-//
+
+/**
+ * All callbacks in this module shall be invoked on a connection thread from the server thread pool.
+ */
 
 typedef struct qdr_core_t qdr_core_t;
 typedef struct qdr_connection_t qdr_connection_t;
@@ -100,7 +101,12 @@ typedef struct {
     qdr_delivery_t  *delivery; // For DELIVERY
 } qdr_work_t;
 
-qdr_connection_t *qdr_connection_opened(qdr_core_t *core, qd_field_iterator_t *label);
+/**
+ * qdr_connection_opened
+ *
+ * This function must be called once for every 
+ */
+qdr_connection_t *qdr_connection_opened(qdr_core_t *core, const char *label);
 void qdr_connection_closed(qdr_connection_t *conn);
 void qdr_connection_set_context(qdr_connection_t *conn, void *context);
 void *qdr_connection_get_context(qdr_connection_t *conn);

@@ -63,6 +63,13 @@ struct qdr_action_t {
         } route_table;
 
         //
+        // Arguments for connection-level actions
+        //
+        struct {
+            qdr_connection_t *conn;
+        } connection;
+
+        //
         // Arguments for in-process subscriptions
         //
         struct {
@@ -223,6 +230,17 @@ void qdr_add_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 
 
+struct qdr_connection_t {
+    DEQ_LINKS(qdr_connection_t);
+    qdr_core_t *core;
+    void       *user_context;
+    const char *label;
+};
+
+ALLOC_DECLARE(qdr_connection_t);
+DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);
+
+
 struct qdr_core_t {
     qd_dispatch_t     *qd;
     qd_log_source_t   *log;
@@ -231,6 +249,8 @@ struct qdr_core_t {
     qdr_action_list_t  action_list;
     sys_cond_t        *action_cond;
     sys_mutex_t       *action_lock;
+
+    qdr_connection_list_t open_connections;
 
     //
     // Agent section
