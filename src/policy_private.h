@@ -30,14 +30,42 @@
 #include "entity_cache.h"
 #include <dlfcn.h>
 
+typedef struct qd_policy_t qd_policy_t;
+
+qd_error_t qd_router_configure_policy(qd_policy_t *policy, qd_entity_t *entity);
+
+
+/** Allow or deny an incoming connection based on connection count(s).
+ * A server listener has just accepted a socket.
+ * Allow or deny this connection based on the absolute number
+ *  of allowed connections.
+ * The identity of the connecting user has not been negotiated yet.
+ * @param[in] context the current policy
+ * @param[in] name the connector name
+ * @return the connection is allowed or not
+ **/
+bool qd_policy_socket_accept(void *context, const char *hostname);
+
+
+/** Record a closing connection.
+ * A server listener is closing a socket.
+ * Release the counted connection against provisioned limits
+ * 
+ * @param[in] context the current policy
+ * @param[in] name the connector name
+ **/
+void qd_policy_socket_close(void *context, const char *hostname);
+
+
 /** Allow or deny an incoming connection.
  * An Open performative was received over a new connection.
  * Consult local policy to determine if this host/user is
  * allow to make this connection. The underlying proton 
  * connection is either opened or closed.
+ * This function is called from the deferred queue.
  * @param[in] context a qd_connection_t object
  * @param[in] discard callback switch
  **/
-void qd_policy_handle_open(void *context, bool discard);
+void qd_policy_amqp_open(void *context, bool discard);
 
 #endif

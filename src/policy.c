@@ -43,44 +43,166 @@
 //
 static bool allow_this = true;
 
+bool policy_engine()
+{
+    return allow_this;
+}
+
+void policy_engine_step()
+{
+    // allow_this = !allow_this;
+}
+
+
 //
-// error conditions
+// TODO: when policy dev is more complete lower the log level
+//
+#define POLICY_LOG_LEVEL QD_LOG_CRITICAL
+
+//
+// The current statistics maintained globally through multiple
+// reconfiguration of policy settings.
+//
+static int n_connections = 0;
+
+//
+// error conditions signaled to effect denial
 //
 static char* RESOURCE_LIMIT_EXCEEDED     = "amqp:resource-limit-exceeded";
 //static char* UNAUTHORIZED_ACCESS         = "amqp:unauthorized-access";
 //static char* CONNECTION_FORCED           = "amqp:connection:forced";
 
 //
-// error descriptions
+// error descriptions signaled to effect denial
 //
 static char* CONNECTION_DISALLOWED         = "connection disallowed by local policy";
 
 
-void qd_policy_handle_open(void *context, bool discard)
+//
+// Policy configuration/statistics management interface
+//
+struct qd_policy_t {
+    qd_dispatch_t        *qd;
+    qd_log_source_t      *log_source;
+
+    int                   max_connections;
+
+    int                   current_connections;
+};
+
+
+qd_policy_t *qd_policy(qd_dispatch_t *qd)
+{
+    qd_policy_t *policy = NEW(qd_policy_t);
+
+    policy->qd                  = qd;
+    policy->log_source          = qd_log_source("POLICY");
+    policy->max_connections     = 0;
+    policy->current_connections = 0;
+
+    qd_log(policy->log_source, QD_LOG_TRACE, "Policy Initialized");
+    return policy;
+}
+
+
+void qd_policy_free(qd_policy_t *policy)
+{
+    free(policy);
+}
+
+//
+//
+qd_error_t qd_router_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
+{
+    policy->max_connections = qd_entity_opt_long(entity, "maximumConnections", 0); QD_ERROR_RET();
+    if (policy->max_connections < 0)
+        return qd_error(QD_ERROR_CONFIG, "maximumConnections must be >= 0");
+    return QD_ERROR_NONE;
+}
+
+
+//
+// Functions related to absolute connection counts.
+// These handle connections at the socket level with
+// no regard to user identity. Simple yes/no decisions
+// are made and there is no AMQP channel for returning
+// error conditions.
+//
+bool qd_policy_socket_accept(void *context, const char *hostname)
+{
+    qd_policy_t *policy = (qd_policy_t *)context;
+    bool result = true;
+
+    if (policy->max_connections == 0) {
+        // Policy not in force; connection counted and allowed
+        n_connections += 1;
+        qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' allowed. N= %d", hostname, n_connections); // HACK EXTRA
+    } else {
+        // Policy in force
+        if (n_connections < policy->max_connections) {
+            // connection counted and allowed
+            n_connections += 1;
+            qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' allowed. N= %d", hostname, n_connections);
+        } else {
+            // connection denied
+            result = false;
+            qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' denied, N=%d", hostname, n_connections);
+        }
+    }
+    return result;
+}
+
+
+void qd_policy_socket_close(void *context, const char *hostname)
+{
+    qd_policy_t *policy = (qd_policy_t *)context;
+
+    n_connections -= 1;
+    if (policy->max_connections > 0) {
+        assert (n_connections >= 0);
+        qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed, N=%d", hostname, n_connections);
+    }
+    qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed, N=%d", hostname, n_connections);  // HACK EXTRA
+}
+
+
+//
+// Functions related to authenticated connection denial.
+// An AMQP Open has been received over some connection.
+// Evaluate the connection auth and the Open fields to
+// allow or deny the Open. Denied Open attempts are
+// effected with a returned Open-Close_with_condition.
+//
+void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *cond_name, const char *cond_descr)
+{
+    // Set the error condition and close the connection.
+    // Over the wire this will send an open frame followed
+    // immediately by a close frame with the error condition.
+    pn_condition_t * cond = pn_connection_condition(conn);
+    (void) pn_condition_set_name(       cond, cond_name);
+    (void) pn_condition_set_description(cond, cond_descr);
+    pn_connection_close(conn);
+}
+
+void qd_policy_amqp_open(void *context, bool discard)
 {
     qd_connection_t *qd_conn = (qd_connection_t *)context;
-    
+
     if (!discard) {
         pn_connection_t *conn = qd_connection_pn(qd_conn);
 
-        if (allow_this) { // TODO: Consult actual policy engine
+        // Consult policy engine for this connection attempt
+        if ( policy_engine() ) { // TODO: get rid of this phony policy engine
             // This connection is allowed.
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
                 pn_connection_open(conn);
             qd_connection_manager_connection_opened(qd_conn);
         } else {
             // This connection is denied.
-            // Set the error condition and close the connection.
-            // Over the wire this will send an open frame followed
-            // immediately by a close frame with the error condition.
-            pn_condition_t * cond = pn_connection_condition(conn);
-            (void) pn_condition_set_name(       cond, RESOURCE_LIMIT_EXCEEDED);
-            (void) pn_condition_set_description(cond, CONNECTION_DISALLOWED);
-            pn_connection_close(conn);
+            qd_policy_private_deny_amqp_connection(conn, RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);
         }
-    
-        // update the policy
-        //allow_this = !allow_this;
+        // update the phony policy engine
+        policy_engine_step();
     }
     qd_connection_set_event_stall(qd_conn, false);
 }

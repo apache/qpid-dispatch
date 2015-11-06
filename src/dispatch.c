@@ -31,6 +31,7 @@
 #include "router_private.h"
 #include "waypoint_private.h"
 #include "message_private.h"
+#include "policy_private.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include <dlfcn.h>
@@ -43,6 +44,8 @@ qd_server_t    *qd_server(qd_dispatch_t *qd, int tc, const char *container_name,
 void            qd_server_free(qd_server_t *server);
 qd_container_t *qd_container(qd_dispatch_t *qd);
 void            qd_container_free(qd_container_t *container);
+qd_policy_t    *qd_policy(qd_dispatch_t *qd);
+void            qd_policy_free(qd_policy_t *policy);
 qd_router_t    *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id);
 void            qd_router_setup_late(qd_dispatch_t *qd);
 void            qd_router_free(qd_router_t *router);
@@ -138,12 +141,20 @@ qd_error_t qd_dispatch_configure_lrp(qd_dispatch_t *qd, qd_entity_t *entity) {
     return qd_error_code();
 }
 
+qd_error_t qd_dispatch_configure_policy(qd_dispatch_t *qd, qd_entity_t *entity)
+{
+    qd_router_configure_policy(qd->policy, entity);
+    return QD_ERROR_NONE;
+}
+
+
 qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
 {
     qd->server             = qd_server(qd, qd->thread_count, qd->container_name, qd->sasl_config_path, qd->sasl_config_name);
     qd->container          = qd_container(qd);
     qd->router             = qd_router(qd, qd->router_mode, qd->router_area, qd->router_id);
     qd->connection_manager = qd_connection_manager(qd);
+    qd->policy             = qd_policy(qd);
     return qd_error_code();
 }
 
@@ -160,6 +171,7 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     free(qd->container_name);
     free(qd->router_area);
     qd_connection_manager_free(qd->connection_manager);
+    qd_policy_free(qd->policy);
     Py_XDECREF((PyObject*) qd->agent);
     qd_router_free(qd->router);
     qd_container_free(qd->container);

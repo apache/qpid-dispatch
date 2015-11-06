@@ -25,6 +25,7 @@
 #include "entity.h"
 #include "entity_cache.h"
 #include "dispatch_private.h"
+#include "policy_private.h"
 #include "server_private.h"
 #include "timer_private.h"
 #include "alloc.h"
@@ -239,7 +240,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
     qd_connection_t  *ctx;
 
     for (listener = qdpn_driver_listener(driver); listener; listener = qdpn_driver_listener(driver)) {
-        cxtr = qdpn_listener_accept(listener);
+        cxtr = qdpn_listener_accept(listener, qd_server->qd->policy, &qd_policy_socket_accept);
         if (!cxtr)
             continue;
 
@@ -247,6 +248,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
 
         qd_log(qd_server->log_source, QD_LOG_DEBUG, "Accepting %s",
                log_incoming(logbuf, sizeof(logbuf), cxtr));
+        
         ctx = new_qd_connection_t();
         DEQ_ITEM_INIT(ctx);
         ctx->server        = qd_server;
@@ -713,6 +715,10 @@ static void *thread_run(void *arg)
 
                 sys_mutex_lock(qd_server->lock);
                 DEQ_REMOVE(qd_server->connections, ctx);
+
+                if (!ctx->connector) {
+                    qd_policy_socket_close(qd_server->qd->policy, qdpn_connector_name(cxtr));
+                }
 
                 qdpn_connector_free(cxtr);
                 if (conn)

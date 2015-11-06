@@ -319,22 +319,17 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
     qd_link_t       *qd_link;
     pn_delivery_t   *delivery;
 
+//    qd_log(container->log_source, QD_LOG_CRITICAL, "pn_event_handler: %s", pn_event_type_name(pn_event_type(event)));
+
     switch (pn_event_type(event)) {
     case PN_CONNECTION_REMOTE_OPEN :
-        if (true) {  // TODO: detect if a policy engine is present
-            // Let policy engine decide about this connection
-            if (pn_connection_state(conn) & PN_LOCAL_UNINIT) {
-                // This Open is an externally initiated connection
-                qd_connection_set_event_stall(qd_conn, true);
-                qd_connection_invoke_deferred(qd_conn, qd_policy_handle_open, qd_conn);
-            } else {
-                // This Open is in response to an internally initiated connection
-                qd_connection_manager_connection_opened(qd_conn);
-            }
+        // Let policy engine decide about all connections
+        if (pn_connection_state(conn) & PN_LOCAL_UNINIT) {
+            // This Open is an externally initiated connection
+            qd_connection_set_event_stall(qd_conn, true);
+            qd_connection_invoke_deferred(qd_conn, qd_policy_amqp_open, qd_conn);
         } else {
-            // No policy engine; allow the connection
-            if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
-                pn_connection_open(conn);
+            // This Open is in response to an internally initiated connection
             qd_connection_manager_connection_opened(qd_conn);
         }
         break;

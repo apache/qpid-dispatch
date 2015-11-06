@@ -713,6 +713,7 @@
                         "CONFIG",
                         "ERROR",
                         "DISPATCH",
+                        "POLICY",
                         "DEFAULT"
                     ],
                     "required": true,
@@ -996,6 +997,21 @@
                 "home": {"type": "string", "description": "The full path to the html/css/js files for the console."},
                 "args": {"type": "string", "description": "Optional args to pass the proxy program for logging, authentication, etc."}  
 
+            }
+        },
+
+        "policy": {
+            "description": "Defines user connection and access policy",
+            "extends": "configurationEntity",
+            "singleton": true,
+            "attributes": {
+                "maximumConnections": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "The maximum number of client connections allowed. Zero implies no limit.",
+                    "required": false,
+                    "create": true
+                }
             }
         },
 

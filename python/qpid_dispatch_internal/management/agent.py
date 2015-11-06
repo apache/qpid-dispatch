@@ -269,6 +269,15 @@ class LogEntity(EntityAdapter):
         """Can't actually delete a log source but return it to the default state"""
         self._qd.qd_log_source_reset(self.attributes['module'])
 
+class PolicyEntity(EntityAdapter):
+
+    def create(self):
+        self._qd.qd_dispatch_configure_policy(self._dispatch, self)
+
+    def _identifier(self):
+        return self.attributes.get('module')
+
+
 def _addr_port_identifier(entity):
     for attr in ['addr', 'port']: # Set default values if need be
         entity.attributes.setdefault(
