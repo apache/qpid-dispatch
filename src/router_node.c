@@ -27,10 +27,12 @@
 #include "entity_cache.h"
 #include "router_private.h"
 #include "waypoint_private.h"
+#include "router_core/management_agent_private.h"
 
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
 const char *QD_ROUTER_LINK_TYPE = "router.link";
+const char *CORE_AGENT_ADDRESS = "$management";
 
 static char *router_role    = "inter-router";
 static char *on_demand_role = "on-demand";
@@ -1870,6 +1872,10 @@ void qd_router_setup_late(qd_dispatch_t *qd)
     qd_router_python_setup(qd->router);
     qd->router->router_core = qdr_core(qd);
     qd_timer_schedule(qd->router->timer, 1000);
+
+    //Register the C management agent
+    qd_router_register_address(qd, CORE_AGENT_ADDRESS, management_agent_handler, (void *) qd, QD_SEMANTICS_DEFAULT, true, 0/*forwarder*/);
+    qd_router_register_address(qd, CORE_AGENT_ADDRESS, management_agent_handler, (void *) qd, QD_SEMANTICS_DEFAULT, false, 0/*forwarder*/);
 }
 
 void qd_router_free(qd_router_t *router)
@@ -1991,12 +1997,14 @@ void qd_router_send(qd_dispatch_t       *qd,
                     qd_field_iterator_t *address,
                     qd_message_t        *msg)
 {
+
     qd_router_t  *router = qd->router;
     qd_address_t *addr;
 
     qd_address_iterator_reset_view(address, ITER_VIEW_ADDRESS_HASH);
     sys_mutex_lock(router->lock);
     qd_hash_retrieve(router->addr_hash, address, (void*) &addr);
+
     if (addr) {
         //
         // Forward to all of the local links receiving this address.

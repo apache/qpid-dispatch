@@ -111,6 +111,7 @@ static void qdr_manage_write_address_CT(qdr_query_t *query, qdr_address_t *addr)
             qd_compose_insert_null(body);
             break;
         }
+        i++;
     }
     qd_compose_end_list(body);
 }

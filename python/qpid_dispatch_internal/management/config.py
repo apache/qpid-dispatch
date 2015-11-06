@@ -138,6 +138,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     for l in config.by_type('log'):
         configure(l)
         modules.remove(l["module"])
+
     # Add default entities for any log modules not configured.
     for m in modules: agent.configure(attributes=dict(type="log", module=m))
 
@@ -145,7 +146,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     configure(config.by_type('container')[0])
     configure(config.by_type('router')[0])
     qd.qd_dispatch_prepare(dispatch)
-    agent.activate("$management")
+    #agent.activate("$management_internal")
     qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.
 
     # Remaining configuration

@@ -1403,6 +1403,7 @@ bool qd_user_fd_is_writeable(qd_user_fd_t *ufd)
 void qd_server_timer_pending_LH(qd_timer_t *timer)
 {
     DEQ_INSERT_TAIL(timer->server->pending_timers, timer);
+    qdpn_driver_wakeup(timer->server->driver);
 }
 
 

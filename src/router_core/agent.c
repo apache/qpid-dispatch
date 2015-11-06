@@ -102,7 +102,7 @@ qdr_query_t *qdr_manage_query(qdr_core_t *core, void *context, qd_router_entity_
     switch (query->entity_type) {
     case QD_ROUTER_CONNECTION: break;
     case QD_ROUTER_LINK:       break;
-    case QD_ROUTER_ADDRESS:    qdra_address_set_columns(query, attribute_names);
+    case QD_ROUTER_ADDRESS:    qdra_address_set_columns(query, attribute_names);break;
     case QD_ROUTER_WAYPOINT:   break;
     case QD_ROUTER_EXCHANGE:   break;
     case QD_ROUTER_BINDING:    break;
@@ -117,7 +117,7 @@ void qdr_query_add_attribute_names(qdr_query_t *query)
     switch (query->entity_type) {
     case QD_ROUTER_CONNECTION: break;
     case QD_ROUTER_LINK:       break;
-    case QD_ROUTER_ADDRESS:    qdra_address_emit_columns(query);
+    case QD_ROUTER_ADDRESS:    qdra_address_emit_columns(query); break;
     case QD_ROUTER_WAYPOINT:   break;
     case QD_ROUTER_EXCHANGE:   break;
     case QD_ROUTER_BINDING:    break;
