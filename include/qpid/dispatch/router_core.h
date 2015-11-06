@@ -28,6 +28,8 @@
 
 /**
  * All callbacks in this module shall be invoked on a connection thread from the server thread pool.
+ * If the callback needs to perform work on a connection, it will be invoked on a thread that has
+ * exclusive access to that connection.
  */
 
 typedef struct qdr_core_t qdr_core_t;
@@ -86,47 +88,105 @@ void qdr_core_subscribe(qdr_core_t *core, const char *address, char aclass, char
  * Connection functions
  ******************************************************************************
  */
-typedef enum {
-    QDR_WORK_FIRST_ATTACH,  // Core is initiating a first-attach
-    QDR_WORK_SECOND_ATTACH, // Core is sending a second-attach
-    QDR_WORK_DETACH,        // Core is sending a detach
-    QDR_WORK_DELIVERY       // Core is updating a delivery for in-thread processing
-} qdr_work_type_t;
-
-typedef struct {
-    qdr_work_type_t  work_type;
-    pn_terminus_t   *source;   // For FIRST_ATTACH
-    pn_terminus_t   *target;   // For FIRST_ATTACH
-    qdr_link_t      *link;     // For SECOND_ATTACH, DETACH
-    qdr_delivery_t  *delivery; // For DELIVERY
-} qdr_work_t;
 
 /**
  * qdr_connection_opened
  *
- * This function must be called once for every 
+ * This function must be called once for every connection that is opened in the router.
+ * Once a new connection has been both remotely and locally opened, the core must be notified.
+ *
+ * @param core Pointer to the core object
+ * @param label Optional label provided in the connection's configuration.  This is used to 
+ *        correlate the connection with waypoints and link-route destinations that use the connection.
+ * @return Pointer to a connection object that can be used to refer to this connection over its lifetime.
  */
 qdr_connection_t *qdr_connection_opened(qdr_core_t *core, const char *label);
-void qdr_connection_closed(qdr_connection_t *conn);
-void qdr_connection_set_context(qdr_connection_t *conn, void *context);
-void *qdr_connection_get_context(qdr_connection_t *conn);
-qdr_work_t *qdr_connection_work(qdr_connection_t *conn);
 
-typedef void (*qdr_connection_activate_t) (void *context, const qdr_connection_t *connection);
-void qdr_connection_activate_handler(qdr_core_t *core, qdr_connection_activate_t handler, void *context);
+/**
+ * qdr_connection_closed
+ *
+ * This function must be called when a connection is closed, either cleanly by protocol
+ * or uncleanly by lost connectivity.  Once this functino is called, the caller must never
+ * again refer to or use the connection pointer.
+ *
+ * @param conn The pointer returned by qdr_connection_opened
+ */
+void qdr_connection_closed(qdr_connection_t *conn);
+
+/**
+ * qdr_connection_set_context
+ *
+ * Store an arbitrary void pointer in the connection object.
+ */
+void qdr_connection_set_context(qdr_connection_t *conn, void *context);
+
+/**
+ * qdr_connection_get_context
+ *
+ * Retrieve the stored void pointer from the connection object.
+ */
+void *qdr_connection_get_context(qdr_connection_t *conn);
+
+/**
+ * qdr_connection_activate_t callback
+ *
+ * Activate a connection for transmission (socket write).  This is called whenever
+ * the core has deliveries on links, disposition updates on deliveries, or flow updates
+ * to be sent across the connection.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param conn The connection object to be activated
+ */
+typedef void (*qdr_connection_activate_t) (void *context, qdr_connection_t *conn);
 
 /**
  ******************************************************************************
  * Link functions
  ******************************************************************************
  */
+
+/**
+ * qdr_link_first_attach
+ *
+ * This function is invoked when a first-attach (not a response to an earlier attach)
+ * arrives for a connection.
+ *
+ * @param conn Connection pointer returned by qdr_connection_opened
+ * @param dir Direction of the new link, incoming or outgoing
+ * @param source Source terminus of the attach
+ * @param target Target terminus of the attach
+ * @return A pointer to a new qdr_link_t object to track the link
+ */
 qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, pn_terminus_t *source, pn_terminus_t *target);
+
+/**
+ * qdr_link_second_attach
+ *
+ * This function is invoked when a second-attach (a response to an attach we sent)
+ * arrives for a connection.
+ *
+ * @param link The link pointer returned by qdr_link_first_attach or in a FIRST_ATTACH event.
+ * @param source Source terminus of the attach
+ * @param target Target terminus of the attach
+ */
 void qdr_link_second_attach(qdr_link_t *link, pn_terminus_t *source, pn_terminus_t *target);
+
+/**
+ * qdr_link_detach
+ *
+ * This function is invoked when a link detach arrives.
+ *
+ * @param link The link pointer returned by qdr_link_first_attach or in a FIRST_ATTACH event.
+ * @param condition The link condition from the detach frame.
+ */
 void qdr_link_detach(qdr_link_t *link, pn_condition_t *condition);
 
 qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg);
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg, qd_field_iterator_t *addr);
 
+typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qd_direction_t dir, pn_terminus_t *source, pn_terminus_t *target);
+typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link, pn_terminus_t *source, pn_terminus_t *target);
+typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, pn_condition_t *condition);
 
 /**
  ******************************************************************************

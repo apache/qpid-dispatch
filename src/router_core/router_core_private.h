@@ -67,6 +67,13 @@ struct qdr_action_t {
         //
         struct {
             qdr_connection_t *conn;
+            qdr_link_t       *link;
+            qdr_delivery_t   *delivery;
+            qd_message_t     *msg;
+            qd_direction_t    dir;
+            pn_terminus_t    *source;
+            pn_terminus_t    *target;
+            pn_condition_t   *condition;
         } connection;
 
         //
@@ -146,6 +153,8 @@ DEQ_DECLARE(qdr_router_ref_t, qdr_router_ref_list_t);
 
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
+    qdr_core_t               *core;
+    qdr_connection_t         *conn;
     int                       mask_bit;        ///< Unique mask bit if this is an inter-router link
     qd_link_type_t            link_type;
     qd_direction_t            link_direction;

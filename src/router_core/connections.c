@@ -21,6 +21,9 @@
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_link_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_link_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 ALLOC_DEFINE(qdr_connection_t);
 
@@ -70,14 +73,43 @@ void *qdr_connection_get_context(qdr_connection_t *conn)
 }
 
 
-qdr_work_t *qdr_connection_work(qdr_connection_t *conn)
+qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, pn_terminus_t *source, pn_terminus_t *target)
 {
-    return 0;
+    qdr_action_t *action = qdr_action(qdr_link_first_attach_CT);
+    qdr_link_t   *link   = new_qdr_link_t();
+
+    link->core = conn->core;
+    link->conn = conn;
+
+    action->args.connection.conn   = conn;
+    action->args.connection.link   = link;
+    action->args.connection.dir    = dir;
+    action->args.connection.source = source;
+    action->args.connection.target = target;
+    qdr_action_enqueue(conn->core, action);
+
+    return link;
 }
 
 
-void qdr_connection_activate_handler(qdr_core_t *core, qdr_connection_activate_t handler, void *context)
+void qdr_link_second_attach(qdr_link_t *link, pn_terminus_t *source, pn_terminus_t *target)
 {
+    qdr_action_t *action = qdr_action(qdr_link_second_attach_CT);
+
+    action->args.connection.link   = link;
+    action->args.connection.source = source;
+    action->args.connection.target = target;
+    qdr_action_enqueue(link->core, action);
+}
+
+
+void qdr_link_detach(qdr_link_t *link, pn_condition_t *condition)
+{
+    qdr_action_t *action = qdr_action(qdr_link_detach_CT);
+
+    action->args.connection.link      = link;
+    action->args.connection.condition = condition;
+    qdr_action_enqueue(link->core, action);
 }
 
 
@@ -119,9 +151,27 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 
     //
     // TODO - Clean up links associated with this connection
+    //        This involves the links and the dispositions of deliveries stored
+    //        with the links.
     //
 
     DEQ_REMOVE(core->open_connections, conn);
     free_qdr_connection_t(conn);
 }
+
+
+static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+}
+
+
+static void qdr_link_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+}
+
+
+static void qdr_link_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+}
+
 
