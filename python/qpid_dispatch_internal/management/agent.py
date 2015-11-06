@@ -233,6 +233,9 @@ class ContainerEntity(EntityAdapter):
         self.attributes.setdefault("containerName", "00000000-0000-0000-0000-000000000000")
         return self.attributes["containerName"]
 
+    def __str__(self):
+        return super(ContainerEntity, self).__str__().replace("Entity(", "ContainerEntity(")
+
 
 class RouterEntity(EntityAdapter):
     def __init__(self, agent, entity_type, attributes=None):
@@ -246,6 +249,9 @@ class RouterEntity(EntityAdapter):
 
     def create(self):
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
+
+    def __str__(self):
+        return super(RouterEntity, self).__str__().replace("Entity(", "RouterEntity(")
 
 
 class LogEntity(EntityAdapter):
@@ -269,6 +275,9 @@ class LogEntity(EntityAdapter):
         """Can't actually delete a log source but return it to the default state"""
         self._qd.qd_log_source_reset(self.attributes['module'])
 
+    def __str__(self):
+        return super(LogEntity, self).__str__().replace("Entity(", "LogEntity(")
+
 def _addr_port_identifier(entity):
     for attr in ['addr', 'port']: # Set default values if need be
         entity.attributes.setdefault(
@@ -281,7 +290,11 @@ class ListenerEntity(EntityAdapter):
         self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
-    def _identifier(self): return _addr_port_identifier(self)
+    def _identifier(self):
+        return _addr_port_identifier(self)
+
+    def __str__(self):
+        return super(ListenerEntity, self).__str__().replace("Entity(", "ListenerEntity(")
 
 
 class ConnectorEntity(EntityAdapter):
@@ -289,11 +302,18 @@ class ConnectorEntity(EntityAdapter):
         self._qd.qd_dispatch_configure_connector(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
-    def _identifier(self): return _addr_port_identifier(self)
+    def _identifier(self):
+        return _addr_port_identifier(self)
+
+    def __str__(self):
+        return super(ConnectorEntity, self).__str__().replace("Entity(", "ConnectorEntity(")
 
 class FixedAddressEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_address(self._dispatch, self)
+
+    def __str__(self):
+        return super(FixedAddressEntity, self).__str__().replace("Entity(", "FixedAddressEntity(")
 
 
 class WaypointEntity(EntityAdapter):
@@ -301,11 +321,20 @@ class WaypointEntity(EntityAdapter):
         self._qd.qd_dispatch_configure_waypoint(self._dispatch, self)
         self._qd.qd_waypoint_activate_all(self._dispatch)
 
+    def __str__(self):
+        return super(WaypointEntity, self).__str__().replace("Entity(", "WaypointEntity(")
+
 class LinkRoutePatternEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_lrp(self._dispatch, self)
 
+    def __str__(self):
+        return super(LinkRoutePatternEntity, self).__str__().replace("Entity(", "LinkRoutePatternEntity(")
+
 class ConsoleEntity(EntityAdapter):
+    def __str__(self):
+        return super(ConsoleEntity, self).__str__().replace("Entity(", "ConsoleEntity(")
+
     def create(self):
         # if a named listener is present, use its addr:port 
         name = self.attributes.get('listener')
@@ -343,27 +372,41 @@ class DummyEntity(EntityAdapter):
         return (OK, dict(**request.properties))
 
 
-class RouterLinkEntity(EntityAdapter): pass
+class RouterLinkEntity(EntityAdapter):
+    def __str__(self):
+        return super(RouterLinkEntity, self).__str__().replace("Entity(", "RouterLinkEntity(")
 
 
 class RouterNodeEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('routerId')
 
+    def __str__(self):
+        return super(RouterNodeEntity, self).__str__().replace("Entity(", "RouterNodeEntity(")
+
 
 class RouterAddressEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('key')
+
+    def __str__(self):
+        return super(RouterAddressEntity, self).__str__().replace("Entity(", "RouterAddressEntity(")
 
 
 class ConnectionEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('host')
 
+    def __str__(self):
+        return super(ConnectionEntity, self).__str__().replace("Entity(", "ConnectionEntity(")
+
 
 class AllocatorEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('typeName')
+
+    def __str__(self):
+        return super(AllocatorEntity, self).__str__().replace("Entity(", "AllocatorEntity(")
 
 
 class EntityCache(object):
