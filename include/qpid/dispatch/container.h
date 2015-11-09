@@ -127,11 +127,14 @@ typedef struct {
     /** Invoked when an instance of the node type is destroyed. */
     qd_container_node_handler_t  node_destroyed_handler;
 
-    /** Invoked when an incoming connection (via listener) is established. */
-    qd_container_conn_handler_t  inbound_conn_open_handler;
+    /** Invoked when an incoming connection (via listener) is opened. */
+    qd_container_conn_handler_t  inbound_conn_opened_handler;
 
-    /** Invoked when an outgoing connection (via connector) is established. */
-    qd_container_conn_handler_t  outbound_conn_open_handler;
+    /** Invoked when an outgoing connection (via connector) is opened. */
+    qd_container_conn_handler_t  outbound_conn_opened_handler;
+
+    /** Invoked when a connection is closed. */
+    qd_container_conn_handler_t  conn_closed_handler;
 } qd_node_type_t;
 
 

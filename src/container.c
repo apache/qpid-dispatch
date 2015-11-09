@@ -252,7 +252,62 @@ static void do_updated(pn_delivery_t *pnd)
 }
 
 
-static int close_handler(void* unused, pn_connection_t *conn, qd_connection_t* qd_conn)
+static void notify_opened(qd_container_t *container, qd_connection_t *conn, void *context)
+{
+    const qd_node_type_t *nt;
+
+    //
+    // Note the locking structure in this function.  Generally this would be unsafe, but since
+    // this particular list is only ever appended to and never has items inserted or deleted,
+    // this usage is safe in this case.
+    //
+    sys_mutex_lock(container->lock);
+    qdc_node_type_t *nt_item = DEQ_HEAD(container->node_type_list);
+    sys_mutex_unlock(container->lock);
+
+    while (nt_item) {
+        nt = nt_item->ntype;
+        if (qd_connection_inbound(conn)) {
+            if (nt->inbound_conn_opened_handler)
+                nt->inbound_conn_opened_handler(nt->type_context, conn, context);
+        } else {
+            if (nt->outbound_conn_opened_handler)
+                nt->outbound_conn_opened_handler(nt->type_context, conn, context);
+        }
+
+        sys_mutex_lock(container->lock);
+        nt_item = DEQ_NEXT(nt_item);
+        sys_mutex_unlock(container->lock);
+    }
+}
+
+
+static void notify_closed(qd_container_t *container, qd_connection_t *conn, void *context)
+{
+    const qd_node_type_t *nt;
+
+    //
+    // Note the locking structure in this function.  Generally this would be unsafe, but since
+    // this particular list is only ever appended to and never has items inserted or deleted,
+    // this usage is safe in this case.
+    //
+    sys_mutex_lock(container->lock);
+    qdc_node_type_t *nt_item = DEQ_HEAD(container->node_type_list);
+    sys_mutex_unlock(container->lock);
+
+    while (nt_item) {
+        nt = nt_item->ntype;
+        if (nt->conn_closed_handler)
+            nt->conn_closed_handler(nt->type_context, conn, context);
+
+        sys_mutex_lock(container->lock);
+        nt_item = DEQ_NEXT(nt_item);
+        sys_mutex_unlock(container->lock);
+    }
+}
+
+
+static int close_handler(qd_container_t *container, void* conn_context, pn_connection_t *conn, qd_connection_t* qd_conn)
 {
     qd_connection_manager_connection_closed(qd_conn);
 
@@ -280,8 +335,9 @@ static int close_handler(void* unused, pn_connection_t *conn, qd_connection_t* q
         ssn = pn_session_next(ssn, 0);
     }
 
-    // teardown the connection
+    // close the connection
     pn_connection_close(conn);
+    notify_closed(container, qd_conn, conn_context);
     return 0;
 }
 
@@ -323,6 +379,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
             pn_connection_open(conn);
         qd_connection_manager_connection_opened(qd_conn);
+        notify_opened(container, qd_conn, conn_context);
         break;
 
     case PN_CONNECTION_REMOTE_CLOSE :
@@ -454,31 +511,6 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
 
 static void open_handler(qd_container_t *container, qd_connection_t *conn, qd_direction_t dir, void *context)
 {
-    const qd_node_type_t *nt;
-
-    //
-    // Note the locking structure in this function.  Generally this would be unsafe, but since
-    // this particular list is only ever appended to and never has items inserted or deleted,
-    // this usage is safe in this case.
-    //
-    sys_mutex_lock(container->lock);
-    qdc_node_type_t *nt_item = DEQ_HEAD(container->node_type_list);
-    sys_mutex_unlock(container->lock);
-
-    while (nt_item) {
-        nt = nt_item->ntype;
-        if (dir == QD_INCOMING) {
-            if (nt->inbound_conn_open_handler)
-                nt->inbound_conn_open_handler(nt->type_context, conn, context);
-        } else {
-            if (nt->outbound_conn_open_handler)
-                nt->outbound_conn_open_handler(nt->type_context, conn, context);
-        }
-
-        sys_mutex_lock(container->lock);
-        nt_item = DEQ_NEXT(nt_item);
-        sys_mutex_unlock(container->lock);
-    }
 }
 
 
@@ -490,7 +522,7 @@ static int handler(void *handler_context, void *conn_context, qd_conn_event_t ev
     switch (event) {
     case QD_CONN_EVENT_LISTENER_OPEN:  open_handler(container, qd_conn, QD_INCOMING, conn_context);   break;
     case QD_CONN_EVENT_CONNECTOR_OPEN: open_handler(container, qd_conn, QD_OUTGOING, conn_context);   break;
-    case QD_CONN_EVENT_CLOSE:          return close_handler(conn_context, conn, qd_conn);
+    case QD_CONN_EVENT_CLOSE:          return close_handler(container, conn_context, conn, qd_conn);
     case QD_CONN_EVENT_WRITABLE:       return writable_handler(conn_context, conn, qd_conn);
     }
 

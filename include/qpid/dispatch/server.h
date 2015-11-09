@@ -488,6 +488,15 @@ pn_connection_t *qd_connection_pn(qd_connection_t *conn);
 
 
 /**
+ * Get the direction of establishment for this connection.
+ *
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @return true if connection came through a listener, false if through a connector.
+ */
+bool qd_connection_inbound(qd_connection_t *conn);
+
+
+/**
  * Get the event collector for a connection.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
