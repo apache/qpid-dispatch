@@ -90,6 +90,7 @@ qdr_query_t *qdr_manage_query(qdr_core_t *core, void *context, qd_router_entity_
 {
     qdr_query_t *query = new_qdr_query_t();
 
+    DEQ_ITEM_INIT(query);
     query->core        = core;
     query->entity_type = type;
     query->context     = context;
