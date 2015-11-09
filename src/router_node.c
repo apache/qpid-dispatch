@@ -1665,12 +1665,19 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
 
 static void router_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
+    qd_router_t *router = (qd_router_t*) type_context;
+    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, 0); // TODO - get label
+    qd_connection_set_context(conn, qdrc);
+    qdr_connection_set_context(qdrc, conn);
 }
 
 
 static void router_outbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qd_router_t *router = (qd_router_t*) type_context;
+    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, 0); // TODO - get label
+    qd_connection_set_context(conn, qdrc);
+    qdr_connection_set_context(qdrc, conn);
 
     //
     // If the connection is on-demand, visit all waypoints that are waiting for their
@@ -1755,6 +1762,9 @@ static void router_outbound_opened_handler(void *type_context, qd_connection_t *
 
 static void router_closed_handler(void *type_context, qd_connection_t *conn, void *context)
 {
+    qdr_connection_t *qdrc = (qdr_connection_t*) qd_connection_get_context(conn);
+    qdr_connection_closed(qdrc);
+    qd_connection_set_context(conn, 0);
 }
 
 
