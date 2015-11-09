@@ -54,7 +54,15 @@ def parse_args(argv):
     opts, args = parser.parse_args(args=argv)
 
     if not opts.show:
-        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, -m, -h or --log.")
+        parser.error("You must specify one of these options: "
+                     "-g (Show General Router Stats), "
+                     "-c (Show Connections) , "
+                     "-l (Show Router Links), "
+                     "-n (Show Router Nodes), "
+                     "-a (Show Router Addresses), "
+                     "-m (Show Broker Memory Stats), "
+                     "-v (Show verbose maximum detail), "
+                     "--log (Show recent log entries).")
 
     return opts, args
 
