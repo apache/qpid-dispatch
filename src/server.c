@@ -1233,6 +1233,12 @@ pn_connection_t *qd_connection_pn(qd_connection_t *conn)
 }
 
 
+bool qd_connection_inbound(qd_connection_t *conn)
+{
+    return conn->listener != 0;
+}
+
+
 pn_collector_t *qd_connection_collector(qd_connection_t *conn)
 {
     return conn->collector;

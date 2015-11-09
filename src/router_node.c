@@ -1657,12 +1657,12 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
 }
 
 
-static void router_inbound_open_handler(void *type_context, qd_connection_t *conn, void *context)
+static void router_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
 }
 
 
-static void router_outbound_open_handler(void *type_context, qd_connection_t *conn, void *context)
+static void router_outbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qd_router_t *router = (qd_router_t*) type_context;
 
@@ -1747,6 +1747,11 @@ static void router_outbound_open_handler(void *type_context, qd_connection_t *co
 }
 
 
+static void router_closed_handler(void *type_context, qd_connection_t *conn, void *context)
+{
+}
+
+
 static void qd_router_timer_handler(void *context)
 {
     qd_router_t *router = (qd_router_t*) context;
@@ -1770,8 +1775,9 @@ static qd_node_type_t router_node = {"router", 0, 0,
                                      router_link_flow_handler,
                                      0,   // node_created_handler
                                      0,   // node_destroyed_handler
-                                     router_inbound_open_handler,
-                                     router_outbound_open_handler };
+                                     router_inbound_opened_handler,
+                                     router_outbound_opened_handler,
+                                     router_closed_handler};
 static int type_registered = 0;
 
 
