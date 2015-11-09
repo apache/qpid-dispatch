@@ -268,6 +268,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->connection_id = qd_server->next_connection_id++; // Increment the connection id so the next connection can use it
         DEQ_INIT(ctx->deferred_calls);
         ctx->deferred_call_lock = sys_mutex();
+        ctx->event_stall  = false;
 
         pn_connection_t *conn = pn_connection();
         ctx->collector = pn_collector();
@@ -819,6 +820,7 @@ static void cxtr_try_open(void *context)
 
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
+    ctx->event_stall  = false;
 
     qd_log(ct->server->log_source, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
 
@@ -1270,6 +1272,8 @@ void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, vo
 void qd_connection_set_event_stall(qd_connection_t *conn, bool stall)
 {
     conn->event_stall = stall;
+     if (!stall)
+         qd_server_activate(conn);
 }
 
 
