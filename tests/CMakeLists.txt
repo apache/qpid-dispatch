@@ -61,6 +61,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_qdmanage.py DESTINATION ${CMA
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_qdstat.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_two_routers.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_link_routes.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_policy.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/run_system_tests.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_test.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -86,6 +87,7 @@ add_test(system_tests_qdmanage    ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/sy
 add_test(system_tests_qdstat      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdstat.py -v)
 add_test(system_tests_two_routers ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_two_routers.py -v)
 add_test(system_tests_link_routes ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_link_routes.py -v)
+add_test(system_tests_policy      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_policy.py -v)
 add_test(system_tests_sasl_plain  ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_sasl_plain.py -v)
 add_test(management_tests         ${TEST_WRAP} -m unittest -v management)
 
@@ -107,7 +109,8 @@ set(SYSTEM_TEST_FILES
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdstat.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdmanage.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_link_routes.py
-  ${CMAKE_CURRENT_BINARY_DIR}/system_tests_sasl_plain.py)
+  ${CMAKE_CURRENT_BINARY_DIR}/system_tests_sasl_plain.py
+  ${CMAKE_CURRENT_BINARY_DIR}/system_tests_policy.py)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/A-ssl.conf)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/B-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/B-ssl.conf)

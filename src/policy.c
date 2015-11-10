@@ -117,6 +117,7 @@ qd_error_t qd_router_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
     policy->max_connections = qd_entity_opt_long(entity, "maximumConnections", 0); QD_ERROR_RET();
     if (policy->max_connections < 0)
         return qd_error(QD_ERROR_CONFIG, "maximumConnections must be >= 0");
+    qd_log(policy->log_source, QD_LOG_INFO, "Configured maximumConnections: %d", policy->max_connections);
     return QD_ERROR_NONE;
 }
 
@@ -136,7 +137,6 @@ bool qd_policy_socket_accept(void *context, const char *hostname)
     if (policy->max_connections == 0) {
         // Policy not in force; connection counted and allowed
         n_connections += 1;
-        qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' allowed. N= %d", hostname, n_connections); // HACK EXTRA
     } else {
         // Policy in force
         if (n_connections < policy->max_connections) {
@@ -158,8 +158,8 @@ void qd_policy_socket_close(void *context, const char *hostname)
     qd_policy_t *policy = (qd_policy_t *)context;
 
     n_connections -= 1;
+    assert (n_connections >= 0);
     if (policy->max_connections > 0) {
-        assert (n_connections >= 0);
         qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed, N=%d", hostname, n_connections);
     }
     qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed, N=%d", hostname, n_connections);  // HACK EXTRA
