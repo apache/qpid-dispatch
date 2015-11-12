@@ -32,7 +32,7 @@
 
 typedef struct qd_policy_t qd_policy_t;
 
-qd_error_t qd_router_configure_policy(qd_policy_t *policy, qd_entity_t *entity);
+qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity);
 
 
 /** Allow or deny an incoming connection based on connection count(s).

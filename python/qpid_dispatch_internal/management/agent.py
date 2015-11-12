@@ -270,6 +270,12 @@ class LogEntity(EntityAdapter):
         self._qd.qd_log_source_reset(self.attributes['module'])
 
 class PolicyEntity(EntityAdapter):
+    def __init__(self, agent, entity_type, attributes=None):
+        super(PolicyEntity, self).__init__(agent, entity_type, attributes, validate=False)
+        # Policy is a mix of configuration and operational entity.
+        # The statistics attributes are operational not configured.
+        self._add_implementation(
+            CImplementation(agent.qd, entity_type, self._dispatch))
 
     def create(self):
         self._qd.qd_dispatch_configure_policy(self._dispatch, self)

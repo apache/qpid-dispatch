@@ -64,6 +64,8 @@ void policy_engine_step()
 // reconfiguration of policy settings.
 //
 static int n_connections = 0;
+static int n_denied = 0;
+static int n_processed = 0;
 
 //
 // error conditions signaled to effect denial
@@ -84,10 +86,12 @@ static char* CONNECTION_DISALLOWED         = "connection disallowed by local pol
 struct qd_policy_t {
     qd_dispatch_t        *qd;
     qd_log_source_t      *log_source;
-
-    int                   max_connections;
-
-    int                   current_connections;
+                          // configured settings
+    int                   max_connection_limit;
+                          // live statistics
+    int                   connections_processed;
+    int                   connections_denied;
+    int                   connections_current;
 };
 
 
@@ -95,10 +99,12 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
 {
     qd_policy_t *policy = NEW(qd_policy_t);
 
-    policy->qd                  = qd;
-    policy->log_source          = qd_log_source("POLICY");
-    policy->max_connections     = 0;
-    policy->current_connections = 0;
+    policy->qd                   = qd;
+    policy->log_source           = qd_log_source("POLICY");
+    policy->max_connection_limit = 0;
+    policy->connections_processed= 0;
+    policy->connections_denied   = 0;
+    policy->connections_current  = 0;
 
     qd_log(policy->log_source, QD_LOG_TRACE, "Policy Initialized");
     return policy;
@@ -112,13 +118,26 @@ void qd_policy_free(qd_policy_t *policy)
 
 //
 //
-qd_error_t qd_router_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
+qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
 {
-    policy->max_connections = qd_entity_opt_long(entity, "maximumConnections", 0); QD_ERROR_RET();
-    if (policy->max_connections < 0)
+    policy->max_connection_limit = qd_entity_opt_long(entity, "maximumConnections", 0); QD_ERROR_RET();
+    if (policy->max_connection_limit < 0)
         return qd_error(QD_ERROR_CONFIG, "maximumConnections must be >= 0");
-    qd_log(policy->log_source, QD_LOG_INFO, "Configured maximumConnections: %d", policy->max_connections);
+    qd_log(policy->log_source, QD_LOG_INFO, "Configured maximumConnections: %d", policy->max_connection_limit);
     return QD_ERROR_NONE;
+}
+
+
+//
+//
+qd_error_t qd_entity_refresh_policy(qd_entity_t* entity, void *impl) {
+    // Return global stats
+    if (!qd_entity_set_long(entity, "connectionsProcessed", n_processed) &&
+        !qd_entity_set_long(entity, "connectionsDenied", n_denied) &&
+        !qd_entity_set_long(entity, "connectionsCurrent", n_connections)
+    )
+        return QD_ERROR_NONE;
+    return qd_error_code();
 }
 
 
@@ -134,21 +153,23 @@ bool qd_policy_socket_accept(void *context, const char *hostname)
     qd_policy_t *policy = (qd_policy_t *)context;
     bool result = true;
 
-    if (policy->max_connections == 0) {
+    if (policy->max_connection_limit == 0) {
         // Policy not in force; connection counted and allowed
         n_connections += 1;
     } else {
         // Policy in force
-        if (n_connections < policy->max_connections) {
+        if (n_connections < policy->max_connection_limit) {
             // connection counted and allowed
             n_connections += 1;
             qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' allowed. N= %d", hostname, n_connections);
         } else {
             // connection denied
             result = false;
+            n_denied += 1;
             qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' denied, N=%d", hostname, n_connections);
         }
     }
+    n_processed += 1;
     return result;
 }
 
@@ -159,7 +180,7 @@ void qd_policy_socket_close(void *context, const char *hostname)
 
     n_connections -= 1;
     assert (n_connections >= 0);
-    if (policy->max_connections > 0) {
+    if (policy->max_connection_limit > 0) {
         qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed, N=%d", hostname, n_connections);
     }
     qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed, N=%d", hostname, n_connections);  // HACK EXTRA

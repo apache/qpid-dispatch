@@ -1008,10 +1008,13 @@
                 "maximumConnections": {
                     "type": "integer",
                     "default": 0,
-                    "description": "The maximum number of client connections allowed. Zero implies no limit.",
+                    "description": "The maximum number of concurrent client connections allowed. Zero implies no limit.",
                     "required": false,
                     "create": true
-                }
+                },
+                "connectionsProcessed": {"type": "integer", "graph": true},
+                "connectionsDenied": {"type": "integer", "graph": true},
+                "connectionsCurrent": {"type": "integer", "graph": true}
             }
         },
 
