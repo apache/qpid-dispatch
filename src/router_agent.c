@@ -74,6 +74,7 @@ qd_error_t qd_entity_refresh_router_address(qd_entity_t* entity, void *impl) {
     return qd_error_code();
 }
 
+/*
 static const char *qd_link_type_names[] = { "endpoint", "waypoint", "inter-router", "inter-area" };
 ENUM_DEFINE(qd_link_type, qd_link_type_names);
 
@@ -90,6 +91,7 @@ static const char* qd_router_link_name(qd_router_link_t* link) {
     return pn_link_name(qd_link_pn(link->link));
 }
 
+//TODO - Remove this function and the functions that it calls since this is not used anymore.
 qd_error_t qd_entity_refresh_router_link(qd_entity_t* entity, void *impl)
 {
     qd_router_link_t *link = (qd_router_link_t*) impl;
@@ -104,7 +106,7 @@ qd_error_t qd_entity_refresh_router_link(qd_entity_t* entity, void *impl)
         return QD_ERROR_NONE;
     return qd_error_code();
 }
-
+*/
 void qd_router_build_node_list(qd_dispatch_t *qd, qd_composed_field_t *field)
 {
     qd_router_t *router = qd->router;

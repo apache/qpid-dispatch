@@ -1,5 +1,5 @@
-#ifndef qdr_agent_address
-#define qdr_agent_address 1
+#ifndef qdr_agent_link
+#define qdr_agent_link 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,7 +21,7 @@
 
 #include "router_core_private.h"
 
-void qdra_address_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
-void qdra_address_get_next_CT(qdr_core_t *core, qdr_query_t *query);
+void qdrl_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
+void qdrl_link_get_next_CT(qdr_core_t *core, qdr_query_t *query);
 
 #endif

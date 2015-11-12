@@ -19,22 +19,6 @@
 
 #include "agent_address.h"
 
-static const char *qdr_address_columns[] =
-    {"name",
-     "identity",
-     "type",
-     "key",
-     "inProcess",
-     "subscriberCount",
-     "remoteCount",
-     "hostRouters",
-     "deliveriesIngress",
-     "deliveriesEgress",
-     "deliveriesTransit",
-     "deliveriesToContainer",
-     "deliveriesFromContainer",
-     0};
-
 #define QDR_ADDRESS_NAME                      0
 #define QDR_ADDRESS_IDENTITY                  1
 #define QDR_ADDRESS_TYPE                      2
@@ -48,7 +32,6 @@ static const char *qdr_address_columns[] =
 #define QDR_ADDRESS_DELIVERIES_TRANSIT        10
 #define QDR_ADDRESS_DELIVERIES_TO_CONTAINER   11
 #define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER 12
-#define QDR_ADDRESS_COLUMN_COUNT              13
 
 static void qdr_manage_write_address_CT(qdr_query_t *query, qdr_address_t *addr)
 {
@@ -126,60 +109,6 @@ static void qdr_manage_advance_address_CT(qdr_query_t *query, qdr_address_t *add
         query->next_key = qdr_field((const char*) qd_hash_key_by_handle(addr->hash_handle));
     } else
         query->more = false;
-}
-
-
-void qdra_address_set_columns(qdr_query_t *query, qd_parsed_field_t *attribute_names)
-{
-    if (!attribute_names ||
-        (qd_parse_tag(attribute_names) != QD_AMQP_LIST8 &&
-         qd_parse_tag(attribute_names) != QD_AMQP_LIST32) ||
-        qd_parse_sub_count(attribute_names) == 0) {
-        //
-        // Either the attribute_names field is absent, it's not a list, or it's an empty list.
-        // In this case, we will include all available attributes.
-        //
-        int i;
-        for (i = 0; i < QDR_ADDRESS_COLUMN_COUNT; i++)
-            query->columns[i] = i;
-        query->columns[i] = -1;
-        return;
-    }
-
-    //
-    // We have a valid, non-empty attribute list.  Set the columns appropriately.
-    //
-    uint32_t count = qd_parse_sub_count(attribute_names);
-    uint32_t idx;
-
-    for (idx = 0; idx < count; idx++) {
-        qd_parsed_field_t *name = qd_parse_sub_value(attribute_names, idx);
-        if (!name || (qd_parse_tag(name) != QD_AMQP_STR8_UTF8 && qd_parse_tag(name) != QD_AMQP_STR32_UTF8))
-            query->columns[idx] = QDR_AGENT_COLUMN_NULL;
-        else {
-            int j = 0;
-            while (qdr_address_columns[j]) {
-                qd_field_iterator_t *iter = qd_parse_raw(name);
-                if (qd_field_iterator_equal(iter, (const unsigned char*) qdr_address_columns[j])) {
-                    query->columns[idx] = j;
-                    break;
-                }
-            }
-        }
-    }
-}
-
-
-void qdra_address_emit_columns(qdr_query_t *query)
-{
-    qd_compose_start_list(query->body);
-    int i = 0;
-    while (query->columns[i] >= 0) {
-        assert(query->columns[i] < QDR_ADDRESS_COLUMN_COUNT);
-        qd_compose_insert_string(query->body, qdr_address_columns[query->columns[i]]);
-        i++;
-    }
-    qd_compose_end_list(query->body);
 }
 
 

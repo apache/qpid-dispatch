@@ -210,4 +210,3 @@ void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode)
         ref = DEQ_NEXT(ref);
     }
 }
-

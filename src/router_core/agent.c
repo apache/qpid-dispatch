@@ -19,7 +19,44 @@
 
 #include <qpid/dispatch/amqp.h>
 #include "agent_address.h"
+#include "agent_link.h"
+#include "router_core_private.h"
 #include <stdio.h>
+
+
+static const char *qdr_address_columns[] =
+    {"name",
+     "identity",
+     "type",
+     "key",
+     "inProcess",
+     "subscriberCount",
+     "remoteCount",
+     "hostRouters",
+     "deliveriesIngress",
+     "deliveriesEgress",
+     "deliveriesTransit",
+     "deliveriesToContainer",
+     "deliveriesFromContainer",
+     0};
+
+
+static const char *qdr_link_columns[] =
+    {"linkType",
+     "name",
+     "linkDir",
+     "msgFifoDepth",
+     "owningAddr",
+     "remoteContainer",
+     "linkName",
+     "eventFifoDepth",
+     "type",
+     "identity",
+     0};
+
+#define QDR_ADDRESS_COLUMN_COUNT  13
+#define QDR_LINK_COLUMN_COUNT     10
+
 
 //==================================================================================
 // Internal Functions
@@ -64,8 +101,8 @@ void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query)
 
 static void qdrh_query_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdrh_query_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-
-
+static void qdr_agent_emit_columns(qdr_query_t *query, const char *qdr_columns[], int column_count);
+static void qdr_agent_set_columns(qdr_query_t *query, qd_parsed_field_t *attribute_names, const char *qdr_columns[], int column_count);
 //==================================================================================
 // Interface Functions
 //==================================================================================
@@ -102,8 +139,8 @@ qdr_query_t *qdr_manage_query(qdr_core_t *core, void *context, qd_router_entity_
 
     switch (query->entity_type) {
     case QD_ROUTER_CONNECTION: break;
-    case QD_ROUTER_LINK:       break;
-    case QD_ROUTER_ADDRESS:    qdra_address_set_columns(query, attribute_names);break;
+    case QD_ROUTER_LINK:       qdr_agent_set_columns(query, attribute_names, qdr_link_columns, QDR_LINK_COLUMN_COUNT);break;
+    case QD_ROUTER_ADDRESS:    qdr_agent_set_columns(query, attribute_names, qdr_address_columns, QDR_ADDRESS_COLUMN_COUNT);break;
     case QD_ROUTER_WAYPOINT:   break;
     case QD_ROUTER_EXCHANGE:   break;
     case QD_ROUTER_BINDING:    break;
@@ -117,8 +154,8 @@ void qdr_query_add_attribute_names(qdr_query_t *query)
 {
     switch (query->entity_type) {
     case QD_ROUTER_CONNECTION: break;
-    case QD_ROUTER_LINK:       break;
-    case QD_ROUTER_ADDRESS:    qdra_address_emit_columns(query); break;
+    case QD_ROUTER_LINK:       qdr_agent_emit_columns(query, qdr_link_columns, QDR_LINK_COLUMN_COUNT);break;
+    case QD_ROUTER_ADDRESS:    qdr_agent_emit_columns(query, qdr_address_columns, QDR_ADDRESS_COLUMN_COUNT); break;
     case QD_ROUTER_WAYPOINT:   break;
     case QD_ROUTER_EXCHANGE:   break;
     case QD_ROUTER_BINDING:    break;
@@ -147,6 +184,62 @@ void qdr_query_free(qdr_query_t *query)
 {
 }
 
+static void qdr_agent_emit_columns(qdr_query_t *query, const char *qdr_columns[], int column_count)
+{
+    qd_compose_start_list(query->body);
+    int i = 0;
+    while (query->columns[i] >= 0) {
+        assert(query->columns[i] < column_count);
+        qd_compose_insert_string(query->body, qdr_columns[query->columns[i]]);
+        i++;
+    }
+    qd_compose_end_list(query->body);
+}
+
+static void qdr_agent_set_columns(qdr_query_t *query,
+                           qd_parsed_field_t *attribute_names,
+                           const char *qdr_columns[],
+                           int column_count)
+{
+    if (!attribute_names ||
+        (qd_parse_tag(attribute_names) != QD_AMQP_LIST8 &&
+         qd_parse_tag(attribute_names) != QD_AMQP_LIST32) ||
+        qd_parse_sub_count(attribute_names) == 0) {
+        //
+        // Either the attribute_names field is absent, it's not a list, or it's an empty list.
+        // In this case, we will include all available attributes.
+        //
+        int i;
+        for (i = 0; i < column_count; i++)
+            query->columns[i] = i;
+        query->columns[i] = -1;
+        return;
+    }
+
+    //
+    // We have a valid, non-empty attribute list.  Set the columns appropriately.
+    //
+    uint32_t count = qd_parse_sub_count(attribute_names);
+    uint32_t idx;
+
+    for (idx = 0; idx < count; idx++) {
+        qd_parsed_field_t *name = qd_parse_sub_value(attribute_names, idx);
+        if (!name || (qd_parse_tag(name) != QD_AMQP_STR8_UTF8 && qd_parse_tag(name) != QD_AMQP_STR32_UTF8))
+            query->columns[idx] = QDR_AGENT_COLUMN_NULL;
+        else {
+            int j = 0;
+            while (qdr_columns[j]) {
+                qd_field_iterator_t *iter = qd_parse_raw(name);
+                if (qd_field_iterator_equal(iter, (const unsigned char*) qdr_columns[j])) {
+                    query->columns[idx] = j;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+
 
 void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler)
 {
@@ -174,7 +267,7 @@ static void qdrh_query_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool
     if (!discard)
         switch (query->entity_type) {
         case QD_ROUTER_CONNECTION: break;
-        case QD_ROUTER_LINK:       break;
+        case QD_ROUTER_LINK:       qdrl_link_get_first_CT(core, query, offset); break;
         case QD_ROUTER_ADDRESS:    qdra_address_get_first_CT(core, query, offset); break;
         case QD_ROUTER_WAYPOINT:   break;
         case QD_ROUTER_EXCHANGE:   break;

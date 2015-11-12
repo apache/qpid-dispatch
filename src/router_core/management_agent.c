@@ -199,6 +199,7 @@ static void core_agent_query_handler(qd_dispatch_t           *qd,
     // Set the callback function.
     qdr_manage_handler(core, manage_response_handler);
 
+    // Local local function that creates and returns a qd_management_context_t
     qd_management_context_t *ctx = qd_management_context(message, field, 0, reply_to, qd, (*count));
 
     ctx->query = qdr_manage_query(core, ctx, entity_type, attribute_names_parsed_field, field);
