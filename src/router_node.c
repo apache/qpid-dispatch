@@ -223,7 +223,25 @@ void qd_router_check_addr(qd_router_t *router, qd_address_t *addr, int was_local
 
 
 /**
+ * Determine the role of a connection
+ */
+static qdr_connection_role_t qd_router_connection_role(const qd_connection_t *conn)
+{
+    if (conn) {
+        const qd_server_config_t *cf = qd_connection_config(conn);
+        if (cf && strcmp(cf->role, router_role) == 0)
+            return QDR_ROLE_INTER_ROUTER;
+        if (cf && strcmp(cf->role, on_demand_role) == 0)
+            return QDR_ROLE_ON_DEMAND;
+    }
+
+    return QDR_ROLE_NORMAL;
+}
+
+
+/**
  * Determine whether a connection is configured in the inter-router role.
+ * DEPRECATE
  */
 static int qd_router_connection_is_inter_router(const qd_connection_t *conn)
 {
@@ -240,6 +258,7 @@ static int qd_router_connection_is_inter_router(const qd_connection_t *conn)
 
 /**
  * Determine whether a connection is configured in the on-demand role.
+ * DEPRECATE
  */
 static int qd_router_connection_is_on_demand(const qd_connection_t *conn)
 {
@@ -1665,8 +1684,10 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
 
 static void router_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
-    qd_router_t *router = (qd_router_t*) type_context;
-    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, 0); // TODO - get label
+    qd_router_t           *router = (qd_router_t*) type_context;
+    qdr_connection_role_t  role = qd_router_connection_role(conn);
+    qdr_connection_t      *qdrc = qdr_connection_opened(router->router_core, true, role, 0); // TODO - get label
+
     qd_connection_set_context(conn, qdrc);
     qdr_connection_set_context(qdrc, conn);
 }
@@ -1674,10 +1695,14 @@ static void router_inbound_opened_handler(void *type_context, qd_connection_t *c
 
 static void router_outbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
-    qd_router_t *router = (qd_router_t*) type_context;
-    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, 0); // TODO - get label
+    qd_router_t           *router = (qd_router_t*) type_context;
+    qdr_connection_role_t  role = qd_router_connection_role(conn);
+    qdr_connection_t      *qdrc = qdr_connection_opened(router->router_core, false, role, 0); // TODO - get label
+
     qd_connection_set_context(conn, qdrc);
     qdr_connection_set_context(qdrc, conn);
+
+    // DEPRECATE:
 
     //
     // If the connection is on-demand, visit all waypoints that are waiting for their

@@ -241,9 +241,11 @@ void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 
 struct qdr_connection_t {
     DEQ_LINKS(qdr_connection_t);
-    qdr_core_t *core;
-    void       *user_context;
-    const char *label;
+    qdr_core_t            *core;
+    void                  *user_context;
+    bool                   incoming;
+    qdr_connection_role_t  role;
+    const char            *label;
 };
 
 ALLOC_DECLARE(qdr_connection_t);

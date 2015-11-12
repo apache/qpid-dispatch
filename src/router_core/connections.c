@@ -36,13 +36,15 @@ ALLOC_DEFINE(qdr_connection_t);
 // Interface Functions
 //==================================================================================
 
-qdr_connection_t *qdr_connection_opened(qdr_core_t *core, const char *label)
+qdr_connection_t *qdr_connection_opened(qdr_core_t *core, bool incoming, qdr_connection_role_t role, const char *label)
 {
     qdr_action_t     *action = qdr_action(qdr_connection_opened_CT);
     qdr_connection_t *conn   = new_qdr_connection_t();
 
     conn->core         = core;
     conn->user_context = 0;
+    conn->incoming     = incoming;
+    conn->role         = role;
     conn->label        = label;
 
     action->args.connection.conn = conn;
@@ -127,13 +129,15 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
     DEQ_INSERT_TAIL(core->open_connections, conn);
 
     //
-    // TODO - Look for waypoints that need to be activated now that their connection
-    //        is open.
-    //
-
-    //
-    // TODO - Look for link-route destinations to be activated now that their connection
-    //        is open.
+    // If the role of this connection is NORMAL, there is no further work to do.
+    // If the role is INTER_ROUTER:
+    //    Assign this connection a neighbor mask-bit
+    //    If the connection is not incoming:
+    //       Establish a receiver and sender for router control
+    //       Establish a receiver and sender for inter-router message routing
+    // If the role is ON_DEMAND:
+    //    Activate waypoints associated with this connection
+    //    Activate link-route destinations associated with this connection
     //
 }
 

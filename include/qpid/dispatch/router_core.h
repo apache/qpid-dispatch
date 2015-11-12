@@ -89,6 +89,12 @@ void qdr_core_subscribe(qdr_core_t *core, const char *address, char aclass, char
  ******************************************************************************
  */
 
+typedef enum {
+    QDR_ROLE_NORMAL,
+    QDR_ROLE_INTER_ROUTER,
+    QDR_ROLE_ON_DEMAND
+} qdr_connection_role_t;
+
 /**
  * qdr_connection_opened
  *
@@ -96,11 +102,13 @@ void qdr_core_subscribe(qdr_core_t *core, const char *address, char aclass, char
  * Once a new connection has been both remotely and locally opened, the core must be notified.
  *
  * @param core Pointer to the core object
+ * @param incoming True iff this connection is associated with a listener, False if a connector
+ * @param role The configured role of this connection
  * @param label Optional label provided in the connection's configuration.  This is used to 
  *        correlate the connection with waypoints and link-route destinations that use the connection.
  * @return Pointer to a connection object that can be used to refer to this connection over its lifetime.
  */
-qdr_connection_t *qdr_connection_opened(qdr_core_t *core, const char *label);
+qdr_connection_t *qdr_connection_opened(qdr_core_t *core, bool incoming, qdr_connection_role_t role, const char *label);
 
 /**
  * qdr_connection_closed
@@ -213,9 +221,50 @@ typedef enum {
 
 typedef struct qdr_query_t qdr_query_t;
 
-void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes);
-void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes);
-void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type, qd_parsed_field_t *attributes);
+/**
+ * qdr_manage_create
+ *
+ * Request a managed entity to be created in the router core.
+ *
+ * @param core Pointer to the core object returned by qd_core()
+ * @param context An opaque context that will be passed back in the invocation of the response callback
+ * @param type The entity type for the create request
+ * @param name The name supplied for the entity
+ * @param in_body The body of the request message
+ * @param out_body A composed field for the body of the response message
+ */
+void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t type,
+                       qd_field_iterator_t *name, qd_parsed_field_t *in_body, qd_composed_field_t *out_body);
+
+/**
+ * qdr_manage_delete
+ *
+ * Request the deletion of a managed entity in the router core.
+ *
+ * @param core Pointer to the core object returned by qd_core()
+ * @param context An opaque context that will be passed back in the invocation of the response callback
+ * @param type The entity type for the create request
+ * @param name The name supplied with the request (or 0 if the identity was supplied)
+ * @param identity The identity supplied with the request (or 0 if the name was supplied)
+ */
+void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type,
+                       qd_field_iterator_t *name, qd_field_iterator_t *identity);
+
+/**
+ * qdr_manage_read
+ *
+ * Request a read of a managed entity in the router core.
+ *
+ * @param core Pointer to the core object returned by qd_core()
+ * @param context An opaque context that will be passed back in the invocation of the response callback
+ * @param type The entity type for the create request
+ * @param name The name supplied with the request (or 0 if the identity was supplied)
+ * @param identity The identity supplied with the request (or 0 if the name was supplied)
+ * @param body A composed field for the body of the response message
+ */
+void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type,
+                     qd_field_iterator_t *name, qd_field_iterator_t *identity, qd_composed_field_t *body);
+
 
 /**
  * Sequence for running a query:
