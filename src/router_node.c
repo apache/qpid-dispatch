@@ -346,6 +346,8 @@ static void qd_router_generate_temp_addr(qd_router_t *router, char *buffer, size
 /**
  * Assign a link-mask-bit to a new link.  Do this in such a way that all links on the same
  * connection share the same mask-bit value.
+ *
+ * DEPRECATE
  */
 static int qd_router_find_mask_bit_LH(qd_router_t *router, qd_link_t *link)
 {

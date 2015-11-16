@@ -162,11 +162,15 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
     core->routerma_addr = qdr_add_local_address_CT(core, "qdrouter.ma", QD_SEMANTICS_DEFAULT);
     core->hello_addr    = qdr_add_local_address_CT(core, "qdhello",     QD_SEMANTICS_ROUTER_CONTROL);
 
-    core->routers_by_mask_bit   = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());
-    core->out_links_by_mask_bit = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
+    core->neighbor_free_mask = qd_bitmask(1);
+
+    core->routers_by_mask_bit       = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());
+    core->control_links_by_mask_bit = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
+    core->data_links_by_mask_bit    = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
     for (int idx = 0; idx < qd_bitmask_width(); idx++) {
         core->routers_by_mask_bit[idx]   = 0;
-        core->out_links_by_mask_bit[idx] = 0;
+        core->control_links_by_mask_bit[idx] = 0;
+        core->data_links_by_mask_bit[idx] = 0;
     }
 }
 
@@ -279,12 +283,13 @@ static void qdrh_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disc
         //
         qdr_node_t *rnode = new_qdr_node_t();
         DEQ_ITEM_INIT(rnode);
-        rnode->owning_addr   = addr;
-        rnode->mask_bit      = router_maskbit;
-        rnode->next_hop      = 0;
-        rnode->peer_link     = 0;
-        rnode->ref_count     = 0;
-        rnode->valid_origins = qd_bitmask(0);
+        rnode->owning_addr       = addr;
+        rnode->mask_bit          = router_maskbit;
+        rnode->next_hop          = 0;
+        rnode->peer_control_link = 0;
+        rnode->peer_data_link    = 0;
+        rnode->ref_count         = 0;
+        rnode->valid_origins     = qd_bitmask(0);
 
         DEQ_INSERT_TAIL(core->routers, rnode);
 
@@ -373,7 +378,7 @@ static void qdrh_set_link_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         return;
     }
 
-    if (core->out_links_by_mask_bit[link_maskbit] == 0) {
+    if (core->control_links_by_mask_bit[link_maskbit] == 0) {
         qd_log(core->log, QD_LOG_CRITICAL, "set_link: Invalid link reference: %d", link_maskbit);
         return;
     }
@@ -387,7 +392,8 @@ static void qdrh_set_link_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     // Add the peer_link reference to the router record.
     //
     qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
-    rnode->peer_link = core->out_links_by_mask_bit[link_maskbit];
+    rnode->peer_control_link = core->control_links_by_mask_bit[link_maskbit];
+    rnode->peer_data_link    = core->data_links_by_mask_bit[link_maskbit];
 }
 
 
@@ -406,7 +412,8 @@ static void qdrh_remove_link_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     }
 
     qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
-    rnode->peer_link = 0;
+    rnode->peer_control_link = 0;
+    rnode->peer_data_link    = 0;
 }
 
 

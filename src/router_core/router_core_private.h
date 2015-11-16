@@ -132,8 +132,9 @@ struct qdr_node_t {
     DEQ_LINKS(qdr_node_t);
     qdr_address_t    *owning_addr;
     int               mask_bit;
-    qdr_node_t       *next_hop;   ///< Next hop node _if_ this is not a neighbor node
-    qdr_link_t       *peer_link;  ///< Outgoing link _if_ this is a neighbor node
+    qdr_node_t       *next_hop;           ///< Next hop node _if_ this is not a neighbor node
+    qdr_link_t       *peer_control_link;  ///< Outgoing control link _if_ this is a neighbor node
+    qdr_link_t       *peer_data_link;     ///< Outgoing data link _if_ this is a neighbor node
     uint32_t          ref_count;
     qd_bitmask_t     *valid_origins;
 };
@@ -154,13 +155,14 @@ DEQ_DECLARE(qdr_router_ref_t, qdr_router_ref_list_t);
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
     qdr_core_t               *core;
-    qdr_connection_t         *conn;
+    void                     *user_context;
+    qdr_connection_t         *conn;            ///< [ref] Connection that owns this link
     int                       mask_bit;        ///< Unique mask bit if this is an inter-router link
     qd_link_type_t            link_type;
     qd_direction_t            link_direction;
     qdr_address_t            *owning_addr;     ///< [ref] Address record that owns this link
     //qd_waypoint_t            *waypoint;        ///< [ref] Waypoint that owns this link
-    qd_link_t                *link;            ///< [own] Link pointer
+    qd_link_t                *link;            ///< [own] Link pointer DEPRECATE
     qdr_link_t               *connected_link;  ///< [ref] If this is a link-route, reference the connected link
     qdr_link_ref_t           *ref;             ///< Pointer to a containing reference object
     char                     *target;          ///< Target address for incoming links
@@ -246,6 +248,9 @@ struct qdr_connection_t {
     bool                   incoming;
     qdr_connection_role_t  role;
     const char            *label;
+    int                    mask_bit;
+
+    // TODO - Add direct linkage to waypoints, link-route destinations, and links
 };
 
 ALLOC_DECLARE(qdr_connection_t);
@@ -290,8 +295,10 @@ struct qdr_core_t {
 
     qdr_link_list_t       links;
     qdr_node_list_t       routers;
+    qd_bitmask_t         *neighbor_free_mask;
     qdr_node_t          **routers_by_mask_bit;
-    qdr_link_t          **out_links_by_mask_bit;
+    qdr_link_t          **control_links_by_mask_bit;
+    qdr_link_t          **data_links_by_mask_bit;
 };
 
 void *router_core_thread(void *arg);

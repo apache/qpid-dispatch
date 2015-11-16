@@ -154,6 +154,20 @@ typedef void (*qdr_connection_activate_t) (void *context, qdr_connection_t *conn
  */
 
 /**
+ * qdr_link_set_context
+ *
+ * Store an arbitrary void pointer in the link object.
+ */
+void qdr_link_set_context(qdr_link_t *link, void *context);
+
+/**
+ * qdr_link_get_context
+ *
+ * Retrieve the stored void pointer from the link object.
+ */
+void *qdr_link_get_context(qdr_link_t *link);
+
+/**
  * qdr_link_first_attach
  *
  * This function is invoked when a first-attach (not a response to an earlier attach)
@@ -264,6 +278,24 @@ void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t 
  */
 void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type,
                      qd_field_iterator_t *name, qd_field_iterator_t *identity, qd_composed_field_t *body);
+
+
+/**
+ * qdr_manage_update
+ *
+ * Request the update of a managed entity in the router core.
+ *
+ * @param core Pointer to the core object returned by qd_core()
+ * @param context An opaque context that will be passed back in the invocation of the response callback
+ * @param type The entity type for the update request
+ * @param name The name supplied with the request (or 0 if the identity was supplied)
+ * @param identity The identity supplied with the request (or 0 if the name was supplied)
+ * @param in_body The body of the request message
+ * @param out_body A composed field for the body of the response message
+ */
+void qdr_manage_update(qdr_core_t *core, void *context, qd_router_entity_type_t type,
+                       qd_field_iterator_t *name, qd_field_iterator_t *identity,
+                       qd_parsed_field_t *in_body, qd_composed_field_t *out_body);
 
 
 /**

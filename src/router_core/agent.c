@@ -125,6 +125,13 @@ void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t ty
 }
 
 
+void qdr_manage_update(qdr_core_t *core, void *context, qd_router_entity_type_t type,
+                       qd_field_iterator_t *name, qd_field_iterator_t *identity,
+                       qd_parsed_field_t *in_body, qd_composed_field_t *out_body)
+{
+}
+
+
 qdr_query_t *qdr_manage_query(qdr_core_t *core, void *context, qd_router_entity_type_t type,
                               qd_parsed_field_t *attribute_names, qd_composed_field_t *body)
 {
