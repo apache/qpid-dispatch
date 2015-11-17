@@ -15,22 +15,31 @@
 > specific language governing permissions and limitations
 > under the License.
 
-Connection Policy
-=================
+# Connection Policy
 
-Qpid Dispatch Router (QDR) uses connection policies to limit
+Qpid Dispatch Router (QDR) uses connection and access policies to limit
 user access to QDR resources.
 
 - Absolute TCP/IP connection count limit
 - Per-listener TCP/IP connection count limit
 - Per-listener TCP/IP host restrictions
 - Per-listener TCP/IP user restrictions
-- Per-listener AMQP user hostname access restrictions
+- Per-listener AMQP user hostname access restrictions (TBD)
 
+The Absolute TCP/IP connection count limit is built in to QDR and is always available. The remaining policy controls are managed by a pluggable Policy Authority module. The Policy Authority may be:
+
+- Absent. No per-listener policies are enforced.
+- Local. A simple, built-in Policy Authority may be configured.
+- User Defined. A user module may handle multi-router or centralized configurations.
+
+The system interface to Local and User Defined modules is the same.
+ 
 # Absolute TCP/IP Connection Limit
 
 QDR maintains a count of all TCP/IP connections from all remote clients and
 enforces a global limit. This limit covers connections incoming to all QDR *listeners*.
+
+This limit protects QDR from running out of resources like file descriptors due to incoming connections.
 
 ## Policy Configuration
     "maximumConnections": {
@@ -50,7 +59,44 @@ enforces a global limit. This limit covers connections incoming to all QDR *list
 - Statistics show how many total connections have been processed, how many connections have been denied by policy, and how many connections are currently active.
 - Outbound TCP/IP connections created by QDR *connectors* are not counted by the Absolute Connection Limit. That is, TCP/IP connections to waypoints or to other routers are not part of this accounting. 
 
-# Per-listener Policy
+# Policy Authority Run-time Interface
+
+The Policy Authority is consulted at different times in a connection life cycle.
+
+- A listener socket is accepted
+- An AMQP Open performative is received.
+
+## Policy Authority Listener Accept
+
+The listener socket acceptance is performed before the AMQP handshake has started. At this point the remote host is known but not the user identity. This policy protects the listener from
+
+- too many connection in total
+- too many connection from one external host
+
+#
+    bool policy_listener_accept(
+        const char *listenername,
+        const char *hostname,
+        void       *netaddr_info)
+
+The policy engine returns an allow/deny decision after deciding if this host is allowed to connect the the listener. netaddr_info is some binary info to help the policy engine determine if the the hostname is within configured IP address ranges.
+
+## Policy Authority AMQP Open
+
+The AMQP Open performative received acceptance is called after the network socket is open and after the AMQP and security handshaking has completed. Now both the user identity and the target of the AMQP Open are both known. The open may be rejected and the connection is closed with an error. 
+
+    void * policy_listener_open(
+        const char          *listenername,
+        const char          *hostname,
+        const char	        *authid)
+
+The policy engine returns a TBD policy allow/deny decision if user 'authid' connected through listenername is allowed to open a connection to hostname. If the connection is allowed then a policy configuration is returned. If the connection is denied then a null is returned and the connection is closed.
+
+# Local Policy Authority (LocalPA)
+
+Policy may be implemented in any number of ways: local configuration files, ldap, IPC requests, or whatever. The LocalPA is a compact, fully functional policy engine that is designed to help test the policy engine interfaces. In many instances LocalPA will be adequate to fully protect a QDR.
+
+## LocalPA Per-listener TCP/IP Connection Policy
 
 Each QDR listener may be configured with some settings that:
 
@@ -58,53 +104,29 @@ Each QDR listener may be configured with some settings that:
 - define a simple ingress filter by matching user names against a list of external host addresses. Note that user identity is not defined by external host TCP/IP addresses. Rather, users may be restricted to connecting only from certain TCP/IP addresses.
 - define AMQP Open parameters each user role may receive. (TBD)
 
-## User
+### User
 
 User identities are discovered during the TLS/SSL and SASL authentication phases of connection setup.  The user name used for policy specifications is stored in connection field *connection.user*.
 
 The following special user names are defined for use in policy definitions:
 
-- **$empty** placeholder for a blank user name.
 - **\*** (asterisk) wildcard matches all user names including the blank user name.
 
 User names are case sensitive.
 
-## Role Statements
+### Role Statements
 
-A *role* is a convenience name for a group of users. Role statements are the list of configuration lines that specify roles.
-
-### Role Statement Examples
-
-    |role   |rolename |defining elements|
-    |-------|---------|-----------------|
-    |role   |ACMEadmin|mike admin       |
-    |role   |ACMEuser |alice bruce      |
-    |role   |ACMEtest |zeke             |
-
-Role names may be used in defining other roles.
-
-    |role   |rolename |defining elements     |
-    |-------|---------|----------------------|
-    |role   |ACMEadmin|mike admin            |
-    |role   |ACMEuser |alice bruce ACMEadmin |
-    |role   |ACMEtest |zeke                  |
-
-Role names may be used recursively to extend role definitions.
-
-    |role   |rolename |defining elements     |
-    |-------|---------|----------------------|
-    |role   |ACMEuser |alice bruce charlie   |
-    |role   |ACMEuser |ACMEuser dave ed fred |
+A *role* is a convenience name for a group of users.
 
 Role names and user names may be used interchangeably in policy specifications.
 
 Role names are case sensitive.
 
-## Origin Statements
+### Origin Statements
 
 Origin statements are the list of configuration lines that specify ingress filter rules.
 
-### Host Specification
+#### Host Specification
 
 A Host Specification (hostspec) may be one of
 
@@ -112,7 +134,7 @@ A Host Specification (hostspec) may be one of
 - Host range
 - Wildcard
 
-#### Individual Host Specification
+##### Individual Host Specification
 
 Individual hosts may be specified by literal IP address or by hostname.
 
@@ -134,7 +156,7 @@ or a named host may resolve to a list of IP addresses
     104.16.117.182  unix.stackexchange.com
     104.16.118.182  unix.stackexchange.com
 
-#### Host ranges
+##### Host ranges
 
 Host ranges are specified by two literal IP address hosts separated with a comma
 
@@ -159,16 +181,51 @@ IPv4 CIDR format is not supported. Instead, use a host range.
 
 is "*". It stands for all addresses, IPv4 or IPv6. It may not be used in a host range statement.
 
-### Origin Statement Rule Processing
+## Example configuration file
 
-Origin statements are all *allow* or *whitelist* rules that when matched allow the TCP/IP socket connection. Origin statements are idempotent and may be processed in any order but still achieve the same allow or deny decision.
+LocalPA is configured with a single Python ConfigParser-format file.
 
-### Origin Statement Examples
-
-    |origin |role/user |IP addresses allowed    |Comment                           |
-    |-------|----------|------------------------|----------------------------------|
-    |origin |ACMEuser  |9.0.0.0,9.255.255.255   |users allowed from within a subnet|
-    |origin |ACMEadmin |9.1.1.30                |admin locked to single IP         |
-    |origin |ellen     |72.135.2.9              |random user allowed from anywhere |
-    |origin |*         |10.18.0.0,10.18.255.255 |anyone allowed on local subnet    |
-    |origin |ACMEtest  |*                       |role allowed from anywhere        |
+    # qpid-dispatch simple policy listener configuration
+    #
+    [listener1]
+    maximumConnections       : 10
+    maximumConnectionsPerUser: 5
+    maximumConnectionsPerHost: 5
+    
+    # roles is a map.
+    # key  : the role name
+    # value: list of users assigned to that role.
+    roles: {
+      'admin': ['alice', 'bob', 'charlie'],
+      'users': ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'],
+      'test':  ['zeke']
+      }
+    
+    # origins is a map. 
+    # key  : IP address or range of IP addresses
+    # value: list of roles/users allowed to connect from that address/range.
+    origins: {
+      '9.0.0.0,9.255.255.255':   ['users', 'twatson'],
+      '10.18.0.0,10.18.255.255': ['*'],
+      '72.135.2.9':              ['ellen'],
+      '*':                       ['test']
+      }
+    
+    [default]
+    maximumConnections       : 2
+    maximumConnectionsPerUser: 2
+    maximumConnectionsPerHost: 3
+    
+    # roles is a map.
+    # key  : the role name
+    # value: list of users assigned to that role.
+    roles: {
+      }
+    
+    # origins is a map. 
+    # key  : IP address or range of IP addresses
+    # value: list of roles/users allowed to connect from that address/range.
+    origins: {
+      '127.0.0.1':   ['*'],
+      '::1':         ['*']
+      }
