@@ -116,7 +116,7 @@ static void qdr_manage_advance_link_CT(qdr_query_t *query, qdr_link_t *link)
 }
 
 
-void qdrl_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
+void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
 {
     //
     // Queries that get this far will always succeed.
@@ -158,7 +158,7 @@ void qdrl_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
 }
 
 
-void qdrl_link_get_next_CT(qdr_core_t *core, qdr_query_t *query)
+void qdra_link_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 {
     qdr_link_t *link = 0;
 

@@ -37,7 +37,6 @@ typedef struct {
 qdr_field_t *qdr_field(const char *string);
 void qdr_field_free(qdr_field_t *field);
 
-
 /**
  * qdr_action_t - This type represents one work item to be performed by the router-core thread.
  */
@@ -92,9 +91,12 @@ struct qdr_action_t {
         // Arguments for management-agent actions
         //
         struct {
-            qdr_query_t *query;
-            int          offset;
+            qdr_query_t             *query;
+            int                      offset;
+            qd_field_iterator_t     *identity;
+            qd_field_iterator_t     *name;
         } agent;
+
     } args;
 };
 
@@ -308,4 +310,9 @@ qdr_action_t *qdr_action(qdr_action_handler_t action_handler);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
+qdr_query_t *qdr_query(qdr_core_t              *core,
+                       void                    *context,
+                       qd_router_entity_type_t  type,
+                       qd_parsed_field_t       *attribute_names,
+                       qd_composed_field_t     *body);
 #endif

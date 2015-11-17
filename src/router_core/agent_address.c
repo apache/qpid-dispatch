@@ -18,6 +18,7 @@
  */
 
 #include "agent_address.h"
+#include "router_core_private.h"
 
 #define QDR_ADDRESS_NAME                      0
 #define QDR_ADDRESS_IDENTITY                  1
@@ -33,14 +34,11 @@
 #define QDR_ADDRESS_DELIVERIES_TO_CONTAINER   11
 #define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER 12
 
-static void qdr_manage_write_address_CT(qdr_query_t *query, qdr_address_t *addr)
-{
-    qd_composed_field_t *body = query->body;
 
-    qd_compose_start_list(body);
-    int i = 0;
-    while (query->columns[i] >= 0) {
-        switch(query->columns[i]) {
+static void qdr_insert_address_columns_CT(qdr_address_t        *addr,
+                                          qd_composed_field_t  *body,
+                                          int column_index) {
+    switch(column_index) {
         case QDR_ADDRESS_NAME:
         case QDR_ADDRESS_IDENTITY:
         case QDR_ADDRESS_KEY:
@@ -93,9 +91,40 @@ static void qdr_manage_write_address_CT(qdr_query_t *query, qdr_address_t *addr)
         default:
             qd_compose_insert_null(body);
             break;
-        }
+    }
+
+}
+
+static void qdr_manage_write_address_map_CT(qdr_address_t       *addr,
+                                            qd_composed_field_t *body,
+                                            const char          *qdr_address_columns[])
+{
+    qd_compose_start_map(body);
+
+    for(int i = 0; i < QDR_ADDRESS_COLUMN_COUNT; i++) {
+        qd_compose_insert_string(body, qdr_address_columns[i]);
+        qdr_insert_address_columns_CT(addr, body, i);
+    }
+
+    qd_compose_end_map(body);
+}
+
+
+static void qdr_manage_write_address_list_CT(qdr_query_t *query, qdr_address_t *addr)
+{
+    qd_composed_field_t *body = query->body;
+
+    qd_compose_start_list(body);
+
+    if (!addr)
+        return;
+
+    int i = 0;
+    while (query->columns[i] >= 0) {
+        qdr_insert_address_columns_CT(addr, body, query->columns[i]);
         i++;
     }
+
     qd_compose_end_list(body);
 }
 
@@ -109,6 +138,38 @@ static void qdr_manage_advance_address_CT(qdr_query_t *query, qdr_address_t *add
         query->next_key = qdr_field((const char*) qd_hash_key_by_handle(addr->hash_handle));
     } else
         query->more = false;
+}
+
+void qdra_address_get(qdr_core_t          *core,
+                      qd_field_iterator_t *name,
+                      qd_field_iterator_t *identity,
+                      qdr_query_t         *query,
+                      const char          *qdr_address_columns[])
+{
+    qdr_address_t *addr;
+
+    if (identity) //If there is identity, ignore the name
+        qd_hash_retrieve(core->addr_hash, identity, (void*) &addr);
+    else if (name)
+        qd_hash_retrieve(core->addr_hash, name, (void*) &addr);
+
+    if (addr == 0) {
+        // Send back a 404
+        query->status = &QD_AMQP_NOT_FOUND;
+    }
+    else {
+        //
+        // Write the columns of the address entity into the response body.
+        //
+        qdr_manage_write_address_map_CT(addr, query->body, qdr_address_columns);
+        query->status = &QD_AMQP_OK;
+    }
+
+    //
+    // Enqueue the response.
+    //
+    qdr_agent_enqueue_response_CT(core, query);
+
 }
 
 
@@ -139,7 +200,7 @@ void qdra_address_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     //
     // Write the columns of the address entity into the response body.
     //
-    qdr_manage_write_address_CT(query, addr);
+    qdr_manage_write_address_list_CT(query, addr);
 
     //
     // Advance to the next address
@@ -182,7 +243,7 @@ void qdra_address_get_next_CT(qdr_core_t *core, qdr_query_t *query)
         //
         // Write the columns of the address entity into the response body.
         //
-        qdr_manage_write_address_CT(query, addr);
+        qdr_manage_write_address_list_CT(query, addr);
 
         //
         // Advance to the next address

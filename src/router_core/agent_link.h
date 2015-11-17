@@ -21,7 +21,7 @@
 
 #include "router_core_private.h"
 
-void qdrl_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
-void qdrl_link_get_next_CT(qdr_core_t *core, qdr_query_t *query);
+void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
+void qdra_link_get_next_CT(qdr_core_t *core, qdr_query_t *query);
 
 #endif
