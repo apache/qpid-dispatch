@@ -37,7 +37,8 @@
 
 static void qdr_insert_address_columns_CT(qdr_address_t        *addr,
                                           qd_composed_field_t  *body,
-                                          int column_index) {
+                                          int column_index)
+{
     switch(column_index) {
         case QDR_ADDRESS_NAME:
         case QDR_ADDRESS_IDENTITY:
@@ -140,11 +141,11 @@ static void qdr_manage_advance_address_CT(qdr_query_t *query, qdr_address_t *add
         query->more = false;
 }
 
-void qdra_address_get(qdr_core_t          *core,
-                      qd_field_iterator_t *name,
-                      qd_field_iterator_t *identity,
-                      qdr_query_t         *query,
-                      const char          *qdr_address_columns[])
+void qdra_address_get_CT(qdr_core_t          *core,
+                         qd_field_iterator_t *name,
+                         qd_field_iterator_t *identity,
+                         qdr_query_t         *query,
+                         const char          *qdr_address_columns[])
 {
     qdr_address_t *addr;
 
@@ -258,3 +259,37 @@ void qdra_address_get_next_CT(qdr_core_t *core, qdr_query_t *query)
     qdr_agent_enqueue_response_CT(core, query);
 }
 
+void qdra_address_delete_CT(qdr_core_t          *core,
+                             qd_field_iterator_t *name,
+                             qd_field_iterator_t *identity,
+                             qdr_query_t          *query)
+{
+    bool success = true;
+
+    if (identity) {//If there is identity, ignore the name
+       //TOOD - do something here
+    }
+    else if (name) {
+       //TOOD - do something here
+    }
+    else {
+        query->status = &QD_AMQP_BAD_REQUEST;
+        success = false;
+    }
+
+
+    // TODO - Add more logic here.
+    if (success) {
+        // If the request was successful then the statusCode MUST be 204 (No Content).
+        query->status = &QD_AMQP_NO_CONTENT;
+    }
+
+    // The body of the message MUST consist of an amqp-value section containing a Map with zero entries.
+    qd_compose_start_map(query->body);
+    qd_compose_end_map(query->body);
+
+    //
+    // Enqueue the response.
+    //
+    qdr_agent_enqueue_response_CT(core, query);
+}

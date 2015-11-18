@@ -95,6 +95,7 @@ struct qdr_action_t {
             int                      offset;
             qd_field_iterator_t     *identity;
             qd_field_iterator_t     *name;
+            qd_parsed_field_t       *in_body;
         } agent;
 
     } args;
@@ -302,6 +303,12 @@ struct qdr_core_t {
     qdr_link_t          **control_links_by_mask_bit;
     qdr_link_t          **data_links_by_mask_bit;
 };
+
+typedef enum {
+    PASSTHROUGH,
+    TAP,
+    BYPASS
+} qdr_waypoint_mode_t;
 
 void *router_core_thread(void *arg);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
