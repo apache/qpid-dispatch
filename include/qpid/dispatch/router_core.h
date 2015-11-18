@@ -262,7 +262,7 @@ void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t 
  * @param identity The identity supplied with the request (or 0 if the name was supplied)
  */
 void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                       qd_field_iterator_t *name, qd_field_iterator_t *identity);
+                       qd_field_iterator_t *name, qd_field_iterator_t *identity, qd_composed_field_t *body);
 
 /**
  * qdr_manage_read

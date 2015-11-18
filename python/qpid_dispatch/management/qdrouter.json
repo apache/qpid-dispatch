@@ -771,7 +771,7 @@
         "waypoint": {
             "description":"A remote node that messages for an address pass through.",
             "extends": "configurationEntity",
-            "operations": ["CREATE"],
+            "operations": ["CREATE", "DELETE"],
             "attributes": {
                 "address": {
                     "description":"The AMQP address of the waypoint.",
