@@ -1,5 +1,5 @@
-#ifndef qdr_agent_address
-#define qdr_agent_address 1
+#ifndef qdr_agent_waypoint
+#define qdr_agent_waypoint 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,21 +21,19 @@
 
 #include "router_core_private.h"
 
-void qdra_address_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
-void qdra_address_get_next_CT(qdr_core_t *core, qdr_query_t *query);
+void qdra_waypoint_create_CT(qdr_core_t          *core,
+                             qd_field_iterator_t *name,
+                             qdr_query_t         *query,
+                             qd_parsed_field_t   *in_body);
 
-void qdra_address_get_CT(qdr_core_t *core,
-                      qd_field_iterator_t *name,
-                      qd_field_iterator_t *identity,
-                      qdr_query_t          *query,
-                      const char *qdr_address_columns[]);
-
-void qdra_address_delete_CT(qdr_core_t          *core,
+void qdra_waypoint_delete_CT(qdr_core_t          *core,
                              qd_field_iterator_t *name,
                              qd_field_iterator_t *identity,
                              qdr_query_t          *query);
 
 
-#define QDR_ADDRESS_COLUMN_COUNT  13
+void qdra_waypoint_update_CT(qdr_core_t          *core,
+                             qd_field_iterator_t *name,
+                             qdr_query_t         *query);
 
 #endif

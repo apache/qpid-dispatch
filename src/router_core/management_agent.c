@@ -40,6 +40,7 @@ const char *identity_key = "identity";
 const char *operation_type_key = "operation";
 const char *attribute_names_key = "attributeNames";
 
+const unsigned char *waypoint_entity_type = (unsigned char*) "org.apache.qpid.dispatch.waypoint";
 const unsigned char *address_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.address";
 const unsigned char *link_entity_type    = (unsigned char*) "org.apache.qpid.dispatch.router.link";
 
@@ -166,11 +167,14 @@ static void qd_manage_response_handler (void *context, const qd_amqp_error_t *st
                }
             }
         }
-        qd_compose_end_list(ctx->query->body);
-        qd_compose_end_map(ctx->query->body);
+        qd_compose_end_list(ctx->field);
+        qd_compose_end_map(ctx->field);
     }
-
-
+    else if (ctx->operation_type == QD_ROUTER_OPERATION_DELETE) {
+        // The body of the delete response message MUST consist of an amqp-value section containing a Map with zero entries.
+        qd_compose_start_map(ctx->field);
+        qd_compose_end_map(ctx->field);
+    }
 
     qd_field_iterator_t *reply_to = 0;
 
@@ -251,22 +255,39 @@ static void qd_core_agent_read_handler(qd_dispatch_t              *qd,
     //
     // Add the Body
     //
-    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
+    qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 
     // Set the callback function.
     qdr_manage_handler(core, qd_manage_response_handler);
 
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, field, 0, qd, operation_type, 0);
+    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, body, 0, qd, operation_type, 0);
 
     //Call the read API function
-    qdr_manage_read(core, ctx, entity_type, name_iter, identity_iter, field);
+    qdr_manage_read(core, ctx, entity_type, name_iter, identity_iter, body);
 }
 
 
-static void qd_core_agent_create_handler()
+static void qd_core_agent_create_handler(qd_dispatch_t              *qd,
+                                         qd_message_t               *msg,
+                                         qd_router_entity_type_t     entity_type,
+                                         qd_router_operation_type_t  operation_type,
+                                         qd_field_iterator_t        *name_iter)
 {
+    qdr_core_t *core = qd_router_core(qd);
 
+    //
+    // Add the Body
+    //
+    qd_composed_field_t *out_body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
+
+    // Set the callback function.
+    qdr_manage_handler(core, qd_manage_response_handler);
+
+    // Call local function that creates and returns a qd_management_context_t containing the values passed in.
+    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, qd, operation_type, 0);
+
+    qdr_manage_create(core, ctx, entity_type, name_iter, qd_parse(qd_message_field_iterator(msg, QD_FIELD_BODY)), out_body);
 }
 
 
@@ -276,9 +297,27 @@ static void qd_core_agent_update_handler()
 }
 
 
-static void qd_core_agent_delete_handler()
+static void qd_core_agent_delete_handler(qd_dispatch_t              *qd,
+                                         qd_message_t               *msg,
+                                         qd_router_entity_type_t    entity_type,
+                                         qd_router_operation_type_t operation_type,
+                                         qd_field_iterator_t        *identity_iter,
+                                         qd_field_iterator_t        *name_iter)
 {
+    qdr_core_t *core = qd_router_core(qd);
 
+    //
+    // Add the Body
+    //
+    qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
+
+    // Set the callback function.
+    qdr_manage_handler(core, qd_manage_response_handler);
+
+    // Call local function that creates and returns a qd_management_context_t containing the values passed in.
+    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, body, 0, qd, operation_type, 0);
+
+    qdr_manage_delete(core, ctx, entity_type, name_iter, identity_iter);
 }
 
 
@@ -330,6 +369,8 @@ static bool qd_can_handle_request(qd_field_iterator_t        *props,
         (*entity_type) = QD_ROUTER_ADDRESS;
     else if(qd_field_iterator_equal(qd_parse_raw(parsed_field), link_entity_type))
         (*entity_type) = QD_ROUTER_LINK;
+    else if(qd_field_iterator_equal(qd_parse_raw(parsed_field), waypoint_entity_type))
+        (*entity_type) = QD_ROUTER_WAYPOINT;
     else
         return false;
 
@@ -397,7 +438,7 @@ void management_agent_handler(void *context, qd_message_t *msg, int link_id)
                 qd_core_agent_query_handler(qd, entity_type, operation_type, msg, &count, &offset);
                 break;
             case QD_ROUTER_OPERATION_CREATE:
-                qd_core_agent_create_handler();
+                qd_core_agent_create_handler(qd, msg, entity_type, operation_type, name_iter);
                 break;
             case QD_ROUTER_OPERATION_READ:
                 qd_core_agent_read_handler(qd, msg, entity_type, operation_type, identity_iter, name_iter);
@@ -406,7 +447,7 @@ void management_agent_handler(void *context, qd_message_t *msg, int link_id)
                 qd_core_agent_update_handler();
                 break;
             case QD_ROUTER_OPERATION_DELETE:
-                qd_core_agent_delete_handler();
+                qd_core_agent_delete_handler(qd, msg, entity_type, operation_type, identity_iter, name_iter);
                 break;
        }
     }
