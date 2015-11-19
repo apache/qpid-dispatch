@@ -716,7 +716,7 @@ static void *thread_run(void *arg)
                 qdpn_connector_free(cxtr);
                 if (conn) {
                     pn_connection_set_context(conn, 0);
-                    pn_connection_free(conn);
+                    pn_decref(conn);
                 }
                 if (ctx->collector)
                     pn_collector_free(ctx->collector);
@@ -1132,6 +1132,9 @@ void qd_server_stop(qd_dispatch_t *qd)
 
 void qd_server_signal(qd_dispatch_t *qd, int signum)
 {
+    if (!qd)
+        return;
+
     qd_server_t *qd_server = qd->server;
 
     qd_server->pending_signal = signum;
