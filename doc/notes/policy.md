@@ -18,22 +18,18 @@
 # Connection Policy
 
 Qpid Dispatch Router (QDR) uses connection and access policies to limit
-user access to QDR resources.
+user access to QDR resources. 
+
+The system defines global settings:
 
 - Absolute TCP/IP connection count limit
-- Per-listener TCP/IP connection count limit
-- Per-listener TCP/IP host restrictions
-- Per-listener TCP/IP user restrictions
-- Per-listener AMQP user hostname access restrictions (TBD)
 
-The Absolute TCP/IP connection count limit is built in to QDR and is always available. The remaining policy controls are managed by a pluggable Policy Authority module. The Policy Authority may be:
+A pluggable Policy Authority defines per-listener, per-service settings:
 
-- Absent. No per-listener policies are enforced.
-- Local. A simple, built-in Policy Authority may be configured.
-- User Defined. A user module may handle multi-router or centralized configurations.
+- TCP/IP connection count limits
+- TCP/IP connecting host/user restrictions
+- TCP/IP user restrictions
 
-The system interface to Local and User Defined modules is the same.
- 
 # Absolute TCP/IP Connection Limit
 
 QDR maintains a count of all TCP/IP connections from all remote clients and
@@ -41,19 +37,6 @@ enforces a global limit. This limit covers connections incoming to all QDR *list
 
 This limit protects QDR from running out of resources like file descriptors due to incoming connections.
 
-## Policy Configuration
-    "maximumConnections": {
-      "type"       : "integer",
-      "default"    : 0,
-      "description": "The maximum number of concurrent client
-                      connections allowed. Zero implies no limit.",
-      "required"   : false}
-
-## Policy Statistics
-    "connectionsProcessed": {"type": "integer", "graph": true},
-    "connectionsDenied":    {"type": "integer", "graph": true},
-    "connectionsCurrent":   {"type": "integer", "graph": true}
-    
 ## Usage Notes
  - If the policy configuration is absent or if the maximumConnections value specified in the policy is zero then absolute connection limits are not enforced. Note that connections are always tracked even when policy enforcement is disabled.
 - Statistics show how many total connections have been processed, how many connections have been denied by policy, and how many connections are currently active.
@@ -65,6 +48,8 @@ The Policy Authority is consulted at different times in a connection life cycle.
 
 - A listener socket is accepted
 - An AMQP Open performative is received.
+- An AMQP Begin performative is received.
+- An AMQP Attach performative is received.
 
 ## Policy Authority Listener Accept
 
@@ -74,23 +59,63 @@ The listener socket acceptance is performed before the AMQP handshake has starte
 - too many connection from one external host
 
 #
+    @param[in] listenername : listener receiving the connection
+    @param[in] originhost   : host name of the client system originating the connection
+    
+    @return the accept is allow and a socket is opened
+    
     bool policy_listener_accept(
         const char *listenername,
-        const char *hostname,
-        void       *netaddr_info)
+        const char *originhost)
 
-The policy engine returns an allow/deny decision after deciding if this host is allowed to connect the the listener. netaddr_info is some binary info to help the policy engine determine if the the hostname is within configured IP address ranges.
+The policy engine returns an allow/deny decision after deciding if this client host is allowed to open a new socket to the listener.
 
 ## Policy Authority AMQP Open
 
-The AMQP Open performative received acceptance is called after the network socket is open and after the AMQP and security handshaking has completed. Now both the user identity and the target of the AMQP Open are both known. The open may be rejected and the connection is closed with an error. 
+The AMQP Open performative received acceptance is called after the network socket is open and after the AMQP and security handshaking has completed. Now both the user identity and the requested service name, contained in the hostname field of the AMQP Open, are known.
 
-    void * policy_listener_open(
-        const char          *listenername,
-        const char          *hostname,
-        const char	        *authid)
+If the Open is allowed then the named policy is installed for this listener to control further operations on this service.
 
-The policy engine returns a TBD policy allow/deny decision if user 'authid' connected through listenername is allowed to open a connection to hostname. If the connection is allowed then a policy configuration is returned. If the connection is denied then a null is returned and the connection is closed.
+If the Open is denied then the error condition and description are returned to the listener. The listener is expected to close the connection.
+
+        @param[in] listenername : listener receiving the Open
+        @param[in] originhost   : host name of the client system originating the connection
+        @param[in] authid       : authorized user name
+        @param[in] servicename  : service named in the Open hostname field
+    
+        @param[in,out] policyname     : policy to use if Open is allowed
+        @param[in]     policynamesize : size of policy name buffer
+    
+        @param[in,out] condition       : condition name to return if Open is denied
+        @param[in]     conditionsize   : size of condition buffer
+        @param[in,out] description     : condition description if Open is denied
+        @param[in]     descriptionsize : size of description buffer
+    
+    bool policy_listener_open(
+        const char *listenername,
+        const char *originhost,
+        const char *authid,
+        const char *servicename,
+    
+        char * policyname,
+        int    policynamesize,
+    
+        char * condition,
+        int    conditionsize,
+        char * description,
+        int    descriptionsize)
+
+### AMQP Open - Connection processing
+
+Open processing is performed in two phases.
+
+#### Open - user connection origin
+
+First the user's connecting host origin address is checked. The connection may be denied if the user is not logging in from an acceptable host on the network.
+
+#### Open - user access policy
+
+Next the policy tables are consulted to see if this user has rights to the application. If the user is granted access by membership in a role then the user connection is allowed. Otherwise it is denied.
 
 # Local Policy Authority (LocalPA)
 
@@ -102,15 +127,24 @@ Each QDR listener may be configured with some settings that:
 
 - define simple sets of users organized by user *role*.
 - define a simple ingress filter by matching user names against a list of external host addresses. Note that user identity is not defined by external host TCP/IP addresses. Rather, users may be restricted to connecting only from certain TCP/IP addresses.
-- define AMQP Open parameters each user role may receive. (TBD)
+- define AMQP Open parameters each user role may receive.
+- define which AMQP Attach sources and targets may be accessed by this connection.
+
+### Aggregate Connection Limits
+
+Each policy defines connection limits:
+
+- maximumConnections
+- maximumConnectionsPerUser
+- maximumConnectionsPerHost
+
+These limits are applied in addition to the system-wide absolute maximumConnections. They prevent a user from using all of a service's resources. 
 
 ### User
 
-User identities are discovered during the TLS/SSL and SASL authentication phases of connection setup.  The user name used for policy specifications is stored in connection field *connection.user*.
+Authorized user identities are discovered during the TLS/SSL and SASL authentication phases of connection setup.  The authorized user name used for policy specifications is stored in connection field *connection.user*.
 
-The following special user names are defined for use in policy definitions:
-
-- **\*** (asterisk) wildcard matches all user names including the blank user name.
+The special user name **\*** (asterisk) wildcard matches all user names.
 
 User names are case sensitive.
 
@@ -122,9 +156,9 @@ Role names and user names may be used interchangeably in policy specifications.
 
 Role names are case sensitive.
 
-### Origin Statements
+### connectionOrigin Statements
 
-Origin statements are the list of configuration lines that specify ingress filter rules.
+Origin statements specify groups of network hosts.
 
 #### Host Specification
 
@@ -181,51 +215,124 @@ IPv4 CIDR format is not supported. Instead, use a host range.
 
 is "*". It stands for all addresses, IPv4 or IPv6. It may not be used in a host range statement.
 
+### connectionPolicy Statements
+
+These rules create an ingress filter to allow a user to connect only from a defined set of IP addresses. If a user is included in one of the definitions for connectionPolicy then that user connection is allowed. Otherwise that user's access is controlled by the connectionAllowUnrestricted flag.
+
+#### connectionAllowUnrestricted Flag
+
+This flag offers a blanket allow-all or deny-all backstop to the connectionPolicy filter. A few simple filter rules illustrated in the sample configuration shown below ensure that the privileged users connect only from a few hosts and subnets. Now the question is what happens to users that were not filtered by the connectionPolicy rules? By having the flag set to true non-privileged users may connect from anywhere.
+
+In a different service you may know all the users and all the places from which they can connect. In that case a connectionPolicy can completely define the allowed connections. Then the connectionAllowUnrestricted flag may be set to False to deny any other connections.
+
+### policy Statements
+
+The policy statements define the permissions a user gets when he is allowed to access a service. These permissions include:
+ 
+- The **AMQP Open** performative ***channel-max*** upper limit value. This controls the number of sessions that may be created over this connection.
+- The **AMQP Open** performative ***max-frame-size*** upper limit value. This controls the message buffering for this connections.
+- The **AMQP Begin** performative ***handle-max*** upper limit value. This controls the number of links that each session may contain.
+- The **AMQP Attach** performative ***max-messge-size*** upper limit value. This controls the message size and ultimately the memory that the connection can consume.
+- The **AMQP Attach** performative ***source*** and ***target*** allowed values. This controls the read/write access to service resources.
+
 ## Example configuration file
 
-LocalPA is configured with a single Python ConfigParser-format file.
+LocalPA is configured with a single Python ConfigParser-format file. For example:
 
-    # qpid-dispatch simple policy listener configuration
+    # qpid-dispatch simple policy listener configuration for photoserver service
     #
-    [listener1]
-    maximumConnections       : 10
-    maximumConnectionsPerUser: 5
-    maximumConnectionsPerHost: 5
     
-    # roles is a map.
-    # key  : the role name
-    # value: list of users assigned to that role.
+    [photoserver]
+    # versionId is a text string identifier
+    versionId                : 8
+    
+    # Aggregate connection limits
+    maximumConnections        : 10
+    maximumConnectionsPerUser : 5
+    maximumConnectionsPerHost : 5
+    
+    # A role is an group of authid names
     roles: {
-      'admin': ['alice', 'bob', 'charlie'],
-      'users': ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'],
-      'test':  ['zeke']
+      'anonymous'       : ['anonymous'],
+      'users'           : ['u1', 'u2'],
+      'paidsubscribers' : ['p1', 'p2'],
+      'test'            : ['zeke', 'ynot'],
+      'admin'           : ['alice', 'bob', 'ellen'],
+      'superuser'       : ['ellen']
       }
     
-    # origins is a map. 
-    # key  : IP address or range of IP addresses
-    # value: list of roles/users allowed to connect from that address/range.
-    origins: {
-      '9.0.0.0,9.255.255.255':   ['users', 'twatson'],
-      '10.18.0.0,10.18.255.255': ['*'],
-      '72.135.2.9':              ['ellen'],
-      '*':                       ['test']
+    # A connectionOrigin is list of network host addresses or host address ranges
+    connectionOrigins: {
+      'Ten18':      ['10.18.0.0,10.18.255.255'],
+      'EllensWS':   ['72.135.2.9'],
+      'TheLabs':    ['10.48.0.0,10.48.255.255','192.168.100.0,192.168.100.255'],
+      'Localhost':  ['127.0.0.1','::1'],
       }
     
-    [default]
-    maximumConnections       : 2
-    maximumConnectionsPerUser: 2
-    maximumConnectionsPerHost: 3
-    
-    # roles is a map.
-    # key  : the role name
-    # value: list of users assigned to that role.
-    roles: {
+    # connectionPolicy restricts users to connecting only from defined origins
+    connectionPolicy: {
+      'admin'      : ['Ten18', 'TheLabs', 'Localhost'],
+      'test'       : ['TheLabs'],
+      'superuser'  : ['Localhost', 'EllensWS']
       }
     
-    # origins is a map. 
-    # key  : IP address or range of IP addresses
-    # value: list of roles/users allowed to connect from that address/range.
-    origins: {
-      '127.0.0.1':   ['*'],
-      '::1':         ['*']
+    # connectionAllowUnrestricted - If a user is not restricted by a connectionPolicy
+    #                               then is this user allowed to connect?
+    connectionAllowUnrestricted : True
+    
+    # policy - Based on the user's role what are his access rights?
+    #
+    # A policy contains:
+    #  - values passed in AMQP Open and Attach performatives
+    #  - allowed source and target names in AMQP Attach
+    #
+    policies: {
+      'anonymous' : {
+        'max_frame_size'    : 111111,
+        'channel_max'       : 1,
+        'max_links'         : 11,
+        'max_message_size'  : 111111,
+        'sources'           : [public],
+        'targets'           : []
+        },
+      'users' : {
+        'max_frame_size'    : 222222,
+        'channel_max'       : 2,
+        'max_links'         : 22,
+        'max_message_size'  : 222222,
+        'sources'           : [public, private],
+        'targets'           : [public]
+        },
+      'paidsubscribers' : {
+        'max_frame_size'    : 333333,
+        'channel_max'       : 3,
+        'max_links'         : 33,
+        'max_message_size'  : 333333,
+        'sources'           : [public, private],
+        'targets'           : [public, private]
+        },
+      'test' : {
+        'max_frame_size'    : 444444444,
+        'channel_max'       : 4,
+        'max_links'         : 44,
+        'max_message_size'  : 444444444,
+        'sources'           : [private],
+        'targets'           : [private]
+        },
+      'admin' : {
+        'max_frame_size'    : 555555555,
+        'channel_max'       : 55,
+        'max_links'         : 555,
+        'max_message_size'  : 555555555,
+        'sources'           : [public, private, management],
+        'targets'           : [public, private, management]
+        },
+      'superuser' : {
+        'max_frame_size'    : 666666666,
+        'channel_max'       : 666,
+        'max_links'         : 6666,
+        'max_message_size'  : 666666666,
+        'sources'           : [public, private, management, root],
+        'targets'           : [public, private, management, root]
+        }
       }
