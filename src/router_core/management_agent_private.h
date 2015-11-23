@@ -20,6 +20,6 @@
  * under the License.
  */
 
-void management_agent_handler(void *context, qd_message_t *msg, int link_id);
+void qd_management_agent_handler(void *context, qd_message_t *msg, int link_id);
 
 #endif
