@@ -24,7 +24,7 @@ The system defines global settings:
 
 - Absolute TCP/IP connection count limit
 
-A pluggable Policy Authority defines per-listener, per-service settings:
+A pluggable Policy Authority defines per-listener, per-application settings:
 
 - TCP/IP connection count limits
 - TCP/IP connecting host/user restrictions
@@ -72,16 +72,16 @@ The policy engine returns an allow/deny decision after deciding if this client h
 
 ## Policy Authority AMQP Open
 
-The AMQP Open performative received acceptance is called after the network socket is open and after the AMQP and security handshaking has completed. Now both the user identity and the requested service name, contained in the hostname field of the AMQP Open, are known.
+The AMQP Open performative received acceptance is called after the network socket is open and after the AMQP and security handshaking has completed. Now both the user identity and the requested application name, contained in the hostname field of the AMQP Open, are known.
 
-If the Open is allowed then the named policy is installed for this listener to control further operations on this service.
+If the Open is allowed then the named policy is installed for this listener to control further operations on this application.
 
 If the Open is denied then the error condition and description are returned to the listener. The listener is expected to close the connection.
 
         @param[in] listenername : listener receiving the Open
         @param[in] originhost   : host name of the client system originating the connection
         @param[in] authid       : authorized user name
-        @param[in] servicename  : service named in the Open hostname field
+        @param[in] application  : application named in the Open hostname field
     
         @param[in,out] policyname     : policy to use if Open is allowed
         @param[in]     policynamesize : size of policy name buffer
@@ -95,7 +95,7 @@ If the Open is denied then the error condition and description are returned to t
         const char *listenername,
         const char *originhost,
         const char *authid,
-        const char *servicename,
+        const char *application,
     
         char * policyname,
         int    policynamesize,
@@ -138,7 +138,7 @@ Each policy defines connection limits:
 - maximumConnectionsPerUser
 - maximumConnectionsPerHost
 
-These limits are applied in addition to the system-wide absolute maximumConnections. They prevent a user from using all of a service's resources. 
+These limits are applied in addition to the system-wide absolute maximumConnections. They prevent a user from using all of a application's resources. 
 
 ### User
 
@@ -223,23 +223,23 @@ These rules create an ingress filter to allow a user to connect only from a defi
 
 This flag offers a blanket allow-all or deny-all backstop to the connectionPolicy filter. A few simple filter rules illustrated in the sample configuration shown below ensure that the privileged users connect only from a few hosts and subnets. Now the question is what happens to users that were not filtered by the connectionPolicy rules? By having the flag set to true non-privileged users may connect from anywhere.
 
-In a different service you may know all the users and all the places from which they can connect. In that case a connectionPolicy can completely define the allowed connections. Then the connectionAllowUnrestricted flag may be set to False to deny any other connections.
+In a different application you may know all the users and all the places from which they can connect. In that case a connectionPolicy can completely define the allowed connections. Then the connectionAllowUnrestricted flag may be set to False to deny any other connections.
 
 ### policy Statements
 
-The policy statements define the permissions a user gets when he is allowed to access a service. These permissions include:
+The policy statements define the permissions a user gets when he is allowed to access a application. These permissions include:
  
 - The **AMQP Open** performative ***channel-max*** upper limit value. This controls the number of sessions that may be created over this connection.
 - The **AMQP Open** performative ***max-frame-size*** upper limit value. This controls the message buffering for this connections.
 - The **AMQP Begin** performative ***handle-max*** upper limit value. This controls the number of links that each session may contain.
 - The **AMQP Attach** performative ***max-messge-size*** upper limit value. This controls the message size and ultimately the memory that the connection can consume.
-- The **AMQP Attach** performative ***source*** and ***target*** allowed values. This controls the read/write access to service resources.
+- The **AMQP Attach** performative ***source*** and ***target*** allowed values. This controls the read/write access to application resources.
 
 ## Example configuration file
 
 LocalPA is configured with a single Python ConfigParser-format file. For example:
 
-    # qpid-dispatch simple policy listener configuration for photoserver service
+    # qpid-dispatch simple policy listener configuration for photoserver application
     #
     
     [photoserver]
@@ -288,51 +288,79 @@ LocalPA is configured with a single Python ConfigParser-format file. For example
     #
     policies: {
       'anonymous' : {
-        'max_frame_size'    : 111111,
-        'channel_max'       : 1,
-        'max_links'         : 11,
-        'max_message_size'  : 111111,
-        'sources'           : [public],
-        'targets'           : []
+        'max_frame_size'         : 111111,
+        'max_message_size'       : 111111,
+        'max_session_window'     : 111111,
+        'max_sessions'           : 1,
+        'max_senders'            : 11,
+        'max_receivers'          : 11,
+        'allow_dynamic_src'      : False,
+        'allow_anonymous_sender' : False,
+        'sources'                : [public],
+        'targets'                : []
         },
       'users' : {
-        'max_frame_size'    : 222222,
-        'channel_max'       : 2,
-        'max_links'         : 22,
-        'max_message_size'  : 222222,
-        'sources'           : [public, private],
-        'targets'           : [public]
+        'max_frame_size'         : 222222,
+        'max_message_size'       : 222222,
+        'max_session_window'     : 222222,
+        'max_sessions'           : 2,
+        'max_senders'            : 22,
+        'max_receivers'          : 22,
+        'allow_dynamic_src'      : False,
+        'allow_anonymous_sender' : False,
+        'sources'                : [public, private],
+        'targets'                : [public]
         },
       'paidsubscribers' : {
-        'max_frame_size'    : 333333,
-        'channel_max'       : 3,
-        'max_links'         : 33,
-        'max_message_size'  : 333333,
-        'sources'           : [public, private],
-        'targets'           : [public, private]
+        'max_frame_size'         : 333333,
+        'max_message_size'       : 333333,
+        'max_session_window'     : 333333,
+        'max_sessions'           : 3,
+        'max_senders'            : 33,
+        'max_receivers'          : 33,
+        'allow_dynamic_src'      : True,
+        'allow_anonymous_sender' : False,
+        'sources'                : [public, private],
+        'targets'                : [public, private]
         },
       'test' : {
-        'max_frame_size'    : 444444444,
-        'channel_max'       : 4,
-        'max_links'         : 44,
-        'max_message_size'  : 444444444,
-        'sources'           : [private],
-        'targets'           : [private]
+        'max_frame_size'         : 444444,
+        'max_message_size'       : 444444,
+        'max_session_window'     : 444444,
+        'max_sessions'           : 4,
+        'max_senders'            : 44,
+        'max_receivers'          : 44,
+        'allow_dynamic_src'      : True,
+        'allow_anonymous_sender' : True,
+        'sources'                : [private],
+        'targets'                : [private]
         },
       'admin' : {
-        'max_frame_size'    : 555555555,
-        'channel_max'       : 55,
-        'max_links'         : 555,
-        'max_message_size'  : 555555555,
-        'sources'           : [public, private, management],
-        'targets'           : [public, private, management]
+        'max_frame_size'         : 555555,
+        'max_message_size'       : 555555,
+        'max_session_window'     : 555555,
+        'max_sessions'           : 5,
+        'max_senders'            : 55,
+        'max_receivers'          : 55,
+        'allow_dynamic_src'      : True,
+        'allow_anonymous_sender' : True,
+        'sources'                : [public, private, management],
+        'targets'                : [public, private, management]
         },
       'superuser' : {
-        'max_frame_size'    : 666666666,
-        'channel_max'       : 666,
-        'max_links'         : 6666,
-        'max_message_size'  : 666666666,
-        'sources'           : [public, private, management, root],
-        'targets'           : [public, private, management, root]
+        'max_frame_size'         : 666666,
+        'max_message_size'       : 666666,
+        'max_session_window'     : 666666,
+        'max_sessions'           : 6,
+        'max_senders'            : 66,
+        'max_receivers'          : 66,
+        'allow_dynamic_src'      : False,
+        'allow_anonymous_sender' : False,
+        'sources'                : [public, private, management, root],
+        'targets'                : [public, private, management, root]
         }
       }
+
+### Example Configuration File Walkthrough
+
+This section shows the processing behind various policy lookups. (TBD)
