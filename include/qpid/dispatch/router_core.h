@@ -322,5 +322,4 @@ void qdr_query_free(qdr_query_t *query);
 
 typedef void (*qdr_manage_response_t) (void *context, const qd_amqp_error_t *status, bool more);
 void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler);
-
 #endif

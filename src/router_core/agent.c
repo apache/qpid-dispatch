@@ -21,7 +21,6 @@
 #include "agent_address.h"
 #include "agent_waypoint.h"
 #include "agent_link.h"
-#include "router_core_private.h"
 #include <stdio.h>
 
 
@@ -61,6 +60,7 @@ static const char *qdr_link_columns[] =
 static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 //==================================================================================
 // Internal Functions
@@ -189,9 +189,17 @@ void qdr_manage_update(qdr_core_t              *core,
                        qd_field_iterator_t     *name,
                        qd_field_iterator_t     *identity,
                        qd_parsed_field_t       *in_body,
-                       qd_composed_field_t      *out_body)
+                       qd_composed_field_t     *out_body)
 {
+    qdr_action_t *action = qdr_action(qdr_manage_update_CT);
 
+    // Create a query object here
+    action->args.agent.query = qdr_query(core, context, type, 0, out_body);
+    action->args.agent.name = name;
+    action->args.agent.identity = identity;
+    action->args.agent.in_body = in_body;
+
+    qdr_action_enqueue(core, action);
 }
 
 
@@ -306,7 +314,6 @@ static void qdr_agent_set_columns(qdr_query_t *query,
 }
 
 
-
 void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler)
 {
     core->agent_response_handler = response_handler;
@@ -336,6 +343,23 @@ static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool disc
         case QD_ROUTER_LINK:       break;
         case QD_ROUTER_ADDRESS:    qdra_address_get_CT(core, name, identity, query, qdr_address_columns); break;
         case QD_ROUTER_WAYPOINT:   break;
+        case QD_ROUTER_EXCHANGE:   break;
+        case QD_ROUTER_BINDING:    break;
+   }
+}
+
+static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    qd_field_iterator_t     *identity   = action->args.agent.identity;
+    qd_field_iterator_t     *name       = action->args.agent.name;
+    qdr_query_t             *query      = action->args.agent.query;
+    qd_parsed_field_t       *in_body    = action->args.agent.in_body;
+
+    switch (query->entity_type) {
+        case QD_ROUTER_CONNECTION: break;
+        case QD_ROUTER_LINK:       break;
+        case QD_ROUTER_ADDRESS:    break;
+        case QD_ROUTER_WAYPOINT:   qdra_waypoint_update_CT(core, name, identity, query, in_body); break;
         case QD_ROUTER_EXCHANGE:   break;
         case QD_ROUTER_BINDING:    break;
    }
