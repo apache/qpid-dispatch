@@ -310,6 +310,7 @@ typedef enum {
     BYPASS
 } qdr_waypoint_mode_t;
 
+
 void *router_core_thread(void *arg);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
 void  qdr_agent_setup_CT(qdr_core_t *core);

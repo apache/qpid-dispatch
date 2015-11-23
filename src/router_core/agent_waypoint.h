@@ -34,6 +34,12 @@ void qdra_waypoint_delete_CT(qdr_core_t          *core,
 
 void qdra_waypoint_update_CT(qdr_core_t          *core,
                              qd_field_iterator_t *name,
-                             qdr_query_t         *query);
+                             qd_field_iterator_t *identity,
+                             qdr_query_t         *query,
+                             qd_parsed_field_t   *in_body);
+
+extern const char *qdr_waypoint_columns[];
+
+#define QDR_WAYPOINT_COLUMN_COUNT  6
 
 #endif

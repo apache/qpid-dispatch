@@ -26,9 +26,7 @@
 #define QDR_WAYPOINT_OUTPHASE     4
 #define QDR_WAYPOINT_MODE         5
 
-#define QDR_WAYPOINT_COLUMN_COUNT  6
-
-static const char *qdr_waypoint_columns[] =
+const char *qdr_waypoint_columns[] =
     {"name",
      "address",
      "connector",
@@ -113,9 +111,9 @@ void qdra_waypoint_create_CT(qdr_core_t          *core,
             query->status = &QD_AMQP_BAD_REQUEST;
         }
     }
-    else {
+    else
         query->status = &QD_AMQP_BAD_REQUEST;
-    }
+
 
     //
     // Enqueue the response.
@@ -128,7 +126,7 @@ void qdra_waypoint_create_CT(qdr_core_t          *core,
 void qdra_waypoint_delete_CT(qdr_core_t          *core,
                              qd_field_iterator_t *name,
                              qd_field_iterator_t *identity,
-                             qdr_query_t          *query)
+                             qdr_query_t         *query)
 {
     bool success = true;
 
@@ -157,9 +155,43 @@ void qdra_waypoint_delete_CT(qdr_core_t          *core,
 }
 
 
-void qdra_waypoint_update_CT(qdr_core_t *core, qd_field_iterator_t *name, qdr_query_t *query)
+void qdra_waypoint_update_CT(qdr_core_t          *core,
+                             qd_field_iterator_t *name,
+                             qd_field_iterator_t *identity,
+                             qdr_query_t         *query,
+                             qd_parsed_field_t   *in_body)
 {
+    // If the request was successful then the statusCode MUST contain 200 (OK) and the body of the message
+    // MUST contain a map containing the actual attributes of the entity updated. These MAY differ from those
+    // requested.
+    // A map containing attributes that are not applicable for the entity being created, or invalid values for a
+    // given attribute, MUST result in a failure response with a statusCode of 400 (Bad Request).
+    if (qd_parse_is_map(in_body)) {
+            // The absence of an attribute name implies that the entity should retain its existing value.
+            // If the map contains a key-value pair where the value is null then the updated entity should have no value
+            // for that attribute, removing any previous value.
+            /*
+            qd_parsed_field_t *address_field = qd_parse_value_by_key(in_body, qdr_waypoint_columns[1]);
+            qd_parsed_field_t *connector_field = qd_parse_value_by_key(in_body, qdr_waypoint_columns[2]);
+            qd_parsed_field_t *inPhase_field = qd_parse_value_by_key(in_body, qdr_waypoint_columns[3]);
+            qd_parsed_field_t *outPhase_field = qd_parse_value_by_key(in_body, qdr_waypoint_columns[4]);
+            qd_parsed_field_t *mode_field = qd_parse_value_by_key(in_body, qdr_waypoint_columns[5]);
+            */
 
+            // A map containing attributes that are not applicable for the entity being created, or invalid values for a
+            // given attribute, MUST result in a failure response with a statusCode of 400 (Bad Request).
+
+            qdr_manage_write_response_map_CT(query->body);
+            query->status = &QD_AMQP_OK;
+
+    }
+    else
+        query->status = &QD_AMQP_BAD_REQUEST;
+
+    //
+    // Enqueue the response.
+    //
+    qdr_agent_enqueue_response_CT(core, query);
 }
 
 
