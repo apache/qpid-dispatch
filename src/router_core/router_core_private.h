@@ -70,8 +70,8 @@ struct qdr_action_t {
             qdr_delivery_t   *delivery;
             qd_message_t     *msg;
             qd_direction_t    dir;
-            pn_terminus_t    *source;
-            pn_terminus_t    *target;
+            qdr_terminus_t   *source;
+            qdr_terminus_t   *target;
             pn_condition_t   *condition;
         } connection;
 
@@ -160,20 +160,17 @@ struct qdr_link_t {
     qdr_core_t               *core;
     void                     *user_context;
     qdr_connection_t         *conn;            ///< [ref] Connection that owns this link
-    int                       mask_bit;        ///< Unique mask bit if this is an inter-router link
     qd_link_type_t            link_type;
     qd_direction_t            link_direction;
     qdr_address_t            *owning_addr;     ///< [ref] Address record that owns this link
     //qd_waypoint_t            *waypoint;        ///< [ref] Waypoint that owns this link
-    qd_link_t                *link;            ///< [own] Link pointer DEPRECATE
     qdr_link_t               *connected_link;  ///< [ref] If this is a link-route, reference the connected link
     qdr_link_ref_t           *ref;             ///< Pointer to a containing reference object
-    char                     *target;          ///< Target address for incoming links
     qd_routed_event_list_t    event_fifo;      ///< FIFO of outgoing delivery/link events (no messages)
     qd_routed_event_list_t    msg_fifo;        ///< FIFO of incoming or outgoing message deliveries
     qd_router_delivery_list_t deliveries;      ///< [own] outstanding unsettled deliveries
-    bool                      strip_inbound_annotations;  ///<should the dispatch specific inbound annotations be stripped at the ingress router
-    bool                      strip_outbound_annotations; ///<should the dispatch specific outbound annotations be stripped at the egress router
+    bool                      strip_inbound_annotations;  ///<should the dispatch specific inbound annotations be stripped at the ingress router DEPRECATE/MOVE
+    bool                      strip_outbound_annotations; ///<should the dispatch specific outbound annotations be stripped at the egress router DEPRECATE/MOVE
 };
 
 ALLOC_DECLARE(qdr_link_t);
@@ -244,16 +241,36 @@ void qdr_add_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 
 
+typedef enum {
+    QDR_CONNECTION_WORK_FIRST_ATTACH,
+    QDR_CONNECTION_WORK_SECOND_ATTACH,
+    QDR_CONNECTION_WORK_DETACH
+} qdr_connection_work_type_t;
+
+typedef struct qdr_connection_work_t {
+    DEQ_LINKS(struct qdr_connection_work_t);
+    qdr_connection_work_type_t  work_type;
+    qdr_link_t                 *link;
+    qdr_terminus_t             *source;
+    qdr_terminus_t             *target;
+    pn_condition_t             *condition;
+    uint32_t                    flags;
+} qdr_connection_work_t;
+
+ALLOC_DECLARE(qdr_connection_work_t);
+DEQ_DECLARE(qdr_connection_work_t, qdr_connection_work_list_t);
+
 struct qdr_connection_t {
     DEQ_LINKS(qdr_connection_t);
-    qdr_core_t            *core;
-    void                  *user_context;
-    bool                   incoming;
-    qdr_connection_role_t  role;
-    const char            *label;
-    int                    mask_bit;
-
-    // TODO - Add direct linkage to waypoints, link-route destinations, and links
+    qdr_core_t                 *core;
+    void                       *user_context;
+    bool                        incoming;
+    qdr_connection_role_t       role;
+    const char                 *label;
+    int                         mask_bit;
+    qdr_link_list_t             links;
+    qdr_connection_work_list_t  work_list;
+    sys_mutex_t                *work_lock;
 };
 
 ALLOC_DECLARE(qdr_connection_t);
@@ -287,6 +304,15 @@ struct qdr_core_t {
     qdr_mobile_removed_t  rt_mobile_removed;
     qdr_link_lost_t       rt_link_lost;
 
+    //
+    // Connection section
+    //
+    void                      *user_context;
+    qdr_connection_activate_t  activate_handler;
+    qdr_link_first_attach_t    first_attach_handler;
+    qdr_link_second_attach_t   second_attach_handler;
+    qdr_link_detach_t          detach_handler;
+
     const char *router_area;
     const char *router_id;
 
@@ -296,7 +322,6 @@ struct qdr_core_t {
     qdr_address_t        *routerma_addr;
     qdr_address_t        *hello_addr;
 
-    qdr_link_list_t       links;
     qdr_node_list_t       routers;
     qd_bitmask_t         *neighbor_free_mask;
     qdr_node_t          **routers_by_mask_bit;

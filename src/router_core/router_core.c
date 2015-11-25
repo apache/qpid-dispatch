@@ -81,7 +81,7 @@ ALLOC_DEFINE(qdr_field_t);
 
 qdr_field_t *qdr_field(const char *text)
 {
-    size_t length  = strlen(text);
+    size_t length  = text ? strlen(text) : 0;
     size_t ilength = length;
 
     if (length == 0)

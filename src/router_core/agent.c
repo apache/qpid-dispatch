@@ -128,6 +128,7 @@ static void qdrh_query_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool
 static void qdrh_query_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_agent_emit_columns(qdr_query_t *query, const char *qdr_columns[], int column_count);
 static void qdr_agent_set_columns(qdr_query_t *query, qd_parsed_field_t *attribute_names, const char *qdr_columns[], int column_count);
+
 //==================================================================================
 // Interface Functions
 //==================================================================================

@@ -32,10 +32,11 @@
  * exclusive access to that connection.
  */
 
-typedef struct qdr_core_t qdr_core_t;
+typedef struct qdr_core_t       qdr_core_t;
 typedef struct qdr_connection_t qdr_connection_t;
-typedef struct qdr_link_t qdr_link_t;
-typedef struct qdr_delivery_t qdr_delivery_t;
+typedef struct qdr_link_t       qdr_link_t;
+typedef struct qdr_delivery_t   qdr_delivery_t;
+typedef struct qdr_terminus_t   qdr_terminus_t;
 
 /**
  * Allocate and start an instance of the router core module.
@@ -90,10 +91,23 @@ void qdr_core_subscribe(qdr_core_t *core, const char *address, char aclass, char
  */
 
 typedef enum {
+    QD_LINK_ENDPOINT,   ///< A link to a connected endpoint
+    QD_LINK_WAYPOINT,   ///< A link to a configured waypoint
+    QD_LINK_CONTROL,    ///< A link to a peer router for control messages
+    QD_LINK_ROUTER,     ///< A link to a peer router for routed messages
+    QD_LINK_AREA        ///< A link to a peer router in a different area (area boundary)
+} qd_link_type_t;
+ENUM_DECLARE(qd_link_type);
+
+typedef enum {
     QDR_ROLE_NORMAL,
     QDR_ROLE_INTER_ROUTER,
     QDR_ROLE_ON_DEMAND
 } qdr_connection_role_t;
+
+
+#define QDR_FLAGS_CAPABILITY_ROUTER_CONTROL 1
+#define QDR_FLAGS_CAPABILITY_ROUTER_DATA    2
 
 /**
  * qdr_connection_opened
@@ -133,7 +147,18 @@ void qdr_connection_set_context(qdr_connection_t *conn, void *context);
  *
  * Retrieve the stored void pointer from the connection object.
  */
-void *qdr_connection_get_context(qdr_connection_t *conn);
+void *qdr_connection_get_context(const qdr_connection_t *conn);
+
+/**
+ * qdr_connection_process
+ *
+ * Allow the core to process work associated with this connection.
+ * This function MUST be called only on a thread that exclusively owns
+ * this connection.
+ *
+ * @param conn The pointer returned by qdr_connection_opened
+ */
+void qdr_connection_process(qdr_connection_t *conn);
 
 /**
  * qdr_connection_activate_t callback
@@ -142,10 +167,53 @@ void *qdr_connection_get_context(qdr_connection_t *conn);
  * the core has deliveries on links, disposition updates on deliveries, or flow updates
  * to be sent across the connection.
  *
+ * IMPORTANT: This function will be invoked on the core thread.  It must never block,
+ * delay, or do any lenghty computation.
+ *
  * @param context The context supplied when the callback was registered
  * @param conn The connection object to be activated
  */
 typedef void (*qdr_connection_activate_t) (void *context, qdr_connection_t *conn);
+
+/**
+ ******************************************************************************
+ * Terminus functions
+ ******************************************************************************
+ */
+
+/**
+ * qdr_terminus
+ *
+ * Create a qdr_terminus_t that contains all the content of the
+ * pn_terminus_t.  Note that the pointer to the pn_terminus_t
+ * _will not_ be held or referenced further after this function
+ * returns.
+ *
+ * @param pn Pointer to a proton terminus object that will be copied into
+ *           the qdr_terminus object
+ * @return Pointer to a newly allocated qdr_terminus object
+ */
+qdr_terminus_t *qdr_terminus(pn_terminus_t *pn);
+
+/**
+ * qdr_terminus_free
+ *
+ * Free a qdr_terminus object once it is no longer needed.
+ *
+ * @param terminus The pointer returned by qdr_terminus()
+ */
+void qdr_terminus_free(qdr_terminus_t *terminus);
+
+/**
+ * qdr_terminus_copy
+ *
+ * Copy the contents of the qdr_terminus into a proton terminus
+ *
+ * @param from A qdr_terminus pointer returned by qdr_terminus()
+ * @param to A proton terminus to  be overwritten with the contents
+ *           of 'from'
+ */
+void qdr_terminus_copy(qdr_terminus_t *from, pn_terminus_t *to);
 
 /**
  ******************************************************************************
@@ -165,7 +233,27 @@ void qdr_link_set_context(qdr_link_t *link, void *context);
  *
  * Retrieve the stored void pointer from the link object.
  */
-void *qdr_link_get_context(qdr_link_t *link);
+void *qdr_link_get_context(const qdr_link_t *link);
+
+/**
+ * qdr_link_type
+ *
+ * Retrieve the link-type from the link object.
+ *
+ * @param link Link object
+ * @return Link-type
+ */
+qd_link_type_t qdr_link_type(const qdr_link_t *link);
+
+/**
+ * qdr_link_direction
+ *
+ * Retrieve the link-direction from the link object.
+ *
+ * @param link Link object
+ * @return Link-direction
+ */
+qd_direction_t qdr_link_direction(const qdr_link_t *link);
 
 /**
  * qdr_link_first_attach
@@ -179,7 +267,7 @@ void *qdr_link_get_context(qdr_link_t *link);
  * @param target Target terminus of the attach
  * @return A pointer to a new qdr_link_t object to track the link
  */
-qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, pn_terminus_t *source, pn_terminus_t *target);
+qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, qdr_terminus_t *source, qdr_terminus_t *target);
 
 /**
  * qdr_link_second_attach
@@ -191,7 +279,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, pn
  * @param source Source terminus of the attach
  * @param target Target terminus of the attach
  */
-void qdr_link_second_attach(qdr_link_t *link, pn_terminus_t *source, pn_terminus_t *target);
+void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target);
 
 /**
  * qdr_link_detach
@@ -206,9 +294,17 @@ void qdr_link_detach(qdr_link_t *link, pn_condition_t *condition);
 qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg);
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg, qd_field_iterator_t *addr);
 
-typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qd_direction_t dir, pn_terminus_t *source, pn_terminus_t *target);
-typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link, pn_terminus_t *source, pn_terminus_t *target);
+typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
+                                          qdr_terminus_t *source, qdr_terminus_t *target, uint32_t flags);
+typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, pn_condition_t *condition);
+
+void qdr_connection_handlers(qdr_core_t                *core,
+                             void                      *context,
+                             qdr_connection_activate_t  activate,
+                             qdr_link_first_attach_t    first_attach,
+                             qdr_link_second_attach_t   second_attach,
+                             qdr_link_detach_t          detach);
 
 /**
  ******************************************************************************

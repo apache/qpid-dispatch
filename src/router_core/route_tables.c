@@ -154,7 +154,6 @@ void qdr_core_subscribe(qdr_core_t *core, const char *address, char aclass, char
 void qdr_route_table_setup_CT(qdr_core_t *core)
 {
     DEQ_INIT(core->addrs);
-    DEQ_INIT(core->links);
     DEQ_INIT(core->routers);
     core->addr_hash = qd_hash(10, 32, 0);
 

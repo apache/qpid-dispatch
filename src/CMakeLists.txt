@@ -74,6 +74,7 @@ set(qpid_dispatch_SOURCES
   router_core/router_core_thread.c
   router_core/route_tables.c
   router_core/management_agent.c
+  router_core/terminus.c
   router_delivery.c
   router_node.c
   router_forwarders.c

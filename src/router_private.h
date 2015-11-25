@@ -51,15 +51,6 @@ typedef enum {
 } qd_router_mode_t;
 ENUM_DECLARE(qd_router_mode);
 
-typedef enum {
-    QD_LINK_ENDPOINT,   ///< A link to a connected endpoint
-    QD_LINK_WAYPOINT,   ///< A link to a configured waypoint
-    QD_LINK_CONTROL,    ///< A link to a peer router for control messages
-    QD_LINK_ROUTER,     ///< A link to a peer router for routed messages
-    QD_LINK_AREA        ///< A link to a peer router in a different area (area boundary)
-} qd_link_type_t;
-ENUM_DECLARE(qd_link_type);
-
 typedef struct qd_routed_event_t {
     DEQ_LINKS(struct qd_routed_event_t);
     qd_router_delivery_t *delivery;

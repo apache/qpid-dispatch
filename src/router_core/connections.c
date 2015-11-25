@@ -26,6 +26,7 @@ static void qdr_link_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bo
 static void qdr_link_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 ALLOC_DEFINE(qdr_connection_t);
+ALLOC_DEFINE(qdr_connection_work_t);
 
 //==================================================================================
 // Internal Functions
@@ -48,6 +49,9 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t *core, bool incoming, qdr_con
     conn->role         = role;
     conn->label        = label;
     conn->mask_bit     = -1;
+    DEQ_INIT(conn->links);
+    DEQ_INIT(conn->work_list);
+    conn->work_lock    = sys_mutex();
 
     action->args.connection.conn = conn;
     qdr_action_enqueue(core, action);
@@ -71,9 +75,42 @@ void qdr_connection_set_context(qdr_connection_t *conn, void *context)
 }
 
 
-void *qdr_connection_get_context(qdr_connection_t *conn)
+void *qdr_connection_get_context(const qdr_connection_t *conn)
 {
     return conn ? conn->user_context : 0;
+}
+
+
+void qdr_connection_process(qdr_connection_t *conn)
+{
+    qdr_connection_work_list_t  work_list;
+    qdr_core_t                 *core = conn->core;
+
+    sys_mutex_lock(conn->work_lock);
+    DEQ_MOVE(conn->work_list, work_list);
+    sys_mutex_unlock(conn->work_lock);
+
+    qdr_connection_work_t *work = DEQ_HEAD(work_list);
+    while (work) {
+        DEQ_REMOVE_HEAD(work_list);
+
+        switch (work->work_type) {
+        case QDR_CONNECTION_WORK_FIRST_ATTACH :
+            core->first_attach_handler(core->user_context, conn, work->link, work->source, work->target, work->flags);
+            break;
+
+        case QDR_CONNECTION_WORK_SECOND_ATTACH :
+            core->second_attach_handler(core->user_context, work->link, work->source, work->target);
+            break;
+
+        case QDR_CONNECTION_WORK_DETACH :
+            core->detach_handler(core->user_context, work->link, work->condition);
+            break;
+        }
+
+        free_qdr_connection_work_t(work);
+        work = DEQ_HEAD(work_list);
+    }
 }
 
 
@@ -84,13 +121,25 @@ void qdr_link_set_context(qdr_link_t *link, void *context)
 }
 
 
-void *qdr_link_get_context(qdr_link_t *link)
+void *qdr_link_get_context(const qdr_link_t *link)
 {
     return link ? link->user_context : 0;
 }
 
 
-qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, pn_terminus_t *source, pn_terminus_t *target)
+qd_link_type_t qdr_link_type(const qdr_link_t *link)
+{
+    return link->link_type;
+}
+
+
+qd_direction_t qdr_link_direction(const qdr_link_t *link)
+{
+    return link->link_direction;
+}
+
+
+qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, qdr_terminus_t *source, qdr_terminus_t *target)
 {
     qdr_action_t *action = qdr_action(qdr_link_first_attach_CT);
     qdr_link_t   *link   = new_qdr_link_t();
@@ -110,7 +159,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, pn
 }
 
 
-void qdr_link_second_attach(qdr_link_t *link, pn_terminus_t *source, pn_terminus_t *target)
+void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
 {
     qdr_action_t *action = qdr_action(qdr_link_second_attach_CT);
 
@@ -131,9 +180,71 @@ void qdr_link_detach(qdr_link_t *link, pn_condition_t *condition)
 }
 
 
+void qdr_connection_handlers(qdr_core_t                *core,
+                             void                      *context,
+                             qdr_connection_activate_t  activate,
+                             qdr_link_first_attach_t    first_attach,
+                             qdr_link_second_attach_t   second_attach,
+                             qdr_link_detach_t          detach)
+{
+    core->user_context          = context;
+    core->activate_handler      = activate;
+    core->first_attach_handler  = first_attach;
+    core->second_attach_handler = second_attach;
+    core->detach_handler        = detach;
+}
+
+
 //==================================================================================
 // In-Thread Functions
 //==================================================================================
+
+static void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
+                                           qdr_connection_t      *conn,
+                                           qdr_connection_work_t *work)
+{
+    sys_mutex_lock(conn->work_lock);
+    DEQ_INSERT_TAIL(conn->work_list, work);
+    bool notify = DEQ_SIZE(conn->work_list) == 1;
+    sys_mutex_unlock(conn->work_lock);
+
+    if (notify)
+        core->activate_handler(core->user_context, conn);
+}
+
+
+static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
+                                      qdr_connection_t *conn,
+                                      qd_link_type_t    link_type,
+                                      qd_direction_t    dir,
+                                      qdr_terminus_t   *source,
+                                      qdr_terminus_t   *target,
+                                      uint32_t          flags)
+{
+    //
+    // Create a new link, initiated by the router core.  This will involve issuing a first-attach outbound.
+    //
+    qdr_link_t *link = new_qdr_link_t();
+    ZERO(link);
+
+    link->core           = core;
+    link->user_context   = 0;
+    link->conn           = conn;
+    link->link_type      = link_type;
+    link->link_direction = dir;
+
+    qdr_connection_work_t *work = new_qdr_connection_work_t();
+    ZERO(work);
+    work->work_type = QDR_CONNECTION_WORK_FIRST_ATTACH;
+    work->link      = link;
+    work->source    = source;
+    work->target    = target;
+    work->flags     = flags;
+
+    qdr_connection_enqueue_work_CT(core, conn, work);
+    return link;
+}
+
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
@@ -166,17 +277,16 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
         if (!conn->incoming) {
             //
             // The connector-side of inter-router connections is responsible for setting up the
-            // inter-router links:  Two (in and out) for control, two for routed-message transfer
+            // inter-router links:  Two (in and out) for control, two for routed-message transfer.
             //
-            //(void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, ...);
+            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, 0, 0, QDR_FLAGS_CAPABILITY_ROUTER_CONTROL);
+            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, 0, 0, QDR_FLAGS_CAPABILITY_ROUTER_CONTROL);
+            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, 0, 0, QDR_FLAGS_CAPABILITY_ROUTER_DATA);
+            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, 0, 0, QDR_FLAGS_CAPABILITY_ROUTER_DATA);
         }
     }
 
-    // If the role is INTER_ROUTER:
-    //    Assign this connection a neighbor mask-bit
-    //    If the connection is not incoming:
-    //       Establish a receiver and sender for router control
-    //       Establish a receiver and sender for inter-router message routing
+    //
     // If the role is ON_DEMAND:
     //    Activate waypoints associated with this connection
     //    Activate link-route destinations associated with this connection
@@ -201,7 +311,12 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     //        with the links.
     //
 
+    //
+    // Discard items on the work list
+    //
+
     DEQ_REMOVE(core->open_connections, conn);
+    sys_mutex_free(conn->work_lock);
     free_qdr_connection_t(conn);
 }
 
@@ -211,11 +326,11 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
     if (discard)
         return;
 
-    //qdr_connection_t *conn   = action->args.connection.conn;
-    //qdr_link_t       *link   = action->args.connection.link;
-    //qd_direction_t    dir    = action->args.connection.dir;
-    //pn_terminus_t    *source = action->args.connection.source;
-    //pn_terminus_t    *target = action->args.connection.target;
+    //qdr_connection_t  *conn   = action->args.connection.conn;
+    //qdr_link_t        *link   = action->args.connection.link;
+    //qd_direction_t     dir    = action->args.connection.dir;
+    //qdr_terminus_t    *source = action->args.connection.source;
+    //qdr_terminus_t    *target = action->args.connection.target;
 
     //
     // Cases to be handled:
@@ -254,9 +369,9 @@ static void qdr_link_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bo
     if (discard)
         return;
 
-    //qdr_link_t    *link   = action->args.connection.link;
-    //pn_terminus_t *source = action->args.connection.source;
-    //pn_terminus_t *target = action->args.connection.target;
+    //qdr_link_t     *link   = action->args.connection.link;
+    //qdr_terminus_t *source = action->args.connection.source;
+    //qdr_terminus_t *target = action->args.connection.target;
 
     //
     // Cases to be handled:

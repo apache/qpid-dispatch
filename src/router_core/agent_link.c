@@ -37,19 +37,6 @@ static const char *address_key(qdr_address_t *addr) {
     return addr && addr->hash_handle ? (const char*) qd_hash_key_by_handle(addr->hash_handle) : NULL;
 }
 
-static const char* qd_router_link_remote_container(qdr_link_t *link) {
-    if (!link->link || !qd_link_pn(link->link))
-        return "";
-    return pn_connection_remote_container(
-        pn_session_connection(qd_link_pn_session(link->link)));
-}
-
-static const char* qd_router_link_name(qdr_link_t *link) {
-    if (!link->link || !qd_link_pn(link->link))
-        return "";
-    return pn_link_name(qd_link_pn(link->link));
-}
-
 static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link )
 {
     qd_composed_field_t *body = query->body;
@@ -68,11 +55,11 @@ static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link )
             break;
 
         case QDR_LINK_REMOTE_CONTAINER:
-            qd_compose_insert_string(body, qd_router_link_remote_container(link));
+            qd_compose_insert_null(body); // FIXME
             break;
 
         case QDR_LINK_LINK_NAME:
-            qd_compose_insert_string(body, qd_router_link_name(link));
+            qd_compose_insert_null(body); // FIXME
             break;
 
         case QDR_LINK_LINK_TYPE:
@@ -126,7 +113,7 @@ void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     //
     // If the offset goes beyond the set of links, end the query now.
     //
-    if (offset >= DEQ_SIZE(core->links)) {
+    if (true /*offset >= DEQ_SIZE(core->links)*/) {  // FIXME
         query->more = false;
         qdr_agent_enqueue_response_CT(core, query);
         return;
@@ -135,7 +122,7 @@ void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     //
     // Run to the address at the offset.
     //
-    qdr_link_t *link = DEQ_HEAD(core->links);
+    qdr_link_t *link = 0; // DEQ_HEAD(core->links);  FIXME
     for (int i = 0; i < offset && link; i++)
         link = DEQ_NEXT(link);
     assert(link);
@@ -167,8 +154,8 @@ void qdra_link_get_next_CT(qdr_core_t *core, qdr_query_t *query)
         // If the address was removed in the time between this get and the previous one,
         // we need to use the saved offset, which is less efficient.
         //
-        if (query->next_offset < DEQ_SIZE(core->links)) {
-            link = DEQ_HEAD(core->links);
+        if (false /*query->next_offset < DEQ_SIZE(core->links)*/) {  // FIXME
+            link = 0; //DEQ_HEAD(core->links);
             for (int i = 0; i < query->next_offset && link; i++)
                 link = DEQ_NEXT(link);
         }
