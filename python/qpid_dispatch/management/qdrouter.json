@@ -496,12 +496,10 @@
                 "mode": {
                     "type": [
                         "standalone",
-                        "interior",
-                        "edge",
-                        "endpoint"
+                        "interior"
                     ],
                     "default": "standalone",
-                    "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network.  In edge mode, the router operates with an up link into an interior router network. Edge routers are typically used as connection concentrators or as security firewalls for access into the interior network.",
+                    "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network.",
                     "create": true
                 },
                 "area": {
