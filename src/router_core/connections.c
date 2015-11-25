@@ -335,16 +335,27 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 }
 
 
+static void qdr_link_reject_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+{
+}
+
+
 static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
         return;
 
-    //qdr_connection_t  *conn   = action->args.connection.conn;
-    //qdr_link_t        *link   = action->args.connection.link;
+    qdr_connection_t  *conn   = action->args.connection.conn;
+    qdr_link_t        *link   = action->args.connection.link;
     //qd_direction_t     dir    = action->args.connection.dir;
     //qdr_terminus_t    *source = action->args.connection.source;
     //qdr_terminus_t    *target = action->args.connection.target;
+
+    //
+    // Check for some rejected-attach cases
+    //
+    if ((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)
+        qdr_link_reject_CT(core, conn, link);
 
     //
     // Cases to be handled:
