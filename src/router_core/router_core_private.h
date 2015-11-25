@@ -254,7 +254,6 @@ typedef struct qdr_connection_work_t {
     qdr_terminus_t             *source;
     qdr_terminus_t             *target;
     pn_condition_t             *condition;
-    uint32_t                    flags;
 } qdr_connection_work_t;
 
 ALLOC_DECLARE(qdr_connection_work_t);

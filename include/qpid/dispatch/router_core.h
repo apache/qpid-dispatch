@@ -106,9 +106,6 @@ typedef enum {
 } qdr_connection_role_t;
 
 
-#define QDR_FLAGS_CAPABILITY_ROUTER_CONTROL 1
-#define QDR_FLAGS_CAPABILITY_ROUTER_DATA    2
-
 /**
  * qdr_connection_opened
  *
@@ -216,6 +213,28 @@ void qdr_terminus_free(qdr_terminus_t *terminus);
 void qdr_terminus_copy(qdr_terminus_t *from, pn_terminus_t *to);
 
 /**
+ * qdr_terminus_add_capability
+ *
+ * Add a capability symbol to the terminus.
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @param capability A string to be added as a symbol to the capability list
+ */
+void qdr_terminus_add_capability(qdr_terminus_t *term, const char *capability);
+
+/**
+ * qdr_terminus_has_capability
+ *
+ * Check to see if a terminus has a particular capability.
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @param capability A string describing a capability to be checked
+ * @return true iff the capability is advertised for this terminus
+ */
+bool qdr_terminus_has_capability(qdr_terminus_t *term, const char *capability);
+
+
+/**
  ******************************************************************************
  * Link functions
  ******************************************************************************
@@ -295,7 +314,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, pn_delivery_t *delivery, qd_m
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg, qd_field_iterator_t *addr);
 
 typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
-                                          qdr_terminus_t *source, qdr_terminus_t *target, uint32_t flags);
+                                          qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, pn_condition_t *condition);
 

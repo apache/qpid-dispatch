@@ -37,27 +37,27 @@ ALLOC_DEFINE(qdr_terminus_t);
 
 qdr_terminus_t *qdr_terminus(pn_terminus_t *pn)
 {
-    if (pn == 0)
-        return 0;
-
     qdr_terminus_t *term = new_qdr_terminus_t();
     ZERO(term);
 
-    term->address           = qdr_field(pn_terminus_get_address(pn));
-    term->durability        = pn_terminus_get_durability(pn);
-    term->expiry_policy     = pn_terminus_get_expiry_policy(pn);
-    term->timeout           = pn_terminus_get_timeout(pn);
-    term->dynamic           = pn_terminus_is_dynamic(pn);
-    term->distribution_mode = pn_terminus_get_distribution_mode(pn);
-    term->properties        = pn_data(0);
-    term->filter            = pn_data(0);
-    term->outcomes          = pn_data(0);
-    term->capabilities      = pn_data(0);
+    term->properties   = pn_data(0);
+    term->filter       = pn_data(0);
+    term->outcomes     = pn_data(0);
+    term->capabilities = pn_data(0);
 
-    pn_data_copy(term->properties,   pn_terminus_properties(pn));
-    pn_data_copy(term->filter,       pn_terminus_filter(pn));
-    pn_data_copy(term->outcomes,     pn_terminus_outcomes(pn));
-    pn_data_copy(term->capabilities, pn_terminus_capabilities(pn));
+    if (pn) {
+        term->address           = qdr_field(pn_terminus_get_address(pn));
+        term->durability        = pn_terminus_get_durability(pn);
+        term->expiry_policy     = pn_terminus_get_expiry_policy(pn);
+        term->timeout           = pn_terminus_get_timeout(pn);
+        term->dynamic           = pn_terminus_is_dynamic(pn);
+        term->distribution_mode = pn_terminus_get_distribution_mode(pn);
+
+        pn_data_copy(term->properties,   pn_terminus_properties(pn));
+        pn_data_copy(term->filter,       pn_terminus_filter(pn));
+        pn_data_copy(term->outcomes,     pn_terminus_outcomes(pn));
+        pn_data_copy(term->capabilities, pn_terminus_capabilities(pn));
+    }
 
     return term;
 }
@@ -96,5 +96,26 @@ void qdr_terminus_copy(qdr_terminus_t *from, pn_terminus_t *to)
     pn_data_copy(pn_terminus_filter(to),       from->filter);
     pn_data_copy(pn_terminus_outcomes(to),     from->outcomes);
     pn_data_copy(pn_terminus_capabilities(to), from->capabilities);
+}
+
+
+void qdr_terminus_add_capability(qdr_terminus_t *term, const char *capability)
+{
+    pn_data_put_symbol(term->capabilities, pn_bytes(strlen(capability), capability));
+}
+
+
+bool qdr_terminus_has_capability(qdr_terminus_t *term, const char *capability)
+{
+    pn_data_t *cap = term->capabilities;
+    pn_data_rewind(cap);
+    pn_data_next(cap);
+    if (cap && pn_data_type(cap) == PN_SYMBOL) {
+        pn_bytes_t sym = pn_data_get_symbol(cap);
+        if (sym.size == strlen(capability) && strcmp(sym.start, capability) == 0)
+            return true;
+    }
+
+    return false;
 }
 

@@ -284,8 +284,8 @@ static int qd_router_terminus_is_router(pn_terminus_t *term)
     pn_data_next(cap);
     if (cap && pn_data_type(cap) == PN_SYMBOL) {
         pn_bytes_t sym = pn_data_get_symbol(cap);
-        if (sym.size == strlen(QD_CAPABILITY_ROUTER) &&
-            strcmp(sym.start, QD_CAPABILITY_ROUTER) == 0)
+        if (sym.size == strlen(QD_CAPABILITY_ROUTER_CONTROL) &&
+            strcmp(sym.start, QD_CAPABILITY_ROUTER_CONTROL) == 0)
             return 1;
     }
 
@@ -1725,7 +1725,7 @@ static void router_outbound_opened_handler(void *type_context, qd_connection_t *
     qd_link_t        *receiver;
     qd_router_link_t *rlink;
     int               mask_bit = 0;
-    size_t            clen     = strlen(QD_CAPABILITY_ROUTER);
+    size_t            clen     = strlen(QD_CAPABILITY_ROUTER_CONTROL);
 
     //
     // Allocate a mask bit to designate the pair of links connected to the neighbor router
@@ -1746,7 +1746,7 @@ static void router_outbound_opened_handler(void *type_context, qd_connection_t *
     // TODO - We don't want to have to cast away the constness of the literal string here!
     //        See PROTON-429
     pn_data_put_symbol(pn_terminus_capabilities(qd_link_target(receiver)),
-                       pn_bytes(clen, (char*) QD_CAPABILITY_ROUTER));
+                       pn_bytes(clen, (char*) QD_CAPABILITY_ROUTER_CONTROL));
 
     rlink = qd_router_link(receiver, QD_LINK_ROUTER, QD_INCOMING, 0, 0, mask_bit);
 
@@ -1761,7 +1761,7 @@ static void router_outbound_opened_handler(void *type_context, qd_connection_t *
     // TODO - We don't want to have to cast away the constness of the literal string here!
     //        See PROTON-429
     pn_data_put_symbol(pn_terminus_capabilities(qd_link_source(sender)),
-                       pn_bytes(clen, (char *) QD_CAPABILITY_ROUTER));
+                       pn_bytes(clen, (char *) QD_CAPABILITY_ROUTER_CONTROL));
 
     rlink = qd_router_link(sender, QD_LINK_ROUTER, QD_OUTGOING, router->hello_addr, 0, mask_bit);
 

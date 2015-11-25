@@ -104,7 +104,8 @@ const char * const QD_CAPABILITY_ANONYMOUS_RELAY;
 
 /** @name Link Terminus Capabilities */
 /// @{
-const char * const QD_CAPABILITY_ROUTER;
+const char * const QD_CAPABILITY_ROUTER_CONTROL;
+const char * const QD_CAPABILITY_ROUTER_DATA;
 /// @}
 
 /** @name Dynamic Node Properties */

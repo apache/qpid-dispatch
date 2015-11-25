@@ -24,7 +24,8 @@ const char * const QD_MA_TRACE   = "x-opt-qd.trace";
 const char * const QD_MA_TO      = "x-opt-qd.to";
 const char * const QD_MA_CLASS   = "x-opt-qd.class";
 
-const char * const QD_CAPABILITY_ROUTER          = "qd.router";
+const char * const QD_CAPABILITY_ROUTER_CONTROL  = "qd.router";
+const char * const QD_CAPABILITY_ROUTER_DATA     = "qd.router-data";
 const char * const QD_CAPABILITY_ANONYMOUS_RELAY = "ANONYMOUS-RELAY";
 
 const char * const QD_DYNAMIC_NODE_PROPERTY_ADDRESS = "x-opt-qd.address";

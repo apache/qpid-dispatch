@@ -18,6 +18,7 @@
  */
 
 #include "router_core_private.h"
+#include <qpid/dispatch/amqp.h>
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -31,6 +32,21 @@ ALLOC_DEFINE(qdr_connection_work_t);
 //==================================================================================
 // Internal Functions
 //==================================================================================
+
+qdr_terminus_t *qdr_terminus_router_control(void)
+{
+    qdr_terminus_t *term = qdr_terminus(0);
+    qdr_terminus_add_capability(term, QD_CAPABILITY_ROUTER_CONTROL);
+    return term;
+}
+
+
+qdr_terminus_t *qdr_terminus_router_data(void)
+{
+    qdr_terminus_t *term = qdr_terminus(0);
+    qdr_terminus_add_capability(term, QD_CAPABILITY_ROUTER_DATA);
+    return term;
+}
 
 
 //==================================================================================
@@ -96,7 +112,7 @@ void qdr_connection_process(qdr_connection_t *conn)
 
         switch (work->work_type) {
         case QDR_CONNECTION_WORK_FIRST_ATTACH :
-            core->first_attach_handler(core->user_context, conn, work->link, work->source, work->target, work->flags);
+            core->first_attach_handler(core->user_context, conn, work->link, work->source, work->target);
             break;
 
         case QDR_CONNECTION_WORK_SECOND_ATTACH :
@@ -218,8 +234,7 @@ static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
                                       qd_link_type_t    link_type,
                                       qd_direction_t    dir,
                                       qdr_terminus_t   *source,
-                                      qdr_terminus_t   *target,
-                                      uint32_t          flags)
+                                      qdr_terminus_t   *target)
 {
     //
     // Create a new link, initiated by the router core.  This will involve issuing a first-attach outbound.
@@ -239,7 +254,6 @@ static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     work->link      = link;
     work->source    = source;
     work->target    = target;
-    work->flags     = flags;
 
     qdr_connection_enqueue_work_CT(core, conn, work);
     return link;
@@ -279,10 +293,10 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             // The connector-side of inter-router connections is responsible for setting up the
             // inter-router links:  Two (in and out) for control, two for routed-message transfer.
             //
-            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, 0, 0, QDR_FLAGS_CAPABILITY_ROUTER_CONTROL);
-            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, 0, 0, QDR_FLAGS_CAPABILITY_ROUTER_CONTROL);
-            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, 0, 0, QDR_FLAGS_CAPABILITY_ROUTER_DATA);
-            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, 0, 0, QDR_FLAGS_CAPABILITY_ROUTER_DATA);
+            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), 0);
+            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, 0, qdr_terminus_router_control());
+            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), 0);
+            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, 0, qdr_terminus_router_data());
         }
     }
 
