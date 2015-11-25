@@ -20,6 +20,8 @@
  * under the License.
  */
 
-void management_agent_handler(void *context, qd_message_t *msg, int link_id);
+void qd_router_agent_on_message(void *context, qd_message_t *msg, int link_id);
+
+void qd_manage_response_handler(void *context, const qd_amqp_error_t *status, bool more);
 
 #endif

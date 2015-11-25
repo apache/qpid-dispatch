@@ -1917,8 +1917,9 @@ void qd_router_setup_late(qd_dispatch_t *qd)
     qd_timer_schedule(qd->router->timer, 1000);
 
     //Register the C management agent
-    qd_router_register_address(qd, CORE_AGENT_ADDRESS, management_agent_handler, (void *) qd, QD_SEMANTICS_DEFAULT, true, 0/*forwarder*/);
-    qd_router_register_address(qd, CORE_AGENT_ADDRESS, management_agent_handler, (void *) qd, QD_SEMANTICS_DEFAULT, false, 0/*forwarder*/);
+    qd_router_register_address(qd, CORE_AGENT_ADDRESS, qd_router_agent_on_message, (void *) qd, QD_SEMANTICS_DEFAULT, true, 0/*forwarder*/);
+    qd_router_register_address(qd, CORE_AGENT_ADDRESS, qd_router_agent_on_message, (void *) qd, QD_SEMANTICS_DEFAULT, false, 0/*forwarder*/);
+    qdr_manage_handler(qd->router->router_core, qd_manage_response_handler);
 }
 
 void qd_router_free(qd_router_t *router)

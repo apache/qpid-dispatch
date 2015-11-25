@@ -409,6 +409,7 @@ void qd_field_iterator_free(qd_field_iterator_t *iter)
 
 void qd_field_iterator_reset(qd_field_iterator_t *iter)
 {
+    if (!iter) return;
     iter->pointer = iter->view_start_pointer;
     iter->state   = iter->view_prefix ? STATE_AT_PREFIX : STATE_IN_ADDRESS;
 }
