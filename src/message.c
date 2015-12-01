@@ -319,13 +319,17 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
     int consume     = 0;
     unsigned char tag = next_octet(&test_cursor, &test_buffer);
     if (!test_cursor) return 0;
-    switch (tag) {
-    case 0x45 : // list0
-        break;
+    switch (tag & 0xF0) {
+    case 0x40:               break;
+    case 0x50: consume = 1;  break;
+    case 0x60: consume = 2;  break;
+    case 0x70: consume = 4;  break;
+    case 0x80: consume = 8;  break;
+    case 0x90: consume = 16; break;
 
-    case 0xd0 : // list32
-    case 0xd1 : // map32
-    case 0xb0 : // vbin32
+    case 0xB0:
+    case 0xD0:
+    case 0xF0:
         pre_consume += 3;
         consume |= ((int) next_octet(&test_cursor, &test_buffer)) << 24;
         if (!test_cursor) return 0;
@@ -335,9 +339,9 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
         if (!test_cursor) return 0;
         // Fall through to the next case...
 
-    case 0xc0 : // list8
-    case 0xc1 : // map8
-    case 0xa0 : // vbin8
+    case 0xA0:
+    case 0xC0:
+    case 0xE0:
         pre_consume += 1;
         consume |= (int) next_octet(&test_cursor, &test_buffer);
         if (!test_cursor) return 0;
