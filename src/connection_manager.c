@@ -62,7 +62,6 @@ struct qd_connection_manager_t {
     qd_config_connector_list_t   on_demand_connectors;
 };
 
-
 // True if entity has any of attributes.
 static bool has_attrs(qd_entity_t *entity, const char **attributes, int n) {
     for (int i = 0; i < n; ++i)
@@ -73,6 +72,7 @@ static bool has_attrs(qd_entity_t *entity, const char **attributes, int n) {
 static const char *ssl_attributes[] = {
   "certDb", "certFile", "keyFile", "passwordFile", "password"
 };
+
 static const int ssl_attributes_count = sizeof(ssl_attributes)/sizeof(ssl_attributes[0]);
 
 static void qd_server_config_free(qd_server_config_t *cf)
@@ -139,15 +139,16 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     bool depAllowUnsecured  = qd_entity_opt_bool(entity, "allowUnsecured", !requireSsl); CHECK();
 
     memset(config, 0, sizeof(*config));
-    config->host            = qd_entity_get_string(entity, "addr"); CHECK();
-    config->port            = qd_entity_get_string(entity, "port"); CHECK();
-    config->role            = qd_entity_get_string(entity, "role"); CHECK();
-    config->max_frame_size  = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
+    config->host                 = qd_entity_get_string(entity, "addr"); CHECK();
+    config->port                 = qd_entity_get_string(entity, "port"); CHECK();
+    config->role                 = qd_entity_get_string(entity, "role"); CHECK();
+    config->protocol_family      = qd_entity_opt_string(entity, "protocolFamily", 0); CHECK();
+    config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
     config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds"); CHECK();
-    config->sasl_username = qd_entity_opt_string(entity, "saslUsername", 0); CHECK();
-    config->sasl_password = qd_entity_opt_string(entity, "saslPassword", 0); CHECK();
-    config->sasl_mechanisms = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
-    config->ssl_enabled = has_attrs(entity, ssl_attributes, ssl_attributes_count);
+    config->sasl_username        = qd_entity_opt_string(entity, "saslUsername", 0); CHECK();
+    config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0); CHECK();
+    config->sasl_mechanisms      = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
+    config->ssl_enabled          = has_attrs(entity, ssl_attributes, ssl_attributes_count);
 
     //
     // For now we are hardwiring this attribute to true.  If there's an outcry from the

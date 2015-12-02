@@ -38,7 +38,7 @@ class RouterTest(TestCase):
             return [] # Over-ridden by RouterTestSsl
 
         def router(name, client_server, connection):
-            
+
             config = ssl_config(client_server, connection) + [
                 ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.%s'%name}),
                 ('router', {'mode': 'interior', 'routerId': 'QDR.%s'%name}),
@@ -46,37 +46,37 @@ class RouterTest(TestCase):
                 # Setting the stripAnnotations to 'no' so that the existing tests will work.
                 # Setting stripAnnotations to no will not strip the annotations and any tests that were already in this file
                 # that were expecting the annotations to not be stripped will continue working.
+                # No protocolFamily is specified for this listener.
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
-                
+
                 # The following listeners were exclusively added to test the stripAnnotations attribute in qdrouterd.conf file
                 # Different listeners will be used to test all allowed values of stripAnnotations ('no', 'both', 'out', 'in')
-                ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
-                ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'both'}),
-                ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'out'}),
-                ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'in'}),
-                
+                ('listener', {'addr': '127.0.0.1', 'protocolFamily': 'IPv4','port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
+                ('listener', {'addr': '::1', 'protocolFamily': 'IPv6', 'port': cls.tester.get_port(protocol_family='IPv6'), 'stripAnnotations': 'both'}),
+                ('listener', {'addr': '::1', 'protocolFamily': 'IPv6', 'port': cls.tester.get_port(protocol_family='IPv6'), 'stripAnnotations': 'out'}),
+                ('listener', {'addr': '::1', 'protocolFamily': 'IPv6', 'port': cls.tester.get_port(protocol_family='IPv6'), 'stripAnnotations': 'in'}),
+
                 ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
                 ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
                 ('fixedAddress', {'prefix': '/multicast/', 'fanout': 'multiple'}),
                 ('fixedAddress', {'prefix': '/', 'fanout': 'multiple'}),
                 connection
             ]
-            
+
             config = Qdrouterd.Config(config)
+
             cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
 
         cls.routers = []
-        
-        inter_router_port = cls.tester.get_port()
-        
-        router('A', 'server',
-               ('listener', {'role': 'inter-router', 'port': inter_router_port}))
-        router('B', 'client',
-               ('connector', {'role': 'inter-router', 'port': inter_router_port}))
 
+        inter_router_port = cls.tester.get_port(protocol_family='IPv6')
+
+        router('A', 'server',
+               ('listener', {'addr': '::1', 'role': 'inter-router', 'protocolFamily': 'IPv6', 'port': inter_router_port}))
+        router('B', 'client',
+               ('connector', {'addr': '::1', 'role': 'inter-router', 'protocolFamily': 'IPv6', 'port': inter_router_port}))
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')
-
 
     def test_00_discard(self):
         addr = self.routers[0].addresses[0]+"/discard/1"

@@ -142,12 +142,16 @@ void qdpn_driver_free(qdpn_driver_t *driver);
  * @param[in] driver driver that will 'own' this listener
  * @param[in] host local host address to listen on
  * @param[in] port local port to listen on
+ * @param[in] protocol family to use (IPv4 or IPv6)
  * @param[in] context application-supplied, can be accessed via
  *                    qdpn_listener_context()
  * @return a new listener on the given host:port, NULL if error
  */
-qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver, const char *host,
-                               const char *port, void* context);
+qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
+                               const char *host,
+                               const char *port,
+                               const char *protocol_family,
+                               void* context);
 
 /** Access the head listener for a driver.
  *
@@ -213,12 +217,16 @@ void qdpn_listener_free(qdpn_listener_t *listener);
  * @param[in] driver owner of this connection.
  * @param[in] host remote host to connect to.
  * @param[in] port remote port to connect to.
+ * @param[in] protocol family to use (IPv4 or IPv6).
  * @param[in] context application supplied, can be accessed via
  *                    qdpn_connector_context() @return a new connector
  *                    to the given remote, or NULL on error.
  */
-qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver, const char *host,
-                                 const char *port, void* context);
+qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver,
+                                 const char *host,
+                                 const char *port,
+                                 const char *protocol_family,
+                                 void* context);
 
 /** Access the head connector for a driver.
  *

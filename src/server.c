@@ -826,7 +826,7 @@ static void cxtr_try_open(void *context)
     sys_mutex_lock(ct->server->lock);
     // Increment the connection id so the next connection can use it
     ctx->connection_id = ct->server->next_connection_id++;
-    ctx->pn_cxtr = qdpn_connector(ct->server->driver, ct->config->host, ct->config->port, (void*) ctx);
+    ctx->pn_cxtr = qdpn_connector(ct->server->driver, ct->config->host, ct->config->port, ct->config->protocol_family, (void*) ctx);
     if (ctx->pn_cxtr) {
         DEQ_INSERT_TAIL(ct->server->connections, ctx);
         qd_entity_cache_add(QD_CONNECTION_TYPE, ctx);
@@ -1282,7 +1282,7 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
     li->server      = qd_server;
     li->config      = config;
     li->context     = context;
-    li->pn_listener = qdpn_listener(qd_server->driver, config->host, config->port, (void*) li);
+    li->pn_listener = qdpn_listener(qd_server->driver, config->host, config->port, config->protocol_family, (void*) li);
 
     if (!li->pn_listener) {
         free_qd_listener_t(li);

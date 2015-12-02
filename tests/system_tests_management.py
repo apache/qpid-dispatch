@@ -80,7 +80,7 @@ class ManagementTest(system_test.TestCase):
             ('listener', {'port':cls.get_port(), 'role':'normal'}),
             ('connector', {'port':conf1.sections('listener')[1]['port'], 'role':'inter-router'})
         ])
-        cls._routers = [cls.tester.qdrouterd(config=c, wait=False) for c in [conf0, conf1, conf2]]
+        cls._routers = [cls.tester.qdrouterd(config=c, wait=True) for c in [conf0, conf1, conf2]]
 
         # Standalone router for logging tests (avoid interfering with logging for other tests.)
         conflog=Qdrouterd.Config([
@@ -409,6 +409,7 @@ class ManagementTest(system_test.TestCase):
 
     def test_entity_names(self):
         nodes = [self.cleanup(Node.connect(Url(r.addresses[0]))) for r in self.routers]
+
         # Test that all entities have a consitent identity format: type/name
         entities = list(chain(
             *[n.query(attribute_names=['type', 'identity', 'name']).iter_entities() for n in nodes]))
