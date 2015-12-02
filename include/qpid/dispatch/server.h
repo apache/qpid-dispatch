@@ -248,6 +248,12 @@ typedef struct qd_server_config_t {
     char *port;
 
     /**
+     * Protocol family that the socket will use when binding listener or connector.
+     * Possible values are IPv4 or IPv6. If not specified, the protocol family will be automatically determined from the address
+     */
+    char *protocol_family;
+
+    /**
      * Space-separated list of SASL mechanisms to be accepted for the connection.
      */
     char *sasl_mechanisms;
