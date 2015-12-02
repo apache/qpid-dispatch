@@ -60,6 +60,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_one_router.py DESTINATION ${C
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_qdmanage.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_qdstat.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_two_routers.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_protocol_family.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_link_routes.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/run_system_tests.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_test.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
@@ -78,16 +79,17 @@ add_test(unit_tests_size_1     ${TEST_WRAP} --vg unit_tests_size 1)
 add_test(unit_tests            ${TEST_WRAP} --vg unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
 
 # Add all sytem_tests* using add_test
-add_test(router_tests             ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/router_engine_test.py -v)
-add_test(system_tests_broker      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_broker.py -v)
-add_test(system_tests_management  ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_management.py -v)
-add_test(system_tests_one_router  ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_one_router.py -v)
-add_test(system_tests_qdmanage    ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdmanage.py -v)
-add_test(system_tests_qdstat      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdstat.py -v)
-add_test(system_tests_two_routers ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_two_routers.py -v)
-add_test(system_tests_link_routes ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_link_routes.py -v)
-add_test(system_tests_sasl_plain  ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_sasl_plain.py -v)
-add_test(management_tests         ${TEST_WRAP} -m unittest -v management)
+add_test(router_tests                 ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/router_engine_test.py -v)
+add_test(system_tests_broker          ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_broker.py -v)
+add_test(system_tests_management      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_management.py -v)
+add_test(system_tests_one_router      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_one_router.py -v)
+add_test(system_tests_qdmanage        ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdmanage.py -v)
+add_test(system_tests_qdstat          ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdstat.py -v)
+add_test(system_tests_two_routers     ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_two_routers.py -v)
+add_test(system_tests_protocol_family ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_protocol_family.py -v)
+add_test(system_tests_link_routes     ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_link_routes.py -v)
+add_test(system_tests_sasl_plain      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_sasl_plain.py -v)
+add_test(management_tests             ${TEST_WRAP} -m unittest -v management)
 
 #macro(add_system_test test)
 #  add_test(${test} ${TEST_WRAP} -m ${test} -v)
@@ -102,6 +104,7 @@ set(SYSTEM_TEST_FILES
   ${CMAKE_CURRENT_BINARY_DIR}/system_test.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_one_router.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_two_routers.py
+  ${CMAKE_CURRENT_BINARY_DIR}/system_tests_protocol_family.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_broker.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_management.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdstat.py

@@ -58,6 +58,12 @@
 DEQ_DECLARE(qdpn_listener_t, qdpn_listener_list_t);
 DEQ_DECLARE(qdpn_connector_t, qdpn_connector_list_t);
 
+const char *protocol_family_ipv4 = "IPv4";
+const char *protocol_family_ipv6 = "IPv6";
+
+const char *AF_INET6_STR = "AF_INET6";
+const char *AF_INET_STR = "AF_INET";
+
 struct qdpn_driver_t {
     qd_log_source_t *log;
     pn_trace_t       trace;
@@ -232,8 +238,26 @@ static void qdpn_configure_sock(qdpn_driver_t *driver, int sock)
 }
 
 
-qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver, const char *host,
-                               const char *port, void* context)
+/**
+ * Sets the ai_family field on the addrinfo struct based on the passed in NON-NULL protocol_family.
+ * If the passed in protocol family does not match IPv6, IPv4, the function does not set the ai_family field
+ */
+static void qd_set_addr_ai_family(qdpn_driver_t *driver, struct addrinfo *addr, const char* protocol_family)
+{
+    if (protocol_family) {
+        if(strcmp(protocol_family, protocol_family_ipv6) == 0)
+            addr->ai_family = AF_INET6;
+        else if(strcmp(protocol_family, protocol_family_ipv4) == 0)
+            addr->ai_family = AF_INET;
+    }
+}
+
+
+qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
+                               const char *host,
+                               const char *port,
+                               const char *protocol_family,
+                               void* context)
 {
     if (!driver) return NULL;
 
@@ -243,6 +267,10 @@ qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver, const char *host,
         qd_log(driver->log, QD_LOG_ERROR, "getaddrinfo(%s, %s): %s\n", host, port, gai_strerror(code));
         return 0;
     }
+
+    // Set the protocol family before creating the socket.
+    qd_set_addr_ai_family(driver, addr, protocol_family);
+    qd_log(driver->log, QD_LOG_TRACE, "Set protocol family of port %s to: %s", port, protocol_family);
 
     int sock = qdpn_create_socket(addr->ai_family);
     if (sock < 0) {
@@ -428,8 +456,11 @@ static void qdpn_driver_remove_connector(qdpn_driver_t *d, qdpn_connector_t *c)
     sys_mutex_unlock(d->lock);
 }
 
-qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver, const char *host,
-                                 const char *port, void *context)
+qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver,
+                                 const char *host,
+                                 const char *port,
+                                 const char *protocol_family,
+                                 void *context)
 {
     if (!driver) return NULL;
 
@@ -439,6 +470,10 @@ qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver, const char *host,
         qd_log(driver->log, QD_LOG_ERROR, "getaddrinfo(%s, %s): %s", host, port, gai_strerror(code));
         return 0;
     }
+
+    // Set the protocol family before creating the socket.
+    qd_set_addr_ai_family(driver, addr, protocol_family);
+    qd_log(driver->log, QD_LOG_TRACE, "Set protocol family of port %s to: %s", port, protocol_family);
 
     int sock = qdpn_create_socket(addr->ai_family);
     if (sock == PN_INVALID_SOCKET) {
