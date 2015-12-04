@@ -23,33 +23,229 @@ Utilities for command-line programs.
 
 import sys, optparse, os
 import ConfigParser
-from collections import Sequence, Mapping
+from collections import Sequence, Mapping, namedtuple
 from qpid_dispatch_site import VERSION
 import pdb #; pdb.set_trace()
-#from traceback import format_exc
 import ast
+import socket
+import binascii
 
 
 
-"""Entity implementing the business logic of user connection/access policy.
+"""
+Entity implementing the business logic of user connection/access policy.
 
-Reading configuration files is treated as a set of CREATE operations.
+Policy is represented several ways:
 
-Provides interfaces for per-listener policy lookup:
+1. External       : ConfigParser-format file
+2. CRUD Interface : ConfigParser file section: name, [(name, value), ...]
+3. Internal       : dictionary
 
-- Listener accept
-- AMQP Open
+For example:
+
+1. External
+
+The External Policy is a plain ascii text file formatted for processing
+by ConfigParser.
+
+External Policy:
+----------------
+
+    [photoserver]
+    schemaVersion            : 1
+    policyVersion            : 1
+    roles: {
+      'users'           : ['u1', 'u2'],
+      'paidsubscribers' : ['p1', 'p2']
+      }
+
+2. CRUD Interface
+
+At the CRUD Create function the policy is represented by two strings:
+- name : name of the ConfigParser section
+- data : ConfigParser section as a string
+
+The CRUD Interface policy is created by ConfigParser.read(externalFile)
+and then iterating through the config parser sections.
+
+CRUD Interface Policy:
+----------------------
+
+    'photoserver', '[('schemaVersion', '1'), 
+                     ('policyVersion', '1'), 
+                     ('roles', "{\n
+                       'users'           : ['u1', 'u2'],\n
+                       'paidsubscribers' : ['p1', 'p2']\n}")]'
+
+3. Internal
+
+Internally the policy is stored in a python dictionary. 
+Policies are converted from CRUD Interface format to Internal format
+by a compilation phase. The compiler sanitizes the input and
+creates the nested structures needed for run-time processing.
+
+Internal Policy:
+----------------
+
+    data['photoserver'] = 
+    {'schemaVersion': 1, 
+     'roles': {'paidsubscribers': ['p1', 'p2'], 
+               'users': ['u1', 'u2']}, 
+     'policyVersion': 1}
+
 """
 
+#
+#
 class PolicyError(Exception):
     def __init__(self, value):
         self.value = value
     def __str__(self):
         return repr(self.value)
 
-
-class PolicyValidator():
+#
+#
+class HostAddr():
     """
+    Provide HostIP address ranges and comparison functions.
+    A HostIP may be:
+    - single address:      10.10.1.1
+    - a pair of addresses: 10.10.0.0,10.10.255.255
+    Only IPv4 and IPv6 are supported.
+    - No unix sockets.
+    HostIP names must resolve to a single IP address.
+    Address pairs define a range.
+    - The second address must be numerically larger than the first address.
+    - The addresses must be of the same address 'family', IPv4 or IPv6.
+    IPv6 support is conditional based on underlying OS network options.
+    Raises a PolicyError on validation error in constructor.
+    """
+    families = [socket.AF_INET]
+    famnames = ["IPv4"]
+    if socket.has_ipv6:
+        families.append(socket.AF_INET6)
+        famnames.append("IPv6")
+
+    HostStruct = namedtuple("HostStruct", "text family binary")
+
+    def has_ipv6(self):
+        return socket.has_ipv6
+
+    def parsehost(self, hostname):
+        """
+        @param[in] hostname host IP address to parse
+        @return HostStruct representing this host
+        """
+        try:
+            res = socket.getaddrinfo(hostname, 0)
+            if len(res) == 0:
+                raise PolicyError("HostAddr.parsehost: '%s' did not resolve to an IP address" % hostname)
+            foundFirst = False
+            saddr = ""
+            sfamily = socket.AF_UNSPEC
+            for i0 in range(0, len(res)):
+                family, dum0, dum1, dum2, sockaddr = res[i0]
+                if not foundFirst:
+                    if family in self.families:
+                        saddr = sockaddr[0]
+                        sfamily = family
+                        foundFirst = True
+                else:
+                    if family in self.families:
+                        if not saddr == sockaddr[0] or not sfamily == family:
+                            raise PolicyError("HostAddr.parsehost: '%s' resolves to multiple IP addresses" %
+                                              hostname)
+
+            if not foundFirst:
+                raise PolicyError("HostAddr.parsehost: '%s' did not resolve to one of the supported address family" %
+                        hostname)
+            packed = socket.inet_pton(family, saddr)
+            name = hostname
+            if not name == saddr:
+                name += "(" + saddr + ")"
+            return self.HostStruct(name, sfamily, packed)
+        except Exception, e:
+            raise PolicyError("HostAddr.parsehost: '%s' failed to resolve: '%s'" %
+                              (hostname, e))
+
+    def __init__(self, hostspec):
+        """
+        Parse host spec into binary structures to use for comparisons.
+        Validate the hostspec to enforce usage rules.
+        """
+        self.hoststructs = []
+
+        hosts = [x.strip() for x in hostspec.split(",")]
+
+        # hosts must contain one or two host specs
+        if len(hosts) not in [1, 2]:
+            raise PolicyError("hostspec must contain 1 or 2 host names")
+
+        self.hoststructs.append(self.parsehost(hosts[0]))
+        if len(hosts) > 1:
+            self.hoststructs.append(self.parsehost(hosts[1]))
+            if not self.hoststructs[0].family == self.hoststructs[1].family:
+                raise PolicyError("mixed IPv4 and IPv6 host specs in range not allowed")
+            c0 = self.memcmp(self.hoststructs[0].binary, self.hoststructs[1].binary)
+            if c0 > 0:
+                raise PolicyError("host specs in range must have lower numeric address first")
+
+    def __str__(self):
+        res = self.hoststructs[0].text
+        if len(self.hoststructs) > 1:
+            res += "," + self.hoststructs[1].text
+        return res
+
+    def __repr__(self):
+        return self.__str__()
+
+    def dumpstruct(self, hstruct):
+        return ("(%s, %s, %s)" %
+                (hstruct.text,
+                 "AF_INET" if hstruct.family == socket.AF_INET else "AF_INET6",
+                 binascii.hexlify(hstruct.binary)))
+
+    def dump(self):
+        res = "(" + self.dumpstruct(self.hoststructs[0])
+        if len(self.hoststructs) > 1:
+            res += "," + self.dumpstruct(self.hoststructs[1])
+        res += ")"
+        return res
+
+    def memcmp(self, a, b):
+        res = 0
+        for i in range(0,len(a)):
+            if a[i] > b[i]:
+                res = 1
+                break;
+            elif a[i] < b[i]:
+                res = -1
+                break
+        return res
+
+    def match(self, candidate):
+        """
+        Does the candidate match the IP or range of IP addresses represented by this?
+        @param[in] candidate the IP address to be tested
+        @return candidate matches this or not
+        """
+        try:
+            host = self.parsehost(candidate)
+            if not host.family == self.hoststructs[0].family:
+                # sorry, wrong AF_INET family
+                return False
+            c0 = self.memcmp(host.binary, self.hoststructs[0].binary)
+            if len(self.hoststructs) == 1:
+                return c0 == 0
+            c1 = self.memcmp(host.binary, self.hoststructs[1].binary)
+            return c0 >= 0 and c1 <= 0
+        except PolicyError:
+            return False
+#
+#
+class PolicyCompiler():
+    """
+    Compile CRUD Interface policy into Internal format.
     Validate incoming configuration for legal schema.
     - Warn about section options that go unused.
     - Disallow negative max connection numbers.
@@ -75,20 +271,22 @@ class PolicyValidator():
 
     allowed_opts = ()
     disallowed_opts = ()
-    validator = None
+    crud_compiler_fn = None
+
 
     def __init__(self, schema_version=1):
         """
         Create a validator for the given schema version.
         @param[in] schema_version version selector
         """
-        if schema_version != 1:
+        if schema_version == 1:
+            self.crud_compiler_fn = self.crud_compiler_v1
+        else:
             raise PolicyError(
                 "Illegal policy schema version %s. Must be '1'." % schema_version)
-        self.schema_version = schema_version
-        self.allowed_opts = self.schema_allowed_options[schema_version]
+        self.schema_version  = schema_version
+        self.allowed_opts    = self.schema_allowed_options[schema_version]
         self.disallowed_opts = self.schema_disallowed_options[schema_version]
-        self.validator = self.validate_v1
 
 
     def validateNumber(self, val, v_min, v_max, errors):
@@ -115,15 +313,102 @@ class PolicyValidator():
         return True
 
 
-    def validate_v1(self, name, policy_in, policy_out, warnings, errors):
+    def crud_compiler_v1_origins(self, name, submap, warnings, errors):
         """
-        Validate a schema.
-        @param[in] name - application name
-        @param[in] policy_in - section from ConfigParser as a list of tuples
-        @param[out] policy_out - validated policy as nested map
-        @param[out] warnings - nonfatal irregularities observed
-        @param[out] errors - descriptions of failure
-        @return - policy is usable
+        Handle an origins submap from a CRUD Interface request.
+        Each origin value is verified. On a successful run the submap
+        is replaced parsed lists of HostAddr objects.
+        @param[in] name application name
+        @param[in] submap CRUD Interface policy
+        @param[out] warnings nonfatal irregularities observed
+        @param[out] errors descriptions of failure
+        @return - origins is usable. If True then warnings[] may contain useful
+                  information about fields that are ignored. If False then
+                  warnings[] may contain info and errors[0] will hold the
+                  description of why the origin was rejected.
+        """
+        key = "connectionOrigins"
+        newmap = {}
+        for coname in submap:
+            try:
+                olist = submap[coname]
+                if not type(olist) is list:
+                    errors.append("Application '%s' option '%s' connectionOption '%s' must be type 'list' but is '%s'." %
+                                    (name, key, coname, type(olist)))
+                    return False
+                newmap[coname] = []
+                for co in olist:
+                    coha = HostAddr(co)
+                    newmap[coname].append(coha)
+            except Exception, e:
+                errors.append("Application '%s' option '%s' connectionOption '%s' failed to translate: '%s'." %
+                                (name, key, coname, e))
+                return False
+        submap.update(newmap)
+        return True
+
+
+    def crud_compiler_v1_policies(self, name, submap, warnings, errors):
+        """
+        Handle a policies submap from a CRUD Interface request.
+        Validates policy only returning warnings and errors. submap is unchanged
+        @param[in] name application name
+        @param[in] submap CRUD Interface policy
+        @param[out] warnings nonfatal irregularities observed
+        @param[out] errors descriptions of failure
+        @return - policy is usable. If True then warnings[] may contain useful
+                  information about fields that are ignored. If False then
+                  warnings[] may contain info and errors[0] will hold the
+                  description of why the policy was rejected.
+        """
+        key = "policies"
+        cerror = []
+        for pname in submap:
+            for setting in submap[pname]:
+                sval = submap[pname][setting]
+                if setting in ['max_frame_size',
+                               'max_message_size',
+                               'max_receivers',
+                               'max_senders',
+                               'max_session_window',
+                               'max_sessions'
+                               ]:
+                    if not self.validateNumber(sval, 0, 0, cerror):
+                        errors.append("Application '%s' option '%s' policy '%s' setting '%s' has error '%s'." %
+                                      (name, key, pname, setting, cerror[0]))
+                        return False
+                elif setting in ['allow_anonymous_sender',
+                                 'allow_dynamic_src'
+                                 ]:
+                    if not type(sval) is bool:
+                        errors.append("Application '%s' option '%s' policy '%s' setting '%s' has illegal boolean value '%s'." %
+                                      (name, key, pname, setting, sval))
+                        return False
+                elif setting in ['sources',
+                                 'targets'
+                                 ]:
+                    if not type(sval) is list:
+                        errors.append("Application '%s' option '%s' policy '%s' setting '%s' must be type 'list' but is '%s'." %
+                                      (name, key, pname, setting, type(sval)))
+                        return False
+                else:
+                    warnings.append("Application '%s' option '%s' policy '%s' setting '%s' is ignored." %
+                                     (name, key, pname, setting))
+        return True
+
+
+    def crud_compiler_v1(self, name, policy_in, policy_out, warnings, errors):
+        """
+        Compile a schema from CRUD format to Internal format.
+        @param[in] name application name
+        @param[in] policy_in CRUD Interface policy
+        @param[out] policy_out validated Internal format
+        @param[out] warnings nonfatal irregularities observed
+        @param[out] errors descriptions of failure
+        @return - policy is usable. If True then warnings[] may contain useful
+                  information about fields that are ignored. If False then
+                  warnings[] may contain info and errors[0] will hold the
+                  description of why the policy was rejected.
         """
         cerror = []
         # validate the options
@@ -168,53 +453,29 @@ class PolicyValidator():
                         errors.append("Application '%s' option '%s' must be of type 'dict' but is '%s'" %
                                       (name, key, type(submap)))
                         return False
+                    if key == "connectionOrigins":
+                        if not self.crud_compiler_v1_origins(name, submap, warnings, errors):
+                            return False
                     if key == "policies":
-                        for pname in submap:
-                            for setting in submap[pname]:
-                                sval = submap[pname][setting]
-                                if setting in ['max_frame_size',
-                                               'max_message_size',
-                                               'max_receivers',
-                                               'max_senders',
-                                               'max_session_window',
-                                               'max_sessions'
-                                               ]:
-                                    if not self.validateNumber(sval, 0, 0, cerror):
-                                        errors.append("Application '%s' option '%s' policy '%s' setting '%s' has error '%s'." %
-                                                      (name, key, pname, setting, cerror[0]))
-                                        return False
-                                elif setting in ['allow_anonymous_sender',
-                                                 'allow_dynamic_src'
-                                                 ]:
-                                    if not type(sval) is bool:
-                                        errors.append("Application '%s' option '%s' policy '%s' setting '%s' has illegal boolean value '%s'." %
-                                                      (name, key, pname, setting, sval))
-                                        return False
-                                elif setting in ['sources',
-                                                 'targets'
-                                                 ]:
-                                    if not type(sval) is list:
-                                        errors.append("Application '%s' option '%s' policy '%s' setting '%s' must be type 'list' but is '%s'." %
-                                                      (name, key, pname, setting, type(sval)))
-                                        return False
-                                else:
-                                    warnings.append("Application '%s' option '%s' policy '%s' setting '%s' is ignored." %
-                                                      (name, key, pname, setting))
+                        if not self.crud_compiler_v1_policies(name, submap, warnings, errors):
+                            return False
                     policy_out[key] = submap
                 except Exception, e:
-                    errors.append("Application '%s' option '%s' error processing  %s map: %s" %
+                    errors.append("Application '%s' option '%s' error processing map: %s" %
                                   (name, key, e))
                     return False
         return True
 
 
 class Policy():
-    """The policy database."""
+    """
+    The policy database.
+    """
 
     data = {}
     folder = "."
     schema_version = 1
-    validator = None
+    policy_compiler = None
 
     def __init__(self, folder=".", schema_version=1):
         """
@@ -223,7 +484,7 @@ class Policy():
         """
         self.folder = folder
         self.schema_version = schema_version
-        self.validator = PolicyValidator(schema_version)
+        self.policy_compiler = PolicyCompiler(schema_version)
         self.policy_io_read_files()
 
     #
@@ -260,20 +521,20 @@ class Policy():
             warnings = []
             diag = []
             candidate = {}
-            if not self.validator.validator(policy, cp.items(policy), candidate, warnings, diag):
+            if not self.policy_compiler.crud_compiler_fn(policy, cp.items(policy), candidate, warnings, diag):
                 msg = "Policy file '%s' is invalid: %s" % (fn, diag[0])
                 raise PolicyError( msg )
             if len(warnings) > 0:
                 print ("LogMe: Policy file '%s' application '%s' has warnings: %s" %
                        (fn, policy, warnings))
             newpolicies[policy] = candidate
-        for newpol in newpolicies:
-            self.data[newpol] = newpolicies[newpol]
+
+        self.data.update(newpolicies)
 
     #
     # CRUD interface
     #
-    def policy_create(self, name, policy, validate=True):
+    def policy_create(self, name, policy):
         """
         Create named policy
         @param name: policy name
@@ -282,8 +543,8 @@ class Policy():
         warnings = []
         diag = []
         candidate = {}
-        result = self.validator.validator(name, policy, candidate, warnings, diag)
-        if validate and not result:
+        result = self.policy_compiler.crud_compiler_fn(name, policy, candidate, warnings, diag)
+        if not result:
             raise PolicyError( "Policy '%s' is invalid: %s" % (name, diag[0]) )
         if len(warnings) > 0:
             print ("LogMe: Application '%s' has warnings: %s" %
@@ -310,6 +571,10 @@ class Policy():
         return self.data.keys()
 
 
+    #
+    # Runtime query interface
+    #
+    
 #
 # HACK ALERT: Temporary
 # Functions related to main
@@ -340,14 +605,6 @@ def main_except(argv):
             print("policy : %s" % pname)
             p = ("%s" % policy.policy_read(pname))
             print(p.replace('\\n', '\n'))
-
-    newpolicy = [('versionId', 3), ('maximumConnections', '20')]
-    policy.policy_create('test', newpolicy)
-
-    print("policy names with test: %s" % policy.policy_db_get_names())
-
-    print("policy test data:")
-    print(policy.policy_read('test'))
 
 def main(argv):
     try:
