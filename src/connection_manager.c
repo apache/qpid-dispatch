@@ -194,8 +194,10 @@ void qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
     load_server_config(qd, &cl->configuration, entity);
     DEQ_ITEM_INIT(cl);
     DEQ_INSERT_TAIL(cm->config_listeners, cl);
-    qd_log(cm->log_source, QD_LOG_INFO, "Configured Listener: %s:%s role=%s",
-           cl->configuration.host, cl->configuration.port, cl->configuration.role);
+    qd_log(cm->log_source, QD_LOG_INFO, "Configured Listener: %s:%s proto=%s role=%s",
+           cl->configuration.host, cl->configuration.port,
+           cl->configuration.protocol_family ? cl->configuration.protocol_family : "any",
+           cl->configuration.role);
 }
 
 
@@ -216,8 +218,10 @@ qd_error_t qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entit
                cc->configuration.host, cc->configuration.port, cc->connector_name);
     } else {
         DEQ_INSERT_TAIL(cm->config_connectors, cc);
-        qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",
-               cc->configuration.host, cc->configuration.port, cc->configuration.role);
+        qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s proto=%s role=%s",
+               cc->configuration.host, cc->configuration.port,
+               cc->configuration.protocol_family ? cc->configuration.protocol_family : "any",
+               cc->configuration.role);
     }
     return QD_ERROR_NONE;
 }

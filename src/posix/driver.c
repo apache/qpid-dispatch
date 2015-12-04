@@ -270,7 +270,6 @@ qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
 
     // Set the protocol family before creating the socket.
     qd_set_addr_ai_family(driver, addr, protocol_family);
-    qd_log(driver->log, QD_LOG_TRACE, "Set protocol family of port %s to: %s", port, protocol_family);
 
     int sock = qdpn_create_socket(addr->ai_family);
     if (sock < 0) {
@@ -473,7 +472,6 @@ qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver,
 
     // Set the protocol family before creating the socket.
     qd_set_addr_ai_family(driver, addr, protocol_family);
-    qd_log(driver->log, QD_LOG_TRACE, "Set protocol family of port %s to: %s", port, protocol_family);
 
     int sock = qdpn_create_socket(addr->ai_family);
     if (sock == PN_INVALID_SOCKET) {
