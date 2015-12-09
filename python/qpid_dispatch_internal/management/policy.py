@@ -212,9 +212,9 @@ class HostAddr():
                 raise PolicyError("host specs in range must have lower numeric address first")
 
     def __str__(self):
-        res = self.hoststructs[0].text
+        res = self.hoststructs[0].name
         if len(self.hoststructs) > 1:
-            res += "," + self.hoststructs[1].text
+            res += "," + self.hoststructs[1].name
         return res
 
     def __repr__(self):
@@ -272,6 +272,16 @@ class HostAddr():
             return False
         return self.match_bin(hoststruct)
 
+
+#
+#
+class PolicyKeys():
+    # Internal policy key words
+    KW_POLICY_VERSION = "policyVersion"
+    KW_SCHEMA_VERSION = "schemaVersion"
+
+
+
 #
 #
 class PolicyCompiler():
@@ -292,9 +302,9 @@ class PolicyCompiler():
         'maximumConnectionsPerHost',
         'maximumConnectionsPerUser',
         'policies',
-        'policyVersion',
+        PolicyKeys.KW_POLICY_VERSION,
         'roles',
-        'schemaVersion')
+        PolicyKeys.KW_SCHEMA_VERSION)
         ]
     schema_disallowed_options = [(),
         ()
@@ -451,13 +461,13 @@ class PolicyCompiler():
                 errors.append("Application '%s' option '%s' is disallowed." %
                               (name, key))
                 return False
-            if key == "schemaVersion":
+            if key == PolicyKeys.KW_SCHEMA_VERSION:
                 if not int(self.schema_version) == int(val):
                     errors.append("Application '%s' expected schema version '%s' but is '%s'." %
                                   (name, self.schema_version, val))
                     return False
                 policy_out[key] = val
-            if key == "policyVersion":
+            if key == PolicyKeys.KW_POLICY_VERSION:
                 if not self.validateNumber(val, 0, 0, cerror):
                     errors.append("Application '%s' option '%s' must resolve to a positive integer: '%s'." %
                                     (name, key, cerror[0]))
@@ -559,8 +569,29 @@ class Policy():
                 print ("LogMe: Policy file '%s' application '%s' has warnings: %s" %
                        (fn, policy, warnings))
             newpolicies[policy] = candidate
-
+        # Log a warning if policy from one config file replaces another.
+        # TODO: Should this throw?
+        for c in newpolicies:
+            c_ver = 0
+            e_ver = 0
+            c_pol = newpolicies[c]
+            if PolicyKeys.KW_POLICY_VERSION in c_pol:
+                c_ver = int(c_pol[PolicyKeys.KW_POLICY_VERSION])
+            if c in self.data:
+                e_pol = self.data[c]
+                if PolicyKeys.KW_POLICY_VERSION in e_pol:
+                    e_ver = int(e_pol[PolicyKeys.KW_POLICY_VERSION])
+                if c_ver < e_ver:
+                    kw = "downgrades"
+                elif c_ver == e_ver:
+                    kw = "replaces"
+                else:
+                    kw = "upgrades"
+                msg = ("LogMe: WARNING Policy file '%s' application '%s' policy version '%s' %s existing policy version '%s'." %
+                    (fn, c, c_ver, kw, e_ver))
+                print msg
         self.data.update(newpolicies)
+
 
     #
     # CRUD interface
