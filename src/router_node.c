@@ -296,6 +296,7 @@ static int qd_router_terminus_is_router(pn_terminus_t *term)
 /**
  * If the terminus has a dynamic-node-property for a node address,
  * return an iterator for the content of that property.
+ * DEPRECATE
  */
 static const char *qd_router_terminus_dnp_address(pn_terminus_t *term)
 {
@@ -323,6 +324,7 @@ static const char *qd_router_terminus_dnp_address(pn_terminus_t *term)
 /**
  * Generate a temporary routable address for a destination connected to this
  * router node.
+ * DEPRECATE
  */
 static void qd_router_generate_temp_addr(qd_router_t *router, char *buffer, size_t length)
 {
@@ -373,6 +375,9 @@ static int qd_router_find_mask_bit_LH(qd_router_t *router, qd_link_t *link)
 }
 
 
+/**
+ * DEPRECATE
+ */
 static qd_address_t *router_lookup_terminus_LH(qd_router_t *router, const char *taddr, qd_direction_t dir)
 {
     char                 addr_prefix = (dir == QD_INCOMING) ? 'C' : 'D';

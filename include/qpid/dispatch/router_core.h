@@ -94,8 +94,7 @@ typedef enum {
     QD_LINK_ENDPOINT,   ///< A link to a connected endpoint
     QD_LINK_WAYPOINT,   ///< A link to a configured waypoint
     QD_LINK_CONTROL,    ///< A link to a peer router for control messages
-    QD_LINK_ROUTER,     ///< A link to a peer router for routed messages
-    QD_LINK_AREA        ///< A link to a peer router in a different area (area boundary)
+    QD_LINK_ROUTER      ///< A link to a peer router for routed messages
 } qd_link_type_t;
 ENUM_DECLARE(qd_link_type);
 
@@ -232,6 +231,48 @@ void qdr_terminus_add_capability(qdr_terminus_t *term, const char *capability);
  * @return true iff the capability is advertised for this terminus
  */
 bool qdr_terminus_has_capability(qdr_terminus_t *term, const char *capability);
+
+/**
+ * qdr_terminus_is_anonymous
+ *
+ * Indicate whether this terminus represents an anonymous endpoint.
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @return true iff the terminus is anonymous
+ */
+bool qdr_terminus_is_anonymous(qdr_terminus_t *term);
+
+/**
+ * qdr_terminus_is_dynamic
+ *
+ * Indicate whether this terminus represents a dynamic endpoint.
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @return true iff the terminus is dynamic
+ */
+bool qdr_terminus_is_dynamic(qdr_terminus_t *term);
+
+/**
+ * qdr_terminus_get_address
+ *
+ * Return the address of the terminus in the form of an iterator.
+ * The iterator is borrowed, the caller must not free the iterator.
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @return A pointer to an iterator or 0 if the terminus is anonymous.
+ */
+qd_field_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term);
+
+/**
+ * qdr_terminus_dnp_address
+ *
+ * Return the address field in the dynamic-node-properties if it is there.
+ * This iterator is given, the caller must free it when it is no longer needed.
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @return A pointer to an iterator or 0 if there is no such field.
+ */
+qd_field_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term);
 
 
 /**

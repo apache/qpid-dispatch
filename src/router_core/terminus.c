@@ -46,7 +46,10 @@ qdr_terminus_t *qdr_terminus(pn_terminus_t *pn)
     term->capabilities = pn_data(0);
 
     if (pn) {
-        term->address           = qdr_field(pn_terminus_get_address(pn));
+        const char *addr = pn_terminus_get_address(pn);
+        if (addr && *addr)
+            term->address = qdr_field(addr);
+
         term->durability        = pn_terminus_get_durability(pn);
         term->expiry_policy     = pn_terminus_get_expiry_policy(pn);
         term->timeout           = pn_terminus_get_timeout(pn);
@@ -118,4 +121,49 @@ bool qdr_terminus_has_capability(qdr_terminus_t *term, const char *capability)
 
     return false;
 }
+
+
+bool qdr_terminus_is_anonymous(qdr_terminus_t *term)
+{
+    return term == 0 || term->address == 0;
+}
+
+
+bool qdr_terminus_is_dynamic(qdr_terminus_t *term)
+{
+    return term->dynamic;
+}
+
+
+qd_field_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term)
+{
+    if (qdr_terminus_is_anonymous(term))
+        return 0;
+
+    return term->address->iterator;
+}
+
+
+qd_field_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term)
+{
+    pn_data_t *props = term->properties;
+
+    if (!props)
+        return 0;
+
+    pn_data_rewind(props);
+    if (pn_data_next(props) && pn_data_enter(props) && pn_data_next(props)) {
+        pn_bytes_t sym = pn_data_get_symbol(props);
+        if (sym.start && strcmp(QD_DYNAMIC_NODE_PROPERTY_ADDRESS, sym.start) == 0) {
+            if (pn_data_next(props)) {
+                pn_bytes_t val = pn_data_get_string(props);
+                if (val.start && *val.start != '\0')
+                    return qd_field_iterator_string(val.start);
+            }
+        }
+    }
+
+    return 0;
+}
+
 

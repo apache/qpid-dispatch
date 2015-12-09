@@ -162,6 +162,7 @@ struct qdr_link_t {
     qdr_connection_t         *conn;            ///< [ref] Connection that owns this link
     qd_link_type_t            link_type;
     qd_direction_t            link_direction;
+    qdr_address_t            *addr;            ///< [ref] Associated address record
     qdr_address_t            *owning_addr;     ///< [ref] Address record that owns this link
     //qd_waypoint_t            *waypoint;        ///< [ref] Waypoint that owns this link
     qdr_link_t               *connected_link;  ///< [ref] If this is a link-route, reference the connected link
