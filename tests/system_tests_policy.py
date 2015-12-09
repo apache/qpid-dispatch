@@ -30,7 +30,7 @@ from proton.utils import BlockingConnection, LinkDetached
 from qpid_dispatch.management.client import Node
 from system_test import TIMEOUT
 
-from qpid_dispatch_internal.management.policy import Policy, HostAddr, PolicyError
+from qpid_dispatch_internal.management.policy import Policy, HostAddr, PolicyError, HostStruct
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
@@ -82,23 +82,34 @@ class PolicyHostAddrTest(TestCase):
     def expect_deny(self, badhostname, msg):
         denied = False
         try:
-            xxx = HostAddr(badhostname)
+            xxx = HostStruct(badhostname)
         except PolicyError:
             denied = True
-        self.assertTrue(denied) # msg
+        self.assertTrue(denied, ("%s" % msg))
+
+    def check_hostaddr_match(self, tHostAddr, tString, expectOk=True):
+        # check that the string is a match for the addr
+        # check that the internal struct version matches, too
+        ha = HostStruct(tString)
+        if expectOk:
+            self.assertTrue( tHostAddr.match_str(tString) )
+            self.assertTrue( tHostAddr.match_bin(ha) )
+        else:
+            self.assertFalse( tHostAddr.match_str(tString) )
+            self.assertFalse( tHostAddr.match_bin(ha) )
 
     def test_policy_hostaddr_ipv4(self):
         # Create simple host and range
         aaa = HostAddr("192.168.1.1")
         bbb = HostAddr("1.1.1.1,1.1.1.255")
         # Verify host and range
-        self.assertTrue ( aaa.match("192.168.1.1") )
-        self.assertFalse( aaa.match("1.1.1.1") )
-        self.assertFalse( aaa.match("192.168.1.2") )
-        self.assertTrue ( bbb.match("1.1.1.1") )
-        self.assertTrue ( bbb.match("1.1.1.254") )
-        self.assertFalse( bbb.match("1.1.1.0") )
-        self.assertFalse( bbb.match("1.1.2.0") )
+        self.check_hostaddr_match(aaa, "192.168.1.1")
+        self.check_hostaddr_match(aaa, "1.1.1.1", False)
+        self.check_hostaddr_match(aaa, "192.168.1.2", False)
+        self.check_hostaddr_match(bbb, "1.1.1.1")
+        self.check_hostaddr_match(bbb, "1.1.1.254")
+        self.check_hostaddr_match(bbb, "1.1.1.0", False)
+        self.check_hostaddr_match(bbb, "1.1.2.0", False)
 
     def test_policy_hostaddr_ipv6(self):
         if not HostAddr.has_ipv6:
@@ -108,17 +119,17 @@ class PolicyHostAddrTest(TestCase):
         bbb = HostAddr("::1,::ffff")
         ccc = HostAddr("ffff::0,ffff:ffff::0")
         # Verify host and range
-        self.assertTrue ( aaa.match("::1") )
-        self.assertFalse( aaa.match("::2") )
-        self.assertFalse( aaa.match("ffff:ffff::0") )
-        self.assertTrue ( bbb.match("::1") )
-        self.assertTrue ( bbb.match("::fffe") )
-        self.assertFalse( bbb.match("::1:0") )
-        self.assertFalse( bbb.match("ffff::0") )
-        self.assertTrue ( ccc.match("ffff::1") )
-        self.assertTrue ( ccc.match("ffff:fffe:ffff:ffff::ffff") )
-        self.assertFalse( ccc.match("ffff:ffff:1") )
-        self.assertFalse( ccc.match("ffff:ffff:ffff:ffff::ffff") )
+        self.check_hostaddr_match(aaa, "::1")
+        self.check_hostaddr_match(aaa, "::2", False)
+        self.check_hostaddr_match(aaa, "ffff:ffff::0", False)
+        self.check_hostaddr_match(bbb, "::1")
+        self.check_hostaddr_match(bbb, "::fffe")
+        self.check_hostaddr_match(bbb, "::1:0", False)
+        self.check_hostaddr_match(bbb, "ffff::0", False)
+        self.check_hostaddr_match(ccc, "ffff::1")
+        self.check_hostaddr_match(ccc, "ffff:fffe:ffff:ffff::ffff")
+        self.check_hostaddr_match(ccc, "ffff:ffff::1", False)
+        self.check_hostaddr_match(ccc, "ffff:ffff:ffff:ffff::ffff", False)
 
     def test_policy_malformed_hostaddr_ipv4(self):
         self.expect_deny( "0.0.0.0.0", "Name or service not known")

@@ -105,6 +105,72 @@ class PolicyError(Exception):
 
 #
 #
+class HostStruct():
+    """
+    HostStruct represents a single, binary socket address from getaddrinfo
+        - name     : name given to constructor, numeric IP or host name
+        - saddr    : net name resolved by getaddrinfo, numeric IP
+        - family   : saddr.family, int
+        - binary   : saddr packed binary address, binary string
+    """
+    families = [socket.AF_INET]
+    famnames = ["IPv4"]
+    if socket.has_ipv6:
+        families.append(socket.AF_INET6)
+        famnames.append("IPv6")
+
+    def __init__(self, hostname):
+        """
+        Given a host name text string, return the socket info for it.
+        @param[in] hostname host IP address to parse
+        """
+        try:
+            res = socket.getaddrinfo(hostname, 0)
+            if len(res) == 0:
+                raise PolicyError("HostStruct: '%s' did not resolve to an IP address" % hostname)
+            foundFirst = False
+            saddr = ""
+            sfamily = socket.AF_UNSPEC
+            for i0 in range(0, len(res)):
+                family, dum0, dum1, dum2, sockaddr = res[i0]
+                if not foundFirst:
+                    if family in self.families:
+                        saddr = sockaddr[0]
+                        sfamily = family
+                        foundFirst = True
+                else:
+                    if family in self.families:
+                        if not saddr == sockaddr[0] or not sfamily == family:
+                            raise PolicyError("HostStruct: '%s' resolves to multiple IP addresses" %
+                                              hostname)
+
+            if not foundFirst:
+                raise PolicyError("HostStruct: '%s' did not resolve to one of the supported address family" %
+                        hostname)
+            self.name = hostname
+            self.saddr = saddr
+            self.family = sfamily
+            self.binary = socket.inet_pton(family, saddr)
+            return
+        except Exception, e:
+            raise PolicyError("HostStruct: '%s' failed to resolve: '%s'" %
+                              (hostname, e))
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.__str__()
+
+    def dump(self):
+        return ("(%s, %s, %s, %s)" %
+                (self.name,
+                 self.saddr,
+                 "AF_INET" if self.family == socket.AF_INET else "AF_INET6",
+                 binascii.hexlify(self.binary)))
+
+#
+#
 class HostAddr():
     """
     Provide HostIP address ranges and comparison functions.
@@ -120,53 +186,9 @@ class HostAddr():
     IPv6 support is conditional based on underlying OS network options.
     Raises a PolicyError on validation error in constructor.
     """
-    families = [socket.AF_INET]
-    famnames = ["IPv4"]
-    if socket.has_ipv6:
-        families.append(socket.AF_INET6)
-        famnames.append("IPv6")
-
-    HostStruct = namedtuple("HostStruct", "text family binary")
 
     def has_ipv6(self):
         return socket.has_ipv6
-
-    def parsehost(self, hostname):
-        """
-        @param[in] hostname host IP address to parse
-        @return HostStruct representing this host
-        """
-        try:
-            res = socket.getaddrinfo(hostname, 0)
-            if len(res) == 0:
-                raise PolicyError("HostAddr.parsehost: '%s' did not resolve to an IP address" % hostname)
-            foundFirst = False
-            saddr = ""
-            sfamily = socket.AF_UNSPEC
-            for i0 in range(0, len(res)):
-                family, dum0, dum1, dum2, sockaddr = res[i0]
-                if not foundFirst:
-                    if family in self.families:
-                        saddr = sockaddr[0]
-                        sfamily = family
-                        foundFirst = True
-                else:
-                    if family in self.families:
-                        if not saddr == sockaddr[0] or not sfamily == family:
-                            raise PolicyError("HostAddr.parsehost: '%s' resolves to multiple IP addresses" %
-                                              hostname)
-
-            if not foundFirst:
-                raise PolicyError("HostAddr.parsehost: '%s' did not resolve to one of the supported address family" %
-                        hostname)
-            packed = socket.inet_pton(family, saddr)
-            name = hostname
-            if not name == saddr:
-                name += "(" + saddr + ")"
-            return self.HostStruct(name, sfamily, packed)
-        except Exception, e:
-            raise PolicyError("HostAddr.parsehost: '%s' failed to resolve: '%s'" %
-                              (hostname, e))
 
     def __init__(self, hostspec):
         """
@@ -180,10 +202,9 @@ class HostAddr():
         # hosts must contain one or two host specs
         if len(hosts) not in [1, 2]:
             raise PolicyError("hostspec must contain 1 or 2 host names")
-
-        self.hoststructs.append(self.parsehost(hosts[0]))
+        self.hoststructs.append(HostStruct(hosts[0]))
         if len(hosts) > 1:
-            self.hoststructs.append(self.parsehost(hosts[1]))
+            self.hoststructs.append(HostStruct(hosts[1]))
             if not self.hoststructs[0].family == self.hoststructs[1].family:
                 raise PolicyError("mixed IPv4 and IPv6 host specs in range not allowed")
             c0 = self.memcmp(self.hoststructs[0].binary, self.hoststructs[1].binary)
@@ -199,16 +220,10 @@ class HostAddr():
     def __repr__(self):
         return self.__str__()
 
-    def dumpstruct(self, hstruct):
-        return ("(%s, %s, %s)" %
-                (hstruct.text,
-                 "AF_INET" if hstruct.family == socket.AF_INET else "AF_INET6",
-                 binascii.hexlify(hstruct.binary)))
-
     def dump(self):
-        res = "(" + self.dumpstruct(self.hoststructs[0])
+        res = "(" + self.hoststructs[0].dump()
         if len(self.hoststructs) > 1:
-            res += "," + self.dumpstruct(self.hoststructs[1])
+            res += "," + self.hoststructs[1].dump()
         res += ")"
         return res
 
@@ -223,24 +238,40 @@ class HostAddr():
                 break
         return res
 
-    def match(self, candidate):
+    def match_bin(self, cstruct):
         """
-        Does the candidate match the IP or range of IP addresses represented by this?
+        Does the candidate hoststruct match the IP or range of IP addresses represented by this?
+        @param[in] cstruct the IP address to be tested
+        @return candidate matches this or not
+        """
+        try:
+            if not cstruct.family == self.hoststructs[0].family:
+                # sorry, wrong AF_INET family
+                return False
+            c0 = self.memcmp(cstruct.binary, self.hoststructs[0].binary)
+            if len(self.hoststructs) == 1:
+                return c0 == 0
+            c1 = self.memcmp(cstruct.binary, self.hoststructs[1].binary)
+            return c0 >= 0 and c1 <= 0
+        except PolicyError:
+            return False
+        except Exception, e:
+            assert isinstance(cstruct, HostStruct), \
+                ("Wrong type. Expected HostStruct but received %s" % cstruct.__class__.__name__)
+            return False
+
+    def match_str(self, candidate):
+        """
+        Does the candidate string match the IP or range represented by this?
         @param[in] candidate the IP address to be tested
         @return candidate matches this or not
         """
         try:
-            host = self.parsehost(candidate)
-            if not host.family == self.hoststructs[0].family:
-                # sorry, wrong AF_INET family
-                return False
-            c0 = self.memcmp(host.binary, self.hoststructs[0].binary)
-            if len(self.hoststructs) == 1:
-                return c0 == 0
-            c1 = self.memcmp(host.binary, self.hoststructs[1].binary)
-            return c0 >= 0 and c1 <= 0
+            hoststruct = HostStruct(candidate)
         except PolicyError:
             return False
+        return self.match_bin(hoststruct)
+
 #
 #
 class PolicyCompiler():
