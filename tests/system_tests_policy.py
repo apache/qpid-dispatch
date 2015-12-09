@@ -131,6 +131,21 @@ class PolicyHostAddrTest(TestCase):
         self.check_hostaddr_match(ccc, "ffff:ffff::1", False)
         self.check_hostaddr_match(ccc, "ffff:ffff:ffff:ffff::ffff", False)
 
+    def test_policy_hostaddr_ipv4_wildcard(self):
+        aaa = HostAddr("*")
+        self.check_hostaddr_match(aaa,"0.0.0.0")
+        self.check_hostaddr_match(aaa,"127.0.0.1")
+        self.check_hostaddr_match(aaa,"255.254.253.252")
+
+
+    def test_policy_hostaddr_ipv6_wildcard(self):
+        if not HostAddr.has_ipv6:
+            self.skipTest("System IPv6 support is not available")
+        aaa = HostAddr("*")
+        self.check_hostaddr_match(aaa,"::0")
+        self.check_hostaddr_match(aaa,"::1")
+        self.check_hostaddr_match(aaa,"ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")
+
     def test_policy_malformed_hostaddr_ipv4(self):
         self.expect_deny( "0.0.0.0.0", "Name or service not known")
         self.expect_deny( "1.1.1.1,2.2.2.2,3.3.3.3", "arg count")

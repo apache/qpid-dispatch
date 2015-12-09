@@ -197,21 +197,28 @@ class HostAddr():
         """
         self.hoststructs = []
 
-        hosts = [x.strip() for x in hostspec.split(",")]
+        if hostspec == "*":
+            self.wildcard = True
+        else:
+            self.wildcard = False
 
-        # hosts must contain one or two host specs
-        if len(hosts) not in [1, 2]:
-            raise PolicyError("hostspec must contain 1 or 2 host names")
-        self.hoststructs.append(HostStruct(hosts[0]))
-        if len(hosts) > 1:
-            self.hoststructs.append(HostStruct(hosts[1]))
-            if not self.hoststructs[0].family == self.hoststructs[1].family:
-                raise PolicyError("mixed IPv4 and IPv6 host specs in range not allowed")
-            c0 = self.memcmp(self.hoststructs[0].binary, self.hoststructs[1].binary)
-            if c0 > 0:
-                raise PolicyError("host specs in range must have lower numeric address first")
+            hosts = [x.strip() for x in hostspec.split(",")]
+
+            # hosts must contain one or two host specs
+            if len(hosts) not in [1, 2]:
+                raise PolicyError("hostspec must contain 1 or 2 host names")
+            self.hoststructs.append(HostStruct(hosts[0]))
+            if len(hosts) > 1:
+                self.hoststructs.append(HostStruct(hosts[1]))
+                if not self.hoststructs[0].family == self.hoststructs[1].family:
+                    raise PolicyError("mixed IPv4 and IPv6 host specs in range not allowed")
+                c0 = self.memcmp(self.hoststructs[0].binary, self.hoststructs[1].binary)
+                if c0 > 0:
+                    raise PolicyError("host specs in range must have lower numeric address first")
 
     def __str__(self):
+        if self.wildcard:
+            return "*"
         res = self.hoststructs[0].name
         if len(self.hoststructs) > 1:
             res += "," + self.hoststructs[1].name
@@ -221,6 +228,8 @@ class HostAddr():
         return self.__str__()
 
     def dump(self):
+        if self.wildcard:
+            return "(*)"
         res = "(" + self.hoststructs[0].dump()
         if len(self.hoststructs) > 1:
             res += "," + self.hoststructs[1].dump()
@@ -244,6 +253,8 @@ class HostAddr():
         @param[in] cstruct the IP address to be tested
         @return candidate matches this or not
         """
+        if self.wildcard:
+            return True
         try:
             if not cstruct.family == self.hoststructs[0].family:
                 # sorry, wrong AF_INET family
