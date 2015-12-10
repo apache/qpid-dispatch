@@ -216,5 +216,26 @@ class PolicyFile(TestCase):
             PolicyFile.policy.policy_lookup('ynot', '10.48.255.254', 'photoserver', ypolicy) )
         self.assertTrue( self.dict_compare(zpolicy, ypolicy) )
 
+    def test_policy1_superuser_aggregation(self):
+        upolicy = {}
+        self.assertTrue( 
+            PolicyFile.policy.policy_lookup('ellen', '72.135.2.9', 'photoserver', upolicy) )
+        self.assertTrue(upolicy['policyVersion']             == '1')
+        self.assertTrue(upolicy['maximumConnections']        == '10')
+        self.assertTrue(upolicy['maximumConnectionsPerUser'] == '5')
+        self.assertTrue(upolicy['maximumConnectionsPerHost'] == '5')
+        self.assertTrue(upolicy['max_frame_size']            == 666666)
+        self.assertTrue(upolicy['max_message_size']          == 666666)
+        self.assertTrue(upolicy['max_session_window']        == 666666)
+        self.assertTrue(upolicy['max_sessions']              == 6)
+        self.assertTrue(upolicy['max_senders']               == 66)
+        self.assertTrue(upolicy['max_receivers']             == 66)
+        self.assertTrue(upolicy['allow_anonymous_sender'])
+        self.assertTrue(upolicy['allow_dynamic_src'])
+        addrs = ['public', 'private','management', 'root']
+        print "targets = %s" % upolicy['targets']
+        for s in addrs: self.assertTrue(s in upolicy['targets'])
+        for s in addrs: self.assertTrue(s in upolicy['sources'])
+
 if __name__ == '__main__':
     unittest.main(main_module())
