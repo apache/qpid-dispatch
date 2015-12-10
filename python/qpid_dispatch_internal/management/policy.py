@@ -647,7 +647,168 @@ class Policy():
     #
     # Runtime query interface
     #
-    
+    def policy_aggregate_limits(self, upolicy, policy, settingname):
+        """
+        Force a max count value into user policy
+        param[in,out] upolicy user policy receiving aggregations
+        param[in] policy Internal policy holding settings to be aggregated
+        param[in] settingname setting of interest
+        """
+        if settingname in policy:
+            upolicy[settingname] = policy[settingname]
+
+    def policy_aggregate_policy_int(self, upolicy, policy, roles, settingname):
+        """
+        Pull int out of policy.policies[role] and install into upolicy if > existing
+        param[in,out] upolicy user policy receiving aggregations
+        param[in] policy Internal policy holding settings to be aggregated
+        param[in] settingname setting of interest
+        """
+        if not 'policies' in policy:
+            return
+        policies = policy['policies']
+        for role in roles:
+            if role in policies:
+                rpol = policies[role]
+                if settingname in rpol:
+                    sp = rpol[settingname]
+                    if settingname in upolicy:
+                        up = upolicy[settingname]
+                        if sp > up:
+                            # policy bumps up user setting
+                            upolicy[settingname] = sp
+                        else:
+                            # user policy is already better
+                            pass
+                    else:
+                        # user policy doesn't have setting so force it
+                        upolicy[settingname] = sp
+                else:
+                    # no setting of this name in the role's policy
+                    pass
+            else:
+                # no policy for this role
+                pass
+
+    def policy_aggregate_policy_bool(self, upolicy, policy, roles, settingname):
+        """
+        Pull bool out of policy and install into upolicy if true
+        param[in,out] upolicy user policy receiving aggregations
+        param[in] policy Internal policy holding settings to be aggregated
+        param[in] settingname setting of interest
+        """
+        if not 'policies' in policy:
+            return
+        policies = policy['policies']
+        for role in roles:
+            if role in policies:
+                rpol = policies[role]
+                if settingname in rpol:
+                    if rpol[settingname]:
+                        upolicy[settingname] = True
+                else:
+                    # no setting of this name in the role's policy
+                    pass
+            else:
+                # no policy for this role
+                pass
+
+    def policy_aggregate_policy_list(self, upolicy, policy, roles, settingname):
+        """
+        Pull list out of policy and append into upolicy
+        param[in,out] upolicy user policy receiving aggregations
+        param[in] policy Internal policy holding settings to be aggregated
+        param[in] settingname setting of interest
+        """
+        if not 'policies' in policy:
+            return
+        policies = policy['policies']
+        for role in roles:
+            if role in policies:
+                rpol = policies[role]
+                if settingname in rpol:
+                    sp = rpol[settingname]
+                    if settingname in upolicy:
+                        upolicy[settingname].extend( sp )
+                    else:
+                        # user policy doesn't have setting so force it
+                        upolicy[settingname] = sp
+                else:
+                    # no setting of this name in the role's policy
+                    pass
+            else:
+                # no policy for this role
+                pass
+
+    def policy_lookup(self, user, host, app, upolicy):
+        """
+        Determine if a user on host accessing app is allowed.
+        @param[in] user connection authId
+        @param[in] host connection remote host numeric IP address
+        @param[in] app application user is accessing
+        @param[out] upolicy dict holding connection and policy values
+        @return if allowed by policy
+        # TODO: use lookaside list for precomputed (user, host, app) policy
+        # Note: the upolicy output is a non-nested dict with settings of interest
+        # TODO: figure out decent defaults for upolicy settings that are undefined
+        """
+        try:
+            settings = self.data[app]
+            # User allowed to connect from host?
+            allowed = False
+            restricted = False
+            uhs = HostStruct(host)
+            uroles = []
+            if 'roles' in settings:
+                for r in settings['roles']:
+                    if user in settings['roles'][r]:
+                        restricted = True
+                        uroles.append(r)
+                        #print "XXX user %s has roles %s " % (user, uroles)
+            uorigins = []
+            if 'connectionPolicy' in settings:
+                for ur in uroles:
+                    if ur in settings['connectionPolicy']:
+                        uorigins.extend(settings['connectionPolicy'][ur])
+                        #print "XXX user %s has origins %s" % (user, uorigins)
+            if 'connectionOrigins' in settings:
+                for co in settings['connectionOrigins']:
+                    if co in uorigins:
+                        for cohost in settings['connectionOrigins'][co]:
+                            if cohost.match_bin(uhs):
+                                #print "XXX user %s passes origin test at %s" % (user, uhs.dump())
+                                allowed = True
+                                break
+                    if allowed:
+                        break
+            if not allowed and not restricted:
+                if 'connectionAllowUnrestricted' in settings:
+                    allowed = settings['connectionAllowUnrestricted']
+            if not allowed:
+                return False
+            # Return connection limits and aggregation of role settings
+            uroles.append(user) # user roles also includes username directly
+            self.policy_aggregate_limits     (upolicy, settings, "policyVersion")
+            self.policy_aggregate_limits     (upolicy, settings, "maximumConnections")
+            self.policy_aggregate_limits     (upolicy, settings, "maximumConnectionsPerUser")
+            self.policy_aggregate_limits     (upolicy, settings, "maximumConnectionsPerHost")
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_frame_size")
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_message_size")
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_session_window")
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_sessions")
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_senders")
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_receivers")
+            self.policy_aggregate_policy_bool(upolicy, settings, uroles, "allow_dynamic_src")
+            self.policy_aggregate_policy_bool(upolicy, settings, uroles, "allow_anonymous_sender")
+            self.policy_aggregate_policy_list(upolicy, settings, uroles, "sources")
+            self.policy_aggregate_policy_list(upolicy, settings, uroles, "targets")
+            return True
+        except Exception, e:
+            #print str(e)
+            #pdb.set_trace()
+            return False
+
+
 #
 # HACK ALERT: Temporary
 # Functions related to main
@@ -678,6 +839,18 @@ def main_except(argv):
             print("policy : %s" % pname)
             p = ("%s" % policy.policy_read(pname))
             print(p.replace('\\n', '\n'))
+
+    # Lookups
+    upolicy = {}
+    res = policy.policy_lookup('zeke', '192.168.100.5', 'photoserver', upolicy)
+    print "Lookup zeke from 192.168.100.5. Expect true and max_frame_size 44444. Result is %s" % res
+    print "Resulting policy is: %s" % upolicy
+
+    upolicy = {}
+    res = policy.policy_lookup('ellen', '72.135.2.9', 'photoserver', upolicy)
+    print "Lookup ellen from 72.135.2.9. Expect true and max_frame_size 666666. Result is %s" % res
+    print "Resulting policy is: %s" % upolicy
+
 
 def main(argv):
     try:

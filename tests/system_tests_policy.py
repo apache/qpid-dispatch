@@ -158,5 +158,63 @@ class PolicyHostAddrTest(TestCase):
         self.expect_deny( "::1,::2,::3", "arg count")
         self.expect_deny( "0:ff:0,0:fe:ffff:ffff::0", "a > b")
 
+class PolicyFile(TestCase):
+
+    policy = Policy("../../../tests/policy-1")
+
+    def dict_compare(self, d1, d2):
+        d1_keys = set(d1.keys())
+        d2_keys = set(d2.keys())
+        intersect_keys = d1_keys.intersection(d2_keys)
+        added = d1_keys - d2_keys
+        removed = d2_keys - d1_keys
+        modified = {o : (d1[o], d2[o]) for o in intersect_keys if d1[o] != d2[o]}
+        same = set(o for o in intersect_keys if d1[o] == d2[o])
+        return len(added) == 0 and len(removed) == 0 and len(modified) == 0
+
+    def test_policy1_test_zeke_ok(self):
+        upolicy = {}
+        self.assertTrue( 
+            PolicyFile.policy.policy_lookup('zeke', '192.168.100.5', 'photoserver', upolicy) )
+        self.assertTrue(upolicy['policyVersion']             == '1')
+        self.assertTrue(upolicy['maximumConnections']        == '10')
+        self.assertTrue(upolicy['maximumConnectionsPerUser'] == '5')
+        self.assertTrue(upolicy['maximumConnectionsPerHost'] == '5')
+        self.assertTrue(upolicy['max_frame_size']            == 444444)
+        self.assertTrue(upolicy['max_message_size']          == 444444)
+        self.assertTrue(upolicy['max_session_window']        == 444444)
+        self.assertTrue(upolicy['max_sessions']              == 4)
+        self.assertTrue(upolicy['max_senders']               == 44)
+        self.assertTrue(upolicy['max_receivers']             == 44)
+        self.assertTrue(upolicy['allow_anonymous_sender'])
+        self.assertTrue(upolicy['allow_dynamic_src'])
+        self.assertTrue(len(upolicy['targets']) == 1)
+        self.assertTrue('private' in upolicy['targets'])
+        self.assertTrue(len(upolicy['sources']) == 1)
+        self.assertTrue('private' in upolicy['sources'])
+
+    def test_policy1_test_zeke_bad_IP(self):
+        upolicy = {}
+        self.assertFalse(
+            PolicyFile.policy.policy_lookup('zeke', '10.18.0.1',    'photoserver', upolicy) )
+        self.assertFalse(
+            PolicyFile.policy.policy_lookup('zeke', '72.135.2.9',   'photoserver', upolicy) )
+        self.assertFalse(
+            PolicyFile.policy.policy_lookup('zeke', '127.0.0.1',    'photoserver', upolicy) )
+
+    def test_policy1_test_zeke_bad_app(self):
+        upolicy = {}
+        self.assertFalse(
+            PolicyFile.policy.policy_lookup('zeke', '192.168.100.5','galleria', upolicy) )
+
+    def test_policy1_test_users_same_permissions(self):
+        zpolicy = {}
+        self.assertTrue(
+            PolicyFile.policy.policy_lookup('zeke', '192.168.100.5', 'photoserver', zpolicy) )
+        ypolicy = {}
+        self.assertTrue(
+            PolicyFile.policy.policy_lookup('ynot', '10.48.255.254', 'photoserver', ypolicy) )
+        self.assertTrue( self.dict_compare(zpolicy, ypolicy) )
+
 if __name__ == '__main__':
     unittest.main(main_module())
