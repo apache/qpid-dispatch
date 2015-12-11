@@ -523,21 +523,17 @@ class Policy():
     """
     The policy database.
     """
-
-    data = {}
-    folder = "."
-    schema_version = 1
-    policy_compiler = None
-
-    def __init__(self, folder=".", schema_version=1):
+    def __init__(self, folder="", schema_version=1):
         """
         Create instance
         @params folder: relative path from __file__ to conf file folder
         """
+        self.data = {}
         self.folder = folder
         self.schema_version = schema_version
         self.policy_compiler = PolicyCompiler(schema_version)
-        self.policy_io_read_files()
+        if not folder == "":
+            self.policy_io_read_files()
 
     #
     # Policy file I/O
@@ -833,12 +829,18 @@ def main_except(argv):
 
     print("policy names: %s" % policy.policy_db_get_names())
 
-    if options.dump:
-        print("Policy details:")
-        for pname in policy.policy_db_get_names():
-            print("policy : %s" % pname)
-            p = ("%s" % policy.policy_read(pname))
-            print(p.replace('\\n', '\n'))
+    if not options.dump:
+        return
+
+    # Exercise a few functions
+    # Empty policy
+    policy2 = Policy()
+
+    print("Policy details:")
+    for pname in policy.policy_db_get_names():
+        print("policy : %s" % pname)
+        p = ("%s" % policy.policy_read(pname))
+        print(p.replace('\\n', '\n'))
 
     # Lookups
     upolicy = {}
@@ -850,6 +852,10 @@ def main_except(argv):
     res = policy.policy_lookup('ellen', '72.135.2.9', 'photoserver', upolicy)
     print "Lookup ellen from 72.135.2.9. Expect true and max_frame_size 666666. Result is %s" % res
     print "Resulting policy is: %s" % upolicy
+
+    upolicy = {}
+    res = policy2.policy_lookup('ellen', '72.135.2.9', 'photoserver', upolicy)
+    print "Lookup policy2 ellen from 72.135.2.9. Expect false. Result is %s" % res
 
 
 def main(argv):
