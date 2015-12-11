@@ -45,7 +45,8 @@ typedef void (*qdr_action_handler_t) (qdr_core_t *core, qdr_action_t *action, bo
 
 struct qdr_action_t {
     DEQ_LINKS(qdr_action_t);
-    qdr_action_handler_t action_handler;
+    qdr_action_handler_t  action_handler;
+    const char           *label;
     union {
         //
         // Arguments for router control-plane actions
@@ -162,7 +163,6 @@ struct qdr_link_t {
     qdr_connection_t         *conn;            ///< [ref] Connection that owns this link
     qd_link_type_t            link_type;
     qd_direction_t            link_direction;
-    qdr_address_t            *addr;            ///< [ref] Associated address record
     qdr_address_t            *owning_addr;     ///< [ref] Address record that owns this link
     //qd_waypoint_t            *waypoint;        ///< [ref] Waypoint that owns this link
     qdr_link_t               *connected_link;  ///< [ref] If this is a link-route, reference the connected link
@@ -211,6 +211,7 @@ struct qdr_address_t {
     void                      *on_message_context;  ///< In-Process Consumer context
     qdr_lrp_ref_list_t         lrps;                ///< Local link-route destinations
     qdr_link_ref_list_t        rlinks;              ///< Locally-Connected Consumers
+    qdr_link_ref_list_t        inlinks;             ///< Locally-Connected Producers
     qdr_router_ref_list_t      rnodes;              ///< Remotely-Connected Consumers
     qd_hash_handle_t          *hash_handle;         ///< Linkage back to the hash table entry
     qd_address_semantics_t     semantics;
@@ -338,7 +339,7 @@ typedef enum {
 void *router_core_thread(void *arg);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
 void  qdr_agent_setup_CT(qdr_core_t *core);
-qdr_action_t *qdr_action(qdr_action_handler_t action_handler);
+qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 

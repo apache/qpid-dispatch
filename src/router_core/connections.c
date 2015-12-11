@@ -65,7 +65,7 @@ qdr_terminus_t *qdr_terminus_router_data(void)
 
 qdr_connection_t *qdr_connection_opened(qdr_core_t *core, bool incoming, qdr_connection_role_t role, const char *label)
 {
-    qdr_action_t     *action = qdr_action(qdr_connection_opened_CT);
+    qdr_action_t     *action = qdr_action(qdr_connection_opened_CT, "connection_opened");
     qdr_connection_t *conn   = new_qdr_connection_t();
 
     ZERO(conn);
@@ -88,7 +88,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t *core, bool incoming, qdr_con
 
 void qdr_connection_closed(qdr_connection_t *conn)
 {
-    qdr_action_t *action = qdr_action(qdr_connection_closed_CT);
+    qdr_action_t *action = qdr_action(qdr_connection_closed_CT, "connection_closed");
     action->args.connection.conn = conn;
     qdr_action_enqueue(conn->core, action);
 }
@@ -167,7 +167,7 @@ qd_direction_t qdr_link_direction(const qdr_link_t *link)
 
 qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, qdr_terminus_t *source, qdr_terminus_t *target)
 {
-    qdr_action_t *action = qdr_action(qdr_link_first_attach_CT);
+    qdr_action_t *action = qdr_action(qdr_link_first_attach_CT, "link_first_attach");
     qdr_link_t   *link   = new_qdr_link_t();
 
     ZERO(link);
@@ -187,7 +187,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, qd
 
 void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
 {
-    qdr_action_t *action = qdr_action(qdr_link_second_attach_CT);
+    qdr_action_t *action = qdr_action(qdr_link_second_attach_CT, "link_second_attach");
 
     action->args.connection.link   = link;
     action->args.connection.source = source;
@@ -198,7 +198,7 @@ void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_termin
 
 void qdr_link_detach(qdr_link_t *link, pn_condition_t *condition)
 {
-    qdr_action_t *action = qdr_action(qdr_link_detach_CT);
+    qdr_action_t *action = qdr_action(qdr_link_detach_CT, "link_detach");
 
     action->args.connection.link      = link;
     action->args.connection.condition = condition;
@@ -321,7 +321,8 @@ static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_fie
     qdr_address_t *addr = 0;
 
     //
-    // Question: Should we use a new prefix for configuration?
+    // Question: Should we use a new prefix for configuration? (No: allows the possibility of
+    //           static routes; yes: prevents occlusion by mobile addresses with specified semantics)
     //
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) addr);
     return addr ? addr->semantics : qdr_default_semantics;
@@ -518,7 +519,7 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
     qdr_connection_t  *conn   = action->args.connection.conn;
     qdr_link_t        *link   = action->args.connection.link;
     qd_direction_t     dir    = action->args.connection.dir;
-    //qdr_terminus_t    *source = action->args.connection.source;
+    qdr_terminus_t    *source = action->args.connection.source;
     qdr_terminus_t    *target = action->args.connection.target;
 
     //
@@ -538,15 +539,15 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
         // Handle incoming link cases
         //
         switch (link->link_type) {
-        case QD_LINK_ENDPOINT:
+        case QD_LINK_ENDPOINT: {
             if (qdr_terminus_is_anonymous(target)) {
-                link->addr = 0;
+                link->owning_addr = 0;
                 qdr_link_accept_CT(core, link);
             } else {
                 //
                 // This link has a target address
                 //
-                bool           link_route = false;
+                bool           link_route;
                 qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, target, false, false, &link_route);
                 if (!addr)
                     //
@@ -565,11 +566,13 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
                     // Associate the link with the address.  With this association, it will be unnecessary
                     // to do an address lookup for deliveries that arrive on this link.
                     //
-                    link->addr = addr;
+                    link->owning_addr = addr;
+                    qdr_add_link_ref(&addr->inlinks, link);
                     qdr_link_accept_CT(core, link);
                 }
             }
             break;
+        }
 
         case QD_LINK_WAYPOINT:
             // No action, waypoint links are rejected above.
@@ -586,14 +589,48 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
         // Handle outgoing link cases
         //
         switch (link->link_type) {
-        case QD_LINK_ENDPOINT:
+        case QD_LINK_ENDPOINT: {
+            bool           link_route;
+            qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, source, true, true, &link_route);
+            if (!addr)
+                //
+                // No route to this destination, reject the link
+                //
+                qdr_link_reject_CT(core, link, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+
+            else if (link_route)
+                //
+                // This is a link-routed destination, forward the attach to the next hop
+                //
+                qdr_forward_first_attach_CT(core, link, addr);
+
+            else {
+                //
+                // Associate the link with the address.  With this association, it will be unnecessary
+                // to do an address lookup for deliveries that arrive on this link.
+                //
+                link->owning_addr = addr;
+                qdr_add_link_ref(&addr->rlinks, link);
+                if (DEQ_SIZE(addr->rlinks) == 1)
+                    // TODO - notify the router module
+                    ;
+                qdr_link_accept_CT(core, link);
+            }
             break;
+        }
+
         case QD_LINK_WAYPOINT:
             // No action, waypoint links are rejected above.
             break;
+
         case QD_LINK_CONTROL:
+            link->owning_addr = core->hello_addr;
+            qdr_add_link_ref(&core->hello_addr->rlinks, link);
+            core->control_links_by_mask_bit[conn->mask_bit] = link;
             break;
+
         case QD_LINK_ROUTER:
+            core->data_links_by_mask_bit[conn->mask_bit] = link;
             break;
         }
     }
@@ -603,29 +640,16 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
     //
     // dir = Incoming or Outgoing:
     //    Link is an router-control link
-    //       If this isn't an inter-router connection, close the link
     //       Note the control link on the connection
     //       Issue a second attach back to the originating node
-    //    Link is addressed (i.e. has a target/source address)
-    //       If this is a link-routed address, Issue a first attach to the next hop
-    //       If not link-routed, issue a second attach back to the originating node
     //
     // dir = Incoming:
-    //    Link is addressed (i.e. has a target address) and not link-routed
-    //       Lookup/Create address in the address table and associate the link to the address
-    //       Issue a second attach back to the originating node
-    //    Link is anonymous
-    //       Issue a second attach back to the originating node
     //    Issue credit for the inbound fifo
     //
     // dir = Outgoing:
     //    Link is a router-control link
     //       Associate the link with the router-hello address
     //       Associate the link with the link-mask-bit being used by the router
-    //    Link is addressed (i.e. has a non-dynamic source address)
-    //       If the address is appropriate for distribution, add it to the address table as a local destination
-    //       If this is the first local dest for this address, notify the router (mobile_added)
-    //       Issue a second attach back to the originating node
     //
 }
 

@@ -140,7 +140,7 @@ void qdr_manage_create(qdr_core_t              *core,
                        qd_parsed_field_t       *in_body,
                        qd_composed_field_t     *out_body)
 {
-    qdr_action_t *action = qdr_action(qdr_manage_create_CT);
+    qdr_action_t *action = qdr_action(qdr_manage_create_CT, "manage_create");
 
     // Create a query object here
     action->args.agent.query = qdr_query(core, context, type, 0, out_body);
@@ -156,7 +156,7 @@ void qdr_manage_delete(qdr_core_t *core, void  *context,
                        qd_field_iterator_t     *name,
                        qd_field_iterator_t     *identity)
 {
-    qdr_action_t *action = qdr_action(qdr_manage_delete_CT);
+    qdr_action_t *action = qdr_action(qdr_manage_delete_CT, "manage_delete");
 
     // Create a query object here
     action->args.agent.query = qdr_query(core, context, type, 0, 0);
@@ -173,7 +173,7 @@ void qdr_manage_read(qdr_core_t *core, void  *context,
                      qd_field_iterator_t     *identity,
                      qd_composed_field_t     *body)
 {
-    qdr_action_t *action = qdr_action(qdr_manage_read_CT);
+    qdr_action_t *action = qdr_action(qdr_manage_read_CT, "manage_read");
 
     // Create a query object here
     action->args.agent.query = qdr_query(core, context, entity_type, 0, body);
@@ -232,7 +232,7 @@ void qdr_query_add_attribute_names(qdr_query_t *query)
 
 void qdr_query_get_first(qdr_query_t *query, int offset)
 {
-    qdr_action_t *action = qdr_action(qdrh_query_get_first_CT);
+    qdr_action_t *action = qdr_action(qdrh_query_get_first_CT, "query_get_first");
     action->args.agent.query  = query;
     action->args.agent.offset = offset;
     qdr_action_enqueue(query->core, action);
@@ -241,7 +241,7 @@ void qdr_query_get_first(qdr_query_t *query, int offset)
 
 void qdr_query_get_next(qdr_query_t *query)
 {
-    qdr_action_t *action = qdr_action(qdrh_query_get_next_CT);
+    qdr_action_t *action = qdr_action(qdrh_query_get_next_CT, "query_get_next");
     action->args.agent.query = query;
     qdr_action_enqueue(query->core, action);
 }

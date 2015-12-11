@@ -118,13 +118,15 @@ void qdr_field_free(qdr_field_t *field)
 }
 
 
-qdr_action_t *qdr_action(qdr_action_handler_t action_handler)
+qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label)
 {
     qdr_action_t *action = new_qdr_action_t();
     ZERO(action);
     action->action_handler = action_handler;
+    action->label          = label;
     return action;
 }
+
 
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 {

@@ -1915,13 +1915,44 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     return router;
 }
 
+
+static void qd_router_connection_activate(void *context, qdr_connection_t *conn)
+{
+    //qd_router_t *router = (qd_router_t*) context;
+}
+
+
+static void qd_router_link_first_attach(void *context, qdr_connection_t *conn, qdr_link_t *link, 
+                                        qdr_terminus_t *source, qdr_terminus_t *target)
+{
+}
+
+
+static void qd_router_link_second_attach(void *context, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
+{
+}
+
+
+static void qd_router_link_detach(void *context, qdr_link_t *link, pn_condition_t *condition)
+{
+}
+
+
 void qd_router_setup_late(qd_dispatch_t *qd)
 {
-    qd_router_python_setup(qd->router);
     qd->router->router_core = qdr_core(qd);
+
+    qdr_connection_handlers(qd->router->router_core, (void*) qd->router,
+                            qd_router_connection_activate,
+                            qd_router_link_first_attach,
+                            qd_router_link_second_attach,
+                            qd_router_link_detach);
+
+    qd_router_python_setup(qd->router);
     qd_timer_schedule(qd->router->timer, 1000);
 
     //Register the C management agent
+    // DEPRECATE
     qd_router_register_address(qd, CORE_AGENT_ADDRESS, management_agent_handler, (void *) qd, QD_SEMANTICS_DEFAULT, true, 0/*forwarder*/);
     qd_router_register_address(qd, CORE_AGENT_ADDRESS, management_agent_handler, (void *) qd, QD_SEMANTICS_DEFAULT, false, 0/*forwarder*/);
 }

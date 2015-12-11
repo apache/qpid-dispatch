@@ -65,6 +65,7 @@ void *router_core_thread(void *arg)
         action = DEQ_HEAD(action_list);
         while (action) {
             DEQ_REMOVE_HEAD(action_list);
+            qd_log(core->log, QD_LOG_TRACE, "Core action '%s'%s", action->label, core->running ? "" : " (discard)");
             action->action_handler(core, action, !core->running);
             free_qdr_action_t(action);
             action = DEQ_HEAD(action_list);
