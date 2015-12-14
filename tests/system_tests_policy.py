@@ -30,7 +30,8 @@ from proton.utils import BlockingConnection, LinkDetached
 from qpid_dispatch.management.client import Node
 from system_test import TIMEOUT
 
-from qpid_dispatch_internal.management.policy import Policy, HostAddr, PolicyError, HostStruct
+from qpid_dispatch_internal.management.policy import \
+    Policy, HostAddr, PolicyError, HostStruct, PolicyConnStatsPerApp
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
@@ -175,11 +176,8 @@ class PolicyFile(TestCase):
     def test_policy1_test_zeke_ok(self):
         upolicy = {}
         self.assertTrue( 
-            PolicyFile.policy.policy_lookup('zeke', '192.168.100.5', 'photoserver', upolicy) )
+            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '192.168.100.5', 'photoserver', upolicy) )
         self.assertTrue(upolicy['policyVersion']             == '1')
-        self.assertTrue(upolicy['maximumConnections']        == '10')
-        self.assertTrue(upolicy['maximumConnectionsPerUser'] == '5')
-        self.assertTrue(upolicy['maximumConnectionsPerHost'] == '5')
         self.assertTrue(upolicy['max_frame_size']            == 444444)
         self.assertTrue(upolicy['max_message_size']          == 444444)
         self.assertTrue(upolicy['max_session_window']        == 444444)
@@ -196,34 +194,31 @@ class PolicyFile(TestCase):
     def test_policy1_test_zeke_bad_IP(self):
         upolicy = {}
         self.assertFalse(
-            PolicyFile.policy.policy_lookup('zeke', '10.18.0.1',    'photoserver', upolicy) )
+            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '10.18.0.1',    'photoserver', upolicy) )
         self.assertFalse(
-            PolicyFile.policy.policy_lookup('zeke', '72.135.2.9',   'photoserver', upolicy) )
+            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '72.135.2.9',   'photoserver', upolicy) )
         self.assertFalse(
-            PolicyFile.policy.policy_lookup('zeke', '127.0.0.1',    'photoserver', upolicy) )
+            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '127.0.0.1',    'photoserver', upolicy) )
 
     def test_policy1_test_zeke_bad_app(self):
         upolicy = {}
         self.assertFalse(
-            PolicyFile.policy.policy_lookup('zeke', '192.168.100.5','galleria', upolicy) )
+            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '192.168.100.5','galleria', upolicy) )
 
     def test_policy1_test_users_same_permissions(self):
         zpolicy = {}
         self.assertTrue(
-            PolicyFile.policy.policy_lookup('zeke', '192.168.100.5', 'photoserver', zpolicy) )
+            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '192.168.100.5', 'photoserver', zpolicy) )
         ypolicy = {}
         self.assertTrue(
-            PolicyFile.policy.policy_lookup('ynot', '10.48.255.254', 'photoserver', ypolicy) )
+            PolicyFile.policy.policy_lookup('192.168.100.5:33334', 'ynot', '10.48.255.254', 'photoserver', ypolicy) )
         self.assertTrue( self.dict_compare(zpolicy, ypolicy) )
 
     def test_policy1_superuser_aggregation(self):
         upolicy = {}
         self.assertTrue( 
-            PolicyFile.policy.policy_lookup('ellen', '72.135.2.9', 'photoserver', upolicy) )
+            PolicyFile.policy.policy_lookup('192.168.100.5:33335', 'ellen', '72.135.2.9', 'photoserver', upolicy) )
         self.assertTrue(upolicy['policyVersion']             == '1')
-        self.assertTrue(upolicy['maximumConnections']        == '10')
-        self.assertTrue(upolicy['maximumConnectionsPerUser'] == '5')
-        self.assertTrue(upolicy['maximumConnectionsPerHost'] == '5')
         self.assertTrue(upolicy['max_frame_size']            == 666666)
         self.assertTrue(upolicy['max_message_size']          == 666666)
         self.assertTrue(upolicy['max_session_window']        == 666666)
@@ -237,6 +232,73 @@ class PolicyFile(TestCase):
         self.assertTrue(len(upolicy['sources']) == 4)
         for s in addrs: self.assertTrue(s in upolicy['targets'])
         for s in addrs: self.assertTrue(s in upolicy['sources'])
+
+class PolicyConnStatsPerAppTests(TestCase):
+
+    def test_policy_app_conn_stats_fail_by_total(self):
+        stats = PolicyConnStatsPerApp(1, 2, 2)
+        diags = []
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(len(diags) == 1)
+        self.assertTrue('by total' in diags[0])
+
+    def test_policy_app_conn_stats_fail_by_user(self):
+        stats = PolicyConnStatsPerApp(3, 1, 2)
+        diags = []
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(len(diags) == 1)
+        self.assertTrue('per user' in diags[0])
+
+    def test_policy_app_conn_stats_fail_by_hosts(self):
+        stats = PolicyConnStatsPerApp(3, 2, 1)
+        diags = []
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(len(diags) == 1)
+        self.assertTrue('per host' in diags[0])
+
+    def test_policy_app_conn_stats_fail_by_user_hosts(self):
+        stats = PolicyConnStatsPerApp(3, 1, 1)
+        diags = []
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(len(diags) == 2)
+        self.assertTrue('per user' in diags[0] or 'per user' in diags[1])
+        self.assertTrue('per host' in diags[0] or 'per host' in diags[1])
+
+    def test_policy_app_conn_stats_update(self):
+        stats = PolicyConnStatsPerApp(3, 1, 2)
+        diags = []
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(len(diags) == 1)
+        self.assertTrue('per user' in diags[0])
+        diags = []
+        stats.update(3, 2, 2)
+        self.assertTrue(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+
+    def test_policy_app_conn_stats_create_bad_settings(self):
+        denied = False
+        try:
+            stats = PolicyConnStatsPerApp(-3, 1, 2)
+        except PolicyError:
+            denied = True
+        self.assertTrue(denied, "Failed to detect negative setting value.")
+
+    def test_policy_app_conn_stats_update_bad_settings(self):
+        denied = False
+        try:
+            stats = PolicyConnStatsPerApp(0, 0, 0)
+        except PolicyError:
+            denied = True
+        self.assertFalse(denied, "Should allow all zeros.")
+        try:
+            stats.update(0, -1, 0)
+        except PolicyError:
+            denied = True
+        self.assertTrue(denied, "Failed to detect negative setting value.")
 
 if __name__ == '__main__':
     unittest.main(main_module())
