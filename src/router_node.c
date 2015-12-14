@@ -1255,6 +1255,18 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
     int          is_router = qd_router_terminus_is_router(qd_link_remote_source(link));
     const char  *r_tgt     = pn_terminus_get_address(qd_link_remote_target(link));
 
+    qd_connection_t  *conn     = qd_link_connection(link);
+    qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
+    qdr_link_t       *qdr_link = qdr_link_first_attach(qdr_conn, QD_INCOMING,
+                                                       qdr_terminus(qd_link_remote_source(link)),
+                                                       qdr_terminus(qd_link_remote_target(link)));
+    qdr_link_set_context(qdr_link, link);
+    qd_link_set_context(link, qdr_link);
+
+    //
+    // DEPRECATE:
+    //
+
     if (is_router && !qd_router_connection_is_inter_router(qd_link_connection(link))) {
         qd_log(router->log_source, QD_LOG_WARNING,
                "Incoming link claims router capability but is not on an inter-router connection");
@@ -1337,6 +1349,18 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     qd_address_semantics_t  semantics;
     qd_address_t           *addr = 0;
     link_attach_result_t    la_result = LINK_ATTACH_NO_MATCH;
+
+    qd_connection_t  *conn     = qd_link_connection(link);
+    qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
+    qdr_link_t       *qdr_link = qdr_link_first_attach(qdr_conn, QD_OUTGOING,
+                                                       qdr_terminus(qd_link_remote_source(link)),
+                                                       qdr_terminus(qd_link_remote_target(link)));
+    qdr_link_set_context(qdr_link, link);
+    qd_link_set_context(link, qdr_link);
+
+    //
+    // DEPRECATE:
+    //
 
     if (is_router && !qd_router_connection_is_inter_router(qd_link_connection(link))) {
         qd_log(router->log_source, QD_LOG_WARNING,
@@ -1918,12 +1942,15 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 
 static void qd_router_connection_activate(void *context, qdr_connection_t *conn)
 {
-    //qd_router_t *router = (qd_router_t*) context;
+    qd_server_activate((qd_connection_t*) qdr_connection_get_context(conn));
 }
 
 
-static void qd_router_link_first_attach(void *context, qdr_connection_t *conn, qdr_link_t *link, 
-                                        qdr_terminus_t *source, qdr_terminus_t *target)
+static void qd_router_link_first_attach(void             *context,
+                                        qdr_connection_t *conn,
+                                        qdr_link_t       *link, 
+                                        qdr_terminus_t   *source,
+                                        qdr_terminus_t   *target)
 {
 }
 
@@ -1940,7 +1967,7 @@ static void qd_router_link_detach(void *context, qdr_link_t *link, pn_condition_
 
 void qd_router_setup_late(qd_dispatch_t *qd)
 {
-    qd->router->router_core = qdr_core(qd);
+    qd->router->router_core = qdr_core(qd, qd->router->router_area, qd->router->router_id);
 
     qdr_connection_handlers(qd->router->router_core, (void*) qd->router,
                             qd_router_connection_activate,

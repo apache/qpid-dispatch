@@ -174,6 +174,13 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, qd
     link->core = conn->core;
     link->conn = conn;
 
+    if (dir == QD_OUTGOING) {
+        if      (qdr_terminus_has_capability(target, QD_CAPABILITY_ROUTER_CONTROL))
+            link->link_type = QD_LINK_CONTROL;
+        else if (qdr_terminus_has_capability(target, QD_CAPABILITY_ROUTER_DATA))
+            link->link_type = QD_LINK_ROUTER;
+    }
+
     action->args.connection.conn   = conn;
     action->args.connection.link   = link;
     action->args.connection.dir    = dir;
@@ -683,8 +690,23 @@ static void qdr_link_detach_CT(qdr_core_t *core, qdr_action_t *action, bool disc
     if (discard)
         return;
 
-    //qdr_link_t     *link      = action->args.connection.link;
+    qdr_link_t     *link      = action->args.connection.link;
     //pn_condition_t *condition = action->args.connection.condition;
+
+    switch (link->link_type) {
+    case QD_LINK_ENDPOINT:
+        break;
+
+    case QD_LINK_WAYPOINT:
+        break;
+
+    case QD_LINK_CONTROL:
+        break;
+
+    case QD_LINK_ROUTER:
+        break;
+    }
+
 
     //
     // Cases to be handled:

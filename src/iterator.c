@@ -376,6 +376,8 @@ qd_field_iterator_t* qd_address_iterator_binary(const char *text, int length, qd
     iter->phase                = '0';
     iter->prefix_override      = '\0';
 
+    DEQ_INIT(iter->hash_segments);
+
     qd_address_iterator_reset_view(iter, view);
 
     return iter;
@@ -393,6 +395,8 @@ qd_field_iterator_t *qd_address_iterator_buffer(qd_buffer_t *buffer, int offset,
     iter->start_pointer.length = length;
     iter->phase                = '0';
     iter->prefix_override      = '\0';
+
+    DEQ_INIT(iter->hash_segments);
 
     qd_address_iterator_reset_view(iter, view);
 
@@ -491,6 +495,8 @@ qd_field_iterator_t *qd_field_iterator_sub(const qd_field_iterator_t *iter, uint
     sub->view_prefix          = false;
     sub->prefix_override      = '\0';
     sub->phase                = '0';
+
+    DEQ_INIT(sub->hash_segments);
 
     return sub;
 }

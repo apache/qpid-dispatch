@@ -28,12 +28,14 @@ ALLOC_DEFINE(qdr_router_ref_t);
 ALLOC_DEFINE(qdr_link_ref_t);
 
 
-qdr_core_t *qdr_core(qd_dispatch_t *qd)
+qdr_core_t *qdr_core(qd_dispatch_t *qd, const char *area, const char *id)
 {
     qdr_core_t *core = NEW(qdr_core_t);
     ZERO(core);
 
-    core->qd = qd;
+    core->qd          = qd;
+    core->router_area = area;
+    core->router_id   = id;
 
     //
     // Set up the logging source for the router core

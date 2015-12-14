@@ -39,7 +39,7 @@ void *router_core_thread(void *arg)
     qdr_route_table_setup_CT(core);
     qdr_agent_setup_CT(core);
 
-    qd_log(core->log, QD_LOG_INFO, "Router Core thread running");
+    qd_log(core->log, QD_LOG_INFO, "Router Core thread running. %s/%s", core->router_area, core->router_id);
     while (core->running) {
         //
         // Use the lock only to protect the condition variable and the action list

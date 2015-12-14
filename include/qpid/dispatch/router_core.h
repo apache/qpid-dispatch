@@ -41,7 +41,7 @@ typedef struct qdr_terminus_t   qdr_terminus_t;
 /**
  * Allocate and start an instance of the router core module.
  */
-qdr_core_t *qdr_core(qd_dispatch_t *qd);
+qdr_core_t *qdr_core(qd_dispatch_t *qd, const char *area, const char *id);
 
 /**
  * Stop and deallocate an instance of the router core.
