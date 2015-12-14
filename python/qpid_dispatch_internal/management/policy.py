@@ -62,7 +62,7 @@ External Policy:
 2. CRUD Interface
 
 At the CRUD Create function the policy is represented by two strings:
-- name : name of the ConfigParser section
+- name : name of the ConfigParser section which is the application name
 - data : ConfigParser section as a string
 
 The CRUD Interface policy is created by ConfigParser.read(externalFile)
@@ -71,11 +71,12 @@ and then iterating through the config parser sections.
 CRUD Interface Policy:
 ----------------------
 
-    'photoserver', '[('schemaVersion', '1'), 
-                     ('policyVersion', '1'), 
-                     ('roles', "{\n
-                       'users'           : ['u1', 'u2'],\n
-                       'paidsubscribers' : ['p1', 'p2']\n}")]'
+    name: 'photoserver'
+    data: '[('schemaVersion', '1'), 
+            ('policyVersion', '1'), 
+            ('roles', "{\n
+              'users'           : ['u1', 'u2'],\n
+              'paidsubscribers' : ['p1', 'p2']\n}")]'
 
 3. Internal
 
@@ -443,6 +444,9 @@ class PolicyCompiler():
                         errors.append("Application '%s' option '%s' policy '%s' setting '%s' must be type 'list' but is '%s'." %
                                       (name, key, pname, setting, type(sval)))
                         return False
+                    # deduplicate address lists
+                    sval = list(set(sval))
+                    submap[pname][setting] = sval
                 else:
                     warnings.append("Application '%s' option '%s' policy '%s' setting '%s' is ignored." %
                                      (name, key, pname, setting))
@@ -508,9 +512,14 @@ class PolicyCompiler():
                     if key == "connectionOrigins":
                         if not self.crud_compiler_v1_origins(name, submap, warnings, errors):
                             return False
-                    if key == "policies":
+                    elif key == "policies":
                         if not self.crud_compiler_v1_policies(name, submap, warnings, errors):
                             return False
+                    else:
+                        # deduplicate connectionPolicy and roles lists
+                        for k,v in submap.iteritems():
+                            v = list(set(v))
+                            submap[k] = v
                     policy_out[key] = submap
                 except Exception, e:
                     errors.append("Application '%s' option '%s' error processing map: %s" %
@@ -606,8 +615,8 @@ class Policy():
     def policy_create(self, name, policy):
         """
         Create named policy
-        @param name: policy name
-        @param policy: policy data
+        @param name: application name
+        @param policy: policy data in CRUD Interface format
         """
         warnings = []
         diag = []
@@ -621,22 +630,39 @@ class Policy():
         self.data[name] = candidate
 
     def policy_read(self, name):
-        """Read named policy"""
+        """
+        Read policy for named application
+        @param[in] name application name
+        @return policy data in Crud Interface format
+        """
         return self.data[name]
 
     def policy_update(self, name, policy):
-        """Update named policy"""
-        pass
+        """
+        Update named policy
+        @param[in] name application name
+        @param[in] policy data in Crud interface format
+        """
+        if not name in self.data:
+            raise PolicyError("Policy '%s' does not exist" % name)
+        self.policy_create(name, policy)
 
     def policy_delete(self, name):
-        """Delete named policy"""
+        """
+        Delete named policy
+        @param[in] name application name
+        """
+        if not name in self.data:
+            raise PolicyError("Policy '%s' does not exist" % name)
         del self.data[name]
 
     #
     # db enumerator
     #
     def policy_db_get_names(self):
-        """Return a list of policy names."""
+        """
+        Return a list of application names in this policy
+        """
         return self.data.keys()
 
 
@@ -655,7 +681,8 @@ class Policy():
 
     def policy_aggregate_policy_int(self, upolicy, policy, roles, settingname):
         """
-        Pull int out of policy.policies[role] and install into upolicy if > existing
+        Pull int out of policy.policies[role] and install into upolicy.
+        Integers are set to max(new, existing)
         param[in,out] upolicy user policy receiving aggregations
         param[in] policy Internal policy holding settings to be aggregated
         param[in] settingname setting of interest
@@ -726,6 +753,7 @@ class Policy():
                     sp = rpol[settingname]
                     if settingname in upolicy:
                         upolicy[settingname].extend( sp )
+                        upolicy[settingname] = list(set(upolicy[settingname]))
                     else:
                         # user policy doesn't have setting so force it
                         upolicy[settingname] = sp

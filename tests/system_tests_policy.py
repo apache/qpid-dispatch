@@ -233,7 +233,8 @@ class PolicyFile(TestCase):
         self.assertTrue(upolicy['allow_anonymous_sender'])
         self.assertTrue(upolicy['allow_dynamic_src'])
         addrs = ['public', 'private','management', 'root']
-        print "targets = %s" % upolicy['targets']
+        self.assertTrue(len(upolicy['targets']) == 4)
+        self.assertTrue(len(upolicy['sources']) == 4)
         for s in addrs: self.assertTrue(s in upolicy['targets'])
         for s in addrs: self.assertTrue(s in upolicy['sources'])
 
