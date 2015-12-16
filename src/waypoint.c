@@ -95,7 +95,7 @@ static void qd_waypoint_visit_sink_LH(qd_dispatch_t *qd, qd_waypoint_t *wp)
         if (DEQ_SIZE(addr->rlinks) == 1) {
             qd_field_iterator_t *iter = qd_address_iterator_string(wp->address, ITER_VIEW_ADDRESS_HASH);
             qd_address_iterator_set_phase(iter, wp->in_phase);
-            qd_router_mobile_added(router, iter);
+            //qd_router_mobile_added(router, iter);
             qd_field_iterator_free(iter);
         }
 

@@ -28,6 +28,10 @@
 static const char qd_link_route_addr_prefix_inbound  = 'C';
 static const char qd_link_route_addr_prefix_outbound = 'D';
 
+
+//
+// DEPRECATE
+//
 static void qd_lrpc_open_handler(void *context, qd_connection_t *conn)
 {
     qd_lrp_container_t *lrpc   = (qd_lrp_container_t*) context;
@@ -39,7 +43,7 @@ static void qd_lrpc_open_handler(void *context, qd_connection_t *conn)
     while (lrp) {
         qd_address_t        *addr;
         qd_field_iterator_t *iter;
-        bool                 propagate;
+        //bool                 propagate;
         char                 unused;
 
         qd_log(router->log_source, QD_LOG_INFO, "Activating Prefix '%s' for routed links to '%s'",
@@ -73,14 +77,14 @@ static void qd_lrpc_open_handler(void *context, qd_connection_t *conn)
             // across the network.
             //
             qd_router_add_lrp_ref_LH(&addr->lrps, lrp);
-            propagate = DEQ_SIZE(addr->lrps) == 1;
+            //propagate = DEQ_SIZE(addr->lrps) == 1;
             sys_mutex_unlock(router->lock);
 
             //
             // Propagate the address if appropriate
             //
-            if (propagate)
-                qd_router_mobile_added(router, iter);
+            //if (propagate)
+            //    qd_router_mobile_added(router, iter);
         }
 
         if (lrp->outbound) {
@@ -106,14 +110,14 @@ static void qd_lrpc_open_handler(void *context, qd_connection_t *conn)
             // across the network.
             //
             qd_router_add_lrp_ref_LH(&addr->lrps, lrp);
-            propagate = DEQ_SIZE(addr->lrps) == 1;
+            //propagate = DEQ_SIZE(addr->lrps) == 1;
             sys_mutex_unlock(router->lock);
 
             //
             // Propagate the address if appropriate
             //
-            if (propagate)
-                qd_router_mobile_added(router, iter);
+            //if (propagate)
+            //    qd_router_mobile_added(router, iter);
         }
 
         qd_field_iterator_free(iter);
@@ -166,7 +170,7 @@ static void qd_lrpc_close_handler(void *context, qd_connection_t *conn)
             //
             if (propagate) {
                 char *text = (char*) qd_field_iterator_copy(iter);
-                qd_router_mobile_removed(router, text);
+                //qd_router_mobile_removed(router, text);
                 free(text);
             }
         }
@@ -194,7 +198,7 @@ static void qd_lrpc_close_handler(void *context, qd_connection_t *conn)
             //
             if (propagate) {
                 char *text = (char*) qd_field_iterator_copy(iter);
-                qd_router_mobile_removed(router, text);
+                //qd_router_mobile_removed(router, text);
                 free(text);
             }
         }

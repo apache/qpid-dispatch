@@ -26,7 +26,9 @@ ALLOC_DEFINE(qdr_node_t);
 ALLOC_DEFINE(qdr_link_t);
 ALLOC_DEFINE(qdr_router_ref_t);
 ALLOC_DEFINE(qdr_link_ref_t);
+ALLOC_DEFINE(qdr_general_work_t);
 
+static void qdr_general_handler(void *context);
 
 qdr_core_t *qdr_core(qd_dispatch_t *qd, const char *area, const char *id)
 {
@@ -49,6 +51,10 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, const char *area, const char *id)
     core->action_lock = sys_mutex();
     core->running     = true;
     DEQ_INIT(core->action_list);
+
+    core->work_lock = sys_mutex();
+    DEQ_INIT(core->work_list);
+    core->work_timer = qd_timer(core->qd, qdr_general_handler, core);
 
     //
     // Launch the core thread
@@ -74,6 +80,8 @@ void qdr_core_free(qdr_core_t *core)
     sys_thread_free(core->thread);
     sys_cond_free(core->action_cond);
     sys_mutex_free(core->action_lock);
+    sys_mutex_free(core->work_lock);
+    qd_timer_free(core->work_timer);
     free(core);
 }
 
@@ -117,6 +125,15 @@ void qdr_field_free(qdr_field_t *field)
         qd_buffer_list_free_buffers(&field->buffers);
         free_qdr_field_t(field);
     }
+}
+
+
+char *qdr_field_copy(qdr_field_t *field)
+{
+    if (!field || !field->iterator)
+        return 0;
+
+    return (char*) qd_field_iterator_copy(field->iterator);
 }
 
 
@@ -214,3 +231,49 @@ void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode)
         ref = DEQ_NEXT(ref);
     }
 }
+
+
+static void qdr_general_handler(void *context)
+{
+    qdr_core_t              *core = (qdr_core_t*) context;
+    qdr_general_work_list_t  work_list;
+    qdr_general_work_t      *work;
+
+    sys_mutex_lock(core->work_lock);
+    DEQ_MOVE(core->work_list, work_list);
+    sys_mutex_unlock(core->work_lock);
+
+    work = DEQ_HEAD(work_list);
+    while (work) {
+        DEQ_REMOVE_HEAD(work_list);
+        work->handler(core, work);
+        free_qdr_general_work_t(work);
+        work = DEQ_HEAD(work_list);
+    }
+}
+
+
+qdr_general_work_t *qdr_general_work(qdr_general_work_handler_t handler)
+{
+    qdr_general_work_t *work = new_qdr_general_work_t();
+    ZERO(work);
+    work->handler = handler;
+    return work;
+}
+
+
+void qdr_post_general_work_CT(qdr_core_t *core, qdr_general_work_t *work)
+{
+    bool notify;
+
+    sys_mutex_lock(core->work_lock);
+    DEQ_ITEM_INIT(work);
+    DEQ_INSERT_TAIL(core->work_list, work);
+    notify = DEQ_SIZE(core->work_list) == 1;
+    sys_mutex_unlock(core->work_lock);
+
+    if (notify)
+        qd_timer_schedule(core->work_timer, 0);
+}
+
+

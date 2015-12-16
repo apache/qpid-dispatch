@@ -130,7 +130,7 @@ void qdr_connection_process(qdr_connection_t *conn)
             break;
 
         case QDR_CONNECTION_WORK_DETACH :
-            core->detach_handler(core->user_context, work->link, work->condition);
+            core->detach_handler(core->user_context, work->link, work->error);
             break;
         }
 
@@ -203,12 +203,12 @@ void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_termin
 }
 
 
-void qdr_link_detach(qdr_link_t *link, pn_condition_t *condition)
+void qdr_link_detach(qdr_link_t *link, qdr_error_t *error)
 {
     qdr_action_t *action = qdr_action(qdr_link_detach_CT, "link_detach");
 
-    action->args.connection.link      = link;
-    action->args.connection.condition = condition;
+    action->args.connection.link  = link;
+    action->args.connection.error = error;
     qdr_action_enqueue(link->core, action);
 }
 
@@ -331,8 +331,43 @@ static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_fie
     // Question: Should we use a new prefix for configuration? (No: allows the possibility of
     //           static routes; yes: prevents occlusion by mobile addresses with specified semantics)
     //
-    qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) addr);
+    qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
     return addr ? addr->semantics : qdr_default_semantics;
+}
+
+
+/**
+ * Check an address to see if it no longer has any associated destinations.
+ * Depending on its policy, the address may be eligible for being closed out
+ * (i.e. Logging its terminal statistics and freeing its resources).
+ */
+/*static*/ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
+{
+    if (addr == 0)
+        return;
+
+    //
+    // If we have just removed a local linkage and it was the last local linkage,
+    // we need to notify the router module that there is no longer a local
+    // presence of this address.
+    //
+    if (was_local && DEQ_SIZE(addr->rlinks) == 0) {
+        const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+        if (key && *key == 'M')
+            qdr_post_mobile_removed_CT(core, key);
+    }
+
+    //
+    // If the address has no in-process consumer or destinations, it should be
+    // deleted.
+    //
+    if (addr->on_message == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->rnodes) == 0 &&
+        !addr->waypoint && !addr->block_deletion) {
+        qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
+        DEQ_REMOVE(core->addrs, addr);
+        qd_hash_handle_free(addr->hash_handle);
+        free_qdr_address_t(addr);
+    }
 }
 
 
@@ -420,6 +455,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
     // a link-route destination for the address.
     //
     qd_field_iterator_t *iter = qdr_terminus_get_address(terminus);
+    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
     qd_address_iterator_override_prefix(iter, qdr_prefix_for_dir(dir));
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
     if (addr) {
@@ -618,9 +654,11 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
                 //
                 link->owning_addr = addr;
                 qdr_add_link_ref(&addr->rlinks, link);
-                if (DEQ_SIZE(addr->rlinks) == 1)
-                    // TODO - notify the router module
-                    ;
+                if (DEQ_SIZE(addr->rlinks) == 1) {
+                    const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+                    if (key && *key == 'M')
+                        qdr_post_mobile_added_CT(core, key);
+                }
                 qdr_link_accept_CT(core, link);
             }
             break;
@@ -690,8 +728,8 @@ static void qdr_link_detach_CT(qdr_core_t *core, qdr_action_t *action, bool disc
     if (discard)
         return;
 
-    qdr_link_t     *link      = action->args.connection.link;
-    //pn_condition_t *condition = action->args.connection.condition;
+    qdr_link_t  *link  = action->args.connection.link;
+    //qdr_error_t *error = action->args.connection.error;
 
     switch (link->link_type) {
     case QD_LINK_ENDPOINT:

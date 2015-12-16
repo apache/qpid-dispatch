@@ -36,6 +36,7 @@ typedef struct {
 
 qdr_field_t *qdr_field(const char *string);
 void qdr_field_free(qdr_field_t *field);
+char *qdr_field_copy(qdr_field_t *field);
 
 /**
  * qdr_action_t - This type represents one work item to be performed by the router-core thread.
@@ -52,14 +53,11 @@ struct qdr_action_t {
         // Arguments for router control-plane actions
         //
         struct {
-            int                     link_maskbit;
-            int                     router_maskbit;
-            int                     nh_router_maskbit;
-            qd_bitmask_t           *router_set;
-            qdr_field_t            *address;
-            char                    address_class;
-            char                    address_phase;
-            qd_address_semantics_t  semantics;
+            int           link_maskbit;
+            int           router_maskbit;
+            int           nh_router_maskbit;
+            qd_bitmask_t *router_set;
+            qdr_field_t  *address;
         } route_table;
 
         //
@@ -73,7 +71,7 @@ struct qdr_action_t {
             qd_direction_t    dir;
             qdr_terminus_t   *source;
             qdr_terminus_t   *target;
-            pn_condition_t   *condition;
+            qdr_error_t      *error;
         } connection;
 
         //
@@ -243,6 +241,33 @@ void qdr_add_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 
 
+//
+// General Work
+//
+// The following types are used to post work to the IO threads for
+// non-connection-specific action.
+//
+typedef struct qdr_general_work_t qdr_general_work_t;
+typedef void (*qdr_general_work_handler_t) (qdr_core_t *core, qdr_general_work_t *work);
+
+struct qdr_general_work_t {
+    DEQ_LINKS(qdr_general_work_t);
+    qdr_general_work_handler_t  handler;
+    qdr_field_t                *field;
+    int                         maskbit;
+};
+
+ALLOC_DECLARE(qdr_general_work_t);
+DEQ_DECLARE(qdr_general_work_t, qdr_general_work_list_t);
+
+qdr_general_work_t *qdr_general_work(qdr_general_work_handler_t handler);
+
+//
+// Connection Work
+//
+// The following types are used to post work to the IO threads for
+// connection-specific action.
+//
 typedef enum {
     QDR_CONNECTION_WORK_FIRST_ATTACH,
     QDR_CONNECTION_WORK_SECOND_ATTACH,
@@ -255,11 +280,12 @@ typedef struct qdr_connection_work_t {
     qdr_link_t                 *link;
     qdr_terminus_t             *source;
     qdr_terminus_t             *target;
-    pn_condition_t             *condition;
+    qdr_error_t                *error;
 } qdr_connection_work_t;
 
 ALLOC_DECLARE(qdr_connection_work_t);
 DEQ_DECLARE(qdr_connection_work_t, qdr_connection_work_list_t);
+
 
 struct qdr_connection_t {
     DEQ_LINKS(qdr_connection_t);
@@ -286,6 +312,10 @@ struct qdr_core_t {
     qdr_action_list_t  action_list;
     sys_cond_t        *action_cond;
     sys_mutex_t       *action_lock;
+
+    sys_mutex_t             *work_lock;
+    qdr_general_work_list_t  work_list;
+    qd_timer_t              *work_timer;
 
     qdr_connection_list_t open_connections;
 
@@ -342,6 +372,12 @@ void  qdr_agent_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
+
+void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash);
+void qdr_post_mobile_removed_CT(qdr_core_t *core, const char *address_hash);
+void qdr_post_link_lost_CT(qdr_core_t *core, int link_maskbit);
+
+void qdr_post_general_work_CT(qdr_core_t *core, qdr_general_work_t *work);
 
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,

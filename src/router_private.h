@@ -277,10 +277,6 @@ void qd_router_del_node_ref_LH(qd_router_ref_list_t *ref_list, qd_router_node_t 
 void qd_router_add_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp);
 void qd_router_del_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp);
 
-void qd_router_mobile_added(qd_router_t *router, qd_field_iterator_t *iter);
-void qd_router_mobile_removed(qd_router_t *router, const char *addr);
-void qd_router_link_lost(qd_router_t *router, int link_mask_bit);
-
 qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_iterator_t *iter,
                                                  char in_phase, char *out_phase);
 qd_address_t *qd_router_address_lookup_LH(qd_router_t *router,

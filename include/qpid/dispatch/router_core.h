@@ -37,6 +37,7 @@ typedef struct qdr_connection_t qdr_connection_t;
 typedef struct qdr_link_t       qdr_link_t;
 typedef struct qdr_delivery_t   qdr_delivery_t;
 typedef struct qdr_terminus_t   qdr_terminus_t;
+typedef struct qdr_error_t      qdr_error_t;
 
 /**
  * Allocate and start an instance of the router core module.
@@ -60,11 +61,11 @@ void qdr_core_remove_link(qdr_core_t *core, int router_maskbit);
 void qdr_core_set_next_hop(qdr_core_t *core, int router_maskbit, int nh_router_maskbit);
 void qdr_core_remove_next_hop(qdr_core_t *core, int router_maskbit);
 void qdr_core_set_valid_origins(qdr_core_t *core, int router_maskbit, qd_bitmask_t *routers);
-void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase, qd_address_semantics_t sem);
-void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address, char aclass, char phase);
+void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address_hash);
+void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address_hash);
 
-typedef void (*qdr_mobile_added_t)   (void *context, const char *address);
-typedef void (*qdr_mobile_removed_t) (void *context, const char *address);
+typedef void (*qdr_mobile_added_t)   (void *context, const char *address_hash);
+typedef void (*qdr_mobile_removed_t) (void *context, const char *address_hash);
 typedef void (*qdr_link_lost_t)      (void *context, int link_maskbit);
 
 void qdr_core_route_table_handlers(qdr_core_t           *core, 
@@ -277,6 +278,17 @@ qd_field_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term);
 
 /**
  ******************************************************************************
+ * Error functions
+ ******************************************************************************
+ */
+
+qdr_error_t *qdr_error_from_pn(pn_condition_t *pn);
+qdr_error_t *qdr_error(const char *name, const char *description);
+void qdr_error_free(qdr_error_t *error);
+void qdr_error_copy(qdr_error_t *from, pn_condition_t *to);
+
+/**
+ ******************************************************************************
  * Link functions
  ******************************************************************************
  */
@@ -347,9 +359,9 @@ void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_termin
  * This function is invoked when a link detach arrives.
  *
  * @param link The link pointer returned by qdr_link_first_attach or in a FIRST_ATTACH event.
- * @param condition The link condition from the detach frame.
+ * @param error The link error from the detach frame or 0 if none.
  */
-void qdr_link_detach(qdr_link_t *link, pn_condition_t *condition);
+void qdr_link_detach(qdr_link_t *link, qdr_error_t *error);
 
 qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg);
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg, qd_field_iterator_t *addr);
@@ -357,7 +369,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, q
 typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
                                           qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target);
-typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, pn_condition_t *condition);
+typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, qdr_error_t *error);
 
 void qdr_connection_handlers(qdr_core_t                *core,
                              void                      *context,
