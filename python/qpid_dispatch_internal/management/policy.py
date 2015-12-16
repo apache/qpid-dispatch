@@ -289,13 +289,27 @@ class HostAddr():
 #
 class PolicyKeys():
     # Internal policy key words
-    KW_POLICY_VERSION = "policyVersion"
-    KW_SCHEMA_VERSION = "schemaVersion"
-    KW_SCHEMA_MAXCONN        = "maximumConnections"
-    KW_SCHEMA_MAXCONNPERHOST = "maximumConnectionsPerHost"
-    KW_SCHEMA_MAXCONNPERUSER = "maximumConnectionsPerUser"
+    KW_POLICY_VERSION           = "policyVersion"
+    KW_VERSION                  = "schemaVersion"
+    KW_CONNECTION_ALLOW_DEFAULT = "connectionAllowDefault"
+    KW_CONNECTION_ORIGINS       = "connectionOrigins"
+    KW_CONNECTION_POLICY        = "connectionPolicy"
+    KW_MAXCONN                  = "maximumConnections"
+    KW_MAXCONNPERHOST           = "maximumConnectionsPerHost"
+    KW_MAXCONNPERUSER           = "maximumConnectionsPerUser"
+    KW_POLICIES                 = "policies"
+    KW_ROLES                    = "roles"
 
-
+    SETTING_MAX_FRAME_SIZE         = "maxFrameSize"
+    SETTING_MAX_MESSAGE_SIZE       = "maxMessageSize"
+    SETTING_MAX_RECEIVERS          = "maxReceivers"
+    SETTING_MAX_SENDERS            = "maxSenders"
+    SETTING_MAX_SESSION_WINDOW     = "maxSessionWindow"
+    SETTING_MAX_SESSIONS           = "maxSessions"
+    SETTING_ALLOW_ANONYMOUS_SENDER = "allowAnonymousSender"
+    SETTING_ALLOW_DYNAMIC_SRC      = "allowDynamicSrc"
+    SETTING_SOURCES                = "sources"
+    SETTING_TARGETS                = "targets"
 #
 #
 class PolicyCompiler():
@@ -309,16 +323,17 @@ class PolicyCompiler():
     schema_version = 1
 
     schema_allowed_options = [(), (
-        'connectionAllowUnrestricted',
-        'connectionOrigins',
-        'connectionPolicy',
-        PolicyKeys.KW_SCHEMA_MAXCONN,
-        PolicyKeys.KW_SCHEMA_MAXCONNPERHOST,
-        PolicyKeys.KW_SCHEMA_MAXCONNPERUSER,
-        'policies',
         PolicyKeys.KW_POLICY_VERSION,
-        'roles',
-        PolicyKeys.KW_SCHEMA_VERSION)
+        PolicyKeys.KW_VERSION,
+        PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT,
+        PolicyKeys.KW_CONNECTION_ORIGINS,
+        PolicyKeys.KW_CONNECTION_POLICY,
+        PolicyKeys.KW_MAXCONN,
+        PolicyKeys.KW_MAXCONNPERHOST,
+        PolicyKeys.KW_MAXCONNPERUSER,
+        PolicyKeys.KW_POLICIES,
+        PolicyKeys.KW_ROLES
+        )
         ]
     schema_disallowed_options = [(),
         ()
@@ -382,7 +397,7 @@ class PolicyCompiler():
                   warnings[] may contain info and errors[0] will hold the
                   description of why the origin was rejected.
         """
-        key = "connectionOrigins"
+        key = PolicyKeys.KW_CONNECTION_ORIGINS
         newmap = {}
         for coname in submap:
             try:
@@ -416,31 +431,31 @@ class PolicyCompiler():
                   warnings[] may contain info and errors[0] will hold the
                   description of why the policy was rejected.
         """
-        key = "policies"
+        key = PolicyKeys.KW_POLICIES
         cerror = []
         for pname in submap:
             for setting in submap[pname]:
                 sval = submap[pname][setting]
-                if setting in ['max_frame_size',
-                               'max_message_size',
-                               'max_receivers',
-                               'max_senders',
-                               'max_session_window',
-                               'max_sessions'
+                if setting in [PolicyKeys.SETTING_MAX_FRAME_SIZE,
+                               PolicyKeys.SETTING_MAX_MESSAGE_SIZE,
+                               PolicyKeys.SETTING_MAX_RECEIVERS,
+                               PolicyKeys.SETTING_MAX_SENDERS,
+                               PolicyKeys.SETTING_MAX_SESSION_WINDOW,
+                               PolicyKeys.SETTING_MAX_SESSIONS
                                ]:
                     if not self.validateNumber(sval, 0, 0, cerror):
                         errors.append("Application '%s' option '%s' policy '%s' setting '%s' has error '%s'." %
                                       (name, key, pname, setting, cerror[0]))
                         return False
-                elif setting in ['allow_anonymous_sender',
-                                 'allow_dynamic_src'
+                elif setting in [PolicyKeys.SETTING_ALLOW_ANONYMOUS_SENDER,
+                                 PolicyKeys.SETTING_ALLOW_DYNAMIC_SRC
                                  ]:
                     if not type(sval) is bool:
                         errors.append("Application '%s' option '%s' policy '%s' setting '%s' has illegal boolean value '%s'." %
                                       (name, key, pname, setting, sval))
                         return False
-                elif setting in ['sources',
-                                 'targets'
+                elif setting in [PolicyKeys.SETTING_SOURCES,
+                                 PolicyKeys.SETTING_TARGETS
                                  ]:
                     if not type(sval) is list:
                         errors.append("Application '%s' option '%s' policy '%s' setting '%s' must be type 'list' but is '%s'." %
@@ -478,7 +493,7 @@ class PolicyCompiler():
                 errors.append("Application '%s' option '%s' is disallowed." %
                               (name, key))
                 return False
-            if key == PolicyKeys.KW_SCHEMA_VERSION:
+            if key == PolicyKeys.KW_VERSION:
                 if not int(self.schema_version) == int(val):
                     errors.append("Application '%s' expected schema version '%s' but is '%s'." %
                                   (name, self.schema_version, val))
@@ -490,9 +505,9 @@ class PolicyCompiler():
                                     (name, key, cerror[0]))
                     return False
                 policy_out[key] = val
-            elif key in [PolicyKeys.KW_SCHEMA_MAXCONN,
-                         PolicyKeys.KW_SCHEMA_MAXCONNPERHOST,
-                         PolicyKeys.KW_SCHEMA_MAXCONNPERUSER
+            elif key in [PolicyKeys.KW_MAXCONN,
+                         PolicyKeys.KW_MAXCONNPERHOST,
+                         PolicyKeys.KW_MAXCONNPERUSER
                          ]:
                 if not self.validateNumber(val, 0, 65535, cerror):
                     msg = ("Application '%s' option '%s' has error '%s'." % 
@@ -500,10 +515,10 @@ class PolicyCompiler():
                     errors.append(msg)
                     return False
                 policy_out[key] = val
-            elif key in ['connectionOrigins',
-                         'connectionPolicy',
-                         'policies',
-                         'roles'
+            elif key in [PolicyKeys.KW_CONNECTION_ORIGINS,
+                         PolicyKeys.KW_CONNECTION_POLICY,
+                         PolicyKeys.KW_POLICIES,
+                         PolicyKeys.KW_ROLES
                          ]:
                 try:
                     submap = ast.literal_eval(val)
@@ -511,10 +526,10 @@ class PolicyCompiler():
                         errors.append("Application '%s' option '%s' must be of type 'dict' but is '%s'" %
                                       (name, key, type(submap)))
                         return False
-                    if key == "connectionOrigins":
+                    if key == PolicyKeys.KW_CONNECTION_ORIGINS:
                         if not self.crud_compiler_v1_origins(name, submap, warnings, errors):
                             return False
-                    elif key == "policies":
+                    elif key == PolicyKeys.KW_POLICIES:
                         if not self.crud_compiler_v1_policies(name, submap, warnings, errors):
                             return False
                     else:
@@ -712,12 +727,12 @@ class Policy():
             c_max = 0
             c_max_u = 0
             c_max_h = 0
-            if PolicyKeys.KW_SCHEMA_MAXCONN in c_pol:
-                c_max = c_pol[PolicyKeys.KW_SCHEMA_MAXCONN]
-            if PolicyKeys.KW_SCHEMA_MAXCONNPERUSER in c_pol:
-                c_max_u = c_pol[PolicyKeys.KW_SCHEMA_MAXCONNPERUSER]
-            if PolicyKeys.KW_SCHEMA_MAXCONNPERHOST in c_pol:
-                c_max_h = c_pol[PolicyKeys.KW_SCHEMA_MAXCONNPERHOST]
+            if PolicyKeys.KW_MAXCONN in c_pol:
+                c_max = c_pol[PolicyKeys.KW_MAXCONN]
+            if PolicyKeys.KW_MAXCONNPERUSER in c_pol:
+                c_max_u = c_pol[PolicyKeys.KW_MAXCONNPERUSER]
+            if PolicyKeys.KW_MAXCONNPERHOST in c_pol:
+                c_max_h = c_pol[PolicyKeys.KW_MAXCONNPERHOST]
             if c in self.stats:
                 self.stats[c].update(c_max, c_max_u, c_max_h)
             else:
@@ -804,9 +819,9 @@ class Policy():
         param[in] policy Internal policy holding settings to be aggregated
         param[in] settingname setting of interest
         """
-        if not 'policies' in policy:
+        if not PolicyKeys.KW_POLICIES in policy:
             return
-        policies = policy['policies']
+        policies = policy[PolicyKeys.KW_POLICIES]
         for role in roles:
             if role in policies:
                 rpol = policies[role]
@@ -837,9 +852,9 @@ class Policy():
         param[in] policy Internal policy holding settings to be aggregated
         param[in] settingname setting of interest
         """
-        if not 'policies' in policy:
+        if not PolicyKeys.KW_POLICIES in policy:
             return
-        policies = policy['policies']
+        policies = policy[PolicyKeys.KW_POLICIES]
         for role in roles:
             if role in policies:
                 rpol = policies[role]
@@ -860,9 +875,9 @@ class Policy():
         param[in] policy Internal policy holding settings to be aggregated
         param[in] settingname setting of interest
         """
-        if not 'policies' in policy:
+        if not PolicyKeys.KW_POLICIES in policy:
             return
-        policies = policy['policies']
+        policies = policy[PolicyKeys.KW_POLICIES]
         for role in roles:
             if role in policies:
                 rpol = policies[role]
@@ -906,43 +921,43 @@ class Policy():
             restricted = False
             uhs = HostStruct(host)
             uroles = []
-            if 'roles' in settings:
-                for r in settings['roles']:
-                    if user in settings['roles'][r]:
+            if PolicyKeys.KW_ROLES in settings:
+                for r in settings[PolicyKeys.KW_ROLES]:
+                    if user in settings[PolicyKeys.KW_ROLES][r]:
                         restricted = True
                         uroles.append(r)
             uorigins = []
-            if 'connectionPolicy' in settings:
+            if PolicyKeys.KW_CONNECTION_POLICY in settings:
                 for ur in uroles:
-                    if ur in settings['connectionPolicy']:
-                        uorigins.extend(settings['connectionPolicy'][ur])
-            if 'connectionOrigins' in settings:
-                for co in settings['connectionOrigins']:
+                    if ur in settings[PolicyKeys.KW_CONNECTION_POLICY]:
+                        uorigins.extend(settings[PolicyKeys.KW_CONNECTION_POLICY][ur])
+            if PolicyKeys.KW_CONNECTION_ORIGINS in settings:
+                for co in settings[PolicyKeys.KW_CONNECTION_ORIGINS]:
                     if co in uorigins:
-                        for cohost in settings['connectionOrigins'][co]:
+                        for cohost in settings[PolicyKeys.KW_CONNECTION_ORIGINS][co]:
                             if cohost.match_bin(uhs):
                                 allowed = True
                                 break
                     if allowed:
                         break
             if not allowed and not restricted:
-                if 'connectionAllowUnrestricted' in settings:
-                    allowed = settings['connectionAllowUnrestricted']
+                if PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT in settings:
+                    allowed = settings[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]
             if not allowed:
                 return False
             # Return connection limits and aggregation of role settings
             uroles.append(user) # user roles also includes username directly
-            self.policy_aggregate_limits     (upolicy, settings, "policyVersion")
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_frame_size")
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_message_size")
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_session_window")
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_sessions")
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_senders")
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, "max_receivers")
-            self.policy_aggregate_policy_bool(upolicy, settings, uroles, "allow_dynamic_src")
-            self.policy_aggregate_policy_bool(upolicy, settings, uroles, "allow_anonymous_sender")
-            self.policy_aggregate_policy_list(upolicy, settings, uroles, "sources")
-            self.policy_aggregate_policy_list(upolicy, settings, uroles, "targets")
+            self.policy_aggregate_limits     (upolicy, settings, PolicyKeys.KW_POLICY_VERSION)
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_FRAME_SIZE)
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_MESSAGE_SIZE)
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_SESSION_WINDOW)
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_SESSIONS)
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_SENDERS)
+            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_RECEIVERS)
+            self.policy_aggregate_policy_bool(upolicy, settings, uroles, PolicyKeys.SETTING_ALLOW_DYNAMIC_SRC)
+            self.policy_aggregate_policy_bool(upolicy, settings, uroles, PolicyKeys.SETTING_ALLOW_ANONYMOUS_SENDER)
+            self.policy_aggregate_policy_list(upolicy, settings, uroles, PolicyKeys.SETTING_SOURCES)
+            self.policy_aggregate_policy_list(upolicy, settings, uroles, PolicyKeys.SETTING_TARGETS)
             c_upolicy = {}
             c_upolicy.update(upolicy)
             self.lookup_cache[lookup_id] = c_upolicy
@@ -1019,7 +1034,7 @@ def main_except(argv):
     upolicy = {}
     pdb.set_trace()
     res = policy.policy_lookup('192.168.100.5:33332', 'zeke', '192.168.100.5', 'photoserver', upolicy)
-    print "Lookup zeke from 192.168.100.5. Expect true and max_frame_size 44444. Result is %s" % res
+    print "Lookup zeke from 192.168.100.5. Expect true and maxFrameSize 44444. Result is %s" % res
     print "Resulting policy is: %s" % upolicy
     # Hit the cache
     upolicy2 = {}
@@ -1029,7 +1044,7 @@ def main_except(argv):
 
     upolicy = {}
     res = policy.policy_lookup('72.135.2.9:33333', 'ellen', '72.135.2.9', 'photoserver', upolicy)
-    print "Lookup ellen from 72.135.2.9. Expect true and max_frame_size 666666. Result is %s" % res
+    print "Lookup ellen from 72.135.2.9. Expect true and maxFrameSize 666666. Result is %s" % res
     print "Resulting policy is: %s" % upolicy
 
     upolicy = {}
