@@ -30,8 +30,10 @@ from proton.utils import BlockingConnection, LinkDetached
 from qpid_dispatch.management.client import Node
 from system_test import TIMEOUT
 
+from qpid_dispatch_internal.management.policy_util import \
+    HostAddr, PolicyError, HostStruct, PolicyAppConnectionMgr
 from qpid_dispatch_internal.management.policy import \
-    Policy, HostAddr, PolicyError, HostStruct, PolicyConnStatsPerApp
+    Policy
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
@@ -233,34 +235,34 @@ class PolicyFile(TestCase):
         for s in addrs: self.assertTrue(s in upolicy['targets'])
         for s in addrs: self.assertTrue(s in upolicy['sources'])
 
-class PolicyConnStatsPerAppTests(TestCase):
+class PolicyAppConnectionMgrTests(TestCase):
 
-    def test_policy_app_conn_stats_fail_by_total(self):
-        stats = PolicyConnStatsPerApp(1, 2, 2)
+    def test_policy_app_conn_mgr_fail_by_total(self):
+        stats = PolicyAppConnectionMgr(1, 2, 2)
         diags = []
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
         self.assertTrue(len(diags) == 1)
         self.assertTrue('by total' in diags[0])
 
-    def test_policy_app_conn_stats_fail_by_user(self):
-        stats = PolicyConnStatsPerApp(3, 1, 2)
+    def test_policy_app_conn_mgr_fail_by_user(self):
+        stats = PolicyAppConnectionMgr(3, 1, 2)
         diags = []
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
         self.assertTrue(len(diags) == 1)
         self.assertTrue('per user' in diags[0])
 
-    def test_policy_app_conn_stats_fail_by_hosts(self):
-        stats = PolicyConnStatsPerApp(3, 2, 1)
+    def test_policy_app_conn_mgr_fail_by_hosts(self):
+        stats = PolicyAppConnectionMgr(3, 2, 1)
         diags = []
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
         self.assertTrue(len(diags) == 1)
         self.assertTrue('per host' in diags[0])
 
-    def test_policy_app_conn_stats_fail_by_user_hosts(self):
-        stats = PolicyConnStatsPerApp(3, 1, 1)
+    def test_policy_app_conn_mgr_fail_by_user_hosts(self):
+        stats = PolicyAppConnectionMgr(3, 1, 1)
         diags = []
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
@@ -268,8 +270,8 @@ class PolicyConnStatsPerAppTests(TestCase):
         self.assertTrue('per user' in diags[0] or 'per user' in diags[1])
         self.assertTrue('per host' in diags[0] or 'per host' in diags[1])
 
-    def test_policy_app_conn_stats_update(self):
-        stats = PolicyConnStatsPerApp(3, 1, 2)
+    def test_policy_app_conn_mgr_update(self):
+        stats = PolicyAppConnectionMgr(3, 1, 2)
         diags = []
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
@@ -279,18 +281,18 @@ class PolicyConnStatsPerAppTests(TestCase):
         stats.update(3, 2, 2)
         self.assertTrue(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
 
-    def test_policy_app_conn_stats_create_bad_settings(self):
+    def test_policy_app_conn_mgr_create_bad_settings(self):
         denied = False
         try:
-            stats = PolicyConnStatsPerApp(-3, 1, 2)
+            stats = PolicyAppConnectionMgr(-3, 1, 2)
         except PolicyError:
             denied = True
         self.assertTrue(denied, "Failed to detect negative setting value.")
 
-    def test_policy_app_conn_stats_update_bad_settings(self):
+    def test_policy_app_conn_mgr_update_bad_settings(self):
         denied = False
         try:
-            stats = PolicyConnStatsPerApp(0, 0, 0)
+            stats = PolicyAppConnectionMgr(0, 0, 0)
         except PolicyError:
             denied = True
         self.assertFalse(denied, "Should allow all zeros.")
@@ -299,6 +301,18 @@ class PolicyConnStatsPerAppTests(TestCase):
         except PolicyError:
             denied = True
         self.assertTrue(denied, "Failed to detect negative setting value.")
+
+    def test_policy_app_conn_mgr_larger_counts(self):
+        stats = PolicyAppConnectionMgr(10000, 10000, 10000)
+        diags = []
+        for i in range(0, 10000):
+            self.assertTrue(stats.can_connect('1.1.1.1:' + str(i), 'chuck', '1.1.1.1', diags))
+            self.assertTrue(len(diags) == 0)
+        self.assertFalse(stats.can_connect('1.1.1.1:10000', 'chuck', '1.1.1.1', diags))
+        self.assertTrue(len(diags) == 3)
+        self.assertTrue(stats.connections_active == 10000)
+        self.assertTrue(stats.connections_approved == 10000)
+        self.assertTrue(stats.connections_denied == 1)
 
 if __name__ == '__main__':
     unittest.main(main_module())

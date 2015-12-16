@@ -18,17 +18,15 @@
 #
 
 """
-Utilities for command-line programs.
+
 """
 
-import sys, optparse, os
+import sys, os
 import ConfigParser
-from collections import Sequence, Mapping, namedtuple
-from qpid_dispatch_site import VERSION
+import optparse
+from policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr
 import pdb #; pdb.set_trace()
 import ast
-import socket
-import binascii
 
 
 
@@ -95,195 +93,6 @@ Internal Policy:
      'policyVersion': 1}
 
 """
-
-#
-#
-class PolicyError(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)
-
-#
-#
-class HostStruct():
-    """
-    HostStruct represents a single, binary socket address from getaddrinfo
-        - name     : name given to constructor, numeric IP or host name
-        - saddr    : net name resolved by getaddrinfo, numeric IP
-        - family   : saddr.family, int
-        - binary   : saddr packed binary address, binary string
-    """
-    families = [socket.AF_INET]
-    famnames = ["IPv4"]
-    if socket.has_ipv6:
-        families.append(socket.AF_INET6)
-        famnames.append("IPv6")
-
-    def __init__(self, hostname):
-        """
-        Given a host name text string, return the socket info for it.
-        @param[in] hostname host IP address to parse
-        """
-        try:
-            res = socket.getaddrinfo(hostname, 0)
-            if len(res) == 0:
-                raise PolicyError("HostStruct: '%s' did not resolve to an IP address" % hostname)
-            foundFirst = False
-            saddr = ""
-            sfamily = socket.AF_UNSPEC
-            for i0 in range(0, len(res)):
-                family, dum0, dum1, dum2, sockaddr = res[i0]
-                if not foundFirst:
-                    if family in self.families:
-                        saddr = sockaddr[0]
-                        sfamily = family
-                        foundFirst = True
-                else:
-                    if family in self.families:
-                        if not saddr == sockaddr[0] or not sfamily == family:
-                            raise PolicyError("HostStruct: '%s' resolves to multiple IP addresses" %
-                                              hostname)
-
-            if not foundFirst:
-                raise PolicyError("HostStruct: '%s' did not resolve to one of the supported address family" %
-                        hostname)
-            self.name = hostname
-            self.saddr = saddr
-            self.family = sfamily
-            self.binary = socket.inet_pton(family, saddr)
-            return
-        except Exception, e:
-            raise PolicyError("HostStruct: '%s' failed to resolve: '%s'" %
-                              (hostname, e))
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return self.__str__()
-
-    def dump(self):
-        return ("(%s, %s, %s, %s)" %
-                (self.name,
-                 self.saddr,
-                 "AF_INET" if self.family == socket.AF_INET else "AF_INET6",
-                 binascii.hexlify(self.binary)))
-
-#
-#
-class HostAddr():
-    """
-    Provide HostIP address ranges and comparison functions.
-    A HostIP may be:
-    - single address:      10.10.1.1
-    - a pair of addresses: 10.10.0.0,10.10.255.255
-    Only IPv4 and IPv6 are supported.
-    - No unix sockets.
-    HostIP names must resolve to a single IP address.
-    Address pairs define a range.
-    - The second address must be numerically larger than the first address.
-    - The addresses must be of the same address 'family', IPv4 or IPv6.
-    IPv6 support is conditional based on underlying OS network options.
-    Raises a PolicyError on validation error in constructor.
-    """
-
-    def has_ipv6(self):
-        return socket.has_ipv6
-
-    def __init__(self, hostspec):
-        """
-        Parse host spec into binary structures to use for comparisons.
-        Validate the hostspec to enforce usage rules.
-        """
-        self.hoststructs = []
-
-        if hostspec == "*":
-            self.wildcard = True
-        else:
-            self.wildcard = False
-
-            hosts = [x.strip() for x in hostspec.split(",")]
-
-            # hosts must contain one or two host specs
-            if len(hosts) not in [1, 2]:
-                raise PolicyError("hostspec must contain 1 or 2 host names")
-            self.hoststructs.append(HostStruct(hosts[0]))
-            if len(hosts) > 1:
-                self.hoststructs.append(HostStruct(hosts[1]))
-                if not self.hoststructs[0].family == self.hoststructs[1].family:
-                    raise PolicyError("mixed IPv4 and IPv6 host specs in range not allowed")
-                c0 = self.memcmp(self.hoststructs[0].binary, self.hoststructs[1].binary)
-                if c0 > 0:
-                    raise PolicyError("host specs in range must have lower numeric address first")
-
-    def __str__(self):
-        if self.wildcard:
-            return "*"
-        res = self.hoststructs[0].name
-        if len(self.hoststructs) > 1:
-            res += "," + self.hoststructs[1].name
-        return res
-
-    def __repr__(self):
-        return self.__str__()
-
-    def dump(self):
-        if self.wildcard:
-            return "(*)"
-        res = "(" + self.hoststructs[0].dump()
-        if len(self.hoststructs) > 1:
-            res += "," + self.hoststructs[1].dump()
-        res += ")"
-        return res
-
-    def memcmp(self, a, b):
-        res = 0
-        for i in range(0,len(a)):
-            if a[i] > b[i]:
-                res = 1
-                break;
-            elif a[i] < b[i]:
-                res = -1
-                break
-        return res
-
-    def match_bin(self, cstruct):
-        """
-        Does the candidate hoststruct match the IP or range of IP addresses represented by this?
-        @param[in] cstruct the IP address to be tested
-        @return candidate matches this or not
-        """
-        if self.wildcard:
-            return True
-        try:
-            if not cstruct.family == self.hoststructs[0].family:
-                # sorry, wrong AF_INET family
-                return False
-            c0 = self.memcmp(cstruct.binary, self.hoststructs[0].binary)
-            if len(self.hoststructs) == 1:
-                return c0 == 0
-            c1 = self.memcmp(cstruct.binary, self.hoststructs[1].binary)
-            return c0 >= 0 and c1 <= 0
-        except PolicyError:
-            return False
-        except Exception, e:
-            assert isinstance(cstruct, HostStruct), \
-                ("Wrong type. Expected HostStruct but received %s" % cstruct.__class__.__name__)
-            return False
-
-    def match_str(self, candidate):
-        """
-        Does the candidate string match the IP or range represented by this?
-        @param[in] candidate the IP address to be tested
-        @return candidate matches this or not
-        """
-        try:
-            hoststruct = HostStruct(candidate)
-        except PolicyError:
-            return False
-        return self.match_bin(hoststruct)
-
 
 #
 #
@@ -544,103 +353,6 @@ class PolicyCompiler():
                     return False
         return True
 
-class PolicyConnStatsPerApp():
-    """
-    Track policy user/host connection statistics for one app
-    connections : 5
-    max_t : 20
-    max_u : 5
-    max_h : 10
-    host_aggr : { 'host1' : [conn1, conn2, conn3],
-                  'host2' : [conn4, conn5] }
-    user_aggr : { 'user1' : [conn1, conn2, conn3],
-                  'user2' : [conn4, conn5] }
-    """
-    def __init__(self, maxconn, maxconnperuser, maxconnperhost):
-        """
-        The object is constructed with the policy limits
-        for total, total per user, and total per host counts.
-        As connections are allowed they are tracked in 
-        aggregation maps.
-        """
-        self.connections = 0
-        if maxconn < 0 or maxconnperuser < 0 or maxconnperhost < 0:
-            raise PolicyError("PolicyConnStatsPerApp settings must be >= 0")
-        self.max_t = maxconn
-        self.max_u = maxconnperuser
-        self.max_h = maxconnperhost
-        self.user_aggr = {}
-        self.host_aggr = {}
-
-    def __str__(self):
-        pdb.set_trace()
-        res = ("Connection Limits: Total: %s, Per User: %s, Per Host: %s\n" %
-            (self.max_t, self.max_u, self.max_h))
-        res += ("User counts: %s\n" % self.user_aggr)
-        res += ("Host counts: %s" % self.host_aggr)
-        return res
-
-    def __repr__(self):
-        return self.__str__()
-
-    def update(self, maxconn, maxconnperuser, maxconnperhost):
-        if maxconn < 0 or maxconnperuser < 0 or maxconnperhost < 0:
-            raise PolicyError("PolicyConnStatsPerApp settings must be >= 0")
-        self.max_t = maxconn
-        self.max_u = maxconnperuser
-        self.max_h = maxconnperhost
-
-    def can_connect(self, conn_id, user, host, diags):
-        """
-        Register a connection attempt.
-        If all the connection rules pass then add the
-        user/host to the connection tables
-        """
-        n_user = 0
-        if user in self.user_aggr:
-            n_user = len(self.user_aggr[user])
-        n_host = 0
-        if host in self.host_aggr:
-            n_host = len(self.host_aggr[host])
-
-        allowbytotal = self.max_t == 0 or self.connections < self.max_t
-        allowbyuser  = self.max_u == 0 or n_user < self.max_u
-        allowbyhost  = self.max_h == 0 or n_host < self.max_h
-
-        if allowbytotal and allowbyuser and allowbyhost:
-            self.connections += 1
-            if not user in self.user_aggr:
-                self.user_aggr[user] = []
-            self.user_aggr[user].append(conn_id)
-            if not host in self.host_aggr:
-                self.host_aggr[host] = []
-            self.host_aggr[host].append(conn_id)
-            return True
-        else:
-            if not allowbytotal:
-                diags.append("LogMe: INFO user '%s' from host '%s' denied connection by total connection limit" %
-                             (user, host))
-            if not allowbyuser:
-                diags.append("LogMe: INFO user '%s' from host '%s' denied connection by per user limit" %
-                             (user, host))
-            if not allowbyhost:
-                diags.append("LogMe: INFO user '%s' from host '%s' denied connection by per host limit" %
-                             (user, host))
-            return False
-
-    def disconnect(self, conn_id, user, host):
-        """
-        Unregister a connection
-        """
-        assert(self.connections > 0)
-        assert(user in self.user_aggr)
-        assert(conn_id in self.user_aggr[user])
-        assert(host in self.host_aggr)
-        assert(conn_id in self.host_aggr[host])
-        self.connections -= 1
-        self.user_aggr[user].remove(conn_id)
-        self.host_aggr[host].remove(conn_id)
-
 class Policy():
     """
     The policy database.
@@ -736,7 +448,7 @@ class Policy():
             if c in self.stats:
                 self.stats[c].update(c_max, c_max_u, c_max_h)
             else:
-                self.stats[c] = PolicyConnStatsPerApp(c_max, c_max_u, c_max_h)
+                self.stats[c] = PolicyAppConnectionMgr(c_max, c_max_u, c_max_h)
         self.data.update(newpolicies)
 
 
