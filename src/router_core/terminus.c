@@ -83,6 +83,9 @@ void qdr_terminus_free(qdr_terminus_t *term)
 
 void qdr_terminus_copy(qdr_terminus_t *from, pn_terminus_t *to)
 {
+    if (!from)
+        return;
+
     if (from->address) {
         unsigned char *addr = qd_field_iterator_copy(from->address->iterator);
         pn_terminus_set_address(to, (char*) addr);
@@ -132,6 +135,13 @@ bool qdr_terminus_is_anonymous(qdr_terminus_t *term)
 bool qdr_terminus_is_dynamic(qdr_terminus_t *term)
 {
     return term->dynamic;
+}
+
+
+void qdr_terminus_set_address(qdr_terminus_t *term, const char *addr)
+{
+    qdr_field_free(term->address);
+    term->address = qdr_field(addr);
 }
 
 

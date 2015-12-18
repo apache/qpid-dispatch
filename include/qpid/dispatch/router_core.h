@@ -150,12 +150,13 @@ void *qdr_connection_get_context(const qdr_connection_t *conn);
  * qdr_connection_process
  *
  * Allow the core to process work associated with this connection.
- * This function MUST be called only on a thread that exclusively owns
+ * This function MUST be called on a thread that exclusively owns
  * this connection.
  *
  * @param conn The pointer returned by qdr_connection_opened
+ * @return The number of actions processed.
  */
-void qdr_connection_process(qdr_connection_t *conn);
+int qdr_connection_process(qdr_connection_t *conn);
 
 /**
  * qdr_connection_activate_t callback
@@ -254,6 +255,16 @@ bool qdr_terminus_is_anonymous(qdr_terminus_t *term);
 bool qdr_terminus_is_dynamic(qdr_terminus_t *term);
 
 /**
+ * qdr_terminus_set_address
+ *
+ * Set the terminus address
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @param addr An AMQP address (null-terminated string)
+ */
+void qdr_terminus_set_address(qdr_terminus_t *term, const char *addr);
+
+/**
  * qdr_terminus_get_address
  *
  * Return the address of the terminus in the form of an iterator.
@@ -328,6 +339,16 @@ qd_link_type_t qdr_link_type(const qdr_link_t *link);
 qd_direction_t qdr_link_direction(const qdr_link_t *link);
 
 /**
+ * qdr_link_name
+ *
+ * Retrieve the name of the link.
+ *
+ * @param link Link object
+ * @return The link's name
+ */
+const char *qdr_link_name(const qdr_link_t *link);
+
+/**
  * qdr_link_first_attach
  *
  * This function is invoked when a first-attach (not a response to an earlier attach)
@@ -339,7 +360,11 @@ qd_direction_t qdr_link_direction(const qdr_link_t *link);
  * @param target Target terminus of the attach
  * @return A pointer to a new qdr_link_t object to track the link
  */
-qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, qdr_terminus_t *source, qdr_terminus_t *target);
+qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
+                                  qd_direction_t    dir,
+                                  qdr_terminus_t   *source,
+                                  qdr_terminus_t   *target,
+                                  const char       *name);
 
 /**
  * qdr_link_second_attach
@@ -359,9 +384,10 @@ void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_termin
  * This function is invoked when a link detach arrives.
  *
  * @param link The link pointer returned by qdr_link_first_attach or in a FIRST_ATTACH event.
+ * @param dt The type of detach that occurred.
  * @param error The link error from the detach frame or 0 if none.
  */
-void qdr_link_detach(qdr_link_t *link, qdr_error_t *error);
+void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error);
 
 qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg);
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg, qd_field_iterator_t *addr);

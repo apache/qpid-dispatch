@@ -1181,8 +1181,10 @@ void qd_server_activate(qd_connection_t *ctx)
     if (!ctor)
         return;
 
-    if (!qdpn_connector_closed(ctor))
+    if (!qdpn_connector_closed(ctor)) {
         qdpn_connector_activate(ctor, QDPN_CONNECTOR_WRITABLE);
+        qdpn_driver_wakeup(ctx->server->driver);
+    }
 }
 
 

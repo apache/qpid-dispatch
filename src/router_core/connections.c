@@ -23,9 +23,9 @@
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_link_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_link_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 ALLOC_DEFINE(qdr_connection_t);
 ALLOC_DEFINE(qdr_connection_work_t);
@@ -107,7 +107,7 @@ void *qdr_connection_get_context(const qdr_connection_t *conn)
 }
 
 
-void qdr_connection_process(qdr_connection_t *conn)
+int qdr_connection_process(qdr_connection_t *conn)
 {
     qdr_connection_work_list_t  work_list;
     qdr_core_t                 *core = conn->core;
@@ -116,6 +116,7 @@ void qdr_connection_process(qdr_connection_t *conn)
     DEQ_MOVE(conn->work_list, work_list);
     sys_mutex_unlock(conn->work_lock);
 
+    int event_count = DEQ_SIZE(work_list);
     qdr_connection_work_t *work = DEQ_HEAD(work_list);
     while (work) {
         DEQ_REMOVE_HEAD(work_list);
@@ -134,9 +135,14 @@ void qdr_connection_process(qdr_connection_t *conn)
             break;
         }
 
+        qdr_terminus_free(work->source);
+        qdr_terminus_free(work->target);
         free_qdr_connection_work_t(work);
+
         work = DEQ_HEAD(work_list);
     }
+
+    return event_count;
 }
 
 
@@ -165,21 +171,32 @@ qd_direction_t qdr_link_direction(const qdr_link_t *link)
 }
 
 
-qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, qdr_terminus_t *source, qdr_terminus_t *target)
+const char *qdr_link_name(const qdr_link_t *link)
 {
-    qdr_action_t *action = qdr_action(qdr_link_first_attach_CT, "link_first_attach");
-    qdr_link_t   *link   = new_qdr_link_t();
+    return link->name;
+}
+
+
+qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
+                                  qd_direction_t    dir,
+                                  qdr_terminus_t   *source,
+                                  qdr_terminus_t   *target,
+                                  const char       *name)
+{
+    qdr_action_t   *action         = qdr_action(qdr_link_inbound_first_attach_CT, "link_first_attach");
+    qdr_link_t     *link           = new_qdr_link_t();
+    qdr_terminus_t *local_terminus = dir == QD_OUTGOING ? source : target;
 
     ZERO(link);
     link->core = conn->core;
     link->conn = conn;
+    link->name = (char*) malloc(strlen(name));
+    strcpy(link->name, name);
 
-    if (dir == QD_OUTGOING) {
-        if      (qdr_terminus_has_capability(target, QD_CAPABILITY_ROUTER_CONTROL))
-            link->link_type = QD_LINK_CONTROL;
-        else if (qdr_terminus_has_capability(target, QD_CAPABILITY_ROUTER_DATA))
-            link->link_type = QD_LINK_ROUTER;
-    }
+    if      (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_CONTROL))
+        link->link_type = QD_LINK_CONTROL;
+    else if (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_DATA))
+        link->link_type = QD_LINK_ROUTER;
 
     action->args.connection.conn   = conn;
     action->args.connection.link   = link;
@@ -194,7 +211,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn, qd_direction_t dir, qd
 
 void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
 {
-    qdr_action_t *action = qdr_action(qdr_link_second_attach_CT, "link_second_attach");
+    qdr_action_t *action = qdr_action(qdr_link_inbound_second_attach_CT, "link_second_attach");
 
     action->args.connection.link   = link;
     action->args.connection.source = source;
@@ -203,12 +220,13 @@ void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_termin
 }
 
 
-void qdr_link_detach(qdr_link_t *link, qdr_error_t *error)
+void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error)
 {
-    qdr_action_t *action = qdr_action(qdr_link_detach_CT, "link_detach");
+    qdr_action_t *action = qdr_action(qdr_link_inbound_detach_CT, "link_detach");
 
-    action->args.connection.link  = link;
-    action->args.connection.error = error;
+    action->args.connection.link   = link;
+    action->args.connection.error  = error;
+    action->args.connection.dt     = dt;
     qdr_action_enqueue(link->core, action);
 }
 
@@ -246,6 +264,48 @@ static void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
 }
 
 
+#define QDR_DISCRIMINATOR_SIZE 16
+static void qdr_generate_discriminator(char *string)
+{
+    static const char *table = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+_";
+    long int rnd1 = random();
+    long int rnd2 = random();
+    long int rnd3 = random();
+    int      idx;
+    int      cursor = 0;
+
+    for (idx = 0; idx < 5; idx++) {
+        string[cursor++] = table[(rnd1 >> (idx * 6)) & 63];
+        string[cursor++] = table[(rnd2 >> (idx * 6)) & 63];
+        string[cursor++] = table[(rnd3 >> (idx * 6)) & 63];
+    }
+    string[cursor] = '\0';
+}
+
+
+/**
+ * Generate a temporary routable address for a destination connected to this
+ * router node.
+ */
+static void qdr_generate_temp_addr(qdr_core_t *core, char *buffer, size_t length)
+{
+    char discriminator[QDR_DISCRIMINATOR_SIZE];
+    qdr_generate_discriminator(discriminator);
+    snprintf(buffer, length, "amqp:/_topo/%s/%s/temp.%s", core->router_area, core->router_id, discriminator);
+}
+
+
+/**
+ * Generate a link name
+ */
+static void qdr_generate_link_name(const char *label, char *buffer, size_t length)
+{
+    char discriminator[QDR_DISCRIMINATOR_SIZE];
+    qdr_generate_discriminator(discriminator);
+    snprintf(buffer, length, "%s.%s", label, discriminator);
+}
+
+
 static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
                                       qdr_connection_t *conn,
                                       qd_link_type_t    link_type,
@@ -264,6 +324,8 @@ static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->conn           = conn;
     link->link_type      = link_type;
     link->link_direction = dir;
+    link->name           = (char*) malloc(QDR_DISCRIMINATOR_SIZE + 8);
+    qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
 
     qdr_connection_work_t *work = new_qdr_connection_work_t();
     ZERO(work);
@@ -277,43 +339,27 @@ static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
 }
 
 
-static void qdr_link_reject_CT(qdr_core_t *core, qdr_link_t *link, qdr_condition_t condition)
+static void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_condition_t condition)
 {
 }
 
 
-static void qdr_link_accept_CT(qdr_core_t *core, qdr_link_t *link)
+static void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
 {
+    qdr_connection_work_t *work = new_qdr_connection_work_t();
+    ZERO(work);
+    work->work_type = QDR_CONNECTION_WORK_SECOND_ATTACH;
+    work->link      = link;
+    work->source    = source;
+    work->target    = target;
+
+    qdr_connection_enqueue_work_CT(core, link->conn, work);
 }
 
 
-static void qdr_forward_first_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_address_t *addr)
+static void qdr_forward_first_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_address_t *addr,
+                                        qdr_terminus_t *source, qdr_terminus_t *target)
 {
-}
-
-
-/**
- * Generate a temporary routable address for a destination connected to this
- * router node.
- */
-static void qdr_generate_temp_addr(qdr_core_t *core, char *buffer, size_t length)
-{
-    static const char *table = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+_";
-    char     discriminator[16];
-    long int rnd1 = random();
-    long int rnd2 = random();
-    long int rnd3 = random();
-    int      idx;
-    int      cursor = 0;
-
-    for (idx = 0; idx < 5; idx++) {
-        discriminator[cursor++] = table[(rnd1 >> (idx * 6)) & 63];
-        discriminator[cursor++] = table[(rnd2 >> (idx * 6)) & 63];
-        discriminator[cursor++] = table[(rnd3 >> (idx * 6)) & 63];
-    }
-    discriminator[cursor] = '\0';
-
-    snprintf(buffer, length, "amqp:/_topo/%s/%s/temp.%s", core->router_area, core->router_id, discriminator);
 }
 
 
@@ -341,7 +387,7 @@ static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_fie
  * Depending on its policy, the address may be eligible for being closed out
  * (i.e. Logging its terminal statistics and freeing its resources).
  */
-/*static*/ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
+static void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
 {
     if (addr == 0)
         return;
@@ -361,8 +407,8 @@ static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_fie
     // If the address has no in-process consumer or destinations, it should be
     // deleted.
     //
-    if (addr->on_message == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->rnodes) == 0 &&
-        !addr->waypoint && !addr->block_deletion) {
+    if (addr->on_message == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->inlinks) == 0 &&
+        DEQ_SIZE(addr->rnodes) == 0 && !addr->waypoint && !addr->block_deletion) {
         qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
         DEQ_REMOVE(core->addrs, addr);
         qd_hash_handle_free(addr->hash_handle);
@@ -437,6 +483,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
                 addr = qdr_address(qdr_dynamic_semantics);
                 qd_hash_insert(core->addr_hash, temp_iter, addr, &addr->hash_handle);
                 DEQ_INSERT_TAIL(core->addrs, addr);
+                qdr_terminus_set_address(terminus, temp_addr);
                 generating = false;
             }
             qd_field_iterator_free(temp_iter);
@@ -512,10 +559,10 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             // The connector-side of inter-router connections is responsible for setting up the
             // inter-router links:  Two (in and out) for control, two for routed-message transfer.
             //
-            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), 0);
-            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, 0, qdr_terminus_router_control());
-            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), 0);
-            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, 0, qdr_terminus_router_data());
+            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control());
+            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control());
+            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data());
+            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data());
         }
     }
 
@@ -554,7 +601,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 }
 
 
-static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
         return;
@@ -567,15 +614,14 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
 
     //
     // Reject any attaches of inter-router links that arrive on connections that are not inter-router.
-    //
-    if ((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)
-        qdr_link_reject_CT(core, link, QDR_CONDITION_FORBIDDEN);
-
-    //
     // Reject any waypoint links.  Waypoint links are always initiated by a router, not the remote container.
     //
-    if (link->link_type == QD_LINK_WAYPOINT)
-        qdr_link_reject_CT(core, link, QDR_CONDITION_FORBIDDEN);
+    if ((link->link_type == QD_LINK_WAYPOINT) ||
+        ((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)) {
+        qdr_link_outbound_detach_CT(core, link, QDR_CONDITION_FORBIDDEN);
+        qdr_terminus_free(source);
+        qdr_terminus_free(target);
+    }
 
     if (dir == QD_INCOMING) {
         //
@@ -585,24 +631,28 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
         case QD_LINK_ENDPOINT: {
             if (qdr_terminus_is_anonymous(target)) {
                 link->owning_addr = 0;
-                qdr_link_accept_CT(core, link);
+                qdr_link_outbound_second_attach_CT(core, link, source, target);
+
             } else {
                 //
                 // This link has a target address
                 //
                 bool           link_route;
                 qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, target, false, false, &link_route);
-                if (!addr)
+                if (!addr) {
                     //
                     // No route to this destination, reject the link
                     //
-                    qdr_link_reject_CT(core, link, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                    qdr_link_outbound_detach_CT(core, link, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                    qdr_terminus_free(source);
+                    qdr_terminus_free(target);
+                }
 
                 else if (link_route)
                     //
                     // This is a link-routed destination, forward the attach to the next hop
                     //
-                    qdr_forward_first_attach_CT(core, link, addr);
+                    qdr_forward_first_attach_CT(core, link, addr, source, target);
 
                 else {
                     //
@@ -611,7 +661,7 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
                     //
                     link->owning_addr = addr;
                     qdr_add_link_ref(&addr->inlinks, link);
-                    qdr_link_accept_CT(core, link);
+                    qdr_link_outbound_second_attach_CT(core, link, source, target);
                 }
             }
             break;
@@ -622,9 +672,11 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
             break;
 
         case QD_LINK_CONTROL:
+            qdr_link_outbound_second_attach_CT(core, link, source, target);
             break;
 
         case QD_LINK_ROUTER:
+            qdr_link_outbound_second_attach_CT(core, link, source, target);
             break;
         }
     } else {
@@ -635,17 +687,20 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
         case QD_LINK_ENDPOINT: {
             bool           link_route;
             qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, source, true, true, &link_route);
-            if (!addr)
+            if (!addr) {
                 //
                 // No route to this destination, reject the link
                 //
-                qdr_link_reject_CT(core, link, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                qdr_link_outbound_detach_CT(core, link, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                qdr_terminus_free(source);
+                qdr_terminus_free(target);
+            }
 
             else if (link_route)
                 //
                 // This is a link-routed destination, forward the attach to the next hop
                 //
-                qdr_forward_first_attach_CT(core, link, addr);
+                qdr_forward_first_attach_CT(core, link, addr, source, target);
 
             else {
                 //
@@ -659,7 +714,7 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
                     if (key && *key == 'M')
                         qdr_post_mobile_added_CT(core, key);
                 }
-                qdr_link_accept_CT(core, link);
+                qdr_link_outbound_second_attach_CT(core, link, source, target);
             }
             break;
         }
@@ -672,10 +727,12 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
             link->owning_addr = core->hello_addr;
             qdr_add_link_ref(&core->hello_addr->rlinks, link);
             core->control_links_by_mask_bit[conn->mask_bit] = link;
+            qdr_link_outbound_second_attach_CT(core, link, source, target);
             break;
 
         case QD_LINK_ROUTER:
             core->data_links_by_mask_bit[conn->mask_bit] = link;
+            qdr_link_outbound_second_attach_CT(core, link, source, target);
             break;
         }
     }
@@ -699,14 +756,59 @@ static void qdr_link_first_attach_CT(qdr_core_t *core, qdr_action_t *action, boo
 }
 
 
-static void qdr_link_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
         return;
 
-    //qdr_link_t     *link   = action->args.connection.link;
-    //qdr_terminus_t *source = action->args.connection.source;
-    //qdr_terminus_t *target = action->args.connection.target;
+    qdr_connection_t *conn   = action->args.connection.conn;
+    qdr_link_t       *link   = action->args.connection.link;
+    qd_direction_t    dir    = action->args.connection.dir;
+    qdr_terminus_t   *source = action->args.connection.source;
+    qdr_terminus_t   *target = action->args.connection.target;
+
+    if (dir == QD_INCOMING) {
+        //
+        // Handle incoming link cases
+        //
+        switch (link->link_type) {
+        case QD_LINK_ENDPOINT:
+            break;
+
+        case QD_LINK_WAYPOINT:
+            break;
+
+        case QD_LINK_CONTROL:
+            break;
+
+        case QD_LINK_ROUTER:
+            break;
+        }
+    } else {
+        //
+        // Handle outgoing link cases
+        //
+        switch (link->link_type) {
+        case QD_LINK_ENDPOINT:
+            break;
+
+        case QD_LINK_WAYPOINT:
+            break;
+
+        case QD_LINK_CONTROL:
+            link->owning_addr = core->hello_addr;
+            qdr_add_link_ref(&core->hello_addr->rlinks, link);
+            core->control_links_by_mask_bit[conn->mask_bit] = link;
+            break;
+
+        case QD_LINK_ROUTER:
+            core->data_links_by_mask_bit[conn->mask_bit] = link;
+            break;
+        }
+    }
+
+    qdr_terminus_free(source);
+    qdr_terminus_free(target);
 
     //
     // Cases to be handled:
@@ -723,28 +825,79 @@ static void qdr_link_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bo
 }
 
 
-static void qdr_link_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
         return;
 
-    qdr_link_t  *link  = action->args.connection.link;
-    //qdr_error_t *error = action->args.connection.error;
+    qdr_connection_t *conn      = action->args.connection.conn;
+    qdr_link_t       *link      = action->args.connection.link;
+    //qdr_error_t      *error     = action->args.connection.error;
+    qd_detach_type_t  dt        = action->args.connection.dt;
+    qdr_address_t    *addr      = link->owning_addr;
+    bool              was_local = false;
 
-    switch (link->link_type) {
-    case QD_LINK_ENDPOINT:
-        break;
+    link->owning_addr = 0;
 
-    case QD_LINK_WAYPOINT:
-        break;
+    if (link->link_direction == QD_INCOMING) {
+        //
+        // Handle incoming link cases
+        //
+        switch (link->link_type) {
+        case QD_LINK_ENDPOINT:
+            if (addr)
+                qdr_del_link_ref(&addr->inlinks, link);
+            break;
 
-    case QD_LINK_CONTROL:
-        break;
+        case QD_LINK_WAYPOINT:
+            break;
 
-    case QD_LINK_ROUTER:
-        break;
+        case QD_LINK_CONTROL:
+            break;
+
+        case QD_LINK_ROUTER:
+            break;
+        }
+    } else {
+        //
+        // Handle outgoing link cases
+        //
+        switch (link->link_type) {
+        case QD_LINK_ENDPOINT:
+            if (addr) {
+                qdr_del_link_ref(&addr->rlinks, link);
+                was_local = true;
+            }
+            break;
+
+        case QD_LINK_WAYPOINT:
+            break;
+
+        case QD_LINK_CONTROL:
+            qdr_del_link_ref(&core->hello_addr->rlinks, link);
+            core->control_links_by_mask_bit[conn->mask_bit] = 0;
+            qdr_post_link_lost_CT(core, conn->mask_bit);
+            break;
+
+        case QD_LINK_ROUTER:
+            core->data_links_by_mask_bit[conn->mask_bit] = 0;
+            break;
+        }
     }
 
+    //
+    // If the detach occurred via protocol, send a detach back.
+    // TODO - Note that this is not appropriate for routed links.
+    //
+    if (dt != QD_LOST)
+        qdr_link_outbound_detach_CT(core, link, 0);  // TODO - Fix error arg
+
+    //
+    // If there was an address associated with this link, check to see if any address-related
+    // cleanup has to be done.
+    //
+    if (addr)
+        qdr_check_addr_CT(core, addr, was_local);
 
     //
     // Cases to be handled:

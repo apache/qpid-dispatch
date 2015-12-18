@@ -46,7 +46,7 @@ if (NOT PYTHONLIBS_FOUND)
      message(FATAL_ERROR "Python Development Libraries are needed.")
 endif (NOT PYTHONLIBS_FOUND)
 
-set (SO_VERSION_MAJOR 1)
+set (SO_VERSION_MAJOR 2)
 set (SO_VERSION_MINOR 0)
 set (SO_VERSION "${SO_VERSION_MAJOR}.${SO_VERSION_MINOR}")
 

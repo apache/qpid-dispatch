@@ -72,6 +72,7 @@ struct qdr_action_t {
             qdr_terminus_t   *source;
             qdr_terminus_t   *target;
             qdr_error_t      *error;
+            qd_detach_type_t  dt;
         } connection;
 
         //
@@ -161,6 +162,7 @@ struct qdr_link_t {
     qdr_connection_t         *conn;            ///< [ref] Connection that owns this link
     qd_link_type_t            link_type;
     qd_direction_t            link_direction;
+    char                     *name;
     qdr_address_t            *owning_addr;     ///< [ref] Address record that owns this link
     //qd_waypoint_t            *waypoint;        ///< [ref] Waypoint that owns this link
     qdr_link_t               *connected_link;  ///< [ref] If this is a link-route, reference the connected link
@@ -245,7 +247,9 @@ void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 // General Work
 //
 // The following types are used to post work to the IO threads for
-// non-connection-specific action.
+// non-connection-specific action.  These actions are serialized through
+// a zero-delay timer and are processed by one thread at a time.  General
+// actions occur in-order and are not run concurrently.
 //
 typedef struct qdr_general_work_t qdr_general_work_t;
 typedef void (*qdr_general_work_handler_t) (qdr_core_t *core, qdr_general_work_t *work);
@@ -266,7 +270,9 @@ qdr_general_work_t *qdr_general_work(qdr_general_work_handler_t handler);
 // Connection Work
 //
 // The following types are used to post work to the IO threads for
-// connection-specific action.
+// connection-specific action.  The actions for a particular connection
+// are run in-order and are not concurrent.  Actions for different connections
+// will run concurrently.
 //
 typedef enum {
     QDR_CONNECTION_WORK_FIRST_ATTACH,

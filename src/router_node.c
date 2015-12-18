@@ -199,10 +199,21 @@ void qd_router_link_free_LH(qd_router_link_t *rlink)
 }
 
 
+static int router_writable_conn_handler(void *type_context, qd_connection_t *conn, void *context)
+{
+    qdr_connection_t *qconn = (qdr_connection_t*) qd_connection_get_context(conn);
+
+    if (qconn)
+        return qdr_connection_process(qconn);
+    return 0;
+}
+
+
 /**
  * Outgoing Link Writable Handler
+ * DEPRECATE
  */
-static int router_writable_link_handler(void* context, qd_link_t *link)
+/*static*/ int router_writable_link_handler(void* context, qd_link_t *link)
 {
     qd_router_t            *router = (qd_router_t*) context;
     qd_router_delivery_t   *delivery;
@@ -821,7 +832,8 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
     qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
     qdr_link_t       *qdr_link = qdr_link_first_attach(qdr_conn, QD_INCOMING,
                                                        qdr_terminus(qd_link_remote_source(link)),
-                                                       qdr_terminus(qd_link_remote_target(link)));
+                                                       qdr_terminus(qd_link_remote_target(link)),
+                                                       pn_link_name(qd_link_pn(link)));
     qdr_link_set_context(qdr_link, link);
     qd_link_set_context(link, qdr_link);
 
@@ -838,7 +850,8 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
     qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
     qdr_link_t       *qdr_link = qdr_link_first_attach(qdr_conn, QD_OUTGOING,
                                                        qdr_terminus(qd_link_remote_source(link)),
-                                                       qdr_terminus(qd_link_remote_target(link)));
+                                                       qdr_terminus(qd_link_remote_target(link)),
+                                                       pn_link_name(qd_link_pn(link)));
     qdr_link_set_context(qdr_link, link);
     qd_link_set_context(link, qdr_link);
 
@@ -915,14 +928,14 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
         qdr_error_t *error = qdr_error_from_pn(cond);
         if (!error && dt == QD_LOST)
             error = qdr_error("qd:routed-link-lost", "Connectivity to the peer container was lost");
-        qdr_link_detach(rlink, error);
+        qdr_link_detach(rlink, dt, error);
     }
 
     return 0;
 }
 
 
-static void router_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
+static int router_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qd_router_t           *router = (qd_router_t*) type_context;
     qdr_connection_role_t  role   = qd_router_connection_role(conn);
@@ -930,10 +943,12 @@ static void router_inbound_opened_handler(void *type_context, qd_connection_t *c
 
     qd_connection_set_context(conn, qdrc);
     qdr_connection_set_context(qdrc, conn);
+
+    return 0;
 }
 
 
-static void router_outbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
+static int router_outbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qd_router_t           *router = (qd_router_t*) type_context;
     qdr_connection_role_t  role   = qd_router_connection_role(conn);
@@ -941,14 +956,18 @@ static void router_outbound_opened_handler(void *type_context, qd_connection_t *
 
     qd_connection_set_context(conn, qdrc);
     qdr_connection_set_context(qdrc, conn);
+
+    return 0;
 }
 
 
-static void router_closed_handler(void *type_context, qd_connection_t *conn, void *context)
+static int router_closed_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qdr_connection_t *qdrc = (qdr_connection_t*) qd_connection_get_context(conn);
     qdr_connection_closed(qdrc);
     qd_connection_set_context(conn, 0);
+
+    return 0;
 }
 
 
@@ -969,7 +988,7 @@ static qd_node_type_t router_node = {"router", 0, 0,
                                      router_disposition_handler,
                                      router_incoming_link_handler,
                                      router_outgoing_link_handler,
-                                     router_writable_link_handler,
+                                     router_writable_conn_handler,
                                      router_link_detach_handler,
                                      router_link_attach_handler,
                                      router_link_flow_handler,
@@ -1080,11 +1099,46 @@ static void qd_router_link_first_attach(void             *context,
                                         qdr_terminus_t   *source,
                                         qdr_terminus_t   *target)
 {
+    qd_router_t     *router = (qd_router_t*) context;
+    qd_connection_t *qconn  = (qd_connection_t*) qdr_connection_get_context(conn);
+
+    //
+    // Create a new link to be attached
+    //
+    qd_link_t *qlink = qd_link(router->node, qconn, qdr_link_direction(link), qdr_link_name(link));
+
+    //
+    // Copy the source and target termini to the link
+    //
+    qdr_terminus_copy(source, qd_link_source(qlink));
+    qdr_terminus_copy(target, qd_link_target(qlink));
+
+    //
+    // Associate the qd_link and the qdr_link to each other
+    //
+    qdr_link_set_context(link, qlink);
+    qd_link_set_context(qlink, link);
+
+    //
+    // Open (attach) the link
+    //
+    pn_link_open(qd_link_pn(qlink));
 }
 
 
 static void qd_router_link_second_attach(void *context, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
 {
+    qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    if (!qlink)
+        return;
+
+    qdr_terminus_copy(source, qd_link_source(qlink));
+    qdr_terminus_copy(target, qd_link_target(qlink));
+
+    //
+    // Open (attach) the link
+    //
+    pn_link_open(qd_link_pn(qlink));
 }
 
 
