@@ -846,7 +846,7 @@
             "description": "AMQP address managed by the router.",
             "extends": "operationalEntity",
             "attributes": {
-                "inProcess": {"type": "boolean"},
+                "inProcess": {"type": "integer"},
                 "subscriberCount": {"type": "integer", "graph": true},
                 "remoteCount": {"type": "integer", "graph": true},
                 "deliveriesIngress": {"type": "integer", "graph": true},

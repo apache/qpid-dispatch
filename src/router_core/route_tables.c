@@ -30,6 +30,7 @@ static void qdr_set_valid_origins_CT (qdr_core_t *core, qdr_action_t *action, bo
 static void qdr_map_destination_CT   (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_unmap_destination_CT (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_subscribe_CT         (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_unsubscribe_CT       (qdr_core_t *core, qdr_action_t *action, bool discard);
 
 static qd_address_semantics_t router_addr_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS | QD_BYPASS_VALID_ORIGINS;
 
@@ -128,17 +129,39 @@ void qdr_core_route_table_handlers(qdr_core_t           *core,
 }
 
 
-void qdr_core_subscribe(qdr_core_t *core, const char *address, char aclass, char phase,
-                        qd_address_semantics_t sem, qdr_receive_t on_message, void *context)
+qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
+                                       const char             *address,
+                                       char                    aclass,
+                                       char                    phase,
+                                       qd_address_semantics_t  semantics,
+                                       qdr_receive_t           on_message,
+                                       void                   *context)
 {
+    qdr_subscription_t *sub = NEW(qdr_subscription_t);
+    sub->core               = core;
+    sub->addr               = 0;
+    sub->on_message         = on_message;
+    sub->on_message_context = context;
+
     qdr_action_t *action = qdr_action(qdr_subscribe_CT, "subscribe");
-    action->args.subscribe.address        = qdr_field(address);
-    action->args.subscribe.semantics      = sem;
-    action->args.subscribe.address_class  = aclass;
-    action->args.subscribe.address_phase  = phase;
-    action->args.subscribe.on_message     = on_message;
-    action->args.subscribe.context        = context;
+    action->args.io.address       = qdr_field(address);
+    action->args.io.address_class = aclass;
+    action->args.io.address_phase = phase;
+    action->args.io.subscription  = sub;
+    action->args.io.semantics     = semantics;
     qdr_action_enqueue(core, action);
+
+    return sub;
+}
+
+
+void qdr_core_unsubscribe(qdr_subscription_t *sub)
+{
+    if (sub) {
+        qdr_action_t *action = qdr_action(qdr_unsubscribe_CT, "unsubscribe");
+        action->args.io.subscription = sub;
+        qdr_action_enqueue(sub->core, action);
+    }
 }
 
 
@@ -165,64 +188,6 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
         core->routers_by_mask_bit[idx]   = 0;
         core->control_links_by_mask_bit[idx] = 0;
         core->data_links_by_mask_bit[idx] = 0;
-    }
-}
-
-
-/**
- * Check an address to see if it no longer has any associated destinations.
- * Depending on its policy, the address may be eligible for being closed out
- * (i.e. Logging its terminal statistics and freeing its resources).
- */
-static void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
-{
-    if (addr == 0)
-        return;
-
-    bool         to_delete      = false;
-    bool         no_more_locals = false;
-    qdr_field_t *key_field      = 0;
-
-    //
-    // If the address has no in-process consumer or destinations, it should be
-    // deleted.
-    //
-    if (addr->on_message == 0 &&
-        DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->rnodes) == 0 &&
-        !addr->waypoint && !addr->block_deletion)
-        to_delete = true;
-
-    //
-    // If we have just removed a local linkage and it was the last local linkage,
-    // we need to notify the router module that there is no longer a local
-    // presence of this address.
-    //
-    if (was_local && DEQ_SIZE(addr->rlinks) == 0) {
-        no_more_locals = true;
-        const unsigned char *key = qd_hash_key_by_handle(addr->hash_handle);
-        if (key && (key[0] == 'M' || key[0] == 'C' || key[0] == 'D'))
-            key_field = qdr_field((const char*) key);
-    }
-
-    if (to_delete) {
-        //
-        // Delete the address but grab the hash key so we can use it outside the
-        // critical section.
-        //
-        qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
-        DEQ_REMOVE(core->addrs, addr);
-        qd_hash_handle_free(addr->hash_handle);
-        free_qdr_address_t(addr);
-    }
-
-    //
-    // If the address is mobile-class and it was just removed from a local link,
-    // tell the router module that it is no longer attached locally.
-    //
-    if (no_more_locals && key_field) {
-        //
-        // TODO - Defer-call mobile-removed
-        //
     }
 }
 
@@ -585,11 +550,12 @@ static void qdr_unmap_destination_CT(qdr_core_t *core, qdr_action_t *action, boo
 
 static void qdr_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qdr_field_t *address = action->args.subscribe.address;
+    qdr_field_t        *address = action->args.io.address;
+    qdr_subscription_t *sub     = action->args.io.subscription;
 
     if (!discard) {
-        char aclass         = action->args.subscribe.address_class;
-        char phase          = action->args.subscribe.address_phase;
+        char aclass         = action->args.io.address_class;
+        char phase          = action->args.io.address_phase;
         qdr_address_t *addr = 0;
 
         qd_address_iterator_override_prefix(address->iterator, aclass);
@@ -599,23 +565,34 @@ static void qdr_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discar
 
         qd_hash_retrieve(core->addr_hash, address->iterator, (void**) &addr);
         if (!addr) {
-            addr = qdr_address(action->args.subscribe.semantics);
+            addr = qdr_address(action->args.io.semantics);
             qd_hash_insert(core->addr_hash, address->iterator, addr, &addr->hash_handle);
             DEQ_ITEM_INIT(addr);
             DEQ_INSERT_TAIL(core->addrs, addr);
         }
 
-        if (!addr->on_message) {
-            addr->on_message         = action->args.subscribe.on_message;
-            addr->on_message_context = action->args.subscribe.context;
-        } else
-            qd_log(core->log, QD_LOG_CRITICAL,
-                   "qdr_core_subscribe: Multiple in-process subscriptions on the same address");
-    }
+        sub->addr = addr;
+        DEQ_ITEM_INIT(sub);
+        DEQ_INSERT_TAIL(addr->subscriptions, sub);
+    } else
+        free(sub);
 
     qdr_field_free(address);
 }
 
+
+static void qdr_unsubscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    qdr_subscription_t *sub = action->args.io.subscription;
+
+    if (!discard) {
+        DEQ_REMOVE(sub->addr->subscriptions, sub);
+        sub->addr = 0;
+        qdr_check_addr_CT(sub->core, sub->addr, false);
+    }
+
+    free(sub);
+}
 
 //==================================================================================
 // Call-back Functions

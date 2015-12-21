@@ -32,12 +32,13 @@
  * exclusive access to that connection.
  */
 
-typedef struct qdr_core_t       qdr_core_t;
-typedef struct qdr_connection_t qdr_connection_t;
-typedef struct qdr_link_t       qdr_link_t;
-typedef struct qdr_delivery_t   qdr_delivery_t;
-typedef struct qdr_terminus_t   qdr_terminus_t;
-typedef struct qdr_error_t      qdr_error_t;
+typedef struct qdr_core_t         qdr_core_t;
+typedef struct qdr_connection_t   qdr_connection_t;
+typedef struct qdr_link_t         qdr_link_t;
+typedef struct qdr_delivery_t     qdr_delivery_t;
+typedef struct qdr_terminus_t     qdr_terminus_t;
+typedef struct qdr_error_t        qdr_error_t;
+typedef struct qdr_subscription_t qdr_subscription_t;
 
 /**
  * Allocate and start an instance of the router core module.
@@ -76,13 +77,20 @@ void qdr_core_route_table_handlers(qdr_core_t           *core,
 
 /**
  ******************************************************************************
- * In-process message-receiver functions
+ * In-process messaging functions
  ******************************************************************************
  */
 typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit);
 
-void qdr_core_subscribe(qdr_core_t *core, const char *address, char aclass, char phase,
-                        qd_address_semantics_t sem, qdr_receive_t on_message, void *context);
+qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
+                                       const char             *address,
+                                       char                    aclass,
+                                       char                    phase,
+                                       qd_address_semantics_t  semantics,
+                                       qdr_receive_t           on_message,
+                                       void                   *context);
+
+void qdr_core_unsubscribe(qdr_subscription_t *sub);
 
 
 /**
@@ -391,6 +399,19 @@ void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error);
 
 qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg);
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg, qd_field_iterator_t *addr);
+
+/**
+ * qdr_send_to
+ *
+ * Send a message to a destination.  This function is used only by in-process components that
+ * create messages to be sent.  For these messages, there is no inbound link or delivery.
+ *
+ * @param core Pointer to the core module
+ * @param msg Pointer to the message to be sent.  The message will be copied during the call
+ *            can must be freed by the caller if the caller doesn't need to hold it for later use.
+ * @param exclude_inprocess If true, the message will not be sent to in-process subscribers.
+ */
+void qdr_send_to(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exclude_inprocess);
 
 typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
                                           qdr_terminus_t *source, qdr_terminus_t *target);

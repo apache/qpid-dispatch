@@ -54,7 +54,7 @@ static void qdr_insert_address_columns_CT(qdr_address_t        *addr,
             break;
 
         case QDR_ADDRESS_IN_PROCESS:
-            qd_compose_insert_bool(body, addr->on_message != 0);
+            qd_compose_insert_uint(body, DEQ_SIZE(addr->subscriptions));
             break;
 
         case QDR_ADDRESS_SUBSCRIBER_COUNT:

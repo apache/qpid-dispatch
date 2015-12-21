@@ -387,7 +387,7 @@ static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_fie
  * Depending on its policy, the address may be eligible for being closed out
  * (i.e. Logging its terminal statistics and freeing its resources).
  */
-static void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
+void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
 {
     if (addr == 0)
         return;
@@ -407,7 +407,7 @@ static void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_lo
     // If the address has no in-process consumer or destinations, it should be
     // deleted.
     //
-    if (addr->on_message == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->inlinks) == 0 &&
+    if (DEQ_SIZE(addr->subscriptions) == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->inlinks) == 0 &&
         DEQ_SIZE(addr->rnodes) == 0 && !addr->waypoint && !addr->block_deletion) {
         qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
         DEQ_REMOVE(core->addrs, addr);

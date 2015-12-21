@@ -269,7 +269,7 @@ class BusManager(Node):
         heads.append(Header("class"))
         heads.append(Header("address"))
         heads.append(Header("phase"))
-        heads.append(Header("in-proc", Header.Y))
+        heads.append(Header("in-proc", Header.COMMAS))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
         heads.append(Header("in", Header.COMMAS))

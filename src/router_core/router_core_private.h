@@ -76,16 +76,16 @@ struct qdr_action_t {
         } connection;
 
         //
-        // Arguments for in-process subscriptions
+        // Arguments for in-process messaging
         //
         struct {
             qdr_field_t            *address;
-            qd_address_semantics_t  semantics;
             char                    address_class;
             char                    address_phase;
-            qdr_receive_t           on_message;
-            void                   *context;
-        } subscribe;
+            qd_address_semantics_t  semantics;
+            qdr_subscription_t     *subscription;
+            qd_message_t           *message;
+        } io;
 
         //
         // Arguments for management-agent actions
@@ -204,21 +204,30 @@ struct qdr_lrp_ref_t {
 ALLOC_DECLARE(qdr_lrp_ref_t);
 DEQ_DECLARE(qdr_lrp_ref_t, qdr_lrp_ref_list_t);
 
+struct qdr_subscription_t {
+    DEQ_LINKS(qdr_subscription_t);
+    qdr_core_t    *core;
+    qdr_address_t *addr;
+    qdr_receive_t  on_message;
+    void          *on_message_context;
+};
+
+DEQ_DECLARE(qdr_subscription_t, qdr_subscription_list_t);
+
 
 struct qdr_address_t {
     DEQ_LINKS(qdr_address_t);
-    qd_router_message_cb_t     on_message;          ///< In-Process Message Consumer
-    void                      *on_message_context;  ///< In-Process Consumer context
-    qdr_lrp_ref_list_t         lrps;                ///< Local link-route destinations
-    qdr_link_ref_list_t        rlinks;              ///< Locally-Connected Consumers
-    qdr_link_ref_list_t        inlinks;             ///< Locally-Connected Producers
-    qdr_router_ref_list_t      rnodes;              ///< Remotely-Connected Consumers
-    qd_hash_handle_t          *hash_handle;         ///< Linkage back to the hash table entry
-    qd_address_semantics_t     semantics;
-    bool                       toggle;
-    bool                       waypoint;
-    bool                       block_deletion;
-    qd_router_forwarder_t     *forwarder;
+    qdr_subscription_list_t  subscriptions; ///< In-process message subscribers
+    qdr_lrp_ref_list_t       lrps;          ///< Local link-route destinations
+    qdr_link_ref_list_t      rlinks;        ///< Locally-Connected Consumers
+    qdr_link_ref_list_t      inlinks;       ///< Locally-Connected Producers
+    qdr_router_ref_list_t    rnodes;        ///< Remotely-Connected Consumers
+    qd_hash_handle_t        *hash_handle;   ///< Linkage back to the hash table entry
+    qd_address_semantics_t   semantics;
+    bool                     toggle;
+    bool                     waypoint;
+    bool                     block_deletion;
+    qd_router_forwarder_t   *forwarder;
 
     /**@name Statistics */
     ///@{
@@ -384,6 +393,7 @@ void qdr_post_mobile_removed_CT(qdr_core_t *core, const char *address_hash);
 void qdr_post_link_lost_CT(qdr_core_t *core, int link_maskbit);
 
 void qdr_post_general_work_CT(qdr_core_t *core, qdr_general_work_t *work);
+void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local);
 
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
