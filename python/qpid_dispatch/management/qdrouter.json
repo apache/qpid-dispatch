@@ -1012,6 +1012,12 @@
                     "required": false,
                     "create": true
                 },
+                "policyDb": {
+                    "type": "path",
+                    "description": "The path to the folder that holds policy definition files.",
+		    "required": false,
+                    "create": true
+                },
                 "connectionsProcessed": {"type": "integer", "graph": true},
                 "connectionsDenied": {"type": "integer", "graph": true},
                 "connectionsCurrent": {"type": "integer", "graph": true}
