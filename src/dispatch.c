@@ -143,7 +143,10 @@ qd_error_t qd_dispatch_configure_lrp(qd_dispatch_t *qd, qd_entity_t *entity) {
 
 qd_error_t qd_dispatch_configure_policy(qd_dispatch_t *qd, qd_entity_t *entity)
 {
-    qd_entity_configure_policy(qd->policy, entity);
+    qd_error_t err;
+    err = qd_entity_configure_policy(qd->policy, entity);
+    if (err)
+        return err;
     return QD_ERROR_NONE;
 }
 
