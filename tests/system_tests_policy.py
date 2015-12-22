@@ -32,8 +32,7 @@ from system_test import TIMEOUT
 
 from qpid_dispatch_internal.management.policy_util import \
     HostAddr, PolicyError, HostStruct, PolicyAppConnectionMgr
-from qpid_dispatch_internal.management.policy import \
-    Policy
+from qpid_dispatch_internal.management.policy import PolicyLocal
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
@@ -163,7 +162,7 @@ class PolicyHostAddrTest(TestCase):
 
 class PolicyFile(TestCase):
 
-    policy = Policy("../../../tests/policy-1")
+    policy = PolicyLocal("../../../tests/policy-1")
 
     def dict_compare(self, d1, d2):
         d1_keys = set(d1.keys())

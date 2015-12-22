@@ -353,7 +353,7 @@ class PolicyCompiler():
                     return False
         return True
 
-class Policy():
+class PolicyLocal():
     """
     The policy database.
     """
@@ -725,7 +725,7 @@ def main_except(argv):
 
     (options, args) = parser.parse_args()
 
-    policy = Policy(options.folder)
+    policy = PolicyLocal(options.folder)
 
     print("policy names: %s" % policy.policy_db_get_names())
 
@@ -734,7 +734,7 @@ def main_except(argv):
 
     # Exercise a few functions
     # Empty policy
-    policy2 = Policy()
+    policy2 = PolicyLocal()
 
     print("Policy details:")
     for pname in policy.policy_db_get_names():
