@@ -232,7 +232,7 @@ class RouterEngine:
         Send a control message to another router.
         """
         app_props = {'opcode' : msg.get_opcode() }
-        self.io_adapter[0].send(Message(address=dest, properties=app_props, body=msg.to_dict()))
+        self.io_adapter[0].send(Message(address=dest, properties=app_props, body=msg.to_dict()), True, True)
 
 
     def node_updated(self, addr, reachable, neighbor):

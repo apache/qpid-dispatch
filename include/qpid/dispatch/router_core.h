@@ -410,8 +410,9 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, q
  * @param msg Pointer to the message to be sent.  The message will be copied during the call
  *            can must be freed by the caller if the caller doesn't need to hold it for later use.
  * @param exclude_inprocess If true, the message will not be sent to in-process subscribers.
+ * @param control If true, this message is to be treated as control traffic and flow on a control link.
  */
-void qdr_send_to(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exclude_inprocess);
+void qdr_send_to(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exclude_inprocess, bool control);
 
 typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
                                           qdr_terminus_t *source, qdr_terminus_t *target);

@@ -86,6 +86,7 @@ struct qdr_action_t {
             qdr_subscription_t     *subscription;
             qd_message_t           *message;
             bool                    exclude_inprocess;
+            bool                    control;
         } io;
 
         //

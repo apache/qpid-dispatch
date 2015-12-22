@@ -596,8 +596,9 @@ static PyObject *qd_python_send(PyObject *self, PyObject *args)
     qd_composed_field_t *field = 0;
     PyObject *message = 0;
     int       no_echo = 1;
+    int       control = 0;
 
-    if (!PyArg_ParseTuple(args, "O|i", &message, &no_echo))
+    if (!PyArg_ParseTuple(args, "O|ii", &message, &no_echo, &control))
         return 0;
 
     if (compose_python_message(&field, message, ioa->qd) == QD_ERROR_NONE) {
@@ -605,7 +606,7 @@ static PyObject *qd_python_send(PyObject *self, PyObject *args)
         qd_message_compose_2(msg, field);
         PyObject *address = PyObject_GetAttrString(message, "address");
         if (address) {
-            qdr_send_to(ioa->core, msg, PyString_AsString(address), (bool) no_echo);
+            qdr_send_to(ioa->core, msg, PyString_AsString(address), (bool) no_echo, (bool) control);
             Py_DECREF(address);
         }
         qd_compose_free(field);

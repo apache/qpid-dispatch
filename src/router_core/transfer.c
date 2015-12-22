@@ -57,12 +57,13 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, q
 }
 
 
-void qdr_send_to(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exclude_inprocess)
+void qdr_send_to(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exclude_inprocess, bool control)
 {
     qdr_action_t *action = qdr_action(qdr_send_to_CT, "send_to");
     action->args.io.address           = qdr_field(addr);
     action->args.io.message           = qd_message_copy(msg);
     action->args.io.exclude_inprocess = exclude_inprocess;
+    action->args.io.control           = control;
 
     qdr_action_enqueue(core, action);
 }
@@ -76,7 +77,8 @@ static void qdr_route_message_CT(qdr_core_t     *core,
                                  qdr_address_t  *addr,
                                  qd_message_t   *msg,
                                  qdr_delivery_t *dlv,
-                                 bool            exclude_inprocess)
+                                 bool            exclude_inprocess,
+                                 bool            control)
 {
     const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
     printf("qdr_route_message_CT - %s, %s\n", key, exclude_inprocess ? "yes" : "no");
@@ -107,7 +109,7 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
         qd_address_iterator_reset_view(addr_field->iterator, ITER_VIEW_ADDRESS_HASH);
         qd_hash_retrieve(core->addr_hash, addr_field->iterator, (void**) &addr);
         if (addr)
-            qdr_route_message_CT(core, addr, msg, 0, action->args.io.exclude_inprocess);
+            qdr_route_message_CT(core, addr, msg, 0, action->args.io.exclude_inprocess, action->args.io.control);
         else
             qd_log(core->log, QD_LOG_DEBUG, "In-process send to an unknown address");
     }
