@@ -110,7 +110,12 @@ static void parse_address_view(qd_field_iterator_t *iter)
 
         if (qd_field_iterator_prefix(iter, "topo/")) {
             if (qd_field_iterator_prefix(iter, "all/") || qd_field_iterator_prefix(iter, my_area)) {
-                if (qd_field_iterator_prefix(iter, "all/") || qd_field_iterator_prefix(iter, my_router)) {
+                if (qd_field_iterator_prefix(iter, "all/")) {
+                    iter->prefix      = 'T';
+                    iter->state       = STATE_AT_PREFIX;
+                    iter->view_prefix = true;
+                    return;
+                } else if (qd_field_iterator_prefix(iter, my_router)) {
                     iter->prefix      = 'L';
                     iter->state       = STATE_AT_PREFIX;
                     iter->view_prefix = true;
