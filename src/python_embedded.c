@@ -434,9 +434,10 @@ static PyTypeObject LogAdapterType = {
 
 typedef struct {
     PyObject_HEAD
-    PyObject       *handler;
-    qd_dispatch_t  *qd;
-    qd_address_t   *addr;
+    PyObject           *handler;
+    qd_dispatch_t      *qd;
+    qdr_core_t         *core;
+    qdr_subscription_t *sub;
 } IoAdapter;
 
 // Parse an iterator to a python object.
@@ -526,21 +527,21 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
 static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
 {
     PyObject *addr;
-    int global = 0;
-    if (!PyArg_ParseTuple(args, "OO|i", &self->handler, &addr, &global))
+    char aclass = 'L';
+    char phase  = '0';
+    if (!PyArg_ParseTuple(args, "OO|cc", &self->handler, &addr, &aclass, &phase))
         return -1;
     if (!PyCallable_Check(self->handler)) {
         PyErr_SetString(PyExc_TypeError, "IoAdapter.__init__ handler is not callable");
         return -1;
     }
     Py_INCREF(self->handler);
-    self->qd = dispatch;
+    self->qd   = dispatch;
+    self->core = qd_router_core(self->qd);
     const char *address = PyString_AsString(addr);
     if (!address) return -1;
     qd_error_clear();
-    self->addr =
-        qd_router_register_address(self->qd, address, qd_io_rx_handler, self,
-                                   py_semantics, global, 0);
+    self->sub = qdr_core_subscribe(self->core, address, aclass, phase, py_semantics, qd_io_rx_handler, self);
     if (qd_error_code()) {
         PyErr_SetString(PyExc_RuntimeError, qd_error_message());
         return -1;
@@ -550,8 +551,7 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
 
 static void IoAdapter_dealloc(IoAdapter* self)
 {
-    qd_router_unregister_address(self->addr);
-    free(self->addr);
+    qdr_core_unsubscribe(self->sub);
     Py_DECREF(self->handler);
     self->ob_type->tp_free((PyObject*)self);
 }
@@ -595,8 +595,9 @@ static PyObject *qd_python_send(PyObject *self, PyObject *args)
     IoAdapter           *ioa   = (IoAdapter*) self;
     qd_composed_field_t *field = 0;
     PyObject *message = 0;
+    int       no_echo = 1;
 
-    if (!PyArg_ParseTuple(args, "O", &message))
+    if (!PyArg_ParseTuple(args, "O|i", &message, &no_echo))
         return 0;
 
     if (compose_python_message(&field, message, ioa->qd) == QD_ERROR_NONE) {
@@ -604,7 +605,7 @@ static PyObject *qd_python_send(PyObject *self, PyObject *args)
         qd_message_compose_2(msg, field);
         PyObject *address = PyObject_GetAttrString(message, "address");
         if (address) {
-            qd_router_send2(ioa->qd, PyString_AsString(address), msg);
+            qdr_send_to(ioa->core, msg, PyString_AsString(address), (bool) no_echo);
             Py_DECREF(address);
         }
         qd_compose_free(field);

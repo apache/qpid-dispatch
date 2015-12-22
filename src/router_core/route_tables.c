@@ -175,9 +175,11 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
     DEQ_INIT(core->routers);
     core->addr_hash = qd_hash(10, 32, 0);
 
-    core->router_addr   = qdr_add_local_address_CT(core, "qdrouter",    QD_SEMANTICS_ROUTER_CONTROL);
-    core->routerma_addr = qdr_add_local_address_CT(core, "qdrouter.ma", QD_SEMANTICS_DEFAULT);
-    core->hello_addr    = qdr_add_local_address_CT(core, "qdhello",     QD_SEMANTICS_ROUTER_CONTROL);
+    core->hello_addr      = qdr_add_local_address_CT(core, 'L', "qdhello",     QD_SEMANTICS_ROUTER_CONTROL);
+    core->router_addr_L   = qdr_add_local_address_CT(core, 'L', "qdrouter",    QD_SEMANTICS_ROUTER_CONTROL);
+    core->routerma_addr_L = qdr_add_local_address_CT(core, 'L', "qdrouter.ma", QD_SEMANTICS_DEFAULT);
+    core->router_addr_T   = qdr_add_local_address_CT(core, 'T', "qdrouter",    QD_SEMANTICS_ROUTER_CONTROL);
+    core->routerma_addr_T = qdr_add_local_address_CT(core, 'T', "qdrouter.ma", QD_SEMANTICS_DEFAULT);
 
     core->neighbor_free_mask = qd_bitmask(1);
 
@@ -259,9 +261,10 @@ static void qdr_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
 
         //
         // Link the router record to the router address records.
+        // Use the T-class addresses only.
         //
-        qdr_add_node_ref(&core->router_addr->rnodes, rnode);
-        qdr_add_node_ref(&core->routerma_addr->rnodes, rnode);
+        qdr_add_node_ref(&core->router_addr_T->rnodes, rnode);
+        qdr_add_node_ref(&core->routerma_addr_T->rnodes, rnode);
 
         //
         // Add the router record to the mask-bit index.

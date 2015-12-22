@@ -85,6 +85,7 @@ struct qdr_action_t {
             qd_address_semantics_t  semantics;
             qdr_subscription_t     *subscription;
             qd_message_t           *message;
+            bool                    exclude_inprocess;
         } io;
 
         //
@@ -153,6 +154,14 @@ struct qdr_router_ref_t {
 
 ALLOC_DECLARE(qdr_router_ref_t);
 DEQ_DECLARE(qdr_router_ref_t, qdr_router_ref_list_t);
+
+
+struct qdr_delivery_t {
+    DEQ_LINKS(qdr_delivery_t);
+};
+
+ALLOC_DECLARE(qdr_delivery_t);
+DEQ_DECLARE(qdr_delivery_t, qdr_delivery_list_t);
 
 
 struct qdr_link_t {
@@ -243,7 +252,7 @@ ALLOC_DECLARE(qdr_address_t);
 DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
 qdr_address_t *qdr_address(qd_address_semantics_t semantics);
-qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, const char *addr, qd_address_semantics_t semantics);
+qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_semantics_t semantics);
 
 void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link);
 void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link);
@@ -364,9 +373,11 @@ struct qdr_core_t {
 
     qdr_address_list_t    addrs;
     qd_hash_t            *addr_hash;
-    qdr_address_t        *router_addr;
-    qdr_address_t        *routerma_addr;
     qdr_address_t        *hello_addr;
+    qdr_address_t        *router_addr_L;
+    qdr_address_t        *routerma_addr_L;
+    qdr_address_t        *router_addr_T;
+    qdr_address_t        *routerma_addr_T;
 
     qdr_node_list_t       routers;
     qd_bitmask_t         *neighbor_free_mask;

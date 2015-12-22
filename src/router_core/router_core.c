@@ -166,13 +166,13 @@ qdr_address_t *qdr_address(qd_address_semantics_t semantics)
 }
 
 
-qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, const char *address, qd_address_semantics_t semantics)
+qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *address, qd_address_semantics_t semantics)
 {
     char                 addr_string[1000];
     qdr_address_t       *addr = 0;
     qd_field_iterator_t *iter = 0;
 
-    snprintf(addr_string, sizeof(addr_string), "L%s", address);
+    snprintf(addr_string, sizeof(addr_string), "%c%s", aclass, address);
     iter = qd_address_iterator_string(addr_string, ITER_VIEW_ALL);
 
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);

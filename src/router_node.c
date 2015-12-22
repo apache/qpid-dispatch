@@ -999,7 +999,6 @@ static qd_node_type_t router_node = {"router", 0, 0,
                                      router_closed_handler};
 static int type_registered = 0;
 
-
 qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id)
 {
     if (!type_registered) {
@@ -1053,16 +1052,6 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     router->dtag               = 1;
     DEQ_INIT(router->config_addrs);
     DEQ_INIT(router->waypoints);
-
-    //
-    // Create addresses for all of the routers in the topology.  It will be registered
-    // locally later in the initialization sequence.
-    //
-    if (router->router_mode == QD_ROUTER_MODE_INTERIOR) {
-        router->router_addr   = qd_router_register_address(qd, "qdrouter", 0, 0, QD_SEMANTICS_ROUTER_CONTROL, false, 0);
-        router->routerma_addr = qd_router_register_address(qd, "qdrouter.ma", 0, 0, QD_SEMANTICS_DEFAULT, false, 0);
-        router->hello_addr    = qd_router_register_address(qd, "qdhello", 0, 0, QD_SEMANTICS_ROUTER_CONTROL, false, 0);
-    }
 
     //
     // Inform the field iterator module of this router's id and area.  The field iterator
@@ -1159,11 +1148,6 @@ void qd_router_setup_late(qd_dispatch_t *qd)
 
     qd_router_python_setup(qd->router);
     qd_timer_schedule(qd->router->timer, 1000);
-
-    //Register the C management agent
-    // DEPRECATE
-    qd_router_register_address(qd, CORE_AGENT_ADDRESS, management_agent_handler, (void *) qd, QD_SEMANTICS_DEFAULT, true, 0/*forwarder*/);
-    qd_router_register_address(qd, CORE_AGENT_ADDRESS, management_agent_handler, (void *) qd, QD_SEMANTICS_DEFAULT, false, 0/*forwarder*/);
 }
 
 void qd_router_free(qd_router_t *router)
@@ -1214,56 +1198,6 @@ const char *qd_router_id(const qd_dispatch_t *qd)
 qdr_core_t *qd_router_core(qd_dispatch_t *qd)
 {
     return qd->router->router_core;
-}
-
-
-qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
-                                         const char             *address,
-                                         qd_router_message_cb_t  on_message,
-                                         void                   *context,
-                                         qd_address_semantics_t  semantics,
-                                         bool                    global,
-                                         qd_router_forwarder_t  *forwarder)
-{
-    char                 addr_string[1000];
-    qd_router_t         *router = qd->router;
-    qd_address_t        *addr = 0;
-    qd_field_iterator_t *iter = 0;
-
-    snprintf(addr_string, sizeof(addr_string), "%s%s", global ? "M0" : "L", address);
-    iter = qd_address_iterator_string(addr_string, ITER_VIEW_NO_HOST);
-
-    sys_mutex_lock(router->lock);
-    qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
-    if (!addr) {
-        addr = qd_address(semantics);
-        qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
-        DEQ_ITEM_INIT(addr);
-        DEQ_INSERT_TAIL(router->addrs, addr);
-        qd_entity_cache_add(QD_ROUTER_ADDRESS_TYPE, addr);
-    }
-    qd_field_iterator_free(iter);
-
-    addr->on_message         = on_message;
-    addr->on_message_context = context;
-    if (forwarder) {
-        if (addr->forwarder) addr->forwarder->release(addr->forwarder);
-        addr->forwarder = forwarder;
-    }
-
-    sys_mutex_unlock(router->lock);
-
-    if (on_message)
-        qd_log(router->log_source, QD_LOG_INFO, "In-Process Address Registered: %s", address);
-    assert(addr);
-    return addr;
-}
-
-
-void qd_router_unregister_address(qd_address_t *ad)
-{
-    // if (ad->forwarder) ad->forwarder->release(ad->forwarder);
-    //free_qd_address_t(ad);
 }
 
 

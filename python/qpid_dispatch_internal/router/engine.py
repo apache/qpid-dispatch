@@ -54,6 +54,8 @@ class RouterEngine:
         self._log_general   = LogAdapter("ROUTER")
         self.io_adapter     = [IoAdapter(self.receive, "qdrouter"),
                                IoAdapter(self.receive, "qdrouter.ma"),
+                               IoAdapter(self.receive, "qdrouter", 'T'),
+                               IoAdapter(self.receive, "qdrouter.ma", 'T'),
                                IoAdapter(self.receive, "qdhello")]
         self.max_routers    = max_routers
         self.id             = router_id
