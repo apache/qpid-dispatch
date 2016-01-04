@@ -315,14 +315,15 @@ class EntityType(object):
     @ivar short_name: Un-prefixed short name.
     @ivar attributes: Map of L{AttributeType} for entity.
     @ivar singleton: If true only one entity of this type is allowed.
-    #ivar annotation: List of names of sections annotationd by this entity.
+    @ivar referential: True if an entity/annotation can be referred to by name.
+    @ivar annotations: List of names of sections annotationd by this entity.
     """
-    def __init__(self, name, schema, attributes=None, operations=None, operationDefs=None, description="", fullName=True, singleton=False, annotations=None, extends=None, **kwargs):
+    def __init__(self, name, schema, attributes=None, operations=None, operationDefs=None, description="", fullName=True, singleton=False, annotations=None, extends=None, referential=False, **kwargs):
         """
         @param name: name of the entity type.
         @param schema: schema for this type.
         @param singleton: True if entity type is a singleton.
-        @param annotation: List of names of annotation types for this entity.
+        @param annotations: List of names of annotation types for this entity.
         @param attributes: Map of attributes {name: {type:, default:, required:, unique:}}
         @param description: Human readable description.
         @param operations: Allowed operations, list of operation names.
@@ -342,9 +343,12 @@ class EntityType(object):
             self.base = extends
             self.all_bases = []
             self.annotations = annotations or []
+            # List of annotations that are singletons
+            self.references = []
             # This map defines values that can be referred to using $$ in the schema.
             self.refs = {'entityType': self.name}
             self.singleton = singleton
+            self.referential = referential
             self._init = False      # Have not yet initialized from base and attributes.
             # Operation definitions
             self.operation_defs = dict((name, OperationDef(name, **op))
@@ -363,6 +367,8 @@ class EntityType(object):
             self.all_bases = [self.base] + self.base.all_bases
             self._extend(self.base, 'extend')
         if self.annotations:
+            self.references = [x for x in self.annotations
+                                if self.schema.annotation(x).referential]    
             self.annotations = [self.schema.annotation(a) for a in self.annotations]
         for a in self.annotations:
             self._extend(a, 'be annotated')
@@ -476,7 +482,9 @@ class EntityType(object):
                 (k, v.dump()) for k, v in self.attributes.iteritems()
                 if k != 'type')), # Don't dump 'type' attribute, dumped separately.
             ('operations', self.operations),
-            ('description', self.description or None)
+            ('description', self.description or None),
+            ('references', self.references),
+            ('singleton', self.singleton)
         ])
 
     def __repr__(self): return "%s(%s)" % (type(self).__name__, self.name)

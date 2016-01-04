@@ -48,6 +48,7 @@
 
         "sslProfile": {
             "description":"Attributes for setting TLS/SSL configuration for connections.",
+            "referential": true,
             "attributes": {
                 "certDb": {
                     "type": "path",
