@@ -156,12 +156,11 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 }
 
 
-qdr_address_t *qdr_address(qd_address_semantics_t semantics)
+qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_semantics_t semantics)
 {
     qdr_address_t *addr = new_qdr_address_t();
     ZERO(addr);
-    addr->semantics = semantics;
-    addr->forwarder = qd_router_get_forwarder(semantics);
+    addr->forwarder = qdr_forwarder_CT(core, semantics);
     return addr;
 }
 
@@ -177,7 +176,7 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
 
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr) {
-        addr = qdr_address(semantics);
+        addr = qdr_address_CT(core, semantics);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(core->addrs, addr);

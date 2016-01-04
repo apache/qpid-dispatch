@@ -42,8 +42,6 @@ static PyObject        *dispatch_module = 0;
 static PyObject        *message_type = 0;
 static PyObject        *dispatch_python_pkgdir = 0;
 
-static qd_address_semantics_t py_semantics = QD_FANOUT_MULTIPLE | QD_BIAS_NONE | QD_CONGESTION_DROP | QD_DROP_FOR_SLOW_CONSUMERS;
-
 static void qd_python_setup(void);
 
 
@@ -527,9 +525,10 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
 static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
 {
     PyObject *addr;
-    char aclass = 'L';
-    char phase  = '0';
-    if (!PyArg_ParseTuple(args, "OO|cc", &self->handler, &addr, &aclass, &phase))
+    char aclass    = 'L';
+    char phase     = '0';
+    int  semantics = QD_SEMANTICS_ANYCAST_BALANCED;
+    if (!PyArg_ParseTuple(args, "OO|cci", &self->handler, &addr, &aclass, &phase, &semantics))
         return -1;
     if (!PyCallable_Check(self->handler)) {
         PyErr_SetString(PyExc_TypeError, "IoAdapter.__init__ handler is not callable");
@@ -541,7 +540,7 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     const char *address = PyString_AsString(addr);
     if (!address) return -1;
     qd_error_clear();
-    self->sub = qdr_core_subscribe(self->core, address, aclass, phase, py_semantics, qd_io_rx_handler, self);
+    self->sub = qdr_core_subscribe(self->core, address, aclass, phase, semantics, qd_io_rx_handler, self);
     if (qd_error_code()) {
         PyErr_SetString(PyExc_RuntimeError, qd_error_message());
         return -1;
@@ -733,6 +732,11 @@ static void qd_python_setup(void)
         PyTypeObject *ioaType = &IoAdapterType;
         Py_INCREF(ioaType);
         PyModule_AddObject(m, "IoAdapter", (PyObject*) &IoAdapterType);
+
+        qd_register_constant(m, "SEMANTICS_MULTICAST_FLOOD",  QD_SEMANTICS_MULTICAST_FLOOD);
+        qd_register_constant(m, "SEMANTICS_MULTICAST_ONCE",   QD_SEMANTICS_MULTICAST_ONCE);
+        qd_register_constant(m, "SEMANTICS_ANYCAST_CLOSEST",  QD_SEMANTICS_ANYCAST_CLOSEST);
+        qd_register_constant(m, "SEMANTICS_ANYCAST_BALANCED", QD_SEMANTICS_ANYCAST_BALANCED);
 
         Py_INCREF(m);
         dispatch_module = m;

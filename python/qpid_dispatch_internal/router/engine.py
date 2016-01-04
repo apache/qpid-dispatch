@@ -52,11 +52,11 @@ class RouterEngine:
         self._log_ls        = LogAdapter("ROUTER_LS")
         self._log_ma        = LogAdapter("ROUTER_MA")
         self._log_general   = LogAdapter("ROUTER")
-        self.io_adapter     = [IoAdapter(self.receive, "qdrouter"),
-                               IoAdapter(self.receive, "qdrouter.ma"),
-                               IoAdapter(self.receive, "qdrouter", 'T'),
-                               IoAdapter(self.receive, "qdrouter.ma", 'T'),
-                               IoAdapter(self.receive, "qdhello")]
+        self.io_adapter     = [IoAdapter(self.receive, "qdrouter",    'L', '0', SEMANTICS_MULTICAST_FLOOD),
+                               IoAdapter(self.receive, "qdrouter.ma", 'L', '0', SEMANTICS_MULTICAST_ONCE),
+                               IoAdapter(self.receive, "qdrouter",    'T', '0', SEMANTICS_MULTICAST_FLOOD),
+                               IoAdapter(self.receive, "qdrouter.ma", 'T', '0', SEMANTICS_MULTICAST_ONCE),
+                               IoAdapter(self.receive, "qdhello",     'L', '0', SEMANTICS_MULTICAST_FLOOD)]
         self.max_routers    = max_routers
         self.id             = router_id
         self.instance       = long(time.time())

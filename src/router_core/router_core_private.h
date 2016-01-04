@@ -25,6 +25,12 @@
 #include <qpid/dispatch/log.h>
 #include <memory.h>
 
+typedef struct qdr_forwarder_t qdr_forwarder_t;
+
+qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_semantics_t semantics);
+void qdr_forward_message_CT(qdr_core_t *core, qdr_forwarder_t *forwarder, qd_message_t *msg, qdr_delivery_t *in_delivery);
+void qdr_forward_attach_CT(qdr_core_t *core, qdr_forwarder_t *forwarder, qdr_link_t *in_link);
+
 /**
  * qdr_field_t - This type is used to pass variable-length fields (strings, etc.) into
  *               and out of the router-core thread.
@@ -233,11 +239,10 @@ struct qdr_address_t {
     qdr_link_ref_list_t      inlinks;       ///< Locally-Connected Producers
     qdr_router_ref_list_t    rnodes;        ///< Remotely-Connected Consumers
     qd_hash_handle_t        *hash_handle;   ///< Linkage back to the hash table entry
-    qd_address_semantics_t   semantics;
+    qdr_forwarder_t         *forwarder;
     bool                     toggle;
     bool                     waypoint;
     bool                     block_deletion;
-    qd_router_forwarder_t   *forwarder;
 
     /**@name Statistics */
     ///@{
@@ -252,7 +257,7 @@ struct qdr_address_t {
 ALLOC_DECLARE(qdr_address_t);
 DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
-qdr_address_t *qdr_address(qd_address_semantics_t semantics);
+qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_semantics_t semantics);
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_semantics_t semantics);
 
 void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link);
@@ -385,6 +390,8 @@ struct qdr_core_t {
     qdr_node_t          **routers_by_mask_bit;
     qdr_link_t          **control_links_by_mask_bit;
     qdr_link_t          **data_links_by_mask_bit;
+
+    qdr_forwarder_t      *forwarders[QD_SEMANTICS_LINK_BALANCED + 1];
 };
 
 typedef enum {
@@ -396,6 +403,7 @@ typedef enum {
 void *router_core_thread(void *arg);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
 void  qdr_agent_setup_CT(qdr_core_t *core);
+void  qdr_forwarder_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);

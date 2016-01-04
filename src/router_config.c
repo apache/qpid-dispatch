@@ -76,32 +76,31 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 
     qd_address_semantics_t semantics = 0;
     switch(fanout) {
-      case QD_SCHEMA_FIXEDADDRESS_FANOUT_MULTIPLE: semantics |= QD_FANOUT_MULTIPLE; break;
-      case QD_SCHEMA_FIXEDADDRESS_FANOUT_SINGLE: semantics |= QD_FANOUT_SINGLE; break;
-      default:
-        free(prefix);
-        free(addr_phase);
-        return qd_error(QD_ERROR_CONFIG, "Invalid fanout value %d", fanout);
-    }
+    case QD_SCHEMA_FIXEDADDRESS_FANOUT_MULTIPLE:
+        semantics = QD_SEMANTICS_MULTICAST_ONCE;
+        break;
 
-    if ((semantics & QD_FANOUTMASK) == QD_FANOUT_SINGLE) {
+    case QD_SCHEMA_FIXEDADDRESS_FANOUT_SINGLE:
         switch(bias) {
-          case QD_SCHEMA_FIXEDADDRESS_BIAS_CLOSEST: semantics |= QD_BIAS_CLOSEST; break;
-          case QD_SCHEMA_FIXEDADDRESS_BIAS_SPREAD: semantics |= QD_BIAS_SPREAD; break;
-          default:
+        case QD_SCHEMA_FIXEDADDRESS_BIAS_CLOSEST:
+            semantics = QD_SEMANTICS_ANYCAST_CLOSEST;
+            break;
+
+        case QD_SCHEMA_FIXEDADDRESS_BIAS_SPREAD:
+            semantics = QD_SEMANTICS_ANYCAST_BALANCED;
+            break;
+
+        default:
             free(prefix);
             free(addr_phase);
             return qd_error(QD_ERROR_CONFIG, "Invalid bias value %d", fanout);
         }
-        qd_log(router->log_source, QD_LOG_INFO,
-               "Configured Address: prefix=%s phase=%d fanout=%s bias=%s",
-               prefix, phase,
-               qd_schema_fixedAddress_fanout_names[fanout],
-               qd_schema_fixedAddress_bias_names[bias]);
-    } else {
-        semantics |= QD_BIAS_NONE;
-        qd_log(router->log_source, QD_LOG_INFO, "Configured Address: prefix=%s phase=%d fanout=%s",
-               prefix, phase, qd_schema_fixedAddress_fanout_names[fanout]);
+        break;
+
+    default:
+        free(prefix);
+        free(addr_phase);
+        return qd_error(QD_ERROR_CONFIG, "Invalid fanout value %d", fanout);
     }
 
     addr_phase->semantics = semantics;
@@ -327,5 +326,5 @@ qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_i
     }
 
     qd_address_iterator_reset_view(iter, old_view);
-    return phase ? phase->semantics : QD_SEMANTICS_DEFAULT;
+    return phase ? phase->semantics : QD_SEMANTICS_ANYCAST_BALANCED;
 }

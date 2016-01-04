@@ -59,7 +59,7 @@ qd_address_t* qd_address(qd_address_semantics_t semantics)
     DEQ_INIT(addr->rlinks);
     DEQ_INIT(addr->rnodes);
     addr->semantics = semantics;
-    addr->forwarder = qd_router_get_forwarder(semantics);
+    addr->forwarder = 0; //qd_router_get_forwarder(semantics);
     return addr;
 }
 

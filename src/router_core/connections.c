@@ -30,9 +30,6 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
 ALLOC_DEFINE(qdr_connection_t);
 ALLOC_DEFINE(qdr_connection_work_t);
 
-static qd_address_semantics_t qdr_dynamic_semantics = QD_FANOUT_SINGLE | QD_BIAS_CLOSEST | QD_CONGESTION_BACKPRESSURE;
-static qd_address_semantics_t qdr_default_semantics = QD_FANOUT_SINGLE | QD_BIAS_SPREAD  | QD_CONGESTION_BACKPRESSURE;
-
 typedef enum {
     QDR_CONDITION_NO_ROUTE_TO_DESTINATION,
     QDR_CONDITION_ROUTED_LINK_LOST,
@@ -378,7 +375,7 @@ static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_fie
     //           static routes; yes: prevents occlusion by mobile addresses with specified semantics)
     //
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
-    return addr ? addr->semantics : qdr_default_semantics;
+    return /* addr ? addr->semantics : */  QD_SEMANTICS_ANYCAST_BALANCED; // FIXME
 }
 
 
@@ -480,7 +477,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
             qd_field_iterator_t *temp_iter = qd_address_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
             qd_hash_retrieve(core->addr_hash, temp_iter, (void**) &addr);
             if (!addr) {
-                addr = qdr_address(qdr_dynamic_semantics);
+                addr = qdr_address_CT(core, QD_SEMANTICS_ANYCAST_CLOSEST);
                 qd_hash_insert(core->addr_hash, temp_iter, addr, &addr->hash_handle);
                 DEQ_INSERT_TAIL(core->addrs, addr);
                 qdr_terminus_set_address(terminus, temp_addr);
@@ -517,7 +514,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr && create_if_not_found) {
         qd_address_semantics_t sem = qdr_semantics_for_address(core, iter);
-        addr = qdr_address(sem);
+        addr = qdr_address_CT(core, sem);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(core->addrs, addr);
     }

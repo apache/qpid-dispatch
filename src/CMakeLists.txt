@@ -71,6 +71,7 @@ set(qpid_dispatch_SOURCES
   router_core/agent_link.c
   router_core/connections.c
   router_core/error.c
+  router_core/forwarder.c
   router_core/router_core.c
   router_core/router_core_thread.c
   router_core/route_tables.c
@@ -79,7 +80,6 @@ set(qpid_dispatch_SOURCES
   router_core/transfer.c
   router_delivery.c
   router_node.c
-  router_forwarders.c
   router_pynode.c
   schema_enum.c
   server.c
