@@ -26,13 +26,13 @@ General Structure
                        +--------------------------------+
                        | Router Core Thread (CT)        |
                        |                           -----------
-                       |                                 |||||    ---> General Callbacks
+                       |                                 |||||    ---> General Events
                  action queue                      -----------
     Async        ------------                           |
     Action   --->     ||||||| ->                        |
     Functions    ------------                    -----------
                        |                               |||||--
-                       |                         -----------||--  ---> Connection Callbacks
+                       |                         -----------||--  ---> Connection Events
                        |    Forwarding Tables      -----------||
                        |                             -----------
                        |                                |
@@ -87,9 +87,9 @@ Router Core Objects
     may be a problem.
 
 
-===========
-Action APIs
-===========
+=========
+Core APIs
+=========
 
   Router Control
 
@@ -97,30 +97,82 @@ Action APIs
     routers, computes the best next-hops for each remote router, and maintains the
     mapping of mobile addresses to remote routers.
 
+      Actions:
+        Add/Delete Router
+        Set/Remove Neighbor Link
+        Set/Remove Next Hop
+        Set Valid Origins
+        Map/Unmap Destination
+
+      General Events:
+        Mobile Added/Removed
+        Link Lost
+
   In-process Subscription and Send
 
     Used by in-process components that need to communicate using AMQP message
     transfers.  This API provides a best-effort messaging capability.  It does not
     provide acknowledgement, settlement, or flow control.
 
+      Actions:
+        Subscribe/Unsubscribe
+        Send To
+
+      General Events:
+        Receive
+
   Connection Actions
 
-    Tracks the lifecycle of a connection:  Opened, Closed, Process (writable)
+    Tracks the lifecycle of a connection.
+
+      Actions:
+        Opened/Closed
+        Process (writable)
+
+      General Events:
+        Activate
 
   Link Actions
 
-    Tracks the lifecycle of a link:        First-Attach, Second-Attach, Detach, Deliver
+    Tracks the lifecycle of a link.
+
+      Actions:
+        First Attach
+        Second Attach
+        Detach
+        Deliver/Deliver_To
+
+      Connection Events:
+        First Attach
+        Second Attach
+        Detach
 
   Delivery Actions
 
-    Tracks the lifecycle of a delivery:    Update-Disposition, Flow
+    Tracks the lifecycle of a delivery.
+
+      Actions:
+        Update Disposition
+        Flow
+
+      Connection Events:
+        Update Disposition
+        Flow
 
   Management Actions
 
     Provides asynchronous access to manageable entities inside the core thread's data
     structures.
 
-        Create, Delete, Read, Update, Query
+      Actions:
+        Create
+        Delete
+        Read
+        Update
+        Query
+
+      General Events:
+        Response
 
     This management API is used to manage addresses, waypoints, and link-route
     destinations.
@@ -163,3 +215,16 @@ Forwarding Semantics
     LINK_BALANCED
 
         For link-routes.
+
+
+===============
+Address Classes
+===============
+
+  L - Local
+  T - Topological
+  R - Router
+  M - Mobile
+  C - Link Inbound
+  D - Link Outbound
+
