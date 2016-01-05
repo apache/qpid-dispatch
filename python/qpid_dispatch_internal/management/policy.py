@@ -144,12 +144,8 @@ class PolicyCompiler():
         PolicyKeys.KW_ROLES
         )
         ]
-    schema_disallowed_options = [(),
-        ()
-        ]
 
     allowed_opts = ()
-    disallowed_opts = ()
     crud_compiler_fn = None
 
 
@@ -165,7 +161,6 @@ class PolicyCompiler():
                 "Illegal policy schema version %s. Must be '1'." % schema_version)
         self.schema_version  = schema_version
         self.allowed_opts    = self.schema_allowed_options[schema_version]
-        self.disallowed_opts = self.schema_disallowed_options[schema_version]
 
 
     def validateNumber(self, val, v_min, v_max, errors):
@@ -298,10 +293,6 @@ class PolicyCompiler():
             if key not in self.allowed_opts:
                 warnings.append("Application '%s' option '%s' is ignored." %
                                 (name, key))
-            if key in self.disallowed_opts:
-                errors.append("Application '%s' option '%s' is disallowed." %
-                              (name, key))
-                return False
             if key == PolicyKeys.KW_VERSION:
                 if not int(self.schema_version) == int(val):
                     errors.append("Application '%s' expected schema version '%s' but is '%s'." %
@@ -353,7 +344,7 @@ class PolicyCompiler():
                     return False
         return True
 
-class Policy():
+class PolicyLocal():
     """
     The policy database.
     """
@@ -725,7 +716,7 @@ def main_except(argv):
 
     (options, args) = parser.parse_args()
 
-    policy = Policy(options.folder)
+    policy = PolicyLocal(options.folder)
 
     print("policy names: %s" % policy.policy_db_get_names())
 
@@ -734,7 +725,7 @@ def main_except(argv):
 
     # Exercise a few functions
     # Empty policy
-    policy2 = Policy()
+    policy2 = PolicyLocal()
 
     print("Policy details:")
     for pname in policy.policy_db_get_names():

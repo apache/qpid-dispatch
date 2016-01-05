@@ -88,6 +88,7 @@ struct qd_policy_t {
     qd_log_source_t      *log_source;
                           // configured settings
     int                   max_connection_limit;
+    char                 *policyDb;
                           // live statistics
     int                   connections_processed;
     int                   connections_denied;
@@ -102,6 +103,7 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
     policy->qd                   = qd;
     policy->log_source           = qd_log_source("POLICY");
     policy->max_connection_limit = 0;
+    policy->policyDb             = 0;
     policy->connections_processed= 0;
     policy->connections_denied   = 0;
     policy->connections_current  = 0;
@@ -113,18 +115,28 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
 
 void qd_policy_free(qd_policy_t *policy)
 {
+    if (policy->policyDb)
+        free(policy->policyDb);
     free(policy);
 }
+
+#define CHECK() if (qd_error_code()) goto error
 
 //
 //
 qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
 {
-    policy->max_connection_limit = qd_entity_opt_long(entity, "maximumConnections", 0); QD_ERROR_RET();
+    policy->max_connection_limit = qd_entity_opt_long(entity, "maximumConnections", 0); CHECK();
     if (policy->max_connection_limit < 0)
         return qd_error(QD_ERROR_CONFIG, "maximumConnections must be >= 0");
+    policy->policyDb =
+        qd_entity_opt_string(entity, "policyDb", 0); CHECK();
     qd_log(policy->log_source, QD_LOG_INFO, "Configured maximumConnections: %d", policy->max_connection_limit);
     return QD_ERROR_NONE;
+
+error:
+    qd_policy_free(policy);
+    return qd_error_code();
 }
 
 
