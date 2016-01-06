@@ -37,7 +37,7 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 // Interface Functions
 //==================================================================================
 
-qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg)
+qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_iterator_t *ingress)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
@@ -47,13 +47,21 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, pn_delivery_t *delivery, qd_m
 }
 
 
-qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg, qd_field_iterator_t *addr)
+qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
+                                    qd_field_iterator_t *ingress, qd_field_iterator_t *addr)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_to_CT, "link_deliver_to");
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     qdr_action_enqueue(link->core, action);
     return dlv;
+}
+
+
+qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg)
+{
+    // TODO - Implement this.  Bypass the CT?
+    return 0;
 }
 
 
@@ -66,6 +74,18 @@ void qdr_send_to(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exc
     action->args.io.control           = control;
 
     qdr_action_enqueue(core, action);
+}
+
+
+void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context)
+{
+    delivery->context = context;
+}
+
+
+void *qdr_delivery_get_context(qdr_delivery_t *delivery)
+{
+    return delivery->context;
 }
 
 

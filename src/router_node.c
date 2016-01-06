@@ -36,13 +36,10 @@ const char *CORE_AGENT_ADDRESS = "$management";
 
 static char *router_role    = "inter-router";
 static char *on_demand_role = "on-demand";
-static char *local_prefix   = "_local/";
 static char *direct_prefix;
 static char *node_id;
 
 ALLOC_DEFINE(qd_routed_event_t);
-ALLOC_DEFINE(qd_router_link_t);
-ALLOC_DEFINE(qd_router_node_t);
 ALLOC_DEFINE(qd_router_ref_t);
 ALLOC_DEFINE(qd_router_link_ref_t);
 ALLOC_DEFINE(qd_router_lrp_ref_t);
@@ -66,51 +63,6 @@ qd_address_t* qd_address(qd_address_semantics_t semantics)
 const char* qd_address_logstr(qd_address_t* address) {
     return (char*)qd_hash_key_by_handle(address->hash_handle);
 }
-
-void qd_router_add_link_ref_LH(qd_router_link_ref_list_t *ref_list, qd_router_link_t *link)
-{
-    qd_router_link_ref_t *ref = new_qd_router_link_ref_t();
-    DEQ_ITEM_INIT(ref);
-    ref->link = link;
-    link->ref = ref;
-    DEQ_INSERT_TAIL(*ref_list, ref);
-}
-
-
-void qd_router_del_link_ref_LH(qd_router_link_ref_list_t *ref_list, qd_router_link_t *link)
-{
-    if (link->ref) {
-        DEQ_REMOVE(*ref_list, link->ref);
-        free_qd_router_link_ref_t(link->ref);
-        link->ref = 0;
-    }
-}
-
-
-void qd_router_add_node_ref_LH(qd_router_ref_list_t *ref_list, qd_router_node_t *rnode)
-{
-    qd_router_ref_t *ref = new_qd_router_ref_t();
-    DEQ_ITEM_INIT(ref);
-    ref->router = rnode;
-    rnode->ref_count++;
-    DEQ_INSERT_TAIL(*ref_list, ref);
-}
-
-
-void qd_router_del_node_ref_LH(qd_router_ref_list_t *ref_list, qd_router_node_t *rnode)
-{
-    qd_router_ref_t *ref = DEQ_HEAD(*ref_list);
-    while (ref) {
-        if (ref->router == rnode) {
-            DEQ_REMOVE(*ref_list, ref);
-            free_qd_router_ref_t(ref);
-            rnode->ref_count--;
-            break;
-        }
-        ref = DEQ_NEXT(ref);
-    }
-}
-
 
 void qd_router_add_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp)
 {
@@ -138,64 +90,26 @@ void qd_router_del_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp)
 /**
  * Determine the role of a connection
  */
-static qdr_connection_role_t qd_router_connection_role(const qd_connection_t *conn)
+static void qd_router_connection_get_config(const qd_connection_t  *conn,
+                                            qdr_connection_role_t  *role,
+                                            const char            **label,
+                                            bool                   *strip_annotations_in,
+                                            bool                   *strip_annotations_out)
 {
     if (conn) {
         const qd_server_config_t *cf = qd_connection_config(conn);
-        if (cf && strcmp(cf->role, router_role) == 0)
-            return QDR_ROLE_INTER_ROUTER;
-        if (cf && strcmp(cf->role, on_demand_role) == 0)
-            return QDR_ROLE_ON_DEMAND;
+        if      (cf && strcmp(cf->role, router_role) == 0)
+            *role = QDR_ROLE_INTER_ROUTER;
+        else if (cf && strcmp(cf->role, on_demand_role) == 0)
+            *role = QDR_ROLE_ON_DEMAND;
+        else
+            *role = QDR_ROLE_NORMAL;
+
+        *label = cf->label;
+
+        *strip_annotations_in  = cf->strip_inbound_annotations;
+        *strip_annotations_out = cf->strip_outbound_annotations;
     }
-
-    return QDR_ROLE_NORMAL;
-}
-
-
-void qd_router_link_free_LH(qd_router_link_t *rlink)
-{
-    qd_link_t *link = rlink->link;
-    if (link) {
-        qd_link_set_context(link, 0);
-        qd_link_free_LH(link);
-        rlink->link = 0;
-    }
-
-    if (rlink->target)
-        free(rlink->target);
-
-    assert(rlink->ref == 0);
-
-    qd_routed_event_t      *re;
-
-    re = DEQ_HEAD(rlink->event_fifo);
-    while (re) {
-        DEQ_REMOVE_HEAD(rlink->event_fifo);
-        if (re->delivery && qd_router_delivery_fifo_exit_LH(re->delivery)) {
-            qd_router_delivery_unlink_LH(re->delivery);
-        }
-        free_qd_routed_event_t(re);
-        re = DEQ_HEAD(rlink->event_fifo);
-    }
-
-    re = DEQ_HEAD(rlink->msg_fifo);
-    while (re) {
-        DEQ_REMOVE_HEAD(rlink->msg_fifo);
-        if (re->delivery)
-            qd_router_delivery_fifo_exit_LH(re->delivery);
-        if (re->message)
-            qd_message_free(re->message);
-        free_qd_routed_event_t(re);
-        re = DEQ_HEAD(rlink->msg_fifo);
-    }
-
-    qd_router_delivery_t *delivery = DEQ_HEAD(rlink->deliveries);
-    while (delivery) {
-        // this unlinks the delivery from the rlink:
-        qd_router_delivery_free_LH(delivery, PN_RELEASED);
-        delivery = DEQ_HEAD(rlink->deliveries);
-    }
-    free_qd_router_link_t(rlink);
 }
 
 
@@ -209,175 +123,11 @@ static int router_writable_conn_handler(void *type_context, qd_connection_t *con
 }
 
 
-/**
- * Outgoing Link Writable Handler
- * DEPRECATE
- */
-/*static*/ int router_writable_link_handler(void* context, qd_link_t *link)
-{
-    qd_router_t            *router = (qd_router_t*) context;
-    qd_router_delivery_t   *delivery;
-    qd_router_link_t       *rlink = (qd_router_link_t*) qd_link_get_context(link);
-    pn_link_t              *pn_link = qd_link_pn(link);
-    uint64_t                tag;
-    int                     link_credit = pn_link_credit(pn_link);
-    qd_routed_event_list_t  to_send;
-    qd_routed_event_list_t  events;
-    qd_routed_event_t      *re;
-    size_t                  offer;
-    int                     event_count = 0;
-
-    if (!rlink)
-        return 0;
-
-    bool drain_mode;
-    bool drain_changed = qd_link_drain_changed(link, &drain_mode);
-
-    DEQ_INIT(to_send);
-    DEQ_INIT(events);
-
-    sys_mutex_lock(router->lock);
-
-    //
-    // Pull the non-delivery events into a local list so they can be processed without
-    // the lock being held.
-    //
-    re = DEQ_HEAD(rlink->event_fifo);
-    while (re) {
-        DEQ_REMOVE_HEAD(rlink->event_fifo);
-        DEQ_INSERT_TAIL(events, re);
-        re = DEQ_HEAD(rlink->event_fifo);
-    }
-
-    //
-    // Under lock, move available deliveries from the msg_fifo to the local to_send
-    // list.  Don't move more than we have credit to send.
-    //
-    if (link_credit > 0) {
-        tag = router->dtag;
-        re = DEQ_HEAD(rlink->msg_fifo);
-        while (re) {
-            DEQ_REMOVE_HEAD(rlink->msg_fifo);
-            DEQ_INSERT_TAIL(to_send, re);
-            if (DEQ_SIZE(to_send) == link_credit)
-                break;
-            re = DEQ_HEAD(rlink->msg_fifo);
-        }
-        router->dtag += DEQ_SIZE(to_send);
-    }
-
-    offer = DEQ_SIZE(rlink->msg_fifo);
-    sys_mutex_unlock(router->lock);
-
-    //
-    // Deliver all the to_send messages downrange
-    //
-    re = DEQ_HEAD(to_send);
-    while (re) {
-        DEQ_REMOVE_HEAD(to_send);
-
-        //
-        // Get a delivery for the send.  This will be the current delivery on the link.
-        //
-        tag++;
-        delivery = qd_router_link_new_delivery(rlink, pn_dtag((char*) &tag, 8));
-
-        //
-        // Send the message
-        //
-        qd_message_send(re->message, link, rlink->strip_outbound_annotations);
-
-        //
-        // Check the delivery associated with the queued message.  If it is not
-        // settled, link it to the outgoing delivery for disposition/settlement
-        // tracking.  If it is (pre-)settled, put it on the incoming link's event
-        // queue to be locally settled.  This is done to hold session credit during
-        // the time the message is in the outgoing message fifo.
-        //
-        sys_mutex_lock(router->lock);
-        if (re->delivery) {
-            if (qd_router_delivery_fifo_exit_LH(re->delivery)) {
-                if (qd_router_delivery_settled(re->delivery)) {
-                    qd_router_link_t  *peer_rlink = qd_router_delivery_link(re->delivery);
-                    qd_routed_event_t *return_re  = new_qd_routed_event_t();
-                    DEQ_ITEM_INIT(return_re);
-                    return_re->delivery    = re->delivery;
-                    return_re->message     = 0;
-                    return_re->settle      = true;
-                    return_re->disposition = 0;
-                    qd_router_delivery_fifo_enter_LH(re->delivery);
-                    DEQ_INSERT_TAIL(peer_rlink->event_fifo, return_re);
-                    qd_link_activate(peer_rlink->link);
-                } else
-                    qd_router_delivery_link_peers_LH(re->delivery, delivery);
-            }
-        } else
-            qd_router_delivery_free_LH(delivery, 0);  // settle and free
-        sys_mutex_unlock(router->lock);
-
-        pn_link_advance(pn_link);
-        event_count++;
-
-        qd_message_free(re->message);
-        free_qd_routed_event_t(re);
-        re = DEQ_HEAD(to_send);
-    }
-
-    //
-    // Process the non-delivery events.
-    //
-    re = DEQ_HEAD(events);
-    while (re) {
-        DEQ_REMOVE_HEAD(events);
-
-        if (re->delivery) {
-            if (re->disposition) {
-                pn_delivery_update(qd_router_delivery_pn(re->delivery), re->disposition);
-                event_count++;
-            }
-
-            sys_mutex_lock(router->lock);
-
-            bool ok = qd_router_delivery_fifo_exit_LH(re->delivery);
-            if (ok && re->settle) {
-                qd_router_delivery_unlink_LH(re->delivery);
-                qd_router_delivery_free_LH(re->delivery, re->disposition);
-                event_count++;
-            }
-
-            sys_mutex_unlock(router->lock);
-        }
-
-        free_qd_routed_event_t(re);
-        re = DEQ_HEAD(events);
-    }
-
-    //
-    // Set the offer to the number of messages remaining to be sent.
-    //
-    if (offer > 0)
-        pn_link_offered(pn_link, offer);
-    else {
-        pn_link_drained(pn_link);
-
-        //
-        // If this link is in drain mode and it wasn't last time we came through here, we need to
-        // count this operation as a work event.  This will allow the container to process the
-        // connector and send out the flow(drain=true) response to the receiver.
-        //
-        if (drain_changed && drain_mode)
-            event_count++;
-    }
-
-    return event_count;
-}
-
 static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
                                                     qd_parsed_field_t *in_ma,
                                                     qd_message_t      *msg,
-                                                    int               *drop,
-                                                    const char        *to_override,
-                                                    bool strip_inbound_annotations)
+                                                    bool              *drop,
+                                                    bool               strip_inbound_annotations)
 {
     qd_field_iterator_t *ingress_iter = 0;
 
@@ -391,15 +141,17 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
 
         for (uint32_t idx = 0; idx < count && !done; idx++) {
             qd_parsed_field_t *sub  = qd_parse_sub_key(in_ma, idx);
-            if (!sub) continue;
+            if (!sub)
+                continue;
             qd_field_iterator_t *iter = qd_parse_raw(sub);
-            if (!iter) continue;
+            if (!iter)
+                continue;
 
-            if (qd_field_iterator_equal(iter, (unsigned char *)QD_MA_TRACE)) {
+            if        (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_TRACE)) {
                 trace = qd_parse_sub_value(in_ma, idx);
-            } else if (qd_field_iterator_equal(iter, (unsigned char *)QD_MA_INGRESS)) {
+            } else if (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_INGRESS)) {
                 ingress = qd_parse_sub_value(in_ma, idx);
-            } else if (qd_field_iterator_equal(iter, (unsigned char *)QD_MA_TO)) {
+            } else if (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_TO)) {
                 to = qd_parse_sub_value(in_ma, idx);
             }
             done = trace && ingress && to;
@@ -436,14 +188,9 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
 
     //
     // QD_MA_TO:
-    // The supplied to override takes precedence over any existing
-    // value.
+    // Preserve the existing value.
     //
-    if (to_override) {  // takes precedence over existing value
-        qd_composed_field_t *to_field = qd_compose_subfield(0);
-        qd_compose_insert_string(to_field, to_override);
-        qd_message_set_to_override_annotation(msg, to_field);
-    } else if (to) {
+    if (to) {
         qd_composed_field_t *to_field = qd_compose_subfield(0);
         qd_compose_insert_string_iterator(to_field, qd_parse_raw(to));
         qd_message_set_to_override_annotation(msg, to_field);
@@ -475,11 +222,10 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
  */
 static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 {
-    qd_router_t      *router  = (qd_router_t*) context;
-    pn_link_t        *pn_link = qd_link_pn(link);
-    qd_router_link_t *rlink   = (qd_router_link_t*) qd_link_get_context(link);
-    qd_message_t     *msg;
-    int               valid_message = 0;
+    qd_router_t  *router  = (qd_router_t*) context;
+    pn_link_t    *pn_link = qd_link_pn(link);
+    qdr_link_t   *rlink   = (qdr_link_t*) qd_link_get_context(link);
+    qd_message_t *msg;
 
     //
     // Receive the message into a local representation.  If the returned message
@@ -508,168 +254,96 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
     }
 
     //
-    // Handle the Link-Routing case.
+    // Handle the link-routed case
     //
-    sys_mutex_lock(router->lock);
-    qd_router_link_t *clink = rlink->connected_link;
-    if (clink) {
-        //router_link_route_delivery_LH(clink, qd_router_delivery(rlink, pnd), msg);
-        sys_mutex_unlock(router->lock);
+    if (qdr_link_is_routed(rlink)) {
+        // TODO - Add Link-Route Forwarding here
         return;
     }
 
     //
-    // Handle the Message-Routing case.  Start by issuing a replacement credit.
+    // Determine if the incoming link is anonymous.  If the link is addressed,
+    // there are some optimizations we can take advantage of.
     //
-    pn_link_flow(pn_link, 1);
+    bool anonymous_link = qdr_link_is_anonymous(rlink);
 
     //
-    // Validate the message through the Properties section so we can access the TO field.
+    // Validate the content of the delivery as an AMQP message.  This is done partially, only
+    // to validate that we can find the fields we need to route the message.
     //
-    qd_message_t           *in_process_copy    = 0;
-    qd_router_message_cb_t  on_message         = 0;
-    void                   *on_message_context = 0;
-
-    valid_message = qd_message_check(msg, QD_DEPTH_PROPERTIES);
+    // If the link is anonymous, we must validate through the message properties to find the
+    // 'to' field.  If the link is not anonymous, we don't need the 'to' field as we will be
+    // using the address from the link target.
+    //
+    qd_message_depth_t  validation_depth = anonymous_link ? QD_DEPTH_PROPERTIES : QD_DEPTH_MESSAGE_ANNOTATIONS;
+    bool                valid_message    = qd_message_check(msg, validation_depth);
+    qdr_delivery_t     *delivery;
 
     if (valid_message) {
-        qd_parsed_field_t   *in_ma     = 0;
-        qd_field_iterator_t *iter      = 0;
-        bool                 free_iter = true;
-        char                *to_override  = 0;
-        bool                 forwarded = false;
-        qd_router_delivery_t *delivery = qd_router_delivery(rlink, pnd);
+        qd_parsed_field_t   *in_ma        = qd_message_message_annotations(msg);
+        bool                 drop         = false;
+        bool                 strip        = qdr_link_strip_annotations_in(rlink);
+        qd_field_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &drop, strip);
 
-        //
-        // Only respect the delivery annotations if the message came from another router.
-        //
-        if (rlink->link_type != QD_LINK_WAYPOINT)
-            in_ma = qd_message_message_annotations(msg);
-
-        //
-        // If the message has delivery annotations, get the to-override field from the annotations.
-        //
-        if (in_ma) {
-            qd_parsed_field_t *ma_to = qd_parse_value_by_key(in_ma, QD_MA_TO);
-            if (ma_to) {
-                iter      = qd_parse_raw(ma_to);
-                free_iter = false;
-            }
+        if (drop) {
+            qd_message_free(msg);
+            return;
         }
 
-        //
-        // If this is a waypoint link, set the address (and to_override) to the phased
-        // address for the link.
-        //
-        if (!iter && rlink->waypoint) {
-            iter = qd_address_iterator_string(rlink->waypoint->address, ITER_VIEW_ADDRESS_HASH);
-            qd_address_iterator_set_phase(iter, rlink->waypoint->out_phase);
-        }
-
-        //
-        // Still no destination address?  Use the TO field from the message properties.
-        //
-        if (!iter)
-            iter = qd_message_field_iterator(msg, QD_FIELD_TO);
-
-        //
-        // Handle the case where the TO field is absent and the incoming link has a target
-        // address.  Use the target address in the lookup in lieu of a TO address.
-        // Note also that the message must then be annotated with a TO-OVERRIDE field in
-        // the delivery annotations.
-        //
-        // ref: https://issues.apache.org/jira/browse/DISPATCH-1
-        //
-        if (!iter && rlink->target) {
-            iter = qd_address_iterator_string(rlink->target, ITER_VIEW_ALL);
-            to_override = rlink->target;
-        }
-
-        if (iter) {
+        if (anonymous_link) {
+            qd_field_iterator_t *addr_iter = 0;
+            
             //
-            // Note: This function is going to need to be refactored so we can put an
-            //       asynchronous address lookup here.  In the event there is a translation
-            //       of the address (via namespace), it will have to be done here after
-            //       obtaining the iterator and before doing the hash lookup.
+            // If the message has delivery annotations, get the to-override field from the annotations.
             //
-            //       Note that this lookup is only done for global/mobile class addresses.
-            //
-            bool is_local;
-            bool is_direct;
-            qd_address_t *addr = qd_router_address_lookup_LH(router, iter, &is_local, &is_direct);
-            if (free_iter)
-                qd_field_iterator_free(iter);
-
-            if (addr) {
-                //
-                // If the incoming link is an endpoint link, count this as an ingress delivery.
-                //
-                if (rlink->link_type == QD_LINK_ENDPOINT)
-                    addr->deliveries_ingress++;
-
-                //
-                // TO field is valid and contains a known destination.  Handle the various
-                // cases for forwarding.
-                //
-                // Interpret and update the delivery annotations of the message.  As a convenience,
-                // this function returns the iterator to the ingress field (if it exists).  It also
-                // returns a 'drop' indication if it detects that the message will loop.
-                //
-                int drop = 0;
-                qd_field_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &drop, to_override, rlink->strip_inbound_annotations);
-
-                if (!drop) {
-                    //
-                    // Forward a copy of the message to the in-process endpoint for
-                    // this address if there is one.  The actual invocation of the
-                    // handler will occur later after we've released the lock.
-                    //
-                    if (addr->on_message) {
-                        in_process_copy = qd_message_copy(msg);
-                        on_message         = addr->on_message;
-                        on_message_context = addr->on_message_context;
-                        addr->deliveries_to_container++;
-                    }
-
-                    //
-                    // If the address form is local (i.e. is prefixed by _local), don't forward
-                    // outside of the router process.
-                    //
-                    if (!is_local && router->router_mode != QD_ROUTER_MODE_ENDPOINT) {
-                        qd_router_forwarder_t *f = addr->forwarder;
-                        forwarded = f->forward(f, router, msg, delivery, addr, ingress_iter, is_direct);
-                    }
-                }
+            if (in_ma) {
+                qd_parsed_field_t *ma_to = qd_parse_value_by_key(in_ma, QD_MA_TO);
+                if (ma_to)
+                    addr_iter = qd_field_iterator_dup(qd_parse_raw(ma_to));
             }
+
+            //
+            // Still no destination address?  Use the TO field from the message properties.
+            //
+            if (!addr_iter)
+                addr_iter = qd_message_field_iterator(msg, QD_FIELD_TO);
+
+            if (addr_iter)
+                delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter);
+        } else
+            delivery = qdr_link_deliver(rlink, msg, ingress_iter);
+
+        if (delivery) {
+            pn_delivery_set_context(pnd, delivery);
+            qdr_delivery_set_context(delivery, pnd);
+        } else {
+            //
+            // The message is now and will always be unroutable because there is no address.
+            //
+            pn_delivery_update(pnd, PN_REJECTED);
+            pn_delivery_settle(pnd);
         }
 
-        if (!forwarded) {
-            if (on_message)
-                // our local in-process handler will accept it:
-                qd_router_delivery_free_LH(delivery, PN_ACCEPTED);
-            else {
-                // no one has accepted it, so inform sender
-                qd_router_delivery_set_undeliverable_LH(delivery);
-                qd_router_delivery_free_LH(delivery, PN_MODIFIED);
-            }
-        }
+        //
+        // Rules for delivering messages:
+        //
+        // For addressed (non-anonymous) links:
+        //   to-override must be set (done in the core?)
+        //   uses qdr_link_deliver to hand over to the core
+        //
+        // For anonymous links:
+        //   If there's a to-override in the annotations, use that address
+        //   Or, use the 'to' field in the message properties
+        //
+
+
+
     } else {
         //
-        // Message is invalid.  Reject the message.
+        // Message is invalid.  Reject the message and don't involve the router core.
         //
         pn_delivery_update(pnd, PN_REJECTED);
         pn_delivery_settle(pnd);
-    }
-
-    sys_mutex_unlock(router->lock);
-    qd_message_free(msg);
-
-    //
-    // Invoke the in-process handler now that the lock is released.
-    //
-    if (on_message) {
-        on_message(on_message_context, in_process_copy, rlink->mask_bit);
-        qd_message_free(in_process_copy);
     }
 }
 
@@ -679,149 +353,15 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
  */
 static void router_disposition_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 {
-    qd_router_t   *router  = (qd_router_t*) context;
-    qd_router_delivery_t *delivery = (qd_router_delivery_t *)pn_delivery_get_context(pnd);
-    if (!delivery) return;
+    //qd_router_t    *router   = (qd_router_t*) context;
+    qdr_delivery_t *delivery = (qdr_delivery_t*) pn_delivery_get_context(pnd);
 
-    bool           changed = qd_router_delivery_disp_changed(delivery);
-    uint64_t       disp    = qd_router_delivery_disp(delivery);
-    bool           settled = qd_router_delivery_settled(delivery);
+    if (!delivery)
+        return;
 
-    sys_mutex_lock(router->lock);
-    qd_router_delivery_t *peer = qd_router_delivery_peer(delivery);
-    if (peer) {
-        //
-        // The case where this delivery has a peer.
-        //
-        if (changed || settled) {
-            qd_router_link_t  *peer_link = qd_router_delivery_link(peer);
-            qd_routed_event_t *re        = new_qd_routed_event_t();
-            DEQ_ITEM_INIT(re);
-            re->delivery    = peer;
-            re->message     = 0;
-            re->settle      = settled;
-            re->disposition = changed ? disp : 0;
-
-            qd_router_delivery_fifo_enter_LH(peer);
-            DEQ_INSERT_TAIL(peer_link->event_fifo, re);
-            if (settled) {
-                qd_router_delivery_unlink_LH(delivery);
-                qd_router_delivery_free_LH(delivery, 0);
-            }
-
-            qd_link_activate(peer_link->link);
-        }
-    } else if (settled)
-        qd_router_delivery_free_LH(delivery, 0);
-
-    sys_mutex_unlock(router->lock);
+    // TODO - hook into the core
 }
 
-
-typedef struct link_attach_t {
-    qd_router_t      *router;
-    qd_router_link_t *peer_link;
-    qd_link_t        *peer_qd_link;
-    char             *link_name;
-    qd_direction_t    dir;
-    qd_connection_t  *conn;
-    int               credit;
-} link_attach_t;
-
-ALLOC_DECLARE(link_attach_t);
-ALLOC_DEFINE(link_attach_t);
-
-
-#define COND_NAME_LEN        127
-#define COND_DESCRIPTION_LEN 511
-
-typedef struct link_detach_t {
-    qd_router_t      *router;
-    qd_router_link_t *rlink;
-    char              condition_name[COND_NAME_LEN + 1];
-    char              condition_description[COND_DESCRIPTION_LEN + 1];
-    pn_data_t        *condition_info;
-} link_detach_t;
-
-ALLOC_DECLARE(link_detach_t);
-ALLOC_DEFINE(link_detach_t);
-
-
-typedef struct link_event_t {
-    qd_router_t      *router;
-    qd_router_link_t *rlink;
-    int               credit;
-    bool              drain;
-} link_event_t;
-
-ALLOC_DECLARE(link_event_t);
-ALLOC_DEFINE(link_event_t);
-
-
-typedef enum {
-    LINK_ATTACH_FORWARDED = 1,  ///< The attach was forwarded
-    LINK_ATTACH_NO_MATCH  = 2,  ///< No link-route address was found
-    LINK_ATTACH_NO_PATH   = 3   ///< Link-route exists but there's no reachable destination
-} link_attach_result_t;
-
-
-static void qd_router_flow(void *context, bool discard)
-{
-    link_event_t *le = (link_event_t*) context;
-
-    if (!discard) {
-        qd_link_t *link    = le->rlink->link;
-        pn_link_t *pn_link = qd_link_pn(link);
-        int delta          = le->credit - pn_link_credit(pn_link);
-        if (delta > 0) {
-            pn_link_flow(pn_link, delta);
-            qd_link_activate(link);
-        }
-    }
-
-    free_link_event_t(le);
-}
-
-
-qd_router_link_t* qd_router_link(qd_link_t *link, qd_link_type_t link_type, qd_direction_t direction, qd_address_t *owning_addr, qd_waypoint_t *wp, int mask_bit)
-{
-    qd_router_link_t *rlink = new_qd_router_link_t();
-    DEQ_ITEM_INIT(rlink);
-    rlink->mask_bit       = mask_bit;
-    rlink->link_type      = link_type;
-    rlink->link_direction = direction;
-    rlink->owning_addr    = owning_addr;
-    rlink->waypoint       = wp;
-    rlink->link           = link;
-    rlink->connected_link = 0;
-    rlink->ref            = 0;
-    rlink->target         = 0;
-    rlink->strip_inbound_annotations  = false;
-    rlink->strip_outbound_annotations = false;
-    DEQ_INIT(rlink->event_fifo);
-    DEQ_INIT(rlink->msg_fifo);
-    DEQ_INIT(rlink->deliveries);
-
-    //Get the configuration via the connection's listener.
-	qd_connection_t *connection = qd_link_connection(link);
-    if (connection) {
-        const qd_server_config_t *config = connection->listener ?
-            connection->listener->config : connection->connector->config;
-
-        if (config) {
-            //strip_inbound_annotations and strip_outbound_annotations don't apply to inter router links.
-            if (rlink->link_type != QD_LINK_ROUTER) {
-                if (rlink->link_direction == QD_INCOMING) {
-                    rlink->strip_inbound_annotations  = config->strip_inbound_annotations;
-                } else {
-                    rlink->strip_outbound_annotations = config->strip_outbound_annotations;
-                }
-            }
-        }
-    }
-
-    return rlink;
-}
 
 /**
  * New Incoming Link Handler
@@ -865,7 +405,9 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
 static int router_link_attach_handler(void* context, qd_link_t *link)
 {
     qdr_link_t *qlink = (qdr_link_t*) qd_link_get_context(link);
-    qdr_link_second_attach(qlink, qdr_terminus(qd_link_remote_source(link)), qdr_terminus(qd_link_remote_target(link)));
+    qdr_link_second_attach(qlink,
+                           qdr_terminus(qd_link_remote_source(link)),
+                           qdr_terminus(qd_link_remote_target(link)));
 
     return 0;
 }
@@ -876,42 +418,12 @@ static int router_link_attach_handler(void* context, qd_link_t *link)
  */
 static int router_link_flow_handler(void* context, qd_link_t *link)
 {
-    qd_router_t      *router     = (qd_router_t*) context;
-    qd_router_link_t *rlink      = (qd_router_link_t*) qd_link_get_context(link);
-    pn_link_t        *pn_link    = qd_link_pn(link);
+    //qd_router_t *router = (qd_router_t*) context;
+    qdr_link_t  *rlink  = (qdr_link_t*) qd_link_get_context(link);
 
     if (!rlink)
         return 0;
 
-    sys_mutex_lock(router->lock);
-    qd_router_link_t *peer_rlink = rlink->connected_link;
-
-    if (peer_rlink) {
-        qd_connection_t *out_conn = qd_link_connection(peer_rlink->link);
-        if (out_conn) {
-            if (rlink->link_direction == QD_OUTGOING) {
-                //
-                // Outgoing link handling
-                //
-                int credit = pn_link_remote_credit(pn_link) - DEQ_SIZE(rlink->msg_fifo);
-                if (credit > 0) {
-                    link_event_t *le = new_link_event_t();
-                    memset(le, 0, sizeof(link_event_t));
-                    le->router = router;
-                    le->rlink  = peer_rlink;
-                    le->credit = credit;
-                    le->drain  = false;
-                    qd_connection_invoke_deferred(out_conn, qd_router_flow, le);
-                }
-            } else {
-                //
-                // Incoming link handling
-                //
-            }
-        }
-    }
-
-    sys_mutex_unlock(router->lock);
     return 0;
 }
 
@@ -935,28 +447,35 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
 }
 
 
-static int router_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
+static void router_opened_handler(qd_router_t *router, qd_connection_t *conn, bool inbound)
 {
-    qd_router_t           *router = (qd_router_t*) type_context;
-    qdr_connection_role_t  role   = qd_router_connection_role(conn);
-    qdr_connection_t      *qdrc   = qdr_connection_opened(router->router_core, true, role, 0); // TODO - get label
+    qdr_connection_role_t  role;
+    bool                   strip_annotations_in;
+    bool                   strip_annotations_out;
+    const char            *label;
+
+    qd_router_connection_get_config(conn, &role, &label, &strip_annotations_in, &strip_annotations_out);
+
+    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, label,
+                                                   strip_annotations_in, strip_annotations_out);
 
     qd_connection_set_context(conn, qdrc);
     qdr_connection_set_context(qdrc, conn);
+}
 
+
+static int router_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
+{
+    qd_router_t *router = (qd_router_t*) type_context;
+    router_opened_handler(router, conn, true);
     return 0;
 }
 
 
 static int router_outbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
-    qd_router_t           *router = (qd_router_t*) type_context;
-    qdr_connection_role_t  role   = qd_router_connection_role(conn);
-    qdr_connection_t      *qdrc   = qdr_connection_opened(router->router_core, false, role, 0); // TODO - get label
-
-    qd_connection_set_context(conn, qdrc);
-    qdr_connection_set_context(qdrc, conn);
-
+    qd_router_t *router = (qd_router_t*) type_context;
+    router_opened_handler(router, conn, false);
     return 0;
 }
 
@@ -1035,8 +554,6 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     DEQ_INIT(router->addrs);
     router->addr_hash    = qd_hash(10, 32, 0);
 
-    DEQ_INIT(router->links);
-    DEQ_INIT(router->routers);
     DEQ_INIT(router->lrp_containers);
 
     router->out_links_by_mask_bit = NEW_PTR_ARRAY(qd_router_link_t, qd_bitmask_width());
@@ -1200,101 +717,3 @@ qdr_core_t *qd_router_core(qd_dispatch_t *qd)
     return qd->router->router_core;
 }
 
-
-qd_address_t *qd_router_address_lookup_LH(qd_router_t *router,
-                                          qd_field_iterator_t *addr_iter,
-                                          bool *is_local, bool *is_direct)
-{
-    qd_address_t *addr = 0;
-    qd_address_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
-    qd_hash_retrieve(router->addr_hash, addr_iter, (void*) &addr);
-    qd_address_iterator_reset_view(addr_iter, ITER_VIEW_NO_HOST);
-    *is_local  = (bool) qd_field_iterator_prefix(addr_iter, local_prefix);
-    *is_direct = (bool) qd_field_iterator_prefix(addr_iter, direct_prefix);
-    return addr;
-}
-
-
-void qd_router_send(qd_dispatch_t       *qd,
-                    qd_field_iterator_t *address,
-                    qd_message_t        *msg)
-{
-
-    qd_router_t  *router = qd->router;
-    qd_address_t *addr;
-
-    qd_address_iterator_reset_view(address, ITER_VIEW_ADDRESS_HASH);
-    sys_mutex_lock(router->lock);
-    qd_hash_retrieve(router->addr_hash, address, (void*) &addr);
-
-    if (addr) {
-        //
-        // Forward to all of the local links receiving this address.
-        //
-        addr->deliveries_from_container++;
-        qd_router_link_ref_t *dest_link_ref = DEQ_HEAD(addr->rlinks);
-        while (dest_link_ref) {
-            qd_routed_event_t *re = new_qd_routed_event_t();
-            DEQ_ITEM_INIT(re);
-            re->delivery    = 0;
-            re->message     = qd_message_copy(msg);
-            re->settle      = 0;
-            re->disposition = 0;
-            DEQ_INSERT_TAIL(dest_link_ref->link->msg_fifo, re);
-
-            qd_link_activate(dest_link_ref->link->link);
-            addr->deliveries_egress++;
-
-            dest_link_ref = DEQ_NEXT(dest_link_ref);
-        }
-
-        //
-        // Forward to the next-hops for remote destinations.
-        //
-        qd_router_ref_t  *dest_node_ref = DEQ_HEAD(addr->rnodes);
-        qd_router_link_t *dest_link;
-        qd_bitmask_t     *link_set = qd_bitmask(0);
-
-        while (dest_node_ref) {
-            if (dest_node_ref->router->next_hop)
-                dest_link = dest_node_ref->router->next_hop->peer_link;
-            else
-                dest_link = dest_node_ref->router->peer_link;
-            if (dest_link)
-                qd_bitmask_set_bit(link_set, dest_link->mask_bit);
-            dest_node_ref = DEQ_NEXT(dest_node_ref);
-        }
-
-        int link_bit;
-        while (qd_bitmask_first_set(link_set, &link_bit)) {
-            qd_bitmask_clear_bit(link_set, link_bit);
-            dest_link = router->out_links_by_mask_bit[link_bit];
-            if (dest_link) {
-                qd_routed_event_t *re = new_qd_routed_event_t();
-                DEQ_ITEM_INIT(re);
-                re->delivery    = 0;
-                re->message     = qd_message_copy(msg);
-                re->settle      = 0;
-                re->disposition = 0;
-                DEQ_INSERT_TAIL(dest_link->msg_fifo, re);
-                qd_link_activate(dest_link->link);
-                addr->deliveries_transit++;
-            }
-        }
-
-        qd_bitmask_free(link_set);
-    }
-    sys_mutex_unlock(router->lock); // TOINVESTIGATE Move this higher?
-}
-
-
-void qd_router_send2(qd_dispatch_t *qd,
-                     const char    *address,
-                     qd_message_t  *msg)
-{
-    if (address && msg) {
-        qd_field_iterator_t *iter = qd_address_iterator_string(address, ITER_VIEW_ADDRESS_HASH);
-        qd_router_send(qd, iter, msg);
-        qd_field_iterator_free(iter);
-    }
-}

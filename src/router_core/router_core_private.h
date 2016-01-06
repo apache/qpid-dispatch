@@ -165,6 +165,11 @@ DEQ_DECLARE(qdr_router_ref_t, qdr_router_ref_list_t);
 
 struct qdr_delivery_t {
     DEQ_LINKS(qdr_delivery_t);
+    void           *context;
+    qdr_link_t     *link;
+    qdr_delivery_t *peer;
+    uint64_t        disposition;
+    bool            settled;
 };
 
 ALLOC_DECLARE(qdr_delivery_t);
@@ -186,8 +191,8 @@ struct qdr_link_t {
     qd_routed_event_list_t    event_fifo;      ///< FIFO of outgoing delivery/link events (no messages)
     qd_routed_event_list_t    msg_fifo;        ///< FIFO of incoming or outgoing message deliveries
     qd_router_delivery_list_t deliveries;      ///< [own] outstanding unsettled deliveries
-    bool                      strip_inbound_annotations;  ///<should the dispatch specific inbound annotations be stripped at the ingress router DEPRECATE/MOVE
-    bool                      strip_outbound_annotations; ///<should the dispatch specific outbound annotations be stripped at the egress router DEPRECATE/MOVE
+    bool                      strip_annotations_in;
+    bool                      strip_annotations_out;
 };
 
 ALLOC_DECLARE(qdr_link_t);
@@ -324,6 +329,8 @@ struct qdr_connection_t {
     bool                        incoming;
     qdr_connection_role_t       role;
     const char                 *label;
+    bool                        strip_annotations_in;
+    bool                        strip_annotations_out;
     int                         mask_bit;
     qdr_link_list_t             links;
     qdr_connection_work_list_t  work_list;

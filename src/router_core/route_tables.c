@@ -559,6 +559,10 @@ static void qdr_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         char phase          = action->args.io.address_phase;
         qdr_address_t *addr = 0;
 
+        char *astring = (char*) qd_field_iterator_copy(address->iterator);
+        qd_log(core->log, QD_LOG_INFO, "Subscribed address=%s class=%c", astring, aclass);
+        free(astring);
+
         qd_address_iterator_override_prefix(address->iterator, aclass);
         if (aclass == 'M')
             qd_address_iterator_set_phase(address->iterator, phase);

@@ -33,12 +33,12 @@
  */
 
 typedef struct qdr_core_t         qdr_core_t;
+typedef struct qdr_subscription_t qdr_subscription_t;
 typedef struct qdr_connection_t   qdr_connection_t;
 typedef struct qdr_link_t         qdr_link_t;
 typedef struct qdr_delivery_t     qdr_delivery_t;
 typedef struct qdr_terminus_t     qdr_terminus_t;
 typedef struct qdr_error_t        qdr_error_t;
-typedef struct qdr_subscription_t qdr_subscription_t;
 
 /**
  * Allocate and start an instance of the router core module.
@@ -52,7 +52,7 @@ void qdr_core_free(qdr_core_t *core);
 
 /**
  ******************************************************************************
- * Route table maintenance functions
+ * Route table maintenance functions (Router Control)
  ******************************************************************************
  */
 void qdr_core_add_router(qdr_core_t *core, const char *address, int router_maskbit);
@@ -92,6 +92,22 @@ qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
 
 void qdr_core_unsubscribe(qdr_subscription_t *sub);
 
+/**
+ * qdr_send_to
+ *
+ * Send a message to a destination.  This function is used only by in-process components that
+ * create messages to be sent.  For these messages, there is no inbound link or delivery.
+ * Note also that deliveries sent through this function will be pre-settled.
+ *
+ * @param core Pointer to the core module
+ * @param msg Pointer to the message to be sent.  The message will be copied during the call
+ *            and must be freed by the caller if the caller doesn't need to hold it for later use.
+ * @param addr Null-terminated string containing the address to which the message should be delivered.
+ * @param exclude_inprocess If true, the message will not be sent to in-process subscribers.
+ * @param control If true, this message is to be treated as control traffic and flow on a control link.
+ */
+void qdr_send_to(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exclude_inprocess, bool control);
+
 
 /**
  ******************************************************************************
@@ -125,9 +141,16 @@ typedef enum {
  * @param role The configured role of this connection
  * @param label Optional label provided in the connection's configuration.  This is used to 
  *        correlate the connection with waypoints and link-route destinations that use the connection.
+ * @param strip_annotations_in True if configured to remove annotations on inbound messages.
+ * @param strip_annotations_out True if configured to remove annotations on outbound messages.
  * @return Pointer to a connection object that can be used to refer to this connection over its lifetime.
  */
-qdr_connection_t *qdr_connection_opened(qdr_core_t *core, bool incoming, qdr_connection_role_t role, const char *label);
+qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
+                                        bool                   incoming,
+                                        qdr_connection_role_t  role,
+                                        const char            *label,
+                                        bool                   strip_annotations_in,
+                                        bool                   strip_annotations_out);
 
 /**
  * qdr_connection_closed
@@ -347,6 +370,44 @@ qd_link_type_t qdr_link_type(const qdr_link_t *link);
 qd_direction_t qdr_link_direction(const qdr_link_t *link);
 
 /**
+ * qdr_link_is_anonymous
+ *
+ * Indicate whether the link is anonymous.  Note that this is determined inside
+ * the core thread.  In the time between first creating the link and when the
+ * core thread determines its status, a link will indicate "true" for being anonymous.
+ * The reason for this is to be conservative.  The anonymous check is an optimization
+ * used by the caller to skip parsing the "to" field for messages on non-anonymous links.
+ *
+ * @param link Link object
+ * @return True if the link is anonymous or the link hasn't been processed yet.
+ */
+bool qdr_link_is_anonymous(const qdr_link_t *link);
+
+/**
+ * qdr_link_is_routed
+ *
+ * Indicate whether the link is link-routed.
+ *
+ * @param link Link object
+ * @return True if the link is link-routed.
+ */
+bool qdr_link_is_routed(const qdr_link_t *link);
+
+/**
+ * qdr_link_strip_annotations_in
+ *
+ * Indicate whether the link's connection is configured to strip message annotations on inbound messages.
+ */
+bool qdr_link_strip_annotations_in(const qdr_link_t *link);
+
+/**
+ * qdr_link_strip_annotations_oout
+ *
+ * Indicate whether the link's connection is configured to strip message annotations on outbound messages.
+ */
+bool qdr_link_strip_annotations_out(const qdr_link_t *link);
+
+/**
  * qdr_link_name
  *
  * Retrieve the name of the link.
@@ -397,26 +458,27 @@ void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_termin
  */
 void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error);
 
-qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg);
-qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, pn_delivery_t *delivery, qd_message_t *msg, qd_field_iterator_t *addr);
-
 /**
- * qdr_send_to
+ * qdr_link_deliver
  *
- * Send a message to a destination.  This function is used only by in-process components that
- * create messages to be sent.  For these messages, there is no inbound link or delivery.
+ * Deliver a message to the router core for forwarding.  This function is used in cases where
+ * the link contains all the information needed for proper message routing (i.e. non-anonymous
+ * inbound links).
  *
- * @param core Pointer to the core module
- * @param msg Pointer to the message to be sent.  The message will be copied during the call
- *            can must be freed by the caller if the caller doesn't need to hold it for later use.
- * @param exclude_inprocess If true, the message will not be sent to in-process subscribers.
- * @param control If true, this message is to be treated as control traffic and flow on a control link.
+ * @param link Pointer to the link over which the message arrived.
+ * @param msg Pointer to the delivered message.  The sender is giving this reference to the router
+ *            core.  The sender _must not_ free or otherwise use the message after invoking this function.
+ * @return Pointer to the qdr_delivery that will track the lifecycle of this delivery on this link.
  */
-void qdr_send_to(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exclude_inprocess, bool control);
+qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_iterator_t *ingress);
+qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
+                                    qd_field_iterator_t *ingress, qd_field_iterator_t *addr);
+qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg);
 
 typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
                                           qdr_terminus_t *source, qdr_terminus_t *target);
-typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target);
+typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
+                                          qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, qdr_error_t *error);
 
 void qdr_connection_handlers(qdr_core_t                *core,
@@ -431,6 +493,8 @@ void qdr_connection_handlers(qdr_core_t                *core,
  * Delivery functions
  ******************************************************************************
  */
+void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
+void *qdr_delivery_get_context(qdr_delivery_t *delivery);
 void qdr_delivery_update_disposition(qdr_delivery_t *delivery);
 void qdr_delivery_update_flow(qdr_delivery_t *delivery);
 void qdr_delivery_process(qdr_delivery_t *delivery);

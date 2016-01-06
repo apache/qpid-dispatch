@@ -78,13 +78,11 @@ set(qpid_dispatch_SOURCES
   router_core/management_agent.c
   router_core/terminus.c
   router_core/transfer.c
-  router_delivery.c
   router_node.c
   router_pynode.c
   schema_enum.c
   server.c
   timer.c
-  waypoint.c
   )
 
 if(USE_MEMORY_POOL)

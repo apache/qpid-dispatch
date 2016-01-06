@@ -602,6 +602,17 @@ unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter)
 }
 
 
+qd_field_iterator_t *qd_field_iterator_dup(const qd_field_iterator_t *iter)
+{
+    if (iter == 0)
+        return 0;
+
+    qd_field_iterator_t *dup = new_qd_field_iterator_t();
+    *dup = *iter;
+    return dup;
+}
+
+
 qd_iovec_t *qd_field_iterator_iovec(const qd_field_iterator_t *iter)
 {
     assert(!iter->view_prefix); // Not supported for views with a prefix

@@ -60,21 +60,28 @@ qdr_terminus_t *qdr_terminus_router_data(void)
 // Interface Functions
 //==================================================================================
 
-qdr_connection_t *qdr_connection_opened(qdr_core_t *core, bool incoming, qdr_connection_role_t role, const char *label)
+qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
+                                        bool                   incoming,
+                                        qdr_connection_role_t  role,
+                                        const char            *label,
+                                        bool                   strip_annotations_in,
+                                        bool                   strip_annotations_out)
 {
     qdr_action_t     *action = qdr_action(qdr_connection_opened_CT, "connection_opened");
     qdr_connection_t *conn   = new_qdr_connection_t();
 
     ZERO(conn);
-    conn->core         = core;
-    conn->user_context = 0;
-    conn->incoming     = incoming;
-    conn->role         = role;
-    conn->label        = label;
-    conn->mask_bit     = -1;
+    conn->core                  = core;
+    conn->user_context          = 0;
+    conn->incoming              = incoming;
+    conn->role                  = role;
+    conn->label                 = label;
+    conn->strip_annotations_in  = strip_annotations_in;
+    conn->strip_annotations_out = strip_annotations_out;
+    conn->mask_bit              = -1;
     DEQ_INIT(conn->links);
     DEQ_INIT(conn->work_list);
-    conn->work_lock    = sys_mutex();
+    conn->work_lock = sys_mutex();
 
     action->args.connection.conn = conn;
     qdr_action_enqueue(core, action);
@@ -168,6 +175,30 @@ qd_direction_t qdr_link_direction(const qdr_link_t *link)
 }
 
 
+bool qdr_link_is_anonymous(const qdr_link_t *link)
+{
+    return link->owning_addr == 0;
+}
+
+
+bool qdr_link_is_routed(const qdr_link_t *link)
+{
+    return link->connected_link != 0;
+}
+
+
+bool qdr_link_strip_annotations_in(const qdr_link_t *link)
+{
+    return link->strip_annotations_in;
+}
+
+
+bool qdr_link_strip_annotations_out(const qdr_link_t *link)
+{
+    return link->strip_annotations_out;
+}
+
+
 const char *qdr_link_name(const qdr_link_t *link)
 {
     return link->name;
@@ -189,6 +220,9 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->conn = conn;
     link->name = (char*) malloc(strlen(name));
     strcpy(link->name, name);
+
+    link->strip_annotations_in  = conn->strip_annotations_in;
+    link->strip_annotations_out = conn->strip_annotations_out;
 
     if      (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_CONTROL))
         link->link_type = QD_LINK_CONTROL;
