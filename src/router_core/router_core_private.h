@@ -25,10 +25,17 @@
 #include <qpid/dispatch/log.h>
 #include <memory.h>
 
-typedef struct qdr_forwarder_t qdr_forwarder_t;
+typedef struct qdr_address_t     qdr_address_t;
+typedef struct qdr_node_t        qdr_node_t;
+typedef struct qdr_router_ref_t  qdr_router_ref_t;
+typedef struct qdr_link_ref_t    qdr_link_ref_t;
+typedef struct qdr_lrp_t         qdr_lrp_t;
+typedef struct qdr_lrp_ref_t     qdr_lrp_ref_t;
+typedef struct qdr_forwarder_t   qdr_forwarder_t;
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_semantics_t semantics);
-void qdr_forward_message_CT(qdr_core_t *core, qdr_forwarder_t *forwarder, qd_message_t *msg, qdr_delivery_t *in_delivery);
+void qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
+                            bool exclude_inprocess, bool control);
 void qdr_forward_attach_CT(qdr_core_t *core, qdr_forwarder_t *forwarder, qdr_link_t *in_link);
 
 /**
@@ -131,13 +138,6 @@ struct qdr_query_t {
 ALLOC_DECLARE(qdr_query_t);
 DEQ_DECLARE(qdr_query_t, qdr_query_list_t); 
 
-
-typedef struct qdr_address_t     qdr_address_t;
-typedef struct qdr_node_t        qdr_node_t;
-typedef struct qdr_router_ref_t  qdr_router_ref_t;
-typedef struct qdr_link_ref_t    qdr_link_ref_t;
-typedef struct qdr_lrp_t         qdr_lrp_t;
-typedef struct qdr_lrp_ref_t     qdr_lrp_ref_t;
 
 struct qdr_node_t {
     DEQ_LINKS(qdr_node_t);

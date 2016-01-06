@@ -33,6 +33,7 @@ import time
 ## (i.e. we are in a test bench, etc.), load the stub versions.
 ##
 from ..dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_INFO, LOG_ERROR, LOG_STACK_LIMIT
+from ..dispatch import SEMANTICS_MULTICAST_FLOOD, SEMANTICS_MULTICAST_ONCE
 
 class RouterEngine:
     """

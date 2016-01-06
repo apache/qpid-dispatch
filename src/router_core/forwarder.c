@@ -22,9 +22,12 @@
 #include <stdio.h>
 
 typedef void (*qdr_forward_message_t) (qdr_core_t      *core,
-                                       qdr_forwarder_t *forw,
+                                       qdr_address_t   *addr,
                                        qd_message_t    *msg,
-                                       qdr_delivery_t  *in_delivery);
+                                       qdr_delivery_t  *in_delivery,
+                                       bool             exclude_inprocess,
+                                       bool             control);
+
 typedef void (*qdr_forward_attach_t) (qdr_core_t      *core,
                                       qdr_forwarder_t *forw,
                                       qdr_link_t      *link);
@@ -39,33 +42,40 @@ struct qdr_forwarder_t {
 // Built-in Forwarders
 //==================================================================================
 
-void qdr_forward_multicast(qdr_core_t      *core,
-                           qdr_forwarder_t *forw,
-                           qd_message_t    *msg,
-                           qdr_delivery_t  *in_delivery)
+void qdr_forward_multicast_CT(qdr_core_t      *core,
+                              qdr_address_t   *addr,
+                              qd_message_t    *msg,
+                              qdr_delivery_t  *in_delivery,
+                              bool             exclude_inprocess,
+                              bool             control)
+{
+    //bool bypass_valid_origins = addr->forwarder->bypass_valid_origins;
+}
+
+
+void qdr_forward_closest_CT(qdr_core_t      *core,
+                            qdr_address_t   *addr,
+                            qd_message_t    *msg,
+                            qdr_delivery_t  *in_delivery,
+                            bool             exclude_inprocess,
+                            bool             control)
 {
 }
 
 
-void qdr_forward_closest(qdr_core_t      *core,
-                         qdr_forwarder_t *forw,
-                         qd_message_t    *msg,
-                         qdr_delivery_t  *in_delivery)
+void qdr_forward_balanced_CT(qdr_core_t      *core,
+                             qdr_address_t   *addr,
+                             qd_message_t    *msg,
+                             qdr_delivery_t  *in_delivery,
+                             bool             exclude_inprocess,
+                             bool             control)
 {
 }
 
 
-void qdr_forward_balanced(qdr_core_t      *core,
-                          qdr_forwarder_t *forw,
-                          qd_message_t    *msg,
-                          qdr_delivery_t  *in_delivery)
-{
-}
-
-
-void qdr_forward_link_balanced(qdr_core_t      *core,
-                               qdr_forwarder_t *forw,
-                               qdr_link_t      *link)
+void qdr_forward_link_balanced_CT(qdr_core_t      *core,
+                                  qdr_forwarder_t *forw,
+                                  qdr_link_t      *link)
 {
 }
 
@@ -91,15 +101,15 @@ void qdr_forwarder_setup_CT(qdr_core_t *core)
     //
     // Create message forwarders
     //
-    core->forwarders[QD_SEMANTICS_MULTICAST_FLOOD]  = qdr_new_forwarder(qdr_forward_multicast, 0, true);
-    core->forwarders[QD_SEMANTICS_MULTICAST_ONCE]   = qdr_new_forwarder(qdr_forward_multicast, 0, false);
-    core->forwarders[QD_SEMANTICS_ANYCAST_CLOSEST]  = qdr_new_forwarder(qdr_forward_closest,   0, false);
-    core->forwarders[QD_SEMANTICS_ANYCAST_BALANCED] = qdr_new_forwarder(qdr_forward_balanced,  0, false);
+    core->forwarders[QD_SEMANTICS_MULTICAST_FLOOD]  = qdr_new_forwarder(qdr_forward_multicast_CT, 0, true);
+    core->forwarders[QD_SEMANTICS_MULTICAST_ONCE]   = qdr_new_forwarder(qdr_forward_multicast_CT, 0, false);
+    core->forwarders[QD_SEMANTICS_ANYCAST_CLOSEST]  = qdr_new_forwarder(qdr_forward_closest_CT,   0, false);
+    core->forwarders[QD_SEMANTICS_ANYCAST_BALANCED] = qdr_new_forwarder(qdr_forward_balanced_CT,  0, false);
 
     //
     // Create link forwarders
     //
-    core->forwarders[QD_SEMANTICS_LINK_BALANCED] = qdr_new_forwarder(0, qdr_forward_link_balanced, false);
+    core->forwarders[QD_SEMANTICS_LINK_BALANCED] = qdr_new_forwarder(0, qdr_forward_link_balanced_CT, false);
 }
 
 
@@ -111,8 +121,14 @@ qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_semantics_t seman
 }
 
 
-void qdr_forward_message_CT(qdr_core_t *core, qdr_forwarder_t *forwarder, qd_message_t *msg, qdr_delivery_t *in_delivery)
+void qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
+                            bool exclude_inprocess, bool control)
 {
+    if (addr->forwarder)
+        addr->forwarder->forward_message(core, addr, msg, in_delivery, exclude_inprocess, control);
+    else {
+        // TODO - Deal with this delivery's disposition
+    }
 }
 
 

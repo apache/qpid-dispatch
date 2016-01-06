@@ -148,7 +148,7 @@ static void qd_set_properties(qd_message_t        *msg,
 }
 
 
-static void qd_manage_response_handler (void *context, const qd_amqp_error_t *status, bool more)
+static void qd_manage_response_handler(void *context, const qd_amqp_error_t *status, bool more)
 {
     qd_management_context_t *ctx = (qd_management_context_t*) context;
 
@@ -313,13 +313,13 @@ static void qd_core_agent_delete_handler(qdr_core_t                 *core,
 /**
  * Checks the content of the message to see if this can be handled by this agent.
  */
-static bool qd_can_handle_request(qd_field_iterator_t        *props,
-                                  qd_router_entity_type_t    *entity_type,
-                                  qd_router_operation_type_t *operation_type,
+static bool qd_can_handle_request(qd_field_iterator_t         *props,
+                                  qd_router_entity_type_t     *entity_type,
+                                  qd_router_operation_type_t  *operation_type,
                                   qd_field_iterator_t        **identity_iter,
                                   qd_field_iterator_t        **name_iter,
-                                  int                        *count,
-                                  int                        *offset)
+                                  int                         *count,
+                                  int                         *offset)
 {
     qd_parsed_field_t *fld = qd_parse(props);
 
@@ -407,7 +407,7 @@ static bool qd_can_handle_request(qd_field_iterator_t        *props,
  * Handler for the management agent.
  *
  */
-void management_agent_handler(void *context, qd_message_t *msg, int link_id)
+void management_agent_handler(void *context, qd_message_t *msg, int unused_link_id)
 {
     qdr_core_t *core = (qdr_core_t*) context;
     qd_field_iterator_t *app_properties_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);

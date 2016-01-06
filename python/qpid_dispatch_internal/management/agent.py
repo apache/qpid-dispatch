@@ -295,7 +295,7 @@ class FixedAddressEntity(EntityAdapter):
 class WaypointEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_waypoint(self._dispatch, self)
-        self._qd.qd_waypoint_activate_all(self._dispatch)
+        #self._qd.qd_waypoint_activate_all(self._dispatch)
 
 class LinkRoutePatternEntity(EntityAdapter):
     def create(self):
