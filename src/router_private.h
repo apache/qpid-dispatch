@@ -225,17 +225,8 @@ struct qd_router_t {
     const char               *router_id;
     qd_node_t                *node;
 
-    qd_address_list_t         addrs;
-    qd_hash_t                *addr_hash;
-    qd_address_t             *router_addr;
-    qd_address_t             *routerma_addr;
-    qd_address_t             *hello_addr;
-
     qd_lrp_container_list_t   lrp_containers;
-    qd_router_link_t        **out_links_by_mask_bit;
-    qd_router_node_t        **routers_by_mask_bit;
 
-    qd_bitmask_t             *neighbor_free_mask;
     sys_mutex_t              *lock;
     qd_timer_t               *timer;
     uint64_t                  dtag;

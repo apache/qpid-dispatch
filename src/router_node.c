@@ -39,30 +39,7 @@ static char *on_demand_role = "on-demand";
 static char *direct_prefix;
 static char *node_id;
 
-ALLOC_DEFINE(qd_routed_event_t);
-ALLOC_DEFINE(qd_router_ref_t);
-ALLOC_DEFINE(qd_router_link_ref_t);
 ALLOC_DEFINE(qd_router_lrp_ref_t);
-ALLOC_DEFINE(qd_address_t);
-ALLOC_DEFINE(qd_router_conn_t);
-
-
-qd_address_t* qd_address(qd_address_semantics_t semantics)
-{
-    qd_address_t* addr = new_qd_address_t();
-    memset(addr, 0, sizeof(qd_address_t));
-    DEQ_ITEM_INIT(addr);
-    DEQ_INIT(addr->lrps);
-    DEQ_INIT(addr->rlinks);
-    DEQ_INIT(addr->rnodes);
-    addr->semantics = semantics;
-    addr->forwarder = 0; //qd_router_get_forwarder(semantics);
-    return addr;
-}
-
-const char* qd_address_logstr(qd_address_t* address) {
-    return (char*)qd_hash_key_by_handle(address->hash_handle);
-}
 
 void qd_router_add_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp)
 {
@@ -526,13 +503,6 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     }
 
     size_t dplen = 9 + strlen(area) + strlen(id);
-    direct_prefix = (char*) malloc(dplen);
-    strcpy(direct_prefix, "_topo/");
-    strcat(direct_prefix, area);
-    strcat(direct_prefix, "/");
-    strcat(direct_prefix, id);
-    strcat(direct_prefix, "/");
-
     node_id = (char*) malloc(dplen);
     strcpy(node_id, area);
     strcat(node_id, "/");
@@ -551,19 +521,8 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     router->router_area  = area;
     router->router_id    = id;
     router->node         = qd_container_set_default_node_type(qd, &router_node, (void*) router, QD_DIST_BOTH);
-    DEQ_INIT(router->addrs);
-    router->addr_hash    = qd_hash(10, 32, 0);
-
     DEQ_INIT(router->lrp_containers);
 
-    router->out_links_by_mask_bit = NEW_PTR_ARRAY(qd_router_link_t, qd_bitmask_width());
-    router->routers_by_mask_bit   = NEW_PTR_ARRAY(qd_router_node_t, qd_bitmask_width());
-    for (int idx = 0; idx < qd_bitmask_width(); idx++) {
-        router->out_links_by_mask_bit[idx] = 0;
-        router->routers_by_mask_bit[idx]   = 0;
-    }
-
-    router->neighbor_free_mask = qd_bitmask(1);
     router->lock               = sys_mutex();
     router->timer              = qd_timer(qd, qd_router_timer_handler, (void*) router);
     router->dtag               = 1;
@@ -673,30 +632,9 @@ void qd_router_free(qd_router_t *router)
 
     qd_container_set_default_node_type(router->qd, 0, 0, QD_DIST_BOTH);
 
-    for (qd_address_t *addr = DEQ_HEAD(router->addrs); addr; addr = DEQ_HEAD(router->addrs)) {
-        for (qd_router_link_ref_t *rlink = DEQ_HEAD(addr->rlinks); rlink; rlink = DEQ_HEAD(addr->rlinks)) {
-            DEQ_REMOVE_HEAD(addr->rlinks);
-            free_qd_router_link_ref_t(rlink);
-        }
-
-        for (qd_router_ref_t *rnode = DEQ_HEAD(addr->rnodes); rnode; rnode = DEQ_HEAD(addr->rnodes)) {
-            DEQ_REMOVE_HEAD(addr->rnodes);
-            free_qd_router_ref_t(rnode);
-        }
-
-        qd_hash_handle_free(addr->hash_handle);
-        DEQ_REMOVE_HEAD(router->addrs);
-        qd_entity_cache_remove(QD_ROUTER_ADDRESS_TYPE, addr);
-        free_qd_address_t(addr);
-    }
-
     qdr_core_free(router->router_core);
     qd_timer_free(router->timer);
     sys_mutex_free(router->lock);
-    qd_bitmask_free(router->neighbor_free_mask);
-    free(router->out_links_by_mask_bit);
-    free(router->routers_by_mask_bit);
-    qd_hash_free(router->addr_hash);
     qd_router_configure_free(router);
     qd_router_python_free(router);
 

@@ -605,7 +605,7 @@ static PyObject *qd_python_send(PyObject *self, PyObject *args)
         qd_message_compose_2(msg, field);
         PyObject *address = PyObject_GetAttrString(message, "address");
         if (address) {
-            qdr_send_to(ioa->core, msg, PyString_AsString(address), (bool) no_echo, (bool) control);
+            qdr_send_to2(ioa->core, msg, PyString_AsString(address), (bool) no_echo, (bool) control);
             Py_DECREF(address);
         }
         qd_compose_free(field);

@@ -102,11 +102,14 @@ void qdr_core_unsubscribe(qdr_subscription_t *sub);
  * @param core Pointer to the core module
  * @param msg Pointer to the message to be sent.  The message will be copied during the call
  *            and must be freed by the caller if the caller doesn't need to hold it for later use.
- * @param addr Null-terminated string containing the address to which the message should be delivered.
+ * @param addr Field iterator describing the address to which the message should be delivered.
  * @param exclude_inprocess If true, the message will not be sent to in-process subscribers.
  * @param control If true, this message is to be treated as control traffic and flow on a control link.
  */
-void qdr_send_to(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exclude_inprocess, bool control);
+void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_field_iterator_t *addr,
+                  bool exclude_inprocess, bool control);
+void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr,
+                  bool exclude_inprocess, bool control);
 
 
 /**
@@ -468,6 +471,9 @@ void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error);
  * @param link Pointer to the link over which the message arrived.
  * @param msg Pointer to the delivered message.  The sender is giving this reference to the router
  *            core.  The sender _must not_ free or otherwise use the message after invoking this function.
+ * @param ingress Field iterator referencing the value of the ingress-router header.  NOTE: This
+ *                iterator is assumed to reference content in the message that will stay valid
+ *                through the lifetime of the message.
  * @return Pointer to the qdr_delivery that will track the lifecycle of this delivery on this link.
  */
 qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_iterator_t *ingress);

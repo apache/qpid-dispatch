@@ -97,7 +97,7 @@ qdr_field_t *qdr_field(const char *text)
     if (length == 0)
         return 0;
 
-    qdr_field_t *field   = new_qdr_field_t();
+    qdr_field_t *field = new_qdr_field_t();
     qd_buffer_t *buf;
 
     ZERO(field);

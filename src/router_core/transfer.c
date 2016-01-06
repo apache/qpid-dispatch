@@ -65,7 +65,19 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
 }
 
 
-void qdr_send_to(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exclude_inprocess, bool control)
+void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_field_iterator_t *addr, bool exclude_inprocess, bool control)
+{
+    qdr_action_t *action = qdr_action(qdr_send_to_CT, "send_to");
+    //action->args.io.address           = qdr_field(addr);  // TODO - fix this
+    action->args.io.message           = qd_message_copy(msg);
+    action->args.io.exclude_inprocess = exclude_inprocess;
+    action->args.io.control           = control;
+
+    qdr_action_enqueue(core, action);
+}
+
+
+void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr, bool exclude_inprocess, bool control)
 {
     qdr_action_t *action = qdr_action(qdr_send_to_CT, "send_to");
     action->args.io.address           = qdr_field(addr);

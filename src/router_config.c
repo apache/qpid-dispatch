@@ -27,7 +27,9 @@
 #include "entity_cache.h"
 #include "schema_enum.h"
 
-qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity) {
+qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
+{
+    /*
     qd_error_clear();
     int   phase  = qd_entity_opt_long(entity, "phase", 0); QD_ERROR_RET();
     qd_schema_fixedAddress_fanout_t fanout = qd_entity_get_long(entity, "fanout"); QD_ERROR_RET();
@@ -107,6 +109,7 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
     addr->last_phase      = addr_phase->phase;
     DEQ_INSERT_TAIL(addr->phases, addr_phase);
     free(prefix);
+    */
     return qd_error_code();
 }
 
@@ -144,6 +147,7 @@ qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity
 
 qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 {
+    /*
     char *prefix    = qd_entity_get_string(entity, "prefix"); QD_ERROR_RET();
     char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
     char *direction = qd_entity_get_string(entity, "dir"); QD_ERROR_RET();
@@ -264,6 +268,7 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
     qd_field_iterator_free(iter);
     free(prefix);
     free(connector);
+    */
     return qd_error_code();
 }
 
@@ -271,7 +276,7 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 void qd_router_configure_free(qd_router_t *router)
 {
     if (!router) return;
-
+    /*
     for (qd_config_address_t *ca = DEQ_HEAD(router->config_addrs); ca; ca = DEQ_HEAD(router->config_addrs)) {
         for (qd_config_phase_t *ap = DEQ_HEAD(ca->phases); ap; ap = DEQ_HEAD(ca->phases)) {
             DEQ_REMOVE_HEAD(ca->phases);
@@ -296,6 +301,7 @@ void qd_router_configure_free(qd_router_t *router)
         DEQ_REMOVE_HEAD(router->lrp_containers);
         free(lrpc);
     }
+    */
 }
 
 
