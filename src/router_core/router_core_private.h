@@ -34,8 +34,8 @@ typedef struct qdr_lrp_ref_t     qdr_lrp_ref_t;
 typedef struct qdr_forwarder_t   qdr_forwarder_t;
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_semantics_t semantics);
-void qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
-                            bool exclude_inprocess, bool control);
+int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
+                           bool exclude_inprocess, bool control);
 void qdr_forward_attach_CT(qdr_core_t *core, qdr_forwarder_t *forwarder, qdr_link_t *in_link);
 
 /**
@@ -165,11 +165,14 @@ DEQ_DECLARE(qdr_router_ref_t, qdr_router_ref_list_t);
 
 struct qdr_delivery_t {
     DEQ_LINKS(qdr_delivery_t);
-    void           *context;
-    qdr_link_t     *link;
-    qdr_delivery_t *peer;
-    uint64_t        disposition;
-    bool            settled;
+    void                *context;
+    qdr_link_t          *link;
+    qdr_delivery_t      *peer;
+    qd_message_t        *msg;
+    qd_field_iterator_t *to_addr;
+    qd_field_iterator_t *origin;
+    uint64_t             disposition;
+    bool                 settled;
 };
 
 ALLOC_DECLARE(qdr_delivery_t);
@@ -178,21 +181,19 @@ DEQ_DECLARE(qdr_delivery_t, qdr_delivery_list_t);
 
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
-    qdr_core_t               *core;
-    void                     *user_context;
-    qdr_connection_t         *conn;            ///< [ref] Connection that owns this link
-    qd_link_type_t            link_type;
-    qd_direction_t            link_direction;
-    char                     *name;
-    qdr_address_t            *owning_addr;     ///< [ref] Address record that owns this link
-    //qd_waypoint_t            *waypoint;        ///< [ref] Waypoint that owns this link
-    qdr_link_t               *connected_link;  ///< [ref] If this is a link-route, reference the connected link
-    qdr_link_ref_t           *ref;             ///< Pointer to a containing reference object
-    qd_routed_event_list_t    event_fifo;      ///< FIFO of outgoing delivery/link events (no messages)
-    qd_routed_event_list_t    msg_fifo;        ///< FIFO of incoming or outgoing message deliveries
-    qd_router_delivery_list_t deliveries;      ///< [own] outstanding unsettled deliveries
-    bool                      strip_annotations_in;
-    bool                      strip_annotations_out;
+    qdr_core_t          *core;
+    void                *user_context;
+    qdr_connection_t    *conn;            ///< [ref] Connection that owns this link
+    qd_link_type_t       link_type;
+    qd_direction_t       link_direction;
+    char                *name;
+    qdr_address_t       *owning_addr;     ///< [ref] Address record that owns this link
+    qdr_link_t          *connected_link;  ///< [ref] If this is a link-route, reference the connected link
+    qdr_link_ref_t      *ref;             ///< Pointer to a containing reference object (TODO - check this!)
+    qdr_delivery_list_t  undelivered;     ///< Deliveries to be forwarded or sent
+    qdr_delivery_list_t  unsettled;       ///< Unsettled deliveries
+    bool                 strip_annotations_in;
+    bool                 strip_annotations_out;
 };
 
 ALLOC_DECLARE(qdr_link_t);
@@ -380,6 +381,7 @@ struct qdr_core_t {
     qdr_link_first_attach_t    first_attach_handler;
     qdr_link_second_attach_t   second_attach_handler;
     qdr_link_detach_t          detach_handler;
+    qdr_link_flow_t            flow_handler;
 
     const char *router_area;
     const char *router_id;

@@ -267,13 +267,15 @@ void qdr_connection_handlers(qdr_core_t                *core,
                              qdr_connection_activate_t  activate,
                              qdr_link_first_attach_t    first_attach,
                              qdr_link_second_attach_t   second_attach,
-                             qdr_link_detach_t          detach)
+                             qdr_link_detach_t          detach,
+                             qdr_link_flow_t            flow)
 {
     core->user_context          = context;
     core->activate_handler      = activate;
     core->first_attach_handler  = first_attach;
     core->second_attach_handler = second_attach;
     core->detach_handler        = detach;
+    core->flow_handler          = flow;
 }
 
 

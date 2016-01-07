@@ -286,9 +286,9 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
                 addr_iter = qd_message_field_iterator(msg, QD_FIELD_TO);
 
             if (addr_iter)
-                delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter);
+                delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd));
         } else
-            delivery = qdr_link_deliver(rlink, msg, ingress_iter);
+            delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd));
 
         if (delivery) {
             pn_delivery_set_context(pnd, delivery);
@@ -612,6 +612,11 @@ static void qd_router_link_detach(void *context, qdr_link_t *link, qdr_error_t *
 }
 
 
+static void qd_router_link_flow(void *context, qdr_link_t *link)
+{
+}
+
+
 void qd_router_setup_late(qd_dispatch_t *qd)
 {
     qd->router->router_core = qdr_core(qd, qd->router->router_area, qd->router->router_id);
@@ -620,7 +625,8 @@ void qd_router_setup_late(qd_dispatch_t *qd)
                             qd_router_connection_activate,
                             qd_router_link_first_attach,
                             qd_router_link_second_attach,
-                            qd_router_link_detach);
+                            qd_router_link_detach,
+                            qd_router_link_flow);
 
     qd_router_python_setup(qd->router);
     qd_timer_schedule(qd->router->timer, 1000);

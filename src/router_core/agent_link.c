@@ -75,11 +75,11 @@ static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link )
             break;
 
         case QDR_LINK_MSG_FIFO_DEPTH:
-            qd_compose_insert_ulong(body, DEQ_SIZE(link->msg_fifo));
+            qd_compose_insert_ulong(body, 0); // FIXME
             break;
 
         case QDR_LINK_EVENT_FIFO_DEPTH:
-            qd_compose_insert_ulong(body, DEQ_SIZE(link->event_fifo));
+            qd_compose_insert_ulong(body, 0); // FIXME
             break;
 
         default:
