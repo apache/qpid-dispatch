@@ -75,6 +75,13 @@ if(BUILD_DOCS)
     configure_file(${src}/${file} ${bin}/${file} COPYONLY)
   endforeach()
 
+  # Copy the images. Don't use configure_file since it truncates .png files at 1st ^Z character
+  file(GLOB_RECURSE PNG_SRC RELATIVE ${src} *.png)
+  foreach(file ${PNG_SRC})
+    #message("${scr}/${file} getting copied to ${bin}/dochtml/${file}.")
+    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src}/${file} ${bin}/dochtml/${file})
+  endforeach()
+
   # Generate files from management schema
   set(schema, "${CMAKE_SOURCE_DIR}/python/qpid_router/management/qdrouterd.json")
   set(py_management ${CMAKE_SOURCE_DIR}/python/qpid_dispatch_internal/management)

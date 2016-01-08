@@ -30,3 +30,4 @@ Qpid Dispatch Router Book
    introduction
    using
    technical_details
+   console
