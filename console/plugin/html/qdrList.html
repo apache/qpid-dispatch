@@ -1,0 +1,37 @@
+<div class="main-display row-fluid qdrList" ng-controller="QDR.ListController">
+    <ul class="nav nav-tabs qdrListNodes">
+          <li ng-repeat="node in nodes" ng-click="selectNode({{node}})" ng-class="{active : isNodeSelected(node.id)}"> <span>{{node.name}}</span> </li>
+    </ul>
+
+    <div class="row-fluid qdrListActions">
+        <ul class="nav nav-tabs ng-scope">
+            <li ng-repeat="entity in entities" ng-class="{active : isActionActive(entity.name)}" ng-click="selectAction('{{entity.name}}')" >
+                <a title="{{entity.title}}" data-placement="bottom"> {{entity.humanName}} </a></li>
+        </ul>
+            <div class="gridStyle" ng-grid="gridDef"></div>
+            <div class="selectedItems">
+                <div class="gridStyle gridDetails" ng-grid="details"></div>
+            </div>
+    </div>
+</div>
+
+<!--
+    This is the template for the graph dialog that is displayed. It uses the
+    dialogCtrl controller in qdrList.js.
+-->
+<script type="text/ng-template" id="template-from-script.html">
+    <div class="listGraphs" title="Chart" ng-controller="QDR.ListChartController">
+        <p ng-hide="isOnChartsPage()">
+            <button ng-click="addChartsPage()"><i class="icon-bar-chart"></i> Add</button> this chart to the Charts page.
+        </p>
+        <p ng-show="isOnChartsPage()">
+            <button ng-click="delChartsPage()">Remove</button> this chart from the <button ng-click="showChartsPage()"><i class="icon-bar-chart"></i> Charts</button> page.
+        </p>
+        <div id="{{svgDivId}}" class="d3Chart"></div>
+
+        <div class="okButton">
+                <button ng-click="okClick()">Close</button>
+        </div>
+    </div>
+</script>
+

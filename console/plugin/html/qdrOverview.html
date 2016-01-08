@@ -1,0 +1,50 @@
+<div ng-controller="QDR.OverviewController">
+
+    <hawtio-pane position="left" width="250">
+        <div id="overtree"></div>
+    </hawtio-pane>
+
+    <div class="row-fluid" ng-include="template.url"></div>
+
+</div>
+
+
+<!-- the following scripts are content that gets loaded into the above div that has the temple.url -->
+<script type="text/ng-template" id="routers.html">
+    <h3>Routers</h3>
+    <div class="overview">
+        <div class="gridStyle" ng-grid="allConnections"></div>
+    </div>
+</script>
+
+<script type="text/ng-template" id="router.html">
+    <h3>Router {{router.data.title}}</h3>
+    <div class="gridStyle" ng-grid="routerGrid"></div>
+</script>
+
+<script type="text/ng-template" id="addresses.html">
+    <h3>Addresses</h3>
+    <div class="overview">
+        <div class="gridStyle" ng-grid="addressGrid"></div>
+    </div>
+</script>
+<script type="text/ng-template" id="address.html">
+    <h3>Address {{address.data.title}}</h3>
+    <div class="gridStyle" ng-grid="addressGrid"></div>
+</script>
+<script type="text/ng-template" id="connections.html">
+    <h3>Connections</h3>
+    <div class="overview">
+        <div class="gridStyle" ng-grid="allConnectionGrid"></div>
+    </div>
+</script>
+<script type="text/ng-template" id="connection.html">
+    <h3>Connection {{connection.data.title}}</h3>
+    <div class="gridStyle" ng-grid="connectionGrid"></div>
+</script>
+<script type="text/ng-template" id="logs.html">
+    <h3>Logs</h3>
+</script>
+<script type="text/ng-template" id="log.html">
+    <h3>Log {{log.data.title}}</h3>
+</script>

@@ -1,0 +1,476 @@
+main-display > .span8 {
+  height: 100%;
+  position: relative;
+}
+
+.nickname-window,
+.channel-window,
+.main-window {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+  /* border: 1px solid #d4d4d4;
+  border-radius: 4px;*/
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.nickname-window > .nickname-window-inner,
+.channel-window > .channel-window-inner,
+.main-window > .main-window-inner {
+  position: static;
+}
+
+.channel-window-inner > ul > li {
+  cursor: pointer;
+  padding: 0;
+  border-bottom: 1px solid #EEEEEE;
+}
+
+
+.channel-window-inner > ul > li > span:hover {
+  background-color: #EAEAEA;
+}
+
+ul.qdrListNodes > li > span {
+  padding: 6px 20px; 6px; 6px;
+  display: block;
+}
+
+.qdrList .gridStyle {
+    width: 20em;
+    margin-right: 0;
+    float: left;
+}
+
+
+.qdrList div.gridDetails {
+
+    width: auto;
+}
+
+.selectedItems {
+    margin-left: 21em;
+}
+
+.qdrListPane {
+    top: 110px;
+}
+
+.qdrListActions {
+    width: auto;
+}
+
+.nickname-window-inner > ul > li {
+  cursor: pointer;
+}
+
+.channel-window {
+  bottom: 40px;
+}
+
+.main-window {
+  border: none;
+  top: 46px;
+  bottom: 46px;
+}
+
+.main-window.no-topic {
+  top: 2px;
+}
+
+.topic-window {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 2px;
+  height: 20px;
+  overflow: hidden;
+  z-index: 50;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  border-left: 1px solid #d4d4d4;
+  border-right: 1px solid #d4d4d4;
+  border-bottom: 1px solid #d4d4d4;
+  background: white;
+  padding: 10px;
+}
+
+.input-widget {
+  background: white;
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  height: 40px;
+  z-index: 50;
+}
+
+.input-widget > form {
+  position: relative;
+}
+
+.input-widget > form > div {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  bottom: 2px;
+  right: 84px;
+}
+
+.input-widget > form > div > input[type="text"] {
+  width: 100%;
+}
+
+.input-widget > form > input[type="submit"] {
+  position: absolute;
+  right: 2px;
+  top: 3px;
+}
+
+.input-widget > form > input {
+  margin-bottom: 0;
+}
+
+.channel-control-buttons {
+  position: absolute;
+  background: white;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  z-index: 50;
+}
+
+div.listAttrName {
+    padding-top: 5px;
+}
+
+div.listAttrName i.icon-bar-chart {
+    float: right;
+    margin: 5px;
+}
+
+div.listAttrName i.icon-bar-chart.active, div.hastip i.icon-bar-chart.active, li.haschart i {
+    background-color: #AAFFAA;
+}
+
+div#main div ul.nav li a:not(.btn) {
+    background: initial !important;
+}
+
+div#main div ul.nav li.active a {
+    background-color: #f0f0ff !important;
+}
+
+div#main.qdr {
+    margin-top: 44px !important;
+}
+
+div.charts-header {
+  font-size: 1.2em;
+  color: #666666;
+  margin: 1em 0;
+}
+
+.selectedNode, .selectedAction, .selectedEntity {
+    font-weight: 600;
+    color: #606066;
+}
+
+.okButton {
+    text-align: center;
+    margin: 1em;
+}
+
+span.showChartsLink {
+    border: 1px solid blue;
+    padding: 1px 2px;
+}
+
+div.listGraphs p {
+    margin: 1em 0 2em 2em;
+    text-align: center;
+}
+
+div.centered {
+    text-align: center;
+    margin: 4em;
+}
+
+div.aChart {
+    height: 200px;
+    width:  400px;
+    margin: 1em;
+}
+
+div.chartContainer {
+    float: left;
+}
+
+div.d3Chart path {
+    stroke: black;
+    stroke-width: 1;
+	opacity: 0.5;
+}
+
+div.d3Chart path.line {
+    stroke: steelblue;
+    stroke-width: 1;
+    fill: none;
+    opacity: 1;
+}
+
+.mo-rect {
+    fill: #ffffdd;
+    stroke: #f0f0f0;
+    stroke-width: 1;
+}
+
+.mo-guide {
+    fill: none;
+    stroke: #d0d0d0;
+    stroke-width: 2;
+    stroke-dasharray: 3,3;
+}
+
+div.d3Chart .title {
+    text-decoration: underline;
+}
+
+
+.axis line, .axis path {
+  fill: none;
+  shape-rendering: crispEdges;
+  stroke-width: 1;
+  stroke: #000000;
+}
+
+.axis line {
+  stroke: #C0C0C0;
+  stroke-dasharray: 1,1;
+  opacity: 0.5;
+}
+
+.y.axis text, .x.axis text, .focus text, div.d3Chart .title {
+    font-size: 12px;
+}
+
+.y.axis path {
+   stroke: #000;
+ }
+
+.overlay {
+   fill: none;
+   pointer-events: all;
+ }
+
+.focus circle {
+   fill: none;
+   stroke: steelblue;
+ }
+.focus .fo-table {
+	/* box-shadow: 2px 2px 3px #EEE; */
+}
+
+div.d3Chart {
+    padding: 1em 0;
+    border: 1px solid #C0C0C0;
+}
+
+div.d3Chart .axis path {
+	display: inherit;
+}
+.c3-circle {
+	display: none;
+}
+
+.fo-table {
+	border: 1px solid darkgray;
+	background-color: white;
+	font-size: .85em;
+}
+
+.fo-table td {
+	padding: 4px;
+	border-left: 1px solid darkgray;
+}
+.fo-table tr.detail td {
+	padding: 1px 4px;
+}
+.fo-title {
+	color: white;
+	background-color: darkgray;
+}
+
+.fo-table-legend {
+	width: 8px;
+	height: 8px;
+	border: 1px solid black;
+	margin: 0 4px;
+	display: inline-block;
+}
+
+svg .legend {
+	dominant-baseline: central;
+}
+
+div.chartContainer div.aChart {
+    margin-top: 0.5em;
+}
+
+div#main.qdr div ul.nav li.active a {
+  background-color: #e0e0ff !important;
+  color: #000000;
+}
+
+div#main.qdr .selected, .box.selected {
+  color: #000000;
+  text-shadow: none;
+}
+
+/* the selected node on the list page */
+div.qdrList li.active {
+    background-color: #e0e0ff;
+}
+
+/* the selected row in the name table */
+div#main.qdr div.qdrList div.selected {
+  background-color: #e0e0ff !important;
+}
+
+#dialogChart {
+    height: 200px;
+}
+
+div.qdrCharts p.chartLabels button {
+    float: right;
+}
+
+div.qdrCharts p.chartLabels {
+     padding-right: 1em;;
+ }
+
+p.dialogHeader {
+    text-align: center;
+}
+
+p.dialogHeader input {
+    margin-top: 10px;
+    width: 480px;
+}
+
+.ui-slider-tick {
+  position: absolute;
+  background-color: #666;
+  width: 2px;
+  height: 8px;
+  top: 12px;
+  z-index: -1;
+}
+
+label.rateGroup {
+    float: left;
+}
+
+div.chartOptions div.dlg-slider {
+    float: left;
+    margin-left: 2em;
+    width: 28em;
+    font-size: 14px;
+}
+
+div.chartOptions div.duration {
+  width: 35em !important;
+}
+
+div.chartOptions .slider {
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+input[type="radio"] {
+    margin-top: 0 !important;
+}
+
+div.chartOptions legend {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+div.chartOptions span.minicolors-swatch {
+    width: 14px;
+    height: 14px;
+}
+
+.minicolors-input {
+    width: 4em;
+    padding: 0 0 0 24px !important;
+}
+
+
+div.colorPicker div:nth-of-type(1), /* first span under div.colorPicker */
+ div.minicolors{
+    float:left;
+    margin-right: 0.5em;
+}
+
+div.chartOptions p.sep {
+    height: 1em;
+}
+
+ul.nav-tabs {
+    border-bottom: 1px solid #ddd !important;
+}
+
+div.tabbable div.tab-content {
+    overflow: visible;
+}
+
+div.tabbable ul.nav-tabs > .active > a {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-bottom-color: transparent;
+}
+
+
+div.tabbable .tab-pane {
+    background-color: #f8f8f8;
+    padding: 12px;
+    border-right: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+div.tabbable ul.nav-tabs {
+  margin-bottom: 0;
+}
+
+ul.qdrTopoModes {
+    position: relative;
+    top: -10px;
+}
+.overview.section {
+	/* width: 35em; */
+}
+.overview.section .ngGrid {
+	height: 12em !important;
+	min-height: 12em !important;
+}
+
+.overview.routers.section .ngGrid {
+ 	height: 16em !important;
+ 	min-height: 16em !important;
+}
+.overview.routers.section {
+ 	/*width: 15em; */
+ }
+
+.grid-align-value {
+	text-align: right;
+}
+
+.overview .ngRow:hover {
+	background:#e0e0ff;
+}
