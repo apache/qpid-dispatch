@@ -178,7 +178,7 @@ class PolicyFile(TestCase):
         upolicy = {}
         self.assertTrue( 
             PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '192.168.100.5', 'photoserver', upolicy) )
-        self.assertTrue(upolicy['policyVersion']             == '1')
+        self.assertTrue(upolicy['policyVersion']             == 1)
         self.assertTrue(upolicy['maxFrameSize']            == 444444)
         self.assertTrue(upolicy['maxMessageSize']          == 444444)
         self.assertTrue(upolicy['maxSessionWindow']        == 444444)
@@ -219,7 +219,7 @@ class PolicyFile(TestCase):
         upolicy = {}
         self.assertTrue( 
             PolicyFile.policy.policy_lookup('192.168.100.5:33335', 'ellen', '72.135.2.9', 'photoserver', upolicy) )
-        self.assertTrue(upolicy['policyVersion']             == '1')
+        self.assertTrue(upolicy['policyVersion']             == 1)
         self.assertTrue(upolicy['maxFrameSize']            == 666666)
         self.assertTrue(upolicy['maxMessageSize']          == 666666)
         self.assertTrue(upolicy['maxSessionWindow']        == 666666)

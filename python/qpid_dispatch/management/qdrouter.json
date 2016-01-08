@@ -1008,19 +1008,163 @@
                 "maximumConnections": {
                     "type": "integer",
                     "default": 0,
-                    "description": "The maximum number of concurrent client connections allowed. Zero implies no limit.",
+                    "description": "The maximum number of concurrent client connections allowed to this router. Zero implies no limit.",
                     "required": false,
                     "create": true
                 },
                 "policyDb": {
                     "type": "path",
-                    "description": "The path to the folder that holds policy definition files.",
+                    "description": "The path to the folder that holds local policy definition files.",
 		    "required": false,
                     "create": true
                 },
                 "connectionsProcessed": {"type": "integer", "graph": true},
                 "connectionsDenied": {"type": "integer", "graph": true},
                 "connectionsCurrent": {"type": "integer", "graph": true}
+            }
+        },
+
+        "policy.appConnections": {
+            "description": "Defines per application connection limits, counts, and state.",
+            "extends": "operationalEntity",
+            "attributes": {
+                "appName": {
+                    "type": "string",
+                    "description": "Application to which these statistics apply",
+                    "create": true
+                },
+
+                "maxConnections": {
+                    "type": "integer",
+                    "description": "The maximum number of concurrent client connections allowed to this application. Zero implies no limit."
+                    },
+                "maxConnPerUser": {
+                    "type": "integer",
+                    "description": "The maximum number of concurrent connections allowed to this application for a single authenticated user. Zero implies no limit."
+                    },
+                "maxConnPerHost": {
+                    "type": "integer",
+                    "description": "The maximum number of concurrent connections allowed to this application from a remote host. Zero implies no limit."
+                },
+
+                "connectionsApproved": {"type": "integer", "graph": true},
+                "connectionsDenied": {"type": "integer", "graph": true},
+                "connectionsActive": {"type": "integer", "graph": true},
+                "perUserState": {
+                    "type": "map",
+                    "description": "Index is authenticated username; data is comma separated string naming the user's connections."
+                },
+                "perHostState": {
+                    "type": "map",
+                    "description": "Index is remote host; data is comma separated string naming the host's connections."
+                }
+            }
+        },
+
+        "policy.appStatistics": {
+            "description": "Aggregated statistics for one application.",
+            "extends": "operationalEntity",
+            "attributes": {
+                "appName": {
+                    "type": "string",
+                    "description": "Application to which these statistics apply",
+                    "create": true
+                },
+
+                "maxSendersDenials": {"type": "integer", "graph": true},
+                "maxReceiversDenials": {"type": "integer", "graph": true},
+                "dynamicSrcDenials": {"type": "integer", "graph": true},
+                "anonmousSenderDenials": {"type": "integer", "graph": true},
+                "sourceDenials": {"type": "integer", "graph": true},
+                "targetsDenials": {"type": "integer", "graph": true}
+            }
+        },
+
+        "policy.appGroupSettings": {
+            "description": "Defines control values for a group of users in one application",
+            "extends": "configurationEntity",
+            "attributes": {
+                "appName": {
+                    "type": "string",
+                    "description": "Application to which these settings apply",
+                    "create": true
+                },
+                "appGroupName": {
+                    "type": "string",
+                    "description": "Rule set name",
+                    "create": true
+                },
+
+                "maxFrameSize": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Largest frame that may be used on this connection. Value placed into forwarded AMQP Open.max-frame-size field. Zero implies inserting system default.",
+                    "required": false,
+                    "create": true
+                },
+                "maxMessageSize": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Largest message that may be used on this connection. Value placed into forwarded AMQP Attach.max-message-size field. Zero implies inserting system default.",
+                    "required": false,
+                    "create": true
+                },
+                "maxSessionWindow": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Largest incoming and outgoing window that may be used on this connection. Value placed into forwarded AMQP Begin.incoming-window and .outgoing-window fields. Zero implies inserting system default.",
+                    "required": false,
+                    "create": true
+                },
+                "maxSessions": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Maximum number of simultaneous sessions that may be used on this connection. Value placed into forwarded AMQP Open.channel-max field. Zero implies inserting system default.",
+                    "required": false,
+                    "create": true
+                },
+                "maxSenders": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Maximum number of simultaneous senders that may be used on this connection. Zero implies system default.",
+                    "required": false,
+                    "create": true
+                },
+                "maxReceivers": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Maximum number of simultaneous receivers that may be used on this connection. Zero implies system default.",
+                    "required": false,
+                    "create": true
+                },
+                "allowDynamicSrc": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "A receiver link created on this connection is allowed to set the dynamic flag to true.",
+                    "required": false,
+                    "create": true
+                },
+                "allowAnonymousSender": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "A sender link created on this connection is allowed to have a blank target address.",
+                    "required": false,
+                    "create": true
+                },
+                "sources": {
+                    "type": "string",
+                    "default": 0,
+                    "description": "Comma separated list of allowed source addresses to be specified by receive links. A blank list denies all access. A list with a single wildcard address '*' allows all access. Simple beginsWith and endsWith may be specified by prefixing and postfixing a string with '*'. Username substitution is supported by using the $USER token in a string.",
+                    "required": false,
+                    "create": true
+                },
+                "targets": {
+                    "type": "string",
+                    "default": 0,
+                    "description": "Comma separated list of allowed target addresses to be specified by sending links. A blank list denies all access. A list with a single wildcard address '*' allows all access. Simple beginsWith and endsWith may be specified by prefixing and postfixing a string with '*'. Username substitution is supported by using the $USER token in a string.",
+                    "required": false,
+                    "create": true
+                }
             }
         },
 

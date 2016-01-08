@@ -22,11 +22,10 @@
 """
 
 import sys, os
-import ConfigParser
+import json
 import optparse
 from policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr
 import pdb #; pdb.set_trace()
-import ast
 
 
 
@@ -35,60 +34,15 @@ Entity implementing the business logic of user connection/access policy.
 
 Policy is represented several ways:
 
-1. External       : ConfigParser-format file
-2. CRUD Interface : ConfigParser file section: name, [(name, value), ...]
-3. Internal       : dictionary
-
-For example:
-
-1. External
-
-The External Policy is a plain ascii text file formatted for processing
-by ConfigParser.
-
-External Policy:
-----------------
-
-    [photoserver]
-    schemaVersion            : 1
-    policyVersion            : 1
-    roles: {
-      'users'           : ['u1', 'u2'],
-      'paidsubscribers' : ['p1', 'p2']
-      }
-
-2. CRUD Interface
-
-At the CRUD Create function the policy is represented by two strings:
-- name : name of the ConfigParser section which is the application name
-- data : ConfigParser section as a string
-
-The CRUD Interface policy is created by ConfigParser.read(externalFile)
-and then iterating through the config parser sections.
-
-CRUD Interface Policy:
-----------------------
-
-    name: 'photoserver'
-    data: '[('schemaVersion', '1'), 
-            ('policyVersion', '1'), 
-            ('roles', "{\n
-              'users'           : ['u1', 'u2'],\n
-              'paidsubscribers' : ['p1', 'p2']\n}")]'
-
-3. Internal
-
-Internally the policy is stored in a python dictionary. 
-Policies are converted from CRUD Interface format to Internal format
-by a compilation phase. The compiler sanitizes the input and
-creates the nested structures needed for run-time processing.
+1. External       : json format file
+2. Internal       : dictionary
 
 Internal Policy:
 ----------------
 
     data['photoserver'] = 
     {'schemaVersion': 1, 
-     'roles': {'paidsubscribers': ['p1', 'p2'], 
+     'groups': {'paidsubscribers': ['p1', 'p2'],
                'users': ['u1', 'u2']}, 
      'policyVersion': 1}
 
@@ -97,17 +51,17 @@ Internal Policy:
 #
 #
 class PolicyKeys():
-    # Internal policy key words
+    # Policy key words
     KW_POLICY_VERSION           = "policyVersion"
     KW_VERSION                  = "schemaVersion"
     KW_CONNECTION_ALLOW_DEFAULT = "connectionAllowDefault"
     KW_CONNECTION_ORIGINS       = "connectionOrigins"
     KW_CONNECTION_POLICY        = "connectionPolicy"
-    KW_MAXCONN                  = "maximumConnections"
-    KW_MAXCONNPERHOST           = "maximumConnectionsPerHost"
-    KW_MAXCONNPERUSER           = "maximumConnectionsPerUser"
+    KW_MAXCONN                  = "maxConnections"
+    KW_MAXCONNPERHOST           = "maxConnPerHost"
+    KW_MAXCONNPERUSER           = "maxConnPerUser"
     KW_POLICIES                 = "policies"
-    KW_ROLES                    = "roles"
+    KW_GROUPS                   = "groups"
 
     SETTING_MAX_FRAME_SIZE         = "maxFrameSize"
     SETTING_MAX_MESSAGE_SIZE       = "maxMessageSize"
@@ -141,7 +95,7 @@ class PolicyCompiler():
         PolicyKeys.KW_MAXCONNPERHOST,
         PolicyKeys.KW_MAXCONNPERUSER,
         PolicyKeys.KW_POLICIES,
-        PolicyKeys.KW_ROLES
+        PolicyKeys.KW_GROUPS
         )
         ]
 
@@ -276,9 +230,9 @@ class PolicyCompiler():
 
     def crud_compiler_v1(self, name, policy_in, policy_out, warnings, errors):
         """
-        Compile a schema from CRUD format to Internal format.
+        Compile a schema from processed json format to Internal format.
         @param[in] name application name
-        @param[in] policy_in CRUD Interface policy
+        @param[in] policy_in raw policy to be validated
         @param[out] policy_out validated Internal format
         @param[out] warnings nonfatal irregularities observed
         @param[out] errors descriptions of failure
@@ -289,7 +243,7 @@ class PolicyCompiler():
         """
         cerror = []
         # validate the options
-        for (key, val) in policy_in:
+        for key, val in policy_in.iteritems():
             if key not in self.allowed_opts:
                 warnings.append("Application '%s' option '%s' is ignored." %
                                 (name, key))
@@ -318,26 +272,25 @@ class PolicyCompiler():
             elif key in [PolicyKeys.KW_CONNECTION_ORIGINS,
                          PolicyKeys.KW_CONNECTION_POLICY,
                          PolicyKeys.KW_POLICIES,
-                         PolicyKeys.KW_ROLES
+                         PolicyKeys.KW_GROUPS
                          ]:
                 try:
-                    submap = ast.literal_eval(val)
-                    if not type(submap) is dict:
+                    if not type(val) is dict:
                         errors.append("Application '%s' option '%s' must be of type 'dict' but is '%s'" %
-                                      (name, key, type(submap)))
+                                      (name, key, type(val)))
                         return False
                     if key == PolicyKeys.KW_CONNECTION_ORIGINS:
-                        if not self.crud_compiler_v1_origins(name, submap, warnings, errors):
+                        if not self.crud_compiler_v1_origins(name, val, warnings, errors):
                             return False
                     elif key == PolicyKeys.KW_POLICIES:
-                        if not self.crud_compiler_v1_policies(name, submap, warnings, errors):
+                        if not self.crud_compiler_v1_policies(name, val, warnings, errors):
                             return False
                     else:
-                        # deduplicate connectionPolicy and roles lists
-                        for k,v in submap.iteritems():
+                        # deduplicate connectionPolicy and groups lists
+                        for k,v in val.iteritems():
                             v = list(set(v))
-                            submap[k] = v
-                    policy_out[key] = submap
+                            val[k] = v
+                    policy_out[key] = val
                 except Exception, e:
                     errors.append("Application '%s' option '%s' error processing map: %s" %
                                   (name, key, e))
@@ -354,7 +307,7 @@ class PolicyLocal():
         Create instance
         @params folder: relative path from __file__ to conf file folder
         """
-        self.data = {}
+        self.policydb = {}
         self.lookup_cache = {}
         self.stats = {}
         self.folder = folder
@@ -373,37 +326,34 @@ class PolicyLocal():
         apath = os.path.abspath(os.path.dirname(__file__))
         apath = os.path.join(apath, self.folder)
         for i in os.listdir(apath):
-            if i.endswith(".conf"):
+            if i.endswith(".json"):
                 self.policy_io_read_file(os.path.join(apath, i))
 
     def policy_io_read_file(self, fn):
         """
-        Read a single policy config file.
-        A file may hold multiple policies in separate ConfigParser sections.
-        All policies validated before any are committed.
-        Create each policy in db.
+        Read a policy config file.
+        Validate each policy and commit to policy database.
         @param fn: absolute path to file
         """
         try:
-            cp = ConfigParser.ConfigParser()
-            cp.optionxform = str
-            cp.read(fn)
+            with open(fn) as json_file:
+                cp = json.load(json_file)
 
         except Exception, e:
             raise PolicyError( 
                 "Error processing policy configuration file '%s' : %s" % (fn, e))
         newpolicies = {}
-        for policy in cp.sections():
+        for key, val in cp.iteritems():
             warnings = []
             diag = []
             candidate = {}
-            if not self.policy_compiler.crud_compiler_fn(policy, cp.items(policy), candidate, warnings, diag):
+            if not self.policy_compiler.crud_compiler_fn(key, val, candidate, warnings, diag):
                 msg = "Policy file '%s' is invalid: %s" % (fn, diag[0])
                 raise PolicyError( msg )
             if len(warnings) > 0:
                 print ("LogMe: Policy file '%s' application '%s' has warnings: %s" %
-                       (fn, policy, warnings))
-            newpolicies[policy] = candidate
+                       (fn, key, warnings))
+            newpolicies[key] = candidate
         # Log a warning if policy from one config file replaces another.
         # TODO: Should this throw? Do we increment the policy version per load?
         for c in newpolicies:
@@ -412,8 +362,8 @@ class PolicyLocal():
             c_pol = newpolicies[c]
             if PolicyKeys.KW_POLICY_VERSION in c_pol:
                 c_ver = int(c_pol[PolicyKeys.KW_POLICY_VERSION])
-            if c in self.data:
-                e_pol = self.data[c]
+            if c in self.policydb:
+                e_pol = self.policydb[c]
                 if PolicyKeys.KW_POLICY_VERSION in e_pol:
                     e_ver = int(e_pol[PolicyKeys.KW_POLICY_VERSION])
                 if c_ver < e_ver:
@@ -440,7 +390,7 @@ class PolicyLocal():
                 self.stats[c].update(c_max, c_max_u, c_max_h)
             else:
                 self.stats[c] = PolicyAppConnectionMgr(c_max, c_max_u, c_max_h)
-        self.data.update(newpolicies)
+        self.policydb.update(newpolicies)
 
 
     #
@@ -461,7 +411,7 @@ class PolicyLocal():
         if len(warnings) > 0:
             print ("LogMe: Application '%s' has warnings: %s" %
                    (name, warnings))
-        self.data[name] = candidate
+        self.policydb[name] = candidate
         # TODO: Create stats
 
     def policy_read(self, name):
@@ -470,7 +420,7 @@ class PolicyLocal():
         @param[in] name application name
         @return policy data in Crud Interface format
         """
-        return self.data[name]
+        return self.policydb[name]
 
     def policy_update(self, name, policy):
         """
@@ -478,7 +428,7 @@ class PolicyLocal():
         @param[in] name application name
         @param[in] policy data in Crud interface format
         """
-        if not name in self.data:
+        if not name in self.policydb:
             raise PolicyError("Policy '%s' does not exist" % name)
         self.policy_create(name, policy)
 
@@ -487,9 +437,9 @@ class PolicyLocal():
         Delete named policy
         @param[in] name application name
         """
-        if not name in self.data:
+        if not name in self.policydb:
             raise PolicyError("Policy '%s' does not exist" % name)
-        del self.data[name]
+        del self.policydb[name]
 
     #
     # db enumerator
@@ -498,7 +448,7 @@ class PolicyLocal():
         """
         Return a list of application names in this policy
         """
-        return self.data.keys()
+        return self.policydb.keys()
 
 
     #
@@ -514,9 +464,9 @@ class PolicyLocal():
         if settingname in policy:
             upolicy[settingname] = policy[settingname]
 
-    def policy_aggregate_policy_int(self, upolicy, policy, roles, settingname):
+    def policy_aggregate_policy_int(self, upolicy, policy, groups, settingname):
         """
-        Pull int out of policy.policies[role] and install into upolicy.
+        Pull int out of policy.policies[group] and install into upolicy.
         Integers are set to max(new, existing)
         param[in,out] upolicy user policy receiving aggregations
         param[in] policy Internal policy holding settings to be aggregated
@@ -525,9 +475,9 @@ class PolicyLocal():
         if not PolicyKeys.KW_POLICIES in policy:
             return
         policies = policy[PolicyKeys.KW_POLICIES]
-        for role in roles:
-            if role in policies:
-                rpol = policies[role]
+        for group in groups:
+            if group in policies:
+                rpol = policies[group]
                 if settingname in rpol:
                     sp = rpol[settingname]
                     if settingname in upolicy:
@@ -542,13 +492,13 @@ class PolicyLocal():
                         # user policy doesn't have setting so force it
                         upolicy[settingname] = sp
                 else:
-                    # no setting of this name in the role's policy
+                    # no setting of this name in the group's policy
                     pass
             else:
-                # no policy for this role
+                # no policy for this group
                 pass
 
-    def policy_aggregate_policy_bool(self, upolicy, policy, roles, settingname):
+    def policy_aggregate_policy_bool(self, upolicy, policy, groups, settingname):
         """
         Pull bool out of policy and install into upolicy if true
         param[in,out] upolicy user policy receiving aggregations
@@ -558,20 +508,20 @@ class PolicyLocal():
         if not PolicyKeys.KW_POLICIES in policy:
             return
         policies = policy[PolicyKeys.KW_POLICIES]
-        for role in roles:
-            if role in policies:
-                rpol = policies[role]
+        for group in groups:
+            if group in policies:
+                rpol = policies[group]
                 if settingname in rpol:
                     if rpol[settingname]:
                         upolicy[settingname] = True
                 else:
-                    # no setting of this name in the role's policy
+                    # no setting of this name in the group's policy
                     pass
             else:
-                # no policy for this role
+                # no policy for this group
                 pass
 
-    def policy_aggregate_policy_list(self, upolicy, policy, roles, settingname):
+    def policy_aggregate_policy_list(self, upolicy, policy, groups, settingname):
         """
         Pull list out of policy and append into upolicy
         param[in,out] upolicy user policy receiving aggregations
@@ -581,9 +531,9 @@ class PolicyLocal():
         if not PolicyKeys.KW_POLICIES in policy:
             return
         policies = policy[PolicyKeys.KW_POLICIES]
-        for role in roles:
-            if role in policies:
-                rpol = policies[role]
+        for group in groups:
+            if group in policies:
+                rpol = policies[group]
                 if settingname in rpol:
                     sp = rpol[settingname]
                     if settingname in upolicy:
@@ -593,10 +543,10 @@ class PolicyLocal():
                         # user policy doesn't have setting so force it
                         upolicy[settingname] = sp
                 else:
-                    # no setting of this name in the role's policy
+                    # no setting of this name in the group's policy
                     pass
             else:
-                # no policy for this role
+                # no policy for this group
                 pass
 
     def policy_lookup_settings(self, user, host, app, upolicy):
@@ -618,20 +568,20 @@ class PolicyLocal():
                 upolicy.update( self.lookup_cache[lookup_id] )
                 return True
 
-            settings = self.data[app]
+            settings = self.policydb[app]
             # User allowed to connect from host?
             allowed = False
             restricted = False
             uhs = HostStruct(host)
-            uroles = []
-            if PolicyKeys.KW_ROLES in settings:
-                for r in settings[PolicyKeys.KW_ROLES]:
-                    if user in settings[PolicyKeys.KW_ROLES][r]:
+            ugroups = []
+            if PolicyKeys.KW_GROUPS in settings:
+                for r in settings[PolicyKeys.KW_GROUPS]:
+                    if user in settings[PolicyKeys.KW_GROUPS][r]:
                         restricted = True
-                        uroles.append(r)
+                        ugroups.append(r)
             uorigins = []
             if PolicyKeys.KW_CONNECTION_POLICY in settings:
-                for ur in uroles:
+                for ur in ugroups:
                     if ur in settings[PolicyKeys.KW_CONNECTION_POLICY]:
                         uorigins.extend(settings[PolicyKeys.KW_CONNECTION_POLICY][ur])
             if PolicyKeys.KW_CONNECTION_ORIGINS in settings:
@@ -648,19 +598,19 @@ class PolicyLocal():
                     allowed = settings[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]
             if not allowed:
                 return False
-            # Return connection limits and aggregation of role settings
-            uroles.append(user) # user roles also includes username directly
+            # Return connection limits and aggregation of group settings
+            ugroups.append(user) # user groups also includes username directly
             self.policy_aggregate_limits     (upolicy, settings, PolicyKeys.KW_POLICY_VERSION)
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_FRAME_SIZE)
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_MESSAGE_SIZE)
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_SESSION_WINDOW)
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_SESSIONS)
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_SENDERS)
-            self.policy_aggregate_policy_int (upolicy, settings, uroles, PolicyKeys.SETTING_MAX_RECEIVERS)
-            self.policy_aggregate_policy_bool(upolicy, settings, uroles, PolicyKeys.SETTING_ALLOW_DYNAMIC_SRC)
-            self.policy_aggregate_policy_bool(upolicy, settings, uroles, PolicyKeys.SETTING_ALLOW_ANONYMOUS_SENDER)
-            self.policy_aggregate_policy_list(upolicy, settings, uroles, PolicyKeys.SETTING_SOURCES)
-            self.policy_aggregate_policy_list(upolicy, settings, uroles, PolicyKeys.SETTING_TARGETS)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_FRAME_SIZE)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_MESSAGE_SIZE)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SESSION_WINDOW)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SESSIONS)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SENDERS)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_RECEIVERS)
+            self.policy_aggregate_policy_bool(upolicy, settings, ugroups, PolicyKeys.SETTING_ALLOW_DYNAMIC_SRC)
+            self.policy_aggregate_policy_bool(upolicy, settings, ugroups, PolicyKeys.SETTING_ALLOW_ANONYMOUS_SENDER)
+            self.policy_aggregate_policy_list(upolicy, settings, ugroups, PolicyKeys.SETTING_SOURCES)
+            self.policy_aggregate_policy_list(upolicy, settings, ugroups, PolicyKeys.SETTING_TARGETS)
             c_upolicy = {}
             c_upolicy.update(upolicy)
             self.lookup_cache[lookup_id] = c_upolicy
