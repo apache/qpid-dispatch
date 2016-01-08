@@ -82,7 +82,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         qdr_link_t     *out_link     = link_ref->link;
         qdr_delivery_t *out_delivery = qdr_forward_new_delivery(in_delivery, out_link, msg);
         DEQ_INSERT_TAIL(out_link->undelivered, out_delivery); // TODO - check locking on this list
-        // TODO activate the connection for the out link
+        qdr_connection_activate_CT(core, out_link->conn);
         fanout++;
         link_ref = DEQ_NEXT(link_ref);
     }
@@ -152,7 +152,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
                 DEQ_INSERT_TAIL(dest_link->undelivered, out_delivery); // TODO - check locking on this list
                 fanout++;
                 addr->deliveries_transit++;
-                // TODO - Activate link's connection
+                qdr_connection_activate_CT(core, dest_link->conn);
             }
         }
 

@@ -424,6 +424,8 @@ void qdr_post_link_lost_CT(qdr_core_t *core, int link_maskbit);
 void qdr_post_general_work_CT(qdr_core_t *core, qdr_general_work_t *work);
 void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local);
 
+void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn);
+
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,

@@ -283,6 +283,12 @@ void qdr_connection_handlers(qdr_core_t                *core,
 // In-Thread Functions
 //==================================================================================
 
+void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn)
+{
+    core->activate_handler(core->user_context, conn);
+}
+
+
 static void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
                                            qdr_connection_t      *conn,
                                            qdr_connection_work_t *work)
@@ -293,7 +299,7 @@ static void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
     sys_mutex_unlock(conn->work_lock);
 
     if (notify)
-        core->activate_handler(core->user_context, conn);
+        qdr_connection_activate_CT(core, conn);
 }
 
 

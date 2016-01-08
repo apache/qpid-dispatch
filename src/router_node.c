@@ -554,6 +554,11 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 
 static void qd_router_connection_activate(void *context, qdr_connection_t *conn)
 {
+    //
+    // IMPORTANT:  This is the only core callback that is invoked on the core
+    //             thread itself.  It is imperative that this function do nothing
+    //             apart from setting the activation in the server for the connection.
+    //
     qd_server_activate((qd_connection_t*) qdr_connection_get_context(conn));
 }
 
