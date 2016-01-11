@@ -1,6 +1,5 @@
 {
     "photoserver": {
-        "schemaVersion": 1,
         "policyVersion": 1,
         "maxConnections": 10,
         "maxConnPerUser": 5,

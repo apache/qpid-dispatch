@@ -41,8 +41,7 @@ Internal Policy:
 ----------------
 
     data['photoserver'] = 
-    {'schemaVersion': 1, 
-     'groups': {'paidsubscribers': ['p1', 'p2'],
+    {'groups': {'paidsubscribers': ['p1', 'p2'],
                'users': ['u1', 'u2']}, 
      'policyVersion': 1}
 
@@ -53,7 +52,6 @@ Internal Policy:
 class PolicyKeys():
     # Policy key words
     KW_POLICY_VERSION           = "policyVersion"
-    KW_VERSION                  = "schemaVersion"
     KW_CONNECTION_ALLOW_DEFAULT = "connectionAllowDefault"
     KW_CONNECTION_ORIGINS       = "connectionOrigins"
     KW_CONNECTION_POLICY        = "connectionPolicy"
@@ -77,17 +75,14 @@ class PolicyKeys():
 #
 class PolicyCompiler():
     """
-    Compile CRUD Interface policy into Internal format.
     Validate incoming configuration for legal schema.
     - Warn about section options that go unused.
     - Disallow negative max connection numbers.
     - Check that connectionOrigins resolve to IP hosts
     """
-    schema_version = 1
 
-    schema_allowed_options = [(), (
+    allowed_options = [
         PolicyKeys.KW_POLICY_VERSION,
-        PolicyKeys.KW_VERSION,
         PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT,
         PolicyKeys.KW_CONNECTION_ORIGINS,
         PolicyKeys.KW_CONNECTION_POLICY,
@@ -96,25 +91,14 @@ class PolicyCompiler():
         PolicyKeys.KW_MAXCONNPERUSER,
         PolicyKeys.KW_POLICIES,
         PolicyKeys.KW_GROUPS
-        )
         ]
 
-    allowed_opts = ()
-    crud_compiler_fn = None
 
-
-    def __init__(self, schema_version=1):
+    def __init__(self):
         """
-        Create a validator for the given schema version.
-        @param[in] schema_version version selector
+        Create a validator
         """
-        if schema_version == 1:
-            self.crud_compiler_fn = self.crud_compiler_v1
-        else:
-            raise PolicyError(
-                "Illegal policy schema version %s. Must be '1'." % schema_version)
-        self.schema_version  = schema_version
-        self.allowed_opts    = self.schema_allowed_options[schema_version]
+        pass
 
 
     def validateNumber(self, val, v_min, v_max, errors):
@@ -141,13 +125,14 @@ class PolicyCompiler():
         return True
 
 
-    def crud_compiler_v1_origins(self, name, submap, warnings, errors):
+    def compiler_origins(self, name, submap, warnings, errors):
         """
-        Handle an origins submap from a CRUD Interface request.
+        Handle an origins submap.
         Each origin value is verified. On a successful run the submap
         is replaced parsed lists of HostAddr objects.
         @param[in] name application name
-        @param[in] submap CRUD Interface policy
+        @param[in,out] submap user input origin list as text strings
+                       modified in place to be list of HostAddr objects
         @param[out] warnings nonfatal irregularities observed
         @param[out] errors descriptions of failure
         @return - origins is usable. If True then warnings[] may contain useful
@@ -176,12 +161,12 @@ class PolicyCompiler():
         return True
 
 
-    def crud_compiler_v1_policies(self, name, submap, warnings, errors):
+    def compiler_policies(self, name, submap, warnings, errors):
         """
-        Handle a policies submap from a CRUD Interface request.
+        Handle a policies submap
         Validates policy only returning warnings and errors. submap is unchanged
         @param[in] name application name
-        @param[in] submap CRUD Interface policy
+        @param[in] submap user input policy submap
         @param[out] warnings nonfatal irregularities observed
         @param[out] errors descriptions of failure
         @return - policy is usable. If True then warnings[] may contain useful
@@ -228,7 +213,7 @@ class PolicyCompiler():
         return True
 
 
-    def crud_compiler_v1(self, name, policy_in, policy_out, warnings, errors):
+    def compile(self, name, policy_in, policy_out, warnings, errors):
         """
         Compile a schema from processed json format to Internal format.
         @param[in] name application name
@@ -244,15 +229,9 @@ class PolicyCompiler():
         cerror = []
         # validate the options
         for key, val in policy_in.iteritems():
-            if key not in self.allowed_opts:
+            if key not in self.allowed_options:
                 warnings.append("Application '%s' option '%s' is ignored." %
                                 (name, key))
-            if key == PolicyKeys.KW_VERSION:
-                if not int(self.schema_version) == int(val):
-                    errors.append("Application '%s' expected schema version '%s' but is '%s'." %
-                                  (name, self.schema_version, val))
-                    return False
-                policy_out[key] = val
             if key == PolicyKeys.KW_POLICY_VERSION:
                 if not self.validateNumber(val, 0, 0, cerror):
                     errors.append("Application '%s' option '%s' must resolve to a positive integer: '%s'." %
@@ -280,10 +259,10 @@ class PolicyCompiler():
                                       (name, key, type(val)))
                         return False
                     if key == PolicyKeys.KW_CONNECTION_ORIGINS:
-                        if not self.crud_compiler_v1_origins(name, val, warnings, errors):
+                        if not self.compiler_origins(name, val, warnings, errors):
                             return False
                     elif key == PolicyKeys.KW_POLICIES:
-                        if not self.crud_compiler_v1_policies(name, val, warnings, errors):
+                        if not self.compiler_policies(name, val, warnings, errors):
                             return False
                     else:
                         # deduplicate connectionPolicy and groups lists
@@ -302,7 +281,7 @@ class PolicyLocal():
     The policy database.
     """
 
-    def __init__(self, folder="", schema_version=1):
+    def __init__(self, folder=""):
         """
         Create instance
         @params folder: relative path from __file__ to conf file folder
@@ -311,8 +290,7 @@ class PolicyLocal():
         self.lookup_cache = {}
         self.stats = {}
         self.folder = folder
-        self.schema_version = schema_version
-        self.policy_compiler = PolicyCompiler(schema_version)
+        self.policy_compiler = PolicyCompiler()
         if not folder == "":
             self.policy_io_read_files()
 
@@ -343,17 +321,17 @@ class PolicyLocal():
             raise PolicyError( 
                 "Error processing policy configuration file '%s' : %s" % (fn, e))
         newpolicies = {}
-        for key, val in cp.iteritems():
+        for app_name, app_policy in cp.iteritems():
             warnings = []
             diag = []
             candidate = {}
-            if not self.policy_compiler.crud_compiler_fn(key, val, candidate, warnings, diag):
+            if not self.policy_compiler.compile(app_name, app_policy, candidate, warnings, diag):
                 msg = "Policy file '%s' is invalid: %s" % (fn, diag[0])
                 raise PolicyError( msg )
             if len(warnings) > 0:
                 print ("LogMe: Policy file '%s' application '%s' has warnings: %s" %
-                       (fn, key, warnings))
-            newpolicies[key] = candidate
+                       (fn, app_name, warnings))
+            newpolicies[app_name] = candidate
         # Log a warning if policy from one config file replaces another.
         # TODO: Should this throw? Do we increment the policy version per load?
         for c in newpolicies:
@@ -394,18 +372,18 @@ class PolicyLocal():
 
 
     #
-    # CRUD interface
+    # Service interfaces
     #
     def policy_create(self, name, policy):
         """
         Create named policy
         @param name: application name
-        @param policy: policy data in CRUD Interface format
+        @param policy: policy data in raw user format
         """
         warnings = []
         diag = []
         candidate = {}
-        result = self.policy_compiler.crud_compiler_fn(name, policy, candidate, warnings, diag)
+        result = self.policy_compiler.compile(name, policy, candidate, warnings, diag)
         if not result:
             raise PolicyError( "Policy '%s' is invalid: %s" % (name, diag[0]) )
         if len(warnings) > 0:
@@ -418,7 +396,7 @@ class PolicyLocal():
         """
         Read policy for named application
         @param[in] name application name
-        @return policy data in Crud Interface format
+        @return policy data in raw user format
         """
         return self.policydb[name]
 
@@ -426,7 +404,7 @@ class PolicyLocal():
         """
         Update named policy
         @param[in] name application name
-        @param[in] policy data in Crud interface format
+        @param[in] policy data in raw user input
         """
         if not name in self.policydb:
             raise PolicyError("Policy '%s' does not exist" % name)
@@ -677,7 +655,7 @@ def main_except(argv):
     # Empty policy
     policy2 = PolicyLocal()
 
-    print("Policy details:")
+    print("Print some Policy details:")
     for pname in policy.policy_db_get_names():
         print("policy : %s" % pname)
         p = ("%s" % policy.policy_read(pname))
@@ -685,25 +663,29 @@ def main_except(argv):
 
     # Lookups
     upolicy = {}
-    pdb.set_trace()
-    res = policy.policy_lookup('192.168.100.5:33332', 'zeke', '192.168.100.5', 'photoserver', upolicy)
-    print "Lookup zeke from 192.168.100.5. Expect true and maxFrameSize 44444. Result is %s" % res
-    print "Resulting policy is: %s" % upolicy
+    # pdb.set_trace()
+    res1 = policy.policy_lookup('192.168.100.5:33332', 'zeke', '192.168.100.5', 'photoserver', upolicy)
+    print "\nLookup zeke from 192.168.100.5. Expect true and maxFrameSize 44444. Expecting True, result is %s" % res1
+    print "\nResulting policy is: %s" % upolicy
     # Hit the cache
     upolicy2 = {}
     res2  = policy.policy_lookup('192.168.100.5:33335', 'zeke', '192.168.100.5', 'photoserver', upolicy2)
     # Print the stats
-    print "policy stats: %s" % policy.stats
+    print "\npolicy stats: %s" % policy.stats
 
     upolicy = {}
-    res = policy.policy_lookup('72.135.2.9:33333', 'ellen', '72.135.2.9', 'photoserver', upolicy)
-    print "Lookup ellen from 72.135.2.9. Expect true and maxFrameSize 666666. Result is %s" % res
+    res3 = policy.policy_lookup('72.135.2.9:33333', 'ellen', '72.135.2.9', 'photoserver', upolicy)
+    print "\nLookup ellen from 72.135.2.9. Expect true and maxFrameSize 666666. Result is %s" % res3
     print "Resulting policy is: %s" % upolicy
 
     upolicy = {}
-    res = policy2.policy_lookup('72.135.2.9:33334', 'ellen', '72.135.2.9', 'photoserver', upolicy)
-    print "Lookup policy2 ellen from 72.135.2.9. Expect false. Result is %s" % res
+    res4 = policy2.policy_lookup('72.135.2.9:33334', 'ellen', '72.135.2.9', 'photoserver', upolicy)
+    print "\nLookup policy2 ellen from 72.135.2.9. Expect false. Result is %s" % res4
 
+    if not (res1 and res2 and res3 and not res4):
+        print "Tests FAIL"
+    else:
+        print "Tests PASS"
 
 def main(argv):
     try:
