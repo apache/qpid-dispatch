@@ -32,7 +32,7 @@ from system_test import TIMEOUT
 
 from qpid_dispatch_internal.management.policy_util import \
     HostAddr, PolicyError, HostStruct, PolicyAppConnectionMgr
-from qpid_dispatch_internal.management.policy import PolicyLocal
+from qpid_dispatch_internal.management.policy_local import PolicyLocal
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
