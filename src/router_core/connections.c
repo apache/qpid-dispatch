@@ -118,6 +118,7 @@ int qdr_connection_process(qdr_connection_t *conn)
 
     sys_mutex_lock(conn->work_lock);
     DEQ_MOVE(conn->work_list, work_list);
+    // TODO - Grab the list of links with deliveries
     sys_mutex_unlock(conn->work_lock);
 
     int event_count = DEQ_SIZE(work_list);
@@ -145,6 +146,8 @@ int qdr_connection_process(qdr_connection_t *conn)
 
         work = DEQ_HEAD(work_list);
     }
+
+    // TODO - Invoke the push handler for each link with deliveries
 
     return event_count;
 }
@@ -268,7 +271,11 @@ void qdr_connection_handlers(qdr_core_t                *core,
                              qdr_link_first_attach_t    first_attach,
                              qdr_link_second_attach_t   second_attach,
                              qdr_link_detach_t          detach,
-                             qdr_link_flow_t            flow)
+                             qdr_link_flow_t            flow,
+                             qdr_link_offer_t           offer,
+                             qdr_link_drained_t         drained,
+                             qdr_link_push_t            push,
+                             qdr_link_deliver_t         deliver)
 {
     core->user_context          = context;
     core->activate_handler      = activate;
@@ -276,6 +283,10 @@ void qdr_connection_handlers(qdr_core_t                *core,
     core->second_attach_handler = second_attach;
     core->detach_handler        = detach;
     core->flow_handler          = flow;
+    core->offer_handler         = offer;
+    core->drained_handler       = drained;
+    core->push_handler          = push;
+    core->deliver_handler       = deliver;
 }
 
 
@@ -699,7 +710,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     // to do an address lookup for deliveries that arrive on this link.
                     //
                     link->owning_addr = addr;
-                    qdr_add_link_ref(&addr->inlinks, link);
+                    qdr_add_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
                     qdr_link_outbound_second_attach_CT(core, link, source, target);
                 }
             }
@@ -747,7 +758,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 // to do an address lookup for deliveries that arrive on this link.
                 //
                 link->owning_addr = addr;
-                qdr_add_link_ref(&addr->rlinks, link);
+                qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
                 if (DEQ_SIZE(addr->rlinks) == 1) {
                     const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
                     if (key && *key == 'M')
@@ -764,7 +775,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
 
         case QD_LINK_CONTROL:
             link->owning_addr = core->hello_addr;
-            qdr_add_link_ref(&core->hello_addr->rlinks, link);
+            qdr_add_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
             core->control_links_by_mask_bit[conn->mask_bit] = link;
             qdr_link_outbound_second_attach_CT(core, link, source, target);
             break;
@@ -836,7 +847,7 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
 
         case QD_LINK_CONTROL:
             link->owning_addr = core->hello_addr;
-            qdr_add_link_ref(&core->hello_addr->rlinks, link);
+            qdr_add_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
             core->control_links_by_mask_bit[conn->mask_bit] = link;
             break;
 
@@ -885,7 +896,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         switch (link->link_type) {
         case QD_LINK_ENDPOINT:
             if (addr)
-                qdr_del_link_ref(&addr->inlinks, link);
+                qdr_del_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
             break;
 
         case QD_LINK_WAYPOINT:
@@ -904,7 +915,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         switch (link->link_type) {
         case QD_LINK_ENDPOINT:
             if (addr) {
-                qdr_del_link_ref(&addr->rlinks, link);
+                qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
                 was_local = true;
             }
             break;
@@ -913,7 +924,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             break;
 
         case QD_LINK_CONTROL:
-            qdr_del_link_ref(&core->hello_addr->rlinks, link);
+            qdr_del_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
             core->control_links_by_mask_bit[conn->mask_bit] = 0;
             qdr_post_link_lost_CT(core, conn->mask_bit);
             break;

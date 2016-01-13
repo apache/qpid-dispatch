@@ -622,6 +622,47 @@ static void qd_router_link_flow(void *context, qdr_link_t *link)
 }
 
 
+static void qd_router_link_offer(void *context, qdr_link_t *link, int delivery_count)
+{
+}
+
+
+static void qd_router_link_drained(void *context, qdr_link_t *link)
+{
+}
+
+
+static void qd_router_link_push(void *context, qdr_link_t *link)
+{
+    qd_router_t *router      = (qd_router_t*) context;
+    qd_link_t   *qlink       = (qd_link_t*) qdr_link_get_context(link);
+    pn_link_t   *plink       = qd_link_pn(qlink);
+    int          link_credit = pn_link_credit(plink);
+
+    qdr_link_process_deliveries(router->router_core, link, link_credit);
+}
+
+
+static void qd_router_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *dlv)
+{
+    qd_link_t  *qlink = (qd_link_t*) qdr_link_get_context(link);
+    pn_link_t  *plink = qd_link_pn(qlink);
+    const char *tag;
+    int         tag_length;
+
+    qdr_delivery_tag(dlv, &tag, &tag_length);
+
+    pn_delivery(plink, pn_dtag(tag, tag_length));
+    pn_delivery_t *pdlv = pn_link_current(plink);
+
+    pn_delivery_set_context(pdlv, dlv);
+    qdr_delivery_set_context(dlv, pdlv);
+
+    qd_message_send(qdr_delivery_message(dlv), qlink, qdr_link_strip_annotations_out(link));
+    pn_link_advance(plink);
+}
+
+
 void qd_router_setup_late(qd_dispatch_t *qd)
 {
     qd->router->router_core = qdr_core(qd, qd->router->router_area, qd->router->router_id);
@@ -631,7 +672,11 @@ void qd_router_setup_late(qd_dispatch_t *qd)
                             qd_router_link_first_attach,
                             qd_router_link_second_attach,
                             qd_router_link_detach,
-                            qd_router_link_flow);
+                            qd_router_link_flow,
+                            qd_router_link_offer,
+                            qd_router_link_drained,
+                            qd_router_link_push,
+                            qd_router_link_deliver);
 
     qd_router_python_setup(qd->router);
     qd_timer_schedule(qd->router->timer, 1000);

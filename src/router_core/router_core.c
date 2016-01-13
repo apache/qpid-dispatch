@@ -188,22 +188,25 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
 }
 
 
-void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link)
+void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls)
 {
+    if (link->ref[cls] != 0)
+        return;
+
     qdr_link_ref_t *ref = new_qdr_link_ref_t();
     DEQ_ITEM_INIT(ref);
     ref->link = link;
-    link->ref = ref;
+    link->ref[cls] = ref;
     DEQ_INSERT_TAIL(*ref_list, ref);
 }
 
 
-void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link)
+void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls)
 {
-    if (link->ref) {
-        DEQ_REMOVE(*ref_list, link->ref);
-        free_qdr_link_ref_t(link->ref);
-        link->ref = 0;
+    if (link->ref[cls]) {
+        DEQ_REMOVE(*ref_list, link->ref[cls]);
+        free_qdr_link_ref_t(link->ref[cls]);
+        link->ref[cls] = 0;
     }
 }
 

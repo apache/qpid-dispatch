@@ -482,12 +482,18 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
                                     qd_field_iterator_t *ingress, qd_field_iterator_t *addr, bool settled);
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg);
 
+void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
+
 typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
                                           qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
                                           qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, qdr_error_t *error);
 typedef void (*qdr_link_flow_t)          (void *context, qdr_link_t *link);
+typedef void (*qdr_link_offer_t)         (void *context, qdr_link_t *link, int delivery_count);
+typedef void (*qdr_link_drained_t)       (void *context, qdr_link_t *link);
+typedef void (*qdr_link_push_t)          (void *context, qdr_link_t *link);
+typedef void (*qdr_link_deliver_t)       (void *context, qdr_link_t *link, qdr_delivery_t *delivery);
 
 void qdr_connection_handlers(qdr_core_t                *core,
                              void                      *context,
@@ -495,7 +501,11 @@ void qdr_connection_handlers(qdr_core_t                *core,
                              qdr_link_first_attach_t    first_attach,
                              qdr_link_second_attach_t   second_attach,
                              qdr_link_detach_t          detach,
-                             qdr_link_flow_t            flow);
+                             qdr_link_flow_t            flow,
+                             qdr_link_offer_t           offer,
+                             qdr_link_drained_t         drained,
+                             qdr_link_push_t            push,
+                             qdr_link_deliver_t         deliver);
 
 /**
  ******************************************************************************
@@ -506,10 +516,13 @@ void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
 void *qdr_delivery_get_context(qdr_delivery_t *delivery);
 uint64_t qdr_delivery_disposition(const qdr_delivery_t *delivery);
 bool qdr_delivery_is_settled(const qdr_delivery_t *delivery);
+void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *length);
+qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
 
 void qdr_delivery_update_disposition(qdr_delivery_t *delivery);
 void qdr_delivery_update_flow(qdr_delivery_t *delivery);
 void qdr_delivery_process(qdr_delivery_t *delivery);
+
 
 /**
  ******************************************************************************

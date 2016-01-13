@@ -47,7 +47,7 @@ struct qdr_forwarder_t {
 //==================================================================================
 
 
-qdr_delivery_t *qdr_forward_new_delivery(qdr_delivery_t *peer, qdr_link_t *link, qd_message_t *msg)
+qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *peer, qdr_link_t *link, qd_message_t *msg)
 {
     qdr_delivery_t *dlv = new_qdr_delivery_t();
 
@@ -56,11 +56,30 @@ qdr_delivery_t *qdr_forward_new_delivery(qdr_delivery_t *peer, qdr_link_t *link,
     dlv->peer    = peer;
     dlv->msg     = qd_message_copy(msg);
     dlv->settled = !peer || peer->settled;
+    dlv->tag     = core->next_tag++;
 
     if (peer->peer == 0)
         peer->peer = dlv;  // TODO - make this a back-list for multicast tracking
 
     return dlv;
+}
+
+
+void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv)
+{
+    sys_mutex_lock(link->conn->work_lock);
+    DEQ_INSERT_TAIL(link->undelivered, dlv);
+    sys_mutex_unlock(link->conn->work_lock);
+
+    //
+    // If the link isn't already on the links_with_deliveries list, put it there.
+    //
+    qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+
+    //
+    // Activate the outgoing connection for later processing.
+    //
+    qdr_connection_activate_CT(core, link->conn);
 }
 
 
@@ -80,9 +99,8 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
     while (link_ref) {
         qdr_link_t     *out_link     = link_ref->link;
-        qdr_delivery_t *out_delivery = qdr_forward_new_delivery(in_delivery, out_link, msg);
-        DEQ_INSERT_TAIL(out_link->undelivered, out_delivery); // TODO - check locking on this list
-        qdr_connection_activate_CT(core, out_link->conn);
+        qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
+        qdr_forward_deliver_CT(core, out_link, out_delivery);
         fanout++;
         link_ref = DEQ_NEXT(link_ref);
     }
@@ -148,8 +166,8 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
                 core->control_links_by_mask_bit[link_bit] :
                 core->data_links_by_mask_bit[link_bit];
             if (dest_link) {
-                qdr_delivery_t *out_delivery = qdr_forward_new_delivery(in_delivery, dest_link, msg);
-                DEQ_INSERT_TAIL(dest_link->undelivered, out_delivery); // TODO - check locking on this list
+                qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, dest_link, msg);
+                qdr_forward_deliver_CT(core, dest_link, out_delivery);
                 fanout++;
                 addr->deliveries_transit++;
                 qdr_connection_activate_CT(core, dest_link->conn);

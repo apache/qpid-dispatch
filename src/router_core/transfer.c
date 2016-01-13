@@ -75,7 +75,62 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg)
 {
     // TODO - Implement this.  Bypass the CT?
+
+    //
+    // We might wish to run link-routed transfers and updates through the core in order to
+    // track the number of outstanding deliveries and to have the ability to intervene in
+    // flow control.
+    //
+    // Use case: Quiescing a broker.  To do this, all inbound links to the broker shall be
+    // idled by preventing the propagation of flow credit out of the broker.  This will dry
+    // the transfer of inbound deliveries, allow all existing deliveries to be settled, and
+    // allow the router to know when it is safe to detach the inbound links.  Outbound links
+    // can also be detached after all deliveries are settled and "drained" indications are
+    // received.
+    //
+    // Waypoint disconnect procedure:
+    //   1) Block flow-credit propagation for link outbound to waypoint.
+    //   2) Wait for the number of unsettled outbound deliveries to go to zero.
+    //   3) Detach the outbound link.
+    //   4) Wait for inbound link to be drained with zero unsettled deliveries.
+    //   5) Detach inbound link.
+    //
+
     return 0;
+}
+
+
+void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
+{
+    qdr_connection_t *conn = link->conn;
+    qdr_delivery_t   *dlv;
+    bool              drained = false;
+    int               offer;
+
+    while (credit > 0 && !drained) {
+        sys_mutex_lock(conn->work_lock);
+        dlv = DEQ_HEAD(link->undelivered);
+        if (dlv) {
+            DEQ_REMOVE_HEAD(link->undelivered);
+            DEQ_INSERT_TAIL(link->unsettled, dlv);
+            credit--;
+            offer = DEQ_SIZE(link->undelivered);
+        } else
+            drained = true;
+        sys_mutex_unlock(conn->work_lock);
+
+        if (dlv)
+            core->deliver_handler(core->user_context, link, dlv);
+    }
+
+    if (drained)
+        core->drained_handler(core->user_context, link);
+    else
+        core->offer_handler(core->user_context, link, offer);
+
+    //
+    // TODO - handle disposition/settlement updates
+    //
 }
 
 
@@ -127,6 +182,19 @@ bool qdr_delivery_is_settled(const qdr_delivery_t *delivery)
 }
 
 
+void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *length)
+{
+    *tag    = (const char*) &delivery->tag;
+    *length = sizeof(uint64_t);
+}
+
+
+qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery)
+{
+    return delivery->msg;
+}
+
+
 //==================================================================================
 // In-Thread Functions
 //==================================================================================
@@ -139,6 +207,12 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     qdr_delivery_t *dlv   = action->args.connection.delivery;
     qdr_link_t     *link  = dlv->link;
     int             count = 0;
+
+    //
+    // NOTE: The link->undelivered list does not need to be protected by the
+    //       connection's work lock for incoming links.  This protection is only
+    //       needed for outgoing links.
+    //
 
     if (DEQ_IS_EMPTY(link->undelivered)) {
         qdr_address_t *addr = link->owning_addr;

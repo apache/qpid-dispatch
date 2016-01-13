@@ -173,11 +173,15 @@ struct qdr_delivery_t {
     qd_field_iterator_t *origin;
     uint64_t             disposition;
     bool                 settled;
+    uint64_t             tag;
 };
 
 ALLOC_DECLARE(qdr_delivery_t);
 DEQ_DECLARE(qdr_delivery_t, qdr_delivery_list_t);
 
+#define QDR_LINK_LIST_CLASS_ADDRESS  0
+#define QDR_LINK_LIST_CLASS_DELIVERY 1
+#define QDR_LINK_LIST_CLASSES        2
 
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
@@ -189,7 +193,7 @@ struct qdr_link_t {
     char                *name;
     qdr_address_t       *owning_addr;     ///< [ref] Address record that owns this link
     qdr_link_t          *connected_link;  ///< [ref] If this is a link-route, reference the connected link
-    qdr_link_ref_t      *ref;             ///< Pointer to a containing reference object (TODO - check this!)
+    qdr_link_ref_t      *ref[QDR_LINK_LIST_CLASSES];  ///< Pointers to containing reference objects
     qdr_delivery_list_t  undelivered;     ///< Deliveries to be forwarded or sent
     qdr_delivery_list_t  unsettled;       ///< Unsettled deliveries
     bool                 strip_annotations_in;
@@ -266,8 +270,8 @@ DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_semantics_t semantics);
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_semantics_t semantics);
 
-void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link);
-void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link);
+void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
+void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
 
 void qdr_add_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
@@ -336,6 +340,7 @@ struct qdr_connection_t {
     qdr_link_list_t             links;
     qdr_connection_work_list_t  work_list;
     sys_mutex_t                *work_lock;
+    qdr_link_ref_list_t         links_with_deliveries;
 };
 
 ALLOC_DECLARE(qdr_connection_t);
@@ -382,6 +387,10 @@ struct qdr_core_t {
     qdr_link_second_attach_t   second_attach_handler;
     qdr_link_detach_t          detach_handler;
     qdr_link_flow_t            flow_handler;
+    qdr_link_offer_t           offer_handler;
+    qdr_link_drained_t         drained_handler;
+    qdr_link_push_t            push_handler;
+    qdr_link_deliver_t         deliver_handler;
 
     const char *router_area;
     const char *router_id;
@@ -399,6 +408,8 @@ struct qdr_core_t {
     qdr_node_t          **routers_by_mask_bit;
     qdr_link_t          **control_links_by_mask_bit;
     qdr_link_t          **data_links_by_mask_bit;
+
+    uint64_t              next_tag;
 
     qdr_forwarder_t      *forwarders[QD_SEMANTICS_LINK_BALANCED + 1];
 };
