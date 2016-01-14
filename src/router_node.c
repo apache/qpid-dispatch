@@ -285,8 +285,10 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
             if (!addr_iter)
                 addr_iter = qd_message_field_iterator(msg, QD_FIELD_TO);
 
-            if (addr_iter)
+            if (addr_iter) {
+                qd_address_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
                 delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd));
+            }
         } else
             delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd));
 
@@ -617,8 +619,12 @@ static void qd_router_link_detach(void *context, qdr_link_t *link, qdr_error_t *
 }
 
 
-static void qd_router_link_flow(void *context, qdr_link_t *link)
+static void qd_router_link_flow(void *context, qdr_link_t *link, int credit)
 {
+    qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    pn_link_t *plink = qd_link_pn(qlink);
+
+    pn_link_flow(plink, credit);
 }
 
 
@@ -634,6 +640,7 @@ static void qd_router_link_drained(void *context, qdr_link_t *link)
 
 static void qd_router_link_push(void *context, qdr_link_t *link)
 {
+    printf("qd_router_link_push\n");
     qd_router_t *router      = (qd_router_t*) context;
     qd_link_t   *qlink       = (qd_link_t*) qdr_link_get_context(link);
     pn_link_t   *plink       = qd_link_pn(qlink);

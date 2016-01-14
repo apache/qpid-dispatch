@@ -114,11 +114,14 @@ void *qdr_connection_get_context(const qdr_connection_t *conn)
 int qdr_connection_process(qdr_connection_t *conn)
 {
     qdr_connection_work_list_t  work_list;
+    qdr_link_ref_list_t         links_with_deliveries;
+    qdr_link_ref_list_t         links_with_credit;
     qdr_core_t                 *core = conn->core;
 
     sys_mutex_lock(conn->work_lock);
     DEQ_MOVE(conn->work_list, work_list);
-    // TODO - Grab the list of links with deliveries
+    DEQ_MOVE(conn->links_with_deliveries, links_with_deliveries);
+    DEQ_MOVE(conn->links_with_credit, links_with_credit);
     sys_mutex_unlock(conn->work_lock);
 
     int event_count = DEQ_SIZE(work_list);
@@ -147,7 +150,20 @@ int qdr_connection_process(qdr_connection_t *conn)
         work = DEQ_HEAD(work_list);
     }
 
-    // TODO - Invoke the push handler for each link with deliveries
+    qdr_link_ref_t *ref = DEQ_HEAD(links_with_deliveries);
+    while (ref) {
+        core->push_handler(core->user_context, ref->link);
+        qdr_del_link_ref(&links_with_deliveries, ref->link, QDR_LINK_LIST_CLASS_DELIVERY);
+        ref = DEQ_HEAD(links_with_deliveries);
+    }
+
+    ref = DEQ_HEAD(links_with_credit);
+    while (ref) {
+        core->flow_handler(core->user_context, ref->link, ref->link->incremental_credit);
+        ref->link->incremental_credit = 0;
+        qdr_del_link_ref(&links_with_credit, ref->link, QDR_LINK_LIST_CLASS_FLOW);
+        ref = DEQ_HEAD(links_with_credit);
+    }
 
     return event_count;
 }
@@ -223,6 +239,8 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->conn = conn;
     link->name = (char*) malloc(strlen(name));
     strcpy(link->name, name);
+    link->link_direction = dir;
+    link->capacity = 32;  // TODO - make this configurable
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -258,6 +276,7 @@ void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error)
 {
     qdr_action_t *action = qdr_action(qdr_link_inbound_detach_CT, "link_detach");
 
+    action->args.connection.conn   = link->conn;
     action->args.connection.link   = link;
     action->args.connection.error  = error;
     action->args.connection.dt     = dt;
@@ -374,6 +393,7 @@ static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->conn           = conn;
     link->link_type      = link_type;
     link->link_direction = dir;
+    link->capacity       = 32; // TODO - make this configurable
     link->name           = (char*) malloc(QDR_DISCRIMINATOR_SIZE + 8);
     qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
 
@@ -682,6 +702,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             if (qdr_terminus_is_anonymous(target)) {
                 link->owning_addr = 0;
                 qdr_link_outbound_second_attach_CT(core, link, source, target);
+                qdr_link_issue_credit_CT(core, link, link->capacity);
 
             } else {
                 //
@@ -712,6 +733,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     link->owning_addr = addr;
                     qdr_add_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
                     qdr_link_outbound_second_attach_CT(core, link, source, target);
+                    qdr_link_issue_credit_CT(core, link, link->capacity);
                 }
             }
             break;
@@ -723,10 +745,12 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
 
         case QD_LINK_CONTROL:
             qdr_link_outbound_second_attach_CT(core, link, source, target);
+            qdr_link_issue_credit_CT(core, link, link->capacity);
             break;
 
         case QD_LINK_ROUTER:
             qdr_link_outbound_second_attach_CT(core, link, source, target);
+            qdr_link_issue_credit_CT(core, link, link->capacity);
             break;
         }
     } else {
@@ -811,16 +835,16 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
     if (discard)
         return;
 
-    qdr_connection_t *conn   = action->args.connection.conn;
     qdr_link_t       *link   = action->args.connection.link;
-    qd_direction_t    dir    = action->args.connection.dir;
+    qdr_connection_t *conn   = link->conn;
     qdr_terminus_t   *source = action->args.connection.source;
     qdr_terminus_t   *target = action->args.connection.target;
 
-    if (dir == QD_INCOMING) {
+    if (link->link_direction == QD_INCOMING) {
         //
         // Handle incoming link cases
         //
+        qdr_link_issue_credit_CT(core, link, link->capacity);
         switch (link->link_type) {
         case QD_LINK_ENDPOINT:
             break;

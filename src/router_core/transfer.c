@@ -199,6 +199,34 @@ qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery)
 // In-Thread Functions
 //==================================================================================
 
+/**
+ * Check the link's accumulated credit.  If the credit given to the connection thread
+ * has been issued to Proton, provide the next batch of credit to the connection thread.
+ */
+void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit)
+{
+    link->incremental_credit_CT += credit;
+
+    if (link->incremental_credit_CT && link->incremental_credit == 0) {
+        //
+        // Move the credit from the core-thread value to the connection-thread value.
+        //
+        link->incremental_credit    = link->incremental_credit_CT;
+        link->incremental_credit_CT = 0;
+
+        //
+        // Put this link on the connection's has-credit list.
+        //
+        qdr_add_link_ref(&link->conn->links_with_credit, link, QDR_LINK_LIST_CLASS_FLOW);
+
+        //
+        // Activate the connection
+        //
+        qdr_connection_activate_CT(core, link->conn);
+    }
+}
+
+
 static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)

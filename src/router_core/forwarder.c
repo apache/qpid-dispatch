@@ -58,7 +58,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *pe
     dlv->settled = !peer || peer->settled;
     dlv->tag     = core->next_tag++;
 
-    if (peer->peer == 0)
+    if (peer && peer->peer == 0)
         peer->peer = dlv;  // TODO - make this a back-list for multicast tracking
 
     return dlv;
@@ -69,17 +69,34 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
 {
     sys_mutex_lock(link->conn->work_lock);
     DEQ_INSERT_TAIL(link->undelivered, dlv);
-    sys_mutex_unlock(link->conn->work_lock);
 
     //
     // If the link isn't already on the links_with_deliveries list, put it there.
     //
     qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+    sys_mutex_unlock(link->conn->work_lock);
 
     //
     // Activate the outgoing connection for later processing.
     //
     qdr_connection_activate_CT(core, link->conn);
+}
+
+
+void qdr_forward_on_message(qdr_core_t *core, qdr_general_work_t *work)
+{
+    work->on_message(work->on_message_context, work->msg, work->maskbit);
+}
+
+
+void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_link_t *link, qd_message_t *msg)
+{
+    qdr_general_work_t *work = qdr_general_work(qdr_forward_on_message);
+    work->on_message         = sub->on_message;
+    work->on_message_context = sub->on_message_context;
+    work->msg                = qd_message_copy(msg);
+    work->maskbit            = link ? link->conn->mask_bit : 0;
+    qdr_post_general_work_CT(core, work);
 }
 
 
@@ -181,6 +198,11 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         //
         // Forward to in-process subscribers
         //
+        qdr_subscription_t *sub = DEQ_HEAD(addr->subscriptions);
+        while (sub) {
+            qdr_forward_on_message_CT(core, sub, in_delivery ? in_delivery->link : 0, msg);
+            sub = DEQ_NEXT(sub);
+        }
     }
 
     return fanout;

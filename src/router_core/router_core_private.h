@@ -181,7 +181,8 @@ DEQ_DECLARE(qdr_delivery_t, qdr_delivery_list_t);
 
 #define QDR_LINK_LIST_CLASS_ADDRESS  0
 #define QDR_LINK_LIST_CLASS_DELIVERY 1
-#define QDR_LINK_LIST_CLASSES        2
+#define QDR_LINK_LIST_CLASS_FLOW     2
+#define QDR_LINK_LIST_CLASSES        3
 
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
@@ -198,6 +199,9 @@ struct qdr_link_t {
     qdr_delivery_list_t  unsettled;       ///< Unsettled deliveries
     bool                 strip_annotations_in;
     bool                 strip_annotations_out;
+    int                  capacity;
+    int                  incremental_credit_CT;
+    int                  incremental_credit;
 };
 
 ALLOC_DECLARE(qdr_link_t);
@@ -210,6 +214,9 @@ struct qdr_link_ref_t {
 
 ALLOC_DECLARE(qdr_link_ref_t);
 DEQ_DECLARE(qdr_link_ref_t, qdr_link_ref_list_t);
+
+void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
+void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
 
 
 struct qdr_lrp_t {
@@ -270,9 +277,6 @@ DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_semantics_t semantics);
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_semantics_t semantics);
 
-void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
-void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
-
 void qdr_add_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 
@@ -293,6 +297,9 @@ struct qdr_general_work_t {
     qdr_general_work_handler_t  handler;
     qdr_field_t                *field;
     int                         maskbit;
+    qdr_receive_t               on_message;
+    void                       *on_message_context;
+    qd_message_t               *msg;
 };
 
 ALLOC_DECLARE(qdr_general_work_t);
@@ -341,6 +348,7 @@ struct qdr_connection_t {
     qdr_connection_work_list_t  work_list;
     sys_mutex_t                *work_lock;
     qdr_link_ref_list_t         links_with_deliveries;
+    qdr_link_ref_list_t         links_with_credit;
 };
 
 ALLOC_DECLARE(qdr_connection_t);
@@ -426,6 +434,7 @@ void  qdr_agent_setup_CT(qdr_core_t *core);
 void  qdr_forwarder_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
+void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
 void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash);

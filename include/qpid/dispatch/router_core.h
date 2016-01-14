@@ -489,7 +489,7 @@ typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn,
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
                                           qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, qdr_error_t *error);
-typedef void (*qdr_link_flow_t)          (void *context, qdr_link_t *link);
+typedef void (*qdr_link_flow_t)          (void *context, qdr_link_t *link, int credit);
 typedef void (*qdr_link_offer_t)         (void *context, qdr_link_t *link, int delivery_count);
 typedef void (*qdr_link_drained_t)       (void *context, qdr_link_t *link);
 typedef void (*qdr_link_push_t)          (void *context, qdr_link_t *link);
