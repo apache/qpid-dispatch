@@ -35,6 +35,7 @@ if(BUILD_DOCS)
   else()
     set (OPTIONAL OPTIONAL)
     add_custom_target(doc)
+    add_custom_target(docs DEPENDS doc) # some projects say "make doc" others "make docs" allow both.
   endif()
   macro(install_doc)
     install(${ARGN} ${OPTIONAL})
@@ -137,7 +138,7 @@ if(BUILD_DOCS)
       COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b html ${bin} ${bin}/dochtml
       # man/ contains Unix man pages.
       COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b man  ${bin} ${bin}/man
-      DEPENDS ${RST_SRC} ${HELP_GEN} ${SCHEMA_GEN} 
+      DEPENDS ${RST_SRC} ${HELP_GEN} ${SCHEMA_GEN}
       )
     add_custom_target(doc-sphinx DEPENDS ${SPHINX_OUTPUT})
     add_dependencies(doc doc-sphinx)
@@ -150,5 +151,3 @@ if(BUILD_DOCS)
 
 
 endif(BUILD_DOCS)
-
-
