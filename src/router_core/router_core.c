@@ -182,6 +182,7 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
         DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(core->addrs, addr);
         addr->block_deletion = true;
+        addr->local = (aclass == 'L');
     }
     qd_field_iterator_free(iter);
     return addr;

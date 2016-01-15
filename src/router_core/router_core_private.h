@@ -260,6 +260,7 @@ struct qdr_address_t {
     bool                     toggle;
     bool                     waypoint;
     bool                     block_deletion;
+    bool                     local;
 
     /**@name Statistics */
     ///@{

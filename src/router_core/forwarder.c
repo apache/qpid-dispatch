@@ -113,13 +113,15 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     //
     // Forward to local subscribers
     //
-    qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
-    while (link_ref) {
-        qdr_link_t     *out_link     = link_ref->link;
-        qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
-        qdr_forward_deliver_CT(core, out_link, out_delivery);
-        fanout++;
-        link_ref = DEQ_NEXT(link_ref);
+    if (!addr->local || exclude_inprocess) {
+        qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
+        while (link_ref) {
+            qdr_link_t     *out_link     = link_ref->link;
+            qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
+            qdr_forward_deliver_CT(core, out_link, out_delivery);
+            fanout++;
+            link_ref = DEQ_NEXT(link_ref);
+        }
     }
 
     //
@@ -201,9 +203,11 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         qdr_subscription_t *sub = DEQ_HEAD(addr->subscriptions);
         while (sub) {
             qdr_forward_on_message_CT(core, sub, in_delivery ? in_delivery->link : 0, msg);
+            fanout++;
             sub = DEQ_NEXT(sub);
         }
     }
+
 
     return fanout;
 }

@@ -793,8 +793,8 @@ static bool compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
 }
 
 void qd_message_send(qd_message_t *in_msg,
-					qd_link_t *link,
-					bool strip_annotations)
+                     qd_link_t    *link,
+                     bool          strip_annotations)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     qd_message_content_t *content = msg->content;

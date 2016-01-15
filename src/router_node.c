@@ -75,17 +75,20 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
 {
     if (conn) {
         const qd_server_config_t *cf = qd_connection_config(conn);
-        if      (cf && strcmp(cf->role, router_role) == 0)
+
+        *strip_annotations_in  = cf->strip_inbound_annotations;
+        *strip_annotations_out = cf->strip_outbound_annotations;
+
+        if        (cf && strcmp(cf->role, router_role) == 0) {
+            *strip_annotations_in  = false;
+            *strip_annotations_out = false;
             *role = QDR_ROLE_INTER_ROUTER;
-        else if (cf && strcmp(cf->role, on_demand_role) == 0)
+        } else if (cf && strcmp(cf->role, on_demand_role) == 0)
             *role = QDR_ROLE_ON_DEMAND;
         else
             *role = QDR_ROLE_NORMAL;
 
         *label = cf->label;
-
-        *strip_annotations_in  = cf->strip_inbound_annotations;
-        *strip_annotations_out = cf->strip_outbound_annotations;
     }
 }
 
@@ -640,7 +643,6 @@ static void qd_router_link_drained(void *context, qdr_link_t *link)
 
 static void qd_router_link_push(void *context, qdr_link_t *link)
 {
-    printf("qd_router_link_push\n");
     qd_router_t *router      = (qd_router_t*) context;
     qd_link_t   *qlink       = (qd_link_t*) qdr_link_get_context(link);
     pn_link_t   *plink       = qd_link_pn(qlink);
@@ -666,6 +668,8 @@ static void qd_router_link_deliver(void *context, qdr_link_t *link, qdr_delivery
     qdr_delivery_set_context(dlv, pdlv);
 
     qd_message_send(qdr_delivery_message(dlv), qlink, qdr_link_strip_annotations_out(link));
+    if (qdr_delivery_is_settled(dlv))
+        pn_delivery_settle(pdlv);
     pn_link_advance(plink);
 }
 

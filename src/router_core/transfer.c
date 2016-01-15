@@ -252,20 +252,22 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     }
 
     if (count == 0) {
-        if (link->owning_addr)
+        if (link->owning_addr) {
             //
             // Message was not delivered and the link is not anonymous.
             // Queue the message for later delivery (when the address gets
             // a valid destination).
             //
             DEQ_INSERT_TAIL(link->undelivered, dlv);
-        else {
+        } else {
             //
             // TODO - Release the delivery
             //
         }
     } else if (count == 1) {
         if (qdr_delivery_is_settled(dlv))
+            qdr_link_issue_credit_CT(core, link, 1);
+        else
             DEQ_INSERT_TAIL(link->unsettled, dlv);
     } else {
         //

@@ -397,6 +397,9 @@ static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->name           = (char*) malloc(QDR_DISCRIMINATOR_SIZE + 8);
     qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
 
+    link->strip_annotations_in  = conn->strip_annotations_in;
+    link->strip_annotations_out = conn->strip_annotations_out;
+
     qdr_connection_work_t *work = new_qdr_connection_work_t();
     ZERO(work);
     work->work_type = QDR_CONNECTION_WORK_FIRST_ATTACH;
