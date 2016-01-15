@@ -284,6 +284,7 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 
     if (!discard) {
         qdr_address_t *addr;
+
         qd_address_iterator_reset_view(addr_field->iterator, ITER_VIEW_ADDRESS_HASH);
         qd_hash_retrieve(core->addr_hash, addr_field->iterator, (void**) &addr);
         if (addr)

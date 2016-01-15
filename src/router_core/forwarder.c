@@ -208,7 +208,6 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         }
     }
 
-
     return fanout;
 }
 
