@@ -40,10 +40,16 @@ qd_bitmask_t *qd_bitmask(int initial);
 void qd_bitmask_free(qd_bitmask_t *b);
 void qd_bitmask_set_all(qd_bitmask_t *b);
 void qd_bitmask_clear_all(qd_bitmask_t *b);
-void qd_bitmask_set_bit(qd_bitmask_t *b, int bitnum);
-void qd_bitmask_clear_bit(qd_bitmask_t *b, int bitnum);
+int qd_bitmask_set_bit(qd_bitmask_t *b, int bitnum);
+int qd_bitmask_clear_bit(qd_bitmask_t *b, int bitnum);
 int qd_bitmask_value(qd_bitmask_t *b, int bitnum);
 int qd_bitmask_first_set(qd_bitmask_t *b, int *bitnum);
+int qd_bitmask_cardinality(const qd_bitmask_t *b);
+
+int _qdbm_start(qd_bitmask_t *b);
+void _qdbm_next(qd_bitmask_t *b, int *v);
+
+#define QD_BITMASK_EACH(M,V,C) C=qd_bitmask_cardinality(M),V=_qdbm_start(M);V>=0 && C;_qdbm_next(M,&V),C--
 
 ///@}
 

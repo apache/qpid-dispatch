@@ -24,12 +24,13 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
-#define QD_BITMASK_LONGS 16
+#define QD_BITMASK_LONGS 2
 #define QD_BITMASK_BITS  (QD_BITMASK_LONGS * 64)
 
 struct qd_bitmask_t {
     uint64_t array[QD_BITMASK_LONGS];
     int      first_set;
+    int      cardinality;
 };
 
 ALLOC_DECLARE(qd_bitmask_t);
@@ -69,7 +70,8 @@ void qd_bitmask_set_all(qd_bitmask_t *b)
 {
     for (int i = 0; i < QD_BITMASK_LONGS; i++)
         b->array[i] = 0xFFFFFFFFFFFFFFFF;
-    b->first_set = 0;
+    b->first_set   = 0;
+    b->cardinality = QD_BITMASK_BITS;
 }
 
 
@@ -77,25 +79,42 @@ void qd_bitmask_clear_all(qd_bitmask_t *b)
 {
     for (int i = 0; i < QD_BITMASK_LONGS; i++)
         b->array[i] = 0;
-    b->first_set = FIRST_NONE;
+    b->first_set   = FIRST_NONE;
+    b->cardinality = 0;
 }
 
 
-void qd_bitmask_set_bit(qd_bitmask_t *b, int bitnum)
+int qd_bitmask_set_bit(qd_bitmask_t *b, int bitnum)
 {
+    int old_value = 1;
     assert(bitnum < QD_BITMASK_BITS);
+    if ((b->array[MASK_INDEX(bitnum)] & MASK_ONEHOT(bitnum)) == 0) {
+        old_value = 0;
+        b->cardinality++;
+    }
+
     b->array[MASK_INDEX(bitnum)] |= MASK_ONEHOT(bitnum);
     if (b->first_set > bitnum || b->first_set < 0)
         b->first_set = bitnum;
+
+    return old_value;
 }
 
 
-void qd_bitmask_clear_bit(qd_bitmask_t *b, int bitnum)
+int qd_bitmask_clear_bit(qd_bitmask_t *b, int bitnum)
 {
+    int old_value = 0;
     assert(bitnum < QD_BITMASK_BITS);
+    if (b->array[MASK_INDEX(bitnum)] & MASK_ONEHOT(bitnum)) {
+        old_value = 1;
+        b->cardinality--;
+    }
+
     b->array[MASK_INDEX(bitnum)] &= ~(MASK_ONEHOT(bitnum));
     if (b->first_set == bitnum)
         b->first_set = FIRST_UNKNOWN;
+
+    return old_value;
 }
 
 
@@ -125,3 +144,49 @@ int qd_bitmask_first_set(qd_bitmask_t *b, int *bitnum)
     *bitnum = b->first_set;
     return 1;
 }
+
+
+int qd_bitmask_cardinality(const qd_bitmask_t *b)
+{
+    return b->cardinality;
+}
+
+
+int _qdbm_start(qd_bitmask_t *b)
+{
+    int v;
+    if (qd_bitmask_first_set(b, &v))
+        return v;
+    return -1;
+}
+
+
+void _qdbm_next(qd_bitmask_t *b, int *v)
+{
+    if (*v == QD_BITMASK_BITS - 1) {
+        *v = -1;
+        return;
+    }
+
+    int      idx  = MASK_INDEX(*v);
+    uint64_t bits = MASK_ONEHOT(*v);
+    int      next = *v;
+
+    while (1) {
+        next++;
+        if (bits & 0x8000000000000000LL) {
+            if (++idx == QD_BITMASK_LONGS) {
+                *v = -1;
+                return;
+            }
+            bits = 1;
+        } else
+            bits = bits << 1;
+
+        if (b->array[idx] & bits) {
+            *v = next;
+            return;
+        }
+    }
+}
+
