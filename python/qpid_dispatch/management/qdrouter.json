@@ -1012,7 +1012,8 @@
                 "arg1": {"type": "string", "create": true, "update": true},
                 "arg2": {"type": "string", "create": true, "update": true},
                 "num1": {"type": "integer", "create": true, "update": true},
-                "num2": {"type": "integer", "create": true, "update": true}
+                "num2": {"type": "integer", "create": true, "update": true},
+                "map": {"type": "map", "create": true, "update": true}
             }
         }
     }

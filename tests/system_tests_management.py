@@ -463,7 +463,7 @@ class ManagementTest(system_test.TestCase):
 
     def test_get_attributes(self):
         result = self.node.get_attributes(type=DUMMY)
-        self.assertEqual(set([u'arg1', u'arg2', u'num1', u'num2', u'name', u'identity', u'type']),
+        self.assertEqual(set([u'arg1', u'arg2', u'num1', u'num2', u'name', u'identity', u'type', u'map']),
                          set(result[DUMMY]))
         result = self.node.get_attributes()
         for type in LISTENER, WAYPOINT, LINK: self.assertIn(type, result)
