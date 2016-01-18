@@ -31,25 +31,11 @@ import pdb #; pdb.set_trace()
 
 """
 Entity implementing the business logic of user connection/access policy.
-
-Policy is represented several ways:
-
-1. External       : json format file
-2. Internal       : dictionary
-
-Internal Policy:
-----------------
-
-    data['photoserver'] = 
-    {'groups': {'paidsubscribers': ['p1', 'p2'],
-               'users': ['u1', 'u2']}, 
-     'policyVersion': 1}
-
 """
 
 #
 #
-class PolicyKeys():
+class PolicyKeys(object):
     # Policy key words
     KW_POLICY_VERSION           = "policyVersion"
     KW_CONNECTION_ALLOW_DEFAULT = "connectionAllowDefault"
@@ -73,7 +59,7 @@ class PolicyKeys():
     SETTING_TARGETS                = "targets"
 #
 #
-class PolicyCompiler():
+class PolicyCompiler(object):
     """
     Validate incoming configuration for legal schema.
     - Warn about section options that go unused.
@@ -276,7 +262,7 @@ class PolicyCompiler():
                     return False
         return True
 
-class PolicyLocal():
+class PolicyLocal(object):
     """
     The policy database.
     """
@@ -291,6 +277,8 @@ class PolicyLocal():
         self.stats = {}
         self.folder = folder
         self.policy_compiler = PolicyCompiler()
+        self.name_lookup_cache = {}
+        self.blob_lookup_cache = {}
         if not folder == "":
             self.policy_io_read_files()
 
@@ -529,6 +517,7 @@ class PolicyLocal():
 
     def policy_lookup_settings(self, user, host, app, upolicy):
         """
+        HACK ALERT - delete this lookup. It is obsolete.
         Determine if a user on host accessing app through AMQP Open is allowed
         according to the policy access rules. 
         If allowed then return the policy settings.
@@ -577,7 +566,6 @@ class PolicyLocal():
             if not allowed:
                 return False
             # Return connection limits and aggregation of group settings
-            ugroups.append(user) # user groups also includes username directly
             self.policy_aggregate_limits     (upolicy, settings, PolicyKeys.KW_POLICY_VERSION)
             self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_FRAME_SIZE)
             self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_MESSAGE_SIZE)
@@ -600,6 +588,7 @@ class PolicyLocal():
 
     def policy_lookup(self, conn_id, user, host, app, upolicy):
         """
+        HACK ALERT - delete this lookup. It is obsolete.
         Determine if a user on host accessing app through AMQP Open is allowed:
         - verify to the policy access rules. 
         - track user/host connection limits
@@ -622,6 +611,102 @@ class PolicyLocal():
             # TODO: print ("LogMe: connection denied by connection count limits: %s" % diags)
             return False
         return True
+
+    def lookup_users_policyname(self, user, host, app, policyname):
+        """
+        Determine if a user on host accessing app through AMQP Open is allowed
+        according to the policy access rules.
+        If allowed then return the policy settings name
+        @param[in] user connection authId
+        @param[in] host connection remote host numeric IP address as string
+        @param[in] app application user is accessing
+        @param[out] policyname name of the policy settings blob for this user
+        @return if allowed by policy
+        # Note: the upolicy output is a concatenated list of policy blob names.
+        """
+        try:
+            lookup_id = user + "|" + host + "|" + app
+            if lookup_id in self.name_lookup_cache:
+                policyname.append( self.name_lookup_cache[lookup_id] )
+                return True
+
+            settings = self.policydb[app]
+            # User allowed to connect from host?
+            allowed = False
+            restricted = False
+            uhs = HostStruct(host)
+            ugroups = []
+            if PolicyKeys.KW_GROUPS in settings:
+                for r in settings[PolicyKeys.KW_GROUPS]:
+                    if user in settings[PolicyKeys.KW_GROUPS][r]:
+                        restricted = True
+                        ugroups.append(r)
+            uorigins = []
+            if PolicyKeys.KW_CONNECTION_POLICY in settings:
+                for ur in ugroups:
+                    if ur in settings[PolicyKeys.KW_CONNECTION_POLICY]:
+                        uorigins.extend(settings[PolicyKeys.KW_CONNECTION_POLICY][ur])
+            if PolicyKeys.KW_CONNECTION_ORIGINS in settings:
+                for co in settings[PolicyKeys.KW_CONNECTION_ORIGINS]:
+                    if co in uorigins:
+                        for cohost in settings[PolicyKeys.KW_CONNECTION_ORIGINS][co]:
+                            if cohost.match_bin(uhs):
+                                allowed = True
+                                break
+                    if allowed:
+                        break
+            if not allowed and not restricted:
+                if PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT in settings:
+                    allowed = settings[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]
+            if not allowed:
+                return False
+            # Return connection limits and aggregation of group settings
+            ugroups.sort()
+            result = "|".join(ugroups)
+            self.name_lookup_cache[lookup_id] = result
+            policyname.append(result)
+            return True
+
+        except Exception, e:
+            #print str(e)
+            #pdb.set_trace()
+            return False
+
+    def lookup_named_settings(self, app, policyname, upolicy):
+        """
+        Given a settings name, return the aggregated policy blob.
+        @param[in] app application user is accessing
+        @param[in] policyname name of the policy settings blob
+        @param[out] upolicy dict holding policy values
+        @return if allowed by policy
+        # Note: the upolicy output is a non-nested dict with settings of interest
+        # TODO: figure out decent defaults for upolicy settings that are undefined
+        """
+        try:
+            cachekey = app + "|" + policyname
+            if cachekey in self.blob_lookup_cache:
+                upolicy.update( self.blob_lookup_cache[cachekey] )
+                return True
+            settings = self.policydb[app]
+            ugroups = policyname.split("|")
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_FRAME_SIZE)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_MESSAGE_SIZE)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SESSION_WINDOW)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SESSIONS)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SENDERS)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_RECEIVERS)
+            self.policy_aggregate_policy_bool(upolicy, settings, ugroups, PolicyKeys.SETTING_ALLOW_DYNAMIC_SRC)
+            self.policy_aggregate_policy_bool(upolicy, settings, ugroups, PolicyKeys.SETTING_ALLOW_ANONYMOUS_SENDER)
+            self.policy_aggregate_policy_list(upolicy, settings, ugroups, PolicyKeys.SETTING_SOURCES)
+            self.policy_aggregate_policy_list(upolicy, settings, ugroups, PolicyKeys.SETTING_TARGETS)
+            c_upolicy = {}
+            c_upolicy.update(upolicy)
+            self.blob_lookup_cache[cachekey] = c_upolicy
+            return True
+        except Exception, e:
+            #print str(e)
+            #pdb.set_trace()
+            return False
 
 
 #
@@ -678,11 +763,20 @@ def main_except(argv):
     print "\nLookup ellen from 72.135.2.9. Expect true and maxFrameSize 666666. Result is %s" % res3
     print "Resulting policy is: %s" % upolicy
 
-    upolicy = {}
-    res4 = policy2.policy_lookup('72.135.2.9:33334', 'ellen', '72.135.2.9', 'photoserver', upolicy)
+    upolicy4 = {}
+    res4 = policy2.policy_lookup('72.135.2.9:33334', 'ellen', '72.135.2.9', 'photoserver', upolicy4)
     print "\nLookup policy2 ellen from 72.135.2.9. Expect false. Result is %s" % res4
 
-    if not (res1 and res2 and res3 and not res4):
+    policyname5 = []
+    res5 = policy.lookup_users_policyname('ellen', '72.135.2.9', 'photoserver', policyname5)
+    print "\nLookup user's policyname: %s" % policyname5
+
+    upolicy6 = {}
+    res6 = policy.lookup_named_settings('photoserver', policyname5[0], upolicy6)
+    res6a = upolicy6['maxFrameSize'] == 666666
+    print "\nNamed settings lookup result = %s, and value check = %s" % (res6, res6a)
+
+    if not (res1 and res2 and res3 and not res4 and res5 and res6 and res6a):
         print "Tests FAIL"
     else:
         print "Tests PASS"

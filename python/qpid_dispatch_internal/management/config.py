@@ -30,13 +30,13 @@ from .qdrouter import QdSchema
 class Config(object):
     """Load config entities from qdrouterd.conf and validated against L{QdSchema}."""
 
-    def __init__(self, filename=None, schema=QdSchema()):
+    def __init__(self, filename=None, schema=QdSchema(), raw_json=False):
         self.schema = schema
         self.config_types = [et for et in schema.entity_types.itervalues()
                              if schema.is_configuration(et)]
         if filename:
             try:
-                self.load(filename)
+                self.load(filename, raw_json)
             except Exception, e:
                 raise Exception, "Cannot load configuration file %s: %s" % (filename, e), sys.exc_info()[2]
         else:
@@ -67,6 +67,17 @@ class Config(object):
             s[1] = dict((camelcase(k), v) for k, v in s[1].iteritems())
         return sections
 
+    @staticmethod
+    def _parserawjson(lines):
+        """Parse raw json config file format into a section list"""
+        def sub(line):
+            """Do substitutions to make line json-friendly"""
+            line = line.split('#')[0].strip() # Strip comments
+            return line
+        js_text = "%s"%("".join([sub(l) for l in lines]))
+        sections = json.loads(js_text)
+        return sections
+
 
     def _expand(self, content):
         """
@@ -90,16 +101,18 @@ class Config(object):
         return [_expand_section(s, annotations) for s in content
                 if self.schema.is_configuration(self.schema.entity_type(s[0], False))]
 
-    def load(self, source):
+    def load(self, source, raw_json=False):
         """
         Load a configuration file.
         @param source: A file name, open file object or iterable list of lines
+        @param raw_json: Source is pure json not needing conf-style substitutions
         """
         if isinstance(source, basestring):
+            raw_json |= source.endswith(".json")
             with open(source) as f:
-                self.load(f)
+                self.load(f, raw_json)
         else:
-            sections = self._parse(source)
+            sections = self._parserawjson(source) if raw_json else self._parse(source)
             # Add missing singleton sections
             for et in self.config_types:
                 if et.singleton and not [s for s in sections if s[0] == et.short_name]:

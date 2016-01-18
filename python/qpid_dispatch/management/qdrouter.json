@@ -1001,21 +1001,15 @@
         },
 
         "policy": {
-            "description": "Defines user connection and access policy",
+            "description": "Defines global connection limit",
             "extends": "configurationEntity",
             "singleton": true,
             "attributes": {
                 "maximumConnections": {
                     "type": "integer",
                     "default": 0,
-                    "description": "The maximum number of concurrent client connections allowed to this router. Zero implies no limit.",
+                    "description": "Global maximum number of concurrent client connections allowed. Zero implies no limit. This limit is always enforced even if no other policy settings have been defined.",
                     "required": false,
-                    "create": true
-                },
-                "policyDb": {
-                    "type": "path",
-                    "description": "The path to the folder that holds local policy definition files.",
-		    "required": false,
                     "create": true
                 },
                 "connectionsProcessed": {"type": "integer", "graph": true},
@@ -1024,147 +1018,184 @@
             }
         },
 
-        "policy.appConnections": {
-            "description": "Defines per application connection limits, counts, and state.",
-            "extends": "operationalEntity",
+        "policy.accessRuleset": {
+            "description": "Per application definition of the locations from which users may connect and the groups to which users belong.",
+            "extends": "configurationEntity",
             "attributes": {
-                "appName": {
+                "name": {
                     "type": "string",
-                    "description": "Application to which these statistics apply",
-                    "create": true
+                    "description": "The application name.",
+                    "required": true
                 },
-
                 "maxConnections": {
                     "type": "integer",
-                    "description": "The maximum number of concurrent client connections allowed to this application. Zero implies no limit."
-                    },
+                    "default": 0,
+                    "description": "Maximum number of concurrent client connections allowed. Zero implies no limit.",
+                    "required": false,
+                    "create": true
+                },
                 "maxConnPerUser": {
                     "type": "integer",
-                    "description": "The maximum number of concurrent connections allowed to this application for a single authenticated user. Zero implies no limit."
-                    },
+                    "default": 0,
+                    "description": "Maximum number of concurrent client connections allowed for any single user. Zero implies no limit.",
+                    "required": false,
+                    "create": true
+                },
                 "maxConnPerHost": {
                     "type": "integer",
-                    "description": "The maximum number of concurrent connections allowed to this application from a remote host. Zero implies no limit."
+                    "default": 0,
+                    "description": "Maximum number of concurrent client connections allowed for any remote host. Zero implies no limit.",
+                    "required": false,
+                    "create": true
                 },
-
-                "connectionsApproved": {"type": "integer", "graph": true},
-                "connectionsDenied": {"type": "integer", "graph": true},
-                "connectionsActive": {"type": "integer", "graph": true},
-                "perUserState": {
+                "userGroups": {
                     "type": "map",
-                    "description": "Index is authenticated username; data is comma separated string naming the user's connections."
+                    "description": "A map where each key is a user group name and the corresponding value is a list of users in that group. Users who are assigned to one or more groups are deemed 'restricted'. Restricted users are subject to connection ingress policy and are assigned policy settings based on the assigned user groups. Unrestricted users may be allowed or denied. If unrestricted users are allowed to connect then they are assigned to user group default.",
+                    "required": false,
+                    "create": true
                 },
-                "perHostState": {
+                "connectionGroups": {
                     "type": "map",
-                    "description": "Index is remote host; data is comma separated string naming the host's connections."
+                    "description": "A map where each key is a connection group name and the corresponding value is a list of IP addresses in that group. IP addresses may be numeric IPv4 or IPv6 host address or comma separated host ranges.  The wildcard host address '*' represents any host address.",
+                    "required": false,
+                    "create": true
+                },
+                "connectionIngressPolicies": {
+                    "type": "map",
+                    "description": "A map where each key is a user group name and the corresponding value is a list of connection groups. Users who are members of the user group are allowed to connect only from a host in one of the named connection policy groups.",
+                    "required": false,
+                    "create": true
+                },
+                "connectionAllowDefault": {
+                    "type": "boolean",
+                    "description": "Unrestricted users, those who are not members of a defined user group, are allowed to connect to this application.",
+                    "default": false,
+                    "required": false,
+                    "create": true
                 }
             }
         },
-
-        "policy.appStatistics": {
-            "description": "Aggregated statistics for one application.",
+        "policy.accessStats": {
+            "description": "Per application connection and access statistics.",
             "extends": "operationalEntity",
             "attributes": {
-                "appName": {
+                "name": {
                     "type": "string",
-                    "description": "Application to which these statistics apply",
-                    "create": true
+                    "description": "The application name."
                 },
+                "connectionsApproved": {"type": "integer", "graph": true},
+                "connectionsDenied": {"type": "integer", "graph": true},
+                "connectionsCurrent": {"type": "integer", "graph": true},
+                "perUsrerState": {
+                    "type": "map",
+                    "description": "A map where the key is the authenticated user name and the value is a list of the user's connections."
+                },
+                "perHostState": {
+                    "type": "map",
+                    "description": "A map where the key is the host name and the value is a list of the host's connections."
+                }
 
-                "maxSendersDenials": {"type": "integer", "graph": true},
-                "maxReceiversDenials": {"type": "integer", "graph": true},
-                "dynamicSrcDenials": {"type": "integer", "graph": true},
-                "anonmousSenderDenials": {"type": "integer", "graph": true},
-                "sourceDenials": {"type": "integer", "graph": true},
-                "targetsDenials": {"type": "integer", "graph": true}
             }
-        },
 
-        "policy.appGroupSettings": {
-            "description": "Defines control values for a group of users in one application",
+        },
+        "policy.settings": {
+            "description": "For a given application and user group define the policy settings applied to the user's AMQP connection.",
             "extends": "configurationEntity",
             "attributes": {
-                "appName": {
+                "applicationName": {
                     "type": "string",
-                    "description": "Application to which these settings apply",
-                    "create": true
+                    "description": "The application to which these settings apply.",
+                    "required": true
                 },
-                "appGroupName": {
+                "groupName": {
                     "type": "string",
-                    "description": "Rule set name",
-                    "create": true
+                    "description": "The user group to which these settings apply.",
+                    "required": true
                 },
-
                 "maxFrameSize": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Largest frame that may be used on this connection. Value placed into forwarded AMQP Open.max-frame-size field. Zero implies inserting system default.",
+                    "description": "Largest frame that may be sent on this connection. Zero implies system default. (AMQP Open, max-frame-size)",
+                    "default": 65536,
                     "required": false,
                     "create": true
                 },
                 "maxMessageSize": {
                     "type": "integer",
+                    "description": "Largest message size supported by links created on this connection. Zero implies system default. (AMQP Attach, max-message-size)",
                     "default": 0,
-                    "description": "Largest message that may be used on this connection. Value placed into forwarded AMQP Attach.max-message-size field. Zero implies inserting system default.",
                     "required": false,
                     "create": true
                 },
                 "maxSessionWindow": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Largest incoming and outgoing window that may be used on this connection. Value placed into forwarded AMQP Begin.incoming-window and .outgoing-window fields. Zero implies inserting system default.",
+                    "description": "Largest incoming and outgoing window for sessions created on this connection. Zero implies system default. (AMQP Begin, incoming-window, outgoing-window)",
+                    "default": 2147483647,
                     "required": false,
                     "create": true
                 },
                 "maxSessions": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Maximum number of simultaneous sessions that may be used on this connection. Value placed into forwarded AMQP Open.channel-max field. Zero implies inserting system default.",
+                    "description": "Maximum number of sessions that may be created on this connection. Zero implies system default. (AMQP Open, channel-max)",
+                    "default": 10,
                     "required": false,
                     "create": true
                 },
                 "maxSenders": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Maximum number of simultaneous senders that may be used on this connection. Zero implies system default.",
+                    "description": "Maximum number of sending links that may be created on this connection. Zero implies system default.",
+                    "default": 10,
                     "required": false,
                     "create": true
                 },
                 "maxReceivers": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Maximum number of simultaneous receivers that may be used on this connection. Zero implies system default.",
+                    "description": "Maximum number of receiving links that may be created on this connection. Zero implies system default.",
                     "required": false,
                     "create": true
                 },
                 "allowDynamicSrc": {
                     "type": "boolean",
+                    "description": "This connection is allowed to use the dynamic link source feature.",
                     "default": false,
-                    "description": "A receiver link created on this connection is allowed to set the dynamic flag to true.",
                     "required": false,
                     "create": true
                 },
                 "allowAnonymousSender": {
                     "type": "boolean",
+                    "description": "This connection is allowed to use the Anonymous Sender feature.",
                     "default": false,
-                    "description": "A sender link created on this connection is allowed to have a blank target address.",
                     "required": false,
                     "create": true
                 },
                 "sources": {
-                    "type": "string",
-                    "default": 0,
-                    "description": "Comma separated list of allowed source addresses to be specified by receive links. A blank list denies all access. A list with a single wildcard address '*' allows all access. Simple beginsWith and endsWith may be specified by prefixing and postfixing a string with '*'. Username substitution is supported by using the $USER token in a string.",
+                    "type": "list",
+                    "description": "List of Source addresses allowed when creating receiving links.",
                     "required": false,
                     "create": true
                 },
                 "targets": {
-                    "type": "string",
-                    "default": 0,
-                    "description": "Comma separated list of allowed target addresses to be specified by sending links. A blank list denies all access. A list with a single wildcard address '*' allows all access. Simple beginsWith and endsWith may be specified by prefixing and postfixing a string with '*'. Username substitution is supported by using the $USER token in a string.",
+                    "type": "list",
+                    "description": "List of Target addresses allowed when creating sending links.",
                     "required": false,
                     "create": true
                 }
+            }
+        },
+
+        "policy.stats": {
+            "description": "Per application policy enforcement statistics.",
+            "extends": "operationalEntity",
+            "attributes": {
+                "name": {
+                    "type": "string",
+                    "description": "The application name."
+                },
+                "maxSendersDenied": {"type": "integer", "graph": true},
+                "maxReceiversDenied": {"type": "integer", "graph": true},
+                "dynamicSrcDenied": {"type": "integer", "graph": true},
+                "anonymousSenderDenied": {"type": "integer", "graph": true},
+                "linkSourceDenied": {"type": "integer", "graph": true},
+                "linkTargetDenied": {"type": "integer", "graph": true}
             }
         },
 
