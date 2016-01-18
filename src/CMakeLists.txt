@@ -82,6 +82,7 @@ set(qpid_dispatch_SOURCES
   schema_enum.c
   server.c
   timer.c
+  trace_mask.c
   )
 
 if(USE_MEMORY_POOL)
