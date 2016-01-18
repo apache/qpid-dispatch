@@ -162,6 +162,7 @@ qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_semantics_t semantics
     qdr_address_t *addr = new_qdr_address_t();
     ZERO(addr);
     addr->forwarder = qdr_forwarder_CT(core, semantics);
+    addr->rnodes    = qd_bitmask(0);
     return addr;
 }
 

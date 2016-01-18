@@ -140,10 +140,8 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         qd_address_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
         qdr_address_t *origin_addr;
         qd_hash_retrieve(core->addr_hash, ingress_iter, (void*) &origin_addr);
-        if (origin_addr && DEQ_SIZE(origin_addr->rnodes) == 1) {
-            qdr_router_ref_t *rref = DEQ_HEAD(origin_addr->rnodes);
-            origin = rref->router->mask_bit;
-        }
+        if (origin_addr && qd_bitmask_cardinality(origin_addr->rnodes) == 1)
+            qd_bitmask_first_set(origin_addr->rnodes, &origin);
     } else
         origin = 0;
 
@@ -151,10 +149,10 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     // Forward to the next-hops for remote destinations.
     //
     if (origin >= 0) {
-        qdr_router_ref_t *dest_node_ref = DEQ_HEAD(addr->rnodes);
-        qdr_link_t       *dest_link;
-        qdr_node_t       *next_node;
-        qd_bitmask_t     *link_set = qd_bitmask(0);
+        int           dest_bit;
+        qdr_link_t   *dest_link;
+        qdr_node_t   *next_node;
+        qd_bitmask_t *link_set = qd_bitmask(0);
 
         //
         // Loop over the target nodes for this address.  Build a set of outgoing links
@@ -164,15 +162,20 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         // will send only one copy of the message over the link and allow a downstream
         // router to fan the message out.
         //
-        while (dest_node_ref) {
-            if (dest_node_ref->router->next_hop)
-                next_node = dest_node_ref->router->next_hop;
+        int c;
+        for (QD_BITMASK_EACH(addr->rnodes, dest_bit, c)) {
+            qdr_node_t *rnode = core->routers_by_mask_bit[dest_bit];
+            if (!rnode)
+                continue;
+
+            if (rnode->next_hop)
+                next_node = rnode->next_hop;
             else
-                next_node = dest_node_ref->router;
+                next_node = rnode;
+
             dest_link = control ? next_node->peer_control_link : next_node->peer_data_link;
-            if (dest_link && qd_bitmask_value(dest_node_ref->router->valid_origins, origin))
+            if (dest_link && qd_bitmask_value(rnode->valid_origins, origin))
                 qd_bitmask_set_bit(link_set, dest_link->conn->mask_bit);
-            dest_node_ref = DEQ_NEXT(dest_node_ref);
         }
 
         //
@@ -219,6 +222,53 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
                            bool             exclude_inprocess,
                            bool             control)
 {
+    //
+    // Forward to an in-process subscriber if there is one
+    //
+    if (!exclude_inprocess) {
+        qdr_subscription_t *sub = DEQ_HEAD(addr->subscriptions);
+        if (sub) {
+            qdr_forward_on_message_CT(core, sub, in_delivery ? in_delivery->link : 0, msg);
+
+            //
+            // Rotate this subscription to the end of the list to get round-robin distribution
+            //
+            if (DEQ_SIZE(addr->subscriptions) > 1) {
+                DEQ_REMOVE_HEAD(addr->subscriptions);
+                DEQ_INSERT_TAIL(addr->subscriptions, sub);
+            }
+
+            return 1;
+        }
+    }
+
+    //
+    // Forward to a local subscriber
+    //
+    qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
+    if (link_ref) {
+        qdr_link_t     *out_link     = link_ref->link;
+        qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
+        qdr_forward_deliver_CT(core, out_link, out_delivery);
+
+        //
+        // If there are multiple local subscribers, rotate the list of link references
+        // so deliveries will be distributed among the subscribers in a round-robin pattern.
+        //
+        if (DEQ_SIZE(addr->rlinks) > 1) {
+            DEQ_REMOVE_HEAD(addr->rlinks);
+            DEQ_INSERT_TAIL(addr->rlinks, link_ref);
+        }
+
+        return 1;
+    }
+
+    //
+    // TODO
+    // Forward to remote routers with subscribers using the appropriate
+    // link for the traffic class: control or data
+    //
+
     return 0;
 }
 

@@ -62,7 +62,7 @@ static void qdr_insert_address_columns_CT(qdr_address_t        *addr,
             break;
 
         case QDR_ADDRESS_REMOTE_COUNT:
-            qd_compose_insert_uint(body, DEQ_SIZE(addr->rnodes));
+            qd_compose_insert_uint(body, qd_bitmask_cardinality(addr->rnodes));
             break;
 
         case QDR_ADDRESS_HOST_ROUTERS:

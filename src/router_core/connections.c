@@ -481,10 +481,11 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
     // deleted.
     //
     if (DEQ_SIZE(addr->subscriptions) == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->inlinks) == 0 &&
-        DEQ_SIZE(addr->rnodes) == 0 && !addr->waypoint && !addr->block_deletion) {
+        qd_bitmask_cardinality(addr->rnodes) == 0 && !addr->waypoint && !addr->block_deletion) {
         qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
         DEQ_REMOVE(core->addrs, addr);
         qd_hash_handle_free(addr->hash_handle);
+        qd_bitmask_free(addr->rnodes);
         free_qdr_address_t(addr);
     }
 }

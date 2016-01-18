@@ -288,6 +288,9 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
         qd_address_iterator_reset_view(addr_field->iterator, ITER_VIEW_ADDRESS_HASH);
         qd_hash_retrieve(core->addr_hash, addr_field->iterator, (void**) &addr);
         if (addr)
+            //
+            // Forward the message.  We don't care what the fanout count is.
+            //
             (void) qdr_forward_message_CT(core, addr, msg, 0, action->args.io.exclude_inprocess, action->args.io.control);
         else
             qd_log(core->log, QD_LOG_DEBUG, "In-process send to an unknown address");

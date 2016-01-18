@@ -254,7 +254,7 @@ struct qdr_address_t {
     qdr_lrp_ref_list_t       lrps;          ///< Local link-route destinations
     qdr_link_ref_list_t      rlinks;        ///< Locally-Connected Consumers
     qdr_link_ref_list_t      inlinks;       ///< Locally-Connected Producers
-    qdr_router_ref_list_t    rnodes;        ///< Remotely-Connected Consumers
+    qd_bitmask_t            *rnodes;        ///< Bitmask of remote routers with connected consumers
     qd_hash_handle_t        *hash_handle;   ///< Linkage back to the hash table entry
     qdr_forwarder_t         *forwarder;
     bool                     toggle;

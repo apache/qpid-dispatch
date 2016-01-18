@@ -255,14 +255,19 @@ static void qdr_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
         //
         // Link the router record to the address record.
         //
-        qdr_add_node_ref(&addr->rnodes, rnode);
+        qd_bitmask_set_bit(addr->rnodes, router_maskbit);
 
         //
         // Link the router record to the router address records.
         // Use the T-class addresses only.
         //
-        qdr_add_node_ref(&core->router_addr_T->rnodes, rnode);
-        qdr_add_node_ref(&core->routerma_addr_T->rnodes, rnode);
+        qd_bitmask_set_bit(core->router_addr_T->rnodes, router_maskbit);
+        qd_bitmask_set_bit(core->routerma_addr_T->rnodes, router_maskbit);
+
+        //
+        // Bump the ref-count by three for each of the above links.
+        //
+        rnode->ref_count += 3;
 
         //
         // Add the router record to the mask-bit index.
@@ -295,7 +300,10 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     //
     // Unlink the router node from the address record
     //
-    qdr_del_node_ref(&oaddr->rnodes, rnode);
+    qd_bitmask_clear_bit(oaddr->rnodes, router_maskbit);
+    qd_bitmask_clear_bit(core->router_addr_T->rnodes, router_maskbit);
+    qd_bitmask_clear_bit(core->routerma_addr_T->rnodes, router_maskbit);
+    rnode->ref_count -= 3;
 
     //
     // While the router node has a non-zero reference count, look for addresses
@@ -303,7 +311,11 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     //
     qdr_address_t *addr = DEQ_HEAD(core->addrs);
     while (addr && rnode->ref_count > 0) {
-        qdr_del_node_ref(&addr->rnodes, rnode);
+        if (qd_bitmask_clear_bit(addr->rnodes, router_maskbit))
+            //
+            // If the cleared bit was originally set, decrement the ref count
+            //
+            rnode->ref_count--;
         addr = DEQ_NEXT(addr);
     }
     assert(rnode->ref_count == 0);
@@ -493,7 +505,8 @@ static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool 
         }
 
         qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
-        qdr_add_node_ref(&addr->rnodes, rnode);
+        qd_bitmask_set_bit(addr->rnodes, router_maskbit);
+        rnode->ref_count++;
 
         //
         // TODO - If this affects a waypoint, create the proper side effects
@@ -536,7 +549,8 @@ static void qdr_unmap_destination_CT(qdr_core_t *core, qdr_action_t *action, boo
             break;
         }
 
-        qdr_del_node_ref(&addr->rnodes, rnode);
+        qd_bitmask_clear_bit(addr->rnodes, router_maskbit);
+        rnode->ref_count--;
 
         //
         // TODO - If this affects a waypoint, create the proper side effects
