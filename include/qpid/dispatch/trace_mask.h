@@ -61,13 +61,35 @@ void qd_tracemask_add_router(qd_tracemask_t *tm, const char *address, int maskbi
 void qd_tracemask_del_router(qd_tracemask_t *tm, int maskbit);
 
 /**
+ * qd_tracemask_set_link
+ *
+ * Notify the TraceMask of a link connected to a neighbor router.
+ *
+ * @param tm Tracemask created by qd_tracemask()
+ * @param router_maskbit The mask bit assigned to this router by the router module.
+ * @param link_maskbit The mask bit assigned to the link by the router core.
+ */
+void qd_tracemask_set_link(qd_tracemask_t *tm, int router_maskbit, int link_maskbit);
+
+/**
+ * qd_tracemask_remove_link
+ *
+ * Notify the TraceMask of a disconnected neighbor router.
+ *
+ * @param tm Tracemask created by qd_tracemask()
+ * @param router_maskbit The mask bit assigned to this router by the router module.
+ */
+void qd_tracemask_remove_link(qd_tracemask_t *tm, int router_maskbit);
+
+/**
  * qd_tracemask_create
  *
- * Create a new bitmask with a bit set for every router mentioned in the trace list.
+ * Create a new bitmask with a bit set for every outgoing link to a neighbor mentioned
+ * in the trace list.
  *
  * @param tm Tracemask created by qd_tracemask()
  * @param tracelist The parsed field from a message's trace header
- * @return A new bit mask with a set-bit for each router in the list.  This must be freed
+ * @return A new bit mask with a set-bit for each neighbor router in the list.  This must be freed
  *         by the caller when the caller is done with it.
  */
 qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, qd_parsed_field_t *tracelist);

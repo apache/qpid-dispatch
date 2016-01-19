@@ -170,6 +170,11 @@ static char *test_tracemask(void *context)
     qd_tracemask_add_router(tm, "0/Router.E", 4);
     qd_tracemask_add_router(tm, "0/Router.F", 5);
 
+    qd_tracemask_set_link(tm, 0, 4);
+    qd_tracemask_set_link(tm, 3, 10);
+    qd_tracemask_set_link(tm, 4, 3);
+    qd_tracemask_set_link(tm, 5, 2);
+
     qd_composed_field_t *comp = qd_compose_subfield(0);
     qd_compose_start_list(comp);
     qd_compose_insert_string(comp, "0/Router.A");
@@ -199,17 +204,18 @@ static char *test_tracemask(void *context)
     for (QD_BITMASK_EACH(bm, bit, c)) {
         total += bit;
     }
-    if (total != 7) {
-        sprintf(error, "Expected total bit value of 7, got %d", total);
+    if (total != 17) {
+        sprintf(error, "Expected total bit value of 17, got %d", total);
         return error;
     }
 
     qd_bitmask_free(bm);
     qd_tracemask_del_router(tm, 3);
+    qd_tracemask_remove_link(tm, 0);
 
     bm = qd_tracemask_create(tm, pf);
-    if (qd_bitmask_cardinality(bm) != 2) {
-        sprintf(error, "Expected cardinality of 2, got %d", qd_bitmask_cardinality(bm));
+    if (qd_bitmask_cardinality(bm) != 1) {
+        sprintf(error, "Expected cardinality of 1, got %d", qd_bitmask_cardinality(bm));
         return error;
     }
 
@@ -217,8 +223,8 @@ static char *test_tracemask(void *context)
     for (QD_BITMASK_EACH(bm, bit, c)) {
         total += bit;
     }
-    if (total != 4) {
-        sprintf(error, "Expected total bit value of 4, got %d", total);
+    if (total != 3) {
+        sprintf(error, "Expected total bit value of 3, got %d", total);
         return error;
     }
 

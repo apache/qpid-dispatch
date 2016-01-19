@@ -26,6 +26,7 @@
 typedef struct {
     qd_hash_handle_t *hash_handle;
     int               maskbit;
+    int               link_maskbit;
 } qdtm_router_t;
 
 ALLOC_DECLARE(qdtm_router_t);
@@ -72,6 +73,7 @@ void qd_tracemask_add_router(qd_tracemask_t *tm, const char *address, int maskbi
     if (maskbit < qd_bitmask_width() && tm->router_by_mask_bit[maskbit] == 0) {
         qdtm_router_t *router = new_qdtm_router_t();
         router->maskbit = maskbit;
+        router->link_maskbit = -1;
         qd_hash_insert(tm->hash, iter, router, &router->hash_handle);
         tm->router_by_mask_bit[maskbit] = router;
     }
@@ -94,6 +96,32 @@ void qd_tracemask_del_router(qd_tracemask_t *tm, int maskbit)
 }
 
 
+void qd_tracemask_set_link(qd_tracemask_t *tm, int router_maskbit, int link_maskbit)
+{
+    sys_rwlock_wrlock(tm->lock);
+    assert(router_maskbit < qd_bitmask_width() && link_maskbit < qd_bitmask_width() &&
+           tm->router_by_mask_bit[router_maskbit] != 0);
+    if (router_maskbit < qd_bitmask_width() && link_maskbit < qd_bitmask_width() &&
+        tm->router_by_mask_bit[router_maskbit] != 0) {
+        qdtm_router_t *router = tm->router_by_mask_bit[router_maskbit];
+        router->link_maskbit = link_maskbit;
+    }
+    sys_rwlock_unlock(tm->lock);
+}
+
+
+void qd_tracemask_remove_link(qd_tracemask_t *tm, int router_maskbit)
+{
+    sys_rwlock_wrlock(tm->lock);
+    assert(router_maskbit < qd_bitmask_width() && tm->router_by_mask_bit[router_maskbit] != 0);
+    if (router_maskbit < qd_bitmask_width() && tm->router_by_mask_bit[router_maskbit] != 0) {
+        qdtm_router_t *router = tm->router_by_mask_bit[router_maskbit];
+        router->link_maskbit = -1;
+    }
+    sys_rwlock_unlock(tm->lock);
+}
+
+
 qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, qd_parsed_field_t *tracelist)
 {
     qd_bitmask_t *bm  = qd_bitmask(0);
@@ -108,8 +136,8 @@ qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, qd_parsed_field_t *traceli
         qd_field_iterator_t *iter = qd_parse_raw(item);
         qd_address_iterator_reset_view(iter, ITER_VIEW_NODE_HASH);
         qd_hash_retrieve(tm->hash, iter, (void*) &router);
-        if (router)
-            qd_bitmask_set_bit(bm, router->maskbit);
+        if (router && router->link_maskbit >= 0)
+            qd_bitmask_set_bit(bm, router->link_maskbit);
         idx++;
         item = qd_parse_sub_value(tracelist, idx);
     }
