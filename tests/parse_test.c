@@ -24,6 +24,7 @@
 #include <inttypes.h>
 #include "test_case.h"
 #include <qpid/dispatch.h>
+#include <qpid/dispatch/trace_mask.h>
 
 struct fs_vector_t {
     const char *data;
@@ -153,12 +154,86 @@ static char *test_parser_errors(void *context)
 }
 
 
+static char *test_tracemask(void *context)
+{
+    qd_bitmask_t    *bm;
+    qd_tracemask_t  *tm = qd_tracemask();
+    qd_buffer_list_t list;
+    static char      error[1024];
+
+    qd_field_iterator_set_address("0", "ROUTER");
+
+    qd_tracemask_add_router(tm, "0/Router.A", 0);
+    qd_tracemask_add_router(tm, "0/Router.B", 1);
+    qd_tracemask_add_router(tm, "0/Router.C", 2);
+    qd_tracemask_add_router(tm, "0/Router.D", 3);
+    qd_tracemask_add_router(tm, "0/Router.E", 4);
+    qd_tracemask_add_router(tm, "0/Router.F", 5);
+
+    qd_composed_field_t *comp = qd_compose_subfield(0);
+    qd_compose_start_list(comp);
+    qd_compose_insert_string(comp, "0/Router.A");
+    qd_compose_insert_string(comp, "0/Router.D");
+    qd_compose_insert_string(comp, "0/Router.E");
+    qd_compose_end_list(comp);
+
+    DEQ_INIT(list);
+    qd_compose_take_buffers(comp, &list);
+    int length = 0;
+    qd_buffer_t *buf = DEQ_HEAD(list);
+    while (buf) {
+        length += qd_buffer_size(buf);
+        buf = DEQ_NEXT(buf);
+    }
+
+    qd_field_iterator_t *iter = qd_address_iterator_buffer(DEQ_HEAD(list), 0, length, ITER_VIEW_ALL);
+    qd_parsed_field_t   *pf   = qd_parse(iter);
+
+    bm = qd_tracemask_create(tm, pf);
+    if (qd_bitmask_cardinality(bm) != 3) {
+        sprintf(error, "Expected cardinality of 3, got %d", qd_bitmask_cardinality(bm));
+        return error;
+    }
+    int total = 0;
+    int bit, c;
+    for (QD_BITMASK_EACH(bm, bit, c)) {
+        total += bit;
+    }
+    if (total != 7) {
+        sprintf(error, "Expected total bit value of 7, got %d", total);
+        return error;
+    }
+
+    qd_bitmask_free(bm);
+    qd_tracemask_del_router(tm, 3);
+
+    bm = qd_tracemask_create(tm, pf);
+    if (qd_bitmask_cardinality(bm) != 2) {
+        sprintf(error, "Expected cardinality of 2, got %d", qd_bitmask_cardinality(bm));
+        return error;
+    }
+
+    total = 0;
+    for (QD_BITMASK_EACH(bm, bit, c)) {
+        total += bit;
+    }
+    if (total != 4) {
+        sprintf(error, "Expected total bit value of 4, got %d", total);
+        return error;
+    }
+
+    qd_tracemask_free(tm);
+    return 0;
+}
+
+
 int parse_tests()
 {
     int result = 0;
 
     TEST_CASE(test_parser_fixed_scalars, 0);
     TEST_CASE(test_parser_errors, 0);
+    TEST_CASE(test_tracemask, 0);
 
     return result;
 }
