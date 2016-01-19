@@ -87,6 +87,7 @@ void qdr_terminus_copy(qdr_terminus_t *from, pn_terminus_t *to)
         return;
 
     if (from->address) {
+        qd_address_iterator_reset_view(from->address->iterator, ITER_VIEW_ALL);
         unsigned char *addr = qd_field_iterator_copy(from->address->iterator);
         pn_terminus_set_address(to, (char*) addr);
         free(addr);

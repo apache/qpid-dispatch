@@ -48,6 +48,7 @@ typedef struct {
 } qdr_field_t;
 
 qdr_field_t *qdr_field(const char *string);
+qdr_field_t *qdr_field_from_iter(qd_field_iterator_t *iter);
 void qdr_field_free(qdr_field_t *field);
 char *qdr_field_copy(qdr_field_t *field);
 
@@ -379,6 +380,7 @@ struct qdr_core_t {
     sys_mutex_t           *query_lock;
     qd_timer_t            *agent_timer;
     qdr_manage_response_t  agent_response_handler;
+    qdr_subscription_t    *agent_subscription;
 
     //
     // Route table section
@@ -431,6 +433,7 @@ typedef enum {
 } qdr_waypoint_mode_t;
 
 void *router_core_thread(void *arg);
+void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
 void  qdr_agent_setup_CT(qdr_core_t *core);
 void  qdr_forwarder_setup_CT(qdr_core_t *core);

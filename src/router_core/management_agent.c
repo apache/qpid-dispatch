@@ -24,7 +24,6 @@
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/compose.h>
 #include <qpid/dispatch/dispatch.h>
-#include "management_agent_private.h"
 #include "router_core_private.h"
 #include "dispatch_private.h"
 #include "alloc.h"
@@ -407,7 +406,7 @@ static bool qd_can_handle_request(qd_field_iterator_t         *props,
  * Handler for the management agent.
  *
  */
-void management_agent_handler(void *context, qd_message_t *msg, int unused_link_id)
+void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id)
 {
     qdr_core_t *core = (qdr_core_t*) context;
     qd_field_iterator_t *app_properties_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
@@ -451,3 +450,4 @@ void management_agent_handler(void *context, qd_message_t *msg, int unused_link_
     qd_field_iterator_free(identity_iter);
 
 }
+

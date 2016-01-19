@@ -62,6 +62,13 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, const char *area, const char *id)
     //
     core->thread = sys_thread(router_core_thread, core);
 
+    //
+    // Perform outside-of-thread setup for the management agent
+    //
+    core->agent_subscription = qdr_core_subscribe(core, "$management", 'M', '0',
+                                                  QD_SEMANTICS_ANYCAST_CLOSEST,
+                                                  qdr_management_agent_on_message, core);
+
     return core;
 }
 
@@ -78,6 +85,7 @@ void qdr_core_free(qdr_core_t *core)
     //
     // Free the core resources
     //
+    qdr_core_unsubscribe(core->agent_subscription);
     sys_thread_free(core->thread);
     sys_cond_free(core->action_cond);
     sys_mutex_free(core->action_lock);
@@ -114,6 +122,32 @@ qdr_field_t *qdr_field(const char *text)
     }
 
     field->iterator = qd_field_iterator_buffer(DEQ_HEAD(field->buffers), 0, ilength);
+
+    return field;
+}
+
+
+qdr_field_t *qdr_field_from_iter(qd_field_iterator_t *iter)
+{
+    qdr_field_t *field = new_qdr_field_t();
+    qd_buffer_t *buf;
+    int          remaining;
+    int          length;
+
+    ZERO(field);
+    qd_field_iterator_reset(iter);
+    remaining = qd_field_iterator_remaining(iter);
+    length    = remaining;
+    while (remaining) {
+        buf = qd_buffer();
+        size_t cap    = qd_buffer_capacity(buf);
+        int    copied = qd_field_iterator_ncopy(iter, qd_buffer_cursor(buf), cap);
+        qd_buffer_insert(buf, copied);
+        DEQ_INSERT_TAIL(field->buffers, buf);
+        remaining = qd_field_iterator_remaining(iter);
+    }
+
+    field->iterator = qd_field_iterator_buffer(DEQ_HEAD(field->buffers), 0, length);
 
     return field;
 }

@@ -141,7 +141,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_field_iterator_t *addr, bool exclude_inprocess, bool control)
 {
     qdr_action_t *action = qdr_action(qdr_send_to_CT, "send_to");
-    //action->args.io.address           = qdr_field(addr);  // TODO - fix this
+    action->args.io.address           = qdr_field_from_iter(addr);
     action->args.io.message           = qd_message_copy(msg);
     action->args.io.exclude_inprocess = exclude_inprocess;
     action->args.io.control           = control;
@@ -249,12 +249,11 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
     if (DEQ_IS_EMPTY(link->undelivered)) {
         qdr_address_t *addr = link->owning_addr;
-        if (!addr && dlv->to_addr) {
+        if (!addr && dlv->to_addr)
             qd_hash_retrieve(core->addr_hash, dlv->to_addr, (void**) &addr);
-            if (addr)
-                count = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false,
-                                               link->link_type == QD_LINK_CONTROL, link_exclude);
-        }
+        if (addr)
+            count = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false,
+                                           link->link_type == QD_LINK_CONTROL, link_exclude);
     }
 
     if (count == 0) {

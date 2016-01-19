@@ -782,8 +782,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
 
             else {
                 //
-                // Associate the link with the address.  With this association, it will be unnecessary
-                // to do an address lookup for deliveries that arrive on this link.
+                // Associate the link with the address.
                 //
                 link->owning_addr = addr;
                 qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
