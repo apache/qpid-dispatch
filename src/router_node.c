@@ -106,7 +106,7 @@ static int router_writable_conn_handler(void *type_context, qd_connection_t *con
 static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
                                                     qd_parsed_field_t *in_ma,
                                                     qd_message_t      *msg,
-                                                    bool              *drop,
+                                                    qd_bitmask_t     **link_exclusions,
                                                     bool               strip_inbound_annotations)
 {
     qd_field_iterator_t *ingress_iter = 0;
@@ -114,6 +114,8 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
     qd_parsed_field_t *trace   = 0;
     qd_parsed_field_t *ingress = 0;
     qd_parsed_field_t *to      = 0;
+
+    *link_exclusions = 0;
 
     if (in_ma && !strip_inbound_annotations) {
         uint32_t count = qd_parse_sub_count(in_ma);
@@ -147,14 +149,20 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
     qd_compose_start_list(trace_field);
     if (trace) {
         if (qd_parse_is_list(trace)) {
+            //
+            // Create a link-exclusion map for the items in the trace.  This map will
+            // contain a one-bit for each link that leads to a neighbor router that
+            // the message has already passed through.
+            //
+            *link_exclusions = qd_tracemask_create(router->tracemask, trace);
+
+            //
+            // Append this router's ID to the trace.
+            //
             uint32_t idx = 0;
             qd_parsed_field_t *trace_item = qd_parse_sub_value(trace, idx);
             while (trace_item) {
                 qd_field_iterator_t *iter = qd_parse_raw(trace_item);
-                if (qd_field_iterator_equal(iter, (unsigned char*) node_id)) {
-                    *drop = 1;
-                    return 0;  // no further processing necessary
-                }
                 qd_field_iterator_reset(iter);
                 qd_compose_insert_string_iterator(trace_field, iter);
                 idx++;
@@ -261,14 +269,9 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
 
     if (valid_message) {
         qd_parsed_field_t   *in_ma        = qd_message_message_annotations(msg);
-        bool                 drop         = false;
+        qd_bitmask_t        *link_exclusions;
         bool                 strip        = qdr_link_strip_annotations_in(rlink);
-        qd_field_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &drop, strip);
-
-        if (drop) {
-            qd_message_free(msg);
-            return;
-        }
+        qd_field_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &link_exclusions, strip);
 
         if (anonymous_link) {
             qd_field_iterator_t *addr_iter = 0;
@@ -290,10 +293,11 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
 
             if (addr_iter) {
                 qd_address_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
-                delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd));
+                delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
+                                               link_exclusions);
             }
         } else
-            delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd));
+            delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions);
 
         if (delivery) {
             pn_delivery_set_context(pnd, delivery);
@@ -676,6 +680,7 @@ static void qd_router_link_deliver(void *context, qdr_link_t *link, qdr_delivery
 
 void qd_router_setup_late(qd_dispatch_t *qd)
 {
+    qd->router->tracemask   = qd_tracemask();
     qd->router->router_core = qdr_core(qd, qd->router->router_area, qd->router->router_id);
 
     qdr_connection_handlers(qd->router->router_core, (void*) qd->router,
@@ -700,6 +705,7 @@ void qd_router_free(qd_router_t *router)
     qd_container_set_default_node_type(router->qd, 0, 0, QD_DIST_BOTH);
 
     qdr_core_free(router->router_core);
+    qd_tracemask_free(router->tracemask);
     qd_timer_free(router->timer);
     sys_mutex_free(router->lock);
     qd_router_configure_free(router);

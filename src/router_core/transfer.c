@@ -35,7 +35,8 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 // Interface Functions
 //==================================================================================
 
-qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_iterator_t *ingress, bool settled)
+qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_iterator_t *ingress,
+                                 bool settled, qd_bitmask_t *link_exclusion)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
@@ -48,13 +49,15 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_i
     dlv->settled = settled;
 
     action->args.connection.delivery = dlv;
+    action->args.connection.link_exclusion = link_exclusion;
     qdr_action_enqueue(link->core, action);
     return dlv;
 }
 
 
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
-                                    qd_field_iterator_t *ingress, qd_field_iterator_t *addr, bool settled)
+                                    qd_field_iterator_t *ingress, qd_field_iterator_t *addr,
+                                    bool settled, qd_bitmask_t *link_exclusion)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
@@ -67,6 +70,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     dlv->settled = settled;
 
     action->args.connection.delivery = dlv;
+    action->args.connection.link_exclusion = link_exclusion;
     qdr_action_enqueue(link->core, action);
     return dlv;
 }
@@ -232,9 +236,10 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     if (discard)
         return;
 
-    qdr_delivery_t *dlv   = action->args.connection.delivery;
-    qdr_link_t     *link  = dlv->link;
-    int             count = 0;
+    qdr_delivery_t *dlv          = action->args.connection.delivery;
+    qd_bitmask_t   *link_exclude = action->args.connection.link_exclusion;
+    qdr_link_t     *link         = dlv->link;
+    int             count        = 0;
 
     //
     // NOTE: The link->undelivered list does not need to be protected by the
@@ -247,7 +252,8 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         if (!addr && dlv->to_addr) {
             qd_hash_retrieve(core->addr_hash, dlv->to_addr, (void**) &addr);
             if (addr)
-                count = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false, link->link_type == QD_LINK_CONTROL);
+                count = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false,
+                                               link->link_type == QD_LINK_CONTROL, link_exclude);
         }
     }
 
@@ -291,7 +297,8 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
             //
             // Forward the message.  We don't care what the fanout count is.
             //
-            (void) qdr_forward_message_CT(core, addr, msg, 0, action->args.io.exclude_inprocess, action->args.io.control);
+            (void) qdr_forward_message_CT(core, addr, msg, 0, action->args.io.exclude_inprocess,
+                                          action->args.io.control, 0);
         else
             qd_log(core->log, QD_LOG_DEBUG, "In-process send to an unknown address");
     }

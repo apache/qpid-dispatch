@@ -29,6 +29,7 @@
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/message.h>
 #include <qpid/dispatch/bitmask.h>
+#include <qpid/dispatch/trace_mask.h>
 #include <qpid/dispatch/hash.h>
 #include <qpid/dispatch/log.h>
 #include "dispatch_private.h"
@@ -219,6 +220,7 @@ DEQ_DECLARE(qd_waypoint_t, qd_waypoint_list_t);
 struct qd_router_t {
     qd_dispatch_t            *qd;
     qdr_core_t               *router_core;
+    qd_tracemask_t           *tracemask;
     qd_log_source_t          *log_source;
     qd_router_mode_t          router_mode;
     const char               *router_area;

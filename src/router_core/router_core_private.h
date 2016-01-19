@@ -35,7 +35,7 @@ typedef struct qdr_forwarder_t   qdr_forwarder_t;
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_semantics_t semantics);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
-                           bool exclude_inprocess, bool control);
+                           bool exclude_inprocess, bool control, qd_bitmask_t *link_exclusion);
 void qdr_forward_attach_CT(qdr_core_t *core, qdr_forwarder_t *forwarder, qdr_link_t *in_link);
 
 /**
@@ -86,6 +86,7 @@ struct qdr_action_t {
             qdr_terminus_t   *target;
             qdr_error_t      *error;
             qd_detach_type_t  dt;
+            qd_bitmask_t     *link_exclusion;
         } connection;
 
         //

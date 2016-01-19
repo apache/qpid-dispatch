@@ -475,11 +475,16 @@ void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error);
  *                iterator is assumed to reference content in the message that will stay valid
  *                through the lifetime of the message.
  * @param settled True iff the delivery is pre-settled.
+ * @param link_exclusion If present, this is a bitmask of inter-router links that should not be used
+ *                       to send this message.  This bitmask is created by the trace_mask module and
+ *                       it built on the trace header from a received message.
  * @return Pointer to the qdr_delivery that will track the lifecycle of this delivery on this link.
  */
-qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_iterator_t *ingress, bool settled);
+qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_iterator_t *ingress,
+                                 bool settled, qd_bitmask_t *link_exclusion);
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
-                                    qd_field_iterator_t *ingress, qd_field_iterator_t *addr, bool settled);
+                                    qd_field_iterator_t *ingress, qd_field_iterator_t *addr,
+                                    bool settled, qd_bitmask_t *link_exclusion);
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg);
 
 void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
