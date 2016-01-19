@@ -163,12 +163,12 @@ static char *test_tracemask(void *context)
 
     qd_field_iterator_set_address("0", "ROUTER");
 
-    qd_tracemask_add_router(tm, "0/Router.A", 0);
-    qd_tracemask_add_router(tm, "0/Router.B", 1);
-    qd_tracemask_add_router(tm, "0/Router.C", 2);
-    qd_tracemask_add_router(tm, "0/Router.D", 3);
-    qd_tracemask_add_router(tm, "0/Router.E", 4);
-    qd_tracemask_add_router(tm, "0/Router.F", 5);
+    qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.A", 0);
+    qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.B", 1);
+    qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.C", 2);
+    qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.D", 3);
+    qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.E", 4);
+    qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.F", 5);
 
     qd_tracemask_set_link(tm, 0, 4);
     qd_tracemask_set_link(tm, 3, 10);

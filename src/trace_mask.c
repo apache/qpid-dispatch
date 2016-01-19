@@ -67,7 +67,7 @@ void qd_tracemask_free(qd_tracemask_t *tm)
 
 void qd_tracemask_add_router(qd_tracemask_t *tm, const char *address, int maskbit)
 {
-    qd_field_iterator_t *iter = qd_address_iterator_string(address, ITER_VIEW_NODE_HASH);
+    qd_field_iterator_t *iter = qd_address_iterator_string(address, ITER_VIEW_ADDRESS_HASH);
     sys_rwlock_wrlock(tm->lock);
     assert(maskbit < qd_bitmask_width() && tm->router_by_mask_bit[maskbit] == 0);
     if (maskbit < qd_bitmask_width() && tm->router_by_mask_bit[maskbit] == 0) {
