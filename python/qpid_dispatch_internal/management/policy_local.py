@@ -283,6 +283,19 @@ class PolicyLocal(object):
             self.policy_io_read_files()
 
     #
+    # Management create
+    #
+    def create_ruleset(self, attributes):
+        print ("POLICY configured ruleset %s" % attributes['applicationName'])
+        #pdb.set_trace()
+        pass
+
+    def create_settings(self, attributes):
+        print ("POLICY configured settings %s_%s" % (attributes['applicationName'], attributes['userGroupName']))
+        #pdb.set_trace()
+        pass
+
+    #
     # Policy file I/O
     #
     def policy_io_read_files(self):

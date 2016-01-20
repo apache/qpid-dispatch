@@ -1018,11 +1018,11 @@
             }
         },
 
-        "policy.accessRuleset": {
+        "policyAccessRuleset": {
             "description": "Per application definition of the locations from which users may connect and the groups to which users belong.",
             "extends": "configurationEntity",
             "attributes": {
-                "name": {
+                "applicationName": {
                     "type": "string",
                     "description": "The application name.",
                     "required": true
@@ -1075,18 +1075,19 @@
                 }
             }
         },
-        "policy.accessStats": {
+
+        "policyAccessStats": {
             "description": "Per application connection and access statistics.",
             "extends": "operationalEntity",
             "attributes": {
-                "name": {
+                "applicationName": {
                     "type": "string",
                     "description": "The application name."
                 },
                 "connectionsApproved": {"type": "integer", "graph": true},
                 "connectionsDenied": {"type": "integer", "graph": true},
                 "connectionsCurrent": {"type": "integer", "graph": true},
-                "perUsrerState": {
+                "perUserState": {
                     "type": "map",
                     "description": "A map where the key is the authenticated user name and the value is a list of the user's connections."
                 },
@@ -1098,7 +1099,8 @@
             }
 
         },
-        "policy.settings": {
+
+        "policyAppSettings": {
             "description": "For a given application and user group define the policy settings applied to the user's AMQP connection.",
             "extends": "configurationEntity",
             "attributes": {
@@ -1107,7 +1109,7 @@
                     "description": "The application to which these settings apply.",
                     "required": true
                 },
-                "groupName": {
+                "userGroupName": {
                     "type": "string",
                     "description": "The user group to which these settings apply.",
                     "required": true
@@ -1182,7 +1184,7 @@
             }
         },
 
-        "policy.stats": {
+        "policyAppStats": {
             "description": "Per application policy enforcement statistics.",
             "extends": "operationalEntity",
             "attributes": {

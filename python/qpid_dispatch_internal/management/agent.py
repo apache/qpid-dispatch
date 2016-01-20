@@ -81,6 +81,7 @@ from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema
 from ..router.message import Message
 from ..router.address import Address
+from policy_local import PolicyLocal
 
 
 def dictstr(d):
@@ -154,6 +155,7 @@ class EntityAdapter(SchemaEntity):
         self.__dict__['_log'] = agent.log
         self.__dict__['_qd'] = agent.qd
         self.__dict__['_dispatch'] = agent.dispatch
+        self.__dict__['_policy'] = agent.policy
         self.__dict__['_implementations'] = []
 
     def validate(self, **kwargs):
@@ -283,6 +285,19 @@ class PolicyEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('module')
 
+class PolicyAccessRulesetEntity(EntityAdapter):
+    def create(self):
+        self._policy.create_ruleset(self.attributes)
+
+    def _identifier(self):
+        return self.attributes.get('applicationName')
+
+class PolicyAppSettingsEntity(EntityAdapter):
+    def create(self):
+        self._policy.create_settings(self.attributes)
+
+    def _identifier(self):
+        return self.attributes.get('applicationName') + "_" + self.attributes.get('userGroupName')
 
 def _addr_port_identifier(entity):
     for attr in ['addr', 'port']: # Set default values if need be
@@ -611,6 +626,7 @@ class Agent(object):
         self.entities = EntityCache(self)
         self.request_lock = Lock()
         self.log_adapter = LogAdapter("AGENT")
+        self.policy = PolicyLocal()
         self.management = self.create_entity({"type": "management"})
         self.add_entity(self.management)
 
