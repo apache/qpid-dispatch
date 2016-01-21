@@ -40,10 +40,18 @@ typedef struct qdr_delivery_t     qdr_delivery_t;
 typedef struct qdr_terminus_t     qdr_terminus_t;
 typedef struct qdr_error_t        qdr_error_t;
 
+typedef enum {
+    QD_ROUTER_MODE_STANDALONE,  ///< Standalone router.  No routing protocol participation
+    QD_ROUTER_MODE_INTERIOR,    ///< Interior router.  Full participation in routing protocol.
+    QD_ROUTER_MODE_EDGE,        ///< Edge router.  No transit-router capability.
+    QD_ROUTER_MODE_ENDPOINT     ///< No routing except for internal modules (agent, etc.).
+} qd_router_mode_t;
+ENUM_DECLARE(qd_router_mode);
+
 /**
  * Allocate and start an instance of the router core module.
  */
-qdr_core_t *qdr_core(qd_dispatch_t *qd, const char *area, const char *id);
+qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id);
 
 /**
  * Stop and deallocate an instance of the router core.

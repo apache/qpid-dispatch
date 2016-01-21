@@ -173,21 +173,23 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
     DEQ_INIT(core->routers);
     core->addr_hash = qd_hash(10, 32, 0);
 
-    core->hello_addr      = qdr_add_local_address_CT(core, 'L', "qdhello",     QD_SEMANTICS_MULTICAST_FLOOD);
-    core->router_addr_L   = qdr_add_local_address_CT(core, 'L', "qdrouter",    QD_SEMANTICS_MULTICAST_FLOOD);
-    core->routerma_addr_L = qdr_add_local_address_CT(core, 'L', "qdrouter.ma", QD_SEMANTICS_MULTICAST_ONCE);
-    core->router_addr_T   = qdr_add_local_address_CT(core, 'T', "qdrouter",    QD_SEMANTICS_MULTICAST_FLOOD);
-    core->routerma_addr_T = qdr_add_local_address_CT(core, 'T', "qdrouter.ma", QD_SEMANTICS_MULTICAST_ONCE);
+    if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
+        core->hello_addr      = qdr_add_local_address_CT(core, 'L', "qdhello",     QD_SEMANTICS_MULTICAST_FLOOD);
+        core->router_addr_L   = qdr_add_local_address_CT(core, 'L', "qdrouter",    QD_SEMANTICS_MULTICAST_FLOOD);
+        core->routerma_addr_L = qdr_add_local_address_CT(core, 'L', "qdrouter.ma", QD_SEMANTICS_MULTICAST_ONCE);
+        core->router_addr_T   = qdr_add_local_address_CT(core, 'T', "qdrouter",    QD_SEMANTICS_MULTICAST_FLOOD);
+        core->routerma_addr_T = qdr_add_local_address_CT(core, 'T', "qdrouter.ma", QD_SEMANTICS_MULTICAST_ONCE);
 
-    core->neighbor_free_mask = qd_bitmask(1);
+        core->neighbor_free_mask = qd_bitmask(1);
 
-    core->routers_by_mask_bit       = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());
-    core->control_links_by_mask_bit = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
-    core->data_links_by_mask_bit    = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
-    for (int idx = 0; idx < qd_bitmask_width(); idx++) {
-        core->routers_by_mask_bit[idx]   = 0;
-        core->control_links_by_mask_bit[idx] = 0;
-        core->data_links_by_mask_bit[idx] = 0;
+        core->routers_by_mask_bit       = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());
+        core->control_links_by_mask_bit = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
+        core->data_links_by_mask_bit    = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
+        for (int idx = 0; idx < qd_bitmask_width(); idx++) {
+            core->routers_by_mask_bit[idx]   = 0;
+            core->control_links_by_mask_bit[idx] = 0;
+            core->data_links_by_mask_bit[idx] = 0;
+        }
     }
 }
 

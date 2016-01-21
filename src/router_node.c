@@ -714,7 +714,7 @@ static void qd_router_delivery_update(void *context, qdr_delivery_t *dlv, uint64
 void qd_router_setup_late(qd_dispatch_t *qd)
 {
     qd->router->tracemask   = qd_tracemask();
-    qd->router->router_core = qdr_core(qd, qd->router->router_area, qd->router->router_id);
+    qd->router->router_core = qdr_core(qd, qd->router->router_mode, qd->router->router_area, qd->router->router_id);
 
     qdr_connection_handlers(qd->router->router_core, (void*) qd->router,
                             qd_router_connection_activate,

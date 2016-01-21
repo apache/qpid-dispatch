@@ -426,8 +426,9 @@ struct qdr_core_t {
     qdr_link_deliver_t         deliver_handler;
     qdr_delivery_update_t      delivery_update_handler;
 
-    const char *router_area;
-    const char *router_id;
+    qd_router_mode_t  router_mode;
+    const char       *router_area;
+    const char       *router_id;
 
     qdr_address_list_t    addrs;
     qd_hash_t            *addr_hash;

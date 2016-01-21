@@ -44,14 +44,6 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity);
 
 void qd_router_configure_free(qd_router_t *router);
 
-typedef enum {
-    QD_ROUTER_MODE_STANDALONE,  ///< Standalone router.  No routing protocol participation
-    QD_ROUTER_MODE_INTERIOR,    ///< Interior router.  Full participation in routing protocol.
-    QD_ROUTER_MODE_EDGE,        ///< Edge router.  No transit-router capability.
-    QD_ROUTER_MODE_ENDPOINT     ///< No routing except for internal modules (agent, etc.).
-} qd_router_mode_t;
-ENUM_DECLARE(qd_router_mode);
-
 typedef struct qd_routed_event_t {
     DEQ_LINKS(struct qd_routed_event_t);
     qd_router_delivery_t *delivery;
