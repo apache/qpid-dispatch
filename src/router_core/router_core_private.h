@@ -91,6 +91,15 @@ struct qdr_action_t {
         } connection;
 
         //
+        // Arguments for delivery state updates
+        //
+        struct {
+            qdr_delivery_t *delivery;
+            uint64_t        disposition;
+            bool            settled;
+        } delivery;
+
+        //
         // Arguments for in-process messaging
         //
         struct {
@@ -181,6 +190,17 @@ struct qdr_delivery_t {
 ALLOC_DECLARE(qdr_delivery_t);
 DEQ_DECLARE(qdr_delivery_t, qdr_delivery_list_t);
 
+typedef struct qdr_delivery_ref_t {
+    DEQ_LINKS(struct qdr_delivery_ref_t);
+    qdr_delivery_t *dlv;
+} qdr_delivery_ref_t;
+
+ALLOC_DECLARE(qdr_delivery_ref_t);
+DEQ_DECLARE(qdr_delivery_ref_t, qdr_delivery_ref_list_t);
+
+void qdr_add_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_t *dlv);
+void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref);
+
 #define QDR_LINK_LIST_CLASS_ADDRESS  0
 #define QDR_LINK_LIST_CLASS_DELIVERY 1
 #define QDR_LINK_LIST_CLASS_FLOW     2
@@ -188,22 +208,23 @@ DEQ_DECLARE(qdr_delivery_t, qdr_delivery_list_t);
 
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
-    qdr_core_t          *core;
-    void                *user_context;
-    qdr_connection_t    *conn;            ///< [ref] Connection that owns this link
-    qd_link_type_t       link_type;
-    qd_direction_t       link_direction;
-    char                *name;
-    qdr_address_t       *owning_addr;     ///< [ref] Address record that owns this link
-    qdr_link_t          *connected_link;  ///< [ref] If this is a link-route, reference the connected link
-    qdr_link_ref_t      *ref[QDR_LINK_LIST_CLASSES];  ///< Pointers to containing reference objects
-    qdr_delivery_list_t  undelivered;     ///< Deliveries to be forwarded or sent
-    qdr_delivery_list_t  unsettled;       ///< Unsettled deliveries
-    bool                 strip_annotations_in;
-    bool                 strip_annotations_out;
-    int                  capacity;
-    int                  incremental_credit_CT;
-    int                  incremental_credit;
+    qdr_core_t              *core;
+    void                    *user_context;
+    qdr_connection_t        *conn;               ///< [ref] Connection that owns this link
+    qd_link_type_t           link_type;
+    qd_direction_t           link_direction;
+    char                    *name;
+    qdr_address_t           *owning_addr;        ///< [ref] Address record that owns this link
+    qdr_link_t              *connected_link;     ///< [ref] If this is a link-route, reference the connected link
+    qdr_link_ref_t          *ref[QDR_LINK_LIST_CLASSES];  ///< Pointers to containing reference objects
+    qdr_delivery_list_t      undelivered;        ///< Deliveries to be forwarded or sent
+    qdr_delivery_list_t      unsettled;          ///< Unsettled deliveries
+    qdr_delivery_ref_list_t  updated_deliveries; ///< References to deliveries (in the unsettled list) with updates.
+    bool                     strip_annotations_in;
+    bool                     strip_annotations_out;
+    int                      capacity;
+    int                      incremental_credit_CT;
+    int                      incremental_credit;
 };
 
 ALLOC_DECLARE(qdr_link_t);
@@ -403,6 +424,7 @@ struct qdr_core_t {
     qdr_link_drained_t         drained_handler;
     qdr_link_push_t            push_handler;
     qdr_link_deliver_t         deliver_handler;
+    qdr_delivery_update_t      delivery_update_handler;
 
     const char *router_area;
     const char *router_id;
@@ -440,6 +462,7 @@ void  qdr_forwarder_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit);
+void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
 void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash);

@@ -242,6 +242,15 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
             qdr_forward_on_message_CT(core, sub, in_delivery ? in_delivery->link : 0, msg);
 
             //
+            // If the incoming delivery is not settled, it should be accepted and settled here.
+            //
+            if (in_delivery) {
+                in_delivery->disposition = PN_ACCEPTED;
+                in_delivery->settled     = true;
+                qdr_delivery_push_CT(core, in_delivery);
+            }
+
+            //
             // Rotate this subscription to the end of the list to get round-robin distribution.
             //
             if (DEQ_SIZE(addr->subscriptions) > 1) {

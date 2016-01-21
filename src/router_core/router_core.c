@@ -24,6 +24,7 @@ ALLOC_DEFINE(qdr_query_t);
 ALLOC_DEFINE(qdr_address_t);
 ALLOC_DEFINE(qdr_node_t);
 ALLOC_DEFINE(qdr_delivery_t);
+ALLOC_DEFINE(qdr_delivery_ref_t);
 ALLOC_DEFINE(qdr_link_t);
 ALLOC_DEFINE(qdr_router_ref_t);
 ALLOC_DEFINE(qdr_link_ref_t);
@@ -269,6 +270,22 @@ void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode)
         }
         ref = DEQ_NEXT(ref);
     }
+}
+
+
+void qdr_add_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_t *dlv)
+{
+    qdr_delivery_ref_t *ref = new_qdr_delivery_ref_t();
+    DEQ_ITEM_INIT(ref);
+    ref->dlv = dlv;
+    DEQ_INSERT_TAIL(*list, ref);
+}
+
+
+void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref)
+{
+    DEQ_REMOVE(*list, ref);
+    free_qdr_delivery_ref_t(ref);
 }
 
 

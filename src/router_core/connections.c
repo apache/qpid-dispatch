@@ -294,18 +294,20 @@ void qdr_connection_handlers(qdr_core_t                *core,
                              qdr_link_offer_t           offer,
                              qdr_link_drained_t         drained,
                              qdr_link_push_t            push,
-                             qdr_link_deliver_t         deliver)
+                             qdr_link_deliver_t         deliver,
+                             qdr_delivery_update_t      delivery_update)
 {
-    core->user_context          = context;
-    core->activate_handler      = activate;
-    core->first_attach_handler  = first_attach;
-    core->second_attach_handler = second_attach;
-    core->detach_handler        = detach;
-    core->flow_handler          = flow;
-    core->offer_handler         = offer;
-    core->drained_handler       = drained;
-    core->push_handler          = push;
-    core->deliver_handler       = deliver;
+    core->user_context            = context;
+    core->activate_handler        = activate;
+    core->first_attach_handler    = first_attach;
+    core->second_attach_handler   = second_attach;
+    core->detach_handler          = detach;
+    core->flow_handler            = flow;
+    core->offer_handler           = offer;
+    core->drained_handler         = drained;
+    core->push_handler            = push;
+    core->deliver_handler         = deliver;
+    core->delivery_update_handler = delivery_update;
 }
 
 

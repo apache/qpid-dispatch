@@ -338,13 +338,26 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
  */
 static void router_disposition_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 {
-    //qd_router_t    *router   = (qd_router_t*) context;
+    qd_router_t    *router   = (qd_router_t*) context;
     qdr_delivery_t *delivery = (qdr_delivery_t*) pn_delivery_get_context(pnd);
 
     if (!delivery)
         return;
 
-    // TODO - hook into the core
+    //
+    // Update the disposition of the delivery
+    //
+    qdr_delivery_update_disposition(router->router_core, delivery, pn_delivery_remote_state(pnd));
+
+    //
+    // If the delivery is settled, remove the linkage between pn-delivery and qdr-delivery
+    // and settle the qdr-delivery.
+    //
+    if (pn_delivery_settled(pnd)) {
+        pn_delivery_set_context(pnd, 0);
+        qdr_delivery_set_context(delivery, 0);
+        qdr_delivery_settle(router->router_core, delivery);
+    }
 }
 
 
@@ -655,7 +668,7 @@ static void qd_router_link_push(void *context, qdr_link_t *link)
 }
 
 
-static void qd_router_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *dlv)
+static void qd_router_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *dlv, bool settled)
 {
     qd_link_t  *qlink = (qd_link_t*) qdr_link_get_context(link);
     pn_link_t  *plink = qd_link_pn(qlink);
@@ -671,9 +684,30 @@ static void qd_router_link_deliver(void *context, qdr_link_t *link, qdr_delivery
     qdr_delivery_set_context(dlv, pdlv);
 
     qd_message_send(qdr_delivery_message(dlv), qlink, qdr_link_strip_annotations_out(link));
-    if (qdr_delivery_is_settled(dlv))
+    if (settled)
         pn_delivery_settle(pdlv);
     pn_link_advance(plink);
+}
+
+
+static void qd_router_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled)
+{
+    pn_delivery_t *pnd = (pn_delivery_t*) qdr_delivery_get_context(dlv);
+
+    //
+    // If the disposition has changed, update the proton delivery.
+    //
+    if (disp != pn_delivery_remote_state(pnd))
+        pn_delivery_update(pnd, disp);
+
+    //
+    // If the delivery is settled, remove the linkage and settle the proton delivery.
+    //
+    if (settled) {
+        qdr_delivery_set_context(dlv, 0);
+        pn_delivery_set_context(pnd, 0);
+        pn_delivery_settle(pnd);
+    }
 }
 
 
@@ -691,7 +725,8 @@ void qd_router_setup_late(qd_dispatch_t *qd)
                             qd_router_link_offer,
                             qd_router_link_drained,
                             qd_router_link_push,
-                            qd_router_link_deliver);
+                            qd_router_link_deliver,
+                            qd_router_delivery_update);
 
     qd_router_python_setup(qd->router);
     qd_timer_schedule(qd->router->timer, 1000);

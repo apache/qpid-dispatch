@@ -146,8 +146,8 @@ def configure_dispatch(dispatch, lib_handle, filename):
     configure(config.by_type('container')[0])
     configure(config.by_type('router')[0])
     qd.qd_dispatch_prepare(dispatch)
-    #agent.activate("$management_internal")
     qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.
+    agent.activate("$_management_internal")
 
     # Remaining configuration
     for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern":

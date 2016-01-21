@@ -73,7 +73,7 @@ from cProfile import Profile
 from cStringIO import StringIO
 from ctypes import c_void_p, py_object, c_long
 from subprocess import Popen
-from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_DEBUG, LOG_ERROR
+from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_DEBUG, LOG_ERROR, SEMANTICS_ANYCAST_CLOSEST
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch.management.entity import camelcase
@@ -603,8 +603,7 @@ class Agent(object):
         """Register the management address to receive management requests"""
         self.entities.refresh_from_c()
         self.log(LOG_INFO, "Activating management agent on %s" % address)
-        self.io = [IoAdapter(self.receive, address),
-                   IoAdapter(self.receive, address, True)] # Global
+        self.io = IoAdapter(self.receive, address, 'L', '0', SEMANTICS_ANYCAST_CLOSEST)
 
     def entity_class(self, entity_type):
         """Return the class that implements entity_type"""
@@ -636,7 +635,7 @@ class Agent(object):
             body=body)
         self.log(LOG_DEBUG, "Agent response:\n  %s\n  Responding to: \n  %s"%(response, request))
         try:
-            self.io[0].send(response)
+            self.io.send(response)
         except:
             self.log(LOG_ERROR, "Can't respond to %s: %s"%(request, format_exc()))
 

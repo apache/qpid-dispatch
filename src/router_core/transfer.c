@@ -24,7 +24,7 @@
 
 static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-
+static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 //==================================================================================
 // Internal Functions
@@ -124,7 +124,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
         sys_mutex_unlock(conn->work_lock);
 
         if (dlv)
-            core->deliver_handler(core->user_context, link, dlv);
+            core->deliver_handler(core->user_context, link, dlv, dlv->settled);
     }
 
     if (drained)
@@ -133,8 +133,19 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
         core->offer_handler(core->user_context, link, offer);
 
     //
-    // TODO - handle disposition/settlement updates
+    // Handle disposition/settlement updates
     //
+    qdr_delivery_ref_list_t updated_deliveries;
+    sys_mutex_lock(conn->work_lock);
+    DEQ_MOVE(link->updated_deliveries, updated_deliveries);
+    sys_mutex_unlock(conn->work_lock);
+
+    qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
+    while (ref) {
+        core->delivery_update_handler(core->user_context, ref->dlv, ref->dlv->disposition, ref->dlv->settled);
+        qdr_del_delivery_ref(&updated_deliveries, ref);
+        ref = DEQ_HEAD(updated_deliveries);
+    }
 }
 
 
@@ -162,6 +173,27 @@ void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr, bool ex
 }
 
 
+void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition)
+{
+    qdr_action_t *action = qdr_action(qdr_update_delivery_CT, "update_delivery");
+    action->args.delivery.delivery    = delivery;
+    action->args.delivery.disposition = disposition;
+    action->args.delivery.settled     = false;
+
+    qdr_action_enqueue(core, action);
+}
+
+
+void qdr_delivery_settle(qdr_core_t *core, qdr_delivery_t *delivery)
+{
+    qdr_action_t *action = qdr_action(qdr_update_delivery_CT, "update_delivery");
+    action->args.delivery.delivery = delivery;
+    action->args.delivery.settled  = true;
+
+    qdr_action_enqueue(core, action);
+}
+
+
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context)
 {
     delivery->context = context;
@@ -171,18 +203,6 @@ void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context)
 void *qdr_delivery_get_context(qdr_delivery_t *delivery)
 {
     return delivery->context;
-}
-
-
-uint64_t qdr_delivery_disposition(const qdr_delivery_t *delivery)
-{
-    return delivery->disposition;
-}
-
-
-bool qdr_delivery_is_settled(const qdr_delivery_t *delivery)
-{
-    return delivery->settled;
 }
 
 
@@ -270,7 +290,11 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             //
         }
     } else if (count == 1) {
-        if (qdr_delivery_is_settled(dlv))
+        if (dlv->settled)
+            //
+            // The delivery was pre-settled.  Issue replacement credit now that it's
+            // been forwarded.
+            //
             qdr_link_issue_credit_CT(core, link, 1);
         else
             DEQ_INSERT_TAIL(link->unsettled, dlv);
@@ -305,4 +329,43 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
     qdr_field_free(addr_field);
     qd_message_free(msg);
 }
+
+
+static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    qdr_delivery_t *dlv     = action->args.delivery.delivery;
+    uint64_t        disp    = action->args.delivery.disposition;
+    //    bool            settled = action->args.delivery.settled;
+
+    if (disp != dlv->disposition) {
+        //
+        // Disposition has changed, propagate the change to the peer delivery.
+        //
+        dlv->disposition = disp;
+    }
+}
+
+
+void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
+{
+    if (!dlv || !dlv->link)
+        return;
+
+    qdr_link_t *link = dlv->link;
+
+    sys_mutex_lock(link->conn->work_lock);
+    qdr_add_delivery_ref(&link->updated_deliveries, dlv);
+
+    //
+    // Put this link on the connection's list of links with delivery activity.
+    //
+    qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+    sys_mutex_unlock(link->conn->work_lock);
+
+    //
+    // Activate the connection
+    //
+    qdr_connection_activate_CT(core, link->conn);
+}
+
 

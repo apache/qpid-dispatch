@@ -498,7 +498,8 @@ typedef void (*qdr_link_flow_t)          (void *context, qdr_link_t *link, int c
 typedef void (*qdr_link_offer_t)         (void *context, qdr_link_t *link, int delivery_count);
 typedef void (*qdr_link_drained_t)       (void *context, qdr_link_t *link);
 typedef void (*qdr_link_push_t)          (void *context, qdr_link_t *link);
-typedef void (*qdr_link_deliver_t)       (void *context, qdr_link_t *link, qdr_delivery_t *delivery);
+typedef void (*qdr_link_deliver_t)       (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
+typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
 
 void qdr_connection_handlers(qdr_core_t                *core,
                              void                      *context,
@@ -510,21 +511,22 @@ void qdr_connection_handlers(qdr_core_t                *core,
                              qdr_link_offer_t           offer,
                              qdr_link_drained_t         drained,
                              qdr_link_push_t            push,
-                             qdr_link_deliver_t         deliver);
+                             qdr_link_deliver_t         deliver,
+                             qdr_delivery_update_t      delivery_update);
 
 /**
  ******************************************************************************
  * Delivery functions
  ******************************************************************************
  */
+void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disp);
+void qdr_delivery_settle(qdr_core_t *core, qdr_delivery_t *delivery);
+
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
 void *qdr_delivery_get_context(qdr_delivery_t *delivery);
-uint64_t qdr_delivery_disposition(const qdr_delivery_t *delivery);
-bool qdr_delivery_is_settled(const qdr_delivery_t *delivery);
 void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *length);
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
 
-void qdr_delivery_update_disposition(qdr_delivery_t *delivery);
 void qdr_delivery_update_flow(qdr_delivery_t *delivery);
 void qdr_delivery_process(qdr_delivery_t *delivery);
 

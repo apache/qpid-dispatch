@@ -48,7 +48,7 @@ const char * const correlation_id = "correlation-id";
 const char * const results = "results";
 const char * const status_code = "statusCode";
 
-const char * MANAGEMENT_INTERNAL = "$management_internal";
+const char * MANAGEMENT_INTERNAL = "_local/$_management_internal";
 
 //TODO - Move these to amqp.h
 const unsigned char *MANAGEMENT_QUERY = (unsigned char*) "QUERY";
