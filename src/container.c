@@ -561,8 +561,7 @@ static void qd_connection_set_user(qd_connection_t *conn)
     if (sasl) {
         const qd_server_config_t *config =
                     conn->connector ? conn->connector->config : conn->listener->config;
-        // We want to set the user name only if it is not already set and the selected sasl mechanism is EXTERNAL
-        if (config->ssl_enabled && config->ssl_uid_format && conn->user_id == 0)  //&& (strcmp(mech, MECH_EXTERNAL) == 0 || strcmp(mech, MECH_PLAIN) == 0 )) {
+        if (config->ssl_enabled && config->ssl_uid_format && conn->user_id == 0)
             conn->user_id = qd_connection_get_user_from_ssl_client_cert(config, conn, tport);
 
         if(conn->user_id == 0)
