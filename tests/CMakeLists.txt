@@ -60,6 +60,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_one_router.py DESTINATION ${C
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_qdmanage.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_qdstat.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_two_routers.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_user_id.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_protocol_family.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/system_tests_link_routes.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/run_system_tests.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
@@ -86,6 +87,7 @@ add_test(system_tests_one_router      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR
 add_test(system_tests_qdmanage        ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdmanage.py -v)
 add_test(system_tests_qdstat          ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_qdstat.py -v)
 add_test(system_tests_two_routers     ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_two_routers.py -v)
+add_test(system_tests_user_id         ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_user_id.py -v)
 add_test(system_tests_protocol_family ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_protocol_family.py -v)
 add_test(system_tests_link_routes     ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_link_routes.py -v)
 add_test(system_tests_sasl_plain      ${TEST_WRAP} -s ${CMAKE_CURRENT_BINARY_DIR}/system_tests_sasl_plain.py -v)
@@ -104,6 +106,7 @@ set(SYSTEM_TEST_FILES
   ${CMAKE_CURRENT_BINARY_DIR}/system_test.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_one_router.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_two_routers.py
+  ${CMAKE_CURRENT_BINARY_DIR}/system_tests_user_id.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_protocol_family.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_broker.py
   ${CMAKE_CURRENT_BINARY_DIR}/system_tests_management.py

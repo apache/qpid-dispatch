@@ -47,6 +47,7 @@ ALLOC_DEFINE(qd_user_fd_t);
 
 const char *QD_CONNECTION_TYPE = "connection";
 
+
 static qd_thread_t *thread(qd_server_t *qd_server, int id)
 {
     qd_thread_t *thread = NEW(qd_thread_t);
@@ -87,6 +88,8 @@ static qd_error_t connection_entity_update_host(qd_entity_t* entity, qd_connecti
         return qd_entity_set_string(entity, "host", qdpn_connector_name(conn->pn_cxtr));
 }
 
+
+
 qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
 {
     qd_connection_t *conn = (qd_connection_t*)impl;
@@ -104,7 +107,7 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
     }
     if (tport) {
         sasl = pn_sasl(tport);
-        user = pn_transport_get_user(tport);
+        user = conn->user_id;
     }
     if (sasl)
         mech = pn_sasl_get_mech(sasl);
@@ -263,6 +266,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->user_context  = 0;
         ctx->link_context  = 0;
         ctx->ufd           = 0;
+        ctx->user_id       = 0;
         ctx->connection_id = qd_server->next_connection_id++; // Increment the connection id so the next connection can use it
         DEQ_INIT(ctx->deferred_calls);
         ctx->deferred_call_lock = sys_mutex();
@@ -809,6 +813,7 @@ static void cxtr_try_open(void *context)
     ctx->connector    = ct;
     ctx->context      = ct->context;
     ctx->user_context = 0;
+    ctx->user_id      = 0;
     ctx->link_context = 0;
     ctx->ufd          = 0;
 

@@ -175,6 +175,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             qd_entity_opt_string(entity, "certDb", 0); CHECK();
         config->ssl_trusted_certificates =
             qd_entity_opt_string(entity, "trustedCerts", 0); CHECK();
+        config->ssl_uid_format =
+            qd_entity_opt_string(entity, "uidFormat", 0); CHECK();
     }
 
     free(stripAnnotations);
