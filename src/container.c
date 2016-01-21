@@ -34,9 +34,6 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/log.h>
 
-const char *MECH_EXTERNAL = "EXTERNAL";
-const char *MECH_PLAIN = "PLAIN";
-
 //Allowed uidFormat fields.
 const char CERT_COUNTRY_CODE = 'c';
 const char CERT_STATE = 's';
