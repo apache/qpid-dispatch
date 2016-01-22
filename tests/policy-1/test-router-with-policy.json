@@ -1,295 +1,178 @@
 [
-  [
-    "container",
-    {
-      "containerName": "QdstatSslTest",
-      "saslConfigName": "tests-mech-EXTERNAL",
-      "saslConfigPath": "/home/chug/Research/qdr/standaloneSsl/sasl_configs",
-      "debugDump": "qddebug.txt"
-    }
-  ],
-  [
-    "sslProfile",
-    {
-      "certFile": "/home/chug/Research/qdr/standaloneSsl/ssl_certs/server-certificate.pem",
-      "keyFile": "/home/chug/Research/qdr/standaloneSsl/ssl_certs/server-private-key.pem",
-      "password": "server-password",
-      "name": "server-ssl",
-      "certDb": "/home/chug/Research/qdr/standaloneSsl/ssl_certs/ca-certificate.pem"
-    }
-  ],
-  [
-    "listener",
-    {
-      "saslMechanisms": "ANONYMOUS",
-      "authenticatePeer": "no",
-      "idleTimeoutSeconds": "120",
-      "port": 21000,
-      "addr": "0.0.0.0"
-    }
-  ],
-  [
-    "listener",
-    {
-      "addr": "0.0.0.0",
-      "requireSsl": "yes",
-      "idleTimeoutSeconds": "120",
-      "saslMechanisms": "ANONYMOUS",
-      "sslProfile": "server-ssl",
-      "authenticatePeer": "no",
-      "port": 21001
-    }
-  ],
-  [
-    "listener",
-    {
-      "addr": "0.0.0.0",
-      "requireSsl": "no",
-      "idleTimeoutSeconds": "120",
-      "saslMechanisms": "ANONYMOUS",
-      "sslProfile": "server-ssl",
-      "authenticatePeer": "no",
-      "port": 21002
-    }
-  ],
-  [
-    "listener",
-    {
-      "addr": "0.0.0.0",
-      "requireSsl": "yes",
-      "idleTimeoutSeconds": "120",
-      "saslMechanisms": "EXTERNAL",
-      "sslProfile": "server-ssl",
-      "authenticatePeer": "yes",
-      "port": 21003
-    }
-  ],
-  [
-    "log",
-    {
-      "source": "true",
-      "enable": "info+",
-      "module": "DEFAULT"
-    }
-  ],
-  [
-    "policy",
-    {
-      "maximumConnections": 2
-    }
-  ],
-  [
-    "policyAccessRuleset",
-    {
+    ["container", {
+	"containerName": "QdstatSslTest",
+	"saslConfigName": "tests-mech-EXTERNAL",
+	"saslConfigPath": "/home/chug/Research/qdr/standaloneSsl/sasl_configs",
+	"debugDump": "qddebug.txt"
+    }],
+    ["sslProfile", {
+	"certFile": "/home/chug/Research/qdr/standaloneSsl/ssl_certs/server-certificate.pem",
+	"keyFile": "/home/chug/Research/qdr/standaloneSsl/ssl_certs/server-private-key.pem",
+	"password": "server-password",
+	"name": "server-ssl",
+	"certDb": "/home/chug/Research/qdr/standaloneSsl/ssl_certs/ca-certificate.pem"
+    }],
+    ["listener", {
+	"saslMechanisms": "ANONYMOUS",
+	"authenticatePeer": "no",
+	"idleTimeoutSeconds": "120",
+	"port": 21000,
+	"addr": "0.0.0.0"
+    }],
+    ["listener", {
+	"addr": "0.0.0.0",
+	"requireSsl": "yes",
+	"idleTimeoutSeconds": "120",
+	"saslMechanisms": "ANONYMOUS",
+	"sslProfile": "server-ssl",
+	"authenticatePeer": "no",
+	"port": 21001
+    }],
+    ["listener", {
+	"addr": "0.0.0.0",
+	"requireSsl": "no",
+	"idleTimeoutSeconds": "120",
+	"saslMechanisms": "ANONYMOUS",
+	"sslProfile": "server-ssl",
+	"authenticatePeer": "no",
+	"port": 21002
+    }],
+    ["listener", {
+	"addr": "0.0.0.0",
+	"requireSsl": "yes",
+	"idleTimeoutSeconds": "120",
+	"saslMechanisms": "EXTERNAL",
+	"sslProfile": "server-ssl",
+	"authenticatePeer": "yes",
+	"port": 21003
+    }],
+    ["log", {
+	"source": "true",
+	"enable": "info+",
+	"module": "DEFAULT"
+    }],
+    ["policy", {
+	"maximumConnections": 2
+    }],
+  ["policyAccessRuleset", {
       "applicationName": "photoserver",
       "maxConnections": 50,
       "maxConnPerUser": 5,
       "maxConnPerHost": 20,
       "userGroups": {
-        "anonymous": [
-          "anonymous"
-        ],
-        "users": [
-          "u1",
-          "u2"
-        ],
-        "paidsubscribers": [
-          "p1",
-          "p2"
-        ],
-        "test": [
-          "test",
-          "ynot"
-        ],
-        "admin": [
-          "alice",
-          "bob",
-          "ellen"
-        ],
-        "superuser": [
-          "ellen"
-        ]
+        "anonymous":       "anonymous",
+        "users":           "u1, u2",
+        "paidsubscribers": "p1, p2",
+        "test":            "zeke, ynot",
+        "admin":           "alice, bob, ellen",
+        "superuser":       "ellen"
       },
       "connectionGroups": {
-        "Ten18": [
-          "10.18.0.0,10.18.255.255"
-        ],
-        "EllensWS": [
-          "72.135.2.9"
-        ],
-        "TheLabs": [
-          "10.48.0.0,10.48.255.255",
-          "192.168.100.0,192.168.100.255"
-        ],
-        "localhost": [
-          "127.0.0.1",
-          "::1"
-        ],
-        "TheWorld": [
-          "*"
-        ]
+        "Ten18":     "10.18.0.0-10.18.255.255",
+        "EllensWS":  "72.135.2.9",
+        "TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255",
+        "localhost": "127.0.0.1, ::1",
+        "TheWorld":  "*"
       },
       "connectionIngressPolicies": {
-        "anonymous": [
-          "TheWorld"
-        ],
-        "users": [
-          "TheWorld"
-        ],
-        "paidsubscribers": [
-          "TheWorld"
-        ],
-        "test": [
-          "TheLabs"
-        ],
-        "admin": [
-          "Ten18",
-          "TheLabs",
-          "localhost"
-        ],
-        "superuser": [
-          "EllensSW",
-          "localhost"
-        ]
+        "anonymous":       "TheWorld",
+        "users":           "TheWorld",
+        "paidsubscribers": "TheWorld",
+        "test":            "TheLabs",
+        "admin":           "Ten18, TheLabs, localhost",
+        "superuser":       "EllensSW, localhost"
       },
       "connectionAllowDefault": true
     }
   ],
-  [
-    "policyAppSettings",
-    {
+  ["policyAppSettings", {
       "applicationName": "photoserver",
-      "userGroupName": "anonymous",
-      "maxFrameSize": 111111,
-      "maxMessageSize": 111111,
+      "userGroupName":   "anonymous",
+      "maxFrameSize":     111111,
+      "maxMessageSize":   111111,
       "maxSessionWindow": 111111,
-      "maxSessions": 1,
-      "maxSenders": 11,
-      "maxReceivers": 11,
-      "allowDynamicSrc": false,
+      "maxSessions":           1,
+      "maxSenders":           11,
+      "maxReceivers":         11,
+      "allowDynamicSrc":      false,
       "allowAnonymousSender": false,
-      "sources": [
-        "public"
-      ],
-      "targets": []
+      "sources": "public",
+      "targets": ""
     }
   ],
-  [
-    "policyAppSettings",
-    {
+  ["policyAppSettings", {
       "applicationName": "photoserver",
-      "userGroupName": "users",
-      "maxFrameSize": 222222,
-      "maxMessageSize": 222222,
+      "userGroupName":   "users",
+      "maxFrameSize":     222222,
+      "maxMessageSize":   222222,
       "maxSessionWindow": 222222,
-      "maxSessions": 2,
-      "maxSenders": 22,
-      "maxReceivers": 22,
-      "allowDynamicSrc": false,
+      "maxSessions":           2,
+      "maxSenders":           22,
+      "maxReceivers":         22,
+      "allowDynamicSrc":      false,
       "allowAnonymousSender": false,
-      "sources": [
-        "public",
-        "private"
-      ],
-      "targets": [
-        "public"
-      ]
+      "sources": "public, private",
+      "targets": "public"
     }
   ],
-  [
-    "policyAppSettings",
-    {
+  ["policyAppSettings", {
       "applicationName": "photoserver",
-      "userGroupName": "paidsubscribers",
-      "maxFrameSize": 333333,
-      "maxMessageSize": 333333,
+      "userGroupName":   "paidsubscribers",
+      "maxFrameSize":     333333,
+      "maxMessageSize":   333333,
       "maxSessionWindow": 333333,
-      "maxSessions": 3,
-      "maxSenders": 33,
-      "maxReceivers": 33,
-      "allowDynamicSrc": true,
+      "maxSessions":           3,
+      "maxSenders":           33,
+      "maxReceivers":         33,
+      "allowDynamicSrc":      true,
       "allowAnonymousSender": false,
-      "sources": [
-        "public",
-        "private"
-      ],
-      "targets": [
-        "public",
-        "private"
-      ]
+      "sources": "public, private",
+      "targets": "public, private"
     }
   ],
-  [
-    "policyAppSettings",
-    {
+  ["policyAppSettings", {
       "applicationName": "photoserver",
-      "userGroupName": "test",
-      "maxFrameSize": 444444,
-      "maxMessageSize": 444444,
+      "userGroupName":   "test",
+      "maxFrameSize":     444444,
+      "maxMessageSize":   444444,
       "maxSessionWindow": 444444,
-      "maxSessions": 4,
-      "maxSenders": 44,
-      "maxReceivers": 44,
-      "allowDynamicSrc": true,
+      "maxSessions":           4,
+      "maxSenders":           44,
+      "maxReceivers":         44,
+      "allowDynamicSrc":      true,
       "allowAnonymousSender": true,
-      "sources": [
-        "private"
-      ],
-      "targets": [
-        "private"
-      ]
+      "sources": "private",
+      "targets": "private"
     }
   ],
-  [
-    "policyAppSettings",
-    {
+  ["policyAppSettings", {
       "applicationName": "photoserver",
-      "userGroupName": "admin",
-      "maxFrameSize": 555555,
-      "maxMessageSize": 555555,
+      "userGroupName":   "admin",
+      "maxFrameSize":     555555,
+      "maxMessageSize":   555555,
       "maxSessionWindow": 555555,
-      "maxSessions": 5,
-      "maxSenders": 55,
-      "maxReceivers": 55,
-      "allowDynamicSrc": true,
+      "maxSessions":           5,
+      "maxSenders":           55,
+      "maxReceivers":         55,
+      "allowDynamicSrc":      true,
       "allowAnonymousSender": true,
-      "sources": [
-        "public",
-        "private",
-        "management"
-      ],
-      "targets": [
-        "public",
-        "private",
-        "management"
-      ]
+      "sources": "public, private, management",
+      "targets": "public, private, management"
     }
   ],
-  [
-    "policyAppSettings",
-    {
+  ["policyAppSettings", {
       "applicationName": "photoserver",
-      "userGroupName": "superuser",
-      "maxFrameSize": 666666,
-      "maxMessageSize": 666666,
+      "userGroupName":   "superuser",
+      "maxFrameSize":     666666,
+      "maxMessageSize":   666666,
       "maxSessionWindow": 666666,
-      "maxSessions": 6,
-      "maxSenders": 66,
-      "maxReceivers": 66,
-      "allowDynamicSrc": false,
+      "maxSessions":           6,
+      "maxSenders":           66,
+      "maxReceivers":         66,
+      "allowDynamicSrc":      false,
       "allowAnonymousSender": false,
-      "sources": [
-        "public",
-        "private",
-        "management",
-        "root"
-      ],
-      "targets": [
-        "public",
-        "private",
-        "management",
-        "root"
-      ]
+      "sources": "public, private, management, root",
+      "targets": "public, private, management, root"
     }
   ]
 ]

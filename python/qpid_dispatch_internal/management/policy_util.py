@@ -119,7 +119,7 @@ class HostAddr():
     def has_ipv6(self):
         return socket.has_ipv6
 
-    def __init__(self, hostspec):
+    def __init__(self, hostspec, separator=","):
         """
         Parse host spec into binary structures to use for comparisons.
         Validate the hostspec to enforce usage rules.
@@ -131,7 +131,7 @@ class HostAddr():
         else:
             self.wildcard = False
 
-            hosts = [x.strip() for x in hostspec.split(",")]
+            hosts = [x.strip() for x in hostspec.split(separator)]
 
             # hosts must contain one or two host specs
             if len(hosts) not in [1, 2]:

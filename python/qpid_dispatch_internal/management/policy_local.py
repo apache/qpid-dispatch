@@ -36,27 +36,43 @@ Entity implementing the business logic of user connection/access policy.
 #
 #
 class PolicyKeys(object):
-    # Policy key words
-    KW_POLICY_VERSION           = "policyVersion"
-    KW_CONNECTION_ALLOW_DEFAULT = "connectionAllowDefault"
-    KW_CONNECTION_ORIGINS       = "connectionOrigins"
-    KW_CONNECTION_POLICY        = "connectionPolicy"
+    # Common key words
+    KW_IGNORED_NAME             = "name"
+    KW_IGNORED_IDENTITY         = "identity"
+    KW_IGNORED_TYPE             = "type"
+    KW_APPLICATION_NAME         = "applicationName"
+
+    # Policy ruleset key words
     KW_MAXCONN                  = "maxConnections"
     KW_MAXCONNPERHOST           = "maxConnPerHost"
     KW_MAXCONNPERUSER           = "maxConnPerUser"
-    KW_POLICIES                 = "policies"
-    KW_GROUPS                   = "groups"
+    KW_USER_GROUPS              = "userGroups"
+    KW_CONNECTION_GROUPS        = "connectionGroups"
+    KW_CONNECTION_POLICY        = "connectionIngressPolicies"
+    KW_CONNECTION_ALLOW_DEFAULT = "connectionAllowDefault"
 
-    SETTING_MAX_FRAME_SIZE         = "maxFrameSize"
-    SETTING_MAX_MESSAGE_SIZE       = "maxMessageSize"
-    SETTING_MAX_RECEIVERS          = "maxReceivers"
-    SETTING_MAX_SENDERS            = "maxSenders"
-    SETTING_MAX_SESSION_WINDOW     = "maxSessionWindow"
-    SETTING_MAX_SESSIONS           = "maxSessions"
-    SETTING_ALLOW_ANONYMOUS_SENDER = "allowAnonymousSender"
-    SETTING_ALLOW_DYNAMIC_SRC      = "allowDynamicSrc"
-    SETTING_SOURCES                = "sources"
-    SETTING_TARGETS                = "targets"
+    # Policy settings key words
+    KW_USER_GROUP_NAME          = "userGroupName"
+    KW_MAX_FRAME_SIZE           = "maxFrameSize"
+    KW_MAX_MESSAGE_SIZE         = "maxMessageSize"
+    KW_MAX_SESSION_WINDOW       = "maxSessionWindow"
+    KW_MAX_SESSIONS             = "maxSessions"
+    KW_MAX_SENDERS              = "maxSenders"
+    KW_MAX_RECEIVERS            = "maxReceivers"
+    KW_ALLOW_DYNAMIC_SRC        = "allowDynamicSrc"
+    KW_ALLOW_ANONYMOUS_SENDER   = "allowAnonymousSender"
+    KW_SOURCES                  = "sources"
+    KW_TARGETS                  = "targets"
+
+    # What settings does a user get when allowed to connect but
+    # not restricted by a user group?
+    KW_DEFAULT_SETTINGS         = "default"
+
+    # Config file separator character for two IP addresses in a range
+    KC_CONFIG_IP_SEP            = "-"
+
+    # Config file separator character for names in a list
+    KC_CONFIG_LIST_SEP          = ","
 #
 #
 class PolicyCompiler(object):
@@ -67,18 +83,37 @@ class PolicyCompiler(object):
     - Check that connectionOrigins resolve to IP hosts
     """
 
-    allowed_options = [
-        PolicyKeys.KW_POLICY_VERSION,
-        PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT,
-        PolicyKeys.KW_CONNECTION_ORIGINS,
-        PolicyKeys.KW_CONNECTION_POLICY,
+    allowed_ruleset_options = [
+        PolicyKeys.KW_IGNORED_NAME,
+        PolicyKeys.KW_IGNORED_IDENTITY,
+        PolicyKeys.KW_IGNORED_TYPE,
+        PolicyKeys.KW_APPLICATION_NAME,
         PolicyKeys.KW_MAXCONN,
         PolicyKeys.KW_MAXCONNPERHOST,
         PolicyKeys.KW_MAXCONNPERUSER,
-        PolicyKeys.KW_POLICIES,
-        PolicyKeys.KW_GROUPS
+        PolicyKeys.KW_USER_GROUPS,
+        PolicyKeys.KW_CONNECTION_GROUPS,
+        PolicyKeys.KW_CONNECTION_POLICY,
+        PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT
         ]
 
+    allowed_settings_options = [
+        PolicyKeys.KW_IGNORED_NAME,
+        PolicyKeys.KW_IGNORED_IDENTITY,
+        PolicyKeys.KW_IGNORED_TYPE,
+        PolicyKeys.KW_APPLICATION_NAME,
+        PolicyKeys.KW_USER_GROUP_NAME,
+        PolicyKeys.KW_MAX_FRAME_SIZE,
+        PolicyKeys.KW_MAX_MESSAGE_SIZE,
+        PolicyKeys.KW_MAX_SESSION_WINDOW,
+        PolicyKeys.KW_MAX_SESSIONS,
+        PolicyKeys.KW_MAX_SENDERS,
+        PolicyKeys.KW_MAX_RECEIVERS,
+        PolicyKeys.KW_ALLOW_DYNAMIC_SRC,
+        PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER,
+        PolicyKeys.KW_SOURCES,
+        PolicyKeys.KW_TARGETS
+        ]
 
     def __init__(self):
         """
@@ -111,9 +146,9 @@ class PolicyCompiler(object):
         return True
 
 
-    def compiler_origins(self, name, submap, warnings, errors):
+    def compile_connection_groups(self, name, submap, warnings, errors):
         """
-        Handle an origins submap.
+        Handle an connectionGroups submap.
         Each origin value is verified. On a successful run the submap
         is replaced parsed lists of HostAddr objects.
         @param[in] name application name
@@ -126,18 +161,15 @@ class PolicyCompiler(object):
                   warnings[] may contain info and errors[0] will hold the
                   description of why the origin was rejected.
         """
-        key = PolicyKeys.KW_CONNECTION_ORIGINS
+        key = PolicyKeys.KW_CONNECTION_GROUPS
         newmap = {}
         for coname in submap:
             try:
-                olist = submap[coname]
-                if not type(olist) is list:
-                    errors.append("Application '%s' option '%s' connectionOption '%s' must be type 'list' but is '%s'." %
-                                    (name, key, coname, type(olist)))
-                    return False
+                ostr = str(submap[coname])
+                olist = [x.strip(' ') for x in ostr.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
                 newmap[coname] = []
                 for co in olist:
-                    coha = HostAddr(co)
+                    coha = HostAddr(co, PolicyKeys.KC_CONFIG_IP_SEP)
                     newmap[coname].append(coha)
             except Exception, e:
                 errors.append("Application '%s' option '%s' connectionOption '%s' failed to translate: '%s'." %
@@ -147,61 +179,57 @@ class PolicyCompiler(object):
         return True
 
 
-    def compiler_policies(self, name, submap, warnings, errors):
+    def compile_app_settings(self, appname, usergroup, policy_in, policy_out, warnings, errors):
         """
-        Handle a policies submap
-        Validates policy only returning warnings and errors. submap is unchanged
+        Compile a schema from processed json format to local internal format.
         @param[in] name application name
-        @param[in] submap user input policy submap
+        @param[in] policy_in user config settings
+        @param[out] policy_out validated Internal format
         @param[out] warnings nonfatal irregularities observed
         @param[out] errors descriptions of failure
-        @return - policy is usable. If True then warnings[] may contain useful
+        @return - settings are usable. If True then warnings[] may contain useful
                   information about fields that are ignored. If False then
                   warnings[] may contain info and errors[0] will hold the
                   description of why the policy was rejected.
         """
-        key = PolicyKeys.KW_POLICIES
         cerror = []
-        for pname in submap:
-            for setting in submap[pname]:
-                sval = submap[pname][setting]
-                if setting in [PolicyKeys.SETTING_MAX_FRAME_SIZE,
-                               PolicyKeys.SETTING_MAX_MESSAGE_SIZE,
-                               PolicyKeys.SETTING_MAX_RECEIVERS,
-                               PolicyKeys.SETTING_MAX_SENDERS,
-                               PolicyKeys.SETTING_MAX_SESSION_WINDOW,
-                               PolicyKeys.SETTING_MAX_SESSIONS
-                               ]:
-                    if not self.validateNumber(sval, 0, 0, cerror):
-                        errors.append("Application '%s' option '%s' policy '%s' setting '%s' has error '%s'." %
-                                      (name, key, pname, setting, cerror[0]))
-                        return False
-                elif setting in [PolicyKeys.SETTING_ALLOW_ANONYMOUS_SENDER,
-                                 PolicyKeys.SETTING_ALLOW_DYNAMIC_SRC
-                                 ]:
-                    if not type(sval) is bool:
-                        errors.append("Application '%s' option '%s' policy '%s' setting '%s' has illegal boolean value '%s'." %
-                                      (name, key, pname, setting, sval))
-                        return False
-                elif setting in [PolicyKeys.SETTING_SOURCES,
-                                 PolicyKeys.SETTING_TARGETS
-                                 ]:
-                    if not type(sval) is list:
-                        errors.append("Application '%s' option '%s' policy '%s' setting '%s' must be type 'list' but is '%s'." %
-                                      (name, key, pname, setting, type(sval)))
-                        return False
-                    # deduplicate address lists
-                    sval = list(set(sval))
-                    submap[pname][setting] = sval
-                else:
-                    warnings.append("Application '%s' option '%s' policy '%s' setting '%s' is ignored." %
-                                     (name, key, pname, setting))
+        for key, val in policy_in.iteritems():
+            if key not in self.allowed_settings_options:
+                warnings.append("Application '%s' user group '%s' option '%s' is ignored." %
+                                (appname, usergroup, key))
+            if key in [PolicyKeys.KW_MAX_FRAME_SIZE,
+                       PolicyKeys.KW_MAX_MESSAGE_SIZE,
+                       PolicyKeys.KW_MAX_RECEIVERS,
+                       PolicyKeys.KW_MAX_SENDERS,
+                       PolicyKeys.KW_MAX_SESSION_WINDOW,
+                       PolicyKeys.KW_MAX_SESSIONS
+                       ]:
+                if not self.validateNumber(val, 0, 0, cerror):
+                    errors.append("Application '%s' user group '%s' option '%s' has error '%s'." %
+                                  (appname, usergroup, key, cerror[0]))
+                    return False
+                policy_out[key] = val
+            elif key in [PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER,
+                         PolicyKeys.KW_ALLOW_DYNAMIC_SRC
+                         ]:
+                if not type(val) is bool:
+                    errors.append("Application '%s' user group '%s' option '%s' has illegal boolean value '%s'." %
+                                  (appname, usergroup, key, val))
+                    return False
+                policy_out[key] = val
+            elif key in [PolicyKeys.KW_SOURCES,
+                         PolicyKeys.KW_TARGETS
+                         ]:
+                val = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
+                # deduplicate address lists
+                val = list(set(val))
+                policy_out[key] = val
         return True
 
 
-    def compile(self, name, policy_in, policy_out, warnings, errors):
+    def compile_access_ruleset(self, name, policy_in, policy_out, warnings, errors):
         """
-        Compile a schema from processed json format to Internal format.
+        Compile a schema from processed json format to local internal format.
         @param[in] name application name
         @param[in] policy_in raw policy to be validated
         @param[out] policy_out validated Internal format
@@ -215,44 +243,35 @@ class PolicyCompiler(object):
         cerror = []
         # validate the options
         for key, val in policy_in.iteritems():
-            if key not in self.allowed_options:
+            if key not in self.allowed_ruleset_options:
                 warnings.append("Application '%s' option '%s' is ignored." %
                                 (name, key))
-            if key == PolicyKeys.KW_POLICY_VERSION:
-                if not self.validateNumber(val, 0, 0, cerror):
-                    errors.append("Application '%s' option '%s' must resolve to a positive integer: '%s'." %
-                                    (name, key, cerror[0]))
-                    return False
-                policy_out[key] = val
-            elif key in [PolicyKeys.KW_MAXCONN,
-                         PolicyKeys.KW_MAXCONNPERHOST,
-                         PolicyKeys.KW_MAXCONNPERUSER
-                         ]:
+            if key in [PolicyKeys.KW_MAXCONN,
+                       PolicyKeys.KW_MAXCONNPERHOST,
+                       PolicyKeys.KW_MAXCONNPERUSER
+                       ]:
                 if not self.validateNumber(val, 0, 65535, cerror):
                     msg = ("Application '%s' option '%s' has error '%s'." % 
                            (name, key, cerror[0]))
                     errors.append(msg)
                     return False
                 policy_out[key] = val
-            elif key in [PolicyKeys.KW_CONNECTION_ORIGINS,
-                         PolicyKeys.KW_CONNECTION_POLICY,
-                         PolicyKeys.KW_POLICIES,
-                         PolicyKeys.KW_GROUPS
+            elif key in [PolicyKeys.KW_USER_GROUPS,
+                         PolicyKeys.KW_CONNECTION_GROUPS,
+                         PolicyKeys.KW_CONNECTION_POLICY
                          ]:
                 try:
                     if not type(val) is dict:
                         errors.append("Application '%s' option '%s' must be of type 'dict' but is '%s'" %
                                       (name, key, type(val)))
                         return False
-                    if key == PolicyKeys.KW_CONNECTION_ORIGINS:
-                        if not self.compiler_origins(name, val, warnings, errors):
-                            return False
-                    elif key == PolicyKeys.KW_POLICIES:
-                        if not self.compiler_policies(name, val, warnings, errors):
+                    if key == PolicyKeys.KW_CONNECTION_GROUPS:
+                        if not self.compile_connection_groups(name, val, warnings, errors):
                             return False
                     else:
-                        # deduplicate connectionPolicy and groups lists
+                        # deduplicate connectionIngressPolicy and userGroups lists
                         for k,v in val.iteritems():
+                            v = [x.strip(' ') for x in v.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
                             v = list(set(v))
                             val[k] = v
                     policy_out[key] = val
@@ -267,124 +286,32 @@ class PolicyLocal(object):
     The policy database.
     """
 
-    def __init__(self, folder=""):
+    def __init__(self):
         """
         Create instance
         @params folder: relative path from __file__ to conf file folder
         """
         self.policydb = {}
+        self.settingsdb = {}
         self.lookup_cache = {}
         self.stats = {}
-        self.folder = folder
         self.policy_compiler = PolicyCompiler()
         self.name_lookup_cache = {}
         self.blob_lookup_cache = {}
-        if not folder == "":
-            self.policy_io_read_files()
-
-    #
-    # Management create
-    #
-    def create_ruleset(self, attributes):
-        print ("POLICY configured ruleset %s" % attributes['applicationName'])
-        #pdb.set_trace()
-        pass
-
-    def create_settings(self, attributes):
-        print ("POLICY configured settings %s_%s" % (attributes['applicationName'], attributes['userGroupName']))
-        #pdb.set_trace()
-        pass
-
-    #
-    # Policy file I/O
-    #
-    def policy_io_read_files(self):
-        """
-        Read all conf files and create the policies they contain.
-        """
-        apath = os.path.abspath(os.path.dirname(__file__))
-        apath = os.path.join(apath, self.folder)
-        for i in os.listdir(apath):
-            if i.endswith(".json"):
-                self.policy_io_read_file(os.path.join(apath, i))
-
-    def policy_io_read_file(self, fn):
-        """
-        Read a policy config file.
-        Validate each policy and commit to policy database.
-        @param fn: absolute path to file
-        """
-        try:
-            with open(fn) as json_file:
-                cp = json.load(json_file)
-
-        except Exception, e:
-            raise PolicyError( 
-                "Error processing policy configuration file '%s' : %s" % (fn, e))
-        newpolicies = {}
-        for app_name, app_policy in cp.iteritems():
-            warnings = []
-            diag = []
-            candidate = {}
-            if not self.policy_compiler.compile(app_name, app_policy, candidate, warnings, diag):
-                msg = "Policy file '%s' is invalid: %s" % (fn, diag[0])
-                raise PolicyError( msg )
-            if len(warnings) > 0:
-                print ("LogMe: Policy file '%s' application '%s' has warnings: %s" %
-                       (fn, app_name, warnings))
-            newpolicies[app_name] = candidate
-        # Log a warning if policy from one config file replaces another.
-        # TODO: Should this throw? Do we increment the policy version per load?
-        for c in newpolicies:
-            c_ver = 0
-            e_ver = 0
-            c_pol = newpolicies[c]
-            if PolicyKeys.KW_POLICY_VERSION in c_pol:
-                c_ver = int(c_pol[PolicyKeys.KW_POLICY_VERSION])
-            if c in self.policydb:
-                e_pol = self.policydb[c]
-                if PolicyKeys.KW_POLICY_VERSION in e_pol:
-                    e_ver = int(e_pol[PolicyKeys.KW_POLICY_VERSION])
-                if c_ver < e_ver:
-                    kw = "downgrades"
-                elif c_ver == e_ver:
-                    kw = "replaces"
-                else:
-                    kw = "upgrades"
-                msg = ("LogMe: WARNING Policy file '%s' application '%s' policy version '%s' %s existing policy version '%s'." %
-                    (fn, c, c_ver, kw, e_ver))
-                print msg
-        for c in newpolicies:
-            c_pol = newpolicies[c]
-            c_max = 0
-            c_max_u = 0
-            c_max_h = 0
-            if PolicyKeys.KW_MAXCONN in c_pol:
-                c_max = c_pol[PolicyKeys.KW_MAXCONN]
-            if PolicyKeys.KW_MAXCONNPERUSER in c_pol:
-                c_max_u = c_pol[PolicyKeys.KW_MAXCONNPERUSER]
-            if PolicyKeys.KW_MAXCONNPERHOST in c_pol:
-                c_max_h = c_pol[PolicyKeys.KW_MAXCONNPERHOST]
-            if c in self.stats:
-                self.stats[c].update(c_max, c_max_u, c_max_h)
-            else:
-                self.stats[c] = PolicyAppConnectionMgr(c_max, c_max_u, c_max_h)
-        self.policydb.update(newpolicies)
-
 
     #
     # Service interfaces
     #
-    def policy_create(self, name, policy):
+    def create_ruleset(self, attributes):
         """
-        Create named policy
-        @param name: application name
-        @param policy: policy data in raw user format
+        Create named policy ruleset
+        @param[in] attributes: from config
         """
         warnings = []
         diag = []
         candidate = {}
-        result = self.policy_compiler.compile(name, policy, candidate, warnings, diag)
+        name = attributes[PolicyKeys.KW_APPLICATION_NAME]
+        result = self.policy_compiler.compile_access_ruleset(name, attributes, candidate, warnings, diag)
         if not result:
             raise PolicyError( "Policy '%s' is invalid: %s" % (name, diag[0]) )
         if len(warnings) > 0:
@@ -392,6 +319,26 @@ class PolicyLocal(object):
                    (name, warnings))
         self.policydb[name] = candidate
         # TODO: Create stats
+
+    def create_settings(self, attributes):
+        """
+        Create named policy ruleset
+        @param[in] attributes: from config
+        """
+        warnings = []
+        diag = []
+        candidate = {}
+        app_name = attributes[PolicyKeys.KW_APPLICATION_NAME]
+        usergroup = attributes[PolicyKeys.KW_USER_GROUP_NAME]
+        result = self.policy_compiler.compile_app_settings(app_name, usergroup, attributes, candidate, warnings, diag)
+        if not result:
+            raise PolicyError( "Policy '%s' is invalid: %s" % (app_name, diag[0]) )
+        if len(warnings) > 0:
+            print ("LogMe: Application '%s' has warnings: %s" %
+                   (app_name, warnings))
+        if not app_name in self.settingsdb:
+            self.settingsdb[app_name] = {}
+        self.settingsdb[app_name][usergroup] = candidate  # create named settings
 
     def policy_read(self, name):
         """
@@ -443,7 +390,7 @@ class PolicyLocal(object):
         if settingname in policy:
             upolicy[settingname] = policy[settingname]
 
-    def policy_aggregate_policy_int(self, upolicy, policy, groups, settingname):
+    def policy_aggregate_policy_int(self, upolicy, appsettings, groups, settingname):
         """
         Pull int out of policy.policies[group] and install into upolicy.
         Integers are set to max(new, existing)
@@ -451,12 +398,9 @@ class PolicyLocal(object):
         param[in] policy Internal policy holding settings to be aggregated
         param[in] settingname setting of interest
         """
-        if not PolicyKeys.KW_POLICIES in policy:
-            return
-        policies = policy[PolicyKeys.KW_POLICIES]
         for group in groups:
-            if group in policies:
-                rpol = policies[group]
+            if group in appsettings:
+                rpol = appsettings[group]
                 if settingname in rpol:
                     sp = rpol[settingname]
                     if settingname in upolicy:
@@ -477,19 +421,16 @@ class PolicyLocal(object):
                 # no policy for this group
                 pass
 
-    def policy_aggregate_policy_bool(self, upolicy, policy, groups, settingname):
+    def policy_aggregate_policy_bool(self, upolicy, appsettings, groups, settingname):
         """
         Pull bool out of policy and install into upolicy if true
         param[in,out] upolicy user policy receiving aggregations
         param[in] policy Internal policy holding settings to be aggregated
         param[in] settingname setting of interest
         """
-        if not PolicyKeys.KW_POLICIES in policy:
-            return
-        policies = policy[PolicyKeys.KW_POLICIES]
         for group in groups:
-            if group in policies:
-                rpol = policies[group]
+            if group in appsettings:
+                rpol = appsettings[group]
                 if settingname in rpol:
                     if rpol[settingname]:
                         upolicy[settingname] = True
@@ -500,19 +441,16 @@ class PolicyLocal(object):
                 # no policy for this group
                 pass
 
-    def policy_aggregate_policy_list(self, upolicy, policy, groups, settingname):
+    def policy_aggregate_policy_list(self, upolicy, appsettings, groups, settingname):
         """
         Pull list out of policy and append into upolicy
         param[in,out] upolicy user policy receiving aggregations
         param[in] policy Internal policy holding settings to be aggregated
         param[in] settingname setting of interest
         """
-        if not PolicyKeys.KW_POLICIES in policy:
-            return
-        policies = policy[PolicyKeys.KW_POLICIES]
         for group in groups:
-            if group in policies:
-                rpol = policies[group]
+            if group in appsettings:
+                rpol = appsettings[group]
                 if settingname in rpol:
                     sp = rpol[settingname]
                     if settingname in upolicy:
@@ -528,105 +466,11 @@ class PolicyLocal(object):
                 # no policy for this group
                 pass
 
-    def policy_lookup_settings(self, user, host, app, upolicy):
+    #
+    #
+    def lookup_user(self, user, host, app, conn_name, policyname):
         """
-        HACK ALERT - delete this lookup. It is obsolete.
-        Determine if a user on host accessing app through AMQP Open is allowed
-        according to the policy access rules. 
-        If allowed then return the policy settings.
-        @param[in] user connection authId
-        @param[in] host connection remote host numeric IP address
-        @param[in] app application user is accessing
-        @param[out] upolicy dict holding connection and policy values
-        @return if allowed by policy
-        # Note: the upolicy output is a non-nested dict with settings of interest
-        # TODO: figure out decent defaults for upolicy settings that are undefined
-        """
-        try:
-            lookup_id = user + "|" + host + "|" + app
-            if lookup_id in self.lookup_cache:
-                upolicy.update( self.lookup_cache[lookup_id] )
-                return True
-
-            settings = self.policydb[app]
-            # User allowed to connect from host?
-            allowed = False
-            restricted = False
-            uhs = HostStruct(host)
-            ugroups = []
-            if PolicyKeys.KW_GROUPS in settings:
-                for r in settings[PolicyKeys.KW_GROUPS]:
-                    if user in settings[PolicyKeys.KW_GROUPS][r]:
-                        restricted = True
-                        ugroups.append(r)
-            uorigins = []
-            if PolicyKeys.KW_CONNECTION_POLICY in settings:
-                for ur in ugroups:
-                    if ur in settings[PolicyKeys.KW_CONNECTION_POLICY]:
-                        uorigins.extend(settings[PolicyKeys.KW_CONNECTION_POLICY][ur])
-            if PolicyKeys.KW_CONNECTION_ORIGINS in settings:
-                for co in settings[PolicyKeys.KW_CONNECTION_ORIGINS]:
-                    if co in uorigins:
-                        for cohost in settings[PolicyKeys.KW_CONNECTION_ORIGINS][co]:
-                            if cohost.match_bin(uhs):
-                                allowed = True
-                                break
-                    if allowed:
-                        break
-            if not allowed and not restricted:
-                if PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT in settings:
-                    allowed = settings[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]
-            if not allowed:
-                return False
-            # Return connection limits and aggregation of group settings
-            self.policy_aggregate_limits     (upolicy, settings, PolicyKeys.KW_POLICY_VERSION)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_FRAME_SIZE)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_MESSAGE_SIZE)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SESSION_WINDOW)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SESSIONS)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SENDERS)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_RECEIVERS)
-            self.policy_aggregate_policy_bool(upolicy, settings, ugroups, PolicyKeys.SETTING_ALLOW_DYNAMIC_SRC)
-            self.policy_aggregate_policy_bool(upolicy, settings, ugroups, PolicyKeys.SETTING_ALLOW_ANONYMOUS_SENDER)
-            self.policy_aggregate_policy_list(upolicy, settings, ugroups, PolicyKeys.SETTING_SOURCES)
-            self.policy_aggregate_policy_list(upolicy, settings, ugroups, PolicyKeys.SETTING_TARGETS)
-            c_upolicy = {}
-            c_upolicy.update(upolicy)
-            self.lookup_cache[lookup_id] = c_upolicy
-            return True
-        except Exception, e:
-            #print str(e)
-            #pdb.set_trace()
-            return False
-
-    def policy_lookup(self, conn_id, user, host, app, upolicy):
-        """
-        HACK ALERT - delete this lookup. It is obsolete.
-        Determine if a user on host accessing app through AMQP Open is allowed:
-        - verify to the policy access rules. 
-        - track user/host connection limits
-        If allowed then return the policy settings.
-        @param[in] conn_id unique connection identifier
-        @param[in] user connection authId
-        @param[in] host connection remote host numeric IP address
-        @param[in] app application user is accessing
-        @param[out] upolicy dict holding connection and policy values
-        @return if allowed by policy
-        # Note: the upolicy output is a non-nested dict with settings of interest
-        # TODO: figure out decent defaults for upolicy settings that are undefined
-        """
-        if not self.policy_lookup_settings(user, host, app, upolicy):
-            # TODO: print ("LogMe: connection denied by connection access rules")
-            return False
-        assert(app in self.stats)
-        diags = []
-        if not self.stats[app].can_connect(conn_id, user, host, diags):
-            # TODO: print ("LogMe: connection denied by connection count limits: %s" % diags)
-            return False
-        return True
-
-    def lookup_users_policyname(self, user, host, app, policyname):
-        """
+        Lookup function called from C.
         Determine if a user on host accessing app through AMQP Open is allowed
         according to the policy access rules.
         If allowed then return the policy settings name
@@ -635,7 +479,8 @@ class PolicyLocal(object):
         @param[in] app application user is accessing
         @param[out] policyname name of the policy settings blob for this user
         @return if allowed by policy
-        # Note: the upolicy output is a concatenated list of policy blob names.
+        # Note: the upolicy[0] output is list of group names joined with '|'.
+        TODO: handle the AccessStats
         """
         try:
             lookup_id = user + "|" + host + "|" + app
@@ -643,15 +488,20 @@ class PolicyLocal(object):
                 policyname.append( self.name_lookup_cache[lookup_id] )
                 return True
 
+            if not app in self.policydb:
+                print("LogMe: no policy defined for application %s" % app)
+                policyname.append("")
+                return False
+
             settings = self.policydb[app]
             # User allowed to connect from host?
             allowed = False
             restricted = False
             uhs = HostStruct(host)
             ugroups = []
-            if PolicyKeys.KW_GROUPS in settings:
-                for r in settings[PolicyKeys.KW_GROUPS]:
-                    if user in settings[PolicyKeys.KW_GROUPS][r]:
+            if PolicyKeys.KW_USER_GROUPS in settings:
+                for r in settings[PolicyKeys.KW_USER_GROUPS]:
+                    if user in settings[PolicyKeys.KW_USER_GROUPS][r]:
                         restricted = True
                         ugroups.append(r)
             uorigins = []
@@ -659,10 +509,10 @@ class PolicyLocal(object):
                 for ur in ugroups:
                     if ur in settings[PolicyKeys.KW_CONNECTION_POLICY]:
                         uorigins.extend(settings[PolicyKeys.KW_CONNECTION_POLICY][ur])
-            if PolicyKeys.KW_CONNECTION_ORIGINS in settings:
-                for co in settings[PolicyKeys.KW_CONNECTION_ORIGINS]:
+            if PolicyKeys.KW_CONNECTION_GROUPS in settings:
+                for co in settings[PolicyKeys.KW_CONNECTION_GROUPS]:
                     if co in uorigins:
-                        for cohost in settings[PolicyKeys.KW_CONNECTION_ORIGINS][co]:
+                        for cohost in settings[PolicyKeys.KW_CONNECTION_GROUPS][co]:
                             if cohost.match_bin(uhs):
                                 allowed = True
                                 break
@@ -673,7 +523,9 @@ class PolicyLocal(object):
                     allowed = settings[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]
             if not allowed:
                 return False
-            # Return connection limits and aggregation of group settings
+            if not restricted:
+                ugroups.append(PolicyKeys.KW_DEFAULT_SETTINGS)
+            #
             ugroups.sort()
             result = "|".join(ugroups)
             self.name_lookup_cache[lookup_id] = result
@@ -685,33 +537,33 @@ class PolicyLocal(object):
             #pdb.set_trace()
             return False
 
-    def lookup_named_settings(self, app, policyname, upolicy):
+    def lookup_settings(self, appname, name, upolicy):
         """
         Given a settings name, return the aggregated policy blob.
-        @param[in] app application user is accessing
-        @param[in] policyname name of the policy settings blob
-        @param[out] upolicy dict holding policy values
+        @param[in] appname: application user is accessing
+        @param[in] name: user group name or concatenation of names of the policy settings blob
+        @param[out] upolicy: dict holding policy values - the settings blob
         @return if allowed by policy
         # Note: the upolicy output is a non-nested dict with settings of interest
         # TODO: figure out decent defaults for upolicy settings that are undefined
         """
         try:
-            cachekey = app + "|" + policyname
+            cachekey = appname + "|" + name
             if cachekey in self.blob_lookup_cache:
                 upolicy.update( self.blob_lookup_cache[cachekey] )
                 return True
-            settings = self.policydb[app]
-            ugroups = policyname.split("|")
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_FRAME_SIZE)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_MESSAGE_SIZE)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SESSION_WINDOW)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SESSIONS)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_SENDERS)
-            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.SETTING_MAX_RECEIVERS)
-            self.policy_aggregate_policy_bool(upolicy, settings, ugroups, PolicyKeys.SETTING_ALLOW_DYNAMIC_SRC)
-            self.policy_aggregate_policy_bool(upolicy, settings, ugroups, PolicyKeys.SETTING_ALLOW_ANONYMOUS_SENDER)
-            self.policy_aggregate_policy_list(upolicy, settings, ugroups, PolicyKeys.SETTING_SOURCES)
-            self.policy_aggregate_policy_list(upolicy, settings, ugroups, PolicyKeys.SETTING_TARGETS)
+            settings = self.settingsdb[appname]
+            ugroups = name.split("|")
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.KW_MAX_FRAME_SIZE)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.KW_MAX_MESSAGE_SIZE)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.KW_MAX_SESSION_WINDOW)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.KW_MAX_SESSIONS)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.KW_MAX_SENDERS)
+            self.policy_aggregate_policy_int (upolicy, settings, ugroups, PolicyKeys.KW_MAX_RECEIVERS)
+            self.policy_aggregate_policy_bool(upolicy, settings, ugroups, PolicyKeys.KW_ALLOW_DYNAMIC_SRC)
+            self.policy_aggregate_policy_bool(upolicy, settings, ugroups, PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER)
+            self.policy_aggregate_policy_list(upolicy, settings, ugroups, PolicyKeys.KW_SOURCES)
+            self.policy_aggregate_policy_list(upolicy, settings, ugroups, PolicyKeys.KW_TARGETS)
             c_upolicy = {}
             c_upolicy.update(upolicy)
             self.blob_lookup_cache[cachekey] = c_upolicy
@@ -734,17 +586,33 @@ def main_except(argv):
 
     usage = "usage: %prog [options]\nRead and print all conf files in a folder."
     parser = optparse.OptionParser(usage=usage)
-    parser.set_defaults(folder="../../../tests/policy-1")
-    parser.add_option("-f", "--folder", action="store", type="string", dest="folder",
-                      help="Use named folder instead of policy-1")
+    #parser.set_defaults(folder="../../../tests/policy-1")
+    #parser.add_option("-f", "--folder", action="store", type="string", dest="folder",
+    #                  help="Use named folder instead of policy-1")
     parser.add_option("-d", "--dump", action="store_true", dest="dump",
                       help="Dump policy details")
 
     (options, args) = parser.parse_args()
 
-    policy = PolicyLocal(options.folder)
+    policy = PolicyLocal()
 
-    print("policy names: %s" % policy.policy_db_get_names())
+    ruleset_str = '["policyAccessRuleset", {"applicationName": "photoserver","maxConnections": 50,"maxConnPerUser": 5,"maxConnPerHost": 20,"userGroups": {"anonymous":       "anonymous","users":           "u1, u2","paidsubscribers": "p1, p2","test":            "zeke, ynot","admin":           "alice, bob, ellen","superuser":       "ellen"},"connectionGroups": {"Ten18":     "10.18.0.0-10.18.255.255","EllensWS":  "72.135.2.9","TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255","localhost": "127.0.0.1, ::1","TheWorld":  "*"},"connectionIngressPolicies": {"anonymous":       "TheWorld","users":           "TheWorld","paidsubscribers": "TheWorld","test":            "TheLabs","admin":           "Ten18, TheLabs, localhost","superuser":       "EllensWS, localhost"},"connectionAllowDefault": true}]'
+    ruleset = json.loads(ruleset_str)
+
+    policy.create_ruleset(ruleset[1])
+    print("policy ruleset names: %s" % policy.policy_db_get_names())
+
+    settings_strs = []
+    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"anonymous",      "maxFrameSize": 111111,"maxMessageSize":   111111,"maxSessionWindow": 111111,"maxSessions":           1,"maxSenders":           11,"maxReceivers":         11,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public",                           "targets": ""}]')
+    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"users",          "maxFrameSize": 222222,"maxMessageSize":   222222,"maxSessionWindow": 222222,"maxSessions":           2,"maxSenders":           22,"maxReceivers":         22,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private",                  "targets": "public"}]')
+    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"paidsubscribers","maxFrameSize": 333333,"maxMessageSize":   333333,"maxSessionWindow": 333333,"maxSessions":           3,"maxSenders":           33,"maxReceivers":         33,"allowDynamicSrc":      true, "allowAnonymousSender": false,"sources": "public, private",                  "targets": "public, private"}]')
+    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"test",           "maxFrameSize": 444444,"maxMessageSize":   444444,"maxSessionWindow": 444444,"maxSessions":           4,"maxSenders":           44,"maxReceivers":         44,"allowDynamicSrc":      true, "allowAnonymousSender": true, "sources": "private",                          "targets": "private"}]')
+    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"admin",          "maxFrameSize": 555555,"maxMessageSize":   555555,"maxSessionWindow": 555555,"maxSessions":           5,"maxSenders":           55,"maxReceivers":         55,"allowDynamicSrc":      true, "allowAnonymousSender": true, "sources": "public, private, management",      "targets": "public, private, management"}]')
+    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"superuser",      "maxFrameSize": 666666,"maxMessageSize":   666666,"maxSessionWindow": 666666,"maxSessions":           6,"maxSenders":           66,"maxReceivers":         66,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private, management, root","targets": "public, private, management, root"}]')
+
+    for sstr in settings_strs:
+        settings = json.loads(sstr)
+        policy.create_settings(settings[1])
 
     if not options.dump:
         return
@@ -760,36 +628,30 @@ def main_except(argv):
         print(p.replace('\\n', '\n'))
 
     # Lookups
-    upolicy = {}
+    policynames = []
     # pdb.set_trace()
-    res1 = policy.policy_lookup('192.168.100.5:33332', 'zeke', '192.168.100.5', 'photoserver', upolicy)
-    print "\nLookup zeke from 192.168.100.5. Expect true and maxFrameSize 44444. Expecting True, result is %s" % res1
-    print "\nResulting policy is: %s" % upolicy
+    res1 = policy.lookup_user('zeke', '192.168.100.5', 'photoserver', '192.168.100.5:33334', policynames)
+    print "\nLookup zeke from 192.168.100.5. Expecting True, result is %s" % res1
+    print "\nResulting policy expecting 'test', is: %s" % policynames[0]
     # Hit the cache
-    upolicy2 = {}
-    res2  = policy.policy_lookup('192.168.100.5:33335', 'zeke', '192.168.100.5', 'photoserver', upolicy2)
-    # Print the stats
-    print "\npolicy stats: %s" % policy.stats
+    policynames = []
+    res2  = policy.lookup_user('zeke', '192.168.100.5', 'photoserver', '192.168.100.5:33335', policynames)
 
-    upolicy = {}
-    res3 = policy.policy_lookup('72.135.2.9:33333', 'ellen', '72.135.2.9', 'photoserver', upolicy)
-    print "\nLookup ellen from 72.135.2.9. Expect true and maxFrameSize 666666. Result is %s" % res3
-    print "Resulting policy is: %s" % upolicy
+    policynames3 = []
+    res3 = policy.lookup_user('ellen', '72.135.2.9', 'photoserver', '72.135.2.9:33333', policynames3)
+    print "\nLookup ellen from 72.135.2.9. Expect true. Result is %s" % res3
+    print "Resulting policy is: %s" % policynames[0]
 
-    upolicy4 = {}
-    res4 = policy2.policy_lookup('72.135.2.9:33334', 'ellen', '72.135.2.9', 'photoserver', upolicy4)
+    policynames = []
+    res4 = policy2.lookup_user('ellen', '72.135.2.9', 'photoserver', '72.135.2.9:33334', policynames)
     print "\nLookup policy2 ellen from 72.135.2.9. Expect false. Result is %s" % res4
 
-    policyname5 = []
-    res5 = policy.lookup_users_policyname('ellen', '72.135.2.9', 'photoserver', policyname5)
-    print "\nLookup user's policyname: %s" % policyname5
-
     upolicy6 = {}
-    res6 = policy.lookup_named_settings('photoserver', policyname5[0], upolicy6)
+    res6 = policy.lookup_settings('photoserver', policynames3[0], upolicy6)
     res6a = upolicy6['maxFrameSize'] == 666666
     print "\nNamed settings lookup result = %s, and value check = %s" % (res6, res6a)
 
-    if not (res1 and res2 and res3 and not res4 and res5 and res6 and res6a):
+    if not (res1 and res2 and res3 and not res4 and res6 and res6a):
         print "Tests FAIL"
     else:
         print "Tests PASS"
