@@ -1,3 +1,21 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 /**
  * @module QDR
  */
@@ -7,14 +25,16 @@
 var QDR = (function (QDR) {
 
   /**
-   * @method ChartsController
+   * @method OverviewController
    * @param $scope
-   * @param QDRServer
+   * @param QDRService
    * @param QDRChartServer
+   * dialogServer
+   * $location
    *
-   * Controller that handles the QDR charts page
+   * Controller that handles the QDR overview page
    */
-	QDR.OverviewController = function($scope, QDRService, QDRChartService, dialogService, localStorage, $location) {
+	QDR.module.controller("QDR.OverviewController", ['$scope', 'uiGridConstants', 'QDRService', function($scope, uiGridConstants, QDRService) {
 
 
 		if (!angular.isDefined(QDRService.schema))
@@ -23,6 +43,13 @@ var QDR = (function (QDR) {
 		var nodeIds = QDRService.nodeIdList();
 		var currentTimer;
 		var refreshInterval = 5000
+		var Folder = (function () {
+            function Folder(title) {
+                this.title = title;
+				this.children = [];
+            }
+            return Folder;
+        })();
 	    $scope.modes = [
 	    	{title: 'Overview', name: 'Overview', right: false}
 	    	];
@@ -37,10 +64,14 @@ var QDR = (function (QDR) {
               { name: 'Logs', url: 'logs.html'},
               { name: 'Log', url: 'log.html'} ];
 
+		$scope.getGridHeight = function (data) {
+	       // add 1 for the header row
+	       return {height: (($scope[data.data].length + 1) * 30) + "px"};
+		}
 		$scope.overview = new Folder("Overview");
 
-		$scope.allConnectionFields = [];
-		var allConnectionCols = [
+		$scope.allRouterFields = [];
+		var allRouterCols = [
 			 {
 				 field: 'routerId',
 				 displayName: 'Router'
@@ -66,29 +97,32 @@ var QDR = (function (QDR) {
                  displayName: 'Link count'
              }
 		];
-		$scope.mySelections = [];
-		$scope.allConnections = {
-			data: 'allConnectionFields',
-			columnDefs: allConnectionCols,
+		$scope.allRouters = {
+			data: 'allRouterFields',
+			columnDefs: allRouterCols,
+			enableHorizontalScrollbar: uiGridConstants.scrollbars.NEVER,
+            enableVerticalScrollbar: uiGridConstants.scrollbars.NEVER,
 			enableColumnResize: true,
 			multiSelect: false,
-			selectedItems: $scope.mySelections,
-			afterSelectionChange: function(data) {
-				if (data.selected) {
-					var selItem = $scope.mySelections[0]
-					var nodeId = selItem.nodeId
-					// activate Routers->nodeId in the tree
-					$("#overtree").dynatree("getTree").activateKey(nodeId);
-
-				}
-            }
+			enableRowHeaderSelection: false,
+			noUnselect: true,
+			enableSelectAll: false,
+			enableRowSelection: true,
+			onRegisterApi: function (gridApi) {
+				gridApi.selection.on.rowSelectionChanged($scope, function(row) {
+					if (row.isSelected) {
+						var nodeId = row.entity.nodeId;
+						$("#overtree").dynatree("getTree").activateKey(nodeId);
+					}
+				});
+		    }
 		};
 		// get info for all routers
 		var allRouterInfo = function () {
 			nodeIds = QDRService.nodeIdList()
 			var expected = Object.keys(nodeIds).length
 			var received = 0;
-			var allConnectionFields = [];
+			var allRouterFields = [];
 			var gotNodeInfo = function (nodeName, entity, response) {
 				var results = response.results;
 				var name = QDRService.nameFromId(nodeName)
@@ -99,17 +133,17 @@ var QDR = (function (QDR) {
 						++connections
 					}
 				})
-				allConnectionFields.push({routerId: name, connections: connections, nodeId: nodeName})
+				allRouterFields.push({routerId: name, connections: connections, nodeId: nodeName})
 				++received
 				if (expected == received) {
-					allConnectionFields.sort ( function (a,b) { return a.routerId < b.routerId ? -1 : a.routerId > b.routerId ? 1 : 0})
+					allRouterFields.sort ( function (a,b) { return a.routerId < b.routerId ? -1 : a.routerId > b.routerId ? 1 : 0})
 					// now get each router's node info
 					QDRService.getMultipleNodeInfo(nodeIds, "router", [], function (nodeIds, entity, response) {
 						var results = response.aggregates
 						results.forEach ( function (result) {
 
 							var routerId = QDRService.valFor(response.attributeNames, result, "routerId").sum
-							allConnectionFields.some( function (connField) {
+							allRouterFields.some( function (connField) {
 								if (routerId === connField.routerId) {
 									response.attributeNames.forEach ( function (attrName) {
 										connField[attrName] = QDRService.valFor(response.attributeNames, result, attrName).sum
@@ -119,7 +153,7 @@ var QDR = (function (QDR) {
 								return false
 							})
 						})
-						$scope.allConnectionFields = allConnectionFields
+						$scope.allRouterFields = allRouterFields
 						$scope.$apply()
 						if (currentTimer) {
 							clearTimeout(currentTimer)
@@ -154,13 +188,10 @@ var QDR = (function (QDR) {
 				data: 'routerFields',
 				columnDefs: cols,
 				enableColumnResize: true,
-				multiSelect: false,
-				beforeSelectionChange: function() {
-					  return false;
-				}
+				multiSelect: false
 			}
 
-			$scope.allConnectionFields.some( function (field) {
+			$scope.allRouterFields.some( function (field) {
 				if (field.routerId === node.data.title) {
 					Object.keys(field).forEach ( function (key) {
 						$scope.routerFields.push({attribute: key, value: field[key]})
@@ -223,16 +254,21 @@ var QDR = (function (QDR) {
 				data: 'addressFields',
 				columnDefs: addressCols,
 				enableColumnResize: true,
+				enableHorizontalScrollbar: uiGridConstants.scrollbars.NEVER,
+	            enableVerticalScrollbar: uiGridConstants.scrollbars.NEVER,
 				multiSelect: false,
-				selectedItems: $scope.selectedAddresses,
-				afterSelectionChange: function(data) {
-					if (data.selected) {
-						var key = data.entity.uid
-						// activate Routers->nodeId in the tree
-						$("#overtree").dynatree("getTree").activateKey(key);
-
-					}
-	            }
+				enableRowHeaderSelection: false,
+				noUnselect: true,
+				enableSelectAll: false,
+				enableRowSelection: true,
+				onRegisterApi: function (gridApi) {
+					gridApi.selection.on.rowSelectionChanged($scope, function(row) {
+						if (row.isSelected) {
+							var key = row.entity.uid;
+							$("#overtree").dynatree("getTree").activateKey(key);
+						}
+					});
+			    }
 			}
 
 			var gotAllAddressFields = function ( addressFields ) {
@@ -349,21 +385,25 @@ var QDR = (function (QDR) {
 					 displayName: 'authentication'
 				 }
 			]
-			var selectedConnections = []
 			$scope.allConnectionGrid = {
 				data: 'allConnectionFields',
 				columnDefs: allConnectionCols,
+				enableHorizontalScrollbar: uiGridConstants.scrollbars.NEVER,
+	            enableVerticalScrollbar: uiGridConstants.scrollbars.NEVER,
 				enableColumnResize: true,
 				multiSelect: false,
-				selectedItems: selectedConnections,
-				afterSelectionChange: function(data) {
-					if (data.selected) {
-						var key = data.entity.host
-						// activate Routers->nodeId in the tree
-						$("#overtree").dynatree("getTree").activateKey(key);
-
-					}
-	            }
+				enableRowHeaderSelection: false,
+				noUnselect: true,
+				enableSelectAll: false,
+				enableRowSelection: true,
+				onRegisterApi: function (gridApi) {
+					gridApi.selection.on.rowSelectionChanged($scope, function(row) {
+						if (row.isSelected) {
+							var host = row.entity.host;
+							$("#overtree").dynatree("getTree").activateKey(host);
+						}
+					});
+			    }
 			}
 			connections.children.forEach( function (connection) {
 				$scope.allConnectionFields.push(connection.fields)
@@ -395,10 +435,7 @@ var QDR = (function (QDR) {
 				data: 'addressFields',
 				columnDefs: cols,
 				enableColumnResize: true,
-				multiSelect: false,
-				beforeSelectionChange: function() {
-					  return false;
-				}
+				multiSelect: false
 			}
 
 			var fields = Object.keys(address.data.fields)
@@ -434,10 +471,7 @@ var QDR = (function (QDR) {
 				data: 'connectionFields',
 				columnDefs: cols,
 				enableColumnResize: true,
-				multiSelect: false,
-				beforeSelectionChange: function() {
-					  return false;
-				}
+				multiSelect: false
 			}
 
 			var fields = Object.keys(connection.data.fields)
@@ -623,7 +657,7 @@ var QDR = (function (QDR) {
 			}
         });
 
-    }
+    }]);
 
   return QDR;
 

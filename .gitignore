@@ -6,3 +6,5 @@ install
 .project
 .pydevproject
 tests/system_test.dir/
+*.iml
+.idea

@@ -1,3 +1,21 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 /**
  * @module QDR
  */
@@ -10,12 +28,12 @@ var QDR = (function(QDR) {
    *
    * Controller for the main interface
    */
-	QDR.ListController = function($scope, QDRService, QDRChartService, dialogService, localStorage, $location, $element, $rootScope) {
+	QDR.module.controller("QDR.ListController", ['$scope', '$location', 'uiGridConstants', 'QDRService', 'QDRChartService', '$uibModal',
+		function ($scope, $location, uiGridConstants, QDRService, QDRChartService, $uibModal) {
 
 		//QDR.log.debug("started List controller");
 		if (!angular.isDefined(QDRService.schema))
 			return;
-		$scope.mySelections = [];
 		$scope.selectedAction = localStorage['QDRSelectedAction'];
 		$scope.selectedNode = localStorage['QDRSelectedNode'];
 		$scope.selectedNodeId = localStorage['QDRSelectedNodeId'];
@@ -91,11 +109,7 @@ var QDR = (function(QDR) {
 		})
 
 		$scope.tableRows = [];
-		//$scope.schema = QDRService.schema;
-		$scope.gridDef = undefined;
 		var selectedRowIndex = 0;
-
-
 		var updateTableData = function (entity) {
 			var gotNodeInfo = function (nodeName, dotentity, response) {
 				//QDR.log.debug("got results for  " + nodeName);
@@ -163,14 +177,16 @@ var QDR = (function(QDR) {
 			while ($scope.tableRows.length) {
 				$scope.tableRows.pop();
 			}
-			//QDR.log.debug("tablerows is now");
-			//console.dump(tableRows);
 			$scope.tableRows = tableRows;
 			// must apply scope here to update the tableRows before selecting the row
 			$scope.$apply();
-			$scope.gridDef.selectRow(selectedRowIndex, true);
+            $scope.gridApi.selection.selectRow($scope.tableRows[selectedRowIndex]);
 			fixTooltips();
 		}
+
+		$scope.getTableHeight = function() {
+	       return {height: ($scope.tableRows.length * 30) + "px"};
+	    };
 		var fixTooltips = function () {
 			if ($('.hastip').length == 0) {
 				setTimeout(fixTooltips, 100);
@@ -221,41 +237,49 @@ var QDR = (function(QDR) {
 		var stop = undefined;
 
 		// The left-hand table that lists the names
-		var cellTemplate = '<div class="ngCellText" ng-class="col.colIndex()"><span ng-cell-text>{{row.getProperty(col.field)}}</span></div>';
 		var gridCols = [
 			{ field: 'name',
 			  displayName: '',
-			  cellTemplate: '<div class="ngCellText" ng-class="col.colIndex()"><span ng-cell-text>{{row.getProperty(col.field).value}}</span></div>'
+			  cellTemplate: '<div class="ngCellText"><span ng-cell-text>{{row.entity.name.value}}</span></div>'
 			}
 		];
 		// the table on the left of the page contains the name field for each record that was returned
 		$scope.gridDef = {
 			data: 'tableRows',
+			hideHeader: true,
+			showHeader: false,
+			enableHorizontalScrollbar: uiGridConstants.scrollbars.NEVER,
+			enableVerticalScrollbar: uiGridConstants.scrollbars.NEVER,
 			columnDefs: gridCols,
-			headerRowHeight:0,
-			selectedItems: $scope.mySelections,
+			enableColumnResize: true,
 			multiSelect: false,
-			afterSelectionChange: function (rowItem) {
-				//QDR.log.debug("afterSelectionChange called");
-				if (rowItem.selected && angular.isDefined(rowItem.orig))  {
-					selectedRowIndex = rowItem.rowIndex;
-					$scope.selectedRecordName = $scope.mySelections[0].name.value;
-					var details = [];
-					// for each field in the new row, add a row in the details grid
-					for (var name in rowItem.entity) {
-						details.push( { attributeName: QDRService.humanify(name),
-										attributeValue: QDRService.pretty(rowItem.entity[name].value),
-										type: rowItem.entity[name].type,
-										name: name,
-										rawValue: rowItem.entity[name].value,
-										graph: rowItem.entity[name].graph,
-										title: rowItem.entity[name].title,
-										aggregateValue: QDRService.pretty(rowItem.entity[name].aggregate),
-										aggregateTip: rowItem.entity[name].aggregateTip})
+			enableRowHeaderSelection: false,
+			noUnselect: true,
+			enableSelectAll: false,
+			enableRowSelection: true,
+			onRegisterApi: function (gridApi) {
+				$scope.gridApi = gridApi;
+				gridApi.selection.on.rowSelectionChanged($scope, function(row) {
+					if (row.isSelected)  {
+						selectedRowIndex = row.rowIndex;
+						$scope.selectedRecordName = row.entity.name.value;
+						var details = [];
+						// for each field in the new row, add a row in the details grid
+						for (var name in row.entity) {
+							details.push( { attributeName: QDRService.humanify(name),
+											attributeValue: QDRService.pretty(row.entity[name].value),
+											type: row.entity[name].type,
+											name: name,
+											rawValue: row.entity[name].value,
+											graph: row.entity[name].graph,
+											title: row.entity[name].title,
+											aggregateValue: QDRService.pretty(row.entity[name].aggregate),
+											aggregateTip: row.entity[name].aggregateTip})
+						}
+						setTimeout(updateDetails, 10, details);
 					}
-					setTimeout(updateDetails, 10, details);
-				}
-			}
+				});
+		    }
 		};
 
 		$scope.detailFields = [];
@@ -290,8 +314,8 @@ var QDR = (function(QDR) {
 		var detailCols = [
 			 {
 				 field: 'attributeName',
-				 displayName: 'Attribute',
-				 cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName">{{row.entity[col.field]}}<i ng-if="row.entity.graph" ng-click="addToGraph(row.entity)" ng-class="{\'active\': isFieldGraphed(row.entity, false), \'icon-bar-chart\': row.entity.graph == true }"></i></div>'
+				 cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName">{{row.entity.name}}<i ng-if="row.entity.graph" ng-click="grid.appScope.addToGraph(row.entity)" ng-class="{\'active\': grid.appScope.isFieldGraphed(row.entity, false), \'icon-bar-chart\': row.entity.graph == true }"></i></div>',
+				 displayName: 'Attribute'
 			 },
 			 {
 				 field: 'attributeValue',
@@ -304,7 +328,7 @@ var QDR = (function(QDR) {
 				 width: '10%',
 				 field: 'aggregateValue',
 				 displayName: 'Aggregate',
-				 cellTemplate: '<div class="hastip" alt="{{row.entity.aggregateTip}}">{{row.entity[col.field]}}<i ng-if="row.entity.graph" ng-click="addAllToGraph(row.entity)" ng-class="{\'active\': isFieldGraphed(row.entity, true), \'icon-bar-chart\': row.entity.graph == true }"></i></div>',
+				 cellTemplate: '<div class="hastip" alt="{{row.entity.aggregateTip}}">{{row.entity.aggregateValue}}<i ng-if="row.entity.graph" ng-click="grid.appScope.addAllToGraph(row.entity)" ng-class="{\'active\': grid.appScope.isFieldGraphed(row.entity, true), \'icon-bar-chart\': row.entity.graph == true }"></i></div>',
 				 cellClass: 'aggregate'
 			 }
 			)
@@ -314,15 +338,21 @@ var QDR = (function(QDR) {
 		$scope.details = {
 			data: 'detailFields',
 			columnDefs: detailCols,
+			enableHorizontalScrollbar: uiGridConstants.scrollbars.NEVER,
+			enableVerticalScrollbar: uiGridConstants.scrollbars.NEVER,
 			enableColumnResize: true,
 			multiSelect: false,
-			beforeSelectionChange: function() {
-				  return false;
-			}
+			enableRowHeaderSelection: false,
+			noUnselect: true,
+			enableSelectAll: false,
+			enableRowSelection: true
 		};
 
 		updateTableData($scope.selectedEntity);
 		stop = setInterval(updateTableData, 5000, $scope.selectedEntity);
+		$scope.getDetailsTableHeight = function() {
+	       return {height: ($scope.detailFields.length * 30) + "px"};
+	    };
 
 		$scope.$on("$destroy", function( event ) {
 			//QDR.log.debug("scope destroyed for qdrList");
@@ -342,83 +372,44 @@ var QDR = (function(QDR) {
 
 		function doDialog(template, chart) {
 
-			// The data for the dialog
-			var model = {
-				chart: chart,
-			};
-
-			// jQuery UI dialog options
-			var options = {
-				autoOpen: false,
-				modal: true,
-				width: 600,
-				position: {my: "top", at: "top", of: ".qdrList"},
-
-				show: {
-						effect: "fade",
-						duration: 200
-					  },
-					  hide: {
-						effect: "fade",
-						duration: 200
-					  },
-				resizable: false,
-				close: function(event, ui) {
-					//QDR.log.debug("Predefined close");
-					if (!chart.dashboard) {
-						QDRChartService.unRegisterChart(chart);     // remove the chart
-						delete model.chart;
-					}
-					if (model.updateTimer) {
-						clearTimeout(model.updateTimer);
-					}
-					delete model.dialogSvgChart;
-					delete model.updateTimer;
-				}
-			};
-
-			// Open the dialog using template from script
-			dialogService.open("myDialog", template, model, options).then(
-				function(result) {
-					//QDR.log.debug("Close");
-					//QDR.log.debug(result);
-				},
-				function(error) {
-					//QDR.log.debug("Cancelled");
-				}
-			);
-
+		    var modalInstance = $uibModal.open({
+		      animation: true,
+		      templateUrl: template,
+		      controller: 'QDR.ListChartController',
+		      resolve: {
+		        chart: function () {
+		          return chart;
+		        }
+		      }
+		    });
 		};
 
-	};
+	}]);
 
-	QDR.ListChartController = function($element, $scope, QDRService, QDRChartService, dialogService, localStorage, $location, $element, $rootScope) {
-		var dialogSvgChart = null;
-		var updateTimer = null;
+
+	QDR.module.controller('QDR.ListChartController', function ($scope, $uibModalInstance, $location, QDRChartService, chart) {
+
+	    $scope.chart = chart;
+		$scope.dialogSvgChart = null;
+		$scope.updateTimer = null;
 		$scope.svgDivId = "dialogChart";    // the div id for the svg chart
 
-		$scope.okClick = function () {
-			dialogService.cancel("myDialog");
-		};
-
 		$scope.showChartsPage = function () {
-			dialogService.close("myDialog");
+			cleanup();
+		    $uibModalInstance.close();
 			$location.path("/charts");
 		};
 
 		$scope.addChartsPage = function () {
-			var chart = $scope.model.chart;
-			QDRChartService.addDashboard(chart);
+			QDRChartService.addDashboard($scope.chart);
 		};
 
 		$scope.delChartsPage = function () {
-			var chart = $scope.model.chart;
-			QDRChartService.delDashboard(chart);
+			QDRChartService.delDashboard($scope.chart);
 		};
 
 		$scope.isOnChartsPage = function () {
-			var chart = $scope.model.chart;
-			return chart.dashboard;
+			return $scope.chart.dashboard;
 		}
 
 		var showChart = function () {
@@ -428,21 +419,33 @@ var QDR = (function(QDR) {
 				setTimeout(showChart, 100);
 				return;
 			}
-			dialogSvgChart = new QDRChartService.AreaChart($scope.model.chart, $location.$$path);
-			$scope.model.dialogSvgChart = dialogSvgChart;
+			dialogSvgChart = new QDRChartService.AreaChart($scope.chart, $location.$$path);
+			$scope.dialogSvgChart = dialogSvgChart;
 			updateDialogChart();
 		}
 		showChart();
 
 		var updateDialogChart = function () {
-			if (dialogSvgChart)
-				dialogSvgChart.tick($scope.svgDivId);
-			updateTimer = setTimeout(updateDialogChart, 1000);
-			$scope.model.updateTimer = updateTimer;
+			if ($scope.dialogSvgChart)
+				$scope.dialogSvgChart.tick($scope.svgDivId);
+			$scope.updateTimer = setTimeout(updateDialogChart, 1000);
 		}
 
-	};
+		var cleanup = function () {
+			if ($scope.updateTimer) {
+				clearTimeout($scope.updateTimer);
+				$scope.updateTimer = null;
+			}
+			if (!$scope.chart.dashboard)
+				QDRChartService.unRegisterChart(chart);     // remove the chart
 
+		}
+		$scope.ok = function () {
+			cleanup();
+	        $uibModalInstance.close();
+	    };
+
+	});
     return QDR;
 
 } (QDR || {}));

@@ -1,13 +1,58 @@
 <div class="row-fluid" ng-controller="QDR.SettingsController">
-  <div class="span4"></div>
-  <div class="span4" ng-hide="connecting">
-    <div simple-form name="settings" data="formConfig" entity="formEntity"></div>
-    <p></p>
-    <div>
-      <button class="btn btn-primary pull-right" ng-disabled="!forms.settings.$valid" ng-click="connect()">{{buttonText()}}</button>
+      <div class="login container" ng-hide="connecting">
+          <div class="row" id="login-container">
+              <div class="span2 offset4">
+                  <!-- <div simple-form name="settings" data="formConfig" entity="formEntity"></div> -->
+                  <form class="form-horizontal no-bottom-margin" novalidate name="settings" action="" method="post">
+                      <fieldset>
+                          <div class="control-group">
+                              <label class="control-label">Address: </label>
+                              <div class="controls">
+                                  <input type="text" description="Router address" ng-model="formEntity.address" name="address" required="required" autofocus="autofocus" class="ng-pristine ng-valid ng-valid-required">
+                                  <span class="help-block"></span>
+                              </div>
+                          </div>
+                          <div class="control-group">
+                              <label class="control-label" title="Port to connect to, by default 5673">Port: </label>
+                              <div class="controls">
+                                  <input type="number" description="Router port" tooltip="Ports to connect to, by default 5672" ng-model="formEntity.port" name="port" title="Port to connect to, by default 5673" class="ng-scope ng-pristine ng-valid ng-valid-number">
+                                  <span class="help-block"></span>
+                              </div>
+                          </div>
+                          <!--
+                                          <div class="control-group">
+                                              <label class="control-label">Username: </label>
+                                              <div class="controls">
+                                                  <input type="text" description="User Name" ng-model="formEntity.username" name="username" class="ng-pristine ng-valid">
+                                                  <span class="help-block"></span>
+                                              </div>
+                                          </div>
+                                          <div class="control-group">
+                                              <label class="control-label">Password: </label>
+                                              <div class="controls">
+                                                  <input type="password" description="Password" ng-model="formEntity.password" name="password" class="ng-pristine ng-valid">
+                                                  <span class="help-block"></span>
+                                              </div>
+                                          </div>
+                          -->
+                          <div class="control-group">
+                              <label class="control-label" title="Whether or not the connection should be started as soon as you navigate to the console">Autostart: </label>
+                              <div class="controls">
+                                  <input type="checkbox" description="Connect at startup" tooltip="Whether or not the connection should be started as soon as you navigate to the console" ng-model="formEntity.autostart" name="autostart" title="Whether or not the connection should be started as soon as you log into hawtio" class="ng-scope ng-pristine ng-valid">
+                                  <span class="help-block"></span>
+                              </div>
+                          </div>
+                          <input type="submit" style="position: absolute; left: -9999px; width: 1px; height: 1px;">
+                      </fieldset>
+                  </form>
+                  <p></p>
+                  <div>
+                      <button class="btn btn-primary pull-right" ng-disabled="settings.$invalid" ng-click="connect()">{{buttonText()}}</button>
+                  </div>
+              </div>
+          </div>
+      </div>
 
-    </div>
-  </div>
   <div class="span4 centered" ng-show="connecting">
     <i class="icon-spin icon-spinner icon-4x"></i>
     <p>Please wait, connecting now...</p>

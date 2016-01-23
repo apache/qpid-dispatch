@@ -1,13 +1,29 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.
+*/
 /**
  * @module QDR
  */
 var QDR = (function(QDR) {
 
-  QDR.SERVER = 'Server Messages';
-
   // The QDR service handles the connection to
   // the server in the background
-  QDR.module.factory("QDRService", function($rootScope, $http, $resource) {
+  QDR.module.factory("QDRService", ['$rootScope', '$http', '$resource', function($rootScope, $http, $resource) {
     var self = {
 
       timeout: 10,
@@ -66,7 +82,7 @@ var QDR = (function(QDR) {
             QDR.log.debug("topology was just initialized");
             self.gotTopology = true;
             self.executeConnectActions();
-            Core.$apply($rootScope);
+            $rootScope.$apply();
         } else {
             QDR.log.debug("topology model was just updated");
             self.executeUpdatedActions();
@@ -196,6 +212,7 @@ var QDR = (function(QDR) {
 
       initProton: function() {
         //QDR.log.debug("*************QDR init proton called ************");
+        // override the subprotocol string to allow generic servers to connect
         proton.websocket['subprotocol'] = "binary,AMQPWSB10";    // binary is 1st so websockify can connect
         self.messenger = new proton.Messenger();
         self.msgReceived = new proton.Message();
@@ -694,7 +711,6 @@ The response looks like:
       },
 
       connect: function(options) {
-        // override the subprotocol string to allow generic servers to connect
         self.options = options;
         self.topologyInitialized = false;
         if (!self.subscribed) {
@@ -711,7 +727,7 @@ The response looks like:
       }
     }
       return self;
-  });
+  }]);
 
   return QDR;
 }(QDR || {}));

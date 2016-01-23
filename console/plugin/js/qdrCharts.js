@@ -1,3 +1,21 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 /**
  * @module QDR
  */
@@ -14,7 +32,8 @@ var QDR = (function (QDR) {
    *
    * Controller that handles the QDR charts page
    */
-  QDR.ChartsController = function($scope, QDRService, QDRChartService, dialogService, localStorage, $location) {
+  QDR.module.controller("QDR.ChartsController", ['$scope', 'QDRService', 'QDRChartService', '$uibModal', '$location',
+  function($scope, QDRService, QDRChartService, $uibModal, $location) {
     var updateTimer = null;
 
     QDR.log.debug("started Charts controller");
@@ -23,7 +42,7 @@ var QDR = (function (QDR) {
 
     $scope.svgCharts = [];
     // create an svg object for each chart
-    QDRChartService.charts.filter(function (chart) {return chart.dashboard}).each(function (chart) {
+    QDRChartService.charts.filter(function (chart) {return chart.dashboard}).forEach(function (chart) {
         var svgChart = new QDRChartService.AreaChart(chart, $location.$$path)
         svgChart.zoomed = false;
         $scope.svgCharts.push(svgChart);
@@ -31,7 +50,7 @@ var QDR = (function (QDR) {
 
     // redraw the charts every second
     var updateCharts = function () {
-        $scope.svgCharts.each(function (svgChart) {
+        $scope.svgCharts.forEach(function (svgChart) {
             svgChart.tick(svgChart.chart.id()); // on this page we are using the chart.id() as the div id in which to render the chart
         })
         updateHandle = setTimeout(updateCharts, 1100);
@@ -59,7 +78,7 @@ var QDR = (function (QDR) {
     $scope.delChart = function (chart) {
         QDRChartService.unRegisterChart(chart.chart);
         // remove from svgCharts
-        $scope.svgCharts.each(function (svgChart, i) {
+        $scope.svgCharts.forEach(function (svgChart, i) {
             if (svgChart === chart) {
                 delete $scope.svgCharts.splice(i, 1);
             }
@@ -84,62 +103,30 @@ var QDR = (function (QDR) {
 
     function doDialog(template, chart) {
 
-        // The data for the dialog
-        var model = {
-            chart: chart,
-            controller: $scope
-        };
-
-        // jQuery UI dialog options
-        var options = {
-            autoOpen: false,
-            modal: true,
-            width: 600,
-            position: {my: "top", at: "top", of: ".qdrCharts"},
-            show: {
-                    effect: "fade",
-                    duration: 200
-                  },
-                  hide: {
-                    effect: "fade",
-                    duration: 200
-                  },
-            resizable: false,
-            close: function(event, ui) {
-                QDRChartService.unRegisterChart(model.dialogChart);     // remove the chart
-                if (model.updateTimer) {
-                    clearTimeout(model.updateTimer);
-                }
-                delete model.dialogSvgChart;
-                delete model.updateTimer;
-                delete model.dialogChart;
-            }
-        };
-        if (dialogService.isOpen("editDialog"))
-            return;
-
-        // Open the dialog using template from script
-        dialogService.open("editDialog", template, model, options).then(
-            function(result) {
-                QDR.log.debug("Close");
-                QDR.log.debug(result);
-            },
-            function(error) {
-                QDR.log.debug("Cancelled");
-            }
-        );
-
+	    var modalInstance = $uibModal.open({
+	      animation: true,
+	      templateUrl: template,
+	      controller: 'QDR.ChartDialogController',
+	      resolve: {
+	        chart: function () {
+	          return chart;
+	        },
+	        dashboard: function () {
+	            return $scope;
+	        }
+	      }
+	    });
     };
 
-  };
+  }]);
 
-  QDR.ChartDialogController = function($element, $scope, QDRService, QDRChartService, dialogService, localStorage, $location, $element, $rootScope) {
+  QDR.module.controller("QDR.ChartDialogController", function($scope, QDRChartService, $location, $uibModalInstance, $rootScope, chart, dashboard) {
         var dialogSvgChart = null;
         $scope.svgDivId = "dialogChart";    // the div id for the svg chart
 
-        $scope.chart = $scope.model.chart;  // the underlying chart object from the dashboard
+		$scope.updateTimer = null;
+        $scope.chart = chart;  // the underlying chart object from the dashboard
         $scope.dialogChart = $scope.chart.copy(); // the chart object for this dialog
-        $scope.model.dialogChart = $scope.dialogChart;
         $scope.userTitle = $scope.chart.title();
 
         $scope.$watch('userTitle', function(newValue, oldValue) {
@@ -150,9 +137,17 @@ var QDR = (function (QDR) {
         // the stored rateWindow is in milliseconds, but the slider is in seconds
         $scope.rateWindow = $scope.chart.rateWindow / 1000;
 
-        $scope.okClick = function () {
-            dialogService.cancel("editDialog");
-        };
+		var cleanup = function () {
+			if ($scope.updateTimer) {
+				clearTimeout($scope.updateTimer);
+				$scope.updateTimer = null;
+			}
+			QDRChartService.unRegisterChart($scope.dialogChart);     // remove the chart
+		}
+		$scope.okClick = function () {
+			cleanup();
+	        $uibModalInstance.close();
+	    };
 
         // initialize the rateWindow slider
         $scope.slider = {
@@ -201,7 +196,7 @@ var QDR = (function (QDR) {
             // set the new chart's dashboard state
             QDRChartService.addDashboard(chart);
             // notify the chart controller that it needs to display a new chart
-            $scope.model.controller.addChart(chart);
+            dashboard.addChart(chart);
         }
 
         // update the chart on the popup dialog
@@ -211,7 +206,7 @@ var QDR = (function (QDR) {
                 dialogSvgChart.tick($scope.svgDivId);
 
             // draw the chart again in 1 second
-            $scope.model.updateTimer = setTimeout(updateDialogChart, 1000);
+            $scope.updateTimer = setTimeout(updateDialogChart, 1000);
         }
 
         var showChart = function () {
@@ -222,13 +217,12 @@ var QDR = (function (QDR) {
                 return;
             }
             dialogSvgChart = new QDRChartService.AreaChart($scope.dialogChart, $location.$$path);
-            $scope.model.dialogSvgChart = dialogSvgChart;
             updateDialogChart();
         }
         showChart();
 
 
-  };
+  });
 
   return QDR;
 

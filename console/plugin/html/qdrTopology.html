@@ -1,17 +1,33 @@
-<div class="qdrTopology row-fluid">
-    <div class=" tertiary left panel">
-        <div id="topologyForm" ng-class="{selected : isSelected()}" ng-controller="QDR.TopologyFormController">
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<div class="qdrTopology row-fluid" ng-controller="QDR.TopologyController">
+    <div class="tertiary left panel">
+        <div id="topologyForm" ng-class="{selected : isSelected()}">
             <!-- <div ng-repeat="form in forms" ng-show="isVisible(form)" ng-class='{selected : isSelected(form)}'> -->
 
             <div ng-show="isGeneral()">
                 <h4>Router Info</h4>
-                <table class="table table-condensed table-striped"
-                   hawtio-simple-table="topoGridOptions"></table>
+                <div ng-style="getTableHeight(attributes)" ui-grid-auto-resize ui-grid="topoGridOptions"></div>
             </div>
-            <div ng-class="{selected : isSelected('connections')}" ng-show="isConnections()">
+            <div ng-show="isConnections()">
                 <h4>Connection Info</h4>
-                <table class="table table-condensed table-striped"
-                       hawtio-simple-table="topoConnOptions"></table>
+                <div ng-style="getTableHeight(connAttributes)" ui-grid-auto-resize ui-grid="topoConnOptions"></div>
             </div>
             <div id="addNodeForm" ng-show="isAddNode()">
                 <h4>Add a new router</h4>
@@ -20,16 +36,18 @@
                     <li>Double-click on the new router to <button ng-click="editNewRouter()">edit</button> its properties</li>
                     <li ng-show="addingNode.hasLink" >Right-click on a new connection to edit its properties</li>
                 </ul>
-                <button ng-class="{disabled: !addingNode.haslink}" ng-click="apply()">Apply</button> <button ng-click="cancel()">Cancel</button>
+                <button ng-click="cancel()">Cancel</button>
             </div>
         </div>
     </div>
-    <div class="panel-adjacent canvas" ng-controller="QDR.TopologyController">
+    <div class="panel-adjacent canvas">
 
+<!--
         <ul class="nav nav-tabs ng-scope qdrTopoModes">
             <li ng-repeat="mode in modes" ng-class="{active : isModeActive(mode.name), 'pull-right' : isRight(mode)}" ng-click="selectMode('{{mode.name}}')" >
                 <a data-placement="bottom" class="ng-binding"> {{mode.name}} </a></li>
         </ul>
+-->
         <div id="topology" ng-show="mode == 'Diagram'"><!-- d3 toplogy here --></div>
         <div id="geology" ng-show="mode == 'Globe'"><!-- d3 globe here --></div>
         <div id="crosssection"><!-- d3 pack here --></div>

@@ -1,50 +1,83 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
 <div ng-controller="QDR.OverviewController">
 
-    <hawtio-pane position="left" width="250">
+    <div class="treeContainer">
         <div id="overtree"></div>
-    </hawtio-pane>
+    </div>
 
-    <div class="row-fluid" ng-include="template.url"></div>
-
+    <div class="treeDetails" ng-include="template.url"></div>
 </div>
 
 
 <!-- the following scripts are content that gets loaded into the above div that has the temple.url -->
 <script type="text/ng-template" id="routers.html">
-    <h3>Routers</h3>
-    <div class="overview">
-        <div class="gridStyle" ng-grid="allConnections"></div>
+    <div class="row-fluid">
+        <h3>Routers</h3>
+        <div class="overview">
+            <div ui-grid="allRouters" ng-style="getGridHeight(allRouters)" ui-grid-auto-resize ui-grid-selection class="gridStyle"></div>
+        </div>
     </div>
 </script>
 
 <script type="text/ng-template" id="router.html">
-    <h3>Router {{router.data.title}}</h3>
-    <div class="gridStyle" ng-grid="routerGrid"></div>
+    <div class="row-fluid">
+        <h3>Router {{router.data.title}}</h3>
+        <div ui-grid="routerGrid" class="gridStyle noHighlight"></div>
+    </div>
 </script>
 
 <script type="text/ng-template" id="addresses.html">
+    <div class="row-fluid">
     <h3>Addresses</h3>
     <div class="overview">
-        <div class="gridStyle" ng-grid="addressGrid"></div>
+        <div class="gridStyle" ng-style="getGridHeight(addressGrid)" ui-grid-auto-resize ui-grid-selection ui-grid="addressGrid"></div>
+    </div>
     </div>
 </script>
 <script type="text/ng-template" id="address.html">
+    <div class="row-fluid">
     <h3>Address {{address.data.title}}</h3>
-    <div class="gridStyle" ng-grid="addressGrid"></div>
+    <div class="gridStyle noHighlight" ui-grid="addressGrid"></div>
+    </div>
 </script>
 <script type="text/ng-template" id="connections.html">
+    <div class="row-fluid">
     <h3>Connections</h3>
     <div class="overview">
-        <div class="gridStyle" ng-grid="allConnectionGrid"></div>
+        <div class="gridStyle" ng-style="getGridHeight(allConnectionGrid)" ui-grid-auto-resize ui-grid-selection ui-grid="allConnectionGrid"></div>
+    </div>
     </div>
 </script>
 <script type="text/ng-template" id="connection.html">
+    <div class="row-fluid">
     <h3>Connection {{connection.data.title}}</h3>
-    <div class="gridStyle" ng-grid="connectionGrid"></div>
+    <div class="gridStyle noHighlight" ui-grid="connectionGrid"></div>
+    </div>
 </script>
 <script type="text/ng-template" id="logs.html">
+    <div class="row-fluid">
     <h3>Logs</h3>
+    </div>
 </script>
 <script type="text/ng-template" id="log.html">
+    <div class="row-fluid">
     <h3>Log {{log.data.title}}</h3>
+    </div>
 </script>

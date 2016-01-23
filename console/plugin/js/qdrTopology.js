@@ -1,6 +1,25 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 /**
  * @module QDR
  */
+var dialogService = {};
 var QDR = (function (QDR) {
 
   /**
@@ -21,84 +40,45 @@ var QDR = (function (QDR) {
    *
    */
    
-   QDR.TopoTabsController = function($scope, QDRService, $location) {
-   
-   		QDR.log.debug("started QDR.TopoTabsController with location: " + $location.url());
-   
-   		$scope.states = [
-   			{
-                   content: '<i class="icon-comments"></i> General',
-                   title: "General router stats",
-                   name: 'general',
-                   isValid: function (QDRService) { return true; } //QDRService.isConnected(); }
-   			},
-   			{
-   				content: '<i class="icon-cogs"></i> Connections',
-   				title: "Router connections",
-   				description: "Show the connections for the highlighted router",
-                   name: 'connections',
-   				isValid: function (QDRService) { return true; }
-   			},
-   			{
-   				content: '<i class="icon-star-empty"></i> Nodes',
-   				title: "Router nodes",
-   				description: "Show the nodes for the highlighted router",
-                   name: 'nodes',
-   				isValid: function (QDRService) { return true; }
-   			  }
-   		];
-           $scope.currentTab = $scope.states[0].name;
-   
-   		$scope.isValid = function(whichTab) {
-   		  return whichTab.isValid(QDRService);
-   		};
-   
-   		$scope.isActive = function(whichTab) {
-               return whichTab.name === $scope.currentTab;
-   		};
-   		
-   		$scope.setActive = function(whichTab) {
-   		    $scope.currentTab = whichTab.name;
-   		};
-   };
+    QDR.module.controller("QDR.TopologyController", ['$scope', '$rootScope', 'uiGridConstants', 'QDRService', '$location', '$timeout',
+    function($scope, $rootScope, uiGridConstants, QDRService, $location, $timeout) {
 
-    QDR.currentAttributes = [];
-    QDR.connAttributes = [];
-    QDR.topoForm = "general";
-    QDR.topoFormSelected = "";
-	QDR.addingNode = {
-		step: 0,
-		hasLink: false,
-		trigger: ''
-	}; // shared object about the node that is being added
+		QDR.log.debug("started QDR.TopologyController with location.url: " + $location.url());
+		QDR.log.debug("started QDR.TopologyController with window.location.pathname : " + window.location.pathname);
+		var urlPrefix = window.location.pathname;
 
-	QDR.TopologyFormController = function($scope, localStorage, $location) {
-		QDR.log.debug("started QDR.TopologyFormController with location: " + $location.url());
-
-        $scope.attributes = QDR.currentAttributes;
-        $scope.connAttributes = QDR.connAttributes;
-		$scope.addingNode = QDR.addingNode;
+		$scope.attributes = [];
+        $scope.connAttributes = [];
+        $scope.topoForm = "general";
+        $scope.topoFormSelected = "";
+		$scope.addingNode = {
+			step: 0,
+			hasLink: false,
+			trigger: ''
+		}; // shared object about the node that is be	    $scope.topoForm = "general";
 
         var generalCellTemplate = '<div class="ngCellText"><span title="{{row.entity.description}}">{{row.entity.attributeName}}</span></div>';
-        
-		$scope.update = function () {
-		};
+
 		$scope.isGeneral = function () {
-    	    return QDR.topoForm == 'general';
+    	    //QDR.log.debug("$scope.topoForm=" + $scope.topoForm)
+    	    return $scope.topoForm === 'general';
 		};
 		$scope.isConnections = function () {
-    	    return QDR.topoForm == 'connections';
+    	    //QDR.log.debug("$scope.topoForm=" + $scope.topoForm)
+    	    return $scope.topoForm === 'connections';
 		};
 		$scope.isAddNode = function () {
-			return QDR.topoForm == 'addNode';
+    	    //QDR.log.debug("$scope.topoForm=" + $scope.topoForm)
+			return $scope.topoForm === 'addNode';
 		}
 
+		$scope.getTableHeight = function (rows) {
+	        return {height: (rows.length * 30) + "px"};
+		}
         $scope.isSelected = function () {
-            return (QDR.topoFormSelected != "");
+            return ($scope.topoFormSelected != "");
         }
-        $scope.apply = function () {
 
-        }
         $scope.cancel = function () {
             $scope.addingNode.step = 0;
         }
@@ -107,19 +87,11 @@ var QDR = (function (QDR) {
 		}
 
         $scope.topoGridOptions = {
-            selectedItems: [],
             data: 'attributes',
-            displayFooter: true,
-            displaySelectionCheckbox: false,
-            canSelectRows: false,
-            enableSorting: false,
-            showSelectionCheckbox: false,
-            enableRowClickSelection: false,
-            multiSelect: false,
-            sortInfo: {
-              sortBy: 'nothing!!!',
-              ascending: true
-            },
+			enableColumnResize: true,
+			enableHorizontalScrollbar: uiGridConstants.scrollbars.NEVER,
+            enableVerticalScrollbar: uiGridConstants.scrollbars.NEVER,
+			multiSelect: false,
             columnDefs: [
             {
                 field: 'attributeName',
@@ -134,14 +106,6 @@ var QDR = (function (QDR) {
         };
         $scope.topoConnOptions = angular.copy($scope.topoGridOptions);
         $scope.topoConnOptions.data = 'connAttributes';
-	};
-
-    QDR.TopologyController = function($scope, $rootScope, QDRService, dialogService, localStorage, $location, $timeout) {
-
-		QDR.log.debug("started QDR.TopologyController with location.url: " + $location.url());
-		QDR.log.debug("started QDR.TopologyController with window.location.pathname : " + window.location.pathname);
-		var urlPrefix = window.location.pathname;
-
 		var NewRouterName = "__NEW__";
 	    // mouse event vars
 	    var selected_node = null,
@@ -153,16 +117,12 @@ var QDR = (function (QDR) {
 
         $scope.schema = "Not connected";
 
-		$scope.update = function () {
-			//QDR.log.debug("topology controller update called for scope variable");
-		};
 	    $scope.modes = [
 	    	{title: 'Topology view', name: 'Diagram', right: false},
 	    	/* {title: '3D Globe view', name: 'Globe', right: false}, */
-	    	{title: 'Add a new router node', name: 'Add Router', right: true}
+	    	/* {title: 'Add a new router node', name: 'Add Router', right: true} */
 	    	];
 		$scope.mode = "Diagram";
-		$scope.addingNode = QDR.addingNode;
 		$scope.contextNode = null; // node that is associated with the current context menu
 
 		$scope.isModeActive = function (name) {
@@ -174,16 +134,16 @@ var QDR = (function (QDR) {
 			if (name == "Add Router") {
 				name = 'Diagram';
 				if ($scope.addingNode.step > 0) {
-					QDR.topoForm = 'general'
-					QDR.topoFormSelected = '';
+					$scope.topoForm = 'general'
+					$scope.topoFormSelected = '';
 					$scope.addingNode.step = 0;
 				} else {
 					// start adding node mode
 					$scope.addingNode.step = 1;
 				}
 			} else {
-				QDR.topoForm = 'general'
-				QDR.topoFormSelected = '';
+				$scope.topoForm = 'general'
+				$scope.topoFormSelected = '';
 				$scope.addingNode.step = 0;
 			}
 
@@ -212,12 +172,12 @@ var QDR = (function (QDR) {
 					}
 					return true;
 				})
-				QDR.topoForm = 'general'
-				QDR.topoFormSelected = '';
+				$scope.topoForm = 'general'
+				$scope.topoFormSelected = '';
 			} else if (newValue > 0) {
 				// we are starting the add mode
-				QDR.topoForm = 'addNode';
-                QDR.topoFormSelected = 'addNode';
+				$scope.topoForm = 'addNode';
+                $scope.topoFormSelected = 'addNode';
 
 				resetMouseVars();
                 selected_node = null;
@@ -396,7 +356,7 @@ var QDR = (function (QDR) {
 		// create an bare svg element and
 		// initialize the nodes and links array from the QDRService.topology._nodeInfo object
 		var initForceGraph = function () {
-            QDR.log.debug("initForceGraph called");
+            //QDR.log.debug("initForceGraph called");
 			nodes = [];
 			links = [];
 
@@ -520,8 +480,8 @@ var QDR = (function (QDR) {
 			for (var id in nodeInfo) {
 				var onode = nodeInfo[id];
 
-                initForm(onode['.connection'].attributeNames, onode['.connection'].results[0], QDRService.schema.entityTypes.connection, QDR.connAttributes);
-                initForm(onode['.router'].attributeNames, onode['.router'].results[0], QDRService.schema.entityTypes.router, QDR.currentAttributes);
+                initForm(onode['.connection'].attributeNames, onode['.connection'].results[0], QDRService.schema.entityTypes.connection, $scope.connAttributes);
+                initForm(onode['.router'].attributeNames, onode['.router'].results[0], QDRService.schema.entityTypes.router, $scope.attributes);
                 
 				break;
 			}
@@ -811,18 +771,18 @@ var QDR = (function (QDR) {
 				var nodeResults = onode['.router'].results[0];
 				var nodeAttributes = onode['.router'].attributeNames;
 
-                for (var i=0; i<QDR.currentAttributes.length; ++i) {
-                    var idx = nodeAttributes.indexOf(QDR.currentAttributes[i].attributeName);
+                for (var i=0; i<$scope.attributes.length; ++i) {
+                    var idx = nodeAttributes.indexOf($scope.attributes[i].attributeName);
                     if (idx > -1) {
-                        if (QDR.currentAttributes[i].attributeValue != nodeResults[idx]) {
+                        if ($scope.attributes[i].attributeValue != nodeResults[idx]) {
                             // highlight the changed data
-                            QDR.currentAttributes[i].attributeValue = nodeResults[idx];
+                            $scope.attributes[i].attributeValue = nodeResults[idx];
 
                         }
                     }
                 }
 			}
-            QDR.topoForm = "general";
+            $scope.topoForm = "general";
             $scope.$apply();
 		}
 
@@ -833,21 +793,22 @@ var QDR = (function (QDR) {
 				var nodeResults = onode['.connection'].results[resultIndex];
 				var nodeAttributes = onode['.connection'].attributeNames;
 
-                for (var i=0; i<QDR.connAttributes.length; ++i) {
-                    var idx = nodeAttributes.indexOf(QDR.connAttributes[i].attributeName);
+                for (var i=0; i<$scope.connAttributes.length; ++i) {
+                    var idx = nodeAttributes.indexOf($scope.connAttributes[i].attributeName);
                     if (idx > -1) {
                     	try {
-                        if (QDR.connAttributes[i].attributeValue != nodeResults[idx]) {
+                        if ($scope.connAttributes[i].attributeValue != nodeResults[idx]) {
                             // highlight the changed data
-                            QDR.connAttributes[i].attributeValue = nodeResults[idx];
+                            $scope.connAttributes[i].attributeValue = nodeResults[idx];
 
                         }
                         } catch (err) {
+							QDR.log.error("error updating form" + err)
                         }
                     }
                 }
 			}
-             QDR.topoForm = "connections";
+            $scope.topoForm = "connections";
             $scope.$apply();
 		}
 
@@ -1320,18 +1281,18 @@ var QDR = (function (QDR) {
 					// if this node was selected, unselect it
                     if (mousedown_node === selected_node) {
                         selected_node = null;
-                        QDR.topoFormSelected = "";
+                        $scope.topoFormSelected = "";
                     }
                     else {
                         selected_node = mousedown_node;
                         if (d.nodeType === 'inter-router') {
                             //QDR.log.debug("showing general form");
                             updateNodeForm(d);
-                            QDR.topoFormSelected = "general";
+                            $scope.topoFormSelected = "general";
                         } else if (d.nodeType === 'normal' || d.nodeType === 'on-demand') {
                             //QDR.log.debug("showing connections form");
                             updateConnForm(d, d.resultIndex);
-                            QDR.topoFormSelected = "connections";
+                            $scope.topoFormSelected = "connections";
                         }
                     }
                     for (var i=0; i<links.length; ++i) {
@@ -1577,10 +1538,9 @@ var QDR = (function (QDR) {
         };
 
 
-  };
+  }]);
 
-  QDR.NodeDialogController = function($scope, QDRService, dialogService) {
-
+  QDR.module.controller("QDR.NodeDialogController", ['$scope', 'QDRService', function($scope, QDRService) {
         var newName = $scope.model.NewRouterName;
    		var schema = QDRService.schema;
    		var myEntities = ['container', 'router', 'log', 'listener' ];
@@ -1832,9 +1792,10 @@ var QDR = (function (QDR) {
         // start the update loop
         initTabs();
 
-  };
+  }]);
 
-QDR.DownloadDialogController = function($scope, QDRService, dialogService, $templateCache, $window) {
+QDR.module.controller("QDR.DownloadDialogController", ['$scope', 'QDRService', '$templateCache', '$window',
+function($scope, QDRService, $templateCache, $window) {
 
 		var result = $scope.model.result.entities;
 		var annotations = $scope.model.result.annotations;
@@ -1955,7 +1916,7 @@ QDR.DownloadDialogController = function($scope, QDRService, dialogService, $temp
 		$scope.done = function () {
 			dialogService.close("downloadDialog");
 		}
-  };
+}]);
 
 
   return QDR;

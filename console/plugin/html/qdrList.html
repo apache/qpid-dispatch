@@ -1,37 +1,56 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
 <div class="main-display row-fluid qdrList" ng-controller="QDR.ListController">
     <ul class="nav nav-tabs qdrListNodes">
-          <li ng-repeat="node in nodes" ng-click="selectNode({{node}})" ng-class="{active : isNodeSelected(node.id)}"> <span>{{node.name}}</span> </li>
+          <li ng-repeat="node in nodes" ng-click="selectNode(node)" ng-class="{active : isNodeSelected(node.id)}"> <span>{{node.name}}</span> </li>
     </ul>
 
     <div class="row-fluid qdrListActions">
         <ul class="nav nav-tabs ng-scope">
-            <li ng-repeat="entity in entities" ng-class="{active : isActionActive(entity.name)}" ng-click="selectAction('{{entity.name}}')" >
+            <li ng-repeat="entity in entities" ng-class="{active : isActionActive(entity.name)}" ng-click="selectAction(entity.name)" >
                 <a title="{{entity.title}}" data-placement="bottom"> {{entity.humanName}} </a></li>
         </ul>
-            <div class="gridStyle" ng-grid="gridDef"></div>
+            <div class="gridStyle" ng-style="getTableHeight()" ui-grid-auto-resize ui-grid-selection ui-grid="gridDef"></div>
             <div class="selectedItems">
-                <div class="gridStyle gridDetails" ng-grid="details"></div>
+                <div ng-style="getDetailsTableHeight()" ui-grid-auto-resize ui-grid-selection ui-grid="details"></div>
             </div>
     </div>
 </div>
-
 <!--
     This is the template for the graph dialog that is displayed. It uses the
     dialogCtrl controller in qdrList.js.
 -->
 <script type="text/ng-template" id="template-from-script.html">
-    <div class="listGraphs" title="Chart" ng-controller="QDR.ListChartController">
-        <p ng-hide="isOnChartsPage()">
-            <button ng-click="addChartsPage()"><i class="icon-bar-chart"></i> Add</button> this chart to the Charts page.
-        </p>
-        <p ng-show="isOnChartsPage()">
-            <button ng-click="delChartsPage()">Remove</button> this chart from the <button ng-click="showChartsPage()"><i class="icon-bar-chart"></i> Charts</button> page.
-        </p>
-        <div id="{{svgDivId}}" class="d3Chart"></div>
-
-        <div class="okButton">
-                <button ng-click="okClick()">Close</button>
-        </div>
+    <div class="modal-header">
+        <h3 class="modal-title">Chart {{chart.attr() | humanify}}</h3>
+    </div>
+    <div class="modal-body">
+            <div id="{{svgDivId}}" class="d3Chart"></div>
+    </div>
+    <div class="modal-footer">
+        <span ng-hide="isOnChartsPage()">
+            <button class="btn btn-success" type="button" ng-click="addChartsPage()"><i class="icon-bar-chart"></i> Add</button> this chart to the Charts page.
+        </span>
+        <span ng-show="isOnChartsPage()">
+            <button class="btn btn-danger" type="button" ng-click="delChartsPage()">Remove</button> this chart from the <button class="btn btn-success" type="button" ng-click="showChartsPage()"><i class="icon-bar-chart"></i> Charts</button> page.
+        </span>
+        <button class="btn btn-primary" type="button" ng-click="ok()">Close</button>
     </div>
 </script>
 

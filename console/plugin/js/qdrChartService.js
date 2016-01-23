@@ -1,10 +1,29 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
 /**
  * @module QDR
  */
 var QDR = (function(QDR) {
 
     // The QDR chart service handles periodic gathering data for charts and displaying the charts
-    QDR.module.factory("QDRChartService", function($rootScope, QDRService, localStorage, $http, $resource) {
+    QDR.module.factory("QDRChartService", ['$rootScope', 'QDRService', '$http', '$resource',
+    function($rootScope, QDRService, $http, $resource) {
 
         var instance = 0;   // counter for chart instances
         var bases = [];
@@ -21,15 +40,12 @@ var QDR = (function(QDR) {
             // the base chart attributes
             this.name = name;           // the record's "name" field
             this.attr = attr;           // the record's attr field to chart
-            this.request = request;     // the associated request that gets the data
-            this.data = [];             // array of objects {date: value:}
-            this.duration = 10;         // number of minutes to keep the data
+            this.request = request;     // the associated request that fetches the data
 
             // copy the savable properties to an object
             this.copyProps = function (o) {
                 o.name = this.name;
                 o.attr = this.attr;
-                o.duration = this.duration;
                 this.request.copyProps(o);
             }
 
@@ -52,14 +68,14 @@ var QDR = (function(QDR) {
             this.dashboard = false;     // is this chart on the dashboard page
             this.type = "value";        // value or rate
             this.rateWindow = 1000;     // calculate the rate of change over this time interval. higher == smother graph
-            this.areaColor = "#EEFFEE"; // the chart's area color when not an empty string
+            this.areaColor = "#c0e0ff"; // the chart's area color when not an empty string
             this.lineColor = "#4682b4"; // the chart's line color when not an empty string
             this.visibleDuration = 10;  // number of minutes of data to show (<= base.duration)
             this.userTitle = null;      // user title overrides title()
 
             // generate a unique id for this chart
             this.id = function () {
-                var key = this.request.nodeId + this.request.entity + this.name + this.attr + "_" + this.instance;
+                var key = this.request().nodeId + this.request().entity + this.name() + this.attr() + "_" + this.instance;
                 // remove all characters except letters,numbers, and _
                 return key.replace(/[^\w]/gi, '')
             }
@@ -99,7 +115,7 @@ var QDR = (function(QDR) {
                 return this;
             }
             this.data = function () {
-                if (!arguments.length) return this.base.data;   // read only
+                return this.base.request.data(this.base.name, this.base.attr); // refernce to chart's data array
             }
             this.interval = function (_) {
                 if (!arguments.length) return this.base.request.interval;
@@ -107,14 +123,15 @@ var QDR = (function(QDR) {
                 return this;
             }
             this.duration = function (_) {
-                if (!arguments.length) return this.base.duration;
-                this.base.duration = _;
+                if (!arguments.length) return this.base.request.duration;
+                this.base.request.duration = _;
                 return this;
             }
             this.title = function (_) {
-                var computed = QDRService.nameFromId(this.nodeId()) +
-                                   "  :  " + this.name() +
-                                   "  :  " + QDRService.humanify(this.attr());
+				var name = this.request().aggregate ? 'Aggregate' : QDRService.nameFromId(this.nodeId());
+                var computed = name +
+                                   " " + QDRService.humanify(this.attr()) +
+                                   " - " + this.name()
                 if (!arguments.length) return this.userTitle || computed;
 
                 // don't store computed title in userTitle
@@ -123,9 +140,13 @@ var QDR = (function(QDR) {
                 this.userTitle = _;
                 return this;
             }
+            this.title_short = function (_) {
+                if (!arguments.length) return this.userTitle || this.name();
+                return this;
+            }
             this.copy = function () {
                 var chart = self.registerChart(this.nodeId(), this.entity(),
-                            this.name(), this.attr(), this.interval(), true);
+                            this.name(), this.attr(), this.interval(), true, this.base.request.aggregate);
                 chart.type = this.type;
                 chart.areaColor = this.areaColor;
                 chart.lineColor = this.lineColor;
@@ -145,26 +166,72 @@ var QDR = (function(QDR) {
             }
         }
 
-        // Object that represents the management request to get data for multiple charts
-        function ChartRequest(nodeId, entity, attr, interval) {
-            this.nodeId = nodeId;       // eg. amqp:/_topo/0/QDR.A/$management
+        // Object that represents the management request to fetch and store data for multiple charts
+        function ChartRequest(nodeId, entity, name, attr, interval, aggregate) {
+            this.duration = 10;         // number of minutes to keep the data
+            this.nodeId = nodeId;       // eg amqp:/_topo/0/QDR.A/$management
             this.entity = entity;       // eg .router.address
-            this.attrs = [attr];        // deliveriesFromContainer
+			// sorted since the responses will always be sorted
+			this.aggregate = aggregate;   // list of nodeIds for aggregate charts
+            this.datum = {};            // object containing array of arrays for each attr
+                                        // like {attr1: [[date,value],[date,value]...], attr2: [[date,value]...]}
 
-            this.interval = interval;   // number of milliseconds to update data
+            this.interval = interval;   // number of milliseconds between updates to data
             this.setTimeoutHandle = null;   // used to cancel the next request
             // copy the savable properties to an object
+
+			this.data = function (name, attr) {
+				if (this.datum[name] && this.datum[name][attr])
+					return this.datum[name][attr]
+				return null;
+			}
+			this.addAttrName = function (name, attr) {
+				if (Object.keys(this.datum).indexOf(name) == -1) {
+					this.datum[name] = {}
+				}
+				if (Object.keys(this.datum[name]).indexOf(attr) == -1) {
+					this.datum[name][attr] = [];
+				}
+			}
+			this.addAttrName(name, attr)
+
             this.copyProps = function (o) {
                 o.nodeId = this.nodeId;
                 o.entity = this.entity;
                 o.interval = this.interval;
+				o.aggregate = this.aggregate;
+				o.duration = this.duration;
             }
 
-            this.equals = function (r) {
-                return (this.nodeId == r.nodeId && this.entity == r.entity)
-            }
+			this.removeAttr = function (name, attr) {
+				if (this.datum[name]) {
+					if (this.datum[name][attr]) {
+						delete this.datum[name][attr]
+					}
+				}
+				return this.attrs().length;
+			}
+
+            this.equals = function (r, entity, aggregate) {
+				if (arguments.length == 3) {
+					var o = {nodeId: r, entity: entity, aggregate: aggregate}
+					r = o;
+				}
+                return (this.nodeId === r.nodeId && this.entity === r.entity && this.aggregate == r.aggregate)
+			}
+			this.names = function () {
+				return Object.keys(this.datum)
+			}
+			this.attrs = function () {
+				var attrs = {}
+				Object.keys(this.datum).forEach( function (name) {
+					Object.keys(this.datum[name]).forEach( function (attr) {
+						attrs[attr] = 1;
+					})
+				}, this)
+				return Object.keys(attrs);
+			}
         };
-
         var self = {
             charts: [],         // list of charts to gather data for
             chartRequests: [],  // the management request info (multiple charts can be driven off of a single request
@@ -173,15 +240,16 @@ var QDR = (function(QDR) {
                 self.loadCharts();
             },
 
-            findChartRequest: function (nodeId, entity) {
-                for (var i=0; i<self.chartRequests.length; ++i) {
-                    var request = self.chartRequests[i];
-                    if (request.nodeId == nodeId && request.entity == entity) {
-                        return request;
-                    }
-                }
-                return null;
-            },
+			findChartRequest: function (nodeId, entity, aggregate) {
+				var ret = null;
+				self.chartRequests.some( function (request) {
+					if (request.equals(nodeId, entity, aggregate)) {
+						ret = request;
+						return true;
+					}
+				})
+				return ret;
+			},
 
             findCharts: function (name, attr, nodeId, entity) {
                 return self.charts.filter( function (chart) {
@@ -196,37 +264,41 @@ var QDR = (function(QDR) {
                 for (var i=0; i<self.chartRequests.length; ++i) {
                     var r = self.chartRequests[i];
                     if (request.equals(r)) {
+	                    QDR.log.debug("removed request: " + request.nodeId + " " + request.entity);
                         self.chartRequests.splice(i, 1);
                         self.stopCollecting(request);
-                        delete request;
                         return;
                     }
                 }
             },
 
             delChart: function (chart) {
+                var foundBases = 0;
                 for (var i=0; i<self.charts.length; ++i) {
                     var c = self.charts[i];
+					if (c.base === chart.base)
+						++foundBases;
                     if (c.equals(chart)) {
                         self.charts.splice(i, 1);
                         if (chart.dashboard)
                             self.saveCharts();
-                        delete chart;
-                        return;
                     }
+                }
+                if (foundBases == 1) {
+                    var baseIndex = bases.indexOf(chart.base)
+                    bases.splice(baseIndex, 1);
                 }
             },
 
-            registerChart: function (nodeId, entity, name, attr, interval, forceCreate) {
-                var request = self.findChartRequest(nodeId, entity);
+            registerChart: function (nodeId, entity, name, attr, interval, forceCreate, aggregate) {
+                var request = self.findChartRequest(nodeId, entity, aggregate);
                 if (request) {
-                    // add any new attr to the list
-                    if (request.attrs.indexOf(attr) == -1)
-                        request.attrs.push(attr);
+                    // add any new attr or name to the list
+                    request.addAttrName(name, attr)
                 } else {
                     // the nodeId/entity did not already exist, so add a new request and chart
                     QDR.log.debug("added new request: " + nodeId + " " + entity);
-                    request = new ChartRequest(nodeId, entity, attr, interval);
+                    request = new ChartRequest(nodeId, entity, name, attr, interval, aggregate);
                     self.chartRequests.push(request);
                     self.startCollecting(request);
                 }
@@ -258,9 +330,7 @@ var QDR = (function(QDR) {
                                     return;
                             }
                             // no other charts use this attr, so remove it
-                            var attrIndex = request.attrs.indexOf(chart.attr());
-                            request.attrs.splice(attrIndex, 1);
-                            if (request.attrs.length == 0) {
+                            if (request.removeAttr(chart.name(), chart.attr()) == 0) {
                                 self.stopCollecting(request);
                                 self.delChartRequest(request);
                             }
@@ -283,41 +353,56 @@ var QDR = (function(QDR) {
             // send the request
             sendChartRequest: function (request) {
                 // ensure the response has the name field so we can associate the response values with the correct chart
-                var attrs = request.attrs.slice(); // copy to temp array
+                var attrs = request.attrs();
                 attrs.push("name");
-                QDRService.getNodeInfo(request.nodeId, request.entity, attrs,
-                    // this is called when the response is received
-                    function (nodeId, entity, response) {
-                        QDR.log.debug("got chart results for " + nodeId + " " + entity);
-                        var records = response.results;
-                        var now = new Date();
-                        var nameIndex = response.attributeNames.indexOf("name");
-                        if (nameIndex < 0)
-                            return;
-                        // for each record returned, find the charts for this request and save the data with this timestamp
-                        for (var i=0; i<records.length; ++i) {
-                            var name = records[i][nameIndex];
-                            for (var j=0; j<self.charts.length; ++j) {
-                                var chart = self.charts[j];
-                                if (chart.name() == name && chart.request().equals(request)) {
-                                    var attrIndex = response.attributeNames.indexOf(chart.attr());
-                                    if (attrIndex > -1) {
-                                        chart.data().push({date: now, value: records[i][attrIndex]});
-                                        self.expireData(chart.data(), now, chart.duration());
-                                    }
-                                }
-                            }
-                        }
-                        // it is now safe to send another request
-                        request.setTimeoutHandle = setTimeout(self.sendChartRequest, request.interval, request)
-                    });
-            },
 
-            expireData: function (data, now, duration) {
-                var cutOff = new Date(now.getTime() - duration * 60 * 1000);
-                while (data[0].date < cutOff) {
-                    data.shift();
-                }
+	            // this is called when the response is received
+				var saveResponse = function (nodeId, entity, response) {
+	                //QDR.log.debug("got chart results for " + nodeId + " " + entity);
+	                // records an array that has data for all names
+	                var records = response.results;
+	                if (!records)
+	                    return;
+
+	                var now = new Date();
+	                var cutOff = new Date(now.getTime() - request.duration * 60 * 1000);
+	                // index of the "name" attr in the response
+	                var nameIndex = response.attributeNames.indexOf("name");
+	                if (nameIndex < 0)
+	                    return;
+
+					var names = request.names();
+	                // for each record returned, find the name/attr for this request and save the data with this timestamp
+	                for (var i=0; i<records.length; ++i) {
+	                    var name = records[i][nameIndex];
+						// if we want to store the values for some attrs for this name
+	                    if (names.indexOf(name) > -1) {
+	                        attrs.forEach( function (attr) {
+		                        var data = request.data(name, attr) // get a reference to the data array
+								if (data) {
+		                            var attrIndex = response.attributeNames.indexOf(attr)
+			                        if (request.aggregate) {
+			                            data.push([now, response.aggregates[i][attrIndex].sum, response.aggregates[i][attrIndex].detail])
+			                        } else {
+										data.push([now, records[i][attrIndex]])
+			                        }
+	                                // expire the old data
+	                                while (data[0][0] < cutOff) {
+	                                    data.shift();
+	                                }
+								}
+	                        })
+	                    }
+	                }
+				}
+				if (request.aggregate) {
+					var nodeList = QDRService.nodeIdList()
+					QDRService.getMultipleNodeInfo(nodeList, request.entity, attrs, saveResponse, request.nodeId);
+				} else {
+                    QDRService.getNodeInfo(request.nodeId, request.entity, attrs, saveResponse);
+				}
+                // it is now safe to send another request
+                request.setTimeoutHandle = setTimeout(self.sendChartRequest, request.interval, request)
             },
 
             numCharts: function () {
@@ -344,7 +429,7 @@ var QDR = (function(QDR) {
                 var charts = [];
                 var minCharts = [];
 
-                self.charts.each(function (chart) {
+                self.charts.forEach(function (chart) {
                     var minChart = {};
                     // don't save chart unless it is on the dashboard
                     if (chart.dashboard) {
@@ -357,16 +442,18 @@ var QDR = (function(QDR) {
             loadCharts: function () {
                 var charts = angular.fromJson(localStorage["QDRCharts"]);
                 if (charts) {
-                    charts.each(function (chart) {
+                    charts.forEach(function (chart) {
                         if (!chart.interval)
                             chart.interval = 1000;
                         if (!chart.duration)
                             chart.duration = 10;
-                        var newChart = self.registerChart(chart.nodeId, chart.entity, chart.name, chart.attr, chart.interval, true);
+                        if (chart.nodeList)
+                            chart.aggregate = true;
+                        var newChart = self.registerChart(chart.nodeId, chart.entity, chart.name, chart.attr, chart.interval, true, chart.aggregate);
                         newChart.dashboard = true;  // we only save the dashboard charts
                         newChart.type = chart.type;
                         newChart.rateWindow = chart.rateWindow;
-                        newChart.areaColor = chart.areaColor ? chart.areaColor : "#EEFFEE";
+                        newChart.areaColor = chart.areaColor ? chart.areaColor : "#c0e0ff";
                         newChart.lineColor = chart.lineColor ? chart.lineColor : "#4682b4";
                         newChart.duration(chart.duration);
                         newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 10;
@@ -380,34 +467,49 @@ var QDR = (function(QDR) {
                 if (!chart)
                     return;
 
+				// if this is an aggregate chart, show it stacked
+				var stacked = chart.request().aggregate;
                 this.chart = chart; // reference to underlying chart
-                this.tschart = null;
+                this.svgchart = null;
                 if (url)
                     url = "/dispatch" + url;
                 else
                     url = "";
                 this.url = url;
 
-                // callback function. called by tschart when binding data
-                // in the method, the variable 'this' refers to the svg and not the AreaChart,
+                // callback function. called by svgchart when binding data
+                // the variable 'this' refers to the svg and not the AreaChart,
                 // but since we are still in the scope of the AreaChart we have access to the passed in chart argument
                 this.chartData = function () {
 
                     var now = new Date();
                     var visibleDate = new Date(now.getTime() - chart.visibleDuration * 60 * 1000);
+					var data = chart.data();
+					var nodeList = QDRService.nodeIdList();
 
                     if (chart.type == "rate") {
                         var rateData = [];
+                        var datalen = data.length;
                         k = 0;  // inner loop optimization
-                        for (var i=0; i<chart.data().length; ++i) {
-                            var d = chart.data()[i];
-                            if (d.date >= visibleDate)
-                            {
-                                for (var j=k+1; j<chart.data().length; ++j) {
-                                    var d1 = chart.data()[j];
-                                    if (d1.date - d.date >= chart.rateWindow) {
-                                        rateData.push({date: d1.date, value: d1.value - d.value});
+                        for (var i=0; i<datalen; ++i) {
+                            var d = data[i];
+                            if (d[0] >= visibleDate) {
+                                for (var j=k+1; j<datalen; ++j) {
+                                    var d1 = data[j];
+                                    if (d1[0] - d[0] >= chart.rateWindow) { // rateWindow is the timespan to calculate rates
+										var elapsed = Math.max((d1[0] - d[0]) / 1000, 1); // number of seconds that elapsed
+										var rd = [d1[0],(d1[1] - d[1])/elapsed]
                                         k = j; // start here next time
+										// this is a stacked (aggregate) chart
+										if (stacked) {
+											var detail = [];
+											nodeList.forEach( function (node, nodeIndex) {
+												if (d1[2][nodeIndex] && d[2][nodeIndex])
+													detail.push({node: QDRService.nameFromId(node), val: (d1[2][nodeIndex].val- d[2][nodeIndex].val)/elapsed})
+											})
+											rd.push(detail)
+										}
+										rateData.push(rd);
                                         break;
                                     }
                                 }
@@ -415,17 +517,28 @@ var QDR = (function(QDR) {
                         }
                         // we need at least a point to chart
                         if (rateData.length == 0) {
-                            rateData[0] = {date: chart.data()[0].date, value: 0};
+                            rateData[0] = [chart.data()[0][0],0,[{node:'',val:0}]];
                         }
                         return rateData;
                     }
                     if (chart.visibleDuration != chart.duration()) {
-                        return chart.data.filter(function (d) { return d>=visibleDate});
+                        return data.filter(function (d) { return d[0]>=visibleDate});
                     } else
-                        return chart.data();
+                        return data;
                 }
 
-                // redraw the chart
+                this.zoom = function (id, zoom) {
+                    if (this.svgchart) {
+                        this.svgchart.attr("zoom", zoom)
+						d3.select('#' + id)
+							.data([this.chartData()])
+							.call(this.svgchart)
+                    }
+                }
+
+                // called by the controller on the page that displays the chart
+                // called whenever the controller wants to redraw the chart
+                // note: the data is collected independently of how often the chart is redrawn
                 this.tick = function (id) {
 
                     // can't draw charts that don't have data yet
@@ -433,7 +546,10 @@ var QDR = (function(QDR) {
                         return;
                     }
 
-                    if (!this.tschart) {
+                    // if we haven't created the svg yet
+                    if (!this.svgchart) {
+
+						// make sure the dom element exists on the page
                         var div = angular.element('#' + id);
                         if (!div)
                             return;
@@ -441,90 +557,237 @@ var QDR = (function(QDR) {
                         var width = div.width();
                         var height = div.height();
 
+						// make sure the dom element has a size. otherwise we wouldn't see anything anyway
                         if (!width)
                             return;
 
-                        // initialize the chart
-                        this.tschart = self.timeSeriesChart()
-                            .x(function(d) { return d.date; })
-                            .y(function(d) { return d.value; })
-                            .width(width)
-                            .height(height)
-                            .title(this.chart.title());
-                    }
+						var tooltipGenerator;
+						// stacked charts have a different tooltip
+                        if (stacked) {
+							tooltipGenerator = function (d, color, format) {
+			                    var html = "<table class='fo-table'><tbody><tr class='fo-title'>"+
+			                    "<td align='center' colspan='2' nowrap>Time: "+d[0].toTimeString().substring(0, 8)+"</td></tr>"
+			                    d[2].forEach( function (detail) {
+			                        html += "<tr class='detail'><td align='right' nowrap>"
+			                        + detail.node
+			                        + "<div class='fo-table-legend' style='background-color: "+color(detail.node)+"'></div>"
+			                        + "</td><td>"+format(detail.val)+"</td></tr>"
+			                    })
+			                    html += "</tbody></table>"
+			                    return html;
+							}
+                        } else {
+                            tooltipGenerator = function (d, color, format) {
+								var html = "<table class='fo-table'><tbody><tr class='fo-title'>"+
+		                                "<td align='center'>Time</td><td align='center'>Value</td></tr><tr><td>" +
+		                                    d[0].toTimeString().substring(0, 8) +
+		                                "</td><td>" +
+		                                   format(d[1]) +
+		                                "</td></tr></tbody></table>"
+			                    return html;
+                            }
+						}
+                        // create and initialize the chart
+                        this.svgchart = self.timeSeriesStackedChart(id, width, height,
+                                QDRService.humanify(this.chart.attr()),
+                                this.chart.name(),
+                                QDRService.nameFromId(this.chart.nodeId()),
+                                this.chart.entity(),
+                                stacked)
+                            .tooltipGenerator(tooltipGenerator);
 
-                    // in case the chart type has changed, set the new type
-                    this.tschart.type(this.chart.type)
-                        .areaColor(this.chart.areaColor)
-                        .lineColor(this.chart.lineColor)
-                        .url(this.url)
-                        .title(this.chart.title());
+                    }
+                    // in case the chart properties have changed, set the new props
+                    this.svgchart
+                        .attr("type", this.chart.type)
+                        .attr("areaColor", this.chart.areaColor)
+                        .attr("lineColor", this.chart.lineColor)
+                        .attr("url", this.url)
+                        .attr("title", this.chart.userTitle);
 
                     // bind the new data and update the chart
                     d3.select('#' + id)         // the div id on the page/dialog
-                        .datum(this.chartData)     // the callback function to get the data
-                        .call(this.tschart);       // the charting function
+						.data([this.chartData()])
+                        .call(this.svgchart);       // the charting function
                 }
             },
 
-            timeSeriesChart: function () {
-                var margin = {top: 24, right: 46, bottom: 20, left: 20},
-                    width = 760,
-                    height = 120,
-                    xValue = function(d) {return d[0];},
-                    yValue = function(d) {return d[1];},
-                    xScale = d3.time.scale(),
-                    yScale = d3.scale.linear(),
-                    xAxis = d3.svg.axis().scale(xScale).orient("bottom").ticks(d3.time.minutes, 2).tickSize(6, 0),
-                    yAxis = d3.svg.axis().scale(yScale).orient("right").ticks(3).tickFormat(function(d) { return formatValue(d)}),
-                    area = d3.svg.area().interpolate("basis").x(X).y1(Y),
-                    line = d3.svg.line().x(X).y(Y),
-                    title = "",
-                    url = "",       // page url to prepend to url('#xxxx') selections
-                    type = "value",
-                    areaColor = "",
-                    lineColor = "";
+            timeSeriesStackedChart: function (id, width, height, attrName, name, node, entity, stacked) {
+				var margin = {top: 20, right: 18, bottom: 10, left: 15}
+				// attrs that can be changed after the chart is created by using
+				// chart.attr(<attrname>, <attrvalue>);
+				var attrs = {
+							attrName: attrName, // like Deliveries to Container. Put at top of chart
+							name: name,         // like router.address/qdrhello  Put at bottom of chart with node
+							node: node,         // put at bottom of chart with name
+							entity: entity,     // like .router.address  Not used atm
+							title: "",          // user title overrides the node and name at the bottom of the chart
+							url: "",            // needed to reference filters and clip because of angular's location service
+							type: "value",      // value or rate
+							areaColor: "",      // can be set for non-stacked charts
+							lineColor: "",      // can be set for non-stacked charts
+							zoom: false         // should the y-axis range start at 0 or the min data value
+				}
+				var width = width - margin.left - margin.right,
+					height = height - margin.top - margin.bottom
+					yAxisTransitionDuration = 0
 
+				var x = d3.time.scale()
+			    var y = d3.scale.linear()
+			          .rangeRound([height, 0]);
+                // The x-accessor for the path generator; xScale ∘ xValue.
+				var X = function (d) { return x(d[0]) }
+                // The x-accessor for the path generator; yScale ∘ yValue.
+                var Y = function Y(d) { return y(d[1]) }
+
+                var xAxis = d3.svg.axis().scale(x).orient("bottom")
+					.outerTickSize(6)
+					.innerTickSize(-(height-margin.top-margin.bottom))
+                    .tickPadding(2)
+                    .ticks(d3.time.minutes, 2)
+                var yAxis = d3.svg.axis().scale(y).orient("right")
+                    .outerTickSize(8)
+                    .innerTickSize(-(width-margin.left-margin.right))
+                    .tickPadding(10)
+                    .ticks(3)
+                    .tickFormat(function(d) { return formatValue(d)})
+
+				var tooltipGenerator = function (d, color, format) {return ""}; // should be overridden to set an appropriate tooltip
                 var formatValue = d3.format(".2s");
                 var formatPrecise = d3.format(",");
                 var bisectDate = d3.bisector(function(d) { return d[0]; }).left;
+				var line = d3.svg.line();
+
+		        var stack = d3.layout.stack()
+			          .offset("zero")
+			          .values(function (d) { return d.values; })
+			          .x(function (d) { return x(d.date); })
+			          .y(function (d) { return d.value; });
+
+			    var area = d3.svg.area()
+
+				if (stacked) {
+			        area.interpolate("cardinal")
+			          .x(function (d) { return x(d.date); })
+			          .y0(function (d) { return y(d.y0); })
+			          .y1(function (d) { return y(d.y0 + d.y); });
+				} else {
+                    area.interpolate("basis").x(X).y1(Y)
+                    line.x(X).y(Y)
+				}
+				var color = d3.scale.category20();
+
+			    var sv = d3.select("#"+id).append("svg")
+			          .attr("width",  width  + margin.left + margin.right)
+			          .attr("height", height + margin.top  + margin.bottom)
+				var svg = sv
+			        .append("g")
+			          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			    var clip = svg.append("defs").append("svg:clipPath")
+			        .attr("id", "clip")
+			        .append("svg:rect")
+			        .attr("id", "clip-rect")
+			        .attr("x", "0")
+			        .attr("y", "0")
+			        .attr("width", width)
+			        .attr("height", height);
+
+				// we want all our areas to appear before the axiis
+				svg.append("g")
+					.attr("class", "section-container")
+
+		        svg.append("g")
+			            .attr("class", "x axis")
+
+		        svg.append("g")
+			            .attr("class", "y axis")
+
+                svg.append("text").attr("class", "title")
+                        .attr("x", (width / 2) - (margin.left + margin.right) / 2)
+                        .attr("y", 0 - (margin.top / 2))
+                        .attr("text-anchor", "middle")
+                        .text(attrs.attrName);
+
+                svg.append("text").attr("class", "legend")
+                        .attr("x", (width / 2) - (margin.left + margin.right) / 2)
+                        .attr("y", height + (margin.bottom / 2) )
+                        .attr("text-anchor", "middle")
+                        .text(!stacked ? attrs.node + " " + attrs.name : attrs.name);
+
+                var focus = sv.append("g")
+                  .attr("class", "focus")
+                  .style("display", "none");
+
+                focus.append("circle")
+                  .attr("r", 4.5);
+
+                var focusg = focus.append("g");
+                focusg.append("rect")
+                    .attr("class", "mo-guide y")
+                    .attr("width", 1)
+                    .attr("height", height - (margin.top + margin.bottom));
+                focusg.append("rect")
+                    .attr("class", "mo-guide x")
+                    .attr("width", width - (margin.left + margin.right))
+                    .attr("height", 1);
+				focus.append("foreignObject")
+					.attr('class', 'svg-tooltip')
+					.append("xhtml:span");
+
 
                 function chart(selection) {
                     selection.each(function(data) {
 
-                        yAxis.tickSize(width - margin.left - margin.right);    // set here since width can be set after initialization
+					var seriesArr = []
+					if (stacked) {
+						var detailNames = data[0][2].map(function (detail){ return detail.node })
+						var revNames = angular.copy(detailNames).reverse();
+						color.domain(revNames);
 
-                        // Convert data to standard representation greedily;
-                        // this is needed for nondeterministic accessors.
-                        data = data.map(function(d, i) {
-                            return [xValue.call(data, d, i), yValue.call(data, d, i)];
-                        });
+				        var series = {};
+				        detailNames.forEach(function (name) {
+							series[name] = {name: name, values:[]};
+							seriesArr.unshift(series[name]);    // insert at beginning
+				        });
 
-                        // Update the x-scale.
-                        var extent = d3.extent(data, function(d) {return d[0];});
-                        xScale
-                          .domain(extent)
-                          .range([0, width - margin.left - margin.right]);
+				        data.forEach(function (d) {
+							detailNames.map(function (name, i) {
+								series[name].values.push({date: d[0], value: d[2][i] ? d[2][i].val : 0});
+							});
+				        });
 
-                        // Update the y-scale.
-                        var min = d3.min(data, function(d) {return d[1]});
-                        var max = d3.max(data, function(d) {return d[1]});
-                        var mean = d3.mean(data, function(d) {return d[1]});
-                        //max = max * 1.01;
-                        var diff = (max - min);
-                        if (diff == 0) {
-                            max = max + 1;
-                            diff = 1;
-                        }
-                        var ratio = mean != 0 ? diff / mean : 1;
-                        if (ratio < .05)
-                            formatValue = d3.format(".3s")
+				        // this decorates seriesArr with x,y,and y0 properties
+				        stack(seriesArr);
+					}
 
-                        yScale
+                    var extent = d3.extent(data, function(d) {return d[0];});
+                    x.domain(extent)
+                      .range([0, width - margin.left - margin.right]);
+
+                    // Update the y-scale.
+                    var min = attrs.zoom ? 0 : d3.min(data, function(d) {return d[1]});
+                    var max = d3.max(data, function(d) {return d[1]});
+                    var mean = d3.mean(data, function(d) {return d[1]});
+                    //max = max * 1.01;
+                    var diff = (max - min);
+                    if (diff == 0) {
+                        max = max + 1;
+                        diff = 1;
+                    }
+                    var ratio = mean != 0 ? diff / mean : 1;
+                    if (ratio < .05)
+                        formatValue = d3.format(".3s")
+
+					if (stacked) {
+	                    y.domain([min, max])
+	                      .range([height - margin.top - margin.bottom, 0]);
+					} else {
+                        y
                           .domain([min, max])
                           .range([height - margin.top - margin.bottom, 0]);
-
-                        if (type == "rate") {
+					}
+                        if (attrs.type == "rate") {
                             area.interpolate("basis");  // rate charts look better smoothed
                             line.interpolate("basis");
                         }
@@ -533,255 +796,161 @@ var QDR = (function(QDR) {
                             line.interpolate("linear");
                         }
 
-                        // adjust the xaxis based on the range of x values (domain)
-                        var timeSpan = (extent[1] - extent[0]) / (1000 * 60);   // number of minutes
-                        if (timeSpan < 1.5)
-                            xAxis.ticks(d3.time.seconds, 10);
-                        else if (timeSpan < 3)
-                            xAxis.ticks(d3.time.seconds, 30);
-                        else if (timeSpan < 8)
-                            xAxis.ticks(d3.time.minutes, 1);
-                        else
-                            xAxis.ticks(d3.time.minutes, 2);
+                    // adjust the xaxis based on the range of x values (domain)
+                    var timeSpan = (extent[1] - extent[0]) / (1000 * 60);   // number of minutes
+                    if (timeSpan < 1.5)
+                        xAxis.ticks(d3.time.seconds, 10);
+                    else if (timeSpan < 3)
+                        xAxis.ticks(d3.time.seconds, 30);
+                    else if (timeSpan < 8)
+                        xAxis.ticks(d3.time.minutes, 1);
+                    else
+                        xAxis.ticks(d3.time.minutes, 2);
 
-                        // adjust the number of yaxis ticks based on the range of y values
-                        var minStr = formatValue(min);
-                        var maxStr = formatValue(max);
-                        if (minStr == maxStr)
-                            yAxis.ticks(1);
+                    // adjust the number of yaxis ticks based on the range of y values
+                    if (formatValue(min) === formatValue(max))
+                        yAxis.ticks(2);
 
-                        // Select the svg element, if it exists.
-                        var svg = d3.select(this).selectAll("svg").data([data]);
+					var container = svg.select('.section-container');
+					container.selectAll('.series').remove();
+					if (stacked) {
+	                    y.domain([Math.min(min, 0), d3.max(seriesArr, function (c) {
+	                        return d3.max(c.values, function (d) { return d.y0 + d.y; });
+	                      })]);
 
-                        // Otherwise, create the skeletal chart.
-                        // anything appended to svgEnter will be done when the svg is created and not
-                        // every time it is updated
-                        var svgEnter = svg.enter().append("svg");
+						// creates a .series g path for each section in the detail
+						// since we don't get more sections this selection is only run once
+	                    var series = container.selectAll(".series")
+	                      .data(seriesArr)
 
-                    /*<defs>
-                        <filter id="dropshadow" height="130%">
-                          <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-                          <feOffset dx="2" dy="2" result="offsetblur"/>
-                          <feComponentTransfer>
-                            <feFuncA type="linear" slope="0.2"/>
-                          </feComponentTransfer>
-                          <feMerge>
-                            <feMergeNode/>
-                            <feMergeNode in="SourceGraphic"/>
-                          </feMerge>
-                        </filter>
-                      </defs>*/
-                        var filter = svgEnter.append("svg:defs")
-                                        .append("filter")
-                                          .attr("id", "dropshadow")
-                                          .attr("height", "130%");
-                        filter.append("feGaussianBlur").attr("in", "SourceAlpha").attr("stdDeviation", 3);
-                        filter.append("feOffset").attr("dx", "2").attr("dy", "2").attr("result", "offsetblur");
-                        filter.append("feComponentTransfer")
-                                .append("feFuncA").attr("type", "linear").attr("slope", "0.5");
-                        var feMerge = filter.append("feMerge");
-                        feMerge.append("feMergeNode")
-                        feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+						series.enter().append("g")
+	                        .attr("class", "series")
+				          .append("path")
+							.attr("class", "streamPath")
+							.style("fill", function (d) { return color(d.name); })
+							.style("stroke", "grey");
 
+						series.exit().remove()
 
-                        var gEnter = svgEnter.append("g");
-                        gEnter.append("path").attr("class", "area");
-                        gEnter.append("path").attr("class", "line");
-                        gEnter.append("g").attr("class", "x axis");
-                        gEnter.append("g").attr("class", "y axis");
-                        gEnter.append("text").attr("class", "title")
-                                .attr("x", (width / 2) - (margin.left + margin.right) / 2)
-                                .attr("y", 0 - (margin.top / 2))
-                                .attr("text-anchor", "middle")
-                                .text(title);
+						//series.exit().remove()
+						// each time the data is updated, update each section
+						container.selectAll(".series .streamPath").data(seriesArr)
+							.attr("d", function (d) { return area(d.values); })
+					} else {
+	                    var series = container.selectAll(".series")
+	                      .data([data], function(d) { return d; })
 
-                        // Update the outer dimensions.
-                        svg.attr("width", width)
-                          .attr("height", height);
+	                      series.enter().append("g")
+	                        .append("path")
+	                        .attr("class", "area")
+						  series.enter().append("path")
+	                        .attr("class", "line")
 
-                        // Update the inner dimensions.
-                        var g = svg.select("g")
-                          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+						series.exit().remove()
 
-                        g.select(".title").text(title);
                         // Update the area path.
-                        var path = g.select(".area")
-                          .attr("d", area.y0(yScale.range()[0]));
-                        if (areaColor != "") {
-                            path.style("fill", areaColor);  // assumed to be already validated
-                        } // else the color from the style sheet will be used
+                        container.select(".area").data([data])
+                          .attr("d", area.y0(y.range()[0]))
+						  .style("fill", attrs.areaColor);
 
                         //Update the line path.
-                        var topLine = g.select(".line")
-                          .attr("d", line);
-                        if (lineColor != "")
-                            topLine.style("stroke", lineColor);
+                        container.select(".line").data([data])
+                          .attr("d", line)
+						  .style("stroke", attrs.lineColor)
+					}
+                    // Update the x-axis.
+                    svg.select(".x.axis")
+                      .attr("transform", "translate(0," + (height - margin.top - margin.bottom + 1) + ")")
+                      .call(xAxis);
 
-                        // Update the x-axis.
-                        g.select(".x.axis")
-                          .attr("transform", "translate(0," + (yScale.range()[0] -1) + ")")
-                          .call(xAxis);
+                    svg.select(".y.axis")
+						.transition().duration(yAxisTransitionDuration)  // animate the y axis
+                      .attr("transform", "translate(" + (width - margin.right - margin.left) + ",0)")
+                      .call(yAxis);
+                    yAxisTransitionDuration = 1000  // only do a transition after the chart is 1st drawn
 
-                        g.select(".y.axis")
-                          .attr("width", width)
-                          .attr("transform", "translate(" + (xScale.range()[0]) + ",0)")
-                          .call(yAxis);
+                    // TODO: fix this
+                    // need to recreate this every update... not sure why
+                    var overlay = sv.select(".overlay");
+                    if (!overlay.empty())
+                            overlay.remove();
+                    sv.append("rect")
+                      .attr("class", "overlay")
+                      .attr("width", width)
+                      .attr("height", height)
+                      .on("mouseover", function () {focus.style("display", null)})
+                      .on("mouseout", function () {focus.style("display", "none")})
+                      .on("mousemove", mousemove)
 
-                        var focus = svgEnter.append("g")
-                          .attr("class", "focus")
-                          .style("display", "none");
+	                    function mousemove() {
+	                        var x0 = x.invert(d3.mouse(this)[0] - margin.left);
+	                        var i = bisectDate(data, x0, 1);
+	                        if (i < data.length && i > 0) {
+	                            var d0 = data[i - 1];
+	                            var d1 = data[i];
+								// set d to the data that is closest to the mouse position
+	                            var d = x0 - d0[0] > d1[0] - x0 ? d1 : d0;
+	                            focus.attr("transform", "translate(" + (x(d[0]) + margin.left) + "," + (y(d[1]) + margin.top) + ")");
 
-                        focus.append("circle")
-                          .attr("r", 4.5);
+								var tipFormat = formatPrecise;
+								if (attrs.type === "rate")
+									tipFormat = d3.format(".2n")
+								// set the tooltip html and position it
+								focus.select('.svg-tooltip span')
+									.html(tooltipGenerator(d, color, tipFormat))
 
-                        var focusg = focus.append("g");
-                        focusg.append("rect")
-                            .attr("class", "mo-rect")   // mouseover rect
-                            .attr("width", 60)
-                            .attr("height", 18)
-                            .attr("x", -60)
-                            .attr("y", -20)
-                            .attr("filter", "url(" + url + "#dropshadow)"); // use the current path
-                            // see https://github.com/angular/angular.js/issues/8934
+								var foBounds = focus.select('table')[0][0].getBoundingClientRect();
+	                            var mx = x(d[0]); // mouse x
+	                            var my = y(d[1]); // mouse y
 
-                        focusg.append("rect")
-                            .attr("class", "mo-guide")
-                            .attr("width", 1)
-                            .attr("height", height - (margin.top + margin.bottom));
-                        focusg.append("text")
-                              .attr("x", 9) //-9)
-                              .attr("dy", -7) //"-1em")
-                              .attr("text-anchor", "start");
+	                            // perfer to put the tooltip in the nw corner relative to the focus circle
+	                            var foy = -foBounds.height;
+								var fox = -foBounds.width;
+								// off the left side
+								if (mx - foBounds.width - margin.left < 0)
+									fox = 0;
+								// above the top
+								if (my - foBounds.height - margin.top < 0)
+									foy = 0;
+								// won't fit above or below, just put it at bottom
+								if (my + foBounds.height > height)
+									foy = -(foBounds.height - (height - my));
 
-                        // prepend the url to the defs:filter at update time
-                        //svg.select('.mo-rect').attr("filter", "url(" + url + "#dropshadow)");
+								focus.select('.svg-tooltip')
+									.attr('x', fox).attr('y', foy);
 
-                        focus = svg.select('.focus');
+								// position the guide lines
+	                            focus.select(".mo-guide.y")
+	                                .attr("y", -my);
+	                            focus.select(".mo-guide.x")
+	                                .attr("x", -mx);
 
-                        // TODO: fix this
-                        // need to recreate this every update... not sure why
-                        var overlay = svg.select(".overlay");
-                        if (!overlay.empty())
-                                overlay.remove();
-                        svg.append("rect")
-                          .attr("class", "overlay")
-                          .attr("width", width)
-                          .attr("height", height)
-                          .on("mouseover", function() { focus.style("display", null); })
-                          .on("mouseout", function() { focus.style("display", "none"); })
-                          .on("mousemove", mousemove)
+	                        } else {
+	                            focus.attr("transform", "translate(-10,-10)");
+	                        }
+	                    }
 
-                        function mousemove() {
-                            var x0 = xScale.invert(d3.mouse(this)[0] - margin.left);
-                            var i = bisectDate(data, x0, 1);
-                            if (i < data.length && i > 0) {
-                                var d0 = data[i - 1];
-                                var d1 = data[i];
-                                var d = x0 - d0[0] > d1[0] - x0 ? d1 : d0;
-                                focus.attr("transform", "translate(" + (xScale(d[0]) + margin.left) + "," + (yScale(d[1]) + margin.top) + ")");
-                                var trect = focus.select(".mo-rect");
-                                var guide = focus.select(".mo-guide");
-                                guide.attr("y", -yScale(d[1]));
-                                var text = focus.select("text").text(formatPrecise(d[1]));
-                                var tnw = text.node().getBBox().width;
-                                var mx = xScale(d[0]); // mouse x
-                                trect.attr("width", tnw + 16);
-                                var tx = text.attr("x");
-                                // if the text is off the left side of the svg, align it on the right instead of left
-                                if (mx - tnw < -9) {
-                                    text.attr("x", 9);
-                                }
-                                // if text is off the right side of the svg
-                                if (tnw + mx + margin.left + 9 > width) {
-                                    text.attr("x", -tnw - 9);
-                                }
-                                var tx = text.attr("x");
-                                trect.attr("x", tx - 8);
+                    })
 
-                            } else {
-                                focus.attr("transform", "translate(-10,-10)");
-                            }
-                        }
 
-                    });
                 }
+				chart.attr = function (attrName, value) {
+					if (arguments.length < 2)
+						return arguments.length == 1 ? attrs[attrName] : chart;
+					if (angular.isDefined(attrs[attrName]))
+						attrs[attrName] = value;
+					return chart;
+				}
+				chart.tooltipGenerator = function (_) {
+					tooltipGenerator = _;
+					return chart;
+				}
 
-                // The x-accessor for the path generator; xScale ∘ xValue.
-                function X(d) {
-                    return xScale(d[0]);
-                }
-
-                // The x-accessor for the path generator; yScale ∘ yValue.
-                function Y(d) {
-                    return yScale(d[1]);
-                }
-
-                chart.margin = function(_) {
-                    if (!arguments.length) return margin;
-                    margin = _;
-                    return chart;
-                };
-
-                chart.width = function(_) {
-                    if (!arguments.length) return width;
-                    width = _;
-                    return chart;
-                };
-
-                chart.height = function(_) {
-                    if (!arguments.length) return height;
-                    height = _;
-                    return chart;
-                };
-
-                chart.title = function (_) {
-                    if (!arguments.length) return title;
-                    title = _;
-                    return chart;
-                };
-
-                chart.url = function (_) {
-                    if (!arguments.length) return url;
-                    url = _;
-                    return chart;
-                };
-
-                chart.type = function (_) {
-                    if (!arguments.length) return type;
-                    type = _;
-                    return chart;
-                };
-
-                chart.areaColor = function (_) {
-                    if (!arguments.length) return areaColor;
-                    areaColor = _;
-                    return chart;
-                };
-
-                chart.lineColor = function (_) {
-                    if (!arguments.length) return lineColor;
-                    lineColor = _;
-                    return chart;
-                };
-
-                chart.x = function(_) {
-                    if (!arguments.length) return xValue;
-                    xValue = _;
-                    return chart;
-                };
-
-                chart.y = function(_) {
-                    if (!arguments.length) return yValue;
-                    yValue = _;
-                    return chart;
-                };
-
-                return chart;
-            },
-
+				return chart;
+            }
         }
         return self;
-  });
+  }]);
 
   return QDR;
 }(QDR || {}));

@@ -17,13 +17,89 @@
 
 <!--
     This is the template for the graph dialog that is displayed. It uses the
-    dialogCtrl controller in qdrList.js.
+    dialogCtrl controller in qdrCharts.js.
 -->
 <script type="text/ng-template" id="chart-config-template.html">
+<div class="chartOptions">
+    <div class="modal-header">
+        <h3 class="modal-title">Chart {{chart.attr() | humanify}}</h3>
+    </div>
+    <div class="modal-body">
+        <div id="{{svgDivId}}" class="d3Chart"></div>
+        <uib-tabset>
+            <uib-tab heading="Type">
+                <legend>Chart type</legend>
+                <label><input type="radio" ng-model="dialogChart.type" value="value" ng-change="chartChanged()" /> Value Chart</label>
+                <label><input type="radio" ng-model="dialogChart.type" value="rate" ng-change="chartChanged()" /> Rate Chart</label>
+                <div class="dlg-slider" ng-show="dialogChart.type=='rate'">
+                    <span>Rate Window: {{rateWindow}} second{{rateWindow > 1 ? "s" : ""}}</span>
+                    <div class="slider" ui-slider="slider.options" ng-model="rateWindow"></div>
+                </div>
+                <div style="clear:both;"> </div>
+            </uib-tab>
+            <uib-tab heading="Colors">
+                <legend>Chart colors</legend>
+                <div class="colorPicker">
+                    <div>Area</div><input minicolors="areaColor" id="position-bottom-left" type="text" ng-model="dialogChart.areaColor" />
+                </div>
+                <div class="colorPicker">
+                    <div>Line</div><input minicolors="lineColor" id="position-bottom-left" type="text" ng-model="dialogChart.lineColor" />
+                </div>
+                <div style="clear:both;"> </div>
+            </uib-tab>
+            <uib-tab heading="Duration">
+                <legend>Chart duration</legend>
+                <div class="dlg-slider duration">
+                    <span>Show data for past {{dialogChart.visibleDuration}} minute{{dialogChart.visibleDuration > 1 ? "s" : ""}}</span> <div class="slider" ui-slider="duration.options" ng-model="dialogChart.visibleDuration"></div>
+                </div>
+                <div style="clear:both;"> </div>
+
+            </uib-tab>
+        </uib-tabset>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-success" type="button" ng-click="apply()">Apply to existing chart</button>
+        <button class="btn btn-info" type="button" ng-click="copyToDashboard()">Create new chart</button>
+        <button class="btn btn-primary" type="button" ng-click="okClick()">Close</button>
+    </div>
+</div>
+<!--
     <div class="chartOptions" title="Configure chart" ng-controller="QDR.ChartDialogController">
         <p class="dialogHeader">Title: <input type="text" ng-model="userTitle" /></p>
         <div id="{{svgDivId}}" class="d3Chart"></div>
         <p></p>
+        <uib-tabset>
+            <uib-tab heading="Type">
+                <legend>Chart type</legend>
+                <label><input type="radio" ng-model="dialogChart.type" value="value" ng-change="chartChanged()" /> Value Chart</label>
+                <label><input type="radio" ng-model="dialogChart.type" value="rate" ng-change="chartChanged()" /> Rate Chart</label>
+
+                <div class="dlg-slider" ng-show="dialogChart.type=='rate'">
+                    <span>Rate Window: {{rateWindow}} second{{rateWindow > 1 ? "s" : ""}}</span>
+                    <div class="slider" ui-slider="slider.options" ng-model="rateWindow"></div>
+                </div>
+                <div style="clear:both;"> </div>
+            </uib-tab>
+            <uib-tab heading="Colors">
+                <legend>Chart colors</legend>
+                <div class="colorPicker">
+                    <div>Area</div><input minicolors="areaColor" id="position-bottom-left" type="text" ng-model="dialogChart.areaColor" />
+                </div>
+                <div class="colorPicker">
+                    <div>Line</div><input minicolors="lineColor" id="position-bottom-left" type="text" ng-model="dialogChart.lineColor" />
+                </div>
+                <div style="clear:both;"> </div>
+            </uib-tab>
+            <uib-tab heading="Duration">
+                <legend>Chart duration</legend>
+                <div class="dlg-slider duration">
+                    <span>Show data for past {{dialogChart.visibleDuration}} minute{{dialogChart.visibleDuration > 1 ? "s" : ""}}</span> <div class="slider" ui-slider="duration.options" ng-model="dialogChart.visibleDuration"></div>
+                </div>
+                <div style="clear:both;"> </div>
+
+            </uib-tab>
+        </uib-tabset>
+
         <tabset>
             <tab heading="Type">
                 <div>
@@ -63,12 +139,12 @@
                 <div style="clear:both;"> </div>
             </tab>
         </tabset>
-
         <div class="okButton">
             <button ng-click="apply()">Apply to existing chart</button>
             <button ng-click="copyToDashboard()">Create new chart</button>
             <button ng-click="okClick()">Close</button>
         </div>
     </div>
+-->
 </script>
 
