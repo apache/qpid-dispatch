@@ -80,7 +80,7 @@
         "paidsubscribers": "TheWorld",
         "test":            "TheLabs",
         "admin":           "Ten18, TheLabs, localhost",
-        "superuser":       "EllensSW, localhost"
+        "superuser":       "EllensWS, localhost"
       },
       "connectionAllowDefault": true
     }

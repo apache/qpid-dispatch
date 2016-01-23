@@ -584,37 +584,76 @@ class ExitStatus(Exception):
 
 def main_except(argv):
 
-    usage = "usage: %prog [options]\nRead and print all conf files in a folder."
+    def read_files(policy, path):
+        """
+        Read all .json conf files in path and create the policies they contain.
+        @param policy: The policy_local to receive the configuration.
+        @param path: The path relative to policy_local.py
+        """
+        apath = os.path.abspath(os.path.dirname(__file__))
+        apath = os.path.join(apath, path)
+        for i in os.listdir(apath):
+            if i.endswith(".json"):
+                read_file(policy, os.path.join(apath, i))
+
+    def read_file(policy, fn):
+        """
+        Read a qdrouterd config file and extract the policy sections.
+        @param policy: The policy_local to receive the configuration.
+        @param fn: absolute path to file
+        """
+        try:
+            with open(fn) as json_file:
+                cp = json.load(json_file)
+            for i in range(0, len(cp)):
+                if cp[i][0] == "policyAccessRuleset":
+                    policy.create_ruleset(cp[i][1])
+                elif cp[i][0] == "policyAppSettings":
+                    policy.create_settings(cp[i][1])
+                else:
+                    # some config option we don't care about
+                    pass
+        except Exception, e:
+            # complain but otherwise ignore errors
+            print("Error processing policy configuration file '%s' : %s" % (fn, e))
+
+    usage = "usage: %prog [options]\nExercise policy_local functions."
     parser = optparse.OptionParser(usage=usage)
-    #parser.set_defaults(folder="../../../tests/policy-1")
-    #parser.add_option("-f", "--folder", action="store", type="string", dest="folder",
-    #                  help="Use named folder instead of policy-1")
-    parser.add_option("-d", "--dump", action="store_true", dest="dump",
-                      help="Dump policy details")
+    parser.set_defaults(folder="../../../tests/policy-1")
+    parser.add_option("-f", "--folder", action="store", type="string", dest="folder",
+                      help="By default all .json files in ../../../tests/policy-1 are loaded."
+                      " Use '-f /some/path' to load a different folder."
+                      " Use '-f <blank>' to skip loading any folder and use built-in configuration settings")
+    parser.add_option("-d", "--exercise", action="store_true", dest="exercise",
+                      help="Run canned tests. Expect good results only on built-in or policy-1 settings.")
 
     (options, args) = parser.parse_args()
 
     policy = PolicyLocal()
 
-    ruleset_str = '["policyAccessRuleset", {"applicationName": "photoserver","maxConnections": 50,"maxConnPerUser": 5,"maxConnPerHost": 20,"userGroups": {"anonymous":       "anonymous","users":           "u1, u2","paidsubscribers": "p1, p2","test":            "zeke, ynot","admin":           "alice, bob, ellen","superuser":       "ellen"},"connectionGroups": {"Ten18":     "10.18.0.0-10.18.255.255","EllensWS":  "72.135.2.9","TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255","localhost": "127.0.0.1, ::1","TheWorld":  "*"},"connectionIngressPolicies": {"anonymous":       "TheWorld","users":           "TheWorld","paidsubscribers": "TheWorld","test":            "TheLabs","admin":           "Ten18, TheLabs, localhost","superuser":       "EllensWS, localhost"},"connectionAllowDefault": true}]'
-    ruleset = json.loads(ruleset_str)
+    if options.folder == "":
+        # Empty folder name uses built-in configuration
+        ruleset_str = '["policyAccessRuleset", {"applicationName": "photoserver","maxConnections": 50,"maxConnPerUser": 5,"maxConnPerHost": 20,"userGroups": {"anonymous":       "anonymous","users":           "u1, u2","paidsubscribers": "p1, p2","test":            "zeke, ynot","admin":           "alice, bob, ellen","superuser":       "ellen"},"connectionGroups": {"Ten18":     "10.18.0.0-10.18.255.255","EllensWS":  "72.135.2.9","TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255","localhost": "127.0.0.1, ::1","TheWorld":  "*"},"connectionIngressPolicies": {"anonymous":       "TheWorld","users":           "TheWorld","paidsubscribers": "TheWorld","test":            "TheLabs","admin":           "Ten18, TheLabs, localhost","superuser":       "EllensWS, localhost"},"connectionAllowDefault": true}]'
+        ruleset = json.loads(ruleset_str)
 
-    policy.create_ruleset(ruleset[1])
-    print("policy ruleset names: %s" % policy.policy_db_get_names())
+        policy.create_ruleset(ruleset[1])
+        print("policy ruleset names: %s" % policy.policy_db_get_names())
 
-    settings_strs = []
-    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"anonymous",      "maxFrameSize": 111111,"maxMessageSize":   111111,"maxSessionWindow": 111111,"maxSessions":           1,"maxSenders":           11,"maxReceivers":         11,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public",                           "targets": ""}]')
-    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"users",          "maxFrameSize": 222222,"maxMessageSize":   222222,"maxSessionWindow": 222222,"maxSessions":           2,"maxSenders":           22,"maxReceivers":         22,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private",                  "targets": "public"}]')
-    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"paidsubscribers","maxFrameSize": 333333,"maxMessageSize":   333333,"maxSessionWindow": 333333,"maxSessions":           3,"maxSenders":           33,"maxReceivers":         33,"allowDynamicSrc":      true, "allowAnonymousSender": false,"sources": "public, private",                  "targets": "public, private"}]')
-    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"test",           "maxFrameSize": 444444,"maxMessageSize":   444444,"maxSessionWindow": 444444,"maxSessions":           4,"maxSenders":           44,"maxReceivers":         44,"allowDynamicSrc":      true, "allowAnonymousSender": true, "sources": "private",                          "targets": "private"}]')
-    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"admin",          "maxFrameSize": 555555,"maxMessageSize":   555555,"maxSessionWindow": 555555,"maxSessions":           5,"maxSenders":           55,"maxReceivers":         55,"allowDynamicSrc":      true, "allowAnonymousSender": true, "sources": "public, private, management",      "targets": "public, private, management"}]')
-    settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"superuser",      "maxFrameSize": 666666,"maxMessageSize":   666666,"maxSessionWindow": 666666,"maxSessions":           6,"maxSenders":           66,"maxReceivers":         66,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private, management, root","targets": "public, private, management, root"}]')
+        settings_strs = []
+        settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"anonymous",      "maxFrameSize": 111111,"maxMessageSize":   111111,"maxSessionWindow": 111111,"maxSessions":           1,"maxSenders":           11,"maxReceivers":         11,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public",                           "targets": ""}]')
+        settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"users",          "maxFrameSize": 222222,"maxMessageSize":   222222,"maxSessionWindow": 222222,"maxSessions":           2,"maxSenders":           22,"maxReceivers":         22,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private",                  "targets": "public"}]')
+        settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"paidsubscribers","maxFrameSize": 333333,"maxMessageSize":   333333,"maxSessionWindow": 333333,"maxSessions":           3,"maxSenders":           33,"maxReceivers":         33,"allowDynamicSrc":      true, "allowAnonymousSender": false,"sources": "public, private",                  "targets": "public, private"}]')
+        settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"test",           "maxFrameSize": 444444,"maxMessageSize":   444444,"maxSessionWindow": 444444,"maxSessions":           4,"maxSenders":           44,"maxReceivers":         44,"allowDynamicSrc":      true, "allowAnonymousSender": true, "sources": "private",                          "targets": "private"}]')
+        settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"admin",          "maxFrameSize": 555555,"maxMessageSize":   555555,"maxSessionWindow": 555555,"maxSessions":           5,"maxSenders":           55,"maxReceivers":         55,"allowDynamicSrc":      true, "allowAnonymousSender": true, "sources": "public, private, management",      "targets": "public, private, management"}]')
+        settings_strs.append('["policyAppSettings", {"applicationName": "photoserver","userGroupName":"superuser",      "maxFrameSize": 666666,"maxMessageSize":   666666,"maxSessionWindow": 666666,"maxSessions":           6,"maxSenders":           66,"maxReceivers":         66,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private, management, root","targets": "public, private, management, root"}]')
 
-    for sstr in settings_strs:
-        settings = json.loads(sstr)
-        policy.create_settings(settings[1])
-
-    if not options.dump:
+        for sstr in settings_strs:
+            settings = json.loads(sstr)
+            policy.create_settings(settings[1])
+    else:
+        # Load all .json files in given folder
+        read_files(policy, options.folder)
+    if not options.exercise:
         return
 
     # Exercise a few functions
@@ -651,10 +690,8 @@ def main_except(argv):
     res6a = upolicy6['maxFrameSize'] == 666666
     print "\nNamed settings lookup result = %s, and value check = %s" % (res6, res6a)
 
-    if not (res1 and res2 and res3 and not res4 and res6 and res6a):
-        print "Tests FAIL"
-    else:
-        print "Tests PASS"
+    print ("Tests success: %s" % (res1 and res2 and res3 and not res4 and res6 and res6a))
+
 
 def main(argv):
     try:
