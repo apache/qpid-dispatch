@@ -174,5 +174,19 @@
       "sources": "public, private, management, root",
       "targets": "public, private, management, root"
     }
+  ],  ["policyAppSettings", {
+      "applicationName": "photoserver",
+      "userGroupName":   "users",
+      "maxFrameSize":     222222,
+      "maxMessageSize":   222222,
+      "maxSessionWindow": 222222,
+      "maxSessions":           2,
+      "maxSenders":           22,
+      "maxReceivers":         22,
+      "allowDynamicSrc":      false,
+      "allowAnonymousSender": false,
+      "sources": "public, private",
+      "targets": "public"
+    }
   ]
 ]
