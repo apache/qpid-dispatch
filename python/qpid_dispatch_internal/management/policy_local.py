@@ -489,7 +489,7 @@ class PolicyLocal(object):
                 return True
 
             if not app in self.policydb:
-                print("LogMe: no policy defined for application %s" % app)
+                # TODO: ("LogMe: no policy defined for application %s" % app)
                 policyname.append("")
                 return False
 

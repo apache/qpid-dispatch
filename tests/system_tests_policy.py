@@ -162,7 +162,8 @@ class PolicyHostAddrTest(TestCase):
 
 class PolicyFile(TestCase):
 
-    policy = PolicyLocal("../../../tests/policy-1")
+    policy = PolicyLocal()
+    policy.test_load_config()
 
     def dict_compare(self, d1, d2):
         d1_keys = set(d1.keys())
@@ -175,10 +176,14 @@ class PolicyFile(TestCase):
         return len(added) == 0 and len(removed) == 0 and len(modified) == 0
 
     def test_policy1_test_zeke_ok(self):
+        unames = []
+        self.assertTrue(
+            PolicyFile.policy.lookup_user('zeke', '192.168.100.5', 'photoserver', '192.168.100.5:33333', unames)
+        )
         upolicy = {}
-        self.assertTrue( 
-            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '192.168.100.5', 'photoserver', upolicy) )
-        self.assertTrue(upolicy['policyVersion']             == 1)
+        self.assertTrue(
+            PolicyFile.policy.lookup_settings('photoserver', unames[0], upolicy)
+        )
         self.assertTrue(upolicy['maxFrameSize']            == 444444)
         self.assertTrue(upolicy['maxMessageSize']          == 444444)
         self.assertTrue(upolicy['maxSessionWindow']        == 444444)
@@ -193,33 +198,37 @@ class PolicyFile(TestCase):
         self.assertTrue('private' in upolicy['sources'])
 
     def test_policy1_test_zeke_bad_IP(self):
-        upolicy = {}
+        unames = []
         self.assertFalse(
-            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '10.18.0.1',    'photoserver', upolicy) )
+            PolicyFile.policy.lookup_user('zeke', '10.18.0.1',    'photoserver', "connid", unames) )
         self.assertFalse(
-            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '72.135.2.9',   'photoserver', upolicy) )
+            PolicyFile.policy.lookup_user('zeke', '72.135.2.9',   'photoserver', "connid", unames) )
         self.assertFalse(
-            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '127.0.0.1',    'photoserver', upolicy) )
+            PolicyFile.policy.lookup_user('zeke', '127.0.0.1',    'photoserver', "connid", unames) )
 
     def test_policy1_test_zeke_bad_app(self):
-        upolicy = {}
+        unames = []
         self.assertFalse(
-            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '192.168.100.5','galleria', upolicy) )
+            PolicyFile.policy.lookup_user('zeke', '192.168.100.5','galleria', "connid", unames) )
 
     def test_policy1_test_users_same_permissions(self):
-        zpolicy = {}
+        znames = []
         self.assertTrue(
-            PolicyFile.policy.policy_lookup('192.168.100.5:33333', 'zeke', '192.168.100.5', 'photoserver', zpolicy) )
-        ypolicy = {}
+            PolicyFile.policy.lookup_user('zeke', '192.168.100.5', 'photoserver', '192.168.100.5:33333', znames) )
+        ynames = []
         self.assertTrue(
-            PolicyFile.policy.policy_lookup('192.168.100.5:33334', 'ynot', '10.48.255.254', 'photoserver', ypolicy) )
-        self.assertTrue( self.dict_compare(zpolicy, ypolicy) )
+            PolicyFile.policy.lookup_user('ynot', '10.48.255.254', 'photoserver', '192.168.100.5:33334', ynames) )
+        self.assertTrue( znames[0] == ynames[0] )
 
     def test_policy1_superuser_aggregation(self):
+        unames = []
+        self.assertTrue(
+            PolicyFile.policy.lookup_user('ellen', '72.135.2.9', 'photoserver', '75.135.2.9:33333', unames)
+        )
         upolicy = {}
-        self.assertTrue( 
-            PolicyFile.policy.policy_lookup('192.168.100.5:33335', 'ellen', '72.135.2.9', 'photoserver', upolicy) )
-        self.assertTrue(upolicy['policyVersion']             == 1)
+        self.assertTrue(
+            PolicyFile.policy.lookup_settings('photoserver', unames[0], upolicy)
+        )
         self.assertTrue(upolicy['maxFrameSize']            == 666666)
         self.assertTrue(upolicy['maxMessageSize']          == 666666)
         self.assertTrue(upolicy['maxSessionWindow']        == 666666)
