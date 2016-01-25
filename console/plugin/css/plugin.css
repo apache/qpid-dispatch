@@ -602,3 +602,14 @@ input[type="text"], input[type="number"], input[type="password"] {
 div.login.container {
 	width: 550px;
 }
+
+#overtree .fancytree-container {
+	border: 0px;
+}
+
+#overtree span.fancytree-custom-icon.ui-icon-refresh {
+	background-position: -64px -80px;
+}
+#overtree span.fancytree-custom-icon.ui-icon-transfer-e-w {
+	background-position: -112px -80px;
+}

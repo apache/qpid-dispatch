@@ -31,7 +31,7 @@ under the License.
     <div class="row-fluid">
         <h3>Routers</h3>
         <div class="overview">
-            <div ui-grid="allRouters" ng-style="getGridHeight(allRouters)" ui-grid-auto-resize ui-grid-selection class="gridStyle"></div>
+            <div class="gridStyle" ng-style="getGridHeight(allRouters)" ui-grid-auto-resize ui-grid-selection ui-grid="allRouters"></div>
         </div>
     </div>
 </script>
@@ -39,7 +39,7 @@ under the License.
 <script type="text/ng-template" id="router.html">
     <div class="row-fluid">
         <h3>Router {{router.data.title}}</h3>
-        <div ui-grid="routerGrid" class="gridStyle noHighlight"></div>
+        <div ng-style="getGridHeight(routerGrid)" ui-grid-auto-resize ui-grid="routerGrid" class="gridStyle noHighlight"></div>
     </div>
 </script>
 
@@ -54,7 +54,7 @@ under the License.
 <script type="text/ng-template" id="address.html">
     <div class="row-fluid">
     <h3>Address {{address.data.title}}</h3>
-    <div class="gridStyle noHighlight" ui-grid="addressGrid"></div>
+    <div ng-style="getGridHeight(addressGrid)" ui-grid-auto-resize class="gridStyle noHighlight" ui-grid="addressGrid"></div>
     </div>
 </script>
 <script type="text/ng-template" id="connections.html">
@@ -68,7 +68,7 @@ under the License.
 <script type="text/ng-template" id="connection.html">
     <div class="row-fluid">
     <h3>Connection {{connection.data.title}}</h3>
-    <div class="gridStyle noHighlight" ui-grid="connectionGrid"></div>
+    <div ng-style="getGridHeight(connectionGrid)" ui-grid-auto-resize class="gridStyle noHighlight" ui-grid="connectionGrid"></div>
     </div>
 </script>
 <script type="text/ng-template" id="logs.html">

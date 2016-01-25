@@ -47,8 +47,15 @@ var QDR = (function (QDR) {
             function Folder(title) {
                 this.title = title;
 				this.children = [];
+				this.folder = true;
             }
             return Folder;
+        })();
+		var Leaf = (function () {
+            function Leaf(title) {
+                this.title = title;
+            }
+            return Leaf;
         })();
 	    $scope.modes = [
 	    	{title: 'Overview', name: 'Overview', right: false}
@@ -112,7 +119,7 @@ var QDR = (function (QDR) {
 				gridApi.selection.on.rowSelectionChanged($scope, function(row) {
 					if (row.isSelected) {
 						var nodeId = row.entity.nodeId;
-						$("#overtree").dynatree("getTree").activateKey(nodeId);
+						$("#overtree").fancytree("getTree").activateKey(nodeId);
 					}
 				});
 		    }
@@ -187,14 +194,17 @@ var QDR = (function (QDR) {
 			$scope.routerGrid = {
 				data: 'routerFields',
 				columnDefs: cols,
+				enableHorizontalScrollbar: uiGridConstants.scrollbars.NEVER,
+	            enableVerticalScrollbar: uiGridConstants.scrollbars.NEVER,
 				enableColumnResize: true,
 				multiSelect: false
 			}
 
 			$scope.allRouterFields.some( function (field) {
-				if (field.routerId === node.data.title) {
+				if (field.routerId === node.title) {
 					Object.keys(field).forEach ( function (key) {
-						$scope.routerFields.push({attribute: key, value: field[key]})
+						if (key !== '$$hashKey')
+							$scope.routerFields.push({attribute: key, value: field[key]})
 					})
 					return true
 				}
@@ -265,7 +275,7 @@ var QDR = (function (QDR) {
 					gridApi.selection.on.rowSelectionChanged($scope, function(row) {
 						if (row.isSelected) {
 							var key = row.entity.uid;
-							$("#overtree").dynatree("getTree").activateKey(key);
+							$("#overtree").fancytree("getTree").activateKey(key);
 						}
 					});
 			    }
@@ -400,7 +410,7 @@ var QDR = (function (QDR) {
 					gridApi.selection.on.rowSelectionChanged($scope, function(row) {
 						if (row.isSelected) {
 							var host = row.entity.host;
-							$("#overtree").dynatree("getTree").activateKey(host);
+							$("#overtree").fancytree("getTree").activateKey(host);
 						}
 					});
 			    }
@@ -435,6 +445,8 @@ var QDR = (function (QDR) {
 				data: 'addressFields',
 				columnDefs: cols,
 				enableColumnResize: true,
+				enableHorizontalScrollbar: uiGridConstants.scrollbars.NEVER,
+	            enableVerticalScrollbar: uiGridConstants.scrollbars.NEVER,
 				multiSelect: false
 			}
 
@@ -471,6 +483,8 @@ var QDR = (function (QDR) {
 				data: 'connectionFields',
 				columnDefs: cols,
 				enableColumnResize: true,
+				enableHorizontalScrollbar: uiGridConstants.scrollbars.NEVER,
+	            enableVerticalScrollbar: uiGridConstants.scrollbars.NEVER,
 				multiSelect: false
 			}
 
@@ -495,41 +509,47 @@ var QDR = (function (QDR) {
 			$scope.log = node
 		}
 
-
-		var activated = function (node) {
+		var activated = function (event, node) {
 			//QDR.log.debug("node activated: " + node.data.title)
+			node = node.node;
 			var type = node.data.type;
 			var template = $scope.templates.filter( function (tpl) {
 				return tpl.name == type;
 			})
 			$scope.template = template[0];
-			if (node.data.info)
+			// Call the function associated with this type passing in the node that was selected
+			// In dynatree I could save the function to call in the node, but not in FancyTree
+			if (treeTypeMap[type])
+				treeTypeMap[type](node);
+
+			/*if (node.data.info)
 				node.data.info(node)
+			*/
 			$scope.$apply();
 		}
         $scope.template = $scope.templates[0];
 
 		var routers = new Folder("Routers")
 		routers.type = "Routers"
-		routers.info = allRouterInfo
-		routers.activate = true
+		//routers.info = allRouterInfo
+		routers.focus = true
+		routers.expanded = true
 		routers.key = "Routers"
 		$scope.overview.children.push(routers)
 		nodeIds.forEach( function (node) {
 			var name = QDRService.nameFromId(node)
-			var router = new Folder(name)
+			var router = new Leaf(name)
 			router.type = "Router"
-			router.info = routerInfo
+			//router.info = routerInfo
 			router.nodeId = node
 			router.key = node
 			routers.children.push(router)
 		})
 
-
 		var expected = nodeIds.length;
 		var addresses = new Folder("Addresses")
 		addresses.type = "Addresses"
-		addresses.info = allAddressInfo
+		//addresses.info = allAddressInfo
 		addresses.key = "Addresses"
 		$scope.overview.children.push(addresses)
 
@@ -544,8 +564,8 @@ var QDR = (function (QDR) {
 					addressFields[i].title = addressFields[i].address
 			}
 			addressFields.forEach( function (address) {
-				var a = new Folder(address.title)
-				a.info = addressInfo
+				var a = new Leaf(address.title)
+				//a.info = addressInfo
 				a.key = address.uid
 				a.fields = address
 				a.type = "Address"
@@ -559,7 +579,7 @@ var QDR = (function (QDR) {
 		var connectionsObj = {}
 		var connections = new Folder("Connections")
 		connections.type = "Connections"
-		connections.info = allConnectionInfo
+		//connections.info = allConnectionInfo
 		connections.key = "Connections"
 		$scope.overview.children.push(connections)
 		nodeIds.forEach( function (nodeId) {
@@ -604,13 +624,13 @@ var QDR = (function (QDR) {
 				if (connreceived == expected) {
 					var allConnections = Object.keys(connectionsObj).sort()
 					allConnections.forEach(function (connection) {
-						var c = new Folder(connection)
+						var c = new Leaf(connection)
 						c.type = "Connection"
-						c.info = connectionInfo
+						c.icon = "ui-icon "
+						c.icon += connectionsObj[connection].role === "inter-router" ? "ui-icon-refresh" : "ui-icon-transfer-e-w"
+						//c.info = connectionInfo
 						c.key = connection
 						c.fields = connectionsObj[connection]
-						if (connectionsObj[connection].role === "inter-router")
-							c.addClass = "icon-random"
 						c.tooltip = connectionsObj[connection].role === "inter-router" ? "inter-router connection" : "external connection"
 						connections.children.push(c)
 					})
@@ -622,7 +642,7 @@ var QDR = (function (QDR) {
 		var logObj = {}
 		var logs = new Folder("Logs")
 		logs.type = "Logs"
-		logs.info = allLogInfo
+		//logs.info = allLogInfo
 		logs.key = "Logs"
 		//$scope.overview.children.push(logs)
 		nodeIds.forEach( function (nodeId) {
@@ -634,16 +654,19 @@ var QDR = (function (QDR) {
 				if (logsreceived == expected) {
 					var allLogs = Object.keys(logObj).sort()
 					allLogs.forEach(function (log) {
-						var l = new Folder(log)
+						var l = new Leaf(log)
 						l.type = "Log"
-						l.info = logInfo
+						//l.info = logInfo
 						l.key = log
 						logs.children.push(l)
 					})
-					$("#overtree").dynatree({
-						onActivate: activated,
+					//console.log("---------------")
+					//console.dump($scope.overview.children)
+					//console.log("---------------")
+					$("#overtree").fancytree({
+						activate: activated,
 						clickFolderMode: 1,
-						children: $scope.overview.children
+						source: $scope.overview.children
 						})
 					allRouterInfo();
 				}
@@ -656,6 +679,14 @@ var QDR = (function (QDR) {
 				currentTimer = null;
 			}
         });
+		var treeTypeMap = {
+			Routers:     allRouterInfo,
+			Router:      routerInfo,
+			Addresses:   allAddressInfo,
+			Address:     addressInfo,
+			Connections: allConnectionInfo,
+			Connection:  connectionInfo
+		}
 
     }]);
 

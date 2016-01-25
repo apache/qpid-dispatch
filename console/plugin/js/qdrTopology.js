@@ -19,7 +19,6 @@ under the License.
 /**
  * @module QDR
  */
-var dialogService = {};
 var QDR = (function (QDR) {
 
   /**
@@ -40,8 +39,8 @@ var QDR = (function (QDR) {
    *
    */
    
-    QDR.module.controller("QDR.TopologyController", ['$scope', '$rootScope', 'uiGridConstants', 'QDRService', '$location', '$timeout',
-    function($scope, $rootScope, uiGridConstants, QDRService, $location, $timeout) {
+    QDR.module.controller("QDR.TopologyController", ['$scope', '$rootScope', 'uiGridConstants', 'QDRService', '$uibModal', '$location', '$timeout',
+    function($scope, $rootScope, uiGridConstants, QDRService, $uibModal, $location, $timeout) {
 
 		QDR.log.debug("started QDR.TopologyController with location.url: " + $location.url());
 		QDR.log.debug("started QDR.TopologyController with window.location.pathname : " + window.location.pathname);
@@ -232,8 +231,9 @@ var QDR = (function (QDR) {
 				editNode();
 			}
 		})
+
 	    function editNode() {
-	        doAddDialog("node-config-template.html", NewRouterName);
+	        doAddDialog(NewRouterName);
 	    };
 		$scope.reverseLink = function () {
 			if (!mousedown_link)
@@ -1453,95 +1453,39 @@ var QDR = (function (QDR) {
 
 		initGlobe(cities)//, "Boston", "Tel Aviv-Yafo"]);
 
-	    function doAddDialog(template, NewRouterName) {
-
-            // The data for the dialog
-            var model = {
-                NewRouterName:  NewRouterName,
-                controller:     $scope
-            };
-
-            // jQuery UI dialog options
-            var options = {
-                autoOpen: false,
-                modal: true,
-                width: "50em",
-                position: {my: "top", at: "top", of: ".qdrTopology"},
-                show: {
-                        effect: "fade",
-                        duration: 200
-                      },
-                      hide: {
-                        effect: "fade",
-                        duration: 200
-                      },
-                resizable: false,
-                close: function(event, ui) {
-
-                    QDR.log.debug("Edit node cancelled?");
-                    console.dump(ui);
-                }
-            };
-            if (dialogService.isOpen("nodeDialog"))
-                return;
-
-            // Open the dialog using template from script
-            dialogService.open("nodeDialog", template, model, options).then(
-                function(result) {
-                    doDownloadDialog(result);
-                },
-                function(error) {
-                    QDR.log.debug("error");
-                    console.dump(error);
-                }
-            );
-
+	    function doAddDialog(NewRouterName) {
+		    var modalInstance = $uibModal.open({
+		        animation: true,
+		        controller: 'QDR.NodeDialogController',
+		        templateUrl: 'node-config-template.html',
+		        size: 'lg',
+		        resolve: {
+		            newname: function () {
+		                return NewRouterName;
+		            }
+		        }
+		    });
+		    modalInstance.result.then(function (result) {
+				if (result)
+					setTimeout(doDownloadDialog, 100, result);
+		    });
         };
 
 	    function doDownloadDialog(result) {
-
-            // The data for the dialog
-            var model = {
-                result:     result,
-                controller: $scope
-            };
-
-            // jQuery UI dialog options
-            var options = {
-                autoOpen: false,
-                modal: true,
-                width: "30em",
-                position: {my: "middle", at: "middle", of: ".qdrTopology"},
-                show: {
-                        effect: "fade",
-                        duration: 200
-                      },
-                      hide: {
-                        effect: "fade",
-                        duration: 200
-                      },
-                resizable: false
-            };
-            if (dialogService.isOpen("downloadDialog"))
-                return;
-
-            // Open the dialog using template from script
-            dialogService.open("downloadDialog", "download-dialog-template.html", model, options).then(
-                function() {
-                },
-                function(error) {
-                    QDR.log.debug("error");
-                    console.dump(error);
-                }
-            );
-
+		    var modalInstance = $uibModal.open({
+		        animation: true,
+				controller: 'QDR.DownloadDialogController',
+		        templateUrl: 'download-dialog-template.html',
+		        resolve: {
+		            results: function () {
+		                return result;
+		            }
+		        }
+		    });
         };
-
-
   }]);
 
-  QDR.module.controller("QDR.NodeDialogController", ['$scope', 'QDRService', function($scope, QDRService) {
-        var newName = $scope.model.NewRouterName;
+  QDR.module.controller("QDR.NodeDialogController", function($scope, QDRService, $uibModalInstance, newname) {
    		var schema = QDRService.schema;
    		var myEntities = ['container', 'router', 'log', 'listener' ];
    		var typeMap = {integer: 'number', string: 'text', path: 'text', boolean: 'boolean'};
@@ -1649,7 +1593,7 @@ var QDR = (function (QDR) {
    		    var noAnnotations = stripAnnotations(entityName, ent, annotations);
 			var ediv = entity(entityName, entityName, hName, noAnnotations, undefined);
 			if (ediv.actualName == 'router') {
-				ediv.attributes.filter(function (attr) { return attr.name == 'name'})[0].value = newName;
+				ediv.attributes.filter(function (attr) { return attr.name == 'name'})[0].value = newname;
 				// if we have any new links (connectors), then the router's mode should be interior
 				if (newLinks.length) {
 					var roleAttr = ediv.attributes.filter(function (attr) { return attr.name == 'mode'})[0];
@@ -1657,7 +1601,7 @@ var QDR = (function (QDR) {
 				}
 			}
 			if (ediv.actualName == 'container') {
-				ediv.attributes.filter(function (attr) { return attr.name == 'containerName'})[0].value = newName + "-container";
+				ediv.attributes.filter(function (attr) { return attr.name == 'containerName'})[0].value = newname + "-container";
 			}
 			if (ediv.actualName == 'listener') {
 				// find max port number that is used in all the listeners
@@ -1744,7 +1688,7 @@ var QDR = (function (QDR) {
 		})
 
         $scope.cancel = function () {
-            dialogService.cancel("nodeDialog");
+            $uibModalInstance.close()
         };
 		$scope.testPattern = function (attr) {
 			if (attr.rawtype == 'path')
@@ -1757,7 +1701,14 @@ var QDR = (function (QDR) {
 		$scope.attributeType = '';
 		$scope.attributeRequired = '';
 		$scope.attributeUnique = '';
+		$scope.active = 'container'
 		$scope.fieldsetDivs = "/fieldsetDivs.html"
+		$scope.setActive = function (tabName) {
+			$scope.active = tabName
+		}
+		$scope.isActive = function (tabName) {
+			return $scope.active === tabName
+		}
 		$scope.showDescription = function (attr, e) {
 			$scope.attributeDescription = attr.description;
 			var offset = jQuery(e.currentTarget).offset()
@@ -1770,8 +1721,7 @@ var QDR = (function (QDR) {
         // handle the download button click
         // copy the dialog's values to the original node
         $scope.download = function () {
-			//$scope.nodeInfo.this = $scope.workingInfo.this;
-			dialogService.close("nodeDialog", {entities: $scope.entities, annotations: annotations});
+	        $uibModalInstance.close({entities: $scope.entities, annotations: annotations});
         }
 
 		$scope.selectAnnotationTab = function (tabName) {
@@ -1792,13 +1742,12 @@ var QDR = (function (QDR) {
         // start the update loop
         initTabs();
 
-  }]);
+  });
 
-QDR.module.controller("QDR.DownloadDialogController", ['$scope', 'QDRService', '$templateCache', '$window',
-function($scope, QDRService, $templateCache, $window) {
+QDR.module.controller("QDR.DownloadDialogController", function($scope, QDRService, $templateCache, $window, $uibModalInstance, results) {
 
-		var result = $scope.model.result.entities;
-		var annotations = $scope.model.result.annotations;
+		var result = results.entities;
+		var annotations = results.annotations;
 		var annotationKeys = Object.keys(annotations);
 		var annotationSections = {};
 
@@ -1914,10 +1863,9 @@ function($scope, QDRService, $templateCache, $window) {
 		}
 
 		$scope.done = function () {
-			dialogService.close("downloadDialog");
+	        $uibModalInstance.close();
 		}
-}]);
-
+});
 
   return QDR;
 }(QDR || {}));

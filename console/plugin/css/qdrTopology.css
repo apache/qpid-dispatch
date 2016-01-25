@@ -366,7 +366,7 @@ li.currentStep {
 }
 
 .entity-fields {
-  height: 400px;
+  /* height: 400px; */
   overflow-y: scroll;
   overflow-x: hidden;
 }
@@ -488,4 +488,11 @@ li.currentStep {
 .leaf circle[title] {
     font-family: monospace;
 
+}
+
+.tabs-left .nav-tabs {
+	float: left;
+}
+.tabs-left .nav-tabs > li {
+	float: initial;
 }

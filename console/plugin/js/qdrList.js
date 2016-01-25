@@ -174,9 +174,6 @@ var QDR = (function(QDR) {
 
 		// tableRows are the records that were returned, this populates the left hand table on the page
 		var selectRow = function (tableRows) {
-			while ($scope.tableRows.length) {
-				$scope.tableRows.pop();
-			}
 			$scope.tableRows = tableRows;
 			// must apply scope here to update the tableRows before selecting the row
 			$scope.$apply();
@@ -187,12 +184,37 @@ var QDR = (function(QDR) {
 		$scope.getTableHeight = function() {
 	       return {height: ($scope.tableRows.length * 30) + "px"};
 	    };
+	    var titleFromAlt = function (alt) {
+			if (alt && alt.length) {
+				var data = angular.fromJson(alt);
+				var table = "<table class='tiptable'><tbody>";
+				data.forEach (function (row) {
+					table += "<tr>";
+					table += "<td>" + row.node + "</td><td align='right'>" + QDRService.pretty(row.val) + "</td>";
+					table += "</tr>"
+				})
+				table += "</tbody></table>"
+				return table;
+			}
+			return '';
+	    }
 		var fixTooltips = function () {
 			if ($('.hastip').length == 0) {
 				setTimeout(fixTooltips, 100);
 				return;
 			}
 			$('.hastip').each( function (i, tip) {
+				var tipset = tip.getAttribute('tipset')
+				if (!tipset) {
+					$(tip).tipsy({html: true, className: 'subTip', opacity: 1, title: function () {
+						return titleFromAlt(this.getAttribute('alt'))
+					} });
+					tip.setAttribute('tipset', true)
+				} else {
+					var title = titleFromAlt(tip.getAttribute('alt'))
+					tip.setAttribute('original-title', title)
+				}
+/*
 				$(tip).tipsy({html: true, className: 'subTip', opacity: 1, title: function () {
 					var alt = this.getAttribute('alt');
 					if (alt && alt.length) {
@@ -208,6 +230,7 @@ var QDR = (function(QDR) {
 					}
 					return '';
 				} });
+				*/
 			})
 		}
 		$scope.selectedEntity = undefined;
