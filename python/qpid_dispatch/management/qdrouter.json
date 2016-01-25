@@ -1170,13 +1170,13 @@
                     "create": true
                 },
                 "sources": {
-                    "type": "list",
+                    "type": "string",
                     "description": "List of Source addresses allowed when creating receiving links.",
                     "required": false,
                     "create": true
                 },
                 "targets": {
-                    "type": "list",
+                    "type": "string",
                     "description": "List of Target addresses allowed when creating sending links.",
                     "required": false,
                     "create": true

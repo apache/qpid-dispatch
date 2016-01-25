@@ -176,7 +176,7 @@
     }
   ],  ["policyAppSettings", {
       "applicationName": "photoserver",
-      "userGroupName":   "users",
+      "userGroupName":   "default",
       "maxFrameSize":     222222,
       "maxMessageSize":   222222,
       "maxSessionWindow": 222222,
