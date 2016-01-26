@@ -461,7 +461,11 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
     sys_mutex_lock(router->lock);
     qd_hash_retrieve(router->addr_hash, iter, (void**) &addr);
     if (!addr) {
-        addr = qd_address(router_semantics_for_addr(router, iter, phase, &unused));
+        const char *sem_addr = addr_string;
+        sem_addr += *sem_addr == 'M' ? 2 : 1;
+        qd_field_iterator_t *sem_iter = qd_address_iterator_string(sem_addr, ITER_VIEW_ALL);
+        addr = qd_address(router_semantics_for_addr(router, sem_iter, phase, &unused));
+        qd_field_iterator_free(sem_iter);
         qd_hash_insert(router->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(router->addrs, addr);

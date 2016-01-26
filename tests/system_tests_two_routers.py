@@ -860,6 +860,10 @@ class RouterTest(TestCase):
         M3 = self.messenger()
         M4 = self.messenger()
 
+        M2.timeout = 0.1
+        M3.timeout = 0.1
+        M4.timeout = 0.1
+
         M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
         M3.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
@@ -871,6 +875,7 @@ class RouterTest(TestCase):
         M4.start()
 
         M2.subscribe(addr)
+        self.routers[0].wait_address("closest/1", 0, 1)
         M3.subscribe(addr)
         M4.subscribe(addr)
         self.routers[0].wait_address("closest/1", 1, 1)
@@ -890,6 +895,22 @@ class RouterTest(TestCase):
             M3.recv(1)
             M3.get(rm)
             rx_set.append(rm.body['number'])
+
+        try:
+            M2.recv(1)
+            self.assertEqual(0, "Unexpected messages arrived on M2")
+        except AssertionError:
+            raise
+        except Exception:
+            pass
+
+        try:
+            M4.recv(1)
+            self.assertEqual(0, "Unexpected messages arrived on M4")
+        except AssertionError:
+            raise
+        except Exception:
+            pass
 
         self.assertEqual(30, len(rx_set))
         rx_set.sort()
