@@ -81,7 +81,7 @@ from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema
 from ..router.message import Message
 from ..router.address import Address
-from policy_local import PolicyLocal
+from ..policy.policy_local import PolicyLocal
 
 
 def dictstr(d):
