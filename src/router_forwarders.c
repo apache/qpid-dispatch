@@ -144,6 +144,12 @@ static void forward_to_remote_subscribers_LH(qd_router_t *router,
 
                 addr->deliveries_transit++;
                 qd_link_activate(dest_link->link);
+
+                //
+                // If the fanout is single, exit the loop here.  We only want to send one message copy.
+                //
+                if (QD_FANOUT(addr->semantics) == QD_FANOUT_SINGLE)
+                    break;
             }
         }
 
