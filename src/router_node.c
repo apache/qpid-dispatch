@@ -264,7 +264,7 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
     //
     qd_message_depth_t  validation_depth = anonymous_link ? QD_DEPTH_PROPERTIES : QD_DEPTH_MESSAGE_ANNOTATIONS;
     bool                valid_message    = qd_message_check(msg, validation_depth);
-    qdr_delivery_t     *delivery;
+    qdr_delivery_t     *delivery         = 0;
 
     if (valid_message) {
         qd_parsed_field_t   *in_ma        = qd_message_message_annotations(msg);
@@ -299,8 +299,12 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
             delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions);
 
         if (delivery) {
-            pn_delivery_set_context(pnd, delivery);
-            qdr_delivery_set_context(delivery, pnd);
+            if (pn_delivery_settled(pnd))
+                pn_delivery_settle(pnd);
+            else {
+                pn_delivery_set_context(pnd, delivery);
+                qdr_delivery_set_context(delivery, pnd);
+            }
         } else {
             //
             // The message is now and will always be unroutable because there is no address.
@@ -680,8 +684,10 @@ static void qd_router_link_deliver(void *context, qdr_link_t *link, qdr_delivery
     pn_delivery(plink, pn_dtag(tag, tag_length));
     pn_delivery_t *pdlv = pn_link_current(plink);
 
-    pn_delivery_set_context(pdlv, dlv);
-    qdr_delivery_set_context(dlv, pdlv);
+    if (!settled) {
+        pn_delivery_set_context(pdlv, dlv);
+        qdr_delivery_set_context(dlv, pdlv);
+    }
 
     qd_message_send(qdr_delivery_message(dlv), qlink, qdr_link_strip_annotations_out(link));
     if (settled)

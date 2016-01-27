@@ -116,15 +116,19 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
         dlv = DEQ_HEAD(link->undelivered);
         if (dlv) {
             DEQ_REMOVE_HEAD(link->undelivered);
-            DEQ_INSERT_TAIL(link->unsettled, dlv);
+            if (!dlv->settled)
+                DEQ_INSERT_TAIL(link->unsettled, dlv);
             credit--;
             offer = DEQ_SIZE(link->undelivered);
         } else
             drained = true;
         sys_mutex_unlock(conn->work_lock);
 
-        if (dlv)
+        if (dlv) {
             core->deliver_handler(core->user_context, link, dlv, dlv->settled);
+            if (dlv->settled)
+                qdr_delivery_free(dlv);
+        }
     }
 
     if (drained)
@@ -143,6 +147,8 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
     qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
     while (ref) {
         core->delivery_update_handler(core->user_context, ref->dlv, ref->dlv->disposition, ref->dlv->settled);
+        if (ref->dlv->settled)
+            qdr_delivery_free(ref->dlv);
         qdr_del_delivery_ref(&updated_deliveries, ref);
         ref = DEQ_HEAD(updated_deliveries);
     }
@@ -170,6 +176,14 @@ void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr, bool ex
     action->args.io.control           = control;
 
     qdr_action_enqueue(core, action);
+}
+
+
+void qdr_delivery_free(qdr_delivery_t *delivery)
+{
+    if (delivery->msg)
+        qd_message_free(delivery->msg);
+    free_qdr_delivery_t(delivery);
 }
 
 
@@ -259,7 +273,8 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     qdr_delivery_t *dlv          = action->args.connection.delivery;
     qd_bitmask_t   *link_exclude = action->args.connection.link_exclusion;
     qdr_link_t     *link         = dlv->link;
-    int             count        = 0;
+    int             fanout       = 0;
+    bool            presettled   = dlv->settled;
 
     //
     // NOTE: The link->undelivered list does not need to be protected by the
@@ -272,11 +287,11 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         if (!addr && dlv->to_addr)
             qd_hash_retrieve(core->addr_hash, dlv->to_addr, (void**) &addr);
         if (addr)
-            count = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false,
-                                           link->link_type == QD_LINK_CONTROL, link_exclude);
+            fanout = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false,
+                                            link->link_type == QD_LINK_CONTROL, link_exclude);
     }
 
-    if (count == 0) {
+    if (fanout == 0) {
         if (link->owning_addr) {
             //
             // Message was not delivered and the link is not anonymous.
@@ -288,20 +303,24 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             //
             // TODO - Release the delivery
             //
+            printf("TODO fanout == 0\n");
         }
-    } else if (count == 1) {
-        if (dlv->settled)
+    } else if (fanout == 1) {
+        if (presettled) {
             //
             // The delivery was pre-settled.  Issue replacement credit now that it's
             // been forwarded.
             //
             qdr_link_issue_credit_CT(core, link, 1);
-        else
+            assert(!dlv->peer);
+            qdr_delivery_free(dlv);
+        } else
             DEQ_INSERT_TAIL(link->unsettled, dlv);
     } else {
         //
-        // The count is greater than one.  Do something!  TODO
+        // The fanout is greater than one.  Do something!  TODO
         //
+        printf("TODO fanout > 1\n");
     }
 }
 
@@ -334,15 +353,55 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     qdr_delivery_t *dlv     = action->args.delivery.delivery;
+    qdr_delivery_t *peer    = dlv->peer;
+    bool            push    = false;
     uint64_t        disp    = action->args.delivery.disposition;
-    //    bool            settled = action->args.delivery.settled;
+    bool            settled = action->args.delivery.settled;
+
+    //
+    // Logic:
+    //
+    // If disposition has changed and there is a peer link, set the disposition of the peer
+    // If settled, the delivery must be unlinked and freed.
+    // If settled and there is a peer, the peer shall be settled and unlinked.  It shall not
+    //   be freed until the connection-side thread settles the PN delivery.
+    //
 
     if (disp != dlv->disposition) {
         //
         // Disposition has changed, propagate the change to the peer delivery.
         //
         dlv->disposition = disp;
+        if (peer) {
+            peer->disposition = disp;
+            push = true;
+        }
     }
+
+    if (settled) {
+        if (peer) {
+            peer->settled = true;
+            push = true;
+            peer->peer = 0;
+            dlv->peer  = 0;
+            if (peer->link) {
+                DEQ_REMOVE(peer->link->unsettled, peer);
+                if (peer->link->link_direction == QD_INCOMING)
+                    qdr_link_issue_credit_CT(core, peer->link, 1);
+            }
+        }
+
+        if (dlv->link) {
+            DEQ_REMOVE(dlv->link->unsettled, dlv);
+            if (dlv->link->link_direction == QD_INCOMING)
+                qdr_link_issue_credit_CT(core, dlv->link, 1);
+        }
+
+        qdr_delivery_free(dlv);
+    }
+
+    if (push)
+        qdr_delivery_push_CT(core, peer);
 }
 
 

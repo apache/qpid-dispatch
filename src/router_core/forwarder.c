@@ -54,13 +54,18 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *pe
 
     ZERO(dlv);
     dlv->link    = link;
-    dlv->peer    = peer;
     dlv->msg     = qd_message_copy(msg);
     dlv->settled = !peer || peer->settled;
     dlv->tag     = core->next_tag++;
 
-    if (peer && peer->peer == 0)
-        peer->peer = dlv;  // TODO - make this a back-list for multicast tracking
+    //
+    // Create peer linkage only if the delivery is not settled
+    //
+    if (!dlv->settled) {
+        dlv->peer = peer;
+        if (peer && peer->peer == 0)
+            peer->peer = dlv;  // TODO - make this a back-list for multicast tracking
+    }
 
     return dlv;
 }
@@ -244,7 +249,7 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
             //
             // If the incoming delivery is not settled, it should be accepted and settled here.
             //
-            if (in_delivery) {
+            if (in_delivery && !in_delivery->settled) {
                 in_delivery->disposition = PN_ACCEPTED;
                 in_delivery->settled     = true;
                 qdr_delivery_push_CT(core, in_delivery);
