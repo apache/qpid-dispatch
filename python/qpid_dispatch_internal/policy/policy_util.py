@@ -32,7 +32,7 @@ class PolicyError(Exception):
 
 #
 #
-class HostStruct():
+class HostStruct(object):
     """
     HostStruct represents a single, binary socket address from getaddrinfo
         - name     : name given to constructor; numeric IP or host name
@@ -98,7 +98,7 @@ class HostStruct():
 
 #
 #
-class HostAddr():
+class HostAddr(object):
     """
     Provide HostIP address ranges and comparison functions.
     A HostIP may be:
@@ -214,7 +214,7 @@ class HostAddr():
 
 #
 #
-class PolicyAppConnectionMgr():
+class PolicyAppConnectionMgr(object):
     """
     Track policy user/host connection limits and statistics for one app.
     # limits - set at creation and by update()

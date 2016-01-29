@@ -21,11 +21,9 @@
 
 """
 
-import sys, os
 import json
-import optparse
-from policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr
-import pdb #; pdb.set_trace()
+from policy_util import PolicyError, HostStruct, HostAddr
+from copy import deepcopy
 
 """
 Entity implementing the business logic of user connection/access policy.
@@ -144,14 +142,14 @@ class PolicyCompiler(object):
         return True
 
 
-    def compile_connection_groups(self, name, submap, warnings, errors):
+    def compile_connection_groups(self, name, submap_in, submap_out, warnings, errors):
         """
         Handle an connectionGroups submap.
         Each origin value is verified. On a successful run the submap
         is replaced parsed lists of HostAddr objects.
         @param[in] name application name
-        @param[in,out] submap user input origin list as text strings
-                       modified in place to be list of HostAddr objects
+        @param[in] submap_in user input origin list as text strings
+        @param[out] submap_out user inputs replaced with HostAddr objects
         @param[out] warnings nonfatal irregularities observed
         @param[out] errors descriptions of failure
         @return - origins is usable. If True then warnings[] may contain useful
@@ -160,20 +158,18 @@ class PolicyCompiler(object):
                   description of why the origin was rejected.
         """
         key = PolicyKeys.KW_CONNECTION_GROUPS
-        newmap = {}
-        for coname in submap:
+        for coname in submap_in:
             try:
-                ostr = str(submap[coname])
+                ostr = str(submap_in[coname])
                 olist = [x.strip(' ') for x in ostr.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
-                newmap[coname] = []
+                submap_out[coname] = []
                 for co in olist:
                     coha = HostAddr(co, PolicyKeys.KC_CONFIG_IP_SEP)
-                    newmap[coname].append(coha)
+                    submap_out[coname].append(coha)
             except Exception, e:
                 errors.append("Application '%s' option '%s' connectionOption '%s' failed to translate: '%s'." %
                                 (name, key, coname, e))
                 return False
-        submap.update(newmap)
         return True
 
 
@@ -288,15 +284,18 @@ class PolicyCompiler(object):
                     if key == PolicyKeys.KW_CONNECTION_GROUPS:
                         # Conection groups are lists of IP addresses that need to be
                         # converted into binary structures for comparisons.
-                        if not self.compile_connection_groups(name, val, warnings, errors):
+                        val_out = {}
+                        if not self.compile_connection_groups(name, val, val_out, warnings, errors):
                             return False
+                        policy_out[key] = {}
+                        policy_out[key].update(val_out)
                     else:
                         # deduplicate connectionIngressPolicy and userGroups lists
                         for k,v in val.iteritems():
                             v = [x.strip(' ') for x in v.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
                             v = list(set(v))
                             val[k] = v
-                    policy_out[key] = val
+                        policy_out[key] = val
                 except Exception, e:
                     errors.append("Application '%s' option '%s' error processing map: %s" %
                                   (name, key, e))
@@ -401,28 +400,9 @@ class PolicyLocal(object):
         if len(warnings) > 0:
             print ("LogMe: Application '%s' has warnings: %s" %
                    (name, warnings))
-        self.rulesetdb[name] = candidate
+        self.rulesetdb[name] = {}
+        self.rulesetdb[name].update(candidate)
         # TODO: Create stats
-
-    def create_settings(self, attributes):
-        """
-        Create named policy ruleset
-        @param[in] attributes: from config
-        """
-        warnings = []
-        diag = []
-        candidate = {}
-        app_name = attributes[PolicyKeys.KW_APPLICATION_NAME]
-        usergroup = attributes[PolicyKeys.KW_USER_GROUP_NAME]
-        result = self._policy_compiler.compile_app_settings(app_name, usergroup, attributes, candidate, warnings, diag)
-        if not result:
-            raise PolicyError( "Policy '%s' is invalid: %s" % (app_name, diag[0]) )
-        if len(warnings) > 0:
-            print ("LogMe: Application '%s' has warnings: %s" %
-                   (app_name, warnings))
-        if not app_name in self.settingsdb:
-            self.settingsdb[app_name] = {}
-        self.settingsdb[app_name][usergroup] = candidate  # create named settings
 
     def policy_read(self, name):
         """
