@@ -67,9 +67,12 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     //
     // Perform outside-of-thread setup for the management agent
     //
-    core->agent_subscription = qdr_core_subscribe(core, "$management", 'M', '0',
-                                                  QD_SEMANTICS_ANYCAST_CLOSEST,
-                                                  qdr_management_agent_on_message, core);
+    core->agent_subscription_mobile = qdr_core_subscribe(core, "$management", 'M', '0',
+                                                         QD_SEMANTICS_ANYCAST_CLOSEST,
+                                                         qdr_management_agent_on_message, core);
+    core->agent_subscription_local = qdr_core_subscribe(core, "$management", 'L', '0',
+                                                        QD_SEMANTICS_ANYCAST_CLOSEST,
+                                                        qdr_management_agent_on_message, core);
 
     return core;
 }
@@ -87,7 +90,8 @@ void qdr_core_free(qdr_core_t *core)
     //
     // Free the core resources
     //
-    qdr_core_unsubscribe(core->agent_subscription);
+    qdr_core_unsubscribe(core->agent_subscription_mobile);
+    qdr_core_unsubscribe(core->agent_subscription_local);
     sys_thread_free(core->thread);
     sys_cond_free(core->action_cond);
     sys_mutex_free(core->action_lock);

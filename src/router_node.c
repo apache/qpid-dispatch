@@ -295,8 +295,15 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
                 delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
                                                link_exclusions);
             }
-        } else
+        } else {
+            const char *r_tgt = pn_terminus_get_address(qd_link_remote_target(link));
+            if (r_tgt) {
+                qd_composed_field_t *to_override = qd_compose_subfield(0);
+                qd_compose_insert_string(to_override, r_tgt);
+                qd_message_set_to_override_annotation(msg, to_override);
+            }
             delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions);
+        }
 
         if (delivery) {
             if (pn_delivery_settled(pnd))
@@ -311,7 +318,6 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
             //
             pn_delivery_update(pnd, PN_REJECTED);
             pn_delivery_settle(pnd);
-            qd_server_activate(qd_link_connection(link));
         }
 
         //
@@ -334,7 +340,6 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
         //
         pn_delivery_update(pnd, PN_REJECTED);
         pn_delivery_settle(pnd);
-        qd_server_activate(qd_link_connection(link));
     }
 }
 

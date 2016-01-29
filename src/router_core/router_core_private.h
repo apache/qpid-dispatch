@@ -404,7 +404,8 @@ struct qdr_core_t {
     sys_mutex_t           *query_lock;
     qd_timer_t            *agent_timer;
     qdr_manage_response_t  agent_response_handler;
-    qdr_subscription_t    *agent_subscription;
+    qdr_subscription_t    *agent_subscription_mobile;
+    qdr_subscription_t    *agent_subscription_local;
 
     //
     // Route table section
