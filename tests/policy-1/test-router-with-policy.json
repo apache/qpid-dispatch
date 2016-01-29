@@ -54,7 +54,7 @@
     ["policy", {
 	"maximumConnections": 2
     }],
-  ["policyAccessRuleset", {
+  ["policyRuleset", {
       "applicationName": "photoserver",
       "maxConnections": 50,
       "maxConnPerUser": 5,
@@ -64,7 +64,7 @@
         "users":           "u1, u2",
         "paidsubscribers": "p1, p2",
         "test":            "zeke, ynot",
-        "admin":           "alice, bob, ellen",
+        "admin":           "alice, bob",
         "superuser":       "ellen"
       },
       "connectionGroups": {
@@ -82,111 +82,93 @@
         "admin":           "Ten18, TheLabs, localhost",
         "superuser":       "EllensWS, localhost"
       },
-      "connectionAllowDefault": true
-    }
-  ],
-  ["policyAppSettings", {
-      "applicationName": "photoserver",
-      "userGroupName":   "anonymous",
-      "maxFrameSize":     111111,
-      "maxMessageSize":   111111,
-      "maxSessionWindow": 111111,
-      "maxSessions":           1,
-      "maxSenders":           11,
-      "maxReceivers":         11,
-      "allowDynamicSrc":      false,
-      "allowAnonymousSender": false,
-      "sources": "public",
-      "targets": ""
-    }
-  ],
-  ["policyAppSettings", {
-      "applicationName": "photoserver",
-      "userGroupName":   "users",
-      "maxFrameSize":     222222,
-      "maxMessageSize":   222222,
-      "maxSessionWindow": 222222,
-      "maxSessions":           2,
-      "maxSenders":           22,
-      "maxReceivers":         22,
-      "allowDynamicSrc":      false,
-      "allowAnonymousSender": false,
-      "sources": "public, private",
-      "targets": "public"
-    }
-  ],
-  ["policyAppSettings", {
-      "applicationName": "photoserver",
-      "userGroupName":   "paidsubscribers",
-      "maxFrameSize":     333333,
-      "maxMessageSize":   333333,
-      "maxSessionWindow": 333333,
-      "maxSessions":           3,
-      "maxSenders":           33,
-      "maxReceivers":         33,
-      "allowDynamicSrc":      true,
-      "allowAnonymousSender": false,
-      "sources": "public, private",
-      "targets": "public, private"
-    }
-  ],
-  ["policyAppSettings", {
-      "applicationName": "photoserver",
-      "userGroupName":   "test",
-      "maxFrameSize":     444444,
-      "maxMessageSize":   444444,
-      "maxSessionWindow": 444444,
-      "maxSessions":           4,
-      "maxSenders":           44,
-      "maxReceivers":         44,
-      "allowDynamicSrc":      true,
-      "allowAnonymousSender": true,
-      "sources": "private",
-      "targets": "private"
-    }
-  ],
-  ["policyAppSettings", {
-      "applicationName": "photoserver",
-      "userGroupName":   "admin",
-      "maxFrameSize":     555555,
-      "maxMessageSize":   555555,
-      "maxSessionWindow": 555555,
-      "maxSessions":           5,
-      "maxSenders":           55,
-      "maxReceivers":         55,
-      "allowDynamicSrc":      true,
-      "allowAnonymousSender": true,
-      "sources": "public, private, management",
-      "targets": "public, private, management"
-    }
-  ],
-  ["policyAppSettings", {
-      "applicationName": "photoserver",
-      "userGroupName":   "superuser",
-      "maxFrameSize":     666666,
-      "maxMessageSize":   666666,
-      "maxSessionWindow": 666666,
-      "maxSessions":           6,
-      "maxSenders":           66,
-      "maxReceivers":         66,
-      "allowDynamicSrc":      false,
-      "allowAnonymousSender": false,
-      "sources": "public, private, management, root",
-      "targets": "public, private, management, root"
-    }
-  ],  ["policyAppSettings", {
-      "applicationName": "photoserver",
-      "userGroupName":   "default",
-      "maxFrameSize":     222222,
-      "maxMessageSize":   222222,
-      "maxSessionWindow": 222222,
-      "maxSessions":           2,
-      "maxSenders":           22,
-      "maxReceivers":         22,
-      "allowDynamicSrc":      false,
-      "allowAnonymousSender": false,
-      "sources": "public, private",
-      "targets": "public"
+      "connectionAllowDefault": true,
+      "settings": {
+        "anonymous" : {
+          "maxFrameSize":     111111,
+          "maxMessageSize":   111111,
+          "maxSessionWindow": 111111,
+          "maxSessions":           1,
+          "maxSenders":           11,
+          "maxReceivers":         11,
+          "allowDynamicSrc":      false,
+          "allowAnonymousSender": false,
+          "sources": "public",
+          "targets": ""
+        },
+        "users" : {
+          "maxFrameSize":     222222,
+          "maxMessageSize":   222222,
+          "maxSessionWindow": 222222,
+          "maxSessions":           2,
+          "maxSenders":           22,
+          "maxReceivers":         22,
+          "allowDynamicSrc":      false,
+          "allowAnonymousSender": false,
+          "sources": "public, private",
+          "targets": "public"
+        },
+        "paidsubscribers" : {
+          "maxFrameSize":     333333,
+          "maxMessageSize":   333333,
+          "maxSessionWindow": 333333,
+          "maxSessions":           3,
+          "maxSenders":           33,
+          "maxReceivers":         33,
+          "allowDynamicSrc":      true,
+          "allowAnonymousSender": false,
+          "sources": "public, private",
+          "targets": "public, private"
+        },
+        "test" : {
+          "maxFrameSize":     444444,
+          "maxMessageSize":   444444,
+          "maxSessionWindow": 444444,
+          "maxSessions":           4,
+          "maxSenders":           44,
+          "maxReceivers":         44,
+          "allowDynamicSrc":      true,
+          "allowAnonymousSender": true,
+          "sources": "private",
+          "targets": "private"
+        },
+        "admin" : {
+          "maxFrameSize":     555555,
+          "maxMessageSize":   555555,
+          "maxSessionWindow": 555555,
+          "maxSessions":           5,
+          "maxSenders":           55,
+          "maxReceivers":         55,
+          "allowDynamicSrc":      true,
+          "allowAnonymousSender": true,
+          "sources": "public, private, management",
+          "targets": "public, private, management"
+        },
+        "superuser" : {
+          "maxFrameSize":     666666,
+          "maxMessageSize":   666666,
+          "maxSessionWindow": 666666,
+          "maxSessions":           6,
+          "maxSenders":           66,
+          "maxReceivers":         66,
+          "allowDynamicSrc":      false,
+          "allowAnonymousSender": false,
+          "sources": "public, private, management, root",
+          "targets": "public, private, management, root"
+        },
+        "default" : {
+          "maxFrameSize":     222222,
+          "maxMessageSize":   222222,
+          "maxSessionWindow": 222222,
+          "maxSessions":           2,
+          "maxSenders":           22,
+          "maxReceivers":         22,
+          "allowDynamicSrc":      false,
+          "allowAnonymousSender": false,
+          "sources": "public, private",
+          "targets": "public"
+        }
+      }
     }
   ]
 ]

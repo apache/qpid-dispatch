@@ -285,19 +285,12 @@ class PolicyEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('module')
 
-class PolicyAccessRulesetEntity(EntityAdapter):
+class PolicyRulesetEntity(EntityAdapter):
     def create(self):
         self._policy.create_ruleset(self.attributes)
 
     def _identifier(self):
         return self.attributes.get('applicationName')
-
-class PolicyAppSettingsEntity(EntityAdapter):
-    def create(self):
-        self._policy.create_settings(self.attributes)
-
-    def _identifier(self):
-        return self.attributes.get('applicationName') + "_" + self.attributes.get('userGroupName')
 
 def _addr_port_identifier(entity):
     for attr in ['addr', 'port']: # Set default values if need be
