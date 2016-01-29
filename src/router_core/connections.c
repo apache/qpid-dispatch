@@ -114,14 +114,10 @@ void *qdr_connection_get_context(const qdr_connection_t *conn)
 int qdr_connection_process(qdr_connection_t *conn)
 {
     qdr_connection_work_list_t  work_list;
-    qdr_link_ref_list_t         links_with_deliveries;
-    qdr_link_ref_list_t         links_with_credit;
     qdr_core_t                 *core = conn->core;
 
     sys_mutex_lock(conn->work_lock);
     DEQ_MOVE(conn->work_list, work_list);
-    DEQ_MOVE(conn->links_with_deliveries, links_with_deliveries);
-    DEQ_MOVE(conn->links_with_credit, links_with_credit);
     sys_mutex_unlock(conn->work_lock);
 
     int event_count = DEQ_SIZE(work_list);
@@ -150,20 +146,38 @@ int qdr_connection_process(qdr_connection_t *conn)
         work = DEQ_HEAD(work_list);
     }
 
-    qdr_link_ref_t *ref = DEQ_HEAD(links_with_deliveries);
-    while (ref) {
-        core->push_handler(core->user_context, ref->link);
-        qdr_del_link_ref(&links_with_deliveries, ref->link, QDR_LINK_LIST_CLASS_DELIVERY);
-        ref = DEQ_HEAD(links_with_deliveries);
-    }
+    qdr_link_ref_t *ref;
+    qdr_link_t     *link;
 
-    ref = DEQ_HEAD(links_with_credit);
-    while (ref) {
-        core->flow_handler(core->user_context, ref->link, ref->link->incremental_credit);
-        ref->link->incremental_credit = 0;
-        qdr_del_link_ref(&links_with_credit, ref->link, QDR_LINK_LIST_CLASS_FLOW);
-        ref = DEQ_HEAD(links_with_credit);
-    }
+    do {
+        sys_mutex_lock(conn->work_lock);
+        ref = DEQ_HEAD(conn->links_with_deliveries);
+        if (ref) {
+            link = ref->link;
+            qdr_del_link_ref(&conn->links_with_deliveries, ref->link, QDR_LINK_LIST_CLASS_DELIVERY);
+        } else
+            link = 0;
+        sys_mutex_unlock(conn->work_lock);
+
+        if (link)
+            core->push_handler(core->user_context, link);
+    } while (link);
+
+    do {
+        sys_mutex_lock(conn->work_lock);
+        ref = DEQ_HEAD(conn->links_with_credit);
+        if (ref) {
+            link = ref->link;
+            qdr_del_link_ref(&conn->links_with_credit, ref->link, QDR_LINK_LIST_CLASS_FLOW);
+        } else
+            link = 0;
+        sys_mutex_unlock(conn->work_lock);
+
+        if (link) {
+            core->flow_handler(core->user_context, link, link->incremental_credit);
+            link->incremental_credit = 0;
+        }
+    } while (link);
 
     return event_count;
 }
@@ -402,6 +416,9 @@ static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
 
+    DEQ_INSERT_TAIL(core->open_links, link);
+    qdr_add_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
+
     qdr_connection_work_t *work = new_qdr_connection_work_t();
     ZERO(work);
     work->work_type = QDR_CONNECTION_WORK_FIRST_ATTACH;
@@ -490,6 +507,24 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
         qd_bitmask_free(addr->rnodes);
         free_qdr_address_t(addr);
     }
+}
+
+
+static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+{
+    //
+    // Remove the link from the master list links
+    //
+    DEQ_REMOVE(core->open_links, link);
+
+    //
+    // Remove the reference to this link in the connection's reference lists
+    //
+    qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
+    sys_mutex_lock(conn->work_lock);
+    qdr_del_link_ref(&conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+    qdr_del_link_ref(&conn->links_with_credit    , link, QDR_LINK_LIST_CLASS_FLOW);
+    sys_mutex_unlock(conn->work_lock);
 }
 
 
@@ -666,6 +701,18 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     //        This involves the links and the dispositions of deliveries stored
     //        with the links.
     //
+    qdr_link_ref_t *link_ref = DEQ_HEAD(conn->links);
+    while (link_ref) {
+        //
+        // TODO - if the link is link-routed and has a peer, detach the peer.
+        //
+
+        //
+        // Clean up the link and all its associated state.
+        //
+        qdr_link_cleanup_CT(core, conn, link_ref->link);
+        link_ref = DEQ_HEAD(conn->links);
+    }
 
     //
     // Discard items on the work list
@@ -687,6 +734,12 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     qd_direction_t     dir    = action->args.connection.dir;
     qdr_terminus_t    *source = action->args.connection.source;
     qdr_terminus_t    *target = action->args.connection.target;
+
+    //
+    // Put the link into the proper lists for tracking.
+    //
+    DEQ_INSERT_TAIL(core->open_links, link);
+    qdr_add_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
 
     //
     // Reject any attaches of inter-router links that arrive on connections that are not inter-router.

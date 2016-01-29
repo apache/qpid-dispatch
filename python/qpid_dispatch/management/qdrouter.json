@@ -832,13 +832,38 @@
             "description": "Link to another AMQP endpoint: router node, client or other AMQP process.",
             "extends": "operationalEntity",
             "attributes": {
-                "linkName": {"type": "string"},
-                "linkType": {"type": ["endpoint", "waypoint", "inter-router", "inter-area"]},
-                "linkDir": {"type": ["in", "out"]},
-                "owningAddr": {"type": "string"},
-                "eventFifoDepth": {"type": "integer", "graph": true},
-                "msgFifoDepth": {"type": "integer", "graph": true},
-                "remoteContainer": {"type": "string"}
+                "linkName": {
+                    "type": "string",
+                    "description": "Name assigned to the link in the Attach."
+                },
+                "linkType": {
+                    "type": ["endpoint", "waypoint", "router-control", "inter-router"],
+                    "description": "Type of link: endpoint: a link to a normally connected endpoint; waypoint: a link to a waypoint node; inter-router: a link to another router in the network."
+                },
+                "linkDir": {
+                    "type": ["in", "out"],
+                    "description": "Direction of delivery flow over the link, inbound or outbound to or from the router."
+                },
+                "owningAddr": {
+                    "type": "string",
+                    "description": "Address assigned to this link during attach: The target for inbound links or the source for outbound links."
+                },
+                "capacity": {
+                    "type": "integer",
+                    "description": "The capacity, in deliveries, for the link.  The number of undelivered plus unsettled deliveries shall not exceed the capacity.  This is enforced by link flow control."
+                },
+                "undeliveredCount": {
+                    "type": "integer",
+                    "description": "The number of undelivered messages pending for the link."
+                },
+                "unsettledCount": {
+                    "type": "integer",
+                    "description": "The number of unsettled deliveries awaiting settlement on the link"
+                },
+                "deliveryCount": {
+                    "type": "integer",
+                    "description": "The total number of deliveries that have traversed this link."
+                }
             }
         },
 

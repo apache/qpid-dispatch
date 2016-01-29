@@ -235,7 +235,7 @@ static void qdr_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
         // This record will be found whenever a "foreign" topological address to this
         // remote router is looked up.
         //
-        addr = qdr_address_CT(core, QD_SEMANTICS_MULTICAST_FLOOD); // TODO - switch back to ANYCAST_CLOSEST when able
+        addr = qdr_address_CT(core, QD_SEMANTICS_ANYCAST_CLOSEST);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(core->addrs, addr);
 

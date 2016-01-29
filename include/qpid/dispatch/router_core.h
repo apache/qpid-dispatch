@@ -132,7 +132,6 @@ typedef enum {
     QD_LINK_CONTROL,    ///< A link to a peer router for control messages
     QD_LINK_ROUTER      ///< A link to a peer router for routed messages
 } qd_link_type_t;
-ENUM_DECLARE(qd_link_type);
 
 typedef enum {
     QDR_ROLE_NORMAL,
@@ -528,8 +527,7 @@ void qdr_connection_handlers(qdr_core_t                *core,
  ******************************************************************************
  */
 void qdr_delivery_free(qdr_delivery_t *delivery);
-void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disp);
-void qdr_delivery_settle(qdr_core_t *core, qdr_delivery_t *delivery);
+void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disp, bool settled);
 
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
 void *qdr_delivery_get_context(qdr_delivery_t *delivery);

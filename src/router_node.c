@@ -311,6 +311,7 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
             //
             pn_delivery_update(pnd, PN_REJECTED);
             pn_delivery_settle(pnd);
+            qd_server_activate(qd_link_connection(link));
         }
 
         //
@@ -333,6 +334,7 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
         //
         pn_delivery_update(pnd, PN_REJECTED);
         pn_delivery_settle(pnd);
+        qd_server_activate(qd_link_connection(link));
     }
 }
 
@@ -349,19 +351,24 @@ static void router_disposition_handler(void* context, qd_link_t *link, pn_delive
         return;
 
     //
-    // Update the disposition of the delivery
-    //
-    qdr_delivery_update_disposition(router->router_core, delivery, pn_delivery_remote_state(pnd));
-
-    //
-    // If the delivery is settled, remove the linkage between pn-delivery and qdr-delivery
-    // and settle the qdr-delivery.
+    // If the delivery is settled, remove the linkage between the PN and QDR deliveries.
     //
     if (pn_delivery_settled(pnd)) {
         pn_delivery_set_context(pnd, 0);
         qdr_delivery_set_context(delivery, 0);
-        qdr_delivery_settle(router->router_core, delivery);
     }
+
+    //
+    // Update the disposition of the delivery
+    //
+    qdr_delivery_update_disposition(router->router_core, delivery,
+                                    pn_delivery_remote_state(pnd), pn_delivery_settled(pnd));
+
+    //
+    // If settled, close out the delivery
+    //
+    if (pn_delivery_settled(pnd))
+        pn_delivery_settle(pnd);
 }
 
 
@@ -699,6 +706,9 @@ static void qd_router_link_deliver(void *context, qdr_link_t *link, qdr_delivery
 static void qd_router_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled)
 {
     pn_delivery_t *pnd = (pn_delivery_t*) qdr_delivery_get_context(dlv);
+
+    if (!pnd)
+        return;
 
     //
     // If the disposition has changed, update the proton delivery.

@@ -119,6 +119,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
             if (!dlv->settled)
                 DEQ_INSERT_TAIL(link->unsettled, dlv);
             credit--;
+            link->total_deliveries++;
             offer = DEQ_SIZE(link->undelivered);
         } else
             drained = true;
@@ -183,26 +184,18 @@ void qdr_delivery_free(qdr_delivery_t *delivery)
 {
     if (delivery->msg)
         qd_message_free(delivery->msg);
+    if (delivery->to_addr)
+        qd_field_iterator_free(delivery->to_addr);
     free_qdr_delivery_t(delivery);
 }
 
 
-void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition)
+void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition, bool settled)
 {
     qdr_action_t *action = qdr_action(qdr_update_delivery_CT, "update_delivery");
     action->args.delivery.delivery    = delivery;
     action->args.delivery.disposition = disposition;
-    action->args.delivery.settled     = false;
-
-    qdr_action_enqueue(core, action);
-}
-
-
-void qdr_delivery_settle(qdr_core_t *core, qdr_delivery_t *delivery)
-{
-    qdr_action_t *action = qdr_action(qdr_update_delivery_CT, "update_delivery");
-    action->args.delivery.delivery = delivery;
-    action->args.delivery.settled  = true;
+    action->args.delivery.settled     = settled;
 
     qdr_action_enqueue(core, action);
 }
@@ -286,12 +279,17 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         qdr_address_t *addr = link->owning_addr;
         if (!addr && dlv->to_addr)
             qd_hash_retrieve(core->addr_hash, dlv->to_addr, (void**) &addr);
-        if (addr)
+        if (addr) {
             fanout = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false,
                                             link->link_type == QD_LINK_CONTROL, link_exclude);
+            if (link->link_type != QD_LINK_CONTROL && link->link_type != QD_LINK_ROUTER)
+                addr->deliveries_ingress++;
+            link->total_deliveries++;
+        }
     }
 
     if (fanout == 0) {
+        printf("TODO fanout == 0\n");
         if (link->owning_addr) {
             //
             // Message was not delivered and the link is not anonymous.
@@ -303,7 +301,6 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             //
             // TODO - Release the delivery
             //
-            printf("TODO fanout == 0\n");
         }
     } else if (fanout == 1) {
         if (presettled) {
@@ -335,13 +332,14 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 
         qd_address_iterator_reset_view(addr_field->iterator, ITER_VIEW_ADDRESS_HASH);
         qd_hash_retrieve(core->addr_hash, addr_field->iterator, (void**) &addr);
-        if (addr)
+        if (addr) {
             //
             // Forward the message.  We don't care what the fanout count is.
             //
             (void) qdr_forward_message_CT(core, addr, msg, 0, action->args.io.exclude_inprocess,
                                           action->args.io.control, 0);
-        else
+            addr->deliveries_from_container++;
+        } else
             qd_log(core->log, QD_LOG_DEBUG, "In-process send to an unknown address");
     }
 

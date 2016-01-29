@@ -202,8 +202,10 @@ class BusManager(Node):
         heads.append(Header("class"))
         heads.append(Header("address"))
         heads.append(Header("phase"))
-        heads.append(Header("event-fifo"))
-        heads.append(Header("msg-fifo"))
+        heads.append(Header("capacity"))
+        heads.append(Header("undelivered"))
+        heads.append(Header("unsettled"))
+        heads.append(Header("deliveries"))
         rows = []
 
         objects = self.query('org.apache.qpid.dispatch.router.link')
@@ -212,18 +214,14 @@ class BusManager(Node):
             row = []
             row.append(link.linkType)
             row.append(link.linkDir)
-            if link.linkType == "inter-router":
-                row.append(self._identity_clean(link.identity))
-            else:
-                row.append('-')
+            row.append(self._identity_clean(link.identity))
             row.append(self._addr_class(link.owningAddr))
             row.append(self._addr_text(link.owningAddr))
             row.append(self._addr_phase(link.owningAddr))
-            row.append(link.eventFifoDepth)
-            if link.linkDir == 'out':
-                row.append(link.msgFifoDepth)
-            else:
-                row.append('-')
+            row.append(link.capacity)
+            row.append(link.undeliveredCount)
+            row.append(link.unsettledCount)
+            row.append(link.deliveryCount)
             rows.append(row)
         title = "Router Links"
         dispRows = rows

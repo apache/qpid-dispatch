@@ -201,10 +201,11 @@ DEQ_DECLARE(qdr_delivery_ref_t, qdr_delivery_ref_list_t);
 void qdr_add_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_t *dlv);
 void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref);
 
-#define QDR_LINK_LIST_CLASS_ADDRESS  0
-#define QDR_LINK_LIST_CLASS_DELIVERY 1
-#define QDR_LINK_LIST_CLASS_FLOW     2
-#define QDR_LINK_LIST_CLASSES        3
+#define QDR_LINK_LIST_CLASS_ADDRESS    0
+#define QDR_LINK_LIST_CLASS_DELIVERY   1
+#define QDR_LINK_LIST_CLASS_FLOW       2
+#define QDR_LINK_LIST_CLASS_CONNECTION 3
+#define QDR_LINK_LIST_CLASSES          4
 
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
@@ -225,6 +226,7 @@ struct qdr_link_t {
     int                      capacity;
     int                      incremental_credit_CT;
     int                      incremental_credit;
+    uint64_t                 total_deliveries;
 };
 
 ALLOC_DECLARE(qdr_link_t);
@@ -368,9 +370,9 @@ struct qdr_connection_t {
     bool                        strip_annotations_in;
     bool                        strip_annotations_out;
     int                         mask_bit;
-    qdr_link_list_t             links;
     qdr_connection_work_list_t  work_list;
     sys_mutex_t                *work_lock;
+    qdr_link_ref_list_t         links;
     qdr_link_ref_list_t         links_with_deliveries;
     qdr_link_ref_list_t         links_with_credit;
 };
@@ -393,6 +395,7 @@ struct qdr_core_t {
     qd_timer_t              *work_timer;
 
     qdr_connection_list_t open_connections;
+    qdr_link_list_t       open_links;
 
     //
     // Agent section

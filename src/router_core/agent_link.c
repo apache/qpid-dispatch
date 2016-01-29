@@ -19,25 +19,38 @@
 
 #include "agent_link.h"
 
-#define QDR_LINK_LINK_TYPE          0
-#define QDR_LINK_LINK_NAME          1
-#define QDR_LINK_LINK_DIR           2 //done
-#define QDR_LINK_MSG_FIFO_DEPTH     3 //done
-#define QDR_LINK_OWNING_ADDR        4 //done
-#define QDR_LINK_REMOTE_CONTAINER   5
-#define QDR_LINK_NAME               6
-#define QDR_LINK_EVENT_FIFO_DEPTH   7 //done
-#define QDR_LINK_TYPE               8
-#define QDR_LINK_IDENTITY           9
+#define QDR_LINK_NAME               0
+#define QDR_LINK_IDENTITY           1
+#define QDR_LINK_TYPE               2
+#define QDR_LINK_LINK_NAME          3
+#define QDR_LINK_LINK_TYPE          4
+#define QDR_LINK_LINK_DIR           5
+#define QDR_LINK_OWNING_ADDR        6
+#define QDR_LINK_CAPACITY           7
+#define QDR_LINK_UNDELIVERED_COUNT  8
+#define QDR_LINK_UNSETTLED_COUNT    9
+#define QDR_LINK_DELIVERY_COUNT     10
 
-static const char *qd_link_type_names[] = { "endpoint", "waypoint", "inter-router", "inter-area" };
-ENUM_DEFINE(qd_link_type, qd_link_type_names);
+static const char *qd_link_type_name(qd_link_type_t lt)
+{
+    switch (lt) {
+    case QD_LINK_ENDPOINT : return "endpoint";
+    case QD_LINK_WAYPOINT : return "waypoint";
+    case QD_LINK_CONTROL  : return "router-control";
+    case QD_LINK_ROUTER   : return "inter-router";
+    }
 
-static const char *address_key(qdr_address_t *addr) {
+    return "";
+}
+
+
+static const char *address_key(qdr_address_t *addr)
+{
     return addr && addr->hash_handle ? (const char*) qd_hash_key_by_handle(addr->hash_handle) : NULL;
 }
 
-static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link )
+
+static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link)
 {
     qd_composed_field_t *body = query->body;
 
@@ -54,32 +67,39 @@ static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link )
             qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.link");
             break;
 
-        case QDR_LINK_REMOTE_CONTAINER:
-            qd_compose_insert_null(body); // FIXME
-            break;
-
         case QDR_LINK_LINK_NAME:
-            qd_compose_insert_null(body); // FIXME
+            qd_compose_insert_string(body, link->name);
             break;
 
         case QDR_LINK_LINK_TYPE:
             qd_compose_insert_string(body, qd_link_type_name(link->link_type));
             break;
 
-        case QDR_LINK_OWNING_ADDR:
-            qd_compose_insert_string(body, address_key(link->owning_addr));
-            break;
-
         case QDR_LINK_LINK_DIR:
             qd_compose_insert_string(body, link->link_direction == QD_INCOMING ? "in" : "out");
             break;
 
-        case QDR_LINK_MSG_FIFO_DEPTH:
-            qd_compose_insert_ulong(body, 0); // FIXME
+        case QDR_LINK_OWNING_ADDR:
+            if (link->owning_addr)
+                qd_compose_insert_string(body, address_key(link->owning_addr));
+            else
+                qd_compose_insert_null(body);
             break;
 
-        case QDR_LINK_EVENT_FIFO_DEPTH:
-            qd_compose_insert_ulong(body, 0); // FIXME
+        case QDR_LINK_CAPACITY:
+            qd_compose_insert_uint(body, link->capacity);
+            break;
+
+        case QDR_LINK_UNDELIVERED_COUNT:
+            qd_compose_insert_ulong(body, DEQ_SIZE(link->undelivered));
+            break;
+
+        case QDR_LINK_UNSETTLED_COUNT:
+            qd_compose_insert_ulong(body, DEQ_SIZE(link->unsettled));
+            break;
+
+        case QDR_LINK_DELIVERY_COUNT:
+            qd_compose_insert_ulong(body, link->total_deliveries);
             break;
 
         default:
@@ -95,10 +115,10 @@ static void qdr_manage_advance_link_CT(qdr_query_t *query, qdr_link_t *link)
 {
     query->next_offset++;
     link = DEQ_NEXT(link);
-    if (link)
+    if (link) {
         query->more     = true;
         //query->next_key = qdr_field((const char*) qd_hash_key_by_handle(link->owning_addr->hash_handle));
-    else
+    } else
         query->more = false;
 }
 
@@ -113,7 +133,7 @@ void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     //
     // If the offset goes beyond the set of links, end the query now.
     //
-    if (true /*offset >= DEQ_SIZE(core->links)*/) {  // FIXME
+    if (offset >= DEQ_SIZE(core->open_links)) {
         query->more = false;
         qdr_agent_enqueue_response_CT(core, query);
         return;
@@ -122,7 +142,7 @@ void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     //
     // Run to the address at the offset.
     //
-    qdr_link_t *link = 0; // DEQ_HEAD(core->links);  FIXME
+    qdr_link_t *link = DEQ_HEAD(core->open_links);
     for (int i = 0; i < offset && link; i++)
         link = DEQ_NEXT(link);
     assert(link);
@@ -149,17 +169,11 @@ void qdra_link_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 {
     qdr_link_t *link = 0;
 
-    if (!link) {
-        //
-        // If the address was removed in the time between this get and the previous one,
-        // we need to use the saved offset, which is less efficient.
-        //
-        if (false /*query->next_offset < DEQ_SIZE(core->links)*/) {  // FIXME
-            link = 0; //DEQ_HEAD(core->links);
+        if (query->next_offset < DEQ_SIZE(core->open_links)) {
+            link = DEQ_HEAD(core->open_links);
             for (int i = 0; i < query->next_offset && link; i++)
                 link = DEQ_NEXT(link);
         }
-    }
 
     if (link) {
         //

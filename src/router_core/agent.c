@@ -43,20 +43,21 @@ static const char *qdr_address_columns[] =
 
 
 static const char *qdr_link_columns[] =
-    {"linkType",
-     "name",
-     "linkDir",
-     "msgFifoDepth",
-     "owningAddr",
-     "remoteContainer",
-     "linkName",
-     "eventFifoDepth",
-     "type",
+    {"name",
      "identity",
+     "type",
+     "linkName",
+     "linkType",
+     "linkDir",
+     "owningAddr",
+     "capacity",
+     "undeliveredCount",
+     "unsettledCount",
+     "deliveryCount",
      0};
 
 
-#define QDR_LINK_COLUMN_COUNT     10
+#define QDR_LINK_COLUMN_COUNT     11
 
 static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
