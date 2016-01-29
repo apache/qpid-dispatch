@@ -81,7 +81,7 @@ from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema
 from ..router.message import Message
 from ..router.address import Address
-from ..policy.policy_local import PolicyLocal
+from ..policy.policy_manager import PolicyManager
 
 
 def dictstr(d):
@@ -619,7 +619,7 @@ class Agent(object):
         self.entities = EntityCache(self)
         self.request_lock = Lock()
         self.log_adapter = LogAdapter("AGENT")
-        self.policy = PolicyLocal()
+        self.policy = PolicyManager(self)
         self.management = self.create_entity({"type": "management"})
         self.add_entity(self.management)
 

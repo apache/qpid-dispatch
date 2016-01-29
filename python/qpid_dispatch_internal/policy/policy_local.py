@@ -358,11 +358,15 @@ class PolicyLocal(object):
     The policy database.
     """
 
-    def __init__(self):
+    def __init__(self, manager):
         """
         Create instance
         @params folder: relative path from __file__ to conf file folder
         """
+        # manager is a class
+        #  It provides access the dispatch system functions
+        self._manager = manager
+
         # rulesetdb is a map
         #  key : application name
         #  val : ruleset for this app
@@ -382,6 +386,13 @@ class PolicyLocal(object):
         #  validates incoming policy and readies it for internal use
         self._policy_compiler = PolicyCompiler()
 
+        # snag trace constants
+        self.LOG_TRACE = manager.log_trace()
+        self.LOG_DEBUG = manager.log_debug()
+        self.LOG_INFO = manager.log_info()
+        self.LOG_ERROR = manager.log_error()
+
+
     #
     # Service interfaces
     #
@@ -398,11 +409,12 @@ class PolicyLocal(object):
         if not result:
             raise PolicyError( "Policy '%s' is invalid: %s" % (name, diag[0]) )
         if len(warnings) > 0:
-            print ("LogMe: Application '%s' has warnings: %s" %
-                   (name, warnings))
+            for warning in warnings:
+                self._manager.log(self.LOG_DEBUG, warning)
         self.rulesetdb[name] = {}
         self.rulesetdb[name].update(candidate)
         # TODO: Create stats
+        self._manager.log(self.LOG_INFO, "Created ruleset %s" % name)
 
     def policy_read(self, name):
         """
