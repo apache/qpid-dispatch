@@ -303,14 +303,20 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             //
         }
     } else if (fanout == 1) {
-        if (presettled) {
+        if (dlv->settled) {
             //
-            // The delivery was pre-settled.  Issue replacement credit now that it's
-            // been forwarded.
+            // The delivery is settled.  Keep it off the unsettled list and issue
+            // replacement credit for it now.
             //
             qdr_link_issue_credit_CT(core, link, 1);
-            assert(!dlv->peer);
-            qdr_delivery_free(dlv);
+
+            //
+            // If the delivery was pre-settled, free it now.
+            //
+            if (presettled) {
+                assert(!dlv->peer);
+                qdr_delivery_free(dlv);
+            }
         } else
             DEQ_INSERT_TAIL(link->unsettled, dlv);
     } else {
