@@ -323,7 +323,12 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         //
         // The fanout is greater than one.  Do something!  TODO
         //
-        printf("TODO fanout > 1\n");
+
+        if (presettled) {
+            qdr_link_issue_credit_CT(core, link, 1);
+            assert(!dlv->peer);
+            qdr_delivery_free(dlv);
+        }
     }
 }
 

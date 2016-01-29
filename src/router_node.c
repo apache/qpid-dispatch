@@ -162,13 +162,14 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
             qd_parsed_field_t *trace_item = qd_parse_sub_value(trace, idx);
             while (trace_item) {
                 qd_field_iterator_t *iter = qd_parse_raw(trace_item);
-                qd_field_iterator_reset(iter);
+                qd_address_iterator_reset_view(iter, ITER_VIEW_ALL);
                 qd_compose_insert_string_iterator(trace_field, iter);
                 idx++;
                 trace_item = qd_parse_sub_value(trace, idx);
             }
         }
     }
+
     qd_compose_insert_string(trace_field, node_id);
     qd_compose_end_list(trace_field);
     qd_message_set_trace_annotation(msg, trace_field);
@@ -497,8 +498,11 @@ static int router_outbound_opened_handler(void *type_context, qd_connection_t *c
 static int router_closed_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qdr_connection_t *qdrc = (qdr_connection_t*) qd_connection_get_context(conn);
-    qdr_connection_closed(qdrc);
-    qd_connection_set_context(conn, 0);
+
+    if (qdrc) {
+        qdr_connection_closed(qdrc);
+        qd_connection_set_context(conn, 0);
+    }
 
     return 0;
 }

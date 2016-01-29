@@ -302,11 +302,18 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
     // TODO - presently, this picks one remote link to send to.  This needs
     //        to be enhanced so it properly chooses the route to the closest destination.
     //
-    int router_bit;
+    int         router_bit;
+    qdr_node_t *next_node;
+
     if (qd_bitmask_first_set(addr->rnodes, &router_bit)) {
         qdr_node_t *rnode = core->routers_by_mask_bit[router_bit];
         if (rnode) {
-            out_link = control ? rnode->peer_control_link : rnode->peer_data_link;
+            if (rnode->next_hop)
+                next_node = rnode->next_hop;
+            else
+                next_node = rnode;
+
+            out_link = control ? next_node->peer_control_link : next_node->peer_data_link;
             if (out_link) {
                 out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
                 qdr_forward_deliver_CT(core, out_link, out_delivery);
