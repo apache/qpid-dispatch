@@ -251,7 +251,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     ZERO(link);
     link->core = conn->core;
     link->conn = conn;
-    link->name = (char*) malloc(strlen(name));
+    link->name = (char*) malloc(strlen(name) + 1);
     strcpy(link->name, name);
     link->link_direction = dir;
     link->capacity = 32;  // TODO - make this configurable
