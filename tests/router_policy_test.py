@@ -107,9 +107,20 @@ class PolicyHostAddrTest(TestCase):
         self.expect_deny( "::1,::2,::3", "arg count")
         self.expect_deny( "0:ff:0,0:fe:ffff:ffff::0", "a > b")
 
+class MockPolicyManager(object):
+    def log_debug(self, text):
+        print("DEBUG: %s" % text)
+    def log_info(self, text):
+        print("INFO: %s" % text)
+    def log_trace(self, text):
+        print("TRACE: %s" % text)
+    def log_error(self, text):
+        print("ERROR: %s" % text)
+
 class PolicyFile(TestCase):
 
-    policy = PolicyLocal()
+    manager = MockPolicyManager()
+    policy = PolicyLocal(manager)
     policy.test_load_config()
 
     def dict_compare(self, d1, d2):
@@ -159,6 +170,17 @@ class PolicyFile(TestCase):
         yname = PolicyFile.policy.lookup_user('ynot', '10.48.255.254', 'photoserver', '192.168.100.5:33334')
         self.assertTrue( zname == yname )
 
+    def test_policy1_lookup_unknown_application(self):
+        upolicy = {}
+        self.assertFalse(
+            PolicyFile.policy.lookup_settings('unknown', 'doesntmatter', upolicy)
+        )
+
+    def test_policy1_lookup_unknown_usergroup(self):
+        upolicy = {}
+        self.assertFalse(
+            PolicyFile.policy.lookup_settings('photoserver', 'unknown', upolicy)
+        )
 
 class PolicyAppConnectionMgrTests(TestCase):
 

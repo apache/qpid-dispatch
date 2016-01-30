@@ -48,17 +48,21 @@ class PolicyManager(object):
         info = traceback.extract_stack(limit=2)[0] # Caller frame info
         self.log_adapter.log(level, text, info[0], info[1])
 
-    def log_debug(self):
-        return LOG_DEBUG
+    def _log(self, level, text):
+        info = traceback.extract_stack(limit=3)[0] # Caller's caller frame info
+        self.log_adapter.log(level, text, info[0], info[1])
 
-    def log_info(self):
-        return LOG_INFO
+    def log_debug(self, text):
+        self._log(LOG_DEBUG, text)
 
-    def log_trace(self):
-        return LOG_TRACE
+    def log_info(self, text):
+        self._log(LOG_INFO, text)
 
-    def log_error(self):
-        return LOG_ERROR
+    def log_trace(self, text):
+        self._log(LOG_TRACE, text)
+
+    def log_error(self, text):
+        self._log(LOG_ERROR, text)
 
     #
     # Management interface to create a ruleset

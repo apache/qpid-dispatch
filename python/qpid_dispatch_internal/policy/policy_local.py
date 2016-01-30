@@ -23,7 +23,6 @@
 
 import json
 from policy_util import PolicyError, HostStruct, HostAddr
-from copy import deepcopy
 
 """
 Entity implementing the business logic of user connection/access policy.
@@ -386,12 +385,6 @@ class PolicyLocal(object):
         #  validates incoming policy and readies it for internal use
         self._policy_compiler = PolicyCompiler()
 
-        # snag trace constants
-        self.LOG_TRACE = manager.log_trace()
-        self.LOG_DEBUG = manager.log_debug()
-        self.LOG_INFO = manager.log_info()
-        self.LOG_ERROR = manager.log_error()
-
 
     #
     # Service interfaces
@@ -410,11 +403,11 @@ class PolicyLocal(object):
             raise PolicyError( "Policy '%s' is invalid: %s" % (name, diag[0]) )
         if len(warnings) > 0:
             for warning in warnings:
-                self._manager.log(self.LOG_DEBUG, warning)
+                self._manager.log_debug(warning)
         self.rulesetdb[name] = {}
         self.rulesetdb[name].update(candidate)
         # TODO: Create stats
-        self._manager.log(self.LOG_INFO, "Created ruleset %s" % name)
+        self._manager.log_info("Created policy rules for application %s" % name)
 
     def policy_read(self, name):
         """
@@ -471,7 +464,9 @@ class PolicyLocal(object):
         """
         try:
             if not app in self.rulesetdb:
-                # TODO: ("LogMe: no policy defined for application %s" % app)
+                self._manager.log_trace(
+                        "lookup_user failed for user '%s', host '%s', application '%s': "
+                        "No policy defined for application" % (user, host, app))
                 return ""
 
             ruleset = self.rulesetdb[app]
@@ -482,7 +477,9 @@ class PolicyLocal(object):
                 if ruleset[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]:
                     usergroup = PolicyKeys.KW_DEFAULT_SETTINGS
                 else:
-                    # User is not in a group and default is disallowed. So no go.
+                    self._manager.log_trace(
+                        "lookup_user failed for user '%s', host '%s', application '%s': "
+                        "User must be in a user group" % (user, host, app))
                     return ""
             # User in usergroup allowed to connect from host?
             if usergroup in ruleset[PolicyKeys.KW_CONNECTION_INGRESS_POLICIES]:
@@ -502,6 +499,9 @@ class PolicyLocal(object):
                 # User's usergroup has no ingress policy so allow
                 allowed = True
             if not allowed:
+                self._manager.log_trace(
+                    "lookup_user failed for user '%s', host '%s', application '%s': "
+                    "User is not allowed to connect from this host" % (user, host, app))
                 return ""
 
             # This user passes administrative approval.
@@ -511,8 +511,9 @@ class PolicyLocal(object):
             return usergroup
 
         except Exception, e:
-            #print str(e)
-            #pdb.set_trace()
+            self._manager.log_error(
+                "lookup_user failed for user '%s', host '%s', application '%s': "
+                "Internal error: %s" % (user, host, app, e))
             return ""
 
     def lookup_settings(self, appname, name, upolicy):
@@ -528,13 +529,17 @@ class PolicyLocal(object):
         """
         try:
             if not appname in self.rulesetdb:
-                # TODO: ("LogMe: no policy defined for application %s" % app)
+                self._manager.log_trace(
+                        "lookup_settings fail for application '%s', user group '%s': "
+                        "No policy defined for this application" % (appname, name))
                 return ""
 
             ruleset = self.rulesetdb[appname]
 
             if not name in ruleset[PolicyKeys.KW_SETTINGS]:
-                # TODO: ("LogMe: no user group settings for application %s group %s" % (app, name))
+                self._manager.log_trace(
+                        "lookup_settings fail for application '%s', user group '%s': "
+                        "This application has no settings for the user group" % (appname, name))
                 return ""
 
             upolicy.update(ruleset[PolicyKeys.KW_SETTINGS][name])
