@@ -67,7 +67,7 @@ class QdstatTest(system_test.TestCase):
         if out.strip() == "No memory statistics available":
             # router built w/o memory pools enabled]
             return self.skipTest("Router's memory pools disabled")
-        regexp = r'qd_address_t\s+[0-9]+'
+        regexp = r'qdr_address_t\s+[0-9]+'
         assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
 
     def test_log(self):
