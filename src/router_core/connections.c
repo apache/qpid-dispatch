@@ -159,8 +159,10 @@ int qdr_connection_process(qdr_connection_t *conn)
             link = 0;
         sys_mutex_unlock(conn->work_lock);
 
-        if (link)
+        if (link) {
             core->push_handler(core->user_context, link);
+            event_count++;
+        }
     } while (link);
 
     do {
@@ -176,6 +178,7 @@ int qdr_connection_process(qdr_connection_t *conn)
         if (link) {
             core->flow_handler(core->user_context, link, link->incremental_credit);
             link->incremental_credit = 0;
+            event_count++;
         }
     } while (link);
 
