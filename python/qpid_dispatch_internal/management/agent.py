@@ -292,6 +292,10 @@ class PolicyRulesetEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('applicationName')
 
+class PolicyStatsEntity(EntityAdapter):
+    def _identifier(self):
+        return self.attributes.get('applicationName')
+
 def _addr_port_identifier(entity):
     for attr in ['addr', 'port']: # Set default values if need be
         entity.attributes.setdefault(

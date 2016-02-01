@@ -309,14 +309,11 @@ class PolicyAppConnectionMgr(object):
             return True
         else:
             if not allowbytotal:
-                diags.append("LogMe: INFO user '%s' from host '%s' denied connection by total connection limit" %
-                             (user, host))
+                diags.append("Connection denied by total connection limit")
             if not allowbyuser:
-                diags.append("LogMe: INFO user '%s' from host '%s' denied connection by per user limit" %
-                             (user, host))
+                diags.append("Connection denied by per user limit")
             if not allowbyhost:
-                diags.append("LogMe: INFO user '%s' from host '%s' denied connection by per host limit" %
-                             (user, host))
+                diags.append("Connection denied by per host limit")
             self.connections_denied += 1
             return False
 

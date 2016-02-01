@@ -64,6 +64,9 @@ class PolicyManager(object):
     def log_error(self, text):
         self._log(LOG_ERROR, text)
 
+    def get_agent(self):
+        return self._agent
+
     #
     # Management interface to create a ruleset
     #

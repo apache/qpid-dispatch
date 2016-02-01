@@ -107,7 +107,14 @@ class PolicyHostAddrTest(TestCase):
         self.expect_deny( "::1,::2,::3", "arg count")
         self.expect_deny( "0:ff:0,0:fe:ffff:ffff::0", "a > b")
 
+class MockAgent(object):
+    def add_implementation(self, entity, cfg_obj_name):
+        pass
+
 class MockPolicyManager(object):
+    def __init__(self):
+        self.agent = MockAgent()
+
     def log_debug(self, text):
         print("DEBUG: %s" % text)
     def log_info(self, text):
@@ -116,6 +123,9 @@ class MockPolicyManager(object):
         print("TRACE: %s" % text)
     def log_error(self, text):
         print("ERROR: %s" % text)
+
+    def get_agent(self):
+        return self.agent
 
 class PolicyFile(TestCase):
 
