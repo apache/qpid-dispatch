@@ -18,6 +18,7 @@
  */
 
 #include "agent_link.h"
+#include <stdio.h>
 
 #define QDR_LINK_NAME               0
 #define QDR_LINK_IDENTITY           1
@@ -58,10 +59,16 @@ static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link)
     int i = 0;
     while (query->columns[i] >= 0) {
         switch(query->columns[i]) {
-        case QDR_LINK_IDENTITY:
+        case QDR_LINK_IDENTITY: {
+            char id[100];
+            snprintf(id, 100, "link.%ld", link->identifier);
+            qd_compose_insert_string(body, id);
+            break;
+        }
+            
         case QDR_LINK_NAME:
             // TODO - This needs to be fixed (use connection_id + link_name)
-            qd_compose_insert_string(body, "fix-me-hardcoded-for-now" );
+            qd_compose_insert_string(body, link->name);
             break;
         case QDR_LINK_TYPE:
             qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.link");

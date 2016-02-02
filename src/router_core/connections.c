@@ -253,6 +253,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
 
     ZERO(link);
     link->core = conn->core;
+    link->identifier = qdr_identifier(conn->core);
     link->conn = conn;
     link->name = (char*) malloc(strlen(name) + 1);
     strcpy(link->name, name);
@@ -408,6 +409,7 @@ static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     ZERO(link);
 
     link->core           = core;
+    link->identifier     = qdr_identifier(core);
     link->user_context   = 0;
     link->conn           = conn;
     link->link_type      = link_type;
@@ -473,7 +475,7 @@ static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_fie
     //           static routes; yes: prevents occlusion by mobile addresses with specified semantics)
     //
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
-    return /* addr ? addr->semantics : */  QD_SEMANTICS_ANYCAST_BALANCED; // FIXME
+    return /* addr ? addr->semantics : */  QD_SEMANTICS_ANYCAST_CLOSEST; // FIXME
 }
 
 

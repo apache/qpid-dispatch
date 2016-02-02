@@ -23,6 +23,7 @@
 
 
 static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
@@ -156,6 +157,17 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 }
 
 
+void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mode)
+{
+    qdr_action_t *action = qdr_action(qdr_link_flow_CT, "link_flow");
+    action->args.connection.link   = link;
+    action->args.connection.credit = credit;
+    action->args.connection.drain  = drain_mode;
+
+    qdr_action_enqueue(core, action);
+}
+
+
 void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_field_iterator_t *addr, bool exclude_inprocess, bool control)
 {
     qdr_action_t *action = qdr_action(qdr_send_to_CT, "send_to");
@@ -255,6 +267,37 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit)
         //
         qdr_connection_activate_CT(core, link->conn);
     }
+}
+
+
+static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    if (discard)
+        return;
+
+    qdr_link_t *link = action->args.connection.link;
+    int  credit = action->args.connection.credit;
+    //bool drain  = action->args.connection.drain;
+    bool activate = false;
+
+    //
+    // TODO - If this is a link-routed link, propagate the flow data downrange.
+    //
+
+    //
+    // Handle the replenishing of credit outbound
+    //
+    if (link->link_direction == QD_OUTGOING && credit > 0) {
+        sys_mutex_lock(link->conn->work_lock);
+        if (DEQ_SIZE(link->undelivered) > 0) {
+            qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+            activate = true;
+        }
+        sys_mutex_unlock(link->conn->work_lock);
+    }
+
+    if (activate)
+        qdr_connection_activate_CT(core, link->conn);
 }
 
 
@@ -394,14 +437,18 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             peer->peer = 0;
             dlv->peer  = 0;
             if (peer->link) {
+                sys_mutex_lock(peer->link->conn->work_lock);
                 DEQ_REMOVE(peer->link->unsettled, peer);
+                sys_mutex_unlock(peer->link->conn->work_lock);
                 if (peer->link->link_direction == QD_INCOMING)
                     qdr_link_issue_credit_CT(core, peer->link, 1);
             }
         }
 
         if (dlv->link) {
+            sys_mutex_lock(dlv->link->conn->work_lock);
             DEQ_REMOVE(dlv->link->unsettled, dlv);
+            sys_mutex_unlock(dlv->link->conn->work_lock);
             if (dlv->link->link_direction == QD_INCOMING)
                 qdr_link_issue_credit_CT(core, dlv->link, 1);
         }
@@ -435,5 +482,3 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     //
     qdr_connection_activate_CT(core, link->conn);
 }
-
-

@@ -433,11 +433,14 @@ static int router_link_attach_handler(void* context, qd_link_t *link)
  */
 static int router_link_flow_handler(void* context, qd_link_t *link)
 {
-    //qd_router_t *router = (qd_router_t*) context;
+    qd_router_t *router = (qd_router_t*) context;
     qdr_link_t  *rlink  = (qdr_link_t*) qd_link_get_context(link);
+    pn_link_t   *pnlink = qd_link_pn(link);
 
     if (!rlink)
         return 0;
+
+    qdr_link_flow(router->router_core, rlink, pn_link_credit(pnlink), pn_link_get_drain(pnlink));
 
     return 0;
 }
@@ -669,11 +672,21 @@ static void qd_router_link_flow(void *context, qdr_link_t *link, int credit)
 
 static void qd_router_link_offer(void *context, qdr_link_t *link, int delivery_count)
 {
+    qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    pn_link_t *plink = qd_link_pn(qlink);
+
+    if (plink)
+        pn_link_offered(plink, delivery_count);
 }
 
 
 static void qd_router_link_drained(void *context, qdr_link_t *link)
 {
+    qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    pn_link_t *plink = qd_link_pn(qlink);
+
+    if (plink)
+        pn_link_drained(plink);
 }
 
 

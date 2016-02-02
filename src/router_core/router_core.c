@@ -60,6 +60,12 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     core->work_timer = qd_timer(core->qd, qdr_general_handler, core);
 
     //
+    // Set up the unique identifier generator
+    //
+    core->next_identifier = 1;
+    core->id_lock = sys_mutex();
+
+    //
     // Launch the core thread
     //
     core->thread = sys_thread(router_core_thread, core);
@@ -96,6 +102,7 @@ void qdr_core_free(qdr_core_t *core)
     sys_cond_free(core->action_cond);
     sys_mutex_free(core->action_lock);
     sys_mutex_free(core->work_lock);
+    sys_mutex_free(core->id_lock);
     qd_timer_free(core->work_timer);
     free(core);
 }
@@ -337,4 +344,12 @@ void qdr_post_general_work_CT(qdr_core_t *core, qdr_general_work_t *work)
         qd_timer_schedule(core->work_timer, 0);
 }
 
+
+uint64_t qdr_identifier(qdr_core_t* core)
+{
+    sys_mutex_lock(core->id_lock);
+    uint64_t id = core->next_identifier++;
+    sys_mutex_unlock(core->id_lock);
+    return id;
+}
 

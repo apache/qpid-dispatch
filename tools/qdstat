@@ -131,9 +131,24 @@ class BusManager(Node):
         dispRows = rows
         disp.formattedTable(title, heads, dispRows)
 
+    def _addr_summary(self, addr):
+        cls   = self._addr_class(addr)
+        phase = self._addr_phase(addr)
+        text  = self._addr_text(addr)
+        if cls == '-':
+            return "-"
+        if cls == 'M':
+            if phase == '0':
+                return text
+            else:
+                return "%s:%s" % (phase, text)
+        return "%s:%s" % (cls, text)
+
+
     def _addr_class(self, addr):
         if not addr:
             return "-"
+        return addr[0]
         if addr[0] == 'M' : return "mobile"
         if addr[0] == 'R' : return "router"
         if addr[0] == 'A' : return "area"
@@ -198,14 +213,13 @@ class BusManager(Node):
         heads = []
         heads.append(Header("type"))
         heads.append(Header("dir"))
-        heads.append(Header("rindex"))
-        heads.append(Header("class"))
-        heads.append(Header("address"))
-        heads.append(Header("phase"))
-        heads.append(Header("capacity"))
-        heads.append(Header("undelivered"))
+        heads.append(Header("id"))
+        heads.append(Header("addr"))
+        heads.append(Header("cap"))
+        heads.append(Header("undel"))
         heads.append(Header("unsettled"))
         heads.append(Header("deliveries"))
+        heads.append(Header("name"))
         rows = []
 
         objects = self.query('org.apache.qpid.dispatch.router.link')
@@ -215,13 +229,12 @@ class BusManager(Node):
             row.append(link.linkType)
             row.append(link.linkDir)
             row.append(self._identity_clean(link.identity))
-            row.append(self._addr_class(link.owningAddr))
-            row.append(self._addr_text(link.owningAddr))
-            row.append(self._addr_phase(link.owningAddr))
+            row.append(self._addr_summary(link.owningAddr))
             row.append(link.capacity)
             row.append(link.undeliveredCount)
             row.append(link.unsettledCount)
             row.append(link.deliveryCount)
+            row.append(link.name)
             rows.append(row)
         title = "Router Links"
         dispRows = rows
@@ -265,9 +278,7 @@ class BusManager(Node):
     def displayAddresses(self):
         disp = Display(prefix="  ")
         heads = []
-        heads.append(Header("class"))
-        heads.append(Header("address"))
-        heads.append(Header("phase"))
+        heads.append(Header("addr"))
         heads.append(Header("in-proc", Header.COMMAS))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
@@ -282,9 +293,7 @@ class BusManager(Node):
 
         for addr in objects:
             row = []
-            row.append(self._addr_class(self._identity_clean(addr.identity)))
-            row.append(self._addr_text(self._identity_clean(addr.identity)))
-            row.append(self._addr_phase(self._identity_clean(addr.identity)))
+            row.append(self._addr_summary(self._identity_clean(addr.identity)))
             row.append(addr.inProcess)
             row.append(addr.subscriberCount)
             row.append(addr.remoteCount)
@@ -295,7 +304,7 @@ class BusManager(Node):
             row.append(addr.deliveriesFromContainer)
             rows.append(row)
         title = "Router Addresses"
-        sorter = Sorter(heads, rows, 'address', 0, True)
+        sorter = Sorter(heads, rows, 'addr', 0, True)
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 

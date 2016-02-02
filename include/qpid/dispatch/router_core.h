@@ -496,6 +496,8 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
 
 void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
 
+void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mode);
+
 typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
                                           qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
@@ -533,10 +535,6 @@ void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
 void *qdr_delivery_get_context(qdr_delivery_t *delivery);
 void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *length);
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
-
-void qdr_delivery_update_flow(qdr_delivery_t *delivery);
-void qdr_delivery_process(qdr_delivery_t *delivery);
-
 
 /**
  ******************************************************************************

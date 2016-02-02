@@ -88,6 +88,8 @@ struct qdr_action_t {
             qdr_error_t      *error;
             qd_detach_type_t  dt;
             qd_bitmask_t     *link_exclusion;
+            int               credit;
+            bool              drain;
         } connection;
 
         //
@@ -210,6 +212,7 @@ void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
     qdr_core_t              *core;
+    uint64_t                 identifier;
     void                    *user_context;
     qdr_connection_t        *conn;               ///< [ref] Connection that owns this link
     qd_link_type_t           link_type;
@@ -450,6 +453,9 @@ struct qdr_core_t {
 
     uint64_t              next_tag;
 
+    uint64_t              next_identifier;
+    sys_mutex_t          *id_lock;
+
     qdr_forwarder_t      *forwarders[QD_SEMANTICS_LINK_BALANCED + 1];
 };
 
@@ -460,6 +466,7 @@ typedef enum {
 } qdr_waypoint_mode_t;
 
 void *router_core_thread(void *arg);
+uint64_t qdr_identifier(qdr_core_t* core);
 void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
 void  qdr_agent_setup_CT(qdr_core_t *core);
