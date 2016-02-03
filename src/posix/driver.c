@@ -98,6 +98,7 @@ struct qdpn_connector_t {
     DEQ_LINKS(qdpn_connector_t);
     qdpn_driver_t *driver;
     char name[PN_NAME_MAX];
+    char hostip[PN_NAME_MAX];
     pn_timestamp_t wakeup;
     pn_connection_t *connection;
     pn_transport_t *transport;
@@ -352,6 +353,7 @@ qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l, void *policy, bool (*
     char name[PN_NAME_MAX];
     char host[MAX_HOST];
     char serv[MAX_SERV];
+    char hostip[MAX_HOST];
 
     struct sockaddr_in addr = {0};
     addr.sin_family = AF_UNSPEC;
@@ -363,7 +365,8 @@ qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l, void *policy, bool (*
         return 0;
     } else {
         int code;
-        if ((code = getnameinfo((struct sockaddr *) &addr, addrlen, host, MAX_HOST, serv, MAX_SERV, 0))) {
+        if ((code = getnameinfo((struct sockaddr *) &addr, addrlen, host, MAX_HOST, serv, MAX_SERV, 0)) ||
+            (code = getnameinfo((struct sockaddr *) &addr, addrlen, hostip, MAX_HOST, 0, 0, NI_NUMERICHOST))) {
             qd_log(l->driver->log, QD_LOG_ERROR, "getnameinfo: %s\n", gai_strerror(code));
             close(sock);
             return 0;
@@ -383,6 +386,7 @@ qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l, void *policy, bool (*
 
     qdpn_connector_t *c = qdpn_connector_fd(l->driver, sock, NULL);
     snprintf(c->name, PN_NAME_MAX, "%s", name);
+    snprintf(c->hostip, PN_NAME_MAX, "%s", hostip);
     c->listener = l;
     return c;
 }
@@ -578,6 +582,12 @@ const char *qdpn_connector_name(const qdpn_connector_t *ctor)
 {
     if (!ctor) return 0;
     return ctor->name;
+}
+
+const char *qdpn_connector_hostip(const qdpn_connector_t *ctor)
+{
+    if (!ctor) return 0;
+    return ctor->hostip;
 }
 
 qdpn_listener_t *qdpn_connector_listener(qdpn_connector_t *ctor)

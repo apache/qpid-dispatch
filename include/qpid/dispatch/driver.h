@@ -308,10 +308,17 @@ void qdpn_connector_set_context(qdpn_connector_t *connector, void *context);
 
 /** Access the name of the connector
  *
- * @param[in] connector the connector which will hole the name
+ * @param[in] connector the connector of interest
  * @return the name of the connector in the form of a null-terminated character string.
  */
 const char *qdpn_connector_name(const qdpn_connector_t *connector);
+
+/** Access the numeric host ip of the connector
+ *
+ * @param[in] connector the connector of interest
+ * @return the numeric host ip address of the connector in the form of a null-terminated character string.
+ */
+const char *qdpn_connector_hostip(const qdpn_connector_t *connector);
 
 /** Access the transport used by this connector.
  *

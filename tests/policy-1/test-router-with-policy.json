@@ -1,7 +1,7 @@
 [
     ["container", {
 	"containerName": "QdstatSslTest",
-	"saslConfigName": "tests-mech-EXTERNAL",
+	"saslConfigName": "tests-mech-PLAIN",
 	"saslConfigPath": "/home/chug/Research/qdr/standaloneSsl/sasl_configs",
 	"debugDump": "qddebug.txt"
     }],
@@ -13,7 +13,7 @@
 	"certDb": "/home/chug/Research/qdr/standaloneSsl/ssl_certs/ca-certificate.pem"
     }],
     ["listener", {
-	"saslMechanisms": "ANONYMOUS",
+	"saslMechanisms": "ANONYMOUS PLAIN",
 	"authenticatePeer": "no",
 	"idleTimeoutSeconds": "120",
 	"port": 21000,
@@ -23,7 +23,7 @@
 	"addr": "0.0.0.0",
 	"requireSsl": "yes",
 	"idleTimeoutSeconds": "120",
-	"saslMechanisms": "ANONYMOUS",
+	"saslMechanisms": "PLAIN",
 	"sslProfile": "server-ssl",
 	"authenticatePeer": "no",
 	"port": 21001
@@ -46,9 +46,17 @@
 	"authenticatePeer": "yes",
 	"port": 21003
     }],
+    ["listener", {
+	"addr": "0.0.0.0",
+	"requireSsl": "no",
+	"idleTimeoutSeconds": "120",
+	"saslMechanisms": "ANONYMOUS",
+	"authenticatePeer": "yes",
+	"port": 21004
+    }],
     ["log", {
 	"source": "true",
-	"enable": "info+",
+	"enable": "trace+",
 	"module": "DEFAULT"
     }],
     ["policy", {

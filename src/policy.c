@@ -29,6 +29,7 @@
 #include <proton/message.h>
 #include <proton/condition.h>
 #include <proton/connection.h>
+#include <proton/transport.h>
 #include <proton/error.h>
 #include <proton/event.h>
 #include <qpid/dispatch/ctools.h>
@@ -37,21 +38,6 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/log.h>
 
-//
-// TODO: get a real policy engine
-//       This engine accepts every other connection
-//
-static bool allow_this = true;
-
-bool policy_engine()
-{
-    return allow_this;
-}
-
-void policy_engine_step()
-{
-    // allow_this = !allow_this;
-}
 
 
 //
@@ -206,6 +192,21 @@ void qd_policy_socket_close(void *context, const char *hostname)
 // allow or deny the Open. Denied Open attempts are
 // effected with a returned Open-Close_with_condition.
 //
+bool qd_policy_open_lookup_user(
+    qd_policy_t *policy,
+    const char *username,
+    const char *hostip,
+    const char *app,
+    const char *conn_name)
+{
+    // Log the name
+    qd_log(policy->log_source, 
+           POLICY_LOG_LEVEL, 
+           "Policy AMQP Open lookup user: %s, hostip: %s, app: %s, connection: %s", 
+           username, hostip, app, conn_name);
+    return true;
+}
+
 void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *cond_name, const char *cond_descr)
 {
     // Set the error condition and close the connection.
@@ -220,12 +221,21 @@ void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *c
 void qd_policy_amqp_open(void *context, bool discard)
 {
     qd_connection_t *qd_conn = (qd_connection_t *)context;
-
     if (!discard) {
         pn_connection_t *conn = qd_connection_pn(qd_conn);
+        qd_dispatch_t *qd = qd_conn->server->qd;
+        qd_policy_t *policy = qd->policy;
 
-        // Consult policy engine for this connection attempt
-        if ( policy_engine() ) { // TODO: get rid of this phony policy engine
+        // username = pn_connection_get_user(conn) returns blank when
+        // the transport returns 'anonymous'.
+        pn_transport_t *pn_trans = pn_connection_transport(conn);
+        const char *username = pn_transport_get_user(pn_trans);
+
+        const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+        const char *app = "fixme";
+        const char *conn_name = qdpn_connector_name(qd_conn->pn_cxtr);
+
+        if ( qd_policy_open_lookup_user(policy, username, hostip, app, conn_name) ) {
             // This connection is allowed.
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
                 pn_connection_open(conn);
@@ -234,8 +244,6 @@ void qd_policy_amqp_open(void *context, bool discard)
             // This connection is denied.
             qd_policy_private_deny_amqp_connection(conn, RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);
         }
-        // update the phony policy engine
-        policy_engine_step();
     }
     qd_connection_set_event_stall(qd_conn, false);
 }
