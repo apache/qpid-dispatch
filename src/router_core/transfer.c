@@ -260,7 +260,9 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit)
         //
         // Put this link on the connection's has-credit list.
         //
+        sys_mutex_lock(link->conn->work_lock);
         qdr_add_link_ref(&link->conn->links_with_credit, link, QDR_LINK_LIST_CLASS_FLOW);
+        sys_mutex_unlock(link->conn->work_lock);
 
         //
         // Activate the connection
