@@ -658,6 +658,19 @@ static void qd_router_link_second_attach(void *context, qdr_link_t *link, qdr_te
 
 static void qd_router_link_detach(void *context, qdr_link_t *link, qdr_error_t *error)
 {
+    qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    if (!qlink)
+        return;
+
+    pn_link_t *pn_link = qd_link_pn(qlink);
+    if (!pn_link)
+        return;
+
+    if (error) {
+        pn_condition_t *cond = pn_link_condition(pn_link);
+        qdr_error_copy(error, cond);
+    }
+    qd_link_close(qlink);
 }
 
 

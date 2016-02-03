@@ -33,7 +33,8 @@ ALLOC_DEFINE(qdr_connection_work_t);
 typedef enum {
     QDR_CONDITION_NO_ROUTE_TO_DESTINATION,
     QDR_CONDITION_ROUTED_LINK_LOST,
-    QDR_CONDITION_FORBIDDEN
+    QDR_CONDITION_FORBIDDEN,
+    QDR_CONDITION_NONE
 } qdr_condition_t;
 
 //==================================================================================
@@ -134,8 +135,17 @@ int qdr_connection_process(qdr_connection_t *conn)
             core->second_attach_handler(core->user_context, work->link, work->source, work->target);
             break;
 
-        case QDR_CONNECTION_WORK_DETACH :
+        case QDR_CONNECTION_WORK_FIRST_DETACH :
             core->detach_handler(core->user_context, work->link, work->error);
+            if (work->error)
+                qdr_error_free(work->error);
+            break;
+
+        case QDR_CONNECTION_WORK_SECOND_DETACH :
+            core->detach_handler(core->user_context, work->link, work->error);
+            if (work->error)
+                qdr_error_free(work->error);
+            free_qdr_link_t(work->link);
             break;
         }
 
@@ -395,6 +405,24 @@ static void qdr_generate_link_name(const char *label, char *buffer, size_t lengt
 }
 
 
+static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+{
+    //
+    // Remove the link from the master list links
+    //
+    DEQ_REMOVE(core->open_links, link);
+
+    //
+    // Remove the reference to this link in the connection's reference lists
+    //
+    qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
+    sys_mutex_lock(conn->work_lock);
+    qdr_del_link_ref(&conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+    qdr_del_link_ref(&conn->links_with_credit    , link, QDR_LINK_LIST_CLASS_FLOW);
+    sys_mutex_unlock(conn->work_lock);
+}
+
+
 static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
                                       qdr_connection_t *conn,
                                       qd_link_type_t    link_type,
@@ -436,8 +464,39 @@ static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
 }
 
 
-static void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_condition_t condition)
+static void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t *error, qdr_condition_t condition)
 {
+    qdr_connection_work_t *work = new_qdr_connection_work_t();
+    ZERO(work);
+    work->work_type = ++link->detach_count == 1 ? QDR_CONNECTION_WORK_FIRST_DETACH : QDR_CONNECTION_WORK_SECOND_DETACH;
+    work->link      = link;
+
+    if (error)
+        work->error = error;
+    else {
+        switch (condition) {
+        case QDR_CONDITION_NO_ROUTE_TO_DESTINATION:
+            work->error = qdr_error("qd:no-route-to-dest", "No route to the destination node");
+            break;
+
+        case QDR_CONDITION_ROUTED_LINK_LOST:
+            work->error = qdr_error("qd:routed-link-lost", "Connectivity to the peer container was lost");
+            break;
+
+        case QDR_CONDITION_FORBIDDEN:
+            work->error = qdr_error("qd:forbidden", "Connectivity to the node is forbidden");
+            break;
+
+        case QDR_CONDITION_NONE:
+            work->error = 0;
+            break;
+        }
+    }
+
+    if (link->detach_count == 2)
+        qdr_link_cleanup_CT(core, link->conn, link);
+
+    qdr_connection_enqueue_work_CT(core, link->conn, work);
 }
 
 
@@ -512,24 +571,6 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
         qd_bitmask_free(addr->rnodes);
         free_qdr_address_t(addr);
     }
-}
-
-
-static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
-{
-    //
-    // Remove the link from the master list links
-    //
-    DEQ_REMOVE(core->open_links, link);
-
-    //
-    // Remove the reference to this link in the connection's reference lists
-    //
-    qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
-    sys_mutex_lock(conn->work_lock);
-    qdr_del_link_ref(&conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
-    qdr_del_link_ref(&conn->links_with_credit    , link, QDR_LINK_LIST_CLASS_FLOW);
-    sys_mutex_unlock(conn->work_lock);
 }
 
 
@@ -716,6 +757,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
         // Clean up the link and all its associated state.
         //
         qdr_link_cleanup_CT(core, conn, link_ref->link);
+        free_qdr_link_t(link_ref->link);
         link_ref = DEQ_HEAD(conn->links);
     }
 
@@ -752,7 +794,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     //
     if ((link->link_type == QD_LINK_WAYPOINT) ||
         ((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)) {
-        qdr_link_outbound_detach_CT(core, link, QDR_CONDITION_FORBIDDEN);
+        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
     }
@@ -778,7 +820,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     //
                     // No route to this destination, reject the link
                     //
-                    qdr_link_outbound_detach_CT(core, link, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
                     qdr_terminus_free(source);
                     qdr_terminus_free(target);
                 }
@@ -829,7 +871,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 //
                 // No route to this destination, reject the link
                 //
-                qdr_link_outbound_detach_CT(core, link, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
                 qdr_terminus_free(source);
                 qdr_terminus_free(target);
             }
@@ -974,6 +1016,10 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     qdr_address_t    *addr      = link->owning_addr;
     bool              was_local = false;
 
+    //
+    // TODO - For routed links, propagate the detach
+    //
+
     link->owning_addr = 0;
 
     if (link->link_direction == QD_INCOMING) {
@@ -1023,11 +1069,20 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     }
 
     //
-    // If the detach occurred via protocol, send a detach back.
-    // TODO - Note that this is not appropriate for routed links.
+    // Bump the detach_count.  If it's now 1, the link is half-detached.  If it's 2,
+    // the link is fully detached.
     //
-    if (dt != QD_LOST)
-        qdr_link_outbound_detach_CT(core, link, 0);  // TODO - Fix error arg
+    link->detach_count++;
+    if (link->detach_count == 1) {
+        //
+        // If the detach occurred via protocol, send a detach back.
+        //
+        if (dt != QD_LOST)
+            qdr_link_outbound_detach_CT(core, link, 0, 0);  // TODO - Fix error arg
+    } else {
+        qdr_link_cleanup_CT(core, conn, link);
+        free_qdr_link_t(link);
+    }
 
     //
     // If there was an address associated with this link, check to see if any address-related

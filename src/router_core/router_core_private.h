@@ -218,6 +218,7 @@ struct qdr_link_t {
     qd_link_type_t           link_type;
     qd_direction_t           link_direction;
     char                    *name;
+    int                      detach_count;       ///< 0, 1, or 2 depending on the state of the lifecycle
     qdr_address_t           *owning_addr;        ///< [ref] Address record that owns this link
     qdr_link_t              *connected_link;     ///< [ref] If this is a link-route, reference the connected link
     qdr_link_ref_t          *ref[QDR_LINK_LIST_CLASSES];  ///< Pointers to containing reference objects
@@ -347,7 +348,8 @@ qdr_general_work_t *qdr_general_work(qdr_general_work_handler_t handler);
 typedef enum {
     QDR_CONNECTION_WORK_FIRST_ATTACH,
     QDR_CONNECTION_WORK_SECOND_ATTACH,
-    QDR_CONNECTION_WORK_DETACH
+    QDR_CONNECTION_WORK_FIRST_DETACH,
+    QDR_CONNECTION_WORK_SECOND_DETACH
 } qdr_connection_work_type_t;
 
 typedef struct qdr_connection_work_t {
