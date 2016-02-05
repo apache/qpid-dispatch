@@ -318,7 +318,7 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
     int pre_consume = 1;  // Count the already extracted tag
     int consume     = 0;
     unsigned char tag = next_octet(&test_cursor, &test_buffer);
-    if (!test_cursor) return 0;
+
     switch (tag & 0xF0) {
     case 0x40:               break;
     case 0x50: consume = 1;  break;
@@ -349,7 +349,7 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
     }
 
     location->length = pre_consume + consume;
-    if (consume)
+    if (consume && test_cursor)
         advance(&test_cursor, &test_buffer, consume, 0, 0);
 
     *cursor = test_cursor;
