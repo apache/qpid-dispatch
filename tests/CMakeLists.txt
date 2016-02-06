@@ -122,6 +122,9 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/tests-mech-EXTERNAL.conf DEST
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/tests-mech-NOEXTERNAL.conf DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/sasl_configs)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_certs DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/sasl_configs/tests-mech-PLAIN.conf.in ${CMAKE_CURRENT_BINARY_DIR}/sasl_configs/tests-mech-PLAIN.conf)
+file(COPY      ${CMAKE_CURRENT_SOURCE_DIR}/policy-2/policy-photoserver-sasl.sasldb  DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/policy-2)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/policy-2/policy-photoserver-sasl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/policy-2/policy-photoserver-sasl.conf)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/policy-2/test-router-with-policy.json.in ${CMAKE_CURRENT_BINARY_DIR}/policy-2/test-router-with-policy.json)
 
 # following install() functions will be called only if you do a make "install"
 install(FILES ${SYSTEM_TEST_FILES}
@@ -140,4 +143,3 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/config-2
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_certs
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests)
-

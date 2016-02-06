@@ -232,7 +232,7 @@ void qd_policy_amqp_open(void *context, bool discard)
         const char *username = pn_transport_get_user(pn_trans);
 
         const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
-        const char *app = "fixme";
+        const char *app = pn_connection_remote_hostname(conn);
         const char *conn_name = qdpn_connector_name(qd_conn->pn_cxtr);
 
         if ( qd_policy_open_lookup_user(policy, username, hostip, app, conn_name) ) {

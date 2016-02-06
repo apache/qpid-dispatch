@@ -1,58 +1,23 @@
 [
     ["container", {
-	"containerName": "QdstatSslTest",
-	"saslConfigName": "tests-mech-PLAIN",
-	"saslConfigPath": "/home/chug/Research/qdr/standaloneSsl/sasl_configs",
+	"containerName": "dispatch",
+	"saslConfigName": "policy-photoserver-sasl",
+	"saslConfigPath": "${CMAKE_CURRENT_BINARY_DIR}/policy-2",
 	"debugDump": "qddebug.txt"
     }],
-    ["sslProfile", {
-	"certFile": "/home/chug/Research/qdr/standaloneSsl/ssl_certs/server-certificate.pem",
-	"keyFile": "/home/chug/Research/qdr/standaloneSsl/ssl_certs/server-private-key.pem",
-	"password": "server-password",
-	"name": "server-ssl",
-	"certDb": "/home/chug/Research/qdr/standaloneSsl/ssl_certs/ca-certificate.pem"
-    }],
     ["listener", {
+	"addr": "0.0.0.0",
 	"saslMechanisms": "ANONYMOUS PLAIN",
 	"authenticatePeer": "no",
 	"idleTimeoutSeconds": "120",
-	"port": 21000,
-	"addr": "0.0.0.0"
+	"port": 21000
     }],
     ["listener", {
 	"addr": "0.0.0.0",
-	"requireSsl": "yes",
-	"idleTimeoutSeconds": "120",
 	"saslMechanisms": "PLAIN",
-	"sslProfile": "server-ssl",
 	"authenticatePeer": "no",
+	"idleTimeoutSeconds": "120",
 	"port": 21001
-    }],
-    ["listener", {
-	"addr": "0.0.0.0",
-	"requireSsl": "no",
-	"idleTimeoutSeconds": "120",
-	"saslMechanisms": "ANONYMOUS",
-	"sslProfile": "server-ssl",
-	"authenticatePeer": "no",
-	"port": 21002
-    }],
-    ["listener", {
-	"addr": "0.0.0.0",
-	"requireSsl": "yes",
-	"idleTimeoutSeconds": "120",
-	"saslMechanisms": "EXTERNAL",
-	"sslProfile": "server-ssl",
-	"authenticatePeer": "yes",
-	"port": 21003
-    }],
-    ["listener", {
-	"addr": "0.0.0.0",
-	"requireSsl": "no",
-	"idleTimeoutSeconds": "120",
-	"saslMechanisms": "ANONYMOUS",
-	"authenticatePeer": "yes",
-	"port": 21004
     }],
     ["log", {
 	"source": "true",
