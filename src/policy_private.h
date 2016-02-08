@@ -34,6 +34,8 @@ typedef struct qd_policy_t qd_policy_t;
 
 qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity);
 
+qd_error_t qd_register_policy_manager(qd_policy_t *policy, void *policy_manager);
+
 
 /** Allow or deny an incoming connection based on connection count(s).
  * A server listener has just accepted a socket.

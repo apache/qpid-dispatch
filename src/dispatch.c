@@ -71,6 +71,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_message_initialize();
     if (qd_error_code()) { qd_dispatch_free(qd); return 0; }
     qd->log_source = qd_log_source("DISPATCH");
+    qd->dl_handle = 0;
     return qd;
 }
 
@@ -80,15 +81,15 @@ STATIC_ASSERT(sizeof(long) >= sizeof(void*), pointer_is_bigger_than_long);
 
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 {
-    void *handle = dlopen(QPID_DISPATCH_LIB, RTLD_LAZY | RTLD_NOLOAD);
-    if (!handle)
+    qd->dl_handle = dlopen(QPID_DISPATCH_LIB, RTLD_LAZY | RTLD_NOLOAD);
+    if (!qd->dl_handle)
         return qd_error(QD_ERROR_RUNTIME, "Cannot locate library %s", QPID_DISPATCH_LIB);
 
     qd_python_lock_state_t lock_state = qd_python_lock();
     PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.management.config");
     PyObject *configure_dispatch = module ? PyObject_GetAttrString(module, "configure_dispatch") : NULL;
     Py_XDECREF(module);
-    PyObject *result = configure_dispatch ? PyObject_CallFunction(configure_dispatch, "(lls)", (long)qd, handle, config_path) : NULL;
+    PyObject *result = configure_dispatch ? PyObject_CallFunction(configure_dispatch, "(lls)", (long)qd, qd->dl_handle, config_path) : NULL;
     Py_XDECREF(configure_dispatch);
     if (!result) qd_error_py();
     Py_XDECREF(result);
@@ -148,6 +149,12 @@ qd_error_t qd_dispatch_configure_policy(qd_dispatch_t *qd, qd_entity_t *entity)
     if (err)
         return err;
     return QD_ERROR_NONE;
+}
+
+
+qd_error_t qd_dispatch_register_policy_manager(qd_dispatch_t *qd, qd_entity_t *entity)
+{
+    return qd_register_policy_manager(qd->policy, entity);
 }
 
 

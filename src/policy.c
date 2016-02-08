@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include <Python.h>
+#include <qpid/dispatch/python_embedded.h>
 #include "policy_private.h"
 #include <stdio.h>
 #include <string.h>
@@ -37,7 +39,6 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/log.h>
-
 
 
 //
@@ -72,6 +73,7 @@ static char* CONNECTION_DISALLOWED         = "connection disallowed by local pol
 struct qd_policy_t {
     qd_dispatch_t        *qd;
     qd_log_source_t      *log_source;
+    void                 *py_policy_manager;
                           // configured settings
     int                   max_connection_limit;
     char                 *policyDb;
@@ -125,6 +127,14 @@ error:
     return qd_error_code();
 }
 
+
+//
+//
+qd_error_t qd_register_policy_manager(qd_policy_t *policy, void *policy_manager)
+{
+    policy->py_policy_manager = policy_manager;
+    return QD_ERROR_NONE;
+}
 
 //
 //
@@ -199,11 +209,27 @@ bool qd_policy_open_lookup_user(
     const char *app,
     const char *conn_name)
 {
-    // Log the name
+    // Log the names
     qd_log(policy->log_source, 
            POLICY_LOG_LEVEL, 
-           "Policy AMQP Open lookup user: %s, hostip: %s, app: %s, connection: %s", 
+           "Policy AMQP Open lookup_user: %s, hostip: %s, app: %s, connection: %s", 
            username, hostip, app, conn_name);
+    qd_python_lock_state_t lock_state = qd_python_lock();
+    PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
+    PyObject *lookup_user = module ? PyObject_GetAttrString(module, "policy_lookup_user") : NULL;
+    Py_XDECREF(module);
+    PyObject *result = lookup_user ? PyObject_CallFunction(lookup_user, "(Ossss)", (PyObject *)policy->py_policy_manager, username, hostip, app, conn_name) : NULL;
+    Py_XDECREF(lookup_user);
+    if (!result) qd_error_py();
+    const char *res_string = PyString_AsString(result);
+
+    qd_log(policy->log_source,
+           POLICY_LOG_LEVEL,
+           "Policy AMQP Open lookup_user result: '%s'", res_string);
+    Py_XDECREF(result);
+    
+    qd_python_unlock(lock_state);
+
     return true;
 }
 

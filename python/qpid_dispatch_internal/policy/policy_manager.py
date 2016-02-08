@@ -108,3 +108,19 @@ class PolicyManager(object):
         # TODO: figure out decent defaults for upolicy settings that are undefined
         """
         return self._policy_local.lookup_settings(appname, name, upolicy)
+
+#
+#
+#
+def policy_lookup_user(mgr, user, host, app, conn_name):
+    """
+    Look up a user in the policy database
+    Called by C code
+    @param mgr:
+    @param user:
+    @param host:
+    @param app:
+    @param conn_name:
+    @return:
+    """
+    return mgr.lookup_user(user, host, app, conn_name)

@@ -281,6 +281,7 @@ class PolicyEntity(EntityAdapter):
 
     def create(self):
         self._qd.qd_dispatch_configure_policy(self._dispatch, self)
+        self._qd.qd_dispatch_register_policy_manager(self._dispatch, self._policy)
 
     def _identifier(self):
         return self.attributes.get('module')
