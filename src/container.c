@@ -34,6 +34,18 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/log.h>
 
+//Allowed uidFormat fields.
+const char CERT_COUNTRY_CODE = 'c';
+const char CERT_STATE = 's';
+const char CERT_CITY_LOCALITY = 'l';
+const char CERT_ORGANIZATION_NAME = 'o';
+const char CERT_ORGANIZATION_UNIT = 'u';
+const char CERT_COMMON_NAME = 'n';
+const char CERT_FINGERPRINT_SHA512 = '5';
+const char CERT_FINGERPRINT_SHA1 = '1';
+const char CERT_FINGERPRINT_SHA256 = '2';
+const char *COMPONENT_SEPARATOR = ";";
+
 /** Instance of a node type in a container */
 struct qd_node_t {
     DEQ_LINKS(qd_node_t);
@@ -364,6 +376,199 @@ static int writable_handler(void* unused, pn_connection_t *conn, qd_connection_t
     return event_count;
 }
 
+/**
+ * Returns a char pointer to a user id which is constructed from components specified in the config->ssl_uid_format.
+ * Parses through each component and builds a semi-colon delimited string which is returned as the user id.
+ */
+static const char *qd_connection_get_user_from_ssl_client_cert(const qd_server_config_t *config, qd_connection_t *conn, pn_transport_t *tport)
+{
+    if (config->ssl_uid_format) {
+
+        // The ssl_uid_format length cannot be greater that 7
+        assert(strlen(config->ssl_uid_format) < 8);
+
+        //
+        // The tokens in the uidFormat strings are delimited by comma. Load the individual components of the uidFormat
+        // into the components[] array. The maximum number of components that are allowed are 7 namely, c, s, l, o, u, n, (F or f)
+        //
+        char *components = config->ssl_uid_format;
+
+        const char *country_code = 0;
+        const char *state = 0;
+        const char *locality_city = 0;
+        const char *organization = 0;
+        const char *org_unit = 0;
+        const char *common_name = 0;
+        //
+        // SHA1 is 40 hex characters (20 octets); SHA256 is 64 hex characters(32 octets) and SHA512 is 128 hex characters (64 octets).
+        // so the max size of the fingerprint char array is 128 + 1 = 129 (will accomodate sha1 or sha256 or sha512 or even md5).
+        //
+        char fingerprint[129];
+
+        int uid_length = 0;
+        int semi_colon_count = -1;
+
+        int component_count = strlen(components);
+
+        for (int x = 0; x < component_count ; x++) {
+            // accumulate the length into uid_length on each pass so we definitively know the number of octets to malloc.
+            if (components[x] == CERT_COUNTRY_CODE) {
+                country_code =  pn_ssl_get_remote_subject_subfield(pn_ssl(tport), PN_SSL_CERT_SUBJECT_COUNTRY_NAME);
+                if (country_code) {
+                    uid_length += strlen((const char *)country_code);
+                    semi_colon_count++;
+                }
+            }
+            else if (components[x] == CERT_STATE) {
+                state =  pn_ssl_get_remote_subject_subfield(pn_ssl(tport), PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE);
+                if (state) {
+                    uid_length += strlen((const char *)state);
+                    semi_colon_count++;
+                }
+            }
+            else if (components[x] == CERT_CITY_LOCALITY) {
+                locality_city =  pn_ssl_get_remote_subject_subfield(pn_ssl(tport), PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY);
+                if (locality_city) {
+                    uid_length += strlen((const char *)locality_city);
+                    semi_colon_count++;
+                }
+            }
+            else if (components[x] == CERT_ORGANIZATION_NAME) {
+                organization =  pn_ssl_get_remote_subject_subfield(pn_ssl(tport), PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME);
+                if(organization) {
+                    uid_length += strlen((const char *)organization);
+                    semi_colon_count++;
+                }
+            }
+            else if (components[x] == CERT_ORGANIZATION_UNIT) {
+                org_unit =  pn_ssl_get_remote_subject_subfield(pn_ssl(tport), PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT);
+                if(org_unit) {
+                    uid_length += strlen((const char *)org_unit);
+                    semi_colon_count++;
+                }
+            }
+            else if (components[x] == CERT_COMMON_NAME) {
+                common_name =  pn_ssl_get_remote_subject_subfield(pn_ssl(tport), PN_SSL_CERT_SUBJECT_COMMON_NAME);
+                if(common_name) {
+                    uid_length += strlen((const char *)common_name);
+                    semi_colon_count++;
+                }
+            }
+            else if (components[x] == CERT_FINGERPRINT_SHA1 || components[x] == CERT_FINGERPRINT_SHA256 || components[x] == CERT_FINGERPRINT_SHA512) {
+                // Allocate the memory for message digest
+                int out = 0;
+
+                int fingerprint_length = 0;
+                if(components[x] == CERT_FINGERPRINT_SHA1) {
+                    fingerprint_length = 40;
+                    out = pn_ssl_get_cert_fingerprint(pn_ssl(tport), fingerprint, fingerprint_length + 1, PN_SSL_SHA1);
+                }
+                else if (components[x] == CERT_FINGERPRINT_SHA256) {
+                    fingerprint_length = 64;
+                    out = pn_ssl_get_cert_fingerprint(pn_ssl(tport), fingerprint, fingerprint_length + 1, PN_SSL_SHA256);
+                }
+                else if (components[x] == CERT_FINGERPRINT_SHA512) {
+                    fingerprint_length = 128;
+                    out = pn_ssl_get_cert_fingerprint(pn_ssl(tport), fingerprint, fingerprint_length + 1, PN_SSL_SHA512);
+                }
+
+                if(out >= 0) {
+                    uid_length += fingerprint_length;
+                    semi_colon_count++;
+                }
+                else {
+                    // The pn_ssl_get_cert_fingerprint returned a PN_ERR, log this error
+                    qd_log(conn->server->log_source, QD_LOG_CRITICAL, "Error obtaining certificate fingerprint");
+                }
+            }
+            else {
+                // This is an unrecognized component. log a critical error and continue to the next component
+                qd_log(conn->server->log_source, QD_LOG_CRITICAL, "Unrecognized component '%c' in uidFormat ", components[x]);
+            }
+        }
+
+        if(uid_length > 0) {
+            char *user_id = malloc((uid_length + semi_colon_count + 1) * sizeof(char)); // the + 1 is for the '\0' character
+            *user_id=0;
+
+            // The components in the user id string must appear in the same order as it appears in the component string. that is
+            // the purpose of this additional loop
+            for (int x=0; x < component_count ; x++) {
+                if (components[x] == CERT_COUNTRY_CODE) {
+                    if (country_code) {
+                        if(*user_id != '\0')
+                            strcat(user_id, COMPONENT_SEPARATOR);
+                        strcat(user_id, (char *) country_code);
+                    }
+                }
+                else if (components[x] == CERT_STATE) {
+                    if (state) {
+                        if(*user_id != '\0')
+                            strcat(user_id, COMPONENT_SEPARATOR);
+                        strcat(user_id, (char *) state);
+                    }
+                }
+                else if (components[x] == CERT_CITY_LOCALITY) {
+                    if (locality_city) {
+                        if(*user_id != '\0')
+                            strcat(user_id, COMPONENT_SEPARATOR);
+                        strcat(user_id, (char *) locality_city);
+                    }
+                }
+                else if (components[x] == CERT_ORGANIZATION_NAME) {
+                    if (organization) {
+                        if(*user_id != '\0')
+                            strcat(user_id, COMPONENT_SEPARATOR);
+                        strcat(user_id, (char *) organization);
+                    }
+                }
+                else if (components[x] == CERT_ORGANIZATION_UNIT) {
+                    if (org_unit) {
+                        if(*user_id != '\0')
+                            strcat(user_id, COMPONENT_SEPARATOR);
+                        strcat(user_id, (char *) org_unit);
+                    }
+                }
+                else if (components[x] == CERT_COMMON_NAME) {
+                    if (common_name) {
+                        if(*user_id != '\0')
+                            strcat(user_id, COMPONENT_SEPARATOR);
+                        strcat(user_id, (char *) common_name);
+                    }
+                }
+                else if (components[x] == CERT_FINGERPRINT_SHA1 || components[x] == CERT_FINGERPRINT_SHA256 || components[x] == CERT_FINGERPRINT_SHA512) {
+                    if (strlen(fingerprint) > 0) {
+                        if(*user_id != '\0')
+                            strcat(user_id, COMPONENT_SEPARATOR);
+                        strcat(user_id, fingerprint);
+                    }
+                }
+            }
+            qd_log(conn->server->log_source, QD_LOG_TRACE, "User id derived from uidFormat is '%s' ", user_id);
+            return user_id;
+        }
+    }
+
+
+    return 0;
+}
+
+
+static void qd_connection_set_user(qd_connection_t *conn)
+{
+    pn_transport_t *tport = pn_connection_transport(conn->pn_conn);
+    pn_sasl_t      *sasl  = pn_sasl(tport);
+    if (sasl) {
+        const qd_server_config_t *config =
+                    conn->connector ? conn->connector->config : conn->listener->config;
+        if (config->ssl_enabled && config->ssl_uid_format && conn->user_id == 0)
+            conn->user_id = qd_connection_get_user_from_ssl_client_cert(config, conn, tport);
+
+        if(conn->user_id == 0)
+            conn->user_id = pn_transport_get_user(tport);
+    }
+}
+
 
 int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *event, qd_connection_t *qd_conn)
 {
@@ -378,6 +583,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
     case PN_CONNECTION_REMOTE_OPEN :
         if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
             pn_connection_open(conn);
+        qd_connection_set_user(qd_conn);
         qd_connection_manager_connection_opened(qd_conn);
         notify_opened(container, qd_conn, conn_context);
         break;
