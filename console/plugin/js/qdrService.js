@@ -23,8 +23,10 @@ var QDR = (function(QDR) {
 
   // The QDR service handles the connection to
   // the server in the background
-  QDR.module.factory("QDRService", ['$rootScope', '$http', '$resource', function($rootScope, $http, $resource) {
+  QDR.module.factory("QDRService", ['$rootScope', '$http', '$resource', '$location', function($rootScope, $http, $resource, $location) {
     var self = {
+
+	  rhea: require("rhea"),
 
       timeout: 10,
       connectActions: [],
@@ -89,11 +91,6 @@ var QDR = (function(QDR) {
         }
 
       },
-      channels: {
-        'Server Messages': {
-          messages: []
-        }
-      },
       /**
        * @property options
        * Holds a reference to the connection options when
@@ -106,18 +103,17 @@ var QDR = (function(QDR) {
        * The proton message that is used to send commands
        * and receive responses
        */
-      messenger: undefined,
-      msgReceived: undefined,
-      msgSend: undefined,
-      address: undefined,
+		sender: undefined,
+		receiver: undefined,
+		sendable: false,
+
       schema: undefined,
 
-      replyTo: undefined,
-      subscription: undefined,
-      subscribed: false,
+      toAddress: undefined,
+      connected: false,
       gotTopology: false,
-      localNode: undefined,
       errorText: undefined,
+	  connectionError: undefined,
 
       isConnected: function() {
         return self.gotTopology;
@@ -128,31 +124,26 @@ var QDR = (function(QDR) {
         _corremationID: 0,
 
         corr: function () {
-            return (++this._corremationID + "");
-        },
-        add: function(id) {
-            //QDR.log.debug("correlator:add id="+id);
-            this._objects[id] = {resolver: null};
+            var id = ++this._corremationID + "";
+			this._objects[id] = {resolver: null}
+            return id;
         },
         request: function() {
             //QDR.log.debug("correlator:request");
             return this;
         },
-        then: function(id, resolver) {
+        then: function(id, resolver, error) {
             //QDR.log.debug("registered then resolver for correlationID: " + id);
+			if (error) {
+	            delete this._objects[id];
+				return;
+			}
             this._objects[id].resolver = resolver;
         },
-        resolve: function() {
-            var statusCode = self.msgReceived.properties['statusCode'];
-            if (typeof statusCode === "undefined") {
-                //QDR.log.debug("correlator:resolve:statusCode was not 200 (OK) but was undefined. Waiting.");
-                return;
-            }
-
-            var correlationID = self.msgReceived.getCorrelationID();
-            //QDR.log.debug("message received: ");
-            //console.dump(msgReceived.body);
-            this._objects[correlationID].resolver(self.msgReceived.body);
+        // called by receiver's on('message') handler when a response arrives
+        resolve: function(context) {
+			var correlationID = context.message.properties.correlation_id;
+            this._objects[correlationID].resolver(context.message.body);
             delete this._objects[correlationID];
         }
     },
@@ -163,6 +154,7 @@ var QDR = (function(QDR) {
      },
 
     startUpdating: function () {
+        QDR.log.info("startUpdating called")
         self.stopUpdating();
         self.topology.get();
         self.stop = setInterval(function() {
@@ -171,67 +163,16 @@ var QDR = (function(QDR) {
     },
     stopUpdating: function () {
         if (angular.isDefined(self.stop)) {
+            QDR.log.info("stoptUpdating called")
             clearInterval(self.stop);
             self.stop = undefined;
         }
     },
-    pumpData: function() {
-         //QDR.log.debug("pumpData called");
-	     if (!self.subscribed) {
-	     	 var subscriptionAddress = self.subscription.getAddress();
-	         if (subscriptionAddress) {
-      	     	self.replyTo = subscriptionAddress;
-	            self.subscribed = true;
-	            var splitAddress = subscriptionAddress.split('/');
-	            splitAddress.pop();
-	            self.localNode = splitAddress.join('/') + "/$management";
-                //QDR.log.debug("we are subscribed. replyTo is " + self.replyTo + " localNode is " + self.localNode);
-
-	            self.onSubscription();
-	         }
-	     }
-
-	     while (self.messenger.incoming()) {
-	         // The second parameter forces Binary payloads to be decoded as strings
-	         // this is useful because the broker QMF Agent encodes strings as AMQP
-	         // binary, which is a right pain from an interoperability perspective.
-             self.msgReceived.clear();;
-	         var t = self.messenger.get(self.msgReceived, true);
-	         //QDR.log.debug("pumpData incoming t was " + t);
-	         self.correlator.resolve();
-	         self.messenger.accept(t);
-	         self.messenger.settle(t);
-	         //msgReceived.free();
-	         //delete msgReceived;
-	     }
-
-	     if (self.messenger.isStopped()) {
-			 QDR.log.debug("command completed and messenger stopped");
-	     }
-	 },
 
       initProton: function() {
         //QDR.log.debug("*************QDR init proton called ************");
-        // override the subprotocol string to allow generic servers to connect
-        proton.websocket['subprotocol'] = "binary,AMQPWSB10";    // binary is 1st so websockify can connect
-        self.messenger = new proton.Messenger();
-        self.msgReceived = new proton.Message();
-        self.msgSend = new proton.Message();
-        self.messenger.on('error', function(error) {
-          self.errorText = error;
-          QDR.log.error("Got error from messenger: " + error);
-          self.executeDisconnectActions();
-        });
-        self.messenger.on('work', self.pumpData);
-        self.messenger.setOutgoingWindow(1024);
-        self.messenger.start();
       },
       cleanUp: function() {
-        if (self.subscribed === true) {
-          self.messenger.stop();
-          self.subscribed = false;
-          //QDR.log.debug("*************QDR closed ************");
-        }
       },
       error: function(line) {
         if (line.num) {
@@ -325,8 +266,10 @@ var QDR = (function(QDR) {
         get: function () {
             if (this._gettingTopo)
                 return;
-            if (!self.subscribed)
+            if (!self.connected) {
+				QDR.log.debug("topology get failed because !self.connected")
                 return;
+            }
             this._lastNodeInfo = angular.copy(this._nodeInfo);
             this._gettingTopo = true;
 
@@ -509,14 +452,14 @@ The response looks like:
 
       getRemoteNodeInfo: function (callback) {
 	 	//QDR.log.debug("getRemoteNodeInfo called");
-        var id;
+        var ret;
         // first get the list of remote node names
 	 	self.correlator.request(
-                id = self.sendMgmtNodesQuery()
-            ).then(id, function(response) {
+                ret = self.sendMgmtQuery('GET-MGMT-NODES')
+            ).then(ret.id, function(response) {
                 callback(response);
                 self.topology.cleanUp(response);
-            });
+            }, ret.error);
       },
 
       makeMgmtCalls: function (id) {
@@ -529,14 +472,30 @@ The response looks like:
 
       getNodeInfo: function (nodeName, entity, attrs, callback) {
         //QDR.log.debug("getNodeInfo called with nodeName: " + nodeName + " and entity " + entity);
-        var id;
+        var ret;
         self.correlator.request(
-            id = self.sendQuery(nodeName, entity, attrs)
-        ).then(id, function(response) {
+            ret = self.sendQuery(nodeName, entity, attrs)
+        ).then(ret.id, function(response) {
+            // TODO: file a bug against rhea - large numbers are coming back as Uint8Array
+			response.results.forEach( function (result) {
+				result.forEach( function (val, i) {
+					if (val instanceof Uint8Array) {
+						var ua2num = function(ua) {
+	                        var n = 0;
+	                        for (var i = 0; i<ua.length; i++) {
+	                            n *= 256;
+	                            n += ua[i];
+	                        }
+	                        return n;
+	                    }
+	                    result[i] = ua2num(val);
+					}
+				})
+			})
             callback(nodeName, entity, response);
             //self.topology.addNodeInfo(nodeName, entity, response);
             //self.topology.cleanUp(response);
-        });
+        }, ret.error);
       },
 
 		getMultipleNodeInfo: function (nodeNames, entity, attrs, callback, selectedNodeId) {
@@ -609,121 +568,162 @@ The response looks like:
 
       getSchema: function () {
         //QDR.log.debug("getting schema");
-        var id;
+        var ret;
         self.correlator.request(
-            id = self.sendSchemaQuery()
-        ).then(id, function(response) {
+            ret = self.sendMgmtQuery('GET-SCHEMA')
+        ).then(ret.id, function(response) {
             //QDR.log.debug("Got schema response");
-            //console.dump(response);
-            self.schema = angular.copy(response);
-            self.topology.cleanUp(response);
+			self.schema = response;
+            //self.schema = angular.copy(response);
+            //self.topology.cleanUp(response);
             self.notifyTopologyDone();
-        });
+        }, ret.error);
       },
 
     sendQuery: function(toAddr, entity, attrs) {
-        //QDR.log.debug("sendQuery (" + toAddr + ", " + entity + ", " + attrs + ")");
-        var correlationID = self.correlator.corr();
-        self.msgSend.clear();
-
-        self.msgSend.setReplyTo(self.replyTo);
-        self.msgSend.setCorrelationID(correlationID);
-        self.msgSend.properties = {
-            "operation": "QUERY",
-            "entityType": "org.apache.qpid.dispatch" + entity,
-            "type": "org.amqp.management",
-            "name": "self",
-        };
-        // remove the amqp: from the beginning of the toAddr
-        // toAddr looks like amqp:/_topo/0/QDR.A/$management
         var toAddrParts = toAddr.split('/');
         if (toAddrParts.shift() != "amqp:") {
             self.topology.error(Error("unexpected format for router address: " + toAddr));
             return;
         }
-        var fullAddr =  self.address + "/" + toAddrParts.join('/');
-        self.msgSend.setAddress(fullAddr);
-        //QDR.log.debug("sendQuery for " + toAddr + " :: address is " + fullAddr);
+        var fullAddr =  self.toAddress + "/" + toAddrParts.join('/');
 
+		var body;
         if (attrs)
-        self.msgSend.body = {
+            body = {
                     "attributeNames": attrs,
-                 }
+            }
         else
-        self.msgSend.body = {
-            "attributeNames": [],
-         }
+            body = {
+                "attributeNames": [],
+            }
 
-        self.correlator.add(correlationID);
-        //QDR.log.debug("message for " + toAddr);
-        //console.dump(message);
-        self.messenger.put(self.msgSend, true);
-        return correlationID;
+		return self._send(body, fullAddr, "QUERY", "org.apache.qpid.dispatch" + entity);
     },
 
-    sendMgmtNodesQuery: function () {
-        //console.log("sendMgmtNodesQuery");
-        var correlationID = self.correlator.corr();
-        self.msgSend.clear();
-
-        self.msgSend.setAddress(self.address + "/$management");
-        self.msgSend.setReplyTo(self.replyTo);
-        self.msgSend.setCorrelationID(correlationID);
-        self.msgSend.properties = {
-            "operation": "GET-MGMT-NODES",
-            "type": "org.amqp.management",
-            "name": "self",
-        };
-
-        self.msgSend.body = [];
-
-        //QDR.log.debug("sendMgmtNodesQuery address is " + self.address + "/$management");
-        //QDR.log.debug("sendMgmtNodesQuery replyTo is " + self.replyTo);
-        self.correlator.add(correlationID);
-        self.messenger.put(self.msgSend, true);
-        return correlationID;
+    sendMgmtQuery: function (operation) {
+		// TODO: file bug against dispatch - We should be able to just pass body: [], but that generates an 'invalid body'
+		return self._send([' '], self.toAddress + "/$management", operation);
     },
 
-    sendSchemaQuery: function () {
-        //console.log("sendMgmtNodesQuery");
-        var correlationID = self.correlator.corr();
-        self.msgSend.clear();
+	_send: function (body, to, operation, entityType) {
+		var ret = {id: self.correlator.corr()};
+		if (!self.sender || !self.sendable) {
+			ret.error = "no sender"
+			return ret;
+		}
+		try {
+			var application_properties = {
+				operation:  operation,
+                type:       "org.amqp.management",
+                name:       "self"
+            };
+			if (entityType)
+                application_properties.entityType = entityType;
 
-        self.msgSend.setAddress(self.address + "/$management");
-        self.msgSend.setReplyTo(self.replyTo);
-        self.msgSend.setCorrelationID(correlationID);
-        self.msgSend.properties = {
-            "operation": "GET-SCHEMA",
-            "type": "org.amqp.management",
-            "name": "self",
-        };
-
-        self.msgSend.body = [];
-
-        //QDR.log.debug("sendMgmtNodesQuery address is " + self.address + "/$management");
-        //QDR.log.debug("sendMgmtNodesQuery replyTo is " + self.replyTo);
-        self.correlator.add(correlationID);
-        self.messenger.put(self.msgSend, true);
-        return correlationID;
-    },
+	        self.sender.send({
+	                body: body,
+	                properties: {
+	                    to:                     to,
+                        reply_to:               self.receiver.remote.attach.source.address,
+	                    correlation_id:         ret.id
+	                },
+	                application_properties: application_properties
+            })
+		}
+		catch (e) {
+			error = "error sending: " + e;
+			QDR.log.error(error)
+			ret.error = error;
+		}
+		return ret;
+	},
 
       disconnect: function() {
+        self.connection.close();
       },
 
       connect: function(options) {
         self.options = options;
         self.topologyInitialized = false;
-        if (!self.subscribed) {
+		if (!self.connected) {
+			var okay = {connection: false, sender: false, receiver: false}
             var port = options.port || 5673;
-            var baseAddress = 'amqp://' + options.address + ':' + port;
-            self.address = baseAddress;
-            QDR.log.debug("Subscribing to router: ", baseAddress + "/#");
-            self.subscription = self.messenger.subscribe(baseAddress + "/#");
-            // wait for response messages to come in
-            self.messenger.recv(); // Receive as many messages as messenger can buffer.
-        } else {
-            self.topology.get();
-        }
+            var baseAddress = options.address + ':' + port;
+			var ws = self.rhea.websocket_connect(WebSocket);
+			self.toAddress = "amqp://" + baseAddress;
+			self.connectionError = undefined;
+
+			var stop = function (context) {
+				//self.stopUpdating();
+				if (self.connected) {
+				    $rootScope.$broadcast('newAlert', { type: 'danger', msg: 'Connection to ' + baseAddress + " was lost. Retrying..." });
+				}
+				okay.sender = false;
+				okay.receiver = false;
+				okay.connected = false;
+				self.connected = false;
+				self.sender = null;
+				self.receiver = null;
+				self.sendable = false;
+			}
+
+			var maybeStart = function () {
+				if (okay.connection && okay.sender && okay.receiver && self.sendable && !self.connected) {
+					QDR.log.info("okay to start")
+					self.connected = true;
+					self.connection = connection;
+					self.sender = sender;
+					self.receiver = receiver;
+					self.onSubscription();
+					$rootScope.$broadcast("clearAlerts");
+				}
+			}
+
+			QDR.log.debug("****** calling rhea.connect ********")
+            var connection = self.rhea.connect({
+                    connection_details:ws('ws://' + baseAddress),
+                    reconnect:true,
+                    properties: {console_identifier: 'Dispatch console'}
+            });
+			connection.on('connection_open', function (context) {
+				QDR.log.debug("connection_opened")
+				okay.connection = true;
+				okay.receiver = false;
+				okay.sender = false;
+			})
+			connection.on('disconnected', function (context) {
+				QDR.log.warn("disconnected");
+				stop();
+				self.errorText = "Error: Connection failed."
+				self.executeDisconnectActions();
+				self.connectionError = true;
+			})
+			connection.on('connection_close', function (context) { QDR.log.warn("connection_close"); stop()})
+
+			var sender = connection.open_sender("/$management");
+			sender.on('sender_open', function (context) {
+				QDR.log.debug("sender_opened")
+				okay.sender = true
+				maybeStart()
+			})
+			sender.on('sendable', function (context) {
+				//QDR.log.debug("sendable")
+				self.sendable = true;
+				maybeStart();
+			})
+
+			var receiver = connection.open_receiver({source: {dynamic: true}});
+			receiver.on('receiver_open', function (context) {
+				QDR.log.debug("receiver_opened")
+				okay.receiver = true;
+				maybeStart()
+			})
+			receiver.on("message", function (context) {
+				self.correlator.resolve(context);
+			});
+
+		}
       }
     }
       return self;

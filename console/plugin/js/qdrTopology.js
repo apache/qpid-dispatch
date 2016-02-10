@@ -43,7 +43,6 @@ var QDR = (function (QDR) {
     function($scope, $rootScope, uiGridConstants, QDRService, $uibModal, $location, $timeout) {
 
 		QDR.log.debug("started QDR.TopologyController with location.url: " + $location.url());
-		QDR.log.debug("started QDR.TopologyController with window.location.pathname : " + window.location.pathname);
 		var urlPrefix = window.location.pathname;
 
 		$scope.attributes = [];
@@ -407,7 +406,7 @@ var QDR = (function (QDR) {
 				}
 				nodes.push( aNode(id, name, "inter-router", nodeInfo, nodes.length, position.x, position.y, undefined, position.fixed) );
 				yInit *= -1;
-				QDR.log.debug("adding node " + nodes.length-1);
+				//QDR.log.debug("adding node " + nodes.length-1);
 			}
 
 			// initialize the list of links
@@ -449,6 +448,7 @@ var QDR = (function (QDR) {
 						getLink(parent, nodes.length-1, dir);
 						client++;
 
+/*
 	                    var container = QDRService.valFor(attrs, conns[j], "container");
 	                    var parts = container.split('.')
 	                    if (parts.length) {
@@ -469,7 +469,7 @@ var QDR = (function (QDR) {
                             }
 
 	                    }
-
+*/
 					}
 				}
 				source++;
@@ -529,7 +529,7 @@ var QDR = (function (QDR) {
 			circle = svg.append('svg:g').selectAll('g');
             
 			force.on('end', function() {
-				QDR.log.debug("force end called");
+				//QDR.log.debug("force end called");
 				circle
 					.attr('cx', function(d) {
 						localStorage[d.name] = angular.toJson({x: d.x, y: d.y, fixed: d.fixed});
@@ -822,7 +822,7 @@ var QDR = (function (QDR) {
                     return nodeIndex;
                 nodeIndex++
             }
-            QDR.log.debug("unable to find containerIndex for " + _id);
+            QDR.log.warn("unable to find containerIndex for " + _id);
             return -1;
         }
 
@@ -833,7 +833,7 @@ var QDR = (function (QDR) {
                 if (QDRService.nameFromId(id) == _id) return nodeIndex;
                 nodeIndex++
             }
-            QDR.log.debug("unable to find nodeIndex for " + _id);
+            QDR.log.warn("unable to find nodeIndex for " + _id);
             return -1;
         }
 
@@ -853,7 +853,7 @@ var QDR = (function (QDR) {
 				}
             }
 
-            QDR.log.debug("creating new link (" + (links.length) + ") between " + nodes[_source].name + " and " + nodes[_target].name);
+            //QDR.log.debug("creating new link (" + (links.length) + ") between " + nodes[_source].name + " and " + nodes[_target].name);
             var link = {
                 source: _source,
                 target: _target,
@@ -925,7 +925,7 @@ var QDR = (function (QDR) {
             var sInfo = QDRService.topology.nodeInfo()[from.key];
 
             if (!sInfo) {
-                QDR.log.debug("unable to find topology node info for " + from.key);
+                QDR.log.warn("unable to find topology node info for " + from.key);
                 return null;
             }
 
@@ -1425,12 +1425,12 @@ var QDR = (function (QDR) {
 		    for (var key in nodeInfo) {
 		        savedKeys[key] = nodeInfo[key]['.connection'].results.length;
 		    }
-			QDR.log.debug("saving current keys");
+			//QDR.log.debug("saving current keys");
 			console.dump(savedKeys);
 		};
 		// we are about to leave the page, save the node positions
 		$rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {
-			QDR.log.debug("locationChangeStart");
+			//QDR.log.debug("locationChangeStart");
 			nodes.forEach( function (d) {
 	           localStorage[d.name] = angular.toJson({x: d.x, y: d.y, fixed: d.fixed});
 			});
@@ -1441,7 +1441,7 @@ var QDR = (function (QDR) {
         // AngularJS will trigger the $destroy event on
         // the scope
         $scope.$on("$destroy", function( event ) {
-   			QDR.log.debug("scope on destroy");
+   			//QDR.log.debug("scope on destroy");
             QDRService.stopUpdating();
             QDRService.delUpdatedAction("topology");
 			d3.select("#SVG_ID").remove();

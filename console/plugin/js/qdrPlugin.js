@@ -65,7 +65,7 @@ var QDR = (function(QDR) {
    *
    * This plugin's angularjs module instance
    */
-  QDR.module = angular.module(QDR.pluginName, ['ngResource', 'ngRoute', 'ui.grid', 'ui.grid.selection',
+  QDR.module = angular.module(QDR.pluginName, ['ngAnimate', 'ngResource', 'ngRoute', 'ui.grid', 'ui.grid.selection',
     'ui.grid.autoResize', 'jsonFormatter', 'ui.bootstrap', 'ui.slider'/*, 'minicolors' */]);
 
   // set up the routing for this plugin
@@ -116,10 +116,21 @@ var QDR = (function(QDR) {
 			return QDRService.humanify(input);
 		};
 	});
+
+	QDR.logger = function ($log) {
+		var log = $log;
+
+		this.debug = function (msg) { msg = "QDR: " + msg; log.debug(msg)};
+		this.error = function (msg) {msg = "QDR: " + msg; log.error(msg)}
+		this.info = function (msg) {msg = "QDR: " + msg; log.info(msg)}
+		this.warn = function (msg) {msg = "QDR: " + msg; log.warn(msg)}
+
+		return this;
+	}
     // one-time initialization happens in the run function
     // of our module
 	QDR.module.run( ["$rootScope", "$location", "$log", "QDRService", "QDRChartService",  function ($rootScope, $location, $log, QDRService, QDRChartService) {
-		QDR.log = $log;
+		QDR.log = new QDR.logger($log);
 		QDR.log.debug("QDR.module.run()")
 
 		QDRService.initProton();
@@ -165,6 +176,22 @@ var QDR = (function(QDR) {
 			isActive: function() { return true; }
 		});
 	}])
+
+	QDR.module.controller ("QDR.Core", function ($scope, $rootScope) {
+		$scope.alerts = [];
+		$scope.closeAlert = function(index) {
+            $scope.alerts.splice(index, 1);
+        };
+		$scope.$on('newAlert', function(event, data) {
+			$scope.alerts.push(data);
+			$scope.$apply();
+		});
+		$scope.$on("clearAlerts", function () {
+			$scope.alerts = [];
+			$scope.$apply();
+		})
+
+	})
 
   return QDR;
 }(QDR || {}));

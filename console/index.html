@@ -45,8 +45,11 @@ under the License.
 
 <body ng-app="QDR">
 
+<div id="core" ng-controller="QDR.Core">
+    <div id="alerts">
+        <uib-alert ng-repeat="alert in alerts" type="{{alert.type}}">{{alert.msg}}</uib-alert>
+    </div>
     <div id="main-nav" class="navbar navbar-fixed-top" ng-controller="QDR.MainController">
-
         <div class="navbar-inner main-nav-lower">
             <div class="container">
                 <div class="pull-left">
@@ -77,6 +80,7 @@ under the License.
             </div>
         </div>
     </div>
+</div>
 
     <script src="http://d3js.org/d3.v3.min.js"></script>
     <script src="http://d3js.org/queue.v1.min.js"></script>
@@ -109,7 +113,8 @@ under the License.
     <script type="text/javascript" src="plugin/js/qdrSettings.js"></script>
 
     <script type="text/javascript" src="plugin/lib/slider.js"></script>
-    <script type="text/javascript" src="plugin/lib/proton.js"></script>
+    <script type="text/javascript" src="plugin/lib/rhea.js"></script>
+
     <script type="text/javascript" src="plugin/lib/json-formatter-min.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.fancytree/2.15.0/jquery.fancytree.js" type="text/javascript"></script>

@@ -607,9 +607,52 @@ div.login.container {
 	border: 0px;
 }
 
-#overtree span.fancytree-custom-icon.ui-icon-refresh {
+#overtree span.fancytree-alert-icon.ui-icon-refresh {
 	background-position: -64px -80px;
 }
-#overtree span.fancytree-custom-icon.ui-icon-transfer-e-w {
+#overtree span.fancytree-alert-icon.ui-icon-transfer-e-w {
 	background-position: -112px -80px;
 }
+
+#alerts {
+	position: fixed;
+	right: 0;
+	top: 0;
+	z-index: 100;
+}
+
+.alert-enter,
+.alert-leave,
+.alert-move {
+  -webkit-transition: 1s linear all;
+  -moz-transition: 1s linear all;
+  -o-transition: 1s linear all;
+  transition: 1s linear all;
+  position:relative;
+}
+
+.alert-enter {
+  left:-10px;
+  opacity:0;
+}
+.alert-enter.alert-enter-active {
+  left:0;
+  opacity:1;
+}
+
+.alert-leave {
+  left:0;
+  opacity:1;
+}
+.alert-leave.alert-leave-active {
+  left:-10px;
+  opacity:0;
+}
+
+.alert-move {
+  opacity:0.5;
+}
+.alert-move.alert-move-active {
+  opacity:1;
+}
+

@@ -94,6 +94,7 @@ var QDR = (function (QDR) {
           $scope.connecting = false;
           $scope.connectionErrorText = QDRService.errorText;
           $scope.connectionError = true;
+          $scope.$apply();
         });
         QDRService.addConnectAction(function() {
           //QDR.log.debug("got connection notification");
