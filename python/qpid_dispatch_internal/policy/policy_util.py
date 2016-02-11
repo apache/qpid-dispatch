@@ -324,8 +324,7 @@ class PolicyAppConnectionMgr(object):
         assert(self.connections_active > 0)
         assert(user in self.per_user_state)
         assert(conn_id in self.per_user_state[user])
-        assert(host in self.max_per_host)
-        assert(conn_id in self.max_per_host[host])
+        assert(conn_id in self.per_host_state[host])
         self.connections_active -= 1
         self.per_user_state[user].remove(conn_id)
         self.per_host_state[host].remove(conn_id)

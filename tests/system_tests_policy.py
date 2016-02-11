@@ -42,7 +42,7 @@ class AbsoluteConnectionCountLimit(TestCase):
     def address(self):
         return self.router.addresses[0]
 
-    def test_aaa_verify_maximum_connections(self):
+    def test_verify_maximum_connections(self):
         addr = self.address()
 
         # two connections should be ok

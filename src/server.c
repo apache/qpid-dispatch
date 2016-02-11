@@ -266,6 +266,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->link_context  = 0;
         ctx->ufd           = 0;
         ctx->connection_id = qd_server->next_connection_id++; // Increment the connection id so the next connection can use it
+        ctx->policy_settings = 0;
         DEQ_INIT(ctx->deferred_calls);
         ctx->deferred_call_lock = sys_mutex();
         ctx->event_stall  = false;
@@ -718,7 +719,7 @@ static void *thread_run(void *arg)
                 DEQ_REMOVE(qd_server->connections, ctx);
 
                 if (!ctx->connector) {
-                    qd_policy_socket_close(qd_server->qd->policy, qdpn_connector_name(cxtr));
+                    qd_policy_socket_close(qd_server->qd->policy, ctx);
                 }
 
                 qdpn_connector_free(cxtr);
@@ -817,6 +818,7 @@ static void cxtr_try_open(void *context)
     ctx->user_context = 0;
     ctx->link_context = 0;
     ctx->ufd          = 0;
+    ctx->policy_settings = 0;
 
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
@@ -1379,6 +1381,7 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     ctx->user_context = 0;
     ctx->link_context = 0;
     ctx->ufd          = ufd;
+    ctx->policy_settings = 0;
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
     ctx->event_stall  = false;

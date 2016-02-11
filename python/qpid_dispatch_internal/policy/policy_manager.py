@@ -76,12 +76,11 @@ class PolicyManager(object):
         @param[in] attributes: from config
         """
         self._policy_local.create_ruleset(attributes)
-        # TODO: Create stats
 
     #
     # Runtime query interface
     #
-    def lookup_user(self, user, host, app, conn_name):
+    def lookup_user(self, user, host, app, conn_name, conn_id):
         """
         Lookup function called from C.
         Determine if a user on host accessing app through AMQP Open is allowed
@@ -90,11 +89,11 @@ class PolicyManager(object):
         @param[in] user connection authId
         @param[in] host connection remote host numeric IP address as string
         @param[in] app application user is accessing
+        @param[in] conn_name connection name for accounting purposes
+        @param[in] conn_id internal connection id
         @return settings user-group name if allowed; "" if not allowed
-        # Note: the upolicy[0] output is list of group names joined with '|'.
-        TODO: handle the AccessStats
         """
-        return self._policy_local.lookup_user(user, host, app, conn_name)
+        return self._policy_local.lookup_user(user, host, app, conn_name, conn_id)
 
     def lookup_settings(self, appname, name, upolicy):
         """
@@ -105,14 +104,21 @@ class PolicyManager(object):
                     TODO: make this a c struct
         @return if allowed by policy
         # Note: the upolicy output is a non-nested dict with settings of interest
-        # TODO: figure out decent defaults for upolicy settings that are undefined
         """
         return self._policy_local.lookup_settings(appname, name, upolicy)
 
+    def close_connection(self, conn_id):
+        """
+        The connection identifed is closing. Remove it from the connection
+        accounting tables.
+        @param facts:
+        @return: none
+        """
+        self._policy_local.close_connection(conn_id)
 #
 #
 #
-def policy_lookup_user(mgr, user, host, app, conn_name):
+def policy_lookup_user(mgr, user, host, app, conn_name, conn_id):
     """
     Look up a user in the policy database
     Called by C code
@@ -123,4 +129,17 @@ def policy_lookup_user(mgr, user, host, app, conn_name):
     @param conn_name:
     @return:
     """
-    return mgr.lookup_user(user, host, app, conn_name)
+    return mgr.lookup_user(user, host, app, conn_name, conn_id)
+
+#
+#
+#
+def policy_close_connection(mgr, conn_id):
+    """
+    Close the connection.
+    Called by C code
+    @param mgr:
+    @param conn_id:
+    @return:
+    """
+    mgr.close_connection(conn_id)

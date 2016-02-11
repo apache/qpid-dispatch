@@ -1012,6 +1012,13 @@
                     "required": false,
                     "create": true
                 },
+                "enableAccessRules": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable user rule set connection denial.",
+                    "required": false,
+                    "create": true
+                },
                 "connectionsProcessed": {"type": "integer", "graph": true},
                 "connectionsDenied": {"type": "integer", "graph": true},
                 "connectionsCurrent": {"type": "integer", "graph": true}
@@ -1021,6 +1028,7 @@
         "policyRuleset": {
             "description": "Per application definition of the locations from which users may connect and the groups to which users belong.",
             "extends": "configurationEntity",
+	    "operations": ["CREATE"],
             "attributes": {
                 "applicationName": {
                     "type": "string",

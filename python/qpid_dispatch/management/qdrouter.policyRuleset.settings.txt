@@ -1,0 +1,105 @@
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+
+
+
+The schema `qdrouterd.json` is a JSON format file that defines annotations and
+entity types of the Qpid Dispatch Router management model.  The model is based
+on the AMQP management specification.
+
+Schema entity `policyRuleset` includes several attributes of type map. In the current form the management schema provides no way to define the keys and values in these attributes. These maps cannot be specified in the schema and they cannot be checked by the schema processing. 
+
+Until the schema is extended specify embedded maps this document describes the policyRuleset settings.
+
+  "policyAppSettings": {
+      "description": "For a given user group define the policy settings applied to the user's AMQP connection.",
+      "extends": "configurationEntity",
+      "attributes": {
+          "userGroupName": {
+              "type": "string",
+              "description": "The user group to which these settings apply.",
+              "required": true
+          },
+          "maxFrameSize": {
+              "type": "integer",
+              "description": "Largest frame that may be sent on this connection. Zero implies system default. (AMQP Open, max-frame-size)",
+              "default": 65536,
+              "required": false,
+              "create": true
+          },
+          "maxMessageSize": {
+              "type": "integer",
+              "description": "Largest message size supported by links created on this connection. Zero implies system default. (AMQP Attach, max-message-size)",
+              "default": 0,
+              "required": false,
+              "create": true
+          },
+          "maxSessionWindow": {
+              "type": "integer",
+              "description": "Largest incoming and outgoing window for sessions created on this connection. Zero implies system default. (AMQP Begin, incoming-window, outgoing-window)",
+              "default": 2147483647,
+              "required": false,
+              "create": true
+          },
+          "maxSessions": {
+              "type": "integer",
+              "description": "Maximum number of sessions that may be created on this connection. Zero implies system default. (AMQP Open, channel-max)",
+              "default": 10,
+              "required": false,
+              "create": true
+          },
+          "maxSenders": {
+              "type": "integer",
+              "description": "Maximum number of sending links that may be created on this connection. Zero implies system default.",
+              "default": 10,
+              "required": false,
+              "create": true
+          },
+          "maxReceivers": {
+              "type": "integer",
+              "description": "Maximum number of receiving links that may be created on this connection. Zero implies system default.",
+              "required": false,
+              "create": true
+          },
+          "allowDynamicSrc": {
+              "type": "boolean",
+              "description": "This connection is allowed to use the dynamic link source feature.",
+              "default": false,
+              "required": false,
+              "create": true
+          },
+          "allowAnonymousSender": {
+              "type": "boolean",
+              "description": "This connection is allowed to use the Anonymous Sender feature.",
+              "default": false,
+              "required": false,
+              "create": true
+          },
+          "sources": {
+              "type": "string",
+              "description": "List of Source addresses allowed when creating receiving links.",
+              "required": false,
+              "create": true
+          },
+          "targets": {
+              "type": "string",
+              "description": "List of Target addresses allowed when creating sending links.",
+              "required": false,
+              "create": true
+          }
+      }
+  }

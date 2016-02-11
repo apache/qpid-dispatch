@@ -77,13 +77,16 @@ struct qd_policy_t {
                           // configured settings
     int                   max_connection_limit;
     char                 *policyDb;
+    bool                  enableAccessRules;
                           // live statistics
     int                   connections_processed;
     int                   connections_denied;
     int                   connections_current;
 };
 
-
+/** Create the policy structure
+ * @param[in] qd pointer the the qd
+ **/
 qd_policy_t *qd_policy(qd_dispatch_t *qd)
 {
     qd_policy_t *policy = NEW(qd_policy_t);
@@ -92,6 +95,7 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
     policy->log_source           = qd_log_source("POLICY");
     policy->max_connection_limit = 0;
     policy->policyDb             = 0;
+    policy->enableAccessRules    = false;
     policy->connections_processed= 0;
     policy->connections_denied   = 0;
     policy->connections_current  = 0;
@@ -101,6 +105,9 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
 }
 
 
+/** Free the policy structure
+ * @param[in] policy pointer to the policy
+ **/
 void qd_policy_free(qd_policy_t *policy)
 {
     if (policy->policyDb)
@@ -108,10 +115,10 @@ void qd_policy_free(qd_policy_t *policy)
     free(policy);
 }
 
+//
+//
 #define CHECK() if (qd_error_code()) goto error
 
-//
-//
 qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
 {
     policy->max_connection_limit = qd_entity_opt_long(entity, "maximumConnections", 0); CHECK();
@@ -119,6 +126,7 @@ qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
         return qd_error(QD_ERROR_CONFIG, "maximumConnections must be >= 0");
     policy->policyDb =
         qd_entity_opt_string(entity, "policyDb", 0); CHECK();
+    policy->enableAccessRules = qd_entity_opt_bool(entity, "enableAccessRules", false); CHECK();
     qd_log(policy->log_source, QD_LOG_INFO, "Configured maximumConnections: %d", policy->max_connection_limit);
     return QD_ERROR_NONE;
 
@@ -136,9 +144,10 @@ qd_error_t qd_register_policy_manager(qd_policy_t *policy, void *policy_manager)
     return QD_ERROR_NONE;
 }
 
-//
-//
-qd_error_t qd_entity_refresh_policy(qd_entity_t* entity, void *impl) {
+/** Update the statistics in qdrouterd.conf["policy"]
+ * @param[in] entity pointer to the policy management object
+ **/
+qd_error_t qd_entity_refresh_policy(qd_entity_t* entity, void *unused) {
     // Return global stats
     if (!qd_entity_set_long(entity, "connectionsProcessed", n_processed) &&
         !qd_entity_set_long(entity, "connectionsDenied", n_denied) &&
@@ -156,6 +165,7 @@ qd_error_t qd_entity_refresh_policy(qd_entity_t* entity, void *impl) {
 // are made and there is no AMQP channel for returning
 // error conditions.
 //
+
 bool qd_policy_socket_accept(void *context, const char *hostname)
 {
     qd_policy_t *policy = (qd_policy_t *)context;
@@ -182,16 +192,37 @@ bool qd_policy_socket_accept(void *context, const char *hostname)
 }
 
 
-void qd_policy_socket_close(void *context, const char *hostname)
+//
+//
+void qd_policy_socket_close(void *context, const qd_connection_t *conn)
 {
     qd_policy_t *policy = (qd_policy_t *)context;
 
     n_connections -= 1;
     assert (n_connections >= 0);
-    if (policy->max_connection_limit > 0) {
-        qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed, N=%d", hostname, n_connections);
+    if (policy->enableAccessRules) {
+        // HACK ALERT: TODO: This should be deferred to a Python thread
+        qd_python_lock_state_t lock_state = qd_python_lock();
+        PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
+        PyObject *close_connection = module ? PyObject_GetAttrString(module, "policy_close_connection") : NULL;
+        Py_XDECREF(module);
+        PyObject *result = close_connection ? PyObject_CallFunction(close_connection, "(OK)", 
+                                                               (PyObject *)policy->py_policy_manager, 
+                                                               conn->connection_id) : NULL;
+        Py_XDECREF(close_connection);
+        if (!result) {
+            qd_python_unlock(lock_state);
+            return;
+        }
+        Py_XDECREF(result);
+
+        qd_python_unlock(lock_state);
+
     }
-    qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed, N=%d", hostname, n_connections);  // HACK EXTRA
+    const char *hostname = qdpn_connector_name(conn->pn_cxtr);
+    if (policy->max_connection_limit > 0) {
+        qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed. N connections=%d", hostname, n_connections);
+    }
 }
 
 
@@ -200,50 +231,74 @@ void qd_policy_socket_close(void *context, const char *hostname)
 // An AMQP Open has been received over some connection.
 // Evaluate the connection auth and the Open fields to
 // allow or deny the Open. Denied Open attempts are
-// effected with a returned Open-Close_with_condition.
+// effected by returning Open and then Close_with_condition.
 //
+/** Look up user/host/app in python policyRuleset and give the AMQP Open
+ *  a go-no_go decision. Return false if the mechanics of calling python
+ *  fails. A policy lookup will deny the connection by returning a blank
+ *  usergroup name in the name buffer.
+ * @param[in] policy pointer to policy
+ * @param[in] username authenticated user name
+ * @param[in] hostip numeric host ip address
+ * @param[in] app application name received in remote AMQP Open.hostname
+ * @param[in] conn_name connection name for tracking
+ * @param[out] name_buf pointer to settings name buffer
+ * @param[in] name_buf_size size of settings_buf
+ **/
 bool qd_policy_open_lookup_user(
     qd_policy_t *policy,
     const char *username,
     const char *hostip,
     const char *app,
-    const char *conn_name)
+    const char *conn_name,
+    char       *name_buf,
+    int         name_buf_size,
+    uint64_t    conn_id)
 {
-    // Log the names
-    qd_log(policy->log_source, 
-           POLICY_LOG_LEVEL, 
-           "Policy AMQP Open lookup_user: %s, hostip: %s, app: %s, connection: %s", 
-           username, hostip, app, conn_name);
     qd_python_lock_state_t lock_state = qd_python_lock();
     PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
     PyObject *lookup_user = module ? PyObject_GetAttrString(module, "policy_lookup_user") : NULL;
     Py_XDECREF(module);
-    PyObject *result = lookup_user ? PyObject_CallFunction(lookup_user, "(Ossss)", (PyObject *)policy->py_policy_manager, username, hostip, app, conn_name) : NULL;
+    PyObject *result = lookup_user ? PyObject_CallFunction(lookup_user, "(OssssK)", 
+                                                           (PyObject *)policy->py_policy_manager, 
+                                                           username, hostip, app, conn_name, conn_id) : NULL;
     Py_XDECREF(lookup_user);
-    if (!result) qd_error_py();
+    if (!result) {
+        qd_python_unlock(lock_state);
+        return false;
+    }
     const char *res_string = PyString_AsString(result);
-
-    qd_log(policy->log_source,
-           POLICY_LOG_LEVEL,
-           "Policy AMQP Open lookup_user result: '%s'", res_string);
+    strncpy(name_buf, res_string, name_buf_size);
     Py_XDECREF(result);
-    
+
     qd_python_unlock(lock_state);
+
+    qd_log(policy->log_source, 
+           POLICY_LOG_LEVEL, 
+           "Policy AMQP Open lookup_user: %s, hostip: %s, app: %s, connection: %s. Usergroup: '%s'", 
+           username, hostip, app, conn_name, name_buf);
 
     return true;
 }
 
+/** Set the error condition and close the connection.
+ * Over the wire this will send an open frame followed
+ * immediately by a close frame with the error condition.
+ * @param[in] conn proton connection being closed
+ * @param[in] cond_name condition name
+ * @param[in] cond_descr condition description
+ **/ 
 void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *cond_name, const char *cond_descr)
 {
-    // Set the error condition and close the connection.
-    // Over the wire this will send an open frame followed
-    // immediately by a close frame with the error condition.
     pn_condition_t * cond = pn_connection_condition(conn);
     (void) pn_condition_set_name(       cond, cond_name);
     (void) pn_condition_set_description(cond, cond_descr);
     pn_connection_close(conn);
 }
 
+
+//
+//
 void qd_policy_amqp_open(void *context, bool discard)
 {
     qd_connection_t *qd_conn = (qd_connection_t *)context;
@@ -260,8 +315,13 @@ void qd_policy_amqp_open(void *context, bool discard)
         const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
         const char *app = pn_connection_remote_hostname(conn);
         const char *conn_name = qdpn_connector_name(qd_conn->pn_cxtr);
+#define SETTINGS_NAME_SIZE 256
+        char settings_name[SETTINGS_NAME_SIZE];
+        uint32_t conn_id = qd_conn->connection_id;
 
-        if ( qd_policy_open_lookup_user(policy, username, hostip, app, conn_name) ) {
+        if (!policy->enableAccessRules ||
+            (qd_policy_open_lookup_user(policy, username, hostip, app, conn_name, settings_name, SETTINGS_NAME_SIZE, conn_id) &&
+             settings_name[0])) {
             // This connection is allowed.
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
                 pn_connection_open(conn);

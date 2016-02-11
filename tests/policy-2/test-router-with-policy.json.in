@@ -25,9 +25,10 @@
 	"module": "DEFAULT"
     }],
     ["policy", {
-	"maximumConnections": 2
+	"maximumConnections": 20,
+	"enableAccessRules": "true"
     }],
-  ["policyRuleset", {
+    ["policyRuleset", {
       "applicationName": "photoserver",
       "maxConnections": 50,
       "maxConnPerUser": 5,
@@ -140,6 +141,27 @@
           "allowAnonymousSender": false,
           "sources": "public, private",
           "targets": "public"
+        }
+      }
+  }],
+  ["policyRuleset", {
+      "applicationName": "0.0.0.0:21000",
+      "maxConnections": 50,
+      "maxConnPerUser": 5,
+      "maxConnPerHost": 20,
+      "connectionAllowDefault": true,
+      "settings": {
+        "default" : {
+          "maxFrameSize":     222222,
+          "maxMessageSize":   222222,
+          "maxSessionWindow": 222222,
+          "maxSessions":           2,
+          "maxSenders":           22,
+          "maxReceivers":         22,
+          "allowDynamicSrc":      true,
+          "allowAnonymousSender": true,
+          "sources": "public, private, $management",
+          "targets": "public, private, $management"
         }
       }
     }

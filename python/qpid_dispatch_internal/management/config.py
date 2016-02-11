@@ -164,7 +164,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     # Remaining configuration
 
     for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", \
-             "policy", "policyAccessRuleset", "policyAppSettings":
+             "policy", "policyRuleset":
         for a in config.by_type(t): configure(a)
     for e in config.entities:
         configure(e)

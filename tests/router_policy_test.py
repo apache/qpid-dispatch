@@ -144,7 +144,7 @@ class PolicyFile(TestCase):
         return len(added) == 0 and len(removed) == 0 and len(modified) == 0
 
     def test_policy1_test_zeke_ok(self):
-        p1 = PolicyFile.policy.lookup_user('zeke', '192.168.100.5', 'photoserver', '192.168.100.5:33333')
+        p1 = PolicyFile.policy.lookup_user('zeke', '192.168.100.5', 'photoserver', '192.168.100.5:33333', 1)
         self.assertTrue(p1 == 'test')
         upolicy = {}
         self.assertTrue(
@@ -165,19 +165,19 @@ class PolicyFile(TestCase):
 
     def test_policy1_test_zeke_bad_IP(self):
         self.assertTrue(
-            PolicyFile.policy.lookup_user('zeke', '10.18.0.1',    'photoserver', "connid") == '')
+            PolicyFile.policy.lookup_user('zeke', '10.18.0.1',    'photoserver', "connid", 2) == '')
         self.assertTrue(
-            PolicyFile.policy.lookup_user('zeke', '72.135.2.9',   'photoserver', "connid") == '')
+            PolicyFile.policy.lookup_user('zeke', '72.135.2.9',   'photoserver', "connid", 3) == '')
         self.assertTrue(
-            PolicyFile.policy.lookup_user('zeke', '127.0.0.1',    'photoserver', "connid") == '')
+            PolicyFile.policy.lookup_user('zeke', '127.0.0.1',    'photoserver', "connid", 4) == '')
 
     def test_policy1_test_zeke_bad_app(self):
         self.assertTrue(
-            PolicyFile.policy.lookup_user('zeke', '192.168.100.5','galleria', "connid") == '')
+            PolicyFile.policy.lookup_user('zeke', '192.168.100.5','galleria', "connid", 5) == '')
 
     def test_policy1_test_users_same_permissions(self):
-        zname = PolicyFile.policy.lookup_user('zeke', '192.168.100.5', 'photoserver', '192.168.100.5:33333')
-        yname = PolicyFile.policy.lookup_user('ynot', '10.48.255.254', 'photoserver', '192.168.100.5:33334')
+        zname = PolicyFile.policy.lookup_user('zeke', '192.168.100.5', 'photoserver', '192.168.100.5:33333', 6)
+        yname = PolicyFile.policy.lookup_user('ynot', '10.48.255.254', 'photoserver', '192.168.100.5:33334', 7)
         self.assertTrue( zname == yname )
 
     def test_policy1_lookup_unknown_application(self):

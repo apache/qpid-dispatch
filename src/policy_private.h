@@ -32,8 +32,34 @@
 
 typedef struct qd_policy_t qd_policy_t;
 
+struct qd_policy__settings_s {
+    int  maxFrameSize;
+    int  maxMessageSize;
+    int  maxSessionWindow;
+    int  maxSessions;
+    int  maxSenders;
+    int  maxReceivers;
+    bool allowDynamicSrc;
+    bool allowAnonymousSender;
+    // char * sources; // TODO:
+    // char * targets; // TODO:
+};
+
+typedef struct qd_policy__settings_s qd_policy_settings_t;
+
+/** Configure the C policy entity from the settings in qdrouterd.conf["policy"]
+ * Called python-to-C during config processing.
+ * @param[in] policy pointer to the policy
+ * @param[in] entity pointer to the managed entity
+ * @return error or not. If error then the policy is freed.
+ **/
 qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity);
 
+/** Memorize the address of python policy_manager object.
+ * This python object gets called by C to execute user lookups 
+ * @param[in] policy pointer to the policy
+ * @param[in] policy_manager the address of the policy_manager object
+ **/
 qd_error_t qd_register_policy_manager(qd_policy_t *policy, void *policy_manager);
 
 
@@ -54,16 +80,17 @@ bool qd_policy_socket_accept(void *context, const char *hostname);
  * Release the counted connection against provisioned limits
  * 
  * @param[in] context the current policy
- * @param[in] name the connector name
+ * @param[in] conn qd_connection
  **/
-void qd_policy_socket_close(void *context, const char *hostname);
+void qd_policy_socket_close(void *context, const qd_connection_t *conn);
 
 
 /** Allow or deny an incoming connection.
  * An Open performative was received over a new connection.
  * Consult local policy to determine if this host/user is
- * allow to make this connection. The underlying proton 
- * connection is either opened or closed.
+ *  allowed to make this connection.
+ * Denied pn_connections are closed with a condition.
+ * Allowed connections are signaled through qd_connection_manager.
  * This function is called from the deferred queue.
  * @param[in] context a qd_connection_t object
  * @param[in] discard callback switch

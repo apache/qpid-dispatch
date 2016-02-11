@@ -394,6 +394,17 @@ class AppStats(object):
     def can_connect(self, conn_id, user, host, diags):
         return self.conn_mgr.can_connect(conn_id, user, host, diags)
 
+    def disconnect(self, conn_id, user, host):
+        self.conn_mgr.disconnect(conn_id, user, host)
+#
+#
+class ConnectionFacts:
+    def __init__(self, user, host, app, conn_name):
+        self.user = user
+        self.host = host
+        self.app = app
+        self.conn_name = conn_name
+
 #
 #
 class PolicyLocal(object):
@@ -436,7 +447,12 @@ class PolicyLocal(object):
         #  validates incoming policy and readies it for internal use
         self._policy_compiler = PolicyCompiler()
 
-
+        # _connections is a map
+        #  key : numeric connection id
+        #  val : ConnectionFacts
+        # Entries created as connection AMQP Opens arrive
+        # Entries destroyed as sockets closed
+        self._connections = {}
     #
     # Service interfaces
     #
@@ -500,7 +516,7 @@ class PolicyLocal(object):
     #
     # Runtime query interface
     #
-    def lookup_user(self, user, host, app, conn_name):
+    def lookup_user(self, user, host, app, conn_name, conn_id):
         """
         Lookup function called from C.
         Determine if a user on host accessing app through AMQP Open is allowed
@@ -511,6 +527,7 @@ class PolicyLocal(object):
         @param[in] host connection remote host numeric IP address as string
         @param[in] app application user is accessing
         @param[in] conn_name connection name used for tracking reports
+        @param[in] conn_id internal connection id
         @return settings user-group name if allowed; "" if not allowed
         """
         try:
@@ -571,6 +588,10 @@ class PolicyLocal(object):
                         "%s" % (user, host, app, diag))
                 return ""
 
+            # Record facts about this connection to use during teardown
+            facts = ConnectionFacts(user, host, app, conn_name)
+            self._connections[conn_id] = facts
+
             # Return success
             return usergroup
 
@@ -612,6 +633,17 @@ class PolicyLocal(object):
             #print str(e)
             #pdb.set_trace()
             return ""
+
+    def close_connection(self, conn_id):
+        """
+        Close the connection.
+        @param conn_id:
+        @return:
+        """
+        facts = self._connections[conn_id]
+        stats = self.statsdb[facts.app]
+        stats.disconnect(facts.conn_name, facts.user, facts.host)
+
 
     def test_load_config(self):
         ruleset_str = '["policyAccessRuleset", {"applicationName": "photoserver","maxConnections": 50,"maxConnPerUser": 5,"maxConnPerHost": 20,"userGroups": {"anonymous":       "anonymous","users":           "u1, u2","paidsubscribers": "p1, p2","test":            "zeke, ynot","admin":           "alice, bob","superuser":       "ellen"},"connectionGroups": {"Ten18":     "10.18.0.0-10.18.255.255","EllensWS":  "72.135.2.9","TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255","localhost": "127.0.0.1, ::1","TheWorld":  "*"},"connectionIngressPolicies": {"anonymous":       "TheWorld","users":           "TheWorld","paidsubscribers": "TheWorld","test":            "TheLabs","admin":           "Ten18, TheLabs, localhost","superuser":       "EllensWS, localhost"},"connectionAllowDefault": true,'
