@@ -643,6 +643,7 @@ class PolicyLocal(object):
         facts = self._connections[conn_id]
         stats = self.statsdb[facts.app]
         stats.disconnect(facts.conn_name, facts.user, facts.host)
+        self._connections.remove(conn_id)
 
 
     def test_load_config(self):
