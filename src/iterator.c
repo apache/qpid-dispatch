@@ -212,17 +212,20 @@ static void view_initialize(qd_field_iterator_t *iter)
 
         switch (state) {
         case STATE_START :
-            if (octet == '/')
+            if (octet == '/') {
                 state = STATE_SLASH_LEFT;
-            else
+                save_pointer = iter->pointer;
+            } else
                 state = STATE_SCANNING;
             break;
 
         case STATE_SLASH_LEFT :
             if (octet == '/')
                 state = STATE_SKIPPING_TO_NEXT_SLASH;
-            else
+            else {
                 state = STATE_AT_NODE_ID;
+                iter->pointer = save_pointer;
+            }
             break;
 
         case STATE_SKIPPING_TO_NEXT_SLASH :
