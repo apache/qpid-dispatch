@@ -38,31 +38,6 @@ static char *on_demand_role = "on-demand";
 static char *direct_prefix;
 static char *node_id;
 
-ALLOC_DEFINE(qd_router_lrp_ref_t);
-
-void qd_router_add_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp)
-{
-    qd_router_lrp_ref_t *ref = new_qd_router_lrp_ref_t();
-    DEQ_ITEM_INIT(ref);
-    ref->lrp = lrp;
-    DEQ_INSERT_TAIL(*ref_list, ref);
-}
-
-
-void qd_router_del_lrp_ref_LH(qd_router_lrp_ref_list_t *ref_list, qd_lrp_t *lrp)
-{
-    qd_router_lrp_ref_t *ref = DEQ_HEAD(*ref_list);
-    while (ref) {
-        if (ref->lrp == lrp) {
-            DEQ_REMOVE(*ref_list, ref);
-            free_qd_router_lrp_ref_t(ref);
-            break;
-        }
-        ref = DEQ_NEXT(ref);
-    }
-}
-
-
 /**
  * Determine the role of a connection
  */
@@ -565,13 +540,9 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     router->router_area  = area;
     router->router_id    = id;
     router->node         = qd_container_set_default_node_type(qd, &router_node, (void*) router, QD_DIST_BOTH);
-    DEQ_INIT(router->lrp_containers);
 
-    router->lock               = sys_mutex();
-    router->timer              = qd_timer(qd, qd_router_timer_handler, (void*) router);
-    router->dtag               = 1;
-    DEQ_INIT(router->config_addrs);
-    DEQ_INIT(router->waypoints);
+    router->lock  = sys_mutex();
+    router->timer = qd_timer(qd, qd_router_timer_handler, (void*) router);
 
     //
     // Inform the field iterator module of this router's id and area.  The field iterator

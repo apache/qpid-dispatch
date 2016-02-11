@@ -34,6 +34,22 @@
 #define QDR_ADDRESS_DELIVERIES_TO_CONTAINER   11
 #define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER 12
 
+const char *qdr_address_columns[] =
+    {"name",
+     "identity",
+     "type",
+     "key",
+     "inProcess",
+     "subscriberCount",
+     "remoteCount",
+     "hostRouters",
+     "deliveriesIngress",
+     "deliveriesEgress",
+     "deliveriesTransit",
+     "deliveriesToContainer",
+     "deliveriesFromContainer",
+     0};
+
 
 static void qdr_insert_address_columns_CT(qdr_address_t        *addr,
                                           qd_composed_field_t  *body,

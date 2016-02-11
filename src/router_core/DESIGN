@@ -223,8 +223,37 @@ Address Classes
 
   L - Local
   T - Topological
+  A - Area
   R - Router
   M - Mobile
   C - Link Inbound
   D - Link Outbound
+  Z - Configuration
+
+
+=================
+Management Schema
+=================
+
+org
+  apache
+    qpid
+      dispatch
+        allocator
+        connection
+        connector
+        console
+        container
+        dummy
+        fixedAddress      (deprecated)
+        linkRoutePattern  (deprecated)
+        listener
+        log
+        router
+          address
+          link
+          node
+          provisioned     (proposed)
+          waypoint        (proposed)
+        waypoint          (deprecated)
 

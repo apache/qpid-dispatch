@@ -29,7 +29,6 @@
 
 qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 {
-    /*
     qd_error_clear();
     int   phase  = qd_entity_opt_long(entity, "phase", 0); QD_ERROR_RET();
     qd_schema_fixedAddress_fanout_t fanout = qd_entity_get_long(entity, "fanout"); QD_ERROR_RET();
@@ -43,79 +42,65 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
         return err;
     }
 
-    //
-    // Search for a matching prefix in the list.
-    //
-    qd_config_address_t *addr = DEQ_HEAD(router->config_addrs);
-    while (addr) {
-        if (strcmp(addr->prefix, prefix) == 0)
-            break;
-        addr = DEQ_NEXT(addr);
+    if (prefix[0] == '/' && prefix[1] == '\0') {
+        qd_log(router->log_source, QD_LOG_WARNING, "Ignoring address configuration for '/'");
+        return qd_error_code();
     }
 
-    if (addr == 0) {
-        //
-        // Create a new prefix
-        //
-        addr = NEW(qd_config_address_t);
-        DEQ_ITEM_INIT(addr);
-        addr->prefix = (char*) malloc(strlen(prefix) + 1);
-        addr->last_phase = (char) phase + '0';
-        DEQ_INIT(addr->phases);
-        DEQ_INSERT_TAIL(router->config_addrs, addr);
-        if (prefix[0] == '/')
-            strcpy(addr->prefix, &prefix[1]);
+    //
+    // Convert fanout + bias to semantics
+    //
+    const char *sem;
+
+    if (fanout == QD_SCHEMA_FIXEDADDRESS_FANOUT_MULTIPLE)
+        sem = "multi";
+    else {
+        if (bias == QD_SCHEMA_FIXEDADDRESS_BIAS_CLOSEST)
+            sem = "anyClosest";
         else
-            strcpy(addr->prefix, prefix);
+            sem = "anyBalanced";
     }
 
     //
-    // Add the phase to the prefix
+    // Formulate this configuration as a router.provisioned and create it through the core management API.
     //
-    qd_config_phase_t *addr_phase = NEW(qd_config_phase_t);
-    DEQ_ITEM_INIT(addr_phase);
-    addr_phase->phase = (char) phase + '0';
+    qd_composed_field_t *body = qd_compose_subfield(0);
+    qd_compose_start_map(body);
+    qd_compose_insert_string(body, "objectType");
+    qd_compose_insert_string(body, "address");
 
-    qd_address_semantics_t semantics = 0;
-    switch(fanout) {
-    case QD_SCHEMA_FIXEDADDRESS_FANOUT_MULTIPLE:
-        semantics = QD_SEMANTICS_MULTICAST_ONCE;
-        break;
+    qd_compose_insert_string(body, "address");
+    qd_compose_insert_string(body, prefix);
 
-    case QD_SCHEMA_FIXEDADDRESS_FANOUT_SINGLE:
-        switch(bias) {
-        case QD_SCHEMA_FIXEDADDRESS_BIAS_CLOSEST:
-            semantics = QD_SEMANTICS_ANYCAST_CLOSEST;
-            break;
+    printf("Configure: %s\n", prefix);
 
-        case QD_SCHEMA_FIXEDADDRESS_BIAS_SPREAD:
-            semantics = QD_SEMANTICS_ANYCAST_BALANCED;
-            break;
+    qd_compose_insert_string(body, "semantics");
+    qd_compose_insert_string(body, sem);
+    qd_compose_end_map(body);
 
-        default:
-            free(prefix);
-            free(addr_phase);
-            return qd_error(QD_ERROR_CONFIG, "Invalid bias value %d", fanout);
-        }
-        break;
+    int              length = 0;
+    qd_buffer_list_t buffers;
 
-    default:
-        free(prefix);
-        free(addr_phase);
-        return qd_error(QD_ERROR_CONFIG, "Invalid fanout value %d", fanout);
+    qd_compose_take_buffers(body, &buffers);
+    qd_compose_free(body);
+
+    qd_buffer_t *buf = DEQ_HEAD(buffers);
+    while (buf) {
+        length += qd_buffer_size(buf);
+        buf = DEQ_NEXT(buf);
     }
 
-    addr_phase->semantics = semantics;
-    addr->last_phase      = addr_phase->phase;
-    DEQ_INSERT_TAIL(addr->phases, addr_phase);
-    free(prefix);
-    */
+    qd_field_iterator_t *iter = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
+    qd_parsed_field_t   *in_body = qd_parse(iter);
+
+    qdr_manage_create(router->router_core, 0, QD_ROUTER_PROVISIONED, 0, in_body, 0);
+
     return qd_error_code();
 }
 
 qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity)
 {
-
+    /*
     char *address = qd_entity_get_string(entity, "address"); QD_ERROR_RET();
     char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
     int   in_phase  = qd_entity_opt_long(entity, "inPhase", 0); QD_ERROR_RET();
@@ -141,6 +126,7 @@ qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity
     qd_log(router->log_source, QD_LOG_INFO,
            "Configured Waypoint: address=%s in_phase=%d out_phase=%d connector=%s",
            address, in_phase, out_phase, connector);
+    */
     return qd_error_code();
 }
 
@@ -276,61 +262,9 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 void qd_router_configure_free(qd_router_t *router)
 {
     if (!router) return;
-    /*
-    for (qd_config_address_t *ca = DEQ_HEAD(router->config_addrs); ca; ca = DEQ_HEAD(router->config_addrs)) {
-        for (qd_config_phase_t *ap = DEQ_HEAD(ca->phases); ap; ap = DEQ_HEAD(ca->phases)) {
-            DEQ_REMOVE_HEAD(ca->phases);
-            free(ap);
-        }
-        free(ca->prefix);
-        DEQ_REMOVE_HEAD(router->config_addrs);
-        free(ca);
-    }
 
-    for (qd_waypoint_t *wp = DEQ_HEAD(router->waypoints); wp; wp = DEQ_HEAD(router->waypoints)) {
-        DEQ_REMOVE_HEAD(router->waypoints);
-        free(wp->address);
-        free(wp->connector_name);
-        free(wp);
-    }
-
-    for (qd_lrp_container_t *lrpc = DEQ_HEAD(router->lrp_containers); lrpc; lrpc = DEQ_HEAD(router->lrp_containers)) {
-        for (qd_lrp_t *lrp = DEQ_HEAD(lrpc->lrps); lrp; lrp = DEQ_HEAD(lrpc->lrps))
-            qd_lrp_free(lrp);
-        qd_timer_free(lrpc->timer);
-        DEQ_REMOVE_HEAD(router->lrp_containers);
-        free(lrpc);
-    }
-    */
+    //
+    // All configuration to be freed is now in the router core.
+    //
 }
 
-
-qd_address_semantics_t router_semantics_for_addr(qd_router_t *router, qd_field_iterator_t *iter,
-                                                 char in_phase, char *out_phase)
-{
-    const qd_iterator_view_t old_view = qd_address_iterator_get_view(iter);
-    qd_address_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
-
-    qd_config_address_t *addr  = DEQ_HEAD(router->config_addrs);
-    qd_config_phase_t   *phase = 0;
-
-    while (addr) {
-        if (qd_field_iterator_prefix(iter, addr->prefix))
-            break;
-        qd_field_iterator_reset(iter);
-        addr = DEQ_NEXT(addr);
-    }
-
-    if (addr) {
-        *out_phase = in_phase == '\0' ? addr->last_phase : in_phase;
-        phase = DEQ_HEAD(addr->phases);
-        while (phase) {
-            if (phase->phase == *out_phase)
-                break;
-            phase = DEQ_NEXT(phase);
-        }
-    }
-
-    qd_address_iterator_reset_view(iter, old_view);
-    return phase ? phase->semantics : QD_SEMANTICS_ANYCAST_BALANCED;
-}

@@ -39,6 +39,7 @@ const char *identity_key = "identity";
 const char *operation_type_key = "operation";
 const char *attribute_names_key = "attributeNames";
 
+const unsigned char *provisioned_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.provisioned";
 const unsigned char *waypoint_entity_type = (unsigned char*) "org.apache.qpid.dispatch.waypoint";
 const unsigned char *address_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.address";
 const unsigned char *link_entity_type    = (unsigned char*) "org.apache.qpid.dispatch.router.link";
@@ -336,12 +337,10 @@ static bool qd_can_handle_request(qd_field_iterator_t         *props,
     qd_parsed_field_t *parsed_field = qd_parse_value_by_key(fld, identity_key);
     if (parsed_field!=0) {
         *identity_iter = qd_parse_raw(parsed_field);
-        //qd_address_iterator_reset_view(*identity_iter, ITER_VIEW_ADDRESS_HASH);
     }
     parsed_field = qd_parse_value_by_key(fld, name_key);
     if (parsed_field!=0) {
         *name_iter = qd_parse_raw(parsed_field);
-        //qd_address_iterator_reset_view(*name_iter, ITER_VIEW_ADDRESS_HASH);
     }
 
 
@@ -353,12 +352,14 @@ static bool qd_can_handle_request(qd_field_iterator_t         *props,
             return false;
     }
 
-    if (qd_field_iterator_equal(qd_parse_raw(parsed_field), address_entity_type))
-        (*entity_type) = QD_ROUTER_ADDRESS;
-    else if(qd_field_iterator_equal(qd_parse_raw(parsed_field), link_entity_type))
-        (*entity_type) = QD_ROUTER_LINK;
-    else if(qd_field_iterator_equal(qd_parse_raw(parsed_field), waypoint_entity_type))
-        (*entity_type) = QD_ROUTER_WAYPOINT;
+    if      (qd_field_iterator_equal(qd_parse_raw(parsed_field), address_entity_type))
+        *entity_type = QD_ROUTER_ADDRESS;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), link_entity_type))
+        *entity_type = QD_ROUTER_LINK;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), waypoint_entity_type))
+        *entity_type = QD_ROUTER_WAYPOINT;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), provisioned_entity_type))
+        *entity_type = QD_ROUTER_PROVISIONED;
     else
         return false;
 

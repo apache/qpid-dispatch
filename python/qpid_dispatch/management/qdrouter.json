@@ -542,7 +542,7 @@
                 "mobileAddrMaxAge": {
                     "type": "integer",
                     "default": 60,
-                    "description": "Deprecated - This value is no longer used in the router.",
+                    "description": "(DEPRECATED) This value is no longer used in the router.",
                     "create": true
                 },
 
@@ -618,17 +618,17 @@
                 "requirePeerAuth": {
                     "type": "boolean",
                     "create": true,
-                    "description": "Deprecated - This attribute is now controlled by the authenticatePeer attribute."
+                    "description": "(DEPRECATED) This attribute is now controlled by the authenticatePeer attribute."
                 },
                 "allowUnsecured": {
                     "type": "boolean",
                     "create": true,
-                    "description": "Deprecated - This attribute is now controlled by the requireEncryption attribute."
+                    "description": "(DEPRECATED) This attribute is now controlled by the requireEncryption attribute."
                 },
                 "allowNoSasl": {
                     "type": "boolean",
                     "create": true,
-                    "description": "Deprecated - This attribute is now controlled by the authenticatePeer attribute."
+                    "description": "(DEPRECATED) This attribute is now controlled by the authenticatePeer attribute."
                 },
                 "stripAnnotations": {
                     "type": ["in", "out", "both", "no"],
@@ -732,7 +732,7 @@
         },
 
         "fixedAddress": {
-            "description":"Establishes semantics for addresses starting with a prefix.",
+            "description":"(DEPRECATED) Establishes semantics for addresses starting with a prefix.",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
@@ -769,7 +769,7 @@
         },
 
         "waypoint": {
-            "description":"A remote node that messages for an address pass through.",
+            "description":"(DEPRECATED) A remote node that messages for an address pass through.",
             "extends": "configurationEntity",
             "operations": ["CREATE", "DELETE"],
             "attributes": {
@@ -801,7 +801,7 @@
         },
 
         "linkRoutePattern": {
-            "description":"An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node.",
+            "description":"(DEPRECATED) An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node.",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
@@ -824,6 +824,66 @@
                     "required": false,
                     "default": "",
                     "create": true
+                }
+            }
+        },
+
+        "router.provisioned": {
+            "description": "Provisioned component within the router: Address configuration, waypoint, or link-route destination",
+            "extends": "configurationEntity",
+            "attributes": {
+                "objectType": {
+                    "type": ["address", "linkDestination", "waypoint"],
+                    "description": "Type of object being provisioned:  address prefix, link destination, or waypoint",
+                    "create": true,
+                    "default": "address"
+                },
+                "address": {
+                    "type": "string",
+                    "description": "The address or address prefix for the provisioned object",
+                    "create": true
+                },
+                "connector": {
+                    "type": "string",
+                    "description": "Label associated with the connector leading to the target container",
+                    "create": true,
+                    "required": false
+                },
+                "direction": {
+                    "type": ["in", "out", "both"],
+                    "description": "For link-destinations, which direction of link should be affected",
+                    "create": true,
+                    "default": "both"
+                },
+                "semantics": {
+                    "type": ["multi", "anyClosest", "anyBalanced"],
+                    "description": "Semantics for the address",
+                    "create": true,
+                    "default": "anyBalanced"
+                },
+                "ingressAddress": {
+                    "type": "string",
+                    "description": "If this is a waypoint, use this address on ingress messages",
+                    "create": true,
+                    "required": false
+                },
+                "egressAddress": {
+                    "type": "string",
+                    "description": "If this is a waypoint, use this address on egress sunscriptions",
+                    "create": true,
+                    "required": false
+                },
+                "ingressSemantics": {
+                    "type": ["multi", "anyClosest", "anyBalanced"],
+                    "description": "Semantics for the ingress address.  If not specified, defaults to 'semantics'",
+                    "create": true,
+                    "required": false
+                },
+                "egressSemantics": {
+                    "type": ["multi", "anyClosest", "anyBalanced"],
+                    "description": "Semantics for the egress address.  If not specified, defaults to 'semantics'",
+                    "create": true,
+                    "required": false
                 }
             }
         },
@@ -863,6 +923,19 @@
                 "deliveryCount": {
                     "type": "integer",
                     "description": "The total number of deliveries that have traversed this link."
+                },
+                "adminState": {
+                    "type": ["enabled", "disabled"],
+                    "description": "",
+                    "default": "enabled",
+                    "create": false,
+                    "update": true
+                },
+                "operState": {
+                    "type": ["attaching", "up", "quiescing", "stopped", "detaching"],
+                    "description": "",
+                    "create": false,
+                    "update": false
                 }
             }
         },
@@ -918,6 +991,25 @@
                 "routerLink": {
                     "description": "Local link to remote node",
                     "type": "entityId"
+                }
+            }
+        },
+
+        "router.waypoint": {
+            "description": "Waypoint that is enabled in this router (i.e. a provisioned waypoint with a connector).",
+            "extends": "operationalEntity",
+            "attributes": {
+                "provisionedId": {
+                    "description": "Reference to the provisioning record that created this waypoint",
+                    "type": "string"
+                },
+                "outboundLink": {
+                    "description": "Reference to the link that is outbound from the waypoint to the remote node",
+                    "type": "string"
+                },
+                "inboundLink": {
+                    "description": "Reference to the link that is inbound to the waypoint from the remote node",
+                    "type": "string"
                 }
             }
         },

@@ -533,6 +533,7 @@ static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_fie
     // Question: Should we use a new prefix for configuration? (No: allows the possibility of
     //           static routes; yes: prevents occlusion by mobile addresses with specified semantics)
     //
+    qd_address_iterator_override_prefix(iter, 'Z');
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
     return /* addr ? addr->semantics : */  QD_SEMANTICS_ANYCAST_CLOSEST; // FIXME
 }

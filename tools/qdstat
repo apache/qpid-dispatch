@@ -234,7 +234,7 @@ class BusManager(Node):
             row.append(link.undeliveredCount)
             row.append(link.unsettledCount)
             row.append(link.deliveryCount)
-            row.append(link.name)
+            row.append(link.linkName)
             rows.append(row)
         title = "Router Links"
         dispRows = rows
@@ -293,7 +293,7 @@ class BusManager(Node):
 
         for addr in objects:
             row = []
-            row.append(self._addr_summary(self._identity_clean(addr.identity)))
+            row.append(self._addr_summary(addr.name))
             row.append(addr.inProcess)
             row.append(addr.subscriberCount)
             row.append(addr.remoteCount)

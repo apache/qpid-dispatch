@@ -22,6 +22,7 @@
 
 ALLOC_DEFINE(qdr_query_t);
 ALLOC_DEFINE(qdr_address_t);
+ALLOC_DEFINE(qdr_address_config_t);
 ALLOC_DEFINE(qdr_node_t);
 ALLOC_DEFINE(qdr_delivery_t);
 ALLOC_DEFINE(qdr_delivery_ref_t);
@@ -29,6 +30,7 @@ ALLOC_DEFINE(qdr_link_t);
 ALLOC_DEFINE(qdr_router_ref_t);
 ALLOC_DEFINE(qdr_link_ref_t);
 ALLOC_DEFINE(qdr_general_work_t);
+ALLOC_DEFINE(qdr_provisioned_t);
 
 static void qdr_general_handler(void *context);
 
@@ -208,6 +210,7 @@ qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_semantics_t semantics
 {
     qdr_address_t *addr = new_qdr_address_t();
     ZERO(addr);
+    addr->semantics = semantics;
     addr->forwarder = qdr_forwarder_CT(core, semantics);
     addr->rnodes    = qd_bitmask(0);
     return addr;

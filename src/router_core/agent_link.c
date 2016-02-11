@@ -31,6 +31,24 @@
 #define QDR_LINK_UNDELIVERED_COUNT  8
 #define QDR_LINK_UNSETTLED_COUNT    9
 #define QDR_LINK_DELIVERY_COUNT     10
+#define QDR_LINK_ADMIN_STATE        11
+#define QDR_LINK_OPER_STATE         12
+
+const char *qdr_link_columns[] =
+    {"name",
+     "identity",
+     "type",
+     "linkName",
+     "linkType",
+     "linkDir",
+     "owningAddr",
+     "capacity",
+     "undeliveredCount",
+     "unsettledCount",
+     "deliveryCount",
+     "adminState",
+     "operState",
+     0};
 
 static const char *qd_link_type_name(qd_link_type_t lt)
 {
@@ -59,17 +77,14 @@ static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link)
     int i = 0;
     while (query->columns[i] >= 0) {
         switch(query->columns[i]) {
-        case QDR_LINK_IDENTITY: {
+        case QDR_LINK_IDENTITY:
+        case QDR_LINK_NAME: {
             char id[100];
             snprintf(id, 100, "link.%ld", link->identifier);
             qd_compose_insert_string(body, id);
             break;
         }
-            
-        case QDR_LINK_NAME:
-            // TODO - This needs to be fixed (use connection_id + link_name)
-            qd_compose_insert_string(body, link->name);
-            break;
+
         case QDR_LINK_TYPE:
             qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.link");
             break;
@@ -108,6 +123,9 @@ static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link)
         case QDR_LINK_DELIVERY_COUNT:
             qd_compose_insert_ulong(body, link->total_deliveries);
             break;
+
+        case QDR_LINK_ADMIN_STATE:
+        case QDR_LINK_OPER_STATE:
 
         default:
             qd_compose_insert_null(body);

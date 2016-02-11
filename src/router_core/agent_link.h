@@ -24,4 +24,8 @@
 void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
 void qdra_link_get_next_CT(qdr_core_t *core, qdr_query_t *query);
 
+#define QDR_LINK_COLUMN_COUNT  13
+
+const char *qdr_link_columns[QDR_LINK_COLUMN_COUNT + 1];
+
 #endif
