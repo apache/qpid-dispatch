@@ -238,6 +238,17 @@ class PolicyAppConnectionMgrTests(TestCase):
         stats.update(3, 2, 2)
         self.assertTrue(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
 
+    def test_policy_app_conn_mgr_disconnect(self):
+        stats = PolicyAppConnectionMgr(3, 1, 2)
+        diags = []
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(len(diags) == 1)
+        self.assertTrue('per user' in diags[0])
+        diags = []
+        stats.disconnect("10.10.10.10:10000", 'chuck', '10.10.10.10')
+        self.assertTrue(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+
     def test_policy_app_conn_mgr_create_bad_settings(self):
         denied = False
         try:

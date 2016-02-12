@@ -329,3 +329,10 @@ class PolicyAppConnectionMgr(object):
         self.per_user_state[user].remove(conn_id)
         self.per_host_state[host].remove(conn_id)
 
+
+    def count_other_denial(self):
+        """
+        Record the statistic for a connection denied by some other process
+        @return:
+        """
+        self.connections_denied += 1

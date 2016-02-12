@@ -100,10 +100,8 @@ class PolicyManager(object):
         Given a settings name, return the aggregated policy blob.
         @param[in] appname: application user is accessing
         @param[in] name: user group name
-        @param[out] upolicy: dict holding policy values - the settings blob
-                    TODO: make this a c struct
-        @return if allowed by policy
-        # Note: the upolicy output is a non-nested dict with settings of interest
+        @param[out] upolicy: map that receives the settings
+        @return settings were retrieved or not
         """
         return self._policy_local.lookup_settings(appname, name, upolicy)
 
@@ -143,3 +141,9 @@ def policy_close_connection(mgr, conn_id):
     @return:
     """
     mgr.close_connection(conn_id)
+
+#
+#
+#
+def policy_lookup_settings(mgr, appname, name, upolicy):
+    return mgr.lookup_settings(appname, name, upolicy)

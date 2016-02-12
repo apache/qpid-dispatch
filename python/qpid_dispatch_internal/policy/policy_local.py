@@ -396,6 +396,10 @@ class AppStats(object):
 
     def disconnect(self, conn_id, user, host):
         self.conn_mgr.disconnect(conn_id, user, host)
+
+    def count_other_denial(self):
+        self.conn_mgr.count_other_denial()
+
 #
 #
 class ConnectionFacts:
@@ -438,9 +442,7 @@ class PolicyLocal(object):
 
         # statsdb is a map
         #  key : <application name>
-        #  val : a map
-        #   key : stat name
-        #   val : stat value
+        #  val : AppStats object
         self.statsdb = {}
 
         # _policy_compiler is a function
@@ -554,6 +556,7 @@ class PolicyLocal(object):
                     self._manager.log_trace(
                         "lookup_user failed for user '%s', host '%s', application '%s': "
                         "User must be in a user group" % (user, host, app))
+                    stats.count_other_denial()
                     return ""
             # User in usergroup allowed to connect from host?
             if usergroup in ruleset[PolicyKeys.KW_CONNECTION_INGRESS_POLICIES]:
@@ -576,6 +579,7 @@ class PolicyLocal(object):
                 self._manager.log_trace(
                     "lookup_user failed for user '%s', host '%s', application '%s': "
                     "User is not allowed to connect from this host" % (user, host, app))
+                stats.count_other_denial()
                 return ""
 
             # This user passes administrative approval.
@@ -608,16 +612,15 @@ class PolicyLocal(object):
         @param[in] name: user group name
         @param[out] upolicy: dict holding policy values - the settings blob
                     TODO: make this a c struct
-        @return if allowed by policy
+        @return if lookup worked
         # Note: the upolicy output is a non-nested dict with settings of interest
-        # TODO: figure out decent defaults for upolicy settings that are undefined
         """
         try:
             if not appname in self.rulesetdb:
                 self._manager.log_trace(
                         "lookup_settings fail for application '%s', user group '%s': "
                         "No policy defined for this application" % (appname, name))
-                return ""
+                return False
 
             ruleset = self.rulesetdb[appname]
 
@@ -625,14 +628,14 @@ class PolicyLocal(object):
                 self._manager.log_trace(
                         "lookup_settings fail for application '%s', user group '%s': "
                         "This application has no settings for the user group" % (appname, name))
-                return ""
+                return False
 
             upolicy.update(ruleset[PolicyKeys.KW_SETTINGS][name])
             return True
         except Exception, e:
             #print str(e)
             #pdb.set_trace()
-            return ""
+            return False
 
     def close_connection(self, conn_id):
         """

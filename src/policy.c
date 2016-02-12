@@ -226,6 +226,19 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
 }
 
 
+int _pyGetInt(PyObject *dict, const char *key)
+{
+    PyObject *pkey = PyString_FromString(key);
+    PyObject *val = PyObject_GetItem(dict, pkey);
+    long res = 0;
+    if (val) {
+        res = PyInt_AsLong(val);
+    }
+    Py_XDECREF(pkey);
+    Py_XDECREF(val);
+    return (int)res;
+}
+
 //
 // Functions related to authenticated connection denial.
 // An AMQP Open has been received over some connection.
@@ -253,17 +266,20 @@ bool qd_policy_open_lookup_user(
     const char *conn_name,
     char       *name_buf,
     int         name_buf_size,
-    uint64_t    conn_id)
+    uint64_t    conn_id,
+    qd_policy_settings_t *settings)
 {
+    memset(settings, 0, sizeof(*settings));
+    // Lookup the user/host/app for allow/deny and to get settings name
     qd_python_lock_state_t lock_state = qd_python_lock();
     PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
     PyObject *lookup_user = module ? PyObject_GetAttrString(module, "policy_lookup_user") : NULL;
-    Py_XDECREF(module);
     PyObject *result = lookup_user ? PyObject_CallFunction(lookup_user, "(OssssK)", 
                                                            (PyObject *)policy->py_policy_manager, 
                                                            username, hostip, app, conn_name, conn_id) : NULL;
     Py_XDECREF(lookup_user);
     if (!result) {
+        Py_XDECREF(module);
         qd_python_unlock(lock_state);
         return false;
     }
@@ -271,6 +287,31 @@ bool qd_policy_open_lookup_user(
     strncpy(name_buf, res_string, name_buf_size);
     Py_XDECREF(result);
 
+    if (name_buf[0]) {
+        // Go get the settings
+        PyObject *upolicy = PyDict_New();
+        PyObject *lookup_settings = module ? PyObject_GetAttrString(module, "policy_lookup_settings") : NULL;
+        PyObject *result2 = lookup_settings ? PyObject_CallFunction(lookup_settings, "(OssO)", 
+                                                            (PyObject *)policy->py_policy_manager, 
+                                                            app, name_buf, upolicy) : NULL;
+        Py_XDECREF(lookup_settings);
+        if (!result2) {
+            Py_XDECREF(upolicy);
+            qd_python_unlock(lock_state);
+            return false;
+        }
+        Py_XDECREF(result2);
+        settings->maxFrameSize     = _pyGetInt(upolicy, "maxFrameSize");
+        settings->maxMessageSize   = _pyGetInt(upolicy, "maxMessageSize");
+        settings->maxSessionWindow = _pyGetInt(upolicy, "maxSessionWindow");
+        settings->maxSessions      = _pyGetInt(upolicy, "maxSessions");
+        settings->maxSenders       = _pyGetInt(upolicy, "maxSenders");
+        settings->maxReceivers     = _pyGetInt(upolicy, "maxReceivers");
+        settings->allowAnonymousSender = false; // TODO:
+        settings->allowDynamicSrc      = false; // TODO:
+        Py_XDECREF(upolicy);
+    }
+    Py_XDECREF(module);
     qd_python_unlock(lock_state);
 
     qd_log(policy->log_source, 
@@ -318,11 +359,20 @@ void qd_policy_amqp_open(void *context, bool discard)
 #define SETTINGS_NAME_SIZE 256
         char settings_name[SETTINGS_NAME_SIZE];
         uint32_t conn_id = qd_conn->connection_id;
+        qd_policy_settings_t settings;
 
         if (!policy->enableAccessRules ||
-            (qd_policy_open_lookup_user(policy, username, hostip, app, conn_name, settings_name, SETTINGS_NAME_SIZE, conn_id) &&
+            (qd_policy_open_lookup_user(policy, username, hostip, app, conn_name, 
+                                        settings_name, SETTINGS_NAME_SIZE, conn_id,
+                                        &settings) &&
              settings_name[0])) {
             // This connection is allowed.
+            // Apply received settings
+            if (settings.maxFrameSize > 0)
+                pn_transport_set_max_frame(pn_trans, settings.maxFrameSize);
+            if (settings.maxSessions > 0)
+                pn_transport_set_channel_max(pn_trans, settings.maxSessions);
+            // TODO: set the rest...
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
                 pn_connection_open(conn);
             qd_connection_manager_connection_opened(qd_conn);
