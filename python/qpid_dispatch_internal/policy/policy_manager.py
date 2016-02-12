@@ -146,4 +146,12 @@ def policy_close_connection(mgr, conn_id):
 #
 #
 def policy_lookup_settings(mgr, appname, name, upolicy):
+    """
+    Return settings for <app, usergroup> in upolicy map
+    @param mgr:
+    @param appname:
+    @param name:
+    @param upolicy:
+    @return:
+    """
     return mgr.lookup_settings(appname, name, upolicy)

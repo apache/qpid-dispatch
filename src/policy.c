@@ -269,7 +269,6 @@ bool qd_policy_open_lookup_user(
     uint64_t    conn_id,
     qd_policy_settings_t *settings)
 {
-    memset(settings, 0, sizeof(*settings));
     // Lookup the user/host/app for allow/deny and to get settings name
     qd_python_lock_state_t lock_state = qd_python_lock();
     PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
@@ -281,6 +280,9 @@ bool qd_policy_open_lookup_user(
     if (!result) {
         Py_XDECREF(module);
         qd_python_unlock(lock_state);
+        qd_log(policy->log_source,
+               POLICY_LOG_LEVEL,
+               "PyObject lookup_user is Null");
         return false;
     }
     const char *res_string = PyString_AsString(result);
@@ -298,6 +300,9 @@ bool qd_policy_open_lookup_user(
         if (!result2) {
             Py_XDECREF(upolicy);
             qd_python_unlock(lock_state);
+            qd_log(policy->log_source,
+                   POLICY_LOG_LEVEL,
+                   "PyObject lookup_settings is Null");
             return false;
         }
         Py_XDECREF(result2);
@@ -360,6 +365,7 @@ void qd_policy_amqp_open(void *context, bool discard)
         char settings_name[SETTINGS_NAME_SIZE];
         uint32_t conn_id = qd_conn->connection_id;
         qd_policy_settings_t settings;
+        memset(&settings, 0, sizeof(settings));
 
         if (!policy->enableAccessRules ||
             (qd_policy_open_lookup_user(policy, username, hostip, app, conn_name, 
