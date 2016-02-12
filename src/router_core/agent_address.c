@@ -24,21 +24,23 @@
 #define QDR_ADDRESS_IDENTITY                  1
 #define QDR_ADDRESS_TYPE                      2
 #define QDR_ADDRESS_KEY                       3
-#define QDR_ADDRESS_IN_PROCESS                4
-#define QDR_ADDRESS_SUBSCRIBER_COUNT          5
-#define QDR_ADDRESS_REMOTE_COUNT              6
-#define QDR_ADDRESS_HOST_ROUTERS              7
-#define QDR_ADDRESS_DELIVERIES_INGRESS        8
-#define QDR_ADDRESS_DELIVERIES_EGRESS         9
-#define QDR_ADDRESS_DELIVERIES_TRANSIT        10
-#define QDR_ADDRESS_DELIVERIES_TO_CONTAINER   11
-#define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER 12
+#define QDR_ADDRESS_SEMANTICS                 4
+#define QDR_ADDRESS_IN_PROCESS                5
+#define QDR_ADDRESS_SUBSCRIBER_COUNT          6
+#define QDR_ADDRESS_REMOTE_COUNT              7
+#define QDR_ADDRESS_HOST_ROUTERS              8
+#define QDR_ADDRESS_DELIVERIES_INGRESS        9
+#define QDR_ADDRESS_DELIVERIES_EGRESS         10
+#define QDR_ADDRESS_DELIVERIES_TRANSIT        11
+#define QDR_ADDRESS_DELIVERIES_TO_CONTAINER   12
+#define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER 13
 
 const char *qdr_address_columns[] =
     {"name",
      "identity",
      "type",
      "key",
+     "semantics",
      "inProcess",
      "subscriberCount",
      "remoteCount",
@@ -56,58 +58,69 @@ static void qdr_insert_address_columns_CT(qdr_address_t        *addr,
                                           int column_index)
 {
     switch(column_index) {
-        case QDR_ADDRESS_NAME:
-        case QDR_ADDRESS_IDENTITY:
-        case QDR_ADDRESS_KEY:
-            if (addr->hash_handle)
-                qd_compose_insert_string(body, (const char*) qd_hash_key_by_handle(addr->hash_handle));
-            else
-                qd_compose_insert_null(body);
-            break;
-
-        case QDR_ADDRESS_TYPE:
-            qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.address");
-            break;
-
-        case QDR_ADDRESS_IN_PROCESS:
-            qd_compose_insert_uint(body, DEQ_SIZE(addr->subscriptions));
-            break;
-
-        case QDR_ADDRESS_SUBSCRIBER_COUNT:
-            qd_compose_insert_uint(body, DEQ_SIZE(addr->rlinks));
-            break;
-
-        case QDR_ADDRESS_REMOTE_COUNT:
-            qd_compose_insert_uint(body, qd_bitmask_cardinality(addr->rnodes));
-            break;
-
-        case QDR_ADDRESS_HOST_ROUTERS:
-            qd_compose_insert_null(body);  // TEMP
-            break;
-
-        case QDR_ADDRESS_DELIVERIES_INGRESS:
-            qd_compose_insert_ulong(body, addr->deliveries_ingress);
-            break;
-
-        case QDR_ADDRESS_DELIVERIES_EGRESS:
-            qd_compose_insert_ulong(body, addr->deliveries_egress);
-            break;
-
-        case QDR_ADDRESS_DELIVERIES_TRANSIT:
-            qd_compose_insert_ulong(body, addr->deliveries_transit);
-            break;
-
-        case QDR_ADDRESS_DELIVERIES_TO_CONTAINER:
-            qd_compose_insert_ulong(body, addr->deliveries_to_container);
-            break;
-
-        case QDR_ADDRESS_DELIVERIES_FROM_CONTAINER:
-            qd_compose_insert_ulong(body, addr->deliveries_from_container);
-            break;
-
-        default:
+    case QDR_ADDRESS_NAME:
+    case QDR_ADDRESS_IDENTITY:
+    case QDR_ADDRESS_KEY:
+        if (addr->hash_handle)
+            qd_compose_insert_string(body, (const char*) qd_hash_key_by_handle(addr->hash_handle));
+        else
             qd_compose_insert_null(body);
-            break;
+        break;
+
+    case QDR_ADDRESS_TYPE:
+        qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.address");
+        break;
+
+    case QDR_ADDRESS_SEMANTICS: {
+        switch (addr->semantics) {
+        case QD_SEMANTICS_MULTICAST_FLOOD:  qd_compose_insert_string(body, "flood");       break;
+        case QD_SEMANTICS_MULTICAST_ONCE:   qd_compose_insert_string(body, "multi");       break;
+        case QD_SEMANTICS_ANYCAST_CLOSEST:  qd_compose_insert_string(body, "anyClosest");  break;
+        case QD_SEMANTICS_ANYCAST_BALANCED: qd_compose_insert_string(body, "anyBalanced"); break;
+        case QD_SEMANTICS_LINK_BALANCED:    qd_compose_insert_string(body, "linkBalanced"); break;
+        }
+        break;
+    }
+
+    case QDR_ADDRESS_IN_PROCESS:
+        qd_compose_insert_uint(body, DEQ_SIZE(addr->subscriptions));
+        break;
+
+    case QDR_ADDRESS_SUBSCRIBER_COUNT:
+        qd_compose_insert_uint(body, DEQ_SIZE(addr->rlinks));
+        break;
+
+    case QDR_ADDRESS_REMOTE_COUNT:
+        qd_compose_insert_uint(body, qd_bitmask_cardinality(addr->rnodes));
+        break;
+
+    case QDR_ADDRESS_HOST_ROUTERS:
+        qd_compose_insert_null(body);  // TEMP
+        break;
+
+    case QDR_ADDRESS_DELIVERIES_INGRESS:
+        qd_compose_insert_ulong(body, addr->deliveries_ingress);
+        break;
+
+    case QDR_ADDRESS_DELIVERIES_EGRESS:
+        qd_compose_insert_ulong(body, addr->deliveries_egress);
+        break;
+
+    case QDR_ADDRESS_DELIVERIES_TRANSIT:
+        qd_compose_insert_ulong(body, addr->deliveries_transit);
+        break;
+
+    case QDR_ADDRESS_DELIVERIES_TO_CONTAINER:
+        qd_compose_insert_ulong(body, addr->deliveries_to_container);
+        break;
+
+    case QDR_ADDRESS_DELIVERIES_FROM_CONTAINER:
+        qd_compose_insert_ulong(body, addr->deliveries_from_container);
+        break;
+
+    default:
+        qd_compose_insert_null(body);
+        break;
     }
 
 }

@@ -187,6 +187,16 @@ class BusManager(Node):
             outlist.append(str(i))
         return outlist
 
+    def _sem_text(self, sem):
+        sem_map = {'flood'        : 'flood',
+                   'multi'        : 'multi',
+                   'anyClosest'   : 'closest',
+                   'anyBalanced'  : 'balanced',
+                   'linkBalanced' : 'linkBalanced'}
+        if sem in sem_map:
+            return sem_map[sem]
+        return '-'
+
     def displayGeneral(self):
         disp = Display(prefix="  ")
         heads = []
@@ -279,6 +289,7 @@ class BusManager(Node):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("addr"))
+        heads.append(Header("sem"))
         heads.append(Header("in-proc", Header.COMMAS))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
@@ -294,6 +305,7 @@ class BusManager(Node):
         for addr in objects:
             row = []
             row.append(self._addr_summary(addr.name))
+            row.append(self._sem_text(addr.semantics))
             row.append(addr.inProcess)
             row.append(addr.subscriberCount)
             row.append(addr.remoteCount)

@@ -36,7 +36,7 @@ void qdra_address_delete_CT(qdr_core_t          *core,
                             qdr_query_t          *query);
 
 
-#define QDR_ADDRESS_COLUMN_COUNT 13
+#define QDR_ADDRESS_COLUMN_COUNT 14
 
 const char *qdr_address_columns[QDR_ADDRESS_COLUMN_COUNT + 1];
 

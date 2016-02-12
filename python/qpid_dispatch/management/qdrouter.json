@@ -831,6 +831,7 @@
         "router.provisioned": {
             "description": "Provisioned component within the router: Address configuration, waypoint, or link-route destination",
             "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
             "attributes": {
                 "objectType": {
                     "type": ["address", "linkDestination", "waypoint"],
@@ -944,19 +945,57 @@
             "description": "AMQP address managed by the router.",
             "extends": "operationalEntity",
             "attributes": {
-                "inProcess": {"type": "integer"},
-                "subscriberCount": {"type": "integer", "graph": true},
-                "remoteCount": {"type": "integer", "graph": true},
-                "deliveriesIngress": {"type": "integer", "graph": true},
-                "deliveriesEgress": {"type": "integer", "graph": true},
-                "deliveriesTransit": {"type": "integer", "graph": true},
-                "deliveriesToContainer": {"type": "integer", "graph": true},
-                "deliveriesFromContainer": {"type": "integer", "graph": true},
+                "semantics": {
+                    "type": ["flood", "multi", "anyClosest", "anyBalanced", "linkBalanced"],
+                    "description": "Forwarding semantics for the address: flood - messages delivered to all subscribers along all available paths (this will cause duplicate deliveries if there are redundant paths); multi - one copy of each message delivered to all subscribers; anyClosest - messages delivered to only the closest subscriber; anyBalanced - messages delivered to one subscriber with load balanced across subscribers; linkBalanced - for link-routing, link attaches balanced across destinations."
+                },
+                "inProcess": {
+                    "type": "integer",
+                    "description": "The number of in-process subscribers for this address"
+                },
+                "subscriberCount": {
+                    "type": "integer",
+                    "description": "The number of local subscribers for this address (i.e. attached to this router)",
+                    "graph": true
+                },
+                "remoteCount": {
+                    "type": "integer",
+                    "description": "The number of remote routers that have at least one subscriber to this address",
+                    "graph": true
+                },
+                "deliveriesIngress": {
+                    "type": "integer",
+                    "description": "The number of deliveries to this address that entered the router network on this router",
+                    "graph": true
+                },
+                "deliveriesEgress": {
+                    "type": "integer",
+                    "description": "The number of deliveries to this address that exited the router network on this router",
+                    "graph": true
+                },
+                "deliveriesTransit": {
+                    "type": "integer",
+                    "description": "The number of deliveries to this address that transited this router to another router",
+                    "graph": true
+                },
+                "deliveriesToContainer": {
+                    "type": "integer",
+                    "description": "The number of deliveries to this address that were given to an in-process subscriber",
+                    "graph": true
+                },
+                "deliveriesFromContainer": {
+                    "type": "integer",
+                    "description": "The number of deliveries to this address that were originated from an in-process entity",
+                    "graph": true
+                },
                 "key": {
                     "description": "Internal unique (to this router) key to identify the address",
                     "type": "string"
                 },
-                "hostRouters": {"type": "list", "description": "List of remote routers on which there is a destination for this address."}
+                "hostRouters": {
+                    "type": "list",
+                    "description": "List of remote routers on which there is a destination for this address."
+                }
             }
         },
 

@@ -196,14 +196,10 @@ static qdr_address_t *qdra_configure_address_CT(qdr_core_t *core, qd_parsed_fiel
     qd_address_iterator_override_prefix(iter, cls);
     qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
 
-    printf("CT configure address: %s\n", qd_field_iterator_copy(iter));
-    qd_field_iterator_reset(iter);
-
     qdr_address_t *addr = 0;
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (addr) {
         // Log error TODO
-        printf("  dup\n");
         return 0;
     }
 

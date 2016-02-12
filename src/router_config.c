@@ -72,8 +72,6 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
     qd_compose_insert_string(body, "address");
     qd_compose_insert_string(body, prefix);
 
-    printf("Configure: %s\n", prefix);
-
     qd_compose_insert_string(body, "semantics");
     qd_compose_insert_string(body, sem);
     qd_compose_end_map(body);
