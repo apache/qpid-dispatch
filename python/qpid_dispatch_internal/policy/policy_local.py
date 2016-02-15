@@ -45,8 +45,8 @@ class PolicyKeys(object):
     KW_MAXCONNPERHOST              = "maxConnPerHost"
     KW_MAXCONNPERUSER              = "maxConnPerUser"
     KW_USER_GROUPS                 = "userGroups"
-    KW_CONNECTION_GROUPS           = "connectionGroups"
-    KW_CONNECTION_INGRESS_POLICIES = "connectionIngressPolicies"
+    KW_INGRESS_HOST_GROUPS         = "ingressHostGroups"
+    KW_INGRESS_POLICIES            = "ingressPolicies"
     KW_CONNECTION_ALLOW_DEFAULT    = "connectionAllowDefault"
     KW_SETTINGS                    = "settings"
 
@@ -103,8 +103,8 @@ class PolicyCompiler(object):
         PolicyKeys.KW_MAXCONNPERHOST,
         PolicyKeys.KW_MAXCONNPERUSER,
         PolicyKeys.KW_USER_GROUPS,
-        PolicyKeys.KW_CONNECTION_GROUPS,
-        PolicyKeys.KW_CONNECTION_INGRESS_POLICIES,
+        PolicyKeys.KW_INGRESS_HOST_GROUPS,
+        PolicyKeys.KW_INGRESS_POLICIES,
         PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT,
         PolicyKeys.KW_SETTINGS
         ]
@@ -155,7 +155,7 @@ class PolicyCompiler(object):
 
     def compile_connection_groups(self, name, submap_in, submap_out, warnings, errors):
         """
-        Handle an connectionGroups submap.
+        Handle an ingressHostGroups submap.
         Each origin value is verified. On a successful run the submap
         is replaced parsed lists of HostAddr objects.
         @param[in] name application name
@@ -168,7 +168,7 @@ class PolicyCompiler(object):
                   warnings[] may contain info and errors[0] will hold the
                   description of why the origin was rejected.
         """
-        key = PolicyKeys.KW_CONNECTION_GROUPS
+        key = PolicyKeys.KW_INGRESS_HOST_GROUPS
         for coname in submap_in:
             try:
                 ostr = str(submap_in[coname])
@@ -263,8 +263,8 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_MAXCONNPERHOST] = 0
         policy_out[PolicyKeys.KW_MAXCONNPERUSER] = 0
         policy_out[PolicyKeys.KW_USER_GROUPS] = {}
-        policy_out[PolicyKeys.KW_CONNECTION_GROUPS] = {}
-        policy_out[PolicyKeys.KW_CONNECTION_INGRESS_POLICIES] = {}
+        policy_out[PolicyKeys.KW_INGRESS_HOST_GROUPS] = {}
+        policy_out[PolicyKeys.KW_INGRESS_POLICIES] = {}
         policy_out[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT] = False
         policy_out[PolicyKeys.KW_SETTINGS] = {}
 
@@ -284,15 +284,15 @@ class PolicyCompiler(object):
                     return False
                 policy_out[key] = val
             elif key in [PolicyKeys.KW_USER_GROUPS,
-                         PolicyKeys.KW_CONNECTION_GROUPS,
-                         PolicyKeys.KW_CONNECTION_INGRESS_POLICIES
+                         PolicyKeys.KW_INGRESS_HOST_GROUPS,
+                         PolicyKeys.KW_INGRESS_POLICIES
                          ]:
                 try:
                     if not type(val) is dict:
                         errors.append("Application '%s' option '%s' must be of type 'dict' but is '%s'" %
                                       (name, key, type(val)))
                         return False
-                    if key == PolicyKeys.KW_CONNECTION_GROUPS:
+                    if key == PolicyKeys.KW_INGRESS_HOST_GROUPS:
                         # Conection groups are lists of IP addresses that need to be
                         # converted into binary structures for comparisons.
                         val_out = {}
@@ -301,7 +301,7 @@ class PolicyCompiler(object):
                         policy_out[key] = {}
                         policy_out[key].update(val_out)
                     else:
-                        # deduplicate connectionIngressPolicy and userGroups lists
+                        # deduplicate ingressPolicy and userGroups lists
                         for k,v in val.iteritems():
                             v = [x.strip(' ') for x in v.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
                             v = list(set(v))
@@ -354,11 +354,11 @@ class PolicyCompiler(object):
                               (name))
                 return False
 
-        # Each ingress policy name references must exist in connection_groups
-        for cipname, cip in policy_out[PolicyKeys.KW_CONNECTION_INGRESS_POLICIES].iteritems():
+        # Each ingress policy name references must exist in ingressHostGroups
+        for cipname, cip in policy_out[PolicyKeys.KW_INGRESS_POLICIES].iteritems():
             for co in cip:
-                if not co in policy_out[PolicyKeys.KW_CONNECTION_GROUPS]:
-                    errors.append("Application '%s' connection ingress policy '%s' references connection group '%s' but that group does not exist"
+                if not co in policy_out[PolicyKeys.KW_INGRESS_HOST_GROUPS]:
+                    errors.append("Application '%s' connection ingress policy '%s' references ingress host group '%s' but that group does not exist"
                                   (name, cipname, co))
                     return False
 
@@ -559,14 +559,14 @@ class PolicyLocal(object):
                     stats.count_other_denial()
                     return ""
             # User in usergroup allowed to connect from host?
-            if usergroup in ruleset[PolicyKeys.KW_CONNECTION_INGRESS_POLICIES]:
+            if usergroup in ruleset[PolicyKeys.KW_INGRESS_POLICIES]:
                 # User's usergroup is restricted to connecting from a host
                 # defined by the group's ingress policy
                 allowed = False
                 uhs = HostStruct(host)
-                cglist = ruleset[PolicyKeys.KW_CONNECTION_INGRESS_POLICIES][usergroup]
+                cglist = ruleset[PolicyKeys.KW_INGRESS_POLICIES][usergroup]
                 for cg in cglist:
-                    for cohost in ruleset[PolicyKeys.KW_CONNECTION_GROUPS][cg]:
+                    for cohost in ruleset[PolicyKeys.KW_INGRESS_HOST_GROUPS][cg]:
                         if cohost.match_bin(uhs):
                             allowed = True
                             break
@@ -650,7 +650,7 @@ class PolicyLocal(object):
 
 
     def test_load_config(self):
-        ruleset_str = '["policyAccessRuleset", {"applicationName": "photoserver","maxConnections": 50,"maxConnPerUser": 5,"maxConnPerHost": 20,"userGroups": {"anonymous":       "anonymous","users":           "u1, u2","paidsubscribers": "p1, p2","test":            "zeke, ynot","admin":           "alice, bob","superuser":       "ellen"},"connectionGroups": {"Ten18":     "10.18.0.0-10.18.255.255","EllensWS":  "72.135.2.9","TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255","localhost": "127.0.0.1, ::1","TheWorld":  "*"},"connectionIngressPolicies": {"anonymous":       "TheWorld","users":           "TheWorld","paidsubscribers": "TheWorld","test":            "TheLabs","admin":           "Ten18, TheLabs, localhost","superuser":       "EllensWS, localhost"},"connectionAllowDefault": true,'
+        ruleset_str = '["policyAccessRuleset", {"applicationName": "photoserver","maxConnections": 50,"maxConnPerUser": 5,"maxConnPerHost": 20,"userGroups": {"anonymous":       "anonymous","users":           "u1, u2","paidsubscribers": "p1, p2","test":            "zeke, ynot","admin":           "alice, bob","superuser":       "ellen"},"ingressHostGroups": {"Ten18":     "10.18.0.0-10.18.255.255","EllensWS":  "72.135.2.9","TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255","localhost": "127.0.0.1, ::1","TheWorld":  "*"},"ingressPolicies": {"anonymous":       "TheWorld","users":           "TheWorld","paidsubscribers": "TheWorld","test":            "TheLabs","admin":           "Ten18, TheLabs, localhost","superuser":       "EllensWS, localhost"},"connectionAllowDefault": true,'
         ruleset_str += '"settings": {'
         ruleset_str += '"anonymous":      {"maxFrameSize": 111111,"maxMessageSize":   111111,"maxSessionWindow": 111111,"maxSessions":           1,"maxSenders":           11,"maxReceivers":         11,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public",                           "targets": ""},'
         ruleset_str += '"users":          {"maxFrameSize": 222222,"maxMessageSize":   222222,"maxSessionWindow": 222222,"maxSessions":           2,"maxSenders":           22,"maxReceivers":         22,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private",                  "targets": "public"},'

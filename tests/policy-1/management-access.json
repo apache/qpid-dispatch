@@ -1,0 +1,26 @@
+# A policy to allow unrestricted access to management
+# through port 22000
+[
+  ["policyRuleset", {
+      "applicationName": "0.0.0.0:22000",
+      "maxConnections": 50,
+      "maxConnPerUser": 5,
+      "maxConnPerHost": 20,
+      "connectionAllowDefault": true,
+      "settings": {
+        "default" : {
+          "maxFrameSize":     222222,
+          "maxMessageSize":   222222,
+          "maxSessionWindow": 222222,
+          "maxSessions":           2,
+          "maxSenders":           22,
+          "maxReceivers":         22,
+          "allowDynamicSrc":      true,
+          "allowAnonymousSender": true,
+          "sources": "$management",
+          "targets": "$management"
+        }
+      }
+    }
+  ]
+]

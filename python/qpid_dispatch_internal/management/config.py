@@ -22,6 +22,7 @@ Configuration file parsing
 """
 
 import json, re, sys
+import os
 from copy import copy
 from qpid_dispatch.management.entity import camelcase
 from ..dispatch import QdDll
@@ -160,8 +161,9 @@ def configure_dispatch(dispatch, lib_handle, filename):
     qd.qd_dispatch_prepare(dispatch)
     agent.activate("$management")
     qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.
+    policyFolder = config.by_type('policy')[0]['policyFolder']
 
-    # Remaining configuration
+    # Remaining configuration from qdrouterd.conf
 
     for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", \
              "policy", "policyRuleset":
@@ -169,4 +171,12 @@ def configure_dispatch(dispatch, lib_handle, filename):
     for e in config.entities:
         configure(e)
 
-
+    # Load the policyRulesets from the .json files in policyFolder
+    # Only policyRulesets are loaded. Other entities are silently discarded.
+    if not policyFolder == '':
+        apath = os.path.abspath(policyFolder)
+        for i in os.listdir(policyFolder):
+            if i.endswith(".json"):
+                pconfig = Config(os.path.join(apath, i))
+                for a in pconfig.by_type("policyRuleset"):
+                    agent.configure(a)

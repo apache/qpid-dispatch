@@ -1015,7 +1015,14 @@
                 "enableAccessRules": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Enable user rule set connection denial.",
+                    "description": "Enable user rule set processing and connection denial.",
+                    "required": false,
+                    "create": true
+                },
+                "policyFolder": {
+                    "type": "path",
+                    "default": "",
+                    "description": "The path to a folder that holds policyRuleset definition .json files. For a small system the rulesets may all be defined in this file. At a larger scale it is better to have the policy files in their own folder and to have none of the rulesets defined here. All rulesets in all .json files in this folder are processed.",
                     "required": false,
                     "create": true
                 },
@@ -1028,7 +1035,7 @@
         "policyRuleset": {
             "description": "Per application definition of the locations from which users may connect and the groups to which users belong.",
             "extends": "configurationEntity",
-	    "operations": ["CREATE"],
+            "operations": ["CREATE"],
             "attributes": {
                 "applicationName": {
                     "type": "string",
@@ -1058,32 +1065,32 @@
                 },
                 "userGroups": {
                     "type": "map",
-                    "description": "A map where each key is a user group name and the corresponding value is a list of users in that group. Users who are assigned to one or more groups are deemed 'restricted'. Restricted users are subject to connection ingress policy and are assigned policy settings based on the assigned user groups. Unrestricted users may be allowed or denied. If unrestricted users are allowed to connect then they are assigned to user group default.",
+                    "description": "A map where each key is a user group name and the corresponding value is a CSV string naming the users in that group. Users who are assigned to one or more groups are deemed 'restricted'. Restricted users are subject to connection ingress policy and are assigned policy settings based on the assigned user groups. Unrestricted users may be allowed or denied. If unrestricted users are allowed to connect then they are assigned to user group default.",
                     "required": false,
                     "create": true
                 },
-                "connectionGroups": {
+                "ingressHostGroups": {
                     "type": "map",
-                    "description": "A map where each key is a connection group name and the corresponding value is a list of IP addresses in that group. IP addresses may be numeric IPv4 or IPv6 host address or comma separated host ranges.  The wildcard host address '*' represents any host address.",
+                    "description": "A map where each key is an ingress host group name and the corresponding value is a CSV string naming the IP addresses or address ranges in that group. IP addresses may be FQDN strings or numeric IPv4 or IPv6 host addresses. A host range is two host addresses of the same address family separated with a hyphen.  The wildcard host address '*' represents any host address.",
                     "required": false,
                     "create": true
                 },
-                "connectionIngressPolicies": {
+                "ingressPolicies": {
                     "type": "map",
-                    "description": "A map where each key is a user group name and the corresponding value is a list of connection groups. Users who are members of the user group are allowed to connect only from a host in one of the named connection policy groups.",
+                    "description": "A map where each key is a user group name and the corresponding value is a CSV string naming the ingress host group names that restrict the ingress host for the user group. Users who are members of the user group are allowed to connect only from a host in one of the named ingress host groups.",
                     "required": false,
                     "create": true
                 },
                 "connectionAllowDefault": {
                     "type": "boolean",
-                    "description": "Unrestricted users, those who are not members of a defined user group, are allowed to connect to this application.",
+                    "description": "Unrestricted users, those who are not members of a defined user group, are allowed to connect to this application. Unrestricted users are assigned to the 'default' user group and receive 'default' settings.",
                     "default": false,
                     "required": false,
                     "create": true
                 },
                 "settings": {
                     "type": "map",
-                    "description": "A map where each key is a connection group name and the corresponding settings for that group.",
+                    "description": "A map where each key is a user group name and the value is a map of the corresponding settings for that group.",
                     "required": false,
                     "create": true
                 }

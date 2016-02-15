@@ -76,7 +76,7 @@ struct qd_policy_t {
     void                 *py_policy_manager;
                           // configured settings
     int                   max_connection_limit;
-    char                 *policyDb;
+    char                 *policyFolder;
     bool                  enableAccessRules;
                           // live statistics
     int                   connections_processed;
@@ -94,7 +94,7 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
     policy->qd                   = qd;
     policy->log_source           = qd_log_source("POLICY");
     policy->max_connection_limit = 0;
-    policy->policyDb             = 0;
+    policy->policyFolder         = 0;
     policy->enableAccessRules    = false;
     policy->connections_processed= 0;
     policy->connections_denied   = 0;
@@ -110,8 +110,8 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
  **/
 void qd_policy_free(qd_policy_t *policy)
 {
-    if (policy->policyDb)
-        free(policy->policyDb);
+    if (policy->policyFolder)
+        free(policy->policyFolder);
     free(policy);
 }
 
@@ -124,8 +124,8 @@ qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
     policy->max_connection_limit = qd_entity_opt_long(entity, "maximumConnections", 0); CHECK();
     if (policy->max_connection_limit < 0)
         return qd_error(QD_ERROR_CONFIG, "maximumConnections must be >= 0");
-    policy->policyDb =
-        qd_entity_opt_string(entity, "policyDb", 0); CHECK();
+    policy->policyFolder =
+        qd_entity_opt_string(entity, "policyFolder", 0); CHECK();
     policy->enableAccessRules = qd_entity_opt_bool(entity, "enableAccessRules", false); CHECK();
     qd_log(policy->log_source, QD_LOG_INFO, "Configured maximumConnections: %d", policy->max_connection_limit);
     return QD_ERROR_NONE;
