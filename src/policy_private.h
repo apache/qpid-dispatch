@@ -41,8 +41,8 @@ struct qd_policy__settings_s {
     int  maxReceivers;
     bool allowDynamicSrc;
     bool allowAnonymousSender;
-    // char * sources; // TODO:
-    // char * targets; // TODO:
+    char *sources;
+    char *targets;
 };
 
 typedef struct qd_policy__settings_s qd_policy_settings_t;

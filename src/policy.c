@@ -226,19 +226,6 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
 }
 
 
-int _pyGetInt(PyObject *dict, const char *key)
-{
-    PyObject *pkey = PyString_FromString(key);
-    PyObject *val = PyObject_GetItem(dict, pkey);
-    long res = 0;
-    if (val) {
-        res = PyInt_AsLong(val);
-    }
-    Py_XDECREF(pkey);
-    Py_XDECREF(val);
-    return (int)res;
-}
-
 //
 // Functions related to authenticated connection denial.
 // An AMQP Open has been received over some connection.
@@ -306,14 +293,16 @@ bool qd_policy_open_lookup_user(
             return false;
         }
         Py_XDECREF(result2);
-        settings->maxFrameSize     = _pyGetInt(upolicy, "maxFrameSize");
-        settings->maxMessageSize   = _pyGetInt(upolicy, "maxMessageSize");
-        settings->maxSessionWindow = _pyGetInt(upolicy, "maxSessionWindow");
-        settings->maxSessions      = _pyGetInt(upolicy, "maxSessions");
-        settings->maxSenders       = _pyGetInt(upolicy, "maxSenders");
-        settings->maxReceivers     = _pyGetInt(upolicy, "maxReceivers");
-        settings->allowAnonymousSender = false; // TODO:
-        settings->allowDynamicSrc      = false; // TODO:
+        settings->maxFrameSize         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxFrameSize", 0);
+        settings->maxMessageSize       = qd_entity_opt_long((qd_entity_t*)upolicy, "maxMessageSize", 0);
+        settings->maxSessionWindow     = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessionWindow", 0);
+        settings->maxSessions          = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessions", 0);
+        settings->maxSenders           = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSenders", 0);
+        settings->maxReceivers         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxReceivers", 0);
+        settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
+        settings->allowDynamicSrc      = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSrc", false);
+        settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
+        settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
         Py_XDECREF(upolicy);
     }
     Py_XDECREF(module);
@@ -364,6 +353,7 @@ void qd_policy_amqp_open(void *context, bool discard)
 #define SETTINGS_NAME_SIZE 256
         char settings_name[SETTINGS_NAME_SIZE];
         uint32_t conn_id = qd_conn->connection_id;
+        // TODO: settings need to be cached and kept beyond the open
         qd_policy_settings_t settings;
         memset(&settings, 0, sizeof(settings));
 
@@ -378,7 +368,14 @@ void qd_policy_amqp_open(void *context, bool discard)
                 pn_transport_set_max_frame(pn_trans, settings.maxFrameSize);
             if (settings.maxSessions > 0)
                 pn_transport_set_channel_max(pn_trans, settings.maxSessions);
-            // TODO: set the rest...
+
+            // HACK ALERT: The settings were fetched, used for the Open,
+            // and now they discarded.
+            if (settings.sources)
+                free(settings.sources);
+            if (settings.targets)
+                free(settings.targets);
+
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
                 pn_connection_open(conn);
             qd_connection_manager_connection_opened(qd_conn);
