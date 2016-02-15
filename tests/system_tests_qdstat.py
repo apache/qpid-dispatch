@@ -89,9 +89,13 @@ try:
         @classmethod
         def setUpClass(cls):
             super(QdstatSslTest, cls).setUpClass()
+            # Write SASL configuration file:
+            with open('tests-mech-EXTERNAL.conf', 'w') as sasl_conf:
+                sasl_conf.write("mech_list: EXTERNAL ANONYMOUS DIGEST-MD5 PLAIN\n")
+            # qdrouterd configuration:
             config = system_test.Qdrouterd.Config([
                 ('container', {'containerName': 'QdstatSslTest',
-                               'saslConfigPath': cls.sasl_path(),
+                               'saslConfigPath': os.getcwd(),
                                'saslConfigName': 'tests-mech-EXTERNAL'}),
                 ('ssl-profile', {'name': 'server-ssl',
                                  'cert-db': cls.ssl_file('ca-certificate.pem'),
@@ -231,9 +235,13 @@ try:
         @classmethod
         def setUpClass(cls):
             super(QdstatSslNoExternalTest, cls).setUpClass()
+            # Write SASL configuration file:
+            with open('tests-mech-NOEXTERNAL.conf', 'w') as sasl_conf:
+                sasl_conf.write("mech_list: ANONYMOUS DIGEST-MD5 PLAIN\n")
+            # qdrouterd configuration:
             config = system_test.Qdrouterd.Config([
                 ('container', {'containerName': 'QdstatSslTest',
-                               'saslConfigPath': cls.sasl_path(),
+                               'saslConfigPath': os.getcwd(),
                                'saslConfigName': 'tests-mech-NOEXTERNAL'}),
                 ('ssl-profile', {'name': 'server-ssl',
                                  'cert-db': cls.ssl_file('ca-certificate.pem'),

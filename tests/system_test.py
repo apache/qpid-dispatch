@@ -581,7 +581,11 @@ class Tester(object):
 - Utilities to create processes and servers, manage ports etc.
 - Clean up processes on teardown"""
 
-    # Wipe the old test tree when we are first imported.
+    # Top level directory above any Tester directories.
+    # CMake-generated configuration may be found here.
+    top_dir = os.getcwd()
+
+    # The root directory for Tester directories, under top_dir
     root_dir = os.path.abspath(__name__+'.dir')
 
     def __init__(self, id):

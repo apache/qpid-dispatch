@@ -18,7 +18,7 @@
 #
 
 import unittest, os
-from subprocess import PIPE
+from subprocess import PIPE, Popen
 import system_test
 from system_test import TestCase, Qdrouterd, main_module
 
@@ -40,6 +40,24 @@ class RouterTestPlainSasl(TestCase):
         """
         super(RouterTestPlainSasl, cls).setUpClass()
 
+        # Create a sasl database.
+        p = Popen(['saslpasswd2', '-c', '-p', '-f', 'qdrouterd.sasldb', '-u', 'domain.com', 'test'],
+                  stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        result = p.communicate('password')
+        assert p.returncode == 0, \
+            "saslpasswd2 exit status %s, output:\n%s" % (p.returncode, result)
+
+        # Create a SASL configuration file.
+        with open('tests-mech-PLAIN.conf', 'w') as sasl_conf:
+            sasl_conf.write("""
+pwcheck_method: auxprop
+auxprop_plugin: sasldb
+sasldb_path: qdrouterd.sasldb
+mech_list: ANONYMOUS DIGEST-MD5 EXTERNAL PLAIN
+# The following line stops spurious 'sql_select option missing' errors when cyrus-sql-sasl plugin is installed
+sql_select: dummy select
+""")
+
         def router(name, connection):
 
             config = [
@@ -58,10 +76,7 @@ class RouterTestPlainSasl(TestCase):
 
         x_listener_port = cls.tester.get_port()
         y_listener_port = cls.tester.get_port()
-
-        # Look at the tests/CMakeLists.txt to find out how CMAKE replaces ${CMAKE_CURRENT_BINARY_DIR} with the correct path
-        # CMAKE also renames this file to system_tests_sasl_plain.py and copies it to the build/tests folder before executing it.
-        sasl_config_path = '${CMAKE_CURRENT_BINARY_DIR}' + '/sasl_configs'
+        sasl_config_path = os.path.join(cls.top_dir, 'sasl_configs')
 
         router('X', [
                      ('listener', {'addr': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
@@ -71,7 +86,7 @@ class RouterTestPlainSasl(TestCase):
                                    'authenticatePeer': 'no'}),
                      ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.X',
                                     'saslConfigName': 'tests-mech-PLAIN',
-                                    'saslConfigPath': sasl_config_path}),
+                                    'saslConfigPath': os.getcwd()}),
         ])
 
         router('Y', [
@@ -85,11 +100,13 @@ class RouterTestPlainSasl(TestCase):
         cls.routers[1].wait_router_connected('QDR.X')
 
     def test_inter_router_plain_exists(self):
-        """
-        The setUpClass sets up two routers with SASL PLAIN enabled.
-        This test makes executes a qdstat -c via an unauthenticated listener to QDR.X and makes sure that the output
-        has an "inter-router" connection to QDR.Y whose authentication is PLAIN. This ensures that QDR.Y did not
+        """The setUpClass sets up two routers with SASL PLAIN enabled.
+
+        This test makes executes a qdstat -c via an unauthenticated listener to
+        QDR.X and makes sure that the output has an "inter-router" connection to
+        QDR.Y whose authentication is PLAIN. This ensures that QDR.Y did not
         somehow use SASL ANONYMOUS to connect to QDR.X
+
         """
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[1]), '-c'],
@@ -98,8 +115,8 @@ class RouterTestPlainSasl(TestCase):
         assert p.returncode == 0, \
             "qdstat exit status %s, output:\n%s" % (p.returncode, out)
 
-        assert "inter-router" in out
-        assert "test@domain.com(PLAIN)" in out
+        self.assertIn("inter-router", out)
+        self.assertIn("test@domain.com(PLAIN)", out)
 
 if __name__ == '__main__':
     unittest.main(main_module())
