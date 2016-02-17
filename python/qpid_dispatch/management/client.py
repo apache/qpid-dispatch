@@ -26,11 +26,7 @@ import proton
 from proton import Url
 from .error import *        # import all error symbols for convenience to users.
 from .entity import EntityBase, clean_dict
-try:
-    from proton.utils import SyncRequestResponse, BlockingConnection
-except ImportError:
-    from qpid_dispatch_internal.proton_future.utils import SyncRequestResponse, BlockingConnection
-
+from proton.utils import SyncRequestResponse, BlockingConnection
 
 class Entity(EntityBase):
     """
