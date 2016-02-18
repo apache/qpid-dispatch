@@ -1,0 +1,222 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<div class="qdrTopology row-fluid" ng-controller="QDR.TopologyController">
+    <div class="tertiary left panel">
+        <div id="topologyForm" ng-class="{selected : isSelected()}">
+            <!-- <div ng-repeat="form in forms" ng-show="isVisible(form)" ng-class='{selected : isSelected(form)}'> -->
+
+            <div ng-show="isGeneral()">
+                <h4>Router Info</h4>
+                <div ng-style="getTableHeight(attributes)" ui-grid-auto-resize ui-grid="topoGridOptions"></div>
+            </div>
+            <div ng-show="isConnections()">
+                <h4>Connection Info</h4>
+                <div ng-style="getTableHeight(connAttributes)" ui-grid-auto-resize ui-grid="topoConnOptions"></div>
+            </div>
+            <div id="addNodeForm" ng-show="isAddNode()">
+                <h4>Add a new router</h4>
+                <ul>
+                    <li>Click on an existing router to create a connection to the new router</li>
+                    <li>Double-click on the new router to <button ng-click="editNewRouter()">edit</button> its properties</li>
+                    <li ng-show="addingNode.hasLink" >Right-click on a new connection to edit its properties</li>
+                </ul>
+                <button ng-click="cancel()">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <div class="panel-adjacent">
+
+<!--
+        <ul class="nav nav-tabs ng-scope qdrTopoModes">
+            <li ng-repeat="mode in modes" ng-class="{active : isModeActive(mode.name), 'pull-right' : isRight(mode)}" ng-click="selectMode('{{mode.name}}')" >
+                <a data-placement="bottom" class="ng-binding"> {{mode.name}} </a></li>
+        </ul>
+-->
+        <div id="topology" ng-show="mode == 'Diagram'"><!-- d3 toplogy here --></div>
+        <div id="geology" ng-show="mode == 'Globe'"><!-- d3 globe here --></div>
+        <div id="crosssection"><!-- d3 pack here --></div>
+        <!-- <div id="addRouter" ng-show="mode == 'Add Node'"></div> -->
+        <div id="node_context_menu" class="contextMenu">
+            <ul>
+                <li class="na" ng-class="{new: contextNode.cls == 'temp'}" ng-click="addingNode.trigger = 'editNode'">Edit...</li>
+                <li class="na" ng-class="{adding: addingNode.step > 0}" ng-click="addingNode.step = 0">Cancel add</li>
+                <li class="context-separator"></li>
+                <li class="na" ng-class="{'force-display': !isFixed()}" ng-click="setFixed(true)">Freeze in place</li>
+                <li class="na" ng-class="{'force-display': isFixed()}" ng-click="setFixed(false)">Unfreeze</li>
+            </ul>
+        </div>
+        <div id="svg_context_menu" class="contextMenu">
+            <ul>
+                <li ng-click="addingNode.step = 2">Add a new router</li>
+            </ul>
+        </div>
+        <div id="link_context_menu" class="contextMenu">
+            <ul>
+                <li ng-click="reverseLink()">Reverse connection direction</li>
+                <li ng-click="removeLink()">Remove connection</li>
+            </ul>
+        </div>
+
+    </div>
+</div>
+<!--
+    This is the template for the node edit dialog that is displayed.
+-->
+<script type="text/ng-template" id="node-config-template.html">
+    <div class="modal-header">
+        <h3 class="modal-title">Configure new router</h3>
+    </div>
+    <div class="modal-body">
+        <form novalidate name="editForm">
+        <div class="tabbable tabs-left">
+            <ul class="nav nav-tabs">
+                <li ng-repeat="entity in entities" ng-click="setActive(entity.tabName)" ng-class="{separated: entity.tabName == 'listener0'}">
+                    <a href="#{{entity.tabName}}" data-toggle="tab"><i ng-if="entity.icon !== ''" ng-class="entity.icon ? 'ui-icon-arrowthick-1-w' : 'ui-icon-arrowthick-1-e'" class="ui-icon"></i>{{entity.humanName}}</a>
+                </li>
+            </ul>
+            <div class="tab-content">
+                <div id="{{entity.tabName}}" ng-repeat="entity in entities" ng-show="isActive(entity.tabName)" class="entity-fields">
+                    <div class="entity-description">{{entity.description}}</div>
+                    <fieldset>
+                        <div ng-mouseenter="showDescription(attribute, $event)" ng-repeat="attribute in entity.attributes">
+                            <label for="{{attribute.name}}">{{attribute.humanName}}</label>
+                            <div ng-if="attribute.input == 'input'">
+                                <!-- ng-pattern="testPattern(attribute)" -->
+                                <input type="{{attribute.type}}" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="attribute.required" class="ui-widget-content ui-corner-all">
+                            </div>
+                            <div ng-if="attribute.input == 'select'">
+                                <select id="{{attribute.name}}" ng-model="attribute.selected" ng-options="item for item in attribute.rawtype"></select>
+                            </div>
+                            <div ng-if="attribute.input == 'boolean'" class="boolean">
+                                <label><input type="radio" ng-model="attribute.value" value="true"> True</label>
+                                <label><input type="radio" ng-model="attribute.value" value="false"> False</label>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <div class="attr-description">{{attributeDescription}}
+                        <div class="attr-type">{{attributeType}}</div>
+                        <div class="attr-required">{{attributeRequired}}</div>
+                        <div class="attr-unique">{{attributeUnique}}</div>
+                    </div>
+                    <div class="attr-annotations" ng-repeat="annotation in entity.annotatedBy">
+                        <span>You can also enter the <button ng-click="selectAnnotationTab(annotation)">{{annotation}}</button> values.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="download()">Download</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+
+<!--
+
+
+    <div class="nodeOptions" title="Configure new router">
+        <form novalidate name="editForm">
+        <div id="tabs" class="nodeEntities">
+            <ul class="nodeTabs">
+                <li ng-repeat="entity in entities" ng-class="{separated: entity.tabName == 'listener0'}">
+
+                    <a href="#{{entity.tabName}}"><i ng-if="entity.icon !== ''" ng-class="entity.icon ? 'ui-icon-arrowthick-1-w' : 'ui-icon-arrowthick-1-e'" class="ui-icon"></i>{{entity.humanName}}</a>
+                </li>
+            </ul>
+            <div id="{{entity.tabName}}" ng-repeat="entity in entities" class="entity-fields">
+                <div class="entity-description">{{entity.description}}</div>
+                <fieldset>
+                    <div ng-mouseenter="showDescription(attribute, $event)" ng-repeat="attribute in entity.attributes">
+                        <label for="{{attribute.name}}">{{attribute.humanName}}</label>
+                        <div ng-if="attribute.input == 'input'">
+                            <input type="{{attribute.type}}" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-pattern="testPattern(attribute)" ng-required="attribute.required" class="ui-widget-content ui-corner-all">
+                        </div>
+                        <div ng-if="attribute.input == 'select'">
+                            <select id="{{attribute.name}}" ng-model="attribute.selected" ng-options="item for item in attribute.rawtype"></select>
+                        </div>
+                        <div ng-if="attribute.input == 'boolean'" class="boolean">
+                            <label><input type="radio" ng-model="attribute.value" value="true"> True</label>
+                            <label><input type="radio" ng-model="attribute.value" value="false"> False</label>
+                        </div>
+                    </div>
+                </fieldset>
+                <div class="attr-description">{{attributeDescription}}
+                    <div class="attr-type">{{attributeType}}</div>
+                    <div class="attr-required">{{attributeRequired}}</div>
+                    <div class="attr-unique">{{attributeUnique}}</div>
+                </div>
+                <div class="attr-annotations" ng-repeat="annotation in entity.annotatedBy">
+                    <span>You can also enter the <button ng-click="selectAnnotationTab(annotation)">{{annotation}}</button> values.</span>
+                </div>
+            </div>
+        </div>
+        </form>
+
+        <div class="okButton">
+            <button ng-click="download()">Download</button>
+            <button ng-click="cancel()">Cancel</button>
+        </div>
+    </div>
+    -->
+</script>
+
+<script type="text/ng-template" id="config-file-header.html">##
+## Licensed to the Apache Software Foundation (ASF) under one
+## or more contributor license agreements.  See the NOTICE file
+## distributed with this work for additional information
+## regarding copyright ownership.  The ASF licenses this file
+## to you under the Apache License, Version 2.0 (the
+## "License"); you may not use this file except in compliance
+## with the License.  You may obtain a copy of the License at
+##
+##   http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing,
+## software distributed under the License is distributed on an
+## "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+## KIND, either express or implied.  See the License for the
+## specific language governing permissions and limitations
+## under the License
+##
+</script>
+
+<script type="text/ng-template" id="download-dialog-template.html">
+    <div title="Configure new router">
+
+        <label title="Show descriptions and default values in confile files"><input type="checkbox" ng-model="verbose"> Verbose output</label>
+        <div>
+            <button ng-click="download()">Download</button>
+            <button class="btn" zero-clipboard data-clipboard-text="{{output}}" title="Copy to clipboard">
+                <i class="icon-copy"></i>
+            </button> configuration file for {{newRouterName}}
+        </div>
+        <div ng-repeat="part in parts">
+            <button ng-click="downloadPart(part)">Download</button>
+            <button class="btn" zero-clipboard data-clipboard-text="{{part.output}}" title="Copy to clipboard">
+                <i class="icon-copy"></i>
+            </button> connector section for {{part.name}}
+        </div>
+
+        <div class="okButton">
+            <button ng-click="done()">Done</button>
+        </div>
+
+    </div>
+</script>
+
