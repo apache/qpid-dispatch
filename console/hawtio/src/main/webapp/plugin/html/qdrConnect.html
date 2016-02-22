@@ -1,0 +1,38 @@
+<div class="row-fluid" ng-controller="QDR.SettingsController">
+      <div class="login container" ng-hide="connecting">
+          <div class="row" id="dispatch-login-container">
+              <div class="connect-column">
+                  <div class="alert alert-success">
+                      <p>
+                          Enter the address and port of a <strong><a href="http://qpid.apache.org/components/dispatch-router/" target="_blank">Qpid Dispatch Router</a></strong> to connect..
+                      </p>
+
+                      <p>
+                          The port should be a websockets <==> tcp proxy.
+                      </p>
+
+                      <p>
+                          When Autostart is checked, you will be automatically logged in to the router the next time you start the console.
+                      </p>
+
+                  </div>
+              </div>
+              <div class="connect-column connect-form">
+                  <div simple-form name="settings" data="formConfig" entity="formEntity"></div>
+                  <p></p>
+                  <div>
+                      <button class="btn btn-primary pull-right" ng-disabled="settings.$invalid" ng-click="connect()">{{buttonText()}}</button>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <div class="centered" ng-show="connecting">
+        <i class="icon-spin icon-spinner icon-4x"></i>
+        <p>Please wait, connecting now...</p>
+      </div>
+      <div class="centered" ng-show="connectionError">
+        <p>There was a connection error: {{connectionErrorText}}</p>
+      </div>
+
+</div>

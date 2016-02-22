@@ -1,0 +1,63 @@
+<div class="main-display row-fluid qdrCharts" ng-controller="QDR.ChartsController">
+    <div ng-hide="dashLogin" ng-repeat="chart in svgCharts" class="chartContainer ">
+        <p class="chartLabels">
+            <button ng-click="editChart(chart)" title="Configure"><i class="icon-edit"></i></button>
+            <button ng-click="zoomChart(chart)" title="Zoom {{chart.zoomed ? 'in' : 'out'}}" ng-if="!chart.chart.request().nodeList"><i ng-class="chart.zoomed ? 'icon-zoom-in' : 'icon-zoom-out'"></i></button>
+        </p><div style="clear:both"></div>
+        <div id="{{chart.chart.id()}}" class="hDash aChart d3Chart"></div>
+    </div>
+    <div ng-init="chartsLoaded()"></div>
+    <div ng-show="dashLogin" class="centered alert alert-warning">
+        <p>You need to <a ng-href="{{loginHref}}">login</a> to Dispatch Router before viewing this chart.</p>
+    </div>
+</div>
+
+<!--
+    This is the template for the graph dialog that is displayed. It uses the
+    dialogCtrl controller in qdrCharts.js.
+-->
+<script type="text/ng-template" id="chart-config-template.html">
+<div class="chartOptions">
+    <div class="modal-header">
+        <h3 class="modal-title">Chart {{chart.attr() | humanify}}</h3>
+    </div>
+    <div class="modal-body">
+        <div id="{{svgDivId}}" class="d3Chart"></div>
+        <tabset>
+            <tab heading="Type">
+                <legend>Chart type</legend>
+                <label><input type="radio" ng-model="dialogChart.type" value="value" /> Value Chart</label>
+                <label><input type="radio" ng-model="dialogChart.type" value="rate" /> Rate Chart</label>
+                <div class="dlg-slider" ng-show="dialogChart.type=='rate'">
+                    <span>Rate Window: {{rateWindow}} second{{rateWindow > 1 ? "s" : ""}}</span>
+                    <div class="slider" ui-slider="slider.options" ng-model="rateWindow"></div>
+                </div>
+                <div style="clear:both;"> </div>
+            </tab>
+            <tab ng-hide="$parent.chart.aggregate()" heading="Colors">
+                <legend>Chart colors</legend>
+                <div class="colorPicker">
+                    <div class="colorText">Area ({{dialogChart.areaColor}}):</div><div hawtio-color-picker="dialogChart.areaColor"></div>
+                </div>
+                <div class="colorPicker">
+                    <div class="colorText">Line ({{dialogChart.lineColor}}):</div><div hawtio-color-picker="dialogChart.lineColor"></div>
+                </div>
+                <div style="clear:both;"> </div>
+            </tab>
+            <tab heading="Duration">
+                <legend>Chart duration</legend>
+                <div class="dlg-slider duration">
+                    <span>Show data for past {{dialogChart.visibleDuration}} minute{{dialogChart.visibleDuration > 1 ? "s" : ""}}</span> <div class="slider" ui-slider="duration.options" ng-model="dialogChart.visibleDuration"></div>
+                </div>
+                <div style="clear:both;"> </div>
+
+            </tab>
+        </tabset>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-success" type="button" ng-click="apply()">Apply</button>
+        <button class="btn btn-primary" type="button" ng-click="okClick()">Close</button>
+    </div>
+</div>
+</script>
+
