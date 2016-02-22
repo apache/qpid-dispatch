@@ -187,7 +187,8 @@ static qd_address_semantics_t qdra_semantics(qd_parsed_field_t *field)
 }
 
 
-static qdr_address_t *qdra_configure_address_CT(qdr_core_t *core, qd_parsed_field_t *addr_field, char cls, qd_address_semantics_t semantics)
+static qdr_address_config_t *qdra_configure_address_prefix_CT(qdr_core_t *core, qd_parsed_field_t *addr_field, char cls,
+                                                              qd_address_semantics_t semantics)
 {
     if (!addr_field)
         return 0;
@@ -196,21 +197,31 @@ static qdr_address_t *qdra_configure_address_CT(qdr_core_t *core, qd_parsed_fiel
     qd_address_iterator_override_prefix(iter, cls);
     qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
 
-    qdr_address_t *addr = 0;
+    qdr_address_config_t *addr = 0;
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (addr) {
         // Log error TODO
         return 0;
     }
 
-    addr = qdr_address_CT(core, semantics);
+    addr = new_qdr_address_config_t();
+    DEQ_ITEM_INIT(addr);
+    addr->semantics = semantics;
+
     if (!!addr) {
         qd_field_iterator_reset(iter);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
-        DEQ_INSERT_TAIL(core->addrs, addr);
+        DEQ_INSERT_TAIL(core->addr_config, addr);
     }
 
     return addr;
+}
+
+
+static qdr_address_t *qdra_configure_address_CT(qdr_core_t *core, qd_parsed_field_t *addr_field, char cls,
+                                                qd_address_semantics_t semantics)
+{
+    return 0;
 }
 
 
@@ -271,7 +282,7 @@ void qdra_provisioned_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
 
         switch (prov->object_type) {
         case QDR_PROV_TYPE_ADDRESS:
-            prov->addr = qdra_configure_address_CT(core, addr_field, 'Z', prov->semantics);
+            prov->addr_config = qdra_configure_address_prefix_CT(core, addr_field, 'Z', prov->semantics);
             break;
 
         case QDR_PROV_TYPE_LINK_DEST:

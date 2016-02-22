@@ -527,15 +527,16 @@ static char qdr_prefix_for_dir(qd_direction_t dir)
 
 static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_field_iterator_t *iter)
 {
-    qdr_address_t *addr = 0;
+    qdr_address_config_t *addr = 0;
 
     //
-    // Question: Should we use a new prefix for configuration? (No: allows the possibility of
-    //           static routes; yes: prevents occlusion by mobile addresses with specified semantics)
+    // Set the prefix to 'Z' for configuration and do a prefix-retrieve to get the most
+    // specific match
     //
     qd_address_iterator_override_prefix(iter, 'Z');
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
-    return /* addr ? addr->semantics : */  QD_SEMANTICS_ANYCAST_CLOSEST; // FIXME
+    qd_address_iterator_override_prefix(iter, '\0');
+    return addr ? addr->semantics : QD_SEMANTICS_ANYCAST_CLOSEST;
 }
 
 
