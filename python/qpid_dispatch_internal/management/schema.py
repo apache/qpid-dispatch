@@ -54,6 +54,7 @@ class Type(object):
         """
         self.name, self.pytype = name, pytype
 
+
     def validate(self, value, **kwargs): # pylint: disable=unused-argument
         """
         Convert value to the correct python type.
@@ -155,7 +156,8 @@ BUILTIN_TYPES = OrderedDict(
                           Type("entityId", str),
                           Type("integer", int),
                           Type("list", list),
-                          Type("map", map),
+                          Type("map", dict),
+                          Type("dict", dict),
                           BooleanType()])
 
 def get_type(rep):
@@ -288,7 +290,8 @@ class MessageDef(object):
     """A request or response message"""
     def __init__(self, body=None, properties=None):
         self.body = None
-        if body: self.body = AttributeType("body", **body)
+        if body:
+            self.body = AttributeType("body", **body)
         self.properties = dict((name, AttributeType(name, **value))
                                for name, value in (properties or {}).iteritems())
 
@@ -300,8 +303,10 @@ class OperationDef(object):
             self.name = name
             self.description = description
             self.request = self.response = None
-            if request: self.request = MessageDef(**request)
-            if response: self.response = MessageDef(**response)
+            if request:
+                self.request = MessageDef(**request)
+            if response:
+                self.response = MessageDef(**response)
         except:
             ex, msg, trace = sys.exc_info()
             raise ValidationError, "Operation '%s': %s" % (name, msg), trace

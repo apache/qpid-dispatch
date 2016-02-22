@@ -142,7 +142,8 @@ class Node(object):
         @param properties: Keyword arguments for application-properties of the request.
         @return: L{proton.Message} containining the management request.
         """
-        if self.locales: properties.setdefault(u'locales', self.locales)
+        if self.locales:
+            properties.setdefault(u'locales', self.locales)
         request = proton.Message()
         request.properties = clean_dict(properties)
         request.body = body or {}

@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <Python.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
@@ -87,6 +88,59 @@ static qd_error_t connection_entity_update_host(qd_entity_t* entity, qd_connecti
         return qd_entity_set_string(entity, "host", qdpn_connector_name(conn->pn_cxtr));
 }
 
+static void qd_get_next_pn_data(pn_data_t *data, const char **d)
+{
+    if (pn_data_next(data)) {
+        switch (pn_data_type(data)) {
+            case PN_STRING:
+                *d = pn_data_get_string(data).start;
+                break;
+            case PN_SYMBOL:
+                *d = pn_data_get_symbol(data).start;
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+/**
+ * Obtains the remote connection properties and sets it as a map on the passed in entity.
+ * @param
+ */
+static qd_error_t qd_set_connection_properties(qd_entity_t* entity, qd_connection_t *conn)
+{
+    // Get the connection properties and stick it into the entity as a map
+    pn_data_t *data = pn_connection_remote_properties(conn->pn_conn);
+    const char *props = "properties";
+    if (data) {
+        size_t count = pn_data_get_map(data);
+        pn_data_enter(data);
+
+        // Create a new map.
+        qd_error_t error_t = qd_entity_set_map(entity, props);
+
+        if (error_t != QD_ERROR_NONE)
+            return error_t;
+
+        for (size_t i = 0; i < count/2; i++) {
+            const char *key   = 0;
+            qd_get_next_pn_data(data, &key);
+            const char *value = 0;
+            qd_get_next_pn_data(data, &value);
+
+            // Now we have a key and value
+            error_t = qd_entity_set_map_key_value(entity, props, key, value);
+
+            if (error_t != QD_ERROR_NONE)
+                return error_t;
+        }
+        pn_data_exit(data);
+    }
+
+    return QD_ERROR_NONE;
+}
+
 qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
 {
     qd_connection_t *conn = (qd_connection_t*)impl;
@@ -106,22 +160,24 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
         sasl = pn_sasl(tport);
         user = pn_transport_get_user(tport);
     }
+
     if (sasl)
         mech = pn_sasl_get_mech(sasl);
 
     if (qd_entity_set_bool(entity, "opened", conn->opened) == 0 &&
-        qd_entity_set_string(entity, "container",
-                             conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0) == 0 &&
+        qd_entity_set_string(entity, "container", conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0) == 0 &&
         connection_entity_update_host(entity, conn) == 0 &&
         qd_entity_set_string(entity, "sasl", mech) == 0 &&
         qd_entity_set_string(entity, "role", config->role) == 0 &&
         qd_entity_set_string(entity, "dir", conn->connector ? "out" : "in") == 0 &&
         qd_entity_set_string(entity, "user", user) == 0 &&
+        qd_set_connection_properties(entity, conn) == 0 &&
         qd_entity_set_bool(entity, "isAuthenticated", tport && pn_transport_is_authenticated(tport)) == 0 &&
         qd_entity_set_bool(entity, "isEncrypted", tport && pn_transport_is_encrypted(tport)) == 0 &&
         qd_entity_set_bool(entity, "ssl", ssl != 0) == 0) {
+
         if (ssl) {
-#define SSL_ATTR_SIZE 50
+ #define SSL_ATTR_SIZE 50
             char proto[SSL_ATTR_SIZE];
             char cipher[SSL_ATTR_SIZE];
             pn_ssl_get_protocol_name(ssl, proto, SSL_ATTR_SIZE);
@@ -130,8 +186,10 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
             qd_entity_set_string(entity, "sslCipher", cipher);
             qd_entity_set_long(entity, "sslSsf", pn_ssl_get_ssf(ssl));
         }
+
         return QD_ERROR_NONE;
     }
+
     return qd_error_code();
 }
 
@@ -218,7 +276,8 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn)
     //
     // Create the connection properties map
     //
-    pn_data_put_map(pn_connection_properties(conn));
+    pn_data_t *data = pn_connection_properties(conn);
+    pn_data_put_map(data);
     pn_data_enter(pn_connection_properties(conn));
 
     pn_data_put_symbol(pn_connection_properties(conn), pn_bytes(strlen(product_key), product_key));
