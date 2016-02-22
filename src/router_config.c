@@ -189,9 +189,10 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 
         if (lrpc == 0) {
             sys_mutex_unlock(router->lock);
+            qd_error_t err =  qd_error(QD_ERROR_CONFIG, "Link-route-pattern configured with unknown connector: %s", connector);
             free(prefix);
             free(connector);
-            return qd_error(QD_ERROR_CONFIG, "Link-route-pattern configured with unknown connector: %s", connector);
+            return err;
         }
 
         qd_lrp_t *lrp = qd_lrp_LH(prefix, inbound, outbound, lrpc);
