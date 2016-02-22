@@ -179,10 +179,12 @@ void qdra_provisioned_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 
 static qd_address_semantics_t qdra_semantics(qd_parsed_field_t *field)
 {
-    qd_field_iterator_t *iter = qd_parse_raw(field);
-    if (qd_field_iterator_equal(iter, (unsigned char*) "multi"))       return QD_SEMANTICS_MULTICAST_ONCE;
-    if (qd_field_iterator_equal(iter, (unsigned char*) "anyClosest"))  return QD_SEMANTICS_ANYCAST_CLOSEST;
-    if (qd_field_iterator_equal(iter, (unsigned char*) "anyBalanced")) return QD_SEMANTICS_ANYCAST_BALANCED;
+    if (field) {
+        qd_field_iterator_t *iter = qd_parse_raw(field);
+        if (qd_field_iterator_equal(iter, (unsigned char*) "multi"))       return QD_SEMANTICS_MULTICAST_ONCE;
+        if (qd_field_iterator_equal(iter, (unsigned char*) "anyClosest"))  return QD_SEMANTICS_ANYCAST_CLOSEST;
+        if (qd_field_iterator_equal(iter, (unsigned char*) "anyBalanced")) return QD_SEMANTICS_ANYCAST_BALANCED;
+    }
     return QD_SEMANTICS_ANYCAST_BALANCED;
 }
 
@@ -221,7 +223,29 @@ static qdr_address_config_t *qdra_configure_address_prefix_CT(qdr_core_t *core, 
 static qdr_address_t *qdra_configure_address_CT(qdr_core_t *core, qd_parsed_field_t *addr_field, char cls,
                                                 qd_address_semantics_t semantics)
 {
-    return 0;
+    if (!addr_field)
+        return 0;
+
+    qd_field_iterator_t *iter = qd_parse_raw(addr_field);
+    qd_address_iterator_override_prefix(iter, cls);
+    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+
+    qdr_address_t *addr = 0;
+    qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
+    if (addr) {
+        // Log error TODO
+        return 0;
+    }
+
+    addr = qdr_address_CT(core, semantics);
+
+    if (!!addr) {
+        qd_field_iterator_reset(iter);
+        qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
+        DEQ_INSERT_TAIL(core->addrs, addr);
+    }
+
+    return addr;
 }
 
 
