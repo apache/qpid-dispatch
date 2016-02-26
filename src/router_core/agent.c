@@ -18,7 +18,7 @@
  */
 
 #include <qpid/dispatch/amqp.h>
-#include "agent_provisioned.h"
+#include "agent_route.h"
 #include "agent_address.h"
 #include "agent_waypoint.h"
 #include "agent_link.h"
@@ -173,8 +173,8 @@ qdr_query_t *qdr_manage_query(qdr_core_t              *core,
     qdr_query_t* query = qdr_query(core, context, type, attribute_names, body);
 
     switch (query->entity_type) {
-    case QD_ROUTER_PROVISIONED:
-        qdr_agent_set_columns(query, attribute_names, qdr_provisioned_columns, QDR_PROVISIONED_COLUMN_COUNT);
+    case QD_ROUTER_ROUTE:
+        qdr_agent_set_columns(query, attribute_names, qdr_route_columns, QDR_ROUTE_COLUMN_COUNT);
         break;
 
     case QD_ROUTER_CONNECTION:
@@ -205,7 +205,7 @@ qdr_query_t *qdr_manage_query(qdr_core_t              *core,
 void qdr_query_add_attribute_names(qdr_query_t *query)
 {
     switch (query->entity_type) {
-    case QD_ROUTER_PROVISIONED: qdr_agent_emit_columns(query, qdr_provisioned_columns, QDR_PROVISIONED_COLUMN_COUNT); break;
+    case QD_ROUTER_ROUTE: qdr_agent_emit_columns(query, qdr_route_columns, QDR_ROUTE_COLUMN_COUNT); break;
     case QD_ROUTER_CONNECTION:  break;
     case QD_ROUTER_LINK:        qdr_agent_emit_columns(query, qdr_link_columns, QDR_LINK_COLUMN_COUNT); break;
     case QD_ROUTER_ADDRESS:     qdr_agent_emit_columns(query, qdr_address_columns, QDR_ADDRESS_COLUMN_COUNT); break;
@@ -318,7 +318,7 @@ static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool disc
     qdr_query_t             *query      = action->args.agent.query;
 
     switch (query->entity_type) {
-    case QD_ROUTER_PROVISIONED: break;
+    case QD_ROUTER_ROUTE:       break;
     case QD_ROUTER_CONNECTION:  break;
     case QD_ROUTER_LINK:        break;
     case QD_ROUTER_ADDRESS:     qdra_address_get_CT(core, name, identity, query, qdr_address_columns); break;
@@ -336,7 +336,7 @@ static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool di
     qd_parsed_field_t       *in_body    = action->args.agent.in_body;
 
     switch (query->entity_type) {
-    case QD_ROUTER_PROVISIONED: qdra_provisioned_create_CT(core, name, query, in_body); break;
+    case QD_ROUTER_ROUTE:       qdra_route_create_CT(core, name, query, in_body); break;
     case QD_ROUTER_CONNECTION:  break;
     case QD_ROUTER_LINK:        break;
     case QD_ROUTER_ADDRESS:     break;
@@ -354,7 +354,7 @@ static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool di
     qdr_query_t             *query      = action->args.agent.query;
 
     switch (query->entity_type) {
-    case QD_ROUTER_PROVISIONED: break;
+    case QD_ROUTER_ROUTE:       break;
     case QD_ROUTER_CONNECTION:  break;
     case QD_ROUTER_LINK:        break;
     case QD_ROUTER_ADDRESS:     qdra_address_delete_CT(core, name, identity, query); break;
@@ -374,7 +374,7 @@ static void qdrh_query_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool
 
     if (!discard) {
         switch (query->entity_type) {
-        case QD_ROUTER_PROVISIONED: qdra_provisioned_get_first_CT(core, query, offset); break;
+        case QD_ROUTER_ROUTE:       qdra_route_get_first_CT(core, query, offset); break;
         case QD_ROUTER_CONNECTION:  break;
         case QD_ROUTER_LINK:        qdra_link_get_first_CT(core, query, offset); break;
         case QD_ROUTER_ADDRESS:     qdra_address_get_first_CT(core, query, offset); break;
@@ -392,7 +392,7 @@ static void qdrh_query_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool 
 
     if (!discard) {
         switch (query->entity_type) {
-        case QD_ROUTER_PROVISIONED: qdra_provisioned_get_next_CT(core, query); break;
+        case QD_ROUTER_ROUTE:       qdra_route_get_next_CT(core, query); break;
         case QD_ROUTER_CONNECTION:  break;
         case QD_ROUTER_LINK:        qdra_link_get_next_CT(core, query); break;
         case QD_ROUTER_ADDRESS:     qdra_address_get_next_CT(core, query); break;

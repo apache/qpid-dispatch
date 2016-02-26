@@ -30,50 +30,48 @@
 qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 {
     qd_error_clear();
-    int   phase  = qd_entity_opt_long(entity, "phase", 0); QD_ERROR_RET();
-    qd_schema_fixedAddress_fanout_t fanout = qd_entity_get_long(entity, "fanout"); QD_ERROR_RET();
-    qd_schema_fixedAddress_bias_t bias   = qd_entity_get_long(entity, "bias"); QD_ERROR_RET();
-    char *prefix = qd_entity_get_string(entity, "prefix"); QD_ERROR_RET();
+    int                             phase  = qd_entity_opt_long(entity, "phase", -1); QD_ERROR_RET();
+    qd_schema_fixedAddress_fanout_t fanout = qd_entity_get_long(entity, "fanout");    QD_ERROR_RET();
+    qd_schema_fixedAddress_bias_t   bias   = qd_entity_get_long(entity, "bias");      QD_ERROR_RET();
+    char                           *prefix = qd_entity_get_string(entity, "prefix");  QD_ERROR_RET();
 
-    if (phase < 0 || phase > 9) {
-        qd_error_t err = qd_error(QD_ERROR_CONFIG,
-                                  "Invalid phase %d for prefix '%s' must be between 0 and 9.  Ignoring", phase, prefix);
+    if (phase != -1) {
+        qd_log(router->log_source, QD_LOG_WARNING,
+               "Address phases deprecated: Ignoring address configuration for '%s', phase %d", prefix, phase);
         free(prefix);
-        return err;
+        return qd_error_code();
     }
 
     if (prefix[0] == '/' && prefix[1] == '\0') {
         qd_log(router->log_source, QD_LOG_WARNING, "Ignoring address configuration for '/'");
+        free(prefix);
         return qd_error_code();
     }
 
     //
     // Convert fanout + bias to semantics
     //
-    const char *sem;
+    const char *trt;
 
     if (fanout == QD_SCHEMA_FIXEDADDRESS_FANOUT_MULTIPLE)
-        sem = "multi";
+        trt = "multicast";
     else {
         if (bias == QD_SCHEMA_FIXEDADDRESS_BIAS_CLOSEST)
-            sem = "anyClosest";
+            trt = "closest";
         else
-            sem = "anyBalanced";
+            trt = "balanced";
     }
 
     //
-    // Formulate this configuration as a router.provisioned and create it through the core management API.
+    // Formulate this configuration as a router.route and create it through the core management API.
     //
     qd_composed_field_t *body = qd_compose_subfield(0);
     qd_compose_start_map(body);
-    qd_compose_insert_string(body, "objectType");
-    qd_compose_insert_string(body, "address");
-
     qd_compose_insert_string(body, "address");
     qd_compose_insert_string(body, prefix);
 
-    qd_compose_insert_string(body, "semantics");
-    qd_compose_insert_string(body, sem);
+    qd_compose_insert_string(body, "treatment");
+    qd_compose_insert_string(body, trt);
     qd_compose_end_map(body);
 
     int              length = 0;
@@ -91,7 +89,7 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
     qd_field_iterator_t *iter = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
     qd_parsed_field_t   *in_body = qd_parse(iter);
 
-    qdr_manage_create(router->router_core, 0, QD_ROUTER_PROVISIONED, 0, in_body, 0);
+    qdr_manage_create(router->router_core, 0, QD_ROUTER_ROUTE, 0, in_body, 0);
 
     free(prefix);
     return qd_error_code();
@@ -132,23 +130,28 @@ qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity
 
 qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 {
-    char *prefix    = qd_entity_get_string(entity, "prefix"); QD_ERROR_RET();
+    char *prefix    = qd_entity_get_string(entity, "prefix");    QD_ERROR_RET();
     char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
-    char *direction = qd_entity_get_string(entity, "dir"); QD_ERROR_RET();
+    char *direction = qd_entity_get_string(entity, "dir");       QD_ERROR_RET();
 
     //
-    // Formulate this configuration as a router.provisioned and create it through the core management API.
+    // Formulate this configuration as a router.route and create it through the core management API.
     //
     qd_composed_field_t *body = qd_compose_subfield(0);
     qd_compose_start_map(body);
-    qd_compose_insert_string(body, "objectType");
-    qd_compose_insert_string(body, "linkDestination");
-
     qd_compose_insert_string(body, "address");
     qd_compose_insert_string(body, prefix);
 
-    qd_compose_insert_string(body, "direction");
-    qd_compose_insert_string(body, direction);
+    qd_compose_insert_string(body, "path");
+    if      (strcmp("in", direction) == 0)
+        qd_compose_insert_string(body, "sink");
+    else if (strcmp("out", direction) == 0)
+        qd_compose_insert_string(body, "source");
+    else
+        qd_compose_insert_string(body, "waypoint");
+
+    qd_compose_insert_string(body, "treatment");
+    qd_compose_insert_string(body, "linkBalanced");
     qd_compose_end_map(body);
 
     int              length = 0;
@@ -163,10 +166,10 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
         buf = DEQ_NEXT(buf);
     }
 
-    qd_field_iterator_t *iter = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
+    qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
     qd_parsed_field_t   *in_body = qd_parse(iter);
 
-    qdr_manage_create(router->router_core, 0, QD_ROUTER_PROVISIONED, 0, in_body, 0);
+    qdr_manage_create(router->router_core, 0, QD_ROUTER_ROUTE, 0, in_body, 0);
 
     free(prefix);
     free(connector);

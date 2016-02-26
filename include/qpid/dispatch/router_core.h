@@ -542,7 +542,7 @@ qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
  ******************************************************************************
  */
 typedef enum {
-    QD_ROUTER_PROVISIONED,
+    QD_ROUTER_ROUTE,
     QD_ROUTER_CONNECTION,
     QD_ROUTER_LINK,
     QD_ROUTER_ADDRESS,

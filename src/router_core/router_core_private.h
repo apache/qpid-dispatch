@@ -33,7 +33,7 @@ typedef struct qdr_link_ref_t        qdr_link_ref_t;
 typedef struct qdr_lrp_t             qdr_lrp_t;
 typedef struct qdr_lrp_ref_t         qdr_lrp_ref_t;
 typedef struct qdr_forwarder_t       qdr_forwarder_t;
-typedef struct qdr_provisioned_t     qdr_provisioned_t;
+typedef struct qdr_route_t           qdr_route_t;
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_semantics_t semantics);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
@@ -398,16 +398,16 @@ ALLOC_DECLARE(qdr_connection_t);
 DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);
 
 typedef enum {
-    QDR_PROV_TYPE_ADDRESS,
-    QDR_PROV_TYPE_LINK_DEST,
-    QDR_PROV_TYPE_WAYPOINT
-} qdr_provisioned_type_t;
+    QDR_ROUTE_TYPE_ADDRESS,
+    QDR_ROUTE_TYPE_LINK_DEST,
+    QDR_ROUTE_TYPE_WAYPOINT
+} qdr_route_type_t;
 
-struct qdr_provisioned_t {
-    DEQ_LINKS(qdr_provisioned_t);
+struct qdr_route_t {
+    DEQ_LINKS(qdr_route_t);
     char                   *name;
     uint64_t                identity;
-    qdr_provisioned_type_t  object_type;
+    qdr_route_type_t        object_type;
     qdr_address_config_t   *addr_config;
     qdr_address_t          *addr;
     qdr_address_t          *ingress_addr;
@@ -420,8 +420,8 @@ struct qdr_provisioned_t {
     char                   *connector_label;
 };
 
-ALLOC_DECLARE(qdr_provisioned_t);
-DEQ_DECLARE(qdr_provisioned_t, qdr_provisioned_list_t);
+ALLOC_DECLARE(qdr_route_t);
+DEQ_DECLARE(qdr_route_t, qdr_route_list_t);
 
 
 struct qdr_core_t {
@@ -437,7 +437,7 @@ struct qdr_core_t {
     qdr_general_work_list_t  work_list;
     qd_timer_t              *work_timer;
 
-    qdr_provisioned_list_t provisioned;
+    qdr_route_list_t      routes;
 
     qdr_connection_list_t open_connections;
     qdr_link_list_t       open_links;

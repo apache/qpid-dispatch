@@ -39,7 +39,7 @@ const char *identity_key = "identity";
 const char *operation_type_key = "operation";
 const char *attribute_names_key = "attributeNames";
 
-const unsigned char *provisioned_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.provisioned";
+const unsigned char *route_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.route";
 const unsigned char *waypoint_entity_type = (unsigned char*) "org.apache.qpid.dispatch.waypoint";
 const unsigned char *address_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.address";
 const unsigned char *link_entity_type    = (unsigned char*) "org.apache.qpid.dispatch.router.link";
@@ -358,8 +358,8 @@ static bool qd_can_handle_request(qd_field_iterator_t         *props,
         *entity_type = QD_ROUTER_LINK;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), waypoint_entity_type))
         *entity_type = QD_ROUTER_WAYPOINT;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), provisioned_entity_type))
-        *entity_type = QD_ROUTER_PROVISIONED;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), route_entity_type))
+        *entity_type = QD_ROUTER_ROUTE;
     else
         return false;
 

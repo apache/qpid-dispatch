@@ -253,7 +253,7 @@ org
           address
           link
           node
-          provisioned     (proposed)
+          route           (proposed)
           waypoint        (proposed)
         waypoint          (deprecated)
 
