@@ -828,61 +828,44 @@
             }
         },
 
-        "router.provisioned": {
-            "description": "Provisioned component within the router: Address configuration, waypoint, or link-route destination",
+        "router.route": {
+            "description": "Provisioned route that affects the treatment of message deliveries and link attaches",
             "extends": "configurationEntity",
-            "operations": ["CREATE", "DELETE"],
+            "operations": ["CREATE", "DELETE", "ADD-CONTAINER", "REMOVE-CONTAINER-CLEAN", "REMOVE-CONTAINER-HARD"],
             "attributes": {
-                "objectType": {
-                    "type": ["address", "linkDestination", "waypoint"],
-                    "description": "Type of object being provisioned:  address prefix, link destination, or waypoint",
-                    "create": true,
-                    "default": "address"
-                },
                 "address": {
                     "type": "string",
                     "description": "The address or address prefix for the provisioned object",
-                    "create": true
+                    "create": true,
+                    "required": true
                 },
-                "connector": {
+                "path": {
+                    "type": ["direct", "source", "sink", "waypoint"],
+                    "description": "Type of object being provisioned:  address prefix, link destination, or waypoint",
+                    "create": true,
+                    "default": "direct"
+                },
+                "treatment": {
+                    "type": ["multicast", "closest", "balanced", "linkBalanced"],
+                    "description": "Treatment of traffic associated with the address",
+                    "create": true,
+                    "default": "balanced"
+                },
+                "connectors": {
+                    "type": "list",
+                    "description": "List of labels associated with the connector leading to the target containers",
+                    "create": true,
+                    "required": false
+                },
+                "containers": {
+                    "type": "list",
+                    "description": "List of container-IDs for target containers",
+                    "create": true,
+                    "required": false
+                },
+                "routeAddress": {
                     "type": "string",
-                    "description": "Label associated with the connector leading to the target container",
-                    "create": true,
-                    "required": false
-                },
-                "direction": {
-                    "type": ["in", "out", "both"],
-                    "description": "For link-destinations, which direction of link should be affected",
-                    "create": true,
-                    "default": "both"
-                },
-                "semantics": {
-                    "type": ["multi", "anyClosest", "anyBalanced"],
-                    "description": "Semantics for the address",
-                    "create": true,
-                    "default": "anyBalanced"
-                },
-                "ingressAddress": {
-                    "type": "string",
-                    "description": "If this is a waypoint, use this address on ingress messages",
-                    "create": true,
-                    "required": false
-                },
-                "egressAddress": {
-                    "type": "string",
-                    "description": "If this is a waypoint, use this address on egress sunscriptions",
-                    "create": true,
-                    "required": false
-                },
-                "ingressSemantics": {
-                    "type": ["multi", "anyClosest", "anyBalanced"],
-                    "description": "Semantics for the ingress address.  If not specified, defaults to 'semantics'",
-                    "create": true,
-                    "required": false
-                },
-                "egressSemantics": {
-                    "type": ["multi", "anyClosest", "anyBalanced"],
-                    "description": "Semantics for the egress address.  If not specified, defaults to 'semantics'",
+                    "description": "Alternate address to use for routing links/messages",
                     "create": true,
                     "required": false
                 }
