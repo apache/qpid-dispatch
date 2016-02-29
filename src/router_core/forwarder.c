@@ -92,6 +92,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
 void qdr_forward_on_message(qdr_core_t *core, qdr_general_work_t *work)
 {
     work->on_message(work->on_message_context, work->msg, work->maskbit);
+    qd_message_free(work->msg);
 }
 
 
@@ -322,6 +323,8 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
             }
         }
     }
+
+
 
     return 0;
 }

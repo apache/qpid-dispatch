@@ -28,16 +28,16 @@
 #include "dispatch_private.h"
 #include "alloc.h"
 
-const char *entity_type_key = "entityType";
-const char *type_key = "type";
-const char *count_key = "count";
-const char *offset_key = "offset";
-const char *name_key = "name";
-const char *identity_key = "identity";
+const char *ENTITY = "entityType";
+const char *TYPE = "type";
+const char *COUNT = "count";
+const char *OFFSET = "offset";
+const char *NAME = "name";
+const char *IDENTITY = "identity";
 
 
-const char *operation_type_key = "operation";
-const char *attribute_names_key = "attributeNames";
+const char *OPERATION = "operation";
+const char *ATTRIBUTE_NAMES = "attributeNames";
 
 const unsigned char *provisioned_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.provisioned";
 const unsigned char *waypoint_entity_type = (unsigned char*) "org.apache.qpid.dispatch.waypoint";
@@ -97,7 +97,7 @@ static qd_management_context_t* qd_management_context(qd_message_t              
     ctx->count  = count;
     ctx->field  = field;
     ctx->msg    = msg;
-    ctx->source = source;
+    ctx->source = qd_message_copy(source);
     ctx->query  = query;
     ctx->current_count = 0;
     ctx->core   = core;
@@ -144,7 +144,7 @@ static void qd_set_properties(qd_message_t        *msg,
     qd_compose_insert_null(*fld);
     qd_compose_insert_typed_iterator(*fld, correlation_id);
     qd_compose_end_list(*fld);
-
+    qd_field_iterator_free(correlation_id);
 }
 
 
@@ -193,8 +193,14 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     // ctx->query has also been already freed
     // Just go over this with Ted to see if I freed everything.
 
+    qd_field_iterator_free(reply_to);
+    qd_compose_free(fld);
+
     if (ctx->msg)
         qd_message_free(ctx->msg);
+    if(ctx->source)
+        qd_message_free(ctx->source);
+
     free_qd_management_context_t(ctx);
 }
 
@@ -207,23 +213,28 @@ static void qd_core_agent_query_handler(qdr_core_t                 *core,
                                         int                        *offset)
 {
     //
-    // Add the Body
+    // Add the Body. This body field is freed by qdr_query_free()
     //
     qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 
     // Start a map in the body. Look for the end map in the callback function, qd_manage_response_handler.
     qd_compose_start_map(field);
 
-    qd_compose_insert_string(field, attribute_names_key); //add a "attributeNames" key
+    //add a "attributeNames" key
+    qd_compose_insert_string(field, ATTRIBUTE_NAMES);
 
-    // Call local function that creates and returns a qd_management_context_t containing the values passed in.
+    // Call local function that creates and returns a local qd_management_context_t object containing the values passed in.
     qd_management_context_t *ctx = qd_management_context(qd_message(), msg, field, 0, core, operation_type, (*count));
 
     // Grab the attribute names from the incoming message body. The attribute names will be used later on in the response.
     qd_parsed_field_t *attribute_names_parsed_field = 0;
-    qd_parsed_field_t *body = qd_parse(qd_message_field_iterator(msg, QD_FIELD_BODY));
-    if (body != 0 && qd_parse_is_map(body))
-        attribute_names_parsed_field = qd_parse_value_by_key(body, attribute_names_key);
+
+    qd_field_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+
+    qd_parsed_field_t *body = qd_parse(body_iter);
+    if (body != 0 && qd_parse_is_map(body)) {
+        attribute_names_parsed_field = qd_parse_value_by_key(body, ATTRIBUTE_NAMES);
+    }
 
     // Set the callback function.
     qdr_manage_handler(core, qd_manage_response_handler);
@@ -235,6 +246,9 @@ static void qd_core_agent_query_handler(qdr_core_t                 *core,
     qd_compose_start_list(field); //start the list for results
 
     qdr_query_get_first(ctx->query, (*offset));
+
+    qd_field_iterator_free(body_iter);
+    qd_parse_free(body);
 }
 
 
@@ -278,7 +292,13 @@ static void qd_core_agent_create_handler(qdr_core_t                 *core,
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
     qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
 
-    qdr_manage_create(core, ctx, entity_type, name_iter, qd_parse(qd_message_field_iterator(msg, QD_FIELD_BODY)), out_body);
+    qd_field_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+
+    qd_parsed_field_t *in_body = qd_parse(body_iter);
+
+    qdr_manage_create(core, ctx, entity_type, name_iter, in_body, out_body);
+
+    qd_field_iterator_free(body_iter);
 }
 
 
@@ -311,9 +331,10 @@ static void qd_core_agent_delete_handler(qdr_core_t                 *core,
 
 
 /**
- * Checks the content of the message to see if this can be handled by this agent.
+ * Checks the content of the message to see if this can be handled by the C-management agent. If this agent cannot handle it, it will be
+ * forwarded to the Python agent.
  */
-static bool qd_can_handle_request(qd_field_iterator_t         *props,
+static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
                                   qd_router_entity_type_t     *entity_type,
                                   qd_router_operation_type_t  *operation_type,
                                   qd_field_iterator_t        **identity_iter,
@@ -321,11 +342,9 @@ static bool qd_can_handle_request(qd_field_iterator_t         *props,
                                   int                         *count,
                                   int                         *offset)
 {
-    qd_parsed_field_t *fld = qd_parse(props);
-
     // The must be a property field and that property field should be a AMQP map. This is true for QUERY but I need
     // to check if it true for CREATE, UPDATE and DELETE
-    if (fld == 0 || !qd_parse_is_map(fld))
+    if (properties_fld == 0 || !qd_parse_is_map(properties_fld))
         return false;
 
     //
@@ -334,25 +353,24 @@ static bool qd_can_handle_request(qd_field_iterator_t         *props,
     // 'entityType': 'org.apache.qpid.dispatch.router.link'
     // TODO - Add more entity types here. The above is not a complete list.
 
-    qd_parsed_field_t *parsed_field = qd_parse_value_by_key(fld, identity_key);
+    qd_parsed_field_t *parsed_field = qd_parse_value_by_key(properties_fld, IDENTITY);
     if (parsed_field!=0) {
         *identity_iter = qd_parse_raw(parsed_field);
     }
-    parsed_field = qd_parse_value_by_key(fld, name_key);
+    parsed_field = qd_parse_value_by_key(properties_fld, NAME);
     if (parsed_field!=0) {
         *name_iter = qd_parse_raw(parsed_field);
     }
 
-
-    parsed_field = qd_parse_value_by_key(fld, entity_type_key);
+    parsed_field = qd_parse_value_by_key(properties_fld, ENTITY);
 
     if (parsed_field == 0) { // Sometimes there is no 'entityType' but 'type' might be available.
-        parsed_field = qd_parse_value_by_key(fld, type_key);
+        parsed_field = qd_parse_value_by_key(properties_fld, TYPE);
         if (parsed_field == 0)
             return false;
     }
 
-    if      (qd_field_iterator_equal(qd_parse_raw(parsed_field), address_entity_type))
+    if (qd_field_iterator_equal(qd_parse_raw(parsed_field), address_entity_type))
         *entity_type = QD_ROUTER_ADDRESS;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), link_entity_type))
         *entity_type = QD_ROUTER_LINK;
@@ -364,7 +382,7 @@ static bool qd_can_handle_request(qd_field_iterator_t         *props,
         return false;
 
 
-    parsed_field = qd_parse_value_by_key(fld, operation_type_key);
+    parsed_field = qd_parse_value_by_key(properties_fld, OPERATION);
 
     if (parsed_field == 0)
         return false;
@@ -384,19 +402,17 @@ static bool qd_can_handle_request(qd_field_iterator_t         *props,
         return false;
 
     // Obtain the count and offset.
-    parsed_field = qd_parse_value_by_key(fld, count_key);
+    parsed_field = qd_parse_value_by_key(properties_fld, COUNT);
     if (parsed_field)
         (*count) = qd_parse_as_int(parsed_field);
     else
         (*count) = -1;
 
-    parsed_field = qd_parse_value_by_key(fld, offset_key);
+    parsed_field = qd_parse_value_by_key(properties_fld, OFFSET);
     if (parsed_field)
         (*offset) = qd_parse_as_int(parsed_field);
     else
         (*offset) = 0;
-
-    qd_parse_free(parsed_field);
 
     return true;
 }
@@ -421,7 +437,9 @@ void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unuse
     int32_t count = 0;
     int32_t offset = 0;
 
-    if (qd_can_handle_request(app_properties_iter, &entity_type, &operation_type, &identity_iter, &name_iter, &count, &offset)) {
+    qd_parsed_field_t *properties_fld = qd_parse(app_properties_iter);
+
+    if (qd_can_handle_request(properties_fld, &entity_type, &operation_type, &identity_iter, &name_iter, &count, &offset)) {
         switch (operation_type) {
             case QD_ROUTER_OPERATION_QUERY:
                 qd_core_agent_query_handler(core, entity_type, operation_type, msg, &count, &offset);
@@ -447,8 +465,7 @@ void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unuse
     }
 
     qd_field_iterator_free(app_properties_iter);
-    qd_field_iterator_free(name_iter);
-    qd_field_iterator_free(identity_iter);
+    qd_parse_free(properties_fld);
 
 }
 
