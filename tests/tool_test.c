@@ -32,6 +32,15 @@ typedef struct item_t {
 DEQ_DECLARE(item_t, item_list_t);
 
 
+typedef struct multi_item_t {
+    DEQ_LINKS(struct multi_item_t);
+    DEQ_LINKS_N(second, struct multi_item_t);
+    char letter;
+} multi_item_t;
+
+DEQ_DECLARE(multi_item_t, multi_item_list_t);
+
+
 static char* list_well_formed(item_list_t list, char *key)
 {
     item_t *ptr;
@@ -190,6 +199,52 @@ static char* test_deq_basic2(void *context)
 }
 
 
+static char* test_deq_multi(void *context)
+{
+    multi_item_list_t  list1;
+    multi_item_list_t  list2;
+    multi_item_t       item[10];
+    multi_item_t      *ptr;
+    int                idx;
+
+    DEQ_INIT(list1);
+    DEQ_INIT(list2);
+    if (DEQ_SIZE(list1) != 0) return "Expected zero initial size 1";
+    if (DEQ_SIZE(list2) != 0) return "Expected zero initial size 2";
+
+    for (idx = 0; idx < 10; idx++) {
+        DEQ_ITEM_INIT(&item[idx]);
+        DEQ_ITEM_INIT_N(second, &item[idx]);
+        item[idx].letter = '0' + idx;
+
+        DEQ_INSERT_TAIL(list1, &item[idx]);
+        if ((idx & 1) == 0) // even index
+            DEQ_INSERT_TAIL_N(second, list2, &item[idx]);
+    }
+
+    if (DEQ_SIZE(list1) != 10) return "Expected list 1 size to be 10";
+    if (DEQ_SIZE(list2) != 5)  return "Expected list 2 size to be 5";
+
+    idx = 0;
+    while (DEQ_HEAD(list1)) {
+        ptr = DEQ_HEAD(list1);
+        DEQ_REMOVE_HEAD(list1);
+        if (ptr->letter != '0' + idx) return "Incorrect value in list 1";
+        idx++;
+    }
+
+    idx = 0;
+    while (DEQ_HEAD(list2)) {
+        ptr = DEQ_HEAD(list2);
+        DEQ_REMOVE_HEAD_N(second, list2);
+        if (ptr->letter != '0' + idx) return "Incorrect value in list 2";
+        idx += 2;
+    }
+
+    return 0;
+}
+
+
 static char* test_bitmask(void *context)
 {
     qd_bitmask_t *bm;
@@ -257,6 +312,7 @@ int tool_tests(void)
 
     TEST_CASE(test_deq_basic, 0);
     TEST_CASE(test_deq_basic2, 0);
+    TEST_CASE(test_deq_multi, 0);
     TEST_CASE(test_bitmask, 0);
 
     return result;
