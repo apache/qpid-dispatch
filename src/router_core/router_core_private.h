@@ -35,7 +35,7 @@ typedef struct qdr_lrp_ref_t         qdr_lrp_ref_t;
 typedef struct qdr_forwarder_t       qdr_forwarder_t;
 typedef struct qdr_route_t           qdr_route_t;
 
-qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_semantics_t semantics);
+qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
                            bool exclude_inprocess, bool control, qd_bitmask_t *link_exclusion);
 void qdr_forward_attach_CT(qdr_core_t *core, qdr_forwarder_t *forwarder, qdr_link_t *in_link);
@@ -110,7 +110,7 @@ struct qdr_action_t {
             qdr_field_t            *address;
             char                    address_class;
             char                    address_phase;
-            qd_address_semantics_t  semantics;
+            qd_address_treatment_t  treatment;
             qdr_subscription_t     *subscription;
             qd_message_t           *message;
             bool                    exclude_inprocess;
@@ -287,7 +287,7 @@ struct qdr_address_t {
     qdr_link_ref_list_t      inlinks;       ///< Locally-Connected Producers
     qd_bitmask_t            *rnodes;        ///< Bitmask of remote routers with connected consumers
     qd_hash_handle_t        *hash_handle;   ///< Linkage back to the hash table entry
-    qd_address_semantics_t   semantics;
+    qd_address_treatment_t   treatment;
     qdr_forwarder_t         *forwarder;
     bool                     toggle;
     bool                     waypoint;
@@ -307,8 +307,8 @@ struct qdr_address_t {
 ALLOC_DECLARE(qdr_address_t);
 DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
-qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_semantics_t semantics);
-qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_semantics_t semantics);
+qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment);
+qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_treatment_t treatment);
 
 void qdr_add_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
@@ -316,7 +316,7 @@ void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
 struct qdr_address_config_t {
     DEQ_LINKS(qdr_address_config_t);
     qd_hash_handle_t       *hash_handle;
-    qd_address_semantics_t  semantics;
+    qd_address_treatment_t  treatment;
 };
 
 ALLOC_DECLARE(qdr_address_config_t);
@@ -414,9 +414,9 @@ struct qdr_route_t {
     qdr_address_t          *egress_addr;
     bool                    direction_in;
     bool                    direction_out;
-    qd_address_semantics_t  semantics;
-    qd_address_semantics_t  ingress_semantics;
-    qd_address_semantics_t  egress_semantics;
+    qd_address_treatment_t  treatment;
+    qd_address_treatment_t  ingress_treatment;
+    qd_address_treatment_t  egress_treatment;
     char                   *connector_label;
 };
 
@@ -498,7 +498,7 @@ struct qdr_core_t {
     uint64_t              next_identifier;
     sys_mutex_t          *id_lock;
 
-    qdr_forwarder_t      *forwarders[QD_SEMANTICS_LINK_BALANCED + 1];
+    qdr_forwarder_t      *forwarders[QD_TREATMENT_LINK_BALANCED + 1];
 };
 
 typedef enum {

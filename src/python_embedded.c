@@ -527,8 +527,8 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     PyObject *addr;
     char aclass    = 'L';
     char phase     = '0';
-    int  semantics = QD_SEMANTICS_ANYCAST_BALANCED;
-    if (!PyArg_ParseTuple(args, "OO|cci", &self->handler, &addr, &aclass, &phase, &semantics))
+    int  treatment = QD_TREATMENT_ANYCAST_BALANCED;
+    if (!PyArg_ParseTuple(args, "OO|cci", &self->handler, &addr, &aclass, &phase, &treatment))
         return -1;
     if (!PyCallable_Check(self->handler)) {
         PyErr_SetString(PyExc_TypeError, "IoAdapter.__init__ handler is not callable");
@@ -540,7 +540,7 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     const char *address = PyString_AsString(addr);
     if (!address) return -1;
     qd_error_clear();
-    self->sub = qdr_core_subscribe(self->core, address, aclass, phase, semantics, qd_io_rx_handler, self);
+    self->sub = qdr_core_subscribe(self->core, address, aclass, phase, treatment, qd_io_rx_handler, self);
     if (qd_error_code()) {
         PyErr_SetString(PyExc_RuntimeError, qd_error_message());
         return -1;
@@ -732,10 +732,10 @@ static void qd_python_setup(void)
         Py_INCREF(ioaType);
         PyModule_AddObject(m, "IoAdapter", (PyObject*) &IoAdapterType);
 
-        qd_register_constant(m, "SEMANTICS_MULTICAST_FLOOD",  QD_SEMANTICS_MULTICAST_FLOOD);
-        qd_register_constant(m, "SEMANTICS_MULTICAST_ONCE",   QD_SEMANTICS_MULTICAST_ONCE);
-        qd_register_constant(m, "SEMANTICS_ANYCAST_CLOSEST",  QD_SEMANTICS_ANYCAST_CLOSEST);
-        qd_register_constant(m, "SEMANTICS_ANYCAST_BALANCED", QD_SEMANTICS_ANYCAST_BALANCED);
+        qd_register_constant(m, "TREATMENT_MULTICAST_FLOOD",  QD_TREATMENT_MULTICAST_FLOOD);
+        qd_register_constant(m, "TREATMENT_MULTICAST_ONCE",   QD_TREATMENT_MULTICAST_ONCE);
+        qd_register_constant(m, "TREATMENT_ANYCAST_CLOSEST",  QD_TREATMENT_ANYCAST_CLOSEST);
+        qd_register_constant(m, "TREATMENT_ANYCAST_BALANCED", QD_TREATMENT_ANYCAST_BALANCED);
 
         Py_INCREF(m);
         dispatch_module = m;

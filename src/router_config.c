@@ -49,7 +49,7 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
     }
 
     //
-    // Convert fanout + bias to semantics
+    // Convert fanout + bias to treatment
     //
     const char *trt;
 

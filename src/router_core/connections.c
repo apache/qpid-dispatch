@@ -525,7 +525,7 @@ static char qdr_prefix_for_dir(qd_direction_t dir)
 }
 
 
-static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_field_iterator_t *iter)
+static qd_address_treatment_t qdr_treatment_for_address(qdr_core_t *core, qd_field_iterator_t *iter)
 {
     qdr_address_config_t *addr = 0;
 
@@ -536,7 +536,7 @@ static qd_address_semantics_t qdr_semantics_for_address(qdr_core_t *core, qd_fie
     qd_address_iterator_override_prefix(iter, 'Z');
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
     qd_address_iterator_override_prefix(iter, '\0');
-    return addr ? addr->semantics : QD_SEMANTICS_ANYCAST_CLOSEST;
+    return addr ? addr->treatment : QD_TREATMENT_ANYCAST_CLOSEST;
 }
 
 
@@ -639,7 +639,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
             qd_field_iterator_t *temp_iter = qd_address_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
             qd_hash_retrieve(core->addr_hash, temp_iter, (void**) &addr);
             if (!addr) {
-                addr = qdr_address_CT(core, QD_SEMANTICS_ANYCAST_CLOSEST);
+                addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_CLOSEST);
                 qd_hash_insert(core->addr_hash, temp_iter, addr, &addr->hash_handle);
                 DEQ_INSERT_TAIL(core->addrs, addr);
                 qdr_terminus_set_address(terminus, temp_addr);
@@ -675,7 +675,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
     qd_address_iterator_override_prefix(iter, '\0'); // Cancel previous override
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr && create_if_not_found) {
-        qd_address_semantics_t sem = qdr_semantics_for_address(core, iter);
+        qd_address_treatment_t sem = qdr_treatment_for_address(core, iter);
         addr = qdr_address_CT(core, sem);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(core->addrs, addr);

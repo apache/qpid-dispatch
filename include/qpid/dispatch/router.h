@@ -37,12 +37,12 @@ typedef struct qd_address_t qd_address_t;
 typedef struct qd_router_delivery_t qd_router_delivery_t;
 
 typedef enum {
-    QD_SEMANTICS_MULTICAST_FLOOD  = 0,
-    QD_SEMANTICS_MULTICAST_ONCE   = 1,
-    QD_SEMANTICS_ANYCAST_CLOSEST  = 2,
-    QD_SEMANTICS_ANYCAST_BALANCED = 3,
-    QD_SEMANTICS_LINK_BALANCED    = 4
-} qd_address_semantics_t;
+    QD_TREATMENT_MULTICAST_FLOOD  = 0,
+    QD_TREATMENT_MULTICAST_ONCE   = 1,
+    QD_TREATMENT_ANYCAST_CLOSEST  = 2,
+    QD_TREATMENT_ANYCAST_BALANCED = 3,
+    QD_TREATMENT_LINK_BALANCED    = 4
+} qd_address_treatment_t;
 
 #include <qpid/dispatch/router_core.h>
 
@@ -96,17 +96,17 @@ qdr_core_t *qd_router_core(qd_dispatch_t *qd);
  * @param on_message Optional callback to be called when a message is received
  * for the address.
  * @param context Context to be passed to the on_message handler.
- * @param semantics Semantics for the address.
+ * @param treatment Treatment for the address.
  * @param global True if the address is global.
  * @param forwarder Optional custom forwarder to use when a message is received
- * for the address.  If null, a default forwarder based on the semantics will
+ * for the address.  If null, a default forwarder based on the treatment will
  * be used.
  */
 qd_address_t *qd_router_register_address(qd_dispatch_t          *qd,
                                          const char             *address,
                                          qd_router_message_cb_t  on_message,
                                          void                   *context,
-                                         qd_address_semantics_t  semantics,
+                                         qd_address_treatment_t  treatment,
                                          bool                    global,
                                          qd_router_forwarder_t  *forwarder);
 
@@ -134,7 +134,7 @@ void qd_router_build_node_list(qd_dispatch_t *qd, qd_composed_field_t *field);
 const char* qd_address_logstr(qd_address_t* address);
 
 /** Retrieve the proper forwarder for a given semantic */
-qd_router_forwarder_t *qd_router_get_forwarder(qd_address_semantics_t s);
+qd_router_forwarder_t *qd_router_get_forwarder(qd_address_treatment_t t);
 
 ///@}
 

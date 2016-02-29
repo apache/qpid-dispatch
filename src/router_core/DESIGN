@@ -179,10 +179,10 @@ Core APIs
 
 
 ====================
-Forwarding Semantics
+Forwarding Treatment
 ====================
 
-  Transition from fanout/bias to a one-dimensional list of semantics:
+  Transition from fanout/bias to a one-dimensional list of treatment:
 
     MULTICAST_FLOOD
 

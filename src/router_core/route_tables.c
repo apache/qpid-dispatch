@@ -131,7 +131,7 @@ qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
                                        const char             *address,
                                        char                    aclass,
                                        char                    phase,
-                                       qd_address_semantics_t  semantics,
+                                       qd_address_treatment_t  treatment,
                                        qdr_receive_t           on_message,
                                        void                   *context)
 {
@@ -146,7 +146,7 @@ qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
     action->args.io.address_class = aclass;
     action->args.io.address_phase = phase;
     action->args.io.subscription  = sub;
-    action->args.io.semantics     = semantics;
+    action->args.io.treatment     = treatment;
     qdr_action_enqueue(core, action);
 
     return sub;
@@ -174,11 +174,11 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
     core->addr_hash = qd_hash(10, 32, 0);
 
     if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
-        core->hello_addr      = qdr_add_local_address_CT(core, 'L', "qdhello",     QD_SEMANTICS_MULTICAST_FLOOD);
-        core->router_addr_L   = qdr_add_local_address_CT(core, 'L', "qdrouter",    QD_SEMANTICS_MULTICAST_FLOOD);
-        core->routerma_addr_L = qdr_add_local_address_CT(core, 'L', "qdrouter.ma", QD_SEMANTICS_MULTICAST_ONCE);
-        core->router_addr_T   = qdr_add_local_address_CT(core, 'T', "qdrouter",    QD_SEMANTICS_MULTICAST_FLOOD);
-        core->routerma_addr_T = qdr_add_local_address_CT(core, 'T', "qdrouter.ma", QD_SEMANTICS_MULTICAST_ONCE);
+        core->hello_addr      = qdr_add_local_address_CT(core, 'L', "qdhello",     QD_TREATMENT_MULTICAST_FLOOD);
+        core->router_addr_L   = qdr_add_local_address_CT(core, 'L', "qdrouter",    QD_TREATMENT_MULTICAST_FLOOD);
+        core->routerma_addr_L = qdr_add_local_address_CT(core, 'L', "qdrouter.ma", QD_TREATMENT_MULTICAST_ONCE);
+        core->router_addr_T   = qdr_add_local_address_CT(core, 'T', "qdrouter",    QD_TREATMENT_MULTICAST_FLOOD);
+        core->routerma_addr_T = qdr_add_local_address_CT(core, 'T', "qdrouter.ma", QD_TREATMENT_MULTICAST_ONCE);
 
         core->neighbor_free_mask = qd_bitmask(1);
 
@@ -235,7 +235,7 @@ static void qdr_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
         // This record will be found whenever a "foreign" topological address to this
         // remote router is looked up.
         //
-        addr = qdr_address_CT(core, QD_SEMANTICS_ANYCAST_CLOSEST);
+        addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_CLOSEST);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(core->addrs, addr);
 
@@ -500,7 +500,7 @@ static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool 
 
         qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
         if (!addr) {
-            addr = qdr_address_CT(core, 0); // FIXME - Semantics
+            addr = qdr_address_CT(core, 0); // FIXME - Treatment
             qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_ITEM_INIT(addr);
             DEQ_INSERT_TAIL(core->addrs, addr);
@@ -586,7 +586,7 @@ static void qdr_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discar
 
         qd_hash_retrieve(core->addr_hash, address->iterator, (void**) &addr);
         if (!addr) {
-            addr = qdr_address_CT(core, action->args.io.semantics);
+            addr = qdr_address_CT(core, action->args.io.treatment);
             qd_hash_insert(core->addr_hash, address->iterator, addr, &addr->hash_handle);
             DEQ_ITEM_INIT(addr);
             DEQ_INSERT_TAIL(core->addrs, addr);

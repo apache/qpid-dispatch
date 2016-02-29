@@ -94,7 +94,7 @@ qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
                                        const char             *address,
                                        char                    aclass,
                                        char                    phase,
-                                       qd_address_semantics_t  semantics,
+                                       qd_address_treatment_t  treatment,
                                        qdr_receive_t           on_message,
                                        void                   *context);
 

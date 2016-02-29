@@ -27,11 +27,11 @@
 #define QDR_ROUTE_ADDRESS            4
 #define QDR_ROUTE_CONNECTOR          5
 #define QDR_ROUTE_DIRECTION          6
-#define QDR_ROUTE_SEMANTICS          7
+#define QDR_ROUTE_TREATMENT          7
 #define QDR_ROUTE_INGRESS_ADDRESS    8
 #define QDR_ROUTE_EGRESS_ADDRESS     9
-#define QDR_ROUTE_INGRESS_SEMANTICS  10
-#define QDR_ROUTE_EGRESS_SEMANTICS   11
+#define QDR_ROUTE_INGRESS_TREATMENT  10
+#define QDR_ROUTE_EGRESS_TREATMENT   11
 
 const char *qdr_route_columns[] =
     {"name",
@@ -41,11 +41,11 @@ const char *qdr_route_columns[] =
      "address",
      "connector",
      "direction",
-     "semantics",
+     "treatment",
      "ingressAddress",
      "egressAddress",
-     "ingressSemantics",
-     "egressSemantics",
+     "ingressTreatment",
+     "egressTreatment",
      0};
 
 
@@ -72,11 +72,11 @@ static void qdr_route_insert_column_CT(qdr_route_t *route, int col, qd_composed_
     case QDR_ROUTE_ADDRESS:
     case QDR_ROUTE_CONNECTOR:
     case QDR_ROUTE_DIRECTION:
-    case QDR_ROUTE_SEMANTICS:
+    case QDR_ROUTE_TREATMENT:
     case QDR_ROUTE_INGRESS_ADDRESS:
     case QDR_ROUTE_EGRESS_ADDRESS:
-    case QDR_ROUTE_INGRESS_SEMANTICS:
-    case QDR_ROUTE_EGRESS_SEMANTICS:
+    case QDR_ROUTE_INGRESS_TREATMENT:
+    case QDR_ROUTE_EGRESS_TREATMENT:
     default:
         qd_compose_insert_null(body);
         break;
@@ -177,20 +177,20 @@ void qdra_route_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 }
 
 
-static qd_address_semantics_t qdra_semantics(qd_parsed_field_t *field)
+static qd_address_treatment_t qdra_treatment(qd_parsed_field_t *field)
 {
     if (field) {
         qd_field_iterator_t *iter = qd_parse_raw(field);
-        if (qd_field_iterator_equal(iter, (unsigned char*) "multi"))       return QD_SEMANTICS_MULTICAST_ONCE;
-        if (qd_field_iterator_equal(iter, (unsigned char*) "anyClosest"))  return QD_SEMANTICS_ANYCAST_CLOSEST;
-        if (qd_field_iterator_equal(iter, (unsigned char*) "anyBalanced")) return QD_SEMANTICS_ANYCAST_BALANCED;
+        if (qd_field_iterator_equal(iter, (unsigned char*) "multi"))       return QD_TREATMENT_MULTICAST_ONCE;
+        if (qd_field_iterator_equal(iter, (unsigned char*) "anyClosest"))  return QD_TREATMENT_ANYCAST_CLOSEST;
+        if (qd_field_iterator_equal(iter, (unsigned char*) "anyBalanced")) return QD_TREATMENT_ANYCAST_BALANCED;
     }
-    return QD_SEMANTICS_ANYCAST_BALANCED;
+    return QD_TREATMENT_ANYCAST_BALANCED;
 }
 
 
 static qdr_address_config_t *qdra_configure_address_prefix_CT(qdr_core_t *core, qd_parsed_field_t *addr_field, char cls,
-                                                              qd_address_semantics_t semantics)
+                                                              qd_address_treatment_t treatment)
 {
     if (!addr_field)
         return 0;
@@ -208,7 +208,7 @@ static qdr_address_config_t *qdra_configure_address_prefix_CT(qdr_core_t *core, 
 
     addr = new_qdr_address_config_t();
     DEQ_ITEM_INIT(addr);
-    addr->semantics = semantics;
+    addr->treatment = treatment;
 
     if (!!addr) {
         qd_field_iterator_reset(iter);
@@ -221,7 +221,7 @@ static qdr_address_config_t *qdra_configure_address_prefix_CT(qdr_core_t *core, 
 
 
 static qdr_address_t *qdra_configure_address_CT(qdr_core_t *core, qd_parsed_field_t *addr_field, char cls,
-                                                qd_address_semantics_t semantics)
+                                                qd_address_treatment_t treatment)
 {
     if (!addr_field)
         return 0;
@@ -237,7 +237,7 @@ static qdr_address_t *qdra_configure_address_CT(qdr_core_t *core, qd_parsed_fiel
         return 0;
     }
 
-    addr = qdr_address_CT(core, semantics);
+    addr = qdr_address_CT(core, treatment);
 
     if (!!addr) {
         qd_field_iterator_reset(iter);
@@ -259,11 +259,11 @@ void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
         qd_parsed_field_t *addr_field     = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_ADDRESS]);
         qd_parsed_field_t *conn_field     = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_CONNECTOR]);
         qd_parsed_field_t *dir_field      = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_DIRECTION]);
-        qd_parsed_field_t *sem_field      = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_SEMANTICS]);
+        qd_parsed_field_t *sem_field      = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_TREATMENT]);
         //qd_parsed_field_t *in_addr_field  = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_INGRESS_ADDRESS]);
         //qd_parsed_field_t *out_addr_field = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_EGRESS_ADDRESS]);
-        //qd_parsed_field_t *in_sem_field   = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_INGRESS_SEMANTICS]);
-        //qd_parsed_field_t *out_sem_field  = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_EGRESS_SEMANTICS]);
+        //qd_parsed_field_t *in_sem_field   = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_INGRESS_TREATMENT]);
+        //qd_parsed_field_t *out_sem_field  = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_EGRESS_TREATMENT]);
 
         bool still_good = true;
         qdr_route_t *route = new_qdr_route_t();
@@ -287,7 +287,7 @@ void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
                 still_good = false;
         }
 
-        route->semantics = qdra_semantics(sem_field);
+        route->treatment = qdra_treatment(sem_field);
 
         route->direction_in  = true;
         route->direction_out = true;
@@ -306,14 +306,14 @@ void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
 
         switch (route->object_type) {
         case QDR_ROUTE_TYPE_ADDRESS:
-            route->addr_config = qdra_configure_address_prefix_CT(core, addr_field, 'Z', route->semantics);
+            route->addr_config = qdra_configure_address_prefix_CT(core, addr_field, 'Z', route->treatment);
             break;
 
         case QDR_ROUTE_TYPE_LINK_DEST:
             if (route->direction_in)
-                route->ingress_addr = qdra_configure_address_CT(core, addr_field, 'C', route->semantics);
+                route->ingress_addr = qdra_configure_address_CT(core, addr_field, 'C', route->treatment);
             if (route->direction_out)
-                route->egress_addr  = qdra_configure_address_CT(core, addr_field, 'D', route->semantics);
+                route->egress_addr  = qdra_configure_address_CT(core, addr_field, 'D', route->treatment);
             break;
 
         case QDR_ROUTE_TYPE_WAYPOINT:

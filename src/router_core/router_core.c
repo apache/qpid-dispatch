@@ -76,10 +76,10 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     // Perform outside-of-thread setup for the management agent
     //
     core->agent_subscription_mobile = qdr_core_subscribe(core, "$management", 'M', '0',
-                                                         QD_SEMANTICS_ANYCAST_CLOSEST,
+                                                         QD_TREATMENT_ANYCAST_CLOSEST,
                                                          qdr_management_agent_on_message, core);
     core->agent_subscription_local = qdr_core_subscribe(core, "$management", 'L', '0',
-                                                        QD_SEMANTICS_ANYCAST_CLOSEST,
+                                                        QD_TREATMENT_ANYCAST_CLOSEST,
                                                         qdr_management_agent_on_message, core);
 
     return core;
@@ -206,18 +206,18 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 }
 
 
-qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_semantics_t semantics)
+qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment)
 {
     qdr_address_t *addr = new_qdr_address_t();
     ZERO(addr);
-    addr->semantics = semantics;
-    addr->forwarder = qdr_forwarder_CT(core, semantics);
+    addr->treatment = treatment;
+    addr->forwarder = qdr_forwarder_CT(core, treatment);
     addr->rnodes    = qd_bitmask(0);
     return addr;
 }
 
 
-qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *address, qd_address_semantics_t semantics)
+qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *address, qd_address_treatment_t treatment)
 {
     char                 addr_string[1000];
     qdr_address_t       *addr = 0;
@@ -228,7 +228,7 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
 
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr) {
-        addr = qdr_address_CT(core, semantics);
+        addr = qdr_address_CT(core, treatment);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(core->addrs, addr);
