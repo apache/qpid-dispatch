@@ -292,7 +292,13 @@ static void qd_core_agent_create_handler(qdr_core_t                 *core,
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
     qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
 
-    qdr_manage_create(core, ctx, entity_type, name_iter, qd_parse(qd_message_field_iterator(msg, QD_FIELD_BODY)), out_body);
+    qd_field_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+
+    qd_parsed_field_t *in_body = qd_parse(body_iter);
+
+    qdr_manage_create(core, ctx, entity_type, name_iter, in_body, out_body);
+
+    qd_field_iterator_free(body_iter);
 }
 
 

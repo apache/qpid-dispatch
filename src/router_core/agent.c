@@ -115,7 +115,8 @@ void qdr_manage_create(qdr_core_t              *core,
 }
 
 
-void qdr_manage_delete(qdr_core_t *core, void  *context,
+void qdr_manage_delete(qdr_core_t *core,
+                       void  *context,
                        qd_router_entity_type_t  type,
                        qd_field_iterator_t     *name,
                        qd_field_iterator_t     *identity)
@@ -131,7 +132,8 @@ void qdr_manage_delete(qdr_core_t *core, void  *context,
 }
 
 
-void qdr_manage_read(qdr_core_t *core, void  *context,
+void qdr_manage_read(qdr_core_t *core,
+                     void  *context,
                      qd_router_entity_type_t  entity_type,
                      qd_field_iterator_t     *name,
                      qd_field_iterator_t     *identity,
@@ -344,14 +346,16 @@ static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool di
     qd_parsed_field_t       *in_body    = action->args.agent.in_body;
 
     switch (query->entity_type) {
-    case QD_ROUTER_PROVISIONED: qdra_provisioned_create_CT(core, name, query, in_body); break;
-    case QD_ROUTER_CONNECTION:  break;
-    case QD_ROUTER_LINK:        break;
-    case QD_ROUTER_ADDRESS:     break;
-    case QD_ROUTER_WAYPOINT:    qdra_waypoint_create_CT(core, name, query, in_body); break;
-    case QD_ROUTER_EXCHANGE:    break;
-    case QD_ROUTER_BINDING:     break;
+        case QD_ROUTER_PROVISIONED: qdra_provisioned_create_CT(core, name, query, in_body); break;
+        case QD_ROUTER_CONNECTION:  break;
+        case QD_ROUTER_LINK:        break;
+        case QD_ROUTER_ADDRESS:     break;
+        case QD_ROUTER_WAYPOINT:    qdra_waypoint_create_CT(core, name, query, in_body); break;
+        case QD_ROUTER_EXCHANGE:    break;
+        case QD_ROUTER_BINDING:     break;
    }
+
+   qd_parse_free(in_body);
 }
 
 
