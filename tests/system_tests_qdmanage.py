@@ -156,6 +156,21 @@ class QdmanageTest(TestCase):
         self.assertEquals(['AGENT', 'trace'], log[0:2])
         self.assertRegexpMatches(log[2], 'get-log')
 
+    def test_update(self):
+        exception = False
+        try:
+            # Try to not set output
+            json.loads(self.run_qdmanage("UPDATE --type org.apache.qpid.dispatch.log --name log/DEFAULT output="))[0]
+        except Exception as e:
+            exception = True
+            self.assertTrue("InternalServerErrorStatus" in e.message)
+        self.assertTrue(exception)
+
+        output = json.loads(self.run_qdmanage("UPDATE --type org.apache.qpid.dispatch.log --name log/DEFAULT "
+                                              "enable=trace+ output=A.log"))
+        self.assertEqual("A.log", output['output'])
+        self.assertEqual("trace+", output['enable'])
+
     def test_ssl(self):
         """Simple test for SSL connection. Note system_tests_qdstat has a more complete SSL test"""
         url = Url(self.router.addresses[1], scheme="amqps")
