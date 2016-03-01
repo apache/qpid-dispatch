@@ -59,9 +59,9 @@ class QdSchema(schema.Schema):
         super(QdSchema, self).validate_all(entities, **kwargs)
         inter_router = not_interior = None
         for e in entities:
-            if self.short_name(e.type) == "router" and e.mode != "interior":
+            if self.short_name(e.type) == "router" and e['mode'] != "interior":
                 not_interior = e.mode
-            if self.short_name(e.type) in ["listener", "connector"] and e.role == "inter-router":
+            if self.short_name(e.type) in ["listener", "connector"] and e['role'] == "inter-router":
                 inter_router = e
             if not_interior and inter_router:
                 raise schema.ValidationError(
