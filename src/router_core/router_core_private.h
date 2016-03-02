@@ -84,6 +84,7 @@ struct qdr_action_t {
         struct {
             qdr_connection_t *conn;
             const char       *label;
+            qdr_field_t      *container_id;
             qdr_link_t       *link;
             qdr_delivery_t   *delivery;
             qd_message_t     *msg;

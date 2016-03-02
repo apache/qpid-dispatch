@@ -159,6 +159,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   incoming,
                                         qdr_connection_role_t  role,
                                         const char            *label,
+                                        const char            *remote_container_id,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out);
 

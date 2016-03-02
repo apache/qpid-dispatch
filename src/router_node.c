@@ -446,10 +446,13 @@ static void router_opened_handler(qd_router_t *router, qd_connection_t *conn, bo
     bool                   strip_annotations_in;
     bool                   strip_annotations_out;
     const char            *label;
+    pn_connection_t       *pn_conn = qd_connection_pn(conn);
 
-    qd_router_connection_get_config(conn, &role, &label, &strip_annotations_in, &strip_annotations_out);
+    qd_router_connection_get_config(conn, &role, &label,
+                                    &strip_annotations_in, &strip_annotations_out);
 
     qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, label,
+                                                   pn_connection_remote_container(pn_conn),
                                                    strip_annotations_in, strip_annotations_out);
 
     qd_connection_set_context(conn, qdrc);

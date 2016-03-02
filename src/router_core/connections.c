@@ -65,6 +65,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   incoming,
                                         qdr_connection_role_t  role,
                                         const char            *label,
+                                        const char            *remote_container_id,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out)
 {
@@ -83,8 +84,9 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     DEQ_INIT(conn->work_list);
     conn->work_lock = sys_mutex();
 
-    action->args.connection.conn  = conn;
-    action->args.connection.label = label;
+    action->args.connection.conn         = conn;
+    action->args.connection.label        = label;
+    action->args.connection.container_id = qdr_field(remote_container_id);
     qdr_action_enqueue(core, action);
 
     return conn;
@@ -687,49 +689,50 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    if (discard)
-        return;
+    if (!discard) {
+        qdr_connection_t *conn = action->args.connection.conn;
+        DEQ_ITEM_INIT(conn);
+        DEQ_INSERT_TAIL(core->open_connections, conn);
 
-    qdr_connection_t *conn = action->args.connection.conn;
-    DEQ_ITEM_INIT(conn);
-    DEQ_INSERT_TAIL(core->open_connections, conn);
-
-    if (conn->role == QDR_ROLE_NORMAL) {
-        //
-        // No action needed for NORMAL connections
-        //
-        return;
-    }
-
-    if (conn->role == QDR_ROLE_INTER_ROUTER) {
-        //
-        // Assign a unique mask-bit to this connection as a reference to be used by
-        // the router module
-        //
-        if (qd_bitmask_first_set(core->neighbor_free_mask, &conn->mask_bit))
-            qd_bitmask_clear_bit(core->neighbor_free_mask, conn->mask_bit);
-        else {
-            qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
+        if (conn->role == QDR_ROLE_NORMAL) {
+            //
+            // No action needed for NORMAL connections
+            //
             return;
         }
 
-        if (!conn->incoming) {
+        if (conn->role == QDR_ROLE_INTER_ROUTER) {
             //
-            // The connector-side of inter-router connections is responsible for setting up the
-            // inter-router links:  Two (in and out) for control, two for routed-message transfer.
+            // Assign a unique mask-bit to this connection as a reference to be used by
+            // the router module
             //
-            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control());
-            (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control());
-            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data());
-            (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data());
+            if (qd_bitmask_first_set(core->neighbor_free_mask, &conn->mask_bit))
+                qd_bitmask_clear_bit(core->neighbor_free_mask, conn->mask_bit);
+            else {
+                qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
+                return;
+            }
+
+            if (!conn->incoming) {
+                //
+                // The connector-side of inter-router connections is responsible for setting up the
+                // inter-router links:  Two (in and out) for control, two for routed-message transfer.
+                //
+                (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control());
+                (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control());
+                (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data());
+                (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data());
+            }
         }
+
+        //
+        // If the role is ON_DEMAND:
+        //    Activate waypoints associated with this connection
+        //    Activate link-route destinations associated with this connection
+        //
     }
 
-    //
-    // If the role is ON_DEMAND:
-    //    Activate waypoints associated with this connection
-    //    Activate link-route destinations associated with this connection
-    //
+    qdr_field_free(action->args.connection.container_id);
 }
 
 
