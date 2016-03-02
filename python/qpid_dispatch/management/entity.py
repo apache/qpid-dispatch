@@ -55,7 +55,11 @@ class EntityBase(object):
         for k, v in kwargs.iteritems():
             self._set(k, v)
 
-    def __getitem__(self, name): return self.attributes[name]
+    def __getitem__(self, name):
+        return self.attributes[name]
+
+    def __getattr__(self, name):
+        return self.__getitem__(name)
 
     @staticmethod
     def _pyname(name): return name.replace('-', '_')
@@ -66,18 +70,21 @@ class EntityBase(object):
 
     # Subclasses should override __setitem__ to do extra actions on set,
     # e.g. validation.
-    def __setitem__(self, name, value): self._set(name, value)
+    def __setitem__(self, name, value):
+        self._set(name, value)
 
     def __delitem__(self, name):
         del self.attributes[name]
         del self.__dict__[self._pyname(name)]
 
-    def __setattr__(self, name, value): self.__setitem__(name, value)
+    def __setattr__(self, name, value):
+        self.__setitem__(name, value)
 
     def __delattr__(self, name):
         self.__delitem__(name)
 
-    def __repr__(self): return "EntityBase(%r)" % self.attributes
+    def __repr__(self):
+        return "EntityBase(%r)" % self.attributes
 
     SPECIAL = [u"name", u"identity", u"type"]
     N_SPECIAL = len(SPECIAL)
