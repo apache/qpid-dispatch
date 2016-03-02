@@ -418,9 +418,10 @@ struct qdr_route_active_t {
     DEQ_LINKS_N(REF, qdr_route_active_t);
     qdr_route_config_t    *config;
     qdr_conn_identifier_t *conn_id;
-    qd_direction_t         dir;
-    qdr_route_state_t      state;
-    qdr_link_t            *link;
+    qdr_route_state_t      in_state;
+    qdr_route_state_t      out_state;
+    qdr_link_t            *in_link;
+    qdr_link_t            *out_link;
 };
 
 ALLOC_DECLARE(qdr_route_active_t);
@@ -433,8 +434,8 @@ struct qdr_route_config_t {
     qdr_route_path_t         path;
     qdr_address_config_t    *addr_config;
     qdr_address_t           *addr;
-    qdr_address_t           *ingress_addr;
-    qdr_address_t           *egress_addr;
+    qdr_address_t           *in_addr;
+    qdr_address_t           *out_addr;
     qd_address_treatment_t   treatment;
 
     qdr_route_active_list_t  active_list;

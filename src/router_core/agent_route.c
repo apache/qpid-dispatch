@@ -53,11 +53,11 @@ static void qdr_route_insert_column_CT(qdr_route_config_t *route, int col, qd_co
 
     switch(col) {
     case QDR_ROUTE_NAME:
-        if (route->name) {
+        if (route->name)
             qd_compose_insert_string(body, route->name);
-            break;
-        }
-        // else fall into IDENTITY
+        else
+            qd_compose_insert_null(body);
+        break;
 
     case QDR_ROUTE_IDENTITY: {
         char id_str[100];
@@ -216,7 +216,10 @@ static qd_address_treatment_t qdra_treatment(qd_parsed_field_t *field)
 void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
                           qdr_query_t *query, qd_parsed_field_t *in_body)
 {
-    // TODO - reject duplicate names
+    // TODO - Validation
+    //    - No duplicate names
+    //    - For "direct" path, no containers or connections
+    //    - For "direct" path, no link-* treatments
 
     while (true) {
         //
@@ -293,24 +296,6 @@ void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
                 qdr_route_connection_add_CT(route, cont_id, true);
             }
         }
-
-        /*
-        switch (route->object_type) {
-        case QDR_ROUTE_TYPE_ADDRESS:
-            route->addr_config = qdra_configure_address_prefix_CT(core, addr_field, 'Z', route->treatment);
-            break;
-
-        case QDR_ROUTE_TYPE_LINK_DEST:
-            if (route->direction_in)
-                route->ingress_addr = qdra_configure_address_CT(core, addr_field, 'C', route->treatment);
-            if (route->direction_out)
-                route->egress_addr  = qdra_configure_address_CT(core, addr_field, 'D', route->treatment);
-            break;
-
-        case QDR_ROUTE_TYPE_WAYPOINT:
-            break;
-        }
-        */
 
         //
         // Compose the result map for the response.

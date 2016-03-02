@@ -57,7 +57,7 @@ static const char *qdr_configure_address_prefix_CT(qdr_core_t              *core
     return 0;
 }
 
-/*
+
 static const char *qdr_configure_address_CT(qdr_core_t              *core,
                                             qd_parsed_field_t       *addr_field,
                                             char                     cls,
@@ -87,7 +87,16 @@ static const char *qdr_configure_address_CT(qdr_core_t              *core,
     *_addr = addr;
     return 0;
 }
-*/
+
+
+static void qdr_route_free_CT(qdr_core_t *core, qdr_route_config_t *route)
+{
+    if (route->name)
+        free(route->name);
+    // TODO - Clean up address records
+    free_qdr_route_config_t(route);
+}
+
 
 const char *qdr_route_create_CT(qdr_core_t             *core,
                                 qd_field_iterator_t    *name,
@@ -108,21 +117,32 @@ const char *qdr_route_create_CT(qdr_core_t             *core,
     route->path      = path;
     route->treatment = treatment;
 
-    switch (path) {
-    case QDR_ROUTE_PATH_DIRECT:
+    //
+    // Direct message routing - Create a address prefix with the provided treatment.
+    //
+    if (path == QDR_ROUTE_PATH_DIRECT)
         error = qdr_configure_address_prefix_CT(core, addr_field, 'Z', treatment, &route->addr_config);
-        break;
 
-    case QDR_ROUTE_PATH_SOURCE:
-    case QDR_ROUTE_PATH_SINK:
-    case QDR_ROUTE_PATH_WAYPOINT:
-        break;
+    //
+    // Link routing - Create inbound and outbound link-route addresses based on the path.
+    //
+    else if (treatment == QD_TREATMENT_LINK_BALANCED) {
+        if (path == QDR_ROUTE_PATH_SOURCE || path == QDR_ROUTE_PATH_WAYPOINT)
+            error = qdr_configure_address_CT(core, addr_field, 'D', treatment, &route->out_addr);
+        if (path == QDR_ROUTE_PATH_SINK   || path == QDR_ROUTE_PATH_WAYPOINT)
+            error = qdr_configure_address_CT(core, addr_field, 'C', treatment, &route->in_addr);
     }
 
-    if (error) {
-        if (route->name) free(route->name);
-        free_qdr_route_config_t(route);
-    } else {
+    //
+    // Indirect message routing cases - Create a normal address with the provided treatment.
+    //
+    else {
+        error = qdr_configure_address_CT(core, addr_field, '\0', treatment, &route->addr);
+    }
+
+    if (error)
+        qdr_route_free_CT(core, route);
+    else {
         DEQ_INSERT_TAIL(core->route_config, route);
         *_route = route;
     }
