@@ -76,7 +76,6 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     conn->user_context          = 0;
     conn->incoming              = incoming;
     conn->role                  = role;
-    conn->label                 = label;
     conn->strip_annotations_in  = strip_annotations_in;
     conn->strip_annotations_out = strip_annotations_out;
     conn->mask_bit              = -1;
@@ -84,7 +83,8 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     DEQ_INIT(conn->work_list);
     conn->work_lock = sys_mutex();
 
-    action->args.connection.conn = conn;
+    action->args.connection.conn  = conn;
+    action->args.connection.label = label;
     qdr_action_enqueue(core, action);
 
     return conn;

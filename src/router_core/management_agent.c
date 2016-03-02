@@ -52,11 +52,14 @@ const char * const status_code = "statusCode";
 const char * MANAGEMENT_INTERNAL = "_local/$_management_internal";
 
 //TODO - Move these to amqp.h
-const unsigned char *MANAGEMENT_QUERY = (unsigned char*) "QUERY";
-const unsigned char *MANAGEMENT_CREATE = (unsigned char*) "CREATE";
-const unsigned char *MANAGEMENT_READ = (unsigned char*) "READ";
-const unsigned char *MANAGEMENT_UPDATE = (unsigned char*) "UPDATE";
-const unsigned char *MANAGEMENT_DELETE = (unsigned char*) "DELETE";
+const unsigned char *MANAGEMENT_QUERY                  = (unsigned char*) "QUERY";
+const unsigned char *MANAGEMENT_CREATE                 = (unsigned char*) "CREATE";
+const unsigned char *MANAGEMENT_READ                   = (unsigned char*) "READ";
+const unsigned char *MANAGEMENT_UPDATE                 = (unsigned char*) "UPDATE";
+const unsigned char *MANAGEMENT_DELETE                 = (unsigned char*) "DELETE";
+const unsigned char *MANAGEMENT_ADD_CONTAINER          = (unsigned char*) "ADD-CONTAINER";
+const unsigned char *MANAGEMENT_REMOVE_CONTAINER_CLEAN = (unsigned char*) "REMOVE-CONTAINER-CLEAN";
+const unsigned char *MANAGEMENT_REMOVE_CONTAINER_HARD  = (unsigned char*) "REMOVE-CONTAINER-HARD";
 
 
 typedef enum {
@@ -65,6 +68,9 @@ typedef enum {
     QD_ROUTER_OPERATION_READ,
     QD_ROUTER_OPERATION_UPDATE,
     QD_ROUTER_OPERATION_DELETE,
+    QD_ROUTER_OPERATION_ADD_CONTAINER,
+    QD_ROUTER_OPERATION_REMOVE_CONTAINER_CLEAN,
+    QD_ROUTER_OPERATION_REMOVE_CONTAINER_HARD
 } qd_router_operation_type_t;
 
 
@@ -153,7 +159,7 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     qd_management_context_t *ctx = (qd_management_context_t*) context;
 
     if (ctx->operation_type == QD_ROUTER_OPERATION_QUERY) {
-        if (status == &QD_AMQP_OK) { // There is no error, proceed to conditionally call get_next
+        if (status->status / 100 == 2) { // There is no error, proceed to conditionally call get_next
             if (more) {
                //If there are no more rows to process or the status returned is something other than
                // QD_AMQP_OK, we will close the list, send the message and
@@ -356,8 +362,6 @@ static bool qd_can_handle_request(qd_field_iterator_t         *props,
         *entity_type = QD_ROUTER_ADDRESS;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), link_entity_type))
         *entity_type = QD_ROUTER_LINK;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), waypoint_entity_type))
-        *entity_type = QD_ROUTER_WAYPOINT;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), route_entity_type))
         *entity_type = QD_ROUTER_ROUTE;
     else
@@ -379,6 +383,12 @@ static bool qd_can_handle_request(qd_field_iterator_t         *props,
         (*operation_type) = QD_ROUTER_OPERATION_UPDATE;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_DELETE))
         (*operation_type) = QD_ROUTER_OPERATION_DELETE;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_ADD_CONTAINER) && *entity_type == QD_ROUTER_ROUTE)
+        (*operation_type) = QD_ROUTER_OPERATION_ADD_CONTAINER;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_REMOVE_CONTAINER_CLEAN) && *entity_type == QD_ROUTER_ROUTE)
+        (*operation_type) = QD_ROUTER_OPERATION_REMOVE_CONTAINER_CLEAN;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_REMOVE_CONTAINER_HARD) && *entity_type == QD_ROUTER_ROUTE)
+        (*operation_type) = QD_ROUTER_OPERATION_REMOVE_CONTAINER_HARD;
     else
         // This is an unknown operation type. cannot be handled, return false.
         return false;
@@ -423,22 +433,26 @@ void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unuse
 
     if (qd_can_handle_request(app_properties_iter, &entity_type, &operation_type, &identity_iter, &name_iter, &count, &offset)) {
         switch (operation_type) {
-            case QD_ROUTER_OPERATION_QUERY:
-                qd_core_agent_query_handler(core, entity_type, operation_type, msg, &count, &offset);
-                break;
-            case QD_ROUTER_OPERATION_CREATE:
-                qd_core_agent_create_handler(core, msg, entity_type, operation_type, name_iter);
-                break;
-            case QD_ROUTER_OPERATION_READ:
-                qd_core_agent_read_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
-                break;
-            case QD_ROUTER_OPERATION_UPDATE:
-                qd_core_agent_update_handler();
-                break;
-            case QD_ROUTER_OPERATION_DELETE:
-                qd_core_agent_delete_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
-                break;
-       }
+        case QD_ROUTER_OPERATION_QUERY:
+            qd_core_agent_query_handler(core, entity_type, operation_type, msg, &count, &offset);
+            break;
+        case QD_ROUTER_OPERATION_CREATE:
+            qd_core_agent_create_handler(core, msg, entity_type, operation_type, name_iter);
+            break;
+        case QD_ROUTER_OPERATION_READ:
+            qd_core_agent_read_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
+            break;
+        case QD_ROUTER_OPERATION_UPDATE:
+            qd_core_agent_update_handler();
+            break;
+        case QD_ROUTER_OPERATION_DELETE:
+            qd_core_agent_delete_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
+            break;
+        case QD_ROUTER_OPERATION_ADD_CONTAINER:
+        case QD_ROUTER_OPERATION_REMOVE_CONTAINER_CLEAN:
+        case QD_ROUTER_OPERATION_REMOVE_CONTAINER_HARD:
+            break;
+        }
     } else {
         //
         // The C management agent is not going to handle this request. Forward it off to Python.

@@ -171,7 +171,8 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
 {
     DEQ_INIT(core->addrs);
     DEQ_INIT(core->routers);
-    core->addr_hash = qd_hash(10, 32, 0);
+    core->addr_hash    = qd_hash(12, 32, 0);
+    core->conn_id_hash = qd_hash(6, 4, 0);
 
     if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
         core->hello_addr      = qdr_add_local_address_CT(core, 'L', "qdhello",     QD_TREATMENT_MULTICAST_FLOOD);

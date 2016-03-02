@@ -185,14 +185,14 @@ void qdra_address_get_CT(qdr_core_t          *core,
 
     if (addr == 0) {
         // Send back a 404
-        query->status = &QD_AMQP_NOT_FOUND;
+        query->status = QD_AMQP_NOT_FOUND;
     }
     else {
         //
         // Write the columns of the address entity into the response body.
         //
         qdr_manage_write_address_map_CT(addr, query->body, qdr_address_columns);
-        query->status = &QD_AMQP_OK;
+        query->status = QD_AMQP_OK;
     }
 
     //
@@ -208,7 +208,7 @@ void qdra_address_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     //
     // Queries that get this far will always succeed.
     //
-    query->status = &QD_AMQP_OK;
+    query->status = QD_AMQP_OK;
 
     //
     // If the offset goes beyond the set of addresses, end the query now.
@@ -302,7 +302,7 @@ void qdra_address_delete_CT(qdr_core_t          *core,
        //TOOD - do something here
     }
     else {
-        query->status = &QD_AMQP_BAD_REQUEST;
+        query->status = QD_AMQP_BAD_REQUEST;
         success = false;
     }
 
@@ -310,7 +310,7 @@ void qdra_address_delete_CT(qdr_core_t          *core,
     // TODO - Add more logic here.
     if (success) {
         // If the request was successful then the statusCode MUST be 204 (No Content).
-        query->status = &QD_AMQP_NO_CONTENT;
+        query->status = QD_AMQP_NO_CONTENT;
     }
 
     //

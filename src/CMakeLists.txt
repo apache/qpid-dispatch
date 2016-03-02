@@ -66,12 +66,12 @@ set(qpid_dispatch_SOURCES
   router_config.c
   router_core/agent.c
   router_core/agent_address.c
-  router_core/agent_waypoint.c
   router_core/agent_link.c
   router_core/agent_route.c
   router_core/connections.c
   router_core/error.c
   router_core/forwarder.c
+  router_core/route_control.c
   router_core/router_core.c
   router_core/router_core_thread.c
   router_core/route_tables.c

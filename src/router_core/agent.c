@@ -20,7 +20,6 @@
 #include <qpid/dispatch/amqp.h>
 #include "agent_route.h"
 #include "agent_address.h"
-#include "agent_waypoint.h"
 #include "agent_link.h"
 #include "router_core_private.h"
 #include <stdio.h>
@@ -48,7 +47,7 @@ static void qdr_agent_response_handler(void *context)
         sys_mutex_unlock(core->query_lock);
 
         if (query) {
-            core->agent_response_handler(query->context, query->status, query->more);
+            core->agent_response_handler(query->context, &query->status, query->more);
             if (!query->more) {
                 if (query->next_key)
                     qdr_field_free(query->next_key);
@@ -70,6 +69,7 @@ void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query)
         qd_timer_schedule(core->agent_timer, 0);
 }
 
+
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,
@@ -79,14 +79,12 @@ qdr_query_t *qdr_query(qdr_core_t              *core,
     qdr_query_t *query = new_qdr_query_t();
 
     DEQ_ITEM_INIT(query);
+    ZERO(query);
     query->core        = core;
     query->entity_type = type;
     query->context     = context;
     query->body        = body;
-    query->next_key    = 0;
-    query->next_offset = 0;
     query->more        = false;
-    query->status      = 0;
 
     return query;
 }
@@ -188,9 +186,6 @@ qdr_query_t *qdr_manage_query(qdr_core_t              *core,
         qdr_agent_set_columns(query, attribute_names, qdr_address_columns, QDR_ADDRESS_COLUMN_COUNT);
         break;
 
-    case QD_ROUTER_WAYPOINT:
-        break;
-
     case QD_ROUTER_EXCHANGE:
         break;
 
@@ -209,7 +204,6 @@ void qdr_query_add_attribute_names(qdr_query_t *query)
     case QD_ROUTER_CONNECTION:  break;
     case QD_ROUTER_LINK:        qdr_agent_emit_columns(query, qdr_link_columns, QDR_LINK_COLUMN_COUNT); break;
     case QD_ROUTER_ADDRESS:     qdr_agent_emit_columns(query, qdr_address_columns, QDR_ADDRESS_COLUMN_COUNT); break;
-    case QD_ROUTER_WAYPOINT:    break;
     case QD_ROUTER_EXCHANGE:    break;
     case QD_ROUTER_BINDING:     break;
     }
@@ -322,7 +316,6 @@ static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool disc
     case QD_ROUTER_CONNECTION:  break;
     case QD_ROUTER_LINK:        break;
     case QD_ROUTER_ADDRESS:     qdra_address_get_CT(core, name, identity, query, qdr_address_columns); break;
-    case QD_ROUTER_WAYPOINT:    break;
     case QD_ROUTER_EXCHANGE:    break;
     case QD_ROUTER_BINDING:     break;
    }
@@ -340,7 +333,6 @@ static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_CONNECTION:  break;
     case QD_ROUTER_LINK:        break;
     case QD_ROUTER_ADDRESS:     break;
-    case QD_ROUTER_WAYPOINT:    qdra_waypoint_create_CT(core, name, query, in_body); break;
     case QD_ROUTER_EXCHANGE:    break;
     case QD_ROUTER_BINDING:     break;
    }
@@ -358,7 +350,6 @@ static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_CONNECTION:  break;
     case QD_ROUTER_LINK:        break;
     case QD_ROUTER_ADDRESS:     qdra_address_delete_CT(core, name, identity, query); break;
-    case QD_ROUTER_WAYPOINT:    qdra_waypoint_delete_CT(core, name, identity, query); break;
     case QD_ROUTER_EXCHANGE:    break;
     case QD_ROUTER_BINDING:     break;
    }
@@ -378,7 +369,6 @@ static void qdrh_query_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool
         case QD_ROUTER_CONNECTION:  break;
         case QD_ROUTER_LINK:        qdra_link_get_first_CT(core, query, offset); break;
         case QD_ROUTER_ADDRESS:     qdra_address_get_first_CT(core, query, offset); break;
-        case QD_ROUTER_WAYPOINT:    break;
         case QD_ROUTER_EXCHANGE:    break;
         case QD_ROUTER_BINDING:     break;
         }
@@ -396,7 +386,6 @@ static void qdrh_query_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool 
         case QD_ROUTER_CONNECTION:  break;
         case QD_ROUTER_LINK:        qdra_link_get_next_CT(core, query); break;
         case QD_ROUTER_ADDRESS:     qdra_address_get_next_CT(core, query); break;
-        case QD_ROUTER_WAYPOINT:    break;
         case QD_ROUTER_EXCHANGE:    break;
         case QD_ROUTER_BINDING:     break;
         }

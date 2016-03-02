@@ -17,40 +17,37 @@
  * under the License.
  */
 
-#include "agent_link.h"
+#include "agent_route.h"
+#include "route_control.h"
 #include <stdio.h>
 
-#define QDR_ROUTE_NAME               0
-#define QDR_ROUTE_IDENTITY           1
-#define QDR_ROUTE_TYPE               2
-#define QDR_ROUTE_OBJECT_TYPE        3
-#define QDR_ROUTE_ADDRESS            4
-#define QDR_ROUTE_CONNECTOR          5
-#define QDR_ROUTE_DIRECTION          6
-#define QDR_ROUTE_TREATMENT          7
-#define QDR_ROUTE_INGRESS_ADDRESS    8
-#define QDR_ROUTE_EGRESS_ADDRESS     9
-#define QDR_ROUTE_INGRESS_TREATMENT  10
-#define QDR_ROUTE_EGRESS_TREATMENT   11
+#define QDR_ROUTE_NAME          0
+#define QDR_ROUTE_IDENTITY      1
+#define QDR_ROUTE_TYPE          2
+#define QDR_ROUTE_ADDRESS       3
+#define QDR_ROUTE_PATH          4
+#define QDR_ROUTE_TREATMENT     5
+#define QDR_ROUTE_CONNECTORS    6
+#define QDR_ROUTE_CONTAINERS    7
+#define QDR_ROUTE_ROUTE_ADDRESS 8
 
 const char *qdr_route_columns[] =
     {"name",
      "identity",
      "type",
-     "objectType",
      "address",
-     "connector",
-     "direction",
+     "path",
      "treatment",
-     "ingressAddress",
-     "egressAddress",
-     "ingressTreatment",
-     "egressTreatment",
+     "connectors",
+     "containers",
+     "routeAddress",
      0};
 
 
-static void qdr_route_insert_column_CT(qdr_route_t *route, int col, qd_composed_field_t *body, bool as_map)
+static void qdr_route_insert_column_CT(qdr_route_config_t *route, int col, qd_composed_field_t *body, bool as_map)
 {
+    const char *text = 0;
+
     if (as_map)
         qd_compose_insert_string(body, qdr_route_columns[col]);
 
@@ -62,29 +59,55 @@ static void qdr_route_insert_column_CT(qdr_route_t *route, int col, qd_composed_
         }
         // else fall into IDENTITY
 
-    case QDR_ROUTE_IDENTITY:
+    case QDR_ROUTE_IDENTITY: {
+        char id_str[100];
+        snprintf(id_str, 100, "%ld", route->identity);
+        qd_compose_insert_string(body, id_str);
+        break;
+    }
 
     case QDR_ROUTE_TYPE:
         qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.route");
         break;
 
-    case QDR_ROUTE_OBJECT_TYPE:
     case QDR_ROUTE_ADDRESS:
-    case QDR_ROUTE_CONNECTOR:
-    case QDR_ROUTE_DIRECTION:
+        if (route->addr_config)
+            qd_compose_insert_string(body, (const char*) qd_hash_key_by_handle(route->addr_config->hash_handle));
+        else
+            qd_compose_insert_null(body);
+        break;
+
+    case QDR_ROUTE_PATH:
+        switch (route->path) {
+        case QDR_ROUTE_PATH_DIRECT:   text = "direct";  break;
+        case QDR_ROUTE_PATH_SOURCE:   text = "source";  break;
+        case QDR_ROUTE_PATH_SINK:     text = "sink";    break;
+        case QDR_ROUTE_PATH_WAYPOINT: text = "waypoint"; break;
+        }
+        qd_compose_insert_string(body, text);
+        break;
+
     case QDR_ROUTE_TREATMENT:
-    case QDR_ROUTE_INGRESS_ADDRESS:
-    case QDR_ROUTE_EGRESS_ADDRESS:
-    case QDR_ROUTE_INGRESS_TREATMENT:
-    case QDR_ROUTE_EGRESS_TREATMENT:
-    default:
+        switch (route->treatment) {
+        case QD_TREATMENT_MULTICAST_FLOOD:
+        case QD_TREATMENT_MULTICAST_ONCE:   text = "multicast";    break;
+        case QD_TREATMENT_ANYCAST_CLOSEST:  text = "closest";      break;
+        case QD_TREATMENT_ANYCAST_BALANCED: text = "balanced";     break;
+        case QD_TREATMENT_LINK_BALANCED:    text = "linkBalanced"; break;
+        }
+        qd_compose_insert_string(body, text);
+        break;
+
+    case QDR_ROUTE_CONNECTORS:
+    case QDR_ROUTE_CONTAINERS:
+    case QDR_ROUTE_ROUTE_ADDRESS:
         qd_compose_insert_null(body);
         break;
     }
 }
 
 
-static void qdr_agent_write_route_CT(qdr_query_t *query,  qdr_route_t *route)
+static void qdr_agent_write_route_CT(qdr_query_t *query,  qdr_route_config_t *route)
 {
     qd_composed_field_t *body = query->body;
 
@@ -97,7 +120,7 @@ static void qdr_agent_write_route_CT(qdr_query_t *query,  qdr_route_t *route)
     qd_compose_end_list(body);
 }
 
-static void qdr_manage_advance_route_CT(qdr_query_t *query, qdr_route_t *route)
+static void qdr_manage_advance_route_CT(qdr_query_t *query, qdr_route_config_t *route)
 {
     query->next_offset++;
     route = DEQ_NEXT(route);
@@ -110,12 +133,12 @@ void qdra_route_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     //
     // Queries that get this far will always succeed.
     //
-    query->status = &QD_AMQP_OK;
+    query->status = QD_AMQP_OK;
 
     //
     // If the offset goes beyond the set of objects, end the query now.
     //
-    if (offset >= DEQ_SIZE(core->routes)) {
+    if (offset >= DEQ_SIZE(core->route_config)) {
         query->more = false;
         qdr_agent_enqueue_response_CT(core, query);
         return;
@@ -124,7 +147,7 @@ void qdra_route_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     //
     // Run to the object at the offset.
     //
-    qdr_route_t *route = DEQ_HEAD(core->routes);
+    qdr_route_config_t *route = DEQ_HEAD(core->route_config);
     for (int i = 0; i < offset && route; i++)
         route = DEQ_NEXT(route);
     assert(route);
@@ -149,13 +172,13 @@ void qdra_route_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
 
 void qdra_route_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 {
-    qdr_route_t *route = 0;
+    qdr_route_config_t *route = 0;
 
-        if (query->next_offset < DEQ_SIZE(core->routes)) {
-            route = DEQ_HEAD(core->routes);
-            for (int i = 0; i < query->next_offset && route; i++)
-                route = DEQ_NEXT(route);
-        }
+    if (query->next_offset < DEQ_SIZE(core->route_config)) {
+        route = DEQ_HEAD(core->route_config);
+        for (int i = 0; i < query->next_offset && route; i++)
+            route = DEQ_NEXT(route);
+    }
 
     if (route) {
         //
@@ -181,71 +204,12 @@ static qd_address_treatment_t qdra_treatment(qd_parsed_field_t *field)
 {
     if (field) {
         qd_field_iterator_t *iter = qd_parse_raw(field);
-        if (qd_field_iterator_equal(iter, (unsigned char*) "multi"))       return QD_TREATMENT_MULTICAST_ONCE;
-        if (qd_field_iterator_equal(iter, (unsigned char*) "anyClosest"))  return QD_TREATMENT_ANYCAST_CLOSEST;
-        if (qd_field_iterator_equal(iter, (unsigned char*) "anyBalanced")) return QD_TREATMENT_ANYCAST_BALANCED;
+        if (qd_field_iterator_equal(iter, (unsigned char*) "multicast"))    return QD_TREATMENT_MULTICAST_ONCE;
+        if (qd_field_iterator_equal(iter, (unsigned char*) "closest"))      return QD_TREATMENT_ANYCAST_CLOSEST;
+        if (qd_field_iterator_equal(iter, (unsigned char*) "balanced"))     return QD_TREATMENT_ANYCAST_BALANCED;
+        if (qd_field_iterator_equal(iter, (unsigned char*) "linkBalanced")) return QD_TREATMENT_LINK_BALANCED;
     }
     return QD_TREATMENT_ANYCAST_BALANCED;
-}
-
-
-static qdr_address_config_t *qdra_configure_address_prefix_CT(qdr_core_t *core, qd_parsed_field_t *addr_field, char cls,
-                                                              qd_address_treatment_t treatment)
-{
-    if (!addr_field)
-        return 0;
-
-    qd_field_iterator_t *iter = qd_parse_raw(addr_field);
-    qd_address_iterator_override_prefix(iter, cls);
-    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-
-    qdr_address_config_t *addr = 0;
-    qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
-    if (addr) {
-        // Log error TODO
-        return 0;
-    }
-
-    addr = new_qdr_address_config_t();
-    DEQ_ITEM_INIT(addr);
-    addr->treatment = treatment;
-
-    if (!!addr) {
-        qd_field_iterator_reset(iter);
-        qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
-        DEQ_INSERT_TAIL(core->addr_config, addr);
-    }
-
-    return addr;
-}
-
-
-static qdr_address_t *qdra_configure_address_CT(qdr_core_t *core, qd_parsed_field_t *addr_field, char cls,
-                                                qd_address_treatment_t treatment)
-{
-    if (!addr_field)
-        return 0;
-
-    qd_field_iterator_t *iter = qd_parse_raw(addr_field);
-    qd_address_iterator_override_prefix(iter, cls);
-    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-
-    qdr_address_t *addr = 0;
-    qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
-    if (addr) {
-        // Log error TODO
-        return 0;
-    }
-
-    addr = qdr_address_CT(core, treatment);
-
-    if (!!addr) {
-        qd_field_iterator_reset(iter);
-        qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
-        DEQ_INSERT_TAIL(core->addrs, addr);
-    }
-
-    return addr;
 }
 
 
@@ -254,56 +218,83 @@ void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
 {
     // TODO - reject duplicate names
 
-    if (qd_parse_is_map(in_body)) {
-        qd_parsed_field_t *type_field     = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_OBJECT_TYPE]);
-        qd_parsed_field_t *addr_field     = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_ADDRESS]);
-        qd_parsed_field_t *conn_field     = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_CONNECTOR]);
-        qd_parsed_field_t *dir_field      = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_DIRECTION]);
-        qd_parsed_field_t *sem_field      = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_TREATMENT]);
-        //qd_parsed_field_t *in_addr_field  = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_INGRESS_ADDRESS]);
-        //qd_parsed_field_t *out_addr_field = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_EGRESS_ADDRESS]);
-        //qd_parsed_field_t *in_sem_field   = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_INGRESS_TREATMENT]);
-        //qd_parsed_field_t *out_sem_field  = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_EGRESS_TREATMENT]);
-
-        bool still_good = true;
-        qdr_route_t *route = new_qdr_route_t();
-        ZERO(route);
-
-        route->identity = qdr_identifier(core);
-        if (name)
-            route->name = (char*) qd_field_iterator_copy(name);
-
-        if (!type_field)
-            route->object_type = QDR_ROUTE_TYPE_ADDRESS;
-        else {
-            qd_field_iterator_t *type_iter = qd_parse_raw(type_field);
-            if      (qd_field_iterator_equal(type_iter, (unsigned char*) "address"))
-                route->object_type = QDR_ROUTE_TYPE_ADDRESS;
-            else if (qd_field_iterator_equal(type_iter, (unsigned char*) "linkDestination"))
-                route->object_type = QDR_ROUTE_TYPE_LINK_DEST;
-            else if (qd_field_iterator_equal(type_iter, (unsigned char*) "waypoint"))
-                route->object_type = QDR_ROUTE_TYPE_WAYPOINT;
-            else
-                still_good = false;
+    while (true) {
+        //
+        // Validation of the request occurs here.  Make sure the body is a map.
+        //
+        if (!qd_parse_is_map(in_body)) {
+            query->status = QD_AMQP_BAD_REQUEST;
+            break;
         }
 
-        route->treatment = qdra_treatment(sem_field);
+        //
+        // Extract the fields from the request
+        //
+        qd_parsed_field_t *addr_field       = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_ADDRESS]);
+        qd_parsed_field_t *path_field       = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_PATH]);
+        qd_parsed_field_t *conn_field       = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_CONNECTORS]);
+        qd_parsed_field_t *cont_field       = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_CONTAINERS]);
+        qd_parsed_field_t *treatment_field  = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_TREATMENT]);
+        qd_parsed_field_t *route_addr_field = qd_parse_value_by_key(in_body, qdr_route_columns[QDR_ROUTE_ROUTE_ADDRESS]);
 
-        route->direction_in  = true;
-        route->direction_out = true;
-        if (dir_field) {
-            qd_field_iterator_t *dir_iter = qd_parse_raw(dir_field);
-            if (qd_field_iterator_equal(dir_iter, (unsigned char*) "in"))
-                route->direction_out = false;
-            if (qd_field_iterator_equal(dir_iter, (unsigned char*) "out"))
-                route->direction_in = false;
+        //
+        // Determine the path, which defaults to Direct
+        //
+        qdr_route_path_t path = QDR_ROUTE_PATH_DIRECT;
+        if (path_field) {
+            qd_field_iterator_t *path_iter = qd_parse_raw(path_field);
+            if      (qd_field_iterator_equal(path_iter, (unsigned char*) "direct"))
+                path = QDR_ROUTE_PATH_DIRECT;
+            else if (qd_field_iterator_equal(path_iter, (unsigned char*) "source"))
+                path = QDR_ROUTE_PATH_SOURCE;
+            else if (qd_field_iterator_equal(path_iter, (unsigned char*) "sink"))
+                path = QDR_ROUTE_PATH_SINK;
+            else if (qd_field_iterator_equal(path_iter, (unsigned char*) "waypoint"))
+                path = QDR_ROUTE_PATH_WAYPOINT;
+            else {
+                query->status = QD_AMQP_BAD_REQUEST;
+                break;
+            }
         }
 
-        if (conn_field) {
-            qd_field_iterator_t *conn_iter  = qd_parse_raw(conn_field);
-            route->connector_label = (char*) qd_field_iterator_copy(conn_iter);
+        qd_address_treatment_t treatment = qdra_treatment(treatment_field);
+
+        //
+        // Ask the route_control module to create the route object and put into effect any needed
+        // side effects.
+        //
+        qdr_route_config_t *route;
+        const char *error = qdr_route_create_CT(core, name, path, treatment, addr_field, route_addr_field, &route);
+
+        if (error) {
+            query->status.status      = 400;
+            query->status.description = error;
+            break;
         }
 
+        //
+        // Add the initial list of connection labels to the route
+        //
+        if (conn_field && qd_parse_is_list(conn_field)) {
+            uint32_t count = qd_parse_sub_count(conn_field);
+            for (uint32_t i = 0; i < count; i++) {
+                qd_parsed_field_t *conn_label = qd_parse_sub_value(conn_field, i);
+                qdr_route_connection_add_CT(route, conn_label, false);
+            }
+        }
+
+        //
+        // Add the initial list of container IDs to the route
+        //
+        if (cont_field && qd_parse_is_list(cont_field)) {
+            uint32_t count = qd_parse_sub_count(cont_field);
+            for (uint32_t i = 0; i < count; i++) {
+                qd_parsed_field_t *cont_id = qd_parse_sub_value(cont_field, i);
+                qdr_route_connection_add_CT(route, cont_id, true);
+            }
+        }
+
+        /*
         switch (route->object_type) {
         case QDR_ROUTE_TYPE_ADDRESS:
             route->addr_config = qdra_configure_address_prefix_CT(core, addr_field, 'Z', route->treatment);
@@ -319,26 +310,30 @@ void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
         case QDR_ROUTE_TYPE_WAYPOINT:
             break;
         }
+        */
 
-        if (still_good) {
-            // TODO - write response map
-            query->status = &QD_AMQP_CREATED;
-            DEQ_INSERT_TAIL(core->routes, route);
-        } else {
-            query->status = &QD_AMQP_BAD_REQUEST;
-            if (route->name)
-                free(route->name);
-            free_qdr_route_t(route);
+        //
+        // Compose the result map for the response.
+        //
+        if (query->body) {
+            qd_compose_start_map(query->body);
+            for (int col = 0; col < QDR_ROUTE_COLUMN_COUNT; col++)
+                qdr_route_insert_column_CT(route, col, query->body, true);
+            qd_compose_end_map(query->body);
         }
+
+        query->status = QD_AMQP_CREATED;
+        break;
     }
-    else
-        query->status = &QD_AMQP_BAD_REQUEST;
 
     //
-    // Enqueue the response.
+    // Enqueue the response if there is a body. If there is no body, this is a management
+    // operation created internally by the configuration file parser.
     //
-    if (query->body)
+    if (query->body) {
+        if (query->status.status / 100 > 2)
+            qd_compose_insert_null(query->body);
         qdr_agent_enqueue_response_CT(core, query);
-    else
+    } else
         free_qdr_query_t(query);
 }

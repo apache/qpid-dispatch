@@ -184,7 +184,7 @@ Forwarding Treatment
 
   Transition from fanout/bias to a one-dimensional list of treatment:
 
-    MULTICAST_FLOOD
+    MULTICAST_FLOOD (not available to users)
 
         Messages are delivered to all subscribers via all unique paths.  If there is
         redundancy in the router topology, multiple copies of each message will be
@@ -256,4 +256,9 @@ org
           route           (proposed)
           waypoint        (proposed)
         waypoint          (deprecated)
+
+
+============================
+Route Control Data Structure
+============================
 

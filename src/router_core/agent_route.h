@@ -28,7 +28,7 @@ void qdra_route_update_CT(qdr_core_t *core, qdr_query_t *query, qd_parsed_field_
 void qdra_route_delete_CT(qdr_core_t *core, qdr_query_t *query, qd_field_iterator_t *name,
                                 qd_field_iterator_t *identity);
 
-#define QDR_ROUTE_COLUMN_COUNT 12
+#define QDR_ROUTE_COLUMN_COUNT 9
 
 const char *qdr_route_columns[QDR_ROUTE_COLUMN_COUNT + 1];
 

@@ -33,7 +33,9 @@ typedef struct qdr_link_ref_t        qdr_link_ref_t;
 typedef struct qdr_lrp_t             qdr_lrp_t;
 typedef struct qdr_lrp_ref_t         qdr_lrp_ref_t;
 typedef struct qdr_forwarder_t       qdr_forwarder_t;
-typedef struct qdr_route_t           qdr_route_t;
+typedef struct qdr_route_config_t    qdr_route_config_t;
+typedef struct qdr_route_active_t    qdr_route_active_t;
+typedef struct qdr_conn_identifier_t qdr_conn_identifier_t;
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
@@ -81,6 +83,7 @@ struct qdr_action_t {
         //
         struct {
             qdr_connection_t *conn;
+            const char       *label;
             qdr_link_t       *link;
             qdr_delivery_t   *delivery;
             qd_message_t     *msg;
@@ -147,7 +150,7 @@ struct qdr_query_t {
     qdr_field_t             *next_key;
     int                      next_offset;
     bool                     more;
-    const qd_amqp_error_t   *status;
+    qd_amqp_error_t          status;
 };
 
 ALLOC_DECLARE(qdr_query_t);
@@ -383,7 +386,7 @@ struct qdr_connection_t {
     void                       *user_context;
     bool                        incoming;
     qdr_connection_role_t       role;
-    const char                 *label;
+    qdr_conn_identifier_t      *conn_id;
     bool                        strip_annotations_in;
     bool                        strip_annotations_out;
     int                         mask_bit;
@@ -398,30 +401,55 @@ ALLOC_DECLARE(qdr_connection_t);
 DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);
 
 typedef enum {
-    QDR_ROUTE_TYPE_ADDRESS,
-    QDR_ROUTE_TYPE_LINK_DEST,
-    QDR_ROUTE_TYPE_WAYPOINT
-} qdr_route_type_t;
+    QDR_ROUTE_PATH_DIRECT,
+    QDR_ROUTE_PATH_SOURCE,
+    QDR_ROUTE_PATH_SINK,
+    QDR_ROUTE_PATH_WAYPOINT
+} qdr_route_path_t;
 
-struct qdr_route_t {
-    DEQ_LINKS(qdr_route_t);
-    char                   *name;
-    uint64_t                identity;
-    qdr_route_type_t        object_type;
-    qdr_address_config_t   *addr_config;
-    qdr_address_t          *addr;
-    qdr_address_t          *ingress_addr;
-    qdr_address_t          *egress_addr;
-    bool                    direction_in;
-    bool                    direction_out;
-    qd_address_treatment_t  treatment;
-    qd_address_treatment_t  ingress_treatment;
-    qd_address_treatment_t  egress_treatment;
-    char                   *connector_label;
+typedef enum {
+    QDR_ROUTE_STATE_DOWN,
+    QDR_ROUTE_STATE_UP,
+    QDR_ROUTE_STATE_QUIESCING
+} qdr_route_state_t;
+
+struct qdr_route_active_t {
+    DEQ_LINKS(qdr_route_active_t);
+    DEQ_LINKS_N(REF, qdr_route_active_t);
+    qdr_route_config_t    *config;
+    qdr_conn_identifier_t *conn_id;
+    qd_direction_t         dir;
+    qdr_route_state_t      state;
+    qdr_link_t            *link;
 };
 
-ALLOC_DECLARE(qdr_route_t);
-DEQ_DECLARE(qdr_route_t, qdr_route_list_t);
+ALLOC_DECLARE(qdr_route_active_t);
+DEQ_DECLARE(qdr_route_active_t, qdr_route_active_list_t);
+
+struct qdr_route_config_t {
+    DEQ_LINKS(qdr_route_config_t);
+    char                    *name;
+    uint64_t                 identity;
+    qdr_route_path_t         path;
+    qdr_address_config_t    *addr_config;
+    qdr_address_t           *addr;
+    qdr_address_t           *ingress_addr;
+    qdr_address_t           *egress_addr;
+    qd_address_treatment_t   treatment;
+
+    qdr_route_active_list_t  active_list;
+};
+
+ALLOC_DECLARE(qdr_route_config_t);
+DEQ_DECLARE(qdr_route_config_t, qdr_route_config_list_t);
+
+struct qdr_conn_identifier_t {
+    qd_hash_handle_t        *hash_handle;
+    qdr_connection_t        *open_connection;
+    qdr_route_active_list_t  active_refs;
+};
+
+ALLOC_DECLARE(qdr_conn_identifier_t);
 
 
 struct qdr_core_t {
@@ -437,7 +465,7 @@ struct qdr_core_t {
     qdr_general_work_list_t  work_list;
     qd_timer_t              *work_timer;
 
-    qdr_route_list_t      routes;
+    qdr_route_config_list_t  route_config;
 
     qdr_connection_list_t open_connections;
     qdr_link_list_t       open_links;
@@ -497,6 +525,8 @@ struct qdr_core_t {
 
     uint64_t              next_identifier;
     sys_mutex_t          *id_lock;
+
+    qd_hash_t            *conn_id_hash;
 
     qdr_forwarder_t      *forwarders[QD_TREATMENT_LINK_BALANCED + 1];
 };
