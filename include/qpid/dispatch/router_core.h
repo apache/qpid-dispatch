@@ -136,6 +136,7 @@ typedef enum {
 typedef enum {
     QDR_ROLE_NORMAL,
     QDR_ROLE_INTER_ROUTER,
+    QDR_ROLE_ROUTE_CONTAINER,
     QDR_ROLE_ON_DEMAND
 } qdr_connection_role_t;
 

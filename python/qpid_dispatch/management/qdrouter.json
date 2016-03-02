@@ -31,6 +31,7 @@
                     "type": [
                         "normal",
                         "inter-router",
+                        "route-container",
                         "on-demand"
                     ],
                     "default": "normal",
