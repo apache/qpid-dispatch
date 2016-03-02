@@ -459,7 +459,7 @@ class ManagementTest(system_test.TestCase):
         result = self.node.get_operations()
         for type in LISTENER, WAYPOINT, LINK: self.assertIn(type, result)
         self.assertEqual(["READ"], result[LINK])
-        self.assertEqual(["CREATE", "READ"], result[WAYPOINT])
+        self.assertEqual(["CREATE", "DELETE", "READ"], result[WAYPOINT])
 
     def test_get_attributes(self):
         result = self.node.get_attributes(type=DUMMY)
