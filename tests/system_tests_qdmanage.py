@@ -163,5 +163,21 @@ class QdmanageTest(TestCase):
         actual = self.run_qdmanage("GET-JSON-SCHEMA")
         self.assertEquals(schema, dictify(json.loads(actual)))
 
+    def test_update(self):
+        exception = False
+        try:
+            # Try to not set 'output'
+            json.loads(self.run_qdmanage("UPDATE --type org.apache.qpid.dispatch.log --name log/DEFAULT output="))[0]
+        except Exception as e:
+            exception = True
+            self.assertTrue("InternalServerErrorStatus" in e.message)
+        self.assertTrue(exception)
+
+        # Set a valid 'output'
+        output = json.loads(self.run_qdmanage("UPDATE --type org.apache.qpid.dispatch.log --name log/DEFAULT "
+                                              "enable=trace+ output=A.log"))
+        self.assertEqual("A.log", output['output'])
+        self.assertEqual("trace+", output['enable'])
+
 if __name__ == '__main__':
     unittest.main(main_module())
