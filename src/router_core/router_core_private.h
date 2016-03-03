@@ -563,6 +563,5 @@ void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn);
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,
-                       qd_parsed_field_t       *attribute_names,
                        qd_composed_field_t     *body);
 #endif

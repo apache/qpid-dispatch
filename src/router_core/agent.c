@@ -49,9 +49,7 @@ static void qdr_agent_response_handler(void *context)
         if (query) {
             core->agent_response_handler(query->context, &query->status, query->more);
             if (!query->more) {
-                if (query->next_key)
-                    qdr_field_free(query->next_key);
-                free_qdr_query_t(query);
+                qdr_query_free(query);
             }
         }
     }
@@ -73,7 +71,6 @@ void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query)
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,
-                       qd_parsed_field_t       *attribute_names,
                        qd_composed_field_t     *body)
 {
     qdr_query_t *query = new_qdr_query_t();
@@ -108,7 +105,7 @@ void qdr_manage_create(qdr_core_t              *core,
     qdr_action_t *action = qdr_action(qdr_manage_create_CT, "manage_create");
 
     // Create a query object here
-    action->args.agent.query = qdr_query(core, context, type, 0, out_body);
+    action->args.agent.query = qdr_query(core, context, type, out_body);
     action->args.agent.name = name;
     action->args.agent.in_body = in_body;
 
@@ -116,7 +113,8 @@ void qdr_manage_create(qdr_core_t              *core,
 }
 
 
-void qdr_manage_delete(qdr_core_t *core, void  *context,
+void qdr_manage_delete(qdr_core_t *core,
+                       void  *context,
                        qd_router_entity_type_t  type,
                        qd_field_iterator_t     *name,
                        qd_field_iterator_t     *identity)
@@ -124,7 +122,7 @@ void qdr_manage_delete(qdr_core_t *core, void  *context,
     qdr_action_t *action = qdr_action(qdr_manage_delete_CT, "manage_delete");
 
     // Create a query object here
-    action->args.agent.query = qdr_query(core, context, type, 0, 0);
+    action->args.agent.query = qdr_query(core, context, type, 0);
     action->args.agent.name = name;
     action->args.agent.identity = identity;
 
@@ -132,7 +130,8 @@ void qdr_manage_delete(qdr_core_t *core, void  *context,
 }
 
 
-void qdr_manage_read(qdr_core_t *core, void  *context,
+void qdr_manage_read(qdr_core_t *core,
+                     void  *context,
                      qd_router_entity_type_t  entity_type,
                      qd_field_iterator_t     *name,
                      qd_field_iterator_t     *identity,
@@ -141,7 +140,7 @@ void qdr_manage_read(qdr_core_t *core, void  *context,
     qdr_action_t *action = qdr_action(qdr_manage_read_CT, "manage_read");
 
     // Create a query object here
-    action->args.agent.query = qdr_query(core, context, entity_type, 0, body);
+    action->args.agent.query = qdr_query(core, context, entity_type, body);
     action->args.agent.identity  = identity;
     action->args.agent.name = name;
 
@@ -168,7 +167,7 @@ qdr_query_t *qdr_manage_query(qdr_core_t              *core,
                               qd_composed_field_t     *body)
 {
 
-    qdr_query_t* query = qdr_query(core, context, type, attribute_names, body);
+    qdr_query_t* query = qdr_query(core, context, type, body);
 
     switch (query->entity_type) {
     case QD_ROUTER_ROUTE:
@@ -228,6 +227,17 @@ void qdr_query_get_next(qdr_query_t *query)
 
 void qdr_query_free(qdr_query_t *query)
 {
+    if(!query)
+        return;
+
+    if (query->next_key)
+        qdr_field_free(query->next_key);
+
+    if(query->body)
+        qd_compose_free(query->body);
+
+    free_qdr_query_t(query);
+
 }
 
 static void qdr_agent_emit_columns(qdr_query_t *query, const char *qdr_columns[], int column_count)
@@ -329,13 +339,17 @@ static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool di
     qd_parsed_field_t       *in_body    = action->args.agent.in_body;
 
     switch (query->entity_type) {
+
     case QD_ROUTER_ROUTE:       qdra_route_create_CT(core, name, query, in_body); break;
     case QD_ROUTER_CONNECTION:  break;
     case QD_ROUTER_LINK:        break;
     case QD_ROUTER_ADDRESS:     break;
     case QD_ROUTER_EXCHANGE:    break;
     case QD_ROUTER_BINDING:     break;
+
    }
+
+   qd_parse_free(in_body);
 }
 
 
