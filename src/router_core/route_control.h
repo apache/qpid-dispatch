@@ -29,21 +29,27 @@ const char *qdr_route_create_CT(qdr_core_t             *core,
                                 qd_parsed_field_t      *route_addr_field,
                                 qdr_route_config_t    **route);
 
-void qdr_route_delete_CT(qdr_route_config_t *route);
+void qdr_route_delete_CT(qdr_core_t *core, qdr_route_config_t *route);
 
-void qdr_route_connection_add_CT(qdr_route_config_t *route,
+void qdr_route_connection_add_CT(qdr_core_t         *core,
+                                 qdr_route_config_t *route,
                                  qd_parsed_field_t  *conn_id,
                                  bool                is_container);
 
-void qdr_route_connection_delete_CT(qdr_route_config_t *route,
+void qdr_route_connection_delete_CT(qdr_core_t         *core,
+                                    qdr_route_config_t *route,
                                     qd_parsed_field_t  *conn_id,
                                     bool                is_container);
 
-void qdr_route_connection_kill_CT(qdr_route_config_t *route,
+void qdr_route_connection_kill_CT(qdr_core_t         *core,
+                                  qdr_route_config_t *route,
                                   qd_parsed_field_t  *conn_id,
                                   bool                is_container);
 
-void qdr_route_connection_opened_CT(qdr_core_t *core, qdr_connection_t *conn);
+void qdr_route_connection_opened_CT(qdr_core_t       *core,
+                                    qdr_connection_t *conn,
+                                    qdr_field_t      *field,
+                                    bool              is_container);
 
 void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn);
 

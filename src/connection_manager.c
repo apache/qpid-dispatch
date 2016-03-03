@@ -141,7 +141,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     memset(config, 0, sizeof(*config));
     config->host            = qd_entity_get_string(entity, "addr"); CHECK();
     config->port            = qd_entity_get_string(entity, "port"); CHECK();
-    config->label           = qd_entity_get_string(entity, "name"); CHECK();
+    config->label           = qd_entity_opt_string(entity, "label", 0); CHECK();
     config->role            = qd_entity_get_string(entity, "role"); CHECK();
     config->max_frame_size  = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
     config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds"); CHECK();
@@ -207,10 +207,11 @@ qd_error_t qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entit
     if (load_server_config(qd, &cc->configuration, entity))
         return qd_error_code();
     DEQ_ITEM_INIT(cc);
-    if (strcmp(cc->configuration.role, "on-demand") == 0) {
+    if (strcmp(cc->configuration.role, "route-container") == 0) {
         DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
-        qd_log(cm->log_source, QD_LOG_INFO, "Configured on-demand connector: %s:%s label=%s",
-               cc->configuration.host, cc->configuration.port, cc->configuration.label);
+        qd_log(cm->log_source, QD_LOG_INFO, "Configured route-container connector: %s:%s label=%s",
+               cc->configuration.host, cc->configuration.port,
+               cc->configuration.label ? cc->configuration.label : "<none>");
     } else {
         DEQ_INSERT_TAIL(cm->config_connectors, cc);
         qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",

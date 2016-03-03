@@ -282,7 +282,7 @@ void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
             uint32_t count = qd_parse_sub_count(conn_field);
             for (uint32_t i = 0; i < count; i++) {
                 qd_parsed_field_t *conn_label = qd_parse_sub_value(conn_field, i);
-                qdr_route_connection_add_CT(route, conn_label, false);
+                qdr_route_connection_add_CT(core, route, conn_label, false);
             }
         }
 
@@ -293,7 +293,7 @@ void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
             uint32_t count = qd_parse_sub_count(cont_field);
             for (uint32_t i = 0; i < count; i++) {
                 qd_parsed_field_t *cont_id = qd_parse_sub_value(cont_field, i);
-                qdr_route_connection_add_CT(route, cont_id, true);
+                qdr_route_connection_add_CT(core, route, cont_id, true);
             }
         }
 

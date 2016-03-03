@@ -18,6 +18,7 @@
  */
 
 #include "router_core_private.h"
+#include "route_control.h"
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
 
@@ -84,9 +85,9 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     DEQ_INIT(conn->work_list);
     conn->work_lock = sys_mutex();
 
-    action->args.connection.conn         = conn;
-    action->args.connection.label        = label;
-    action->args.connection.container_id = qdr_field(remote_container_id);
+    action->args.connection.conn             = conn;
+    action->args.connection.connection_label = qdr_field(label);
+    action->args.connection.container_id     = qdr_field(remote_container_id);
     qdr_action_enqueue(core, action);
 
     return conn;
@@ -725,13 +726,24 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             }
         }
 
-        //
-        // If the role is ON_DEMAND:
-        //    Activate waypoints associated with this connection
-        //    Activate link-route destinations associated with this connection
-        //
+        if (conn->role == QDR_ROLE_ROUTE_CONTAINER) {
+            //
+            // Notify the route-control module that a route-container connection has opened.
+            // There may be routes that need to be activated due to the opening of this connection.
+            //
+
+            //
+            // If there's a connection label, use it as the identifier.  Otherwise, use the remote
+            // container id.
+            //
+            qdr_field_t *cid = action->args.connection.connection_label ?
+                action->args.connection.connection_label : action->args.connection.container_id;
+            if (cid)
+                qdr_route_connection_opened_CT(core, conn, cid, action->args.connection.connection_label == 0);
+        }
     }
 
+    qdr_field_free(action->args.connection.connection_label);
     qdr_field_free(action->args.connection.container_id);
 }
 
@@ -744,8 +756,9 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     qdr_connection_t *conn = action->args.connection.conn;
 
     //
-    // TODO - Deactivate waypoints and link-route destinations for this connection
+    // Deactivate routes associated with this connection
     //
+    qdr_route_connection_closed_CT(core, conn);
 
     //
     // TODO - Clean up links associated with this connection

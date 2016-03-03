@@ -244,9 +244,10 @@ static char* test_view_address_hash(void *context)
 static char* test_view_address_hash_override(void *context)
 {
     struct {const char *addr; const char *view;} cases[] = {
-    {"amqp:/link-target",        "Clink-target"},
-    {"amqp:/domain/link-target", "Cdomain/link-target"},
-    {"domain/link-target",       "Cdomain/link-target"},
+    {"amqp:/link-target",                    "Clink-target"},
+    {"amqp:/domain/link-target",             "Cdomain/link-target"},
+    {"domain/link-target",                   "Cdomain/link-target"},
+    {"bbc79fb3-e1fd-4a08-92b2-9a2de232b558", "Cbbc79fb3-e1fd-4a08-92b2-9a2de232b558"},
     {0, 0}
     };
     int idx;

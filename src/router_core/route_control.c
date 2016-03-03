@@ -18,6 +18,7 @@
  */
 
 #include "route_control.h"
+#include <stdio.h>
 
 ALLOC_DEFINE(qdr_route_active_t);
 ALLOC_DEFINE(qdr_route_config_t);
@@ -98,6 +99,49 @@ static void qdr_route_free_CT(qdr_core_t *core, qdr_route_config_t *route)
 }
 
 
+static qdr_conn_identifier_t *qdr_route_declare_id_CT(qdr_core_t          *core,
+                                                      qd_field_iterator_t *conn_id,
+                                                      bool                 is_container)
+{
+    char                   prefix = is_container ? 'C' : 'L';
+    qdr_conn_identifier_t *cid    = 0;
+
+    qd_address_iterator_reset_view(conn_id, ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_override_prefix(conn_id, prefix);
+
+    qd_hash_retrieve(core->conn_id_hash, conn_id, (void**) &cid);
+    if (!cid) {
+        cid = new_qdr_conn_identifier_t();
+        ZERO(cid);
+        qd_hash_insert(core->conn_id_hash, conn_id, cid, &cid->hash_handle);
+    }
+
+    return cid;
+}
+
+static void qdr_route_check_id_for_deletion_CT(qdr_core_t *core, qdr_conn_identifier_t *cid)
+{
+    //
+    // If this connection identifier has no open connection and no referencing routes,
+    // it can safely be deleted and removed from the hash index.
+    //
+    if (cid->open_connection == 0 && DEQ_IS_EMPTY(cid->active_refs)) {
+        qd_hash_remove_by_handle(core->conn_id_hash, cid->hash_handle);
+        free_qdr_conn_identifier_t(cid);
+    }
+}
+
+
+static void qdr_route_activate_CT(qdr_core_t *core, qdr_route_active_t *active)
+{
+}
+
+
+static void qdr_route_deactivate_CT(qdr_core_t *core, qdr_route_active_t *active)
+{
+}
+
+
 const char *qdr_route_create_CT(qdr_core_t             *core,
                                 qd_field_iterator_t    *name,
                                 qdr_route_path_t        path,
@@ -151,38 +195,111 @@ const char *qdr_route_create_CT(qdr_core_t             *core,
 }
 
 
-void qdr_route_delete_CT(qdr_route_config_t *route)
+void qdr_route_delete_CT(qdr_core_t *core, qdr_route_config_t *route)
 {
 }
 
 
-void qdr_route_connection_add_CT(qdr_route_config_t *route,
+void qdr_route_connection_add_CT(qdr_core_t         *core,
+                                 qdr_route_config_t *route,
                                  qd_parsed_field_t  *conn_id,
                                  bool                is_container)
 {
+    //
+    // Create a new active record for this route+connection and get a connection identifier
+    // record (find and existing one or create a new one).
+    //
+    qdr_route_active_t    *active = new_qdr_route_active_t();
+    qdr_conn_identifier_t *cid    = qdr_route_declare_id_CT(core, qd_parse_raw(conn_id), is_container);
+
+    //
+    // Initialize the active record in the DOWN state.
+    //
+    DEQ_ITEM_INIT(active);
+    DEQ_ITEM_INIT_N(REF, active);
+    active->in_state  = QDR_ROUTE_STATE_DOWN;
+    active->out_state = QDR_ROUTE_STATE_DOWN;
+    active->in_link   = 0;
+    active->out_link  = 0;
+
+    //
+    // Create the linkages between the route-config, active, and connection-identifier.
+    //
+    active->config  = route;
+    active->conn_id = cid;
+
+    DEQ_INSERT_TAIL(route->active_list, active);
+    DEQ_INSERT_TAIL_N(REF, cid->active_refs, active);
+
+    //
+    // If the connection identifier represents an already open connection, activate the route.
+    //
+    if (cid->open_connection)
+        qdr_route_activate_CT(core, active);
 }
 
 
-void qdr_route_connection_delete_CT(qdr_route_config_t *route,
+void qdr_route_connection_delete_CT(qdr_core_t         *core,
+                                    qdr_route_config_t *route,
                                     qd_parsed_field_t  *conn_id,
                                     bool                is_container)
 {
 }
 
 
-void qdr_route_connection_kill_CT(qdr_route_config_t *route,
+void qdr_route_connection_kill_CT(qdr_core_t         *core,
+                                  qdr_route_config_t *route,
                                   qd_parsed_field_t  *conn_id,
                                   bool                is_container)
 {
 }
 
 
-void qdr_route_connection_opened_CT(qdr_core_t *core, qdr_connection_t *conn)
+void qdr_route_connection_opened_CT(qdr_core_t       *core,
+                                    qdr_connection_t *conn,
+                                    qdr_field_t      *field,
+                                    bool              is_container)
 {
+    if (conn->role != QDR_ROLE_ROUTE_CONTAINER || !field)
+        return;
+
+    qdr_conn_identifier_t *cid = qdr_route_declare_id_CT(core, field->iterator, is_container);
+
+    assert(!cid->open_connection);
+    cid->open_connection = conn;
+    conn->conn_id        = cid;
+
+    //
+    // Activate all routes associated with this remote container.
+    //
+    qdr_route_active_t *active = DEQ_HEAD(cid->active_refs);
+    while (active) {
+        qdr_route_activate_CT(core, active);
+        active = DEQ_NEXT_N(REF, active);
+    }
 }
 
 
 void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
 {
+    if (conn->role != QDR_ROLE_ROUTE_CONTAINER)
+        return;
+
+    qdr_conn_identifier_t *cid = conn->conn_id;
+    if (cid) {
+        //
+        // De-activate all routes associated with this remote container.
+        //
+        qdr_route_active_t *active = DEQ_HEAD(cid->active_refs);
+        while (active) {
+            qdr_route_deactivate_CT(core, active);
+            active = DEQ_NEXT_N(REF, active);
+        }
+
+        cid->open_connection = 0;
+        conn->conn_id        = 0;
+
+        qdr_route_check_id_for_deletion_CT(core, cid);
+    }
 }
 
