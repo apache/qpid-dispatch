@@ -90,47 +90,60 @@ static log_sink_t* find_log_sink_lh(const char* name) {
     return sink;
 }
 
-static log_sink_t* log_sink_lh(const char* name) {
-    log_sink_t* sink = find_log_sink_lh(name);
-    if (sink)
-        sink->refcount++;
-    else {
-        sink = NEW(log_sink_t);
-        *sink = (log_sink_t){ 1, strdup(name), };
-        if (strcmp(name, SINK_STDERR) == 0) {
-            sink->file = stderr;
-        }
-        else if (strcmp(name, SINK_SYSLOG) == 0) {
-            openlog(0, 0, LOG_DAEMON);
-            sink->syslog = true;
-        }
-        else {
-            sink->file = fopen(name, "w");
-            if (!sink->file) {
-                char msg[TEXT_MAX];
-                snprintf(msg, sizeof(msg), "Failed to open log file '%s'", name);
-                perror(msg);
-                exit(1);
-            }
-        }
-        DEQ_INSERT_TAIL(sink_list, sink);
-    }
-    return sink;
-}
-
 // Must hold the log_source_lock
 static void log_sink_free_lh(log_sink_t* sink) {
     if (!sink) return;
     assert(sink->refcount);
+
     if (--sink->refcount == 0) {
         DEQ_REMOVE(sink_list, sink);
         free(sink->name);
         if (sink->file && sink->file != stderr)
             fclose(sink->file);
-        if (sink->syslog) closelog();
+        if (sink->syslog)
+            closelog();
         free(sink);
     }
 }
+
+static log_sink_t* log_sink_lh(const char* name) {
+    log_sink_t* sink = find_log_sink_lh(name);
+    if (sink)
+        sink->refcount++;
+    else {
+
+        bool syslog = false;
+        FILE *file = 0;
+
+        if (strcmp(name, SINK_STDERR) == 0) {
+            file = stderr;
+        }
+        else if (strcmp(name, SINK_SYSLOG) == 0) {
+            openlog(0, 0, LOG_DAEMON);
+            syslog = true;
+        }
+        else {
+            file = fopen(name, "w");
+        }
+
+        //If file is not there, log an error and return 0.
+        if (!file && !syslog) {
+            char msg[TEXT_MAX];
+            snprintf(msg, sizeof(msg), "Failed to open log file '%s'", name);
+            qd_error(QD_ERROR_CONFIG, msg);
+            return 0;
+        }
+
+        sink = NEW(log_sink_t);
+        *sink = (log_sink_t){ 1, strdup(name), };
+        sink->syslog = syslog;
+        sink->file = file;
+        DEQ_INSERT_TAIL(sink_list, sink);
+
+    }
+    return sink;
+}
+
 
 struct qd_log_source_t {
     DEQ_LINKS(qd_log_source_t);
@@ -435,39 +448,50 @@ void qd_log_finalize(void) {
 qd_error_t qd_log_entity(qd_entity_t *entity) {
 
     qd_error_clear();
-    char* module = qd_entity_get_string(entity, "module"); QD_ERROR_RET();
+
+    //Obtain the log_source_lock global lock
     sys_mutex_lock(log_source_lock);
-    qd_log_source_t *src = qd_log_source_lh(module); /* The original log source */
-    free(module);
-    qd_log_source_t copy = *src; /* A copy to modify outside the lock. */
+
+    do {
+
+        char* module = qd_entity_get_string(entity, "module");
+        QD_ERROR_BREAK();
+
+        qd_log_source_t *src = qd_log_source_lh(module); /* The original(already existing) log source */
+        free(module);
+
+        if (qd_entity_has(entity, "output")) {
+            char* output = qd_entity_get_string(entity, "output");
+            QD_ERROR_BREAK();
+            log_sink_t* sink = log_sink_lh(output);
+            free(output);
+            QD_ERROR_BREAK();
+
+            log_sink_free_lh(src->sink); /* DEFAULT source may already have a sink, so free that sink first */
+            src->sink = sink;           /* Assign the new sink   */
+
+            if (src->sink->syslog) /* Timestamp off for syslog. */
+                src->timestamp = 0;
+        }
+
+        if (qd_entity_has(entity, "enable")) {
+            char *enable = qd_entity_get_string(entity, "enable");
+            src->mask = enable_mask(enable);
+            free(enable);
+        }
+        QD_ERROR_BREAK();
+
+        if (qd_entity_has(entity, "timestamp"))
+            src->timestamp = qd_entity_get_bool(entity, "timestamp");
+        QD_ERROR_BREAK();
+
+        if (qd_entity_has(entity, "source"))
+            src->source = qd_entity_get_bool(entity, "source");
+        QD_ERROR_BREAK();
+
+    } while(0);
+
     sys_mutex_unlock(log_source_lock);
 
-    if (qd_entity_has(entity, "enable")) {
-        char *enable = qd_entity_get_string(entity, "enable");
-        copy.mask = enable_mask(enable);
-        free(enable);
-    }
-    QD_ERROR_RET();
-
-    if (qd_entity_has(entity, "timestamp"))
-        copy.timestamp = qd_entity_get_bool(entity, "timestamp");
-    QD_ERROR_RET();
-
-    if (qd_entity_has(entity, "source"))
-        copy.source = qd_entity_get_bool(entity, "source");
-    QD_ERROR_RET();
-
-    if (qd_entity_has(entity, "output")) {
-         log_sink_free_lh(copy.sink); /* DEFAULT source may already have a sink */
-        char* output = qd_entity_get_string(entity, "output"); QD_ERROR_RET();
-        copy.sink = log_sink_lh(output);
-        free(output);
-        if (copy.sink->syslog) /* Timestamp off for syslog. */
-            copy.timestamp = 0;
-    }
-
-    sys_mutex_lock(log_source_lock);
-    *src = copy;
-    sys_mutex_unlock(log_source_lock);
     return qd_error_code();
 }

@@ -96,6 +96,7 @@ extern const int QD_ERROR_MAX;
 qd_error_t qd_error_py_impl(const char *file, int line);
 
 #define QD_ERROR_RET() do { if (qd_error_code()) return qd_error_code(); } while(0)
+#define QD_ERROR_BREAK() if (qd_error_code()) break;
 #define QD_ERROR_PY_RET() do { if (qd_error_py()) return qd_error_code(); } while(0)
 
 /**
