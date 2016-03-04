@@ -102,6 +102,11 @@ qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *qd, qd_entity_t *entity
 qd_error_t qd_dispatch_configure_lrp(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
+ * Configure a route, must be called after qd_dispatch_prepare
+ */
+qd_error_t qd_dispatch_configure_route(qd_dispatch_t *qd, qd_entity_t *entity);
+
+/**
  * \brief Configure the logging module from the
  *        parsed configuration file.  This must be called after the
  *        call to qd_dispatch_prepare completes.

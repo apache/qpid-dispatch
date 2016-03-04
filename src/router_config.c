@@ -178,6 +178,106 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 }
 
 
+static void qd_router_insert_items(qd_composed_field_t *body, char *list)
+{
+    char *saveptr;
+    char *token;
+    char *delim = ", ";
+
+    token = strtok_r(list, delim, &saveptr);
+    while (token) {
+        qd_compose_insert_string(body, token);
+        token = strtok_r(0, delim, &saveptr);
+    }
+}
+
+
+qd_error_t qd_router_configure_route(qd_router_t *router, qd_entity_t *entity)
+{
+    char *name          = qd_entity_opt_string(entity, "name", 0);          QD_ERROR_RET();
+    char *address       = qd_entity_opt_string(entity, "address", 0);       QD_ERROR_RET();
+    char *path          = qd_entity_opt_string(entity, "path", 0);          QD_ERROR_RET();
+    char *treatment     = qd_entity_opt_string(entity, "treatment", 0);     QD_ERROR_RET();
+    char *connectors    = qd_entity_opt_string(entity, "connectors", 0);    QD_ERROR_RET();
+    char *containers    = qd_entity_opt_string(entity, "containers", 0);    QD_ERROR_RET();
+    char *route_address = qd_entity_opt_string(entity, "route_address", 0); QD_ERROR_RET();
+
+    //
+    // Formulate this configuration as a route and create it through the core management API.
+    //
+    qd_composed_field_t *body = qd_compose_subfield(0);
+    qd_compose_start_map(body);
+
+    if (name) {
+        qd_compose_insert_string(body, "name");
+        qd_compose_insert_string(body, name);
+    }
+
+    if (address) {
+        qd_compose_insert_string(body, "address");
+        qd_compose_insert_string(body, address);
+    }
+
+    if (path) {
+        qd_compose_insert_string(body, "path");
+        qd_compose_insert_string(body, path);
+    }
+
+    if (treatment) {
+        qd_compose_insert_string(body, "treatment");
+        qd_compose_insert_string(body, treatment);
+    }
+
+    if (connectors) {
+        qd_compose_insert_string(body, "connectors");
+        qd_compose_start_list(body);
+        qd_router_insert_items(body, connectors);
+        qd_compose_end_list(body);
+    }
+
+    if (containers) {
+        qd_compose_insert_string(body, "containers");
+        qd_compose_start_list(body);
+        qd_router_insert_items(body, containers);
+        qd_compose_end_list(body);
+    }
+
+    if (route_address) {
+        qd_compose_insert_string(body, "routeAddress");
+        qd_compose_insert_string(body, route_address);
+    }
+
+    qd_compose_end_map(body);
+
+    int              length = 0;
+    qd_buffer_list_t buffers;
+
+    qd_compose_take_buffers(body, &buffers);
+    qd_compose_free(body);
+
+    qd_buffer_t *buf = DEQ_HEAD(buffers);
+    while (buf) {
+        length += qd_buffer_size(buf);
+        buf = DEQ_NEXT(buf);
+    }
+
+    qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
+    qd_parsed_field_t   *in_body = qd_parse(iter);
+
+    qdr_manage_create(router->router_core, 0, QD_ROUTER_ROUTE, 0, in_body, 0);
+
+    free(name);
+    free(address);
+    free(path);
+    free(treatment);
+    free(connectors);
+    free(containers);
+    free(route_address);
+
+    return qd_error_code();
+}
+
+
 void qd_router_configure_free(qd_router_t *router)
 {
     if (!router) return;

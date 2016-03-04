@@ -28,12 +28,13 @@
 #define QDR_ADDRESS_IN_PROCESS                5
 #define QDR_ADDRESS_SUBSCRIBER_COUNT          6
 #define QDR_ADDRESS_REMOTE_COUNT              7
-#define QDR_ADDRESS_HOST_ROUTERS              8
-#define QDR_ADDRESS_DELIVERIES_INGRESS        9
-#define QDR_ADDRESS_DELIVERIES_EGRESS         10
-#define QDR_ADDRESS_DELIVERIES_TRANSIT        11
-#define QDR_ADDRESS_DELIVERIES_TO_CONTAINER   12
-#define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER 13
+#define QDR_ADDRESS_CONTAINER_COUNT           8
+#define QDR_ADDRESS_HOST_ROUTERS              9
+#define QDR_ADDRESS_DELIVERIES_INGRESS        10
+#define QDR_ADDRESS_DELIVERIES_EGRESS         11
+#define QDR_ADDRESS_DELIVERIES_TRANSIT        12
+#define QDR_ADDRESS_DELIVERIES_TO_CONTAINER   13
+#define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER 14
 
 const char *qdr_address_columns[] =
     {"name",
@@ -44,6 +45,7 @@ const char *qdr_address_columns[] =
      "inProcess",
      "subscriberCount",
      "remoteCount",
+     "containerCount",
      "hostRouters",
      "deliveriesIngress",
      "deliveriesEgress",
@@ -92,6 +94,10 @@ static void qdr_insert_address_columns_CT(qdr_address_t        *addr,
 
     case QDR_ADDRESS_REMOTE_COUNT:
         qd_compose_insert_uint(body, qd_bitmask_cardinality(addr->rnodes));
+        break;
+
+    case QDR_ADDRESS_CONTAINER_COUNT:
+        qd_compose_insert_uint(body, DEQ_SIZE(addr->conns));
         break;
 
     case QDR_ADDRESS_HOST_ROUTERS:

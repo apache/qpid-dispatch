@@ -835,7 +835,7 @@
             }
         },
 
-        "router.route": {
+        "route": {
             "description": "Provisioned route that affects the treatment of message deliveries and link attaches",
             "extends": "configurationEntity",
             "operations": ["CREATE", "DELETE", "ADD-CONTAINER", "REMOVE-CONTAINER-CLEAN", "REMOVE-CONTAINER-HARD"],
@@ -859,14 +859,14 @@
                     "default": "balanced"
                 },
                 "connectors": {
-                    "type": "list",
-                    "description": "List of labels associated with the connector leading to the target containers",
+                    "type": "string",
+                    "description": "Comma-separated list of labels associated with the connector leading to the target containers",
                     "create": true,
                     "required": false
                 },
                 "containers": {
-                    "type": "list",
-                    "description": "List of container-IDs for target containers",
+                    "type": "string",
+                    "description": "Comma-separated list of container-IDs for target containers",
                     "create": true,
                     "required": false
                 },
@@ -951,6 +951,11 @@
                 "remoteCount": {
                     "type": "integer",
                     "description": "The number of remote routers that have at least one subscriber to this address",
+                    "graph": true
+                },
+                "containerCount": {
+                    "type": "integer",
+                    "description": "The number of attached containers that serve this route address",
                     "graph": true
                 },
                 "deliveriesIngress": {

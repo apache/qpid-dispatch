@@ -301,6 +301,10 @@ class LinkRoutePatternEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_lrp(self._dispatch, self)
 
+class RouteEntity(EntityAdapter):
+    def create(self):
+        self._qd.qd_dispatch_configure_route(self._dispatch, self)
+
 class ConsoleEntity(EntityAdapter):
     def create(self):
         # if a named listener is present, use its addr:port 

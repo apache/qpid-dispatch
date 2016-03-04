@@ -67,7 +67,7 @@ static void qdr_route_insert_column_CT(qdr_route_config_t *route, int col, qd_co
     }
 
     case QDR_ROUTE_TYPE:
-        qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.route");
+        qd_compose_insert_string(body, "org.apache.qpid.dispatch.route");
         break;
 
     case QDR_ROUTE_ADDRESS:

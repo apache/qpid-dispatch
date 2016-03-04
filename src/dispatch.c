@@ -138,6 +138,12 @@ qd_error_t qd_dispatch_configure_lrp(qd_dispatch_t *qd, qd_entity_t *entity) {
     return qd_error_code();
 }
 
+qd_error_t qd_dispatch_configure_route(qd_dispatch_t *qd, qd_entity_t *entity) {
+    if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
+    qd_router_configure_route(qd->router, entity);
+    return qd_error_code();
+}
+
 qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
 {
     qd->server             = qd_server(qd, qd->thread_count, qd->container_name, qd->sasl_config_path, qd->sasl_config_name);

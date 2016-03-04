@@ -124,7 +124,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     dispatch = qd.qd_dispatch_p(dispatch)
     config = Config(filename)
 
-    # NOTE: Can't import agent till till dispatch C extension module is initialized.
+    # NOTE: Can't import agent till dispatch C extension module is initialized.
     from .agent import Agent
     agent = Agent(dispatch, qd)
     qd.qd_dispatch_set_agent(dispatch, agent)
@@ -150,7 +150,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     agent.activate("$_management_internal")
 
     # Remaining configuration
-    for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern":
+    for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", "route":
         for a in config.by_type(t): configure(a)
     for e in config.entities:
         configure(e)

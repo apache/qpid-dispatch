@@ -39,7 +39,7 @@ const char *IDENTITY = "identity";
 const char *OPERATION = "operation";
 const char *ATTRIBUTE_NAMES = "attributeNames";
 
-const unsigned char *route_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.route";
+const unsigned char *route_entity_type = (unsigned char*) "org.apache.qpid.dispatch.route";
 const unsigned char *waypoint_entity_type = (unsigned char*) "org.apache.qpid.dispatch.waypoint";
 const unsigned char *address_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.address";
 const unsigned char *link_entity_type    = (unsigned char*) "org.apache.qpid.dispatch.router.link";

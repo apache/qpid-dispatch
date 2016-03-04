@@ -132,10 +132,26 @@ static void qdr_route_check_id_for_deletion_CT(qdr_core_t *core, qdr_conn_identi
 }
 
 
+static void qdr_route_log_CT(qdr_core_t *core, const char *text, qdr_route_config_t *route, qdr_connection_t *conn)
+{
+    const char *key = (const char*) qd_hash_key_by_handle(conn->conn_id->hash_handle);
+    char  id_string[64];
+    const char *name = route->name ? route->name : id_string;
+
+    if (!route->name)
+        snprintf(id_string, 64, "%ld", route->identity);
+
+    qd_log(core->log, QD_LOG_INFO, "Route '%s' %s on %s %s",
+           name, text, key[0] == 'L' ? "connection" : "container", &key[1]);
+}
+
+
 static void qdr_route_activate_CT(qdr_core_t *core, qdr_route_active_t *active, qdr_connection_t *conn)
 {
     qdr_route_config_t *route = active->config;
     const char         *key;
+
+    qdr_route_log_CT(core, "Activated", route, conn);
 
     if (route->treatment == QD_TREATMENT_LINK_BALANCED) {
         //
@@ -167,6 +183,8 @@ static void qdr_route_deactivate_CT(qdr_core_t *core, qdr_route_active_t *active
 {
     qdr_route_config_t *route = active->config;
     const char         *key;
+
+    qdr_route_log_CT(core, "Deactivated", route, conn);
 
     if (route->treatment == QD_TREATMENT_LINK_BALANCED) {
         //
