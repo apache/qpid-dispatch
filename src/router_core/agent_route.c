@@ -47,6 +47,8 @@ const char *qdr_route_columns[] =
 static void qdr_route_insert_column_CT(qdr_route_config_t *route, int col, qd_composed_field_t *body, bool as_map)
 {
     const char *text = 0;
+    qdr_route_active_t *active;
+    const char         *key;
 
     if (as_map)
         qd_compose_insert_string(body, qdr_route_columns[col]);
@@ -99,7 +101,29 @@ static void qdr_route_insert_column_CT(qdr_route_config_t *route, int col, qd_co
         break;
 
     case QDR_ROUTE_CONNECTORS:
+        qd_compose_start_list(body);
+        active = DEQ_HEAD(route->active_list);
+        while(active) {
+            key = (const char*) qd_hash_key_by_handle(active->conn_id->hash_handle);
+            if (key && key[0] == 'L')
+                qd_compose_insert_string(body, &key[1]);
+            active = DEQ_NEXT(active);
+        }
+        qd_compose_end_list(body);
+        break;
+
     case QDR_ROUTE_CONTAINERS:
+        qd_compose_start_list(body);
+        active = DEQ_HEAD(route->active_list);
+        while(active) {
+            key = (const char*) qd_hash_key_by_handle(active->conn_id->hash_handle);
+            if (key && key[0] == 'C')
+                qd_compose_insert_string(body, &key[1]);
+            active = DEQ_NEXT(active);
+        }
+        qd_compose_end_list(body);
+        break;
+
     case QDR_ROUTE_ROUTE_ADDRESS:
         qd_compose_insert_null(body);
         break;
