@@ -634,8 +634,8 @@ class SchemaEntity(EntityBase):
         self.attributes.setdefault('type', entity_type.name)
         if validate: self.validate()
 
-    def __setitem__(self, name, value):
-        super(SchemaEntity, self).__setitem__(name, value)
+    def _set(self, name, value):
+        super(SchemaEntity, self)._set(name, value)
         self.validate()
 
     def validate(self, **kwargs):
