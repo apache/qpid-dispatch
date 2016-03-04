@@ -39,7 +39,8 @@ typedef struct qdr_connection_ref_t  qdr_connection_ref_t;
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
                            bool exclude_inprocess, bool control, qd_bitmask_t *link_exclusion);
-void qdr_forward_attach_CT(qdr_core_t *core, qdr_forwarder_t *forwarder, qdr_link_t *in_link);
+bool qdr_forward_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *in_link, qdr_terminus_t *source,
+                           qdr_terminus_t *target);
 
 /**
  * qdr_field_t - This type is used to pass variable-length fields (strings, etc.) into
@@ -552,6 +553,10 @@ void qdr_post_general_work_CT(qdr_core_t *core, qdr_general_work_t *work);
 void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local);
 
 void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn);
+
+void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
+                                    qdr_connection_t      *conn,
+                                    qdr_connection_work_t *work);
 
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,

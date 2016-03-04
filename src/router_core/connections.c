@@ -352,9 +352,9 @@ void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn)
 }
 
 
-static void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
-                                           qdr_connection_t      *conn,
-                                           qdr_connection_work_t *work)
+void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
+                                    qdr_connection_t      *conn,
+                                    qdr_connection_work_t *work)
 {
     sys_mutex_lock(conn->work_lock);
     DEQ_INSERT_TAIL(conn->work_list, work);
@@ -513,12 +513,6 @@ static void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *lin
     work->target    = target;
 
     qdr_connection_enqueue_work_CT(core, link->conn, work);
-}
-
-
-static void qdr_forward_first_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_address_t *addr,
-                                        qdr_terminus_t *source, qdr_terminus_t *target)
-{
 }
 
 
@@ -847,7 +841,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     //
                     // This is a link-routed destination, forward the attach to the next hop
                     //
-                    qdr_forward_first_attach_CT(core, link, addr, source, target);
+                    qdr_forward_attach_CT(core, addr, link, source, target);
 
                 else {
                     //
@@ -898,7 +892,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 //
                 // This is a link-routed destination, forward the attach to the next hop
                 //
-                qdr_forward_first_attach_CT(core, link, addr, source, target);
+                qdr_forward_attach_CT(core, addr, link, source, target);
 
             else {
                 //
