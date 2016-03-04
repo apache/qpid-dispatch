@@ -179,5 +179,42 @@ class QdmanageTest(TestCase):
         self.assertEqual("A.log", output['output'])
         self.assertEqual("trace+", output['enable'])
 
+    def test_add_connector(self):
+        port = self.get_port()
+        # dont provide role and make sure that role is defaulted to 'normal'
+        command = "CREATE --type=connector --name=eaconn1 port=" + str(port) + " addr=0.0.0.0"
+        output = json.loads(self.run_qdmanage(command))
+        self.assertEqual("normal", output['role'])
+
+        exception = False
+        try:
+            port = self.get_port()
+            # provide the same connector name (eaconn1) and make sure there is a duplicate value failure
+            command = "CREATE --type=connector --name=eaconn1 port=" + str(port) + " addr=0.0.0.0"
+            output = json.loads(self.run_qdmanage(command))
+        except Exception as e:
+            self.assertTrue("Duplicate value 'eaconn1' for unique attribute 'name'" in e.message)
+            exception = True
+
+        self.assertTrue(exception)
+
+        port = self.get_port()
+        # provide role as 'normal' and make sure that it is preserved
+        command = "CREATE --type=connector --name=eaconn2 port=" + str(port) + " addr=0.0.0.0 role=normal"
+        output = json.loads(self.run_qdmanage(command))
+        self.assertEqual("normal", output['role'])
+
+        exception = False
+        port = self.get_port()
+        # provide mode as 'standalone' and role as 'inter-router'. This combination is not allowed
+        command = "CREATE --type=connector --name=eaconn3 port=" + str(port) + " addr=0.0.0.0 role=inter-router"
+        try:
+            output = json.loads(self.run_qdmanage(command))
+        except Exception as e:
+            self.assertTrue("BadRequestStatus: role='inter-router' only allowed with router mode='interior'" in e.message)
+            exception = True
+
+        self.assertTrue(exception)
+
 if __name__ == '__main__':
     unittest.main(main_module())

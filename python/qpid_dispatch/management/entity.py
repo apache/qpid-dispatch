@@ -51,28 +51,34 @@ class EntityBase(object):
         self.__dict__['attributes'] = {}
         if attributes:
             for k, v in attributes.iteritems():
-                self._set(k, v)
+                self.attributes[k] = v
+                self.__dict__[self._pyname(k)] = v
         for k, v in kwargs.iteritems():
             self._set(k, v)
 
-    def __getitem__(self, name): return self.attributes[name]
+    def __getitem__(self, name):
+        return self.attributes[name]
+
+    def __getattr__(self, name):
+        return self.attributes[name]
 
     @staticmethod
     def _pyname(name): return name.replace('-', '_')
 
     def _set(self, name, value):
+        """Subclasses can override _set to do validation on each change"""
         self.attributes[name] = value
         self.__dict__[self._pyname(name)] = value
 
-    # Subclasses should override __setitem__ to do extra actions on set,
-    # e.g. validation.
+    # Access using []
     def __setitem__(self, name, value): self._set(name, value)
 
     def __delitem__(self, name):
         del self.attributes[name]
         del self.__dict__[self._pyname(name)]
 
-    def __setattr__(self, name, value): self.__setitem__(name, value)
+    # Access as python attribute.
+    def __setattr__(self, name, value): self._set(name, value)
 
     def __delattr__(self, name):
         self.__delitem__(name)
