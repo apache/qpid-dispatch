@@ -132,13 +132,64 @@ static void qdr_route_check_id_for_deletion_CT(qdr_core_t *core, qdr_conn_identi
 }
 
 
-static void qdr_route_activate_CT(qdr_core_t *core, qdr_route_active_t *active)
+static void qdr_route_activate_CT(qdr_core_t *core, qdr_route_active_t *active, qdr_connection_t *conn)
 {
+    qdr_route_config_t *route = active->config;
+    const char         *key;
+
+    if (route->treatment == QD_TREATMENT_LINK_BALANCED) {
+        //
+        // Activate the address(es) for link-routed destinations.  If this is the first
+        // activation for this address, notify the router module of the added address.
+        //
+        if (route->out_addr) {
+            qdr_add_connection_ref(&route->out_addr->conns, conn);
+            if (DEQ_SIZE(route->out_addr->conns) == 1) {
+                key = (const char*) qd_hash_key_by_handle(route->out_addr->hash_handle);
+                if (key)
+                    qdr_post_mobile_added_CT(core, key);
+            }
+        }
+
+        if (route->in_addr) {
+            qdr_add_connection_ref(&route->in_addr->conns, conn);
+            if (DEQ_SIZE(route->in_addr->conns) == 1) {
+                key = (const char*) qd_hash_key_by_handle(route->in_addr->hash_handle);
+                if (key)
+                    qdr_post_mobile_added_CT(core, key);
+            }
+        }
+    }
 }
 
 
-static void qdr_route_deactivate_CT(qdr_core_t *core, qdr_route_active_t *active)
+static void qdr_route_deactivate_CT(qdr_core_t *core, qdr_route_active_t *active, qdr_connection_t *conn)
 {
+    qdr_route_config_t *route = active->config;
+    const char         *key;
+
+    if (route->treatment == QD_TREATMENT_LINK_BALANCED) {
+        //
+        // Deactivate the address(es) for link-routed destinations.
+        //
+        if (route->out_addr) {
+            qdr_del_connection_ref(&route->out_addr->conns, conn);
+            if (DEQ_IS_EMPTY(route->out_addr->conns)) {
+                key = (const char*) qd_hash_key_by_handle(route->out_addr->hash_handle);
+                if (key)
+                    qdr_post_mobile_removed_CT(core, key);
+            }
+        }
+
+        if (route->in_addr) {
+            qdr_del_connection_ref(&route->in_addr->conns, conn);
+            if (DEQ_IS_EMPTY(route->in_addr->conns)) {
+                key = (const char*) qd_hash_key_by_handle(route->in_addr->hash_handle);
+                if (key)
+                    qdr_post_mobile_removed_CT(core, key);
+            }
+        }
+    }
 }
 
 
@@ -235,7 +286,7 @@ void qdr_route_connection_add_CT(qdr_core_t         *core,
     // If the connection identifier represents an already open connection, activate the route.
     //
     if (cid->open_connection)
-        qdr_route_activate_CT(core, active);
+        qdr_route_activate_CT(core, active, cid->open_connection);
 }
 
 
@@ -274,7 +325,7 @@ void qdr_route_connection_opened_CT(qdr_core_t       *core,
     //
     qdr_route_active_t *active = DEQ_HEAD(cid->active_refs);
     while (active) {
-        qdr_route_activate_CT(core, active);
+        qdr_route_activate_CT(core, active, conn);
         active = DEQ_NEXT_N(REF, active);
     }
 }
@@ -292,7 +343,7 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
         //
         qdr_route_active_t *active = DEQ_HEAD(cid->active_refs);
         while (active) {
-            qdr_route_deactivate_CT(core, active);
+            qdr_route_deactivate_CT(core, active, conn);
             active = DEQ_NEXT_N(REF, active);
         }
 

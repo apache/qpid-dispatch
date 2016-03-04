@@ -30,6 +30,7 @@ ALLOC_DEFINE(qdr_link_t);
 ALLOC_DEFINE(qdr_router_ref_t);
 ALLOC_DEFINE(qdr_link_ref_t);
 ALLOC_DEFINE(qdr_general_work_t);
+ALLOC_DEFINE(qdr_connection_ref_t);
 
 static void qdr_general_handler(void *context);
 
@@ -258,6 +259,28 @@ void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls)
         DEQ_REMOVE(*ref_list, link->ref[cls]);
         free_qdr_link_ref_t(link->ref[cls]);
         link->ref[cls] = 0;
+    }
+}
+
+
+void qdr_add_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn)
+{
+    qdr_connection_ref_t *ref = new_qdr_connection_ref_t();
+    DEQ_ITEM_INIT(ref);
+    ref->conn = conn;
+    DEQ_INSERT_TAIL(*ref_list, ref);
+}
+
+
+void qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn)
+{
+    qdr_connection_ref_t *ref = DEQ_HEAD(*ref_list);
+    while (ref) {
+        if (ref->conn == conn) {
+            DEQ_REMOVE(*ref_list, ref);
+            free_qdr_connection_ref_t(ref);
+            break;
+        }
     }
 }
 

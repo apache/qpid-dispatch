@@ -30,12 +30,11 @@ typedef struct qdr_address_config_t  qdr_address_config_t;
 typedef struct qdr_node_t            qdr_node_t;
 typedef struct qdr_router_ref_t      qdr_router_ref_t;
 typedef struct qdr_link_ref_t        qdr_link_ref_t;
-typedef struct qdr_lrp_t             qdr_lrp_t;
-typedef struct qdr_lrp_ref_t         qdr_lrp_ref_t;
 typedef struct qdr_forwarder_t       qdr_forwarder_t;
 typedef struct qdr_route_config_t    qdr_route_config_t;
 typedef struct qdr_route_active_t    qdr_route_active_t;
 typedef struct qdr_conn_identifier_t qdr_conn_identifier_t;
+typedef struct qdr_connection_ref_t  qdr_connection_ref_t;
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
@@ -254,23 +253,17 @@ void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
 void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
 
 
-struct qdr_lrp_t {
-    DEQ_LINKS(qdr_lrp_t);
-    char               *prefix;
-    bool                inbound;
-    bool                outbound;
-    qd_lrp_container_t *container;
+struct qdr_connection_ref_t {
+    DEQ_LINKS(qdr_connection_ref_t);
+    qdr_connection_t *conn;
 };
 
-DEQ_DECLARE(qdr_lrp_t, qdr_lrp_list_t);
+ALLOC_DECLARE(qdr_connection_ref_t);
+DEQ_DECLARE(qdr_connection_ref_t, qdr_connection_ref_list_t);
 
-struct qdr_lrp_ref_t {
-    DEQ_LINKS(qdr_lrp_ref_t);
-    qdr_lrp_t *lrp;
-};
+void qdr_add_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn);
+void qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn);
 
-ALLOC_DECLARE(qdr_lrp_ref_t);
-DEQ_DECLARE(qdr_lrp_ref_t, qdr_lrp_ref_list_t);
 
 struct qdr_subscription_t {
     DEQ_LINKS(qdr_subscription_t);
@@ -285,18 +278,18 @@ DEQ_DECLARE(qdr_subscription_t, qdr_subscription_list_t);
 
 struct qdr_address_t {
     DEQ_LINKS(qdr_address_t);
-    qdr_subscription_list_t  subscriptions; ///< In-process message subscribers
-    qdr_lrp_ref_list_t       lrps;          ///< Local link-route destinations
-    qdr_link_ref_list_t      rlinks;        ///< Locally-Connected Consumers
-    qdr_link_ref_list_t      inlinks;       ///< Locally-Connected Producers
-    qd_bitmask_t            *rnodes;        ///< Bitmask of remote routers with connected consumers
-    qd_hash_handle_t        *hash_handle;   ///< Linkage back to the hash table entry
-    qd_address_treatment_t   treatment;
-    qdr_forwarder_t         *forwarder;
-    bool                     toggle;
-    bool                     waypoint;
-    bool                     block_deletion;
-    bool                     local;
+    qdr_subscription_list_t    subscriptions; ///< In-process message subscribers
+    qdr_connection_ref_list_t  conns;         ///< Local Connections for route-destinations
+    qdr_link_ref_list_t        rlinks;        ///< Locally-Connected Consumers
+    qdr_link_ref_list_t        inlinks;       ///< Locally-Connected Producers
+    qd_bitmask_t              *rnodes;        ///< Bitmask of remote routers with connected consumers
+    qd_hash_handle_t          *hash_handle;   ///< Linkage back to the hash table entry
+    qd_address_treatment_t     treatment;
+    qdr_forwarder_t           *forwarder;
+    bool                       toggle;
+    bool                       waypoint;
+    bool                       block_deletion;
+    bool                       local;
 
     /**@name Statistics */
     ///@{
