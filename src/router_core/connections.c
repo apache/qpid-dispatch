@@ -957,6 +957,14 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
     qdr_terminus_t   *source = action->args.connection.source;
     qdr_terminus_t   *target = action->args.connection.target;
 
+    //
+    // Handle attach-routed links
+    //
+    if (link->connected_link) {
+        qdr_link_outbound_second_attach_CT(core, link->connected_link, source, target);
+        return;
+    }
+
     if (link->link_direction == QD_INCOMING) {
         //
         // Handle incoming link cases

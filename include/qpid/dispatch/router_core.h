@@ -494,7 +494,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_i
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
                                     qd_field_iterator_t *ingress, qd_field_iterator_t *addr,
                                     bool settled, qd_bitmask_t *link_exclusion);
-qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg);
+qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled);
 
 void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
 

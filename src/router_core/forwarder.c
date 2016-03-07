@@ -351,7 +351,7 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
                                   qdr_terminus_t *target)
 {
     qdr_connection_ref_t *conn_ref = DEQ_HEAD(addr->conns);
-    qdr_connection_t     *conn;
+    qdr_connection_t     *conn     = 0;
 
     //
     // Check for locally connected containers that can handle this link attach.

@@ -77,31 +77,19 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
 }
 
 
-qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg)
+qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled)
 {
-    // TODO - Implement this.  Bypass the CT?
+    qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
+    qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
-    //
-    // We might wish to run link-routed transfers and updates through the core in order to
-    // track the number of outstanding deliveries and to have the ability to intervene in
-    // flow control.
-    //
-    // Use case: Quiescing a broker.  To do this, all inbound links to the broker shall be
-    // idled by preventing the propagation of flow credit out of the broker.  This will dry
-    // the transfer of inbound deliveries, allow all existing deliveries to be settled, and
-    // allow the router to know when it is safe to detach the inbound links.  Outbound links
-    // can also be detached after all deliveries are settled and "drained" indications are
-    // received.
-    //
-    // Waypoint disconnect procedure:
-    //   1) Block flow-credit propagation for link outbound to waypoint.
-    //   2) Wait for the number of unsettled outbound deliveries to go to zero.
-    //   3) Detach the outbound link.
-    //   4) Wait for inbound link to be drained with zero unsettled deliveries.
-    //   5) Detach inbound link.
-    //
+    ZERO(dlv);
+    dlv->link    = link;
+    dlv->msg     = msg;
+    dlv->settled = settled;
 
-    return 0;
+    action->args.connection.delivery = dlv;
+    qdr_action_enqueue(link->core, action);
+    return dlv;
 }
 
 
@@ -127,6 +115,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
         sys_mutex_unlock(conn->work_lock);
 
         if (dlv) {
+            link->credit_to_core--;
             core->deliver_handler(core->user_context, link, dlv, dlv->settled);
             if (dlv->settled)
                 qdr_delivery_free(dlv);
@@ -160,6 +149,17 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mode)
 {
     qdr_action_t *action = qdr_action(qdr_link_flow_CT, "link_flow");
+
+    //
+    // Compute the number of credits now available that we haven't yet given
+    // incrementally to the router core.  i.e. convert absolute credit to
+    // incremental credit.
+    //
+    credit -= link->credit_to_core;
+    if (credit < 0)
+        credit = 0;
+    link->credit_to_core += credit;
+
     action->args.connection.link   = link;
     action->args.connection.credit = credit;
     action->args.connection.drain  = drain_mode;
@@ -278,13 +278,16 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         return;
 
     qdr_link_t *link = action->args.connection.link;
-    int  credit = action->args.connection.credit;
-    //bool drain  = action->args.connection.drain;
-    bool activate = false;
+    int  credit      = action->args.connection.credit;
+    bool drain       = action->args.connection.drain;
+    bool activate    = false;
 
     //
-    // TODO - If this is a link-routed link, propagate the flow data downrange.
+    // If this is an attach-routed link, propagate the flow data downrange.
+    // Note that the credit value is incremental.
     //
+    if (link->connected_link)
+        qdr_link_issue_credit_CT(core, link->connected_link, credit);
 
     //
     // Handle the replenishing of credit outbound
@@ -297,6 +300,11 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         }
         sys_mutex_unlock(link->conn->work_lock);
     }
+
+    //
+    // Record the drain mode for the link
+    //
+    link->drain_mode = drain;
 
     if (activate)
         qdr_connection_activate_CT(core, link->conn);
@@ -313,6 +321,17 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     qdr_link_t     *link         = dlv->link;
     int             fanout       = 0;
     bool            presettled   = dlv->settled;
+
+    //
+    // If this is an attach-routed link, put the delivery directly onto the peer link
+    //
+    if (link->connected_link) {
+        qdr_delivery_t *peer = qdr_forward_new_delivery_CT(core, dlv, link->connected_link, dlv->msg);
+        qdr_forward_deliver_CT(core, link->connected_link, peer);
+        qd_message_free(dlv->msg);
+        dlv->msg = 0;
+        return;
+    }
 
     //
     // NOTE: The link->undelivered list does not need to be protected by the

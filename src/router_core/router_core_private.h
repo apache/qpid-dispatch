@@ -236,6 +236,8 @@ struct qdr_link_t {
     int                      capacity;
     int                      incremental_credit_CT;
     int                      incremental_credit;
+    bool                     drain_mode;
+    int                      credit_to_core; ///< Number of the available credits incrementally given to the core
     uint64_t                 total_deliveries;
 };
 
@@ -552,6 +554,8 @@ void qdr_post_link_lost_CT(qdr_core_t *core, int link_maskbit);
 void qdr_post_general_work_CT(qdr_core_t *core, qdr_general_work_t *work);
 void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local);
 
+qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *peer, qdr_link_t *link, qd_message_t *msg);
+void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv);
 void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn);
 
 void qdr_connection_enqueue_work_CT(qdr_core_t            *core,

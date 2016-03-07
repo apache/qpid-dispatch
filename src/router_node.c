@@ -222,7 +222,7 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
     // Handle the link-routed case
     //
     if (qdr_link_is_routed(rlink)) {
-        // TODO - Add Link-Route Forwarding here
+        qdr_link_deliver_to_routed_link(rlink, msg, pn_delivery_settled(pnd));
         return;
     }
 
@@ -417,7 +417,7 @@ static int router_link_flow_handler(void* context, qd_link_t *link)
     if (!rlink)
         return 0;
 
-    qdr_link_flow(router->router_core, rlink, pn_link_credit(pnlink), pn_link_get_drain(pnlink));
+    qdr_link_flow(router->router_core, rlink, pn_link_remote_credit(pnlink), pn_link_get_drain(pnlink));
 
     return 0;
 }
