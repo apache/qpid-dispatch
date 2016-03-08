@@ -59,12 +59,17 @@ class QdDll(ctypes.PyDLL):
         self._prototype(self.qd_dispatch_configure_container, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_router, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_prepare, None, [self.qd_dispatch_p])
-        self._prototype(self.qd_dispatch_configure_listener, None, [self.qd_dispatch_p, py_object])
-        self._prototype(self.qd_dispatch_configure_connector, None, [self.qd_dispatch_p, py_object])
+        self._prototype(self.qd_dispatch_configure_listener, ctypes.c_void_p, [self.qd_dispatch_p, py_object])
+        self._prototype(self.qd_dispatch_configure_connector, ctypes.c_void_p, [self.qd_dispatch_p, py_object])
+
+        self._prototype(self.qd_connection_manager_delete_listener, None, [self.qd_dispatch_p, ctypes.c_void_p])
+        self._prototype(self.qd_connection_manager_delete_connector, None, [self.qd_dispatch_p, ctypes.c_void_p])
+
         self._prototype(self.qd_dispatch_configure_address, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_waypoint, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_lrp, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_route, None, [self.qd_dispatch_p, py_object])
+
         self._prototype(self.qd_dispatch_set_agent, None, [self.qd_dispatch_p, py_object])
 
         self._prototype(self.qd_router_setup_late, None, [self.qd_dispatch_p])
@@ -73,7 +78,6 @@ class QdDll(ctypes.PyDLL):
         self._prototype(self.qd_dispatch_router_unlock, None, [self.qd_dispatch_p])
 
         self._prototype(self.qd_connection_manager_start, None, [self.qd_dispatch_p])
-        #self._prototype(self.qd_waypoint_activate_all, None, [self.qd_dispatch_p])
         self._prototype(self.qd_entity_refresh_begin, c_long, [py_object])
         self._prototype(self.qd_entity_refresh_end, None, [])
 

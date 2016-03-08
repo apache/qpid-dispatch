@@ -211,8 +211,8 @@ class EntityAdapter(SchemaEntity):
 
     def delete(self, request):
         """Handle delete request from client"""
-        self._agent.remove(self)
         self._delete()
+        self._agent.remove(self)
         return (NO_CONTENT, {})
 
     def _delete(self):
@@ -274,16 +274,24 @@ def _addr_port_identifier(entity):
 
 class ListenerEntity(EntityAdapter):
     def create(self):
-        self._qd.qd_dispatch_configure_listener(self._dispatch, self)
+        config_listener = self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
+        return config_listener
+
+    def _delete(self):
+        self._qd.qd_connection_manager_delete_listener(self._dispatch, self._implementations[0].key)
 
     def _identifier(self): return _addr_port_identifier(self)
 
-
 class ConnectorEntity(EntityAdapter):
     def create(self):
-        self._qd.qd_dispatch_configure_connector(self._dispatch, self)
+        config_connector = self._qd.qd_dispatch_configure_connector(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
+        return config_connector
+
+    def _delete(self):
+        """Can't actually delete a log source but return it to the default state"""
+        self._qd.qd_connection_manager_delete_connector(self._dispatch, self._implementations[0].key)
 
     def _identifier(self): return _addr_port_identifier(self)
 
@@ -399,16 +407,18 @@ class EntityCache(object):
         self.schema.validate_full(chain(iter([entity]), iter(self.entities)))
         self.entities.append(entity)
 
-    def _add_implementation(self, implementation):
+    def _add_implementation(self, implementation, adapter=None):
         """Create an adapter to wrap the implementation object and add it"""
         cls = self.agent.entity_class(implementation.entity_type)
-        adapter = cls(self.agent, implementation.entity_type, validate=False)
+        if not adapter:
+            adapter = cls(self.agent, implementation.entity_type, validate=False)
         self.implementations[implementation.key] = adapter
         adapter._add_implementation(implementation)
         adapter._refresh()
         self.add(adapter)
 
-    def add_implementation(self, implementation): self._add_implementation(implementation)
+    def add_implementation(self, implementation, adapter=None):
+        self._add_implementation(implementation, adapter=adapter)
 
     def _remove(self, entity):
         try:
@@ -695,8 +705,12 @@ class Agent(object):
     def _create(self, attributes):
         """Create an entity, called externally or from configuration file."""
         entity = self.create_entity(attributes)
-        self.add_entity(entity)
-        entity.create()
+        pointer = entity.create()
+        if pointer:
+            cimplementation = CImplementation(self.qd, entity.entity_type, pointer)
+            self.entities.add_implementation(cimplementation, entity)
+        else:
+            self.add_entity(entity)
         return entity
 
     def create(self, request):

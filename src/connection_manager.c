@@ -183,30 +183,53 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     return qd_error_code();
 }
 
-void qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
+qd_config_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
 {
+    qd_error_clear();
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_config_listener_t *cl = NEW(qd_config_listener_t);
     cl->is_connector = false;
     cl->listener = 0;
-    load_server_config(qd, &cl->configuration, entity);
+    if (load_server_config(qd, &cl->configuration, entity) != QD_ERROR_NONE) {
+        qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create config listener: %s", qd_error_message());
+        qd_config_listener_free(cl);
+        return 0;
+    }
     DEQ_ITEM_INIT(cl);
     DEQ_INSERT_TAIL(cm->config_listeners, cl);
     qd_log(cm->log_source, QD_LOG_INFO, "Configured Listener: %s:%s role=%s",
            cl->configuration.host, cl->configuration.port, cl->configuration.role);
+
+    return cl;
 }
 
 
-qd_error_t qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entity)
+qd_error_t qd_entity_refresh_listener(qd_entity_t* entity, void *impl)
+{
+    return QD_ERROR_NONE;
+}
+
+
+qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
+{
+    return QD_ERROR_NONE;
+}
+
+
+qd_config_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_error_clear();
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_config_connector_t *cc = NEW(qd_config_connector_t);
     memset(cc, 0, sizeof(*cc));
     cc->is_connector = true;
-    if (load_server_config(qd, &cc->configuration, entity))
-        return qd_error_code();
+    if (load_server_config(qd, &cc->configuration, entity) != QD_ERROR_NONE) {
+        qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create config connector: %s", qd_error_message());
+        qd_config_connector_free(cc);
+        return 0;
+    }
     DEQ_ITEM_INIT(cc);
+
     if (strcmp(cc->configuration.role, "route-container") == 0) {
         DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
         qd_log(cm->log_source, QD_LOG_INFO, "Configured route-container connector: %s:%s name=%s",
@@ -217,7 +240,8 @@ qd_error_t qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entit
         qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",
                cc->configuration.host, cc->configuration.port, cc->configuration.role);
     }
-    return QD_ERROR_NONE;
+
+    return cc;
 }
 
 
@@ -288,6 +312,41 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
     }
 }
 
+void qd_config_connector_free(qd_config_connector_t *cc)
+{
+    if (cc->connector)
+        qd_server_connector_free(cc->connector);
+    free(cc);
+}
+
+void qd_config_listener_free(qd_config_listener_t *cl)
+{
+    if (cl->listener)
+        qd_server_listener_close(cl->listener);
+        qd_server_listener_free(cl->listener);
+    free(cl);
+}
+
+void qd_connection_manager_delete_listener(qd_dispatch_t *qd, void *impl)
+{
+    qd_config_listener_t *cl = (qd_config_listener_t*)impl;
+
+    if(cl) {
+        qd_server_listener_close(cl->listener);
+        DEQ_REMOVE(qd->connection_manager->config_listeners, cl);
+        qd_config_listener_free(cl);
+    }
+}
+
+void qd_connection_manager_delete_connector(qd_dispatch_t *qd, void *impl)
+{
+    qd_config_connector_t *cc = (qd_config_connector_t*)impl;
+
+    if(cc) {
+        DEQ_REMOVE(qd->connection_manager->config_connectors, cc);
+        qd_config_connector_free(cc);
+    }
+}
 
 qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, const char *name)
 {

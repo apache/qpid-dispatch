@@ -568,7 +568,7 @@
         "listener": {
             "description": "Listens for incoming connections to the router.",
             "extends": "configurationEntity",
-            "operations": ["CREATE"],
+            "operations": ["CREATE", "DELETE"],
             "annotations": [
                 "addrPort",
                 "connectionRole",
@@ -643,7 +643,7 @@
         "connector": {
             "description": "Establishes an outgoing connections from the router.",
             "extends": "configurationEntity",
-            "operations": ["CREATE"],
+            "operations": ["CREATE", "DELETE"],
             "annotations": [
                 "addrPort",
                 "connectionRole",
