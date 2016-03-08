@@ -187,10 +187,11 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
  */
 static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 {
-    qd_router_t  *router  = (qd_router_t*) context;
-    pn_link_t    *pn_link = qd_link_pn(link);
-    qdr_link_t   *rlink   = (qdr_link_t*) qd_link_get_context(link);
-    qd_message_t *msg;
+    qd_router_t    *router   = (qd_router_t*) context;
+    pn_link_t      *pn_link  = qd_link_pn(link);
+    qdr_link_t     *rlink    = (qdr_link_t*) qd_link_get_context(link);
+    qdr_delivery_t *delivery = 0;
+    qd_message_t   *msg;
 
     //
     // Receive the message into a local representation.  If the returned message
@@ -222,7 +223,15 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
     // Handle the link-routed case
     //
     if (qdr_link_is_routed(rlink)) {
-        qdr_link_deliver_to_routed_link(rlink, msg, pn_delivery_settled(pnd));
+        delivery = qdr_link_deliver_to_routed_link(rlink, msg, pn_delivery_settled(pnd));
+        if (delivery) {
+            if (pn_delivery_settled(pnd))
+                pn_delivery_settle(pnd);
+            else {
+                pn_delivery_set_context(pnd, delivery);
+                qdr_delivery_set_context(delivery, pnd);
+            }
+        }
         return;
     }
 
@@ -242,7 +251,6 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
     //
     qd_message_depth_t  validation_depth = anonymous_link ? QD_DEPTH_PROPERTIES : QD_DEPTH_MESSAGE_ANNOTATIONS;
     bool                valid_message    = qd_message_check(msg, validation_depth);
-    qdr_delivery_t     *delivery         = 0;
 
     if (valid_message) {
         qd_parsed_field_t   *in_ma        = qd_message_message_annotations(msg);

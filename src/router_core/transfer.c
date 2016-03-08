@@ -431,6 +431,8 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
     uint64_t        disp    = action->args.delivery.disposition;
     bool            settled = action->args.delivery.settled;
 
+    bool link_routed = dlv && dlv->link && dlv->link->connected_link;
+
     //
     // Logic:
     //
@@ -457,7 +459,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             push = true;
             peer->peer = 0;
             dlv->peer  = 0;
-            if (peer->link) {
+            if (peer->link && !link_routed) {
                 sys_mutex_lock(peer->link->conn->work_lock);
                 DEQ_REMOVE(peer->link->unsettled, peer);
                 sys_mutex_unlock(peer->link->conn->work_lock);
@@ -466,7 +468,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             }
         }
 
-        if (dlv->link) {
+        if (dlv->link && !link_routed) {
             sys_mutex_lock(dlv->link->conn->work_lock);
             DEQ_REMOVE(dlv->link->unsettled, dlv);
             sys_mutex_unlock(dlv->link->conn->work_lock);

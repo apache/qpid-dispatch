@@ -432,12 +432,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             qd_detach_type_t dt = pn_event_type(event) == PN_LINK_REMOTE_CLOSE ? QD_CLOSED : QD_DETACHED;
             if (node)
                 node->ntype->link_detach_handler(node->context, qd_link, dt);
-
-            //
-            // If the qd_link does not reference the pn_link, we have already freed the pn_link.
-            // If we attempt to free it again, proton will crash.
-            //
-            if (qd_link->pn_link == pn_link)
+            else if (qd_link->pn_link == pn_link)
                 pn_link_close(pn_link);
         }
         break;

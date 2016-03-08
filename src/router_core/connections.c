@@ -1031,7 +1031,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
 
     qdr_connection_t *conn      = action->args.connection.conn;
     qdr_link_t       *link      = action->args.connection.link;
-    //qdr_error_t      *error     = action->args.connection.error;
+    qdr_error_t      *error     = action->args.connection.error;
     qd_detach_type_t  dt        = action->args.connection.dt;
     qdr_address_t    *addr      = link->owning_addr;
     bool              was_local = false;
@@ -1039,6 +1039,10 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     //
     // TODO - For routed links, propagate the detach
     //
+    if (link->connected_link) {
+        qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE);
+        return;
+    }
 
     link->owning_addr = 0;
 
