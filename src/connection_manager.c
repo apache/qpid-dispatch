@@ -141,7 +141,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     memset(config, 0, sizeof(*config));
     config->host            = qd_entity_get_string(entity, "addr"); CHECK();
     config->port            = qd_entity_get_string(entity, "port"); CHECK();
-    config->label           = qd_entity_opt_string(entity, "label", 0); CHECK();
+    // The config label is actually the entity name
+    config->label           = qd_entity_opt_string(entity, "name", 0); CHECK();
     config->role            = qd_entity_get_string(entity, "role"); CHECK();
     config->max_frame_size  = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
     config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds"); CHECK();
@@ -288,6 +289,71 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
     }
 }
 
+qd_config_listener_t *qd_connection_manager_find_listener(qd_dispatch_t *qd, const char *name)
+{
+    qd_config_listener_t *cl = DEQ_HEAD(qd->connection_manager->config_listeners);
+    while (cl) {
+        if (strcmp(cl->configuration.label, name) == 0)
+            break;
+        cl = DEQ_NEXT(cl);
+    }
+
+    return cl;
+}
+
+void qd_config_connector_free(qd_config_connector_t *cc)
+{
+    if(cc->context) {
+        free(cc->context);
+    }
+
+    if(cc->handler_context) {
+        free(cc->handler_context);
+    }
+
+    free(cc);
+
+}
+
+void qd_config_listener_free(qd_config_listener_t *cl)
+{
+    free(cl);
+}
+
+qd_config_connector_t *qd_connection_manager_find_connector(qd_dispatch_t *qd, const char *name)
+{
+    qd_config_connector_t *cc = DEQ_HEAD(qd->connection_manager->config_connectors);
+    while (cc) {
+        if (strcmp(cc->configuration.label, name) == 0)
+            break;
+        cc = DEQ_NEXT(cc);
+    }
+
+    return cc;
+}
+
+void qd_connection_manager_delete_listener(qd_dispatch_t *qd, char *name)
+{
+    qd_config_listener_t *cl = qd_connection_manager_find_listener(qd, name);
+
+    if(cl) {
+        qd_server_listener_close(cl->listener);
+        DEQ_REMOVE(qd->connection_manager->config_listeners, cl);
+        qd_config_listener_free(cl);
+    }
+
+}
+
+void qd_connection_manager_delete_connector(qd_dispatch_t *qd, char *name)
+{
+    qd_config_connector_t *cc = qd_connection_manager_find_connector(qd, name);
+
+    if(cc) {
+        qd_server_connector_free(cc->connector);
+        DEQ_REMOVE(qd->connection_manager->config_connectors, cc);
+        qd_config_connector_free(cc);
+    }
+}
 
 qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, const char *name)
 {
