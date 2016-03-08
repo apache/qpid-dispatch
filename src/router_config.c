@@ -152,6 +152,14 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 
     qd_compose_insert_string(body, "treatment");
     qd_compose_insert_string(body, "linkBalanced");
+
+    if (connector) {
+        qd_compose_insert_string(body, "connectors");
+        qd_compose_start_list(body);
+        qd_compose_insert_string(body, connector);
+        qd_compose_end_list(body);
+    }
+
     qd_compose_end_map(body);
 
     int              length = 0;
