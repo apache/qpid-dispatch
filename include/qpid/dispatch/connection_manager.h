@@ -47,6 +47,17 @@ qd_connection_manager_t *qd_connection_manager(qd_dispatch_t *qd);
  */
 void qd_connection_manager_free(qd_connection_manager_t *cm);
 
+/**
+ * Free all the resources associated with a config listener
+ */
+void qd_config_listener_free(qd_config_listener_t *cl);
+
+
+/**
+ * Free all the resources associated with a config connector
+ */
+void qd_config_connector_free(qd_config_connector_t *cl);
+
 
 /**
  * Start the configured Listeners and Connectors
@@ -125,5 +136,43 @@ void qd_config_connector_set_context(qd_config_connector_t *cc, void *context);
  * @return The name of the connector
  */
 const char *qd_config_connector_name(qd_config_connector_t *cc);
+
+
+/**
+ * Removes a listener with a matching name
+ * Closes the listening socket.
+ *
+ * @param qd Pointer to the dispatch instance.
+ * @param name The name that uniquely identifies the listener.
+ */
+void qd_connection_manager_delete_listener(qd_dispatch_t *qd, char *name);
+
+/**
+ * Removes a connector with a matching name
+ *
+ * @param qd Pointer to the dispatch instance.
+ * @param name The name that uniquely identifies the connector.
+ */
+void qd_connection_manager_delete_connector(qd_dispatch_t *qd, char *name);
+
+
+/**
+ * Given a listener name, find and return a pointer to the listener.
+ *
+ * @param qd The dispatch handle returned by qd_dispatch.
+ * @param name The name that uniquely identifies the listener.
+ * @return The matching listener or NULL if the name is not found.
+ */
+qd_config_listener_t *qd_connection_manager_find_listener(qd_dispatch_t *qd, const char *name);
+
+
+/**
+ * Given a connector name, find and return a pointer to the connector.
+ *
+ * @param qd The dispatch handle returned by qd_dispatch.
+ * @param name The name that uniquely identifies the listener.
+ * @return The matching connector or NULL if the name is not found.
+ */
+qd_config_connector_t *qd_connection_manager_find_connector(qd_dispatch_t *qd, const char *name);
 
 #endif

@@ -277,7 +277,12 @@ class ListenerEntity(EntityAdapter):
         self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
-    def _identifier(self): return _addr_port_identifier(self)
+    def _delete(self):
+        """Can't actually delete a log source but return it to the default state"""
+        self._qd.qd_connection_manager_delete_listener(self._dispatch, self.attributes['name'])
+
+    def _identifier(self):
+        return _addr_port_identifier(self)
 
 
 class ConnectorEntity(EntityAdapter):
@@ -285,7 +290,12 @@ class ConnectorEntity(EntityAdapter):
         self._qd.qd_dispatch_configure_connector(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
 
-    def _identifier(self): return _addr_port_identifier(self)
+    def _delete(self):
+        """Can't actually delete a log source but return it to the default state"""
+        self._qd.qd_connection_manager_delete_connector(self._dispatch, self.attributes['name'])
+
+    def _identifier(self):
+        return _addr_port_identifier(self)
 
 class FixedAddressEntity(EntityAdapter):
     def create(self):
