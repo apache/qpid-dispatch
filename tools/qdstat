@@ -224,6 +224,7 @@ class BusManager(Node):
         heads.append(Header("type"))
         heads.append(Header("dir"))
         heads.append(Header("id"))
+        heads.append(Header("peer"))
         heads.append(Header("addr"))
         heads.append(Header("cap"))
         heads.append(Header("undel"))
@@ -238,7 +239,8 @@ class BusManager(Node):
             row = []
             row.append(link.linkType)
             row.append(link.linkDir)
-            row.append(self._identity_clean(link.identity))
+            row.append(link.identity)
+            row.append(link.peer)
             row.append(self._addr_summary(link.owningAddr))
             row.append(link.capacity)
             row.append(link.undeliveredCount)

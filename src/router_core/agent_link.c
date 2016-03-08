@@ -28,11 +28,12 @@
 #define QDR_LINK_LINK_DIR           5
 #define QDR_LINK_OWNING_ADDR        6
 #define QDR_LINK_CAPACITY           7
-#define QDR_LINK_UNDELIVERED_COUNT  8
-#define QDR_LINK_UNSETTLED_COUNT    9
-#define QDR_LINK_DELIVERY_COUNT     10
-#define QDR_LINK_ADMIN_STATE        11
-#define QDR_LINK_OPER_STATE         12
+#define QDR_LINK_PEER               8
+#define QDR_LINK_UNDELIVERED_COUNT  9
+#define QDR_LINK_UNSETTLED_COUNT    10
+#define QDR_LINK_DELIVERY_COUNT     11
+#define QDR_LINK_ADMIN_STATE        12
+#define QDR_LINK_OPER_STATE         13
 
 const char *qdr_link_columns[] =
     {"name",
@@ -43,6 +44,7 @@ const char *qdr_link_columns[] =
      "linkDir",
      "owningAddr",
      "capacity",
+     "peer",
      "undeliveredCount",
      "unsettledCount",
      "deliveryCount",
@@ -110,6 +112,15 @@ static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link)
 
         case QDR_LINK_CAPACITY:
             qd_compose_insert_uint(body, link->capacity);
+            break;
+
+        case QDR_LINK_PEER:
+            if (link->connected_link) {
+                char id[100];
+                snprintf(id, 100, "link.%ld", link->connected_link->identifier);
+                qd_compose_insert_string(body, id);
+              } else
+                qd_compose_insert_null(body);
             break;
 
         case QDR_LINK_UNDELIVERED_COUNT:

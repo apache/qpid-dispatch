@@ -903,6 +903,10 @@
                     "type": "integer",
                     "description": "The capacity, in deliveries, for the link.  The number of undelivered plus unsettled deliveries shall not exceed the capacity.  This is enforced by link flow control."
                 },
+                "peer": {
+                    "type": "string",
+                    "description": "Identifier of the paired link if this is an attach-routed link."
+                },
                 "undeliveredCount": {
                     "type": "integer",
                     "description": "The number of undelivered messages pending for the link."
