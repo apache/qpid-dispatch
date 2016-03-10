@@ -36,7 +36,11 @@ run.py --sh                                # Print a shell script to set the run
 
 Valgrind can be enabled or disabled by the cmake 'USE_VALGRIND' option and the
 environment variable 'USE_VALGRIND' (set to 'ON' or 'OFF'). The environment
-variable takes precendence if set.
+variable takes precendence if set.  By default valgrind runs the 'memcheck'
+tool. The valgrind tool and supression file can be overridden by setting the
+'VALGRIND_TOOL' and 'VALGRIND_SUPPRESSIONS' environment variables,
+respectively. Additional options can be provided via the 'VALGRIND_OPTS'
+environment variable.
 """
 
 import os, sys, runpy
@@ -114,11 +118,15 @@ def with_valgrind(args, outfile=None):
         opts = ['--trace-children=yes',
                 #  '--leak-check=full',  way too noisy due to Python leaks
                 '--demangle=yes',
-                '--suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp',
                 '--num-callers=12',
                 '--error-exitcode=%d' % VALGRIND_ERROR,
                 '--quiet']
+        opts.append('--tool=%s' % os.environ.get('VALGRIND_TOOL', 'memcheck'))
+        supp = os.environ.get('VALGRIND_SUPPRESSIONS',
+                              '${CMAKE_SOURCE_DIR}/tests/valgrind.supp')
+        opts.append('--suppressions=%s' % supp)
         if outfile: opts.append('--log-file=%s' % outfile)
+        opts.extend(os.environ.get('VALGRIND_OPTS', "").split())
         return ([valgrind_exe]+opts+args, VALGRIND_ERROR)
     return (args, 0)
 

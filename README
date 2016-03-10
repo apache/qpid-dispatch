@@ -69,3 +69,12 @@ If valgrind is installed it will be used by default when running the tests.
 Set the cmake option 'USE_VALGRIND' to 'ON' or 'OFF' to enable/disable valgrind.
 You can also set the environment variable 'USE_VALGRIND' to 'ON or 'OFF'.
 If set the environment variable takes precendence over the cmake option.
+
+By default valgrind uses the memcheck tool to find memory-related
+issues.  The tool can be overrided using the 'VALGRIND_TOOL'
+environment variable.  The location of the valgrind suppression file
+can be overrided by setting the 'VALGRIND_SUPPRESSIONS' environment
+variable to an alternate suppression file.  Additional valgrind
+options can be passed by setting the 'VALGRIND_OPTS' to a space
+separated string containing the additional options.
+E.g. VALGRIND_OPTS="--xml=yes --max-stackframe=10000000"
