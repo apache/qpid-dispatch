@@ -49,6 +49,29 @@ struct qdr_forwarder_t {
 // Built-in Forwarders
 //==================================================================================
 
+static int qdr_forward_message_null_CT(qdr_core_t      *core,
+                                       qdr_address_t   *addr,
+                                       qd_message_t    *msg,
+                                       qdr_delivery_t  *in_delivery,
+                                       bool             exclude_inprocess,
+                                       bool             control,
+                                       qd_bitmask_t    *link_exclusion)
+{
+    qd_log(core->log, QD_LOG_CRITICAL, "NULL Message Forwarder Invoked");
+    return 0;
+}
+
+
+static bool qdr_forward_attach_null_CT(qdr_core_t     *core,
+                                       qdr_address_t  *addr,
+                                       qdr_link_t     *link,
+                                       qdr_terminus_t *source,
+                                       qdr_terminus_t *target)
+{
+    qd_log(core->log, QD_LOG_CRITICAL, "NULL Attach Forwarder Invoked");
+    return false;
+}
+
 
 qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *peer, qdr_link_t *link, qd_message_t *msg)
 {
@@ -388,10 +411,6 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
         }
     }
 
-    //
-    // TODO - Use the next-hop connection if there are no local containers.
-    //
-
     if (conn) {
         qdr_link_t *out_link = new_qdr_link_t();
         ZERO(out_link);
@@ -432,8 +451,8 @@ qdr_forwarder_t *qdr_new_forwarder(qdr_forward_message_t fm, qdr_forward_attach_
 {
     qdr_forwarder_t *forw = NEW(qdr_forwarder_t);
 
-    forw->forward_message      = fm;
-    forw->forward_attach       = fa;
+    forw->forward_message      = fm ? fm : qdr_forward_message_null_CT;
+    forw->forward_attach       = fa ? fa : qdr_forward_attach_null_CT;
     forw->bypass_valid_origins = bypass_valid_origins;
 
     return forw;

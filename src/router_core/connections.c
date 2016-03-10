@@ -416,6 +416,14 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     DEQ_REMOVE(core->open_links, link);
 
     //
+    // If the link has a connected peer, unlink the peer
+    //
+    if (link->connected_link) {
+        link->connected_link->connected_link = 0;
+        link->connected_link = 0;
+    }
+
+    //
     // Remove the reference to this link in the connection's reference lists
     //
     qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
@@ -522,7 +530,7 @@ static char qdr_prefix_for_dir(qd_direction_t dir)
 }
 
 
-static qd_address_treatment_t qdr_treatment_for_address(qdr_core_t *core, qd_field_iterator_t *iter)
+static qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_iterator_t *iter)
 {
     qdr_address_config_t *addr = 0;
 
@@ -672,8 +680,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
     qd_address_iterator_override_prefix(iter, '\0'); // Cancel previous override
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr && create_if_not_found) {
-        qd_address_treatment_t sem = qdr_treatment_for_address(core, iter);
-        addr = qdr_address_CT(core, sem);
+        addr = qdr_address_CT(core, qdr_treatment_for_address_CT(core, iter));
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(core->addrs, addr);
     }
@@ -793,6 +800,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     qd_direction_t     dir    = action->args.connection.dir;
     qdr_terminus_t    *source = action->args.connection.source;
     qdr_terminus_t    *target = action->args.connection.target;
+    bool               success;
 
     //
     // Put the link into the proper lists for tracking.
@@ -837,13 +845,18 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     qdr_terminus_free(target);
                 }
 
-                else if (link_route)
+                else if (link_route) {
                     //
                     // This is a link-routed destination, forward the attach to the next hop
                     //
-                    qdr_forward_attach_CT(core, addr, link, source, target);
+                    success = qdr_forward_attach_CT(core, addr, link, source, target);
+                    if (!success) {
+                        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                        qdr_terminus_free(source);
+                        qdr_terminus_free(target);
+                    }
 
-                else {
+                } else {
                     //
                     // Associate the link with the address.  With this association, it will be unnecessary
                     // to do an address lookup for deliveries that arrive on this link.
@@ -1037,6 +1050,11 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     bool              was_local = false;
 
     //
+    // Bump the detach count to track half and full detaches
+    //
+    link->detach_count++;
+
+    //
     // TODO - For routed links, propagate the detach
     //
     if (link->connected_link) {
@@ -1092,11 +1110,6 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         }
     }
 
-    //
-    // Bump the detach_count.  If it's now 1, the link is half-detached.  If it's 2,
-    // the link is fully detached.
-    //
-    link->detach_count++;
     if (link->detach_count == 1) {
         //
         // If the detach occurred via protocol, send a detach back.
