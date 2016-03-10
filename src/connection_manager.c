@@ -79,7 +79,7 @@ static void qd_server_config_free(qd_server_config_t *cf)
     if (!cf) return;
     free(cf->host);
     free(cf->port);
-    free(cf->label);
+    free(cf->name);
     free(cf->role);
     free(cf->sasl_mechanisms);
     if (cf->ssl_enabled) {
@@ -141,7 +141,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     memset(config, 0, sizeof(*config));
     config->host            = qd_entity_get_string(entity, "addr"); CHECK();
     config->port            = qd_entity_get_string(entity, "port"); CHECK();
-    config->label           = qd_entity_opt_string(entity, "label", 0); CHECK();
+    config->name            = qd_entity_opt_string(entity, "name", 0); CHECK();
     config->role            = qd_entity_get_string(entity, "role"); CHECK();
     config->max_frame_size  = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
     config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds"); CHECK();
@@ -209,9 +209,9 @@ qd_error_t qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entit
     DEQ_ITEM_INIT(cc);
     if (strcmp(cc->configuration.role, "route-container") == 0) {
         DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
-        qd_log(cm->log_source, QD_LOG_INFO, "Configured route-container connector: %s:%s label=%s",
+        qd_log(cm->log_source, QD_LOG_INFO, "Configured route-container connector: %s:%s name=%s",
                cc->configuration.host, cc->configuration.port,
-               cc->configuration.label ? cc->configuration.label : "<none>");
+               cc->configuration.name ? cc->configuration.name : "<none>");
     } else {
         DEQ_INSERT_TAIL(cm->config_connectors, cc);
         qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",
@@ -294,7 +294,7 @@ qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, c
     qd_config_connector_t *cc = DEQ_HEAD(qd->connection_manager->on_demand_connectors);
 
     while (cc) {
-        if (strcmp(cc->configuration.label, name) == 0)
+        if (strcmp(cc->configuration.name, name) == 0)
             break;
         cc = DEQ_NEXT(cc);
     }
@@ -320,7 +320,7 @@ void qd_connection_manager_start_on_demand(qd_dispatch_t *qd, qd_config_connecto
 {
     if (cc && cc->connector == 0) {
         qd_log(qd->connection_manager->log_source, QD_LOG_INFO, "Starting on-demand connector: %s",
-               cc->configuration.label);
+               cc->configuration.name);
         cc->connector = qd_server_connect(qd, &cc->configuration, cc);
     }
 }
@@ -345,7 +345,7 @@ void qd_config_connector_set_context(qd_config_connector_t *cc, void *context)
 
 const char *qd_config_connector_name(qd_config_connector_t *cc)
 {
-    return cc ? cc->configuration.label : 0;
+    return cc ? cc->configuration.name : 0;
 }
 
 

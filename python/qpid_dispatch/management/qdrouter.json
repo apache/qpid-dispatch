@@ -37,12 +37,6 @@
                     "default": "normal",
                     "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.",
                     "create": true
-                },
-                "label": {
-                    "type": "string",
-                    "create": true,
-                    "required": false,
-                    "description": "When the role is 'route-container', this optional label may be used to identify connections for use in routes."
                 }
             }
         },
@@ -860,7 +854,7 @@
                 },
                 "connectors": {
                     "type": "string",
-                    "description": "Comma-separated list of labels associated with the connector leading to the target containers",
+                    "description": "Comma-separated list of names associated with the connector leading to the target containers",
                     "create": true,
                     "required": false
                 },

@@ -248,9 +248,9 @@ typedef struct qd_server_config_t {
     char *port;
 
     /**
-     * Connection label, used as a reference from other parts of the configuration.
+     * Connection name, used as a reference from other parts of the configuration.
      */
-    char *label;
+    char *name;
 
     /**
      * Space-separated list of SASL mechanisms to be accepted for the connection.

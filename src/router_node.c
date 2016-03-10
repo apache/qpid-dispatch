@@ -44,7 +44,7 @@ static char *node_id;
  */
 static void qd_router_connection_get_config(const qd_connection_t  *conn,
                                             qdr_connection_role_t  *role,
-                                            const char            **label,
+                                            const char            **name,
                                             bool                   *strip_annotations_in,
                                             bool                   *strip_annotations_out)
 {
@@ -64,7 +64,7 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
         else
             *role = QDR_ROLE_NORMAL;
 
-        *label = cf->label;
+        *name = cf->name;
     }
 }
 
@@ -455,13 +455,13 @@ static void router_opened_handler(qd_router_t *router, qd_connection_t *conn, bo
     qdr_connection_role_t  role;
     bool                   strip_annotations_in;
     bool                   strip_annotations_out;
-    const char            *label;
+    const char            *name;
     pn_connection_t       *pn_conn = qd_connection_pn(conn);
 
-    qd_router_connection_get_config(conn, &role, &label,
+    qd_router_connection_get_config(conn, &role, &name,
                                     &strip_annotations_in, &strip_annotations_out);
 
-    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, label,
+    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, name,
                                                    pn_connection_remote_container(pn_conn),
                                                    strip_annotations_in, strip_annotations_out);
 
