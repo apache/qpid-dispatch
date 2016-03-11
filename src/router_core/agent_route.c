@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <qpid/dispatch/ctools.h>
 #include "agent_route.h"
 #include "route_control.h"
 #include <stdio.h>
@@ -236,6 +237,78 @@ static qd_address_treatment_t qdra_treatment(qd_parsed_field_t *field)
     return QD_TREATMENT_ANYCAST_BALANCED;
 }
 
+static qdr_route_config_t *qdr_route_config_find_by_identity(qdr_core_t *core, qd_field_iterator_t *identity) {
+    if (!identity)
+        return 0;
+
+    qdr_route_config_list_t  route_config = core->route_config;
+
+    qdr_route_config_t *rc = DEQ_HEAD(route_config);
+
+    while (rc) {
+        // Convert the passed in identity to a char*
+        char id[100];
+        snprintf(id, 100, "%ld", rc->identity);
+        if (qd_field_iterator_equal(identity, (const unsigned char *)id))
+            break;
+        rc = DEQ_NEXT(rc);
+    }
+
+    return rc;
+
+}
+
+static qdr_route_config_t *qdr_route_config_find_by_name(qdr_core_t *core, qd_field_iterator_t *name) {
+    if (!name)
+        return 0;
+
+    qdr_route_config_list_t  route_config = core->route_config;
+
+    qdr_route_config_t *rc = DEQ_HEAD(route_config);
+
+    while (rc) {// Sometimes the name can be null
+        if (rc->name && qd_field_iterator_equal(name, (const unsigned char *)rc->name))
+            break;
+        rc = DEQ_NEXT(rc);
+    }
+
+    return rc;
+
+}
+
+static void qdra_route_delete_route_set_status(qdr_core_t *core, qdr_query_t *query, qdr_route_config_t *route)
+{
+    if (route) {
+        qdr_route_delete_CT(core, route);
+        query->status = QD_AMQP_NO_CONTENT;
+    }
+    else {
+        query->status = QD_AMQP_NOT_FOUND;
+    }
+}
+
+void qdra_route_delete_CT(qdr_core_t          *core,
+                          qdr_query_t          *query,
+                          qd_field_iterator_t *name,
+                          qd_field_iterator_t *identity)
+{
+    if (identity) {
+         qdr_route_config_t *route = qdr_route_config_find_by_identity(core, identity);
+         qdra_route_delete_route_set_status(core, query, route);
+    }
+    else if (name) {
+        qdr_route_config_t *route = qdr_route_config_find_by_name(core, name);
+        qdra_route_delete_route_set_status(core, query, route);
+    }
+    else { // No name and no identity
+        query->status = QD_AMQP_BAD_REQUEST;
+    }
+
+    //
+    // Enqueue the response.
+    //
+    qdr_agent_enqueue_response_CT(core, query);
+}
 
 void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
                           qdr_query_t *query, qd_parsed_field_t *in_body)
@@ -270,7 +343,7 @@ void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name,
         qdr_route_path_t path = QDR_ROUTE_PATH_DIRECT;
         if (path_field) {
             qd_field_iterator_t *path_iter = qd_parse_raw(path_field);
-            if      (qd_field_iterator_equal(path_iter, (unsigned char*) "direct"))
+            if  (qd_field_iterator_equal(path_iter, (unsigned char*) "direct"))
                 path = QDR_ROUTE_PATH_DIRECT;
             else if (qd_field_iterator_equal(path_iter, (unsigned char*) "source"))
                 path = QDR_ROUTE_PATH_SOURCE;

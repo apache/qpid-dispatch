@@ -360,10 +360,10 @@ static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool di
     qdr_query_t             *query      = action->args.agent.query;
 
     switch (query->entity_type) {
-    case QD_ROUTER_ROUTE:       break;
+    case QD_ROUTER_ROUTE:       qdra_route_delete_CT(core, query, name, identity); break;
     case QD_ROUTER_CONNECTION:  break;
     case QD_ROUTER_LINK:        break;
-    case QD_ROUTER_ADDRESS:     qdra_address_delete_CT(core, name, identity, query); break;
+    case QD_ROUTER_ADDRESS:     break;
     case QD_ROUTER_EXCHANGE:    break;
     case QD_ROUTER_BINDING:     break;
    }
