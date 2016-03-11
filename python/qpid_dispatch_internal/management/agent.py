@@ -290,7 +290,6 @@ class ConnectorEntity(EntityAdapter):
         return config_connector
 
     def _delete(self):
-        """Can't actually delete a log source but return it to the default state"""
         self._qd.qd_connection_manager_delete_connector(self._dispatch, self._implementations[0].key)
 
     def _identifier(self): return _addr_port_identifier(self)
