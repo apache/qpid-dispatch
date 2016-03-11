@@ -100,6 +100,9 @@ struct qd_connection_t {
     qd_user_fd_t     *ufd;
     uint64_t         connection_id; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
     qd_policy_settings_t *policy_settings;
+    int              n_sessions;
+    int              n_senders;
+    int              n_receivers;
 
     qd_deferred_call_list_t  deferred_calls;
     sys_mutex_t             *deferred_call_lock;

@@ -63,6 +63,19 @@ static qd_thread_t *thread(qd_server_t *qd_server, int id)
     return thread;
 }
 
+static void free_qd_connection(qd_connection_t *ctx)
+{
+    if (ctx->policy_settings) {
+        if (ctx->policy_settings->sources)
+            free(ctx->policy_settings->sources);
+        if (ctx->policy_settings->targets)
+            free(ctx->policy_settings->targets);
+        free (ctx->policy_settings);
+        ctx->policy_settings = 0;
+    }
+    free_qd_connection_t(ctx);
+}
+
 qd_error_t qd_entity_update_connection(qd_entity_t* entity, void *impl);
 
 /**
@@ -267,6 +280,8 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->ufd           = 0;
         ctx->connection_id = qd_server->next_connection_id++; // Increment the connection id so the next connection can use it
         ctx->policy_settings = 0;
+        ctx->n_senders       = 0;
+        ctx->n_receivers     = 0;
         DEQ_INIT(ctx->deferred_calls);
         ctx->deferred_call_lock = sys_mutex();
         ctx->event_stall  = false;
@@ -729,7 +744,7 @@ static void *thread_run(void *arg)
                     pn_collector_free(ctx->collector);
                 invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
                 sys_mutex_free(ctx->deferred_call_lock);
-                free_qd_connection_t(ctx);
+                free_qd_connection(ctx);
                 qd_server->threads_active--;
                 sys_mutex_unlock(qd_server->lock);
             } else {
@@ -819,7 +834,9 @@ static void cxtr_try_open(void *context)
     ctx->link_context = 0;
     ctx->ufd          = 0;
     ctx->policy_settings = 0;
-
+    ctx->n_senders       = 0;
+    ctx->n_receivers     = 0;
+    
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
     ctx->event_stall  = false;
@@ -846,7 +863,7 @@ static void cxtr_try_open(void *context)
 
     if (ctx->pn_cxtr == 0) {
         sys_mutex_free(ctx->deferred_call_lock);
-        free_qd_connection_t(ctx);
+        free_qd_connection(ctx);
         ct->delay = 10000;
         qd_timer_schedule(ct->timer, ct->delay);
         return;
@@ -1382,6 +1399,8 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     ctx->link_context = 0;
     ctx->ufd          = ufd;
     ctx->policy_settings = 0;
+    ctx->n_senders       = 0;
+    ctx->n_receivers     = 0;
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
     ctx->event_stall  = false;

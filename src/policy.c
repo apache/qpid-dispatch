@@ -18,15 +18,15 @@
  */
 
 #include <Python.h>
-#include <qpid/dispatch/python_embedded.h>
+#include "qpid/dispatch/python_embedded.h"
 #include "policy_private.h"
 #include <stdio.h>
 #include <string.h>
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
-#include <qpid/dispatch/container.h>
-#include <qpid/dispatch/server.h>
-#include <qpid/dispatch/message.h>
+#include "qpid/dispatch/container.h"
+#include "qpid/dispatch/server.h"
+#include "qpid/dispatch/message.h"
 #include <proton/engine.h>
 #include <proton/message.h>
 #include <proton/condition.h>
@@ -34,11 +34,11 @@
 #include <proton/transport.h>
 #include <proton/error.h>
 #include <proton/event.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/hash.h>
-#include <qpid/dispatch/threading.h>
-#include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/log.h>
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/hash.h"
+#include "qpid/dispatch/threading.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/log.h"
 
 
 //
@@ -65,7 +65,8 @@ static char* RESOURCE_LIMIT_EXCEEDED     = "amqp:resource-limit-exceeded";
 // error descriptions signaled to effect denial
 //
 static char* CONNECTION_DISALLOWED         = "connection disallowed by local policy";
-
+static char* SESSION_DISALLOWED            = "session disallowed by local policy";
+static char* LINK_DISALLOWED               = "link disallowed by local policy";
 
 //
 // Policy configuration/statistics management interface
@@ -334,6 +335,52 @@ void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *c
 
 //
 //
+void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
+{
+    pn_condition_t * cond = pn_session_condition(ssn);
+    (void) pn_condition_set_name(       cond, RESOURCE_LIMIT_EXCEEDED);
+    (void) pn_condition_set_description(cond, SESSION_DISALLOWED);
+    pn_session_close(ssn);
+
+    pn_connection_t *conn = qd_connection_pn(qd_conn);
+    qd_dispatch_t *qd = qd_conn->server->qd;
+    qd_policy_t *policy = qd->policy;
+    pn_transport_t *pn_trans = pn_connection_transport(conn);
+    const char *username = pn_transport_get_user(pn_trans);
+    const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+    const char *app = pn_connection_remote_hostname(conn);
+    qd_log(policy->log_source, 
+           POLICY_LOG_LEVEL, 
+           "Policy AMQP Begin denied due to session limit. user: %s, hostip: %s, app: %s", 
+           username, hostip, app);
+}
+
+
+//
+//
+void qd_policy_deny_amqp_link(pn_link_t *link, const char* s_or_r, qd_connection_t *qd_conn)
+{
+    pn_condition_t * cond = pn_link_condition(link);
+    (void) pn_condition_set_name(       cond, RESOURCE_LIMIT_EXCEEDED);
+    (void) pn_condition_set_description(cond, LINK_DISALLOWED);
+    pn_link_close(link);
+
+    pn_connection_t *conn = qd_connection_pn(qd_conn);
+    qd_dispatch_t *qd = qd_conn->server->qd;
+    qd_policy_t *policy = qd->policy;
+    pn_transport_t *pn_trans = pn_connection_transport(conn);
+    const char *username = pn_transport_get_user(pn_trans);
+    const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+    const char *app = pn_connection_remote_hostname(conn);
+    qd_log(policy->log_source, 
+           POLICY_LOG_LEVEL, 
+           "Policy AMQP Attach denied due to %s limit. user: %s, hostip: %s, app: %s", 
+           s_or_r, username, hostip, app);
+}
+
+
+//
+//
 void qd_policy_amqp_open(void *context, bool discard)
 {
     qd_connection_t *qd_conn = (qd_connection_t *)context;
@@ -341,47 +388,47 @@ void qd_policy_amqp_open(void *context, bool discard)
         pn_connection_t *conn = qd_connection_pn(qd_conn);
         qd_dispatch_t *qd = qd_conn->server->qd;
         qd_policy_t *policy = qd->policy;
+        bool connection_allowed = true;
 
-        // username = pn_connection_get_user(conn) returns blank when
-        // the transport returns 'anonymous'.
-        pn_transport_t *pn_trans = pn_connection_transport(conn);
-        const char *username = pn_transport_get_user(pn_trans);
+        if (policy->enableAccessRules) {
+            // Open connection or not based on policy.
+            // username = pn_connection_get_user(conn) returns blank when
+            // the transport returns 'anonymous'.
+            pn_transport_t *pn_trans = pn_connection_transport(conn);
+            const char *username = pn_transport_get_user(pn_trans);
 
-        const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
-        const char *app = pn_connection_remote_hostname(conn);
-        const char *conn_name = qdpn_connector_name(qd_conn->pn_cxtr);
+            const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+            const char *app = pn_connection_remote_hostname(conn);
+            const char *conn_name = qdpn_connector_name(qd_conn->pn_cxtr);
 #define SETTINGS_NAME_SIZE 256
-        char settings_name[SETTINGS_NAME_SIZE];
-        uint32_t conn_id = qd_conn->connection_id;
-        // TODO: settings need to be cached and kept beyond the open
-        qd_policy_settings_t settings;
-        memset(&settings, 0, sizeof(settings));
+            char settings_name[SETTINGS_NAME_SIZE];
+            uint32_t conn_id = qd_conn->connection_id;
+            qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
+            memset(qd_conn->policy_settings, 0, sizeof(qd_policy_settings_t));
 
-        if (!policy->enableAccessRules ||
-            (qd_policy_open_lookup_user(policy, username, hostip, app, conn_name, 
-                                        settings_name, SETTINGS_NAME_SIZE, conn_id,
-                                        &settings) &&
-             settings_name[0])) {
-            // This connection is allowed.
-            // Apply received settings
-            if (settings.maxFrameSize > 0)
-                pn_transport_set_max_frame(pn_trans, settings.maxFrameSize);
-            if (settings.maxSessions > 0)
-                pn_transport_set_channel_max(pn_trans, settings.maxSessions);
-
-            // HACK ALERT: The settings were fetched, used for the Open,
-            // and now they discarded.
-            if (settings.sources)
-                free(settings.sources);
-            if (settings.targets)
-                free(settings.targets);
-
+            if (qd_policy_open_lookup_user(policy, username, hostip, app, conn_name, 
+                                           settings_name, SETTINGS_NAME_SIZE, conn_id,
+                                           qd_conn->policy_settings) &&
+                settings_name[0]) {
+                // This connection is allowed by policy.
+                // Apply tranport policy settings
+                if (qd_conn->policy_settings->maxFrameSize > 0)
+                    pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
+                if (qd_conn->policy_settings->maxSessions > 0)
+                    pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions);
+            } else {
+                // This connection is denied by policy.
+                connection_allowed = false;
+                qd_policy_private_deny_amqp_connection(conn, RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);
+            }
+        } else {
+            // This connection not subject to policy and implicitly allowed.
+            // Note that connections not goverened by policy have no policy_settings.
+        }
+        if (connection_allowed) {
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
                 pn_connection_open(conn);
             qd_connection_manager_connection_opened(qd_conn);
-        } else {
-            // This connection is denied.
-            qd_policy_private_deny_amqp_connection(conn, RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);
         }
     }
     qd_connection_set_event_stall(qd_conn, false);

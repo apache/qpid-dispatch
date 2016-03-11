@@ -19,10 +19,10 @@
  * under the License.
  */
 
-#include <qpid/dispatch.h>
-#include <qpid/dispatch/server.h>
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/static_assert.h>
+#include "qpid/dispatch.h"
+#include "qpid/dispatch/server.h"
+#include "qpid/dispatch/ctools.h"
+#include "qpid/dispatch/static_assert.h"
 
 #include "config.h"
 #include "alloc.h"
@@ -83,6 +83,22 @@ bool qd_policy_socket_accept(void *context, const char *hostname);
  * @param[in] conn qd_connection
  **/
 void qd_policy_socket_close(void *context, const qd_connection_t *conn);
+
+
+/** Set the error condition and close the session.
+ * Over the wire this will send an begin frame followed
+ * immediately by an end frame with the error condition.
+ * @param[in] ssn proton session being closed
+ **/ 
+void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn);
+
+
+/** Set the error condition and close the link.
+ * Over the wire this will send an attach frame followed
+ * immediately by a detach frame with the error condition.
+ * @param[in] link proton link being closed
+ **/ 
+void qd_policy_deny_amqp_link(pn_link_t *link, const char* s_or_r, qd_connection_t *qd_conn);
 
 
 /** Allow or deny an incoming connection.

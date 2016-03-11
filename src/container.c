@@ -343,7 +343,20 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
     case PN_SESSION_REMOTE_OPEN :
         ssn = pn_event_session(event);
         if (pn_session_state(ssn) & PN_LOCAL_UNINIT) {
-            pn_session_set_incoming_capacity(ssn, 1000000);
+            if (qd_conn->policy_settings) {
+                if (qd_conn->policy_settings->maxSessions) {
+                    if (qd_conn->n_sessions == qd_conn->policy_settings->maxSessions) {
+                        qd_policy_deny_amqp_session(ssn, qd_conn);
+                        break;
+                    }
+                }
+                qd_conn->n_sessions++;
+            }
+            if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow) {
+                pn_session_set_incoming_capacity(ssn, qd_conn->policy_settings->maxSessionWindow);
+            } else {
+                pn_session_set_incoming_capacity(ssn, 1000000);
+            }
             pn_session_open(ssn);
         }
         break;
@@ -360,6 +373,15 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                 if (pn_link_session(pn_link) == ssn) {
                     qd_link_t *qd_link = (qd_link_t *)pn_link_get_context(pn_link);
                     if (qd_link && qd_link->node) {
+                        if (qd_conn->policy_settings) {
+                            if (qd_link->direction == QD_OUTGOING) {
+                                qd_conn->n_senders--;
+                                assert(qd_conn->n_senders >= 0);
+                            } else {
+                                qd_conn->n_receivers--;
+                                assert(qd_conn->n_receivers >= 0);
+                            }
+                        }
                         qd_log(container->log_source, QD_LOG_NOTICE,
                                "Aborting link '%s' due to parent session end",
                                pn_link_name(pn_link));
@@ -369,6 +391,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                 }
                 pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
             }
+            qd_conn->n_sessions--;
             pn_session_close(ssn);
         }
         break;
@@ -376,10 +399,49 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
     case PN_LINK_REMOTE_OPEN :
         pn_link = pn_event_link(event);
         if (pn_link_state(pn_link) & PN_LOCAL_UNINIT) {
-            if (pn_link_is_sender(pn_link))
+            if (pn_link_is_sender(pn_link)) {
+               if (qd_conn->policy_settings) {
+                    // Open link or not based on policy.
+                    if (qd_conn->policy_settings->maxSenders) {
+                        if (qd_conn->n_senders == qd_conn->policy_settings->maxSenders) {
+                            // Max sender limit specified and violated.
+                            qd_policy_deny_amqp_link(pn_link, "sender", qd_conn);
+                            break;
+                        } else {
+                            // max sender limit not violated
+                        }
+                    } else {
+                        // max sender limit not specified
+                    }
+                    // TODO: Deny sender link based on target
+                    // Count sender link
+                    qd_conn->n_senders++;
+                } else {
+                    // This connection not controlled by policy. Link implicitly allowed.
+                }
                 setup_outgoing_link(container, pn_link);
-            else
+            } else {
+                if (qd_conn->policy_settings) {
+                    // Open link or not based on policy.
+                    if (qd_conn->policy_settings->maxReceivers) {
+                        if (qd_conn->n_receivers == qd_conn->policy_settings->maxReceivers) {
+                            // Max sender limit specified and violated.
+                            qd_policy_deny_amqp_link(pn_link, "receiver", qd_conn);
+                            break;
+                        } else {
+                            // max receiver limit not violated
+                        }
+                    } else {
+                        // max receiver limit not specified
+                    }
+                    // TODO: Deny receiver link based on source
+                    // Count receiver link
+                    qd_conn->n_receivers++;
+                } else {
+                    // This connection not controlled by policy. Link implicitly allowed.
+                }
                 setup_incoming_link(container, pn_link);
+            }
         } else if (pn_link_state(pn_link) & PN_LOCAL_ACTIVE)
             handle_link_open(container, pn_link);
         break;
@@ -398,8 +460,20 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             // If the qd_link does not reference the pn_link, we have already freed the pn_link.
             // If we attempt to free it again, proton will crash.
             //
-            if (qd_link->pn_link == pn_link)
+            if (qd_link->pn_link == pn_link) {
+                if (qd_conn->policy_settings) {
+                    if (pn_link_is_sender(pn_link)) {
+                        qd_conn->n_senders--;
+                        assert (qd_conn->n_senders >= 0);
+                    } else {
+                        qd_conn->n_receivers--;
+                        assert (qd_conn->n_receivers >= 0);
+                    }
+                } else {
+                    // no policy - links not counted
+                }
                 pn_link_close(pn_link);
+            }
         }
         break;
 
