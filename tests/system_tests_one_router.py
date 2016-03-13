@@ -20,13 +20,19 @@
 import unittest
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, Timeout
 from system_test import TestCase, Messenger, Qdrouterd, main_module
+from proton.utils import SyncRequestResponse, BlockingConnection
+from proton import Message, Url, generate_uuid, Array, UNDESCRIBED, Data, symbol
+from qpid_dispatch.management.client import Node
 
 # PROTON-828:
 try:
     from proton import MODIFIED
+
 except ImportError:
     from proton import PN_STATUS_MODIFIED as MODIFIED
 
+
+CONNECTION_PROPERTIES={u'connection': u'properties'}
 
 class RouterTest(TestCase):
     """System tests involving a single router"""
@@ -62,6 +68,19 @@ class RouterTest(TestCase):
         cls.router.wait_ready()
         cls.address = cls.router.addresses[0]
 
+    def test_connection_properties(self):
+        connection = BlockingConnection(self.router.addresses[0], timeout=60,
+                                        properties=CONNECTION_PROPERTIES)
+        client = SyncRequestResponse(connection)
+
+        node = Node.connect(self.router.addresses[0])
+
+        results = [[{u'connection': u'properties'}], [{}]]
+
+        self.assertEqual(node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['properties']).results,
+                         results)
+
+        client.connection.close()
 
     def test_00_discard(self):
         addr = self.address+"/discard/1"

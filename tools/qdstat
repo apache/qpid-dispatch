@@ -124,6 +124,7 @@ class BusManager(Node):
             row.append(conn.container)
             row.append(conn.role)
             row.append(conn.dir)
+            print 'conn.properties ', conn.properties
             row.append(self.connSecurity(conn))
             row.append(self.connAuth(conn))
             rows.append(row)

@@ -451,7 +451,8 @@ class EntityCache(object):
         adapter._refresh()
         self.add(adapter)
 
-    def add_implementation(self, implementation): self._add_implementation(implementation)
+    def add_implementation(self, implementation):
+        self._add_implementation(implementation)
 
     def _remove(self, entity):
         try:
@@ -497,14 +498,18 @@ class EntityCache(object):
             events = []
             self.qd.qd_entity_refresh_begin(events)
             remove_redundant(events)
+
             for action, type, pointer in events:
                 if action == REMOVE:
                     self._remove_implementation(pointer)
                 elif action == ADD:
                     entity_type = self.schema.entity_type(type)
-                    self._add_implementation(CImplementation(self.qd, entity_type, pointer))
-            # Refresh the entity values while the lock is still held.
-            for e in self.entities: e._refresh()
+                    imp = CImplementation(self.qd, entity_type, pointer)
+                    self._add_implementation(imp)
+            # Refresh the entity_add_implementation values while the lock is still held.
+
+            for e in self.entities:
+                e._refresh()
         finally:
             self.qd.qd_entity_refresh_end()
             self.qd.qd_dispatch_router_unlock(self.agent.dispatch)

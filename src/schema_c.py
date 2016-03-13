@@ -64,13 +64,17 @@ class Generator(object):
         with open(name+'.c', 'w') as f:
             f.write(copyright + text)
 
-    def identifier(self, name): return re.sub(r'\W','_', name)
+    def identifier(self, name):
+        return re.sub(r'\W','_', name)
 
-    def underscore(self, names): return '_'.join([self.identifier(name) for name in names])
+    def underscore(self, names):
+        return '_'.join([self.identifier(name) for name in names])
 
-    def prefix_name(self, names): return self.underscore(self.prefix + names)
+    def prefix_name(self, names):
+        return self.underscore(self.prefix + names)
 
-    def type_name(self, names): return self.prefix_name(names + ['t'])
+    def type_name(self, names):
+        return self.prefix_name(names + ['t'])
 
     class EnumGenerator(object):
         def __init__(self, generator, entity, attribute):
