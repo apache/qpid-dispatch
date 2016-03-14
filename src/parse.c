@@ -309,6 +309,27 @@ int64_t qd_parse_as_long(qd_parsed_field_t *field)
 }
 
 
+bool qd_parse_as_bool(qd_parsed_field_t *field)
+{
+    bool result = false;
+
+    qd_field_iterator_reset(field->raw_iter);
+
+    switch (field->tag) {
+    case QD_AMQP_BYTE:
+    case QD_AMQP_BOOLEAN:
+        result = !!qd_field_iterator_octet(field->raw_iter);
+        break;
+
+    case QD_AMQP_TRUE:
+        result = true;
+        break;
+    }
+
+    return result;
+}
+
+
 uint32_t qd_parse_sub_count(qd_parsed_field_t *field)
 {
     uint32_t count = DEQ_SIZE(field->children);

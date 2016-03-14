@@ -128,6 +128,14 @@ int32_t qd_parse_as_int(qd_parsed_field_t *field);
 int64_t qd_parse_as_long(qd_parsed_field_t *field);
 
 /**
+ * Return the raw content as a boolean value.
+ *
+ * @param field The field pointer returned by qd_parse.
+ * @return The raw content of the field cast as a bool.
+ */
+bool qd_parse_as_bool(qd_parsed_field_t *field);
+
+/**
  * Return the number of sub-field in a compound field.  If the field is
  * a list or array, this is the number of items in the list/array.  If
  * the field is a map, this is the number of key/value pairs in the map
