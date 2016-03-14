@@ -70,22 +70,25 @@ static const char *address_key(qdr_address_t *addr)
     return addr && addr->hash_handle ? (const char*) qd_hash_key_by_handle(addr->hash_handle) : NULL;
 }
 
-
-static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link)
+static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_link_t *link)
 {
-    qd_composed_field_t *body = query->body;
+    switch(col) {
 
-    qd_compose_start_list(body);
-    int i = 0;
-    while (query->columns[i] >= 0) {
-        switch(query->columns[i]) {
-        case QDR_LINK_IDENTITY:
         case QDR_LINK_NAME: {
+            if (link->name)
+                qd_compose_insert_string(body, link->name);
+            else
+                qd_compose_insert_null(body);
+            break;
+        }
+
+        case QDR_LINK_IDENTITY: {
             char id[100];
-            snprintf(id, 100, "link.%ld", link->identifier);
+            snprintf(id, 100, "%ld", link->identifier);
             qd_compose_insert_string(body, id);
             break;
         }
+
 
         case QDR_LINK_TYPE:
             qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.link");
@@ -141,7 +144,17 @@ static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link)
         default:
             qd_compose_insert_null(body);
             break;
-        }
+    }
+}
+
+static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link)
+{
+    qd_composed_field_t *body = query->body;
+
+    qd_compose_start_list(body);
+    int i = 0;
+    while (query->columns[i] >= 0) {
+        qdr_agent_write_column_CT(body, query->columns[i], link);
         i++;
     }
     qd_compose_end_list(body);
@@ -229,3 +242,185 @@ void qdra_link_get_next_CT(qdr_core_t *core, qdr_query_t *query)
     //
     qdr_agent_enqueue_response_CT(core, query);
 }
+
+
+static void qdr_manage_write_response_map_CT(qd_composed_field_t *body, qdr_link_t *link)
+{
+    qd_compose_start_map(body);
+
+    for(int i = 0; i < QDR_LINK_COLUMN_COUNT; i++) {
+        qd_compose_insert_string(body, qdr_link_columns[i]);
+        qdr_agent_write_column_CT(body, i, link);
+    }
+
+    qd_compose_end_map(body);
+}
+
+
+static qdr_link_t *qdr_link_find_by_identity(qdr_core_t *core, qd_field_iterator_t *identity)
+{
+    if (!identity)
+        return 0;
+
+    qdr_link_t *link = DEQ_HEAD(core->open_links);
+
+    while(link) {
+        char id[100];
+        if (link->identifier) {
+            snprintf(id, 100, "%ld", link->identifier);
+            if (qd_field_iterator_equal(identity, (const unsigned char *)id))
+                break;
+        }
+        link = DEQ_NEXT(link);
+    }
+
+    return link;
+
+}
+
+
+static qdr_link_t *qdr_link_find_by_name(qdr_core_t *core, qd_field_iterator_t *name)
+{
+    if(!name)
+        return 0;
+
+    qdr_link_t *link = DEQ_HEAD(core->open_links);
+
+    while(link) {
+        if (link->name && qd_field_iterator_equal(name, (const unsigned char *)link->name))
+            break;
+        link = DEQ_NEXT(link);
+    }
+
+    return link;
+}
+
+
+/**
+ * The body map containing any attributes that are not applicable for the entity being updated
+ * MUST result in a failure response with a statusCode of 400 (Bad Request).
+ * TODO - Generalize this function so that all update functions can use it.
+ */
+static qd_error_t qd_is_update_request_valid(qd_router_entity_type_t  entity_type,
+                                       qd_parsed_field_t       *in_body)
+{
+    qd_error_clear();
+    if(in_body != 0 && qd_parse_is_map(in_body)) {
+        int j=0;
+        qd_parsed_field_t *field = qd_parse_sub_key(in_body, j);
+
+        while (field) {
+            bool found = false;
+
+            qd_field_iterator_t *iter = qd_parse_raw(field);
+
+            for(int i = 1; i < QDR_LINK_COLUMN_COUNT; i++) {
+                if (qd_field_iterator_equal(iter, (unsigned char*)qdr_link_columns[i])) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {// Some bad field was specified in the body map. Reject this request
+                int field_len = qd_field_iterator_length(iter);
+                // lenth of "Invalid Column Name :" + '\0' is 22
+                char error_message[22 + field_len];
+                snprintf(error_message, 22, "Invalid Column Name: ");
+                char octet = qd_field_iterator_octet(iter);
+                int i = 0;
+                while (octet) {
+                    char *spot = &error_message[21+i];
+                    snprintf(spot, 2, &octet);
+                    octet = qd_field_iterator_octet(iter);
+                    i++;
+                }
+                return qd_error(QD_ERROR_MESSAGE, "%s", error_message);
+            }
+
+            j++;
+
+            //Get the next field in the body
+            field = qd_parse_sub_key(in_body, j);
+        }
+    }
+    else
+        return qd_error(QD_ERROR_MESSAGE, "%s", "Message body is not a map"); // The body is either empty or the body is not a map, return false
+
+    return QD_ERROR_NONE;
+}
+
+
+static void qdra_link_update_set_status(qdr_core_t *core, qdr_query_t *query, qdr_link_t *link)
+{
+    if (link) {
+        //link->admin_state = qd_field_iterator_copy(adm_state);
+        qdr_manage_write_response_map_CT(query->body, link);
+        query->status = QD_AMQP_OK;
+    }
+    else {
+        query->status = QD_AMQP_NOT_FOUND;
+        qd_compose_start_map(query->body);
+        qd_compose_end_map(query->body);
+    }
+}
+
+static void qdra_link_set_bad_request(qdr_query_t *query)
+{
+    query->status = QD_AMQP_BAD_REQUEST;
+    qd_compose_start_map(query->body);
+    qd_compose_end_map(query->body);
+}
+
+void qdra_link_update_CT(qdr_core_t              *core,
+                             qd_field_iterator_t *name,
+                             qd_field_iterator_t *identity,
+                             qdr_query_t         *query,
+                             qd_parsed_field_t   *in_body)
+
+{
+    // If the request was successful then the statusCode MUST contain 200 (OK) and the body of the message
+    // MUST contain a map containing the actual attributes of the entity updated. These MAY differ from those
+    // requested.
+    // A map containing attributes that are not applicable for the entity being created, or invalid values for a
+    // given attribute, MUST result in a failure response with a statusCode of 400 (Bad Request).
+    if (qd_parse_is_map(in_body)) {
+        // The absence of an attribute name implies that the entity should retain its existing value.
+        // If the map contains a key-value pair where the value is null then the updated entity should have no value
+        // for that attribute, removing any previous value.
+
+        if (qd_is_update_request_valid(query->entity_type, in_body) == QD_ERROR_NONE) {
+            qd_parsed_field_t *admin_state = qd_parse_value_by_key(in_body, qdr_link_columns[12]);
+            if (admin_state) { //admin state is the only field that can be updated via the update management request
+                //qd_field_iterator_t *adm_state = qd_parse_raw(admin_state);
+
+                if (identity) {
+                    qdr_link_t *link = qdr_link_find_by_identity(core, identity);
+                    // TODO - set the adm_state on the link
+                    qdra_link_update_set_status(core, query, link);
+                }
+                else if (name) {
+                    qdr_link_t *link = qdr_link_find_by_name(core, name);
+                    // TODO - set the adm_state on the link
+                    qdra_link_update_set_status(core, query, link);
+                }
+                else {
+                    qdra_link_set_bad_request(query);
+                }
+            }
+            else
+                qdra_link_set_bad_request(query);
+        }
+        else {
+            qdra_link_set_bad_request(query);
+            query->status.description = qd_error_message();
+
+        }
+    }
+    else
+        query->status = QD_AMQP_BAD_REQUEST;
+
+    //
+    // Enqueue the response.
+    //
+    qdr_agent_enqueue_response_CT(core, query);
+}
+
