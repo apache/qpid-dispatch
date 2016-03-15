@@ -544,7 +544,9 @@ qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
  ******************************************************************************
  */
 typedef enum {
-    QD_ROUTER_ROUTE,
+    QD_ROUTER_CONFIG_ADDRESS,
+    QD_ROUTER_CONFIG_LINK_ROUTE,
+    QD_ROUTER_CONFIG_AUTO_LINK,
     QD_ROUTER_CONNECTION,
     QD_ROUTER_LINK,
     QD_ROUTER_ADDRESS,
@@ -615,30 +617,6 @@ void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t ty
 void qdr_manage_update(qdr_core_t *core, void *context, qd_router_entity_type_t type,
                        qd_field_iterator_t *name, qd_field_iterator_t *identity,
                        qd_parsed_field_t *in_body, qd_composed_field_t *out_body);
-
-/**
- * qdr_manage_method
- *
- * Invoke a custom method on a managed entity in the router core.
- *
- * @param core Pointer to the core object returned by qd_core()
- * @param context An opaque context that will be passed back in the invocation of the response callback
- * @param type The entity type for the update request
- * @param method The method being invoked
- * @param name The name supplied with the request (or 0 if the identity was supplied)
- * @param identity The identity supplied with the request (or 0 if the name was supplied)
- * @param in_body The body of the request message
- * @param out_body A composed field for the body of the response message
- */
-void qdr_manage_method(qdr_core_t              *core,
-                       void                    *context,
-                       qd_router_entity_type_t  type,
-                       qd_field_iterator_t     *method,
-                       qd_field_iterator_t     *name,
-                       qd_field_iterator_t     *identity,
-                       qd_parsed_field_t       *in_body,
-                       qd_composed_field_t     *out_body);
-
 
 /**
  * Sequence for running a query:

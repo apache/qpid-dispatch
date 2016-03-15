@@ -39,10 +39,11 @@ const char *IDENTITY = "identity";
 const char *OPERATION = "operation";
 const char *ATTRIBUTE_NAMES = "attributeNames";
 
-const unsigned char *route_entity_type = (unsigned char*) "org.apache.qpid.dispatch.route";
-const unsigned char *waypoint_entity_type = (unsigned char*) "org.apache.qpid.dispatch.waypoint";
-const unsigned char *address_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.address";
-const unsigned char *link_entity_type    = (unsigned char*) "org.apache.qpid.dispatch.router.link";
+const unsigned char *config_address_entity_type = (unsigned char*) "org.apache.qpid.dispatch.router.config.address";
+const unsigned char *link_route_entity_type     = (unsigned char*) "org.apache.qpid.dispatch.router.config.linkRoute";
+const unsigned char *auto_link_entity_type      = (unsigned char*) "org.apache.qpid.dispatch.router.config.autoLink";
+const unsigned char *address_entity_type        = (unsigned char*) "org.apache.qpid.dispatch.router.address";
+const unsigned char *link_entity_type           = (unsigned char*) "org.apache.qpid.dispatch.router.link";
 
 const char * const status_description = "statusDescription";
 const char * const correlation_id = "correlation-id";
@@ -52,14 +53,11 @@ const char * const status_code = "statusCode";
 const char * MANAGEMENT_INTERNAL = "_local/$_management_internal";
 
 //TODO - Move these to amqp.h
-const unsigned char *MANAGEMENT_QUERY                  = (unsigned char*) "QUERY";
-const unsigned char *MANAGEMENT_CREATE                 = (unsigned char*) "CREATE";
-const unsigned char *MANAGEMENT_READ                   = (unsigned char*) "READ";
-const unsigned char *MANAGEMENT_UPDATE                 = (unsigned char*) "UPDATE";
-const unsigned char *MANAGEMENT_DELETE                 = (unsigned char*) "DELETE";
-const unsigned char *MANAGEMENT_ADD_CONTAINER          = (unsigned char*) "ADD-CONTAINER";
-const unsigned char *MANAGEMENT_REMOVE_CONTAINER_CLEAN = (unsigned char*) "REMOVE-CONTAINER-CLEAN";
-const unsigned char *MANAGEMENT_REMOVE_CONTAINER_HARD  = (unsigned char*) "REMOVE-CONTAINER-HARD";
+const unsigned char *MANAGEMENT_QUERY  = (unsigned char*) "QUERY";
+const unsigned char *MANAGEMENT_CREATE = (unsigned char*) "CREATE";
+const unsigned char *MANAGEMENT_READ   = (unsigned char*) "READ";
+const unsigned char *MANAGEMENT_UPDATE = (unsigned char*) "UPDATE";
+const unsigned char *MANAGEMENT_DELETE = (unsigned char*) "DELETE";
 
 
 typedef enum {
@@ -67,10 +65,7 @@ typedef enum {
     QD_ROUTER_OPERATION_CREATE,
     QD_ROUTER_OPERATION_READ,
     QD_ROUTER_OPERATION_UPDATE,
-    QD_ROUTER_OPERATION_DELETE,
-    QD_ROUTER_OPERATION_ADD_CONTAINER,
-    QD_ROUTER_OPERATION_REMOVE_CONTAINER_CLEAN,
-    QD_ROUTER_OPERATION_REMOVE_CONTAINER_HARD
+    QD_ROUTER_OPERATION_DELETE
 } qd_router_operation_type_t;
 
 
@@ -380,8 +375,12 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
         *entity_type = QD_ROUTER_ADDRESS;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), link_entity_type))
         *entity_type = QD_ROUTER_LINK;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), route_entity_type))
-        *entity_type = QD_ROUTER_ROUTE;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), config_address_entity_type))
+        *entity_type = QD_ROUTER_CONFIG_ADDRESS;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), link_route_entity_type))
+        *entity_type = QD_ROUTER_CONFIG_LINK_ROUTE;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), auto_link_entity_type))
+        *entity_type = QD_ROUTER_CONFIG_AUTO_LINK;
     else
         return false;
 
@@ -401,12 +400,6 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
         (*operation_type) = QD_ROUTER_OPERATION_UPDATE;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_DELETE))
         (*operation_type) = QD_ROUTER_OPERATION_DELETE;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_ADD_CONTAINER) && *entity_type == QD_ROUTER_ROUTE)
-        (*operation_type) = QD_ROUTER_OPERATION_ADD_CONTAINER;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_REMOVE_CONTAINER_CLEAN) && *entity_type == QD_ROUTER_ROUTE)
-        (*operation_type) = QD_ROUTER_OPERATION_REMOVE_CONTAINER_CLEAN;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_REMOVE_CONTAINER_HARD) && *entity_type == QD_ROUTER_ROUTE)
-        (*operation_type) = QD_ROUTER_OPERATION_REMOVE_CONTAINER_HARD;
     else
         // This is an unknown operation type. cannot be handled, return false.
         return false;
@@ -465,10 +458,6 @@ void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unuse
             break;
         case QD_ROUTER_OPERATION_DELETE:
             qd_core_agent_delete_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
-            break;
-        case QD_ROUTER_OPERATION_ADD_CONTAINER:
-        case QD_ROUTER_OPERATION_REMOVE_CONTAINER_CLEAN:
-        case QD_ROUTER_OPERATION_REMOVE_CONTAINER_HARD:
             break;
         }
     } else {

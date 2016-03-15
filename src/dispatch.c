@@ -120,9 +120,9 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
     return qd_error_code();
 }
 
-qd_error_t qd_dispatch_configure_address(qd_dispatch_t *qd, qd_entity_t *entity) {
+qd_error_t qd_dispatch_configure_fixed_address(qd_dispatch_t *qd, qd_entity_t *entity) {
     if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
-    qd_router_configure_address(qd->router, entity);
+    qd_router_configure_fixed_address(qd->router, entity);
     return qd_error_code();
 }
 
@@ -138,9 +138,21 @@ qd_error_t qd_dispatch_configure_lrp(qd_dispatch_t *qd, qd_entity_t *entity) {
     return qd_error_code();
 }
 
-qd_error_t qd_dispatch_configure_route(qd_dispatch_t *qd, qd_entity_t *entity) {
+qd_error_t qd_dispatch_configure_address(qd_dispatch_t *qd, qd_entity_t *entity) {
     if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
-    qd_router_configure_route(qd->router, entity);
+    qd_router_configure_address(qd->router, entity);
+    return qd_error_code();
+}
+
+qd_error_t qd_dispatch_configure_link_route(qd_dispatch_t *qd, qd_entity_t *entity) {
+    if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
+    qd_router_configure_link_route(qd->router, entity);
+    return qd_error_code();
+}
+
+qd_error_t qd_dispatch_configure_auto_link(qd_dispatch_t *qd, qd_entity_t *entity) {
+    if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
+    qd_router_configure_auto_link(qd->router, entity);
     return qd_error_code();
 }
 

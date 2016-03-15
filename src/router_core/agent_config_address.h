@@ -1,5 +1,5 @@
-#ifndef qdr_agent_route
-#define qdr_agent_route 1
+#ifndef qdr_agent_config_address
+#define qdr_agent_config_address 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,15 +21,15 @@
 
 #include "router_core_private.h"
 
-void qdra_route_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
-void qdra_route_get_next_CT(qdr_core_t *core, qdr_query_t *query);
-void qdra_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name, qdr_query_t *query, qd_parsed_field_t *in_body);
-void qdra_route_update_CT(qdr_core_t *core, qdr_query_t *query, qd_parsed_field_t *in_body);
-void qdra_route_delete_CT(qdr_core_t *core, qdr_query_t *query, qd_field_iterator_t *name,
+void qdra_config_address_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
+void qdra_config_address_get_next_CT(qdr_core_t *core, qdr_query_t *query);
+void qdra_config_address_create_CT(qdr_core_t *core, qd_field_iterator_t *name, qdr_query_t *query, qd_parsed_field_t *in_body);
+void qdra_config_address_update_CT(qdr_core_t *core, qdr_query_t *query, qd_parsed_field_t *in_body);
+void qdra_config_address_delete_CT(qdr_core_t *core, qdr_query_t *query, qd_field_iterator_t *name,
                                 qd_field_iterator_t *identity);
 
-#define QDR_ROUTE_COLUMN_COUNT 9
+#define QDR_CONFIG_ADDRESS_COLUMN_COUNT 8
 
-const char *qdr_route_columns[QDR_ROUTE_COLUMN_COUNT + 1];
+const char *qdr_config_address_columns[QDR_CONFIG_ADDRESS_COLUMN_COUNT + 1];
 
 #endif

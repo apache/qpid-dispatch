@@ -829,46 +829,125 @@
             }
         },
 
-        "route": {
-            "description": "Provisioned route that affects the treatment of message deliveries and link attaches",
+        "router.config.address": {
+            "description": "Entity type for address configuration.  This is used to configure the treatment of message-routed deliveries within a particular address-space.  The configuration controls distribution and address phasing.",
             "extends": "configurationEntity",
-            "operations": ["CREATE", "DELETE", "ADD-CONTAINER", "REMOVE-CONTAINER-CLEAN", "REMOVE-CONTAINER-HARD"],
+            "operations": ["CREATE", "DELETE"],
             "attributes": {
-                "address": {
+                "prefix": {
+                    "type": "string",
+                    "description": "The address prefix for the configured settings",
+                    "create": true,
+                    "required": true
+                },
+                "distribution": {
+                    "type": ["multicast", "closest", "balanced"],
+                    "description": "Treatment of traffic associated with the address",
+                    "create": true,
+                    "required": false,
+                    "default": "balanced"
+                },
+                "waypoint": {
+                    "type": "boolean",
+                    "description": "Designates this address space as being used for waypoints.  This will cause the proper address-phasing to be used.",
+                    "create": true,
+                    "required": false,
+                    "default": false
+                },
+                "ingressPhase": {
+                    "type": "integer",
+                    "description": "Advanced - Override the ingress phase for this address",
+                    "create": true,
+                    "required": false
+                },
+                "egressPhase": {
+                    "type": "integer",
+                    "description": "Advanced - Override the egress phase for this address",
+                    "create": true,
+                    "required": false
+                }
+            }
+        },
+
+        "router.config.linkRoute": {
+            "description": "Entity type for link-route configuration.  This is used to identify remote containers that shall be destinations for routed link-attaches.  The link-routing configuration applies to an addressing space defined by a prefix.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "prefix": {
+                    "type": "string",
+                    "description": "The address prefix for the configured settings",
+                    "create": true,
+                    "required": true
+                },
+                "containerId": {
+                    "type": "string",
+                    "description": "ContainerID for the target container",
+                    "create": true,
+                    "required": false
+                },
+                "connectionName": {
+                    "type": "string",
+                    "description": "The name from a connector or listener",
+                    "create": true,
+                    "required": false
+                },
+                "distribution": {
+                    "type": ["linkBalanced"],
+                    "description": "Treatment of traffic associated with the address",
+                    "create": true,
+                    "required": false,
+                    "default": "linkBalanced"
+                },
+                "dir": {
+                    "type": ["in", "out"],
+                    "description": "The permitted direction of links: 'in' means client senders; 'out' means client receivers",
+                    "create": true,
+                    "required": false,
+                    "default": "both"
+                }
+            }
+        },
+
+        "router.config.autoLink": {
+            "description": "Entity type for configuring auto-links.  Auto-links are links whose lifecycle is managed by the router.  These are typically used to attach to waypoints on remote containers (brokers, etc.).",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "addr": {
                     "type": "string",
                     "description": "The address or address prefix for the provisioned object",
                     "create": true,
                     "required": true
                 },
-                "path": {
-                    "type": ["direct", "source", "sink", "waypoint"],
-                    "description": "Type of object being provisioned:  address prefix, link destination, or waypoint",
+                "dir": {
+                    "type": ["in", "out"],
+                    "description": "The direction of the link to be created.  In means into the router, out means out of the router.",
                     "create": true,
-                    "default": "direct"
+                    "required": true
                 },
-                "treatment": {
-                    "type": ["multicast", "closest", "balanced", "linkBalanced"],
-                    "description": "Treatment of traffic associated with the address",
-                    "create": true,
-                    "default": "balanced"
-                },
-                "connectors": {
-                    "type": "string",
-                    "description": "Comma-separated list of names associated with the connector leading to the target containers",
+                "phase": {
+                    "type": "integer",
+                    "description": "The address phase for this link.  Defaults to '0' for 'out' links and '1' for 'in' links.",
                     "create": true,
                     "required": false
                 },
-                "containers": {
+                "containerId": {
                     "type": "string",
-                    "description": "Comma-separated list of container-IDs for target containers",
+                    "description": "ContainerID for the target container",
                     "create": true,
                     "required": false
                 },
-                "routeAddress": {
+                "connectionName": {
                     "type": "string",
-                    "description": "Alternate address to use for routing links/messages",
+                    "description": "The name from a connector or listener",
                     "create": true,
                     "required": false
+                },
+                "linkRef": {
+                    "type": "string",
+                    "description": "Reference to the org.apache.qpid.dispatch.router.link if the link is attached",
+                    "create": false
                 }
             }
         },
@@ -876,14 +955,23 @@
         "router.link": {
             "description": "Link to another AMQP endpoint: router node, client or other AMQP process.",
             "extends": "operationalEntity",
+            "operations": ["UPDATE"],
             "attributes": {
+                "adminStatus": {
+                    "type": ["enabled", "disabled"],
+                    "default": "enabled",
+                    "update": true
+                },
+                "operStatus": {
+                    "type": ["up", "down", "quiescing"]
+                },
                 "linkName": {
                     "type": "string",
                     "description": "Name assigned to the link in the Attach."
                 },
                 "linkType": {
-                    "type": ["endpoint", "waypoint", "router-control", "inter-router"],
-                    "description": "Type of link: endpoint: a link to a normally connected endpoint; waypoint: a link to a waypoint node; inter-router: a link to another router in the network."
+                    "type": ["endpoint", "router-control", "inter-router"],
+                    "description": "Type of link: endpoint: a link to a normally connected endpoint; inter-router: a link to another router in the network."
                 },
                 "linkDir": {
                     "type": ["in", "out"],
@@ -912,19 +1000,6 @@
                 "deliveryCount": {
                     "type": "integer",
                     "description": "The total number of deliveries that have traversed this link."
-                },
-                "adminState": {
-                    "type": ["enabled", "disabled"],
-                    "description": "",
-                    "default": "enabled",
-                    "create": false,
-                    "update": true
-                },
-                "operState": {
-                    "type": ["attaching", "up", "quiescing", "stopped", "detaching"],
-                    "description": "",
-                    "create": false,
-                    "update": false
                 }
             }
         },
@@ -934,7 +1009,7 @@
             "extends": "operationalEntity",
             "attributes": {
                 "treatment": {
-                    "type": ["flood", "multi", "anyClosest", "anyBalanced", "linkBalanced"],
+                    "type": ["flood", "multicast", "closest", "balanced", "linkBalanced"],
                     "description": "Forwarding treatment for the address: flood - messages delivered to all subscribers along all available paths (this will cause duplicate deliveries if there are redundant paths); multi - one copy of each message delivered to all subscribers; anyClosest - messages delivered to only the closest subscriber; anyBalanced - messages delivered to one subscriber with load balanced across subscribers; linkBalanced - for link-routing, link attaches balanced across destinations."
                 },
                 "inProcess": {
@@ -1023,25 +1098,6 @@
                 "routerLink": {
                     "description": "Local link to remote node",
                     "type": "entityId"
-                }
-            }
-        },
-
-        "router.waypoint": {
-            "description": "Waypoint that is enabled in this router (i.e. a provisioned waypoint with a connector).",
-            "extends": "operationalEntity",
-            "attributes": {
-                "provisionedId": {
-                    "description": "Reference to the provisioning record that created this waypoint",
-                    "type": "string"
-                },
-                "outboundLink": {
-                    "description": "Reference to the link that is outbound from the waypoint to the remote node",
-                    "type": "string"
-                },
-                "inboundLink": {
-                    "description": "Reference to the link that is inbound to the waypoint from the remote node",
-                    "type": "string"
                 }
             }
         },

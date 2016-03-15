@@ -244,6 +244,48 @@ class RouterEntity(EntityAdapter):
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
 
 
+class AddressEntity(EntityAdapter):
+    def __init__(self, agent, entity_type, attributes=None):
+        super(AddressEntity, self).__init__(agent, entity_type, attributes, validate=False)
+        # Router is a mix of configuration and operational entity.
+        # The statistics attributes are operational not configured.
+        self._add_implementation(
+            CImplementation(agent.qd, entity_type, self._dispatch))
+
+    def _identifier(self): return self.attributes.get('identity')
+
+    def create(self):
+        self._qd.qd_dispatch_configure_address(self._dispatch, self)
+
+
+class LinkRouteEntity(EntityAdapter):
+    def __init__(self, agent, entity_type, attributes=None):
+        super(LinkRouteEntity, self).__init__(agent, entity_type, attributes, validate=False)
+        # Router is a mix of configuration and operational entity.
+        # The statistics attributes are operational not configured.
+        self._add_implementation(
+            CImplementation(agent.qd, entity_type, self._dispatch))
+
+    def _identifier(self): return self.attributes.get('identity')
+
+    def create(self):
+        self._qd.qd_dispatch_configure_link_route(self._dispatch, self)
+
+
+class AutoLinkEntity(EntityAdapter):
+    def __init__(self, agent, entity_type, attributes=None):
+        super(AutoLinkEntity, self).__init__(agent, entity_type, attributes, validate=False)
+        # Router is a mix of configuration and operational entity.
+        # The statistics attributes are operational not configured.
+        self._add_implementation(
+            CImplementation(agent.qd, entity_type, self._dispatch))
+
+    def _identifier(self): return self.attributes.get('identity')
+
+    def create(self):
+        self._qd.qd_dispatch_configure_auto_link(self._dispatch, self)
+
+
 class LogEntity(EntityAdapter):
 
     def __init__(self, agent, entity_type, attributes=None, validate=True):
@@ -296,7 +338,7 @@ class ConnectorEntity(EntityAdapter):
 
 class FixedAddressEntity(EntityAdapter):
     def create(self):
-        self._qd.qd_dispatch_configure_address(self._dispatch, self)
+        self._qd.qd_dispatch_configure_fixed_address(self._dispatch, self)
 
 
 class WaypointEntity(EntityAdapter):
@@ -308,9 +350,17 @@ class LinkRoutePatternEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_lrp(self._dispatch, self)
 
-class RouteEntity(EntityAdapter):
+class AddressEntity(EntityAdapter):
     def create(self):
-        self._qd.qd_dispatch_configure_route(self._dispatch, self)
+        self._qd.qd_dispatch_configure_address(self._dispatch, self)
+
+class LinkRouteEntity(EntityAdapter):
+    def create(self):
+        self._qd.qd_dispatch_configure_link_route(self._dispatch, self)
+
+class AutoLinkEntity(EntityAdapter):
+    def create(self):
+        self._qd.qd_dispatch_configure_auto_link(self._dispatch, self)
 
 class ConsoleEntity(EntityAdapter):
     def create(self):
