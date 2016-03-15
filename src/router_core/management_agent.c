@@ -26,6 +26,7 @@
 #include <qpid/dispatch/dispatch.h>
 #include "router_core_private.h"
 #include "dispatch_private.h"
+#include "agent_link.h"
 #include "alloc.h"
 
 const char *ENTITY = "entityType";
@@ -303,8 +304,23 @@ static void qd_core_agent_create_handler(qdr_core_t                 *core,
 }
 
 
-static void qd_core_agent_update_handler()
+static void qd_core_agent_update_handler(qdr_core_t                 *core,
+                                         qd_message_t               *msg,
+                                         qd_router_entity_type_t     entity_type,
+                                         qd_router_operation_type_t  operation_type,
+                                         qd_field_iterator_t        *identity_iter,
+                                         qd_field_iterator_t        *name_iter)
 {
+    qd_composed_field_t *out_body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
+
+    // Set the callback function.
+    qdr_manage_handler(core, qd_manage_response_handler);
+
+    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
+
+    qd_parsed_field_t *in_body= qd_parse(qd_message_field_iterator(msg, QD_FIELD_BODY));
+
+    qdr_manage_update(core, ctx, entity_type, name_iter, identity_iter, in_body, out_body);
 
 }
 
@@ -454,7 +470,7 @@ void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unuse
             qd_core_agent_read_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
             break;
         case QD_ROUTER_OPERATION_UPDATE:
-            qd_core_agent_update_handler();
+            qd_core_agent_update_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
             break;
         case QD_ROUTER_OPERATION_DELETE:
             qd_core_agent_delete_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
