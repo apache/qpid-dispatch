@@ -27,6 +27,7 @@
 static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 //==================================================================================
 // Internal Functions
@@ -154,9 +155,15 @@ void qdr_manage_update(qdr_core_t              *core,
                        qd_field_iterator_t     *name,
                        qd_field_iterator_t     *identity,
                        qd_parsed_field_t       *in_body,
-                       qd_composed_field_t      *out_body)
+                       qd_composed_field_t     *out_body)
 {
+    qdr_action_t *action = qdr_action(qdr_manage_update_CT, "manage_update");
+    action->args.agent.query = qdr_query(core, context, type, out_body);
+    action->args.agent.name = name;
+    action->args.agent.identity = identity;
+    action->args.agent.in_body = in_body;
 
+    qdr_action_enqueue(core, action);
 }
 
 
@@ -367,6 +374,25 @@ static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_EXCHANGE:    break;
     case QD_ROUTER_BINDING:     break;
    }
+}
+
+static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    qd_field_iterator_t     *identity   = action->args.agent.identity;
+    qd_field_iterator_t     *name       = action->args.agent.name;
+    qdr_query_t             *query      = action->args.agent.query;
+    qd_parsed_field_t       *in_body    = action->args.agent.in_body;
+
+    switch (query->entity_type) {
+        case QD_ROUTER_ROUTE:      break;
+        case QD_ROUTER_CONNECTION: break;
+        case QD_ROUTER_LINK:       qdra_link_update_CT(core, name, identity, query, in_body); break;
+        case QD_ROUTER_ADDRESS:    break;
+        case QD_ROUTER_EXCHANGE:   break;
+        case QD_ROUTER_BINDING:    break;
+   }
+
+    qd_parse_free(in_body);
 }
 
 

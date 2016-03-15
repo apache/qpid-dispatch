@@ -23,6 +23,11 @@
 
 void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
 void qdra_link_get_next_CT(qdr_core_t *core, qdr_query_t *query);
+void qdra_link_update_CT(qdr_core_t          *core,
+                         qd_field_iterator_t *name,
+                         qd_field_iterator_t *identity,
+                         qdr_query_t         *query,
+                         qd_parsed_field_t   *in_body);
 
 #define QDR_LINK_COLUMN_COUNT  14
 
