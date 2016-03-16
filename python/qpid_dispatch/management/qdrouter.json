@@ -886,7 +886,7 @@
                     "create": true,
                     "required": false
                 },
-                "connectionName": {
+                "connection": {
                     "type": "string",
                     "description": "The name from a connector or listener",
                     "create": true,
@@ -903,8 +903,7 @@
                     "type": ["in", "out"],
                     "description": "The permitted direction of links: 'in' means client senders; 'out' means client receivers",
                     "create": true,
-                    "required": false,
-                    "default": "both"
+                    "required": true
                 }
             }
         },
@@ -938,7 +937,7 @@
                     "create": true,
                     "required": false
                 },
-                "connectionName": {
+                "connection": {
                     "type": "string",
                     "description": "The name from a connector or listener",
                     "create": true,

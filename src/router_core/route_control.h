@@ -29,7 +29,7 @@ void qdr_route_add_link_route_CT(qdr_core_t             *core,
                                  qd_address_treatment_t  treatment,
                                  qd_direction_t          dir);
 
-void qdr_route_del_link_route_CT(qdr_core_t *core);
+void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr);
 
 void qdr_route_add_auto_link_CT(qdr_core_t             *core,
                                 qd_field_iterator_t    *name,

@@ -156,10 +156,15 @@ void qdr_route_add_link_route_CT(qdr_core_t             *core,
         if (lr->conn_id->open_connection)
             qdr_link_route_activate_CT(core, lr, lr->conn_id->open_connection);
     }
+
+    //
+    // Add the link route to the core list
+    //
+    DEQ_INSERT_TAIL(core->link_routes, lr);
 }
 
 
-void qdr_route_del_link_route_CT(qdr_core_t *core)
+void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
 {
 }
 
