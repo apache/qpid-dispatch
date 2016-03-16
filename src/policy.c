@@ -19,7 +19,7 @@
 
 #include <Python.h>
 #include "qpid/dispatch/python_embedded.h"
-#include "policy_private.h"
+#include "policy.h"
 #include <stdio.h>
 #include <string.h>
 #include "dispatch_private.h"
@@ -132,6 +132,8 @@ qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
     return QD_ERROR_NONE;
 
 error:
+    if (policy->policyFolder)
+        free(policy->policyFolder);
     qd_policy_free(policy);
     return qd_error_code();
 }
@@ -144,6 +146,40 @@ qd_error_t qd_register_policy_manager(qd_policy_t *policy, void *policy_manager)
     policy->py_policy_manager = policy_manager;
     return QD_ERROR_NONE;
 }
+
+
+long qd_policy_c_counts_alloc()
+{
+    qd_policy_denial_counts_t * dc = NEW(qd_policy_denial_counts_t);
+    assert(dc);
+    memset(dc, 0, sizeof(qd_policy_denial_counts_t));
+    return (long)dc;
+}
+
+
+void qd_policy_c_counts_free(long ccounts)
+{
+    void *dc = (void *)ccounts;
+    assert(dc);
+    free(dc);
+}
+
+
+qd_error_t qd_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
+{
+    qd_policy_denial_counts_t *dc = (qd_policy_denial_counts_t*)ccounts;
+    if (!qd_entity_set_long(entity, "sessionDenied", dc->sessionDenied) &&
+        !qd_entity_set_long(entity, "senderDenied", dc->senderDenied) &&
+        !qd_entity_set_long(entity, "receiverDenied", dc->receiverDenied) &&
+        !qd_entity_set_long(entity, "dynamicSrcDenied", dc->dynamicSrcDenied) &&
+        !qd_entity_set_long(entity, "anonymousSenderDenied", dc->anonymousSenderDenied) &&
+        !qd_entity_set_long(entity, "linkSourceDenied", dc->linkSourceDenied) &&
+        !qd_entity_set_long(entity, "linkTargetDenied", dc->linkTargetDenied)
+    )
+        return QD_ERROR_NONE;
+    return qd_error_code();
+}
+
 
 /** Update the statistics in qdrouterd.conf["policy"]
  * @param[in] entity pointer to the policy management object
@@ -238,6 +274,7 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
  *  a go-no_go decision. Return false if the mechanics of calling python
  *  fails. A policy lookup will deny the connection by returning a blank
  *  usergroup name in the name buffer.
+ *  Connection and connection denial counting is done in the python code.
  * @param[in] policy pointer to policy
  * @param[in] username authenticated user name
  * @param[in] hostip numeric host ip address
@@ -304,6 +341,8 @@ bool qd_policy_open_lookup_user(
         settings->allowDynamicSrc      = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSrc", false);
         settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
         settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
+        settings->denialCounts         = (qd_policy_denial_counts_t*)
+                                         qd_entity_get_long((qd_entity_t*)upolicy, "denialCounts");
         Py_XDECREF(upolicy);
     }
     Py_XDECREF(module);
@@ -351,14 +390,43 @@ void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
     const char *app = pn_connection_remote_hostname(conn);
     qd_log(policy->log_source, 
            POLICY_LOG_LEVEL, 
-           "Policy AMQP Begin denied due to session limit. user: %s, hostip: %s, app: %s", 
+           "Policy AMQP Begin Session denied due to session limit. user: %s, hostip: %s, app: %s", 
            username, hostip, app);
+
+    qd_conn->policy_settings->denialCounts->sessionDenied++;
 }
 
 
 //
 //
-void qd_policy_deny_amqp_link(pn_link_t *link, const char* s_or_r, qd_connection_t *qd_conn)
+bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
+{
+  if (qd_conn->policy_settings) {
+    if (qd_conn->policy_settings->maxSessions) {
+      if (qd_conn->n_sessions == qd_conn->policy_settings->maxSessions) {
+	qd_policy_deny_amqp_session(ssn, qd_conn);
+	return false;
+      }
+    }
+  }
+  return true;
+}
+
+
+//
+//
+void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_conn)
+{
+  if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow) {
+    pn_session_set_incoming_capacity(ssn, qd_conn->policy_settings->maxSessionWindow);
+  } else {
+    pn_session_set_incoming_capacity(ssn, 1000000);
+  }
+}
+
+//
+//
+void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn, char * s_or_r)
 {
     pn_condition_t * cond = pn_link_condition(link);
     (void) pn_condition_set_name(       cond, RESOURCE_LIMIT_EXCEEDED);
@@ -374,8 +442,61 @@ void qd_policy_deny_amqp_link(pn_link_t *link, const char* s_or_r, qd_connection
     const char *app = pn_connection_remote_hostname(conn);
     qd_log(policy->log_source, 
            POLICY_LOG_LEVEL, 
-           "Policy AMQP Attach denied due to %s limit. user: %s, hostip: %s, app: %s", 
+           "Policy AMQP Attach Link denied due to %s limit. user: %s, hostip: %s, app: %s", 
            s_or_r, username, hostip, app);
+}
+
+
+//
+//
+void _qd_policy_deny_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
+{
+    _qd_policy_deny_amqp_link(pn_link, qd_conn, "sender");
+    qd_conn->policy_settings->denialCounts->senderDenied++;
+}
+
+
+//
+//
+void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
+{
+    _qd_policy_deny_amqp_link(pn_link, qd_conn, "receiver");
+    qd_conn->policy_settings->denialCounts->receiverDenied++;
+}
+
+bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
+{
+    if (qd_conn->policy_settings->maxSenders) {
+        if (qd_conn->n_senders == qd_conn->policy_settings->maxSenders) {
+            // Max sender limit specified and violated.
+            _qd_policy_deny_amqp_sender_link(pn_link, qd_conn);
+            return false;
+        } else {
+            // max sender limit not violated
+        }
+    } else {
+        // max sender limit not specified
+    }
+    // TODO: Deny sender link based on target
+    return true;
+}
+
+
+bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
+{
+    if (qd_conn->policy_settings->maxReceivers) {
+        if (qd_conn->n_receivers == qd_conn->policy_settings->maxReceivers) {
+            // Max sender limit specified and violated.
+            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+            return false;
+        } else {
+            // max receiver limit not violated
+        }
+    } else {
+        // max receiver limit not specified
+    }
+    // TODO: Deny receiver link based on source
+    return true;
 }
 
 

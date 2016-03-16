@@ -83,6 +83,8 @@ class PolicyKeys(object):
     # user-to-group computed map in compiled ruleset
     RULESET_U2G_MAP             = "U2G"
 
+    # policy stats controlled by C code but referenced by settings
+    KW_CSTATS                   = "denialCounts"
 #
 #
 class PolicyCompiler(object):
@@ -379,17 +381,20 @@ class AppStats(object):
                 ruleset[PolicyKeys.KW_MAXCONN],
                 ruleset[PolicyKeys.KW_MAXCONNPERHOST],
                 ruleset[PolicyKeys.KW_MAXCONNPERUSER])
+        self._cstats = self._manager.get_agent().qd.qd_dispatch_policy_c_counts_alloc()
         self._manager.get_agent().add_implementation(self, "policyStats")
 
     def refresh_entity(self, attributes):
         """Refresh management attributes"""
-        attributes.update({
-            PolicyKeys.KW_APPLICATION_NAME:     self.my_id,
-            PolicyKeys.KW_CONNECTIONS_APPROVED: self.conn_mgr.connections_approved,
-            PolicyKeys.KW_CONNECTIONS_DENIED:   self.conn_mgr.connections_denied,
-            PolicyKeys.KW_CONNECTIONS_CURRENT:  self.conn_mgr.connections_active,
-            PolicyKeys.KW_PER_USER_STATE:       self.conn_mgr.per_user_state,
-            PolicyKeys.KW_PER_HOST_STATE:       self.conn_mgr.per_host_state})
+        entitymap = {}
+        entitymap[PolicyKeys.KW_APPLICATION_NAME] =     self.my_id
+        entitymap[PolicyKeys.KW_CONNECTIONS_APPROVED] = self.conn_mgr.connections_approved
+        entitymap[PolicyKeys.KW_CONNECTIONS_DENIED] =   self.conn_mgr.connections_denied
+        entitymap[PolicyKeys.KW_CONNECTIONS_CURRENT] =  self.conn_mgr.connections_active
+        entitymap[PolicyKeys.KW_PER_USER_STATE] =       self.conn_mgr.per_user_state
+        entitymap[PolicyKeys.KW_PER_HOST_STATE] =       self.conn_mgr.per_host_state
+        self._manager.get_agent().qd.qd_dispatch_policy_c_counts_refresh(self._cstats, entitymap)
+        attributes.update(entitymap)
 
     def can_connect(self, conn_id, user, host, diags):
         return self.conn_mgr.can_connect(conn_id, user, host, diags)
@@ -399,6 +404,9 @@ class AppStats(object):
 
     def count_other_denial(self):
         self.conn_mgr.count_other_denial()
+
+    def get_cstats(self):
+        return self._cstats
 
 #
 #
@@ -631,6 +639,8 @@ class PolicyLocal(object):
                 return False
 
             upolicy.update(ruleset[PolicyKeys.KW_SETTINGS][name])
+            upolicy[PolicyKeys.KW_CSTATS] = self.statsdb[appname].get_cstats()
+
             return True
         except Exception, e:
             #print str(e)

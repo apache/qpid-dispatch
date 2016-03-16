@@ -1117,8 +1117,9 @@
                     "description": "A map where the key is the host name and the value is a list of the host's connections."
                 },
 
-                "maxSendersDenied": {"type": "integer", "graph": true},
-                "maxReceiversDenied": {"type": "integer", "graph": true},
+                "sessionDenied": {"type": "integer", "graph": true},
+                "senderDenied": {"type": "integer", "graph": true},
+                "receiverDenied": {"type": "integer", "graph": true},
                 "dynamicSrcDenied": {"type": "integer", "graph": true},
                 "anonymousSenderDenied": {"type": "integer", "graph": true},
                 "linkSourceDenied": {"type": "integer", "graph": true},

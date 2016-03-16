@@ -107,7 +107,17 @@ class PolicyHostAddrTest(TestCase):
         self.expect_deny( "::1,::2,::3", "arg count")
         self.expect_deny( "0:ff:0,0:fe:ffff:ffff::0", "a > b")
 
+class QpidDispatch(object):
+    def qd_dispatch_policy_c_counts_alloc(self):
+        return 100
+
+    def qd_dispatch_policy_c_counts_refresh(self, cstats, entitymap):
+        pass
+
 class MockAgent(object):
+    def __init__(self):
+        self.qd = QpidDispatch()
+
     def add_implementation(self, entity, cfg_obj_name):
         pass
 

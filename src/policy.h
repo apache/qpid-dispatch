@@ -1,5 +1,5 @@
-#ifndef __policy_private_h__
-#define __policy_private_h__
+#ifndef __policy_h__
+#define __policy_h__
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -30,6 +30,18 @@
 #include "entity_cache.h"
 #include <dlfcn.h>
 
+typedef struct qd_policy_denial_counts_s qd_policy_denial_counts_t;
+
+struct qd_policy_denial_counts_s {
+    int sessionDenied;
+    int senderDenied;
+    int receiverDenied;
+    int dynamicSrcDenied;
+    int anonymousSenderDenied;
+    int linkSourceDenied;
+    int linkTargetDenied;
+};
+
 typedef struct qd_policy_t qd_policy_t;
 
 struct qd_policy__settings_s {
@@ -43,6 +55,7 @@ struct qd_policy__settings_s {
     bool allowAnonymousSender;
     char *sources;
     char *targets;
+    qd_policy_denial_counts_t *denialCounts;
 };
 
 typedef struct qd_policy__settings_s qd_policy_settings_t;
@@ -61,6 +74,12 @@ qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity);
  * @param[in] policy_manager the address of the policy_manager object
  **/
 qd_error_t qd_register_policy_manager(qd_policy_t *policy, void *policy_manager);
+
+
+long qd_policy_c_counts_alloc();
+void qd_policy_c_counts_free(long ccounts);
+
+qd_error_t qd_policy_c_counts_refresh(long ccounts, qd_entity_t*entity);
 
 
 /** Allow or deny an incoming connection based on connection count(s).
@@ -85,20 +104,39 @@ bool qd_policy_socket_accept(void *context, const char *hostname);
 void qd_policy_socket_close(void *context, const qd_connection_t *conn);
 
 
-/** Set the error condition and close the session.
- * Over the wire this will send an begin frame followed
- * immediately by an end frame with the error condition.
+/** Approve a new session based on connection's policy.
+ * Sessions denied are closed and counted.
+ *
  * @param[in] ssn proton session being closed
- **/ 
-void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn);
+ * @param[in] qd_conn dispatch connection with policy settings and counts
+ **/
+bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn);
 
 
-/** Set the error condition and close the link.
- * Over the wire this will send an attach frame followed
- * immediately by a detach frame with the error condition.
- * @param[in] link proton link being closed
- **/ 
-void qd_policy_deny_amqp_link(pn_link_t *link, const char* s_or_r, qd_connection_t *qd_conn);
+/** Apply policy or default settings for a new session.
+ *
+ * @param[in] ssn proton session being closed
+ * @param[in] qd_conn dispatch connection with policy settings and counts
+ **/
+void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_conn);
+
+
+/** Approve a new sender link based on connection's policy.
+ * Links denied are closed and counted.
+ *
+ * @param[in] pn_link proton link being closed
+ * @param[in] qd_conn dispatch connection with policy settings and counts
+ **/
+bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn);
+
+
+/** Approve a new receiver link based on connection's policy.
+ * Links denied are closed and counted.
+ *
+ * @param[in] pn_link proton link being closed
+ * @param[in] qd_conn dispatch connection with policy settings and counts
+ **/
+bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn);
 
 
 /** Allow or deny an incoming connection.

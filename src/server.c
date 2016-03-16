@@ -25,7 +25,7 @@
 #include "entity.h"
 #include "entity_cache.h"
 #include "dispatch_private.h"
-#include "policy_private.h"
+#include "policy.h"
 #include "server_private.h"
 #include "timer_private.h"
 #include "alloc.h"

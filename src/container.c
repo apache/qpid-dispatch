@@ -21,7 +21,7 @@
 #include <string.h>
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
-#include "policy_private.h"
+#include "policy.h"
 #include <qpid/dispatch/container.h>
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/message.h>
@@ -344,19 +344,12 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         ssn = pn_event_session(event);
         if (pn_session_state(ssn) & PN_LOCAL_UNINIT) {
             if (qd_conn->policy_settings) {
-                if (qd_conn->policy_settings->maxSessions) {
-                    if (qd_conn->n_sessions == qd_conn->policy_settings->maxSessions) {
-                        qd_policy_deny_amqp_session(ssn, qd_conn);
-                        break;
-                    }
+                if (!qd_policy_approve_amqp_session(ssn, qd_conn)) {
+                    break;
                 }
                 qd_conn->n_sessions++;
             }
-            if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow) {
-                pn_session_set_incoming_capacity(ssn, qd_conn->policy_settings->maxSessionWindow);
-            } else {
-                pn_session_set_incoming_capacity(ssn, 1000000);
-            }
+            qd_policy_apply_session_settings(ssn, qd_conn);
             pn_session_open(ssn);
         }
         break;
@@ -391,7 +384,9 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                 }
                 pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
             }
-            qd_conn->n_sessions--;
+            if (qd_conn->policy_settings) {
+                qd_conn->n_sessions--;
+            }
             pn_session_close(ssn);
         }
         break;
@@ -401,44 +396,18 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         if (pn_link_state(pn_link) & PN_LOCAL_UNINIT) {
             if (pn_link_is_sender(pn_link)) {
                if (qd_conn->policy_settings) {
-                    // Open link or not based on policy.
-                    if (qd_conn->policy_settings->maxSenders) {
-                        if (qd_conn->n_senders == qd_conn->policy_settings->maxSenders) {
-                            // Max sender limit specified and violated.
-                            qd_policy_deny_amqp_link(pn_link, "sender", qd_conn);
-                            break;
-                        } else {
-                            // max sender limit not violated
-                        }
-                    } else {
-                        // max sender limit not specified
+                   if (!qd_policy_approve_amqp_sender_link(pn_link, qd_conn)) {
+                        break;
                     }
-                    // TODO: Deny sender link based on target
-                    // Count sender link
                     qd_conn->n_senders++;
-                } else {
-                    // This connection not controlled by policy. Link implicitly allowed.
                 }
                 setup_outgoing_link(container, pn_link);
             } else {
                 if (qd_conn->policy_settings) {
-                    // Open link or not based on policy.
-                    if (qd_conn->policy_settings->maxReceivers) {
-                        if (qd_conn->n_receivers == qd_conn->policy_settings->maxReceivers) {
-                            // Max sender limit specified and violated.
-                            qd_policy_deny_amqp_link(pn_link, "receiver", qd_conn);
-                            break;
-                        } else {
-                            // max receiver limit not violated
-                        }
-                    } else {
-                        // max receiver limit not specified
+                    if (!qd_policy_approve_amqp_receiver_link(pn_link, qd_conn)) {
+                        break;
                     }
-                    // TODO: Deny receiver link based on source
-                    // Count receiver link
                     qd_conn->n_receivers++;
-                } else {
-                    // This connection not controlled by policy. Link implicitly allowed.
                 }
                 setup_incoming_link(container, pn_link);
             }

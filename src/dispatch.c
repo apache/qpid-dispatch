@@ -31,7 +31,7 @@
 #include "router_private.h"
 #include "waypoint_private.h"
 #include "message_private.h"
-#include "policy_private.h"
+#include "policy.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include <dlfcn.h>
@@ -157,6 +157,22 @@ qd_error_t qd_dispatch_register_policy_manager(qd_dispatch_t *qd, qd_entity_t *e
     return qd_register_policy_manager(qd->policy, entity);
 }
 
+
+long qd_dispatch_policy_c_counts_alloc()
+{
+    return qd_policy_c_counts_alloc();
+}
+
+
+void qd_dispatch_policy_c_counts_free(long ccounts)
+{
+    qd_policy_c_counts_free(ccounts);
+}
+
+void qd_dispatch_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
+{
+    qd_policy_c_counts_refresh(ccounts, entity);
+}
 
 qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
 {
