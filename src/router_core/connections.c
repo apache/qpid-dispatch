@@ -810,10 +810,8 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
 
     //
     // Reject any attaches of inter-router links that arrive on connections that are not inter-router.
-    // Reject any waypoint links.  Waypoint links are always initiated by a router, not the remote container.
     //
-    if ((link->link_type == QD_LINK_WAYPOINT) ||
-        ((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)) {
+    if (((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)) {
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
@@ -870,10 +868,6 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             break;
         }
 
-        case QD_LINK_WAYPOINT:
-            // No action, waypoint links are rejected above.
-            break;
-
         case QD_LINK_CONTROL:
             qdr_link_outbound_second_attach_CT(core, link, source, target);
             qdr_link_issue_credit_CT(core, link, link->capacity);
@@ -922,10 +916,6 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             }
             break;
         }
-
-        case QD_LINK_WAYPOINT:
-            // No action, waypoint links are rejected above.
-            break;
 
         case QD_LINK_CONTROL:
             link->owning_addr = core->hello_addr;
@@ -998,9 +988,6 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
             }
             break;
 
-        case QD_LINK_WAYPOINT:
-            break;
-
         case QD_LINK_CONTROL:
             break;
 
@@ -1029,9 +1016,6 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
                     }
                 }
             }
-            break;
-
-        case QD_LINK_WAYPOINT:
             break;
 
         case QD_LINK_CONTROL:
@@ -1109,9 +1093,6 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
                 qdr_del_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
             break;
 
-        case QD_LINK_WAYPOINT:
-            break;
-
         case QD_LINK_CONTROL:
             break;
 
@@ -1128,9 +1109,6 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
                 qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
                 was_local = true;
             }
-            break;
-
-        case QD_LINK_WAYPOINT:
             break;
 
         case QD_LINK_CONTROL:

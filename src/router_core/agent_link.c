@@ -56,7 +56,6 @@ static const char *qd_link_type_name(qd_link_type_t lt)
 {
     switch (lt) {
     case QD_LINK_ENDPOINT : return "endpoint";
-    case QD_LINK_WAYPOINT : return "waypoint";
     case QD_LINK_CONTROL  : return "router-control";
     case QD_LINK_ROUTER   : return "inter-router";
     }
