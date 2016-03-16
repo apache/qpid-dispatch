@@ -31,13 +31,13 @@ void qdr_route_add_link_route_CT(qdr_core_t             *core,
 
 void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr);
 
-void qdr_route_add_auto_link_CT(qdr_core_t             *core,
-                                qd_field_iterator_t    *name,
-                                qd_parsed_field_t      *addr_field,
-                                qd_direction_t          dir,
-                                int                     phase,
-                                qd_parsed_field_t      *conn_id,
-                                bool                    is_container);
+qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t             *core,
+                                            qd_field_iterator_t    *name,
+                                            qd_parsed_field_t      *addr_field,
+                                            qd_direction_t          dir,
+                                            int                     phase,
+                                            qd_parsed_field_t      *conn_id,
+                                            bool                    is_container);
 
 void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *auto_link);
 

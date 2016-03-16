@@ -29,6 +29,12 @@
 
 qd_error_t qd_router_configure_fixed_address(qd_router_t *router, qd_entity_t *entity)
 {
+    static bool deprecate_warning = true;
+    if (deprecate_warning) {
+        deprecate_warning = false;
+        qd_log(router->log_source, QD_LOG_WARNING, "fixedAddress configuration is deprecated, switch to using address instead.");
+    }
+
     qd_error_clear();
     int                             phase  = qd_entity_opt_long(entity, "phase", -1); QD_ERROR_RET();
     qd_schema_fixedAddress_fanout_t fanout = qd_entity_get_long(entity, "fanout");    QD_ERROR_RET();
@@ -63,7 +69,7 @@ qd_error_t qd_router_configure_fixed_address(qd_router_t *router, qd_entity_t *e
     }
 
     //
-    // Formulate this configuration as a router.route and create it through the core management API.
+    // Formulate this configuration as a router.config.address and create it through the core management API.
     //
     qd_composed_field_t *body = qd_compose_subfield(0);
     qd_compose_start_map(body);
@@ -97,6 +103,12 @@ qd_error_t qd_router_configure_fixed_address(qd_router_t *router, qd_entity_t *e
 
 qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity)
 {
+    static bool deprecate_warning = true;
+    if (deprecate_warning) {
+        deprecate_warning = false;
+        qd_log(router->log_source, QD_LOG_WARNING, "waypoint configuration is deprecated, switch to using autoLink instead.");
+    }
+
     /*
     char *address = qd_entity_get_string(entity, "address"); QD_ERROR_RET();
     char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
@@ -131,7 +143,7 @@ qd_error_t qd_router_configure_waypoint(qd_router_t *router, qd_entity_t *entity
 static void qd_router_add_link_route(qdr_core_t *core, const char *prefix, const char *connector, const char* dir)
 {
     //
-    // Formulate this configuration as a router.route and create it through the core management API.
+    // Formulate this configuration as a router.config.linkRoute and create it through the core management API.
     //
     qd_composed_field_t *body = qd_compose_subfield(0);
     qd_compose_start_map(body);
@@ -169,6 +181,12 @@ static void qd_router_add_link_route(qdr_core_t *core, const char *prefix, const
 
 qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 {
+    static bool deprecate_warning = true;
+    if (deprecate_warning) {
+        deprecate_warning = false;
+        qd_log(router->log_source, QD_LOG_WARNING, "linkRoutePrefix configuration is deprecated, switch to using linkRoute instead.");
+    }
+
     char *prefix    = qd_entity_get_string(entity, "prefix");    QD_ERROR_RET();
     char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
     char *direction = qd_entity_get_string(entity, "dir");       QD_ERROR_RET();

@@ -228,6 +228,7 @@ struct qdr_link_t {
     qdr_address_t           *owning_addr;        ///< [ref] Address record that owns this link
     qdr_link_t              *connected_link;     ///< [ref] If this is a link-route, reference the connected link
     qdr_link_ref_t          *ref[QDR_LINK_LIST_CLASSES];  ///< Pointers to containing reference objects
+    qdr_auto_link_t         *auto_link;          ///< [ref] Auto_link that owns this link
     qdr_delivery_list_t      undelivered;        ///< Deliveries to be forwarded or sent
     qdr_delivery_list_t      unsettled;          ///< Unsettled deliveries
     qdr_delivery_ref_list_t  updated_deliveries; ///< References to deliveries (in the unsettled list) with updates.
@@ -417,6 +418,15 @@ ALLOC_DECLARE(qdr_link_route_t);
 DEQ_DECLARE(qdr_link_route_t, qdr_link_route_list_t);
 
 
+typedef enum {
+    QDR_AUTO_LINK_STATE_INACTIVE,
+    QDR_AUTO_LINK_STATE_ATTACHING,
+    QDR_AUTO_LINK_STATE_FAILED,
+    QDR_AUTO_LINK_STATE_ACTIVE,
+    QDR_AUTO_LINK_STATE_QUIESCING,
+    QDR_AUTO_LINK_STATE_IDLE
+} qdr_auto_link_state_t;
+
 struct qdr_auto_link_t {
     DEQ_LINKS(qdr_auto_link_t);
     DEQ_LINKS_N(REF, qdr_auto_link_t);
@@ -427,6 +437,8 @@ struct qdr_auto_link_t {
     qd_direction_t         dir;
     qdr_conn_identifier_t *conn_id;
     qdr_link_t            *link;
+    qdr_auto_link_state_t  state;
+    char                  *last_error;
 };
 
 ALLOC_DECLARE(qdr_auto_link_t);
@@ -550,10 +562,18 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local);
 qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *peer, qdr_link_t *link, qd_message_t *msg);
 void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv);
 void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn);
+qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_iterator_t *iter);
 
 void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
                                     qdr_connection_t      *conn,
                                     qdr_connection_work_t *work);
+
+qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
+                               qdr_connection_t *conn,
+                               qd_link_type_t    link_type,
+                               qd_direction_t    dir,
+                               qdr_terminus_t   *source,
+                               qdr_terminus_t   *target);
 
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,

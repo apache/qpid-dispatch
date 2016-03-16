@@ -69,7 +69,7 @@ static void qdr_route_log_CT(qdr_core_t *core, const char *text, const char *nam
         snprintf(id_string, 64, "%ld", id);
 
     qd_log(core->log, QD_LOG_INFO, "%s '%s' on %s %s",
-           log_name, text, key[0] == 'L' ? "connection" : "container", &key[1]);
+           text, log_name, key[0] == 'L' ? "connection" : "container", &key[1]);
 }
 
 
@@ -77,7 +77,7 @@ static void qdr_link_route_activate_CT(qdr_core_t *core, qdr_link_route_t *lr, q
 {
     const char *key;
 
-    qdr_route_log_CT(core, "Activated Link Route", lr->name, lr->identity, conn);
+    qdr_route_log_CT(core, "Link Route Activated", lr->name, lr->identity, conn);
 
     //
     // Activate the address for link-routed destinations.  If this is the first
@@ -98,7 +98,7 @@ static void qdr_link_route_deactivate_CT(qdr_core_t *core, qdr_link_route_t *lr,
 {
     const char *key;
 
-    qdr_route_log_CT(core, "Deactivated Link Route", lr->name, lr->identity, conn);
+    qdr_route_log_CT(core, "Link Route Deactivated", lr->name, lr->identity, conn);
 
     //
     // Deactivate the address(es) for link-routed destinations.
@@ -111,6 +111,42 @@ static void qdr_link_route_deactivate_CT(qdr_core_t *core, qdr_link_route_t *lr,
                 qdr_post_mobile_removed_CT(core, key);
         }
     }
+}
+
+
+static void qdr_auto_link_activate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr_connection_t *conn)
+{
+    const char *key;
+
+    qdr_route_log_CT(core, "Auto Link Activated", al->name, al->identity, conn);
+
+    //
+    // Activate the link for an auto_link.  If this is the first activation for this
+    // address, notify the router module of the added address.
+    //
+    if (al->addr) {
+        qdr_terminus_t *source = 0;
+        qdr_terminus_t *target = 0;
+        qdr_terminus_t *term   = qdr_terminus(0);
+
+        if (al->dir == QD_INCOMING)
+            source = term;
+        else
+            target = term;
+
+        key = (const char*) qd_hash_key_by_handle(al->addr->hash_handle);
+        if (key) {
+            qdr_terminus_set_address(term, &key[2]); // truncate the "Mp" annotation (where p = phase)
+            al->link = qdr_create_link_CT(core, conn, QD_LINK_ENDPOINT, al->dir, source, target);
+            al->link->auto_link = al;
+            al->state = QDR_AUTO_LINK_STATE_ATTACHING;
+        }
+    }
+}
+
+
+static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr_connection_t *conn)
+{
 }
 
 
@@ -169,14 +205,56 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
 }
 
 
-void qdr_route_add_auto_link_CT(qdr_core_t             *core,
-                                qd_field_iterator_t    *name,
-                                qd_parsed_field_t      *addr_field,
-                                qd_direction_t          dir,
-                                int                     phase,
-                                qd_parsed_field_t      *conn_id,
-                                bool                    is_container)
+qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
+                                            qd_field_iterator_t *name,
+                                            qd_parsed_field_t   *addr_field,
+                                            qd_direction_t       dir,
+                                            int                  phase,
+                                            qd_parsed_field_t   *conn_id,
+                                            bool                 is_container)
 {
+    qdr_auto_link_t *al = new_qdr_auto_link_t();
+
+    //
+    // Set up the link_route structure
+    //
+    ZERO(al);
+    al->identity = qdr_identifier(core);
+    al->name     = name ? (char*) qd_field_iterator_copy(name) : 0;
+    al->dir      = dir;
+    al->phase    = phase;
+    al->state    = QDR_AUTO_LINK_STATE_INACTIVE;
+
+    //
+    // Find or create an address for the auto_link destination
+    //
+    qd_field_iterator_t *iter = qd_parse_raw(addr_field);
+    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    qd_address_iterator_set_phase(iter, (char) phase + '0');
+
+    qd_hash_retrieve(core->addr_hash, iter, (void*) &al->addr);
+    if (!al->addr) {
+        al->addr = qdr_address_CT(core, qdr_treatment_for_address_CT(core, iter));
+        DEQ_INSERT_TAIL(core->addrs, al->addr);
+        qd_hash_insert(core->addr_hash, iter, al->addr, &al->addr->hash_handle);
+    }
+
+    //
+    // Find or create a connection identifier structure for this auto_link
+    //
+    if (conn_id) {
+        al->conn_id = qdr_route_declare_id_CT(core, qd_parse_raw(conn_id), is_container);
+        DEQ_INSERT_TAIL_N(REF, al->conn_id->auto_link_refs, al);
+        if (al->conn_id->open_connection)
+            qdr_auto_link_activate_CT(core, al, al->conn_id->open_connection);
+    }
+
+    //
+    // Add the auto_link to the core list
+    //
+    DEQ_INSERT_TAIL(core->auto_links, al);
+
+    return al;
 }
 
 
@@ -213,7 +291,7 @@ void qdr_route_connection_opened_CT(qdr_core_t       *core,
     //
     qdr_auto_link_t *al = DEQ_HEAD(cid->auto_link_refs);
     while (al) {
-        //qdr_link_route_activate_CT(core, lr, conn);
+        qdr_auto_link_activate_CT(core, al, conn);
         al = DEQ_NEXT_N(REF, al);
     }
 }
@@ -240,7 +318,7 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
         //
         qdr_auto_link_t *al = DEQ_HEAD(cid->auto_link_refs);
         while (al) {
-            //qdr_link_route_deactivate_CT(core, lr, conn);
+            qdr_auto_link_deactivate_CT(core, al, conn);
             al = DEQ_NEXT_N(REF, al);
         }
 

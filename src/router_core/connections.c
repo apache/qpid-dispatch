@@ -434,12 +434,12 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
 }
 
 
-static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
-                                      qdr_connection_t *conn,
-                                      qd_link_type_t    link_type,
-                                      qd_direction_t    dir,
-                                      qdr_terminus_t   *source,
-                                      qdr_terminus_t   *target)
+qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
+                               qdr_connection_t *conn,
+                               qd_link_type_t    link_type,
+                               qd_direction_t    dir,
+                               qdr_terminus_t   *source,
+                               qdr_terminus_t   *target)
 {
     //
     // Create a new link, initiated by the router core.  This will involve issuing a first-attach outbound.
@@ -530,7 +530,7 @@ static char qdr_prefix_for_dir(qd_direction_t dir)
 }
 
 
-static qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_iterator_t *iter)
+qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_iterator_t *iter)
 {
     qdr_address_config_t *addr = 0;
 
@@ -985,6 +985,17 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
         qdr_link_issue_credit_CT(core, link, link->capacity);
         switch (link->link_type) {
         case QD_LINK_ENDPOINT:
+            if (link->auto_link) {
+                //
+                // This second-attach is the completion of an auto-link.  If the attach
+                // has a valid source, transition the auto-link to the "active" state.
+                //
+                if (qdr_terminus_get_address(source)) {
+                    link->auto_link->state = QDR_AUTO_LINK_STATE_ACTIVE;
+                    qdr_add_link_ref(&link->auto_link->addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+                    link->owning_addr = link->auto_link->addr;
+                }
+            }
             break;
 
         case QD_LINK_WAYPOINT:
@@ -1002,6 +1013,22 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
         //
         switch (link->link_type) {
         case QD_LINK_ENDPOINT:
+            if (link->auto_link) {
+                //
+                // This second-attach is the completion of an auto-link.  If the attach
+                // has a valid target, transition the auto-link to the "active" state.
+                //
+                if (qdr_terminus_get_address(target)) {
+                    link->auto_link->state = QDR_AUTO_LINK_STATE_ACTIVE;
+                    qdr_add_link_ref(&link->auto_link->addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+                    link->owning_addr = link->auto_link->addr;
+                    if (DEQ_SIZE(link->auto_link->addr->rlinks) == 1) {
+                        const char *key = (const char*) qd_hash_key_by_handle(link->auto_link->addr->hash_handle);
+                        if (key && *key == 'M')
+                            qdr_post_mobile_added_CT(core, key);
+                    }
+                }
+            }
             break;
 
         case QD_LINK_WAYPOINT:
@@ -1055,11 +1082,19 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     link->detach_count++;
 
     //
-    // TODO - For routed links, propagate the detach
+    // For routed links, propagate the detach
     //
     if (link->connected_link) {
         qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE);
         return;
+    }
+
+    //
+    // For auto links, switch the auto link to failed state and record the error
+    //
+    if (link->auto_link) {
+        link->auto_link->state = QDR_AUTO_LINK_STATE_FAILED;
+        // TODO - last_error
     }
 
     link->owning_addr = 0;
@@ -1110,6 +1145,10 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         }
     }
 
+    //
+    // TODO - If this link is owned by an auto_link, handle the unexpected detach.
+    //
+
     if (link->detach_count == 1) {
         //
         // If the detach occurred via protocol, send a detach back.
@@ -1127,21 +1166,6 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     //
     if (addr)
         qdr_check_addr_CT(core, addr, was_local);
-
-    //
-    // Cases to be handled:
-    //
-    // Link is link-routed:
-    //    Propagate the detach along the link-chain
-    // Link is half-detached and not link-routed:
-    //    Issue a detach back to the originating node
-    // Link is fully detached:
-    //    Free the qdr_link object
-    //    Remove any address linkages associated with this link
-    //       If the last dest for a local address is lost, notify the router (mobile_removed)
-    // Link is a router-control link:
-    //    Issue a link-lost indication to the router
-    //
 }
 
 

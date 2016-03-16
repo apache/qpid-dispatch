@@ -945,7 +945,17 @@
                 },
                 "linkRef": {
                     "type": "string",
-                    "description": "Reference to the org.apache.qpid.dispatch.router.link if the link is attached",
+                    "description": "Reference to the org.apache.qpid.dispatch.router.link if the link exists",
+                    "create": false
+                },
+                "operStatus": {
+                    "type": ["inactive", "attaching", "failed", "active", "quiescing", "idle"],
+                    "description": "The operational status of this autoLink: inactive - The remote container is not connected; attaching - the link is attaching to the remote node; failed - the link attach failed; active - the link is attached and operational; quiescing - the link is transitioning to idle state; idle - the link is attached but there are no deliveries flowing and no unsettled deliveries.",
+                    "create": false
+                },
+                "lastError": {
+                    "type": "string",
+                    "description": "The error description from the last attach failure",
                     "create": false
                 }
             }

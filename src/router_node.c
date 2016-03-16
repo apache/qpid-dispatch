@@ -65,6 +65,9 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
             *role = QDR_ROLE_NORMAL;
 
         *name = cf->name;
+        if (strncmp("listener/", *name, 9) == 0 ||
+            strncmp("connector/", *name, 10) == 0)
+            *name = 0;
     }
 }
 

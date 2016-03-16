@@ -31,6 +31,8 @@
 #define QDR_CONFIG_AUTO_LINK_CONNECTION    6
 #define QDR_CONFIG_AUTO_LINK_CONTAINER_ID  7
 #define QDR_CONFIG_AUTO_LINK_LINK_REF      8
+#define QDR_CONFIG_AUTO_LINK_OPER_STATUS   9
+#define QDR_CONFIG_AUTO_LINK_LAST_ERROR    10
 
 const char *qdr_config_auto_link_columns[] =
     {"name",
@@ -39,9 +41,11 @@ const char *qdr_config_auto_link_columns[] =
      "addr",
      "dir",
      "phase",
-     "containerId",
      "connection",
+     "containerId",
      "linkRef",
+     "operStatus",
+     "lastError",
      0};
 
 
@@ -110,6 +114,30 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
             qd_compose_insert_string(body, id_str);
         } else
             qd_compose_insert_null(body);
+        break;
+
+    case QDR_CONFIG_AUTO_LINK_OPER_STATUS:
+        switch (al->state) {
+        case QDR_AUTO_LINK_STATE_INACTIVE:  text = "inactive";  break;
+        case QDR_AUTO_LINK_STATE_ATTACHING: text = "attaching"; break;
+        case QDR_AUTO_LINK_STATE_FAILED:    text = "failed";    break;
+        case QDR_AUTO_LINK_STATE_ACTIVE:    text = "active";    break;
+        case QDR_AUTO_LINK_STATE_QUIESCING: text = "quiescing"; break;
+        case QDR_AUTO_LINK_STATE_IDLE:      text = "idle";      break;
+        }
+
+        if (text)
+            qd_compose_insert_string(body, text);
+        else
+            qd_compose_insert_null(body);
+        break;
+
+    case QDR_CONFIG_AUTO_LINK_LAST_ERROR:
+        if (al->last_error)
+            qd_compose_insert_string(body, al->last_error);
+        else
+            qd_compose_insert_null(body);
+        break;
     }
 }
 
@@ -362,7 +390,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t          *core,
         bool               is_container = !!container_field;
         qd_parsed_field_t *in_use_conn  = is_container ? container_field : connection_field;
 
-        qdr_route_add_auto_link_CT(core, name, addr_field, dir, phase, in_use_conn, is_container);
+        al = qdr_route_add_auto_link_CT(core, name, addr_field, dir, phase, in_use_conn, is_container);
 
         //
         // Compose the result map for the response.
