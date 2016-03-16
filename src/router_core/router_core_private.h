@@ -218,7 +218,7 @@ void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
     qdr_core_t              *core;
-    uint64_t                 identifier;
+    uint64_t                 identity;
     void                    *user_context;
     qdr_connection_t        *conn;               ///< [ref] Connection that owns this link
     qd_link_type_t           link_type;

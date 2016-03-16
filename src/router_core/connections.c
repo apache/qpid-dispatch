@@ -266,7 +266,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
 
     ZERO(link);
     link->core = conn->core;
-    link->identifier = qdr_identifier(conn->core);
+    link->identity = qdr_identifier(conn->core);
     link->conn = conn;
     link->name = (char*) malloc(strlen(name) + 1);
     strcpy(link->name, name);
@@ -448,7 +448,7 @@ static qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     ZERO(link);
 
     link->core           = core;
-    link->identifier     = qdr_identifier(core);
+    link->identity       = qdr_identifier(core);
     link->user_context   = 0;
     link->conn           = conn;
     link->link_type      = link_type;

@@ -172,16 +172,15 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
 void qdr_route_add_auto_link_CT(qdr_core_t             *core,
                                 qd_field_iterator_t    *name,
                                 qd_parsed_field_t      *addr_field,
-                                qd_address_treatment_t  treatment,
                                 qd_direction_t          dir,
-                                qd_parsed_field_t      *phase_field,
-                                qd_parsed_field_t      *container_id_field,
-                                qd_parsed_field_t      *conn_name_field)
+                                int                     phase,
+                                qd_parsed_field_t      *conn_id,
+                                bool                    is_container)
 {
 }
 
 
-void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *autolink)
+void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *auto_link)
 {
 }
 

@@ -84,7 +84,7 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
 
         case QDR_LINK_IDENTITY: {
             char id[100];
-            snprintf(id, 100, "%ld", link->identifier);
+            snprintf(id, 100, "%ld", link->identity);
             qd_compose_insert_string(body, id);
             break;
         }
@@ -120,7 +120,7 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
         case QDR_LINK_PEER:
             if (link->connected_link) {
                 char id[100];
-                snprintf(id, 100, "link.%ld", link->connected_link->identifier);
+                snprintf(id, 100, "link.%ld", link->connected_link->identity);
                 qd_compose_insert_string(body, id);
               } else
                 qd_compose_insert_null(body);
@@ -266,8 +266,8 @@ static qdr_link_t *qdr_link_find_by_identity(qdr_core_t *core, qd_field_iterator
 
     while(link) {
         char id[100];
-        if (link->identifier) {
-            snprintf(id, 100, "%ld", link->identifier);
+        if (link->identity) {
+            snprintf(id, 100, "%ld", link->identity);
             if (qd_field_iterator_equal(identity, (const unsigned char *)id))
                 break;
         }

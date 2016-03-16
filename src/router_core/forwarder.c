@@ -415,7 +415,7 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
         qdr_link_t *out_link = new_qdr_link_t();
         ZERO(out_link);
         out_link->core           = core;
-        out_link->identifier     = qdr_identifier(core);
+        out_link->identity       = qdr_identifier(core);
         out_link->conn           = conn;
         out_link->link_type      = QD_LINK_ENDPOINT;
         out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
