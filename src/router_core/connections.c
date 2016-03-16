@@ -530,7 +530,7 @@ static char qdr_prefix_for_dir(qd_direction_t dir)
 }
 
 
-qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_iterator_t *iter)
+qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_iterator_t *iter, int *in_phase, int *out_phase)
 {
     qdr_address_config_t *addr = 0;
 
@@ -541,6 +541,9 @@ qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_i
     qd_address_iterator_override_prefix(iter, 'Z');
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
     qd_address_iterator_override_prefix(iter, '\0');
+    if (in_phase)  *in_phase  = addr ? addr->in_phase  : 0;
+    if (out_phase) *out_phase = addr ? addr->out_phase : 0;
+
     return addr ? addr->treatment : QD_TREATMENT_ANYCAST_CLOSEST;
 }
 
@@ -680,7 +683,13 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
     qd_address_iterator_override_prefix(iter, '\0'); // Cancel previous override
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr && create_if_not_found) {
-        addr = qdr_address_CT(core, qdr_treatment_for_address_CT(core, iter));
+        int in_phase;
+        int out_phase;
+        int addr_phase;
+
+        addr = qdr_address_CT(core, qdr_treatment_for_address_CT(core, iter, &in_phase, &out_phase));
+        addr_phase = dir == QD_INCOMING ? in_phase : out_phase;
+        qd_address_iterator_set_phase(iter, addr_phase);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(core->addrs, addr);
     }
