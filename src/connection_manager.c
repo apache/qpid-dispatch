@@ -230,16 +230,10 @@ qd_config_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_ent
     }
     DEQ_ITEM_INIT(cc);
 
-    if (strcmp(cc->configuration.role, "route-container") == 0) {
-        DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
-        qd_log(cm->log_source, QD_LOG_INFO, "Configured route-container connector: %s:%s name=%s",
-               cc->configuration.host, cc->configuration.port,
-               cc->configuration.name ? cc->configuration.name : "<none>");
-    } else {
-        DEQ_INSERT_TAIL(cm->config_connectors, cc);
-        qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s",
-               cc->configuration.host, cc->configuration.port, cc->configuration.role);
-    }
+    DEQ_INSERT_TAIL(cm->config_connectors, cc);
+    qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s role=%s, name=%s",
+           cc->configuration.host, cc->configuration.port, cc->configuration.role,
+           cc->configuration.name ? cc->configuration.name : "<none>");
 
     return cc;
 }
