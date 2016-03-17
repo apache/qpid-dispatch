@@ -548,6 +548,50 @@ qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_i
 }
 
 
+qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_field_iterator_t *iter)
+{
+#define HASH_STORAGE_SIZE 1000
+    char  storage[HASH_STORAGE_SIZE + 1];
+    char *copy    = storage;
+    bool  on_heap = false;
+    int   length  = qd_field_iterator_length(iter);
+    qd_address_treatment_t trt = QD_TREATMENT_ANYCAST_CLOSEST;
+
+    if (length > HASH_STORAGE_SIZE) {
+        copy    = (char*) malloc(length + 1);
+        on_heap = true;
+    }
+
+    qd_field_iterator_strncpy(iter, copy, length + 1);
+
+    if (copy[0] == 'C' || copy[0] == 'D')
+        //
+        // Handle the link-route address case
+        // TODO - put link-routes into the config table with a different prefix from 'Z'
+        //
+        trt = QD_TREATMENT_LINK_BALANCED;
+
+    else if (copy[0] == 'M') {
+        //
+        // Handle the mobile address case
+        //
+        copy[1] = 'Z';
+        qd_field_iterator_t  *config_iter = qd_field_iterator_string(&copy[1]);
+        qdr_address_config_t *addr = 0;
+
+        qd_hash_retrieve_prefix(core->addr_hash, config_iter, (void**) &addr);
+        if (addr)
+            trt = addr->treatment;
+        qd_field_iterator_free(config_iter);
+    }
+
+    if (on_heap)
+        free(copy);
+
+    return trt;
+}
+
+
 /**
  * Check an address to see if it no longer has any associated destinations.
  * Depending on its policy, the address may be eligible for being closed out

@@ -501,7 +501,7 @@ static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool 
 
         qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
         if (!addr) {
-            addr = qdr_address_CT(core, 0); // FIXME - Treatment
+            addr = qdr_address_CT(core, qdr_treatment_for_address_hash_CT(core, iter));
             qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_ITEM_INIT(addr);
             DEQ_INSERT_TAIL(core->addrs, addr);
