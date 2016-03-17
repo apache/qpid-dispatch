@@ -733,7 +733,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
 
         addr = qdr_address_CT(core, qdr_treatment_for_address_CT(core, iter, &in_phase, &out_phase));
         addr_phase = dir == QD_INCOMING ? in_phase : out_phase;
-        qd_address_iterator_set_phase(iter, addr_phase);
+        qd_address_iterator_set_phase(iter, (char) addr_phase + '0');
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(core->addrs, addr);
     }
