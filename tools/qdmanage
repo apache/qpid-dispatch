@@ -30,7 +30,10 @@ def attr_split(attrstr):
     """Split an attribute string of the form name=value or name to indicate None"""
     nv = attrstr.split("=", 1)
     if len(nv) == 1: return [nv[0], None]
-    else: return nv
+    else:
+        if nv[1] == "true": nv[1] = True
+        if nv[1] == "false": nv[1] = False
+        return nv
 
 class QdManage():
 
