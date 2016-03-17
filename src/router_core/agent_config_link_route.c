@@ -373,7 +373,7 @@ void qdra_config_link_route_create_CT(qdr_core_t          *core,
         bool               is_container = !!container_field;
         qd_parsed_field_t *in_use_conn  = is_container ? container_field : connection_field;
 
-        qdr_route_add_link_route_CT(core, name, prefix_field, in_use_conn, is_container, trt, dir);
+        lr = qdr_route_add_link_route_CT(core, name, prefix_field, in_use_conn, is_container, trt, dir);
 
         //
         // Compose the result map for the response.

@@ -150,13 +150,13 @@ static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, q
 }
 
 
-void qdr_route_add_link_route_CT(qdr_core_t             *core,
-                                 qd_field_iterator_t    *name,
-                                 qd_parsed_field_t      *prefix_field,
-                                 qd_parsed_field_t      *conn_id,
-                                 bool                    is_container,
-                                 qd_address_treatment_t  treatment,
-                                 qd_direction_t          dir)
+qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
+                                              qd_field_iterator_t    *name,
+                                              qd_parsed_field_t      *prefix_field,
+                                              qd_parsed_field_t      *conn_id,
+                                              bool                    is_container,
+                                              qd_address_treatment_t  treatment,
+                                              qd_direction_t          dir)
 {
     qdr_link_route_t *lr = new_qdr_link_route_t();
 
@@ -197,6 +197,8 @@ void qdr_route_add_link_route_CT(qdr_core_t             *core,
     // Add the link route to the core list
     //
     DEQ_INSERT_TAIL(core->link_routes, lr);
+
+    return lr;
 }
 
 

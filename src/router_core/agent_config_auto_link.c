@@ -78,7 +78,7 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
     case QDR_CONFIG_AUTO_LINK_ADDR:
         key = (const char*) qd_hash_key_by_handle(al->addr->hash_handle);
         if (key && key[0] == 'M')
-            qd_compose_insert_string(body, &key[1]);
+            qd_compose_insert_string(body, &key[2]);
         else
             qd_compose_insert_null(body);
         break;
