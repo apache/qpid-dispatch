@@ -724,16 +724,18 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
     //
     // There was no match for a link-route destination, look for a message-route address.
     //
+    int in_phase;
+    int out_phase;
+    int addr_phase;
+    qd_address_treatment_t treat = qdr_treatment_for_address_CT(core, iter, &in_phase, &out_phase);
+
     qd_address_iterator_override_prefix(iter, '\0'); // Cancel previous override
+    addr_phase = dir == QD_INCOMING ? in_phase : out_phase;
+    qd_address_iterator_set_phase(iter, (char) addr_phase + '0');
+
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr && create_if_not_found) {
-        int in_phase;
-        int out_phase;
-        int addr_phase;
-
-        addr = qdr_address_CT(core, qdr_treatment_for_address_CT(core, iter, &in_phase, &out_phase));
-        addr_phase = dir == QD_INCOMING ? in_phase : out_phase;
-        qd_address_iterator_set_phase(iter, (char) addr_phase + '0');
+        addr = qdr_address_CT(core, treat);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(core->addrs, addr);
     }
@@ -1031,7 +1033,6 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
         //
         // Handle incoming link cases
         //
-        qdr_link_issue_credit_CT(core, link, link->capacity);
         switch (link->link_type) {
         case QD_LINK_ENDPOINT:
             if (link->auto_link) {
@@ -1045,12 +1046,18 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
                     link->owning_addr = link->auto_link->addr;
                 }
             }
+
+            //
+            // Issue credit if this is an anonymous link or if its address has at least one reachable destination.
+            //
+            qdr_address_t *addr = link->owning_addr;
+            if (!addr || (DEQ_SIZE(addr->subscriptions) || DEQ_SIZE(addr->rlinks) || qd_bitmask_cardinality(addr->rnodes)))
+                qdr_link_issue_credit_CT(core, link, link->capacity);
             break;
 
         case QD_LINK_CONTROL:
-            break;
-
         case QD_LINK_ROUTER:
+            qdr_link_issue_credit_CT(core, link, link->capacity);
             break;
         }
     } else {
