@@ -447,6 +447,12 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
         if (!error && dt == QD_LOST)
             error = qdr_error("qd:routed-link-lost", "Connectivity to the peer container was lost");
         qdr_link_detach(rlink, dt, error);
+
+        //
+        // This is the last event for this link that we will send into the core.  Remove the
+        // core linkage.  Note that the core->qd linkage is still in place.
+        //
+        qd_link_set_context(link, 0);
     }
 
     return 0;

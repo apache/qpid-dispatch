@@ -886,7 +886,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 // This link has a target address
                 //
                 bool           link_route;
-                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, target, false, false, &link_route);
+                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, target, true, false, &link_route);
                 if (!addr) {
                     //
                     // No route to this destination, reject the link
@@ -915,7 +915,12 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     link->owning_addr = addr;
                     qdr_add_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
                     qdr_link_outbound_second_attach_CT(core, link, source, target);
-                    qdr_link_issue_credit_CT(core, link, link->capacity);
+
+                    //
+                    // Issue the initial credit only if there are destinations for the address.
+                    //
+                    if (DEQ_SIZE(addr->subscriptions) || DEQ_SIZE(addr->rlinks) || qd_bitmask_cardinality(addr->rnodes))
+                        qdr_link_issue_credit_CT(core, link, link->capacity);
                 }
             }
             break;
