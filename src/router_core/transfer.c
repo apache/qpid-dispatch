@@ -43,14 +43,14 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_i
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    dlv->link    = link;
-    dlv->msg     = msg;
-    dlv->to_addr = 0;
-    dlv->origin  = ingress;
-    dlv->settled = settled;
+    dlv->link           = link;
+    dlv->msg            = msg;
+    dlv->to_addr        = 0;
+    dlv->origin         = ingress;
+    dlv->settled        = settled;
+    dlv->link_exclusion = link_exclusion;
 
     action->args.connection.delivery = dlv;
-    action->args.connection.link_exclusion = link_exclusion;
     qdr_action_enqueue(link->core, action);
     return dlv;
 }
@@ -64,14 +64,14 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    dlv->link    = link;
-    dlv->msg     = msg;
-    dlv->to_addr = addr;
-    dlv->origin  = ingress;
-    dlv->settled = settled;
+    dlv->link           = link;
+    dlv->msg            = msg;
+    dlv->to_addr        = addr;
+    dlv->origin         = ingress;
+    dlv->settled        = settled;
+    dlv->link_exclusion = link_exclusion;
 
     action->args.connection.delivery = dlv;
-    action->args.connection.link_exclusion = link_exclusion;
     qdr_action_enqueue(link->core, action);
     return dlv;
 }
@@ -198,6 +198,7 @@ void qdr_delivery_free(qdr_delivery_t *delivery)
         qd_message_free(delivery->msg);
     if (delivery->to_addr)
         qd_field_iterator_free(delivery->to_addr);
+    qd_bitmask_free(delivery->link_exclusion);
     free_qdr_delivery_t(delivery);
 }
 
@@ -242,60 +243,6 @@ qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery)
 // In-Thread Functions
 //==================================================================================
 
-/**
- * Check the link's accumulated credit.  If the credit given to the connection thread
- * has been issued to Proton, provide the next batch of credit to the connection thread.
- */
-void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit)
-{
-    link->incremental_credit_CT += credit;
-    link->flow_started = true;
-
-    if (link->incremental_credit_CT && link->incremental_credit == 0) {
-        //
-        // Move the credit from the core-thread value to the connection-thread value.
-        //
-        link->incremental_credit    = link->incremental_credit_CT;
-        link->incremental_credit_CT = 0;
-
-        //
-        // Put this link on the connection's has-credit list.
-        //
-        sys_mutex_lock(link->conn->work_lock);
-        qdr_add_link_ref(&link->conn->links_with_credit, link, QDR_LINK_LIST_CLASS_FLOW);
-        sys_mutex_unlock(link->conn->work_lock);
-
-        //
-        // Activate the connection
-        //
-        qdr_connection_activate_CT(core, link->conn);
-    }
-}
-
-
-/**
- * This function should be called after adding a new destination (subscription, local link,
- * or remote node) to an address.  If this address now has exactly one destination (i.e. it
- * transitioned from unreachable to reachable), make sure any unstarted in-links are issued
- * initial credit.
- */
-void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
-{
-    if (DEQ_SIZE(addr->inlinks) == 0)
-        return;
-
-    if (DEQ_SIZE(addr->subscriptions) + DEQ_SIZE(addr->rlinks) + qd_bitmask_cardinality(addr->rnodes) == 1) {
-        qdr_link_ref_t *ref = DEQ_HEAD(addr->inlinks);
-        while (ref) {
-            qdr_link_t *link = ref->link;
-            if (!link->flow_started)
-                qdr_link_issue_credit_CT(core, link, link->capacity);
-            ref = DEQ_NEXT(ref);
-        }
-    }
-}
-
-
 static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
@@ -335,16 +282,73 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
 }
 
 
+static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv, qdr_address_t *addr)
+{
+    int  fanout     = 0;
+    bool presettled = dlv->settled;
+
+    if (addr) {
+        fanout = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false, link->link_type == QD_LINK_CONTROL);
+        if (link->link_type != QD_LINK_CONTROL && link->link_type != QD_LINK_ROUTER)
+            addr->deliveries_ingress++;
+        link->total_deliveries++;
+    }
+
+    if (fanout == 0) {
+        if (link->owning_addr) {
+            //
+            // Message was not delivered and the link is not anonymous.
+            // Queue the message for later delivery (when the address gets
+            // a valid destination).
+            //
+            DEQ_INSERT_TAIL(link->undelivered, dlv);
+        } else {
+            //
+            // TODO - Release the delivery
+            //
+        }
+    } else if (fanout == 1) {
+        qd_bitmask_free(dlv->link_exclusion);
+        if (dlv->settled) {
+            //
+            // The delivery is settled.  Keep it off the unsettled list and issue
+            // replacement credit for it now.
+            //
+            qdr_link_issue_credit_CT(core, link, 1);
+
+            //
+            // If the delivery was pre-settled, free it now.
+            //
+            if (presettled) {
+                assert(!dlv->peer);
+                qdr_delivery_free(dlv);
+            }
+        } else
+            DEQ_INSERT_TAIL(link->unsettled, dlv);
+    } else {
+        //
+        // The fanout is greater than one.  Do something!  TODO
+        //
+        qd_bitmask_free(dlv->link_exclusion);
+
+        if (presettled) {
+            qdr_link_issue_credit_CT(core, link, 1);
+            assert(!dlv->peer);
+            qdr_delivery_free(dlv);
+        }
+    }
+
+    return fanout;
+}
+
+
 static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
         return;
 
-    qdr_delivery_t *dlv          = action->args.connection.delivery;
-    qd_bitmask_t   *link_exclude = action->args.connection.link_exclusion;
-    qdr_link_t     *link         = dlv->link;
-    int             fanout       = 0;
-    bool            presettled   = dlv->settled;
+    qdr_delivery_t *dlv  = action->args.connection.delivery;
+    qdr_link_t     *link = dlv->link;
 
     //
     // If this is an attach-routed link, put the delivery directly onto the peer link
@@ -367,57 +371,9 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         qdr_address_t *addr = link->owning_addr;
         if (!addr && dlv->to_addr)
             qd_hash_retrieve(core->addr_hash, dlv->to_addr, (void**) &addr);
-        if (addr) {
-            fanout = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false,
-                                            link->link_type == QD_LINK_CONTROL, link_exclude);
-            if (link->link_type != QD_LINK_CONTROL && link->link_type != QD_LINK_ROUTER)
-                addr->deliveries_ingress++;
-            link->total_deliveries++;
-        }
-    }
-
-    if (fanout == 0) {
-        printf("TODO fanout == 0\n");
-        if (link->owning_addr) {
-            //
-            // Message was not delivered and the link is not anonymous.
-            // Queue the message for later delivery (when the address gets
-            // a valid destination).
-            //
-            DEQ_INSERT_TAIL(link->undelivered, dlv);
-        } else {
-            //
-            // TODO - Release the delivery
-            //
-        }
-    } else if (fanout == 1) {
-        if (dlv->settled) {
-            //
-            // The delivery is settled.  Keep it off the unsettled list and issue
-            // replacement credit for it now.
-            //
-            qdr_link_issue_credit_CT(core, link, 1);
-
-            //
-            // If the delivery was pre-settled, free it now.
-            //
-            if (presettled) {
-                assert(!dlv->peer);
-                qdr_delivery_free(dlv);
-            }
-        } else
-            DEQ_INSERT_TAIL(link->unsettled, dlv);
-    } else {
-        //
-        // The fanout is greater than one.  Do something!  TODO
-        //
-
-        if (presettled) {
-            qdr_link_issue_credit_CT(core, link, 1);
-            assert(!dlv->peer);
-            qdr_delivery_free(dlv);
-        }
-    }
+        qdr_link_forward_CT(core, link, dlv, addr);
+    } else
+        DEQ_INSERT_TAIL(link->undelivered, dlv);
 }
 
 
@@ -436,7 +392,7 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
             // Forward the message.  We don't care what the fanout count is.
             //
             (void) qdr_forward_message_CT(core, addr, msg, 0, action->args.io.exclude_inprocess,
-                                          action->args.io.control, 0);
+                                          action->args.io.control);
             addr->deliveries_from_container++;
         } else
             qd_log(core->log, QD_LOG_DEBUG, "In-process send to an unknown address");
@@ -505,6 +461,89 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 
     if (push)
         qdr_delivery_push_CT(core, peer);
+}
+
+
+/**
+ * Check the link's accumulated credit.  If the credit given to the connection thread
+ * has been issued to Proton, provide the next batch of credit to the connection thread.
+ */
+void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit)
+{
+    link->incremental_credit_CT += credit;
+    link->flow_started = true;
+
+    if (link->incremental_credit_CT && link->incremental_credit == 0) {
+        //
+        // Move the credit from the core-thread value to the connection-thread value.
+        //
+        link->incremental_credit    = link->incremental_credit_CT;
+        link->incremental_credit_CT = 0;
+
+        //
+        // Put this link on the connection's has-credit list.
+        //
+        sys_mutex_lock(link->conn->work_lock);
+        qdr_add_link_ref(&link->conn->links_with_credit, link, QDR_LINK_LIST_CLASS_FLOW);
+        sys_mutex_unlock(link->conn->work_lock);
+
+        //
+        // Activate the connection
+        //
+        qdr_connection_activate_CT(core, link->conn);
+    }
+}
+
+
+/**
+ * This function should be called after adding a new destination (subscription, local link,
+ * or remote node) to an address.  If this address now has exactly one destination (i.e. it
+ * transitioned from unreachable to reachable), make sure any unstarted in-links are issued
+ * initial credit.
+ *
+ * Also, check the inlinks to see if there are undelivered messages.  If so, drain them to
+ * the forwarder.
+ */
+void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
+{
+    if (DEQ_SIZE(addr->inlinks) == 0)
+        return;
+
+    if (DEQ_SIZE(addr->subscriptions) + DEQ_SIZE(addr->rlinks) + qd_bitmask_cardinality(addr->rnodes) == 1) {
+        qdr_link_ref_t *ref = DEQ_HEAD(addr->inlinks);
+        while (ref) {
+            qdr_link_t *link = ref->link;
+
+            //
+            // Issue credit to stalled links
+            //
+            if (!link->flow_started)
+                qdr_link_issue_credit_CT(core, link, link->capacity);
+
+            //
+            // Drain undelivered deliveries via the forwarder
+            //
+            if (DEQ_SIZE(link->undelivered) > 0) {
+
+                //
+                // Move all the undelivered to a local list in case not all can be delivered.
+                // We don't want to loop here forever putting the same messages on the undelivered
+                // list.
+                //
+                qdr_delivery_list_t deliveries;
+                DEQ_MOVE(link->undelivered, deliveries);
+
+                qdr_delivery_t *dlv = DEQ_HEAD(deliveries);
+                while (dlv) {
+                    DEQ_REMOVE_HEAD(deliveries);
+                    qdr_link_forward_CT(core, link, dlv, addr);
+                    dlv = DEQ_HEAD(deliveries);
+                }
+            }
+
+            ref = DEQ_NEXT(ref);
+        }
+    }
 }
 
 

@@ -30,8 +30,7 @@ typedef int (*qdr_forward_message_t) (qdr_core_t      *core,
                                       qd_message_t    *msg,
                                       qdr_delivery_t  *in_delivery,
                                       bool             exclude_inprocess,
-                                      bool             control,
-                                      qd_bitmask_t    *link_exclusion);
+                                      bool             control);
 
 typedef bool (*qdr_forward_attach_t) (qdr_core_t     *core,
                                       qdr_address_t  *addr,
@@ -54,8 +53,7 @@ static int qdr_forward_message_null_CT(qdr_core_t      *core,
                                        qd_message_t    *msg,
                                        qdr_delivery_t  *in_delivery,
                                        bool             exclude_inprocess,
-                                       bool             control,
-                                       qd_bitmask_t    *link_exclusion)
+                                       bool             control)
 {
     qd_log(core->log, QD_LOG_CRITICAL, "NULL Message Forwarder Invoked");
     return 0;
@@ -137,8 +135,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
                              qd_message_t    *msg,
                              qdr_delivery_t  *in_delivery,
                              bool             exclude_inprocess,
-                             bool             control,
-                             qd_bitmask_t    *link_exclusion)
+                             bool             control)
 {
     bool bypass_valid_origins = addr->forwarder->bypass_valid_origins;
     int  fanout = 0;
@@ -222,7 +219,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             dest_link = control ?
                 core->control_links_by_mask_bit[link_bit] :
                 core->data_links_by_mask_bit[link_bit];
-            if (dest_link && (!link_exclusion || qd_bitmask_value(link_exclusion, link_bit) == 0)) {
+            if (dest_link && (!in_delivery->link_exclusion || qd_bitmask_value(in_delivery->link_exclusion, link_bit) == 0)) {
                 qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, dest_link, msg);
                 qdr_forward_deliver_CT(core, dest_link, out_delivery);
                 fanout++;
@@ -246,8 +243,6 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         }
     }
 
-    if (link_exclusion)
-        qd_bitmask_free(link_exclusion);
     return fanout;
 }
 
@@ -257,17 +252,10 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
                            qd_message_t    *msg,
                            qdr_delivery_t  *in_delivery,
                            bool             exclude_inprocess,
-                           bool             control,
-                           qd_bitmask_t    *link_exclusion)
+                           bool             control)
 {
     qdr_link_t     *out_link;
     qdr_delivery_t *out_delivery;
-
-    //
-    // The Anycast forwarders don't respect link exclusions.
-    //
-    if (link_exclusion)
-        qd_bitmask_free(link_exclusion);
 
     //
     // Forward to an in-process subscriber if there is one.
@@ -360,10 +348,9 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
                             qd_message_t    *msg,
                             qdr_delivery_t  *in_delivery,
                             bool             exclude_inprocess,
-                            bool             control,
-                            qd_bitmask_t    *link_exclusion)
+                            bool             control)
 {
-    return qdr_forward_closest_CT(core, addr, msg, in_delivery, exclude_inprocess, control, link_exclusion);
+    return qdr_forward_closest_CT(core, addr, msg, in_delivery, exclude_inprocess, control);
 }
 
 
@@ -485,10 +472,10 @@ qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treat
 
 
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
-                           bool exclude_inprocess, bool control, qd_bitmask_t *link_exclusion)
+                           bool exclude_inprocess, bool control)
 {
     if (addr->forwarder)
-        return addr->forwarder->forward_message(core, addr, msg, in_delivery, exclude_inprocess, control, link_exclusion);
+        return addr->forwarder->forward_message(core, addr, msg, in_delivery, exclude_inprocess, control);
 
     // TODO - Deal with this delivery's disposition
     return 0;
