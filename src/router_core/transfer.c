@@ -249,6 +249,7 @@ qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery)
 void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit)
 {
     link->incremental_credit_CT += credit;
+    link->flow_started = true;
 
     if (link->incremental_credit_CT && link->incremental_credit == 0) {
         //
@@ -268,6 +269,29 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit)
         // Activate the connection
         //
         qdr_connection_activate_CT(core, link->conn);
+    }
+}
+
+
+/**
+ * This function should be called after adding a new destination (subscription, local link,
+ * or remote node) to an address.  If this address now has exactly one destination (i.e. it
+ * transitioned from unreachable to reachable), make sure any unstarted in-links are issued
+ * initial credit.
+ */
+void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
+{
+    if (DEQ_SIZE(addr->inlinks) == 0)
+        return;
+
+    if (DEQ_SIZE(addr->subscriptions) + DEQ_SIZE(addr->rlinks) + qd_bitmask_cardinality(addr->rnodes) == 1) {
+        qdr_link_ref_t *ref = DEQ_HEAD(addr->inlinks);
+        while (ref) {
+            qdr_link_t *link = ref->link;
+            if (!link->flow_started)
+                qdr_link_issue_credit_CT(core, link, link->capacity);
+            ref = DEQ_NEXT(ref);
+        }
     }
 }
 

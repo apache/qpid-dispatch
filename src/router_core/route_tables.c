@@ -510,6 +510,7 @@ static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool 
         qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
         qd_bitmask_set_bit(addr->rnodes, router_maskbit);
         rnode->ref_count++;
+        qdr_addr_start_inlinks_CT(core, addr);
 
         //
         // TODO - If this affects a waypoint, create the proper side effects
@@ -596,6 +597,8 @@ static void qdr_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         sub->addr = addr;
         DEQ_ITEM_INIT(sub);
         DEQ_INSERT_TAIL(addr->subscriptions, sub);
+        qdr_addr_start_inlinks_CT(core, addr);
+
     } else
         free(sub);
 

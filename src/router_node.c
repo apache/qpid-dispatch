@@ -508,11 +508,6 @@ static int router_closed_handler(void *type_context, qd_connection_t *conn, void
 }
 
 
-static void router_closed_handler(void *type_context, qd_connection_t *conn, void *context)
-{
-}
-
-
 static void qd_router_timer_handler(void *context)
 {
     qd_router_t *router = (qd_router_t*) context;

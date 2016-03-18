@@ -363,7 +363,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
                             bool             control,
                             qd_bitmask_t    *link_exclusion)
 {
-    return 0;
+    return qdr_forward_closest_CT(core, addr, msg, in_delivery, exclude_inprocess, control, link_exclusion);
 }
 
 

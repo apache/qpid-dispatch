@@ -969,6 +969,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
                     if (key && *key == 'M')
                         qdr_post_mobile_added_CT(core, key);
+                    qdr_addr_start_inlinks_CT(core, addr);
                 }
                 qdr_link_outbound_second_attach_CT(core, link, source, target);
             }
