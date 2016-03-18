@@ -208,8 +208,8 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_MAX_RECEIVERS] = 10
         policy_out[PolicyKeys.KW_ALLOW_DYNAMIC_SRC] = False
         policy_out[PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER] = False
-        policy_out[PolicyKeys.KW_SOURCES] = []
-        policy_out[PolicyKeys.KW_TARGETS] = []
+        policy_out[PolicyKeys.KW_SOURCES] = ''
+        policy_out[PolicyKeys.KW_TARGETS] = ''
 
         cerror = []
         for key, val in policy_in.iteritems():
@@ -239,10 +239,23 @@ class PolicyCompiler(object):
             elif key in [PolicyKeys.KW_SOURCES,
                          PolicyKeys.KW_TARGETS
                          ]:
-                val = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
+                # accept a string or list
+                if type(val) is str:
+                    # 'abc, def, mytarget'
+                    val = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
+                elif type(val) is list:
+                    # ['abc', 'def', 'mytarget']
+                    pass
+                elif type(val) is unicode:
+                    # u'abc, def, mytarget'
+                    val = [x.strip(' ') for x in str(val).split(PolicyKeys.KC_CONFIG_LIST_SEP)]
+                else:
+                    errors.append("Application '%s' user group '%s' option '%s' has illegal value '%s'. Type must be 'str' or 'list' but is '%s;" %
+                                  (appname, usergroup, key, val, type(val)))
                 # deduplicate address lists
                 val = list(set(val))
-                policy_out[key] = val
+                # output result is CSV string with no white space between values: 'abc,def,mytarget'
+                policy_out[key] = ','.join(val)
         return True
 
 
@@ -640,7 +653,6 @@ class PolicyLocal(object):
 
             upolicy.update(ruleset[PolicyKeys.KW_SETTINGS][name])
             upolicy[PolicyKeys.KW_CSTATS] = self.statsdb[appname].get_cstats()
-
             return True
         except Exception, e:
             #print str(e)
@@ -653,11 +665,15 @@ class PolicyLocal(object):
         @param conn_id:
         @return:
         """
-        facts = self._connections[conn_id]
-        stats = self.statsdb[facts.app]
-        stats.disconnect(facts.conn_name, facts.user, facts.host)
-        self._connections.remove(conn_id)
-
+        try:
+            facts = self._connections[conn_id]
+            stats = self.statsdb[facts.app]
+            stats.disconnect(facts.conn_name, facts.user, facts.host)
+            del self._connections[conn_id]
+        except Exception, e:
+            #print str(e)
+            self._manager.log_trace(
+                "Policy internal error closing connection id %s. %s" % (conn_id, str(e)))
 
     def test_load_config(self):
         ruleset_str = '["policyAccessRuleset", {"applicationName": "photoserver","maxConnections": 50,"maxConnPerUser": 5,"maxConnPerHost": 20,"userGroups": {"anonymous":       "anonymous","users":           "u1, u2","paidsubscribers": "p1, p2","test":            "zeke, ynot","admin":           "alice, bob","superuser":       "ellen"},"ingressHostGroups": {"Ten18":     "10.18.0.0-10.18.255.255","EllensWS":  "72.135.2.9","TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255","localhost": "127.0.0.1, ::1","TheWorld":  "*"},"ingressPolicies": {"anonymous":       "TheWorld","users":           "TheWorld","paidsubscribers": "TheWorld","test":            "TheLabs","admin":           "Ten18, TheLabs, localhost","superuser":       "EllensWS, localhost"},"connectionAllowDefault": true,'

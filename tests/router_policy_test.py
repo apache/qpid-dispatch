@@ -168,10 +168,8 @@ class PolicyFile(TestCase):
         self.assertTrue(upolicy['maxReceivers']             == 44)
         self.assertTrue(upolicy['allowAnonymousSender'])
         self.assertTrue(upolicy['allowDynamicSrc'])
-        self.assertTrue(len(upolicy['targets']) == 1)
-        self.assertTrue('private' in upolicy['targets'])
-        self.assertTrue(len(upolicy['sources']) == 1)
-        self.assertTrue('private' in upolicy['sources'])
+        self.assertTrue(upolicy['targets'] == 'private')
+        self.assertTrue(upolicy['sources'] == 'private')
 
     def test_policy1_test_zeke_bad_IP(self):
         self.assertTrue(

@@ -32,6 +32,7 @@
 
 typedef struct qd_policy_denial_counts_s qd_policy_denial_counts_t;
 
+// TODO: Provide locking
 struct qd_policy_denial_counts_s {
     int sessionDenied;
     int senderDenied;
@@ -76,9 +77,19 @@ qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity);
 qd_error_t qd_register_policy_manager(qd_policy_t *policy, void *policy_manager);
 
 
+/** Allocate counts statistics block.
+ * Called from Python
+ */
 long qd_policy_c_counts_alloc();
+
+/** Free counts statistics block.
+ * Called from Python
+ */
 void qd_policy_c_counts_free(long ccounts);
 
+/** Refresh a counts statistics block
+ * Called from Python
+ */
 qd_error_t qd_policy_c_counts_refresh(long ccounts, qd_entity_t*entity);
 
 
@@ -107,7 +118,7 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn);
 /** Approve a new session based on connection's policy.
  * Sessions denied are closed and counted.
  *
- * @param[in] ssn proton session being closed
+ * @param[in] ssn proton session being approved
  * @param[in] qd_conn dispatch connection with policy settings and counts
  **/
 bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn);
@@ -115,7 +126,7 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 
 /** Apply policy or default settings for a new session.
  *
- * @param[in] ssn proton session being closed
+ * @param[in] ssn proton session being set
  * @param[in] qd_conn dispatch connection with policy settings and counts
  **/
 void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_conn);
@@ -124,7 +135,7 @@ void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_con
 /** Approve a new sender link based on connection's policy.
  * Links denied are closed and counted.
  *
- * @param[in] pn_link proton link being closed
+ * @param[in] pn_link proton link being approved
  * @param[in] qd_conn dispatch connection with policy settings and counts
  **/
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn);
@@ -133,7 +144,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
 /** Approve a new receiver link based on connection's policy.
  * Links denied are closed and counted.
  *
- * @param[in] pn_link proton link being closed
+ * @param[in] pn_link proton link being approved
  * @param[in] qd_conn dispatch connection with policy settings and counts
  **/
 bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn);

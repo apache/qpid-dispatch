@@ -41,6 +41,15 @@
 #include "qpid/dispatch/log.h"
 
 
+/**
+ * Private Function Prototypes
+ */
+void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *cond_name, const char *cond_descr);
+void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn);
+void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn, char * s_or_r);
+void _qd_policy_deny_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn);
+void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn);
+
 //
 // TODO: when policy dev is more complete lower the log level
 //
@@ -241,23 +250,29 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
         // HACK ALERT: TODO: This should be deferred to a Python thread
         qd_python_lock_state_t lock_state = qd_python_lock();
         PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
-        PyObject *close_connection = module ? PyObject_GetAttrString(module, "policy_close_connection") : NULL;
-        Py_XDECREF(module);
-        PyObject *result = close_connection ? PyObject_CallFunction(close_connection, "(OK)", 
-                                                               (PyObject *)policy->py_policy_manager, 
-                                                               conn->connection_id) : NULL;
-        Py_XDECREF(close_connection);
-        if (!result) {
-            qd_python_unlock(lock_state);
-            return;
+        if (module) {
+            PyObject *close_connection = PyObject_GetAttrString(module, "policy_close_connection");
+            if (close_connection) {
+                PyObject *result = PyObject_CallFunction(close_connection, "(OK)",
+                                                         (PyObject *)policy->py_policy_manager,
+                                                          conn->connection_id);
+                if (result) {
+                    Py_XDECREF(result);
+                } else {
+                    qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection close failed: result");
+                }
+                Py_XDECREF(close_connection);
+            } else {
+                qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection close failed: close_connection");
+            }
+            Py_XDECREF(module);
+        } else {
+            qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection close failed: module");
         }
-        Py_XDECREF(result);
-
         qd_python_unlock(lock_state);
-
     }
-    const char *hostname = qdpn_connector_name(conn->pn_cxtr);
     if (policy->max_connection_limit > 0) {
+        const char *hostname = qdpn_connector_name(conn->pn_cxtr);
         qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed. N connections=%d", hostname, n_connections);
     }
 }
@@ -295,65 +310,83 @@ bool qd_policy_open_lookup_user(
     qd_policy_settings_t *settings)
 {
     // Lookup the user/host/app for allow/deny and to get settings name
+    bool res = false;
     qd_python_lock_state_t lock_state = qd_python_lock();
     PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
-    PyObject *lookup_user = module ? PyObject_GetAttrString(module, "policy_lookup_user") : NULL;
-    PyObject *result = lookup_user ? PyObject_CallFunction(lookup_user, "(OssssK)", 
-                                                           (PyObject *)policy->py_policy_manager, 
-                                                           username, hostip, app, conn_name, conn_id) : NULL;
-    Py_XDECREF(lookup_user);
-    if (!result) {
-        Py_XDECREF(module);
+    if (module) {
+        PyObject *lookup_user = PyObject_GetAttrString(module, "policy_lookup_user");
+        if (lookup_user) {
+            PyObject *result = PyObject_CallFunction(lookup_user, "(OssssK)",
+                                                     (PyObject *)policy->py_policy_manager,
+                                                     username, hostip, app, conn_name, conn_id);
+            if (result) {
+                const char *res_string = PyString_AsString(result);
+                strncpy(name_buf, res_string, name_buf_size);
+                Py_XDECREF(result);
+                res = true; // settings name returned
+            } else {
+                qd_log(policy->log_source, POLICY_LOG_LEVEL, "Internal: lookup_user: result");
+            }
+            Py_XDECREF(lookup_user);
+        } else {
+            qd_log(policy->log_source, POLICY_LOG_LEVEL, "Internal: lookup_user: lookup_user");
+        }
+    }
+    if (!res) {
+        if (module) {
+            Py_XDECREF(module);
+        }
         qd_python_unlock(lock_state);
-        qd_log(policy->log_source,
-               POLICY_LOG_LEVEL,
-               "PyObject lookup_user is Null");
         return false;
     }
-    const char *res_string = PyString_AsString(result);
-    strncpy(name_buf, res_string, name_buf_size);
-    Py_XDECREF(result);
 
+    // 
     if (name_buf[0]) {
-        // Go get the settings
+        // Go get the named settings
+        res = false;
         PyObject *upolicy = PyDict_New();
-        PyObject *lookup_settings = module ? PyObject_GetAttrString(module, "policy_lookup_settings") : NULL;
-        PyObject *result2 = lookup_settings ? PyObject_CallFunction(lookup_settings, "(OssO)", 
-                                                            (PyObject *)policy->py_policy_manager, 
-                                                            app, name_buf, upolicy) : NULL;
-        Py_XDECREF(lookup_settings);
-        if (!result2) {
+        if (upolicy) {
+            PyObject *lookup_settings = PyObject_GetAttrString(module, "policy_lookup_settings");
+            if (lookup_settings) {
+                PyObject *result2 = PyObject_CallFunction(lookup_settings, "(OssO)",
+                                                        (PyObject *)policy->py_policy_manager,
+                                                        app, name_buf, upolicy);
+                if (result2) {
+                    settings->maxFrameSize         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxFrameSize", 0);
+                    settings->maxMessageSize       = qd_entity_opt_long((qd_entity_t*)upolicy, "maxMessageSize", 0);
+                    settings->maxSessionWindow     = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessionWindow", 0);
+                    settings->maxSessions          = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessions", 0);
+                    settings->maxSenders           = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSenders", 0);
+                    settings->maxReceivers         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxReceivers", 0);
+                    settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
+                    settings->allowDynamicSrc      = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSrc", false);
+                    settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
+                    settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
+                    settings->denialCounts         = (qd_policy_denial_counts_t*)
+                                                    qd_entity_get_long((qd_entity_t*)upolicy, "denialCounts");
+                    Py_XDECREF(result2);
+                    res = true; // named settings content returned
+                } else {
+                    qd_log(policy->log_source, POLICY_LOG_LEVEL, "Internal: lookup_user: result2");
+                }
+                Py_XDECREF(lookup_settings);
+            } else {
+                qd_log(policy->log_source, POLICY_LOG_LEVEL, "Internal: lookup_user: lookup_settings");
+            }
             Py_XDECREF(upolicy);
-            qd_python_unlock(lock_state);
-            qd_log(policy->log_source,
-                   POLICY_LOG_LEVEL,
-                   "PyObject lookup_settings is Null");
-            return false;
+        } else {
+            qd_log(policy->log_source, POLICY_LOG_LEVEL, "Internal: lookup_user: upolicy");
         }
-        Py_XDECREF(result2);
-        settings->maxFrameSize         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxFrameSize", 0);
-        settings->maxMessageSize       = qd_entity_opt_long((qd_entity_t*)upolicy, "maxMessageSize", 0);
-        settings->maxSessionWindow     = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessionWindow", 0);
-        settings->maxSessions          = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessions", 0);
-        settings->maxSenders           = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSenders", 0);
-        settings->maxReceivers         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxReceivers", 0);
-        settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
-        settings->allowDynamicSrc      = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSrc", false);
-        settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
-        settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
-        settings->denialCounts         = (qd_policy_denial_counts_t*)
-                                         qd_entity_get_long((qd_entity_t*)upolicy, "denialCounts");
-        Py_XDECREF(upolicy);
     }
     Py_XDECREF(module);
     qd_python_unlock(lock_state);
 
     qd_log(policy->log_source, 
            POLICY_LOG_LEVEL, 
-           "Policy AMQP Open lookup_user: %s, hostip: %s, app: %s, connection: %s. Usergroup: '%s'", 
-           username, hostip, app, conn_name, name_buf);
+           "Policy AMQP Open lookup_user: %s, hostip: %s, app: %s, connection: %s. Usergroup: '%s'%s",
+           username, hostip, app, conn_name, name_buf, (res ? "" : " Internal error."));
 
-    return true;
+    return res;
 }
 
 /** Set the error condition and close the connection.
@@ -372,8 +405,11 @@ void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *c
 }
 
 
-//
-//
+/** Internal function to deny an amqp session
+ * The session is closed with a condition and the denial is counted.
+ * @param[in,out] ssn proton session
+ * @param[in,out] qd_conn dispatch connection
+ */
 void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 {
     pn_condition_t * cond = pn_session_condition(ssn);
@@ -401,15 +437,15 @@ void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 //
 bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 {
-  if (qd_conn->policy_settings) {
-    if (qd_conn->policy_settings->maxSessions) {
-      if (qd_conn->n_sessions == qd_conn->policy_settings->maxSessions) {
-	qd_policy_deny_amqp_session(ssn, qd_conn);
-	return false;
-      }
+    if (qd_conn->policy_settings) {
+        if (qd_conn->policy_settings->maxSessions) {
+            if (qd_conn->n_sessions == qd_conn->policy_settings->maxSessions) {
+                qd_policy_deny_amqp_session(ssn, qd_conn);
+                return false;
+            }
+        }
     }
-  }
-  return true;
+    return true;
 }
 
 
@@ -417,11 +453,11 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 //
 void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_conn)
 {
-  if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow) {
-    pn_session_set_incoming_capacity(ssn, qd_conn->policy_settings->maxSessionWindow);
-  } else {
-    pn_session_set_incoming_capacity(ssn, 1000000);
-  }
+    if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow) {
+        pn_session_set_incoming_capacity(ssn, qd_conn->policy_settings->maxSessionWindow);
+    } else {
+        pn_session_set_incoming_capacity(ssn, 1000000);
+    }
 }
 
 //
@@ -464,6 +500,9 @@ void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_
     qd_conn->policy_settings->denialCounts->receiverDenied++;
 }
 
+
+//
+//
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
     if (qd_conn->policy_settings->maxSenders) {
