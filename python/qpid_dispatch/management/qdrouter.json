@@ -1035,7 +1035,7 @@
             "description": "AMQP address managed by the router.",
             "extends": "operationalEntity",
             "attributes": {
-                "treatment": {
+                "distribution": {
                     "type": ["flood", "multicast", "closest", "balanced", "linkBalanced"],
                     "description": "Forwarding treatment for the address: flood - messages delivered to all subscribers along all available paths (this will cause duplicate deliveries if there are redundant paths); multi - one copy of each message delivered to all subscribers; anyClosest - messages delivered to only the closest subscriber; anyBalanced - messages delivered to one subscriber with load balanced across subscribers; linkBalanced - for link-routing, link attaches balanced across destinations."
                 },

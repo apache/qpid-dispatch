@@ -24,7 +24,7 @@
 #define QDR_ADDRESS_IDENTITY                  1
 #define QDR_ADDRESS_TYPE                      2
 #define QDR_ADDRESS_KEY                       3
-#define QDR_ADDRESS_TREATMENT                 4
+#define QDR_ADDRESS_DISTRIBUTION              4
 #define QDR_ADDRESS_IN_PROCESS                5
 #define QDR_ADDRESS_SUBSCRIBER_COUNT          6
 #define QDR_ADDRESS_REMOTE_COUNT              7
@@ -41,7 +41,7 @@ const char *qdr_address_columns[] =
      "identity",
      "type",
      "key",
-     "treatment",
+     "distribution",
      "inProcess",
      "subscriberCount",
      "remoteCount",
@@ -73,12 +73,12 @@ static void qdr_insert_address_columns_CT(qdr_address_t        *addr,
         qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.address");
         break;
 
-    case QDR_ADDRESS_TREATMENT: {
+    case QDR_ADDRESS_DISTRIBUTION: {
         switch (addr->treatment) {
-        case QD_TREATMENT_MULTICAST_FLOOD:  qd_compose_insert_string(body, "flood");       break;
-        case QD_TREATMENT_MULTICAST_ONCE:   qd_compose_insert_string(body, "multi");       break;
-        case QD_TREATMENT_ANYCAST_CLOSEST:  qd_compose_insert_string(body, "anyClosest");  break;
-        case QD_TREATMENT_ANYCAST_BALANCED: qd_compose_insert_string(body, "anyBalanced"); break;
+        case QD_TREATMENT_MULTICAST_FLOOD:  qd_compose_insert_string(body, "flood");        break;
+        case QD_TREATMENT_MULTICAST_ONCE:   qd_compose_insert_string(body, "multicast");    break;
+        case QD_TREATMENT_ANYCAST_CLOSEST:  qd_compose_insert_string(body, "closest");      break;
+        case QD_TREATMENT_ANYCAST_BALANCED: qd_compose_insert_string(body, "balanced");     break;
         case QD_TREATMENT_LINK_BALANCED:    qd_compose_insert_string(body, "linkBalanced"); break;
         }
         break;

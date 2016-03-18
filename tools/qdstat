@@ -187,16 +187,6 @@ class BusManager(Node):
             outlist.append(str(i))
         return outlist
 
-    def _trt_text(self, trt):
-        trt_map = {'flood'        : 'flood',
-                   'multi'        : 'multi',
-                   'anyClosest'   : 'closest',
-                   'anyBalanced'  : 'balanced',
-                   'linkBalanced' : 'linkBalanced'}
-        if trt in trt_map:
-            return trt_map[trt]
-        return '-'
-
     def displayGeneral(self):
         disp = Display(prefix="  ")
         heads = []
@@ -291,7 +281,7 @@ class BusManager(Node):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("addr"))
-        heads.append(Header("treatment"))
+        heads.append(Header("distrib"))
         heads.append(Header("in-proc", Header.COMMAS))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
@@ -308,7 +298,7 @@ class BusManager(Node):
         for addr in objects:
             row = []
             row.append(self._addr_summary(addr.name))
-            row.append(self._trt_text(addr.treatment))
+            row.append(addr.distribution)
             row.append(addr.inProcess)
             row.append(addr.subscriberCount)
             row.append(addr.remoteCount)
