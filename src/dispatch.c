@@ -29,7 +29,6 @@
 #include "alloc.h"
 #include "log_private.h"
 #include "router_private.h"
-#include "waypoint_private.h"
 #include "message_private.h"
 #include "entity.h"
 #include "entity_cache.h"

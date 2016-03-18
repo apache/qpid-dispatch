@@ -25,7 +25,6 @@
 #include <qpid/dispatch.h>
 #include "dispatch_private.h"
 #include "router_private.h"
-#include "waypoint_private.h"
 #include "entity_cache.h"
 
 static qd_log_source_t *log_source = 0;

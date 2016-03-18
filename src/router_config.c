@@ -22,7 +22,6 @@
 #include <qpid/dispatch/log.h>
 #include "dispatch_private.h"
 #include "router_private.h"
-#include "lrp_private.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include "schema_enum.h"

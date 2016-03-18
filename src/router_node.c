@@ -26,7 +26,6 @@
 #include "dispatch_private.h"
 #include "entity_cache.h"
 #include "router_private.h"
-#include "waypoint_private.h"
 
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
