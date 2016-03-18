@@ -254,48 +254,6 @@ class RouterEntity(EntityAdapter):
         return super(RouterEntity, self).__str__().replace("Entity(", "RouterEntity(")
 
 
-class AddressEntity(EntityAdapter):
-    def __init__(self, agent, entity_type, attributes=None):
-        super(AddressEntity, self).__init__(agent, entity_type, attributes, validate=False)
-        # Router is a mix of configuration and operational entity.
-        # The statistics attributes are operational not configured.
-        self._add_implementation(
-            CImplementation(agent.qd, entity_type, self._dispatch))
-
-    def _identifier(self): return self.attributes.get('identity')
-
-    def create(self):
-        self._qd.qd_dispatch_configure_address(self._dispatch, self)
-
-
-class LinkRouteEntity(EntityAdapter):
-    def __init__(self, agent, entity_type, attributes=None):
-        super(LinkRouteEntity, self).__init__(agent, entity_type, attributes, validate=False)
-        # Router is a mix of configuration and operational entity.
-        # The statistics attributes are operational not configured.
-        self._add_implementation(
-            CImplementation(agent.qd, entity_type, self._dispatch))
-
-    def _identifier(self): return self.attributes.get('identity')
-
-    def create(self):
-        self._qd.qd_dispatch_configure_link_route(self._dispatch, self)
-
-
-class AutoLinkEntity(EntityAdapter):
-    def __init__(self, agent, entity_type, attributes=None):
-        super(AutoLinkEntity, self).__init__(agent, entity_type, attributes, validate=False)
-        # Router is a mix of configuration and operational entity.
-        # The statistics attributes are operational not configured.
-        self._add_implementation(
-            CImplementation(agent.qd, entity_type, self._dispatch))
-
-    def _identifier(self): return self.attributes.get('identity')
-
-    def create(self):
-        self._qd.qd_dispatch_configure_auto_link(self._dispatch, self)
-
-
 class LogEntity(EntityAdapter):
 
     def __init__(self, agent, entity_type, attributes=None, validate=True):
@@ -382,26 +340,26 @@ class LinkRoutePatternEntity(EntityAdapter):
     def __str__(self):
         return super(LinkRoutePatternEntity, self).__str__().replace("Entity(", "LinkRoutePatternEntity(")
 
-class AddressEntity(EntityAdapter):
+class RouterConfigAddressEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_address(self._dispatch, self)
 
     def __str__(self):
-        return super(AddressEntity, self).__str__().replace("Entity(", "AddressEntity(")
+        return super(RouterConfigAddressEntity, self).__str__().replace("Entity(", "RouterConfigAddressEntity(")
 
-class LinkRouteEntity(EntityAdapter):
+class RouterConfigLinkrouteEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_link_route(self._dispatch, self)
 
     def __str__(self):
-        return super(LinkRouteEntity, self).__str__().replace("Entity(", "LinkRouteEntity(")
+        return super(RouterConfigLinkrouteEntity, self).__str__().replace("Entity(", "RouterConfigLinkrouteEntity(")
 
-class AutoLinkEntity(EntityAdapter):
+class RouterConfigAutolinkEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_auto_link(self._dispatch, self)
 
     def __str__(self):
-        return super(AutoLinkEntity, self).__str__().replace("Entity(", "AutoLinkEntity(")
+        return super(RouterConfigAutolinkEntity, self).__str__().replace("Entity(", "RouterConfigAutolinkEntity(")
 
 class ConsoleEntity(EntityAdapter):
     def __str__(self):

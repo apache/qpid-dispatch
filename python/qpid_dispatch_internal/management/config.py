@@ -65,6 +65,9 @@ class Config(object):
         for s in sections:
             s[0] = camelcase(s[0])
             s[1] = dict((camelcase(k), v) for k, v in s[1].iteritems())
+            if s[0] == "address":   s[0] = "router.config.address"
+            if s[0] == "linkRoute": s[0] = "router.config.linkRoute"
+            if s[0] == "autoLink":  s[0] = "router.config.autoLink"
         return sections
 
 
@@ -150,8 +153,10 @@ def configure_dispatch(dispatch, lib_handle, filename):
     agent.activate("$_management_internal")
 
     # Remaining configuration
-    for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", "route":
-        for a in config.by_type(t): configure(a)
+    for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", \
+        "router.config.address", "router.config.linkRoute", "router.config.autoLink":
+        for a in config.by_type(t):
+            configure(a)
     for e in config.entities:
         configure(e)
 
