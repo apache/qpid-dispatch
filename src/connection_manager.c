@@ -233,13 +233,14 @@ qd_config_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_ent
         qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create config connector: %s", qd_error_message());
         qd_config_connector_free(cc);
         return 0;
+    }
+
     DEQ_ITEM_INIT(cc);
     DEQ_INSERT_TAIL(cm->config_connectors, cc);
     qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s proto=%s role=%s",
            cc->configuration.host, cc->configuration.port,
            cc->configuration.protocol_family ? cc->configuration.protocol_family : "any",
            cc->configuration.role);
-    }
 
     return cc;
 }
