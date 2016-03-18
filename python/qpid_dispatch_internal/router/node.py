@@ -486,10 +486,7 @@ class RouterNode(object):
 
     def map_address(self, addr):
         self.mobile_addresses.append(addr)
-        phase = '0'
-        if addr[0] == 'M':
-            phase = addr[1]
-        self.adapter.map_destination(phase, addr, self.maskbit)
+        self.adapter.map_destination(addr, self.maskbit)
         self.log(LOG_DEBUG, "Remote destination %s mapped to router %s" % (self._logify(addr), self.id))
 
 

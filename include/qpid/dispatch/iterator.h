@@ -246,6 +246,15 @@ int qd_field_iterator_ncopy(qd_field_iterator_t *iter, unsigned char* buffer, in
 unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter);
 
 /**
+ * Return a new iterator that is a duplicate of the original iterator, referring
+ * to the same base data.  If the input iterator pointer is NULL, the duplicate
+ * will also be NULL (i.e. no new iterator will be created).
+ * @param iter Input iterator
+ * @return Pointer to a new, identical iterator referring to the same data.
+ */
+qd_field_iterator_t *qd_field_iterator_dup(const qd_field_iterator_t *iter);
+
+/**
  * Copy the iterator's view into buffer as a null terminated string,
  * up to a maximum of n bytes. Cursor is advanced by the number of bytes
  * copied.  Useful for log messages.

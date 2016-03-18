@@ -74,7 +74,7 @@ typedef void (*qd_container_delivery_handler_t)    (void *node_context, qd_link_
 typedef int  (*qd_container_link_handler_t)        (void *node_context, qd_link_t *link);
 typedef int  (*qd_container_link_detach_handler_t) (void *node_context, qd_link_t *link, qd_detach_type_t dt);
 typedef void (*qd_container_node_handler_t)        (void *type_context, qd_node_t *node);
-typedef void (*qd_container_conn_handler_t)        (void *type_context, qd_connection_t *conn, void *context);
+typedef int  (*qd_container_conn_handler_t)        (void *type_context, qd_connection_t *conn, void *context);
 
 /**
  * A set  of Node handlers for deliveries, links and container events.
@@ -100,12 +100,8 @@ typedef struct {
     /** Invoked when an attach for a new outgoing link is received. */
     qd_container_link_handler_t outgoing_handler;
 
-    /**
-     * Invoked when an outgoing link is available for sending either deliveries
-     * or disposition changes.  The handler must check the link's credit to
-     * determine whether (and how many) message deliveries may be sent.
-     */
-    qd_container_link_handler_t writable_handler;
+    /** Invoked when an activated connection is available for writing. */
+    qd_container_conn_handler_t writable_handler;
 
     /** Invoked when a link is detached. */
     qd_container_link_detach_handler_t link_detach_handler;

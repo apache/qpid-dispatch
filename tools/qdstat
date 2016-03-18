@@ -131,13 +131,29 @@ class BusManager(Node):
         dispRows = rows
         disp.formattedTable(title, heads, dispRows)
 
+    def _addr_summary(self, addr):
+        cls   = self._addr_class(addr)
+        phase = self._addr_phase(addr)
+        text  = self._addr_text(addr)
+        if cls == '-':
+            return "-"
+        if cls == 'M':
+            if phase == '0':
+                return text
+            else:
+                return "%s:%s" % (phase, text)
+        return "%s:%s" % (cls, text)
+
+
     def _addr_class(self, addr):
         if not addr:
             return "-"
+        return addr[0]
         if addr[0] == 'M' : return "mobile"
         if addr[0] == 'R' : return "router"
         if addr[0] == 'A' : return "area"
         if addr[0] == 'L' : return "local"
+        if addr[0] == 'T' : return "topo"
         if addr[0] == 'C' : return "link-incoming"
         if addr[0] == 'D' : return "link-outgoing"
         return "unknown: %s" % addr[0]
@@ -171,6 +187,16 @@ class BusManager(Node):
             outlist.append(str(i))
         return outlist
 
+    def _trt_text(self, trt):
+        trt_map = {'flood'        : 'flood',
+                   'multi'        : 'multi',
+                   'anyClosest'   : 'closest',
+                   'anyBalanced'  : 'balanced',
+                   'linkBalanced' : 'linkBalanced'}
+        if trt in trt_map:
+            return trt_map[trt]
+        return '-'
+
     def displayGeneral(self):
         disp = Display(prefix="  ")
         heads = []
@@ -197,12 +223,14 @@ class BusManager(Node):
         heads = []
         heads.append(Header("type"))
         heads.append(Header("dir"))
-        heads.append(Header("rindex"))
-        heads.append(Header("class"))
-        heads.append(Header("address"))
-        heads.append(Header("phase"))
-        heads.append(Header("event-fifo"))
-        heads.append(Header("msg-fifo"))
+        heads.append(Header("id"))
+        heads.append(Header("peer"))
+        heads.append(Header("addr"))
+        heads.append(Header("cap"))
+        heads.append(Header("undel"))
+        heads.append(Header("unsettled"))
+        heads.append(Header("deliveries"))
+        heads.append(Header("name"))
         rows = []
 
         objects = self.query('org.apache.qpid.dispatch.router.link')
@@ -211,18 +239,14 @@ class BusManager(Node):
             row = []
             row.append(link.linkType)
             row.append(link.linkDir)
-            if link.linkType == "inter-router":
-                row.append(self._identity_clean(link.identity))
-            else:
-                row.append('-')
-            row.append(self._addr_class(link.owningAddr))
-            row.append(self._addr_text(link.owningAddr))
-            row.append(self._addr_phase(link.owningAddr))
-            row.append(link.eventFifoDepth)
-            if link.linkDir == 'out':
-                row.append(link.msgFifoDepth)
-            else:
-                row.append('-')
+            row.append(link.identity)
+            row.append(link.peer)
+            row.append(self._addr_summary(link.owningAddr))
+            row.append(link.capacity)
+            row.append(link.undeliveredCount)
+            row.append(link.unsettledCount)
+            row.append(link.deliveryCount)
+            row.append(link.linkName)
             rows.append(row)
         title = "Router Links"
         dispRows = rows
@@ -266,12 +290,12 @@ class BusManager(Node):
     def displayAddresses(self):
         disp = Display(prefix="  ")
         heads = []
-        heads.append(Header("class"))
-        heads.append(Header("address"))
-        heads.append(Header("phase"))
-        heads.append(Header("in-proc", Header.Y))
+        heads.append(Header("addr"))
+        heads.append(Header("treatment"))
+        heads.append(Header("in-proc", Header.COMMAS))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
+        heads.append(Header("cntnr", Header.COMMAS))
         heads.append(Header("in", Header.COMMAS))
         heads.append(Header("out", Header.COMMAS))
         heads.append(Header("thru", Header.COMMAS))
@@ -283,12 +307,12 @@ class BusManager(Node):
 
         for addr in objects:
             row = []
-            row.append(self._addr_class(self._identity_clean(addr.identity)))
-            row.append(self._addr_text(self._identity_clean(addr.identity)))
-            row.append(self._addr_phase(self._identity_clean(addr.identity)))
+            row.append(self._addr_summary(addr.name))
+            row.append(self._trt_text(addr.treatment))
             row.append(addr.inProcess)
             row.append(addr.subscriberCount)
             row.append(addr.remoteCount)
+            row.append(addr.containerCount)
             row.append(addr.deliveriesIngress)
             row.append(addr.deliveriesEgress)
             row.append(addr.deliveriesTransit)
@@ -296,7 +320,7 @@ class BusManager(Node):
             row.append(addr.deliveriesFromContainer)
             rows.append(row)
         title = "Router Addresses"
-        sorter = Sorter(heads, rows, 'address', 0, True)
+        sorter = Sorter(heads, rows, 'addr', 0, True)
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 

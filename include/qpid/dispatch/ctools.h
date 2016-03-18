@@ -56,6 +56,7 @@
 #define DEQ_NEXT(i) DEQ_NEXT_N(,i)
 #define DEQ_PREV_N(n,i) (i)->prev##n
 #define DEQ_PREV(i) DEQ_PREV_N(,i)
+#define DEQ_MOVE(d1,d2) do {d2 = d1; DEQ_INIT(d1);} while (0)
 /**
  *@pre ptr points to first element of deq
  *@post ptr points to first element of deq that passes test, or 0. Test should involve ptr.

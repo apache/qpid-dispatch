@@ -53,7 +53,6 @@ set(qpid_dispatch_SOURCES
   dispatch.c
   entity.c
   entity_cache.c
-  lrp.c
   hash.c
   iovec.c
   iterator.c
@@ -65,14 +64,28 @@ set(qpid_dispatch_SOURCES
   python_embedded.c
   router_agent.c
   router_config.c
-  router_delivery.c
+  router_core/agent.c
+  router_core/agent_address.c
+  router_core/agent_config_address.c
+  router_core/agent_config_auto_link.c
+  router_core/agent_config_link_route.c
+  router_core/agent_link.c
+  router_core/connections.c
+  router_core/error.c
+  router_core/forwarder.c
+  router_core/route_control.c
+  router_core/router_core.c
+  router_core/router_core_thread.c
+  router_core/route_tables.c
+  router_core/management_agent.c
+  router_core/terminus.c
+  router_core/transfer.c
   router_node.c
-  router_forwarders.c
   router_pynode.c
   schema_enum.c
   server.c
   timer.c
-  waypoint.c
+  trace_mask.c
   )
 
 if(USE_MEMORY_POOL)

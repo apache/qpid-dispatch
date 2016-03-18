@@ -47,6 +47,7 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/router.h>
+#include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/parse.h>
 #include <qpid/dispatch/compose.h>

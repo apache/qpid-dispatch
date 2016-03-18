@@ -42,7 +42,6 @@ struct qd_config_connector_t {
     bool is_connector;
     DEQ_LINKS(qd_config_connector_t);
     void                            *context;
-    const char                      *connector_name;
     qd_connector_t                  *connector;
     qd_server_config_t               configuration;
     bool                             started;
@@ -80,6 +79,7 @@ static void qd_server_config_free(qd_server_config_t *cf)
     if (!cf) return;
     free(cf->host);
     free(cf->port);
+    free(cf->name);
     free(cf->role);
     free(cf->sasl_mechanisms);
     if (cf->ssl_enabled) {
@@ -101,8 +101,8 @@ static void qd_server_config_free(qd_server_config_t *cf)
  */
 static void load_strip_annotations(qd_server_config_t *config, const char* stripAnnotations)
 {
-    if(stripAnnotations) {
-    	if (strcmp(stripAnnotations, "both") == 0) {
+    if (stripAnnotations) {
+    	if      (strcmp(stripAnnotations, "both") == 0) {
     		config->strip_inbound_annotations  = true;
     		config->strip_outbound_annotations = true;
     	}
@@ -141,6 +141,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     memset(config, 0, sizeof(*config));
     config->host                 = qd_entity_get_string(entity, "addr"); CHECK();
     config->port                 = qd_entity_get_string(entity, "port"); CHECK();
+    config->name                 = qd_entity_opt_string(entity, "name", 0); CHECK();
     config->role                 = qd_entity_get_string(entity, "role"); CHECK();
     config->protocol_family      = qd_entity_opt_string(entity, "protocolFamily", 0); CHECK();
     config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
@@ -185,45 +186,62 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     return qd_error_code();
 }
 
-void qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
+qd_config_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
 {
+    qd_error_clear();
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_config_listener_t *cl = NEW(qd_config_listener_t);
     cl->is_connector = false;
     cl->listener = 0;
-    load_server_config(qd, &cl->configuration, entity);
+    if (load_server_config(qd, &cl->configuration, entity) != QD_ERROR_NONE) {
+        qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create config listener: %s", qd_error_message());
+        qd_config_listener_free(cl);
+        return 0;
+    }
     DEQ_ITEM_INIT(cl);
     DEQ_INSERT_TAIL(cm->config_listeners, cl);
     qd_log(cm->log_source, QD_LOG_INFO, "Configured Listener: %s:%s proto=%s role=%s",
            cl->configuration.host, cl->configuration.port,
            cl->configuration.protocol_family ? cl->configuration.protocol_family : "any",
            cl->configuration.role);
+
+    return cl;
 }
 
 
-qd_error_t qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entity)
+qd_error_t qd_entity_refresh_listener(qd_entity_t* entity, void *impl)
+{
+    return QD_ERROR_NONE;
+}
+
+
+qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
+{
+    return QD_ERROR_NONE;
+}
+
+
+qd_config_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_error_clear();
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_config_connector_t *cc = NEW(qd_config_connector_t);
-    memset(cc, 0, sizeof(*cc));
+    ZERO(cc);
+
     cc->is_connector = true;
-    if (load_server_config(qd, &cc->configuration, entity))
-        return qd_error_code();
+    if (load_server_config(qd, &cc->configuration, entity) != QD_ERROR_NONE) {
+        qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create config connector: %s", qd_error_message());
+        qd_config_connector_free(cc);
+        return 0;
     DEQ_ITEM_INIT(cc);
-    if (strcmp(cc->configuration.role, "on-demand") == 0) {
-        cc->connector_name = qd_entity_get_string(entity, "name"); QD_ERROR_RET();
-        DEQ_INSERT_TAIL(cm->on_demand_connectors, cc);
-        qd_log(cm->log_source, QD_LOG_INFO, "Configured on-demand connector: %s:%s name=%s",
-               cc->configuration.host, cc->configuration.port, cc->connector_name);
-    } else {
-        DEQ_INSERT_TAIL(cm->config_connectors, cc);
-        qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s proto=%s role=%s",
-               cc->configuration.host, cc->configuration.port,
-               cc->configuration.protocol_family ? cc->configuration.protocol_family : "any",
-               cc->configuration.role);
+    DEQ_INSERT_TAIL(cm->config_connectors, cc);
+    qd_log(cm->log_source, QD_LOG_INFO, "Configured Connector: %s:%s proto=%s role=%s",
+           cc->configuration.host, cc->configuration.port,
+           cc->configuration.protocol_family ? cc->configuration.protocol_family : "any",
+           cc->configuration.role);
     }
-    return QD_ERROR_NONE;
+
+    return cc;
 }
 
 
@@ -294,13 +312,48 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
     }
 }
 
+void qd_config_connector_free(qd_config_connector_t *cc)
+{
+    if (cc->connector)
+        qd_server_connector_free(cc->connector);
+    free(cc);
+}
+
+void qd_config_listener_free(qd_config_listener_t *cl)
+{
+    if (cl->listener)
+        qd_server_listener_close(cl->listener);
+        qd_server_listener_free(cl->listener);
+    free(cl);
+}
+
+void qd_connection_manager_delete_listener(qd_dispatch_t *qd, void *impl)
+{
+    qd_config_listener_t *cl = (qd_config_listener_t*)impl;
+
+    if(cl) {
+        qd_server_listener_close(cl->listener);
+        DEQ_REMOVE(qd->connection_manager->config_listeners, cl);
+        qd_config_listener_free(cl);
+    }
+}
+
+void qd_connection_manager_delete_connector(qd_dispatch_t *qd, void *impl)
+{
+    qd_config_connector_t *cc = (qd_config_connector_t*)impl;
+
+    if(cc) {
+        DEQ_REMOVE(qd->connection_manager->config_connectors, cc);
+        qd_config_connector_free(cc);
+    }
+}
 
 qd_config_connector_t *qd_connection_manager_find_on_demand(qd_dispatch_t *qd, const char *name)
 {
     qd_config_connector_t *cc = DEQ_HEAD(qd->connection_manager->on_demand_connectors);
 
     while (cc) {
-        if (strcmp(cc->connector_name, name) == 0)
+        if (strcmp(cc->configuration.name, name) == 0)
             break;
         cc = DEQ_NEXT(cc);
     }
@@ -326,7 +379,7 @@ void qd_connection_manager_start_on_demand(qd_dispatch_t *qd, qd_config_connecto
 {
     if (cc && cc->connector == 0) {
         qd_log(qd->connection_manager->log_source, QD_LOG_INFO, "Starting on-demand connector: %s",
-               cc->connector_name);
+               cc->configuration.name);
         cc->connector = qd_server_connect(qd, &cc->configuration, cc);
     }
 }
@@ -351,7 +404,7 @@ void qd_config_connector_set_context(qd_config_connector_t *cc, void *context)
 
 const char *qd_config_connector_name(qd_config_connector_t *cc)
 {
-    return cc ? cc->connector_name : 0;
+    return cc ? cc->configuration.name : 0;
 }
 
 

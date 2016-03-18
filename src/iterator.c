@@ -110,7 +110,12 @@ static void parse_address_view(qd_field_iterator_t *iter)
 
         if (qd_field_iterator_prefix(iter, "topo/")) {
             if (qd_field_iterator_prefix(iter, "all/") || qd_field_iterator_prefix(iter, my_area)) {
-                if (qd_field_iterator_prefix(iter, "all/") || qd_field_iterator_prefix(iter, my_router)) {
+                if (qd_field_iterator_prefix(iter, "all/")) {
+                    iter->prefix      = 'T';
+                    iter->state       = STATE_AT_PREFIX;
+                    iter->view_prefix = true;
+                    return;
+                } else if (qd_field_iterator_prefix(iter, my_router)) {
                     iter->prefix      = 'L';
                     iter->state       = STATE_AT_PREFIX;
                     iter->view_prefix = true;
@@ -207,17 +212,20 @@ static void view_initialize(qd_field_iterator_t *iter)
 
         switch (state) {
         case STATE_START :
-            if (octet == '/')
+            if (octet == '/') {
                 state = STATE_SLASH_LEFT;
-            else
+                save_pointer = iter->pointer;
+            } else
                 state = STATE_SCANNING;
             break;
 
         case STATE_SLASH_LEFT :
             if (octet == '/')
                 state = STATE_SKIPPING_TO_NEXT_SLASH;
-            else
+            else {
                 state = STATE_AT_NODE_ID;
+                iter->pointer = save_pointer;
+            }
             break;
 
         case STATE_SKIPPING_TO_NEXT_SLASH :
@@ -376,6 +384,8 @@ qd_field_iterator_t* qd_address_iterator_binary(const char *text, int length, qd
     iter->phase                = '0';
     iter->prefix_override      = '\0';
 
+    DEQ_INIT(iter->hash_segments);
+
     qd_address_iterator_reset_view(iter, view);
 
     return iter;
@@ -393,6 +403,8 @@ qd_field_iterator_t *qd_address_iterator_buffer(qd_buffer_t *buffer, int offset,
     iter->start_pointer.length = length;
     iter->phase                = '0';
     iter->prefix_override      = '\0';
+
+    DEQ_INIT(iter->hash_segments);
 
     qd_address_iterator_reset_view(iter, view);
 
@@ -492,6 +504,8 @@ qd_field_iterator_t *qd_field_iterator_sub(const qd_field_iterator_t *iter, uint
     sub->prefix_override      = '\0';
     sub->phase                = '0';
 
+    DEQ_INIT(sub->hash_segments);
+
     return sub;
 }
 
@@ -588,6 +602,17 @@ unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter)
     int i = qd_field_iterator_ncopy(iter, copy, length+1);
     copy[i] = '\0';
     return copy;
+}
+
+
+qd_field_iterator_t *qd_field_iterator_dup(const qd_field_iterator_t *iter)
+{
+    if (iter == 0)
+        return 0;
+
+    qd_field_iterator_t *dup = new_qd_field_iterator_t();
+    *dup = *iter;
+    return dup;
 }
 
 

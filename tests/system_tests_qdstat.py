@@ -54,7 +54,7 @@ class QdstatTest(system_test.TestCase):
         self.run_qdstat(['--connections'], r'host.*container.*role')
 
     def test_links(self):
-        self.run_qdstat(['--links'], r'endpoint.*out.*local.*temp.')
+        self.run_qdstat(['--links'], r'endpoint.*out.*L:temp.')
 
     def test_nodes(self):
         self.run_qdstat(['--nodes'], r'No Router List')
@@ -67,7 +67,7 @@ class QdstatTest(system_test.TestCase):
         if out.strip() == "No memory statistics available":
             # router built w/o memory pools enabled]
             return self.skipTest("Router's memory pools disabled")
-        regexp = r'qd_address_t\s+[0-9]+'
+        regexp = r'qdr_address_t\s+[0-9]+'
         assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
 
     def test_log(self):

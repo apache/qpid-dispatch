@@ -24,7 +24,8 @@ const char * const QD_MA_TRACE   = "x-opt-qd.trace";
 const char * const QD_MA_TO      = "x-opt-qd.to";
 const char * const QD_MA_CLASS   = "x-opt-qd.class";
 
-const char * const QD_CAPABILITY_ROUTER          = "qd.router";
+const char * const QD_CAPABILITY_ROUTER_CONTROL  = "qd.router";
+const char * const QD_CAPABILITY_ROUTER_DATA     = "qd.router-data";
 const char * const QD_CAPABILITY_ANONYMOUS_RELAY = "ANONYMOUS-RELAY";
 
 const char * const QD_DYNAMIC_NODE_PROPERTY_ADDRESS = "x-opt-qd.address";
@@ -33,6 +34,8 @@ const char * const QD_INTERNODE_LINK_NAME_1 = "qd.internode.1";
 const char * const QD_INTERNODE_LINK_NAME_2 = "qd.internode.2";
 
 const qd_amqp_error_t QD_AMQP_OK = { 200, "OK" };
+const qd_amqp_error_t QD_AMQP_CREATED = { 201, "Created" };
+const qd_amqp_error_t QD_AMQP_NO_CONTENT = { 204, "No Content" }; // This is the response code if the delete of a manageable entity was successful.
 const qd_amqp_error_t QD_AMQP_BAD_REQUEST = { 400, "Bad Request" };
 const qd_amqp_error_t QD_AMQP_NOT_FOUND = { 404, "Not Found" };
 const qd_amqp_error_t QD_AMQP_NOT_IMPLEMENTED = { 501, "Not Implemented"};

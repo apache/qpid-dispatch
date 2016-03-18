@@ -19,7 +19,7 @@
 
 #include "dispatch_private.h"
 
-/** defines a default set of forwarding behaviors based on the semantics of an
+/** defines a default set of forwarding behaviors based on the treatment of an
  * address.
  */
 
@@ -51,7 +51,7 @@ static void forward_to_direct_subscribers_LH(qd_address_t *addr,
         //
         // If the fanout is single, exit the loop here.  We only want to send one message copy.
         //
-        if (QD_FANOUT(addr->semantics) == QD_FANOUT_SINGLE)
+        if (QD_FANOUT(addr->treatment) == QD_FANOUT_SINGLE)
             break;
 
         dest_link_ref = DEQ_NEXT(dest_link_ref);
@@ -83,7 +83,7 @@ static void forward_to_remote_subscribers_LH(qd_router_t *router,
     // candidate destination router.
     //
     int origin = -1;
-    if (ingress_iter && !(addr->semantics & QD_BYPASS_VALID_ORIGINS)) {
+    if (ingress_iter && !(addr->treatment & QD_BYPASS_VALID_ORIGINS)) {
         qd_address_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
         qd_address_t *origin_addr;
         qd_hash_retrieve(router->addr_hash, ingress_iter, (void*) &origin_addr);
@@ -263,22 +263,22 @@ static qd_router_forwarder_t anycast_balanced_forwarder = {
 };
 
 
-/** Get the proper default forwarder for an address of the given semantics:
+/** Get the proper default forwarder for an address of the given treatment:
  */
-qd_router_forwarder_t *qd_router_get_forwarder(qd_address_semantics_t semantics)
+qd_router_forwarder_t *qd_router_get_forwarder(qd_address_treatment_t treatment)
 {
-    switch (QD_FANOUT(semantics)) {
+    switch (QD_FANOUT(treatment)) {
     case QD_FANOUT_MULTIPLE:
         return &multicast_forwarder;
     case QD_FANOUT_SINGLE:
-        switch (QD_BIAS(semantics)) {
+        switch (QD_BIAS(treatment)) {
         case QD_BIAS_CLOSEST:
             return &anycast_closest_forwarder;
         case QD_BIAS_SPREAD:
             return &anycast_balanced_forwarder;
         }
     }
-    assert(false);  // invalid semantics? need new forwarder?
+    assert(false);  // invalid treatment? need new forwarder?
     return 0;
 }
 

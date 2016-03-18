@@ -104,7 +104,8 @@ const char * const QD_CAPABILITY_ANONYMOUS_RELAY;
 
 /** @name Link Terminus Capabilities */
 /// @{
-const char * const QD_CAPABILITY_ROUTER;
+const char * const QD_CAPABILITY_ROUTER_CONTROL;
+const char * const QD_CAPABILITY_ROUTER_DATA;
 /// @}
 
 /** @name Dynamic Node Properties */
@@ -123,6 +124,8 @@ const char * const QD_INTERNODE_LINK_NAME_2;
 /** An AMQP error status code and string description  */
 typedef struct qd_amqp_error_t { int status; const char* description; } qd_amqp_error_t;
 extern const qd_amqp_error_t QD_AMQP_OK;
+extern const qd_amqp_error_t QD_AMQP_CREATED;
+extern const qd_amqp_error_t QD_AMQP_NO_CONTENT;
 extern const qd_amqp_error_t QD_AMQP_BAD_REQUEST;
 extern const qd_amqp_error_t QD_AMQP_NOT_FOUND;
 extern const qd_amqp_error_t QD_AMQP_NOT_IMPLEMENTED;

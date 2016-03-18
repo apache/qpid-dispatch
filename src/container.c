@@ -202,20 +202,6 @@ static void handle_link_open(qd_container_t *container, pn_link_t *pn_link)
 }
 
 
-static int do_writable(pn_link_t *pn_link)
-{
-    qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
-    if (!link)
-        return 0;
-
-    qd_node_t *node = link->node;
-    if (!node)
-        return 0;
-
-    return node->ntype->writable_handler(node->context, link);
-}
-
-
 static void do_receive(pn_delivery_t *pnd)
 {
     pn_link_t     *pn_link  = pn_delivery_link(pnd);
@@ -342,25 +328,30 @@ static int close_handler(qd_container_t *container, void* conn_context, pn_conne
 }
 
 
-static int writable_handler(void* unused, pn_connection_t *conn, qd_connection_t* qd_conn)
+static int writable_handler(qd_container_t *container, pn_connection_t *conn, qd_connection_t* qd_conn)
 {
-    pn_link_t *pn_link;
-    int        event_count = 0;
+    const qd_node_type_t *nt;
+    int                   event_count = 0;
 
     //
-    // Call the attached node's writable handler for all active links
-    // on the connection.  Note that in Dispatch, links are considered
-    // bidirectional.  Incoming and outgoing only pertains to deliveries and
-    // deliveries are a subset of the traffic that flows both directions on links.
+    // Note the locking structure in this function.  Generally this would be unsafe, but since
+    // this particular list is only ever appended to and never has items inserted or deleted,
+    // this usage is safe in this case.
     //
-    if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE)) {
-        pn_link = pn_link_head(conn, 0);
-        while (pn_link) {
-            assert(pn_session_connection(pn_link_session(pn_link)) == conn);
-            event_count += do_writable(pn_link);
-            pn_link = pn_link_next(pn_link, 0);
-        }
+    sys_mutex_lock(container->lock);
+    qdc_node_type_t *nt_item = DEQ_HEAD(container->node_type_list);
+    sys_mutex_unlock(container->lock);
+
+    while (nt_item) {
+        nt = nt_item->ntype;
+        if (nt->writable_handler)
+            event_count += nt->writable_handler(nt->type_context, qd_conn, 0);
+
+        sys_mutex_lock(container->lock);
+        nt_item = DEQ_NEXT(nt_item);
+        sys_mutex_unlock(container->lock);
     }
+
     return event_count;
 }
 
@@ -441,13 +432,11 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             qd_detach_type_t dt = pn_event_type(event) == PN_LINK_REMOTE_CLOSE ? QD_CLOSED : QD_DETACHED;
             if (node)
                 node->ntype->link_detach_handler(node->context, qd_link, dt);
-
-            //
-            // If the qd_link does not reference the pn_link, we have already freed the pn_link.
-            // If we attempt to free it again, proton will crash.
-            //
-            if (qd_link->pn_link == pn_link)
+            else if (qd_link->pn_link == pn_link)
                 pn_link_close(pn_link);
+            if (qd_link->close_sess_with_link && qd_link->pn_sess &&
+                pn_link_state(pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED))
+                pn_session_close(qd_link->pn_sess);
         }
         break;
 
@@ -520,10 +509,19 @@ static int handler(void *handler_context, void *conn_context, qd_conn_event_t ev
     pn_connection_t *conn      = qd_connection_pn(qd_conn);
 
     switch (event) {
-    case QD_CONN_EVENT_LISTENER_OPEN:  open_handler(container, qd_conn, QD_INCOMING, conn_context);   break;
-    case QD_CONN_EVENT_CONNECTOR_OPEN: open_handler(container, qd_conn, QD_OUTGOING, conn_context);   break;
-    case QD_CONN_EVENT_CLOSE:          return close_handler(container, conn_context, conn, qd_conn);
-    case QD_CONN_EVENT_WRITABLE:       return writable_handler(conn_context, conn, qd_conn);
+    case QD_CONN_EVENT_LISTENER_OPEN:
+        open_handler(container, qd_conn, QD_INCOMING, conn_context);
+        return 1;
+
+    case QD_CONN_EVENT_CONNECTOR_OPEN:
+        open_handler(container, qd_conn, QD_OUTGOING, conn_context);
+        return 1;
+
+    case QD_CONN_EVENT_CLOSE:
+        return close_handler(container, conn_context, conn, qd_conn);
+
+    case QD_CONN_EVENT_WRITABLE:
+        return writable_handler(container, conn, qd_conn);
     }
 
     return 0;
@@ -879,8 +877,11 @@ void qd_link_close(qd_link_t *link)
 {
     if (link->pn_link)
         pn_link_close(link->pn_link);
-    if (link->close_sess_with_link && link->pn_sess)
+
+    if (link->close_sess_with_link && link->pn_sess &&
+        pn_link_state(link->pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
         pn_session_close(link->pn_sess);
+    }
 }
 
 

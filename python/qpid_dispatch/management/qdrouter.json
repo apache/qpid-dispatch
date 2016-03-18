@@ -37,6 +37,7 @@
                     "type": [
                         "normal",
                         "inter-router",
+                        "route-container",
                         "on-demand"
                     ],
                     "default": "normal",
@@ -547,7 +548,7 @@
                 "mobileAddrMaxAge": {
                     "type": "integer",
                     "default": 60,
-                    "description": "Deprecated - This value is no longer used in the router.",
+                    "description": "(DEPRECATED) This value is no longer used in the router.",
                     "create": true
                 },
 
@@ -572,7 +573,7 @@
         "listener": {
             "description": "Listens for incoming connections to the router.",
             "extends": "configurationEntity",
-            "operations": ["CREATE"],
+            "operations": ["CREATE", "DELETE"],
             "annotations": [
                 "addrPort",
                 "connectionRole",
@@ -623,17 +624,17 @@
                 "requirePeerAuth": {
                     "type": "boolean",
                     "create": true,
-                    "description": "Deprecated - This attribute is now controlled by the authenticatePeer attribute."
+                    "description": "(DEPRECATED) This attribute is now controlled by the authenticatePeer attribute."
                 },
                 "allowUnsecured": {
                     "type": "boolean",
                     "create": true,
-                    "description": "Deprecated - This attribute is now controlled by the requireEncryption attribute."
+                    "description": "(DEPRECATED) This attribute is now controlled by the requireEncryption attribute."
                 },
                 "allowNoSasl": {
                     "type": "boolean",
                     "create": true,
-                    "description": "Deprecated - This attribute is now controlled by the authenticatePeer attribute."
+                    "description": "(DEPRECATED) This attribute is now controlled by the authenticatePeer attribute."
                 },
                 "stripAnnotations": {
                     "type": ["in", "out", "both", "no"],
@@ -647,7 +648,7 @@
         "connector": {
             "description": "Establishes an outgoing connection from the router.",
             "extends": "configurationEntity",
-            "operations": ["CREATE"],
+            "operations": ["CREATE", "DELETE"],
             "annotations": [
                 "addrPort",
                 "connectionRole",
@@ -708,6 +709,7 @@
                 "module": {
                     "type":[
                         "ROUTER",
+                        "ROUTER_CORE",
                         "ROUTER_HELLO",
                         "ROUTER_LS",
                         "ROUTER_MA",
@@ -749,7 +751,7 @@
         },
 
         "fixedAddress": {
-            "description":"Establishes semantics for addresses starting with a prefix.",
+            "description":"(DEPRECATED) Establishes treatment for addresses starting with a prefix.",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
@@ -786,9 +788,9 @@
         },
 
         "waypoint": {
-            "description":"A remote node that messages for an address pass through.",
+            "description":"(DEPRECATED) A remote node that messages for an address pass through.",
             "extends": "configurationEntity",
-            "operations": ["CREATE"],
+            "operations": ["CREATE", "DELETE"],
             "attributes": {
                 "address": {
                     "description":"The AMQP address of the waypoint.",
@@ -818,7 +820,7 @@
         },
 
         "linkRoutePattern": {
-            "description":"An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node.",
+            "description":"(DEPRECATED) An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node.",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
@@ -845,17 +847,187 @@
             }
         },
 
+        "router.config.address": {
+            "description": "Entity type for address configuration.  This is used to configure the treatment of message-routed deliveries within a particular address-space.  The configuration controls distribution and address phasing.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "prefix": {
+                    "type": "string",
+                    "description": "The address prefix for the configured settings",
+                    "create": true,
+                    "required": true
+                },
+                "distribution": {
+                    "type": ["multicast", "closest", "balanced"],
+                    "description": "Treatment of traffic associated with the address",
+                    "create": true,
+                    "required": false,
+                    "default": "balanced"
+                },
+                "waypoint": {
+                    "type": "boolean",
+                    "description": "Designates this address space as being used for waypoints.  This will cause the proper address-phasing to be used.",
+                    "create": true,
+                    "required": false,
+                    "default": false
+                },
+                "ingressPhase": {
+                    "type": "integer",
+                    "description": "Advanced - Override the ingress phase for this address",
+                    "create": true,
+                    "required": false
+                },
+                "egressPhase": {
+                    "type": "integer",
+                    "description": "Advanced - Override the egress phase for this address",
+                    "create": true,
+                    "required": false
+                }
+            }
+        },
+
+        "router.config.linkRoute": {
+            "description": "Entity type for link-route configuration.  This is used to identify remote containers that shall be destinations for routed link-attaches.  The link-routing configuration applies to an addressing space defined by a prefix.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "prefix": {
+                    "type": "string",
+                    "description": "The address prefix for the configured settings",
+                    "create": true,
+                    "required": true
+                },
+                "containerId": {
+                    "type": "string",
+                    "description": "ContainerID for the target container",
+                    "create": true,
+                    "required": false
+                },
+                "connection": {
+                    "type": "string",
+                    "description": "The name from a connector or listener",
+                    "create": true,
+                    "required": false
+                },
+                "distribution": {
+                    "type": ["linkBalanced"],
+                    "description": "Treatment of traffic associated with the address",
+                    "create": true,
+                    "required": false,
+                    "default": "linkBalanced"
+                },
+                "dir": {
+                    "type": ["in", "out"],
+                    "description": "The permitted direction of links: 'in' means client senders; 'out' means client receivers",
+                    "create": true,
+                    "required": true
+                }
+            }
+        },
+
+        "router.config.autoLink": {
+            "description": "Entity type for configuring auto-links.  Auto-links are links whose lifecycle is managed by the router.  These are typically used to attach to waypoints on remote containers (brokers, etc.).",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "addr": {
+                    "type": "string",
+                    "description": "The address or address prefix for the provisioned object",
+                    "create": true,
+                    "required": true
+                },
+                "dir": {
+                    "type": ["in", "out"],
+                    "description": "The direction of the link to be created.  In means into the router, out means out of the router.",
+                    "create": true,
+                    "required": true
+                },
+                "phase": {
+                    "type": "integer",
+                    "description": "The address phase for this link.  Defaults to '0' for 'out' links and '1' for 'in' links.",
+                    "create": true,
+                    "required": false
+                },
+                "containerId": {
+                    "type": "string",
+                    "description": "ContainerID for the target container",
+                    "create": true,
+                    "required": false
+                },
+                "connection": {
+                    "type": "string",
+                    "description": "The name from a connector or listener",
+                    "create": true,
+                    "required": false
+                },
+                "linkRef": {
+                    "type": "string",
+                    "description": "Reference to the org.apache.qpid.dispatch.router.link if the link exists",
+                    "create": false
+                },
+                "operStatus": {
+                    "type": ["inactive", "attaching", "failed", "active", "quiescing", "idle"],
+                    "description": "The operational status of this autoLink: inactive - The remote container is not connected; attaching - the link is attaching to the remote node; failed - the link attach failed; active - the link is attached and operational; quiescing - the link is transitioning to idle state; idle - the link is attached but there are no deliveries flowing and no unsettled deliveries.",
+                    "create": false
+                },
+                "lastError": {
+                    "type": "string",
+                    "description": "The error description from the last attach failure",
+                    "create": false
+                }
+            }
+        },
+
         "router.link": {
             "description": "Link to another AMQP endpoint: router node, client or other AMQP process.",
             "extends": "operationalEntity",
+            "operations": ["UPDATE"],
             "attributes": {
-                "linkName": {"type": "string"},
-                "linkType": {"type": ["endpoint", "waypoint", "inter-router", "inter-area"]},
-                "linkDir": {"type": ["in", "out"]},
-                "owningAddr": {"type": "string"},
-                "eventFifoDepth": {"type": "integer", "graph": true},
-                "msgFifoDepth": {"type": "integer", "graph": true},
-                "remoteContainer": {"type": "string"}
+                "adminStatus": {
+                    "type": ["enabled", "disabled"],
+                    "default": "enabled",
+                    "update": true
+                },
+                "operStatus": {
+                    "type": ["up", "down", "quiescing"]
+                },
+                "linkName": {
+                    "type": "string",
+                    "description": "Name assigned to the link in the Attach."
+                },
+                "linkType": {
+                    "type": ["endpoint", "router-control", "inter-router"],
+                    "description": "Type of link: endpoint: a link to a normally connected endpoint; inter-router: a link to another router in the network."
+                },
+                "linkDir": {
+                    "type": ["in", "out"],
+                    "description": "Direction of delivery flow over the link, inbound or outbound to or from the router."
+                },
+                "owningAddr": {
+                    "type": "string",
+                    "description": "Address assigned to this link during attach: The target for inbound links or the source for outbound links."
+                },
+                "capacity": {
+                    "type": "integer",
+                    "description": "The capacity, in deliveries, for the link.  The number of undelivered plus unsettled deliveries shall not exceed the capacity.  This is enforced by link flow control."
+                },
+                "peer": {
+                    "type": "string",
+                    "description": "Identifier of the paired link if this is an attach-routed link."
+                },
+                "undeliveredCount": {
+                    "type": "integer",
+                    "description": "The number of undelivered messages pending for the link."
+                },
+                "unsettledCount": {
+                    "type": "integer",
+                    "description": "The number of unsettled deliveries awaiting settlement on the link"
+                },
+                "deliveryCount": {
+                    "type": "integer",
+                    "description": "The total number of deliveries that have traversed this link."
+                }
             }
         },
 
@@ -863,17 +1035,61 @@
             "description": "AMQP address managed by the router.",
             "extends": "operationalEntity",
             "attributes": {
-                "inProcess": {"type": "boolean"},
-                "subscriberCount": {"type": "integer", "graph": true},
-                "remoteCount": {"type": "integer", "graph": true},
-                "deliveriesIngress": {"type": "integer", "graph": true},
-                "deliveriesEgress": {"type": "integer", "graph": true},
-                "deliveriesTransit": {"type": "integer", "graph": true},
-                "deliveriesToContainer": {"type": "integer", "graph": true},
-                "deliveriesFromContainer": {"type": "integer", "graph": true},
+                "treatment": {
+                    "type": ["flood", "multicast", "closest", "balanced", "linkBalanced"],
+                    "description": "Forwarding treatment for the address: flood - messages delivered to all subscribers along all available paths (this will cause duplicate deliveries if there are redundant paths); multi - one copy of each message delivered to all subscribers; anyClosest - messages delivered to only the closest subscriber; anyBalanced - messages delivered to one subscriber with load balanced across subscribers; linkBalanced - for link-routing, link attaches balanced across destinations."
+                },
+                "inProcess": {
+                    "type": "integer",
+                    "description": "The number of in-process subscribers for this address"
+                },
+                "subscriberCount": {
+                    "type": "integer",
+                    "description": "The number of local subscribers for this address (i.e. attached to this router)",
+                    "graph": true
+                },
+                "remoteCount": {
+                    "type": "integer",
+                    "description": "The number of remote routers that have at least one subscriber to this address",
+                    "graph": true
+                },
+                "containerCount": {
+                    "type": "integer",
+                    "description": "The number of attached containers that serve this route address",
+                    "graph": true
+                },
+                "deliveriesIngress": {
+                    "type": "integer",
+                    "description": "The number of deliveries to this address that entered the router network on this router",
+                    "graph": true
+                },
+                "deliveriesEgress": {
+                    "type": "integer",
+                    "description": "The number of deliveries to this address that exited the router network on this router",
+                    "graph": true
+                },
+                "deliveriesTransit": {
+                    "type": "integer",
+                    "description": "The number of deliveries to this address that transited this router to another router",
+                    "graph": true
+                },
+                "deliveriesToContainer": {
+                    "type": "integer",
+                    "description": "The number of deliveries to this address that were given to an in-process subscriber",
+                    "graph": true
+                },
+                "deliveriesFromContainer": {
+                    "type": "integer",
+                    "description": "The number of deliveries to this address that were originated from an in-process entity",
+                    "graph": true
+                },
                 "key": {
                     "description": "Internal unique (to this router) key to identify the address",
                     "type": "string"
+                },
+                "hostRouters": {
+                    "type": "list",
+                    "description": "List of remote routers on which there is a destination for this address."
                 }
             }
         },

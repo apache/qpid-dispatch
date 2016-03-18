@@ -254,6 +254,11 @@ typedef struct qd_server_config_t {
     char *protocol_family;
 
     /**
+     * Connection name, used as a reference from other parts of the configuration.
+     */
+    char *name;
+
+    /**
      * Space-separated list of SASL mechanisms to be accepted for the connection.
      */
     char *sasl_mechanisms;

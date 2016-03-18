@@ -47,6 +47,17 @@ qd_connection_manager_t *qd_connection_manager(qd_dispatch_t *qd);
  */
 void qd_connection_manager_free(qd_connection_manager_t *cm);
 
+/**
+ * Free all the resources associated with a config listener
+ */
+void qd_config_listener_free(qd_config_listener_t *cl);
+
+
+/**
+ * Free all the resources associated with a config connector
+ */
+void qd_config_connector_free(qd_config_connector_t *cl);
+
 
 /**
  * Start the configured Listeners and Connectors

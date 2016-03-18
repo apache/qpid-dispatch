@@ -124,7 +124,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     dispatch = qd.qd_dispatch_p(dispatch)
     config = Config(filename)
 
-    # NOTE: Can't import agent till till dispatch C extension module is initialized.
+    # NOTE: Can't import agent till dispatch C extension module is initialized.
     from .agent import Agent
     agent = Agent(dispatch, qd)
     qd.qd_dispatch_set_agent(dispatch, agent)
@@ -138,6 +138,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     for l in config.by_type('log'):
         configure(l)
         modules.remove(l["module"])
+
     # Add default entities for any log modules not configured.
     for m in modules: agent.configure(attributes=dict(type="log", module=m))
 
@@ -145,11 +146,11 @@ def configure_dispatch(dispatch, lib_handle, filename):
     configure(config.by_type('container')[0])
     configure(config.by_type('router')[0])
     qd.qd_dispatch_prepare(dispatch)
-    agent.activate("$management")
     qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.
+    agent.activate("$_management_internal")
 
     # Remaining configuration
-    for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern":
+    for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", "route":
         for a in config.by_type(t): configure(a)
     for e in config.entities:
         configure(e)

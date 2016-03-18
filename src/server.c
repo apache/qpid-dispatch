@@ -1195,8 +1195,10 @@ void qd_server_activate(qd_connection_t *ctx)
     if (!ctor)
         return;
 
-    if (!qdpn_connector_closed(ctor))
+    if (!qdpn_connector_closed(ctor)) {
         qdpn_connector_activate(ctor, QDPN_CONNECTOR_WRITABLE);
+        qdpn_driver_wakeup(ctx->server->driver);
+    }
 }
 
 
@@ -1423,6 +1425,7 @@ bool qd_user_fd_is_writeable(qd_user_fd_t *ufd)
 void qd_server_timer_pending_LH(qd_timer_t *timer)
 {
     DEQ_INSERT_TAIL(timer->server->pending_timers, timer);
+    qdpn_driver_wakeup(timer->server->driver);
 }
 
 

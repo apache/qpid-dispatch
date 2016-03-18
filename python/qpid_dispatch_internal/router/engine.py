@@ -33,6 +33,7 @@ import time
 ## (i.e. we are in a test bench, etc.), load the stub versions.
 ##
 from ..dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_INFO, LOG_ERROR, LOG_STACK_LIMIT
+from ..dispatch import TREATMENT_MULTICAST_FLOOD, TREATMENT_MULTICAST_ONCE
 
 class RouterEngine:
     """
@@ -52,9 +53,11 @@ class RouterEngine:
         self._log_ls        = LogAdapter("ROUTER_LS")
         self._log_ma        = LogAdapter("ROUTER_MA")
         self._log_general   = LogAdapter("ROUTER")
-        self.io_adapter     = [IoAdapter(self.receive, "qdrouter"),
-                               IoAdapter(self.receive, "qdrouter.ma"),
-                               IoAdapter(self.receive, "qdhello")]
+        self.io_adapter     = [IoAdapter(self.receive, "qdrouter",    'L', '0', TREATMENT_MULTICAST_FLOOD),
+                               IoAdapter(self.receive, "qdrouter.ma", 'L', '0', TREATMENT_MULTICAST_ONCE),
+                               IoAdapter(self.receive, "qdrouter",    'T', '0', TREATMENT_MULTICAST_FLOOD),
+                               IoAdapter(self.receive, "qdrouter.ma", 'T', '0', TREATMENT_MULTICAST_ONCE),
+                               IoAdapter(self.receive, "qdhello",     'L', '0', TREATMENT_MULTICAST_FLOOD)]
         self.max_routers    = max_routers
         self.id             = router_id
         self.instance       = long(time.time())
@@ -230,7 +233,7 @@ class RouterEngine:
         Send a control message to another router.
         """
         app_props = {'opcode' : msg.get_opcode() }
-        self.io_adapter[0].send(Message(address=dest, properties=app_props, body=msg.to_dict()))
+        self.io_adapter[0].send(Message(address=dest, properties=app_props, body=msg.to_dict()), True, True)
 
 
     def node_updated(self, addr, reachable, neighbor):

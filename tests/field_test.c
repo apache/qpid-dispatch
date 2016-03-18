@@ -137,6 +137,34 @@ static char* test_view_global_no_host(void *context)
 }
 
 
+static char* test_view_global_no_host_slash(void *context)
+{
+    qd_field_iterator_t *iter = qd_address_iterator_string("/global/sub", ITER_VIEW_ALL);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "/global/sub"))
+        return "ITER_VIEW_ALL failed";
+
+    qd_address_iterator_reset_view(iter, ITER_VIEW_NO_HOST);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "global/sub"))
+        return "ITER_VIEW_NO_HOST failed";
+
+    qd_address_iterator_reset_view(iter, ITER_VIEW_NODE_ID);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "global"))
+        return "ITER_VIEW_NODE_ID failed";
+
+    qd_address_iterator_reset_view(iter, ITER_VIEW_NODE_SPECIFIC);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "sub"))
+        return "ITER_VIEW_NODE_SPECIFIC failed";
+
+    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    if (!qd_field_iterator_equal(iter, (unsigned char*) "M0global/sub"))
+        return "ITER_VIEW_ADDRESS_HASH failed";
+
+    qd_field_iterator_free(iter);
+
+    return 0;
+}
+
+
 static char* view_address_hash(void *context, qd_field_iterator_t *iter,
                                const char *addr, const char *view)
 {
@@ -159,14 +187,16 @@ static char* test_view_address_hash(void *context)
     {"amqp:/_topo/my-area/router/local/sub",    "Rrouter"},
     {"amqp:/_topo/my-area/my-router/local/sub", "Llocal/sub"},
     {"amqp:/_topo/area/all/local/sub",          "Aarea"},
-    {"amqp:/_topo/my-area/all/local/sub",       "Llocal/sub"},
-    {"amqp:/_topo/all/all/local/sub",           "Llocal/sub"},
+    {"amqp:/_topo/my-area/all/local/sub",       "Tlocal/sub"},
+    {"amqp:/_topo/all/all/local/sub",           "Tlocal/sub"},
     {"amqp://host:port/_local/my-addr",         "Lmy-addr"},
     {"_topo/area/router/my-addr",               "Aarea"},
     {"_topo/my-area/router/my-addr",            "Rrouter"},
     {"_topo/my-area/my-router/my-addr",         "Lmy-addr"},
     {"_topo/my-area/router",                    "Rrouter"},
     {"amqp:/mobile",                            "M1mobile"},
+    {"mobile",                                  "M1mobile"},
+    {"/mobile",                                 "M1mobile"},
 
     // Re-run the above tests to make sure trailing dots are ignored.
     {"amqp:/_local/my-addr/sub.",                "Lmy-addr/sub"},
@@ -175,8 +205,8 @@ static char* test_view_address_hash(void *context)
     {"amqp:/_topo/my-area/router/local/sub.",    "Rrouter"},
     {"amqp:/_topo/my-area/my-router/local/sub.", "Llocal/sub"},
     {"amqp:/_topo/area/all/local/sub.",          "Aarea"},
-    {"amqp:/_topo/my-area/all/local/sub.",       "Llocal/sub"},
-    {"amqp:/_topo/all/all/local/sub.",           "Llocal/sub"},
+    {"amqp:/_topo/my-area/all/local/sub.",       "Tlocal/sub"},
+    {"amqp:/_topo/all/all/local/sub.",           "Tlocal/sub"},
     {"amqp://host:port/_local/my-addr.",         "Lmy-addr"},
     {"_topo/area/router/my-addr.",               "Aarea"},
     {"_topo/my-area/router/my-addr.",            "Rrouter"},
@@ -214,9 +244,10 @@ static char* test_view_address_hash(void *context)
 static char* test_view_address_hash_override(void *context)
 {
     struct {const char *addr; const char *view;} cases[] = {
-    {"amqp:/link-target",        "Clink-target"},
-    {"amqp:/domain/link-target", "Cdomain/link-target"},
-    {"domain/link-target",       "Cdomain/link-target"},
+    {"amqp:/link-target",                    "Clink-target"},
+    {"amqp:/domain/link-target",             "Cdomain/link-target"},
+    {"domain/link-target",                   "Cdomain/link-target"},
+    {"bbc79fb3-e1fd-4a08-92b2-9a2de232b558", "Cbbc79fb3-e1fd-4a08-92b2-9a2de232b558"},
     {0, 0}
     };
     int idx;
@@ -626,6 +657,7 @@ int field_tests(void)
     TEST_CASE(test_view_global_dns, 0);
     TEST_CASE(test_view_global_non_dns, 0);
     TEST_CASE(test_view_global_no_host, 0);
+    TEST_CASE(test_view_global_no_host_slash, 0);
     TEST_CASE(test_view_address_hash, 0);
     TEST_CASE(test_view_address_hash_override, 0);
     TEST_CASE(test_view_node_hash, 0);

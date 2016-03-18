@@ -1,0 +1,264 @@
+ ============================================================
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+ ============================================================
+
+
+
+=================
+General Structure
+=================
+
+                       +--------------------------------+
+                       | Router Core Thread (CT)        |
+                       |                           -----------
+                       |                                 |||||    ---> General Events
+                 action queue                      -----------
+    Async        ------------                           |
+    Action   --->     ||||||| ->                        |
+    Functions    ------------                    -----------
+                       |                               |||||--
+                       |                         -----------||--  ---> Connection Events
+                       |    Forwarding Tables      -----------||
+                       |                             -----------
+                       |                                |
+                       +--------------------------------+
+
+    The above APIs are declared in include/qpid/dispatch/router_core.h
+
+    The asynchronous action functions place an action on the action queue.  The core
+    thread processes the actions serially.
+
+    General callbacks are invoked on one of the IO threads using a zero-duration
+    timer.  General callbacks are not specific to a connection context.
+
+    Connection callbacks are invoked on a thread that is exclusively dedicated to a
+    connection.  The body of a connection callback may safely access any object or data
+    structure that is associated with the connection, including Proton data.  Multiple
+    connections may be processed concurrently on separate threads.
+
+
+===================
+Router Core Objects
+===================
+
+  qdr_core_t
+
+    Core object containing one core thread and offering the core API.
+
+  qdr_subscription_t
+
+    Local subscription for receiving messages in-process.  This is used by the
+    router-control module and the management agent.
+
+  qdr_connection_t
+  qdr_link_t
+  qdr_delivery_t
+
+    Tracking objects for connections, links, and deliveries.  These must be linked with
+    their corresponding external object:
+
+        qdr_connection_t  <--->  qd_connection_t
+        qdr_link_t        <--->  qd_link_t
+        qdr_delivery_t    <--->  pn_delivery_t
+
+    Linkage is accomplished using the TYPE_set_context() methods.
+
+  qdr_terminus_t
+  qdr_error_t
+
+    The terminus and error objects are used to hold all of the content of a Proton
+    terminus and error state.  These are needed to ensure that these Proton state
+    objects are not ever held within the core thread where thread safety with Proton
+    may be a problem.
+
+
+=========
+Core APIs
+=========
+
+  Router Control
+
+    Interface to the router-control module which tracks remote routers, neighbor
+    routers, computes the best next-hops for each remote router, and maintains the
+    mapping of mobile addresses to remote routers.
+
+      Actions:
+        Add/Delete Router
+        Set/Remove Neighbor Link
+        Set/Remove Next Hop
+        Set Valid Origins
+        Map/Unmap Destination
+
+      General Events:
+        Mobile Added/Removed
+        Link Lost
+
+  In-process Subscription and Send
+
+    Used by in-process components that need to communicate using AMQP message
+    transfers.  This API provides a best-effort messaging capability.  It does not
+    provide acknowledgement, settlement, or flow control.
+
+      Actions:
+        Subscribe/Unsubscribe
+        Send To
+
+      General Events:
+        Receive
+
+  Connection Actions
+
+    Tracks the lifecycle of a connection.
+
+      Actions:
+        Opened/Closed
+        Process (writable)
+
+      General Events:
+        Activate
+
+  Link Actions
+
+    Tracks the lifecycle of a link.
+
+      Actions:
+        First Attach
+        Second Attach
+        Detach
+        Deliver/Deliver_To
+
+      Connection Events:
+        First Attach
+        Second Attach
+        Detach
+
+  Delivery Actions
+
+    Tracks the lifecycle of a delivery.
+
+      Actions:
+        Update Disposition
+        Flow
+
+      Connection Events:
+        Update Disposition
+        Flow
+
+  Management Actions
+
+    Provides asynchronous access to manageable entities inside the core thread's data
+    structures.
+
+      Actions:
+        Create
+        Delete
+        Read
+        Update
+        Query
+
+      General Events:
+        Response
+
+    This management API is used to manage addresses, waypoints, and link-route
+    destinations.
+
+
+====================
+Forwarding Treatment
+====================
+
+  Transition from fanout/bias to a one-dimensional list of treatment:
+
+    MULTICAST_FLOOD (not available to users)
+
+        Messages are delivered to all subscribers via all unique paths.  If there is
+        redundancy in the router topology, multiple copies of each message will be
+        delivered to some destinations.
+
+        This semantic behavior should be avoided (not exposed?).  It is needed for a
+        subset of the protocol messages used for router control.
+
+    MULTICAST_ONCE
+
+        Messages are delivered to all subscribers once.  This uses the valid-origins in
+        concert with the ingress-router message annotation to prevent deliveries from
+        being delivered multiply.
+
+    ANYCAST_CLOSEST
+
+        Messages are delivered to one subscriber.  The chosen subscriber is the one
+        that has the lowest hop-cost from the producer.  If there are multiple
+        consumers with the same lowest cost, deliveries are spread across all of those
+        subscribers in a round-robin manner.
+
+    ANYCAST_BALANCED
+
+        Messages are delivered to one subscriber.  The chosen subscriber is the one
+        with the lowest number of unsettled deliveries regardless of its location in
+        the network topology.
+
+    LINK_BALANCED
+
+        For link-routes.
+
+
+===============
+Address Classes
+===============
+
+  L - Local
+  T - Topological
+  A - Area
+  R - Router
+  M - Mobile
+  C - Link Inbound
+  D - Link Outbound
+  Z - Configuration
+
+
+=================
+Management Schema
+=================
+
+org
+  apache
+    qpid
+      dispatch
+        allocator
+        connection
+        connector
+        console
+        container
+        dummy
+        fixedAddress      (deprecated)
+        linkRoutePattern  (deprecated)
+        listener
+        log
+        router
+          address
+          link
+          node
+          route           (proposed)
+          waypoint        (proposed)
+        waypoint          (deprecated)
+
+
+============================
+Route Control Data Structure
+============================
+
