@@ -120,10 +120,6 @@ static void qdr_auto_link_activate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr
 
     qdr_route_log_CT(core, "Auto Link Activated", al->name, al->identity, conn);
 
-    //
-    // Activate the link for an auto_link.  If this is the first activation for this
-    // address, notify the router module of the added address.
-    //
     if (al->addr) {
         qdr_terminus_t *source = 0;
         qdr_terminus_t *target = 0;
@@ -147,6 +143,7 @@ static void qdr_auto_link_activate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr
 
 static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr_connection_t *conn)
 {
+    //qdr_route_log_CT(core, "Auto Link Deactivated", al->name, al->identity, conn);
 }
 
 

@@ -203,6 +203,20 @@ void qdr_delivery_free(qdr_delivery_t *delivery)
 }
 
 
+void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery)
+{
+}
+
+
+void qdr_delivery_remove_unsettled_CT(qdr_core_t *core, qdr_delivery_t *delivery)
+{
+    //
+    // Remove a delivery from its unsettled list.  Side effects include issuing
+    // replacement credit and visiting the link-quiescence algorithm
+    //
+}
+
+
 void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition, bool settled)
 {
     qdr_action_t *action = qdr_action(qdr_update_delivery_CT, "update_delivery");
@@ -309,6 +323,7 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
         }
     } else if (fanout == 1) {
         qd_bitmask_free(dlv->link_exclusion);
+        dlv->link_exclusion = 0;
         if (dlv->settled) {
             //
             // The delivery is settled.  Keep it off the unsettled list and issue
@@ -330,6 +345,7 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
         // The fanout is greater than one.  Do something!  TODO
         //
         qd_bitmask_free(dlv->link_exclusion);
+        dlv->link_exclusion = 0;
 
         if (presettled) {
             qdr_link_issue_credit_CT(core, link, 1);
@@ -439,20 +455,20 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             push = true;
             peer->peer = 0;
             dlv->peer  = 0;
-            if (peer->link && !link_routed) {
+            if (peer->link) {
                 sys_mutex_lock(peer->link->conn->work_lock);
                 DEQ_REMOVE(peer->link->unsettled, peer);
                 sys_mutex_unlock(peer->link->conn->work_lock);
-                if (peer->link->link_direction == QD_INCOMING)
+                if (peer->link->link_direction == QD_INCOMING && !link_routed)
                     qdr_link_issue_credit_CT(core, peer->link, 1);
             }
         }
 
-        if (dlv->link && !link_routed) {
+        if (dlv->link) {
             sys_mutex_lock(dlv->link->conn->work_lock);
             DEQ_REMOVE(dlv->link->unsettled, dlv);
             sys_mutex_unlock(dlv->link->conn->work_lock);
-            if (dlv->link->link_direction == QD_INCOMING)
+            if (dlv->link->link_direction == QD_INCOMING && !link_routed)
                 qdr_link_issue_credit_CT(core, dlv->link, 1);
         }
 
@@ -506,6 +522,9 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit)
  */
 void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
 {
+    //
+    // If there aren't any inlinks, there's no point in proceeding.
+    //
     if (DEQ_SIZE(addr->inlinks) == 0)
         return;
 
@@ -524,7 +543,6 @@ void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
             // Drain undelivered deliveries via the forwarder
             //
             if (DEQ_SIZE(link->undelivered) > 0) {
-
                 //
                 // Move all the undelivered to a local list in case not all can be delivered.
                 // We don't want to loop here forever putting the same messages on the undelivered

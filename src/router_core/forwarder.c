@@ -137,8 +137,9 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
                              bool             exclude_inprocess,
                              bool             control)
 {
-    bool bypass_valid_origins = addr->forwarder->bypass_valid_origins;
-    int  fanout = 0;
+    bool          bypass_valid_origins = addr->forwarder->bypass_valid_origins;
+    int           fanout               = 0;
+    qd_bitmask_t *link_exclusion       = !!in_delivery ? in_delivery->link_exclusion : 0;
 
     //
     // Forward to local subscribers
@@ -219,7 +220,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             dest_link = control ?
                 core->control_links_by_mask_bit[link_bit] :
                 core->data_links_by_mask_bit[link_bit];
-            if (dest_link && (!in_delivery->link_exclusion || qd_bitmask_value(in_delivery->link_exclusion, link_bit) == 0)) {
+            if (dest_link && (!link_exclusion || qd_bitmask_value(link_exclusion, link_bit) == 0)) {
                 qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, dest_link, msg);
                 qdr_forward_deliver_CT(core, dest_link, out_delivery);
                 fanout++;

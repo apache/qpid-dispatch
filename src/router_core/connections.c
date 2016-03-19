@@ -424,6 +424,61 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     }
 
     //
+    // Clean up the lists of deliveries on this link
+    //
+    qdr_delivery_ref_list_t updated_deliveries;
+    qdr_delivery_list_t     undelivered;
+    qdr_delivery_list_t     unsettled;
+
+    sys_mutex_lock(conn->work_lock);
+    DEQ_MOVE(link->updated_deliveries, updated_deliveries);
+    DEQ_MOVE(link->undelivered, undelivered);
+    DEQ_MOVE(link->unsettled, unsettled);
+    sys_mutex_unlock(conn->work_lock);
+
+    //
+    // Free all the 'updated' references
+    //
+    qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
+    while (ref) {
+        qdr_del_delivery_ref(&updated_deliveries, ref);
+        ref = DEQ_HEAD(updated_deliveries);
+    }
+
+    //
+    // Free the undelivered deliveries.  If this is an incoming link, the
+    // undelivereds can simply be desetroyed.  If it's an outgoing link, the
+    // undelivereds' peer deliveries need to be released.
+    //
+    qdr_delivery_t *dlv = DEQ_HEAD(undelivered);
+    qdr_delivery_t *peer;
+    while (dlv) {
+        DEQ_REMOVE_HEAD(undelivered);
+        peer = dlv->peer;
+        qdr_delivery_free(dlv);
+        if (peer) {
+            peer->peer = 0;
+            qdr_delivery_release_CT(core, peer);
+        }
+        dlv = DEQ_HEAD(undelivered);
+    }
+
+    //
+    // Free the unsettled deliveries.
+    //
+    dlv = DEQ_HEAD(unsettled);
+    while (dlv) {
+        DEQ_REMOVE_HEAD(unsettled);
+        peer = dlv->peer;
+        qdr_delivery_free(dlv);
+        if (peer) {
+            peer->peer = 0;
+            qdr_delivery_remove_unsettled_CT(core, peer);
+        }
+        dlv = DEQ_HEAD(unsettled);
+    }
+
+    //
     // Remove the reference to this link in the connection's reference lists
     //
     qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
@@ -991,23 +1046,6 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             break;
         }
     }
-
-    //
-    // Cases to be handled:
-    //
-    // dir = Incoming or Outgoing:
-    //    Link is an router-control link
-    //       Note the control link on the connection
-    //       Issue a second attach back to the originating node
-    //
-    // dir = Incoming:
-    //    Issue credit for the inbound fifo
-    //
-    // dir = Outgoing:
-    //    Link is a router-control link
-    //       Associate the link with the router-hello address
-    //       Associate the link with the link-mask-bit being used by the router
-    //
 }
 
 
@@ -1098,19 +1136,6 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
 
     qdr_terminus_free(source);
     qdr_terminus_free(target);
-
-    //
-    // Cases to be handled:
-    //
-    // Link is a router-control link:
-    //    Note the control link on the connection
-    //    Associate the link with the router-hello address
-    //    Associate the link with the link-mask-bit being used by the router
-    // Link is link-routed:
-    //    Propagate the second attach back toward the originating node
-    // Link is Incoming:
-    //    Issue credit for the inbound fifo
-    //
 }
 
 
