@@ -20,35 +20,20 @@
 #include <Python.h>
 #include "qpid/dispatch/python_embedded.h"
 #include "policy.h"
+#include "policy_internal.h"
 #include <stdio.h>
 #include <string.h>
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
 #include "qpid/dispatch/container.h"
 #include "qpid/dispatch/server.h"
-#include "qpid/dispatch/message.h"
-#include <proton/engine.h>
 #include <proton/message.h>
 #include <proton/condition.h>
 #include <proton/connection.h>
 #include <proton/transport.h>
 #include <proton/error.h>
 #include <proton/event.h>
-#include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/hash.h"
-#include "qpid/dispatch/threading.h"
-#include "qpid/dispatch/iterator.h"
-#include "qpid/dispatch/log.h"
 
-
-/**
- * Private Function Prototypes
- */
-void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *cond_name, const char *cond_descr);
-void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn);
-void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn, char * s_or_r);
-void _qd_policy_deny_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn);
-void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn);
 
 //
 // TODO: when policy dev is more complete lower the log level
@@ -389,13 +374,9 @@ bool qd_policy_open_lookup_user(
     return res;
 }
 
-/** Set the error condition and close the connection.
- * Over the wire this will send an open frame followed
- * immediately by a close frame with the error condition.
- * @param[in] conn proton connection being closed
- * @param[in] cond_name condition name
- * @param[in] cond_descr condition description
- **/ 
+
+//
+//
 void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *cond_name, const char *cond_descr)
 {
     pn_condition_t * cond = pn_connection_condition(conn);
@@ -405,11 +386,8 @@ void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *c
 }
 
 
-/** Internal function to deny an amqp session
- * The session is closed with a condition and the denial is counted.
- * @param[in,out] ssn proton session
- * @param[in,out] qd_conn dispatch connection
- */
+//
+//
 void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 {
     pn_condition_t * cond = pn_session_condition(ssn);
@@ -500,6 +478,114 @@ void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_
     qd_conn->policy_settings->denialCounts->receiverDenied++;
 }
 
+
+//
+//
+#define MIN(a,b) (((a)<(b))?(a):(b))
+
+char * _qd_policy_link_user_name_subst(const char *uname, const char *proposed, char *obuf, int osize)
+{
+    if (strlen(uname) == 0)
+        return NULL;
+    
+    const char *duser = "${user}";
+    char *retptr = obuf;
+    const char *wiptr = proposed;
+    const char *findptr = strstr(proposed, uname);
+    if (findptr == NULL) {
+        return NULL;
+    }
+
+    // Copy leading before match
+    int segsize = findptr - wiptr;
+    int copysize = MIN(osize, segsize);
+    if (copysize)
+        strncpy(obuf, wiptr, copysize);
+    wiptr += copysize;
+    osize -= copysize;
+    obuf  += copysize;
+
+    // Copy the substitution string
+    segsize = strlen(duser);
+    copysize = MIN(osize, segsize);
+    if (copysize)
+        strncpy(obuf, duser, copysize);
+    wiptr += strlen(uname);
+    osize -= copysize;
+    obuf  += copysize;
+
+    // Copy trailing after match
+    strncpy(obuf, wiptr, osize);
+    return retptr;
+}
+
+
+//
+//
+// Size of 'easy' temporary copy of allowed input string
+#define QPALN_SIZE 1024
+// Size of user-name-substituted proposed string.
+#define QPALN_USERBUFSIZE 300
+// C in the CSV string
+#define QPALN_COMMA_SEP ","
+// Wildcard character
+#define QPALN_WILDCARD '*'
+
+bool _qd_policy_approve_link_name(const char *username, const char *allowed, const char *proposed)
+{
+    // Verify string sizes are usable
+    size_t p_len = strlen(proposed);
+    if (p_len == 0) {
+        // degenerate case of blank name being opened. will never match anything.
+        return false;
+    }
+    size_t a_len = strlen(allowed);
+    if (a_len == 0) {
+        // no names in 'allowed'.
+        return false;
+    }
+
+    // Create a temporary writable copy of incoming allowed list
+    char t_allow[QPALN_SIZE + 1]; // temporary buffer for normal allow lists
+    char * pa = t_allow;
+    if (a_len > QPALN_SIZE) {
+        pa = (char *)malloc(a_len + 1); // malloc a buffer for larger allow lists
+    }
+    strncpy(pa, allowed, a_len);
+    pa[a_len] = 0;
+    // Do reverse user substitution into proposed
+    char substbuf[QPALN_USERBUFSIZE];
+    char * prop2 = _qd_policy_link_user_name_subst(username, proposed, substbuf, QPALN_USERBUFSIZE);
+    char *tok, *toknext;
+    tok = strtok_r(pa, QPALN_COMMA_SEP, &toknext);
+    assert (tok);
+    bool result = false;
+    while (tok != NULL) {
+        if (*tok == QPALN_WILDCARD) {
+            result = true;
+            break;
+        }
+	int matchlen = p_len;
+        int len = strlen(tok);
+        if (tok[len-1] == QPALN_WILDCARD) {
+            matchlen = len - 1;
+            assert(len > 0);
+        }
+        if (strncmp(tok, proposed, matchlen) == 0) {
+            result = true;
+            break;
+        }
+        if (prop2 && strncmp(tok, prop2, matchlen) == 0) {
+            result = true;
+            break;
+        }
+        tok = strtok_r(NULL, QPALN_COMMA_SEP, &toknext);
+    }
+    if (pa != t_allow) {
+        free(pa);
+    }
+    return result;
+}
 
 //
 //

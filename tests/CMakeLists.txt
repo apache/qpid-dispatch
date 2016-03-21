@@ -28,6 +28,7 @@ include_directories(
 set(unit_test_SOURCES
     compose_test.c
     parse_test.c
+    policy_test.c
     run_unit_tests.c
     server_test.c
     timer_test.c
