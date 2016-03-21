@@ -47,6 +47,7 @@ def parse_args(argv):
     parser.add_option("-n", "--nodes", help="Show Router Nodes",            action="store_const", const="n",   dest="show")
     parser.add_option("-a", "--address", help="Show Router Addresses",      action="store_const", const="a",   dest="show")
     parser.add_option("-m", "--memory", help="Show Broker Memory Stats",    action="store_const", const="m",   dest="show")
+    parser.add_option("-A", "--autolink", help="Show Auto Links",           action="store_const", const="A",   dest="show")
     parser.add_option("-v", "--verbose", help="Show maximum detail",        action="store_true", dest="verbose")
     parser.add_option("--log", help="Show recent log entries", action="store_const", const="log", dest="show")
     parser.add_option("--limit", help="Limit number of log entries", type="int")
@@ -314,6 +315,33 @@ class BusManager(Node):
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
+    def displayAutolinks(self):
+        disp = Display(prefix="  ")
+        heads = []
+        heads.append(Header("addr"))
+        heads.append(Header("dir"))
+        heads.append(Header("phase"))
+        heads.append(Header("link"))
+        heads.append(Header("status"))
+        heads.append(Header("lastErr"))
+        rows = []
+
+        objects = self.query('org.apache.qpid.dispatch.router.config.autoLink')
+
+        for al in objects:
+            row = []
+            row.append(al.addr)
+            row.append(al.dir)
+            row.append(al.phase)
+            row.append(al.linkRef)
+            row.append(al.operStatus)
+            row.append(al.lastError)
+            rows.append(row)
+        title = "AutoLinks"
+        sorter = Sorter(heads, rows, 'addr', 0, True)
+        dispRows = sorter.getSorted()
+        disp.formattedTable(title, heads, dispRows)
+
     def displayMemory(self):
         disp = Display(prefix="  ")
         heads = []
@@ -361,6 +389,7 @@ class BusManager(Node):
         elif main == 'm': self.displayMemory()
         elif main == 'g': self.displayGeneral()
         elif main == 'c': self.displayConnections()
+        elif main == 'A': self.displayAutolinks()
         elif main == 'log': self.displayLog()
 
     def display(self, identitys):
