@@ -98,7 +98,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
     qdr_connection_t *conn = link->conn;
     qdr_delivery_t   *dlv;
     bool              drained = false;
-    int               offer;
+    int               offer = -1;
 
     while (credit > 0 && !drained) {
         sys_mutex_lock(conn->work_lock);
@@ -124,7 +124,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 
     if (drained)
         core->drained_handler(core->user_context, link);
-    else
+    else if (offer != -1)
         core->offer_handler(core->user_context, link, offer);
 
     //

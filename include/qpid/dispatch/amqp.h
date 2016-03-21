@@ -91,32 +91,32 @@ enum {
 
 /** @name Message Annotation Headers */
 /// @{
-const char * const QD_MA_INGRESS;  ///< Ingress Router
-const char * const QD_MA_TRACE;    ///< Trace
-const char * const QD_MA_TO;       ///< To-Override
-const char * const QD_MA_CLASS;    ///< Message-Class
+extern const char * const QD_MA_INGRESS;  ///< Ingress Router
+extern const char * const QD_MA_TRACE;    ///< Trace
+extern const char * const QD_MA_TO;       ///< To-Override
+extern const char * const QD_MA_CLASS;    ///< Message-Class
 /// @}
 
 /** @name Container Capabilities */
 /// @{
-const char * const QD_CAPABILITY_ANONYMOUS_RELAY;
+extern const char * const QD_CAPABILITY_ANONYMOUS_RELAY;
 /// @}
 
 /** @name Link Terminus Capabilities */
 /// @{
-const char * const QD_CAPABILITY_ROUTER_CONTROL;
-const char * const QD_CAPABILITY_ROUTER_DATA;
+extern const char * const QD_CAPABILITY_ROUTER_CONTROL;
+extern const char * const QD_CAPABILITY_ROUTER_DATA;
 /// @}
 
 /** @name Dynamic Node Properties */
 /// @{
-const char * const QD_DYNAMIC_NODE_PROPERTY_ADDRESS;  ///< Address for routing dynamic sources
+extern const char * const QD_DYNAMIC_NODE_PROPERTY_ADDRESS;  ///< Address for routing dynamic sources
 /// @}
 
 /** @name Miscellaneous Strings */
 /// @{
-const char * const QD_INTERNODE_LINK_NAME_1;
-const char * const QD_INTERNODE_LINK_NAME_2;
+extern const char * const QD_INTERNODE_LINK_NAME_1;
+extern const char * const QD_INTERNODE_LINK_NAME_2;
 /// @}
 
 /** @name AMQP error codes. */

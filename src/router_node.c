@@ -460,10 +460,10 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
 
 static void router_opened_handler(qd_router_t *router, qd_connection_t *conn, bool inbound)
 {
-    qdr_connection_role_t  role;
-    bool                   strip_annotations_in;
-    bool                   strip_annotations_out;
-    const char            *name;
+    qdr_connection_role_t  role = 0;
+    bool                   strip_annotations_in = false;
+    bool                   strip_annotations_out = false;
+    const char            *name = 0;
     pn_connection_t       *pn_conn = qd_connection_pn(conn);
 
     qd_router_connection_get_config(conn, &role, &name,
