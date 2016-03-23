@@ -258,7 +258,7 @@ class QdmanageTest(TestCase):
 
         try:
             # Try to connect to the port that was closed, it should not return an error
-            wait_port(listener_port, host='127.0.0.1', timeout=2)
+            wait_port(listener_port, timeout=2)
         except Exception as e:
             exception_occurred = True
 
@@ -279,7 +279,7 @@ class QdmanageTest(TestCase):
 
         try:
             # Try to connect to that port, it should not return an error
-            wait_port(listener_port, host='127.0.0.1', timeout=2)
+            wait_port(listener_port, timeout=2)
         except Exception as e:
             exception_occurred = True
 
@@ -301,7 +301,7 @@ class QdmanageTest(TestCase):
 
         try:
             # Try to connect to that port, it should not return an error
-            wait_port(listener_port, host='127.0.0.1', timeout=2)
+            wait_port(listener_port, timeout=2)
         except Exception as e:
             exception_occurred = True
 

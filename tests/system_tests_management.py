@@ -89,12 +89,13 @@ class ManagementTest(system_test.TestCase):
         ])
         cls._logrouter = cls.tester.qdrouterd(config=conflog, wait=False)
 
+    @property
+    def router(self):
+        return self.__class__._router.wait_ready()
 
     @property
-    def router(self): return self.__class__._router.wait_ready()
-
-    @property
-    def logrouter(self): return self.__class__._logrouter.wait_ready()
+    def logrouter(self):
+        return self.__class__._logrouter.wait_ready()
 
     @property
     def routers(self):
@@ -249,58 +250,6 @@ class ManagementTest(system_test.TestCase):
         msgr.put(message(address=address, body='hello'))
         self.assertEqual('hello', msgr.fetch().body)
 
-    def test_create_connector_waypoint(self):
-        """Test creating waypoint, connector and fixedAddress
-        Create a waypoint that leads out and back from a second router.
-        """
-        conf = Qdrouterd.Config([
-            ('router', {'mode': 'standalone', 'routerId': 'wp-router'}),
-            ('listener', {'port':self.get_port(), 'role':'normal'}),
-            ('fixedAddress', {'prefix':'foo'})
-        ])
-        wp_router = self.qdrouterd('wp-router', conf)
-        wp_router.wait_ready()
-
-        # Configure the router
-        for c in [
-                (FIXED_ADDRESS, 'a1', {'prefix':'foo', 'phase':0, 'fanout':'single', 'bias':'spread'}),
-                (FIXED_ADDRESS, 'a2', {'prefix':'foo', 'phase':1, 'fanout':'single', 'bias':'spread'}),
-                (CONNECTOR, 'wp_connector', {'addr': '127.0.0.1', 'port':str(wp_router.ports[0]), 'saslMechanisms': 'ANONYMOUS', 'role': 'on-demand'}),
-                (WAYPOINT, 'wp', {'address': 'foo', 'inPhase': 0, 'outPhase': 1, 'connector': 'wp_connector'})
-        ]:
-            self.assert_create_ok(*c)
-        assert retry(lambda: self.router.is_connected, wp_router.ports[0])
-
-        # Verify the entities
-        id = 'connector/127.0.0.1:%s' % wp_router.ports[0]
-        connector = self.node.read(identity=id)
-        self.assertEqual(
-            [connector.name, connector.addr, connector.port, connector.role],
-            ['wp_connector', '127.0.0.1', str(wp_router.ports[0]), 'on-demand'])
-
-        # Pause to allow the waypoint to settle down
-        sleep(1)
-
-        # Send a message through self.router, verify it goes via wp_router
-        address=self.router.addresses[0]+"/foo"
-        mr = self.messenger()
-        mr.subscribe(address)
-        messages = ['a', 'b', 'c']
-        for m in messages:
-            mr.put(message(address=address, body=m)); mr.send()
-
-        # Check messages arrived
-        self.assertEqual(messages, [mr.fetch().body for i in messages])
-
-        # Check log files to verify that the messages went via wp_router
-        # TODO aconway 2014-07-07: should be able to check this via management
-        # stats instead.
-        try:
-            f = open('wp-router.log')
-            self.assertEqual(6, len(re.findall(r'MESSAGE.*to=.*/foo', f.read())))
-        finally:
-            f.close()
-
     def test_dummy(self):
         """Test all operations on the dummy test entity"""
         entity = self.node.read(type=LISTENER, name='l0')
@@ -318,9 +267,8 @@ class ManagementTest(system_test.TestCase):
         # Unknown entity
         self.assertRaises(NotFoundStatus, self.node.read, type=LISTENER, name='nosuch')
 
-        # Update and delete are not allowed by the schema
+        # Update is not allowed by the schema
         self.assertRaises(NotImplementedStatus, entity.update)
-        self.assertRaises(NotImplementedStatus, entity.delete)
 
         # Non-standard request is not allowed by schema.
         self.assertRaises(NotImplementedStatus, entity.call, 'nosuchop', foo="bar")
@@ -458,7 +406,7 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual({DUMMY: ["CREATE", "READ", "UPDATE", "DELETE", "CALLME"]}, result)
         result = self.node.get_operations()
         for type in LISTENER, WAYPOINT, LINK: self.assertIn(type, result)
-        self.assertEqual(["READ"], result[LINK])
+        self.assertEqual(["UPDATE", "READ"], result[LINK])
         self.assertEqual(["CREATE", "DELETE", "READ"], result[WAYPOINT])
 
     def test_get_attributes(self):
