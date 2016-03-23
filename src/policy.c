@@ -565,7 +565,7 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
             result = true;
             break;
         }
-	int matchlen = p_len;
+        int matchlen = p_len;
         int len = strlen(tok);
         if (tok[len-1] == QPALN_WILDCARD) {
             matchlen = len - 1;
@@ -591,6 +591,9 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
 //
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
+    pn_connection_t *conn = qd_connection_pn(qd_conn);
+    pn_transport_t *pn_trans = pn_connection_transport(conn);
+    const char *username = pn_transport_get_user(pn_trans);
     if (qd_conn->policy_settings->maxSenders) {
         if (qd_conn->n_senders == qd_conn->policy_settings->maxSenders) {
             // Max sender limit specified and violated.
@@ -602,13 +605,42 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
     } else {
         // max sender limit not specified
     }
-    // TODO: Deny sender link based on target
+    // Deny sender link based on target
+    const char * target = pn_terminus_get_address(pn_link_remote_target(pn_link));
+    bool lookup;
+    if (target && *target) {
+        // a target is specified
+        lookup = _qd_policy_approve_link_name(username, qd_conn->policy_settings->targets, target);
+
+        qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
+            "Approve sender link '%s' for user '%s': %s",
+            target, username, (lookup ? "ALLOW" : "DENY"));
+
+        if (!lookup) {
+            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+            return false;
+        }
+    } else {
+        // A sender with no remote target.
+        // This happens all the time with anonymous relay
+        lookup = qd_conn->policy_settings->allowAnonymousSender;
+        qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
+            "Approve anonymous sender for user '%s': %s",
+            username, (lookup ? "ALLOW" : "DENY"));
+        if (!lookup) {
+            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+            return false;
+        }
+    }
     return true;
 }
 
 
 bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
+    pn_connection_t *conn = qd_connection_pn(qd_conn);
+    pn_transport_t *pn_trans = pn_connection_transport(conn);
+    const char *username = pn_transport_get_user(pn_trans);
     if (qd_conn->policy_settings->maxReceivers) {
         if (qd_conn->n_receivers == qd_conn->policy_settings->maxReceivers) {
             // Max sender limit specified and violated.
@@ -620,7 +652,33 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     } else {
         // max receiver limit not specified
     }
-    // TODO: Deny receiver link based on source
+    // Deny receiver link based on source
+    bool dynamic_src = pn_terminus_is_dynamic(pn_link_remote_source(pn_link));
+    if (dynamic_src) {
+        bool lookup = qd_conn->policy_settings->allowDynamicSrc;
+        qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
+            "Approve dynamic source for user '%s': %s",
+            username, (lookup ? "ALLOW" : "DENY"));
+        // Dynamic source policy rendered the decision
+        return lookup;
+    }
+    const char * source = pn_terminus_get_address(pn_link_remote_source(pn_link));
+    if (source && *source) {
+        // a source is specified
+        bool lookup = _qd_policy_approve_link_name(username, qd_conn->policy_settings->sources, source);
+
+        qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
+            "Approve receiver link '%s' for user '%s': %s",
+            source, username, (lookup ? "ALLOW" : "DENY"));
+
+        if (!lookup) {
+            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+            return false;
+        }
+    } else {
+        // HACK ALERT: A receiver with no remote source.
+        // This happens all the time with dynamic source
+    }
     return true;
 }
 

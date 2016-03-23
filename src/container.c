@@ -396,7 +396,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         if (pn_link_state(pn_link) & PN_LOCAL_UNINIT) {
             if (pn_link_is_sender(pn_link)) {
                if (qd_conn->policy_settings) {
-                   if (!qd_policy_approve_amqp_sender_link(pn_link, qd_conn)) {
+                   if (!qd_policy_approve_amqp_receiver_link(pn_link, qd_conn)) {
                         break;
                     }
                     qd_conn->n_senders++;
@@ -404,7 +404,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                 setup_outgoing_link(container, pn_link);
             } else {
                 if (qd_conn->policy_settings) {
-                    if (!qd_policy_approve_amqp_receiver_link(pn_link, qd_conn)) {
+                    if (!qd_policy_approve_amqp_sender_link(pn_link, qd_conn)) {
                         break;
                     }
                     qd_conn->n_receivers++;
