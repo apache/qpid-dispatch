@@ -660,6 +660,9 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
             "Approve dynamic source for user '%s': %s",
             username, (lookup ? "ALLOW" : "DENY"));
         // Dynamic source policy rendered the decision
+        if (!lookup) {
+            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+        }
         return lookup;
     }
     const char * source = pn_terminus_get_address(pn_link_remote_source(pn_link));
@@ -676,8 +679,13 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
             return false;
         }
     } else {
-        // HACK ALERT: A receiver with no remote source.
-        // This happens all the time with dynamic source
+        // A receiver with no remote source.
+        qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
+               "Approve receiver link '' for user '%s': DENY",
+               username);
+
+        _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+        return false;
     }
     return true;
 }
