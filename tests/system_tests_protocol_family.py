@@ -103,22 +103,38 @@ class ProtocolFamilyTest(TestCase):
                    ('connector', {'addr': '127.0.0.1', 'role': 'inter-router', 'port': inter_router_ipv4_port})
                ]
         )
-
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')
         cls.routers[2].wait_router_connected('QDR.B')
 
     # Without at least one test the setUpClass does not execute
-    def test_00_discard(self):
+    # If this test has started executing, it means that the setUpClass() has successfully executed which means that
+    # the routers were able to communicate with each other successfully using the specified protocol family.
+    def test_simple_pre_settled(self):
         addr = self.routers[0].addresses[4]+"/test/1"
-        print 'addr', addr
         M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
         tm = Message()
+        rm = Message()
+
         tm.address = addr
         for i in range(100):
             tm.body = {'number': i}
             M1.put(tm)
         M1.send()
+
+        for i in range(100):
+            M2.recv(1)
+            M2.get(rm)
+            self.assertEqual(i, rm.body['number'])
+
+        M1.stop()
+        M2.stop()
 
 if __name__ == '__main__':
     unittest.main(main_module())
