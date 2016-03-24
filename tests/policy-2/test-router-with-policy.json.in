@@ -146,7 +146,7 @@
       }
   }],
   ["policyRuleset", {
-      "applicationName": "0.0.0.0:21000",
+      "applicationName": "0.0.0.0",
       "maxConnections": 50,
       "maxConnPerUser": 5,
       "maxConnPerHost": 20,

@@ -294,6 +294,15 @@ bool qd_policy_open_lookup_user(
     uint64_t    conn_id,
     qd_policy_settings_t *settings)
 {
+    // TODO: crolke 2016-03-24 - Workaround for PROTON-1133: Port number is included in Open hostname
+    // Strip the ':NNNN', if any, from the app name so that policy will work with proton 0.12
+    char appname[HOST_NAME_MAX + 1];
+    strncpy(appname, app, HOST_NAME_MAX);
+    appname[HOST_NAME_MAX] = 0;
+    char * colonp = strstr(appname, ":");
+    if (colonp) {
+        *colonp = 0;
+    }
     // Lookup the user/host/app for allow/deny and to get settings name
     bool res = false;
     qd_python_lock_state_t lock_state = qd_python_lock();
@@ -303,7 +312,7 @@ bool qd_policy_open_lookup_user(
         if (lookup_user) {
             PyObject *result = PyObject_CallFunction(lookup_user, "(OssssK)",
                                                      (PyObject *)policy->py_policy_manager,
-                                                     username, hostip, app, conn_name, conn_id);
+                                                     username, hostip, appname, conn_name, conn_id);
             if (result) {
                 const char *res_string = PyString_AsString(result);
                 strncpy(name_buf, res_string, name_buf_size);
@@ -335,7 +344,7 @@ bool qd_policy_open_lookup_user(
             if (lookup_settings) {
                 PyObject *result2 = PyObject_CallFunction(lookup_settings, "(OssO)",
                                                         (PyObject *)policy->py_policy_manager,
-                                                        app, name_buf, upolicy);
+                                                        appname, name_buf, upolicy);
                 if (result2) {
                     settings->maxFrameSize         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxFrameSize", 0);
                     settings->maxMessageSize       = qd_entity_opt_long((qd_entity_t*)upolicy, "maxMessageSize", 0);
@@ -369,7 +378,7 @@ bool qd_policy_open_lookup_user(
     qd_log(policy->log_source, 
            POLICY_LOG_LEVEL, 
            "Policy AMQP Open lookup_user: %s, hostip: %s, app: %s, connection: %s. Usergroup: '%s'%s",
-           username, hostip, app, conn_name, name_buf, (res ? "" : " Internal error."));
+           username, hostip, appname, conn_name, name_buf, (res ? "" : " Internal error."));
 
     return res;
 }
