@@ -145,7 +145,7 @@ class RouterTest(TestCase):
 
 
     def test_02b_disp_to_closed_connection(self):
-        addr = self.address+"/pre_settled/multicast/1"
+        addr = self.address+"/pre_settled/2"
         M1 = self.messenger()
         M2 = self.messenger()
 
