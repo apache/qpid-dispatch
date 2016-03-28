@@ -42,6 +42,13 @@ int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *
 bool qdr_forward_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *in_link, qdr_terminus_t *source,
                            qdr_terminus_t *target);
 
+typedef enum {
+    QDR_CONDITION_NO_ROUTE_TO_DESTINATION,
+    QDR_CONDITION_ROUTED_LINK_LOST,
+    QDR_CONDITION_FORBIDDEN,
+    QDR_CONDITION_NONE
+} qdr_condition_t;
+
 /**
  * qdr_field_t - This type is used to pass variable-length fields (strings, etc.) into
  *               and out of the router-core thread.
@@ -215,6 +222,13 @@ void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref
 #define QDR_LINK_LIST_CLASS_CONNECTION 3
 #define QDR_LINK_LIST_CLASSES          4
 
+typedef enum {
+    QDR_LINK_OPER_UP,
+    QDR_LINK_OPER_DOWN,
+    QDR_LINK_OPER_QUIESCING,
+    QDR_LINK_OPER_IDLE
+} qdr_link_oper_status_t;
+
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
     qdr_core_t              *core;
@@ -232,6 +246,8 @@ struct qdr_link_t {
     qdr_delivery_list_t      undelivered;        ///< Deliveries to be forwarded or sent
     qdr_delivery_list_t      unsettled;          ///< Unsettled deliveries
     qdr_delivery_ref_list_t  updated_deliveries; ///< References to deliveries (in the unsettled list) with updates.
+    bool                     admin_enabled;
+    qdr_link_oper_status_t   oper_status;
     bool                     strip_annotations_in;
     bool                     strip_annotations_out;
     int                      capacity;
@@ -291,8 +307,8 @@ struct qdr_address_t {
     qd_hash_handle_t          *hash_handle;   ///< Linkage back to the hash table entry
     qd_address_treatment_t     treatment;
     qdr_forwarder_t           *forwarder;
+    int                        ref_count;     ///< Number of link-routes + auto-links referencing this address
     bool                       toggle;
-    bool                       waypoint;
     bool                       block_deletion;
     bool                       local;
 
@@ -580,6 +596,8 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
                                qd_direction_t    dir,
                                qdr_terminus_t   *source,
                                qdr_terminus_t   *target);
+
+void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t *error, qdr_condition_t condition);
 
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,

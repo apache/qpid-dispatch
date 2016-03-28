@@ -339,6 +339,7 @@ qdr_error_t *qdr_error_from_pn(pn_condition_t *pn);
 qdr_error_t *qdr_error(const char *name, const char *description);
 void qdr_error_free(qdr_error_t *error);
 void qdr_error_copy(qdr_error_t *from, pn_condition_t *to);
+char *qdr_error_description(qdr_error_t *err);
 
 /**
  ******************************************************************************

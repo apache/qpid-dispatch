@@ -48,8 +48,8 @@ const char *qdr_link_columns[] =
      "undeliveredCount",
      "unsettledCount",
      "deliveryCount",
-     "adminState",
-     "operState",
+     "adminStatus",
+     "operStatus",
      0};
 
 static const char *qd_link_type_name(qd_link_type_t lt)
@@ -71,8 +71,9 @@ static const char *address_key(qdr_address_t *addr)
 
 static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_link_t *link)
 {
-    switch(col) {
+    char *text = 0;
 
+    switch(col) {
         case QDR_LINK_NAME: {
             if (link->name)
                 qd_compose_insert_string(body, link->name);
@@ -138,7 +139,24 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
             break;
 
         case QDR_LINK_ADMIN_STATE:
+            text = link->admin_enabled ? "enabled" : "disabled";
+            qd_compose_insert_string(body, text);
+            break;
+
         case QDR_LINK_OPER_STATE:
+            switch (link->oper_status) {
+            case QDR_LINK_OPER_UP:        text = "up";        break;
+            case QDR_LINK_OPER_DOWN:      text = "down";      break;
+            case QDR_LINK_OPER_QUIESCING: text = "quiescing"; break;
+            case QDR_LINK_OPER_IDLE:      text = "idle";      break;
+            default:
+                text = 0;
+            }
+            if (!!text)
+                qd_compose_insert_string(body, text);
+            else
+                qd_compose_insert_null(body);
+            break;
 
         default:
             qd_compose_insert_null(body);

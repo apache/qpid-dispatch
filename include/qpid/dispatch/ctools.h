@@ -162,6 +162,7 @@ do {                                           \
         (i)->prev##n->next##n = (i)->next##n;  \
     else                                       \
         (d).head = (i)->next##n;               \
+    CT_ASSERT((d).size > 0);                   \
     (d).size--;                                \
     (i)->next##n = 0;                          \
     (i)->prev##n = 0;                          \

@@ -18,6 +18,7 @@
  */
 
 #include "router_core_private.h"
+#include <stdio.h>
 
 struct qdr_error_t {
     qdr_field_t *name;
@@ -94,4 +95,15 @@ void qdr_error_copy(qdr_error_t *from, pn_condition_t *to)
         pn_data_copy(pn_condition_info(to), from->info);
 }
 
+
+char *qdr_error_description(qdr_error_t *err)
+{
+    if (!err || !err->description || !err->description->iterator)
+        return 0;
+    int   length = qd_field_iterator_length(err->description->iterator);
+    char *text   = (char*) malloc(length + 1);
+    qd_field_iterator_ncopy(err->description->iterator, (unsigned char*) text, length);
+    text[length] = '\0';
+    return text;
+}
 

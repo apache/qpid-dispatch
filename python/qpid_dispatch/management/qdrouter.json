@@ -990,7 +990,7 @@
                     "update": true
                 },
                 "operStatus": {
-                    "type": ["up", "down", "quiescing"]
+                    "type": ["up", "down", "quiescing", "idle"]
                 },
                 "linkName": {
                     "type": "string",

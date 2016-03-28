@@ -85,9 +85,10 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *pe
     // Create peer linkage only if the delivery is not settled
     //
     if (!dlv->settled) {
-        dlv->peer = peer;
-        if (peer && peer->peer == 0)
+        if (peer && peer->peer == 0) {
+            dlv->peer = peer;
             peer->peer = dlv;  // TODO - make this a back-list for multicast tracking
+        }
     }
 
     return dlv;
@@ -408,6 +409,8 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
         out_link->link_type      = QD_LINK_ENDPOINT;
         out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
         out_link->name           = in_link->name;
+        out_link->admin_enabled  = true;
+        out_link->oper_status    = QDR_LINK_OPER_DOWN;
 
         out_link->connected_link = in_link;
         in_link->connected_link  = out_link;

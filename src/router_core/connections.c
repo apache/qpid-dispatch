@@ -31,13 +31,6 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
 ALLOC_DEFINE(qdr_connection_t);
 ALLOC_DEFINE(qdr_connection_work_t);
 
-typedef enum {
-    QDR_CONDITION_NO_ROUTE_TO_DESTINATION,
-    QDR_CONDITION_ROUTED_LINK_LOST,
-    QDR_CONDITION_FORBIDDEN,
-    QDR_CONDITION_NONE
-} qdr_condition_t;
-
 //==================================================================================
 // Internal Functions
 //==================================================================================
@@ -272,6 +265,8 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     strcpy(link->name, name);
     link->link_direction = dir;
     link->capacity = 32;  // TODO - make this configurable
+    link->admin_enabled = true;
+    link->oper_status   = QDR_LINK_OPER_DOWN;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -511,6 +506,8 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->capacity       = 32; // TODO - make this configurable
     link->name           = (char*) malloc(QDR_DISCRIMINATOR_SIZE + 8);
     qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
+    link->admin_enabled  = true;
+    link->oper_status    = QDR_LINK_OPER_DOWN;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -530,7 +527,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
 }
 
 
-static void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t *error, qdr_condition_t condition)
+void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t *error, qdr_condition_t condition)
 {
     qdr_connection_work_t *work = new_qdr_connection_work_t();
     ZERO(work);
@@ -574,6 +571,8 @@ static void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *lin
     work->link      = link;
     work->source    = source;
     work->target    = target;
+
+    link->oper_status = QDR_LINK_OPER_UP;
 
     qdr_connection_enqueue_work_CT(core, link->conn, work);
 }
@@ -673,7 +672,7 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
     // deleted.
     //
     if (DEQ_SIZE(addr->subscriptions) == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->inlinks) == 0 &&
-        qd_bitmask_cardinality(addr->rnodes) == 0 && !addr->waypoint && !addr->block_deletion) {
+        qd_bitmask_cardinality(addr->rnodes) == 0 && addr->ref_count == 0 && !addr->block_deletion) {
         qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
         DEQ_REMOVE(core->addrs, addr);
         qd_hash_handle_free(addr->hash_handle);
@@ -1059,6 +1058,8 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
     qdr_terminus_t   *source = action->args.connection.source;
     qdr_terminus_t   *target = action->args.connection.target;
 
+    link->oper_status = QDR_LINK_OPER_UP;
+
     //
     // Handle attach-routed links
     //
@@ -1168,8 +1169,10 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     // For auto links, switch the auto link to failed state and record the error
     //
     if (link->auto_link) {
+        link->auto_link->link  = 0;
         link->auto_link->state = QDR_AUTO_LINK_STATE_FAILED;
-        // TODO - last_error
+        free(link->auto_link->last_error);
+        link->auto_link->last_error = qdr_error_description(error);
     }
 
     link->owning_addr = 0;

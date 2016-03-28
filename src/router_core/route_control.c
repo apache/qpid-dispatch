@@ -143,7 +143,15 @@ static void qdr_auto_link_activate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr
 
 static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr_connection_t *conn)
 {
-    //qdr_route_log_CT(core, "Auto Link Deactivated", al->name, al->identity, conn);
+    qdr_route_log_CT(core, "Auto Link Deactivated", al->name, al->identity, conn);
+
+    if (al->link) {
+        qdr_link_outbound_detach_CT(core, al->link, 0, QDR_CONDITION_ROUTED_LINK_LOST);
+        al->link->auto_link = 0;
+        al->link            = 0;
+    }
+
+    al->state = QDR_AUTO_LINK_STATE_INACTIVE;
 }
 
 
@@ -180,6 +188,8 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
         qd_hash_insert(core->addr_hash, iter, lr->addr, &lr->addr->hash_handle);
     }
 
+    lr->addr->ref_count++;
+
     //
     // Find or create a connection identifier structure for this link route
     //
@@ -201,6 +211,32 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
 
 void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
 {
+    //
+    // Disassociate from the connection identifier.  Check to see if the identifier
+    // should be removed.
+    //
+    qdr_conn_identifier_t *cid = lr->conn_id;
+    if (cid) {
+        if (!!cid->open_connection)
+            qdr_link_route_deactivate_CT(core, lr, cid->open_connection);
+        DEQ_REMOVE_N(REF, cid->link_route_refs, lr);
+        qdr_route_check_id_for_deletion_CT(core, cid);
+    }
+
+    //
+    // Disassociate the link route from its address.  Check to see if the address
+    // should be removed.
+    //
+    qdr_address_t *addr = lr->addr;
+    if (addr && --addr->ref_count == 0)
+        qdr_check_addr_CT(core, addr, false);
+
+    //
+    // Remove the link route from the core list.
+    //
+    DEQ_REMOVE(core->link_routes, lr);
+    free(lr->name);
+    free_qdr_link_route_t(lr);
 }
 
 
@@ -215,7 +251,7 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
     qdr_auto_link_t *al = new_qdr_auto_link_t();
 
     //
-    // Set up the link_route structure
+    // Set up the auto_link structure
     //
     ZERO(al);
     al->identity = qdr_identifier(core);
@@ -238,6 +274,8 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
         qd_hash_insert(core->addr_hash, iter, al->addr, &al->addr->hash_handle);
     }
 
+    al->addr->ref_count++;
+
     //
     // Find or create a connection identifier structure for this auto_link
     //
@@ -257,8 +295,34 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
 }
 
 
-void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *auto_link)
+void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *al)
 {
+    //
+    // Disassociate from the connection identifier.  Check to see if the identifier
+    // should be removed.
+    //
+    qdr_conn_identifier_t *cid = al->conn_id;
+    if (cid) {
+        if (!!cid->open_connection)
+            qdr_auto_link_deactivate_CT(core, al, cid->open_connection);
+        DEQ_REMOVE_N(REF, cid->auto_link_refs, al);
+        qdr_route_check_id_for_deletion_CT(core, cid);
+    }
+
+    //
+    // Disassociate the auto link from its address.  Check to see if the address
+    // should be removed.
+    //
+    qdr_address_t *addr = al->addr;
+    if (addr && --addr->ref_count == 0)
+        qdr_check_addr_CT(core, addr, false);
+
+    //
+    // Remove the auto link from the core list.
+    //
+    DEQ_REMOVE(core->auto_links, al);
+    free(al->name);
+    free_qdr_auto_link_t(al);
 }
 
 
