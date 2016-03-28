@@ -289,9 +289,11 @@ static void qdr_agent_set_columns(qdr_query_t *query,
                     query->columns[idx] = j;
                     break;
                 }
+                j+=1;
             }
         }
     }
+    query->columns[idx+1] = -1;
 }
 
 
