@@ -17,8 +17,9 @@
 # under the License.
 #
 
-import unittest
-from system_test import TestCase, Qdrouterd, main_module
+import unittest, json
+from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT
+from subprocess import PIPE, STDOUT
 from proton import ConnectionException
 from proton.utils import BlockingConnection, LinkDetached
 
@@ -66,6 +67,45 @@ class AbsoluteConnectionCountLimit(TestCase):
 
         bc1.close()
         bc2.close()
+
+class LoadPolicyFromFolder(TestCase):
+    """
+    Verify that specifying a policy folder from the router conf file
+    effects loading the policies in that folder.
+    This test relies on qdmanage utility.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(LoadPolicyFromFolder, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Policy2'}),
+            ('router', {'mode': 'standalone', 'routerId': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maximumConnections': 2, 'policyFolder': '${CMAKE_CURRENT_BINARY_DIR}/policy-1/', 'enableAccessRules': 'true'})
+        ])
+
+        cls.router = cls.tester.qdrouterd('conn-limit-router', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception, e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
+
+    def test_verify_policies_are_loaded(self):
+        addr = self.address()
+
+        rulesets = json.loads(self.run_qdmanage('query --type=policyRuleset'))
+        self.assertEqual(len(rulesets), 3)
 
 if __name__ == '__main__':
     unittest.main(main_module())
