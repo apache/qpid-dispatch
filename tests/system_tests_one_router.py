@@ -62,20 +62,6 @@ class RouterTest(TestCase):
         cls.router.wait_ready()
         cls.address = cls.router.addresses[0]
 
-
-    def test_00_discard(self):
-        addr = self.address+"/discard/1"
-        M1 = self.messenger()
-        M1.start()
-        tm = Message()
-        tm.address = addr
-        for i in range(100):
-            tm.body = {'number': i}
-            M1.put(tm)
-        M1.send()
-        M1.stop()
-
-
     def test_01_pre_settled(self):
         addr = self.address+"/pre_settled/1"
         M1 = self.messenger()
@@ -101,52 +87,6 @@ class RouterTest(TestCase):
 
         M1.stop()
         M2.stop()
-
-
-    def test_02_multicast(self):
-        addr = self.address+"/pre_settled/multicast/1"
-        M1 = self.messenger()
-        M2 = self.messenger()
-        M3 = self.messenger()
-        M4 = self.messenger()
-
-
-        M1.start()
-        M2.start()
-        M3.start()
-        M4.start()
-
-        M2.subscribe(addr)
-        M3.subscribe(addr)
-        M4.subscribe(addr)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-        for i in range(100):
-            tm.body = {'number': i}
-            M1.put(tm)
-        M1.send()
-
-        for i in range(100):
-            M2.recv(1)
-            M2.get(rm)
-            self.assertEqual(i, rm.body['number'])
-
-            M3.recv(1)
-            M3.get(rm)
-            self.assertEqual(i, rm.body['number'])
-
-            M4.recv(1)
-            M4.get(rm)
-            self.assertEqual(i, rm.body['number'])
-
-        M1.stop()
-        M2.stop()
-        M3.stop()
-        M4.stop()
-
 
     def test_02a_multicast_unsettled(self):
         addr = self.address+"/pre_settled/multicast/1"

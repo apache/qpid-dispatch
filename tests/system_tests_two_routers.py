@@ -77,17 +77,6 @@ class RouterTest(TestCase):
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')
 
-
-    def test_00_discard(self):
-        addr = self.routers[0].addresses[0]+"/discard/1"
-        M1 = self.messenger()
-        tm = Message()
-        tm.address = addr
-        for i in range(100):
-            tm.body = {'number': i}
-            M1.put(tm)
-        M1.send()
-
     def test_01_pre_settled(self):
         addr = "amqp:/pre_settled/1"
         M1 = self.messenger()
@@ -116,56 +105,6 @@ class RouterTest(TestCase):
 
         M1.stop()
         M2.stop()
-
-
-    def test_02_multicast(self):
-        addr = "amqp:/pre_settled/multicast/1"
-        M1 = self.messenger()
-        M2 = self.messenger()
-        M3 = self.messenger()
-        M4 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-        M3.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M4.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.start()
-        M2.start()
-        M3.start()
-        M4.start()
-        M2.subscribe(addr)
-        M3.subscribe(addr)
-        M4.subscribe(addr)
-        self.routers[0].wait_address("pre_settled/multicast/1", 1, 1)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-        for i in range(100):
-            tm.body = {'number': i}
-            M1.put(tm)
-        M1.send()
-
-        for i in range(100):
-            M2.recv(1)
-            M2.get(rm)
-            self.assertEqual(i, rm.body['number'])
-
-            M3.recv(1)
-            M3.get(rm)
-            self.assertEqual(i, rm.body['number'])
-
-            M4.recv(1)
-            M4.get(rm)
-            self.assertEqual(i, rm.body['number'])
-
-        M1.stop()
-        M2.stop()
-        M3.stop()
-        M4.stop()
-
 
     def test_02a_multicast_unsettled(self):
         addr = "amqp:/pre_settled/multicast/2"
