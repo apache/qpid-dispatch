@@ -457,8 +457,10 @@ class Qdrouterd(Process):
             # endswith check is because of M0/L/R prefixes
             addrs = self.management.query(
                 type='org.apache.qpid.dispatch.router.address',
-                attribute_names=['name', 'subscriberCount', 'remoteCount']).get_entities()
+                attribute_names=[u'name', u'subscriberCount', u'remoteCount']).get_entities()
+
             addrs = [a for a in addrs if a['name'].endswith(address)]
+
             return addrs and addrs[0]['subscriberCount'] >= subscribers and addrs[0]['remoteCount'] >= remotes
         assert retry(check, **retry_kwargs)
 
