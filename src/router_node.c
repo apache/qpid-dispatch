@@ -71,7 +71,7 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
 }
 
 
-static int router_writable_conn_handler(void *type_context, qd_connection_t *conn, void *context)
+static int AMQP_writable_conn_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qdr_connection_t *qconn = (qdr_connection_t*) qd_connection_get_context(conn);
 
@@ -187,7 +187,7 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
 /**
  * Inbound Delivery Handler
  */
-static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
+static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 {
     qd_router_t    *router   = (qd_router_t*) context;
     pn_link_t      *pn_link  = qd_link_pn(link);
@@ -335,7 +335,7 @@ static void router_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd
 /**
  * Delivery Disposition Handler
  */
-static void router_disposition_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
+static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 {
     qd_router_t    *router   = (qd_router_t*) context;
     qdr_delivery_t *delivery = (qdr_delivery_t*) pn_delivery_get_context(pnd);
@@ -368,7 +368,7 @@ static void router_disposition_handler(void* context, qd_link_t *link, pn_delive
 /**
  * New Incoming Link Handler
  */
-static int router_incoming_link_handler(void* context, qd_link_t *link)
+static int AMQP_incoming_link_handler(void* context, qd_link_t *link)
 {
     qd_connection_t  *conn     = qd_link_connection(link);
     qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
@@ -386,7 +386,7 @@ static int router_incoming_link_handler(void* context, qd_link_t *link)
 /**
  * New Outgoing Link Handler
  */
-static int router_outgoing_link_handler(void* context, qd_link_t *link)
+static int AMQP_outgoing_link_handler(void* context, qd_link_t *link)
 {
     qd_connection_t  *conn     = qd_link_connection(link);
     qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
@@ -404,7 +404,7 @@ static int router_outgoing_link_handler(void* context, qd_link_t *link)
 /**
  * Handler for remote opening of links that we initiated.
  */
-static int router_link_attach_handler(void* context, qd_link_t *link)
+static int AMQP_link_attach_handler(void* context, qd_link_t *link)
 {
     qdr_link_t *qlink = (qdr_link_t*) qd_link_get_context(link);
     qdr_link_second_attach(qlink,
@@ -418,7 +418,7 @@ static int router_link_attach_handler(void* context, qd_link_t *link)
 /**
  * Handler for flow events on links
  */
-static int router_link_flow_handler(void* context, qd_link_t *link)
+static int AMQP_link_flow_handler(void* context, qd_link_t *link)
 {
     qd_router_t *router = (qd_router_t*) context;
     qdr_link_t  *rlink  = (qdr_link_t*) qd_link_get_context(link);
@@ -436,7 +436,7 @@ static int router_link_flow_handler(void* context, qd_link_t *link)
 /**
  * Link Detached Handler
  */
-static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_type_t dt)
+static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_type_t dt)
 {
     qdr_link_t     *rlink  = (qdr_link_t*) qd_link_get_context(link);
     pn_condition_t *cond   = qd_link_pn(link) ? pn_link_remote_condition(qd_link_pn(link)) : 0;
@@ -458,7 +458,7 @@ static int router_link_detach_handler(void* context, qd_link_t *link, qd_detach_
 }
 
 
-static void router_opened_handler(qd_router_t *router, qd_connection_t *conn, bool inbound)
+static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool inbound)
 {
     qdr_connection_role_t  role = 0;
     bool                   strip_annotations_in = false;
@@ -478,23 +478,23 @@ static void router_opened_handler(qd_router_t *router, qd_connection_t *conn, bo
 }
 
 
-static int router_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
+static int AMQP_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qd_router_t *router = (qd_router_t*) type_context;
-    router_opened_handler(router, conn, true);
+    AMQP_opened_handler(router, conn, true);
     return 0;
 }
 
 
-static int router_outbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
+static int AMQP_outbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qd_router_t *router = (qd_router_t*) type_context;
-    router_opened_handler(router, conn, false);
+    AMQP_opened_handler(router, conn, false);
     return 0;
 }
 
 
-static int router_closed_handler(void *type_context, qd_connection_t *conn, void *context)
+static int AMQP_closed_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qdr_connection_t *qdrc = (qdr_connection_t*) qd_connection_get_context(conn);
 
@@ -520,19 +520,19 @@ static void qd_router_timer_handler(void *context)
 
 
 static qd_node_type_t router_node = {"router", 0, 0,
-                                     router_rx_handler,
-                                     router_disposition_handler,
-                                     router_incoming_link_handler,
-                                     router_outgoing_link_handler,
-                                     router_writable_conn_handler,
-                                     router_link_detach_handler,
-                                     router_link_attach_handler,
-                                     router_link_flow_handler,
+                                     AMQP_rx_handler,
+                                     AMQP_disposition_handler,
+                                     AMQP_incoming_link_handler,
+                                     AMQP_outgoing_link_handler,
+                                     AMQP_writable_conn_handler,
+                                     AMQP_link_detach_handler,
+                                     AMQP_link_attach_handler,
+                                     AMQP_link_flow_handler,
                                      0,   // node_created_handler
                                      0,   // node_destroyed_handler
-                                     router_inbound_opened_handler,
-                                     router_outbound_opened_handler,
-                                     router_closed_handler};
+                                     AMQP_inbound_opened_handler,
+                                     AMQP_outbound_opened_handler,
+                                     AMQP_closed_handler};
 static int type_registered = 0;
 
 qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id)
@@ -588,7 +588,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 }
 
 
-static void qd_router_connection_activate(void *context, qdr_connection_t *conn)
+static void CORE_connection_activate(void *context, qdr_connection_t *conn)
 {
     //
     // IMPORTANT:  This is the only core callback that is invoked on the core
@@ -599,11 +599,11 @@ static void qd_router_connection_activate(void *context, qdr_connection_t *conn)
 }
 
 
-static void qd_router_link_first_attach(void             *context,
-                                        qdr_connection_t *conn,
-                                        qdr_link_t       *link, 
-                                        qdr_terminus_t   *source,
-                                        qdr_terminus_t   *target)
+static void CORE_link_first_attach(void             *context,
+                                   qdr_connection_t *conn,
+                                   qdr_link_t       *link, 
+                                   qdr_terminus_t   *source,
+                                   qdr_terminus_t   *target)
 {
     qd_router_t     *router = (qd_router_t*) context;
     qd_connection_t *qconn  = (qd_connection_t*) qdr_connection_get_context(conn);
@@ -632,7 +632,7 @@ static void qd_router_link_first_attach(void             *context,
 }
 
 
-static void qd_router_link_second_attach(void *context, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
+static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
@@ -648,7 +648,7 @@ static void qd_router_link_second_attach(void *context, qdr_link_t *link, qdr_te
 }
 
 
-static void qd_router_link_detach(void *context, qdr_link_t *link, qdr_error_t *error)
+static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
@@ -666,7 +666,7 @@ static void qd_router_link_detach(void *context, qdr_link_t *link, qdr_error_t *
 }
 
 
-static void qd_router_link_flow(void *context, qdr_link_t *link, int credit)
+static void CORE_link_flow(void *context, qdr_link_t *link, int credit)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     pn_link_t *plink = qd_link_pn(qlink);
@@ -675,7 +675,7 @@ static void qd_router_link_flow(void *context, qdr_link_t *link, int credit)
 }
 
 
-static void qd_router_link_offer(void *context, qdr_link_t *link, int delivery_count)
+static void CORE_link_offer(void *context, qdr_link_t *link, int delivery_count)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     pn_link_t *plink = qd_link_pn(qlink);
@@ -685,7 +685,7 @@ static void qd_router_link_offer(void *context, qdr_link_t *link, int delivery_c
 }
 
 
-static void qd_router_link_drained(void *context, qdr_link_t *link)
+static void CORE_link_drained(void *context, qdr_link_t *link)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     pn_link_t *plink = qd_link_pn(qlink);
@@ -695,7 +695,7 @@ static void qd_router_link_drained(void *context, qdr_link_t *link)
 }
 
 
-static void qd_router_link_push(void *context, qdr_link_t *link)
+static void CORE_link_push(void *context, qdr_link_t *link)
 {
     qd_router_t *router      = (qd_router_t*) context;
     qd_link_t   *qlink       = (qd_link_t*) qdr_link_get_context(link);
@@ -706,7 +706,7 @@ static void qd_router_link_push(void *context, qdr_link_t *link)
 }
 
 
-static void qd_router_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *dlv, bool settled)
+static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *dlv, bool settled)
 {
     qd_link_t  *qlink = (qd_link_t*) qdr_link_get_context(link);
     pn_link_t  *plink = qd_link_pn(qlink);
@@ -730,7 +730,7 @@ static void qd_router_link_deliver(void *context, qdr_link_t *link, qdr_delivery
 }
 
 
-static void qd_router_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled)
+static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled)
 {
     pn_delivery_t *pnd = (pn_delivery_t*) qdr_delivery_get_context(dlv);
 
@@ -760,16 +760,16 @@ void qd_router_setup_late(qd_dispatch_t *qd)
     qd->router->router_core = qdr_core(qd, qd->router->router_mode, qd->router->router_area, qd->router->router_id);
 
     qdr_connection_handlers(qd->router->router_core, (void*) qd->router,
-                            qd_router_connection_activate,
-                            qd_router_link_first_attach,
-                            qd_router_link_second_attach,
-                            qd_router_link_detach,
-                            qd_router_link_flow,
-                            qd_router_link_offer,
-                            qd_router_link_drained,
-                            qd_router_link_push,
-                            qd_router_link_deliver,
-                            qd_router_delivery_update);
+                            CORE_connection_activate,
+                            CORE_link_first_attach,
+                            CORE_link_second_attach,
+                            CORE_link_detach,
+                            CORE_link_flow,
+                            CORE_link_offer,
+                            CORE_link_drained,
+                            CORE_link_push,
+                            CORE_link_deliver,
+                            CORE_delivery_update);
 
     qd_router_python_setup(qd->router);
     qd_timer_schedule(qd->router->timer, 1000);
