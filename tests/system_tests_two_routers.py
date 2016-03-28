@@ -611,46 +611,6 @@ class RouterTest(TestCase):
         M1.stop()
         M2.stop()
     
-    
-    def test_08a_test_strip_message_annotations_out_timeout(self):
-        addr = "amqp:/strip_message_annotations_out_timeout/1"
-        M1 = self.messenger()
-        M2 = self.messenger()
-        
-        M1.route("amqp:/*", self.routers[0].addresses[3]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[3]+"/$1")
-        
-        M1.start()
-        M2.start()
-        M2.timeout = 0.5
-        M2.subscribe(addr)
-        
-        self.routers[0].wait_address("strip_message_annotations_out_timeout/1", 0, 1)
-        
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-        
-        ingress_message_annotations = {'x-opt-qd.ingress': '0/QDR.A', 'x-opt-qd.trace': ['0/QDR.A']}
-        ingress_message.annotations = ingress_message_annotations
-        
-        #Put and send the message
-        M1.put(ingress_message)
-        M1.send()
-        
-        # Receive the message, this should timeout because the router thinks that this message has looped.
-        timed_out = False
-        try:
-            M2.recv(1)
-        except Timeout:
-            timed_out = True
-        
-        self.assertTrue(timed_out)
-        
-        M1.stop()
-        M2.stop()
-        
-    
     #Send in pre-existing trace and ingress and annotations and make sure that they are not in the outgoing annotations.
     #stripAnnotations property is set to "in"
     def test_08a_test_strip_message_annotations_in(self):
