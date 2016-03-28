@@ -442,7 +442,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
 
     //
     // Free the undelivered deliveries.  If this is an incoming link, the
-    // undelivereds can simply be desetroyed.  If it's an outgoing link, the
+    // undelivereds can simply be destroyed.  If it's an outgoing link, the
     // undelivereds' peer deliveries need to be released.
     //
     qdr_delivery_t *dlv = DEQ_HEAD(undelivered);
@@ -466,10 +466,8 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         DEQ_REMOVE_HEAD(unsettled);
         peer = dlv->peer;
         qdr_delivery_free(dlv);
-        if (peer) {
+        if (peer)
             peer->peer = 0;
-            qdr_delivery_remove_unsettled_CT(core, peer);
-        }
         dlv = DEQ_HEAD(unsettled);
     }
 
@@ -479,7 +477,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
     sys_mutex_lock(conn->work_lock);
     qdr_del_link_ref(&conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
-    qdr_del_link_ref(&conn->links_with_credit    , link, QDR_LINK_LIST_CLASS_FLOW);
+    qdr_del_link_ref(&conn->links_with_credit,     link, QDR_LINK_LIST_CLASS_FLOW);
     sys_mutex_unlock(conn->work_lock);
 }
 

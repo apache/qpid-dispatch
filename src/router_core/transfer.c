@@ -105,8 +105,11 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
         dlv = DEQ_HEAD(link->undelivered);
         if (dlv) {
             DEQ_REMOVE_HEAD(link->undelivered);
-            if (!dlv->settled)
+            if (!dlv->settled) {
                 DEQ_INSERT_TAIL(link->unsettled, dlv);
+                dlv->where = QDR_DELIVERY_IN_UNSETTLED;
+            } else
+                dlv->where = QDR_DELIVERY_NOWHERE;
             credit--;
             link->total_deliveries++;
             offer = DEQ_SIZE(link->undelivered);
@@ -203,20 +206,6 @@ void qdr_delivery_free(qdr_delivery_t *delivery)
 }
 
 
-void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery)
-{
-}
-
-
-void qdr_delivery_remove_unsettled_CT(qdr_core_t *core, qdr_delivery_t *delivery)
-{
-    //
-    // Remove a delivery from its unsettled list.  Side effects include issuing
-    // replacement credit and visiting the link-quiescence algorithm
-    //
-}
-
-
 void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition, bool settled)
 {
     qdr_action_t *action = qdr_action(qdr_update_delivery_CT, "update_delivery");
@@ -256,6 +245,48 @@ qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery)
 //==================================================================================
 // In-Thread Functions
 //==================================================================================
+
+void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery)
+{
+}
+
+
+void qdr_delivery_remove_unsettled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
+{
+    //
+    // Remove a delivery from its unsettled list.  Side effects include issuing
+    // replacement credit and visiting the link-quiescence algorithm
+    //
+    qdr_link_t       *link = dlv->link;
+    qdr_connection_t *conn = link ? link->conn : 0;
+    bool              issue_credit = false;
+
+    if (!link || !conn)
+        return;
+
+    //
+    // The lock needs to be acquired only for outgoing links
+    //
+    if (link->link_direction == QD_OUTGOING)
+        sys_mutex_lock(conn->work_lock);
+
+    if (dlv->where == QDR_DELIVERY_IN_UNSETTLED) {
+        DEQ_REMOVE(link->unsettled, dlv);
+        dlv->where = QDR_DELIVERY_NOWHERE;
+        issue_credit = true;
+    }
+
+    if (link->link_direction == QD_OUTGOING)
+        sys_mutex_unlock(conn->work_lock);
+
+    //
+    // If this is an incoming link and it is not link-routed, issue
+    // one replacement credit on the link.
+    //
+    if (issue_credit && link->link_direction == QD_INCOMING && !link->connected_link)
+        qdr_link_issue_credit_CT(core, link, 1);
+}
+
 
 static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
@@ -316,12 +347,14 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
             // a valid destination).
             //
             DEQ_INSERT_TAIL(link->undelivered, dlv);
+            dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
         } else {
             //
-            // TODO - Release the delivery
+            // Release the delivery
             //
+            qdr_delivery_release_CT(core, dlv);
         }
-    } else if (fanout == 1) {
+    } else if (fanout > 0) {
         qd_bitmask_free(dlv->link_exclusion);
         dlv->link_exclusion = 0;
         if (dlv->settled) {
@@ -338,19 +371,9 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
                 assert(!dlv->peer);
                 qdr_delivery_free(dlv);
             }
-        } else
+        } else {
             DEQ_INSERT_TAIL(link->unsettled, dlv);
-    } else {
-        //
-        // The fanout is greater than one.  Do something!  TODO
-        //
-        qd_bitmask_free(dlv->link_exclusion);
-        dlv->link_exclusion = 0;
-
-        if (presettled) {
-            qdr_link_issue_credit_CT(core, link, 1);
-            assert(!dlv->peer);
-            qdr_delivery_free(dlv);
+            dlv->where = QDR_DELIVERY_IN_UNSETTLED;
         }
     }
 
@@ -388,8 +411,10 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         if (!addr && dlv->to_addr)
             qd_hash_retrieve(core->addr_hash, dlv->to_addr, (void**) &addr);
         qdr_link_forward_CT(core, link, dlv, addr);
-    } else
+    } else {
         DEQ_INSERT_TAIL(link->undelivered, dlv);
+        dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
+    }
 }
 
 
@@ -427,8 +452,6 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
     uint64_t        disp    = action->args.delivery.disposition;
     bool            settled = action->args.delivery.settled;
 
-    bool link_routed = dlv && dlv->link && dlv->link->connected_link;
-
     //
     // Logic:
     //
@@ -455,22 +478,12 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             push = true;
             peer->peer = 0;
             dlv->peer  = 0;
-            if (peer->link) {
-                sys_mutex_lock(peer->link->conn->work_lock);
-                DEQ_REMOVE(peer->link->unsettled, peer);
-                sys_mutex_unlock(peer->link->conn->work_lock);
-                if (peer->link->link_direction == QD_INCOMING && !link_routed)
-                    qdr_link_issue_credit_CT(core, peer->link, 1);
-            }
+            if (peer->link)
+                qdr_delivery_remove_unsettled_CT(core, peer);
         }
 
-        if (dlv->link) {
-            sys_mutex_lock(dlv->link->conn->work_lock);
-            DEQ_REMOVE(dlv->link->unsettled, dlv);
-            sys_mutex_unlock(dlv->link->conn->work_lock);
-            if (dlv->link->link_direction == QD_INCOMING && !link_routed)
-                qdr_link_issue_credit_CT(core, dlv->link, 1);
-        }
+        if (dlv->link)
+            qdr_delivery_remove_unsettled_CT(core, dlv);
 
         qdr_delivery_free(dlv);
     }
@@ -567,7 +580,7 @@ void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
 
 void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 {
-    if (!dlv || !dlv->link)
+    if (!dlv || !dlv->link || dlv->where == QDR_DELIVERY_IN_UNDELIVERED)
         return;
 
     qdr_link_t *link = dlv->link;

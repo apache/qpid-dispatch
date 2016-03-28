@@ -187,6 +187,11 @@ struct qdr_router_ref_t {
 ALLOC_DECLARE(qdr_router_ref_t);
 DEQ_DECLARE(qdr_router_ref_t, qdr_router_ref_list_t);
 
+typedef enum {
+    QDR_DELIVERY_NOWHERE = 0,
+    QDR_DELIVERY_IN_UNDELIVERED,
+    QDR_DELIVERY_IN_UNSETTLED
+} qdr_delivery_where_t;
 
 struct qdr_delivery_t {
     DEQ_LINKS(qdr_delivery_t);
@@ -198,6 +203,7 @@ struct qdr_delivery_t {
     qd_field_iterator_t *origin;
     uint64_t             disposition;
     bool                 settled;
+    qdr_delivery_where_t where;
     uint64_t             tag;
     qd_bitmask_t        *link_exclusion;
 };

@@ -71,23 +71,23 @@ static bool qdr_forward_attach_null_CT(qdr_core_t     *core,
 }
 
 
-qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *peer, qdr_link_t *link, qd_message_t *msg)
+qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, qdr_link_t *link, qd_message_t *msg)
 {
     qdr_delivery_t *dlv = new_qdr_delivery_t();
 
     ZERO(dlv);
     dlv->link    = link;
     dlv->msg     = qd_message_copy(msg);
-    dlv->settled = !peer || peer->settled;
+    dlv->settled = !in_dlv || in_dlv->settled;
     dlv->tag     = core->next_tag++;
 
     //
     // Create peer linkage only if the delivery is not settled
     //
     if (!dlv->settled) {
-        if (peer && peer->peer == 0) {
-            dlv->peer = peer;
-            peer->peer = dlv;  // TODO - make this a back-list for multicast tracking
+        if (in_dlv && in_dlv->peer == 0) {
+            dlv->peer = in_dlv;
+            in_dlv->peer = dlv;  // TODO - make this a back-list for multicast tracking
         }
     }
 
@@ -99,6 +99,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
 {
     sys_mutex_lock(link->conn->work_lock);
     DEQ_INSERT_TAIL(link->undelivered, dlv);
+    dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
 
     //
     // If the link isn't already on the links_with_deliveries list, put it there.
