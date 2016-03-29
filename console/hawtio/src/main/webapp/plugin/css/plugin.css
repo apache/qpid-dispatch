@@ -279,9 +279,12 @@ div.qdrList li.active, ul.qdrListNodes li.active {
 div.qdr-attributes span.dynatree-selected a {
     background-color: #e0e0ff;
 }
-div.qdr-attributes.pane {
+div.qdr-attributes.pane, div.qdr-topology.pane {
 	position: absolute;
 	margin-left: 10px;
+}
+div.qdr-topology.pane.left {
+	width: auto;
 }
 
 /* the selected row in the name table */
@@ -428,8 +431,8 @@ ul.qdrTopoModes {
 	background:#e0e0ff;
 }
 
-.qdr-overview.pane.left, .qdr-attributes.pane.left {
-	top: 100px;
+.qdr-overview.pane.left, .qdr-attributes.pane.left, .qdr-topology.pane.left {
+	top: 104px;
 }
 .qdr-overview.pane.left {
 	left: 10px;
@@ -722,4 +725,101 @@ span:not(.dynatree-has-children).allocator .dynatree-icon:before {
 
 .changed {
     color: #339933;
+}
+
+div.dispatch-router div.help {
+    width: auto;
+    padding: 1em;
+    background-color: lavender;
+    border-radius: 6px;
+    margin-top: 1em;
+    text-align: center;
+}
+
+div.operations tr:nth-child(even) {
+	background: #f3f3f3;
+}
+div.operations tr:nth-child(odd), div.operations tr:last-child {
+	background: #fff;
+}
+
+div.operations tr input {
+	margin: 0;
+	padding: 3px 6px;
+}
+div.operations table {
+    width: 100%;
+}
+div.operations th {
+    width: 50%;
+    border-bottom: 1px solid #cccccc;
+    text-align: left;
+}
+div.operations td:nth-child(odd), div.operations th:nth-child(odd) {
+	border-right: 1px solid #cccccc;
+}
+div.operations td:nth-child(odd) {
+	padding-left: 0;
+}
+div.operations td:nth-child(even), div.operations th:nth-child(even) {
+	padding-left: 5px;
+}
+div.operations th {
+	padding: 5px;
+}
+div.operations .tab-pane.active {
+    padding: 12px 12px 12px 0;
+}
+div.operations label {
+    padding-top: 4px;
+    margin-bottom: 4px;
+}
+.qdrListActions .ngGrid {
+	/*min-height: 40em;
+	height: 100%; */
+}
+div.qdrListActions .ngViewport {
+    height: initial !important;
+}
+
+div.operations .boolean {
+    padding-bottom: 0;
+}
+
+table.log-entry {
+    margin-bottom: 1em;
+    border-top: 1px solid black;
+}
+
+table.log-entry pre {
+    background-color: #f5f5f5;
+    color: inherit;
+    margin: 0;
+}
+
+circle.node.normal.console {
+    fill: lightcyan;
+}
+
+text.console, text.on-demand, text.normal {
+	font-family: FontAwesome;
+	font-weight: normal;
+	font-size: 16px;
+}
+
+@font-face {
+    font-family:"Brokers";
+    src: url("brokers.ttf") /* TTF file for CSS3 browsers */
+}
+
+text.artemis.on-demand {
+    font-family: Brokers;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+text.qpid-cpp.on-demand {
+    font-family: Brokers;
+    font-size: 18px;
+    font-weight: bold;
 }

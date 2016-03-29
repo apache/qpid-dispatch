@@ -88,10 +88,12 @@ var QDR = (function(QDR) {
 			$compileProvider.urlSanitizationWhitelist(/^\s*(https?|ftp|mailto|file|blob):/);
 			cur = $compileProvider.urlSanitizationWhitelist();
 	  })
+
 	  .config(function (JSONFormatterConfigProvider) {
 			// Enable the hover preview feature
 			JSONFormatterConfigProvider.hoverPreviewEnabled = true;
 	  })
+
 	  .filter('to_trusted', function($sce){
 			return function(text) {
 				return $sce.trustAsHtml(text);
@@ -107,7 +109,15 @@ var QDR = (function(QDR) {
 				var nameParts = name.split('/')
 				return nameParts.length > 1 ? nameParts[nameParts.length-1] : name;
 			};
-	  });
+	  })
+	  .filter('Pascalcase', function () {
+	        return function (str) {
+				if (!str)
+					return "";
+	            return str.replace(/(\w)(\w*)/g,
+                        function(g0,g1,g2){return g1.toUpperCase() + g2.toLowerCase();});
+	        }
+	  })
 /*
 	QDR.module.config(['$locationProvider', function($locationProvider) {
         $locationProvider.html5Mode(true);
@@ -134,6 +144,7 @@ var QDR = (function(QDR) {
 		Core.addCSS("https://cdn.rawgit.com/mohsen1/json-formatter/master/dist/json-formatter.min.css");
 		Core.addCSS("https://cdnjs.cloudflare.com/ajax/libs/jquery.tipsy/1.0.2/jquery.tipsy.css");
 		Core.addCSS("https://code.jquery.com/ui/1.8.24/themes/base/jquery-ui.css");
+		Core.addCSS("https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css");
 
 		// tell hawtio that we have our own custom layout for
 		// our view
@@ -217,16 +228,14 @@ var QDR = (function(QDR) {
 
 })(QDR || {});
 
-
-// tell the hawtio plugin loader about our plugin so it can be
-// bootstrapped with the rest of angular
-hawtioPluginLoader.addModule(QDR.pluginName);
-
 $.getScript('https://cdn.rawgit.com/angular-ui/ui-slider/master/src/slider.js', function() {
 	hawtioPluginLoader.addModule('ui.slider');
 });
 $.getScript('https://cdn.rawgit.com/mohsen1/json-formatter/master/dist/json-formatter.min.js', function() {
 	hawtioPluginLoader.addModule('jsonFormatter');
+	// tell the hawtio plugin loader about our plugin so it can be
+	// bootstrapped with the rest of angular
+	hawtioPluginLoader.addModule(QDR.pluginName);
 });
 
 // force an more modern version of d3 to load

@@ -28,9 +28,10 @@ var QDR = (function(QDR) {
    *
    * Controller for the main interface
    */
-	QDR.module.controller("QDR.ListController", ['$scope', '$location', '$dialog', 'localStorage', 'QDRService', 'QDRChartService',
-		function ($scope, $location, $dialog, localStorage, QDRService, QDRChartService) {
+	QDR.module.controller("QDR.ListController", ['$scope', '$location', '$dialog', '$filter', 'localStorage', 'QDRService', 'QDRChartService',
+		function ($scope, $location, $dialog, $filter, localStorage, QDRService, QDRChartService) {
 
+		$scope.details = [];
 		if (!QDRService.connected) {
 			// we are not connected. we probably got here from a bookmark or manual page reload
 			$location.path("/dispatch_plugin/connect")
@@ -42,6 +43,75 @@ var QDR = (function(QDR) {
 		$scope.selectedNode = localStorage['QDRSelectedNode'];
 		$scope.selectedNodeId = localStorage['QDRSelectedNodeId'];
 		$scope.selectedRecordName = localStorage['QDRSelectedRecordName'];
+
+		$scope.modes = [{
+	        content: '<a><i class="icon-list"></i> Attriutes</a>',
+			id: 'attributes',
+			op: 'READ',
+			title: "View router attributes",
+	        isValid: function () { return true; }
+	    },
+	    {
+	        content: '<a><i class="icon-edit"></i> Update</a>',
+	        id: 'operations',
+	        op: 'UPDATE',
+	        title: "Update this attribute",
+	        isValid: function () { return $scope.operations.indexOf(this.op) > -1 }
+	    },
+	    {
+	        content: '<a><i class="icon-plus"></i> Create</a>',
+	        id: 'operations',
+	        op: 'CREATE',
+	        title: "Create a new attribute",
+	        isValid: function () { return $scope.operations.indexOf(this.op) > -1 }
+	    },
+	    {
+	        content: '<a><i class="icon-chart"></i> Chart</a>',
+	        id: 'charts',
+	        op: 'graph',
+	        title: "Graph attributes",
+	        isValid: function () { return false; return $scope.detailFields.some( function (field ) {
+                                                 					return field.graph;
+                                                 				})}
+	    },
+	    {
+	        content: '<a><i class="icon-eye-open"></i> Fetch</a>',
+	        id: 'log',
+	        op: 'GET-LOG',
+	        title: "Fetch recent log entries",
+	        isValid: function () { return ($scope.selectedEntity === 'log') }
+	    }
+	    ];
+		$scope.operations = []
+        $scope.currentMode = $scope.modes[0];
+		$scope.isModeSelected = function (mode) {
+			return mode === $scope.currentMode;
+		}
+		$scope.selectMode = function (mode) {
+			$scope.currentMode = mode;
+			if (mode.id === 'log') {
+				$scope.logResults = "getting recent log entries...";
+				QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, {}, $scope.currentMode.op, function (nodeName, entity, response, context) {
+					$scope.logResults = response.filter( function (entry) {
+						return entry[0] === $scope.detailsObject.module
+					}).sort( function (a, b) {
+						return b[5] - a[5]
+					}).map( function (entry) {
+						return {
+							type: entry[1],
+							message: entry[2],
+							source: entry[3],
+							line: entry[4],
+							time: Date(entry[5]).toString()
+						}
+					})
+					$scope.$apply();
+				})
+			}
+		}
+		$scope.isValid = function (mode) {
+			return mode.isValid()
+		}
 
 		$scope.nodes = QDRService.nodeList().sort(function (a, b) { return a.name.toLowerCase() > b.name.toLowerCase()});
 		if (!angular.isDefined($scope.selectedNode)) {
@@ -69,33 +139,20 @@ var QDR = (function(QDR) {
 				return row.linkType.value;
 			}
 		}
-		$scope.modes = [
-		    {
-		        content: '<a><i class="icon-list"></i> Attriutes</a>',
-				id: 'attributes',
-				title: "View router attributes",
-		        isValid: function () { return true; }
-		    },
-		    {
-		        content: '<a><i class="icon-leaf"></i> Operations</a>',
-		        id: 'operations',
-		        title: "Execute operations",
-		        isValid: function () { return true; }
-		    }
-        ];
-        $scope.currentMode = $scope.modes[0];
-		$scope.isModeSelected = function (mode) {
-			return mode === $scope.currentMode;
-		}
-		$scope.selectMode = function (mode) {
-			$scope.currentMode = mode;
+
+		var lookupOperations = function () {
+			var ops = QDRService.schema.entityTypes[$scope.selectedEntity].operations.filter( function (op) { return op !== 'READ'});
+			$scope.operation = ops.length ? ops[0] : "";
+			return ops;
 		}
 
         var entityTreeChildren = [];
-		for (var entity in QDRService.schema.entityTypes) {
+        var sortedEntities = Object.keys(QDRService.schema.entityTypes).sort();
+		sortedEntities.forEach( function (entity) {
 			if (excludedEntities.indexOf(entity) == -1) {
 				if (!angular.isDefined($scope.selectedEntity)) {
 					$scope.selectedEntity = entity;
+					$scope.operations = lookupOperations()
 				}
 				var current = entity === $scope.selectedEntity;
 				var e = new Folder(entity)
@@ -106,7 +163,7 @@ var QDR = (function(QDR) {
 			    e.children = [placeHolder]
 				entityTreeChildren.push(e)
 			}
-		}
+		})
 		$scope.treeReady = function () {
 			$('#entityTree').dynatree({
 				onActivate: onTreeSelected,
@@ -123,10 +180,16 @@ var QDR = (function(QDR) {
 		}
 		// a tree node was selected
 		var onTreeSelected = function (selectedNode) {
+			if ($scope.currentMode.id === 'operations')
+				$scope.currentMode = $scope.modes[0];
+			else if ($scope.currentMode.id === 'log')
+				$scope.selectMode($scope.currentMode)
 			if (selectedNode.data.typeName === "entity") {
 				$scope.selectedEntity = selectedNode.data.key;
+				$scope.operations = lookupOperations()
 			} else if (selectedNode.data.typeName === 'attribute') {
 				$scope.selectedEntity = selectedNode.parent.data.key;
+				$scope.operations = lookupOperations()
 				$scope.selectedRecordName = selectedNode.data.key;
 				updateDetails(selectedNode.data.details);
 				$("#entityTree").dynatree("getRoot").visit(function(node){
@@ -136,6 +199,28 @@ var QDR = (function(QDR) {
 			}
 			$scope.$apply();
 		}
+		// fill in an empty results recoord based on the entities schema
+		var fromSchema = function (entityName) {
+			var row = {}
+			var schemaEntity = QDRService.schema.entityTypes[entityName]
+			for (attr in schemaEntity.attributes) {
+				var entity = schemaEntity.attributes[attr]
+				row[attr] = {
+					value: "",
+					type: entity.type,
+					graph: false,
+					title: entity.description,
+					aggregate: false,
+					aggregateTip: ''
+				}
+			}
+			return row;
+		}
+		$scope.hasCreate = function () {
+			var schemaEntity = QDRService.schema.entityTypes[$scope.selectedEntity]
+			return (schemaEntity.operations.indexOf("CREATE") > -1)
+		}
+
 		// the data for the selected entity is available, populate the tree
 		var updateEntityChildren = function (tableRows, expand) {
 			var tree = $("#entityTree").dynatree("getTree");
@@ -148,8 +233,8 @@ var QDR = (function(QDR) {
 			        typeName:   "none",
 			        title:      "no data"
 			    })
-			    $scope.selectedRecordName = "";
-			    updateDetails({});
+			    $scope.selectedRecordName = $scope.selectedEntity;
+			    updateDetails(fromSchema($scope.selectedEntity));
 			} else {
 				tableRows.forEach( function (row) {
 					var addClass = $scope.selectedEntity;
@@ -184,24 +269,85 @@ var QDR = (function(QDR) {
 			}
 		}
 
+		var schemaProps = function (entityName, key, currentNode) {
+	   		var typeMap = {integer: 'number', string: 'text', path: 'text', boolean: 'boolean'};
+
+			var entity = QDRService.schema.entityTypes[entityName]
+			var value = entity.attributes[key]
+			// skip identity and depricated fields
+			if (!value)
+				return {input: 'input', type: 'disabled', required: false, selected: "", rawtype: 'string', disabled: true, 'default': ''}
+			var description = value.description || ""
+			var val = value['default'];
+			var disabled = (key == 'identity' || description.startsWith('Deprecated'))
+			// special cases
+			if (entityName == 'log' && key == 'module') {
+				return {input: 'input', type: 'disabled', required: false, selected: "", rawtype: 'string', disabled: true, 'default': ''}
+			}
+			if (entityName === 'linkRoutePattern' && key === 'connector') {
+				// turn input into a select. the values will be populated later
+				value.type = []
+				// find all the connector names and populate the select
+				QDRService.getNodeInfo(currentNode.id, '.connector', ['name'], function (nodeName, dotentity, response) {
+					$scope.detailFields.some( function (field) {
+						if (field.name === 'connector') {
+							field.rawtype = response.results.map (function (result) {return result[0]})
+							return true;
+						}
+					})
+				});
+			}
+			return {    name:       key,
+						humanName:  QDRService.humanify(key),
+                        description:value.description,
+                        type:       disabled ? 'disabled' : typeMap[value.type],
+                        rawtype:    value.type,
+                        input:      typeof value.type == 'string' ? value.type == 'boolean' ? 'boolean' : 'input'
+                                                                  : 'select',
+                        selected:   val ? val : undefined,
+                        'default':  value['default'],
+                        value:      val,
+                        required:   value.required,
+                        unique:     value.unique,
+                        disabled:   disabled
+            };
+		}
+		$scope.getAttributeValue = function (attribute) {
+			var value = attribute.attributeValue;
+			if ($scope.currentMode.op === "CREATE" && attribute.name === 'identity')
+				value = "<assigned by system>"
+			return value;
+		}
 		var updateDetails = function (row) {
 			var details = [];
-			for (var attr in row) {
+			$scope.detailsObject = {};
+			var attrs = Object.keys(row).sort();
+			attrs.forEach( function (attr) {
 				var changed = $scope.detailFields.filter(function (old) {
 					return (old.name === attr) ? old.graph && old.rawValue != row[attr].value : false;
 				})
+				var schemaEntity = schemaProps($scope.selectedEntity, attr, $scope.currentNode)
 				details.push( {
 					attributeName:  QDRService.humanify(attr),
-					attributeValue: QDRService.pretty(row[attr].value),
+					attributeValue: attr === 'port' ? row[attr].value : QDRService.pretty(row[attr].value),
 					name:           attr,
 					changed:        changed.length,
 					rawValue:       row[attr].value,
 					graph:          row[attr].graph,
 					title:          row[attr].title,
 					aggregateValue: QDRService.pretty(row[attr].aggregate),
-					aggregateTip:   row[attr].aggregateTip
+					aggregateTip:   row[attr].aggregateTip,
+
+					input:          schemaEntity.input,
+					type:           schemaEntity.type,
+					required:       schemaEntity.required,
+					selected:       schemaEntity.selected,
+					rawtype:        schemaEntity.rawtype,
+					disabled:       schemaEntity.disabled,
+					'default':      schemaEntity['default']
 				})
-			}
+				$scope.detailsObject[attr] = row[attr].value;
+			})
 			$scope.detailFields = details;
 			aggregateColumn();
 			$scope.$apply();
@@ -224,6 +370,7 @@ var QDR = (function(QDR) {
 			if (newValue !== oldValue) {
 				localStorage['QDRSelectedEntity'] = $scope.selectedEntity;
 				restartUpdate();
+				$scope.operations = lookupOperations()
 			}
 		})
 		$scope.$watch('selectedNode', function(newValue, oldValue) {
@@ -241,14 +388,19 @@ var QDR = (function(QDR) {
 		$scope.tableRows = [];
 		var selectedRowIndex = 0;
 		var updateTableData = function (entity, expand) {
+			// don't update the data when on the operations tab
+			if ($scope.currentMode.id === 'operations') {
+				return;
+			}
+
 			var gotNodeInfo = function (nodeName, dotentity, response) {
 				//QDR.log.debug("got results for  " + nodeName);
 				//console.dump(response);
-
 				var records = response.results;
 				var aggregates = response.aggregates;
 				var attributeNames = response.attributeNames;
 				var nameIndex = attributeNames.indexOf("name");
+				var identityIndex = attributeNames.indexOf("identity");
 				var ent = QDRService.schema.entityTypes[entity];
 				var tableRows = [];
 				for (var i=0; i<records.length; ++i) {
@@ -258,7 +410,11 @@ var QDR = (function(QDR) {
 					var rowName;
 					if (nameIndex > -1) {
 						rowName = record[nameIndex];
-					} else {
+						if (!rowName && identityIndex > -1) {
+							rowName = record[nameIndex] = (dotentity + '/' + record[identityIndex])
+						}
+					}
+					if (!rowName) {
 						QDR.log.error("response attributeNames did not contain a name field");
 						console.dump(response.attributeNames);
 						return;
@@ -290,15 +446,15 @@ var QDR = (function(QDR) {
 					}
 					tableRows.push(row);
 				}
+				tableRows.sort( function (a, b) { return a.name.value.localeCompare(b.name.value) })
 				setTimeout(selectRow, 0, {rows: tableRows, expand: expand});
 			}
-
 			// if this entity should show an aggregate column, send the request to get the info for this entity from all the nedes
 			if (aggregateEntities.indexOf(entity) > -1) {
 				var nodeInfo = QDRService.topology.nodeInfo();
 				QDRService.getMultipleNodeInfo(Object.keys(nodeInfo), entity, [], gotNodeInfo, $scope.selectedNodeId);
 			} else {
-				QDRService.getNodeInfo($scope.selectedNodeId, '.' + entity, [], gotNodeInfo);
+				QDRService.getNodeInfo($scope.selectedNodeId, entity, [], gotNodeInfo);
 			}
 		};
 
@@ -420,7 +576,6 @@ var QDR = (function(QDR) {
 				  return false;
 			}
 		};
-
 		updateTableData($scope.selectedEntity, true);
 		stop = setInterval(updateTableData, 5000, $scope.selectedEntity);
 
@@ -431,6 +586,41 @@ var QDR = (function(QDR) {
 				stop = undefined;
 			};
 		});
+
+		function gotMethodResponse (nodeName, entity, response, context) {
+			var statusCode = context.message.application_properties.statusCode;
+			if (statusCode < 200 || statusCode >= 300) {
+				Core.notification('error', context.message.application_properties.statusDescription);
+				QDR.log.debug(context.message.application_properties.statusDescription)
+			} else {
+				var note = entity + " " + $filter('Pascalcase')($scope.currentMode.op) + "d"
+				QDR.log.info(note)
+				Core.notification('success', note);
+				$scope.selectMode($scope.modes[0]);
+				$scope.$apply();
+			}
+		}
+		$scope.ok = function () {
+			var attributes = {}
+			$scope.detailFields.forEach( function (field) {
+				var value = field.rawValue;
+				if (field.input === 'input') {
+					if (field.type === 'text' || field.type === 'disabled')
+						value = field.attributeValue;
+				}
+				if (field.input === 'select')
+					value = field.selected;
+
+				if (value != field['default'] || field.required || (field.name === 'role')) {
+					if (field.name !== 'identity')
+						attributes[field.name] = value
+				}
+				if (!attributes.type)
+					attributes.type = $scope.selectedEntity;
+
+			})
+			QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, gotMethodResponse)
+		}
 
 		function doDialog(template, chart) {
 		    var d = $dialog.dialog({

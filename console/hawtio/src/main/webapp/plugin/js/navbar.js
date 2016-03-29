@@ -43,8 +43,8 @@ var QDR = (function (QDR) {
         href: "#/dispatch_plugin/overview"
       },
     {
-        content: '<i class="icon-list "></i> Details',
-        title: "View the attributes of the router nodes",
+        content: '<i class="icon-list "></i> Entities',
+        title: "View the attributes of the router entities",
         isValid: function (QDRService) { return QDRService.isConnected(); },
         href: "#/dispatch_plugin/list"
       },
