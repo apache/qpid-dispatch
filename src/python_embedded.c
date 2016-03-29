@@ -527,11 +527,15 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     PyObject *addr;
     char aclass    = 'L';
     char phase     = '0';
-    int  treatment = QD_TREATMENT_ANYCAST_BALANCED;
+    int  treatment = QD_TREATMENT_ANYCAST_CLOSEST;
     if (!PyArg_ParseTuple(args, "OO|cci", &self->handler, &addr, &aclass, &phase, &treatment))
         return -1;
     if (!PyCallable_Check(self->handler)) {
         PyErr_SetString(PyExc_TypeError, "IoAdapter.__init__ handler is not callable");
+        return -1;
+    }
+    if (treatment == QD_TREATMENT_ANYCAST_BALANCED) {
+        PyErr_SetString(PyExc_TypeError, "IoAdapter: ANYCAST_BALANCED is not supported for in-process subscriptions");
         return -1;
     }
     Py_INCREF(self->handler);
