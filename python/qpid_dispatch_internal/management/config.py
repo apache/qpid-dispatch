@@ -24,6 +24,7 @@ Configuration file parsing
 import json, re, sys
 from copy import copy
 from qpid_dispatch.management.entity import camelcase
+
 from ..dispatch import QdDll
 from .qdrouter import QdSchema
 
@@ -80,12 +81,15 @@ class Config(object):
         def _expand_section(section, annotations):
             """Expand one section"""
             attrs = section[1]
+
             for k in attrs.keys(): # Iterate over keys() because we will modify attr
                 inc = [i[1] for i in annotations if i[0] == k and i[1]['name'] == attrs[k]]
                 if inc:
                     assert len(inc) == 1
                     inc = copy(inc[0])
-                    del inc['name'] # Not a real attribute, just an annotation id.
+                    if k == u'sslProfile':
+                        inc[u'sslProfileName'] = inc[u'name']
+                    del inc['name']
                     attrs.update(inc)
                     del attrs[k] # Delete the annotation attribute.
             return section
@@ -143,7 +147,8 @@ def configure_dispatch(dispatch, lib_handle, filename):
         modules.remove(l["module"])
 
     # Add default entities for any log modules not configured.
-    for m in modules: agent.configure(attributes=dict(type="log", module=m))
+    for m in modules:
+        agent.configure(attributes=dict(type="log", module=m))
 
     # Configure and prepare container and router before we can activate the agent.
     configure(config.by_type('container')[0])
@@ -152,11 +157,19 @@ def configure_dispatch(dispatch, lib_handle, filename):
     qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.
     agent.activate("$_management_internal")
 
+    from qpid_dispatch_internal.display_name.display_name import DisplayNameService
+    displayname_service = DisplayNameService("$displayname")
     # Remaining configuration
     for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", \
-        "router.config.address", "router.config.linkRoute", "router.config.autoLink":
+             "router.config.address", "router.config.linkRoute", "router.config.autoLink":
         for a in config.by_type(t):
             configure(a)
+            if t == "listener":
+                display_file_name = a.get('displayNameFile')
+                if display_file_name:
+                    ssl_profile_name = a.get('sslProfileName')
+                    displayname_service.add(ssl_profile_name, display_file_name)
+
     for e in config.entities:
         configure(e)
 

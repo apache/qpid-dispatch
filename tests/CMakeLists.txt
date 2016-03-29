@@ -76,6 +76,7 @@ foreach(py_test_module
     system_tests_qdmanage
     system_tests_qdstat
     system_tests_sasl_plain
+    system_tests_user_id
     system_tests_two_routers)
 
   add_test(${py_test_module} ${TEST_WRAP} -m unittest -v ${py_test_module})
@@ -92,7 +93,9 @@ list(APPEND SYSTEM_TEST_FILES
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/A-ssl.conf)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/B-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/B-ssl.conf)
+
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_certs DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/displayname_files DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 # following install() functions will be called only if you do a make "install"
 install(FILES ${SYSTEM_TEST_FILES}

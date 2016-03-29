@@ -83,25 +83,25 @@ DEQ_DECLARE(qd_deferred_call_t, qd_deferred_call_list_t);
  */
 struct qd_connection_t {
     DEQ_LINKS(qd_connection_t);
-    qd_server_t      *server;
-    bool              opened; // An open callback was invoked for this connection
-    bool              closed;
-    int               owner_thread;
-    int               enqueued;
-    qdpn_connector_t *pn_cxtr;
-    pn_connection_t  *pn_conn;
-    pn_collector_t   *collector;
-    pn_ssl_t         *ssl;
-    qd_listener_t    *listener;
-    qd_connector_t   *connector;
-    void             *context; // Copy of context from listener or connector
-    void             *user_context;
-    void             *link_context; // Context shared by this connection's links
-    qd_user_fd_t     *ufd;
-    uint64_t         connection_id; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
-
-    qd_deferred_call_list_t  deferred_calls;
-    sys_mutex_t             *deferred_call_lock;
+    qd_server_t              *server;
+    bool                      opened; // An open callback was invoked for this connection
+    bool                      closed;
+    int                       owner_thread;
+    int                       enqueued;
+    qdpn_connector_t         *pn_cxtr;
+    pn_connection_t          *pn_conn;
+    pn_collector_t           *collector;
+    pn_ssl_t                 *ssl;
+    qd_listener_t            *listener;
+    qd_connector_t           *connector;
+    void                     *context; // Copy of context from listener or connector
+    void                     *user_context;
+    void                     *link_context; // Context shared by this connection's links
+    qd_user_fd_t             *ufd;
+    uint64_t                  connection_id; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
+    const char               *user_id; // A unique identifier for the user on the connection. This is currently populated  from the client ssl cert. See ssl_uid_format in server.h for more info
+    qd_deferred_call_list_t   deferred_calls;
+    sys_mutex_t              *deferred_call_lock;
 };
 
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
@@ -172,5 +172,13 @@ ALLOC_DECLARE(qd_deferred_call_t);
 ALLOC_DECLARE(qd_connector_t);
 ALLOC_DECLARE(qd_connection_t);
 ALLOC_DECLARE(qd_user_fd_t);
+
+/**
+ * Sets the user id on the connection.
+ * If the sasl mech is EXTERNAL, set the user_id on the connection as the concatenated list of fields specified in the uidFormat field of qdrouter.json
+ * If no uidFormat is specified, the user is set to the pn_transport_user
+ * @param conn Connection object
+ */
+void qd_connection_set_user(qd_connection_t *conn);
 
 #endif

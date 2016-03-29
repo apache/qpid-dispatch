@@ -335,6 +335,30 @@ typedef struct qd_server_config_t {
     char *ssl_private_key_file;
 
     /**
+     * Holds the list of component fields of the client certificate from which a unique identifier is constructed.
+     * For e.g, this field could have the format of 'cou' indicating that the uid will consist of
+     * c - common name concatenated with o - organization-company name concatenated with u - organization unit
+     * Allowed components are
+     * Allowed values can be any combination of comma separated
+     * 'c'( ISO3166 two character country code),
+     * 's'(state or province),
+     * 'l'(Locality; generally - city),
+     * 'o'(Organization - Company Name),
+     * 'u'(Organization Unit - typically certificate type or brand),
+     * 'n'(CommonName - typically a user name for client certificates) and
+     * '1'(sha1 certificate fingerprint, the fingerprint, as displayed in the fingerprints section when looking at a certificate
+     *  with say a web browser is the hash of the entire certificate in DER form)
+     * '2'(sha256 certificate fingerprint)
+     * '5'(sha512 certificate fingerprint)
+     */
+    char *ssl_uid_format;
+
+    /**
+     * Full path to the file that contains the uid to display name mapping.
+     */
+    char *ssl_display_name_file;
+
+    /**
      * The password used to sign the private key, or NULL if the key is not protected.
      */
     char *ssl_password;
@@ -433,7 +457,7 @@ void qd_server_set_conn_handler(qd_dispatch_t *qd, qd_conn_handler_cb_t conn_han
 /**
  * Set the user context for a connection.
  *
- * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNECTOR}_OPEN
  * @param context User context to be stored with the connection.
  */
 void qd_connection_set_context(qd_connection_t *conn, void *context);

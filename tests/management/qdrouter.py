@@ -1,21 +1,21 @@
-##
-## Licensed to the Apache Software Foundation (ASF) under one
-## or more contributor license agreements.  See the NOTICE file
-## distributed with this work for additional information
-## regarding copyright ownership.  The ASF licenses this file
-## to you under the Apache License, Version 2.0 (the
-## "License"); you may not use this file except in compliance
-## with the License.  You may obtain a copy of the License at
-##
-##   http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing,
-## software distributed under the License is distributed on an
-## "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-## KIND, either express or implied.  See the License for the
-## specific language governing permissions and limitations
-## under the License
-##
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License
+#
 
 #pylint: disable=wildcard-import,unused-wildcard-import,missing-docstring,too-many-public-methods
 
@@ -74,7 +74,6 @@ listener {
 }
 """
 
-
 class QdrouterTest(unittest.TestCase):
     """Tests for qpid_dispatch_internal.config.qdrouter"""
 
@@ -82,22 +81,11 @@ class QdrouterTest(unittest.TestCase):
         conf = Config()
         content = conf._parse(text.split("\n"))
         self.maxDiff = None
-        expect = [
-            [u"router", {u"mode":u"standalone"}],
-            [u"sslProfile", {u"name":u"test-profile", u"password":u"secret"}],
-            [u"listener", {u"name":u"l0", u"saslMechanisms":u"ANONYMOUS", u"sslProfile":u"test-profile"}],
-            [u"listener", {u"identity":u"l1", u"saslMechanisms":u"ANONYMOUS", u"port":u"1234"}],
-            [u"listener", {u"saslMechanisms":u"ANONYMOUS", u"port":u"4567"}]
-        ]
+        expect = [[u'router', {u'mode': u'standalone'}], [u'sslProfile', {u'password': u'secret', u'name': u'test-profile'}], [u'listener', {u'sslProfile': u'test-profile', u'name': u'l0', u'saslMechanisms': u'ANONYMOUS'}], [u'listener', {u'saslMechanisms': u'ANONYMOUS', u'identity': u'l1', u'port': u'1234'}], [u'listener', {u'saslMechanisms': u'ANONYMOUS', u'port': u'4567'}]]
         self.assertEqual(content, expect)
 
         content = conf._expand(content)
-        expect = [
-            [u"router", {u"mode":u"standalone"}],
-            [u"listener", {u"name":u"l0", u"saslMechanisms":u"ANONYMOUS", u"password":u"secret"}],
-            [u"listener", {u"identity":u"l1", u"saslMechanisms":u"ANONYMOUS", u"port":u"1234"}],
-            [u"listener", {u"saslMechanisms":u"ANONYMOUS", u"port":u"4567"}]
-        ]
+        expect = [[u'router', {u'mode': u'standalone'}], [u'listener', {u'password': u'secret', u'name': u'l0', u'sslProfileName': u'test-profile', u'saslMechanisms': u'ANONYMOUS'}], [u'listener', {u'port': u'1234', u'identity': u'l1', u'saslMechanisms': u'ANONYMOUS'}], [u'listener', {u'port': u'4567', u'saslMechanisms': u'ANONYMOUS'}]]
         self.assertEqual(content, expect)
 
         conf.load(text.split(u"\n"))

@@ -107,10 +107,10 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     if not (certificate or trustfile): return None
     domain = SSLDomain(mode)
     if trustfile:
-        domain.set_trusted_ca_db(trustfile)
-        domain.set_peer_authentication(SSLDomain.VERIFY_PEER, trustfile)
+        domain.set_trusted_ca_db(str(trustfile))
+        domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
     if certificate:
-        domain.set_credentials(certificate, key, password)
+        domain.set_credentials(str(certificate), str(key), str(password))
     return domain
 
 class Option(optparse.Option):

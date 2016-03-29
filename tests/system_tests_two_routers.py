@@ -19,7 +19,7 @@
 
 import unittest, os
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
-from system_test import TestCase, Qdrouterd, main_module
+from system_test import TestCase, Qdrouterd, main_module, DIR
 
 # PROTON-828:
 try:
@@ -29,17 +29,19 @@ except ImportError:
 
 
 class RouterTest(TestCase):
+
+    @staticmethod
+    def ssl_config(client_server, connection):
+        return [] # Over-ridden by RouterTestSsl
+
     @classmethod
     def setUpClass(cls):
         """Start a router and a messenger"""
         super(RouterTest, cls).setUpClass()
 
-        def ssl_config(client_server, connection): 
-            return [] # Over-ridden by RouterTestSsl
-
         def router(name, client_server, connection):
             
-            config = ssl_config(client_server, connection) + [
+            config = cls.ssl_config(client_server, connection) + [
                 ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.%s'%name}),
                 ('router', {'mode': 'interior', 'routerId': 'QDR.%s'%name}),
                 
@@ -62,6 +64,7 @@ class RouterTest(TestCase):
             ]
             
             config = Qdrouterd.Config(config)
+
             cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
 
         cls.routers = []
@@ -995,18 +998,24 @@ class RouterTest(TestCase):
 
 try:
     SSLDomain(SSLDomain.MODE_CLIENT)
+
     class RouterTestSsl(RouterTest):
-        def ssl_config(self, client_server, connection):
-            connection[1]['ssl-profile'] = 'ssl-profile-name'
-            def ssl_file(name):
-                return os.path.join(system_test.DIR, 'config-2', name)
-            return [
-                ('ssl-profile', {
-                    'name': 'ssl-profile-name',
-                    'cert-db': ssl_file('ca-certificate.pem'),
-                    'cert-file': ssl_file(client_server+'-certificate.pem'),
-                    'key-file': ssl_file(client_server+'-private-key.pem'),
-                    'password': client_server+'-password'})]
+
+        @staticmethod
+        def ssl_config(client_server, connection):
+                connection[1]['ssl-profile'] = 'ssl-profile-name'
+
+                def ssl_file(name):
+                    return os.path.join(DIR, 'ssl_certs', name)
+                return [
+                    ('ssl-profile', {
+                        'name': 'ssl-profile-name',
+                        'cert-db': ssl_file('ca-certificate.pem'),
+                        'cert-file': ssl_file(client_server+'-certificate.pem'),
+                        'key-file': ssl_file(client_server+'-private-key.pem'),
+                        'password': client_server+'-password'})]
+
+
 
 except SSLUnavailable:
     class RouterTestSsl(TestCase):
