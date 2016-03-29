@@ -314,7 +314,6 @@ struct qdr_address_t {
     qd_address_treatment_t     treatment;
     qdr_forwarder_t           *forwarder;
     int                        ref_count;     ///< Number of link-routes + auto-links referencing this address
-    bool                       toggle;
     bool                       block_deletion;
     bool                       local;
 
@@ -556,12 +555,6 @@ struct qdr_core_t {
 
     qdr_forwarder_t      *forwarders[QD_TREATMENT_LINK_BALANCED + 1];
 };
-
-typedef enum {
-    PASSTHROUGH,
-    TAP,
-    BYPASS
-} qdr_waypoint_mode_t;
 
 void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);
