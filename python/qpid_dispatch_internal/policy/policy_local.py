@@ -389,13 +389,18 @@ class AppStats(object):
     def __init__(self, id, manager, ruleset):
         self.my_id = id
         self._manager = manager
-        self._ruleset = ruleset
         self.conn_mgr = PolicyAppConnectionMgr(
                 ruleset[PolicyKeys.KW_MAXCONN],
                 ruleset[PolicyKeys.KW_MAXCONNPERHOST],
                 ruleset[PolicyKeys.KW_MAXCONNPERUSER])
         self._cstats = self._manager.get_agent().qd.qd_dispatch_policy_c_counts_alloc()
         self._manager.get_agent().add_implementation(self, "policyStats")
+
+    def update_ruleset(self, ruleset):
+        self.conn_mgr.update(
+            ruleset[PolicyKeys.KW_MAXCONN],
+            ruleset[PolicyKeys.KW_MAXCONNPERHOST],
+            ruleset[PolicyKeys.KW_MAXCONNPERUSER])
 
     def refresh_entity(self, attributes):
         """Refresh management attributes"""
@@ -493,11 +498,15 @@ class PolicyLocal(object):
             raise PolicyError( "Policy '%s' is invalid: %s" % (name, diag[0]) )
         if len(warnings) > 0:
             for warning in warnings:
-                self._manager.log_debug(warning)
+                self._manager.log_warning(warning)
+        if name not in self.rulesetdb:
+            self.statsdb[name] = AppStats(name, self._manager, candidate)
+            self._manager.log_info("Created policy rules for application %s" % name)
+        else:
+            self.statsdb[name].update_ruleset(candidate)
+            self._manager.log_info("Updated policy rules for application %s" % name)
         self.rulesetdb[name] = {}
         self.rulesetdb[name].update(candidate)
-        self.statsdb[name] = AppStats(name, self._manager, candidate)
-        self._manager.log_info("Created policy rules for application %s" % name)
 
     def policy_read(self, name):
         """
