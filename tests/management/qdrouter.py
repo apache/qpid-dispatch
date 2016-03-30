@@ -81,11 +81,22 @@ class QdrouterTest(unittest.TestCase):
         conf = Config()
         content = conf._parse(text.split("\n"))
         self.maxDiff = None
-        expect = [[u'router', {u'mode': u'standalone'}], [u'sslProfile', {u'password': u'secret', u'name': u'test-profile'}], [u'listener', {u'sslProfile': u'test-profile', u'name': u'l0', u'saslMechanisms': u'ANONYMOUS'}], [u'listener', {u'saslMechanisms': u'ANONYMOUS', u'identity': u'l1', u'port': u'1234'}], [u'listener', {u'saslMechanisms': u'ANONYMOUS', u'port': u'4567'}]]
+        expect = [
+            [u'router', {u'mode': u'standalone'}],
+            [u'sslProfile', {u'password': u'secret', u'name': u'test-profile'}],
+            [u'listener', {u'sslProfile': u'test-profile', u'name': u'l0', u'saslMechanisms': u'ANONYMOUS'}],
+            [u'listener', {u'saslMechanisms': u'ANONYMOUS', u'identity': u'l1', u'port': u'1234'}],
+            [u'listener', {u'saslMechanisms': u'ANONYMOUS', u'port': u'4567'}]
+        ]
         self.assertEqual(content, expect)
 
         content = conf._expand(content)
-        expect = [[u'router', {u'mode': u'standalone'}], [u'listener', {u'password': u'secret', u'name': u'l0', u'sslProfileName': u'test-profile', u'saslMechanisms': u'ANONYMOUS'}], [u'listener', {u'port': u'1234', u'identity': u'l1', u'saslMechanisms': u'ANONYMOUS'}], [u'listener', {u'port': u'4567', u'saslMechanisms': u'ANONYMOUS'}]]
+        expect = [
+            [u'router', {u'mode': u'standalone'}],
+            [u'listener', {u'password': u'secret', u'name': u'l0', u'sslProfileName': u'test-profile', u'saslMechanisms': u'ANONYMOUS'}],
+            [u'listener', {u'port': u'1234', u'identity': u'l1', u'saslMechanisms': u'ANONYMOUS'}],
+            [u'listener', {u'port': u'4567', u'saslMechanisms': u'ANONYMOUS'}]
+        ]
         self.assertEqual(content, expect)
 
         conf.load(text.split(u"\n"))

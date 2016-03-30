@@ -500,6 +500,17 @@ void *qd_connection_get_link_context(qd_connection_t *conn);
 
 
 /**
+ * Sets the user id on the connection.
+ * If the sasl mech is EXTERNAL, set the user_id on the connection as the concatenated
+ * list of fields specified in the uidFormat field of qdrouter.json
+ * If no uidFormat is specified, the user is set to the pn_transport_user
+ *
+ * @param conn Connection object
+ */
+void qd_connection_set_user(qd_connection_t *conn);
+
+
+/**
  * Activate a connection for output.
  *
  * This function is used to request that the server activate the indicated
