@@ -494,6 +494,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->user_context  = 0;
         ctx->link_context  = 0;
         ctx->ufd           = 0;
+        ctx->user_id       = 0;
         ctx->connection_id = qd_server->next_connection_id++; // Increment the connection id so the next connection can use it
         ctx->policy_settings = 0;
         ctx->n_senders       = 0;
@@ -1053,6 +1054,7 @@ static void cxtr_try_open(void *context)
     ctx->user_context = 0;
     ctx->link_context = 0;
     ctx->ufd          = 0;
+    ctx->user_id      = 0;
     ctx->policy_settings = 0;
     ctx->n_senders       = 0;
     ctx->n_receivers     = 0;
