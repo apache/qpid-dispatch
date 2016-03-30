@@ -170,7 +170,7 @@ class RouterTest(TestCase):
 
 
     def test_02c_sender_settles_first(self):
-        addr = "amqp:/settled/senderfirst/1"
+        addr = "amqp:/closest.senderfirst.1"
         M1 = self.messenger()
         M2 = self.messenger()
 
@@ -183,7 +183,7 @@ class RouterTest(TestCase):
         M1.start()
         M2.start()
         M2.subscribe(addr)
-        self.routers[0].wait_address("settled/senderfirst/1", 0, 1)
+        self.routers[0].wait_address("closest.senderfirst.1", 0, 1)
 
         tm = Message()
         rm = Message()

@@ -98,14 +98,16 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
     qdr_connection_t *conn = link->conn;
     qdr_delivery_t   *dlv;
     bool              drained = false;
-    int               offer = -1;
+    int               offer   = -1;
+    bool              settled = false;
 
     while (credit > 0 && !drained) {
         sys_mutex_lock(conn->work_lock);
         dlv = DEQ_HEAD(link->undelivered);
         if (dlv) {
             DEQ_REMOVE_HEAD(link->undelivered);
-            if (!dlv->settled) {
+            settled = dlv->settled;
+            if (!settled) {
                 DEQ_INSERT_TAIL(link->unsettled, dlv);
                 dlv->where = QDR_DELIVERY_IN_UNSETTLED;
             } else
@@ -119,8 +121,8 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 
         if (dlv) {
             link->credit_to_core--;
-            core->deliver_handler(core->user_context, link, dlv, dlv->settled);
-            if (dlv->settled)
+            core->deliver_handler(core->user_context, link, dlv, settled);
+            if (settled)
                 qdr_delivery_free(dlv);
         }
     }
@@ -251,18 +253,18 @@ void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery)
 }
 
 
-void qdr_delivery_remove_unsettled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
+bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 {
     //
     // Remove a delivery from its unsettled list.  Side effects include issuing
     // replacement credit and visiting the link-quiescence algorithm
     //
-    qdr_link_t       *link = dlv->link;
-    qdr_connection_t *conn = link ? link->conn : 0;
-    bool              issue_credit = false;
+    qdr_link_t       *link  = dlv->link;
+    qdr_connection_t *conn  = link ? link->conn : 0;
+    bool              moved = false;
 
     if (!link || !conn)
-        return;
+        return false;
 
     //
     // The lock needs to be acquired only for outgoing links
@@ -273,7 +275,7 @@ void qdr_delivery_remove_unsettled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     if (dlv->where == QDR_DELIVERY_IN_UNSETTLED) {
         DEQ_REMOVE(link->unsettled, dlv);
         dlv->where = QDR_DELIVERY_NOWHERE;
-        issue_credit = true;
+        moved = true;
     }
 
     if (link->link_direction == QD_OUTGOING)
@@ -283,8 +285,10 @@ void qdr_delivery_remove_unsettled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     // If this is an incoming link and it is not link-routed, issue
     // one replacement credit on the link.
     //
-    if (issue_credit && link->link_direction == QD_INCOMING && !link->connected_link)
+    if (moved && link->link_direction == QD_INCOMING && !link->connected_link)
         qdr_link_issue_credit_CT(core, link, 1);
+
+    return moved;
 }
 
 
@@ -460,7 +464,6 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
     // If settled and there is a peer, the peer shall be settled and unlinked.  It shall not
     //   be freed until the connection-side thread settles the PN delivery.
     //
-
     if (disp != dlv->disposition) {
         //
         // Disposition has changed, propagate the change to the peer delivery.
@@ -475,15 +478,17 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
     if (settled) {
         if (peer) {
             peer->settled = true;
-            push = true;
             peer->peer = 0;
             dlv->peer  = 0;
-            if (peer->link)
-                qdr_delivery_remove_unsettled_CT(core, peer);
+            if (peer->link) {
+                bool moved = qdr_delivery_settled_CT(core, peer);
+                if (moved)
+                    push = true;
+            }
         }
 
         if (dlv->link)
-            qdr_delivery_remove_unsettled_CT(core, dlv);
+            qdr_delivery_settled_CT(core, dlv);
 
         qdr_delivery_free(dlv);
     }
