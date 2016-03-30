@@ -611,7 +611,8 @@ qd_field_iterator_t *qd_field_iterator_dup(const qd_field_iterator_t *iter)
         return 0;
 
     qd_field_iterator_t *dup = new_qd_field_iterator_t();
-    *dup = *iter;
+    if (dup)
+        *dup = *iter;
     return dup;
 }
 

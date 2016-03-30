@@ -200,7 +200,7 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
 
     if (ctx->msg)
         qd_message_free(ctx->msg);
-    if(ctx->source)
+    if (ctx->source)
         qd_message_free(ctx->source);
 
     free_qd_management_context_t(ctx);

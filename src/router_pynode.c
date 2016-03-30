@@ -184,8 +184,10 @@ static PyObject* qd_set_valid_origins(PyObject *self, PyObject *args)
                 maskbit = PyInt_AS_LONG(PyList_GetItem(origin_list, idx));
                 qd_bitmask_set_bit(core_bitmask, maskbit);
             }
-        } else
+        } else {
             qd_bitmask_free(core_bitmask);
+            break;
+        }
 
         qdr_core_set_valid_origins(router->router_core, router_maskbit, core_bitmask);
     } while (0);

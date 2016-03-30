@@ -922,6 +922,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
+        return;
     }
 
     if (dir == QD_INCOMING) {
@@ -1224,7 +1225,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         // If the detach occurred via protocol, send a detach back.
         //
         if (dt != QD_LOST)
-            qdr_link_outbound_detach_CT(core, link, 0, 0);  // TODO - Fix error arg
+            qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NONE);  // TODO - Fix error arg
     } else {
         qdr_link_cleanup_CT(core, conn, link);
         free_qdr_link_t(link);

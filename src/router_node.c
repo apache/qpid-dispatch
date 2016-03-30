@@ -50,8 +50,8 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
     if (conn) {
         const qd_server_config_t *cf = qd_connection_config(conn);
 
-        *strip_annotations_in  = cf->strip_inbound_annotations;
-        *strip_annotations_out = cf->strip_outbound_annotations;
+        *strip_annotations_in  = cf ? cf->strip_inbound_annotations  : false;
+        *strip_annotations_out = cf ? cf->strip_outbound_annotations : false;
 
         if        (cf && strcmp(cf->role, router_role) == 0) {
             *strip_annotations_in  = false;

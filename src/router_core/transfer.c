@@ -424,7 +424,7 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
     qd_message_t *msg        = action->args.io.message;
 
     if (!discard) {
-        qdr_address_t *addr;
+        qdr_address_t *addr = 0;
 
         qd_address_iterator_reset_view(addr_field->iterator, ITER_VIEW_ADDRESS_HASH);
         qd_hash_retrieve(core->addr_hash, addr_field->iterator, (void**) &addr);
@@ -580,22 +580,23 @@ void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
 
 void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 {
-    if (!dlv || !dlv->link || dlv->where == QDR_DELIVERY_IN_UNDELIVERED)
+    if (!dlv || !dlv->link)
         return;
 
     qdr_link_t *link = dlv->link;
+    bool activate = false;
 
     sys_mutex_lock(link->conn->work_lock);
-    qdr_add_delivery_ref(&link->updated_deliveries, dlv);
-
-    //
-    // Put this link on the connection's list of links with delivery activity.
-    //
-    qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+    if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
+        qdr_add_delivery_ref(&link->updated_deliveries, dlv);
+        qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+        activate = true;
+    }
     sys_mutex_unlock(link->conn->work_lock);
 
     //
     // Activate the connection
     //
-    qdr_connection_activate_CT(core, link->conn);
+    if (activate)
+        qdr_connection_activate_CT(core, link->conn);
 }

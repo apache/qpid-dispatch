@@ -351,7 +351,7 @@ void qdra_config_address_create_CT(qdr_core_t          *core,
 
         bool waypoint  = waypoint_field  ? qd_parse_as_bool(waypoint_field) : false;
         int  in_phase  = in_phase_field  ? qd_parse_as_int(in_phase_field)  : -1;
-        int  out_phase = out_phase_field ? qd_parse_as_int(in_phase_field)  : -1;
+        int  out_phase = out_phase_field ? qd_parse_as_int(out_phase_field) : -1;
 
         //
         // Handle the address-phasing logic.  If the phases are provided, use them.  Otherwise

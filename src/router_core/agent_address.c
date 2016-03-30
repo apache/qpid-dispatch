@@ -182,7 +182,7 @@ void qdra_address_get_CT(qdr_core_t          *core,
                          qdr_query_t         *query,
                          const char          *qdr_address_columns[])
 {
-    qdr_address_t *addr;
+    qdr_address_t *addr = 0;
 
     if (identity) //If there is identity, ignore the name
         qd_hash_retrieve(core->addr_hash, identity, (void*) &addr);

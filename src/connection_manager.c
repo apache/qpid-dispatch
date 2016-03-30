@@ -326,9 +326,10 @@ void qd_config_connector_free(qd_config_connector_t *cc)
 
 void qd_config_listener_free(qd_config_listener_t *cl)
 {
-    if (cl->listener)
+    if (cl->listener) {
         qd_server_listener_close(cl->listener);
         qd_server_listener_free(cl->listener);
+    }
     free(cl);
 }
 
