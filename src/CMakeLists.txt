@@ -105,7 +105,7 @@ set_target_properties(qpid-dispatch PROPERTIES
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )
 install(TARGETS qpid-dispatch
-  LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+  LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
 
 # Set in parent scope for calling cmake file.
 set (QPID_DISPATCH_LIB "libqpid-dispatch.so.${SO_VERSION_MAJOR}" PARENT_SCOPE)
