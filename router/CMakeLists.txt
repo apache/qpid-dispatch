@@ -34,5 +34,6 @@ set(router_SOURCES
 
 add_executable(qdrouterd ${router_SOURCES})
 target_link_libraries(qdrouterd qpid-dispatch ${proton_lib})
+set_target_properties(qdrouterd PROPERTIES LINK_FLAGS "${DISPATCH_LINK_FLAGS}")
 
 install(TARGETS qdrouterd RUNTIME DESTINATION sbin)

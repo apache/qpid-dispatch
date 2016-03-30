@@ -86,6 +86,7 @@ set(QPID_DISPATCH_CONFDIR ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
 find_library(pthread_lib pthread)
 find_library(dl_lib dl)
 find_library(rt_lib rt)
+set(DISPATCH_LIBRARIES ${pthread_lib} ${rt_lib} ${dl_lib})
 find_package(Proton 0.12 REQUIRED)
 
 ##
@@ -116,7 +117,38 @@ add_compile_options(-pthread)
 add_compile_options(-Wall)
 add_compile_options(-Werror)
 add_compile_options(-std=gnu99)
-set(CATCH_UNDEFINED "-Wl,--no-undefined")
+set(DISPATCH_LINK_FLAGS "-Wl,--no-undefined")
+
+# turn on run time thread debugging
+# Be aware! This imposes a ~5-15x decrease in performance!
+#
+option(SANITIZE_THREADS "Enable thread debugging" OFF)
+if (SANITIZE_THREADS)
+  # hack: some packages do not create libtsan.so link:
+  LIST(APPEND CMAKE_FIND_LIBRARY_SUFFIXES ".so.0")
+  find_library(TSAN_LIB tsan)
+  LIST(REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES ".so.0")
+  if (TSAN_LIB)
+    include(CheckCCompilerFlag)
+    LIST(APPEND CMAKE_REQUIRED_LIBRARIES ${TSAN_LIB})
+    CHECK_C_COMPILER_FLAG("-fsanitize=thread" CAN_SANITIZE)
+    CHECK_C_COMPILER_FLAG("-fno-sanitize-recover" SANITIZE_ERROR)
+    LIST(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES ${TSAN_LIB})
+    if (CAN_SANITIZE)
+      add_compile_options(-fsanitize=thread)
+      SET(DISPATCH_LIBRARIES ${DISPATCH_LIBRARIES} ${TSAN_LIB})
+      SET(DISPATCH_LINK_FLAGS "${DISPATCH_LINK_FLAGS} -fsanitize=thread")
+      if (SANITIZE_ERROR)
+        add_compile_options(-fno-sanitize-recover)
+      SET(DISPATCH_LINK_FLAGS "${DISPATCH_LINK_FLAGS} -fno-sanitize-recover")
+      endif (SANITIZE_ERROR)
+    else (CAN_SANITIZE)
+      MESSAGE(STATUS "SANITIZE_THREADS ignored: no compiler support")
+    endif (CAN_SANITIZE)
+  else (TSAN_LIB)
+    MESSAGE(STATUS "SANITIZE_THREADS ignored: libtsan not found")
+  endif (TSAN_LIB)
+endif (SANITIZE_THREADS)
 
 ##
 ## Header file installation
