@@ -202,6 +202,7 @@ static const char *qd_transport_get_user(qd_connection_t *conn, pn_transport_t *
                     out = pn_ssl_get_cert_fingerprint(pn_ssl(tport), fingerprint, fingerprint_length + 1, PN_SSL_SHA512);
                 }
 
+                (void) out;  // avoid 'out unused' compiler warnings if NDEBUG undef'ed
                 assert (out != PN_ERR);
 
                 uid_length += fingerprint_length;

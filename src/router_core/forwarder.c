@@ -352,7 +352,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
                             bool             control)
 {
     qdr_link_t *out_link = 0;
-    uint32_t    link_backlog;
+    uint32_t    link_backlog = UINT32_MAX;
     bool        transit = false;
 
     //
