@@ -372,6 +372,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
 
     switch (pn_event_type(event)) {
     case PN_CONNECTION_REMOTE_OPEN :
+        qd_connection_set_user(qd_conn);
         if (pn_connection_state(conn) & PN_LOCAL_UNINIT) {
             // This Open is an externally initiated connection
             // Let policy engine decide
