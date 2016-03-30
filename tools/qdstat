@@ -56,7 +56,7 @@ def parse_args(argv):
     opts, args = parser.parse_args(args=argv)
 
     if not opts.show:
-        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, -m, -h, -L, -LR or --log.")
+        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, -m, -h, -L, -R or --log.")
 
     return opts, args
 
