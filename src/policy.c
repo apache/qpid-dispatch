@@ -408,14 +408,12 @@ void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
     pn_connection_t *conn = qd_connection_pn(qd_conn);
     qd_dispatch_t *qd = qd_conn->server->qd;
     qd_policy_t *policy = qd->policy;
-    pn_transport_t *pn_trans = pn_connection_transport(conn);
-    const char *username = pn_transport_get_user(pn_trans);
     const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
     const char *app = pn_connection_remote_hostname(conn);
     qd_log(policy->log_source, 
            POLICY_LOG_LEVEL, 
            "Policy AMQP Begin Session denied due to session limit. user: %s, hostip: %s, app: %s", 
-           username, hostip, app);
+           qd_conn->user_id, hostip, app);
 
     qd_conn->policy_settings->denialCounts->sessionDenied++;
 }
@@ -460,14 +458,12 @@ void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn, char *
     pn_connection_t *conn = qd_connection_pn(qd_conn);
     qd_dispatch_t *qd = qd_conn->server->qd;
     qd_policy_t *policy = qd->policy;
-    pn_transport_t *pn_trans = pn_connection_transport(conn);
-    const char *username = pn_transport_get_user(pn_trans);
     const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
     const char *app = pn_connection_remote_hostname(conn);
     qd_log(policy->log_source, 
            POLICY_LOG_LEVEL, 
            "Policy AMQP Attach Link denied due to %s limit. user: %s, hostip: %s, app: %s", 
-           s_or_r, username, hostip, app);
+           s_or_r, qd_conn->user_id, hostip, app);
 }
 
 
@@ -601,9 +597,6 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
 //
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
-    pn_connection_t *conn = qd_connection_pn(qd_conn);
-    pn_transport_t *pn_trans = pn_connection_transport(conn);
-    const char *username = pn_transport_get_user(pn_trans);
     if (qd_conn->policy_settings->maxSenders) {
         if (qd_conn->n_senders == qd_conn->policy_settings->maxSenders) {
             // Max sender limit specified and violated.
@@ -620,11 +613,11 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
     bool lookup;
     if (target && *target) {
         // a target is specified
-        lookup = _qd_policy_approve_link_name(username, qd_conn->policy_settings->targets, target);
+        lookup = _qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings->targets, target);
 
         qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
             "Approve sender link '%s' for user '%s': %s",
-            target, username, (lookup ? "ALLOW" : "DENY"));
+            target, qd_conn->user_id, (lookup ? "ALLOW" : "DENY"));
 
         if (!lookup) {
             _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
@@ -636,7 +629,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
         lookup = qd_conn->policy_settings->allowAnonymousSender;
         qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
             "Approve anonymous sender for user '%s': %s",
-            username, (lookup ? "ALLOW" : "DENY"));
+			qd_conn->user_id, (lookup ? "ALLOW" : "DENY"));
         if (!lookup) {
             _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
             return false;
@@ -648,9 +641,6 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
 
 bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
-    pn_connection_t *conn = qd_connection_pn(qd_conn);
-    pn_transport_t *pn_trans = pn_connection_transport(conn);
-    const char *username = pn_transport_get_user(pn_trans);
     if (qd_conn->policy_settings->maxReceivers) {
         if (qd_conn->n_receivers == qd_conn->policy_settings->maxReceivers) {
             // Max sender limit specified and violated.
@@ -668,7 +658,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
         bool lookup = qd_conn->policy_settings->allowDynamicSrc;
         qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
             "Approve dynamic source for user '%s': %s",
-            username, (lookup ? "ALLOW" : "DENY"));
+            qd_conn->user_id, (lookup ? "ALLOW" : "DENY"));
         // Dynamic source policy rendered the decision
         if (!lookup) {
             _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
@@ -678,11 +668,11 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     const char * source = pn_terminus_get_address(pn_link_remote_source(pn_link));
     if (source && *source) {
         // a source is specified
-        bool lookup = _qd_policy_approve_link_name(username, qd_conn->policy_settings->sources, source);
+        bool lookup = _qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings->sources, source);
 
         qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
             "Approve receiver link '%s' for user '%s': %s",
-            source, username, (lookup ? "ALLOW" : "DENY"));
+            source, qd_conn->user_id, (lookup ? "ALLOW" : "DENY"));
 
         if (!lookup) {
             _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
@@ -692,7 +682,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
         // A receiver with no remote source.
         qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
                "Approve receiver link '' for user '%s': DENY",
-               username);
+			   qd_conn->user_id);
 
         _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
         return false;
@@ -714,11 +704,7 @@ void qd_policy_amqp_open(void *context, bool discard)
 
         if (policy->enableAccessRules) {
             // Open connection or not based on policy.
-            // username = pn_connection_get_user(conn) returns blank when
-            // the transport returns 'anonymous'.
             pn_transport_t *pn_trans = pn_connection_transport(conn);
-            const char *username = pn_transport_get_user(pn_trans);
-
             const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
             const char *app = pn_connection_remote_hostname(conn);
             const char *conn_name = qdpn_connector_name(qd_conn->pn_cxtr);
@@ -728,12 +714,12 @@ void qd_policy_amqp_open(void *context, bool discard)
             qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
             memset(qd_conn->policy_settings, 0, sizeof(qd_policy_settings_t));
 
-            if (qd_policy_open_lookup_user(policy, username, hostip, app, conn_name, 
+            if (qd_policy_open_lookup_user(policy, qd_conn->user_id, hostip, app, conn_name,
                                            settings_name, SETTINGS_NAME_SIZE, conn_id,
                                            qd_conn->policy_settings) &&
                 settings_name[0]) {
                 // This connection is allowed by policy.
-                // Apply tranport policy settings
+                // Apply transport policy settings
                 if (qd_conn->policy_settings->maxFrameSize > 0)
                     pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
                 if (qd_conn->policy_settings->maxSessions > 0)
@@ -745,7 +731,7 @@ void qd_policy_amqp_open(void *context, bool discard)
             }
         } else {
             // This connection not subject to policy and implicitly allowed.
-            // Note that connections not goverened by policy have no policy_settings.
+            // Note that connections not governed by policy have no policy_settings.
         }
         if (connection_allowed) {
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
