@@ -21,6 +21,7 @@
 #include <string.h>
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
+#include "policy.h"
 #include <qpid/dispatch/container.h>
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/message.h>
@@ -267,6 +268,10 @@ static void notify_opened(qd_container_t *container, qd_connection_t *conn, void
     }
 }
 
+void policy_notify_opened(void *container, qd_connection_t *conn, void *context)
+{
+	notify_opened((qd_container_t *)container, (qd_connection_t *)conn, context);
+}
 
 static void notify_closed(qd_container_t *container, qd_connection_t *conn, void *context)
 {
@@ -367,11 +372,18 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
 
     switch (pn_event_type(event)) {
     case PN_CONNECTION_REMOTE_OPEN :
-        if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
-            pn_connection_open(conn);
-        qd_connection_set_user(qd_conn);
-        qd_connection_manager_connection_opened(qd_conn);
-        notify_opened(container, qd_conn, conn_context);
+        if (pn_connection_state(conn) & PN_LOCAL_UNINIT) {
+            // This Open is an externally initiated connection
+            // Let policy engine decide
+            qd_connection_set_event_stall(qd_conn, true);
+            qd_conn->open_container = (void *)container;
+            qd_conn->conn_context = conn_context;
+            qd_connection_invoke_deferred(qd_conn, qd_policy_amqp_open, qd_conn);
+        } else {
+            // This Open is in response to an internally initiated connection
+            qd_connection_manager_connection_opened(qd_conn);
+            notify_opened(container, qd_conn, conn_context);
+        }
         break;
 
     case PN_CONNECTION_REMOTE_CLOSE :
@@ -383,7 +395,13 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
     case PN_SESSION_REMOTE_OPEN :
         ssn = pn_event_session(event);
         if (pn_session_state(ssn) & PN_LOCAL_UNINIT) {
-            pn_session_set_incoming_capacity(ssn, 1000000);
+            if (qd_conn->policy_settings) {
+                if (!qd_policy_approve_amqp_session(ssn, qd_conn)) {
+                    break;
+                }
+                qd_conn->n_sessions++;
+            }
+            qd_policy_apply_session_settings(ssn, qd_conn);
             pn_session_open(ssn);
         }
         break;
@@ -400,6 +418,15 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                 if (pn_link_session(pn_link) == ssn) {
                     qd_link_t *qd_link = (qd_link_t *)pn_link_get_context(pn_link);
                     if (qd_link && qd_link->node) {
+                        if (qd_conn->policy_settings) {
+                            if (qd_link->direction == QD_OUTGOING) {
+                                qd_conn->n_senders--;
+                                assert(qd_conn->n_senders >= 0);
+                            } else {
+                                qd_conn->n_receivers--;
+                                assert(qd_conn->n_receivers >= 0);
+                            }
+                        }
                         qd_log(container->log_source, QD_LOG_NOTICE,
                                "Aborting link '%s' due to parent session end",
                                pn_link_name(pn_link));
@@ -409,6 +436,9 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                 }
                 pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
             }
+            if (qd_conn->policy_settings) {
+                qd_conn->n_sessions--;
+            }
             pn_session_close(ssn);
         }
         break;
@@ -416,10 +446,23 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
     case PN_LINK_REMOTE_OPEN :
         pn_link = pn_event_link(event);
         if (pn_link_state(pn_link) & PN_LOCAL_UNINIT) {
-            if (pn_link_is_sender(pn_link))
+            if (pn_link_is_sender(pn_link)) {
+               if (qd_conn->policy_settings) {
+                   if (!qd_policy_approve_amqp_receiver_link(pn_link, qd_conn)) {
+                        break;
+                    }
+                    qd_conn->n_senders++;
+                }
                 setup_outgoing_link(container, pn_link);
-            else
+            } else {
+                if (qd_conn->policy_settings) {
+                    if (!qd_policy_approve_amqp_sender_link(pn_link, qd_conn)) {
+                        break;
+                    }
+                    qd_conn->n_receivers++;
+                }
                 setup_incoming_link(container, pn_link);
+            }
         } else if (pn_link_state(pn_link) & PN_LOCAL_ACTIVE)
             handle_link_open(container, pn_link);
         break;
@@ -433,8 +476,20 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             qd_detach_type_t dt = pn_event_type(event) == PN_LINK_REMOTE_CLOSE ? QD_CLOSED : QD_DETACHED;
             if (node)
                 node->ntype->link_detach_handler(node->context, qd_link, dt);
-            else if (qd_link->pn_link == pn_link)
+            else if (qd_link->pn_link == pn_link) {
+                if (qd_conn->policy_settings) {
+                    if (pn_link_is_sender(pn_link)) {
+                        qd_conn->n_senders--;
+                        assert (qd_conn->n_senders >= 0);
+                    } else {
+                        qd_conn->n_receivers--;
+                        assert (qd_conn->n_receivers >= 0);
+                    }
+                } else {
+                    // no policy - links not counted
+                }
                 pn_link_close(pn_link);
+            }
             if (qd_link->close_sess_with_link && qd_link->pn_sess &&
                 pn_link_state(pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED))
                 pn_session_close(qd_link->pn_sess);

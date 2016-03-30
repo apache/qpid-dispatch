@@ -59,6 +59,7 @@ set(qpid_dispatch_SOURCES
   log.c
   message.c
   parse.c
+  policy.c
   posix/driver.c
   posix/threading.c
   python_embedded.c

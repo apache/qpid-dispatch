@@ -178,9 +178,11 @@ void qdpn_listener_trace(qdpn_listener_t *listener, pn_trace_t trace);
 /** Accept a connection that is pending on the listener.
  *
  * @param[in] listener the listener to accept the connection on
+ * @param[in] policy function that accepts remote host name and returns 
+ *            decision to allow or deny this connection
  * @return a new connector for the remote, or NULL on error
  */
-qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *listener);
+qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *listener, void *policy, bool (*policy_fn)(void *, const char *));
 
 /** Access the application context that is associated with the listener.
  *
@@ -314,10 +316,17 @@ void qdpn_connector_set_context(qdpn_connector_t *connector, void *context);
 
 /** Access the name of the connector
  *
- * @param[in] connector the connector which will hole the name
+ * @param[in] connector the connector of interest
  * @return the name of the connector in the form of a null-terminated character string.
  */
 const char *qdpn_connector_name(const qdpn_connector_t *connector);
+
+/** Access the numeric host ip of the connector
+ *
+ * @param[in] connector the connector of interest
+ * @return the numeric host ip address of the connector in the form of a null-terminated character string.
+ */
+const char *qdpn_connector_hostip(const qdpn_connector_t *connector);
 
 /** Access the transport used by this connector.
  *

@@ -81,6 +81,7 @@ from .schema import ValidationError, SchemaEntity, EntityType
 from .qdrouter import QdSchema
 from ..router.message import Message
 from ..router.address import Address
+from ..policy.policy_manager import PolicyManager
 
 
 def dictstr(d):
@@ -154,6 +155,7 @@ class EntityAdapter(SchemaEntity):
         self.__dict__['_log'] = agent.log
         self.__dict__['_qd'] = agent.qd
         self.__dict__['_dispatch'] = agent.dispatch
+        self.__dict__['_policy'] = agent.policy
         self.__dict__['_implementations'] = []
 
     def validate(self, **kwargs):
@@ -277,6 +279,36 @@ class LogEntity(EntityAdapter):
 
     def __str__(self):
         return super(LogEntity, self).__str__().replace("Entity(", "LogEntity(")
+
+
+class PolicyEntity(EntityAdapter):
+    def __init__(self, agent, entity_type, attributes=None):
+        super(PolicyEntity, self).__init__(agent, entity_type, attributes, validate=False)
+        # Policy is a mix of configuration and operational entity.
+        # The statistics attributes are operational not configured.
+        self._add_implementation(
+            CImplementation(agent.qd, entity_type, self._dispatch))
+
+    def create(self):
+        self._qd.qd_dispatch_configure_policy(self._dispatch, self)
+        self._qd.qd_dispatch_register_policy_manager(self._dispatch, self._policy)
+
+    def _identifier(self):
+        return self.attributes.get('module')
+
+
+class PolicyRulesetEntity(EntityAdapter):
+    def create(self):
+        self._policy.create_ruleset(self.attributes)
+
+    def _identifier(self):
+        return self.attributes.get('applicationName')
+
+
+class PolicyStatsEntity(EntityAdapter):
+    def _identifier(self):
+        return self.attributes.get('applicationName')
+
 
 def _addr_port_identifier(entity):
     for attr in ['addr', 'port']: # Set default values if need be
@@ -671,6 +703,7 @@ class Agent(object):
         self.entities = EntityCache(self)
         self.request_lock = Lock()
         self.log_adapter = LogAdapter("AGENT")
+        self.policy = PolicyManager(self)
         self.management = self.create_entity({"type": "management"})
         self.add_entity(self.management)
 

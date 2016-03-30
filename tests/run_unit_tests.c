@@ -29,6 +29,7 @@ int alloc_tests(void);
 int server_tests(qd_dispatch_t *qd);
 int parse_tests(void);
 int compose_tests(void);
+int policy_tests(void);
 
 int main(int argc, char** argv)
 {
@@ -53,6 +54,7 @@ int main(int argc, char** argv)
 #if USE_MEMORY_POOL
     result += alloc_tests();
 #endif
+    result += policy_tests();
     qd_dispatch_free(qd);       // dispatch_free last.
 
     return result;

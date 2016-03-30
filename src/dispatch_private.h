@@ -40,6 +40,7 @@ typedef struct qd_config_address_t   qd_config_address_t;
 #include <qpid/dispatch/container.h>
 #include <qpid/dispatch/router.h>
 #include <qpid/dispatch/connection_manager.h>
+#include "policy.h"
 #include "server_private.h"
 #include "router_private.h"
 
@@ -49,6 +50,8 @@ struct qd_dispatch_t {
     qd_router_t             *router;
     void                    *agent;
     qd_connection_manager_t *connection_manager;
+    qd_policy_t             *policy;
+    void                    *dl_handle;
 
     int    thread_count;
     char  *container_name;
@@ -105,6 +108,16 @@ qd_error_t qd_dispatch_configure_lrp(qd_dispatch_t *qd, qd_entity_t *entity);
  * Configure a route, must be called after qd_dispatch_prepare
  */
 qd_error_t qd_dispatch_configure_route(qd_dispatch_t *qd, qd_entity_t *entity);
+
+/**
+ * Configure security policy, must be called after qd_dispatch_prepare
+ */
+qd_error_t qd_dispatch_configure_policy(qd_dispatch_t *qd, qd_entity_t *entity);
+
+/**
+ * Configure security policy manager, must be called after qd_dispatch_prepare
+ */
+qd_error_t qd_dispatch_register_policy_manager(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * \brief Configure the logging module from the

@@ -28,6 +28,7 @@ include_directories(
 set(unit_test_SOURCES
     compose_test.c
     parse_test.c
+    policy_test.c
     run_unit_tests.c
     server_test.c
     timer_test.c
@@ -65,6 +66,7 @@ add_test(unit_tests            ${TEST_WRAP} --vg unit_tests ${CMAKE_CURRENT_SOUR
 # Unit test python modules
 add_test(router_engine_test    ${TEST_WRAP} -m unittest -v router_engine_test)
 add_test(managemet_test        ${TEST_WRAP} -m unittest -v management)
+add_test(router_policy_test    ${TEST_WRAP} -m unittest -v router_policy_test)
 
 # System test python modules
 foreach(py_test_module
@@ -72,6 +74,7 @@ foreach(py_test_module
     system_tests_link_routes
     system_tests_management
     system_tests_one_router
+    system_tests_policy
     system_tests_protocol_family
     system_tests_qdmanage
     system_tests_qdstat
@@ -93,9 +96,17 @@ list(APPEND SYSTEM_TEST_FILES
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/A-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/A-ssl.conf)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-2/B-ssl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/config-2/B-ssl.conf)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/system_tests_policy.py.in ${CMAKE_CURRENT_BINARY_DIR}/system_tests_policy.py)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/policy-1/test-policy-conf-includes-folder.conf.in ${CMAKE_CURRENT_BINARY_DIR}/policy-1/test-policy-conf-includes-folder.conf)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/policy-2/policy-photoserver-sasl.conf.in ${CMAKE_CURRENT_BINARY_DIR}/policy-2/policy-photoserver-sasl.conf)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/policy-2/test-router-with-policy.json.in ${CMAKE_CURRENT_BINARY_DIR}/policy-2/test-router-with-policy.json)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_certs DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/displayname_files DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/policy-1/management-access.json  DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/policy-1/)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/policy-1/policy-boardwalk.json   DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/policy-1/)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/policy-1/policy-safari.json      DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/policy-1/)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/policy-2/policy-photoserver-sasl.sasldb  DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/policy-2)
 
 # following install() functions will be called only if you do a make "install"
 install(FILES ${SYSTEM_TEST_FILES}
@@ -114,4 +125,3 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/config-2
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_certs
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests)
-

@@ -100,8 +100,15 @@ struct qd_connection_t {
     qd_user_fd_t             *ufd;
     uint64_t                  connection_id; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
     const char               *user_id; // A unique identifier for the user on the connection. This is currently populated  from the client ssl cert. See ssl_uid_format in server.h for more info
+    qd_policy_settings_t     *policy_settings;
+    int                       n_sessions;
+    int                       n_senders;
+    int                       n_receivers;
+    void                     *open_container;
+    void                     *conn_context;
     qd_deferred_call_list_t   deferred_calls;
     sys_mutex_t              *deferred_call_lock;
+    bool                      event_stall;
 };
 
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);

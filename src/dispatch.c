@@ -30,6 +30,7 @@
 #include "log_private.h"
 #include "router_private.h"
 #include "message_private.h"
+#include "policy.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include <dlfcn.h>
@@ -42,6 +43,8 @@ qd_server_t    *qd_server(qd_dispatch_t *qd, int tc, const char *container_name,
 void            qd_server_free(qd_server_t *server);
 qd_container_t *qd_container(qd_dispatch_t *qd);
 void            qd_container_free(qd_container_t *container);
+qd_policy_t    *qd_policy(qd_dispatch_t *qd);
+void            qd_policy_free(qd_policy_t *policy);
 qd_router_t    *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id);
 void            qd_router_setup_late(qd_dispatch_t *qd);
 void            qd_router_free(qd_router_t *router);
@@ -67,6 +70,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_message_initialize();
     if (qd_error_code()) { qd_dispatch_free(qd); return 0; }
     qd->log_source = qd_log_source("DISPATCH");
+    qd->dl_handle = 0;
     return qd;
 }
 
@@ -76,15 +80,15 @@ STATIC_ASSERT(sizeof(long) >= sizeof(void*), pointer_is_bigger_than_long);
 
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
 {
-    void *handle = dlopen(QPID_DISPATCH_LIB, RTLD_LAZY | RTLD_NOLOAD);
-    if (!handle)
+    qd->dl_handle = dlopen(QPID_DISPATCH_LIB, RTLD_LAZY | RTLD_NOLOAD);
+    if (!qd->dl_handle)
         return qd_error(QD_ERROR_RUNTIME, "Cannot locate library %s", QPID_DISPATCH_LIB);
 
     qd_python_lock_state_t lock_state = qd_python_lock();
     PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.management.config");
     PyObject *configure_dispatch = module ? PyObject_GetAttrString(module, "configure_dispatch") : NULL;
     Py_XDECREF(module);
-    PyObject *result = configure_dispatch ? PyObject_CallFunction(configure_dispatch, "(lls)", (long)qd, handle, config_path) : NULL;
+    PyObject *result = configure_dispatch ? PyObject_CallFunction(configure_dispatch, "(lls)", (long)qd, qd->dl_handle, config_path) : NULL;
     Py_XDECREF(configure_dispatch);
     if (!result) qd_error_py();
     Py_XDECREF(result);
@@ -155,12 +159,45 @@ qd_error_t qd_dispatch_configure_auto_link(qd_dispatch_t *qd, qd_entity_t *entit
     return qd_error_code();
 }
 
+qd_error_t qd_dispatch_configure_policy(qd_dispatch_t *qd, qd_entity_t *entity)
+{
+    qd_error_t err;
+    err = qd_entity_configure_policy(qd->policy, entity);
+    if (err)
+        return err;
+    return QD_ERROR_NONE;
+}
+
+
+qd_error_t qd_dispatch_register_policy_manager(qd_dispatch_t *qd, qd_entity_t *entity)
+{
+    return qd_register_policy_manager(qd->policy, entity);
+}
+
+
+long qd_dispatch_policy_c_counts_alloc()
+{
+    return qd_policy_c_counts_alloc();
+}
+
+
+void qd_dispatch_policy_c_counts_free(long ccounts)
+{
+    qd_policy_c_counts_free(ccounts);
+}
+
+void qd_dispatch_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
+{
+    qd_policy_c_counts_refresh(ccounts, entity);
+}
+
 qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
 {
     qd->server             = qd_server(qd, qd->thread_count, qd->container_name, qd->sasl_config_path, qd->sasl_config_name);
     qd->container          = qd_container(qd);
     qd->router             = qd_router(qd, qd->router_mode, qd->router_area, qd->router_id);
     qd->connection_manager = qd_connection_manager(qd);
+    qd->policy             = qd_policy(qd);
     return qd_error_code();
 }
 
@@ -177,6 +214,7 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     free(qd->container_name);
     free(qd->router_area);
     qd_connection_manager_free(qd->connection_manager);
+    qd_policy_free(qd->policy);
     Py_XDECREF((PyObject*) qd->agent);
     qd_router_free(qd->router);
     qd_container_free(qd->container);

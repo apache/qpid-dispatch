@@ -155,7 +155,7 @@ BUILTIN_TYPES = OrderedDict(
                           Type("entityId", str),
                           Type("integer", int),
                           Type("list", list),
-                          Type("map", map),
+                          Type("map", dict),
                           BooleanType()])
 
 def get_type(rep):

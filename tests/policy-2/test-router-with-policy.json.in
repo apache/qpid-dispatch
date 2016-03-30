@@ -1,0 +1,170 @@
+[
+    ["container", {
+	"containerName": "dispatch",
+	"saslConfigName": "policy-photoserver-sasl",
+	"saslConfigPath": "${CMAKE_CURRENT_BINARY_DIR}/policy-2",
+	"debugDump": "qddebug.txt"
+    }],
+    ["listener", {
+	"addr": "0.0.0.0",
+	"saslMechanisms": "ANONYMOUS PLAIN",
+	"authenticatePeer": "no",
+	"idleTimeoutSeconds": "120",
+	"port": 21000
+    }],
+    ["listener", {
+	"addr": "0.0.0.0",
+	"saslMechanisms": "PLAIN",
+	"authenticatePeer": "no",
+	"idleTimeoutSeconds": "120",
+	"port": 21001
+    }],
+    ["log", {
+	"source": "true",
+	"enable": "trace+",
+	"module": "DEFAULT"
+    }],
+    ["policy", {
+	"maximumConnections": 20,
+	"enableAccessRules": "true"
+    }],
+# Some ruleset
+    ["policyRuleset", {
+      "applicationName": "photoserver",
+      "maxConnections": 50,
+      "maxConnPerUser": 5,
+      "maxConnPerHost": 20,
+      "userGroups": {
+        "anonymous":       "anonymous",
+        "users":           "u1, u2",
+        "paidsubscribers": "p1, p2",
+        "test":            "zeke, ynot",
+        "admin":           "alice, bob",
+        "superuser":       "ellen"
+      },
+      "ingressHostGroups": {
+        "Ten18":     "10.18.0.0-10.18.255.255",
+        "EllensWS":  "72.135.2.9",
+        "TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255",
+        "localhost": "127.0.0.1, ::1",
+        "TheWorld":  "*"
+      },
+      "ingressPolicies": {
+        "anonymous":       "TheWorld",
+        "users":           "TheWorld",
+        "paidsubscribers": "TheWorld",
+        "test":            "TheLabs",
+        "admin":           "Ten18, TheLabs, localhost",
+        "superuser":       "EllensWS, localhost"
+      },
+      "connectionAllowDefault": true,
+      "settings": {
+        "anonymous" : {
+          "maxFrameSize":     111111,
+          "maxMessageSize":   111111,
+          "maxSessionWindow": 111111,
+          "maxSessions":           1,
+          "maxSenders":           11,
+          "maxReceivers":         11,
+          "allowDynamicSrc":      false,
+          "allowAnonymousSender": false,
+          "sources": "public",
+          "targets": ""
+        },
+        "users" : {
+          "maxFrameSize":     222222,
+          "maxMessageSize":   222222,
+          "maxSessionWindow": 222222,
+          "maxSessions":           2,
+          "maxSenders":           22,
+          "maxReceivers":         22,
+          "allowDynamicSrc":      false,
+          "allowAnonymousSender": false,
+          "sources": "public, private",
+          "targets": "public"
+        },
+        "paidsubscribers" : {
+          "maxFrameSize":     333333,
+          "maxMessageSize":   333333,
+          "maxSessionWindow": 333333,
+          "maxSessions":           3,
+          "maxSenders":           33,
+          "maxReceivers":         33,
+          "allowDynamicSrc":      true,
+          "allowAnonymousSender": false,
+          "sources": "public, private",
+          "targets": "public, private"
+        },
+        "test" : {
+          "maxFrameSize":     444444,
+          "maxMessageSize":   444444,
+          "maxSessionWindow": 444444,
+          "maxSessions":           4,
+          "maxSenders":           44,
+          "maxReceivers":         44,
+          "allowDynamicSrc":      true,
+          "allowAnonymousSender": true,
+          "sources": "private",
+          "targets": "private"
+        },
+        "admin" : {
+          "maxFrameSize":     555555,
+          "maxMessageSize":   555555,
+          "maxSessionWindow": 555555,
+          "maxSessions":           5,
+          "maxSenders":           55,
+          "maxReceivers":         55,
+          "allowDynamicSrc":      true,
+          "allowAnonymousSender": true,
+          "sources": "public, private, management",
+          "targets": "public, private, management"
+        },
+        "superuser" : {
+          "maxFrameSize":     666666,
+          "maxMessageSize":   666666,
+          "maxSessionWindow": 666666,
+          "maxSessions":           6,
+          "maxSenders":           66,
+          "maxReceivers":         66,
+          "allowDynamicSrc":      false,
+          "allowAnonymousSender": false,
+          "sources": "public, private, management, root",
+          "targets": "public, private, management, root"
+        },
+        "default" : {
+          "maxFrameSize":     222222,
+          "maxMessageSize":   222222,
+          "maxSessionWindow": 222222,
+          "maxSessions":           2,
+          "maxSenders":           22,
+          "maxReceivers":         22,
+          "allowDynamicSrc":      false,
+          "allowAnonymousSender": false,
+          "sources": "public, private",
+          "targets": "public"
+        }
+      }
+  }],
+  ["policyRuleset", {
+      "applicationName": "0.0.0.0",
+      "maxConnections": 50,
+      "maxConnPerUser": 5,
+      "maxConnPerHost": 20,
+      "connectionAllowDefault": true,
+      "settings": {
+        "default" : {
+          "maxFrameSize":     222222,
+          "maxMessageSize":   222222,
+          "maxSessionWindow": 222222,
+          "maxSessions":           2,
+          "maxSenders":           22,
+          "maxReceivers":         22,
+          "allowDynamicSrc":      true,
+          "allowAnonymousSender": true,
+          "sources": "public, private, $management",
+          "targets": "public, private, $management"
+        }
+      }
+    }
+  ]
+]

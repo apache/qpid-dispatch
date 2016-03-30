@@ -735,6 +735,7 @@
                         "CONFIG",
                         "ERROR",
                         "DISPATCH",
+                        "POLICY",
                         "DEFAULT"
                     ],
                     "required": true,
@@ -1232,6 +1233,133 @@
                 "home": {"type": "string", "description": "The full path to the html/css/js files for the console."},
                 "args": {"type": "string", "description": "Optional args to pass the proxy program for logging, authentication, etc."}  
 
+            }
+        },
+
+        "policy": {
+            "description": "Defines global connection limit",
+            "extends": "configurationEntity",
+            "singleton": true,
+            "attributes": {
+                "maximumConnections": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Global maximum number of concurrent client connections allowed. Zero implies no limit. This limit is always enforced even if no other policy settings have been defined.",
+                    "required": false,
+                    "create": true
+                },
+                "enableAccessRules": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable user rule set processing and connection denial.",
+                    "required": false,
+                    "create": true
+                },
+                "policyFolder": {
+                    "type": "path",
+                    "default": "",
+                    "description": "The path to a folder that holds policyRuleset definition .json files. For a small system the rulesets may all be defined in this file. At a larger scale it is better to have the policy files in their own folder and to have none of the rulesets defined here. All rulesets in all .json files in this folder are processed.",
+                    "required": false,
+                    "create": true
+                },
+                "connectionsProcessed": {"type": "integer", "graph": true},
+                "connectionsDenied": {"type": "integer", "graph": true},
+                "connectionsCurrent": {"type": "integer", "graph": true}
+            }
+        },
+
+        "policyRuleset": {
+            "description": "Per application definition of the locations from which users may connect and the groups to which users belong.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE"],
+            "attributes": {
+                "applicationName": {
+                    "type": "string",
+                    "description": "The application name.",
+                    "required": true
+                },
+                "maxConnections": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Maximum number of concurrent client connections allowed. Zero implies no limit.",
+                    "required": false,
+                    "create": true
+                },
+                "maxConnPerUser": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Maximum number of concurrent client connections allowed for any single user. Zero implies no limit.",
+                    "required": false,
+                    "create": true
+                },
+                "maxConnPerHost": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "Maximum number of concurrent client connections allowed for any remote host. Zero implies no limit.",
+                    "required": false,
+                    "create": true
+                },
+                "userGroups": {
+                    "type": "map",
+                    "description": "A map where each key is a user group name and the corresponding value is a CSV string naming the users in that group. Users who are assigned to one or more groups are deemed 'restricted'. Restricted users are subject to connection ingress policy and are assigned policy settings based on the assigned user groups. Unrestricted users may be allowed or denied. If unrestricted users are allowed to connect then they are assigned to user group default.",
+                    "required": false,
+                    "create": true
+                },
+                "ingressHostGroups": {
+                    "type": "map",
+                    "description": "A map where each key is an ingress host group name and the corresponding value is a CSV string naming the IP addresses or address ranges in that group. IP addresses may be FQDN strings or numeric IPv4 or IPv6 host addresses. A host range is two host addresses of the same address family separated with a hyphen.  The wildcard host address '*' represents any host address.",
+                    "required": false,
+                    "create": true
+                },
+                "ingressPolicies": {
+                    "type": "map",
+                    "description": "A map where each key is a user group name and the corresponding value is a CSV string naming the ingress host group names that restrict the ingress host for the user group. Users who are members of the user group are allowed to connect only from a host in one of the named ingress host groups.",
+                    "required": false,
+                    "create": true
+                },
+                "connectionAllowDefault": {
+                    "type": "boolean",
+                    "description": "Unrestricted users, those who are not members of a defined user group, are allowed to connect to this application. Unrestricted users are assigned to the 'default' user group and receive 'default' settings.",
+                    "default": false,
+                    "required": false,
+                    "create": true
+                },
+                "settings": {
+                    "type": "map",
+                    "description": "A map where each key is a user group name and the value is a map of the corresponding settings for that group.",
+                    "required": false,
+                    "create": true
+                }
+            }
+        },
+
+        "policyStats": {
+            "description": "Per application connection and access statistics.",
+            "extends": "operationalEntity",
+            "attributes": {
+                "applicationName": {
+                    "type": "string",
+                    "description": "The application name."
+                },
+                "connectionsApproved": {"type": "integer", "graph": true},
+                "connectionsDenied": {"type": "integer", "graph": true},
+                "connectionsCurrent": {"type": "integer", "graph": true},
+                "perUserState": {
+                    "type": "map",
+                    "description": "A map where the key is the authenticated user name and the value is a list of the user's connections."
+                },
+                "perHostState": {
+                    "type": "map",
+                    "description": "A map where the key is the host name and the value is a list of the host's connections."
+                },
+
+                "sessionDenied": {"type": "integer", "graph": true},
+                "senderDenied": {"type": "integer", "graph": true},
+                "receiverDenied": {"type": "integer", "graph": true},
+                "dynamicSrcDenied": {"type": "integer", "graph": true},
+                "anonymousSenderDenied": {"type": "integer", "graph": true},
+                "linkSourceDenied": {"type": "integer", "graph": true},
+                "linkTargetDenied": {"type": "integer", "graph": true}
             }
         },
 
