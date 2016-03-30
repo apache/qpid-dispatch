@@ -18,6 +18,7 @@
 #
 
 import unittest, json
+import os
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT
 from subprocess import PIPE, STDOUT
 from proton import ConnectionException
@@ -78,11 +79,12 @@ class LoadPolicyFromFolder(TestCase):
     def setUpClass(cls):
         """Start the router"""
         super(LoadPolicyFromFolder, cls).setUpClass()
+        policy_config_path = os.path.join(cls.top_dir, 'policy-1')
         config = Qdrouterd.Config([
             ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Policy2'}),
             ('router', {'mode': 'standalone', 'routerId': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
-            ('policy', {'maximumConnections': 2, 'policyFolder': '${CMAKE_CURRENT_BINARY_DIR}/policy-1/', 'enableAccessRules': 'true'})
+            ('policy', {'maximumConnections': 2, 'policyFolder': policy_config_path, 'enableAccessRules': 'true'})
         ])
 
         cls.router = cls.tester.qdrouterd('conn-limit-router', config, wait=True)
