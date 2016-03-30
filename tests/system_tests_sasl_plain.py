@@ -76,7 +76,6 @@ sql_select: dummy select
 
         x_listener_port = cls.tester.get_port()
         y_listener_port = cls.tester.get_port()
-        sasl_config_path = os.path.join(cls.top_dir, 'sasl_configs')
 
         router('X', [
                      ('listener', {'addr': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
