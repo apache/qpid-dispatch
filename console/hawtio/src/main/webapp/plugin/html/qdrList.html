@@ -34,8 +34,15 @@ under the License.
             <div ng-show="selectedRecordName === selectedEntity" class="no-content">There are no {{selectedEntity}}s</div>
             <div ng-hide="selectedRecordName === selectedEntity" ng-grid="details"></div>
         </div>
+        <div ng-show="currentMode.id === 'delete'">
+            <div class="delete" ng-show="selectedRecordName !== selectedEntity">
+                <button class="btn btn-primary" ng-click="remove()">Delete</button> {{selectedRecordName}}
+            </div>
+            <div ng-hide="selectedRecordName !== selectedEntity">
+                There are no {{selectedEntity}}s
+            </div>
+        </div>
         <div class="operations" ng-show="currentMode.id === 'operations'">
-            <!-- <div ng-grid="detailsCREATE"></div> -->
             <fieldset ng-show="operation != ''">
                 <table>
                     <tr>

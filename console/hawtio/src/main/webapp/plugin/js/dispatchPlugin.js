@@ -5,6 +5,9 @@
  * The main entry point for the QDR module
  *
  */
+$.getScript('https://cdn.rawgit.com/angular-ui/ui-slider/master/src/slider.js', function() {
+	hawtioPluginLoader.addModule('ui.slider');
+});
 var QDR = (function(QDR) {
 
   /**
@@ -52,7 +55,7 @@ var QDR = (function(QDR) {
    * workspace, viewRegistry and layoutFull used by the
    * run function
    */
-  QDR.module = angular.module('dispatch_plugin', ['bootstrap', 'jsonFormatter', 'hawtio-ui', 'hawtio-forms', 'ui.bootstrap.dialog', 'hawtioCore'])
+  QDR.module = angular.module('dispatch_plugin', ['bootstrap', 'hawtio-ui', 'hawtio-forms', 'ui.bootstrap.dialog', 'hawtioCore'])
       .config(function($routeProvider) {
         /**
          * Here we define the route for our plugin.  One note is
@@ -88,12 +91,9 @@ var QDR = (function(QDR) {
 			$compileProvider.urlSanitizationWhitelist(/^\s*(https?|ftp|mailto|file|blob):/);
 			cur = $compileProvider.urlSanitizationWhitelist();
 	  })
+	  .config(function( $controllerProvider, $provide, $compileProvider ) {
 
-	  .config(function (JSONFormatterConfigProvider) {
-			// Enable the hover preview feature
-			JSONFormatterConfigProvider.hoverPreviewEnabled = true;
 	  })
-
 	  .filter('to_trusted', function($sce){
 			return function(text) {
 				return $sce.trustAsHtml(text);
@@ -141,7 +141,7 @@ var QDR = (function(QDR) {
 		Core.addCSS(QDR.contextPath + "plugin/css/dispatch.css");
 		Core.addCSS(QDR.contextPath + "plugin/css/qdrTopology.css");
 		Core.addCSS(QDR.contextPath + "plugin/css/plugin.css");
-		Core.addCSS("https://cdn.rawgit.com/mohsen1/json-formatter/master/dist/json-formatter.min.css");
+		//Core.addCSS("https://cdn.rawgit.com/mohsen1/json-formatter/master/dist/json-formatter.min.css");
 		Core.addCSS("https://cdnjs.cloudflare.com/ajax/libs/jquery.tipsy/1.0.2/jquery.tipsy.css");
 		Core.addCSS("https://code.jquery.com/ui/1.8.24/themes/base/jquery-ui.css");
 		Core.addCSS("https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css");
@@ -228,16 +228,6 @@ var QDR = (function(QDR) {
 
 })(QDR || {});
 
-$.getScript('https://cdn.rawgit.com/angular-ui/ui-slider/master/src/slider.js', function() {
-	hawtioPluginLoader.addModule('ui.slider');
-});
-$.getScript('https://cdn.rawgit.com/mohsen1/json-formatter/master/dist/json-formatter.min.js', function() {
-	hawtioPluginLoader.addModule('jsonFormatter');
-	// tell the hawtio plugin loader about our plugin so it can be
-	// bootstrapped with the rest of angular
-	hawtioPluginLoader.addModule(QDR.pluginName);
-});
-
 // force an more modern version of d3 to load
 $.getScript('https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.14/d3.min.js', function() {});
 // tooltips on the list page
@@ -245,6 +235,9 @@ $.getScript('https://cdn.rawgit.com/jaz303/tipsy/master/src/javascripts/jquery.t
 // tooltips on the topology page
 $.getScript('https://cdn.rawgit.com/briancray/tooltipsy/master/tooltipsy.min.js', function() {});
 
+// tell the hawtio plugin loader about our plugin so it can be
+// bootstrapped with the rest of angular
+hawtioPluginLoader.addModule(QDR.pluginName);
 
 
 

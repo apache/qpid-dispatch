@@ -66,6 +66,13 @@ var QDR = (function(QDR) {
 	        isValid: function () { return $scope.operations.indexOf(this.op) > -1 }
 	    },
 	    {
+	        content: '<a><i class="icon-remove"></i> Delete</a>',
+	        id: 'delete',
+	        op: 'DELETE',
+	        title: "Delete",
+	        isValid: function () { return $scope.operations.indexOf(this.op) > -1 }
+	    },
+	    {
 	        content: '<a><i class="icon-chart"></i> Chart</a>',
 	        id: 'charts',
 	        op: 'graph',
@@ -90,6 +97,11 @@ var QDR = (function(QDR) {
 		$scope.selectMode = function (mode) {
 			$scope.currentMode = mode;
 			if (mode.id === 'log') {
+				var ops = lookupOperations();
+				if (ops.indexOf("LOG") == -1) {
+					$scope.currentMode = $scope.modes[0]
+					return;
+				}
 				$scope.logResults = "getting recent log entries...";
 				QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, {}, $scope.currentMode.op, function (nodeName, entity, response, context) {
 					$scope.logResults = response.filter( function (entry) {
@@ -184,6 +196,10 @@ var QDR = (function(QDR) {
 				$scope.currentMode = $scope.modes[0];
 			else if ($scope.currentMode.id === 'log')
 				$scope.selectMode($scope.currentMode)
+			else if ($scope.currentMode.id === 'delete') {
+				// clicked on a tree node while on the delete screen -> switch to attribute screen
+				$scope.currentMode = $scope.modes[0];
+			}
 			if (selectedNode.data.typeName === "entity") {
 				$scope.selectedEntity = selectedNode.data.key;
 				$scope.operations = lookupOperations()
@@ -205,13 +221,17 @@ var QDR = (function(QDR) {
 			var schemaEntity = QDRService.schema.entityTypes[entityName]
 			for (attr in schemaEntity.attributes) {
 				var entity = schemaEntity.attributes[attr]
+				var value = ""
+				if (angular.isDefined(entity['default']))
+					value = entity['default']
 				row[attr] = {
-					value: "",
+					value: value,
 					type: entity.type,
 					graph: false,
 					title: entity.description,
 					aggregate: false,
-					aggregateTip: ''
+					aggregateTip: '',
+					'default': entity['default']
 				}
 			}
 			return row;
@@ -463,13 +483,6 @@ var QDR = (function(QDR) {
 			$scope.tableRows = info.rows;
 			updateEntityChildren(info.rows, info.expand);
 			fixTooltips();
-/*
-			// must apply scope here to update the tableRows before selecting the row
-			$scope.$apply();
-			if ($scope.gridDef.selectRow)
-				$scope.gridDef.selectRow(selectedRowIndex, true);
-			fixTooltips();
-*/
 		}
 
 	    var titleFromAlt = function (alt) {
@@ -597,7 +610,7 @@ var QDR = (function(QDR) {
 				QDR.log.info(note)
 				Core.notification('success', note);
 				$scope.selectMode($scope.modes[0]);
-				$scope.$apply();
+				restartUpdate();
 			}
 		}
 		$scope.ok = function () {
@@ -607,11 +620,15 @@ var QDR = (function(QDR) {
 				if (field.input === 'input') {
 					if (field.type === 'text' || field.type === 'disabled')
 						value = field.attributeValue;
-				}
-				if (field.input === 'select')
+				} else if (field.input === 'select') {
 					value = field.selected;
+				} else if (field.input === 'boolean') {
+					value = field.rawValue
+				}
+				if (value === "")
+					value = undefined;
 
-				if (value != field['default'] || field.required || (field.name === 'role')) {
+				if ((value && value != field['default']) || field.required || (field.name === 'role')) {
 					if (field.name !== 'identity')
 						attributes[field.name] = value
 				}
@@ -619,6 +636,10 @@ var QDR = (function(QDR) {
 					attributes.type = $scope.selectedEntity;
 
 			})
+			QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, gotMethodResponse)
+		}
+		$scope.remove = function () {
+			var attributes = {type: $scope.selectedEntity, name: $scope.selectedRecordName}
 			QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, gotMethodResponse)
 		}
 
@@ -731,3 +752,4 @@ var QDR = (function(QDR) {
     return QDR;
 
 } (QDR || {}));
+// messaging-ci-01.mw.lab.eng.bos.redhat.com

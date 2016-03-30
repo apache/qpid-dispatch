@@ -626,7 +626,7 @@ The response looks like:
 				application_properties.type = attrs.type;
 			if (attrs.name)
 				application_properties.name = attrs.name;
-	        self.sender.send({
+			var msg = {
 	                body: attrs,
 	                properties: {
 	                    to:                     fullAddr,
@@ -634,7 +634,10 @@ The response looks like:
 	                    correlation_id:         ret.id
 	                },
 	                application_properties: application_properties
-            })
+            }
+            self.sender.send( msg );
+			console.dump("------- method called -------")
+            console.dump (msg)
 		}
 		catch (e) {
 			error = "error sending: " + e;
