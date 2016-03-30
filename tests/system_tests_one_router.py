@@ -939,6 +939,9 @@ class RouterTest(TestCase):
         M3 = self.messenger()
         M4 = self.messenger()
 
+        M2.timeout = 0.1
+        M3.timeout = 0.1
+        M4.timeout = 0.1
 
         M1.start()
         M2.start()
@@ -960,20 +963,40 @@ class RouterTest(TestCase):
 
         i = 0
         rx_set = []
-        for i in range(10):
-            M2.recv(1)
-            M2.get(rm)
-            rx_set.append(rm.body['number'])
+        ca = 0
+        cb = 0
+        cc = 0
 
-            M3.recv(1)
-            M3.get(rm)
-            rx_set.append(rm.body['number'])
+        while len(rx_set) < 30:
+            try:
+                M2.recv(1)
+                M2.get(rm)
+                rx_set.append(rm.body['number'])
+                ca += 1
+            except:
+                pass
 
-            M4.recv(1)
-            M4.get(rm)
-            rx_set.append(rm.body['number'])
+            try:
+                M3.recv(1)
+                M3.get(rm)
+                rx_set.append(rm.body['number'])
+                cb += 1
+            except:
+                pass
+
+            try:
+                M4.recv(1)
+                M4.get(rm)
+                rx_set.append(rm.body['number'])
+                cc += 1
+            except:
+                pass
 
         self.assertEqual(30, len(rx_set))
+        self.assertTrue(ca > 0)
+        self.assertTrue(cb > 0)
+        self.assertTrue(cc > 0)
+
         rx_set.sort()
         for i in range(30):
             self.assertEqual(i, rx_set[i])
