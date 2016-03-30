@@ -19,14 +19,15 @@
 
 import unittest
 from time import sleep
-from system_test import TestCase, Qdrouterd, main_module
+from subprocess import PIPE
+
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 
 from proton import Message
 from proton.reactor import AtMostOnce
 from proton.utils import BlockingConnection, LinkDetached
 
 from qpid_dispatch.management.client import Node
-from system_test import TIMEOUT
 
 class LinkRoutePatternTest(TestCase):
     """
@@ -109,7 +110,42 @@ class LinkRoutePatternTest(TestCase):
         # bit more time for the routers to stabilize.
         sleep(2)
 
-    def test_aaa_partial_link_route_match(self):
+    def run_qdstat_linkRoute(self, address):
+        p = self.popen(
+            ['qdstat', '--bus', str(address), '--timeout', str(TIMEOUT) ] + ['--linkroute'],
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+
+        out = p.communicate()[0]
+        assert p.returncode == 0, "qdstat exit status %s, output:\n%s" % (p.returncode, out)
+        return out
+
+    def test_bbb_qdstat_link_routes_routerB(self):
+        """
+        Runs qdstat on router B to make sure that router B has two link routes, one 'in' and one 'out'
+
+        """
+        out = self.run_qdstat_linkRoute(self.routers[1].addresses[0])
+        out_list = out.split()
+        self.assertEqual(out_list.count('org.apache.qpid.dispatch.config.linkRoute'), 2)
+        self.assertEqual(out_list.count('org.apache.qpid.dispatch.config.linkRoute'), 2)
+        self.assertEqual(out_list.count('in'), 1)
+        self.assertEqual(out_list.count('out'), 1)
+        self.assertEqual(out_list.count('broker'), 2)
+
+    def test_ccc_qdstat_link_routes_routerC(self):
+        """
+        Runs qdstat on router C to make sure that router C has two link routes, one 'in' and one 'out'
+
+        """
+        out = self.run_qdstat_linkRoute(self.routers[2].addresses[1])
+        out_list = out.split()
+
+        self.assertEqual(out_list.count('org.apache.qpid.dispatch.config.linkRoute'), 2)
+        self.assertEqual(out_list.count('org.apache.qpid.dispatch.config.linkRoute'), 2)
+        self.assertEqual(out_list.count('in'), 1)
+        self.assertEqual(out_list.count('out'), 1)
+
+    def test_ddd_partial_link_route_match(self):
         """
         The linkRoutePattern on Routers C and B is set to org.apache.
         Creates a receiver listening on the address 'org.apache.dev' and a sender that sends to address 'org.apache.dev'.
