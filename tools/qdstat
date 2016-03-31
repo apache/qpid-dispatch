@@ -47,8 +47,8 @@ def parse_args(argv):
     parser.add_option("-n", "--nodes", help="Show Router Nodes",            action="store_const", const="n",   dest="show")
     parser.add_option("-a", "--address", help="Show Router Addresses",      action="store_const", const="a",   dest="show")
     parser.add_option("-m", "--memory", help="Show Router Memory Stats",    action="store_const", const="m",   dest="show")
-    parser.add_option("-L", "--autolink", help="Show Auto Links",           action="store_const", const="L",   dest="show")
-    parser.add_option("-R", "--linkroute", help="Show Link Routes",         action="store_const", const="R",  dest="show")
+    parser.add_option("--autolinks", help="Show Auto Links",                action="store_const", const="autolinks",  dest="show")
+    parser.add_option("--linkroutes", help="Show Link Routes",              action="store_const", const="linkroutes", dest="show")
     parser.add_option("-v", "--verbose", help="Show maximum detail",        action="store_true", dest="verbose")
     parser.add_option("--log", help="Show recent log entries", action="store_const", const="log", dest="show")
     parser.add_option("--limit", help="Limit number of log entries", type="int")
@@ -56,7 +56,7 @@ def parse_args(argv):
     opts, args = parser.parse_args(args=argv)
 
     if not opts.show:
-        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, -m, -h, -L, -R or --log.")
+        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, -m, -h, --autolinks, --linkroutes, or --log.")
 
     return opts, args
 
@@ -352,25 +352,21 @@ class BusManager(Node):
     def displayLinkRoutes(self):
         disp = Display(prefix="  ")
         heads = []
-        heads.append(Header("type"))
         heads.append(Header("prefix"))
-        heads.append(Header("distribution"))
-        heads.append(Header("connection"))
         heads.append(Header("dir"))
+        heads.append(Header("distrib"))
         rows = []
 
         link_routes = self.query('org.apache.qpid.dispatch.router.config.linkRoute')
 
         for link_route in link_routes:
             row = []
-            row.append(link_route.type)
             row.append(link_route.prefix)
-            row.append(link_route.distribution)
-            row.append(link_route.connection)
             row.append(link_route.dir)
+            row.append(link_route.distribution)
             rows.append(row)
         title = "Link Routes"
-        sorter = Sorter(heads, rows, 'dir', 0, True)
+        sorter = Sorter(heads, rows, 'prefix', 0, True)
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
@@ -421,8 +417,8 @@ class BusManager(Node):
         elif main == 'm': self.displayMemory()
         elif main == 'g': self.displayGeneral()
         elif main == 'c': self.displayConnections()
-        elif main == 'L': self.displayAutolinks()
-        elif main == 'R': self.displayLinkRoutes()
+        elif main == 'autolinks': self.displayAutolinks()
+        elif main == 'linkroutes': self.displayLinkRoutes()
         elif main == 'log': self.displayLog()
 
     def display(self, identitys):
