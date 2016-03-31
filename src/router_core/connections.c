@@ -217,6 +217,12 @@ qd_direction_t qdr_link_direction(const qdr_link_t *link)
 }
 
 
+int qdr_link_phase(const qdr_link_t *link)
+{
+    return link && link->auto_link ? link->auto_link->phase : 0;
+}
+
+
 bool qdr_link_is_anonymous(const qdr_link_t *link)
 {
     return link->owning_addr == 0;

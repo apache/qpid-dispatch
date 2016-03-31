@@ -547,6 +547,7 @@ qd_message_t *qd_message()
     DEQ_INIT(msg->ma_to_override);
     DEQ_INIT(msg->ma_trace);
     DEQ_INIT(msg->ma_ingress);
+    msg->ma_phase = 0;
     msg->content = new_qd_message_content_t();
 
     if (msg->content == 0) {
@@ -612,6 +613,7 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     qd_buffer_list_clone(&copy->ma_to_override, &msg->ma_to_override);
     qd_buffer_list_clone(&copy->ma_trace, &msg->ma_trace);
     qd_buffer_list_clone(&copy->ma_ingress, &msg->ma_ingress);
+    copy->ma_phase = msg->ma_phase;
 
     copy->content = content;
 
@@ -664,6 +666,18 @@ void qd_message_set_to_override_annotation(qd_message_t *in_msg, qd_composed_fie
     qd_buffer_list_free_buffers(&msg->ma_to_override);
     qd_compose_take_buffers(to_field, &msg->ma_to_override);
     qd_compose_free(to_field);
+}
+
+void qd_message_set_phase_annotation(qd_message_t *in_msg, int phase)
+{
+    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
+    msg->ma_phase = phase;
+}
+
+int qd_message_get_phase_annotation(const qd_message_t *in_msg)
+{
+    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
+    return msg->ma_phase;
 }
 
 void qd_message_set_ingress_annotation(qd_message_t *in_msg, qd_composed_field_t *ingress_field)
@@ -788,6 +802,11 @@ static bool compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
         if (!DEQ_IS_EMPTY(msg->ma_ingress)) {
             qd_compose_insert_symbol(out_ma, QD_MA_INGRESS);
             qd_compose_insert_buffers(out_ma, &msg->ma_ingress);
+        }
+
+        if (msg->ma_phase != 0) {
+            qd_compose_insert_symbol(out_ma, QD_MA_PHASE);
+            qd_compose_insert_int(out_ma, msg->ma_phase);
         }
 
         qd_compose_end_map(out_ma);

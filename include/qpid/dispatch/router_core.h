@@ -382,6 +382,17 @@ qd_link_type_t qdr_link_type(const qdr_link_t *link);
 qd_direction_t qdr_link_direction(const qdr_link_t *link);
 
 /**
+ * qdr_link_phase
+ *
+ * If this link is associated with an auto_link, return the address phase.  Otherwise
+ * return zero.
+ *
+ * @param link Link object
+ * @return 0 or the phase of the link's auto_link.
+ */
+int qdr_link_phase(const qdr_link_t *link);
+
+/**
  * qdr_link_is_anonymous
  *
  * Indicate whether the link is anonymous.  Note that this is determined inside

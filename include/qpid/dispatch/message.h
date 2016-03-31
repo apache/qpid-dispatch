@@ -176,6 +176,16 @@ void qd_message_set_trace_annotation(qd_message_t *msg, qd_composed_field_t *tra
 void qd_message_set_to_override_annotation(qd_message_t *msg, qd_composed_field_t *to_field);
 
 /**
+ * Set a phase for the phase annotation in the message.
+ *
+ * @param msg Pointer to an outgoing message.
+ * @param phase The phase of the address for the outgoing message.
+ *
+ */
+void qd_message_set_phase_annotation(qd_message_t *msg, int phase);
+int  qd_message_get_phase_annotation(const qd_message_t *msg);
+
+/**
  * Set the value for the QD_MA_INGRESS field in the outgoing message
  * annotations for the message.
  *

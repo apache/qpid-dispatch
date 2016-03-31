@@ -126,11 +126,8 @@ class LinkRoutePatternTest(TestCase):
         """
         out = self.run_qdstat_linkRoute(self.routers[1].addresses[0])
         out_list = out.split()
-        self.assertEqual(out_list.count('org.apache.qpid.dispatch.config.linkRoute'), 2)
-        self.assertEqual(out_list.count('org.apache.qpid.dispatch.config.linkRoute'), 2)
         self.assertEqual(out_list.count('in'), 1)
         self.assertEqual(out_list.count('out'), 1)
-        self.assertEqual(out_list.count('broker'), 2)
 
     def test_ccc_qdstat_link_routes_routerC(self):
         """
@@ -140,8 +137,6 @@ class LinkRoutePatternTest(TestCase):
         out = self.run_qdstat_linkRoute(self.routers[2].addresses[1])
         out_list = out.split()
 
-        self.assertEqual(out_list.count('org.apache.qpid.dispatch.config.linkRoute'), 2)
-        self.assertEqual(out_list.count('org.apache.qpid.dispatch.config.linkRoute'), 2)
         self.assertEqual(out_list.count('in'), 1)
         self.assertEqual(out_list.count('out'), 1)
 

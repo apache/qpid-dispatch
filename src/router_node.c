@@ -94,6 +94,7 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
     qd_parsed_field_t *trace   = 0;
     qd_parsed_field_t *ingress = 0;
     qd_parsed_field_t *to      = 0;
+    qd_parsed_field_t *phase   = 0;
 
     *link_exclusions = 0;
 
@@ -115,8 +116,10 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
                 ingress = qd_parse_sub_value(in_ma, idx);
             } else if (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_TO)) {
                 to = qd_parse_sub_value(in_ma, idx);
+            } else if (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_PHASE)) {
+                phase = qd_parse_sub_value(in_ma, idx);
             }
-            done = trace && ingress && to;
+            done = trace && ingress && to && phase;
         }
     }
 
@@ -163,6 +166,15 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
         qd_composed_field_t *to_field = qd_compose_subfield(0);
         qd_compose_insert_string_iterator(to_field, qd_parse_raw(to));
         qd_message_set_to_override_annotation(msg, to_field);
+    }
+
+    //
+    // QD_MA_PHASE:
+    // Preserve the existing value.
+    //
+    if (phase) {
+        int phase_val = qd_parse_as_int(phase);
+        qd_message_set_phase_annotation(msg, phase_val);
     }
 
     //
@@ -264,14 +276,17 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 
         if (anonymous_link) {
             qd_field_iterator_t *addr_iter = 0;
+            int phase = 0;
             
             //
             // If the message has delivery annotations, get the to-override field from the annotations.
             //
             if (in_ma) {
                 qd_parsed_field_t *ma_to = qd_parse_value_by_key(in_ma, QD_MA_TO);
-                if (ma_to)
+                if (ma_to) {
                     addr_iter = qd_field_iterator_dup(qd_parse_raw(ma_to));
+                    phase = qd_message_get_phase_annotation(msg);
+                }
             }
 
             //
@@ -282,15 +297,23 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 
             if (addr_iter) {
                 qd_address_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
+                if (phase > 0)
+                    qd_address_iterator_set_phase(addr_iter, '0' + (char) phase);
                 delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
                                                link_exclusions);
             }
         } else {
-            const char *r_tgt = pn_terminus_get_address(qd_link_remote_target(link));
-            if (r_tgt) {
+            const char *term_addr = pn_terminus_get_address(qd_link_remote_target(link));
+            if (!term_addr)
+                term_addr = pn_terminus_get_address(qd_link_source(link));
+
+            if (term_addr) {
                 qd_composed_field_t *to_override = qd_compose_subfield(0);
-                qd_compose_insert_string(to_override, r_tgt);
+                qd_compose_insert_string(to_override, term_addr);
                 qd_message_set_to_override_annotation(msg, to_override);
+                int phase = qdr_link_phase(rlink);
+                if (phase != 0)
+                    qd_message_set_phase_annotation(msg, phase);
             }
             delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions);
         }
