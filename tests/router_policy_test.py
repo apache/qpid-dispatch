@@ -143,16 +143,6 @@ class PolicyFile(TestCase):
     policy = PolicyLocal(manager)
     policy.test_load_config()
 
-    def dict_compare(self, d1, d2):
-        d1_keys = set(d1.keys())
-        d2_keys = set(d2.keys())
-        intersect_keys = d1_keys.intersection(d2_keys)
-        added = d1_keys - d2_keys
-        removed = d2_keys - d1_keys
-        modified = {o : (d1[o], d2[o]) for o in intersect_keys if d1[o] != d2[o]}
-        same = set(o for o in intersect_keys if d1[o] == d2[o])
-        return len(added) == 0 and len(removed) == 0 and len(modified) == 0
-
     def test_policy1_test_zeke_ok(self):
         p1 = PolicyFile.policy.lookup_user('zeke', '192.168.100.5', 'photoserver', '192.168.100.5:33333', 1)
         self.assertTrue(p1 == 'test')
