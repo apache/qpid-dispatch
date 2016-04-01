@@ -182,7 +182,7 @@ pn_terminus_t *qd_link_remote_target(qd_link_t *link);
 void qd_link_activate(qd_link_t *link);
 void qd_link_close(qd_link_t *link);
 bool qd_link_drain_changed(qd_link_t *link, bool *mode);
-void qd_link_free_LH(qd_link_t *link);
+void qd_link_free(qd_link_t *link);
 
 ///@}
 #endif

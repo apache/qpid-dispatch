@@ -451,8 +451,8 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         pn_link = pn_event_link(event);
         if (pn_link_state(pn_link) & PN_LOCAL_UNINIT) {
             if (pn_link_is_sender(pn_link)) {
-               if (qd_conn->policy_settings) {
-                   if (!qd_policy_approve_amqp_receiver_link(pn_link, qd_conn)) {
+                if (qd_conn->policy_settings) {
+                    if (!qd_policy_approve_amqp_receiver_link(pn_link, qd_conn)) {
                         break;
                     }
                     qd_conn->n_senders++;
@@ -481,6 +481,10 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             if (node)
                 node->ntype->link_detach_handler(node->context, qd_link, dt);
             else if (qd_link->pn_link == pn_link) {
+
+                //
+                // This policy stuff is in the wrong place.  This else clause typically does not run.
+                //
                 if (qd_conn->policy_settings) {
                     if (pn_link_is_sender(pn_link)) {
                         qd_conn->n_senders--;
@@ -794,7 +798,7 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
 }
 
 
-void qd_link_free_LH(qd_link_t *link)
+void qd_link_free(qd_link_t *link)
 {
     if (!link) return;
     if (link->pn_link) pn_decref(link->pn_link);

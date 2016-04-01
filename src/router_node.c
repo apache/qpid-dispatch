@@ -468,8 +468,6 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
 
     if (rlink) {
         qdr_error_t *error = qdr_error_from_pn(cond);
-        if (!error && dt == QD_LOST)
-            error = qdr_error("qd:routed-link-lost", "Connectivity to the peer container was lost");
         qdr_link_detach(rlink, dt, error);
 
         //
@@ -477,6 +475,16 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
         // core linkage.  Note that the core->qd linkage is still in place.
         //
         qd_link_set_context(link, 0);
+
+        //
+        // If the link was lost (due to connection drop), or the linkage from the core
+        // object is already gone, finish disconnecting the linkage and free the qd_link
+        // because the core will silently free its own resources.
+        //
+        if (dt == QD_LOST || qdr_link_get_context(rlink) == 0) {
+            qdr_link_set_context(rlink, 0);
+            qd_link_free(link);
+        }
     }
 
     return 0;
@@ -673,7 +681,7 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
 }
 
 
-static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error)
+static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error, bool first)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
@@ -688,6 +696,12 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
         qdr_error_copy(error, cond);
     }
     qd_link_close(qlink);
+
+    //
+    // If this is the second detach, free the qd_link
+    //
+    if (!first)
+        qd_link_free(qlink);
 }
 
 

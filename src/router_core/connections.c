@@ -132,13 +132,13 @@ int qdr_connection_process(qdr_connection_t *conn)
             break;
 
         case QDR_CONNECTION_WORK_FIRST_DETACH :
-            core->detach_handler(core->user_context, work->link, work->error);
+            core->detach_handler(core->user_context, work->link, work->error, true);
             if (work->error)
                 qdr_error_free(work->error);
             break;
 
         case QDR_CONNECTION_WORK_SECOND_DETACH :
-            core->detach_handler(core->user_context, work->link, work->error);
+            core->detach_handler(core->user_context, work->link, work->error, false);
             if (work->error)
                 qdr_error_free(work->error);
             free_qdr_link_t(work->link);
@@ -1231,7 +1231,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         // If the detach occurred via protocol, send a detach back.
         //
         if (dt != QD_LOST)
-            qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NONE);  // TODO - Fix error arg
+            qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NONE);
     } else {
         qdr_link_cleanup_CT(core, conn, link);
         free_qdr_link_t(link);
@@ -1243,6 +1243,9 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     //
     if (addr)
         qdr_check_addr_CT(core, addr, was_local);
+
+    if (error)
+        qdr_error_free(error);
 }
 
 
