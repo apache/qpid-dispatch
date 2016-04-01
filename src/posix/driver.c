@@ -659,6 +659,7 @@ void qdpn_connector_free(qdpn_connector_t *ctor)
     if (!ctor) return;
 
     if (ctor->driver) qdpn_driver_remove_connector(ctor->driver, ctor);
+    pn_transport_unbind(ctor->transport);
     pn_transport_free(ctor->transport);
     ctor->transport = NULL;
     if (ctor->connection) pn_class_decref(PN_OBJECT, ctor->connection);

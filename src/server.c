@@ -86,6 +86,16 @@ static void free_qd_connection(qd_connection_t *ctx)
         free (ctx->policy_settings);
         ctx->policy_settings = 0;
     }
+    if (ctx->pn_conn) {
+        pn_connection_set_context(ctx->pn_conn, 0);
+        pn_decref(ctx->pn_conn);
+        ctx->pn_conn = NULL;
+    }
+    if (ctx->collector) {
+        pn_collector_free(ctx->collector);
+        ctx->collector = NULL;
+    }
+
     free_qd_connection_t(ctx);
 }
 
@@ -730,7 +740,6 @@ static void *thread_run(void *arg)
     qd_thread_t      *thread    = (qd_thread_t*) arg;
     qd_work_item_t   *work;
     qdpn_connector_t *cxtr;
-    pn_connection_t  *conn;
     qd_connection_t  *ctx;
     int               error;
     int               poll_result;
@@ -937,10 +946,6 @@ static void *thread_run(void *arg)
                 qd_entity_cache_remove(QD_CONNECTION_TYPE, ctx);
                 //
                 // Connector is closed.  Free the context and the connector.
-                //
-                conn = qdpn_connector_connection(cxtr);
-
-                //
                 // If this is a dispatch connector, schedule the re-connect timer
                 //
                 if (ctx->connector) {
@@ -957,12 +962,6 @@ static void *thread_run(void *arg)
                 }
 
                 qdpn_connector_free(cxtr);
-                if (conn) {
-                    pn_connection_set_context(conn, 0);
-                    pn_decref(conn);
-                }
-                if (ctx->collector)
-                    pn_collector_free(ctx->collector);
                 invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
                 sys_mutex_free(ctx->deferred_call_lock);
                 free_qd_connection(ctx);

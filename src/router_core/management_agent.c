@@ -318,7 +318,9 @@ static void qd_core_agent_update_handler(qdr_core_t                 *core,
 
     qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
 
-    qd_parsed_field_t *in_body= qd_parse(qd_message_field_iterator(msg, QD_FIELD_BODY));
+    qd_field_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+    qd_parsed_field_t *in_body= qd_parse(iter);
+    qd_field_iterator_free(iter);
 
     qdr_manage_update(core, ctx, entity_type, name_iter, identity_iter, in_body, out_body);
 
