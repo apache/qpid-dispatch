@@ -881,21 +881,28 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     //
     qdr_link_ref_t *link_ref = DEQ_HEAD(conn->links);
     while (link_ref) {
-        //
-        // TODO - if the link is link-routed and has a peer, detach the peer.
-        //
+        qdr_link_t *link = link_ref->link;
 
         //
         // Clean up the link and all its associated state.
         //
-        qdr_link_cleanup_CT(core, conn, link_ref->link);
-        free_qdr_link_t(link_ref->link);
+        qdr_link_cleanup_CT(core, conn, link); // link_cleanup disconnects and frees the ref.
+        free_qdr_link_t(link);
         link_ref = DEQ_HEAD(conn->links);
     }
 
     //
     // Discard items on the work list
     //
+    qdr_connection_work_t *work = DEQ_HEAD(conn->work_list);
+    while (work) {
+        DEQ_REMOVE_HEAD(conn->work_list);
+        qdr_terminus_free(work->source);
+        qdr_terminus_free(work->target);
+        qdr_error_free(work->error);
+        free_qdr_connection_work_t(work);
+        work = DEQ_HEAD(conn->work_list);
+    }
 
     DEQ_REMOVE(core->open_connections, conn);
     sys_mutex_free(conn->work_lock);
