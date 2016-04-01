@@ -171,6 +171,7 @@ void *qd_link_get_conn_context(qd_link_t *link);
 
 void policy_notify_opened(void *container, qd_connection_t *conn, void *context);
 qd_direction_t qd_link_direction(const qd_link_t *link);
+pn_snd_settle_mode_t qd_link_remote_snd_settle_mode(const qd_link_t *link);
 qd_connection_t *qd_link_connection(qd_link_t *link);
 pn_link_t *qd_link_pn(qd_link_t *link);
 pn_session_t *qd_link_pn_session(qd_link_t *link);

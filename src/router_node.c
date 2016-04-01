@@ -733,8 +733,9 @@ static void CORE_link_push(void *context, qdr_link_t *link)
 
 static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *dlv, bool settled)
 {
-    qd_link_t  *qlink = (qd_link_t*) qdr_link_get_context(link);
-    pn_link_t  *plink = qd_link_pn(qlink);
+    qd_router_t *router = (qd_router_t*) context;
+    qd_link_t  *qlink   = (qd_link_t*) qdr_link_get_context(link);
+    pn_link_t  *plink   = qd_link_pn(qlink);
     const char *tag;
     int         tag_length;
 
@@ -743,14 +744,25 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
     pn_delivery(plink, pn_dtag(tag, tag_length));
     pn_delivery_t *pdlv = pn_link_current(plink);
 
-    if (!settled) {
+    //
+    // If the remote send settle mode is set to 'settled', we should settle the delivery on behalf of the receiver.
+    //
+    bool remote_snd_settled = qd_link_remote_snd_settle_mode(qlink) == PN_SND_SETTLED;
+
+    if (!settled && !remote_snd_settled) {
         pn_delivery_set_context(pdlv, dlv);
         qdr_delivery_set_context(dlv, pdlv);
     }
 
     qd_message_send(qdr_delivery_message(dlv), qlink, qdr_link_strip_annotations_out(link));
-    if (settled)
+
+    if (remote_snd_settled)
+        // Tell the core that the delivery has been accepted and settled, since we are settling on behalf of the receiver
+        qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true);
+
+    if (settled || remote_snd_settled)
         pn_delivery_settle(pdlv);
+
     pn_link_advance(plink);
 }
 

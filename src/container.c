@@ -50,16 +50,16 @@ DEQ_DECLARE(qd_node_t, qd_node_list_t);
 ALLOC_DECLARE(qd_node_t);
 ALLOC_DEFINE(qd_node_t);
 
-
 /** Encapsulates a proton link for sending and receiving messages */
 struct qd_link_t {
-    pn_session_t       *pn_sess;
-    pn_link_t          *pn_link;
-    qd_direction_t      direction;
-    void               *context;
-    qd_node_t          *node;
-    bool                drain_mode;
-    bool                close_sess_with_link;
+    pn_session_t               *pn_sess;
+    pn_link_t                  *pn_link;
+    qd_direction_t              direction;
+    void                       *context;
+    qd_node_t                  *node;
+    bool                        drain_mode;
+    bool                        close_sess_with_link;
+    pn_snd_settle_mode_t        remote_snd_settle_mode;
 };
 
 ALLOC_DECLARE(qd_link_t);
@@ -125,8 +125,10 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
     link->direction  = QD_OUTGOING;
     link->context    = 0;
     link->node       = node;
-    link->drain_mode = pn_link_get_drain(pn_link);
-    link->close_sess_with_link = false;
+
+    link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(pn_link);
+    link->drain_mode             = pn_link_get_drain(pn_link);
+    link->close_sess_with_link   = false;
 
     //
     // Keep the borrowed references
@@ -180,6 +182,7 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
     link->context    = 0;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(pn_link);
+    link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(pn_link);
     link->close_sess_with_link = false;
 
     //
@@ -774,6 +777,7 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     link->context    = node->context;
     link->node       = node;
     link->drain_mode = pn_link_get_drain(link->pn_link);
+    link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(link->pn_link);
     link->close_sess_with_link = true;
 
     //
@@ -863,6 +867,10 @@ qd_direction_t qd_link_direction(const qd_link_t *link)
     return link->direction;
 }
 
+pn_snd_settle_mode_t qd_link_remote_snd_settle_mode(const qd_link_t *link)
+{
+    return link->remote_snd_settle_mode;
+}
 
 qd_connection_t *qd_link_connection(qd_link_t *link)
 {

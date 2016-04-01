@@ -18,8 +18,10 @@
 #
 
 import unittest
-from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, Timeout
-from system_test import TestCase, Messenger, Qdrouterd, main_module
+from proton import Message, PENDING, ACCEPTED, REJECTED
+from system_test import TestCase, Qdrouterd, main_module
+from proton.handlers import MessagingHandler
+from proton.reactor import Container, AtMostOnce, AtLeastOnce
 
 # PROTON-828:
 try:
@@ -1041,6 +1043,51 @@ class RouterTest(TestCase):
         M1.stop()
         M2.stop()
 
+    def test_send_settle_mode_settled(self):
+        """
+        The receiver sets a snd-settle-mode of settle thus indicating that it wants to receive settled messages from
+        the sender. This tests make sure that the delivery that comes to the receiver comes as already settled.
+        """
+        send_settle_mode_test = SndSettleModeTest(self.address)
+        send_settle_mode_test.run()
+        self.assertTrue(send_settle_mode_test.message_received)
+        self.assertTrue(send_settle_mode_test.delivery_already_settled)
+
+
+HELLO_WORLD = "Hello World!"
+
+class SndSettleModeTest(MessagingHandler):
+    def __init__(self, address):
+        super(SndSettleModeTest, self).__init__()
+        self.address = address
+        self.sender = None
+        self.receiver = None
+        self.message_received = False
+        self.delivery_already_settled = False
+
+    def on_start(self, event):
+        conn = event.container.connect(self.address)
+        # The receiver sets link.snd_settle_mode = Link.SND_SETTLED. It wants to receive settled messages
+        self.receiver = event.container.create_receiver(conn, "org/apache/dev", options=AtMostOnce())
+
+        # With AtLeastOnce, the sender will not settle.
+        self.sender = event.container.create_sender(conn, "org/apache/dev", options=AtLeastOnce())
+
+    def on_sendable(self, event):
+        msg = Message(body=HELLO_WORLD)
+        event.sender.send(msg)
+        event.sender.close()
+
+    def on_message(self, event):
+        self.delivery_already_settled = event.delivery.settled
+        if HELLO_WORLD == event.message.body:
+            self.message_received = True
+        else:
+            self.message_received = False
+        event.connection.close()
+
+    def run(self):
+        Container(self).run()
 
 if __name__ == '__main__':
     unittest.main(main_module())
