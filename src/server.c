@@ -957,7 +957,7 @@ static void *thread_run(void *arg)
                 sys_mutex_lock(qd_server->lock);
                 DEQ_REMOVE(qd_server->connections, ctx);
 
-                if (!ctx->connector) {
+                if (!ctx->connector && ctx->open_container) {
                     qd_policy_socket_close(qd_server->qd->policy, ctx);
                 }
 
