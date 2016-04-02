@@ -153,6 +153,7 @@ typedef enum {
  *        correlate the connection with waypoints and link-route destinations that use the connection.
  * @param strip_annotations_in True if configured to remove annotations on inbound messages.
  * @param strip_annotations_out True if configured to remove annotations on outbound messages.
+ * @param link_capacity The capacity, in deliveries, for links in this connection.
  * @return Pointer to a connection object that can be used to refer to this connection over its lifetime.
  */
 qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
@@ -161,7 +162,8 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         const char            *label,
                                         const char            *remote_container_id,
                                         bool                   strip_annotations_in,
-                                        bool                   strip_annotations_out);
+                                        bool                   strip_annotations_out,
+                                        int                    link_capacity);
 
 /**
  * qdr_connection_closed

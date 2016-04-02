@@ -150,6 +150,17 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0); CHECK();
     config->sasl_mechanisms      = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
     config->ssl_enabled          = has_attrs(entity, ssl_attributes, ssl_attributes_count);
+    config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0); CHECK();
+
+    //
+    // Handle the defaults for link capacity.
+    //
+    if (config->link_capacity == 0) {
+        if (strcmp("inter-router", config->role) == 0)
+            config->link_capacity = 100000; // This is effectively infinite since session flow control will be more stringent.
+        else
+            config->link_capacity = 10;
+    }
 
     //
     // For now we are hardwiring this attribute to true.  If there's an outcry from the

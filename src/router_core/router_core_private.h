@@ -413,6 +413,7 @@ struct qdr_connection_t {
     qdr_conn_identifier_t      *conn_id;
     bool                        strip_annotations_in;
     bool                        strip_annotations_out;
+    int                         link_capacity;
     int                         mask_bit;
     qdr_connection_work_list_t  work_list;
     sys_mutex_t                *work_lock;

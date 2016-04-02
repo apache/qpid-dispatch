@@ -45,13 +45,16 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
                                             qdr_connection_role_t  *role,
                                             const char            **name,
                                             bool                   *strip_annotations_in,
-                                            bool                   *strip_annotations_out)
+                                            bool                   *strip_annotations_out,
+                                            int                    *link_capacity)
 {
     if (conn) {
         const qd_server_config_t *cf = qd_connection_config(conn);
 
         *strip_annotations_in  = cf ? cf->strip_inbound_annotations  : false;
         *strip_annotations_out = cf ? cf->strip_outbound_annotations : false;
+
+        *link_capacity = cf->link_capacity;
 
         if        (cf && strcmp(cf->role, router_role) == 0) {
             *strip_annotations_in  = false;
@@ -496,15 +499,16 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     qdr_connection_role_t  role = 0;
     bool                   strip_annotations_in = false;
     bool                   strip_annotations_out = false;
+    int                    link_capacity = 1;
     const char            *name = 0;
     pn_connection_t       *pn_conn = qd_connection_pn(conn);
 
     qd_router_connection_get_config(conn, &role, &name,
-                                    &strip_annotations_in, &strip_annotations_out);
+                                    &strip_annotations_in, &strip_annotations_out, &link_capacity);
 
     qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, name,
                                                    pn_connection_remote_container(pn_conn),
-                                                   strip_annotations_in, strip_annotations_out);
+                                                   strip_annotations_in, strip_annotations_out, link_capacity);
 
     qd_connection_set_context(conn, qdrc);
     qdr_connection_set_context(qdrc, conn);

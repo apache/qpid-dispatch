@@ -61,7 +61,8 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         const char            *label,
                                         const char            *remote_container_id,
                                         bool                   strip_annotations_in,
-                                        bool                   strip_annotations_out)
+                                        bool                   strip_annotations_out,
+                                        int                    link_capacity)
 {
     qdr_action_t     *action = qdr_action(qdr_connection_opened_CT, "connection_opened");
     qdr_connection_t *conn   = new_qdr_connection_t();
@@ -73,6 +74,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     conn->role                  = role;
     conn->strip_annotations_in  = strip_annotations_in;
     conn->strip_annotations_out = strip_annotations_out;
+    conn->link_capacity         = link_capacity;
     conn->mask_bit              = -1;
     DEQ_INIT(conn->links);
     DEQ_INIT(conn->work_list);
@@ -270,9 +272,9 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->name = (char*) malloc(strlen(name) + 1);
     strcpy(link->name, name);
     link->link_direction = dir;
-    link->capacity = 32;  // TODO - make this configurable
-    link->admin_enabled = true;
-    link->oper_status   = QDR_LINK_OPER_DOWN;
+    link->capacity       = conn->link_capacity;
+    link->admin_enabled  = true;
+    link->oper_status    = QDR_LINK_OPER_DOWN;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -513,7 +515,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->conn           = conn;
     link->link_type      = link_type;
     link->link_direction = dir;
-    link->capacity       = 32; // TODO - make this configurable
+    link->capacity       = conn->link_capacity;
     link->name           = (char*) malloc(QDR_DISCRIMINATOR_SIZE + 8);
     qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
     link->admin_enabled  = true;
