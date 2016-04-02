@@ -36,11 +36,6 @@
 
 
 //
-// TODO: when policy dev is more complete lower the log level
-//
-#define POLICY_LOG_LEVEL QD_LOG_CRITICAL
-
-//
 // The current statistics maintained globally through multiple
 // reconfiguration of policy settings.
 //
@@ -211,12 +206,12 @@ bool qd_policy_socket_accept(void *context, const char *hostname)
         if (n_connections < policy->max_connection_limit) {
             // connection counted and allowed
             n_connections += 1;
-            qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' allowed. N= %d", hostname, n_connections);
+            qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' allowed. N= %d", hostname, n_connections);
         } else {
             // connection denied
             result = false;
             n_denied += 1;
-            qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' denied, N=%d", hostname, n_connections);
+            qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' denied, N=%d", hostname, n_connections);
         }
     }
     n_processed += 1;
@@ -245,21 +240,21 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
                 if (result) {
                     Py_XDECREF(result);
                 } else {
-                    qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection close failed: result");
+                    qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: Connection close failed: result");
                 }
                 Py_XDECREF(close_connection);
             } else {
-                qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection close failed: close_connection");
+                qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: Connection close failed: close_connection");
             }
             Py_XDECREF(module);
         } else {
-            qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection close failed: module");
+            qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: Connection close failed: module");
         }
         qd_python_unlock(lock_state);
     }
     if (policy->max_connection_limit > 0) {
         const char *hostname = qdpn_connector_name(conn->pn_cxtr);
-        qd_log(policy->log_source, POLICY_LOG_LEVEL, "Connection '%s' closed. N connections=%d", hostname, n_connections);
+        qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' closed. N connections=%d", hostname, n_connections);
     }
 }
 
@@ -320,11 +315,11 @@ bool qd_policy_open_lookup_user(
                 Py_XDECREF(result);
                 res = true; // settings name returned
             } else {
-                qd_log(policy->log_source, POLICY_LOG_LEVEL, "Internal: lookup_user: result");
+                qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: result");
             }
             Py_XDECREF(lookup_user);
         } else {
-            qd_log(policy->log_source, POLICY_LOG_LEVEL, "Internal: lookup_user: lookup_user");
+            qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: lookup_user");
         }
     }
     if (!res) {
@@ -362,22 +357,22 @@ bool qd_policy_open_lookup_user(
                     Py_XDECREF(result2);
                     res = true; // named settings content returned
                 } else {
-                    qd_log(policy->log_source, POLICY_LOG_LEVEL, "Internal: lookup_user: result2");
+                    qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: result2");
                 }
                 Py_XDECREF(lookup_settings);
             } else {
-                qd_log(policy->log_source, POLICY_LOG_LEVEL, "Internal: lookup_user: lookup_settings");
+                qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: lookup_settings");
             }
             Py_XDECREF(upolicy);
         } else {
-            qd_log(policy->log_source, POLICY_LOG_LEVEL, "Internal: lookup_user: upolicy");
+            qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: upolicy");
         }
     }
     Py_XDECREF(module);
     qd_python_unlock(lock_state);
 
     qd_log(policy->log_source, 
-           POLICY_LOG_LEVEL, 
+           QD_LOG_DEBUG,
            "Policy AMQP Open lookup_user: %s, hostip: %s, app: %s, connection: %s. Usergroup: '%s'%s",
            username, hostip, appname, conn_name, name_buf, (res ? "" : " Internal error."));
 
@@ -411,7 +406,7 @@ void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
     const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
     const char *app = pn_connection_remote_hostname(conn);
     qd_log(policy->log_source, 
-           POLICY_LOG_LEVEL, 
+           QD_LOG_DEBUG,
            "Policy AMQP Begin Session denied due to session limit. user: %s, hostip: %s, app: %s", 
            qd_conn->user_id, hostip, app);
 
@@ -461,7 +456,7 @@ void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn, char *
     const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
     const char *app = pn_connection_remote_hostname(conn);
     qd_log(policy->log_source, 
-           POLICY_LOG_LEVEL, 
+           QD_LOG_DEBUG,
            "Policy AMQP Attach Link denied due to %s limit. user: %s, hostip: %s, app: %s", 
            s_or_r, qd_conn->user_id, hostip, app);
 }
