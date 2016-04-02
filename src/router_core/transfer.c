@@ -248,8 +248,16 @@ qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery)
 // In-Thread Functions
 //==================================================================================
 
-void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery)
+void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 {
+    bool push = dlv->disposition != PN_RELEASED;
+
+    dlv->disposition = PN_RELEASED;
+    dlv->settled = true;
+    bool moved = qdr_delivery_settled_CT(core, dlv);
+
+    if (push || moved)
+        qdr_delivery_push_CT(core, dlv);
 }
 
 

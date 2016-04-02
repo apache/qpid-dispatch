@@ -1053,6 +1053,15 @@ class RouterTest(TestCase):
         self.assertTrue(send_settle_mode_test.message_received)
         self.assertTrue(send_settle_mode_test.delivery_already_settled)
 
+    def test_14_excess_deliveries_released(self):
+        """
+        Message-route a series of deliveries where the receiver provides credit for a subset and
+        once received, closes the link.  The remaining deliveries should be released back to the sender.
+        """
+        test = ExcessDeliveriesReleasedTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 HELLO_WORLD = "Hello World!"
 
@@ -1085,6 +1094,52 @@ class SndSettleModeTest(MessagingHandler):
         else:
             self.message_received = False
         event.connection.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class ExcessDeliveriesReleasedTest(MessagingHandler):
+    def __init__(self, address):
+        super(ExcessDeliveriesReleasedTest, self).__init__(prefetch=0)
+        self.address = address
+        self.dest = "closest.EDRtest"
+        self.error = None
+        self.sender = None
+        self.receiver = None
+        self.n_sent     = 0
+        self.n_received = 0
+        self.n_accepted = 0
+        self.n_released = 0
+
+    def on_start(self, event):
+        conn = event.container.connect(self.address)
+        self.sender   = event.container.create_sender(conn, self.dest)
+        self.receiver = event.container.create_receiver(conn, self.dest)
+        self.receiver.flow(6)
+
+    def on_sendable(self, event):
+        for i in range(10 - self.n_sent):
+            msg = Message(body=i)
+            event.sender.send(msg)
+            self.n_sent += 1
+
+    def on_accepted(self, event):
+        self.n_accepted += 1
+
+    def on_released(self, event):
+        self.n_released += 1
+        if self.n_released == 4:
+            if self.n_accepted != 6:
+                self.error = "Expected 6 accepted, got %d" % self.n_accepted
+            if self.n_received != 6:
+                self.error = "Expected 6 received, got %d" % self.n_received
+            event.connection.close()
+
+    def on_message(self, event):
+        self.n_received += 1
+        if self.n_received == 6:
+            self.receiver.close()
 
     def run(self):
         Container(self).run()

@@ -20,6 +20,8 @@
 import unittest, os
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
 from system_test import TestCase, Qdrouterd, main_module, DIR
+from proton.handlers import MessagingHandler
+from proton.reactor import Container, AtMostOnce, AtLeastOnce
 
 # PROTON-828:
 try:
@@ -993,6 +995,64 @@ class RouterTest(TestCase):
 
         M1.stop()
         M2.stop()
+
+    def test_14_excess_deliveries_released(self):
+        """
+        Message-route a series of deliveries where the receiver provides credit for a subset and
+        once received, closes the link.  The remaining deliveries should be released back to the sender.
+        """
+        test = ExcessDeliveriesReleasedTest(self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+class ExcessDeliveriesReleasedTest(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(ExcessDeliveriesReleasedTest, self).__init__(prefetch=0)
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "closest.EDRtest"
+        self.error = None
+        self.sender = None
+        self.receiver = None
+        self.n_sent     = 0
+        self.n_received = 0
+        self.n_accepted = 0
+        self.n_released = 0
+
+    def on_start(self, event):
+        self.conn1 = event.container.connect(self.address1)
+        self.conn2 = event.container.connect(self.address2)
+        self.sender   = event.container.create_sender(self.conn1, self.dest)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+        self.receiver.flow(6)
+
+    def on_sendable(self, event):
+        for i in range(10 - self.n_sent):
+            msg = Message(body=i)
+            event.sender.send(msg)
+            self.n_sent += 1
+
+    def on_accepted(self, event):
+        self.n_accepted += 1
+
+    def on_released(self, event):
+        self.n_released += 1
+        if self.n_released == 4:
+            if self.n_accepted != 6:
+                self.error = "Expected 6 accepted, got %d" % self.n_accepted
+            if self.n_received != 6:
+                self.error = "Expected 6 received, got %d" % self.n_received
+            self.conn1.close()
+            self.conn2.close()
+
+    def on_message(self, event):
+        self.n_received += 1
+        if self.n_received == 6:
+            self.receiver.close()
+
+    def run(self):
+        Container(self).run()
 
 
 
