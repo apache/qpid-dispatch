@@ -485,6 +485,12 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_del_link_ref(&conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
     qdr_del_link_ref(&conn->links_with_credit,     link, QDR_LINK_LIST_CLASS_FLOW);
     sys_mutex_unlock(conn->work_lock);
+
+    //
+    // Free the link's name
+    //
+    free(link->name);
+    link->name = 0;
 }
 
 

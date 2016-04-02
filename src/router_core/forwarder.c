@@ -473,9 +473,11 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
         out_link->conn           = conn;
         out_link->link_type      = QD_LINK_ENDPOINT;
         out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
-        out_link->name           = in_link->name;
         out_link->admin_enabled  = true;
         out_link->oper_status    = QDR_LINK_OPER_DOWN;
+
+        out_link->name = (char*) malloc(strlen(in_link->name + 1));
+        strcpy(out_link->name, in_link->name);
 
         out_link->connected_link = in_link;
         in_link->connected_link  = out_link;
