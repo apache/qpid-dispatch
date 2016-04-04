@@ -109,5 +109,95 @@ class LoadPolicyFromFolder(TestCase):
         rulesets = json.loads(self.run_qdmanage('query --type=policyRuleset'))
         self.assertEqual(len(rulesets), 3)
 
+
+class SenderReceiverLimits(TestCase):
+    """
+    Verify that specifying a policy folder from the router conf file
+    effects loading the policies in that folder.
+    This test relies on qdmanage utility.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(SenderReceiverLimits, cls).setUpClass()
+        policy_config_path = os.path.join(cls.top_dir, 'policy-3')
+        config = Qdrouterd.Config([
+            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Policy3'}),
+            ('router', {'mode': 'standalone', 'routerId': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maximumConnections': 2, 'policyFolder': policy_config_path, 'enableAccessRules': 'true'})
+        ])
+
+        cls.router = cls.tester.qdrouterd('SenderReceiverLimits', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_verify_n_receivers(self):
+        n = 4
+        addr = self.address()
+
+        # connection should be ok
+        denied = False
+        try:
+            br1 = BlockingConnection(addr)
+        except ConnectionException:
+            denied = True
+
+        self.assertFalse(denied) # assert if connections that should open did not open
+
+        # n receivers OK
+        try:
+            r1 = br1.create_receiver(address="****YES_1of4***")
+            r2 = br1.create_receiver(address="****YES_20f4****")
+            r3 = br1.create_receiver(address="****YES_3of4****")
+            r4 = br1.create_receiver(address="****YES_4of4****")
+        except Exception:
+            denied = True
+
+        self.assertFalse(denied) # n receivers should have worked
+
+        # receiver n+1 should be denied
+        try:
+            r5 = br1.create_receiver("****NO****")
+        except Exception:
+            denied = True
+
+        self.assertTrue(denied) # receiver n+1 should have failed
+
+        br1.close()
+
+    def test_verify_n_senders(self):
+        n = 2
+        addr = self.address()
+
+        # connection should be ok
+        denied = False
+        try:
+            bs1 = BlockingConnection(addr)
+        except ConnectionException:
+            denied = True
+
+        self.assertFalse(denied) # assert if connections that should open did not open
+
+        # n senders OK
+        try:
+            s1 = bs1.create_sender(address="****YES_1of2****")
+            s2 = bs1.create_sender(address="****YES_2of2****")
+        except Exception:
+            denied = True
+
+        self.assertFalse(denied) # n senders should have worked
+
+        # receiver n+1 should be denied
+        try:
+            s3 = bs1.create_sender("****NO****")
+        except Exception:
+            denied = True
+
+        self.assertTrue(denied) # sender n+1 should have failed
+
+        bs1.close()
+
 if __name__ == '__main__':
     unittest.main(main_module())
