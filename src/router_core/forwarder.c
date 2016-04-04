@@ -142,6 +142,17 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     bool          bypass_valid_origins = addr->forwarder->bypass_valid_origins;
     int           fanout               = 0;
     qd_bitmask_t *link_exclusion       = !!in_delivery ? in_delivery->link_exclusion : 0;
+    bool          presettled           = !!in_delivery ? in_delivery->settled : true;
+
+    //
+    // If the delivery is not presettled, set the settled flag for forwarding so all
+    // outgoing deliveries will be presettled.
+    //
+    // NOTE:  This is the only multicast mode currently supported.  Others will likely be
+    //        implemented in the future.
+    //
+    if (!presettled)
+        in_delivery->settled = true;
 
     //
     // Forward to local subscribers
@@ -243,6 +254,23 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             fanout++;
             addr->deliveries_to_container++;
             sub = DEQ_NEXT(sub);
+        }
+    }
+
+    if (in_delivery && !presettled) {
+        if (fanout == 0)
+            //
+            // The delivery was not presettled and it was not forwarded to any
+            // destinations, return it to its original unsettled state.
+            //
+            in_delivery->settled = false;
+        else {
+            //
+            // The delivery was not presettled and it was forwarded to at least
+            // one destination.  Accept and settle the delivery.
+            //
+            in_delivery->disposition = PN_ACCEPTED;
+            qdr_delivery_push_CT(core, in_delivery);
         }
     }
 

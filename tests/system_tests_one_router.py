@@ -1043,7 +1043,7 @@ class RouterTest(TestCase):
         M1.stop()
         M2.stop()
 
-    def test_send_settle_mode_settled(self):
+    def test_14_send_settle_mode_settled(self):
         """
         The receiver sets a snd-settle-mode of settle thus indicating that it wants to receive settled messages from
         the sender. This tests make sure that the delivery that comes to the receiver comes as already settled.
@@ -1053,7 +1053,7 @@ class RouterTest(TestCase):
         self.assertTrue(send_settle_mode_test.message_received)
         self.assertTrue(send_settle_mode_test.delivery_already_settled)
 
-    def test_14_excess_deliveries_released(self):
+    def test_15_excess_deliveries_released(self):
         """
         Message-route a series of deliveries where the receiver provides credit for a subset and
         once received, closes the link.  The remaining deliveries should be released back to the sender.
@@ -1061,6 +1061,19 @@ class RouterTest(TestCase):
         test = ExcessDeliveriesReleasedTest(self.address)
         test.run()
         self.assertEqual(None, test.error)
+
+    def test_16_multicast_unsettled(self):
+        test = MulticastUnsettledTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+class Timeout(object):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.timeout()
 
 
 HELLO_WORLD = "Hello World!"
@@ -1143,6 +1156,56 @@ class ExcessDeliveriesReleasedTest(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
+
+class MulticastUnsettledTest(MessagingHandler):
+    def __init__(self, address):
+        super(MulticastUnsettledTest, self).__init__(prefetch=0)
+        self.address = address
+        self.dest = "multicast.MUtest"
+        self.error = None
+        self.count      = 10
+        self.n_sent     = 0
+        self.n_received = 0
+        self.n_accepted = 0
+
+    def check_if_done(self):
+        if self.n_received == self.count * 2 and self.n_accepted == self.count:
+            self.timer.cancel()
+            self.conn.close()
+
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d, received=%d, accepted=%d" % (self.n_sent, self.n_received, self.n_accepted)
+        self.conn.close()
+
+    def on_start(self, event):
+        self.timer     = event.reactor.schedule(5, Timeout(self))
+        self.conn      = event.container.connect(self.address)
+        self.sender    = event.container.create_sender(self.conn, self.dest)
+        self.receiver1 = event.container.create_receiver(self.conn, self.dest, name="A")
+        self.receiver2 = event.container.create_receiver(self.conn, self.dest, name="B")
+        self.receiver1.flow(self.count)
+        self.receiver2.flow(self.count)
+
+    def on_sendable(self, event):
+        for i in range(self.count - self.n_sent):
+            msg = Message(body=i)
+            event.sender.send(msg)
+            self.n_sent += 1
+
+    def on_accepted(self, event):
+        self.n_accepted += 1
+        self.check_if_done()
+
+    def on_message(self, event):
+        if not event.delivery.settled:
+            self.error = "Received unsettled delivery"
+        self.n_received += 1
+        self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
 
 if __name__ == '__main__':
     unittest.main(main_module())
