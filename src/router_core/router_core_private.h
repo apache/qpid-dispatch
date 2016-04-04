@@ -160,7 +160,6 @@ struct qdr_query_t {
     qd_amqp_error_t          status;
 };
 
-ALLOC_DECLARE(qdr_query_t);
 DEQ_DECLARE(qdr_query_t, qdr_query_list_t); 
 
 

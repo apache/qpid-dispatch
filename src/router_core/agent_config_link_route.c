@@ -403,6 +403,6 @@ void qdra_config_link_route_create_CT(qdr_core_t          *core,
     } else {
         if (query->status.status / 100 > 2)
             qd_log(core->log, QD_LOG_ERROR, "Error configuring linkRoute: %s", query->status.description);
-        free_qdr_query_t(query);
+        qdr_query_free(query);
     }
 }

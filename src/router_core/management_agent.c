@@ -157,13 +157,15 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     if (ctx->operation_type == QD_ROUTER_OPERATION_QUERY) {
         if (status->status / 100 == 2) { // There is no error, proceed to conditionally call get_next
             if (more) {
-               //If there are no more rows to process or the status returned is something other than
-               // QD_AMQP_OK, we will close the list, send the message and
                ctx->current_count++; // Increment how many you have at hand
                if (ctx->count != ctx->current_count) {
                    qdr_query_get_next(ctx->query);
                    return;
-               }
+               } else
+                   //
+                   // This is the one case where the core agent won't free the query itself.
+                   //
+                   qdr_query_free(ctx->query);
             }
         }
         qd_compose_end_list(ctx->field);
@@ -176,7 +178,6 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     }
 
     qd_field_iterator_t *reply_to = 0;
-
     qd_composed_field_t *fld = 0;
 
     // Start composing the message.
@@ -191,8 +192,6 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     qdr_send_to1(ctx->core, ctx->msg, reply_to, true, false);
 
     // We have come to the very end. Free the appropriate memory.
-    // ctx->field has already been freed in the call to qd_compose_end_list(ctx->field)
-    // ctx->query has also been already freed
     // Just go over this with Ted to see if I freed everything.
 
     qd_field_iterator_free(reply_to);
@@ -202,6 +201,7 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
         qd_message_free(ctx->msg);
     if (ctx->source)
         qd_message_free(ctx->source);
+    qd_compose_free(ctx->field);
 
     free_qd_management_context_t(ctx);
 }
@@ -215,7 +215,7 @@ static void qd_core_agent_query_handler(qdr_core_t                 *core,
                                         int                        *offset)
 {
     //
-    // Add the Body. This body field is freed by qdr_query_free()
+    // Add the Body.
     //
     qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 

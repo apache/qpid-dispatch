@@ -411,5 +411,5 @@ void qdra_config_address_create_CT(qdr_core_t          *core,
             qd_compose_insert_null(query->body);
         qdr_agent_enqueue_response_CT(core, query);
     } else
-        free_qdr_query_t(query);
+        qdr_query_free(query);
 }

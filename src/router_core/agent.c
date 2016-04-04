@@ -31,6 +31,9 @@ static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool di
 static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
+ALLOC_DECLARE(qdr_query_t);
+ALLOC_DEFINE(qdr_query_t);
+
 //==================================================================================
 // Internal Functions
 //==================================================================================
@@ -50,10 +53,10 @@ static void qdr_agent_response_handler(void *context)
         sys_mutex_unlock(core->query_lock);
 
         if (query) {
-            core->agent_response_handler(query->context, &query->status, query->more);
-            if (!query->more) {
+            bool more = query->more;
+            core->agent_response_handler(query->context, &query->status, more);
+            if (!more)
                 qdr_query_free(query);
-            }
         }
     }
 }
@@ -226,17 +229,13 @@ void qdr_query_get_next(qdr_query_t *query)
 
 void qdr_query_free(qdr_query_t *query)
 {
-    if(!query)
+    if (!query)
         return;
 
     if (query->next_key)
         qdr_field_free(query->next_key);
 
-    if(query->body)
-        qd_compose_free(query->body);
-
     free_qdr_query_t(query);
-
 }
 
 static void qdr_agent_emit_columns(qdr_query_t *query, const char *qdr_columns[], int column_count)
@@ -259,7 +258,8 @@ static void qdr_agent_set_columns(qdr_query_t *query,
     if (!attribute_names ||
         (qd_parse_tag(attribute_names) != QD_AMQP_LIST8 &&
          qd_parse_tag(attribute_names) != QD_AMQP_LIST32) ||
-        qd_parse_sub_count(attribute_names) == 0) {
+        qd_parse_sub_count(attribute_names) == 0 ||
+        qd_parse_sub_count(attribute_names) >= QDR_AGENT_MAX_COLUMNS) {
         //
         // Either the attribute_names field is absent, it's not a list, or it's an empty list.
         // In this case, we will include all available attributes.
@@ -268,6 +268,7 @@ static void qdr_agent_set_columns(qdr_query_t *query,
         for (i = 0; i < column_count; i++)
             query->columns[i] = i;
         query->columns[i] = -1;
+        assert(i < QDR_AGENT_MAX_COLUMNS);
         return;
     }
 
