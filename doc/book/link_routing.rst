@@ -19,6 +19,7 @@ Link Routing
 ============
 
 This feature was introduced in Qpid Dispatch 0.4.
+This feature was significantly updated in Qpid Dispatch 0.6.
 
 Link-routing is an alternative strategy for routing messages across a
 network of routers.  With the existing message-routing strategy, each
@@ -34,7 +35,9 @@ The main benefit to link-routing is that endpoints can use the full link
 protocol to interact with other endpoints in far-flung parts of the
 network.  For example, a client can establish a receiver across the
 network to a queue on a remote broker and use link credit to control
-the flow of messages from the broker.
+the flow of messages from the broker.  Similarly, a receiver can
+establish a link to a topic on a remote broker using a server-side
+filter.
 
 Why would one want to do this?  One reason is to provide client
 isolation.  A network like the following can be deployed:
@@ -93,13 +96,13 @@ broker B2:
 
     connector {
         name: broker
-        role: on-demand
+        role: route-container
         addr: <B2-url>
         port: <B2-port>
         sasl-mechanisms: ANONYMOUS
     }
 
-This *on-demand* connector tells the router how to connect to an
+This *route-container* connector tells the router how to connect to an
 external AMQP container when it is needed.  The name "broker" will be
 used later to refer to this connection.
 
@@ -107,36 +110,45 @@ Now, the router must be configured to route certain addresses to B2:
 
 ::
 
-    linkRoutePattern {
+    linkRoute {
         prefix: b2
-        connector: broker
+        dir: in
+        connection: broker
+    }
+
+    linkRoute {
+        prefix: b2
+        dir: out
+        connection: broker
     }
 
 
-The linkRoutePattern tells router Ra that any sender or receiver that
+The linkRoute tells router Ra that any sender or receiver that
 is attached with a target or source (respectively) whos address begins
-with "b2", should be routed to the broker B2 (via the on-demand
+with "b2", should be routed to the broker B2 (via the route-container
 connector).
+
+Note that receiving and sending links are configured and routed
+separately.  This allows configuration of link routes for listeners
+only or senders only.  A direction of "in" matches client senders
+(i.e. links that carry messages inbound to the router network).
+Direction "out" matches client receivers.
 
 Examples of addresses that "begin with 'b2'" include:
  - b2
- - b2/queues
- - b2/queues/app1
+ - b2.queues
+ - b2.queues.app1
 
-When the on-demand connector is configured, router Ra establishes a
+When the route-container connector is configured, router Ra establishes a
 connection to the broker.  Once the connection is open, Ra tells the
 other routers (Rp and Rb) that it is a valid destination for
 link-routes to the "b2" prefix.  This means that sender or receiver
 links attached to Rb or Rp will be routed via the shortest path to Ra
 where they are then routed outbound to the broker B2.
 
-On Rp and Rb, it is advisable to add the following configuration:
-
-::
-
-    linkRoutePattern {
-        prefix: b2
-    }
+On Rp and Rb, it is advisable to add the identical configuration.  It
+is permissible for a linkRoute configuration to reference a connection
+that does not exist.
 
 This configuration tells the routers that link-routing is intended to
 be available for targets and sources starting with "b2".  This is

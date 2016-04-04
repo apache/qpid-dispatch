@@ -34,14 +34,17 @@ like the following:
 
     $ qdstat -a
     Router Addresses
-      class   address          phase  in-proc  local  remote  in  out  thru  to-proc  from-proc
-      ===========================================================================================
-      local   $management             Y        0      0       0   0    0     0        0
-      mobile  $management      0      Y        0      0       1   0    0     1        0
-      local   temp.4Q3i01lWbs                  1      0       0   0    0     0        0
+      class   addr                   phs  distrib  in-proc  local  remote  cntnr  in  out  thru  to-proc  from-proc
+      ===============================================================================================================
+      local   $_management_internal       closest  1        0      0       0      0   0    0     0        0
+      local   $displayname                closest  1        0      0       0      0   0    0     0        0
+      mobile  $management            0    closest  1        0      0       0      1   0    0     1        0
+      local   $management                 closest  1        0      0       0      0   0    0     0        0
+      local   temp.1GThUllfR7N+BDP        closest  0        1      0       0      0   0    0     0        0
 
-Note that there are two known addresses. *$management* is the address of
-the router's embedded management agent. *temp.4Q3i01lWbs* is the temporary
+
+Note that there are a number of known addresses. *$management* is the address of
+the router's embedded management agent. *temp.1GThUllfR7N+BDP* is the temporary
 reply-to address of the *qdstat* client making requests to the agent.
 
 If you change the mode to interior and restart the processs, the same
@@ -52,14 +55,19 @@ inter-router communication:
 
     $ qdstat -a
     Router Addresses
-      class   address          phase  in-proc  local  remote  in  out  thru  to-proc  from-proc
-      ===========================================================================================
-      local   $management             Y        0      0       0   0    0     0        0
-      mobile  $management      0      Y        0      0       1   0    0     1        0
-      local   qdhello                 Y        0      0       0   0    0     0        3
-      local   qdrouter                Y        0      0       0   0    0     0        1
-      local   qdrouter.ma             Y        0      0       0   0    0     0        0
-      local   temp.2ot2AWsnYz                  1      0       0   0    0     0        0
+      class   addr                   phs  distrib    in-proc  local  remote  cntnr  in  out  thru  to-proc  from-proc
+      =================================================================================================================
+      local   $_management_internal       closest    1        0      0       0      0   0    0     0        0
+      local   $displayname                closest    1        0      0       0      0   0    0     0        0
+      mobile  $management            0    closest    1        0      0       0      1   0    0     1        0
+      local   $management                 closest    1        0      0       0      0   0    0     0        0
+      local   qdhello                     flood      1        0      0       0      0   0    0     0        10
+      local   qdrouter                    flood      1        0      0       0      0   0    0     0        0
+      topo    qdrouter                    flood      1        0      0       0      0   0    0     0        1
+      local   qdrouter.ma                 multicast  1        0      0       0      0   0    0     0        0
+      topo    qdrouter.ma                 multicast  1        0      0       0      0   0    0     0        0
+      local   temp.wfx54+zf+YWQF3T        closest    0        1      0       0      0   0    0     0        0
+
 
 Mobile Subscribers
 ------------------
@@ -84,12 +92,14 @@ address. To verify the subscription:
 
     $ qdstat -a
     Router Addresses
-      class   address          phase  in-proc  local  remote  in  out  thru  to-proc  from-proc
-      ===========================================================================================
-      local   $management             Y        0      0       0   0    0     0        0
-      mobile  $management      0      Y        0      0       1   0    0     1        0
-      mobile  my-address       0               1      0       0   0    0     0        0
-      local   temp.JAgKj1+iB8                  1      0       0   0    0     0        0
+      class   addr                   phs  distrib  in-proc  local  remote  cntnr  in  out  thru  to-proc  from-proc
+      ===============================================================================================================
+      local   $_management_internal       closest  1        0      0       0      0   0    0     0        0
+      local   $displayname                closest  1        0      0       0      0   0    0     0        0
+      mobile  $management            0    closest  1        0      0       0      2   0    0     2        0
+      local   $management                 closest  1        0      0       0      0   0    0     0        0
+      mobile  my-address             0    closest  0        1      0       0      0   0    0     0        0
+      local   temp.75_d2X23x_KOT51        closest  0        1      0       0      0   0    0     0        0
 
 
 You can then, in a separate command window, run a sender to produce

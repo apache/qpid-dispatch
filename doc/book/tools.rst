@@ -22,25 +22,29 @@ qdstat
 ------
 
 *qdstat* is a command line tool that lets you view the status of a
-Dispatch Router. The following options are useful for seeing that the
+Dispatch Router. The following options are useful for seeing what the
 router is doing:
 
-+----------+-----------------------------------------------------------------------------+
-| *Option* | *Description*                                                               |
-+==========+=============================================================================+
-| -l       |Print a list of AMQP links attached to the router. Links are                 |
-|          |unidirectional. Outgoing links are usually associated with a subscription    |
-|          |address. The tool distinguishes between *endpoint* links and *router*        |
-|          |links. Endpoint links are attached to clients using the router. Router links |
-|          |are attached to other routers in a network of routbers.                      |
-|          |                                                                             |
-+----------+-----------------------------------------------------------------------------+
-| -a       |Print a list of addresses known to the router.                               |
-+----------+-----------------------------------------------------------------------------+
-| -n       |Print a list of known routers in the network.                                |
-+----------+-----------------------------------------------------------------------------+
-| -c       |Print a list of connections to the router.                                   |
-+----------+-----------------------------------------------------------------------------+
++--------------+-----------------------------------------------------------------------------+
+| *Option*     | *Description*                                                               |
++==============+=============================================================================+
+| -l           |Print a list of AMQP links attached to the router. Links are                 |
+|              |unidirectional. Outgoing links are usually associated with a subscription    |
+|              |address. The tool distinguishes between *endpoint* links and *router*        |
+|              |links. Endpoint links are attached to clients using the router. Router links |
+|              |are attached to other routers in a network of routbers.                      |
+|              |                                                                             |
++--------------+-----------------------------------------------------------------------------+
+| -a           |Print a list of addresses known to the router.                               |
++--------------+-----------------------------------------------------------------------------+
+| -n           |Print a list of known routers in the network.                                |
++--------------+-----------------------------------------------------------------------------+
+| -c           |Print a list of connections to the router.                                   |
++--------------+-----------------------------------------------------------------------------+
+| --autolinks  |Print a list of configured auto-links.                                       |
++--------------+-----------------------------------------------------------------------------+
+| --linkroutes |Print a list of configures link-routes.                                      |
++--------------+-----------------------------------------------------------------------------+
 
 For complete details see the `qdstat(8)` man page and the output of
 `qdstat --help`.

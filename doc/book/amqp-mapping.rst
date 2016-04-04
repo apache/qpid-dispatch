@@ -58,9 +58,9 @@ The following Message Annotation fields are defined by Dispatch Router:
 |                    |                  |                                                       |
 |                    |                  |                                                       |
 +--------------------+------------------+-------------------------------------------------------+
-| x-opt-qd.class     | string           |Message class. This is used to allow the router to     |
-|                    |                  |provide separate paths for different classes of        |
-|                    |                  |traffic.                                               |
+| x-opt-qd.phase     | integer          |The address-phase, if not zero, for messages flowing   |
+|                    |                  |between routers.                                       |
+|                    |                  |                                                       |
 +--------------------+------------------+-------------------------------------------------------+
 
 Source/Target Capabilities
@@ -72,8 +72,12 @@ The following Capability values are used in Sources and Targets.
 | *Capability*   | *Description*                                                              |
 +================+============================================================================+
 | qd.router      |This capability is added to sources and targets that are used for           |
-|                |inter-router message exchange.                                              |
-|                |                                                                            |
+|                |inter-router message exchange.  This capability denotes a link used for     |
+|                |router-control messages flowing between routers.                            |
++----------------+----------------------------------------------------------------------------+
+| qd.router-data |This capability is added to sources and targets that are used for           |
+|                |inter-router message exchange.  This capability denotes a link used for     |
+|                |user messages being message-routed across an inter-router connection.       |
 +----------------+----------------------------------------------------------------------------+
 
 Dynamic-Node-Properties
@@ -113,7 +117,7 @@ Address Patterns
 |                                |                                                       |
 |                                |                                                       |
 +--------------------------------+-------------------------------------------------------+
-| `_topo/<area>/<router>/<addr>` |An address that references an endpoint attached to a   |
+| `_topo/0/<router>/<addr>`      |An address that references an endpoint attached to a   |
 |                                |specific router node in the network topology. Messages |
 |                                |with addresses that follow this pattern shall be routed|
 |                                |along the shortest path to the specified router. Note  |
@@ -121,9 +125,9 @@ Address Patterns
 |                                |that the address itself contains enough information to |
 |                                |route the message to its destination.                  |
 |                                |                                                       |
-|                                |                                                       |
-|                                |                                                       |
-|                                |                                                       |
+|                                |The '0' component immediately preceding the router-id  |
+|                                |is a placeholder for an _area_ which may be used in    |
+|                                |the future if area routing is implemented.             |
 |                                |                                                       |
 |                                |                                                       |
 |                                |                                                       |
@@ -161,31 +165,31 @@ Address Patterns
 Supported Addresses
 ~~~~~~~~~~~~~~~~~~~
 
-+------------------------------+------------------------------------------------------------+
-| *Address*                    | *Description*                                              |
-+==============================+============================================================+
-| `$management`                |The management agent on the attached router/container. This |
-|                              |address would be used by an endpoint that is a management   |
-|                              |client/console/tool wishing to access management data from  |
-|                              |the attached container.                                     |
-+------------------------------+------------------------------------------------------------+
-| `_topo/0/Router.E/agent`     |The management agent at Router.E in area 0. This address    |
-|                              |would be used by a management client wishing to access      |
-|                              |management data from a specific container that is reachable |
-|                              |within the network.                                         |
-+------------------------------+------------------------------------------------------------+
-| `_local/qdhello`             |The router entity in each of the connected routers. This    |
-|                              |address is used to communicate with neighbor routers and is |
-|                              |exclusively for the HELLO discovery protocol.               |
-+------------------------------+------------------------------------------------------------+
-| `_local/qdrouter`            |The router entity in each of the connected routers. This    |
-|                              |address is used by a router to communicate with other       |
-|                              |routers in the network.                                     |
-+------------------------------+------------------------------------------------------------+
-| `_topo/0/Router.E/qdrouter`  |The router entity at the specifically indicated router. This|
-|                              |address form is used by a router to communicate with a      |
-|                              |specific router that may or may not be a neighbor.          |
-+------------------------------+------------------------------------------------------------+
++---------------------------------+------------------------------------------------------------+
+| *Address*                       | *Description*                                              |
++=================================+============================================================+
+| `$management`                   |The management agent on the attached router/container. This |
+|                                 |address would be used by an endpoint that is a management   |
+|                                 |client/console/tool wishing to access management data from  |
+|                                 |the attached container.                                     |
++---------------------------------+------------------------------------------------------------+
+| `_topo/0/Router.E/$management`  |The management agent at Router.E in area 0. This address    |
+|                                 |would be used by a management client wishing to access      |
+|                                 |management data from a specific container that is reachable |
+|                                 |within the network.                                         |
++---------------------------------+------------------------------------------------------------+
+| `_local/qdhello`                |The router entity in each of the connected routers. This    |
+|                                 |address is used to communicate with neighbor routers and is |
+|                                 |exclusively for the HELLO discovery protocol.               |
++---------------------------------+------------------------------------------------------------+
+| `_local/qdrouter`               |The router entity in each of the connected routers. This    |
+|                                 |address is used by a router to communicate with other       |
+|                                 |routers in the network.                                     |
++---------------------------------+------------------------------------------------------------+
+| `_topo/0/Router.E/qdrouter`     |The router entity at the specifically indicated router. This|
+|                                 |address form is used by a router to communicate with a      |
+|                                 |specific router that may or may not be a neighbor.          |
++---------------------------------+------------------------------------------------------------+
 
 Implementation of the AMQP Management Specification
 ---------------------------------------------------

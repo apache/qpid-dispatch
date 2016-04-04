@@ -961,7 +961,7 @@
             "attributes": {
                 "addr": {
                     "type": "string",
-                    "description": "The address or address prefix for the provisioned object",
+                    "description": "The address of the provisioned object",
                     "create": true,
                     "required": true
                 },

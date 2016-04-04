@@ -25,5 +25,6 @@ Using Qpid Dispatch
    tools
    basic_usage
    link_routing
+   auto_links
 
 
