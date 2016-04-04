@@ -374,7 +374,10 @@ void qdpn_listener_set_context(qdpn_listener_t *listener, void *context)
     listener->context = context;
 }
 
-qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l, void *policy, bool (*policy_fn)(void *, const char *name))
+qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l,
+                                       void *policy,
+                                       bool (*policy_fn)(void *, const char *name),
+                                       bool *counted)
 {
     if (!l || !l->pending) return NULL;
     char name[PN_NAME_MAX];
@@ -403,11 +406,15 @@ qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l, void *policy, bool (*
         }
     }
 
-    if (policy_fn && !(*policy_fn)(policy, name)) {
-        close(sock);
-        return 0;
+    if (policy_fn) {
+        if (!(*policy_fn)(policy, name)) {
+            close(sock);
+            return 0;
+        } else {
+            *counted = true;
+        }
     }
-    
+
     if (l->driver->trace & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
         fprintf(stderr, "Accepted from %s\n", name);
 

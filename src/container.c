@@ -381,7 +381,6 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             // Let policy engine decide
             qd_connection_set_event_stall(qd_conn, true);
             qd_conn->open_container = (void *)container;
-            qd_conn->conn_context = conn_context;
             qd_connection_invoke_deferred(qd_conn, qd_policy_amqp_open, qd_conn);
         } else {
             // This Open is in response to an internally initiated connection

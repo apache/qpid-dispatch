@@ -178,11 +178,17 @@ void qdpn_listener_trace(qdpn_listener_t *listener, pn_trace_t trace);
 /** Accept a connection that is pending on the listener.
  *
  * @param[in] listener the listener to accept the connection on
- * @param[in] policy function that accepts remote host name and returns 
+ * @param[in] policy policy that holds absolute connection limits
+ * @param[in] policy_fn function that accepts remote host name and returns
  *            decision to allow or deny this connection
+ * @param[out] counted pointer to a bool set to true when the connection was
+ *             counted against absolute connection limits
  * @return a new connector for the remote, or NULL on error
  */
-qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *listener, void *policy, bool (*policy_fn)(void *, const char *));
+qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *listener,
+                                       void *policy,
+                                       bool (*policy_fn)(void *, const char *),
+                                       bool *counted);
 
 /** Access the application context that is associated with the listener.
  *

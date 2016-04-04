@@ -479,7 +479,8 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
     qd_connection_t  *ctx;
 
     for (listener = qdpn_driver_listener(driver); listener; listener = qdpn_driver_listener(driver)) {
-        cxtr = qdpn_listener_accept(listener, qd_server->qd->policy, &qd_policy_socket_accept);
+        bool policy_counted = false;
+        cxtr = qdpn_listener_accept(listener, qd_server->qd->policy, &qd_policy_socket_accept, &policy_counted);
         if (!cxtr)
             continue;
 
@@ -510,10 +511,10 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->n_senders       = 0;
         ctx->n_receivers     = 0;
         ctx->open_container  = 0;
-        ctx->conn_context    = 0;
         DEQ_INIT(ctx->deferred_calls);
         ctx->deferred_call_lock = sys_mutex();
         ctx->event_stall  = false;
+        ctx->policy_counted = policy_counted;
 
         pn_connection_t *conn = pn_connection();
         ctx->collector = pn_collector();
@@ -957,7 +958,7 @@ static void *thread_run(void *arg)
                 sys_mutex_lock(qd_server->lock);
                 DEQ_REMOVE(qd_server->connections, ctx);
 
-                if (!ctx->connector && ctx->open_container) {
+                if (ctx->policy_counted) {
                     qd_policy_socket_close(qd_server->qd->policy, ctx);
                 }
 
@@ -1058,11 +1059,11 @@ static void cxtr_try_open(void *context)
     ctx->n_senders       = 0;
     ctx->n_receivers     = 0;
     ctx->open_container  = 0;
-    ctx->conn_context    = 0;
-    
+
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
     ctx->event_stall  = false;
+    ctx->policy_counted = false;
 
     qd_log(ct->server->log_source, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
 
@@ -1636,10 +1637,10 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     ctx->n_senders       = 0;
     ctx->n_receivers     = 0;
     ctx->open_container  = 0;
-    ctx->conn_context    = 0;
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
     ctx->event_stall  = false;
+    ctx->policy_counted = false;
 
     ufd->context = context;
     ufd->server  = qd_server;

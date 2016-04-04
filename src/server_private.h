@@ -105,10 +105,10 @@ struct qd_connection_t {
     int                       n_senders;
     int                       n_receivers;
     void                     *open_container;
-    void                     *conn_context;
     qd_deferred_call_list_t   deferred_calls;
     sys_mutex_t              *deferred_call_lock;
     bool                      event_stall;
+    bool                      policy_counted;
 };
 
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);

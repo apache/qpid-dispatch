@@ -732,7 +732,7 @@ void qd_policy_amqp_open(void *context, bool discard)
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
                 pn_connection_open(conn);
             qd_connection_manager_connection_opened(qd_conn);
-            policy_notify_opened(qd_conn->open_container, qd_conn, qd_conn->conn_context);
+            policy_notify_opened(qd_conn->open_container, qd_conn, qd_conn->context);
         }
     }
     qd_connection_set_event_stall(qd_conn, false);
