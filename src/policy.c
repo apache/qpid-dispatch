@@ -254,7 +254,8 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
     }
     if (policy->max_connection_limit > 0) {
         const char *hostname = qdpn_connector_name(conn->pn_cxtr);
-        qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' closed. N connections=%d", hostname, n_connections);
+        qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d. Total connections=%d.",
+                hostname, conn->n_sessions, conn->n_senders, conn->n_receivers, n_connections);
     }
 }
 
@@ -426,6 +427,7 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
             }
         }
     }
+    // Approved
     return true;
 }
 
@@ -603,7 +605,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
     } else {
         // max sender limit not specified
     }
-    // Deny sender link based on target
+    // Approve sender link based on target
     const char * target = pn_terminus_get_address(pn_link_remote_target(pn_link));
     bool lookup;
     if (target && *target) {
@@ -623,13 +625,14 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
         // This happens all the time with anonymous relay
         lookup = qd_conn->policy_settings->allowAnonymousSender;
         qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
-            "Approve anonymous sender for user '%s': %s",
-			qd_conn->user_id, (lookup ? "ALLOW" : "DENY"));
+            "Approve anonymous relay sender link for user '%s': %s",
+            qd_conn->user_id, (lookup ? "ALLOW" : "DENY"));
         if (!lookup) {
             _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
             return false;
         }
     }
+    // Approved
     return true;
 }
 
@@ -647,7 +650,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     } else {
         // max receiver limit not specified
     }
-    // Deny receiver link based on source
+    // Approve receiver link based on source
     bool dynamic_src = pn_terminus_is_dynamic(pn_link_remote_source(pn_link));
     if (dynamic_src) {
         bool lookup = qd_conn->policy_settings->allowDynamicSrc;
@@ -677,11 +680,12 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
         // A receiver with no remote source.
         qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
                "Approve receiver link '' for user '%s': DENY",
-			   qd_conn->user_id);
+               qd_conn->user_id);
 
         _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
         return false;
     }
+    // Approved
     return true;
 }
 

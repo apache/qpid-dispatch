@@ -423,11 +423,11 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                     if (qd_link && qd_link->node) {
                         if (qd_conn->policy_settings) {
                             if (qd_link->direction == QD_OUTGOING) {
-                                qd_conn->n_senders--;
-                                assert(qd_conn->n_senders >= 0);
-                            } else {
                                 qd_conn->n_receivers--;
                                 assert(qd_conn->n_receivers >= 0);
+                            } else {
+                                qd_conn->n_senders--;
+                                assert(qd_conn->n_senders >= 0);
                             }
                         }
                         qd_log(container->log_source, QD_LOG_NOTICE,
@@ -454,7 +454,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                     if (!qd_policy_approve_amqp_receiver_link(pn_link, qd_conn)) {
                         break;
                     }
-                    qd_conn->n_senders++;
+                    qd_conn->n_receivers++;
                 }
                 setup_outgoing_link(container, pn_link);
             } else {
@@ -462,7 +462,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                     if (!qd_policy_approve_amqp_sender_link(pn_link, qd_conn)) {
                         break;
                     }
-                    qd_conn->n_receivers++;
+                    qd_conn->n_senders++;
                 }
                 setup_incoming_link(container, pn_link);
             }
@@ -480,22 +480,22 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             if (node)
                 node->ntype->link_detach_handler(node->context, qd_link, dt);
             else if (qd_link->pn_link == pn_link) {
-
-                //
-                // This policy stuff is in the wrong place.  This else clause typically does not run.
-                //
-                if (qd_conn->policy_settings) {
-                    if (pn_link_is_sender(pn_link)) {
-                        qd_conn->n_senders--;
-                        assert (qd_conn->n_senders >= 0);
-                    } else {
-                        qd_conn->n_receivers--;
-                        assert (qd_conn->n_receivers >= 0);
-                    }
-                } else {
-                    // no policy - links not counted
-                }
                 pn_link_close(pn_link);
+            }
+            if (qd_conn->policy_counted && qd_conn->policy_settings) {
+                if (pn_link_is_sender(pn_link)) {
+                    qd_conn->n_receivers--;
+                    qd_log(container->log_source, QD_LOG_TRACE,
+                           "Closed receiver link %s. n_receivers: %d",
+                           pn_link_name(pn_link), qd_conn->n_receivers);
+                    assert (qd_conn->n_receivers >= 0);
+                } else {
+                    qd_conn->n_senders--;
+                    qd_log(container->log_source, QD_LOG_TRACE,
+                           "Closed sender link %s. n_senders: %d",
+                           pn_link_name(pn_link), qd_conn->n_senders);
+                    assert (qd_conn->n_senders >= 0);
+                }
             }
             if (qd_link->close_sess_with_link && qd_link->pn_sess &&
                 pn_link_state(pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED))

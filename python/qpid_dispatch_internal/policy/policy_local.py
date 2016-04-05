@@ -679,10 +679,11 @@ class PolicyLocal(object):
         @return:
         """
         try:
-            facts = self._connections[conn_id]
-            stats = self.statsdb[facts.app]
-            stats.disconnect(facts.conn_name, facts.user, facts.host)
-            del self._connections[conn_id]
+            if conn_id in self._connections:
+                facts = self._connections[conn_id]
+                stats = self.statsdb[facts.app]
+                stats.disconnect(facts.conn_name, facts.user, facts.host)
+                del self._connections[conn_id]
         except Exception, e:
             self._manager.log_trace(
                 "Policy internal error closing connection id %s. %s" % (conn_id, str(e)))
