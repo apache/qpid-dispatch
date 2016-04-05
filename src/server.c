@@ -61,6 +61,8 @@ const char CERT_FINGERPRINT_SHA256 = '2';
 const char CERT_FINGERPRINT_SHA512 = '5';
 char *COMPONENT_SEPARATOR = ";";
 
+const char *DEFAULT_USER_ID = "anonymous";
+
 static qd_thread_t *thread(qd_server_t *qd_server, int id)
 {
     qd_thread_t *thread = NEW(qd_thread_t);
@@ -322,6 +324,8 @@ void qd_connection_set_user(qd_connection_t *conn)
                 conn->user_id = user_id;
         }
     }
+    if (!conn->user_id)
+        conn->user_id = DEFAULT_USER_ID;
 }
 
 qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
