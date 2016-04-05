@@ -367,8 +367,6 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
             qdr_delivery_release_CT(core, dlv);
         }
     } else if (fanout > 0) {
-        qd_bitmask_free(dlv->link_exclusion);
-        dlv->link_exclusion = 0;
         if (dlv->settled) {
             //
             // The delivery is settled.  Keep it off the unsettled list and issue
