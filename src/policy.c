@@ -557,8 +557,8 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
     // Do reverse user substitution into proposed
     char substbuf[QPALN_USERBUFSIZE];
     char * prop2 = _qd_policy_link_user_name_subst(username, proposed, substbuf, QPALN_USERBUFSIZE);
-    char *tok, *toknext;
-    tok = strtok_r(pa, QPALN_COMMA_SEP, &toknext);
+    char *toknext = 0;
+    char *tok = strtok_r(pa, QPALN_COMMA_SEP, &toknext);
     assert (tok);
     bool result = false;
     while (tok != NULL) {
