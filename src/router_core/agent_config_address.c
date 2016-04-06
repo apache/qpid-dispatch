@@ -19,6 +19,7 @@
 
 #include <qpid/dispatch/ctools.h>
 #include "agent_config_address.h"
+#include <inttypes.h>
 #include <stdio.h>
 
 #define QDR_CONFIG_ADDRESS_NAME          0
@@ -60,7 +61,7 @@ static void qdr_config_address_insert_column_CT(qdr_address_config_t *addr, int 
 
     case QDR_CONFIG_ADDRESS_IDENTITY: {
         char id_str[100];
-        snprintf(id_str, 100, "%ld", addr->identity);
+        snprintf(id_str, 100, "%"PRId64, addr->identity);
         qd_compose_insert_string(body, id_str);
         break;
     }
@@ -224,7 +225,7 @@ static qdr_address_config_t *qdr_address_config_find_by_identity_CT(qdr_core_t *
     while (rc) {
         // Convert the passed in identity to a char*
         char id[100];
-        snprintf(id, 100, "%ld", rc->identity);
+        snprintf(id, 100, "%"PRId64, rc->identity);
         if (qd_field_iterator_equal(identity, (const unsigned char*) id))
             break;
         rc = DEQ_NEXT(rc);

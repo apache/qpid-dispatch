@@ -20,6 +20,7 @@
 #include <qpid/dispatch/ctools.h>
 #include "agent_config_link_route.h"
 #include "route_control.h"
+#include <inttypes.h>
 #include <stdio.h>
 
 #define QDR_CONFIG_LINK_ROUTE_NAME          0
@@ -61,7 +62,7 @@ static void qdr_config_link_route_insert_column_CT(qdr_link_route_t *lr, int col
 
     case QDR_CONFIG_LINK_ROUTE_IDENTITY: {
         char id_str[100];
-        snprintf(id_str, 100, "%ld", lr->identity);
+        snprintf(id_str, 100, "%"PRId64, lr->identity);
         qd_compose_insert_string(body, id_str);
         break;
     }
@@ -252,7 +253,7 @@ static qdr_link_route_t *qdr_link_route_config_find_by_identity_CT(qdr_core_t *c
     while (rc) {
         // Convert the passed in identity to a char*
         char id[100];
-        snprintf(id, 100, "%ld", rc->identity);
+        snprintf(id, 100, "%"PRId64, rc->identity);
         if (qd_field_iterator_equal(identity, (const unsigned char*) id))
             break;
         rc = DEQ_NEXT(rc);

@@ -20,6 +20,7 @@
 #include <qpid/dispatch/ctools.h>
 #include "agent_config_auto_link.h"
 #include "route_control.h"
+#include <inttypes.h>
 #include <stdio.h>
 
 #define QDR_CONFIG_AUTO_LINK_NAME          0
@@ -67,7 +68,7 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
         break;
 
     case QDR_CONFIG_AUTO_LINK_IDENTITY:
-        snprintf(id_str, 100, "%ld", al->identity);
+        snprintf(id_str, 100, "%"PRId64, al->identity);
         qd_compose_insert_string(body, id_str);
         break;
 
@@ -110,7 +111,7 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
 
     case QDR_CONFIG_AUTO_LINK_LINK_REF:
         if (al->link) {
-            snprintf(id_str, 100, "%ld", al->link->identity);
+            snprintf(id_str, 100, "%"PRId64, al->link->identity);
             qd_compose_insert_string(body, id_str);
         } else
             qd_compose_insert_null(body);
@@ -262,7 +263,7 @@ static qdr_auto_link_t *qdr_auto_link_config_find_by_identity_CT(qdr_core_t *cor
     while (rc) {
         // Convert the passed in identity to a char*
         char id[100];
-        snprintf(id, 100, "%ld", rc->identity);
+        snprintf(id, 100, "%"PRId64, rc->identity);
         if (qd_field_iterator_equal(identity, (const unsigned char*) id))
             break;
         rc = DEQ_NEXT(rc);

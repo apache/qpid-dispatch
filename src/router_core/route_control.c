@@ -18,6 +18,7 @@
  */
 
 #include "route_control.h"
+#include <inttypes.h>
 #include <stdio.h>
 
 ALLOC_DEFINE(qdr_link_route_t);
@@ -66,7 +67,7 @@ static void qdr_route_log_CT(qdr_core_t *core, const char *text, const char *nam
     const char *log_name = name ? name : id_string;
 
     if (!name)
-        snprintf(id_string, 64, "%ld", id);
+        snprintf(id_string, 64, "%"PRId64, id);
 
     qd_log(core->log, QD_LOG_INFO, "%s '%s' on %s %s",
            text, log_name, key[0] == 'L' ? "connection" : "container", &key[1]);
