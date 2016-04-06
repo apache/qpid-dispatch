@@ -722,7 +722,7 @@ void qd_policy_amqp_open(void *context, bool discard)
                 if (qd_conn->policy_settings->maxFrameSize > 0)
                     pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
                 if (qd_conn->policy_settings->maxSessions > 0)
-                    pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions);
+                    pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
             } else {
                 // This connection is denied by policy.
                 connection_allowed = false;
