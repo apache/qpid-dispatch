@@ -53,8 +53,7 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
 
         *strip_annotations_in  = cf ? cf->strip_inbound_annotations  : false;
         *strip_annotations_out = cf ? cf->strip_outbound_annotations : false;
-
-        *link_capacity = cf->link_capacity;
+        *link_capacity         = cf ? cf->link_capacity : 1;
 
         if        (cf && strcmp(cf->role, router_role) == 0) {
             *strip_annotations_in  = false;
@@ -66,7 +65,7 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
         else
             *role = QDR_ROLE_NORMAL;
 
-        *name = cf->name;
+        *name = cf ? cf->name : 0;
         if (*name) {
             if (strncmp("listener/", *name, 9) == 0 ||
                 strncmp("connector/", *name, 10) == 0)

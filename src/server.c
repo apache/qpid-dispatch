@@ -144,10 +144,10 @@ static const char *qd_transport_get_user(qd_connection_t *conn, pn_transport_t *
         // The tokens in the uidFormat strings are delimited by comma. Load the individual components of the uidFormat
         // into the components[] array. The maximum number of components that are allowed are 7 namely, c, s, l, o, u, n, (1 or 2 or 5)
         //
-        char components[7];
+        char components[8];
 
         //The strcpy() function copies the string pointed to by src, including the terminating null byte ('\0'), to the buffer pointed to by dest.
-        strcpy(components, config->ssl_uid_format);
+        strncpy(components, config->ssl_uid_format, 7);
 
         const char *country_code = 0;
         const char *state = 0;

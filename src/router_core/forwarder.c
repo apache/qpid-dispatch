@@ -504,7 +504,7 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
         out_link->admin_enabled  = true;
         out_link->oper_status    = QDR_LINK_OPER_DOWN;
 
-        out_link->name = (char*) malloc(strlen(in_link->name + 1));
+        out_link->name = (char*) malloc(strlen(in_link->name) + 1);
         strcpy(out_link->name, in_link->name);
 
         out_link->connected_link = in_link;
