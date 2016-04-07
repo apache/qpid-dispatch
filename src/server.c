@@ -159,7 +159,7 @@ static const char *qd_transport_get_user(qd_connection_t *conn, pn_transport_t *
         // SHA1 is 20 octets (40 hex characters); SHA256 is 32 octets (64 hex characters).
         // SHA512 is 64 octets (128 hex characters)
         //
-        char fingerprint[129];
+        char fingerprint[129] = "\0";
 
         int uid_length = 0;
         int semi_colon_count = -1;
