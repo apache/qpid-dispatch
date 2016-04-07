@@ -225,7 +225,7 @@ class NodeTracker(object):
         """
         Invoked when an inter-router link is dropped.
         """
-        self.container.log_ls(LOG_INFO, "Router Link Lost - link_id=%d" % link_id)
+        self.container.log_ls(LOG_INFO, "Link to Neighbor Router Lost - link_tag=%d" % link_id)
         node_id = self.link_id_to_node_id(link_id)
         if node_id:
             self.nodes_by_link_id.pop(link_id)
@@ -529,6 +529,6 @@ class RouterNode(object):
         self.instance = instance
         self.link_state.del_all_peers()
         self.unmap_all_addresses()
-        self.log(LOG_TRACE, "Node %s detected restart" % self.id)
+        self.log(LOG_INFO, "Detected Restart of Router Node %s" % self.id)
         return True
 
