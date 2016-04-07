@@ -773,7 +773,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 
     qd_message_send(qdr_delivery_message(dlv), qlink, qdr_link_strip_annotations_out(link));
 
-    if (remote_snd_settled)
+    if (!settled && remote_snd_settled)
         // Tell the core that the delivery has been accepted and settled, since we are settling on behalf of the receiver
         qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true);
 
