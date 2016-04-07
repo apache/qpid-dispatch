@@ -19,9 +19,9 @@
 
 import unittest
 from time import sleep
-from subprocess import PIPE
+from subprocess import PIPE, STDOUT
 
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
 
 from proton import Message
 from proton.reactor import AtMostOnce
@@ -119,6 +119,39 @@ class LinkRoutePatternTest(TestCase):
         assert p.returncode == 0, "qdstat exit status %s, output:\n%s" % (p.returncode, out)
         return out
 
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception, e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
+
+    def test_aaa_qdmanage_query_link_route(self):
+        """
+        qdmanage converts short type to long type and this test specifically tests if qdmanage is actually doing
+        the type conversion correctly by querying with short type and long type.
+        """
+        cmd = 'QUERY --type=linkRoute'
+        out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
+
+        # Make sure there is a dir of in and out.
+        self.assertTrue('"dir": "in"' in out)
+        self.assertTrue('"dir": "out"' in out)
+        self.assertTrue('"connection": "broker"' in out)
+
+        # Use the long type and make sure that qdmanage does not mess up the long type
+        cmd = 'QUERY --type=org.apache.qpid.dispatch.router.config.linkRoute'
+        out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
+
+        # Make sure there is a dir of in and out.
+        self.assertTrue('"dir": "in"' in out)
+        self.assertTrue('"dir": "out"' in out)
+        self.assertTrue('"connection": "broker"' in out)
+
     def test_bbb_qdstat_link_routes_routerB(self):
         """
         Runs qdstat on router B to make sure that router B has two link routes, one 'in' and one 'out'
@@ -160,7 +193,7 @@ class LinkRoutePatternTest(TestCase):
 
         apply_options = AtMostOnce()
 
-        # Sender to  to org.apache.dev
+        # Sender to org.apache.dev
         blocking_sender = blocking_connection.create_sender(address="org.apache.dev", options=apply_options)
         msg = Message(body=hello_world_1)
         # Send a message
@@ -316,5 +349,92 @@ class LinkRoutePatternTest(TestCase):
 
         #blocking_receiver.close()
         blocking_connection.close()
+
+    def test_zzz_qdmanage_delete_link_route(self):
+        """
+        We are deleting the link route using qdmanage short name. This should be the last test to run
+        """
+
+        # First delete linkRoutes on QDR.B
+        local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
+        result_list = local_node.query(type='org.apache.qpid.dispatch.router.config.linkRoute').results
+
+        identity_1 = result_list[0][1]
+        identity_2 = result_list[1][1]
+
+        cmd = 'DELETE --type=linkRoute --identity=' + identity_1
+        self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
+
+        cmd = 'DELETE --type=linkRoute --identity=' + identity_2
+        self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
+
+        cmd = 'QUERY --type=linkRoute'
+        out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
+        self.assertEquals(out.rstrip(), '[]')
+
+        sleep(1)
+
+        # linkRoutes now gone on QDR.B but remember that it still exist on QDR.C
+        # We will now try to create a receiver on address org.apache.dev on QDR.C.
+        # Since the linkRoute on QDR.B is gone, QDR.C
+        # will not allow a receiver to be created since there is no route to destination.
+        # Connects to listener #2 on QDR.C
+        addr = self.routers[2].addresses[1]
+
+        timeout_exception = False
+        blocking_connection = BlockingConnection(addr, timeout=3)
+
+        try:
+            blocking_connection.create_receiver(address="org.apache.dev")
+        except Exception as e:
+            self.assertTrue("timed out: Opening link" in e.message)
+            timeout_exception = True
+
+        self.assertTrue(timeout_exception)
+
+        # Now delete linkRoutes on QDR.C to eradicate linkRoutes completely
+        local_node = Node.connect(addr, timeout=TIMEOUT)
+        result_list = local_node.query(type='org.apache.qpid.dispatch.router.config.linkRoute').results
+
+        identity_1 = result_list[0][1]
+        identity_2 = result_list[1][1]
+
+        cmd = 'DELETE --type=linkRoute --identity=' + identity_1
+        self.run_qdmanage(cmd=cmd, address=addr)
+
+        cmd = 'DELETE --type=linkRoute --identity=' + identity_2
+        self.run_qdmanage(cmd=cmd, address=addr)
+
+        cmd = 'QUERY --type=linkRoute'
+        out = self.run_qdmanage(cmd=cmd, address=addr)
+        self.assertEquals(out.rstrip(), '[]')
+
+        blocking_connection = BlockingConnection(addr, timeout=3)
+
+        # Receive on org.apache.dev (this address used to be linkRouted but not anymore since we deleted linkRoutes
+        # on both QDR.C and QDR.B)
+        blocking_receiver = blocking_connection.create_receiver(address="org.apache.dev")
+
+        apply_options = AtMostOnce()
+        hello_world_1 = "Hello World_1!"
+        # Sender to org.apache.dev
+        blocking_sender = blocking_connection.create_sender(address="org.apache.dev", options=apply_options)
+        msg = Message(body=hello_world_1)
+
+        # Send a message
+        blocking_sender.send(msg)
+        received_message = blocking_receiver.receive(timeout=5)
+        self.assertEqual(hello_world_1, received_message.body)
+
+        # Connect to the router acting like the broker (QDR.A) and check the deliveriesIngress and deliveriesEgress
+        local_node = Node.connect(self.routers[2].addresses[1], timeout=TIMEOUT)
+
+        self.assertEqual(u'QDR.C', local_node.query(type='org.apache.qpid.dispatch.router',
+                                                    attribute_names=['routerId']).results[0][0])
+
+        self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
+                                            name='M0org.apache.dev').deliveriesEgress,
+                         "deliveriesEgress is wrong")
+
 if __name__ == '__main__':
     unittest.main(main_module())

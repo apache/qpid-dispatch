@@ -36,9 +36,8 @@ def attr_split(attrstr):
         return nv
 
 class QdManage():
-
     def __init__(self):
-
+        self.prefix = 'org.apache.qpid.dispatch.'
         self.operations = ['QUERY', 'CREATE', 'READ', 'UPDATE', 'DELETE',
                            'GET-TYPES', 'GET-OPERATIONS', 'GET-ATTRIBUTES', 'GET-ANNOTATIONS',
                            'GET-MGMT-NODES', 'GET-SCHEMA', 'GET-LOG']
@@ -60,10 +59,17 @@ class QdManage():
         op.add_option_group(connection_options(op))
         self.op = op
 
+    def clean_opts(self):
+        attr_type = self.opts.type
+        if attr_type:
+            self.opts.type = self.long_type(attr_type)
+
     def run(self, argv):
         # Make all args unicode to avoid encoding arg values as AMQP bytes.
         self.opts, self.args = self.op.parse_args([unicode(x) for x in argv[1:]])
-        if self.opts.indent == -1: self.opts.indent = None
+        self.clean_opts()
+        if self.opts.indent == -1:
+            self.opts.indent = None
         if len(self.args) == 0: raise UsageError("No operation specified")
         self.node = Node.connect(
             opts_url(self.opts), self.opts.router, self.opts.timeout, opts_ssl_domain(self.opts))
@@ -92,12 +98,27 @@ class QdManage():
             except ValueError:
                 print result
 
+    def long_type(self, type):
+        if not type or "." in type:
+            return type
+
+        if type in ('linkRoute', 'address', 'autoLink'):
+            return self.prefix + "router.config." + type
+
+        return self.prefix + type
+
     def call_node(self, method, *argnames, **kwargs):
         """Call method on node, use opts named in argnames"""
         names = set(argnames)
+
+        attributes = kwargs.get('attributes')
+        if attributes and attributes.get('type'):
+            attributes['type'] = self.long_type(attributes['type'])
+
         for k in self.opts.__dict__:
             if k in names and hasattr(self.opts, k):
                 kwargs[k] = getattr(self.opts, k)
+
         return getattr(self.node, method)(**kwargs)
 
     def call_bulk(self, func):
@@ -114,7 +135,8 @@ class QdManage():
 
     def query(self):
         """query [ATTR...]          Print attributes of entities."""
-        if self.args:  self.opts.attribute_names = self.args
+        if self.args:
+            self.opts.attribute_names = self.args
         result = self.call_node('query', 'type', 'attribute_names')
         self.print_json(result.get_dicts(clean=True))
 
