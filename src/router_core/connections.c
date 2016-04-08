@@ -474,8 +474,11 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         DEQ_REMOVE_HEAD(unsettled);
         peer = dlv->peer;
         qdr_delivery_free(dlv);
-        if (peer)
+        if (peer) {
             peer->peer = 0;
+            if (link->link_direction == QD_OUTGOING)
+                qdr_delivery_release_CT(core, peer);
+        }
         dlv = DEQ_HEAD(unsettled);
     }
 
