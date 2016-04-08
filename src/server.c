@@ -98,6 +98,9 @@ static void free_qd_connection(qd_connection_t *ctx)
         ctx->collector = NULL;
     }
 
+    if (ctx->free_user_id)
+        free((char*)ctx->user_id);
+
     free_qd_connection_t(ctx);
 }
 
@@ -243,6 +246,11 @@ static const char *qd_transport_get_user(qd_connection_t *conn, pn_transport_t *
 
         if(uid_length > 0) {
             char *user_id = malloc((uid_length + semi_colon_count + 1) * sizeof(char)); // the +1 is for the '\0' character
+            //
+            // We have allocated memory for user_id. We are responsible for freeing this memory. Set conn->free_user_id
+            // to true so that we know that we have to free the user_id
+            //
+            conn->free_user_id = true;
             memset(user_id, 0, uid_length + semi_colon_count + 1);
 
             // The components in the user id string must appear in the same order as it appears in the component string. that is
@@ -318,7 +326,6 @@ void qd_connection_set_user(qd_connection_t *conn)
         conn->user_id = pn_transport_get_user(tport);
         // We want to set the user name only if it is not already set and the selected sasl mechanism is EXTERNAL
         if (mech && strcmp(mech, MECH_EXTERNAL) == 0) {
-            // TODO - Make sure you free the user_id when conn is freed ?
             const char *user_id = qd_transport_get_user(conn, tport);
             if (user_id)
                 conn->user_id = user_id;
@@ -510,6 +517,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->link_context  = 0;
         ctx->ufd           = 0;
         ctx->user_id       = 0;
+        ctx->free_user_id  = false;
         ctx->connection_id = qd_server->next_connection_id++; // Increment the connection id so the next connection can use it
         ctx->policy_settings = 0;
         ctx->n_senders       = 0;
@@ -1059,6 +1067,7 @@ static void cxtr_try_open(void *context)
     ctx->link_context = 0;
     ctx->ufd          = 0;
     ctx->user_id      = 0;
+    ctx->free_user_id = false;
     ctx->policy_settings = 0;
     ctx->n_senders       = 0;
     ctx->n_receivers     = 0;
