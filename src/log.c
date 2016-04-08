@@ -452,19 +452,21 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     //Obtain the log_source_lock global lock
     sys_mutex_lock(log_source_lock);
 
+    char* module = 0;
+    char *output = 0;
+    char *enable = 0;
+
     do {
 
-        char* module = qd_entity_get_string(entity, "module");
+        module = qd_entity_get_string(entity, "module");
         QD_ERROR_BREAK();
 
         qd_log_source_t *src = qd_log_source_lh(module); /* The original(already existing) log source */
-        free(module);
 
         if (qd_entity_has(entity, "output")) {
-            char* output = qd_entity_get_string(entity, "output");
+            output = qd_entity_get_string(entity, "output");
             QD_ERROR_BREAK();
             log_sink_t* sink = log_sink_lh(output);
-            free(output);
             QD_ERROR_BREAK();
 
             log_sink_free_lh(src->sink); /* DEFAULT source may already have a sink, so free that sink first */
@@ -475,9 +477,9 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
         }
 
         if (qd_entity_has(entity, "enable")) {
-            char *enable = qd_entity_get_string(entity, "enable");
+            enable = qd_entity_get_string(entity, "enable");
+            QD_ERROR_BREAK();
             src->mask = enable_mask(enable);
-            free(enable);
         }
         QD_ERROR_BREAK();
 
@@ -490,6 +492,13 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
         QD_ERROR_BREAK();
 
     } while(0);
+
+    if (module)
+        free(module);
+    if (output)
+        free(output);
+    if (enable)
+        free(enable);
 
     sys_mutex_unlock(log_source_lock);
 

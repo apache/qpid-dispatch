@@ -100,14 +100,15 @@ static const char REPR_END[] = "}\0";
 
 /* TODO aconway 2014-05-13: more detailed message representation. */
 char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len) {
-    qd_message_check(msg, QD_DEPTH_BODY);
-    char *begin = buffer;
-    char *end = buffer + len - sizeof(REPR_END); /* Save space for ending */
-    aprintf(&begin, end, "Message{", msg);
-    copy_field(msg, QD_FIELD_TO, INT_MAX, "to='", "'", &begin, end);
-    copy_field(msg, QD_FIELD_REPLY_TO, INT_MAX, " reply-to='", "'", &begin, end);
-    copy_field(msg, QD_FIELD_BODY, 16, " body='", "'", &begin, end);
-    aprintf(&begin, end, "%s", REPR_END);   /* We saved space at the beginning. */
+    if (qd_message_check(msg, QD_DEPTH_BODY)) {
+        char *begin = buffer;
+        char *end = buffer + len - sizeof(REPR_END); /* Save space for ending */
+        aprintf(&begin, end, "Message{", msg);
+        copy_field(msg, QD_FIELD_TO, INT_MAX, "to='", "'", &begin, end);
+        copy_field(msg, QD_FIELD_REPLY_TO, INT_MAX, " reply-to='", "'", &begin, end);
+        copy_field(msg, QD_FIELD_BODY, 16, " body='", "'", &begin, end);
+        aprintf(&begin, end, "%s", REPR_END);   /* We saved space at the beginning. */
+    }
     return buffer;
 }
 

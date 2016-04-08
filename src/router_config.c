@@ -188,89 +188,112 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
         qd_log(router->log_source, QD_LOG_WARNING, "linkRoutePrefix configuration is deprecated, switch to using linkRoute instead.");
     }
 
-    char *prefix    = qd_entity_get_string(entity, "prefix");    QD_ERROR_RET();
-    char *connector = qd_entity_get_string(entity, "connector"); QD_ERROR_RET();
-    char *direction = qd_entity_get_string(entity, "dir");       QD_ERROR_RET();
+    char *prefix    = 0;
+    char *connector = 0;
+    char *direction = 0;
 
-    if (strcmp("in", direction) == 0 || strcmp("both", direction) == 0)
-        qd_router_add_link_route(router->router_core, prefix, connector, "in");
+    do {
+        prefix    = qd_entity_get_string(entity, "prefix");    QD_ERROR_BREAK();
+        connector = qd_entity_get_string(entity, "connector"); QD_ERROR_BREAK();
+        direction = qd_entity_get_string(entity, "dir");       QD_ERROR_BREAK();
 
-    if (strcmp("out", direction) == 0 || strcmp("both", direction) == 0)
-        qd_router_add_link_route(router->router_core, prefix, connector, "out");
+        if (strcmp("in", direction) == 0 || strcmp("both", direction) == 0)
+            qd_router_add_link_route(router->router_core, prefix, connector, "in");
 
-    free(prefix);
-    free(connector);
-    free(direction);
+        if (strcmp("out", direction) == 0 || strcmp("both", direction) == 0)
+            qd_router_add_link_route(router->router_core, prefix, connector, "out");
+
+    } while (0);
+
+    if (prefix)
+        free(prefix);
+    if (connector)
+        free(connector);
+    if (direction)
+        free(direction);
+
     return qd_error_code();
 }
 
 
 qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 {
-    char *name      = qd_entity_opt_string(entity, "name", 0);         QD_ERROR_RET();
-    char *prefix    = qd_entity_get_string(entity, "prefix");          QD_ERROR_RET();
-    char *distrib   = qd_entity_opt_string(entity, "distribution", 0); QD_ERROR_RET();
-    bool  waypoint  = qd_entity_opt_bool(entity, "waypoint", false);   QD_ERROR_RET();
-    long  in_phase  = qd_entity_opt_long(entity, "ingressPhase", -1);  QD_ERROR_RET();
-    long  out_phase = qd_entity_opt_long(entity, "egressPhase", -1);   QD_ERROR_RET();
+    char *name    = 0;
+    char *prefix  = 0;
+    char *distrib = 0;
 
-    //
-    // Formulate this configuration create it through the core management API.
-    //
-    qd_composed_field_t *body = qd_compose_subfield(0);
-    qd_compose_start_map(body);
+    do {
+        name = qd_entity_opt_string(entity, "name", 0);             QD_ERROR_BREAK();
+        prefix = qd_entity_get_string(entity, "prefix");            QD_ERROR_BREAK();
+        distrib = qd_entity_opt_string(entity, "distribution", 0);  QD_ERROR_BREAK();
 
-    if (name) {
-        qd_compose_insert_string(body, "name");
-        qd_compose_insert_string(body, name);
-    }
+        bool  waypoint  = qd_entity_opt_bool(entity, "waypoint", false);
+        long  in_phase  = qd_entity_opt_long(entity, "ingressPhase", -1);
+        long  out_phase = qd_entity_opt_long(entity, "egressPhase", -1);
 
-    if (prefix) {
-        qd_compose_insert_string(body, "prefix");
-        qd_compose_insert_string(body, prefix);
-    }
+        //
+        // Formulate this configuration create it through the core management API.
+        //
+        qd_composed_field_t *body = qd_compose_subfield(0);
+        qd_compose_start_map(body);
 
-    if (distrib) {
-        qd_compose_insert_string(body, "distribution");
-        qd_compose_insert_string(body, distrib);
-    }
+        if (name) {
+            qd_compose_insert_string(body, "name");
+            qd_compose_insert_string(body, name);
+        }
 
-    qd_compose_insert_string(body, "waypoint");
-    qd_compose_insert_bool(body, waypoint);
+        if (prefix) {
+            qd_compose_insert_string(body, "prefix");
+            qd_compose_insert_string(body, prefix);
+        }
 
-    if (in_phase >= 0) {
-        qd_compose_insert_string(body, "ingressPhase");
-        qd_compose_insert_int(body, in_phase);
-    }
+        if (distrib) {
+            qd_compose_insert_string(body, "distribution");
+            qd_compose_insert_string(body, distrib);
+        }
 
-    if (out_phase >= 0) {
-        qd_compose_insert_string(body, "egressPhase");
-        qd_compose_insert_int(body, out_phase);
-    }
+        qd_compose_insert_string(body, "waypoint");
+        qd_compose_insert_bool(body, waypoint);
 
-    qd_compose_end_map(body);
+        if (in_phase >= 0) {
+            qd_compose_insert_string(body, "ingressPhase");
+            qd_compose_insert_int(body, in_phase);
+        }
 
-    int              length = 0;
-    qd_buffer_list_t buffers;
+        if (out_phase >= 0) {
+            qd_compose_insert_string(body, "egressPhase");
+            qd_compose_insert_int(body, out_phase);
+        }
 
-    qd_compose_take_buffers(body, &buffers);
-    qd_compose_free(body);
+        qd_compose_end_map(body);
 
-    qd_buffer_t *buf = DEQ_HEAD(buffers);
-    while (buf) {
-        length += qd_buffer_size(buf);
-        buf = DEQ_NEXT(buf);
-    }
+        int              length = 0;
+        qd_buffer_list_t buffers;
 
-    qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
-    qd_parsed_field_t   *in_body = qd_parse(iter);
-    qd_field_iterator_free(iter);
+        qd_compose_take_buffers(body, &buffers);
+        qd_compose_free(body);
 
-    qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_ADDRESS, 0, in_body, 0);
+        qd_buffer_t *buf = DEQ_HEAD(buffers);
+        while (buf) {
+            length += qd_buffer_size(buf);
+            buf = DEQ_NEXT(buf);
+        }
 
-    free(name);
-    free(prefix);
-    free(distrib);
+        qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
+        qd_parsed_field_t   *in_body = qd_parse(iter);
+        qd_field_iterator_free(iter);
+
+        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_ADDRESS, 0, in_body, 0);
+
+
+    } while(0);
+
+    if (name)
+        free(name);
+    if (prefix)
+        free(prefix);
+    if (distrib)
+        free(distrib);
 
     return qd_error_code();
 }
@@ -278,75 +301,92 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 
 qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *entity)
 {
-    char *name      = qd_entity_opt_string(entity, "name", 0);         QD_ERROR_RET();
-    char *prefix    = qd_entity_get_string(entity, "prefix");          QD_ERROR_RET();
-    char *container = qd_entity_opt_string(entity, "containerId", 0);  QD_ERROR_RET();
-    char *c_name    = qd_entity_opt_string(entity, "connection", 0);   QD_ERROR_RET();
-    char *distrib   = qd_entity_opt_string(entity, "distribution", 0); QD_ERROR_RET();
-    char *dir       = qd_entity_opt_string(entity, "dir", 0);          QD_ERROR_RET();
 
-    //
-    // Formulate this configuration as a route and create it through the core management API.
-    //
-    qd_composed_field_t *body = qd_compose_subfield(0);
-    qd_compose_start_map(body);
+    char *name      = 0;
+    char *prefix    = 0;
+    char *container = 0;
+    char *c_name    = 0;
+    char *distrib   = 0;
+    char *dir       = 0;
 
-    if (name) {
-        qd_compose_insert_string(body, "name");
-        qd_compose_insert_string(body, name);
-    }
+    do {
+        name      = qd_entity_opt_string(entity, "name", 0);         QD_ERROR_BREAK();
+        prefix    = qd_entity_get_string(entity, "prefix");          QD_ERROR_BREAK();
+        container = qd_entity_opt_string(entity, "containerId", 0);  QD_ERROR_BREAK();
+        c_name    = qd_entity_opt_string(entity, "connection", 0);   QD_ERROR_BREAK();
+        distrib   = qd_entity_opt_string(entity, "distribution", 0); QD_ERROR_BREAK();
+        dir       = qd_entity_opt_string(entity, "dir", 0);          QD_ERROR_BREAK();
 
-    if (prefix) {
-        qd_compose_insert_string(body, "prefix");
-        qd_compose_insert_string(body, prefix);
-    }
+        //
+        // Formulate this configuration as a route and create it through the core management API.
+        //
+        qd_composed_field_t *body = qd_compose_subfield(0);
+        qd_compose_start_map(body);
 
-    if (container) {
-        qd_compose_insert_string(body, "containerId");
-        qd_compose_insert_string(body, container);
-    }
+        if (name) {
+            qd_compose_insert_string(body, "name");
+            qd_compose_insert_string(body, name);
+        }
 
-    if (c_name) {
-        qd_compose_insert_string(body, "connection");
-        qd_compose_insert_string(body, c_name);
-    }
+        if (prefix) {
+            qd_compose_insert_string(body, "prefix");
+            qd_compose_insert_string(body, prefix);
+        }
 
-    if (distrib) {
-        qd_compose_insert_string(body, "distribution");
-        qd_compose_insert_string(body, distrib);
-    }
+        if (container) {
+            qd_compose_insert_string(body, "containerId");
+            qd_compose_insert_string(body, container);
+        }
 
-    if (dir) {
-        qd_compose_insert_string(body, "dir");
-        qd_compose_insert_string(body, dir);
-    }
+        if (c_name) {
+            qd_compose_insert_string(body, "connection");
+            qd_compose_insert_string(body, c_name);
+        }
 
-    qd_compose_end_map(body);
+        if (distrib) {
+            qd_compose_insert_string(body, "distribution");
+            qd_compose_insert_string(body, distrib);
+        }
 
-    int              length = 0;
-    qd_buffer_list_t buffers;
+        if (dir) {
+            qd_compose_insert_string(body, "dir");
+            qd_compose_insert_string(body, dir);
+        }
 
-    qd_compose_take_buffers(body, &buffers);
-    qd_compose_free(body);
+        qd_compose_end_map(body);
 
-    qd_buffer_t *buf = DEQ_HEAD(buffers);
-    while (buf) {
-        length += qd_buffer_size(buf);
-        buf = DEQ_NEXT(buf);
-    }
+        int              length = 0;
+        qd_buffer_list_t buffers;
 
-    qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
-    qd_parsed_field_t   *in_body = qd_parse(iter);
-    qd_field_iterator_free(iter);
+        qd_compose_take_buffers(body, &buffers);
+        qd_compose_free(body);
 
-    qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_LINK_ROUTE, 0, in_body, 0);
+        qd_buffer_t *buf = DEQ_HEAD(buffers);
+        while (buf) {
+            length += qd_buffer_size(buf);
+            buf = DEQ_NEXT(buf);
+        }
 
-    free(name);
-    free(prefix);
-    free(container);
-    free(c_name);
-    free(distrib);
-    free(dir);
+        qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
+        qd_parsed_field_t   *in_body = qd_parse(iter);
+        qd_field_iterator_free(iter);
+
+        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_LINK_ROUTE, 0, in_body, 0);
+
+    } while(0);
+
+    if (name)
+        free(name);
+    if (prefix)
+        free(prefix);
+    if (container)
+        free(container);
+    if (c_name)
+        free(c_name);
+    if (distrib)
+        free(distrib);
+    if (dir)
+        free(dir);
 
     return qd_error_code();
 }
@@ -354,74 +394,89 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
 
 qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entity)
 {
-    char *name      = qd_entity_opt_string(entity, "name", 0);        QD_ERROR_RET();
-    char *addr      = qd_entity_get_string(entity, "addr");           QD_ERROR_RET();
-    char *dir       = qd_entity_get_string(entity, "dir");            QD_ERROR_RET();
-    long  phase     = qd_entity_opt_long(entity, "phase", -1);        QD_ERROR_RET();
-    char *container = qd_entity_opt_string(entity, "containerId", 0); QD_ERROR_RET();
-    char *c_name    = qd_entity_opt_string(entity, "connection", 0);  QD_ERROR_RET();
+    char *name      = 0;
+    char *addr      = 0;
+    char *dir       = 0;
+    char *container = 0;
+    char *c_name    = 0;
 
-    //
-    // Formulate this configuration as a route and create it through the core management API.
-    //
-    qd_composed_field_t *body = qd_compose_subfield(0);
-    qd_compose_start_map(body);
+    do {
+        name      = qd_entity_opt_string(entity, "name", 0);        QD_ERROR_BREAK();
+        addr      = qd_entity_get_string(entity, "addr");           QD_ERROR_BREAK();
+        dir       = qd_entity_get_string(entity, "dir");            QD_ERROR_BREAK();
+        container = qd_entity_opt_string(entity, "containerId", 0); QD_ERROR_BREAK();
+        c_name    = qd_entity_opt_string(entity, "connection", 0);  QD_ERROR_BREAK();
+        long  phase     = qd_entity_opt_long(entity, "phase", -1);  QD_ERROR_BREAK();
 
-    if (name) {
-        qd_compose_insert_string(body, "name");
-        qd_compose_insert_string(body, name);
-    }
+        //
+        // Formulate this configuration as a route and create it through the core management API.
+        //
+        qd_composed_field_t *body = qd_compose_subfield(0);
+        qd_compose_start_map(body);
 
-    if (addr) {
-        qd_compose_insert_string(body, "addr");
-        qd_compose_insert_string(body, addr);
-    }
+        if (name) {
+            qd_compose_insert_string(body, "name");
+            qd_compose_insert_string(body, name);
+        }
 
-    if (dir) {
-        qd_compose_insert_string(body, "dir");
-        qd_compose_insert_string(body, dir);
-    }
+        if (addr) {
+            qd_compose_insert_string(body, "addr");
+            qd_compose_insert_string(body, addr);
+        }
 
-    if (phase >= 0) {
-        qd_compose_insert_string(body, "phase");
-        qd_compose_insert_int(body, phase);
-    }
+        if (dir) {
+            qd_compose_insert_string(body, "dir");
+            qd_compose_insert_string(body, dir);
+        }
 
-    if (container) {
-        qd_compose_insert_string(body, "containerId");
-        qd_compose_insert_string(body, container);
-    }
+        if (phase >= 0) {
+            qd_compose_insert_string(body, "phase");
+            qd_compose_insert_int(body, phase);
+        }
 
-    if (c_name) {
-        qd_compose_insert_string(body, "connection");
-        qd_compose_insert_string(body, c_name);
-    }
+        if (container) {
+            qd_compose_insert_string(body, "containerId");
+            qd_compose_insert_string(body, container);
+        }
 
-    qd_compose_end_map(body);
+        if (c_name) {
+            qd_compose_insert_string(body, "connection");
+            qd_compose_insert_string(body, c_name);
+        }
 
-    int              length = 0;
-    qd_buffer_list_t buffers;
+        qd_compose_end_map(body);
 
-    qd_compose_take_buffers(body, &buffers);
-    qd_compose_free(body);
+        int              length = 0;
+        qd_buffer_list_t buffers;
 
-    qd_buffer_t *buf = DEQ_HEAD(buffers);
-    while (buf) {
-        length += qd_buffer_size(buf);
-        buf = DEQ_NEXT(buf);
-    }
+        qd_compose_take_buffers(body, &buffers);
+        qd_compose_free(body);
 
-    qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
-    qd_parsed_field_t   *in_body = qd_parse(iter);
-    qd_field_iterator_free(iter);
+        qd_buffer_t *buf = DEQ_HEAD(buffers);
+        while (buf) {
+            length += qd_buffer_size(buf);
+            buf = DEQ_NEXT(buf);
+        }
 
-    qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_AUTO_LINK, 0, in_body, 0);
+        qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
+        qd_parsed_field_t   *in_body = qd_parse(iter);
+        qd_field_iterator_free(iter);
 
-    free(name);
-    free(addr);
-    free(dir);
-    free(container);
-    free(c_name);
+        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_AUTO_LINK, 0, in_body, 0);
+
+    } while (0);
+
+
+    if (name)
+        free(name);
+    if (addr)
+        free(addr);
+    if (dir)
+        free(dir);
+    if (container)
+        free(container);
+    if (c_name)
+        free(c_name);
 
     return qd_error_code();
 }
