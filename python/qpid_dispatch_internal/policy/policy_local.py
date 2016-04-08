@@ -390,8 +390,8 @@ class AppStats(object):
         self._manager = manager
         self.conn_mgr = PolicyAppConnectionMgr(
                 ruleset[PolicyKeys.KW_MAXCONN],
-                ruleset[PolicyKeys.KW_MAXCONNPERHOST],
-                ruleset[PolicyKeys.KW_MAXCONNPERUSER])
+                ruleset[PolicyKeys.KW_MAXCONNPERUSER],
+                ruleset[PolicyKeys.KW_MAXCONNPERHOST])
         self._cstats = self._manager.get_agent().qd.qd_dispatch_policy_c_counts_alloc()
         self._manager.get_agent().add_implementation(self, "policyStats")
 
@@ -569,16 +569,16 @@ class PolicyLocal(object):
         """
         try:
             if not app in self.rulesetdb:
-                self._manager.log_trace(
-                    "lookup_user failed for user '%s', host '%s', application '%s': "
+                self._manager.log_info(
+                    "DENY AMQP Open for user '%s', host '%s', application '%s': "
                     "No policy defined for application" % (user, host, app))
                 return ""
 
             ruleset = self.rulesetdb[app]
             if not app in self.statsdb:
                 msg = (
-                    "lookup_user failed for user '%s', host '%s', application '%s': "
-                    "Policy is defined but stats are missing" % (user, host, app))
+                    "DENY AMQP Open for user '%s', host '%s', application '%s': "
+                    "INTERNAL: Policy is defined but stats are missing" % (user, host, app))
                 raise PolicyError(msg)
             stats = self.statsdb[app]
             # User in a group or default?
@@ -588,9 +588,9 @@ class PolicyLocal(object):
                 if ruleset[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]:
                     usergroup = PolicyKeys.KW_DEFAULT_SETTINGS
                 else:
-                    self._manager.log_trace(
-                        "lookup_user failed for user '%s', host '%s', application '%s': "
-                        "User must be in a user group" % (user, host, app))
+                    self._manager.log_info(
+                        "DENY AMQP Open for user '%s', host '%s', application '%s': "
+                        "User is not in a user group and default users are denied" % (user, host, app))
                     stats.count_other_denial()
                     return ""
             # User in usergroup allowed to connect from host?
@@ -611,9 +611,9 @@ class PolicyLocal(object):
                 # User's usergroup has no ingress policy so allow
                 allowed = True
             if not allowed:
-                self._manager.log_trace(
-                    "lookup_user failed for user '%s', host '%s', application '%s': "
-                    "User is not allowed to connect from this host" % (user, host, app))
+                self._manager.log_info(
+                    "DENY AMQP Open for user '%s', host '%s', application '%s': "
+                    "User is not allowed to connect from this network host" % (user, host, app))
                 stats.count_other_denial()
                 return ""
 
@@ -622,8 +622,8 @@ class PolicyLocal(object):
             diags = []
             if not stats.can_connect(conn_name, user, host, diags):
                 for diag in diags:
-                    self._manager.log_trace(
-                        "lookup_user failed for user '%s', host '%s', application '%s': "
+                    self._manager.log_info(
+                        "DENY AMQP Open for user '%s', host '%s', application '%s': "
                         "%s" % (user, host, app, diag))
                 return ""
 
@@ -635,8 +635,8 @@ class PolicyLocal(object):
             return usergroup
 
         except Exception, e:
-            self._manager.log_error(
-                "lookup_user failed for user '%s', host '%s', application '%s': "
+            self._manager.log_info(
+                "DENY AMQP Open lookup_user failed for user '%s', host '%s', application '%s': "
                 "Internal error: %s" % (user, host, app, e))
             # return failure
             return ""
@@ -653,7 +653,7 @@ class PolicyLocal(object):
         """
         try:
             if not appname in self.rulesetdb:
-                self._manager.log_trace(
+                self._manager.log_info(
                         "lookup_settings fail for application '%s', user group '%s': "
                         "No policy defined for this application" % (appname, name))
                 return False

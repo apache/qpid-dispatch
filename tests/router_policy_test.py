@@ -198,7 +198,7 @@ class PolicyAppConnectionMgrTests(TestCase):
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
         self.assertTrue(len(diags) == 1)
-        self.assertTrue('by total' in diags[0])
+        self.assertTrue('application connection limit' in diags[0])
 
     def test_policy_app_conn_mgr_fail_by_user(self):
         stats = PolicyAppConnectionMgr(3, 1, 2)

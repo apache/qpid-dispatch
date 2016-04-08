@@ -46,9 +46,8 @@ void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn);
  * The link is closed and the denial is logged but not counted.
  * @param[in] link proton link being closed
  * @param[in] qd_conn the qd conection
- * @param[in] s_or_r 'sender' or 'receiver' for logging
  */ 
-void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn, char * s_or_r);
+void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn);
 
 
 /** Internal function to deny a sender amqp link
