@@ -73,7 +73,7 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
         break;
 
     case QDR_CONFIG_AUTO_LINK_TYPE:
-        qd_compose_insert_string(body, "org.apache.qpid.dispatch.config.autoLink");
+        qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.config.autoLink");
         break;
 
     case QDR_CONFIG_AUTO_LINK_ADDR:

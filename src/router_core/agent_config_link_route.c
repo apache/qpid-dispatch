@@ -68,7 +68,7 @@ static void qdr_config_link_route_insert_column_CT(qdr_link_route_t *lr, int col
     }
 
     case QDR_CONFIG_LINK_ROUTE_TYPE:
-        qd_compose_insert_string(body, "org.apache.qpid.dispatch.config.linkRoute");
+        qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.config.linkRoute");
         break;
 
     case QDR_CONFIG_LINK_ROUTE_PREFIX:

@@ -67,7 +67,7 @@ static void qdr_config_address_insert_column_CT(qdr_address_config_t *addr, int 
     }
 
     case QDR_CONFIG_ADDRESS_TYPE:
-        qd_compose_insert_string(body, "org.apache.qpid.dispatch.config.address");
+        qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.config.address");
         break;
 
     case QDR_CONFIG_ADDRESS_PREFIX:
