@@ -205,12 +205,9 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 
     } while (0);
 
-    if (prefix)
-        free(prefix);
-    if (connector)
-        free(connector);
-    if (direction)
-        free(direction);
+    free(prefix);
+    free(connector);
+    free(direction);
 
     return qd_error_code();
 }
@@ -288,12 +285,9 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 
     } while(0);
 
-    if (name)
-        free(name);
-    if (prefix)
-        free(prefix);
-    if (distrib)
-        free(distrib);
+    free(name);
+    free(prefix);
+    free(distrib);
 
     return qd_error_code();
 }
@@ -375,18 +369,12 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
 
     } while(0);
 
-    if (name)
-        free(name);
-    if (prefix)
-        free(prefix);
-    if (container)
-        free(container);
-    if (c_name)
-        free(c_name);
-    if (distrib)
-        free(distrib);
-    if (dir)
-        free(dir);
+    free(name);
+    free(prefix);
+    free(container);
+    free(c_name);
+    free(distrib);
+    free(dir);
 
     return qd_error_code();
 }
@@ -466,17 +454,11 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
 
     } while (0);
 
-
-    if (name)
-        free(name);
-    if (addr)
-        free(addr);
-    if (dir)
-        free(dir);
-    if (container)
-        free(container);
-    if (c_name)
-        free(c_name);
+    free(name);
+    free(addr);
+    free(dir);
+    free(container);
+    free(c_name);
 
     return qd_error_code();
 }
