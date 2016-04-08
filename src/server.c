@@ -371,18 +371,23 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
         qd_entity_set_bool(entity, "isAuthenticated", tport && pn_transport_is_authenticated(tport)) == 0 &&
         qd_entity_set_bool(entity, "isEncrypted", tport && pn_transport_is_encrypted(tport)) == 0 &&
         qd_entity_set_bool(entity, "ssl", ssl != 0) == 0) {
+
         if (ssl) {
-#define SSL_ATTR_SIZE 50
+            #define SSL_ATTR_SIZE 50
             char proto[SSL_ATTR_SIZE];
             char cipher[SSL_ATTR_SIZE];
             pn_ssl_get_protocol_name(ssl, proto, SSL_ATTR_SIZE);
             pn_ssl_get_cipher_name(ssl, cipher, SSL_ATTR_SIZE);
-            qd_entity_set_string(entity, "sslProto", proto);
-            qd_entity_set_string(entity, "sslCipher", cipher);
-            qd_entity_set_long(entity, "sslSsf", pn_ssl_get_ssf(ssl));
+            if (qd_entity_set_string(entity, "sslProto", proto)   == 0 &&
+                qd_entity_set_string(entity, "sslCipher", cipher) == 0 &&
+                qd_entity_set_long(entity, "sslSsf", pn_ssl_get_ssf(ssl)) == 0) {
+                    return QD_ERROR_NONE;
+            }
         }
-        return QD_ERROR_NONE;
+        else
+            return QD_ERROR_NONE;
     }
+
     return qd_error_code();
 }
 
@@ -1646,6 +1651,8 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     ctx->user_context = 0;
     ctx->link_context = 0;
     ctx->ufd          = ufd;
+    ctx->user_id       = 0;
+    ctx->free_user_id  = false;
     ctx->policy_settings = 0;
     ctx->n_senders       = 0;
     ctx->n_receivers     = 0;
