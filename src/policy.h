@@ -37,10 +37,6 @@ struct qd_policy_denial_counts_s {
     int sessionDenied;
     int senderDenied;
     int receiverDenied;
-    int dynamicSrcDenied;
-    int anonymousSenderDenied;
-    int linkSourceDenied;
-    int linkTargetDenied;
 };
 
 typedef struct qd_policy_t qd_policy_t;

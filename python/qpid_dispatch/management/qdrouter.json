@@ -1367,11 +1367,7 @@
 
                 "sessionDenied": {"type": "integer", "graph": true},
                 "senderDenied": {"type": "integer", "graph": true},
-                "receiverDenied": {"type": "integer", "graph": true},
-                "dynamicSrcDenied": {"type": "integer", "graph": true},
-                "anonymousSenderDenied": {"type": "integer", "graph": true},
-                "linkSourceDenied": {"type": "integer", "graph": true},
-                "linkTargetDenied": {"type": "integer", "graph": true}
+                "receiverDenied": {"type": "integer", "graph": true}
             }
         },
 

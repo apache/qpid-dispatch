@@ -160,11 +160,7 @@ qd_error_t qd_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
     qd_policy_denial_counts_t *dc = (qd_policy_denial_counts_t*)ccounts;
     if (!qd_entity_set_long(entity, "sessionDenied", dc->sessionDenied) &&
         !qd_entity_set_long(entity, "senderDenied", dc->senderDenied) &&
-        !qd_entity_set_long(entity, "receiverDenied", dc->receiverDenied) &&
-        !qd_entity_set_long(entity, "dynamicSrcDenied", dc->dynamicSrcDenied) &&
-        !qd_entity_set_long(entity, "anonymousSenderDenied", dc->anonymousSenderDenied) &&
-        !qd_entity_set_long(entity, "linkSourceDenied", dc->linkSourceDenied) &&
-        !qd_entity_set_long(entity, "linkTargetDenied", dc->linkTargetDenied)
+        !qd_entity_set_long(entity, "receiverDenied", dc->receiverDenied)
     )
         return QD_ERROR_NONE;
     return qd_error_code();
