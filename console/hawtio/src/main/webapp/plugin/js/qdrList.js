@@ -97,11 +97,6 @@ var QDR = (function(QDR) {
 		$scope.selectMode = function (mode) {
 			$scope.currentMode = mode;
 			if (mode.id === 'log') {
-				var ops = lookupOperations();
-				if (ops.indexOf("LOG") == -1) {
-					$scope.currentMode = $scope.modes[0]
-					return;
-				}
 				$scope.logResults = "getting recent log entries...";
 				QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, {}, $scope.currentMode.op, function (nodeName, entity, response, context) {
 					$scope.logResults = response.filter( function (entry) {
@@ -407,7 +402,15 @@ var QDR = (function(QDR) {
 
 		$scope.tableRows = [];
 		var selectedRowIndex = 0;
+
+		/* Called periodically to refresh the data on the page */
 		var updateTableData = function (entity, expand) {
+			if (!QDRService.connected) {
+				// we are no longer connected. bail back to the connect page
+				$location.path("/dispatch_plugin/connect")
+				$location.search('org', "list");
+				return;
+			}
 			// don't update the data when on the operations tab
 			if ($scope.currentMode.id === 'operations') {
 				return;

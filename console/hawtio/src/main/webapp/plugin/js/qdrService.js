@@ -288,10 +288,18 @@ var QDR = (function(QDR) {
 
             // get the list of nodes to query.
             // once this completes, we will get the info for each node returned
-            self.getRemoteNodeInfo( function (response) {
+            self.getRemoteNodeInfo( function (response, context) {
                 //QDR.log.debug("got remote node list of ");
                 //console.dump(response);
                 if( Object.prototype.toString.call( response ) === '[object Array]' ) {
+					if (response.length === 0) {
+						// there is only one router, get its node id from the reeciiver
+						//"amqp:/_topo/0/Router.A/temp.aSO3+WGaoNUgGVx"
+						var address = context.receiver.remote.attach.source.address;
+						var addrParts = address.split('/')
+						addrParts.splice(addrParts.length-1, 1, '$management')
+						response = [addrParts.join('/')]
+					}
                     // we expect a response for each of these nodes
                     self.topology.wait(self.timeout);
                     for (var i=0; i<response.length; ++i) {
@@ -394,34 +402,6 @@ var QDR = (function(QDR) {
             if (this._expected[id].indexOf(key) == -1)
                 this._expected[id].push(key);
         },
-/*
-The response looks like:
-{
-    ".router": {
-        "results": [
-            [4, "router/QDR.X", 1, "0", 3, 60, 60, 11, "QDR.X", 30, "interior", "org.apache.qpid.dispatch.router", 5, 12, "router/QDR.X"]
-        ],
-        "attributeNames": ["raIntervalFlux", "name", "helloInterval", "area", "helloMaxAge", "mobileAddrMaxAge", "remoteLsMaxAge", "addrCount", "routerId", "raInterval", "mode", "type", "nodeCount", "linkCount", "identity"]
-    },
-    ".connection": {
-        "results": [
-            ["QDR.B", "connection/0.0.0.0:20002", "operational", "0.0.0.0:20002", "inter-router", "connection/0.0.0.0:20002", "ANONYMOUS", "org.apache.qpid.dispatch.connection", "out"],
-            ["QDR.A", "connection/0.0.0.0:20001", "operational", "0.0.0.0:20001", "inter-router", "connection/0.0.0.0:20001", "ANONYMOUS", "org.apache.qpid.dispatch.connection", "out"],
-            ["b2de2f8c-ef4a-4415-9a23-000c2f86e85d", "connection/localhost:33669", "operational", "localhost:33669", "normal", "connection/localhost:33669", "ANONYMOUS", "org.apache.qpid.dispatch.connection", "in"]
-        ],
-        "attributeNames": ["container", "name", "state", "host", "role", "identity", "sasl", "type", "dir"]
-    },
-    ".router.node": {
-        "results": [
-            ["QDR.A", null],
-            ["QDR.B", null],
-            ["QDR.C", "QDR.A"],
-            ["QDR.D", "QDR.A"],
-            ["QDR.Y", "QDR.A"]
-        ],
-        "attributeNames": ["routerId", "nextHop"]
-    }
-}*/
         ondone: function () {
             clearTimeout(this.timerHandle);
             this._gettingTopo = false;
@@ -464,8 +444,8 @@ The response looks like:
         // first get the list of remote node names
 	 	self.correlator.request(
                 ret = self.sendMgmtQuery('GET-MGMT-NODES')
-            ).then(ret.id, function(response) {
-                callback(response);
+            ).then(ret.id, function(response, context) {
+                callback(response, context);
                 self.topology.cleanUp(response);
             }, ret.error);
       },
