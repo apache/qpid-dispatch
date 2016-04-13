@@ -241,7 +241,8 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     // Handle the link-routed case
     //
     if (qdr_link_is_routed(rlink)) {
-        delivery = qdr_link_deliver_to_routed_link(rlink, msg, pn_delivery_settled(pnd));
+        pn_delivery_tag_t dtag = pn_delivery_tag(pnd);
+        delivery = qdr_link_deliver_to_routed_link(rlink, msg, pn_delivery_settled(pnd), (uint8_t*) dtag.start, dtag.size);
         if (delivery) {
             if (pn_delivery_settled(pnd))
                 pn_delivery_settle(pnd);

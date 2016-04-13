@@ -102,6 +102,8 @@ struct qdr_action_t {
             qd_detach_type_t  dt;
             int               credit;
             bool              drain;
+            uint8_t           tag[32];
+            int               tag_length;
         } connection;
 
         //
@@ -203,7 +205,8 @@ struct qdr_delivery_t {
     uint64_t             disposition;
     bool                 settled;
     qdr_delivery_where_t where;
-    uint64_t             tag;
+    uint8_t              tag[32];
+    int                  tag_length;
     qd_bitmask_t        *link_exclusion;
 };
 
