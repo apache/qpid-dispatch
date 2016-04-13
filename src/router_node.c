@@ -26,6 +26,7 @@
 #include "dispatch_private.h"
 #include "entity_cache.h"
 #include "router_private.h"
+#include "message_private.h"
 
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
@@ -369,6 +370,18 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
 
     if (!delivery)
         return;
+
+    pn_record_t *record    = pn_delivery_attachments(pnd);
+
+    //
+    // On the delivery, we set the message (qd_message_pvt_t) as a record with key PN_DELIVERY_CTX. When the
+    // complete delivery is received (rc == PN_EOS), we set the value on the PN_DELIVERY_CTX record to zero.
+    // If the PN_DELIVERY_CTX record is non-zero, it means that the message is still in-flight (complete message
+    // not received yet) in which case we will ignore the disposition.
+    //
+    if (pn_record_get(record, PN_DELIVERY_CTX) != 0) {
+        return;
+    }
 
     //
     // If the delivery is settled, remove the linkage between the PN and QDR deliveries.

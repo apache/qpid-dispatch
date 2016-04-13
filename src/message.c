@@ -694,7 +694,9 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     pn_link_t        *link = pn_delivery_link(delivery);
     ssize_t           rc;
     qd_buffer_t      *buf;
-    qd_message_pvt_t *msg  = (qd_message_pvt_t*) pn_delivery_get_context(delivery);
+
+    pn_record_t *record    = pn_delivery_attachments(delivery);
+    qd_message_pvt_t *msg  = (qd_message_pvt_t*) pn_record_get(record, PN_DELIVERY_CTX);
 
     //
     // If there is no message associated with the delivery, this is the first time
@@ -703,7 +705,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     //
     if (!msg) {
         msg = (qd_message_pvt_t*) qd_message();
-        pn_delivery_set_context(delivery, (void*) msg);
+        pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
     }
 
     //
@@ -728,15 +730,20 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         //
         if (rc == PN_EOS) {
             //
+            // Clear the value in the record with key PN_DELIVERY_CTX
+            //
+            pn_record_set(record, PN_DELIVERY_CTX, 0);
+
+            //
             // If the last buffer in the list is empty, remove it and free it.  This
             // will only happen if the size of the message content is an exact multiple
             // of the buffer size.
             //
+
             if (qd_buffer_size(buf) == 0) {
                 DEQ_REMOVE_TAIL(msg->content->buffers);
                 qd_buffer_free(buf);
             }
-            pn_delivery_set_context(delivery, 0);
 
             char repr[qd_message_repr_len()];
             qd_log(log_source, QD_LOG_TRACE, "Received %s on link %s",
