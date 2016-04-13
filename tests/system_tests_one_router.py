@@ -46,14 +46,14 @@ class RouterTest(TestCase):
             # Setting the stripAnnotations to 'no' so that the existing tests will work.
             # Setting stripAnnotations to no will not strip the annotations and any tests that were already in this file
             # that were expecting the annotations to not be stripped will continue working.
-            ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
+            ('listener', {'port': cls.tester.get_port(), 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
             
             # The following listeners were exclusively added to test the stripAnnotations attribute in qdrouterd.conf file
             # Different listeners will be used to test all allowed values of stripAnnotations ('no', 'both', 'out', 'in')
-            ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
-            ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'both'}),
-            ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'out'}),
-            ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'in'}),
+            ('listener', {'port': cls.tester.get_port(), 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
+            ('listener', {'port': cls.tester.get_port(), 'maxFrameSize': '2048', 'stripAnnotations': 'both'}),
+            ('listener', {'port': cls.tester.get_port(), 'maxFrameSize': '2048', 'stripAnnotations': 'out'}),
+            ('listener', {'port': cls.tester.get_port(), 'maxFrameSize': '2048', 'stripAnnotations': 'in'}),
             
             ('address', {'prefix': 'closest', 'distribution': 'closest'}),
             ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
@@ -1067,6 +1067,11 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_17_multiframe_presettled(self):
+        test = MultiframePresettledTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -1196,6 +1201,53 @@ class MulticastUnsettledTest(MessagingHandler):
     def on_accepted(self, event):
         self.n_accepted += 1
         self.check_if_done()
+
+    def on_message(self, event):
+        if not event.delivery.settled:
+            self.error = "Received unsettled delivery"
+        self.n_received += 1
+        self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+
+class MultiframePresettledTest(MessagingHandler):
+    def __init__(self, address):
+        super(MultiframePresettledTest, self).__init__(prefetch=0)
+        self.address = address
+        self.dest = "closest.MFPtest"
+        self.error = None
+        self.count      = 10
+        self.n_sent     = 0
+        self.n_received = 0
+
+        self.body = ""
+        for i in range(10000):
+            self.body += "0123456789"
+
+    def check_if_done(self):
+        if self.n_received == self.count:
+            self.timer.cancel()
+            self.conn.close()
+
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d, received=%d" % (self.n_sent, self.n_received)
+        self.conn.close()
+
+    def on_start(self, event):
+        self.timer     = event.reactor.schedule(5, Timeout(self))
+        self.conn      = event.container.connect(self.address)
+        self.sender    = event.container.create_sender(self.conn, self.dest)
+        self.receiver  = event.container.create_receiver(self.conn, self.dest, name="A")
+        self.receiver.flow(self.count)
+
+    def on_sendable(self, event):
+        for i in range(self.count - self.n_sent):
+            msg = Message(body=self.body)
+            dlv = event.sender.send(msg)
+            dlv.settle()
+            self.n_sent += 1
 
     def on_message(self, event):
         if not event.delivery.settled:

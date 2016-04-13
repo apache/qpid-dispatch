@@ -104,8 +104,6 @@ ALLOC_DECLARE(qd_message_content_t);
 /** Initialize logging */
 void qd_message_initialize();
 
-PN_HANDLE(PN_DELIVERY_CTX)
-
 ///@}
 
 #endif
