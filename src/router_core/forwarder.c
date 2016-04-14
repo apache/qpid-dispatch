@@ -74,12 +74,13 @@ static bool qdr_forward_attach_null_CT(qdr_core_t     *core,
 qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, qdr_link_t *link, qd_message_t *msg)
 {
     qdr_delivery_t *dlv = new_qdr_delivery_t();
+    uint64_t       *tag = (uint64_t*) dlv->tag;
 
     ZERO(dlv);
     dlv->link    = link;
     dlv->msg     = qd_message_copy(msg);
     dlv->settled = !in_dlv || in_dlv->settled;
-    *((uint64_t*) dlv->tag) = core->next_tag++;
+    *tag         = core->next_tag++;
     dlv->tag_length = 8;
 
     //
