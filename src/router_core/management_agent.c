@@ -197,10 +197,8 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     qd_field_iterator_free(reply_to);
     qd_compose_free(fld);
 
-    if (ctx->msg)
-        qd_message_free(ctx->msg);
-    if (ctx->source)
-        qd_message_free(ctx->source);
+    qd_message_free(ctx->msg);
+    qd_message_free(ctx->source);
     qd_compose_free(ctx->field);
 
     free_qd_management_context_t(ctx);
