@@ -92,6 +92,8 @@ static void qdr_link_route_activate_CT(qdr_core_t *core, qdr_link_route_t *lr, q
                 qdr_post_mobile_added_CT(core, key);
         }
     }
+
+    lr->active = true;
 }
 
 
@@ -112,6 +114,8 @@ static void qdr_link_route_deactivate_CT(qdr_core_t *core, qdr_link_route_t *lr,
                 qdr_post_mobile_removed_CT(core, key);
         }
     }
+
+    lr->active = false;
 }
 
 

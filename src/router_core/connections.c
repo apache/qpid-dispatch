@@ -272,7 +272,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->name = (char*) malloc(strlen(name) + 1);
     strcpy(link->name, name);
     link->link_direction = dir;
-    link->capacity       = conn->link_capacity;
+    link->capacity       = dir == QD_INCOMING ? conn->link_capacity : 0;
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
 
