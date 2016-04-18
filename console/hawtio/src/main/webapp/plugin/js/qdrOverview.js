@@ -39,11 +39,6 @@ var QDR = (function (QDR) {
 
 		console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
 
-		if (!QDRService.connected) {
-			// we are not connected. we probably got here from a bookmark or manual page reload
-			$location.path("/dispatch_plugin/connect")
-			return;
-		}
 		// we want attributes to be listed first, so add it at index 0
 		$scope.subLevelTabs = [{
 		    content: '<i class="icon-list"></i> Attributes',
@@ -444,28 +439,6 @@ var QDR = (function (QDR) {
                     }
                 }
             };
-/*
-			$scope.allConnectionGrid = {
-				data: 'allConnectionFields',
-				columnDefs: allConnectionCols,
-				enableHorizontalScrollbar: uiGridConstants.scrollbars.NEVER,
-	            enableVerticalScrollbar: uiGridConstants.scrollbars.NEVER,
-				enableColumnResize: true,
-				multiSelect: false,
-				enableRowHeaderSelection: false,
-				noUnselect: true,
-				enableSelectAll: false,
-				enableRowSelection: true,
-				onRegisterApi: function (gridApi) {
-					gridApi.selection.on.rowSelectionChanged($scope, function(row) {
-						if (row.isSelected) {
-							var host = row.entity.host;
-							$("#overtree").fancytree("getTree").activateKey(host);
-						}
-					});
-			    }
-			}
-*/
 			connections.children.forEach( function (connection) {
 				$scope.allConnectionFields.push(connection.fields)
 			})
@@ -566,6 +539,12 @@ var QDR = (function (QDR) {
 
 		}
         $scope.template = $scope.templates[0];
+
+		if (!QDRService.connected) {
+			// we are not connected. we probably got here from a bookmark or manual page reload
+			$location.path("/dispatch_plugin/connect")
+			return;
+		}
 
 	/* --------------------------------------------------
 	 *

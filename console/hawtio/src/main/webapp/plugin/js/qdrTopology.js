@@ -66,6 +66,30 @@ var QDR = (function (QDR) {
    */
     QDR.module.controller("QDR.TopologyController", ['$scope', '$rootScope', 'QDRService', '$location', '$timeout', '$dialog',
     function($scope, $rootScope, QDRService, $location, $timeout, $dialog) {
+
+		$scope.multiData = [{name: ''}, {name: ''}, {name: ''}]
+        $scope.multiDetails = {
+            data: 'multiData',
+            columnDefs: [
+            {
+                field: 'host',
+                displayName: 'Host'
+            },
+            {
+                field: 'user',
+                displayName: 'User'
+            },
+			{
+				field: 'properties',
+				displayName: 'Properties'
+			},
+			{
+				field: 'isEncrypted',
+				displayName: 'Encrypted'
+			}
+            ]
+        };
+
 		if (!QDRService.connected) {
 			// we are not connected. we probably got here from a bookmark or manual page reload
 			$location.path("/dispatch_plugin/connect")
@@ -180,29 +204,6 @@ var QDR = (function (QDR) {
 		}
 
 		// for ng-grid that shows details for multiple consoles/clients
-		$scope.multiData = [{name: ''}, {name: ''}, {name: ''}]
-        $scope.multiDetails = {
-            data: 'multiData',
-            columnDefs: [
-            {
-                field: 'host',
-                displayName: 'Host'
-            },
-            {
-                field: 'user',
-                displayName: 'User'
-            },
-			{
-				field: 'properties',
-				displayName: 'Properties'
-			},
-			{
-				field: 'isEncrypted',
-				displayName: 'Encrypted'
-			}
-            ]
-        };
-
 		// generate unique name for router and containerName
 		var genNewName = function () {
 			var nodeInfo = QDRService.topology.nodeInfo();
@@ -773,7 +774,6 @@ var QDR = (function (QDR) {
 	    // been added
 	    function restart(start) {
 	        circle.call(force.drag);
-	        //svg.classed('ctrl', true);
 
 	        // path (link) group
 	        path = path.data(links);
@@ -835,11 +835,8 @@ var QDR = (function (QDR) {
                         updateForm(left.key, 'connection', resultIndex);
                     }
 
-					// select link
 					mousedown_link = d;
 					selected_link = mousedown_link;
-					//selected_node = null;
-					//mousedown_node = null;
 					restart();
 				})
 	            .on('mouseout', function (d) {
@@ -849,11 +846,8 @@ var QDR = (function (QDR) {
 				    }
 				    return;
 				  }
-				        //QDR.log.debug("showing connections form");
-					// select link
+			        //QDR.log.debug("showing connections form");
 					selected_link = null;
-					//selected_node = null;
-					//mousedown_node = null;
 					restart();
 				})
 	            .on("contextmenu", function(d) {
@@ -871,7 +865,6 @@ var QDR = (function (QDR) {
                 .on("click", function (d) {
                     dblckickPos = d3.mouse(this);
                     d3.event.stopPropagation();
-
                     var diameter = 400;
                     var format = d3.format(",d");
                     var pack = d3.layout.pack()
@@ -911,6 +904,8 @@ var QDR = (function (QDR) {
 					containerIndex = links.attributeNames.indexOf('remoteContainer');
 					var nameIndex = links.attributeNames.indexOf('name');
 					var linkDirIndex = links.attributeNames.indexOf('linkDir');
+					if (containerIndex < 0 || nameIndex < 0 || linkDirIndex < 0)
+						return;
 					links.results.forEach ( function (link) {
 						if (link[containerIndex] == d.target.containerName)
 							root.children.push (

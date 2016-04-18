@@ -31,7 +31,7 @@ var QDR = (function(QDR) {
 	QDR.module.controller("QDR.ListController", ['$scope', '$location', '$dialog', '$filter', 'localStorage', 'QDRService', 'QDRChartService',
 		function ($scope, $location, $dialog, $filter, localStorage, QDRService, QDRChartService) {
 
-		$scope.details = [];
+		$scope.details = {};
 		if (!QDRService.connected) {
 			// we are not connected. we probably got here from a bookmark or manual page reload
 			$location.path("/dispatch_plugin/connect")
