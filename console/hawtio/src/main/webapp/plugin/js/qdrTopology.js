@@ -590,7 +590,7 @@ var QDR = (function (QDR) {
 
 				$scope.$broadcast('showEntityForm', {entity: entity, attributes: attributes})
 			}
-			$scope.$apply();
+			if (!$scope.$$phase) $scope.$apply()
 		}
 
         function getContainerIndex(_id) {
@@ -1067,7 +1067,7 @@ var QDR = (function (QDR) {
 						// add a link from the clicked node to the new node
 						getLink(d.id, nodes.length-1, "in", "temp");
 						$scope.addingNode.hasLink = true;
-						$scope.$apply();
+						if (!$scope.$$phase) $scope.$apply()
 						// add new elements to the svg
 						force.links(links).start();
 						restart();
@@ -1088,7 +1088,7 @@ var QDR = (function (QDR) {
                         links[i]['highlighted'] = false;
                     }
 	                mousedown_node = null;
-                    $scope.$apply();
+					if (!$scope.$$phase) $scope.$apply()
                     restart(false);
 
 	            })
@@ -1099,14 +1099,14 @@ var QDR = (function (QDR) {
 	                }
 	                if (QDRService.nameFromId(d.key) == '__internal__') {
 	                    editNode();
-	                    $scope.$apply();
+						if (!$scope.$$phase) $scope.$apply()
 	                }
 	            })
 	            .on("contextmenu", function(d) {
 	                $(document).click();
                     d3.event.preventDefault();
 	                $scope.contextNode = d;
-	                $scope.$apply();    // we just changed a scope valiable during an async event
+					if (!$scope.$$phase) $scope.$apply()     // we just changed a scope valiable during an async event
                     d3.select('#node_context_menu')
                       .style('left', (mouseX + $(document).scrollLeft()) + "px")
                       .style('top', (mouseY + $(document).scrollTop()) + "px")
@@ -1126,7 +1126,7 @@ var QDR = (function (QDR) {
                     d.normals.forEach( function (n) {
                         $scope.multiData.push(n)
                     })
-                    $scope.$apply();
+					if (!$scope.$$phase) $scope.$apply()
                     d3.select('#multiple_details')
                         .style({
                             display: 'block',
@@ -1301,6 +1301,10 @@ var QDR = (function (QDR) {
         });
 
 		function hasChanged () {
+			// Don't update the underlying topology diagram if we are adding a new node.
+			// Once adding is completed, the topology will update automatically if it has changed
+			if ($scope.addingNode.step > 0)
+				return false;
 			var nodeInfo = QDRService.topology.nodeInfo();
 			if (Object.keys(nodeInfo).length != Object.keys(savedKeys).length)
 				return true;
