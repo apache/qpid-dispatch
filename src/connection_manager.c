@@ -30,10 +30,11 @@
 #include <stdio.h>
 
 struct qd_config_listener_t {
-    bool is_connector;
-    DEQ_LINKS(qd_config_listener_t);
+    bool                is_connector;
+    qd_bind_state_t     state;
     qd_listener_t      *listener;
     qd_server_config_t  configuration;
+    DEQ_LINKS(qd_config_listener_t);
 };
 
 DEQ_DECLARE(qd_config_listener_t, qd_config_listener_list_t);
@@ -202,6 +203,7 @@ qd_config_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entit
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_config_listener_t *cl = NEW(qd_config_listener_t);
     cl->is_connector = false;
+    cl->state = QD_BIND_NONE;
     cl->listener = 0;
     if (load_server_config(qd, &cl->configuration, entity) != QD_ERROR_NONE) {
         qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create config listener: %s", qd_error_message());
@@ -300,8 +302,14 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
     qd_config_connector_t *cc = DEQ_HEAD(qd->connection_manager->config_connectors);
 
     while (cl) {
-        if (cl->listener == 0)
-            cl->listener = qd_server_listen(qd, &cl->configuration, cl);
+        if (cl->listener == 0 )
+            if (cl->state == QD_BIND_NONE) { //Try to start listening only if we have never tried to listen on that port before
+                cl->listener = qd_server_listen(qd, &cl->configuration, cl);
+                if (cl->listener && cl->listener->pn_listener)
+                    cl->state = QD_BIND_SUCCESSFUL;
+                else
+                    cl->state = QD_BIND_FAILED;
+            }
         cl = DEQ_NEXT(cl);
     }
 
