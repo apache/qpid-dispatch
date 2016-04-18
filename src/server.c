@@ -1111,6 +1111,11 @@ static void cxtr_try_open(void *context)
         return;
     }
 
+    //
+    // Set the hostname on the pn_connection. This hostname will be used by proton as the hostname in the open frame.
+    //
+    pn_connection_set_hostname(ctx->pn_conn, config->host);
+
     // Set the sasl user name and password on the proton connection object. This has to be done before the call to qdpn_connector_transport() which
     // binds the transport to the connection
     if(config->sasl_username)

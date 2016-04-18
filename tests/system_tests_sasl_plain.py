@@ -79,7 +79,7 @@ sql_select: dummy select
 
         router('X', [
                      ('listener', {'addr': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
-                                   'saslMechanisms':'PLAIN DIGEST-MD5', 'authenticatePeer': 'yes'}),
+                                   'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
                      # This unauthenticated listener is for qdstat to connect to it.
                      ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
@@ -91,7 +91,7 @@ sql_select: dummy select
         router('Y', [
                      ('connector', {'addr': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
                                     # Provide a sasl user name and password to connect to QDR.X
-                                   'saslMechanisms': 'PLAIN DIGEST-MD5', 'saslUsername': 'test@domain.com', 'saslPassword': 'password'}),
+                                   'saslMechanisms': 'PLAIN', 'saslUsername': 'test@domain.com', 'saslPassword': 'password'}),
                      ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Y'}),
                      ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
         ])
