@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "dispatch_private.h"
-#include "connection_manager_private.h"
 #include "policy.h"
 #include <qpid/dispatch/container.h>
 #include <qpid/dispatch/server.h>
@@ -303,8 +302,6 @@ static void notify_closed(qd_container_t *container, qd_connection_t *conn, void
 
 static int close_handler(qd_container_t *container, void* conn_context, pn_connection_t *conn, qd_connection_t* qd_conn)
 {
-    qd_connection_manager_connection_closed(qd_conn);
-
     //
     // Close all links, passing QD_LOST as the reason.  These links are not
     // being properly 'detached'.  They are being orphaned.
@@ -384,7 +381,6 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             qd_connection_invoke_deferred(qd_conn, qd_policy_amqp_open, qd_conn);
         } else {
             // This Open is in response to an internally initiated connection
-            qd_connection_manager_connection_opened(qd_conn);
             notify_opened(container, qd_conn, conn_context);
         }
         break;
@@ -392,7 +388,6 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
     case PN_CONNECTION_REMOTE_CLOSE :
         if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED))
             pn_connection_close(conn);
-        qd_connection_manager_connection_closed(qd_conn);
         break;
 
     case PN_SESSION_REMOTE_OPEN :
