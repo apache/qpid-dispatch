@@ -44,7 +44,7 @@ class HelloProtocol(object):
             self.container.log_hello(LOG_TRACE, "SENT: %r" % msg)
 
 
-    def handle_hello(self, msg, now, link_id):
+    def handle_hello(self, msg, now, link_id, cost):
         if msg.id == self.id:
             if not self.dup_reported and (msg.instance != self.container.instance):
                 self.dup_reported = True
@@ -52,7 +52,7 @@ class HelloProtocol(object):
             return
         self.hellos[msg.id] = now
         if msg.is_seen(self.id):
-            self.node_tracker.neighbor_refresh(msg.id, msg.instance, link_id, now)
+            self.node_tracker.neighbor_refresh(msg.id, msg.instance, link_id, cost, now)
 
 
     def _expire_hellos(self, now):

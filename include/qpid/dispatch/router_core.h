@@ -88,7 +88,7 @@ void qdr_core_route_table_handlers(qdr_core_t           *core,
  * In-process messaging functions
  ******************************************************************************
  */
-typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit);
+typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost);
 
 qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
                                        const char             *address,
@@ -149,6 +149,7 @@ typedef enum {
  * @param core Pointer to the core object
  * @param incoming True iff this connection is associated with a listener, False if a connector
  * @param role The configured role of this connection
+ * @param cost If the role is inter_router, this is the configured cost for the connection.
  * @param label Optional label provided in the connection's configuration.  This is used to 
  *        correlate the connection with waypoints and link-route destinations that use the connection.
  * @param strip_annotations_in True if configured to remove annotations on inbound messages.
@@ -159,6 +160,7 @@ typedef enum {
 qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   incoming,
                                         qdr_connection_role_t  role,
+                                        int                    cost,
                                         const char            *label,
                                         const char            *remote_container_id,
                                         bool                   strip_annotations_in,

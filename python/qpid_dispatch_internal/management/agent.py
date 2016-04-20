@@ -751,7 +751,7 @@ class Agent(object):
         except:
             self.log(LOG_ERROR, "Can't respond to %s: %s"%(request, format_exc()))
 
-    def receive(self, request, link_id):
+    def receive(self, request, unused_link_id, unused_cost):
         """Called when a management request is received."""
         def error(e, trace):
             """Raise an error"""
@@ -766,7 +766,7 @@ class Agent(object):
         with self.request_lock:
             try:
                 self.entities.refresh_from_c()
-                self.log(LOG_DEBUG, "Agent request %s on link %s"%(request, link_id))
+                self.log(LOG_DEBUG, "Agent request %s"% request)
                 status, body = self.handle(request)
                 self.respond(request, status=status, body=body)
             except ManagementError, e:

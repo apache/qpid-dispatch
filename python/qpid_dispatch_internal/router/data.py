@@ -52,7 +52,7 @@ class LinkState(object):
             self.id = getMandatory(body, 'id', str)
             self.area = '0'
             self.ls_seq = getMandatory(body, 'ls_seq', long)
-            self.peers = getMandatory(body, 'peers', list)
+            self.peers = getMandatory(body, 'peers', dict)
         else:
             self.id = _id
             self.area = '0'
@@ -68,20 +68,20 @@ class LinkState(object):
                 'ls_seq' : self.ls_seq,
                 'peers'  : self.peers}
 
-    def add_peer(self, _id):
-        if self.peers.count(_id) == 0:
-            self.peers.append(_id)
+    def add_peer(self, _id, _cost):
+        if _id not in self.peers:
+            self.peers[_id] = _cost
             return True
         return False
 
     def del_peer(self, _id):
-        if self.peers.count(_id) > 0:
-            self.peers.remove(_id)
+        if _id in self.peers:
+            self.peers.pop(_id)
             return True
         return False
 
     def del_all_peers(self):
-        self.peers = []
+        self.peers = {}
         self.ls_seq = 0
 
     def has_peers(self):

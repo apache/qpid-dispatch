@@ -442,7 +442,7 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
  * Handler for the management agent.
  *
  */
-void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id)
+void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id, int unused_cost)
 {
     qdr_core_t *core = (qdr_core_t*) context;
     qd_field_iterator_t *app_properties_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);

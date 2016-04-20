@@ -368,6 +368,7 @@ struct qdr_general_work_t {
     qdr_general_work_handler_t  handler;
     qdr_field_t                *field;
     int                         maskbit;
+    int                         inter_router_cost;
     qdr_receive_t               on_message;
     void                       *on_message_context;
     qd_message_t               *msg;
@@ -412,6 +413,7 @@ struct qdr_connection_t {
     void                       *user_context;
     bool                        incoming;
     qdr_connection_role_t       role;
+    int                         inter_router_cost;
     qdr_conn_identifier_t      *conn_id;
     bool                        strip_annotations_in;
     bool                        strip_annotations_out;
@@ -562,7 +564,7 @@ struct qdr_core_t {
 
 void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);
-void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id);
+void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id, int unused_cost);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
 void  qdr_agent_setup_CT(qdr_core_t *core);
 void  qdr_forwarder_setup_CT(qdr_core_t *core);

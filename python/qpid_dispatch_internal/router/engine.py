@@ -126,7 +126,7 @@ class RouterEngine:
         except Exception:
             self.log(LOG_ERROR, "Exception in timer processing\n%s" % format_exc(LOG_STACK_LIMIT))
 
-    def handleControlMessage(self, opcode, body, link_id):
+    def handleControlMessage(self, opcode, body, link_id, cost):
         """
         """
         try:
@@ -134,7 +134,7 @@ class RouterEngine:
             if   opcode == 'HELLO':
                 msg = MessageHELLO(body)
                 self.log_hello(LOG_TRACE, "RCVD: %r" % msg)
-                self.hello_protocol.handle_hello(msg, now, link_id)
+                self.hello_protocol.handle_hello(msg, now, link_id, cost)
 
             elif opcode == 'RA':
                 msg = MessageRA(body)
@@ -164,12 +164,12 @@ class RouterEngine:
         except Exception:
             self.log(LOG_ERROR, "Control message error: opcode=%s body=%r\n%s" % (opcode, body, format_exc(LOG_STACK_LIMIT)))
 
-    def receive(self, message, link_id):
+    def receive(self, message, link_id, cost):
         """
         This is the IoAdapter message-receive handler
         """
         try:
-            self.handleControlMessage(message.properties['opcode'], message.body, link_id)
+            self.handleControlMessage(message.properties['opcode'], message.body, link_id, cost)
         except Exception:
             self.log(LOG_ERROR, "Exception in raw message processing: properties=%r body=%r\n%s" %
                      (message.properties, message.body, format_exc(LOG_STACK_LIMIT)))

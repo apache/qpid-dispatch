@@ -33,7 +33,7 @@ class NodeTracker(object):
         self.container             = container
         self.my_id                 = container.id
         self.max_routers           = max_routers
-        self.link_state            = LinkState(None, self.my_id, 0, [])
+        self.link_state            = LinkState(None, self.my_id, 0, {})
         self.link_state_changed    = False
         self.recompute_topology    = False
         self.last_topology_change  = 0
@@ -184,7 +184,7 @@ class NodeTracker(object):
             self.container.link_state_engine.send_ra(now)
 
 
-    def neighbor_refresh(self, node_id, instance, link_id, now):
+    def neighbor_refresh(self, node_id, instance, link_id, cost, now):
         """
         Invoked when the hello protocol has received positive confirmation
         of continued bi-directional connectivity with a neighbor router.
@@ -204,7 +204,7 @@ class NodeTracker(object):
         if node.set_link_id(link_id):
             self.nodes_by_link_id[link_id] = node
             node.request_link_state()
-            if self.link_state.add_peer(node_id):
+            if self.link_state.add_peer(node_id, cost):
                 self.link_state_changed = True
 
         ##
@@ -364,7 +364,7 @@ class RouterNode(object):
         self.maskbit                 = self.parent._allocate_maskbit()
         self.neighbor_refresh_time   = 0.0
         self.peer_link_id            = None
-        self.link_state              = LinkState(None, self.id, 0, [])
+        self.link_state              = LinkState(None, self.id, 0, {})
         self.next_hop_router         = None
         self.valid_origins           = None
         self.mobile_addresses        = []

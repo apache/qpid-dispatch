@@ -95,14 +95,15 @@ class DisplayNameService(object):
 
         return body
 
-    def receive(self, message, link_id):
+    def receive(self, message, unused_link_id, unused_cost):
         """
         This is the IOAdapter's callback function. Will be invoked when the IOAdapter receives a request.
         Will only accept QUERY requests.
         Matches the passed in profilename and userid to user name. If a matching user name is not found, returns the
         passed in userid as the user name.
         :param message:
-        :param link_id:
+        :param unused_link_id:
+        :param unused_cost
         """
         body = {}
 

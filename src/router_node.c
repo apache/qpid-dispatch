@@ -43,6 +43,7 @@ static char *node_id;
  */
 static void qd_router_connection_get_config(const qd_connection_t  *conn,
                                             qdr_connection_role_t  *role,
+                                            int                    *cost,
                                             const char            **name,
                                             bool                   *strip_annotations_in,
                                             bool                   *strip_annotations_out,
@@ -59,6 +60,7 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
             *strip_annotations_in  = false;
             *strip_annotations_out = false;
             *role = QDR_ROLE_INTER_ROUTER;
+            *cost = cf->inter_router_cost;
         } else if (cf && (strcmp(cf->role, container_role) == 0 ||
                           strcmp(cf->role, on_demand_role) == 0))  // backward compat
             *role = QDR_ROLE_ROUTE_CONTAINER;
@@ -497,16 +499,17 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
 static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool inbound)
 {
     qdr_connection_role_t  role = 0;
+    int                    cost = 1;
     bool                   strip_annotations_in = false;
     bool                   strip_annotations_out = false;
     int                    link_capacity = 1;
     const char            *name = 0;
     pn_connection_t       *pn_conn = qd_connection_pn(conn);
 
-    qd_router_connection_get_config(conn, &role, &name,
+    qd_router_connection_get_config(conn, &role, &cost, &name,
                                     &strip_annotations_in, &strip_annotations_out, &link_capacity);
 
-    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, name,
+    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, cost, name,
                                                    pn_connection_remote_container(pn_conn),
                                                    strip_annotations_in, strip_annotations_out, link_capacity);
 

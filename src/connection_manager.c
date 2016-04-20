@@ -139,6 +139,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->port                 = qd_entity_get_string(entity, "port"); CHECK();
     config->name                 = qd_entity_opt_string(entity, "name", 0); CHECK();
     config->role                 = qd_entity_get_string(entity, "role"); CHECK();
+    config->inter_router_cost    = qd_entity_opt_long(entity, "cost", 1); CHECK();
     config->protocol_family      = qd_entity_opt_string(entity, "protocolFamily", 0); CHECK();
     config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
     config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds"); CHECK();

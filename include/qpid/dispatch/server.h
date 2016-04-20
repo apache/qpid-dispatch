@@ -400,6 +400,13 @@ typedef struct qd_server_config_t {
     char *role;
 
     /**
+     * If the role is "inter-router", the cost can be set to a number greater than
+     * or equal to one.  Inter-router cost is used to influence the routing algorithm
+     * such that it prefers lower-cost paths.
+     */
+    int inter_router_cost;
+
+    /**
      * The maximum size of an AMQP frame in octets.
      */
     uint32_t max_frame_size;

@@ -488,7 +488,7 @@ static qd_error_t iter_to_py_attr(qd_field_iterator_t *iter,
     return qd_error_code();
 }
 
-static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
+static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, int inter_router_cost)
 {
     IoAdapter *self = (IoAdapter*) context;
 
@@ -513,7 +513,7 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id)
     iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES), py_iter_parse, py_msg, "properties");
     iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_BODY), py_iter_parse, py_msg, "body");
 
-    PyObject *value = PyObject_CallFunction(self->handler, "Ol", py_msg, link_id);
+    PyObject *value = PyObject_CallFunction(self->handler, "Oll", py_msg, link_id, inter_router_cost);
 
     Py_DECREF(py_msg);
     Py_XDECREF(value);

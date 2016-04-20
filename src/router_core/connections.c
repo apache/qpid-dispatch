@@ -58,6 +58,7 @@ qdr_terminus_t *qdr_terminus_router_data(void)
 qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   incoming,
                                         qdr_connection_role_t  role,
+                                        int                    cost,
                                         const char            *label,
                                         const char            *remote_container_id,
                                         bool                   strip_annotations_in,
@@ -72,6 +73,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     conn->user_context          = 0;
     conn->incoming              = incoming;
     conn->role                  = role;
+    conn->inter_router_cost     = cost;
     conn->strip_annotations_in  = strip_annotations_in;
     conn->strip_annotations_out = strip_annotations_out;
     conn->link_capacity         = link_capacity;
