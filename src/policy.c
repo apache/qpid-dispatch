@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "dispatch_private.h"
-#include "connection_manager_private.h"
 #include "qpid/dispatch/container.h"
 #include "qpid/dispatch/server.h"
 #include <proton/message.h>
@@ -749,7 +748,6 @@ void qd_policy_amqp_open(void *context, bool discard)
         if (connection_allowed) {
             if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
                 pn_connection_open(conn);
-            qd_connection_manager_connection_opened(qd_conn);
             policy_notify_opened(qd_conn->open_container, qd_conn, qd_conn->context);
         } else {
             qd_policy_private_deny_amqp_connection(conn, RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);

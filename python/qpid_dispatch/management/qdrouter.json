@@ -950,6 +950,11 @@
                     "description": "The permitted direction of links: 'in' means client senders; 'out' means client receivers",
                     "create": true,
                     "required": true
+                },
+                "operStatus": {
+                    "type": ["inactive", "active"],
+                    "description": "The operational status of this linkRoute: inactive - The remote container is not connected; active - the remote container is connected and ready to accept link routed attachments.",
+                    "create": false
                 }
             }
         },

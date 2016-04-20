@@ -648,6 +648,75 @@ static char *test_qd_hash_retrieve_prefix_separator_exact_match_dot_at_end_1(voi
 }
 
 
+static char *test_prefix_hash(void *context)
+{
+    static char error[200];
+    char *entries[] = {"an_entry_with_no_separators",   //  0
+                       "dot.separated.pattern.one",     //  1
+                       "dot.separated.pattern.two",     //  2
+                       "dot.separated.",                //  3
+                       "dot",                           //  4
+                       "slash",                         //  5
+                       "slash/delimited",               //  6
+                       "slash/delimited/first",         //  7
+                       "slash/delimited/second",        //  8
+                       "mixed.set/of/delimiters.one",   //  9
+                       "mixed.set/of/delimiters.two",   // 10
+                       "mixed.set/of/delimiters/three", // 11
+                       "mixed.set",                     // 12
+                       0};
+    struct { char* pattern; int entry; } patterns[] = {{"an_entry_with_no_separators", 0},
+                                                       {"dot.separated.pattern.one", 1},
+                                                       {"dot.separated.pattern.two", 2},
+                                                       {"dot.separated.pattern.three", 3},
+                                                       {"dot.separated.other.pattern", 3},
+                                                       {"dot.differentiated/other", 4},
+                                                       {"slash/other", 5},
+                                                       {"slash/delimited/first", 7},
+                                                       {"slash/delimited/second", 8},
+                                                       {"slash/delimited/third", 6},
+                                                       {"mixed.other", -1},
+                                                       {"mixed.set/other", 12},
+                                                       {"mixed.set/of/delimiters.one/queue", 9},
+                                                       {"mixed.set/of/delimiters.one.queue", 9},
+                                                       {"mixed.set.of/delimiters.one.queue", 12},
+                                                       {"other.thing.entirely", -1},
+                                                       {0, 0}};
+
+    qd_hash_t *hash = qd_hash(10, 32, 0);
+    long idx = 0;
+
+    //
+    // Insert the entries into the hash table
+    //
+    while (entries[idx]) {
+        qd_field_iterator_t *iter = qd_address_iterator_string(entries[idx], ITER_VIEW_ADDRESS_HASH);
+        qd_hash_insert(hash, iter, (void*) (idx + 1), 0);
+        qd_field_iterator_free(iter);
+        idx++;
+    }
+
+    //
+    // Test the patterns
+    //
+    idx = 0;
+    while (patterns[idx].pattern) {
+        qd_field_iterator_t *iter = qd_address_iterator_string(patterns[idx].pattern, ITER_VIEW_ADDRESS_HASH);
+        int position;
+        qd_hash_retrieve_prefix(hash, iter, (void*) &position);
+        position--;
+        if (position != patterns[idx].entry) {
+            snprintf(error, 200, "Pattern: '%s', expected %d, got %d",
+                     patterns[idx].pattern, patterns[idx].entry, position);
+            return error;
+        }
+        idx++;
+    }
+
+    return 0;
+}
+
+
 int field_tests(void)
 {
     int result = 0;
@@ -672,6 +741,7 @@ int field_tests(void)
     TEST_CASE(test_qd_hash_retrieve_prefix_separator_exact_match_slashes, 0);
     TEST_CASE(test_qd_hash_retrieve_prefix_separator_exact_match_dot_at_end, 0);
     TEST_CASE(test_qd_hash_retrieve_prefix_separator_exact_match_dot_at_end_1, 0);
+    TEST_CASE(test_prefix_hash, 0);
 
     return result;
 }

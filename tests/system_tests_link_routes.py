@@ -393,17 +393,6 @@ class LinkRoutePatternTest(TestCase):
         # Connects to listener #2 on QDR.C
         addr = self.routers[2].addresses[1]
 
-        timeout_exception = False
-        blocking_connection = BlockingConnection(addr, timeout=3)
-
-        try:
-            blocking_connection.create_receiver(address="org.apache.dev")
-        except Exception as e:
-            self.assertTrue("timed out: Opening link" in e.message)
-            timeout_exception = True
-
-        self.assertTrue(timeout_exception)
-
         # Now delete linkRoutes on QDR.C to eradicate linkRoutes completely
         local_node = Node.connect(addr, timeout=TIMEOUT)
         result_list = local_node.query(type='org.apache.qpid.dispatch.router.config.linkRoute').results
@@ -445,16 +434,6 @@ class LinkRoutePatternTest(TestCase):
         blocking_sender.send(msg)
         received_message = blocking_receiver.receive(timeout=5)
         self.assertEqual(hello_world_1, received_message.body)
-
-        # Connect to the router acting like the broker (QDR.A) and check the deliveriesIngress and deliveriesEgress
-        local_node = Node.connect(self.routers[2].addresses[1], timeout=TIMEOUT)
-
-        self.assertEqual(u'QDR.C', local_node.query(type='org.apache.qpid.dispatch.router',
-                                                    attribute_names=['routerId']).results[0][0])
-
-        self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache.dev').deliveriesEgress,
-                         "deliveriesEgress is wrong")
 
     def test_yyy_delivery_tag(self):
         """

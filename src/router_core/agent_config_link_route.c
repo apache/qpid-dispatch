@@ -31,6 +31,7 @@
 #define QDR_CONFIG_LINK_ROUTE_CONNECTION    5
 #define QDR_CONFIG_LINK_ROUTE_CONTAINER_ID  6
 #define QDR_CONFIG_LINK_ROUTE_DIR           7
+#define QDR_CONFIG_LINK_ROUTE_OPER_STATUS   8
 
 const char *qdr_config_link_route_columns[] =
     {"name",
@@ -41,6 +42,7 @@ const char *qdr_config_link_route_columns[] =
      "connection",
      "containerId",
      "dir",
+     "operStatus",
      0};
 
 
@@ -111,6 +113,11 @@ static void qdr_config_link_route_insert_column_CT(qdr_link_route_t *lr, int col
 
     case QDR_CONFIG_LINK_ROUTE_DIR:
         text = lr->dir == QD_INCOMING ? "in" : "out";
+        qd_compose_insert_string(body, text);
+        break;
+
+    case QDR_CONFIG_LINK_ROUTE_OPER_STATUS:
+        text = lr->active ? "active" : "inactive";
         qd_compose_insert_string(body, text);
         break;
     }

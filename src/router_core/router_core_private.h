@@ -437,6 +437,7 @@ struct qdr_link_route_t {
     qd_direction_t          dir;
     qdr_conn_identifier_t  *conn_id;
     qd_address_treatment_t  treatment;
+    bool                    active;
 };
 
 ALLOC_DECLARE(qdr_link_route_t);

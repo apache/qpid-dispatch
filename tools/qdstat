@@ -362,6 +362,7 @@ class BusManager(Node):
         heads.append(Header("prefix"))
         heads.append(Header("dir"))
         heads.append(Header("distrib"))
+        heads.append(Header("status"))
         rows = []
 
         link_routes = self.query('org.apache.qpid.dispatch.router.config.linkRoute')
@@ -371,6 +372,7 @@ class BusManager(Node):
             row.append(link_route.prefix)
             row.append(link_route.dir)
             row.append(link_route.distribution)
+            row.append(link_route.operStatus)
             rows.append(row)
         title = "Link Routes"
         sorter = Sorter(heads, rows, 'prefix', 0, True)
