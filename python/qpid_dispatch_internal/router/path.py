@@ -40,7 +40,7 @@ class PathEngine(object):
             link_states[_id] = ls.peers
             for p in ls.peers:
                 if p not in link_states:
-                    link_states[p] = [_id]
+                    link_states[p] = {_id:1L}
 
         ##
         ## Setup Dijkstra's Algorithm
@@ -61,27 +61,28 @@ class PathEngine(object):
             if cost[u] == None:
                 # There are no more reachable nodes in unresolved
                 break
-            for v in link_states[u]:
+            for v, v_cost in link_states[u].items():
                 if unresolved.contains(v):
-                    alt = cost[u] + 1   # TODO - Use link cost instead of 1
+                    alt = cost[u] + v_cost
                     if cost[v] == None or alt < cost[v]:
                         cost[v] = alt
                         prev[v] = u
                         unresolved.set_cost(v, alt)
 
         ##
-        ## Remove unreachable nodes from the map.  Note that this will also remove the
+        ## Remove unreachable nodes from the maps.  Note that this will also remove the
         ## root node (has no previous node) from the map.
         ##
         for u, val in prev.items():
             if not val:
                 prev.pop(u)
+                cost.pop(u)
 
         ##
-        ## Return previous-node map.  This is a map of all reachable, remote nodes to
-        ## their predecessor node.
+        ## Return previous-node and cost maps.  Prev is a map of all reachable, remote nodes to
+        ## their predecessor node.  Cost is a map of all reachable nodes and their costs.
         ##
-        return prev
+        return prev, cost
 
 
     def _calculate_valid_origins(self, nodeset, collection):
@@ -96,7 +97,7 @@ class PathEngine(object):
                 valid_origin[node] = []
 
         for root in valid_origin.keys():
-            prev  = self._calculate_tree_from_root(root, collection)
+            prev, cost = self._calculate_tree_from_root(root, collection)
             nodes = prev.keys()
             while len(nodes) > 0:
                 u = nodes[0]
@@ -119,7 +120,7 @@ class PathEngine(object):
         ##
         ## Generate the shortest-path tree with the local node as root
         ##
-        prev  = self._calculate_tree_from_root(self.id, collection)
+        prev, cost = self._calculate_tree_from_root(self.id, collection)
         nodes = prev.keys()
 
         ##
@@ -145,7 +146,7 @@ class PathEngine(object):
         ##
         valid_origins = self._calculate_valid_origins(prev.keys(), collection)
 
-        return (next_hops, valid_origins)
+        return (next_hops, cost, valid_origins)
 
 
 

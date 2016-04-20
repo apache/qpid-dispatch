@@ -146,8 +146,9 @@ class NodeTracker(object):
             collection = {self.my_id : self.link_state}
             for node_id, node in self.nodes.items():
                 collection[node_id] = node.link_state
-            next_hops, valid_origins = self.container.path_engine.calculate_routes(collection)
+            next_hops, cost, valid_origins = self.container.path_engine.calculate_routes(collection)
             self.container.log_ls(LOG_TRACE, "Computed next hops: %r" % next_hops)
+            self.container.log_ls(LOG_TRACE, "Computed costs: %r" % cost)
             self.container.log_ls(LOG_TRACE, "Computed valid origins: %r" % valid_origins)
 
             ##
