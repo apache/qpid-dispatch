@@ -1304,7 +1304,7 @@ var QDR = (function (QDR) {
 			// Don't update the underlying topology diagram if we are adding a new node.
 			// Once adding is completed, the topology will update automatically if it has changed
 			if ($scope.addingNode.step > 0)
-				return false;
+				return false; 
 			var nodeInfo = QDRService.topology.nodeInfo();
 			if (Object.keys(nodeInfo).length != Object.keys(savedKeys).length)
 				return true;
