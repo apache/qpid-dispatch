@@ -87,7 +87,7 @@ typedef enum {
 static char *my_area    = "";
 static char *my_router  = "";
 
-const char *SEPARATORS  = "./\\";
+const char *SEPARATORS  = "./";
 
 const uint32_t HASH_INIT = 5381;
 

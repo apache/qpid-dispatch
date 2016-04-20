@@ -664,7 +664,6 @@ static char *test_prefix_hash(void *context)
                        "mixed.set/of/delimiters.two",   // 10
                        "mixed.set/of/delimiters/three", // 11
                        "mixed.set",                     // 12
-                       "backslash\\windows",            // 13
                        0};
     struct { char* pattern; int entry; } patterns[] = {{"an_entry_with_no_separators", 0},
                                                        {"dot.separated.pattern.one", 1},
@@ -682,7 +681,6 @@ static char *test_prefix_hash(void *context)
                                                        {"mixed.set/of/delimiters.one.queue", 9},
                                                        {"mixed.set.of/delimiters.one.queue", 12},
                                                        {"other.thing.entirely", -1},
-                                                       {"backslash\\windows\\test", 13},
                                                        {0, 0}};
 
     qd_hash_t *hash = qd_hash(10, 32, 0);
