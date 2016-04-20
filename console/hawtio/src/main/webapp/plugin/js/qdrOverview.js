@@ -556,7 +556,7 @@ var QDR = (function (QDR) {
 		routers.type = "Routers"
 		routers.info = allRouterInfo
 		routers.focus = true
-		routers.expanded = true
+		routers.expand = true
 		routers.key = "Routers"
 	    routers.addClass = "routers"
 		topLevelChildren.push(routers)
