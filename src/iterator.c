@@ -87,7 +87,7 @@ typedef enum {
 static char *my_area    = "";
 static char *my_router  = "";
 
-const char SEPARATOR    = '.';
+const char *SEPARATORS  = "./\\";
 
 const uint32_t HASH_INIT = 5381;
 
@@ -166,24 +166,20 @@ static void parse_node_view(qd_field_iterator_t *iter)
 }
 
 
-static void qd_address_iterator_check_trailing_octet(qd_field_iterator_t *iter, char octet)
+static void qd_address_iterator_remove_trailing_separator(qd_field_iterator_t *iter)
 {
     // Save the iterator's pointer so we can apply it back before returning from this function.
     pointer_t save_pointer = iter->pointer;
 
     char current_octet = 0;
-    while(!qd_field_iterator_end(iter)) {
+    while (!qd_field_iterator_end(iter)) {
         current_octet = qd_field_iterator_octet(iter);
     }
 
     // We have the last octet in current_octet
-    if (current_octet == octet) {
-        iter->pointer = save_pointer;
-        iter->pointer.length-- ;
-    }
-    else {
-        iter->pointer = save_pointer;
-    }
+    iter->pointer = save_pointer;
+    if (current_octet && strrchr(SEPARATORS, (int) current_octet))
+        iter->pointer.length--;
 }
 
 
@@ -283,7 +279,7 @@ static void view_initialize(qd_field_iterator_t *iter)
 
     if (iter->view == ITER_VIEW_ADDRESS_HASH) {
         iter->mode = MODE_TO_END;
-        qd_address_iterator_check_trailing_octet(iter, SEPARATOR);
+        qd_address_iterator_remove_trailing_separator(iter);
         parse_address_view(iter);
         return;
     }
@@ -725,14 +721,15 @@ void qd_iterator_hash_segments(qd_field_iterator_t *iter)
         octet = qd_field_iterator_octet(iter);
         segment_length += 1;
 
-        if (octet == SEPARATOR) {
+        if (strrchr(SEPARATORS, (int) octet)) {
             qd_insert_hash_segment(iter, &hash, segment_length-1);
         }
 
         hash = ((hash << 5) + hash) + octet; /* hash * 33 + c */
     }
 
-    // Segments should never end with a separator. see view_initialize which in turn calls qd_address_iterator_check_trailing_octet
+    // Segments should never end with a separator. see view_initialize which in turn calls
+    // qd_address_iterator_remove_trailing_separator
     // Insert the last segment which was not inserted in the previous while loop
     qd_insert_hash_segment(iter, &hash, segment_length);
 
