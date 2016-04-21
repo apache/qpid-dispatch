@@ -217,7 +217,7 @@ static int qdpn_create_socket(int af)
 }
 
 
-static void qdpn_configure_sock(qdpn_driver_t *driver, int sock)
+static void qdpn_configure_sock(qdpn_driver_t *driver, int sock, bool tcp)
 {
     //
     // Set the socket to be non-blocking for asynchronous operation.
@@ -233,9 +233,11 @@ static void qdpn_configure_sock(qdpn_driver_t *driver, int sock)
     // Note:  It would be more correct for the "level" argument to be SOL_TCP.  However, there
     //        are portability issues with this macro so we use IPPROTO_TCP instead.
     //
-    int tcp_nodelay = 1;
-    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void*) &tcp_nodelay, sizeof(tcp_nodelay)) < 0)
-        qdpn_log_errno(driver, "setsockopt");
+    if (tcp) {
+        int tcp_nodelay = 1;
+        if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void*) &tcp_nodelay, sizeof(tcp_nodelay)) < 0)
+            qdpn_log_errno(driver, "setsockopt");
+    }
 }
 
 
@@ -401,7 +403,7 @@ qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l,
             close(sock);
             return 0;
         } else {
-            qdpn_configure_sock(l->driver, sock);
+            qdpn_configure_sock(l->driver, sock, true);
             snprintf(name, PN_NAME_MAX-1, "%s:%s", host, serv);
         }
     }
@@ -496,7 +498,7 @@ qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver,
         return 0;
     }
 
-    qdpn_configure_sock(driver, sock);
+    qdpn_configure_sock(driver, sock, true);
 
     if (connect(sock, addr->ai_addr, addr->ai_addrlen) == -1) {
         if (errno != EINPROGRESS) {
@@ -846,6 +848,9 @@ qdpn_driver_t *qdpn_driver()
     if (pipe(d->ctrl)) {
         perror("Can't create control pipe");
     }
+
+    qdpn_configure_sock(d, d->ctrl[0], false);
+    qdpn_configure_sock(d, d->ctrl[1], false);
 
     return d;
 }
