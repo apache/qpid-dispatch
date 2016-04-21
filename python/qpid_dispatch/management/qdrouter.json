@@ -1051,14 +1051,17 @@
                 },
                 "undeliveredCount": {
                     "type": "integer",
+                    "graph": true,
                     "description": "The number of undelivered messages pending for the link."
                 },
                 "unsettledCount": {
                     "type": "integer",
+                    "graph": true,
                     "description": "The number of unsettled deliveries awaiting settlement on the link"
                 },
                 "deliveryCount": {
                     "type": "integer",
+                    "graph": true,
                     "description": "The total number of deliveries that have traversed this link."
                 }
             }
