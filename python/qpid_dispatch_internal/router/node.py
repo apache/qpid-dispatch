@@ -146,9 +146,9 @@ class NodeTracker(object):
             collection = {self.my_id : self.link_state}
             for node_id, node in self.nodes.items():
                 collection[node_id] = node.link_state
-            next_hops, cost, valid_origins = self.container.path_engine.calculate_routes(collection)
+            next_hops, costs, valid_origins = self.container.path_engine.calculate_routes(collection)
             self.container.log_ls(LOG_TRACE, "Computed next hops: %r" % next_hops)
-            self.container.log_ls(LOG_TRACE, "Computed costs: %r" % cost)
+            self.container.log_ls(LOG_TRACE, "Computed costs: %r" % costs)
             self.container.log_ls(LOG_TRACE, "Computed valid origins: %r" % valid_origins)
 
             ##
@@ -158,8 +158,10 @@ class NodeTracker(object):
                 node     = self.nodes[node_id]
                 next_hop = self.nodes[next_hop_id]
                 vo       = valid_origins[node_id]
+                cost     = costs[node_id]
                 node.set_next_hop(next_hop)
                 node.set_valid_origins(vo)
+                node.set_cost(cost)
 
         ##
         ## Send link-state requests and mobile-address requests to the nodes
@@ -367,6 +369,7 @@ class RouterNode(object):
         self.peer_link_id            = None
         self.link_state              = LinkState(None, self.id, 0, {})
         self.next_hop_router         = None
+        self.cost                    = None
         self.valid_origins           = None
         self.mobile_addresses        = []
         self.mobile_address_sequence = 0
@@ -441,6 +444,14 @@ class RouterNode(object):
         vo_mb = [self.parent.nodes[N].maskbit for N in valid_origins]
         self.adapter.set_valid_origins(self.maskbit, vo_mb)
         self.log(LOG_TRACE, "Node %s valid origins: %r" % (self.id, valid_origins))
+
+
+    def set_cost(self, cost):
+        if self.cost == cost:
+            return
+        self.cost = cost
+        self.adapter.set_cost(self.maskbit, cost)
+        self.log(LOG_TRACE, "Node %s cost: %d" % (self.id, cost))
 
 
     def remove_next_hop(self):

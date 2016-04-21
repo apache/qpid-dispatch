@@ -26,6 +26,7 @@ static void qdr_set_link_CT          (qdr_core_t *core, qdr_action_t *action, bo
 static void qdr_remove_link_CT       (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_set_next_hop_CT      (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_remove_next_hop_CT   (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_set_cost_CT          (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_set_valid_origins_CT (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_map_destination_CT   (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_unmap_destination_CT (qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -84,6 +85,15 @@ void qdr_core_remove_next_hop(qdr_core_t *core, int router_maskbit)
 {
     qdr_action_t *action = qdr_action(qdr_remove_next_hop_CT, "remove_next_hop");
     action->args.route_table.router_maskbit = router_maskbit;
+    qdr_action_enqueue(core, action);
+}
+
+
+void qdr_core_set_cost(qdr_core_t *core, int router_maskbit, int cost)
+{
+    qdr_action_t *action = qdr_action(qdr_set_cost_CT, "set_cost");
+    action->args.route_table.router_maskbit = router_maskbit;
+    action->args.route_table.cost           = cost;
     qdr_action_enqueue(core, action);
 }
 
@@ -435,6 +445,26 @@ static void qdr_remove_next_hop_CT(qdr_core_t *core, qdr_action_t *action, bool 
 
     qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
     rnode->next_hop = 0;
+}
+
+
+static void qdr_set_cost_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    int router_maskbit = action->args.route_table.router_maskbit;
+    int cost           = action->args.route_table.cost;
+
+    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_cost: Router maskbit out of range: %d", router_maskbit);
+        return;
+    }
+
+    if (cost < 1) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_cost: Invalid cost %d for maskbit: %d", cost, router_maskbit);
+        return;
+    }
+
+    qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
+    rnode->cost = cost;
 }
 
 

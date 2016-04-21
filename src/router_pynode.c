@@ -143,6 +143,23 @@ static PyObject* qd_remove_next_hop(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* qd_set_cost(PyObject *self, PyObject *args)
+{
+    RouterAdapter *adapter = (RouterAdapter*) self;
+    qd_router_t   *router  = adapter->router;
+    int            router_maskbit;
+    int            cost;
+
+    if (!PyArg_ParseTuple(args, "ii", &router_maskbit, &cost))
+        return 0;
+
+    qdr_core_set_cost(router->router_core, router_maskbit, cost);
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
 static PyObject* qd_set_valid_origins(PyObject *self, PyObject *args)
 {
     RouterAdapter *adapter = (RouterAdapter*) self;
@@ -262,6 +279,7 @@ static PyMethodDef RouterAdapter_methods[] = {
     {"remove_link",         qd_remove_link,       METH_VARARGS, "Remove the link for a neighbor router"},
     {"set_next_hop",        qd_set_next_hop,      METH_VARARGS, "Set the next hop for a remote router"},
     {"remove_next_hop",     qd_remove_next_hop,   METH_VARARGS, "Remove the next hop for a remote router"},
+    {"set_cost",            qd_set_cost,          METH_VARARGS, "Set the cost to reach a remote router"},
     {"set_valid_origins",   qd_set_valid_origins, METH_VARARGS, "Set the valid origins for a remote router"},
     {"map_destination",     qd_map_destination,   METH_VARARGS, "Add a newly discovered destination mapping"},
     {"unmap_destination",   qd_unmap_destination, METH_VARARGS, "Delete a destination mapping"},

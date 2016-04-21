@@ -81,6 +81,7 @@ struct qdr_action_t {
             int           link_maskbit;
             int           router_maskbit;
             int           nh_router_maskbit;
+            int           cost;
             qd_bitmask_t *router_set;
             qdr_field_t  *address;
         } route_table;
@@ -174,6 +175,7 @@ struct qdr_node_t {
     qdr_link_t       *peer_data_link;     ///< Outgoing data link _if_ this is a neighbor node
     uint32_t          ref_count;
     qd_bitmask_t     *valid_origins;
+    int               cost;
 };
 
 ALLOC_DECLARE(qdr_node_t);
