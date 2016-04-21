@@ -114,10 +114,12 @@ extern const char * const QD_CAPABILITY_ROUTER_DATA;
 extern const char * const QD_DYNAMIC_NODE_PROPERTY_ADDRESS;  ///< Address for routing dynamic sources
 /// @}
 
-/** @name Miscellaneous Strings */
+/** @name Connection Properties */
 /// @{
-extern const char * const QD_INTERNODE_LINK_NAME_1;
-extern const char * const QD_INTERNODE_LINK_NAME_2;
+extern const char * const QD_CONNECTION_PROPERTY_PRODUCT_KEY;
+extern const char * const QD_CONNECTION_PROPERTY_PRODUCT_VALUE;
+extern const char * const QD_CONNECTION_PROPERTY_VERSION_KEY;
+extern const char * const QD_CONNECTION_PROPERTY_COST_KEY;
 /// @}
 
 /** @name AMQP error codes. */

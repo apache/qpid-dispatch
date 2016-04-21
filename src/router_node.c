@@ -500,6 +500,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 {
     qdr_connection_role_t  role = 0;
     int                    cost = 1;
+    int                    remote_cost = 1;
     bool                   strip_annotations_in = false;
     bool                   strip_annotations_out = false;
     int                    link_capacity = 1;
@@ -508,6 +509,38 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     qd_router_connection_get_config(conn, &role, &cost, &name,
                                     &strip_annotations_in, &strip_annotations_out, &link_capacity);
+
+    if (role == QDR_ROLE_INTER_ROUTER) {
+        //
+        // Check the remote properties for an inter-router cost value.
+        //
+        pn_data_t *props = pn_conn ? pn_connection_remote_properties(pn_conn) : 0;
+        if (props) {
+            pn_data_rewind(props);
+            pn_data_next(props);
+            if (props && pn_data_type(props) == PN_MAP) {
+                pn_data_enter(props);
+                while (pn_data_next(props)) {
+                    if (pn_data_type(props) == PN_SYMBOL) {
+                        pn_bytes_t sym = pn_data_get_symbol(props);
+                        if (sym.size == strlen(QD_CONNECTION_PROPERTY_COST_KEY) &&
+                            strcmp(sym.start, QD_CONNECTION_PROPERTY_COST_KEY) == 0) {
+                            pn_data_next(props);
+                            if (pn_data_type(props) == PN_INT)
+                                remote_cost = pn_data_get_int(props);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        //
+        // Use the larger of the local and remote costs for this connection
+        //
+        if (remote_cost > cost)
+            cost = remote_cost;
+    }
 
     qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, cost, name,
                                                    pn_connection_remote_container(pn_conn),

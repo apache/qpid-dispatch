@@ -454,12 +454,9 @@ static const char *log_incoming(char *buf, size_t size, qdpn_connector_t *cxtr)
 }
 
 
-static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn)
+static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, const qd_server_config_t *config)
 {
     size_t clen = strlen(QD_CAPABILITY_ANONYMOUS_RELAY);
-    static char *product_key = "product";
-    static char *product_val = "qpid-dispatch-router";
-    static char *version_key = "version";
 
     //
     // Set the container name
@@ -477,11 +474,21 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn)
     pn_data_put_map(pn_connection_properties(conn));
     pn_data_enter(pn_connection_properties(conn));
 
-    pn_data_put_symbol(pn_connection_properties(conn), pn_bytes(strlen(product_key), product_key));
-    pn_data_put_string(pn_connection_properties(conn), pn_bytes(strlen(product_val), product_val));
+    pn_data_put_symbol(pn_connection_properties(conn),
+                       pn_bytes(strlen(QD_CONNECTION_PROPERTY_PRODUCT_KEY), QD_CONNECTION_PROPERTY_PRODUCT_KEY));
+    pn_data_put_string(pn_connection_properties(conn),
+                       pn_bytes(strlen(QD_CONNECTION_PROPERTY_PRODUCT_VALUE), QD_CONNECTION_PROPERTY_PRODUCT_VALUE));
 
-    pn_data_put_symbol(pn_connection_properties(conn), pn_bytes(strlen(version_key), version_key));
-    pn_data_put_string(pn_connection_properties(conn), pn_bytes(strlen(QPID_DISPATCH_VERSION), QPID_DISPATCH_VERSION));
+    pn_data_put_symbol(pn_connection_properties(conn),
+                       pn_bytes(strlen(QD_CONNECTION_PROPERTY_VERSION_KEY), QD_CONNECTION_PROPERTY_VERSION_KEY));
+    pn_data_put_string(pn_connection_properties(conn),
+                       pn_bytes(strlen(QPID_DISPATCH_VERSION), QPID_DISPATCH_VERSION));
+
+    if (config && config->inter_router_cost > 1) {
+        pn_data_put_symbol(pn_connection_properties(conn),
+                           pn_bytes(strlen(QD_CONNECTION_PROPERTY_COST_KEY), QD_CONNECTION_PROPERTY_COST_KEY));
+        pn_data_put_int(pn_connection_properties(conn), config->inter_router_cost);
+    }
 
     pn_data_exit(pn_connection_properties(conn));
 }
@@ -536,7 +543,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         pn_connection_t *conn = pn_connection();
         ctx->collector = pn_collector();
         pn_connection_collect(conn, ctx->collector);
-        decorate_connection(qd_server, conn);
+        decorate_connection(qd_server, conn, ctx->listener->config);
         qdpn_connector_set_connection(cxtr, conn);
         pn_connection_set_context(conn, ctx);
         ctx->pn_conn = conn;
@@ -1086,7 +1093,7 @@ static void cxtr_try_open(void *context)
     qd_log(ct->server->log_source, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
 
     pn_connection_collect(ctx->pn_conn, ctx->collector);
-    decorate_connection(ctx->server, ctx->pn_conn);
+    decorate_connection(ctx->server, ctx->pn_conn, ct->config);
 
     //
     // qdpn_connector is not thread safe
