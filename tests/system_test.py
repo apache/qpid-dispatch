@@ -52,7 +52,7 @@ export PYTHONPATH="$PYTHONPATH:/usr/local/lib/proton/bindings/python:/usr/local/
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib64"
 """
 
-import os, time, socket, random, subprocess, shutil, unittest, __main__, re
+import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re
 from copy import copy
 import proton
 from proton import Message
@@ -178,7 +178,7 @@ def port_available(port, protocol_family='IPv4'):
         s.connect((host, port))
         s.close()
     except socket.error, e:
-        return e.errno == 111
+        return e.errno == errno.ECONNREFUSED
     except:
         pass
     return False
@@ -188,7 +188,7 @@ def wait_port(port, protocol_family='IPv4', **retry_kwargs):
     Takes same keyword arguments as retry to control the timeout"""
     def check(e):
         """Only retry on connection refused"""
-        if not isinstance(e, socket.error) or not e.errno == 111:
+        if not isinstance(e, socket.error) or not e.errno == errno.ECONNREFUSED:
             raise
     s, host = get_local_host_socket(protocol_family)
     try:

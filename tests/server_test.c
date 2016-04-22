@@ -53,18 +53,16 @@ static void ufd_handler(void *context, qd_user_fd_t *ufd)
     if (dir == 0) { // READ
         in_read++;
         assert(in_read == 1);
-        if (!qd_user_fd_is_readable(ufd_read)) {
-            sprintf(stored_error, "Expected Readable");
+        len = read(fd[0], &buffer, 1);
+        if (len < 0) {
+            sprintf(stored_error, "Error while reading");
             qd_server_stop(qd);
-        } else {
-            len = read(fd[0], &buffer, 1);
-            if (len == 1) {
-                read_count++;
-                if (read_count == OCTET_COUNT)
-                    qd_server_stop(qd);
-            }
-            qd_user_fd_activate_read(ufd_read);
+        } else if (len == 1) {
+            read_count++;
+            if (read_count == OCTET_COUNT)
+                qd_server_stop(qd);
         }
+        qd_user_fd_activate_read(ufd_read);
         in_read--;
     } else {        // WRITE
         in_write++;
