@@ -389,7 +389,8 @@ class RouterNode(object):
             "nextHop":  self.next_hop_router and self.next_hop_router.id,
             "validOrigins": self.valid_origins,
             "address": Address.topological(self.id, area=self.parent.container.area),
-            "routerLink": self.peer_link_id
+            "routerLink": self.peer_link_id,
+            "cost": self.cost
         })
 
     def _logify(self, addr):

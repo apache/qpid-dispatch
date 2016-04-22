@@ -260,6 +260,7 @@ class BusManager(Node):
         heads.append(Header("next-hop"))
         heads.append(Header("link"))
         if self.opts.verbose:
+            heads.append(Header("cost"))
             heads.append(Header("neighbors"))
             heads.append(Header("valid-origins"))
         rows = []
@@ -277,6 +278,7 @@ class BusManager(Node):
                 row.append(node.routerLink)
 
             if self.opts.verbose:
+                row.append(node.cost)
                 row.append('%r' % self._list_clean(node.linkState))
                 row.append('%r' % self._list_clean(node.validOrigins))
             rows.append(row)

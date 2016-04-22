@@ -1168,6 +1168,10 @@
                 "routerLink": {
                     "description": "Local link to remote node",
                     "type": "entityId"
+                },
+                "cost": {
+                    "description": "Reachability cost",
+                    "type": "integer"
                 }
             }
         },
