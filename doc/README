@@ -18,7 +18,7 @@
 Building documentation
 ======================
 
-Build the documentation with ``make doc``.
+Build the documentation with ``make doc`` or ``make docs``.
 
 If you have an older verbsion of cmake, the documentation may be built when you
 do ``make all``. If so you can disable documentation build with
