@@ -694,6 +694,7 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
         DEQ_REMOVE(core->addrs, addr);
         qd_hash_handle_free(addr->hash_handle);
         qd_bitmask_free(addr->rnodes);
+        qd_bitmask_free(addr->closest_remotes);
         free_qdr_address_t(addr);
     }
 }

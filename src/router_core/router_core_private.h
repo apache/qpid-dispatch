@@ -321,6 +321,10 @@ struct qdr_address_t {
     bool                       block_deletion;
     bool                       local;
 
+    uint64_t      cost_epoch;
+    qd_bitmask_t *closest_remotes;
+    int           next_remote;
+
     /**@name Statistics */
     ///@{
     uint64_t deliveries_ingress;
@@ -549,11 +553,12 @@ struct qdr_core_t {
     qdr_address_t             *router_addr_T;
     qdr_address_t             *routerma_addr_T;
 
-    qdr_node_list_t       routers;
+    qdr_node_list_t       routers;            ///< List of routers, in order of cost, from lowest to highest
     qd_bitmask_t         *neighbor_free_mask;
     qdr_node_t          **routers_by_mask_bit;
     qdr_link_t          **control_links_by_mask_bit;
     qdr_link_t          **data_links_by_mask_bit;
+    uint64_t              cost_epoch;
 
     uint64_t              next_tag;
 
@@ -566,7 +571,7 @@ struct qdr_core_t {
 
 void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);
-void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id, int unused_cost);
+void qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
 void  qdr_agent_setup_CT(qdr_core_t *core);
 void  qdr_forwarder_setup_CT(qdr_core_t *core);

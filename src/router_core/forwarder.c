@@ -71,6 +71,33 @@ static bool qdr_forward_attach_null_CT(qdr_core_t     *core,
 }
 
 
+static void qdr_forward_find_closest_remotes_CT(qdr_core_t *core, qdr_address_t *addr)
+{
+    qdr_node_t *rnode       = DEQ_HEAD(core->routers);
+    int         lowest_cost = 0;
+
+    if (!addr->closest_remotes)
+        addr->closest_remotes = qd_bitmask(0);
+    addr->cost_epoch  = core->cost_epoch;
+    addr->next_remote = -1;
+
+    qd_bitmask_clear_all(addr->closest_remotes);
+    while (rnode) {
+        if (qd_bitmask_value(addr->rnodes, rnode->mask_bit)) {
+            if (lowest_cost == 0) {
+                lowest_cost = rnode->cost;
+                addr->next_remote = rnode->mask_bit;
+            }
+            if (lowest_cost == rnode->cost)
+                qd_bitmask_set_bit(addr->closest_remotes, rnode->mask_bit);
+            else
+                break;
+        }
+        rnode = DEQ_NEXT(rnode);
+    }
+}
+
+
 qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, qdr_link_t *link, qd_message_t *msg)
 {
     qdr_delivery_t *dlv = new_qdr_delivery_t();
@@ -347,15 +374,22 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
     // Forward to remote routers with subscribers using the appropriate
     // link for the traffic class: control or data
     //
-    // TODO - presently, this picks one remote link to send to.  This needs
-    //        to be enhanced so it properly chooses the route to the closest destination.
-    //
-    int         router_bit;
     qdr_node_t *next_node;
 
-    if (qd_bitmask_first_set(addr->rnodes, &router_bit)) {
-        qdr_node_t *rnode = core->routers_by_mask_bit[router_bit];
+    //
+    // If the cached list of closest remotes is stale (i.e. cost data has changed),
+    // recompute the closest remote routers.
+    //
+    if (addr->cost_epoch != core->cost_epoch)
+        qdr_forward_find_closest_remotes_CT(core, addr);
+
+    if (addr->next_remote >= 0) {
+        qdr_node_t *rnode = core->routers_by_mask_bit[addr->next_remote];
         if (rnode) {
+            _qdbm_next(addr->closest_remotes, &addr->next_remote);
+            if (addr->next_remote == -1)
+                qd_bitmask_first_set(addr->closest_remotes, &addr->next_remote);
+
             if (rnode->next_hop)
                 next_node = rnode->next_hop;
             else

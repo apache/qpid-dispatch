@@ -177,12 +177,49 @@ void qdr_core_unsubscribe(qdr_subscription_t *sub)
 // In-Thread Functions
 //==================================================================================
 
+//
+// React to the updated cost of a router node.  The core->routers list is to be kept
+// sorted by cost, from least to most.
+//
+void qdr_route_table_update_cost_CT(qdr_core_t *core, qdr_node_t *rnode)
+{
+    qdr_node_t *ptr;
+    bool needs_reinsertion = false;
+
+    ptr = DEQ_PREV(rnode);
+    if (ptr && ptr->cost > rnode->cost)
+        needs_reinsertion = true;
+    else {
+        ptr = DEQ_NEXT(rnode);
+        if (ptr && ptr->cost < rnode->cost)
+            needs_reinsertion = true;
+    }
+
+    if (needs_reinsertion) {
+        core->cost_epoch++;
+        DEQ_REMOVE(core->routers, rnode);
+        ptr = DEQ_TAIL(core->routers);
+        while (ptr) {
+            if (rnode->cost >= ptr->cost) {
+                DEQ_INSERT_AFTER(core->routers, rnode, ptr);
+                break;
+            }
+            ptr = DEQ_PREV(ptr);
+        }
+
+        if (!ptr)
+            DEQ_INSERT_HEAD(core->routers, rnode);
+    }
+}
+
+
 void qdr_route_table_setup_CT(qdr_core_t *core)
 {
     DEQ_INIT(core->addrs);
     DEQ_INIT(core->routers);
     core->addr_hash    = qd_hash(12, 32, 0);
     core->conn_id_hash = qd_hash(6, 4, 0);
+    core->cost_epoch   = 1;
 
     if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
         core->hello_addr      = qdr_add_local_address_CT(core, 'L', "qdhello",     QD_TREATMENT_MULTICAST_FLOOD);
@@ -262,8 +299,15 @@ static void qdr_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
         rnode->peer_data_link    = 0;
         rnode->ref_count         = 0;
         rnode->valid_origins     = qd_bitmask(0);
+        rnode->cost              = 0;
 
-        DEQ_INSERT_TAIL(core->routers, rnode);
+        //
+        // Insert at the head of the list because we don't yet know the cost to this
+        // router node and we've set the cost to zero.  This puts it in a properly-sorted
+        // position.  Also, don't bump the cost_epoch here because this new router won't be
+        // used until it is assigned a cost.
+        //
+        DEQ_INSERT_HEAD(core->routers, rnode);
 
         //
         // Link the router record to the address record.
@@ -338,12 +382,15 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     //
     qd_bitmask_free(rnode->valid_origins);
     DEQ_REMOVE(core->routers, rnode);
+    core->cost_epoch++;
     free_qdr_node_t(rnode);
 
     qd_hash_remove_by_handle(core->addr_hash, oaddr->hash_handle);
     DEQ_REMOVE(core->addrs, oaddr);
     qd_hash_handle_free(oaddr->hash_handle);
     core->routers_by_mask_bit[router_maskbit] = 0;
+    qd_bitmask_free(oaddr->closest_remotes);
+    qd_bitmask_free(oaddr->rnodes);
     free_qdr_address_t(oaddr);
 }
 
@@ -465,6 +512,7 @@ static void qdr_set_cost_CT(qdr_core_t *core, qdr_action_t *action, bool discard
 
     qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
     rnode->cost = cost;
+    qdr_route_table_update_cost_CT(core, rnode);
 }
 
 
@@ -503,10 +551,6 @@ static void qdr_set_valid_origins_CT(qdr_core_t *core, qdr_action_t *action, boo
 
 static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    //
-    // TODO - handle the class-prefix and phase explicitly
-    //
-
     int          router_maskbit = action->args.route_table.router_maskbit;
     qdr_field_t *address        = action->args.route_table.address;
 
@@ -540,11 +584,8 @@ static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool 
         qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
         qd_bitmask_set_bit(addr->rnodes, router_maskbit);
         rnode->ref_count++;
+        addr->cost_epoch--;
         qdr_addr_start_inlinks_CT(core, addr);
-
-        //
-        // TODO - If this affects a waypoint, create the proper side effects
-        //
     } while (false);
 
     qdr_field_free(address);
