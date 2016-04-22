@@ -363,9 +363,15 @@ var QDR = (function(QDR) {
 				})
 				$scope.detailsObject[attr] = row[attr].value;
 			})
+			setTimeout(applyDetails, 1, details)
+		}
+
+		var applyDetails = function (details) {
 			$scope.detailFields = details;
 			aggregateColumn();
 			$scope.$apply();
+			// ng-grid bug? the entire table doesn't always draw unless a reflow is triggered;
+			$(window).trigger('resize');
 		}
 
 		var restartUpdate = function () {
