@@ -130,33 +130,6 @@ class SchemaTest(unittest.TestCase):
         e.init()
         self.assertEqual(e.validate({'x':1}), {'x':1, 'foo1': 'FOO1', 'foo2': 'FOO2'})
 
-    def test_entity_refs(self):
-        e = EntityType('MyEntity', Schema(), attributes={
-            'type': {'type': 'string', 'required': True, 'value': '$$entityType'},
-            'name': {'type':'string', 'default':'$identity'},
-            'identity': {'type':'string', 'default':'$name', "required": True}})
-
-        self.assertEqual({'type': 'MyEntity', 'identity': 'x', 'name': 'x'},
-                         e.validate({'identity':'x'}))
-        self.assertEqual({'type': 'MyEntity', 'identity': 'x', 'name': 'x'},
-                         e.validate({'name':'x'}))
-        self.assertEqual({'type': 'MyEntity', 'identity': 'x', 'name': 'y'},
-                         e.validate({'identity': 'x', 'name':'y'}))
-        self.assertRaises(ValidationError, e.validate, {}) # Circular reference.
-
-    def test_entity_annotation_refs(self):
-        s = Schema(annotations={
-            'i1': {'attributes': {
-                'name': {'type':'string', 'default':'$identity'},
-                'identity': {'type':'string', 'default':'$name', "required": True}}}})
-
-        e = EntityType('MyEntity', s, attributes={}, annotations=['i1'])
-        e.init()
-        self.assertEqual({'identity': 'x', 'name': 'x'}, e.validate({'identity':'x'}))
-        self.assertEqual({'identity': 'x', 'name': 'x'}, e.validate({'name':'x'}))
-        self.assertEqual({'identity': 'x', 'name': 'y'}, e.validate({'identity': 'x', 'name':'y'}))
-        self.assertRaises(ValidationError, e.validate, {})
-
     def test_schema_validate(self):
         s = Schema(**SCHEMA_1)
         # Duplicate unique attribute 'name'

@@ -125,7 +125,6 @@
                 "type": {
                     "type": "string",
                     "required": true,
-                    "value": "$$entityType",
                     "description": "Management entity type.",
                     "create": true
                 }
