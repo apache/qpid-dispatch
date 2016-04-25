@@ -306,7 +306,7 @@ static int close_handler(qd_container_t *container, void* conn_context, pn_conne
     // Close all links, passing QD_LOST as the reason.  These links are not
     // being properly 'detached'.  They are being orphaned.
     //
-    pn_link_t *pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE);
+    pn_link_t *pn_link = pn_link_head(conn, 0);
     while (pn_link) {
         qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
         if (link) {
@@ -316,7 +316,7 @@ static int close_handler(qd_container_t *container, void* conn_context, pn_conne
             }
         }
         pn_link_close(pn_link);
-        pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE);
+        pn_link = pn_link_next(pn_link, 0);
     }
 
     // teardown all sessions
@@ -414,7 +414,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             pn_link_t *pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
             while (pn_link) {
                 if (pn_link_session(pn_link) == ssn) {
-                    qd_link_t *qd_link = (qd_link_t *)pn_link_get_context(pn_link);
+                    qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
                     if (qd_link && qd_link->node) {
                         if (qd_conn->policy_settings) {
                             if (qd_link->direction == QD_OUTGOING) {

@@ -416,7 +416,7 @@ static void qdr_generate_link_name(const char *label, char *buffer, size_t lengt
 static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
     //
-    // Remove the link from the master list links
+    // Remove the link from the master list of links
     //
     DEQ_REMOVE(core->open_links, link);
 
