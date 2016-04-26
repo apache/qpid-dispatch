@@ -116,7 +116,7 @@ var QDR = (function(QDR) {
 	  connectionError: undefined,
 
       isConnected: function() {
-        return self.gotTopology;
+        return self.connected;
       },
 
     correlator: {
@@ -143,7 +143,7 @@ var QDR = (function(QDR) {
         // called by receiver's on('message') handler when a response arrives
         resolve: function(context) {
 			var correlationID = context.message.properties.correlation_id;
-            this._objects[correlationID].resolver(context.message.body);
+            this._objects[correlationID].resolver(context.message.body, context);
             delete this._objects[correlationID];
         }
     },
@@ -163,7 +163,7 @@ var QDR = (function(QDR) {
     },
     stopUpdating: function () {
         if (angular.isDefined(self.stop)) {
-            QDR.log.info("stoptUpdating called")
+            QDR.log.info("stopUpdating called")
             clearInterval(self.stop);
             self.stop = undefined;
         }
@@ -247,6 +247,14 @@ var QDR = (function(QDR) {
           return null;
       },
 
+		isArtemis: function (d) {
+			return d.nodeType ==='on-demand' && !d.properties.product;
+		},
+
+		isQpid: function (d) {
+			return d.nodeType ==='on-demand' && (d.properties && d.properties.product === 'qpid-cpp');
+		},
+
       /*
        * send the management messages that build up the topology
        *
@@ -280,10 +288,18 @@ var QDR = (function(QDR) {
 
             // get the list of nodes to query.
             // once this completes, we will get the info for each node returned
-            self.getRemoteNodeInfo( function (response) {
+            self.getRemoteNodeInfo( function (response, context) {
                 //QDR.log.debug("got remote node list of ");
                 //console.dump(response);
                 if( Object.prototype.toString.call( response ) === '[object Array]' ) {
+					if (response.length === 0) {
+						// there is only one router, get its node id from the reeciiver
+						//"amqp:/_topo/0/Router.A/temp.aSO3+WGaoNUgGVx"
+						var address = context.receiver.remote.attach.source.address;
+						var addrParts = address.split('/')
+						addrParts.splice(addrParts.length-1, 1, '$management')
+						response = [addrParts.join('/')]
+					}
                     // we expect a response for each of these nodes
                     self.topology.wait(self.timeout);
                     for (var i=0; i<response.length; ++i) {
@@ -456,8 +472,8 @@ The response looks like:
         // first get the list of remote node names
 	 	self.correlator.request(
                 ret = self.sendMgmtQuery('GET-MGMT-NODES')
-            ).then(ret.id, function(response) {
-                callback(response);
+            ).then(ret.id, function(response, context) {
+                callback(response, context);
                 self.topology.cleanUp(response);
             }, ret.error);
       },
@@ -476,88 +492,25 @@ The response looks like:
         self.correlator.request(
             ret = self.sendQuery(nodeName, entity, attrs)
         ).then(ret.id, function(response) {
-            // TODO: file a bug against rhea - large numbers are coming back as Uint8Array
-			response.results.forEach( function (result) {
-				result.forEach( function (val, i) {
-					if (val instanceof Uint8Array) {
-						var ua2num = function(ua) {
-	                        var n = 0;
-	                        for (var i = 0; i<ua.length; i++) {
-	                            n *= 256;
-	                            n += ua[i];
-	                        }
-	                        return n;
-	                    }
-	                    result[i] = ua2num(val);
-					}
-				})
-			})
             callback(nodeName, entity, response);
             //self.topology.addNodeInfo(nodeName, entity, response);
             //self.topology.cleanUp(response);
         }, ret.error);
       },
 
-		getMultipleNodeInfo: function (nodeNames, entity, attrs, callback, selectedNodeId) {
+		getMultipleNodeInfo: function (nodeNames, entity, attrs, callback, selectedNodeId, aggregate) {
+			if (!angular.isDefined(aggregate))
+				aggregate = true;
 			var responses = {};
 			var gotNodesResult = function (nodeName, dotentity, response) {
 				responses[nodeName] = response;
 				if (Object.keys(responses).length == nodeNames.length) {
-					aggregateNodeInfo(nodeNames, entity, responses, callback);
+					if (aggregate)
+						self.aggregateNodeInfo(nodeNames, entity, selectedNodeId, responses, callback);
+					else {
+						callback(nodeNames, entity, responses)
+					}
 				}
-			}
-
-			var aggregateNodeInfo = function (nodeNames, entity, responses, callback) {
-				//QDR.log.debug("got all results for  " + entity);
-				// aggregate the responses
-				var newResponse = {};
-				var thisNode = responses[selectedNodeId];
-				newResponse['attributeNames'] = thisNode.attributeNames;
-				newResponse['results'] = thisNode.results;
-				newResponse['aggregates'] = [];
-				for (var i=0; i<thisNode.results.length; ++i) {
-					var result = thisNode.results[i];
-					var vals = [];
-					result.forEach( function (val) {
-						vals.push({sum: val, detail: []})
-					})
-					newResponse.aggregates.push(vals);
-				}
-				var nameIndex = thisNode.attributeNames.indexOf("name");
-				var ent = self.schema.entityTypes[entity];
-				var ids = Object.keys(responses);
-				ids.sort();
-				ids.forEach( function (id) {
-					var response = responses[id];
-					var results = response.results;
-					results.forEach( function (result) {
-						// find the matching result in the aggregates
-						var found = newResponse.aggregates.some( function (aggregate, j) {
-							if (aggregate[nameIndex].sum === result[nameIndex]) {
-								// result and aggregate are now the same record, add the graphable values
-								newResponse.attributeNames.forEach( function (key, i) {
-									if (ent.attributes[key] && ent.attributes[key].graph) {
-										if (id != selectedNodeId)
-											aggregate[i].sum += result[i];
-										aggregate[i].detail.push({node: self.nameFromId(id)+':', val: result[i]})
-									}
-								})
-								return true; // stop looping
-							}
-							return false; // continute looking for the aggregate record
-						})
-						if (!found) {
-							// this attribute was not found in the aggregates yet
-							// because it was not in the selectedNodeId's results
-							var vals = [];
-							result.forEach( function (val) {
-								vals.push({sum: val, detail: []})
-							})
-							newResponse.aggregates.push(vals)
-						}
-					})
-				})
-				callback(nodeNames, entity, newResponse);
 			}
 
 			nodeNames.forEach( function (id) {
@@ -565,6 +518,60 @@ The response looks like:
 	        })
 			//TODO: implement a timeout in case not all requests complete
 		},
+
+		aggregateNodeInfo: function (nodeNames, entity, selectedNodeId, responses, callback) {
+			//QDR.log.debug("got all results for  " + entity);
+			// aggregate the responses
+			var newResponse = {};
+			var thisNode = responses[selectedNodeId];
+			newResponse['attributeNames'] = thisNode.attributeNames;
+			newResponse['results'] = thisNode.results;
+			newResponse['aggregates'] = [];
+			for (var i=0; i<thisNode.results.length; ++i) {
+				var result = thisNode.results[i];
+				var vals = [];
+				result.forEach( function (val) {
+					vals.push({sum: val, detail: []})
+				})
+				newResponse.aggregates.push(vals);
+			}
+			var nameIndex = thisNode.attributeNames.indexOf("name");
+			var ent = self.schema.entityTypes[entity];
+			var ids = Object.keys(responses);
+			ids.sort();
+			ids.forEach( function (id) {
+				var response = responses[id];
+				var results = response.results;
+				results.forEach( function (result) {
+					// find the matching result in the aggregates
+					var found = newResponse.aggregates.some( function (aggregate, j) {
+						if (aggregate[nameIndex].sum === result[nameIndex]) {
+							// result and aggregate are now the same record, add the graphable values
+							newResponse.attributeNames.forEach( function (key, i) {
+								if (ent.attributes[key] && ent.attributes[key].graph) {
+									if (id != selectedNodeId)
+										aggregate[i].sum += result[i];
+									aggregate[i].detail.push({node: self.nameFromId(id)+':', val: result[i]})
+								}
+							})
+							return true; // stop looping
+						}
+						return false; // continute looking for the aggregate record
+					})
+					if (!found) {
+						// this attribute was not found in the aggregates yet
+						// because it was not in the selectedNodeId's results
+						var vals = [];
+						result.forEach( function (val) {
+							vals.push({sum: val, detail: []})
+						})
+						newResponse.aggregates.push(vals)
+					}
+				})
+			})
+			callback(nodeNames, entity, newResponse);
+		},
+
 
       getSchema: function () {
         //QDR.log.debug("getting schema");
@@ -580,13 +587,77 @@ The response looks like:
         }, ret.error);
       },
 
-    sendQuery: function(toAddr, entity, attrs) {
+      getNodeInfo: function (nodeName, entity, attrs, callback) {
+        //QDR.log.debug("getNodeInfo called with nodeName: " + nodeName + " and entity " + entity);
+        var ret;
+        self.correlator.request(
+            ret = self.sendQuery(nodeName, entity, attrs)
+        ).then(ret.id, function(response) {
+            callback(nodeName, entity, response);
+            //self.topology.addNodeInfo(nodeName, entity, response);
+            //self.topology.cleanUp(response);
+        }, ret.error);
+      },
+
+	sendMethod: function (nodeId, entity, attrs, operation, callback) {
+		var ret;
+		self.correlator.request(
+			ret = self._sendMethod(nodeId, entity, attrs, operation)
+		).then(ret.id, function (response, context) {
+				callback(nodeId, entity, response, context);
+		}, ret.error);
+	},
+
+	_fullAddr: function (toAddr) {
         var toAddrParts = toAddr.split('/');
         if (toAddrParts.shift() != "amqp:") {
             self.topology.error(Error("unexpected format for router address: " + toAddr));
             return;
         }
-        var fullAddr =  self.toAddress + "/" + toAddrParts.join('/');
+        //var fullAddr =  self.toAddress + "/" + toAddrParts.join('/');
+        var fullAddr =  toAddrParts.join('/');
+		return fullAddr;
+	},
+
+	_sendMethod: function (toAddr, entity, attrs, operation) {
+		var fullAddr = self._fullAddr(toAddr);
+		var ret = {id: self.correlator.corr()};
+		if (!self.sender || !self.sendable) {
+			ret.error = "no sender"
+			return ret;
+		}
+		try {
+			var application_properties = {
+				operation:  operation
+			}
+			if (attrs.type)
+				application_properties.type = attrs.type;
+			if (attrs.name)
+				application_properties.name = attrs.name;
+			var msg = {
+	                body: attrs,
+	                properties: {
+	                    to:                     fullAddr,
+                        reply_to:               self.receiver.remote.attach.source.address,
+	                    correlation_id:         ret.id
+	                },
+	                application_properties: application_properties
+            }
+            self.sender.send( msg );
+			console.dump("------- method called -------")
+            console.dump (msg)
+		}
+		catch (e) {
+			error = "error sending: " + e;
+			QDR.log.error(error)
+			ret.error = error;
+		}
+		return ret;
+	},
+
+    sendQuery: function(toAddr, entity, attrs, operation) {
+        operation = operation || "QUERY"
+		var fullAddr = self._fullAddr(toAddr);
 
 		var body;
         if (attrs)
@@ -597,13 +668,14 @@ The response looks like:
             body = {
                 "attributeNames": [],
             }
-
-		return self._send(body, fullAddr, "QUERY", "org.apache.qpid.dispatch" + entity);
+		if (entity[0] === '.')
+			entity = entity.substr(1, entity.length-1)
+		//return self._send(body, fullAddr, operation, entity);
+		return self._send(body, fullAddr, operation, "org.apache.qpid.dispatch." + entity);
     },
 
     sendMgmtQuery: function (operation) {
-		// TODO: file bug against dispatch - We should be able to just pass body: [], but that generates an 'invalid body'
-		return self._send([' '], self.toAddress + "/$management", operation);
+		return self._send([], "/$management", operation);
     },
 
 	_send: function (body, to, operation, entityType) {
@@ -641,6 +713,7 @@ The response looks like:
 
       disconnect: function() {
         self.connection.close();
+		self.errorText = "Disconnected."
       },
 
       connect: function(options) {
@@ -656,9 +729,6 @@ The response looks like:
 
 			var stop = function (context) {
 				//self.stopUpdating();
-				if (self.connected) {
-				    $rootScope.$broadcast('newAlert', { type: 'danger', msg: 'Connection to ' + baseAddress + " was lost. Retrying..." });
-				}
 				okay.sender = false;
 				okay.receiver = false;
 				okay.connected = false;
@@ -676,13 +746,18 @@ The response looks like:
 					self.sender = sender;
 					self.receiver = receiver;
 					self.onSubscription();
-					$rootScope.$broadcast("clearAlerts");
+					self.gotTopology = false;
 				}
+			}
+			var onDisconnect = function () {
+				//QDR.log.warn("Disconnected");
+				stop();
+				self.executeDisconnectActions();
 			}
 
 			QDR.log.debug("****** calling rhea.connect ********")
             var connection = self.rhea.connect({
-                    connection_details:ws('ws://' + baseAddress),
+                    connection_details:ws('ws://' + baseAddress, ["binary", "AMQWSB10"]),
                     reconnect:true,
                     properties: {console_identifier: 'Dispatch console'}
             });
@@ -693,15 +768,17 @@ The response looks like:
 				okay.sender = false;
 			})
 			connection.on('disconnected', function (context) {
-				QDR.log.warn("disconnected");
-				stop();
-				self.errorText = "Error: Connection failed."
+				onDisconnect();
+				self.errorText = "Error: Connection failed"
 				self.executeDisconnectActions();
 				self.connectionError = true;
 			})
-			connection.on('connection_close', function (context) { QDR.log.warn("connection_close"); stop()})
+			connection.on('connection_close', function (context) {
+				onDisconnect();
+				self.errorText = "Disconnected"
+			})
 
-			var sender = connection.open_sender("/$management");
+			var sender = connection.open_sender();
 			sender.on('sender_open', function (context) {
 				QDR.log.debug("sender_opened")
 				okay.sender = true
@@ -735,7 +812,7 @@ The response looks like:
 (function() {
     console.dump = function(object) {
         if (window.JSON && window.JSON.stringify)
-            console.log(JSON.stringify(object));
+            console.log(JSON.stringify(object,undefined,2));
         else
             console.log(object);
     };

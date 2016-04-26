@@ -17,19 +17,18 @@ specific language governing permissions and limitations
 under the License.
 -->
 <div class="qdrTopology row-fluid" ng-controller="QDR.TopologyController">
-    <div class="tertiary left panel">
+    <div class="qdr-topology pane left" ng-controller="QDR.TopologyFormController">
         <div id="topologyForm" ng-class="{selected : isSelected()}">
             <!-- <div ng-repeat="form in forms" ng-show="isVisible(form)" ng-class='{selected : isSelected(form)}'> -->
-
-            <div ng-show="isGeneral()">
+            <div ng-show="form == 'router'">
                 <h4>Router Info</h4>
-                <div ng-style="getTableHeight(attributes)" ui-grid-auto-resize ui-grid="topoGridOptions"></div>
+                <div class="topoGrid" ng-style="getTableHeight(attributes)" ui-grid-auto-resize ui-grid="topoGridOptions"></div>
             </div>
-            <div ng-show="isConnections()">
+            <div ng-show="form == 'connection'">
                 <h4>Connection Info</h4>
-                <div ng-style="getTableHeight(connAttributes)" ui-grid-auto-resize ui-grid="topoConnOptions"></div>
+                <div class="topoGrid" ng-style="getTableHeight(attributes)" ui-grid-auto-resize ui-grid="topoGridOptions"></div>
             </div>
-            <div id="addNodeForm" ng-show="isAddNode()">
+            <div id="addNodeForm" ng-show="form == 'add'">
                 <h4>Add a new router</h4>
                 <ul>
                     <li>Click on an existing router to create a connection to the new router</li>
@@ -72,7 +71,10 @@ under the License.
                 <li ng-click="removeLink()">Remove connection</li>
             </ul>
         </div>
-
+        <div id="svg_legend"></div>
+        <div id="multiple_details">
+            <div class="gridStyle" ng-grid="multiDetails"></div>
+        </div>
     </div>
 </div>
 <!--

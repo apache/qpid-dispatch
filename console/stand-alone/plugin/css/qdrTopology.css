@@ -97,7 +97,11 @@ circle.node.normal {
     fill: #F0F000;
 }
 circle.node.on-demand {
-    fill: #00F000;
+    fill: #C0FFC0;
+}
+circle.node.on-demand.artemis {
+	fill: #FCC;
+	/*opacity: 0.2; */
 }
 
 circle.node.fixed {
@@ -148,6 +152,11 @@ text.id {
   font-weight: bold;
 }
 
+text.label {
+  text-anchor: start;
+  font-weight: bold;
+}
+
 .row-fluid.tertiary {
   position: relative;
   left: 20px;
@@ -159,7 +168,26 @@ text.id {
 
 .row-fluid.tertiary.panel {
   width: 410px;
-  height: 100%;
+  /*height: 100%; */
+}
+
+/*, div.qdrTopology div#multiple_details .ngViewport*/
+div#topologyForm .ngViewport, div#topologyForm .gridStyle {
+    height: inherit !important;
+	min-height: initial !important;
+	overflow: initial;
+}
+
+div#multiple_details {
+	height: 300px;
+	width: 500px;
+	display: none;
+	padding: 1em;
+    border: 1px solid;
+	position: absolute;
+	background-color: white;
+	max-height: 330px !important;
+    overflow: hidden;
 }
 
 .panel-adjacent {
@@ -170,10 +198,13 @@ text.id {
   border: 1px solid red;
 }
 #topologyForm {
-  border: 1px solid white;
-  padding: 2px;
-  position: relative;
-  top: -8px;
+    border: 1px solid white;
+    padding: 2px;
+    /* position: relative; */
+    /* top: -8px; */
+}
+div.qdr-topology.pane.left .ngViewport {
+    /* border: 1px solid lightgray; */
 }
 
 #topologyForm > div {
@@ -249,6 +280,7 @@ li.currentStep {
 }
 */
 
+/*
 .ui-tabs.ui-tabs-vertical {
     padding: 0;
     width: 48em;
@@ -307,6 +339,7 @@ li.currentStep {
 .ui-tabs li i.ui-icon {
     display: inline-block;
 }
+*/
 .ui-tabs .ui-tabs-panel {
     /* padding-top: 0 !important; */
 }
@@ -371,17 +404,18 @@ li.currentStep {
   overflow-x: hidden;
 }
 
-.entity-fields div.boolean label:first-child {
+div.boolean label:first-child {
     float: left;
     margin-right: 1em;
 }
-.entity-fields div.boolean {
+div.boolean {
     padding-bottom: 1em;
 }
 
-.entity-fields label.ng-binding {
+.entity-fields label {
     font-weight: 600;
     margin-top: 0.5em;
+	display: inline;
 }
 
 .aggregate {
@@ -479,6 +513,13 @@ li.currentStep {
   stroke-width: 3px;
 }
 
+circle.subcircle {
+    stroke-width: 1px;
+    /* stroke-dasharray: 2; */
+    fill-opacity: 0;
+    stroke: black;
+}
+
 .leaf circle {
   fill: #6fa8dc;
   fill-opacity: 0.95;
@@ -490,9 +531,32 @@ li.currentStep {
 
 }
 
-.tabs-left .nav-tabs {
-	float: left;
+#svg_legend {
+    position: absolute;
+    top: 110px;
+    right: 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fcfcfc;
+    margin-right: 1.3em;
+	padding: 1em;
 }
-.tabs-left .nav-tabs > li {
-	float: initial;
+
+#svg_legend svg {
+    height: 235px;
+    width: 180px;
+}
+
+#multiple_details div.gridStyle {
+/*	height: 50em; */
+	min-height: 70px !important;
+	height: auto !important;
+}
+
+#multiple_details .ngViewport {
+    height: auto !important;
+}
+
+div.topoGrid .ui-grid-viewport {
+	overflow: hidden !important;
 }

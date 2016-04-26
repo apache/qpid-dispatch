@@ -656,3 +656,29 @@ div.login.container {
   opacity:1;
 }
 
+circle.node.normal.console {
+    fill: lightcyan;
+}
+
+text.console, text.on-demand, text.normal {
+	font-family: FontAwesome;
+	font-weight: normal;
+	font-size: 16px;
+}
+
+@font-face {
+    font-family:"Brokers";
+    src: url("brokers.ttf") /* TTF file for CSS3 browsers */
+}
+
+text.artemis.on-demand {
+    font-family: Brokers;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+text.qpid-cpp.on-demand {
+    font-family: Brokers;
+    font-size: 18px;
+    font-weight: bold;
+}
