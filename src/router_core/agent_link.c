@@ -33,8 +33,9 @@
 #define QDR_LINK_UNDELIVERED_COUNT  9
 #define QDR_LINK_UNSETTLED_COUNT    10
 #define QDR_LINK_DELIVERY_COUNT     11
-#define QDR_LINK_ADMIN_STATE        12
-#define QDR_LINK_OPER_STATE         13
+#define QDR_LINK_CONNECTION_ID      12
+#define QDR_LINK_ADMIN_STATE        13
+#define QDR_LINK_OPER_STATE         14
 
 const char *qdr_link_columns[] =
     {"name",
@@ -49,6 +50,7 @@ const char *qdr_link_columns[] =
      "undeliveredCount",
      "unsettledCount",
      "deliveryCount",
+     "connectionId", // The connection id of the owner connection
      "adminStatus",
      "operStatus",
      0};
@@ -89,7 +91,6 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
             qd_compose_insert_string(body, id);
             break;
         }
-
 
         case QDR_LINK_TYPE:
             qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.link");
@@ -137,6 +138,10 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
 
         case QDR_LINK_DELIVERY_COUNT:
             qd_compose_insert_ulong(body, link->total_deliveries);
+            break;
+
+        case QDR_LINK_CONNECTION_ID:
+            qd_compose_insert_ulong(body, link->conn->management_id);
             break;
 
         case QDR_LINK_ADMIN_STATE:

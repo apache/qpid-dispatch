@@ -564,6 +564,15 @@ pn_collector_t *qd_connection_collector(qd_connection_t *conn);
 
 
 /**
+ * Get the connection id of a connection.
+ *
+ * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN
+ * @return The connection_id associated with the connection.
+ */
+uint64_t qd_connection_connection_id(qd_connection_t *conn);
+
+
+/**
  * Get the configuration that was used in the setup of this connection.
  *
  * @param conn Connection object supplied in QD_CONN_EVENT_{LISTENER,CONNETOR}_OPEN

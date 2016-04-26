@@ -151,6 +151,7 @@ typedef enum {
  * @param incoming True iff this connection is associated with a listener, False if a connector
  * @param role The configured role of this connection
  * @param cost If the role is inter_router, this is the configured cost for the connection.
+ * @param management_id - A unique identifier that is used in management and logging operations.
  * @param label Optional label provided in the connection's configuration.  This is used to 
  *        correlate the connection with waypoints and link-route destinations that use the connection.
  * @param strip_annotations_in True if configured to remove annotations on inbound messages.
@@ -162,6 +163,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   incoming,
                                         qdr_connection_role_t  role,
                                         int                    cost,
+                                        uint64_t               management_id,
                                         const char            *label,
                                         const char            *remote_container_id,
                                         bool                   strip_annotations_in,

@@ -109,6 +109,7 @@ class BusManager(Node):
     def displayConnections(self):
         disp = Display(prefix="  ")
         heads = []
+        heads.append(Header("Id"))
         heads.append(Header("host"))
         heads.append(Header("container"))
         heads.append(Header("role"))
@@ -122,6 +123,7 @@ class BusManager(Node):
 
         for conn in objects:
             row = []
+            row.append(conn.identity)
             row.append(conn.host)
             row.append(conn.container)
             row.append(conn.role)
@@ -214,6 +216,7 @@ class BusManager(Node):
         heads = []
         heads.append(Header("type"))
         heads.append(Header("dir"))
+        heads.append(Header("conn id"))
         heads.append(Header("id"))
         heads.append(Header("peer"))
         heads.append(Header("class"))
@@ -235,6 +238,7 @@ class BusManager(Node):
             row = []
             row.append(link.linkType)
             row.append(link.linkDir)
+            row.append(link.connectionId)
             row.append(link.identity)
             row.append(link.peer)
             row.append(self._addr_class(link.owningAddr))

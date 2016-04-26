@@ -364,7 +364,11 @@ class ManagementTest(system_test.TestCase):
             if e.type == MANAGEMENT:
                 self.assertEqual(e.identity, "self")
             else:
-                self.assertRegexpMatches(e.identity, "^%s/" % short_name(e.type), e)
+                if e.type == 'org.apache.qpid.dispatch.connection':
+                    # This will make sure that the identity of the connection object is always numeric
+                    self.assertRegexpMatches(str(e.identity), "[1-9]+", e)
+                else:
+                    self.assertRegexpMatches(e.identity, "^%s/" % short_name(e.type), e)
 
     def test_remote_node(self):
         """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""

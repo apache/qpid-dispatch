@@ -59,6 +59,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   incoming,
                                         qdr_connection_role_t  role,
                                         int                    cost,
+                                        uint64_t               management_id,
                                         const char            *label,
                                         const char            *remote_container_id,
                                         bool                   strip_annotations_in,
@@ -77,6 +78,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     conn->strip_annotations_in  = strip_annotations_in;
     conn->strip_annotations_out = strip_annotations_out;
     conn->link_capacity         = link_capacity;
+    conn->management_id         = management_id;
     conn->mask_bit              = -1;
     DEQ_INIT(conn->links);
     DEQ_INIT(conn->work_list);

@@ -505,6 +505,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     bool                   strip_annotations_out = false;
     int                    link_capacity = 1;
     const char            *name = 0;
+    uint64_t               connection_id = qd_connection_connection_id(conn);
     pn_connection_t       *pn_conn = qd_connection_pn(conn);
 
     qd_router_connection_get_config(conn, &role, &cost, &name,
@@ -542,7 +543,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
             cost = remote_cost;
     }
 
-    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, cost, name,
+    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, cost, connection_id, name,
                                                    pn_connection_remote_container(pn_conn),
                                                    strip_annotations_in, strip_annotations_out, link_capacity);
 

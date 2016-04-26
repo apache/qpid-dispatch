@@ -440,7 +440,7 @@ class Qdrouterd(Process):
         """If router has a connection to host:port return the management info.
         Otherwise return None"""
         try:
-            return self.management.read(identity="connection/%s:%s" % (host, port))
+            return self.management.read(name="connection/%s:%s" % (host, port))
         except:
             return False
 

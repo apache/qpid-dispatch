@@ -368,6 +368,7 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
         qd_entity_set_string(entity, "role", config->role) == 0 &&
         qd_entity_set_string(entity, "dir", conn->connector ? "out" : "in") == 0 &&
         qd_entity_set_string(entity, "user", user) == 0 &&
+        qd_entity_set_long(entity, "identity", conn->connection_id) == 0 &&
         qd_entity_set_bool(entity, "isAuthenticated", tport && pn_transport_is_authenticated(tport)) == 0 &&
         qd_entity_set_bool(entity, "isEncrypted", tport && pn_transport_is_encrypted(tport)) == 0 &&
         qd_entity_set_bool(entity, "ssl", ssl != 0) == 0) {
@@ -1527,6 +1528,11 @@ bool qd_connection_inbound(qd_connection_t *conn)
 pn_collector_t *qd_connection_collector(qd_connection_t *conn)
 {
     return conn->collector;
+}
+
+uint64_t qd_connection_connection_id(qd_connection_t *conn)
+{
+    return conn->connection_id;
 }
 
 
