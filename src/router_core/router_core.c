@@ -280,6 +280,7 @@ void qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_
             free_qdr_connection_ref_t(ref);
             break;
         }
+        ref = DEQ_NEXT(ref);
     }
 }
 
