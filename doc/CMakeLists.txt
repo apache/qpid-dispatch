@@ -79,8 +79,8 @@ if(BUILD_DOCS)
   # Copy the images. Don't use configure_file since it truncates .png files at 1st ^Z character
   file(GLOB_RECURSE PNG_SRC RELATIVE ${src} *.png)
   foreach(file ${PNG_SRC})
-    #message("${scr}/${file} getting copied to ${bin}/dochtml/${file}.")
-    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src}/${file} ${bin}/dochtml/${file})
+    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src}/${file} ${bin})
+    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src}/${file} ${bin}/dochtml)
   endforeach()
 
   # Generate files from management schema
@@ -138,6 +138,8 @@ if(BUILD_DOCS)
       COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b html ${bin} ${bin}/dochtml
       # man/ contains Unix man pages.
       COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b man  ${bin} ${bin}/man
+      # singlehtml is a single HTML page
+      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b singlehtml ${bin} ${bin}/singlehtml
       DEPENDS ${RST_SRC} ${HELP_GEN} ${SCHEMA_GEN}
       )
     add_custom_target(doc-sphinx DEPENDS ${SPHINX_OUTPUT})

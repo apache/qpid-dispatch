@@ -29,11 +29,13 @@ The following need to be installed before running a console:
 
 A nodejs proxy is distributed with proton.
 To start the proton's nodejs proxy::
-   cd ~/rh-qpid-proton/examples/javascript/messenger
+
+  cd ~/rh-qpid-proton/examples/javascript/messenger
    node proxy.js &
 
 This will start the proxy listening to ws traffic on port 5673 and translating it to tcp on port 5672.
 One of the routers in the network needs to have a listener configured on port 5672. That listener's role should be 'normal'. For example::
+
    listener {
       addr: 0.0.0.0
       role: normal
