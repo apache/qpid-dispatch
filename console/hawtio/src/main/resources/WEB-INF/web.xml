@@ -33,7 +33,7 @@
   </context-param>
 
   <listener>
-    <listener-class>io.hawt.dispatch.PluginContextListener</listener-class>
+    <listener-class>org.apache.qpid.dispatch.PluginContextListener</listener-class>
   </listener>
 
 

@@ -1131,13 +1131,18 @@ var QDR = (function (QDR) {
 
 					// find router.links where link.remoteContainer is d.source.name
 					var links = nodeInfo[d.source.key]['.router.link'];
-					containerIndex = links.attributeNames.indexOf('remoteContainer');
+					var identityIndex = connections.attributeNames.indexOf('identity')
+					var roleIndex = connections.attributeNames.indexOf('role')
+					var connectionIdIndex = links.attributeNames.indexOf('connectionId');
+					var linkTypeIndex = links.attributeNames.indexOf('linkType');
 					var nameIndex = links.attributeNames.indexOf('name');
 					var linkDirIndex = links.attributeNames.indexOf('linkDir');
-					if (containerIndex < 0 || nameIndex < 0 || linkDirIndex < 0)
+
+					if (roleIndex < 0 || identityIndex < 0 || connectionIdIndex < 0
+						|| linkTypeIndex < 0 || nameIndex < 0 || linkDirIndex < 0)
 						return;
 					links.results.forEach ( function (link) {
-						if (link[containerIndex] == d.target.containerName)
+						if (link[connectionIdIndex] == root.obj[identityIndex] && link[linkTypeIndex] == root.obj[roleIndex])
 							root.children.push (
 								{ name: "(" + link[linkDirIndex] + ") " + link[nameIndex],
 								size: 100,
@@ -1168,7 +1173,6 @@ var QDR = (function (QDR) {
 	                node.append("circle")
 	                      .attr("r", function(d) { return d.r; });
 
-//	                node.filter(function(d) { return !d.children; }).append("text")
 	                node.append("text")
 	                      .attr("dy", function (d) { return d.children ? "-10em" : ".3em"})
 	                      .style("text-anchor", "middle")

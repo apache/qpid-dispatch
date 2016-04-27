@@ -1,4 +1,4 @@
-package io.hawt.dispatch;
+package org.apache.qpid.dispatch;
 
 import io.hawt.web.plugin.HawtioPlugin;
 import org.slf4j.Logger;
