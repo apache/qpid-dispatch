@@ -59,7 +59,7 @@ class Config(object):
             line = re.sub(attr, r'"\1": "\2",', line)
             return line
 
-        js_text = "[%s]"%("".join([sub(l) for l in lines]))
+        js_text = "[%s]"%("\n".join([sub(l) for l in lines]))
         spare_comma = re.compile(r',\s*([]}])') # Strip spare commas
         js_text = re.sub(spare_comma, r'\1', js_text)
         # Convert dictionary keys to camelCase
@@ -79,7 +79,7 @@ class Config(object):
             """Do substitutions to make line json-friendly"""
             line = line.split('#')[0].strip() # Strip comments
             return line
-        js_text = "%s"%("".join([sub(l) for l in lines]))
+        js_text = "%s"%("\n".join([sub(l) for l in lines]))
         sections = json.loads(js_text)
         return sections
 
