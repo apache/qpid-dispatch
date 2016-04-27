@@ -391,110 +391,118 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         break;
 
     case PN_SESSION_REMOTE_OPEN :
-        ssn = pn_event_session(event);
-        if (pn_session_state(ssn) & PN_LOCAL_UNINIT) {
-            if (qd_conn->policy_settings) {
-                if (!qd_policy_approve_amqp_session(ssn, qd_conn)) {
-                    break;
+        if (!(pn_connection_state(conn) & PN_LOCAL_CLOSED)) {
+            ssn = pn_event_session(event);
+            if (pn_session_state(ssn) & PN_LOCAL_UNINIT) {
+                if (qd_conn->policy_settings) {
+                    if (!qd_policy_approve_amqp_session(ssn, qd_conn)) {
+                        break;
+                    }
+                    qd_conn->n_sessions++;
                 }
-                qd_conn->n_sessions++;
+                qd_policy_apply_session_settings(ssn, qd_conn);
+                pn_session_open(ssn);
             }
-            qd_policy_apply_session_settings(ssn, qd_conn);
-            pn_session_open(ssn);
         }
         break;
 
     case PN_SESSION_REMOTE_CLOSE :
-        ssn = pn_event_session(event);
-        if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
-            // remote has nuked our session.  Check for any links that were
-            // left open and forcibly detach them, since no detaches will
-            // arrive on this session.
-            pn_connection_t *conn = pn_session_connection(ssn);
-            pn_link_t *pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
-            while (pn_link) {
-                if (pn_link_session(pn_link) == ssn) {
-                    qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
-                    if (qd_link && qd_link->node) {
-                        if (qd_conn->policy_settings) {
-                            if (qd_link->direction == QD_OUTGOING) {
-                                qd_conn->n_receivers--;
-                                assert(qd_conn->n_receivers >= 0);
-                            } else {
-                                qd_conn->n_senders--;
-                                assert(qd_conn->n_senders >= 0);
+        if (!(pn_connection_state(conn) & PN_LOCAL_CLOSED)) {
+            ssn = pn_event_session(event);
+            if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
+                // remote has nuked our session.  Check for any links that were
+                // left open and forcibly detach them, since no detaches will
+                // arrive on this session.
+                pn_connection_t *conn = pn_session_connection(ssn);
+                pn_link_t *pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
+                while (pn_link) {
+                    if (pn_link_session(pn_link) == ssn) {
+                        qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
+                        if (qd_link && qd_link->node) {
+                            if (qd_conn->policy_settings) {
+                                if (qd_link->direction == QD_OUTGOING) {
+                                    qd_conn->n_receivers--;
+                                    assert(qd_conn->n_receivers >= 0);
+                                } else {
+                                    qd_conn->n_senders--;
+                                    assert(qd_conn->n_senders >= 0);
+                                }
                             }
+                            qd_log(container->log_source, QD_LOG_NOTICE,
+                                   "Aborting link '%s' due to parent session end",
+                                   pn_link_name(pn_link));
+                            qd_link->node->ntype->link_detach_handler(qd_link->node->context,
+                                                                      qd_link, QD_LOST);
                         }
-                        qd_log(container->log_source, QD_LOG_NOTICE,
-                               "Aborting link '%s' due to parent session end",
-                               pn_link_name(pn_link));
-                        qd_link->node->ntype->link_detach_handler(qd_link->node->context,
-                                                                  qd_link, QD_LOST);
                     }
+                    pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
                 }
-                pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
+                if (qd_conn->policy_settings) {
+                    qd_conn->n_sessions--;
+                }
+                pn_session_close(ssn);
             }
-            if (qd_conn->policy_settings) {
-                qd_conn->n_sessions--;
-            }
-            pn_session_close(ssn);
         }
         break;
 
     case PN_LINK_REMOTE_OPEN :
-        pn_link = pn_event_link(event);
-        if (pn_link_state(pn_link) & PN_LOCAL_UNINIT) {
-            if (pn_link_is_sender(pn_link)) {
-                if (qd_conn->policy_settings) {
-                    if (!qd_policy_approve_amqp_receiver_link(pn_link, qd_conn)) {
-                        break;
+        if (!(pn_connection_state(conn) & PN_LOCAL_CLOSED)) {
+            pn_link = pn_event_link(event);
+            if (pn_link_state(pn_link) & PN_LOCAL_UNINIT) {
+                if (pn_link_is_sender(pn_link)) {
+                    if (qd_conn->policy_settings) {
+                        if (!qd_policy_approve_amqp_receiver_link(pn_link, qd_conn)) {
+                            break;
+                        }
+                        qd_conn->n_receivers++;
                     }
-                    qd_conn->n_receivers++;
-                }
-                setup_outgoing_link(container, pn_link);
-            } else {
-                if (qd_conn->policy_settings) {
-                    if (!qd_policy_approve_amqp_sender_link(pn_link, qd_conn)) {
-                        break;
+                    setup_outgoing_link(container, pn_link);
+                } else {
+                    if (qd_conn->policy_settings) {
+                        if (!qd_policy_approve_amqp_sender_link(pn_link, qd_conn)) {
+                            break;
+                        }
+                        qd_conn->n_senders++;
                     }
-                    qd_conn->n_senders++;
+                    setup_incoming_link(container, pn_link);
                 }
-                setup_incoming_link(container, pn_link);
-            }
-        } else if (pn_link_state(pn_link) & PN_LOCAL_ACTIVE)
-            handle_link_open(container, pn_link);
+            } else if (pn_link_state(pn_link) & PN_LOCAL_ACTIVE)
+                handle_link_open(container, pn_link);
+        }
         break;
 
     case PN_LINK_REMOTE_CLOSE :
     case PN_LINK_REMOTE_DETACH :
-        pn_link = pn_event_link(event);
-        qd_link = (qd_link_t*) pn_link_get_context(pn_link);
-        if (qd_link) {
-            qd_node_t *node = qd_link->node;
-            qd_detach_type_t dt = pn_event_type(event) == PN_LINK_REMOTE_CLOSE ? QD_CLOSED : QD_DETACHED;
-            if (node)
-                node->ntype->link_detach_handler(node->context, qd_link, dt);
-            else if (qd_link->pn_link == pn_link) {
-                pn_link_close(pn_link);
-            }
-            if (qd_conn->policy_counted && qd_conn->policy_settings) {
-                if (pn_link_is_sender(pn_link)) {
-                    qd_conn->n_receivers--;
-                    qd_log(container->log_source, QD_LOG_TRACE,
-                           "Closed receiver link %s. n_receivers: %d",
-                           pn_link_name(pn_link), qd_conn->n_receivers);
-                    assert (qd_conn->n_receivers >= 0);
-                } else {
-                    qd_conn->n_senders--;
-                    qd_log(container->log_source, QD_LOG_TRACE,
-                           "Closed sender link %s. n_senders: %d",
-                           pn_link_name(pn_link), qd_conn->n_senders);
-                    assert (qd_conn->n_senders >= 0);
+        if (!(pn_connection_state(conn) & PN_LOCAL_CLOSED)) {
+            pn_link = pn_event_link(event);
+            qd_link = (qd_link_t*) pn_link_get_context(pn_link);
+            if (qd_link) {
+                qd_node_t *node = qd_link->node;
+                qd_detach_type_t dt = pn_event_type(event) == PN_LINK_REMOTE_CLOSE ? QD_CLOSED : QD_DETACHED;
+                if (node)
+                    node->ntype->link_detach_handler(node->context, qd_link, dt);
+                else if (qd_link->pn_link == pn_link) {
+                    pn_link_close(pn_link);
                 }
+                if (qd_conn->policy_counted && qd_conn->policy_settings) {
+                    if (pn_link_is_sender(pn_link)) {
+                        qd_conn->n_receivers--;
+                        qd_log(container->log_source, QD_LOG_TRACE,
+                               "Closed receiver link %s. n_receivers: %d",
+                               pn_link_name(pn_link), qd_conn->n_receivers);
+                        assert (qd_conn->n_receivers >= 0);
+                    } else {
+                        qd_conn->n_senders--;
+                        qd_log(container->log_source, QD_LOG_TRACE,
+                               "Closed sender link %s. n_senders: %d",
+                               pn_link_name(pn_link), qd_conn->n_senders);
+                        assert (qd_conn->n_senders >= 0);
+                    }
+                }
+                if (qd_link->close_sess_with_link && qd_link->pn_sess &&
+                    pn_link_state(pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED))
+                    pn_session_close(qd_link->pn_sess);
             }
-            if (qd_link->close_sess_with_link && qd_link->pn_sess &&
-                pn_link_state(pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED))
-                pn_session_close(qd_link->pn_sess);
         }
         break;
 
