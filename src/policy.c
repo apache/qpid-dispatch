@@ -711,35 +711,28 @@ void qd_policy_amqp_open(void *context, bool discard)
             // Open connection or not based on policy.
             pn_transport_t *pn_trans = pn_connection_transport(conn);
             const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
-            const char *app = pn_connection_remote_hostname(conn);
-            if (app && *app) {
-                const char *conn_name = qdpn_connector_name(qd_conn->pn_cxtr);
+            const char *pcrh = pn_connection_remote_hostname(conn);
+            const char *app = (pcrh ? pcrh : "");
+            const char *conn_name = qdpn_connector_name(qd_conn->pn_cxtr);
 #define SETTINGS_NAME_SIZE 256
-                char settings_name[SETTINGS_NAME_SIZE];
-                uint32_t conn_id = qd_conn->connection_id;
-                qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
-                memset(qd_conn->policy_settings, 0, sizeof(qd_policy_settings_t));
+            char settings_name[SETTINGS_NAME_SIZE];
+            uint32_t conn_id = qd_conn->connection_id;
+            qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
+            memset(qd_conn->policy_settings, 0, sizeof(qd_policy_settings_t));
 
-                if (qd_policy_open_lookup_user(policy, qd_conn->user_id, hostip, app, conn_name,
-                                               settings_name, SETTINGS_NAME_SIZE, conn_id,
-                                               qd_conn->policy_settings) &&
-                    settings_name[0]) {
-                    // This connection is allowed by policy.
-                    // Apply transport policy settings
-                    if (qd_conn->policy_settings->maxFrameSize > 0)
-                        pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
-                    if (qd_conn->policy_settings->maxSessions > 0)
-                        pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
-                } else {
-                    // This connection is denied by policy.
-                    connection_allowed = false;
-                }
+            if (qd_policy_open_lookup_user(policy, qd_conn->user_id, hostip, app, conn_name,
+                                           settings_name, SETTINGS_NAME_SIZE, conn_id,
+                                           qd_conn->policy_settings) &&
+                settings_name[0]) {
+                // This connection is allowed by policy.
+                // Apply transport policy settings
+                if (qd_conn->policy_settings->maxFrameSize > 0)
+                    pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
+                if (qd_conn->policy_settings->maxSessions > 0)
+                    pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
             } else {
-                // No application name implies automatic policy denial
+                // This connection is denied by policy.
                 connection_allowed = false;
-                qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_INFO,
-                        "DENY AMQP Open for user '%s', host '%s', application '': "
-                        "No application specified", qd_conn->user_id, hostip);
             }
         } else {
             // No policy implies automatic policy allow
