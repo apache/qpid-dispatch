@@ -80,7 +80,6 @@ if(BUILD_DOCS)
   file(GLOB_RECURSE PNG_SRC RELATIVE ${src} *.png)
   foreach(file ${PNG_SRC})
     EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src}/${file} ${bin})
-    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src}/${file} ${bin}/dochtml)
   endforeach()
 
   # Generate files from management schema
@@ -146,6 +145,11 @@ if(BUILD_DOCS)
     add_dependencies(doc doc-sphinx)
 
     install_doc(DIRECTORY ${bin}/dochtml/  DESTINATION ${QD_DOC_INSTALL_DIR}/html)
+
+    set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
+      ${bin}/html
+      ${bin}/singlehtml
+      ${bin}/dochtml)
   endif(USE_SPHINX)
 
   # Install rst documentation as baseline in case we have no generator
