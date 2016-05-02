@@ -107,7 +107,7 @@ class LoadPolicyFromFolder(TestCase):
         addr = self.address()
 
         rulesets = json.loads(self.run_qdmanage('query --type=policyRuleset'))
-        self.assertEqual(len(rulesets), 3)
+        self.assertEqual(len(rulesets), 5)
 
 class SenderReceiverLimits(TestCase):
     """
