@@ -41,7 +41,6 @@ class ProtocolFamilyTest(TestCase):
         def router(name, connection):
 
             config = [
-                ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.%s'%name}),
                 ('router', {'mode': 'interior', 'routerId': 'QDR.%s'%name}),
 
                 # No protocolFamily is specified for this listener.

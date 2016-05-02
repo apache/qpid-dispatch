@@ -17,36 +17,17 @@
 ## under the License
 ##
 
-
-##
-## Container section - Configures the general operation of the AMQP container.
-##
-container {
-    ##
-    ## worker-threads - The number of threads that will be created to
-    ## process message traffic and other application work (timers, non-amqp
-    ## file descriptors, etc.)
-    ##
-    ## The number of threads should be related to the number of available
-    ## processor cores.  To fully utilize a quad-core system, set the
-    ## number of threads to 4.
-    ##
-    worker-threads: 4
-
-    ##
-    ## container-name - The name of the AMQP container.  If not specified,
-    ## the container name will be set to a value of the container's
-    ## choosing.  The automatically assigned container name is not
-    ## guaranteed to be persistent across restarts of the container.
-    ##
-    container-name: Qpid.Dispatch.Router.A
-}
-
 ##
 ## SSL Profile section - Zero or more SSL profiles may be defined here and
 ## then referenced later in listeners (for incoming connections) or
 ## connectors (for outgoing connectors).
 ##
+
+router {
+    mode: interior
+    router-id: QDR.A
+}
+
 ssl-profile {
     name: ssl-profile-name
     cert-db: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/ca-certificate.pem
@@ -71,11 +52,6 @@ listener {
     sasl-mechanisms: EXTERNAL
     ssl-profile: ssl-profile-name
     requirePeerAuth: yes
-}
-
-router {
-    mode: interior
-    router-id: QDR.A
 }
 
 fixed-address {

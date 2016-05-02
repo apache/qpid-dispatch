@@ -29,7 +29,6 @@ class RouterTestPlainSaslCommon(TestCase):
     def router(cls, name, connection):
 
         config = [
-            ('router', {'mode': 'interior', 'routerId': 'QDR.%s'%name}),
             ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
             ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
             ('fixedAddress', {'prefix': '/multicast/', 'fanout': 'multiple'}),
@@ -38,6 +37,7 @@ class RouterTestPlainSaslCommon(TestCase):
         ] + connection
 
         config = Qdrouterd.Config(config)
+
         cls.routers.append(cls.tester.qdrouterd(name, config, wait=False))
 
     @classmethod
@@ -86,16 +86,20 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
                      # This unauthenticated listener is for qdstat to connect to it.
                      ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
-                     ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.X',
-                                    'saslConfigName': 'tests-mech-PLAIN',
-                                    'saslConfigPath': os.getcwd()}),
+                     ('router', {'workerThreads': 1,
+                                 'routerId': 'QDR.X',
+                                 'mode': 'interior',
+                                 'saslConfigName': 'tests-mech-PLAIN',
+                                 'saslConfigPath': os.getcwd()}),
         ])
 
         super(RouterTestPlainSasl, cls).router('Y', [
                      ('connector', {'addr': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
                                     # Provide a sasl user name and password to connect to QDR.X
                                    'saslMechanisms': 'PLAIN', 'saslUsername': 'test@domain.com', 'saslPassword': 'password'}),
-                     ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Y'}),
+                     ('router', {'workerThreads': 1,
+                                 'mode': 'interior',
+                                 'routerId': 'QDR.Y'}),
                      ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
         ])
 
@@ -158,9 +162,11 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                      'cert-file': cls.ssl_file('server-certificate.pem'),
                                      'key-file': cls.ssl_file('server-private-key.pem'),
                                      'password': 'server-password'}),
-                     ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.X',
-                                    'saslConfigName': 'tests-mech-PLAIN',
-                                    'saslConfigPath': os.getcwd()}),
+                     ('router', {'workerThreads': 1,
+                                 'routerId': 'QDR.X',
+                                 'mode': 'interior',
+                                 'saslConfigName': 'tests-mech-PLAIN',
+                                 'saslConfigPath': os.getcwd()}),
         ])
 
         super(RouterTestPlainSaslOverSsl, cls).router('Y', [
@@ -171,7 +177,9 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com', 'saslPassword': 'password'}),
-                     ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Y'}),
+                     ('router', {'workerThreads': 1,
+                                 'mode': 'interior',
+                                 'routerId': 'QDR.Y'}),
                      ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
                                      'cert-db': cls.ssl_file('ca-certificate.pem'),
@@ -206,7 +214,6 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
 
         # user must be test@domain.com
         self.assertEqual(u'test@domain.com', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][16])
-
 
 if __name__ == '__main__':
     unittest.main(main_module())

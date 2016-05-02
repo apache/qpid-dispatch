@@ -1,6 +1,6 @@
 [
-    ["container", {
-	"containerName": "dispatch",
+    ["router", {
+	"routerId": "dispatch",
 	"saslConfigName": "policy-photoserver-sasl",
 	"saslConfigPath": "${CMAKE_CURRENT_BINARY_DIR}/policy-2",
 	"debugDump": "qddebug.txt"

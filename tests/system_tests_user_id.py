@@ -38,9 +38,8 @@ class QdSSLUseridTest(TestCase):
         ssl_profile1_json = os.path.join(DIR, 'displayname_files', 'profile_names1.json')
         ssl_profile2_json = os.path.join(DIR, 'displayname_files', 'profile_names2.json')
 
-        port = cls.tester.get_port()
-
         config = Qdrouterd.Config([
+            ('router', {'routerId': 'QDR', 'workerThreads': 1}),
 
             # sha1
             ('sslProfile', {'name': 'server-ssl1',
