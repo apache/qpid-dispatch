@@ -45,6 +45,7 @@ const unsigned char *link_route_entity_type     = (unsigned char*) "org.apache.q
 const unsigned char *auto_link_entity_type      = (unsigned char*) "org.apache.qpid.dispatch.router.config.autoLink";
 const unsigned char *address_entity_type        = (unsigned char*) "org.apache.qpid.dispatch.router.address";
 const unsigned char *link_entity_type           = (unsigned char*) "org.apache.qpid.dispatch.router.link";
+const unsigned char *console_entity_type        = (unsigned char*) "org.apache.qpid.dispatch.console";
 
 const char * const status_description = "statusDescription";
 const char * const correlation_id = "correlation-id";
@@ -241,7 +242,7 @@ static void qd_core_agent_query_handler(qdr_core_t                 *core,
     ctx->query = qdr_manage_query(core, ctx, entity_type, attribute_names_parsed_field, field);
 
     //Add the attribute names
-    qdr_query_add_attribute_names(ctx->query); //this adds adds a list of attribute names like ["attribute1", "attribute2", "attribute3", "attribute4",]
+    qdr_query_add_attribute_names(ctx->query); //this adds a list of attribute names like ["attribute1", "attribute2", "attribute3", "attribute4",]
     qd_compose_insert_string(field, results); //add a "results" key
     qd_compose_start_list(field); //start the list for results
 
@@ -397,6 +398,8 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
         *entity_type = QD_ROUTER_CONFIG_LINK_ROUTE;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), auto_link_entity_type))
         *entity_type = QD_ROUTER_CONFIG_AUTO_LINK;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), console_entity_type))
+        *entity_type = QD_ROUTER_FORBIDDEN;
     else
         return false;
 

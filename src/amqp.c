@@ -40,5 +40,6 @@ const qd_amqp_error_t QD_AMQP_OK = { 200, "OK" };
 const qd_amqp_error_t QD_AMQP_CREATED = { 201, "Created" };
 const qd_amqp_error_t QD_AMQP_NO_CONTENT = { 204, "No Content" }; // This is the response code if the delete of a manageable entity was successful.
 const qd_amqp_error_t QD_AMQP_BAD_REQUEST = { 400, "Bad Request" };
+const qd_amqp_error_t QD_AMQP_FORBIDDEN = { 403, "Forbidden" };
 const qd_amqp_error_t QD_AMQP_NOT_FOUND = { 404, "Not Found" };
 const qd_amqp_error_t QD_AMQP_NOT_IMPLEMENTED = { 501, "Not Implemented"};

@@ -570,7 +570,8 @@ typedef enum {
     QD_ROUTER_LINK,
     QD_ROUTER_ADDRESS,
     QD_ROUTER_EXCHANGE,
-    QD_ROUTER_BINDING
+    QD_ROUTER_BINDING,
+    QD_ROUTER_FORBIDDEN
 } qd_router_entity_type_t;
 
 typedef struct qdr_query_t qdr_query_t;
