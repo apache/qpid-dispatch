@@ -410,11 +410,21 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     //
     if (link->connected_link) {
         qdr_delivery_t *peer = qdr_forward_new_delivery_CT(core, dlv, link->connected_link, dlv->msg);
+
+        //
+        // Copy the delivery tag.  For link-routing, the delivery tag must be preserved.
+        //
         peer->tag_length = action->args.connection.tag_length;
         memcpy(peer->tag, action->args.connection.tag, peer->tag_length);
+
         qdr_forward_deliver_CT(core, link->connected_link, peer);
         qd_message_free(dlv->msg);
         dlv->msg = 0;
+        link->total_deliveries++;
+        if (!dlv->settled) {
+            DEQ_INSERT_TAIL(link->unsettled, dlv);
+            dlv->where = QDR_DELIVERY_IN_UNSETTLED;
+        }
         return;
     }
 

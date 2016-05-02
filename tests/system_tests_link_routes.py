@@ -447,6 +447,12 @@ class LinkRoutePatternTest(TestCase):
         self.assertTrue(test.message_received)
         self.assertTrue(test.delivery_tag_verified)
 
+    def test_close_with_unsettled(self):
+        test = CloseWithUnsettledTest(self.routers[1].addresses[0], self.routers[1].addresses[1])
+        test.run()
+        self.assertEqual(None, test.error)
+
+
 class DeliveryTagsTest(MessagingHandler):
     def __init__(self, sender_address, listening_address, qdstat_address):
         super(DeliveryTagsTest, self).__init__()
@@ -511,6 +517,64 @@ class DeliveryTagsTest(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
+
+class Timeout(object):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.timeout()
+
+
+class CloseWithUnsettledTest(MessagingHandler):
+    ##
+    ## This test sends a message across an attach-routed link.  While the message
+    ## is unsettled, the client link is closed.  The test is ensuring that the
+    ## router does not crash during the closing of the links.
+    ##
+    def __init__(self, normal_addr, route_addr):
+        super(CloseWithUnsettledTest, self).__init__(prefetch=0, auto_accept=False)
+        self.normal_addr = normal_addr
+        self.route_addr  = route_addr
+        self.dest = "pulp.task.CWUtest"
+        self.error = None
+
+    def timeout(self):
+        self.error = "Timeout Expired - Check for cores"
+        self.conn_normal.close()
+        self.conn_route.close()
+
+    def on_start(self, event):
+        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.conn_route = event.container.connect(self.route_addr)
+
+    def on_connection_opened(self, event):
+        if event.connection == self.conn_route:
+            self.conn_normal = event.container.connect(self.normal_addr)
+        elif event.connection == self.conn_normal:
+            self.sender = event.container.create_sender(self.conn_normal, self.dest)
+
+    def on_connection_closed(self, event):
+        self.conn_route.close()
+        self.timer.cancel()
+
+    def on_link_opened(self, event):
+        if event.receiver:
+            self.receiver = event.receiver
+            self.receiver.flow(1)
+
+    def on_sendable(self, event):
+        msg = Message(body="CloseWithUnsettled")
+        event.sender.send(msg)
+
+    def on_message(self, event):
+        self.conn_normal.close()
+
+    def run(self):
+        Container(self).run()
+
+
 
 if __name__ == '__main__':
     unittest.main(main_module())
