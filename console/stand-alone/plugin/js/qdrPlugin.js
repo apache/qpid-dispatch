@@ -46,7 +46,7 @@ var QDR = (function(QDR) {
    *
    * The top level path to this plugin's partials
    */
-  QDR.srcBase = "../dispatch/plugin/";
+  QDR.srcBase = "plugin/";
   QDR.templatePath = QDR.srcBase + "html/";
   QDR.cssPath = QDR.srcBase + "css/";
 

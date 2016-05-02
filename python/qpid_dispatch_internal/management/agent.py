@@ -414,20 +414,23 @@ class ConsoleEntity(EntityAdapter):
                         #required
                         host   = listener.attributes['addr']
                         port   = listener.attributes['port']
-                        wsport = self.attributes['wsport']
                         #optional
+                        wsport = self.attributes.get('wsport')
                         home   = self.attributes.get('home')
                         args   = self.attributes.get('args')
 
                         pargs = []
                         pargs.append(self.attributes['proxy'])
-                        pargs.append(str(self.attributes['wsport']))
-                        pargs.append("%s:%s" % (host, port))
-                        if home:
-                            pargs.append("--web")
-                            pargs.append(self.attributes['home'])
                         if args:
-                            pargs.append(args)
+                            # Replace any $port|$host|$wsport|$home
+                            dargs = {'$port': port, '$host': host}
+                            if wsport:
+                                dargs['$wsport'] = wsport
+                            if home:
+                                dargs['$home'] = home
+                            for k,v in dargs.iteritems():
+                                args = args.replace(k,str(v))
+                            pargs += args.split()
 
                         #run the external program
                         Popen(pargs)
