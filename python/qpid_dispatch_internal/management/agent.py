@@ -233,6 +233,9 @@ class EntityAdapter(SchemaEntity):
 
 
 class ContainerEntity(EntityAdapter):
+    """
+    The ContainerEntity has been deprecated. Use the the RouterEntity instead
+    """
 
     def create(self):
         self._qd.qd_dispatch_configure_container(self._dispatch, self)

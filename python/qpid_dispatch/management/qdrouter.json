@@ -472,11 +472,12 @@
         },
 
         "container": {
-            "description":"Attributes related to the AMQP container.",
+            "description":"(DEPRECATED)Attributes related to the AMQP container. All container attributes are now available in the router entity. The container entity will be removed in future releases",
             "extends": "configurationEntity",
 
             "singleton": true,
             "attributes": {
+            
                 "containerName": {
                     "type": "string",
                     "description": "The  name of the AMQP container.  If not specified, the container name will be set to a value of the container's choosing.  The automatically assigned container name is not guaranteed to be persistent across restarts of the container.",
@@ -485,7 +486,7 @@
                 },
                 "workerThreads": {
                     "type": "integer",
-                    "default": 1,
+                    "default": 4,
                     "description": "The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .",
                     "create": true
 
@@ -506,7 +507,6 @@
                     "type": "string",
                     "description": "Name of the SASL configuration.  This string + '.conf' is the name of the configuration file.",
                     "required": false,
-                    "default": "qdrouterd",
                     "create": true
                 }
             }
@@ -520,6 +520,7 @@
                 "routerId": {
                     "description":"Router's unique identity.",
                     "type": "string",
+                    "required": true,
                     "create": true
                 },
                 "mode": {
@@ -587,6 +588,32 @@
                     "type": "integer",
                     "description":"Number of known peer router nodes.",
                     "graph": true
+                },
+                "workerThreads": {
+                    "type": "integer",
+                    "default": 4,
+                    "description": "The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .",
+                    "create": true
+
+                },
+                "debugDump": {
+                    "type": "path",
+                    "description": "A file to dump debugging information that can't be logged normally.",
+                    "create": true
+
+                },
+                "saslConfigPath": {
+                    "type": "path",
+                    "description": "Absolute path to the SASL configuration file.",
+                    "required": false,
+                    "create": true
+                },
+                "saslConfigName": {
+                    "type": "string",
+                    "description": "Name of the SASL configuration.  This string + '.conf' is the name of the configuration file.",
+                    "default": "qdrouterd",
+                    "required": false,
+                    "create": true
                 }
             }
         },

@@ -30,6 +30,7 @@ class QdstatTest(system_test.TestCase):
     def setUpClass(cls):
         super(QdstatTest, cls).setUpClass()
         config = system_test.Qdrouterd.Config([
+            ('router', {'routerId': 'QDR.A', 'workerThreads': 1}),
             ('listener', {'port': cls.tester.get_port()}),
         ])
         cls.router = cls.tester.qdrouterd('test-router', config)
@@ -94,9 +95,10 @@ try:
                 sasl_conf.write("mech_list: EXTERNAL ANONYMOUS DIGEST-MD5 PLAIN\n")
             # qdrouterd configuration:
             config = system_test.Qdrouterd.Config([
-                ('container', {'containerName': 'QdstatSslTest',
-                               'saslConfigPath': os.getcwd(),
-                               'saslConfigName': 'tests-mech-EXTERNAL'}),
+                ('router', {'routerId': 'QDR.B',
+                            'saslConfigPath': os.getcwd(),
+                            'workerThreads': 1,
+                            'saslConfigName': 'tests-mech-EXTERNAL'}),
                 ('ssl-profile', {'name': 'server-ssl',
                                  'cert-db': cls.ssl_file('ca-certificate.pem'),
                                  'cert-file': cls.ssl_file('server-certificate.pem'),
@@ -240,9 +242,10 @@ try:
                 sasl_conf.write("mech_list: ANONYMOUS DIGEST-MD5 PLAIN\n")
             # qdrouterd configuration:
             config = system_test.Qdrouterd.Config([
-                ('container', {'containerName': 'QdstatSslTest',
-                               'saslConfigPath': os.getcwd(),
-                               'saslConfigName': 'tests-mech-NOEXTERNAL'}),
+                ('router', {'routerId': 'QDR.C',
+                            'saslConfigPath': os.getcwd(),
+                            'workerThreads': 1,
+                            'saslConfigName': 'tests-mech-NOEXTERNAL'}),
                 ('ssl-profile', {'name': 'server-ssl',
                                  'cert-db': cls.ssl_file('ca-certificate.pem'),
                                  'cert-file': cls.ssl_file('server-certificate.pem'),
