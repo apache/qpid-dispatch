@@ -44,12 +44,8 @@ class RouterTest(TestCase):
         def router(name, client_server, connection):
             
             config = cls.ssl_config(client_server, connection) + [
-                ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.%s'%name}),
                 ('router', {'mode': 'interior', 'routerId': 'QDR.%s'%name}),
                 
-                # Setting the stripAnnotations to 'no' so that the existing tests will work.
-                # Setting stripAnnotations to no will not strip the annotations and any tests that were already in this file
-                # that were expecting the annotations to not be stripped will continue working.
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
                 
                 # The following listeners were exclusively added to test the stripAnnotations attribute in qdrouterd.conf file

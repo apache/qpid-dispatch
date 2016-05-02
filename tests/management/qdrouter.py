@@ -26,6 +26,7 @@ from qpid_dispatch_internal.management.config import Config
 conf_text = """
 # Line comment
 router {
+    routerId: QDR
     mode: standalone            # End of line comment
 }
 ssl-profile {
@@ -52,6 +53,7 @@ listener {
 confText = """
 # Line comment
 router {
+    routerId: QDR
     mode: standalone            # End of line comment
 }
 sslProfile {
@@ -82,7 +84,7 @@ class QdrouterTest(unittest.TestCase):
         content = conf._parse(text.split("\n"))
         self.maxDiff = None
         expect = [
-            [u'router', {u'mode': u'standalone'}],
+            [u'router', {u'mode': u'standalone', u'routerId': u'QDR'}],
             [u'sslProfile', {u'password': u'secret', u'name': u'test-profile'}],
             [u'listener', {u'sslProfile': u'test-profile', u'name': u'l0', u'saslMechanisms': u'ANONYMOUS'}],
             [u'listener', {u'saslMechanisms': u'ANONYMOUS', u'identity': u'l1', u'port': u'1234'}],
@@ -92,7 +94,7 @@ class QdrouterTest(unittest.TestCase):
 
         content = conf._expand(content)
         expect = [
-            [u'router', {u'mode': u'standalone'}],
+            [u'router', {u'mode': u'standalone', u'routerId': u'QDR'}],
             [u'listener', {u'password': u'secret', u'name': u'l0', u'sslProfileName': u'test-profile', u'saslMechanisms': u'ANONYMOUS'}],
             [u'listener', {u'port': u'1234', u'identity': u'l1', u'saslMechanisms': u'ANONYMOUS'}],
             [u'listener', {u'port': u'4567', u'saslMechanisms': u'ANONYMOUS'}]

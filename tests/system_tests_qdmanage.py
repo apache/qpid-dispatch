@@ -38,7 +38,6 @@ class QdmanageTest(TestCase):
         super(QdmanageTest, cls).setUpClass()
         cls.inter_router_port = cls.tester.get_port()
         config_1 = Qdrouterd.Config([
-            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.1'}),
             ('router', {'mode': 'interior', 'routerId': 'R1'}),
             ('ssl-profile', {'name': 'server-ssl',
                              'cert-db': cls.ssl_file('ca-certificate.pem'),
@@ -51,7 +50,6 @@ class QdmanageTest(TestCase):
         ])
 
         config_2 = Qdrouterd.Config([
-            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.2'}),
             ('router', {'mode': 'interior', 'routerId': 'R2'}),
             ('listener', {'role': 'inter-router', 'port': cls.inter_router_port}),
         ])
