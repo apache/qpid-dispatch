@@ -109,6 +109,9 @@ class Config(object):
         return [_expand_section(s, annotations) for s in content
                 if self.schema.is_configuration(self.schema.entity_type(s[0], False))]
 
+    def get_config_types(self):
+        return self.config_types
+
     def load(self, source, raw_json=False):
         """
         Load a configuration file.
@@ -122,7 +125,7 @@ class Config(object):
         else:
             sections = self._parserawjson(source) if raw_json else self._parse(source)
             # Add missing singleton sections
-            for et in self.config_types:
+            for et in self.get_config_types():
                 if et.singleton and not [s for s in sections if s[0] == et.short_name]:
                     sections.append((et.short_name, {}))
             sections = self._expand(sections)
@@ -138,6 +141,12 @@ class Config(object):
     def remove(self, entity):
         self.entities.remove(entity)
 
+class PolicyConfig(Config):
+    def __init__(self, filename=None, schema=QdSchema(), raw_json=False):
+        super(PolicyConfig, self).__init__(filename, schema, raw_json)
+
+    def get_config_types(self):
+        return [s for s in self.config_types if 'policy' in s.name]
 
 def configure_dispatch(dispatch, lib_handle, filename):
     """Called by C router code to load configuration file and do configuration"""
@@ -195,6 +204,6 @@ def configure_dispatch(dispatch, lib_handle, filename):
         apath = os.path.abspath(policyFolder)
         for i in os.listdir(policyFolder):
             if i.endswith(".json"):
-                pconfig = Config(os.path.join(apath, i))
+                pconfig = PolicyConfig(os.path.join(apath, i))
                 for a in pconfig.by_type("policyRuleset"):
                     agent.configure(a)

@@ -19,7 +19,7 @@
 
 import unittest, json
 import os
-from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT
+from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
 from proton import ConnectionException
 from proton.utils import BlockingConnection, LinkDetached
@@ -33,7 +33,6 @@ class AbsoluteConnectionCountLimit(TestCase):
         """Start the router"""
         super(AbsoluteConnectionCountLimit, cls).setUpClass()
         config = Qdrouterd.Config([
-            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Policy'}),
             ('router', {'mode': 'standalone', 'routerId': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('policy', {'maximumConnections': 2})
@@ -79,9 +78,8 @@ class LoadPolicyFromFolder(TestCase):
     def setUpClass(cls):
         """Start the router"""
         super(LoadPolicyFromFolder, cls).setUpClass()
-        policy_config_path = os.path.join(cls.top_dir, 'policy-1')
+        policy_config_path = os.path.join(DIR, 'policy-1')
         config = Qdrouterd.Config([
-            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Policy2'}),
             ('router', {'mode': 'standalone', 'routerId': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('policy', {'maximumConnections': 2, 'policyFolder': policy_config_path, 'enableAccessRules': 'true'})
@@ -119,9 +117,8 @@ class SenderReceiverLimits(TestCase):
     def setUpClass(cls):
         """Start the router"""
         super(SenderReceiverLimits, cls).setUpClass()
-        policy_config_path = os.path.join(cls.top_dir, 'policy-3')
+        policy_config_path = os.path.join(DIR, 'policy-3')
         config = Qdrouterd.Config([
-            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Policy3'}),
             ('router', {'mode': 'standalone', 'routerId': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('policy', {'maximumConnections': 2, 'policyFolder': policy_config_path, 'enableAccessRules': 'true'})
