@@ -23,7 +23,7 @@ Logging in to a router network
 
 The console communicates to the router network using the proton javascript bindings. When run from a web page, the proton bindings use web sockets to send and receive commands. However, the dispatch router requires tcp. Therefore a web-sockets to tcp proxy is used. 
 
-.. image:: /console_login.png
+.. image:: console_login.png
 
 Enter the address of a proxy that is connected to a router in the network.
 
