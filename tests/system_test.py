@@ -317,9 +317,9 @@ class Qdrouterd(Process):
         """
 
         DEFAULTS = {
-            'listener':{'addr':'0.0.0.0', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120', 'authenticatePeer': 'no'},
-            'connector':{'addr':'127.0.0.1', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120', 'role':'on-demand'},
-            'container':{'debugDump':"qddebug.txt"}
+            'listener': {'addr':'0.0.0.0', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120', 'authenticatePeer': 'no'},
+            'connector': {'addr':'127.0.0.1', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120', 'role':'on-demand'},
+            'router': {'mode': 'standalone', 'routerId': 'QDR', 'debugDump': 'qddebug.txt',  'workerThreads': 1}
         }
 
         def sections(self, name):
