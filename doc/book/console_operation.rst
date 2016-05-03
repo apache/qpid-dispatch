@@ -36,19 +36,19 @@ Overview page
 
 On the overview page, aggregate information about routers, addresses, and connections is displayed.
 
-.. image:: /console_overview.png
+.. image:: console_overview.png
 
 Topology page
 -------------
 
 This page displays the router network in a graphical form showing how the routers are connected and information about the individual routers and links.
 
-.. image:: /console_topology.png
+.. image:: console_topology.png
 
 Router entity details page
 --------------------------
 
-.. image:: /console_entity.png
+.. image:: console_entity.png
 
 Displays detailed information about entities such as routers, links, addresses, memory.
 
@@ -57,14 +57,14 @@ Numeric attributes can be graphed by clicking on the graph icon.
 Charts page
 -----------
 
-.. image:: /console_charts.png
+.. image:: console_charts.png
 
 This page displays graphs of numeric values that are on the entity details page.
 
 Schema page
 -----------
 
-.. image:: /console_schema.png
+.. image:: console_schema.png
 
 This page displays the json schema that is used to manage the router network.
 

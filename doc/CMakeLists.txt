@@ -79,7 +79,7 @@ if(BUILD_DOCS)
   # Copy the images. Don't use configure_file since it truncates .png files at 1st ^Z character
   file(GLOB_RECURSE PNG_SRC RELATIVE ${src} *.png)
   foreach(file ${PNG_SRC})
-    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src}/${file} ${bin})
+    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src}/${file} ${bin}/${file})
   endforeach()
 
   # Generate files from management schema
