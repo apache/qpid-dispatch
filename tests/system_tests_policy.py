@@ -33,7 +33,6 @@ class AbsoluteConnectionCountLimit(TestCase):
         """Start the router"""
         super(AbsoluteConnectionCountLimit, cls).setUpClass()
         config = Qdrouterd.Config([
-            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Policy'}),
             ('router', {'mode': 'standalone', 'routerId': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('policy', {'maximumConnections': 2})
@@ -81,7 +80,6 @@ class LoadPolicyFromFolder(TestCase):
         super(LoadPolicyFromFolder, cls).setUpClass()
         policy_config_path = os.path.join(cls.top_dir, 'policy-1')
         config = Qdrouterd.Config([
-            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Policy2'}),
             ('router', {'mode': 'standalone', 'routerId': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('policy', {'maximumConnections': 2, 'policyFolder': policy_config_path, 'enableAccessRules': 'true'})
@@ -121,7 +119,6 @@ class SenderReceiverLimits(TestCase):
         super(SenderReceiverLimits, cls).setUpClass()
         policy_config_path = os.path.join(cls.top_dir, 'policy-3')
         config = Qdrouterd.Config([
-            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.Policy3'}),
             ('router', {'mode': 'standalone', 'routerId': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('policy', {'maximumConnections': 2, 'policyFolder': policy_config_path, 'enableAccessRules': 'true'})

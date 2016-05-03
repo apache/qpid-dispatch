@@ -39,8 +39,6 @@ class RouterTest(TestCase):
         super(RouterTest, cls).setUpClass()
         name = "test-router"
         config = Qdrouterd.Config([
-            ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.A'}),
-            
             ('router', {'mode': 'standalone', 'routerId': 'QDR'}),
             
             # Setting the stripAnnotations to 'no' so that the existing tests will work.

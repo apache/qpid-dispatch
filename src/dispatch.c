@@ -96,31 +96,44 @@ qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
     return qd_error_code();
 }
 
-
+/**
+ * The Container Entity has been deprecated and will be removed in the future. Use the RouterEntity instead.
+ */
 qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entity)
 {
-    const char *default_name = "00000000-0000-0000-0000-000000000000";
-    qd->thread_count   = qd_entity_opt_long(entity, "workerThreads", 1); QD_ERROR_RET();
-    qd->container_name = qd_entity_opt_string(entity, "containerName", default_name); QD_ERROR_RET();
-    qd->sasl_config_path = qd_entity_opt_string(entity, "saslConfigPath", 0); QD_ERROR_RET();
-    qd->sasl_config_name = qd_entity_opt_string(entity, "saslConfigName", "qdrouterd"); QD_ERROR_RET();
-    char *dump_file = qd_entity_opt_string(entity, "debugDump", 0);
-    if (dump_file) {
-        qd_alloc_debug_dump(dump_file); QD_ERROR_RET();
+     // Add a log warning. Check to see if too early
+     qd->thread_count   = qd_entity_opt_long(entity, "workerThreads", 4); QD_ERROR_RET();
+     qd->sasl_config_path = qd_entity_opt_string(entity, "saslConfigPath", 0); QD_ERROR_RET();
+     qd->sasl_config_name = qd_entity_opt_string(entity, "saslConfigName", 0); QD_ERROR_RET();
+     char *dump_file = qd_entity_opt_string(entity, "debugDump", 0); QD_ERROR_RET();
+     if (dump_file) {
+         qd_alloc_debug_dump(dump_file); QD_ERROR_RET();
         free(dump_file);
-    }
-    return QD_ERROR_NONE;
+     }
+
+     return QD_ERROR_NONE;
 }
 
 
 qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
 {
-    qd_error_clear();
-    free(qd->router_id);
-    qd->router_id   = qd_entity_opt_string(entity, "routerId", qd->container_name);
-    QD_ERROR_RET();
-    qd->router_mode = qd_entity_get_long(entity, "mode");
-    return qd_error_code();
+    qd->router_id = qd_entity_get_string(entity, "routerId"); QD_ERROR_RET();
+    qd->router_mode = qd_entity_get_long(entity, "mode"); QD_ERROR_RET();
+    qd->thread_count = qd_entity_opt_long(entity, "workerThreads", 4); QD_ERROR_RET();
+
+    if (! qd->sasl_config_path)
+        qd->sasl_config_path = qd_entity_opt_string(entity, "saslConfigPath", 0); QD_ERROR_RET();
+    if (! qd->sasl_config_name)
+        qd->sasl_config_name = qd_entity_opt_string(entity, "saslConfigName", "qdrouterd"); QD_ERROR_RET();
+
+    char *dump_file = qd_entity_opt_string(entity, "debugDump", 0); QD_ERROR_RET();
+    if (dump_file) {
+        qd_alloc_debug_dump(dump_file); QD_ERROR_RET();
+        free(dump_file);
+    }
+
+    return QD_ERROR_NONE;
+
 }
 
 qd_error_t qd_dispatch_configure_fixed_address(qd_dispatch_t *qd, qd_entity_t *entity) {
@@ -193,7 +206,7 @@ void qd_dispatch_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
 
 qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
 {
-    qd->server             = qd_server(qd, qd->thread_count, qd->container_name, qd->sasl_config_path, qd->sasl_config_name);
+    qd->server             = qd_server(qd, qd->thread_count, qd->router_id, qd->sasl_config_path, qd->sasl_config_name);
     qd->container          = qd_container(qd);
     qd->router             = qd_router(qd, qd->router_mode, qd->router_area, qd->router_id);
     qd->connection_manager = qd_connection_manager(qd);
@@ -211,7 +224,6 @@ void qd_dispatch_free(qd_dispatch_t *qd)
 {
     if (!qd) return;
     free(qd->router_id);
-    free(qd->container_name);
     free(qd->router_area);
     qd_connection_manager_free(qd->connection_manager);
     qd_policy_free(qd->policy);
