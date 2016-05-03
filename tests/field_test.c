@@ -702,8 +702,9 @@ static char *test_prefix_hash(void *context)
     idx = 0;
     while (patterns[idx].pattern) {
         qd_field_iterator_t *iter = qd_address_iterator_string(patterns[idx].pattern, ITER_VIEW_ADDRESS_HASH);
-        int position;
-        qd_hash_retrieve_prefix(hash, iter, (void*) &position);
+        void *ptr;
+        qd_hash_retrieve_prefix(hash, iter, &ptr);
+        int position = (int) ((long) ptr);
         position--;
         if (position != patterns[idx].entry) {
             snprintf(error, 200, "Pattern: '%s', expected %d, got %d",
