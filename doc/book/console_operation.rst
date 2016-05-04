@@ -48,6 +48,8 @@ Topology page
 This page displays the router network in a graphical form showing how the routers are connected and information about the individual routers and links.
 
 .. image:: console_topology.png
+   :height: 500px
+   :width: 1000 px
 
 Router entity details page
 --------------------------
