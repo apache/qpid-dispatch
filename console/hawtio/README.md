@@ -11,29 +11,11 @@ The fastest way to use the console is to run the [docker image](https://hub.dock
 ## Building
 The dispatch-plugin.war file is pre-built and can be installed alongside the hawtio.war on any system with a modern java installation. If you want to build the dispatch-plugin.war from source:
 
-- clone the hawtio git repo
-
-    $ git clone https://github.com/hawtio/hawtio.git
-
-- build hawtio
-
-    $ cd hawtio
-
-    $ mvn clean install
-
-    If you encounter any errors when building hawtio, visit [the hawtio build page](http://hawt.io/building/index.html) for help.
-
-- create a dispatch dir under the hawtio dir and copy the source code
-
-    $ mkdir dispatch
-
-    $ cp -r {dir where this file is located}/dispatch/* dispatch/
-
 - do a maven build of dispatch
 
-    $ cd dispach
+    $ cd console/hawtio
 
-    $ mvn package
+    $ mvn clean install
 
 The dispatch-plugin-1.4.60.war file should now be in the target directory.
 
@@ -51,16 +33,15 @@ On the Dispatch Router's console page, select the Connect sub tab. Enter the add
 
 ### Websockts to tcp proxy
 
-The console communicates to a router using Qpid Proton's [rhea](https://github.com/grs/rhea) javascript binding. When run from a browser, it uses websockets. 
-The router communicates using tcp. Therefore a websockts/tcp proxy is required.
+The console communicates to a router using websockets. 
+The router listens for tcp. Therefore a websockts/tcp proxy is required.
 
 #### Manually running a python websockets/tcp proxy
 
 A popular python based proxy is [websockify](https://github.com/kanaka/websockify). To use it:
 
-    $ git clone https://github.com/kanaka/websockify.git
-    $ cd websockify
-    $ ./run 5673 0.0.0.0:20009 &
+    $ yum install python-websockify
+    $ websockify 5673 0.0.0.0:20009 &
     
 In the above, websockify is listening for ws traffic on port 5673 and will proxy it to 0.0.0.0:20009. One of the routers will need a listener on the proxied port. An example router .conf file entry is:
 
@@ -78,9 +59,7 @@ You can automatically start the proxy program when a router starts. Add the list
 
     console {
         listener: ProxyListener
-        proxy:    /pathToWebsockify/run
-        wsport:   5673
+        proxy:    wobsockify
+        args:     $host:5673 $host:$port
     }
     
-The value for proxy: can be any program that has execute permission. The router will execute it and pass <wsport> <addr:port> as arguments.
-

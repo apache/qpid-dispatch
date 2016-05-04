@@ -1,25 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-  <parent>
-    <groupId>io.hawt</groupId>
-    <artifactId>project</artifactId>
-    <version>1.4.60</version>
-  </parent>
-<!--
-  <parent>
-    <groupId>io.hawt</groupId>
-    <artifactId>hawtio-plugin-examples</artifactId>
-    <version>1.4.60</version>
-    <relativePath>..</relativePath>
-  </parent>
--->
-  <modelVersion>4.0.0</modelVersion>
-  <artifactId>dispatch-plugin</artifactId>
-  <name>${project.artifactId}</name>
-  <description>hawtio :: hawtio Dispatch plugin</description>
 
-  <!-- hawtio plugins are almost always war files -->
+  <parent>
+    <groupId>org.apache</groupId>
+    <artifactId>apache</artifactId>
+    <version>17</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.apache.qpid</groupId>
+  <artifactId>dispatch-plugin</artifactId>
+  <version>0.6.0-SNAPSHOT</version>
   <packaging>war</packaging>
+  <name>${project.artifactId}</name>
+  <inceptionYear>2016</inceptionYear>
+  <url>https://qpid.apache.org</url>
+
+  <description>
+    hawtio :: hawtio Dispatch plugin
+  </description>
+
+  <prerequisites>
+    <maven>3.0.4</maven>
+  </prerequisites>
 
   <properties>
     <!-- filtered plugin properties, we don't define plugin-scripts here
@@ -36,12 +39,24 @@
       string -->
     <plugin-domain />
 
+    <!-- the hawtio version to build against -->
+    <hawtio-version>1.4.60</hawtio-version>
+    <!-- properties from hawtio pom @ https://repo1.maven.org/maven2/io/hawt/project/1.4.60/project-1.4.60.pom -->
+    <servlet-api-version>2.5</servlet-api-version>
+    <slf4j-version>1.7.13</slf4j-version>
+    <maven-antrun-plugin-version>1.7</maven-antrun-plugin-version>
+    <maven-resources-plugin-version>2.6</maven-resources-plugin-version>
+    <maven-bundle-plugin-version>2.3.7</maven-bundle-plugin-version>
+    <war-plugin-version>2.1.1</war-plugin-version>
+    <webapp-dir>${project.artifactId}-${project.version}</webapp-dir>
+    <webapp-outdir>${basedir}/target/${webapp-dir}</webapp-outdir>
+
     <!-- this lets this plugin deploy nicely into karaf, these get used
       for the ImportPackage directive for maven-bundle-plugin -->
-    <fuse.osgi.import>
+    <dispatch.osgi.import>
       javax.servlet,
       *;resolution:=optional
-    </fuse.osgi.import>
+    </dispatch.osgi.import>
   </properties>
 
   <dependencies>
@@ -52,7 +67,7 @@
     <dependency>
       <groupId>io.hawt</groupId>
       <artifactId>hawtio-plugin-mbean</artifactId>
-      <version>${project.version}</version>
+      <version>${hawtio-version}</version>
     </dependency>
 
     <!-- servlet API is provided by the container -->
@@ -73,6 +88,12 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <version>${slf4j-version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.geronimo.specs</groupId>
+      <artifactId>geronimo-servlet_2.5_spec</artifactId>
+      <version>1.2</version>
     </dependency>
 
   </dependencies>
@@ -193,10 +214,10 @@
             <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
             <Embed-Transitive>true</Embed-Transitive>
 
-            <Export-Package>${fuse.osgi.export}</Export-Package>
-            <Import-Package>${fuse.osgi.import}</Import-Package>
-            <DynamicImport-Package>${fuse.osgi.dynamic}</DynamicImport-Package>
-            <Private-Package>${fuse.osgi.private.pkg}</Private-Package>
+            <Export-Package>${dispatch.osgi.export}</Export-Package>
+            <Import-Package>${dispatch.osgi.import}</Import-Package>
+            <DynamicImport-Package>${dispatch.osgi.dynamic}</DynamicImport-Package>
+            <Private-Package>${dispatch.osgi.private.pkg}</Private-Package>
 
             <Bundle-ClassPath>.,WEB-INF/classes</Bundle-ClassPath>
 
