@@ -60,7 +60,6 @@ class LinkRoutePatternTest(TestCase):
         def router(name, connection):
 
             config = [
-                ('container', {'workerThreads': 4, 'containerName': 'Qpid.Dispatch.Router.%s'%name}),
                 ('router', {'mode': 'interior', 'routerId': 'QDR.%s'%name}),
                 ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
                 ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
