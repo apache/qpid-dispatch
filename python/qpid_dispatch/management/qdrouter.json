@@ -472,7 +472,7 @@
         },
 
         "container": {
-            "description":"(DEPRECATED)Attributes related to the AMQP container. All container attributes are now available in the router entity. The container entity will be removed in future releases",
+            "description":"(DEPRECATED)Attributes related to the AMQP container. This entity has been deprecated. Use the router entity instead.",
             "extends": "configurationEntity",
 
             "singleton": true,
@@ -812,7 +812,7 @@
         },
 
         "fixedAddress": {
-            "description":"(DEPRECATED) Establishes treatment for addresses starting with a prefix.",
+            "description":"(DEPRECATED) Establishes treatment for addresses starting with a prefix. This entity has been deprecated. Use router.config.address instead",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
@@ -849,7 +849,7 @@
         },
 
         "waypoint": {
-            "description":"(DEPRECATED) A remote node that messages for an address pass through.",
+            "description":"(DEPRECATED) A remote node that messages for an address pass through. This entity has been deprecated. Use router.config.autoLink instead",
             "extends": "configurationEntity",
             "operations": ["CREATE", "DELETE"],
             "attributes": {
@@ -881,7 +881,7 @@
         },
 
         "linkRoutePattern": {
-            "description":"(DEPRECATED) An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node.",
+            "description":"(DEPRECATED) An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node. This entity has been deprecated. Use router.config.linkRoute instead",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
