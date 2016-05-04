@@ -303,10 +303,12 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     }
 
     //
-    // If this is an incoming link and it is not link-routed, issue
-    // one replacement credit on the link.
+    // If this is an incoming link and it is not link-routed or inter-router, issue
+    // one replacement credit on the link.  Note that credit on inter-router links is
+    // issued immediately even for unsettled deliveries.
     //
-    if (moved && link->link_direction == QD_INCOMING && !link->connected_link)
+    if (moved && link->link_direction == QD_INCOMING &&
+        link->link_type != QD_LINK_ROUTER && !link->connected_link)
         qdr_link_issue_credit_CT(core, link, 1);
 
     return moved;
@@ -378,6 +380,8 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
             // Release the delivery
             //
             qdr_delivery_release_CT(core, dlv);
+            if (link->link_type == QD_LINK_ROUTER)
+                qdr_link_issue_credit_CT(core, link, 1);
         }
     } else if (fanout > 0) {
         if (dlv->settled) {
@@ -397,6 +401,15 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
         } else {
             DEQ_INSERT_TAIL(link->unsettled, dlv);
             dlv->where = QDR_DELIVERY_IN_UNSETTLED;
+
+            //
+            // If the delivery was received on an inter-router link, issue the credit
+            // now.  We don't want to tie inter-router link flow control to unsettled
+            // deliveries because it increases the risk of credit starvation if there
+            // are many addresses sharing the link.
+            //
+            if (link->link_type == QD_LINK_ROUTER)
+                qdr_link_issue_credit_CT(core, link, 1);
         }
     }
 

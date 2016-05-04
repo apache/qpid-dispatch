@@ -476,6 +476,14 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     dlv = DEQ_HEAD(unsettled);
     while (dlv) {
         DEQ_REMOVE_HEAD(unsettled);
+
+        if (dlv->tracking_addr) {
+            int link_bit = link->conn->mask_bit;
+            dlv->tracking_addr->outstanding_deliveries[link_bit]--;
+            dlv->tracking_addr->tracked_deliveries--;
+            dlv->tracking_addr = 0;
+        }
+
         peer = dlv->peer;
         qdr_delivery_free(dlv);
         if (peer) {

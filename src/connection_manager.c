@@ -152,12 +152,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     //
     // Handle the defaults for link capacity.
     //
-    if (config->link_capacity == 0) {
-        if (strcmp("inter-router", config->role) == 0)
-            config->link_capacity = 100000; // This is effectively infinite since session flow control will be more stringent.
-        else
-            config->link_capacity = 250;
-    }
+    if (config->link_capacity == 0)
+        config->link_capacity = 250;
 
     //
     // For now we are hardwiring this attribute to true.  If there's an outcry from the
