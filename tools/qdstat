@@ -340,7 +340,7 @@ class BusManager(Node):
         heads = []
         heads.append(Header("addr"))
         heads.append(Header("dir"))
-        heads.append(Header("phase"))
+        heads.append(Header("phs"))
         heads.append(Header("link"))
         heads.append(Header("status"))
         heads.append(Header("lastErr"))
