@@ -24,6 +24,8 @@ Logging in to a router network
 The console communicates to the router network using the proton javascript bindings. When run from a web page, the proton bindings use web sockets to send and receive commands. However, the dispatch router requires tcp. Therefore a web-sockets to tcp proxy is used. 
 
 .. image:: console_login.png
+   :height: 500px
+   :width: 1000 px
 
 Enter the address of a proxy that is connected to a router in the network.
 
@@ -37,6 +39,8 @@ Overview page
 On the overview page, aggregate information about routers, addresses, and connections is displayed.
 
 .. image:: console_overview.png
+   :height: 500px
+   :width: 1000 px
 
 Topology page
 -------------
@@ -49,6 +53,8 @@ Router entity details page
 --------------------------
 
 .. image:: console_entity.png
+   :height: 500px
+   :width: 1000 px
 
 Displays detailed information about entities such as routers, links, addresses, memory.
 
@@ -58,6 +64,8 @@ Charts page
 -----------
 
 .. image:: console_charts.png
+   :height: 500px
+   :width: 1000 px
 
 This page displays graphs of numeric values that are on the entity details page.
 
@@ -65,6 +73,8 @@ Schema page
 -----------
 
 .. image:: console_schema.png
+   :height: 500px
+   :width: 1000 px
 
 This page displays the json schema that is used to manage the router network.
 
