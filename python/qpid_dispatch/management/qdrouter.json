@@ -1156,9 +1156,17 @@
                     "description": "Internal unique (to this router) key to identify the address",
                     "type": "string"
                 },
-                "hostRouters": {
+                "remoteHostRouters": {
                     "type": "list",
                     "description": "List of remote routers on which there is a destination for this address."
+                },
+                "transitOutstanding": {
+                    "type": "list",
+                    "description": "List of numbers of outstanding deliveries across a transit (inter-router) link for this address.  This is for balanced distribution only."
+                },
+                "trackedDeliveries": {
+                    "type": "integer",
+                    "description": "Number of transit deliveries being tracked for this address (for balanced distribution)."
                 }
             }
         },

@@ -122,7 +122,7 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
         case QDR_LINK_PEER:
             if (link->connected_link) {
                 char id[100];
-                snprintf(id, 100, "link.%"PRId64, link->connected_link->identity);
+                snprintf(id, 100, "%"PRId64, link->connected_link->identity);
                 qd_compose_insert_string(body, id);
               } else
                 qd_compose_insert_null(body);
