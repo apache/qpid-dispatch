@@ -101,14 +101,12 @@ set_property(
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
 target_link_libraries(qpid-dispatch ${Proton_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES})
 set_target_properties(qpid-dispatch PROPERTIES
-  VERSION "${SO_VERSION}"
-  SOVERSION "${SO_VERSION_MAJOR}"
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )
 install(TARGETS qpid-dispatch
   LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
 
 # Set in parent scope for calling cmake file.
-set (QPID_DISPATCH_LIB "libqpid-dispatch.so.${SO_VERSION_MAJOR}" PARENT_SCOPE)
+set (QPID_DISPATCH_LIB "libqpid-dispatch.so" PARENT_SCOPE)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
