@@ -217,11 +217,9 @@ class LinkRoutePatternTest(TestCase):
                                                     attribute_names=['routerId']).results[0][0])
 
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache.dev').deliveriesEgress,
-                         "deliveriesEgress is wrong")
+                                            name='M0org.apache.dev').deliveriesEgress)
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache.dev').deliveriesIngress,
-                         "deliveriesIngress is wrong")
+                                            name='M0org.apache.dev').deliveriesIngress)
 
         # There should be 4 links -
         # 1. outbound receiver link on org.apache.dev
@@ -263,12 +261,10 @@ class LinkRoutePatternTest(TestCase):
         # Make sure that the router node acting as the broker (QDR.A) had one message routed through it. This confirms
         # that the message was link routed
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache.dev').deliveriesEgress,
-                         "deliveriesEgress is wrong")
+                                            name='M0org.apache.dev').deliveriesEgress)
 
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache.dev').deliveriesIngress,
-                         "deliveriesIngress is wrong")
+                                            name='M0org.apache.dev').deliveriesIngress)
 
         blocking_connection.close()
 
@@ -306,12 +302,10 @@ class LinkRoutePatternTest(TestCase):
         # Make sure that the router node acting as the broker (QDR.A) had one message routed through it. This confirms
         # that the message was link routed
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache').deliveriesEgress,
-                         "deliveriesEgress is wrong")
+                                            name='M0org.apache').deliveriesEgress)
 
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache').deliveriesIngress,
-                         "deliveriesIngress is wrong")
+                                            name='M0org.apache').deliveriesIngress)
 
         blocking_connection.close()
 
@@ -346,12 +340,10 @@ class LinkRoutePatternTest(TestCase):
         # Make sure that the router node acting as the broker (QDR.A) had one message routed through it. This confirms
         # that the message was link routed
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache').deliveriesEgress,
-                         "deliveriesEgress is wrong")
+                                            name='M0org.apache').deliveriesEgress)
 
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache').deliveriesIngress,
-                         "deliveriesIngress is wrong")
+                                            name='M0org.apache').deliveriesIngress)
 
         blocking_connection.close()
 
