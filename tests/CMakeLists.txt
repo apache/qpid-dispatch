@@ -80,6 +80,7 @@ foreach(py_test_module
     system_tests_qdstat
     system_tests_sasl_plain
     system_tests_user_id
+    system_tests_deprecated
     system_tests_two_routers)
 
   add_test(${py_test_module} ${TEST_WRAP} -m unittest -v ${py_test_module})
