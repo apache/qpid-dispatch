@@ -295,6 +295,13 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     if (link->link_direction == QD_OUTGOING)
         sys_mutex_unlock(conn->work_lock);
 
+    if (dlv->tracking_addr) {
+        int link_bit = link->conn->mask_bit;
+        dlv->tracking_addr->outstanding_deliveries[link_bit]--;
+        dlv->tracking_addr->tracked_deliveries--;
+        dlv->tracking_addr = 0;
+    }
+
     //
     // If this is an incoming link and it is not link-routed, issue
     // one replacement credit on the link.

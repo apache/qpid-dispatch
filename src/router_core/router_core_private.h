@@ -210,6 +210,7 @@ struct qdr_delivery_t {
     uint8_t              tag[32];
     int                  tag_length;
     qd_bitmask_t        *link_exclusion;
+    qdr_address_t       *tracking_addr;
 };
 
 ALLOC_DECLARE(qdr_delivery_t);
@@ -320,11 +321,20 @@ struct qdr_address_t {
     int                        ref_count;     ///< Number of link-routes + auto-links referencing this address
     bool                       block_deletion;
     bool                       local;
+    uint32_t                   tracked_deliveries;
+    uint64_t                   cost_epoch;
 
-    uint64_t      cost_epoch;
+    //
+    // State for "closest" treatment
+    //
     qd_bitmask_t *closest_remotes;
     int           next_remote;
 
+    //
+    // State for "balanced" treatment
+    //
+    int *outstanding_deliveries;
+    
     /**@name Statistics */
     ///@{
     uint64_t deliveries_ingress;

@@ -389,7 +389,6 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     DEQ_REMOVE(core->addrs, oaddr);
     qd_hash_handle_free(oaddr->hash_handle);
     core->routers_by_mask_bit[router_maskbit] = 0;
-    qd_bitmask_free(oaddr->closest_remotes);
     qd_bitmask_free(oaddr->rnodes);
     free_qdr_address_t(oaddr);
 }

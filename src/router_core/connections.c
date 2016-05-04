@@ -276,7 +276,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->name = (char*) malloc(strlen(name) + 1);
     strcpy(link->name, name);
     link->link_direction = dir;
-    link->capacity       = dir == QD_INCOMING ? conn->link_capacity : 0;
+    link->capacity       = conn->link_capacity;
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
 
@@ -691,12 +691,16 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
     // deleted.
     //
     if (DEQ_SIZE(addr->subscriptions) == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->inlinks) == 0 &&
-        qd_bitmask_cardinality(addr->rnodes) == 0 && addr->ref_count == 0 && !addr->block_deletion) {
+        qd_bitmask_cardinality(addr->rnodes) == 0 && addr->ref_count == 0 && !addr->block_deletion &&
+        addr->tracked_deliveries == 0) {
         qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
         DEQ_REMOVE(core->addrs, addr);
         qd_hash_handle_free(addr->hash_handle);
         qd_bitmask_free(addr->rnodes);
-        qd_bitmask_free(addr->closest_remotes);
+        if      (addr->treatment == QD_TREATMENT_ANYCAST_CLOSEST)
+            qd_bitmask_free(addr->closest_remotes);
+        else if (addr->treatment == QD_TREATMENT_ANYCAST_BALANCED)
+            free(addr->outstanding_deliveries);
         free_qdr_address_t(addr);
     }
 }

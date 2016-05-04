@@ -371,17 +371,17 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
     }
 
     //
-    // Forward to remote routers with subscribers using the appropriate
-    // link for the traffic class: control or data
-    //
-    qdr_node_t *next_node;
-
-    //
     // If the cached list of closest remotes is stale (i.e. cost data has changed),
     // recompute the closest remote routers.
     //
     if (addr->cost_epoch != core->cost_epoch)
         qdr_forward_find_closest_remotes_CT(core, addr);
+
+    //
+    // Forward to remote routers with subscribers using the appropriate
+    // link for the traffic class: control or data
+    //
+    qdr_node_t *next_node;
 
     if (addr->next_remote >= 0) {
         qdr_node_t *rnode = core->routers_by_mask_bit[addr->next_remote];
@@ -416,13 +416,29 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
                             bool             exclude_inprocess,
                             bool             control)
 {
-    qdr_link_t *out_link = 0;
-    uint32_t    link_backlog = UINT32_MAX;
-    bool        transit = false;
+    //
+    // Control messages should never use balanced treatment.
+    //
+    assert(!control);
+
+    //
+    // If this is the first time through here, allocate the array for outstanding delivery counts.
+    //
+    if (addr->outstanding_deliveries == 0) {
+        addr->outstanding_deliveries = NEW_ARRAY(int, qd_bitmask_width());
+        for (int i = 0; i < qd_bitmask_width(); i++)
+            addr->outstanding_deliveries[i] = 0;
+    }
+
+    qdr_link_t *chosen_link     = 0;
+    int         chosen_link_bit = -1;
+    uint32_t    link_value      = UINT32_MAX;
+    bool        transit         = false;
 
     //
     // Find all the possible outbound links for this delivery, searching for the one with the
-    // smallest backlog.
+    // smallest eligible value.  Value = outstanding_deliveries + minimum_downrange_cost.
+    // A link is ineligible if the outstanding_deliveries is equal to the link's capacity.
     //
 
     //
@@ -430,51 +446,81 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     //
     qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
     while (link_ref) {
-        qdr_link_t *link    = link_ref->link;
-        uint32_t    backlog = DEQ_SIZE(link->undelivered) + DEQ_SIZE(link->unsettled);
+        qdr_link_t *link     = link_ref->link;
+        uint32_t    value    = DEQ_SIZE(link->undelivered) + DEQ_SIZE(link->unsettled);
+        bool        eligible = link->capacity > value;
 
-        if (!out_link || link_backlog > backlog) {
-            out_link     = link;
-            link_backlog = backlog;
+        //
+        // If this is the best eligible link thus far, choose it.
+        //
+        if (eligible && link_value > value) {
+            chosen_link = link;
+            link_value  = value;
         }
 
         link_ref = DEQ_NEXT(link_ref);
     }
 
-    if (!out_link || link_backlog > 0) {
+    //
+    // If we haven't already found a link with zero (best possible) value, check the
+    // inter-router links as well.
+    //
+    if (!chosen_link || link_value > 0) {
         //
-        // If we haven't already found a link with zero backlog, check the
-        // remotes as well.
+        // Get the mask bit associated with the ingress router for the message.
+        // This will be compared against the "valid_origin" masks for each
+        // candidate destination router.
         //
-        int         router_bit;
-        int         c;
-        qdr_node_t *next_node;
+        int origin = 0;
+        qd_field_iterator_t *ingress_iter = in_delivery ? in_delivery->origin : 0;
 
-        for (QD_BITMASK_EACH(addr->rnodes, router_bit, c)) {
-            qdr_node_t *rnode = core->routers_by_mask_bit[router_bit];
-            if (rnode) {
-                if (rnode->next_hop)
-                    next_node = rnode->next_hop;
-                else
-                    next_node = rnode;
+        if (ingress_iter) {
+            qd_address_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
+            qdr_address_t *origin_addr;
+            qd_hash_retrieve(core->addr_hash, ingress_iter, (void*) &origin_addr);
+            if (origin_addr && qd_bitmask_cardinality(origin_addr->rnodes) == 1)
+                qd_bitmask_first_set(origin_addr->rnodes, &origin);
+        }
 
-                qdr_link_t *link = control ? next_node->peer_control_link : next_node->peer_data_link;
-                if (link) {
-                    uint32_t backlog = DEQ_SIZE(link->undelivered) + DEQ_SIZE(link->unsettled);
-                    if (backlog < link_backlog) {
-                        out_link     = link;
-                        link_backlog = backlog;
-                        transit      = true;
-                    }
+        int c;
+        int node_bit;
+        for (QD_BITMASK_EACH(addr->rnodes, node_bit, c)) {
+            qdr_node_t *rnode     = core->routers_by_mask_bit[node_bit];
+            qdr_node_t *next_node = rnode->next_hop ? rnode->next_hop : rnode;
+            qdr_link_t *link      = next_node->peer_data_link;
+            int         link_bit  = link->conn->mask_bit;
+            int         value     = addr->outstanding_deliveries[link_bit];
+            if (value < link->capacity && qd_bitmask_value(rnode->valid_origins, origin)) {
+                //
+                // Link is eligible, adjust the value by the bias (node cost).
+                //
+                value += rnode->cost;
+                if (link_value > value) {
+                    chosen_link     = link;
+                    chosen_link_bit = link_bit;
+                    link_value      = value;
+                    transit         = true;
                 }
             }
         }
     }
 
-    if (out_link) {
-        qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
-        qdr_forward_deliver_CT(core, out_link, out_delivery);
+    if (chosen_link) {
+        qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, chosen_link, msg);
+        qdr_forward_deliver_CT(core, chosen_link, out_delivery);
 
+        //
+        // If the delivery is unsettled and the link is inter-router, account for the outstanding delivery.
+        //
+        if (!in_delivery->settled && chosen_link_bit >= 0) {
+            addr->outstanding_deliveries[chosen_link_bit]++;
+            out_delivery->tracking_addr = addr;
+            addr->tracked_deliveries++;
+        }
+
+        //
+        // Bump the appropriate counter based on where we sent the delivery.
+        //
         if (transit)
             addr->deliveries_transit++;
         else
