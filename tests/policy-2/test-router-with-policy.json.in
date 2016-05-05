@@ -1,19 +1,19 @@
 [
     ["router", {
-	"routerId": "dispatch",
+	"id": "dispatch",
 	"saslConfigName": "policy-photoserver-sasl",
 	"saslConfigPath": "${CMAKE_CURRENT_BINARY_DIR}/policy-2",
 	"debugDump": "qddebug.txt"
     }],
     ["listener", {
-	"addr": "0.0.0.0",
+	"host": "0.0.0.0",
 	"saslMechanisms": "ANONYMOUS PLAIN",
 	"authenticatePeer": "no",
 	"idleTimeoutSeconds": "120",
 	"port": 21000
     }],
     ["listener", {
-	"addr": "0.0.0.0",
+	"host": "0.0.0.0",
 	"saslMechanisms": "PLAIN",
 	"authenticatePeer": "no",
 	"idleTimeoutSeconds": "120",

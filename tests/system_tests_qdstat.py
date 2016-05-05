@@ -30,7 +30,7 @@ class QdstatTest(system_test.TestCase):
     def setUpClass(cls):
         super(QdstatTest, cls).setUpClass()
         config = system_test.Qdrouterd.Config([
-            ('router', {'routerId': 'QDR.A', 'workerThreads': 1}),
+            ('router', {'id': 'QDR.A', 'workerThreads': 1}),
             ('listener', {'port': cls.tester.get_port()}),
         ])
         cls.router = cls.tester.qdrouterd('test-router', config)
@@ -95,7 +95,7 @@ try:
                 sasl_conf.write("mech_list: EXTERNAL ANONYMOUS DIGEST-MD5 PLAIN\n")
             # qdrouterd configuration:
             config = system_test.Qdrouterd.Config([
-                ('router', {'routerId': 'QDR.B',
+                ('router', {'id': 'QDR.B',
                             'saslConfigPath': os.getcwd(),
                             'workerThreads': 1,
                             'saslConfigName': 'tests-mech-EXTERNAL'}),
@@ -242,7 +242,7 @@ try:
                 sasl_conf.write("mech_list: ANONYMOUS DIGEST-MD5 PLAIN\n")
             # qdrouterd configuration:
             config = system_test.Qdrouterd.Config([
-                ('router', {'routerId': 'QDR.C',
+                ('router', {'id': 'QDR.C',
                             'saslConfigPath': os.getcwd(),
                             'workerThreads': 1,
                             'saslConfigName': 'tests-mech-NOEXTERNAL'}),

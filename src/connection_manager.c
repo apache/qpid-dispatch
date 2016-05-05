@@ -135,7 +135,6 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     bool depAllowUnsecured  = qd_entity_opt_bool(entity, "allowUnsecured", !requireSsl); CHECK();
 
     memset(config, 0, sizeof(*config));
-    config->host                 = qd_entity_get_string(entity, "addr"); CHECK();
     config->port                 = qd_entity_get_string(entity, "port"); CHECK();
     config->name                 = qd_entity_opt_string(entity, "name", 0); CHECK();
     config->role                 = qd_entity_get_string(entity, "role"); CHECK();
@@ -148,6 +147,10 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->sasl_mechanisms      = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
     config->ssl_enabled          = has_attrs(entity, ssl_attributes, ssl_attributes_count);
     config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0); CHECK();
+    config->host                 = qd_entity_opt_string(entity, "host", 0); QD_ERROR_RET();
+    if (! config->host)
+        config->host             = qd_entity_opt_string(entity, "addr", 0); CHECK();
+    assert(config->host);
 
     //
     // Handle the defaults for link capacity.

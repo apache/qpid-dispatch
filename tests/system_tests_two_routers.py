@@ -44,7 +44,7 @@ class RouterTest(TestCase):
         def router(name, client_server, connection):
             
             config = cls.ssl_config(client_server, connection) + [
-                ('router', {'mode': 'interior', 'routerId': 'QDR.%s'%name}),
+                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
                 
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
                 

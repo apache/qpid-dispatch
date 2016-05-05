@@ -9,11 +9,17 @@
             "description": "Attributes for internet address and port.",
             "attributes": {
                 "addr": {
-                    "description":"IP address: ipv4 or ipv6 literal or a host name.",
+                    "description":"(DEPRECATED)IP address: ipv4 or ipv6 literal or a host name. This attribute has been deprecated. Use host instead",
                     "type": "string",
                     "default": "127.0.0.1",
                     "create": true
                 },
+                "host": {
+                    "description":"IP address: ipv4 or ipv6 literal or a host name",
+                    "type": "string",
+                    "default": "127.0.0.1",
+                    "create": true
+                },                
                 "port": {
                     "description": "Port number or symbolic service name.",
                     "type": "string",
@@ -518,9 +524,15 @@
             "singleton": true,
             "attributes": {
                 "routerId": {
-                    "description":"Router's unique identity.",
+                    "description":"(DEPRECATED) Router's unique identity. This attribute has been deprecated. Use id instead",
                     "type": "string",
-                    "required": true,
+                    "required": false,
+                    "create": true
+                },
+                "id": {
+                    "description":"Router's unique identity. One of id or routerId is required. The router will fail to start without id or routerId",
+                    "type": "string",
+                    "required": false,
                     "create": true
                 },
                 "mode": {
@@ -1176,10 +1188,10 @@
             "description": "Remote router node connected to this router.",
             "extends": "operationalEntity",
             "attributes": {
-                "routerId": {
+                "id": {
                     "description": "Remote node identifier.",
                     "type": "string"
-                },
+                },                
                 "instance": {
                     "description": "Remote node boot number.",
                     "type": "integer"

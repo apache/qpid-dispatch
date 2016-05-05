@@ -60,7 +60,7 @@ class LinkRoutePatternTest(TestCase):
         def router(name, connection):
 
             config = [
-                ('router', {'mode': 'interior', 'routerId': 'QDR.%s'%name}),
+                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
                 ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
                 ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
                 ('fixedAddress', {'prefix': '/multicast/', 'fanout': 'multiple'}),
@@ -79,18 +79,18 @@ class LinkRoutePatternTest(TestCase):
 
         router('A',
                [
-                   ('listener', {'role': 'normal', 'addr': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
+                   ('listener', {'role': 'normal', 'host': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                ])
         router('B',
                [
-                   ('listener', {'role': 'normal', 'addr': '0.0.0.0', 'port': b_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
-                   ('listener', {'name': 'test-tag', 'role': 'route-container', 'addr': '0.0.0.0', 'port': test_tag_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
+                   ('listener', {'role': 'normal', 'host': '0.0.0.0', 'port': b_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
+                   ('listener', {'name': 'test-tag', 'role': 'route-container', 'host': '0.0.0.0', 'port': test_tag_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
 
                    # This is an on-demand connection made from QDR.B's ephemeral port to a_listener_port
-                   ('connector', {'name': 'broker', 'role': 'route-container', 'addr': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
+                   ('connector', {'name': 'broker', 'role': 'route-container', 'host': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    # Only inter router communication must happen on 'inter-router' connectors. This connector makes
                    # a connection from the router B's ephemeral port to c_listener_port
-                   ('connector', {'role': 'inter-router', 'addr': '0.0.0.0', 'port': c_listener_port}),
+                   ('connector', {'role': 'inter-router', 'host': '0.0.0.0', 'port': c_listener_port}),
                    ('linkRoutePattern', {'prefix': 'org.apache', 'connector': 'broker'}),
                    ('linkRoute', {'prefix': 'pulp.task', 'connection': 'test-tag', 'dir': 'in'}),
                    ('linkRoute', {'prefix': 'pulp.task', 'connection': 'test-tag', 'dir': 'out'})
@@ -98,9 +98,9 @@ class LinkRoutePatternTest(TestCase):
                )
         router('C',
                [
-                   ('listener', {'addr': '0.0.0.0', 'role': 'inter-router', 'port': c_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
+                   ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': c_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    # The client will exclusively use the following listener to connect to QDR.C
-                   ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(), 'saslMechanisms': 'ANONYMOUS'}),
+                   ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(), 'saslMechanisms': 'ANONYMOUS'}),
                    # Note here that the linkRoutePattern is set to org.apache. which makes it backward compatible.
                    # The dot(.) at the end is ignored by the address hashing scheme.
                    ('linkRoutePattern', {'prefix': 'org.apache.'}),
@@ -213,7 +213,7 @@ class LinkRoutePatternTest(TestCase):
         # Connect to the router acting like the broker (QDR.A) and check the deliveriesIngress and deliveriesEgress
         local_node = Node.connect(self.routers[0].addresses[0], timeout=TIMEOUT)
         self.assertEqual(u'QDR.A', local_node.query(type='org.apache.qpid.dispatch.router',
-                                                    attribute_names=['routerId']).results[0][0])
+                                                    attribute_names=['id']).results[0][0])
 
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
                                             name='M0org.apache.dev').deliveriesEgress)
