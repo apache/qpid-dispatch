@@ -55,7 +55,7 @@ class ManagementTest(system_test.TestCase):
         super(ManagementTest, cls).setUpClass()
         # Stand-alone router
         conf0=Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'routerId': 'solo'}),
+            ('router', { 'mode': 'standalone', 'id': 'solo'}),
             ('listener', {'name': 'l0', 'port':cls.get_port(), 'role':'normal'}),
             # Extra listeners to exercise managment query
             ('listener', {'name': 'l1', 'port':cls.get_port(), 'role':'normal'}),
@@ -65,18 +65,18 @@ class ManagementTest(system_test.TestCase):
 
         # Trio of interior routers linked in a line so we can see some next-hop values.
         conf0 = Qdrouterd.Config([
-            ('router', { 'mode': 'interior', 'routerId': 'router0'}),
+            ('router', { 'mode': 'interior', 'id': 'router0'}),
             ('listener', {'port':cls.get_port(), 'role':'normal'}),
             ('listener', {'port':cls.get_port(), 'role':'inter-router'})
         ])
         conf1 = Qdrouterd.Config([
-            ('router', { 'mode': 'interior', 'routerId': 'router1'}),
+            ('router', { 'mode': 'interior', 'id': 'router1'}),
             ('listener', {'port':cls.get_port(), 'role':'normal'}),
             ('connector', {'port':conf0.sections('listener')[1]['port'], 'role':'inter-router'}),
             ('listener', {'port':cls.get_port(), 'role':'inter-router'})
         ])
         conf2 = Qdrouterd.Config([
-            ('router', { 'mode': 'interior', 'routerId': 'router2'}),
+            ('router', { 'mode': 'interior', 'id': 'router2'}),
             ('listener', {'port':cls.get_port(), 'role':'normal'}),
             ('connector', {'port':conf1.sections('listener')[1]['port'], 'role':'inter-router'})
         ])
@@ -84,7 +84,7 @@ class ManagementTest(system_test.TestCase):
 
         # Standalone router for logging tests (avoid interfering with logging for other tests.)
         conflog=Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'routerId': 'logrouter'}),
+            ('router', { 'mode': 'standalone', 'id': 'logrouter'}),
             ('listener', {'port':cls.get_port(), 'role':'normal'}),
         ])
         cls._logrouter = cls.tester.qdrouterd(config=conflog, wait=False)
@@ -124,7 +124,7 @@ class ManagementTest(system_test.TestCase):
     def test_query_type(self):
         """Query with type only"""
         response = self.node.query(type=LISTENER)
-        for attr in ['type', 'name', 'identity', 'addr', 'port']:
+        for attr in ['type', 'name', 'identity', 'host', 'port']:
             self.assertTrue(attr in response.attribute_names)
         for r in response.get_dicts():
             self.assertEqual(len(response.attribute_names), len(r))
@@ -172,12 +172,12 @@ class ManagementTest(system_test.TestCase):
         attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'saslMechanisms': 'ANONYMOUS', 'authenticatePeer': False}
         entity = self.assert_create_ok(LISTENER, 'foo', attributes)
         self.assertEqual(entity['name'], 'foo')
-        self.assertEqual(entity['addr'], '127.0.0.1')
+        self.assertEqual(entity['host'], '127.0.0.1')
 
         # Connect via the new listener
         node3 = self.cleanup(Node.connect(Url(port=port)))
         router = node3.query(type=ROUTER).get_entities()
-        self.assertEqual(self.router.name, router[0]['routerId'])
+        self.assertEqual(self.router.name, router[0]['id'])
 
     def test_log(self):
         """Create, update and query log entities"""
@@ -344,7 +344,7 @@ class ManagementTest(system_test.TestCase):
         rnode_lists = [n.query(type=NODE).get_dicts() for n in nodes]
 
         def check(attrs):
-            name = attrs['routerId']
+            name = attrs['id']
             self.assertEqual(attrs['identity'], 'router.node/%s' % name)
             self.assertEqual(attrs['name'], 'router.node/%s' % name)
             self.assertEqual(attrs['type'], 'org.apache.qpid.dispatch.router.node')
@@ -378,7 +378,7 @@ class ManagementTest(system_test.TestCase):
         # Query router2 indirectly via router1
         remote_url = Url(self.routers[0].addresses[0], path=Url(remotes[0]).path)
         remote = self.cleanup(Node.connect(remote_url))
-        self.assertEqual(["router2"], [r.routerId for r in remote.query(type=ROUTER).get_entities()])
+        self.assertEqual(["router2"], [r.id for r in remote.query(type=ROUTER).get_entities()])
 
     def test_remote_node(self):
         """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""
@@ -392,7 +392,7 @@ class ManagementTest(system_test.TestCase):
         remote = self.cleanup(Node.connect(remote_url))
         router_id = remotes[0].split("/")[3]
         assert router_id in ['router0', 'router1', 'router2']
-        self.assertEqual([router_id], [r.routerId for r in remote.query(type=ROUTER).get_entities()])
+        self.assertEqual([router_id], [r.id for r in remote.query(type=ROUTER).get_entities()])
 
     def test_get_types(self):
         types = self.node.get_types()
@@ -434,7 +434,7 @@ class ManagementTest(system_test.TestCase):
             self.node.create, dict(attrs, type=CONNECTOR, name="bad2", port=str(self.get_port())))
 
         conf = Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'routerId': 'all_by_myself1'}),
+            ('router', { 'mode': 'standalone', 'id': 'all_by_myself1'}),
             ('listener', {'port':self.get_port(), 'role':'inter-router'})
         ])
         r = self.qdrouterd('routerX', conf, wait=False)
@@ -442,7 +442,7 @@ class ManagementTest(system_test.TestCase):
         self.assertTrue(r.wait() != 0)
 
         conf = Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'routerId': 'all_by_myself2'}),
+            ('router', { 'mode': 'standalone', 'id': 'all_by_myself2'}),
             ('listener', {'port':self.get_port(), 'role':'normal'}),
             ('connector', {'port':self.get_port(), 'role':'inter-router'})
         ])

@@ -39,7 +39,7 @@ class RouterTest(TestCase):
         super(RouterTest, cls).setUpClass()
         name = "test-router"
         config = Qdrouterd.Config([
-            ('router', {'mode': 'standalone', 'routerId': 'QDR'}),
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
             
             # Setting the stripAnnotations to 'no' so that the existing tests will work.
             # Setting stripAnnotations to no will not strip the annotations and any tests that were already in this file

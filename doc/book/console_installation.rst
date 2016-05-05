@@ -37,7 +37,7 @@ This will start the proxy listening to ws traffic on port 5673 and translating i
 One of the routers in the network needs to have a listener configured on port 5672. That listener's role should be 'normal'. For example::
 
    listener {
-      addr: 0.0.0.0
+      host: 0.0.0.0
       role: normal
       port: amqp
       saslMechanisms: ANONYMOUS

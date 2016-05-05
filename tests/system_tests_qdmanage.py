@@ -38,7 +38,7 @@ class QdmanageTest(TestCase):
         super(QdmanageTest, cls).setUpClass()
         cls.inter_router_port = cls.tester.get_port()
         config_1 = Qdrouterd.Config([
-            ('router', {'mode': 'interior', 'routerId': 'R1'}),
+            ('router', {'mode': 'interior', 'id': 'R1'}),
             ('ssl-profile', {'name': 'server-ssl',
                              'cert-db': cls.ssl_file('ca-certificate.pem'),
                              'cert-file': cls.ssl_file('server-certificate.pem'),
@@ -50,7 +50,7 @@ class QdmanageTest(TestCase):
         ])
 
         config_2 = Qdrouterd.Config([
-            ('router', {'mode': 'interior', 'routerId': 'R2'}),
+            ('router', {'mode': 'interior', 'id': 'R2'}),
             ('listener', {'role': 'inter-router', 'port': cls.inter_router_port}),
         ])
         cls.router_2 = cls.tester.qdrouterd('test_router_2', config_2, wait=True)
@@ -194,7 +194,7 @@ class QdmanageTest(TestCase):
         self.assertEqual("trace+", output['enable'])
 
     def create(self, type, name, port):
-        create_command = 'CREATE --type=' + type + ' --name=' + name + ' addr=0.0.0.0 port=' + port
+        create_command = 'CREATE --type=' + type + ' --name=' + name + ' host=0.0.0.0 port=' + port
         connector = json.loads(self.run_qdmanage(create_command))
         return connector
 
@@ -220,7 +220,7 @@ class QdmanageTest(TestCase):
     def test_zzz_add_connector(self):
         port = self.get_port()
         # dont provide role and make sure that role is defaulted to 'normal'
-        command = "CREATE --type=connector --name=eaconn1 port=" + str(port) + " addr=0.0.0.0"
+        command = "CREATE --type=connector --name=eaconn1 port=" + str(port) + " host=0.0.0.0"
         output = json.loads(self.run_qdmanage(command))
         self.assertEqual("normal", output['role'])
 
@@ -228,7 +228,7 @@ class QdmanageTest(TestCase):
         try:
             port = self.get_port()
             # provide the same connector name (eaconn1) and make sure there is a duplicate value failure
-            command = "CREATE --type=connector --name=eaconn1 port=" + str(port) + " addr=0.0.0.0"
+            command = "CREATE --type=connector --name=eaconn1 port=" + str(port) + " host=0.0.0.0"
             output = json.loads(self.run_qdmanage(command))
         except Exception as e:
             self.assertTrue("Duplicate value 'eaconn1' for unique attribute 'name'" in e.message)
@@ -238,7 +238,7 @@ class QdmanageTest(TestCase):
 
         port = self.get_port()
         # provide role as 'normal' and make sure that it is preserved
-        command = "CREATE --type=connector --name=eaconn2 port=" + str(port) + " addr=0.0.0.0 role=normal"
+        command = "CREATE --type=connector --name=eaconn2 port=" + str(port) + " host=0.0.0.0 role=normal"
         output = json.loads(self.run_qdmanage(command))
         self.assertEqual("normal", output['role'])
 

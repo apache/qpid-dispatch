@@ -48,7 +48,7 @@ through a pair of queues on a broker:
     connector {
         name: broker
         role: route-container
-        addr: <hostname>
+        host: <hostname>
         port: <port>
         sasl-mechanisms: ANONYMOUS
     }
@@ -188,7 +188,7 @@ multiple brokers share the message-queueing load.
     connector {
         name: broker1
         role: route-container
-        addr: <hostname>
+        host: <hostname>
         port: <port>
         sasl-mechanisms: ANONYMOUS
     }
@@ -196,7 +196,7 @@ multiple brokers share the message-queueing load.
     connector {
         name: broker2
         role: route-container
-        addr: <hostname>
+        host: <hostname>
         port: <port>
         sasl-mechanisms: ANONYMOUS
     }
@@ -245,7 +245,7 @@ using *qdmanage*:
 
 ::
 
-    qdmanage create --type org.apache.qpid.dispatch.connector addr=<host> port=<port> name=broker3
+    qdmanage create --type org.apache.qpid.dispatch.connector host=<host> port=<port> name=broker3
     qdmanage create --type org.apache.qpid.dispatch.router.config.autoLink addr=queue.first dir=in connection=broker3
     qdmanage create --type org.apache.qpid.dispatch.router.config.autoLink addr=queue.first dir=out connection=broker3
 

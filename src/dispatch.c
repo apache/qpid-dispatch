@@ -117,7 +117,10 @@ qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entit
 
 qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
 {
-    qd->router_id = qd_entity_get_string(entity, "routerId"); QD_ERROR_RET();
+    qd->router_id = qd_entity_opt_string(entity, "routerId", 0); QD_ERROR_RET();
+    if (! qd->router_id)
+        qd->router_id = qd_entity_opt_string(entity, "id", 0); QD_ERROR_RET();
+    assert(qd->router_id);
     qd->router_mode = qd_entity_get_long(entity, "mode"); QD_ERROR_RET();
     qd->thread_count = qd_entity_opt_long(entity, "workerThreads", 4); QD_ERROR_RET();
 

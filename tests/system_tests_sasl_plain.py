@@ -81,26 +81,26 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
         y_listener_port = cls.tester.get_port()
 
         super(RouterTestPlainSasl, cls).router('X', [
-                     ('listener', {'addr': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
+                     ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
                                    'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
                      # This unauthenticated listener is for qdstat to connect to it.
-                     ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
                      ('router', {'workerThreads': 1,
-                                 'routerId': 'QDR.X',
+                                 'id': 'QDR.X',
                                  'mode': 'interior',
                                  'saslConfigName': 'tests-mech-PLAIN',
                                  'saslConfigPath': os.getcwd()}),
         ])
 
         super(RouterTestPlainSasl, cls).router('Y', [
-                     ('connector', {'addr': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
+                     ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
                                     # Provide a sasl user name and password to connect to QDR.X
                                    'saslMechanisms': 'PLAIN', 'saslUsername': 'test@domain.com', 'saslPassword': 'password'}),
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
-                                 'routerId': 'QDR.Y'}),
-                     ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
+                                 'id': 'QDR.Y'}),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
         ])
 
         cls.routers[1].wait_router_connected('QDR.X')
@@ -151,11 +151,11 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         y_listener_port = cls.tester.get_port()
 
         super(RouterTestPlainSaslOverSsl, cls).router('X', [
-                     ('listener', {'addr': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
+                     ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
                                    'sslProfile':'server-ssl-profile',
                                    'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
                      # This unauthenticated listener is for qdstat to connect to it.
-                     ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
                                      'cert-db': cls.ssl_file('ca-certificate.pem'),
@@ -163,7 +163,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                      'key-file': cls.ssl_file('server-private-key.pem'),
                                      'password': 'server-password'}),
                      ('router', {'workerThreads': 1,
-                                 'routerId': 'QDR.X',
+                                 'id': 'QDR.X',
                                  'mode': 'interior',
                                  'saslConfigName': 'tests-mech-PLAIN',
                                  'saslConfigPath': os.getcwd()}),
@@ -172,15 +172,15 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         super(RouterTestPlainSaslOverSsl, cls).router('Y', [
                      # This router will act like a client. First an SSL connection will be established and then
                      # we will have SASL plain authentication over SSL.
-                     ('connector', {'addr': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
+                     ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
                                     'ssl-profile': 'client-ssl-profile',
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com', 'saslPassword': 'password'}),
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
-                                 'routerId': 'QDR.Y'}),
-                     ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
+                                 'id': 'QDR.Y'}),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
                                      'cert-db': cls.ssl_file('ca-certificate.pem'),
                                      'cert-file': cls.ssl_file('client-certificate.pem'),

@@ -97,7 +97,7 @@ broker B2:
     connector {
         name: broker
         role: route-container
-        addr: <B2-url>
+        host: <B2-url>
         port: <B2-port>
         sasl-mechanisms: ANONYMOUS
     }

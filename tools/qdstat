@@ -273,7 +273,7 @@ class BusManager(Node):
 
         for node in objects:
             row = []
-            row.append(node.routerId)
+            row.append(node.id)
             if node.nextHop != None:
                 row.append(node.nextHop)
                 row.append('-')
