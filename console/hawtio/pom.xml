@@ -12,13 +12,23 @@
   <artifactId>dispatch-plugin</artifactId>
   <version>0.6.0-SNAPSHOT</version>
   <packaging>war</packaging>
-  <name>${project.artifactId}</name>
   <inceptionYear>2016</inceptionYear>
   <url>https://qpid.apache.org</url>
 
   <description>
-    hawtio :: hawtio Dispatch plugin
+    Qpid Dispatch hawtio console plugin
   </description>
+
+  <issueManagement>
+    <url>https://issues.apache.org/jira/browse/DISPATCH</url>
+    <system>JIRA</system>
+  </issueManagement>
+
+  <scm>
+    <connection>scm:git:http://git-wip-us.apache.org/repos/asf/qpid-dispatch.git</connection>
+    <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/qpid-dispatch.git</developerConnection>
+    <url>https://git-wip-us.apache.org/repos/asf?p=qpid-dispatch.git</url>
+  </scm>
 
   <prerequisites>
     <maven>3.0.4</maven>
@@ -39,15 +49,15 @@
       string -->
     <plugin-domain />
 
-    <!-- the hawtio version to build against -->
+    <!-- dependency versions -->
     <hawtio-version>1.4.60</hawtio-version>
-    <!-- properties from hawtio pom @ https://repo1.maven.org/maven2/io/hawt/project/1.4.60/project-1.4.60.pom -->
-    <servlet-api-version>2.5</servlet-api-version>
+    <geronimo-servlet-2-5-spec-version>1.2</geronimo-servlet-2-5-spec-version>
     <slf4j-version>1.7.13</slf4j-version>
+
+    <!-- plugin versions -->
     <maven-antrun-plugin-version>1.7</maven-antrun-plugin-version>
-    <maven-resources-plugin-version>2.6</maven-resources-plugin-version>
     <maven-bundle-plugin-version>2.3.7</maven-bundle-plugin-version>
-    <war-plugin-version>2.1.1</war-plugin-version>
+
     <webapp-dir>${project.artifactId}-${project.version}</webapp-dir>
     <webapp-outdir>${basedir}/target/${webapp-dir}</webapp-outdir>
 
@@ -57,6 +67,9 @@
       javax.servlet,
       *;resolution:=optional
     </dispatch.osgi.import>
+
+    <maven.compiler.source>1.7</maven.compiler.source>
+    <maven.compiler.target>1.7</maven.compiler.target>
   </properties>
 
   <dependencies>
@@ -68,14 +81,6 @@
       <groupId>io.hawt</groupId>
       <artifactId>hawtio-plugin-mbean</artifactId>
       <version>${hawtio-version}</version>
-    </dependency>
-
-    <!-- servlet API is provided by the container -->
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
-      <version>${servlet-api-version}</version>
-      <scope>provided</scope>
     </dependency>
 
     <!-- logging -->
@@ -90,10 +95,12 @@
       <version>${slf4j-version}</version>
     </dependency>
 
+    <!-- servlet API is provided by the container -->
     <dependency>
       <groupId>org.apache.geronimo.specs</groupId>
       <artifactId>geronimo-servlet_2.5_spec</artifactId>
-      <version>1.2</version>
+      <version>${geronimo-servlet-2-5-spec-version}</version>
+      <scope>provided</scope>
     </dependency>
 
   </dependencies>
@@ -167,7 +174,6 @@
 
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>${maven-resources-plugin-version}</version>
         <executions>
           <execution>
             <!-- defining this maven plugin in the same phase as the
@@ -236,7 +242,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-war-plugin</artifactId>
-        <version>${war-plugin-version}</version>
         <configuration>
           <outputFileNameMapping>@{artifactId}@-@{baseVersion}@@{dashClassifier?}@.@{extension}@</outputFileNameMapping>
           <packagingExcludes>**/classes/OSGI-INF/**</packagingExcludes>

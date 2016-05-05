@@ -1,6 +1,6 @@
 # hawtio dispatch router plugin
 
-dispatch-plugin.war is a standalone hawtio plugin that can be deployed in a server alongside the main hawtio-web application.
+dispatch-plugin.war is a standalone [hawtio](http://hawt.io/) plugin that can be deployed in a server alongside the main hawtio-web application.
 
 The project creates a war file that can be deployed in various application services and is also OSGi-ified so it deploys nicely into Apache Karaf.
 
@@ -17,14 +17,14 @@ The dispatch-plugin.war file is pre-built and can be installed alongside the haw
 
     $ mvn clean install
 
-The dispatch-plugin-1.4.60.war file should now be in the target directory.
+The dispatch-plugin-<version>.war file should now be in the target directory.
 
 ## Apache Tomcat installation
 
-Copy the dispatch-plugin-1.4.60.war file as the following name
+Copy the dispatch-plugin-<version>.war file as the following name
 
     dispatch-plugin.war
-to the deploy directory of Apache Tomcat or similar Java web container. Ensure the hawtio.war file is present in the same directory. Point a browser at http://\<tomcathost:post\>/hawtio
+to the deploy directory of Apache Tomcat or similar Java web container. Ensure the hawtio.war file is present in the same directory. Point a browser at http://\<tomcat-host:port\>/hawtio
 Dispatch Router should be available as a tab in the console.
 
 ## Connecting to a router
