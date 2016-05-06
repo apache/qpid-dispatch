@@ -625,6 +625,7 @@ static void qdr_unmap_destination_CT(qdr_core_t *core, qdr_action_t *action, boo
 
         qd_bitmask_clear_bit(addr->rnodes, router_maskbit);
         rnode->ref_count--;
+        addr->cost_epoch--;
 
         //
         // TODO - If this affects a waypoint, create the proper side effects
