@@ -753,7 +753,8 @@ bool qd_iterator_hash_and_reset(qd_field_iterator_t *iter, uint32_t *hash)
             iter->view_start_pointer.length = hash_segment->segment_length - 2;
         else
             iter->view_start_pointer.length = hash_segment->segment_length - 1;
-    }
+    } else
+        iter->view_start_pointer.length = hash_segment->segment_length;
 
     // Remove the tail from the hash segments since we have already compared it.
     DEQ_REMOVE_TAIL(iter->hash_segments);
