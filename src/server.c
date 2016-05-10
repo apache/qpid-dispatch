@@ -730,8 +730,6 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
                                             ctx->context, ce, (qd_connection_t*) qdpn_connector_context(cxtr));
                     events = 1;
                 } else if (pn_event_type(event) == PN_TRANSPORT_ERROR) {
-                    ctx->closed = true;
-                    qdpn_connector_close(cxtr);
                     if (ctx->connector) {
                         const qd_server_config_t *config = ctx->connector->config;
                         qd_log(qd_server->log_source, QD_LOG_TRACE, "Connection to %s:%s failed", config->host, config->port);
