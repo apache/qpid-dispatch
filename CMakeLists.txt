@@ -114,9 +114,11 @@ endif (NOT COMMAND add_compile_options)
 
 add_compile_options(-pthread)
 add_compile_options(-Wall)
+if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
 add_compile_options(-Werror)
+endif (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
 add_compile_options(-std=gnu99)
-set(CATCH_UNDEFINED "-Wl,--no-undefined")
+set(CATCH_UNDEFINED "-Wl,-z,defs")
 
 ##
 ## Header file installation

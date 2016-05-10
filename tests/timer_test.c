@@ -29,7 +29,7 @@
 static unsigned long    fire_mask;
 static qd_timer_list_t  pending_timers;
 static sys_mutex_t     *lock;
-static long             time;
+static long             time_value;
 static qd_timer_t      *timers[16];
 
 
@@ -66,11 +66,11 @@ static char* test_quiet(void *context)
     fire_mask = 0;
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
 
     while(fire_head());
@@ -132,9 +132,9 @@ static char* test_immediate_plus_delayed(void *context)
     if (fire_mask != 1)  return "Incorrect fire mask 1";
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    time += 8;
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    time_value += 8;
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
 
     if (fire_head() < 1) return "Delayed Failed to fire";
@@ -153,19 +153,19 @@ static char* test_single(void *context)
     if (fire_head() > 0) return "Premature firing 1";
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     if (fire_head() > 0) return "Premature firing 2";
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     if (fire_head() < 1) return "Failed to fire";
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     if (fire_head() != 0) return "Spurious fires";
 
@@ -185,8 +185,8 @@ static char* test_two_inorder(void *context)
     qd_timer_schedule(timers[1], 4);
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     int count = fire_head();
     if (count < 1) return "First failed to fire";
@@ -194,8 +194,8 @@ static char* test_two_inorder(void *context)
     if (fire_mask != 1) return "Incorrect fire mask 1";
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     if (fire_head() < 1) return "Second failed to fire";
     if (fire_mask != 3)  return "Incorrect fire mask 3";
@@ -213,8 +213,8 @@ static char* test_two_reverse(void *context)
     qd_timer_schedule(timers[1], 2);
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     int count = fire_head();
     if (count < 1) return "First failed to fire";
@@ -222,8 +222,8 @@ static char* test_two_reverse(void *context)
     if (fire_mask != 2) return "Incorrect fire mask 2";
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     if (fire_head() < 1) return "Second failed to fire";
     if (fire_mask != 3)  return "Incorrect fire mask 3";
@@ -241,8 +241,8 @@ static char* test_two_duplicate(void *context)
     qd_timer_schedule(timers[1], 2);
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     int count = fire_head();
     if (count != 2) return "Expected two firings";
@@ -250,8 +250,8 @@ static char* test_two_duplicate(void *context)
     if (fire_mask != 3) return "Incorrect fire mask 3";
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     if (fire_head() > 0) return "Spurious timer fires";
 
@@ -270,8 +270,8 @@ static char* test_separated(void *context)
     qd_timer_schedule(timers[1], 4);
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     count = fire_head();
     if (count < 1) return "First failed to fire";
@@ -282,8 +282,8 @@ static char* test_separated(void *context)
     qd_timer_schedule(timers[3], 4);
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     count = fire_head();
     fire_head();
@@ -292,20 +292,20 @@ static char* test_separated(void *context)
     if (fire_mask != 7)  return "Incorrect fire mask 7";
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     count = fire_head();
     if (count < 1) return "Fourth failed to fire";
     if (fire_mask != 15) return "Incorrect fire mask 15";
 
     sys_mutex_lock(lock);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
-    qd_timer_visit_LH(time++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
+    qd_timer_visit_LH(time_value++);
     sys_mutex_unlock(lock);
     count = fire_head();
     if (count > 0) return "Spurious fire";
@@ -350,7 +350,7 @@ static char* test_big(void *context)
         qd_timer_schedule(timers[i], durations[i]);
     for (i = 0; i < 18; i++) {
         sys_mutex_lock(lock);
-        qd_timer_visit_LH(time++);
+        qd_timer_visit_LH(time_value++);
         sys_mutex_unlock(lock);
         while(fire_head());
         if (fire_mask != masks[i]) {
@@ -371,7 +371,7 @@ int timer_tests(void)
     fire_mask = 0;
     DEQ_INIT(pending_timers);
     lock = qd_timer_lock();
-    time = 1;
+    time_value = 1;
 
     timers[0]  = qd_timer(0, 0, (void*) 0x00000001);
     timers[1]  = qd_timer(0, 0, (void*) 0x00000002);

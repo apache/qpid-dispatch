@@ -179,7 +179,7 @@ qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const cha
     if (errnum) {
         ts.error_code = QD_ERROR_SYSTEM;
         char buf[ERROR_MAX];
-        char *errstr = strerror_r(errno, buf, sizeof(buf));
+		strerror_r(errno, buf, sizeof(buf));
 
         char *begin = ts.error_message;
         char *end = begin + ERROR_MAX;
@@ -187,7 +187,7 @@ qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const cha
         va_start(arglist, fmt);
         vaprintf(&begin, end, fmt, arglist);
         va_end(arglist);
-        aprintf(&begin, end, ": %s", errstr);
+        aprintf(&begin, end, ": %s", buf);
         qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", qd_error_message());
         return qd_error_code();
     }

@@ -23,6 +23,7 @@
 #include <qpid/dispatch/amqp.h>
 #include "compose_private.h"
 #include <memory.h>
+#include <string.h>
 
 ALLOC_DEFINE(qd_composite_t);
 ALLOC_DEFINE(qd_composed_field_t);

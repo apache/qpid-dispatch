@@ -106,7 +106,6 @@ set_target_properties(qpid-dispatch PROPERTIES
 install(TARGETS qpid-dispatch
   LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
 
-# Set in parent scope for calling cmake file.
-set (QPID_DISPATCH_LIB "libqpid-dispatch.so" PARENT_SCOPE)
+set (QPID_DISPATCH_LIB "libqpid-dispatch.so")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)

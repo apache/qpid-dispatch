@@ -37,6 +37,10 @@
 #include <assert.h>
 #include <time.h>
 
+#ifdef __sun
+#include <signal.h>
+#endif
+
 #include <qpid/dispatch/driver.h>
 #include <qpid/dispatch/threading.h>
 #include "alloc.h"
@@ -264,8 +268,9 @@ qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
 {
     if (!driver) return NULL;
 
-    struct addrinfo *addr;
-    int code = getaddrinfo(host, port, NULL, &addr);
+    struct addrinfo hints = {0}, *addr;
+    hints.ai_socktype = SOCK_STREAM;
+    int code = getaddrinfo(host, port, &hints, &addr);
     if (code) {
         qd_log(driver->log, QD_LOG_ERROR, "getaddrinfo(%s, %s): %s\n", host, port, gai_strerror(code));
         return 0;
@@ -481,8 +486,9 @@ qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver,
 {
     if (!driver) return NULL;
 
-    struct addrinfo *addr;
-    int code = getaddrinfo(host, port, NULL, &addr);
+    struct addrinfo hints = {0}, *addr;
+    hints.ai_socktype = SOCK_STREAM;
+    int code = getaddrinfo(host, port, &hints, &addr);
     if (code) {
         qd_log(driver->log, QD_LOG_ERROR, "getaddrinfo(%s, %s): %s", host, port, gai_strerror(code));
         return 0;
@@ -788,7 +794,11 @@ void qdpn_connector_process(qdpn_connector_t *c)
                 c->status |= PN_SEL_WR;
                 if (c->pending_write) {
                     c->pending_write = false;
+                    #ifdef MSG_NOSIGNAL
                     ssize_t n = send(c->fd, pn_transport_head(transport), pending, MSG_NOSIGNAL);
+                    #else
+                    ssize_t n = send(c->fd, pn_transport_head(transport), pending, 0);
+                    #endif
                     if (n < 0) {
                         // XXX
                         if (errno != EAGAIN) {
@@ -851,6 +861,12 @@ qdpn_driver_t *qdpn_driver()
 
     qdpn_configure_sock(d, d->ctrl[0], false);
     qdpn_configure_sock(d, d->ctrl[1], false);
+
+#ifdef __sun
+    struct sigaction act;
+    act.sa_handler = SIG_IGN;
+    sigaction(SIGPIPE, &act, NULL);
+#endif
 
     return d;
 }
