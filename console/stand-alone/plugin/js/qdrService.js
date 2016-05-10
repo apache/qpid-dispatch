@@ -523,10 +523,16 @@ The response looks like:
 			//QDR.log.debug("got all results for  " + entity);
 			// aggregate the responses
 			var newResponse = {};
+			newResponse['aggregates'] = [];
 			var thisNode = responses[selectedNodeId];
+			if (!thisNode) {
+				newResponse['attributeNames'] = ['name'];
+				newResponse['results'] = [''];
+				callback(nodeNames, entity, newResponse);
+				return;
+			}
 			newResponse['attributeNames'] = thisNode.attributeNames;
 			newResponse['results'] = thisNode.results;
-			newResponse['aggregates'] = [];
 			for (var i=0; i<thisNode.results.length; ++i) {
 				var result = thisNode.results[i];
 				var vals = [];

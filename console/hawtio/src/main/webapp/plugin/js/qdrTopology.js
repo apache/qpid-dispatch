@@ -314,18 +314,21 @@ var QDR = (function (QDR) {
 
 		var aNode = function (id, name, nodeType, nodeInfo, nodeIndex, x, y, resultIndex, fixed, properties) {
 			properties = properties || {};
-			var containerName;
+			var routerId;
 			if (nodeInfo) {
 				var node = nodeInfo[id];
 				if (node) {
-					containerName = node['.container'].results[0][0];
+					var router = node['.router'];
+					routerId = QDRService.valFor(router.attributeNames, router.results[0], 'id')
+					if (!routerId)
+						routerId = QDRService.valFor(router.attributeNames, router.results[0], 'routerId')
 				}
 			}
 			return {   key: id,
 				name: name,
 				nodeType: nodeType,
 				properties: properties,
-				containerName: containerName,
+				routerId: routerId,
 				x: x,
 				y: y,
 				id: nodeIndex,
@@ -597,11 +600,24 @@ var QDR = (function (QDR) {
             var nodeIndex = 0;
             var nodeInfo = QDRService.topology.nodeInfo();
             for (var id in nodeInfo) {
-                var node = nodeInfo[id];
-                if (node['.container'].results[0][0] == _id)
+                var node = nodeInfo[id]['.router'];
+                // there should be only one router entity for each node, so using results[0] should be fine
+                if (QDRService.valFor( node.attributeNames, node.results[0], "id") === _id)
+                    return nodeIndex;
+                if (QDRService.valFor( node.attributeNames, node.results[0], "routerId") === _id)
                     return nodeIndex;
                 nodeIndex++
             }
+			// there was no router.id that matched, check deprecated router.routerId
+            nodeIndex = 0;
+            for (var id in nodeInfo) {
+                var node = nodeInfo[id]['.container'];
+				if (node) {
+					if (QDRService.valFor ( node.attributeNames, node.results[0], "containerName") === _id)
+						return nodeIndex;
+				}
+				nodeIndex++
+			}
             QDR.log.warn("unable to find containerIndex for " + _id);
             return -1;
         }
@@ -807,7 +823,7 @@ var QDR = (function (QDR) {
 				    }
 				    return;
 				  }
-				        //QDR.log.debug("showing connections form");
+			        //QDR.log.debug("showing connections form");
 					var resultIndex = 0; // the connection to use
                     var left = d.left ? d.target : d.source;
 					// right is the node that the arrow points to, left is the other node
@@ -822,7 +838,7 @@ var QDR = (function (QDR) {
                             var conn = onode['.connection'].results[resultIndex];
                             /// find the connection whose container is the right's name
                             var name = QDRService.valFor(onode['.connection'].attributeNames, conn, "container");
-                            if (name == right.containerName) {
+                            if (name == right.routerId) {
                                 break;
                             }
                         }
@@ -832,7 +848,8 @@ var QDR = (function (QDR) {
                             left = d.target;
                             resultIndex = left.resultIndex;
                         }
-                        updateForm(left.key, 'connection', resultIndex);
+						if (resultIndex)
+                            updateForm(left.key, 'connection', resultIndex);
                     }
 
 					mousedown_link = d;
@@ -890,7 +907,7 @@ var QDR = (function (QDR) {
 					var connections = nodeInfo[d.source.key]['.connection'];
 					var containerIndex = connections.attributeNames.indexOf('container');
 					connections.results.some ( function (connection) {
-                        if (connection[containerIndex] == d.target.containerName) {
+                        if (connection[containerIndex] == d.target.routerId) {
                             root.attributeNames = connections.attributeNames;
                             root.obj = connection;
                             root.desc = "Connection";
