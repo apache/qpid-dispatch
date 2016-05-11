@@ -613,6 +613,38 @@ class PathTest(unittest.TestCase):
         self.assertEqual(valid_origins['R6'], ['R2', 'R3', 'R4'])
         self.assertEqual(valid_origins['R7'], ['R2', 'R3', 'R4'])
 
+    def test_topology6_path_vs_valid_origin(self):
+        """
+
+        +====+      +====+      +----+
+        | R1 |--10--| R3 |--10--| R5 |
+        +====+      +====+      +----+
+           |           |           |
+           1          10           1
+           |           |           |
+        +----+      +----+      +----+
+        | R2 |--10--| R4 |--10--| R6 |
+        +----+      +----+      +----+
+
+        """
+        collection = { 'R1': LinkState(None, 'R1', 1, {'R2':1,  'R3':10}),
+                       'R2': LinkState(None, 'R2', 1, {'R1':1,  'R4':10}),
+                       'R3': LinkState(None, 'R3', 1, {'R1':10, 'R4':10, 'R5':10}),
+                       'R4': LinkState(None, 'R4', 1, {'R2':10, 'R3':10, 'R6':10}),
+                       'R5': LinkState(None, 'R5', 1, {'R3':10, 'R6':1}),
+                       'R6': LinkState(None, 'R6', 1, {'R4':10, 'R5':1}) }
+
+        self.id = 'R3'
+        self.engine = PathEngine(self)
+        r3_next_hops, r3_costs, r3_valid_origins = self.engine.calculate_routes(collection)
+
+        self.id = 'R1'
+        self.engine = PathEngine(self)
+        r1_next_hops, r1_costs, r1_valid_origins = self.engine.calculate_routes(collection)
+
+        self.assertEqual(r1_next_hops['R6'], 'R2')
+        self.assertEqual(r3_valid_origins['R6'], [])
+
 
 if __name__ == '__main__':
     unittest.main(main_module())
