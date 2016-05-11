@@ -72,7 +72,10 @@ class RouterTest(TestCase):
         router('A', 'server',
                ('listener', {'role': 'inter-router', 'port': inter_router_port}))
         router('B', 'client',
-               ('connector', {'role': 'inter-router', 'port': inter_router_port}))
+               ('connector',
+                {'role': 'inter-router',
+                 'port': inter_router_port,
+                 'verifyHostName': 'no'}))
 
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')
