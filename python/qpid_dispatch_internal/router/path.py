@@ -110,7 +110,8 @@ class PathEngine(object):
                             path.append(v)
                         nodes.remove(v)
                     if v == self.id:
-                        valid_origin[root].extend(path)
+                        for dest in path:
+                            valid_origin[dest].append(root)
                     u = v
                     v = prev[u]
         return valid_origin
