@@ -784,7 +784,8 @@
                         "DEFAULT"
                     ],
                     "required": true,
-                    "description": "Module to configure. The special module 'DEFAULT' specifies defaults for all modules."
+                    "description": "Module to configure. The special module 'DEFAULT' specifies defaults for all modules.",
+                    "update": true
                 },
                 "enable": {
                     "type": "string",
