@@ -1328,6 +1328,20 @@
                     "required": false,
                     "create": true
                 },
+                "defaultApplication": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Application policyRuleset to use for connections with no open.hostname or a hostname that does not match any existing policy. For users that don't wish to use open.hostname or any multi-tennancy feature, this default policy can be the only policy in effect for the network.",
+                    "required": false,
+                    "create": true
+                },
+                "defaultApplicationEnabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable defaultApplication policy fallback logic.",
+                    "required": false,
+                    "create": true
+                },
                 "connectionsProcessed": {"type": "integer", "graph": true},
                 "connectionsDenied": {"type": "integer", "graph": true},
                 "connectionsCurrent": {"type": "integer", "graph": true}

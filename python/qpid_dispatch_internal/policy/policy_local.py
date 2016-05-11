@@ -486,6 +486,16 @@ class PolicyLocal(object):
         # Entries created as connection AMQP Opens arrive
         # Entries destroyed as sockets closed
         self._connections = {}
+
+        # _default_application is a string
+        #  holds the name of the policyRuleset to use when the
+        #  open.hostname is not found in the rulesetdb
+        self._default_application = ""
+
+        # _default_application_enabled is a boolean
+        #  controls default application fallback logic
+        self._default_application_enabled = False
+
     #
     # Service interfaces
     #
@@ -549,11 +559,27 @@ class PolicyLocal(object):
         """
         return self.rulesetdb.keys()
 
+    def set_default_application(self, name, enabled):
+        """
+        Set the default application name and control its enablement.
+        Raise PolicyError if the named application is enabled but absent.
+        @param name: the name of the default application
+        @param enabled: default application ruleset logic is active
+        @return: none
+        """
+        self._default_application = name
+        self._default_application_enabled = enabled
+        if enabled:
+            if not name in self.policy_db_get_names():
+                raise PolicyError("Policy fallback defaultApplication '%s' does not exist" % name)
+            self._manager.log_info("Policy fallback defaultApplication is enabled: '%s'" % name)
+        else:
+            self._manager.log_info("Policy fallback defaultApplication is disabled")
 
     #
     # Runtime query interface
     #
-    def lookup_user(self, user, host, app, conn_name, conn_id):
+    def lookup_user(self, user, host, app_in, conn_name, conn_id):
         """
         Lookup function called from C.
         Determine if a user on host accessing app through AMQP Open is allowed
@@ -562,19 +588,24 @@ class PolicyLocal(object):
         returns true then it has registered and counted the connection.
         @param[in] user connection authId
         @param[in] host connection remote host numeric IP address as string
-        @param[in] app application user is accessing
+        @param[in] app_in application user is accessing
         @param[in] conn_name connection name used for tracking reports
         @param[in] conn_id internal connection id
         @return settings user-group name if allowed; "" if not allowed
         """
         try:
-            if not app in self.rulesetdb:
-                self._manager.log_info(
-                    "DENY AMQP Open for user '%s', host '%s', application '%s': "
-                    "No policy defined for application" % (user, host, app))
-                return ""
+            app = app_in
+            if not app_in in self.rulesetdb:
+                if self._default_application_enabled:
+                    app = self._default_application
+                else:
+                    self._manager.log_info(
+                        "DENY AMQP Open for user '%s', host '%s', application '%s': "
+                        "No policy defined for application" % (user, host, app))
+                    return ""
 
             ruleset = self.rulesetdb[app]
+
             if not app in self.statsdb:
                 msg = (
                     "DENY AMQP Open for user '%s', host '%s', application '%s': "
@@ -641,7 +672,7 @@ class PolicyLocal(object):
             # return failure
             return ""
 
-    def lookup_settings(self, appname, name, upolicy):
+    def lookup_settings(self, appname_in, name, upolicy):
         """
         Given a settings name, return the aggregated policy blob.
         @param[in] appname: application user is accessing
@@ -652,6 +683,10 @@ class PolicyLocal(object):
         # Note: the upolicy output is a non-nested dict with settings of interest
         """
         try:
+            appname = appname_in
+            if not appname in self.rulesetdb and self._default_application_enabled:
+                appname = self._default_application
+
             if not appname in self.rulesetdb:
                 self._manager.log_info(
                         "lookup_settings fail for application '%s', user group '%s': "

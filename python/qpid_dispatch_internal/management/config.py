@@ -183,6 +183,8 @@ def configure_dispatch(dispatch, lib_handle, filename):
     from qpid_dispatch_internal.display_name.display_name import DisplayNameService
     displayname_service = DisplayNameService("$displayname")
     policyFolder = config.by_type('policy')[0]['policyFolder']
+    policyDefaultApplication = config.by_type('policy')[0]['defaultApplication']
+    policyDefaultApplicationEnabled = config.by_type('policy')[0]['defaultApplicationEnabled']
     # Remaining configuration
     for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", \
              "router.config.address", "router.config.linkRoute", "router.config.autoLink", \
@@ -207,3 +209,6 @@ def configure_dispatch(dispatch, lib_handle, filename):
                 pconfig = PolicyConfig(os.path.join(apath, i))
                 for a in pconfig.by_type("policyRuleset"):
                     agent.configure(a)
+
+    # Set policy default application after all rulesets loaded
+    agent.policy.set_default_application(policyDefaultApplication, policyDefaultApplicationEnabled)

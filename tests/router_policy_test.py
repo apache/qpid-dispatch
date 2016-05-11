@@ -190,6 +190,50 @@ class PolicyFile(TestCase):
             PolicyFile.policy.lookup_settings('photoserver', 'unknown', upolicy)
         )
 
+class PolicyFileApplicationFallback(TestCase):
+    manager = MockPolicyManager()
+    policy = PolicyLocal(manager)
+    policy.test_load_config()
+
+    def test_bad_app_fallback(self):
+        # Show that with no fallback the user cannot connect
+        self.assertTrue(
+            self.policy.lookup_user('zeke', '192.168.100.5', 'galleria', "connid", 5) == '')
+
+        # Enable the fallback defaultApplication and show the same user can now connect
+        self.policy.set_default_application('photoserver', True)
+        settingsname = self.policy.lookup_user('zeke', '192.168.100.5', 'galleria', "connid", 5)
+        self.assertTrue(settingsname == 'test')
+
+        # Show that the fallback settings are returned
+        upolicy = {}
+        self.assertTrue(
+            self.policy.lookup_settings('phony*app*name', settingsname, upolicy)
+        )
+        self.assertTrue(upolicy['maxFrameSize']            == 444444)
+        self.assertTrue(upolicy['maxMessageSize']          == 444444)
+        self.assertTrue(upolicy['maxSessionWindow']        == 444444)
+        self.assertTrue(upolicy['maxSessions']              == 4)
+        self.assertTrue(upolicy['maxSenders']               == 44)
+        self.assertTrue(upolicy['maxReceivers']             == 44)
+        self.assertTrue(upolicy['allowAnonymousSender'])
+        self.assertTrue(upolicy['allowDynamicSrc'])
+        self.assertTrue(upolicy['targets'] == 'private')
+        self.assertTrue(upolicy['sources'] == 'private')
+
+        # Disable fallback and show failure again
+        self.policy.set_default_application('', False)
+        self.assertTrue(
+            self.policy.lookup_user('zeke', '192.168.100.5', 'galleria', "connid", 5) == '')
+
+        # Configuration will not allow default application to point to bogus app ruleset
+        was_allowed = True
+        try:
+            self.policy.set_default_application('foobar', True)
+        except:
+            was_allowed = False
+        self.assertTrue(was_allowed == False)
+
 class PolicyAppConnectionMgrTests(TestCase):
 
     def test_policy_app_conn_mgr_fail_by_total(self):

@@ -78,6 +78,18 @@ class PolicyManager(object):
         self._policy_local.create_ruleset(attributes)
 
     #
+    # Management interface to set the default application
+    #
+    def set_default_application(self, name, enabled):
+        """
+        Set default application
+        @param name:
+        @param enabled
+        @return:
+        """
+        self._policy_local.set_default_application(name, enabled)
+
+    #
     # Runtime query interface
     #
     def lookup_user(self, user, host, app, conn_name, conn_id):
