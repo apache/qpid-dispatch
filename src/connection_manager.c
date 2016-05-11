@@ -127,27 +127,28 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
 {
     qd_error_clear();
 
-    bool authenticatePeer   = qd_entity_opt_bool(entity, "authenticatePeer",  false); CHECK();
-    char *stripAnnotations  = qd_entity_opt_string(entity, "stripAnnotations", 0);    CHECK();
-    bool requireEncryption  = qd_entity_opt_bool(entity, "requireEncryption", false); CHECK();
-    bool requireSsl         = qd_entity_opt_bool(entity, "requireSsl",        false); CHECK();
-    bool depRequirePeerAuth = qd_entity_opt_bool(entity, "requirePeerAuth",   false); CHECK();
+    bool authenticatePeer   = qd_entity_opt_bool(entity, "authenticatePeer",  false);    CHECK();
+    bool verifyHostName     = qd_entity_opt_bool(entity, "verifyHostName",    false);    CHECK();
+    char *stripAnnotations  = qd_entity_opt_string(entity, "stripAnnotations", 0);       CHECK();
+    bool requireEncryption  = qd_entity_opt_bool(entity, "requireEncryption", false);    CHECK();
+    bool requireSsl         = qd_entity_opt_bool(entity, "requireSsl",        false);    CHECK();
+    bool depRequirePeerAuth = qd_entity_opt_bool(entity, "requirePeerAuth",   false);    CHECK();
     bool depAllowUnsecured  = qd_entity_opt_bool(entity, "allowUnsecured", !requireSsl); CHECK();
 
     memset(config, 0, sizeof(*config));
-    config->host                 = qd_entity_get_string(entity, "addr"); CHECK();
-    config->port                 = qd_entity_get_string(entity, "port"); CHECK();
-    config->name                 = qd_entity_opt_string(entity, "name", 0); CHECK();
-    config->role                 = qd_entity_get_string(entity, "role"); CHECK();
-    config->inter_router_cost    = qd_entity_opt_long(entity, "cost", 1); CHECK();
+    config->host                 = qd_entity_get_string(entity, "addr");              CHECK();
+    config->port                 = qd_entity_get_string(entity, "port");              CHECK();
+    config->name                 = qd_entity_opt_string(entity, "name", 0);           CHECK();
+    config->role                 = qd_entity_get_string(entity, "role");              CHECK();
+    config->inter_router_cost    = qd_entity_opt_long(entity, "cost", 1);             CHECK();
     config->protocol_family      = qd_entity_opt_string(entity, "protocolFamily", 0); CHECK();
-    config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize"); CHECK();
-    config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds"); CHECK();
-    config->sasl_username        = qd_entity_opt_string(entity, "saslUsername", 0); CHECK();
-    config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0); CHECK();
+    config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize");        CHECK();
+    config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds");  CHECK();
+    config->sasl_username        = qd_entity_opt_string(entity, "saslUsername", 0);   CHECK();
+    config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0);   CHECK();
     config->sasl_mechanisms      = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
+    config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0);     CHECK();
     config->ssl_enabled          = has_attrs(entity, ssl_attributes, ssl_attributes_count);
-    config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0); CHECK();
 
     //
     // Handle the defaults for link capacity.
@@ -160,6 +161,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     // user community, we can revisit this later.
     //
     config->allowInsecureAuthentication = true;
+    config->verify_host_name = verifyHostName;
 
     load_strip_annotations(config, stripAnnotations);
 
