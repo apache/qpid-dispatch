@@ -223,34 +223,48 @@ var QDR = (function (QDR) {
 	        dialog.close();
 	    };
 
-        // initialize the rateWindow slider
-        $scope.slider = {
-            'options': {
-                min: 1,
-                max: 10,
-                step: 1,
-                tick: true,
-                stop: function (event, ui) {
-                    $scope.dialogChart.rateWindow = ui.value * 1000;
-                    if (dialogSvgChart)
-                        dialogSvgChart.tick($scope.svgDivId);
-                }
-            }
-		};
+		var initRateSlider = function () {
+			if (document.getElementById('rateSlider')) {
+				$( "#rateSlider" ).slider({
+				      value: $scope.rateWindow,
+				      min: 1,
+				      max: 10,
+				      step: 1,
+				      slide: function( event, ui ) {
+						$scope.rateWindow = ui.value;
+						$scope.dialogChart.rateWindow = ui.value * 1000;
+						$scope.$apply();
+						if (dialogSvgChart)
+							dialogSvgChart.tick($scope.svgDivId);
+				      }
+				});
 
-        $scope.visibleDuration =
-        $scope.duration = {
-            'options': {
-                min: 1,
-                max: 10,
-                step: 1,
-                tick: true,
-                stop: function (event, ui) {
-                    if (dialogSvgChart)
-                        dialogSvgChart.tick($scope.svgDivId);
-                }
-            }
-		};
+			} else {
+				setTimeout(initRateSlider, 100)
+			}
+		}
+		initRateSlider();
+
+		var initDurationSlider = function () {
+			if (document.getElementById('durationSlider')) {
+				$( "#durationSlider" ).slider({
+				      value: $scope.dialogChart.visibleDuration,
+				      min: 1,
+				      max: 10,
+				      step: 1,
+				      slide: function( event, ui ) {
+						$scope.visibleDuration = $scope.dialogChart.visibleDuration = ui.value;
+						$scope.$apply();
+						if (dialogSvgChart)
+							dialogSvgChart.tick($scope.svgDivId);
+				      }
+				});
+
+			} else {
+				setTimeout(initDurationSlider, 100)
+			}
+		}
+		initDurationSlider();
 
         // handle the Apply button click
         // update the dashboard chart's properties
@@ -258,7 +272,7 @@ var QDR = (function (QDR) {
             $scope.chart.areaColor = $scope.dialogChart.areaColor;
             $scope.chart.lineColor = $scope.dialogChart.lineColor;
             $scope.chart.type = $scope.dialogChart.type;
-            $scope.chart.rateWindow = $scope.dialogChart.rateWindow;
+            $scope.chart.rateWindow = $scope.rateWindow * 1000;
             $scope.chart.title($scope.dialogChart.title());
             $scope.chart.visibleDuration = $scope.dialogChart.visibleDuration;
             QDRChartService.saveCharts();
@@ -299,6 +313,3 @@ var QDR = (function (QDR) {
   return QDR;
 
 }(QDR || {}));
-
-// "QDRBrouteraddressrouteraddressLqdrouterdeliveriesTransit_0_0"
-// "QDRBrouteraddressrouteraddressLqdrouterdeliveriesTransit_1_0"

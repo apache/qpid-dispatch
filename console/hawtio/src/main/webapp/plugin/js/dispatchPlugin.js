@@ -5,9 +5,6 @@
  * The main entry point for the QDR module
  *
  */
-$.getScript('https://cdn.rawgit.com/angular-ui/ui-slider/master/src/slider.js', function() {
-	hawtioPluginLoader.addModule('ui.slider');
-});
 var QDR = (function(QDR) {
 
   /**

@@ -30,7 +30,7 @@
                 <label><input type="radio" ng-model="dialogChart.type" value="rate" /> Rate Chart</label>
                 <div class="dlg-slider" ng-show="dialogChart.type=='rate'">
                     <span>Rate Window: {{rateWindow}} second{{rateWindow > 1 ? "s" : ""}}</span>
-                    <div class="slider" ui-slider="slider.options" ng-model="rateWindow"></div>
+                    <div id="rateSlider"></div>
                 </div>
                 <div style="clear:both;"> </div>
             </tab>
@@ -47,7 +47,8 @@
             <tab heading="Duration">
                 <legend>Chart duration</legend>
                 <div class="dlg-slider duration">
-                    <span>Show data for past {{dialogChart.visibleDuration}} minute{{dialogChart.visibleDuration > 1 ? "s" : ""}}</span> <div class="slider" ui-slider="duration.options" ng-model="dialogChart.visibleDuration"></div>
+                    <span>Show data for past {{dialogChart.visibleDuration}} minute{{dialogChart.visibleDuration > 1 ? "s" : ""}}</span>
+                    <div id="durationSlider"></div>
                 </div>
                 <div style="clear:both;"> </div>
 
