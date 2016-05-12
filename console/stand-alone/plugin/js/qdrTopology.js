@@ -1158,7 +1158,7 @@ var QDR = (function (QDR) {
 						|| linkTypeIndex < 0 || nameIndex < 0 || linkDirIndex < 0)
 						return;
 					links.results.forEach ( function (link) {
-						if (link[connectionIdIndex] == root.obj[identityIndex] && link[linkTypeIndex] == root.obj[roleIndex])
+						if (root.obj && link[connectionIdIndex] == root.obj[identityIndex] && link[linkTypeIndex] == root.obj[roleIndex])
 							root.children.push (
 								{ name: "(" + link[linkDirIndex] + ") " + link[nameIndex],
 								size: 100,
