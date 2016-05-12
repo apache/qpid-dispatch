@@ -175,11 +175,13 @@ qd_error_t qd_error_py_impl(const char *file, int line) {
     return qd_error_code();
 }
 
+static inline void ignore_result(char* ignored) {}
+
 qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const char *fmt, ...) {
     if (errnum) {
         ts.error_code = QD_ERROR_SYSTEM;
         char buf[ERROR_MAX];
-		strerror_r(errno, buf, sizeof(buf));
+		ignore_result(strerror_r(errno, buf, sizeof(buf)));
 
         char *begin = ts.error_message;
         char *end = begin + ERROR_MAX;
