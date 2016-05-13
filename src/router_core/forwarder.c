@@ -559,12 +559,29 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
         //
         // Look for a next-hop we can use to forward the link-attach.
         //
-        int         router_bit;
         qdr_node_t *next_node;
 
-        if (qd_bitmask_first_set(addr->rnodes, &router_bit)) {
-            qdr_node_t *rnode = core->routers_by_mask_bit[router_bit];
+        if (addr->cost_epoch != core->cost_epoch) {
+            addr->next_remote = -1;
+            addr->cost_epoch  = core->cost_epoch;
+        }
+
+        if (addr->next_remote < 0) {
+            qd_bitmask_first_set(addr->rnodes, &addr->next_remote);
+        }
+
+        if (addr->next_remote >= 0) {
+
+            qdr_node_t *rnode = core->routers_by_mask_bit[addr->next_remote];
+
             if (rnode) {
+                //
+                // Advance the addr->next_remote so there will be link balance across containers
+                //
+                _qdbm_next(addr->rnodes, &addr->next_remote);
+                if (addr->next_remote == -1)
+                    qd_bitmask_first_set(addr->rnodes, &addr->next_remote);
+
                 if (rnode->next_hop)
                     next_node = rnode->next_hop;
                 else
