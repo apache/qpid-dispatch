@@ -430,15 +430,20 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
             addr->outstanding_deliveries[i] = 0;
     }
 
-    qdr_link_t *chosen_link     = 0;
-    int         chosen_link_bit = -1;
-    uint32_t    link_value      = UINT32_MAX;
-    bool        transit         = false;
+    qdr_link_t *best_eligible_link       = 0;
+    int         best_eligible_link_bit   = -1;
+    uint32_t    eligible_link_value      = UINT32_MAX;
+    qdr_link_t *best_ineligible_link     = 0;
+    int         best_ineligible_link_bit = -1;
+    uint32_t    ineligible_link_value    = UINT32_MAX;
 
     //
     // Find all the possible outbound links for this delivery, searching for the one with the
     // smallest eligible value.  Value = outstanding_deliveries + minimum_downrange_cost.
     // A link is ineligible if the outstanding_deliveries is equal to the link's capacity.
+    //
+    // If there are no eligible links, use the best ineligible link.  Zero fanout should be returned
+    // only if there are no available destinations.
     //
 
     //
@@ -451,11 +456,15 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         bool        eligible = link->capacity > value;
 
         //
-        // If this is the best eligible link thus far, choose it.
+        // If this is the best eligible link so far, record the fact.
+        // Otherwise, if this is the best ineligible link, make note of that.
         //
-        if (eligible && link_value > value) {
-            chosen_link = link;
-            link_value  = value;
+        if (eligible && eligible_link_value > value) {
+            best_eligible_link  = link;
+            eligible_link_value = value;
+        } else if (!eligible && ineligible_link_value > value) {
+            best_ineligible_link  = link;
+            ineligible_link_value = value;
         }
 
         link_ref = DEQ_NEXT(link_ref);
@@ -465,7 +474,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     // If we haven't already found a link with zero (best possible) value, check the
     // inter-router links as well.
     //
-    if (!chosen_link || link_value > 0) {
+    if (!best_eligible_link || eligible_link_value > 0) {
         //
         // Get the mask bit associated with the ingress router for the message.
         // This will be compared against the "valid_origin" masks for each
@@ -488,21 +497,38 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
             qdr_node_t *rnode     = core->routers_by_mask_bit[node_bit];
             qdr_node_t *next_node = rnode->next_hop ? rnode->next_hop : rnode;
             qdr_link_t *link      = next_node->peer_data_link;
+            if (!link) continue;
             int         link_bit  = link->conn->mask_bit;
             int         value     = addr->outstanding_deliveries[link_bit];
-            if (value < link->capacity && qd_bitmask_value(rnode->valid_origins, origin)) {
+            bool        eligible  = link->capacity > value;
+
+            if (qd_bitmask_value(rnode->valid_origins, origin)) {
                 //
-                // Link is eligible, adjust the value by the bias (node cost).
+                // Link is a candidate, adjust the value by the bias (node cost).
                 //
                 value += rnode->cost;
-                if (link_value > value) {
-                    chosen_link     = link;
-                    chosen_link_bit = link_bit;
-                    link_value      = value;
-                    transit         = true;
+                if (eligible && eligible_link_value > value) {
+                    best_eligible_link     = link;
+                    best_eligible_link_bit = link_bit;
+                    eligible_link_value    = value;
+                } else if (!eligible && ineligible_link_value > value) {
+                    best_ineligible_link     = link;
+                    best_ineligible_link_bit = link_bit;
+                    ineligible_link_value    = value;
                 }
             }
         }
+    }
+
+    qdr_link_t *chosen_link     = 0;
+    int         chosen_link_bit = -1;
+
+    if (best_eligible_link) {
+        chosen_link     = best_eligible_link;
+        chosen_link_bit = best_eligible_link_bit;
+    } else if (best_ineligible_link) {
+        chosen_link     = best_ineligible_link;
+        chosen_link_bit = best_ineligible_link_bit;
     }
 
     if (chosen_link) {
@@ -521,7 +547,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         //
         // Bump the appropriate counter based on where we sent the delivery.
         //
-        if (transit)
+        if (chosen_link_bit >= 0)
             addr->deliveries_transit++;
         else
             addr->deliveries_egress++;
