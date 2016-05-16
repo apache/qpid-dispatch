@@ -440,7 +440,20 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     sys_mutex_lock(conn->work_lock);
     DEQ_MOVE(link->updated_deliveries, updated_deliveries);
     DEQ_MOVE(link->undelivered, undelivered);
+    qdr_delivery_t *d = DEQ_HEAD(undelivered);
+    while (d) {
+        assert(d->where == QDR_DELIVERY_IN_UNDELIVERED);
+        d->where = QDR_DELIVERY_NOWHERE;
+        d = DEQ_NEXT(d);
+    }
+
     DEQ_MOVE(link->unsettled, unsettled);
+    d = DEQ_HEAD(unsettled);
+    while (d) {
+        assert(d->where == QDR_DELIVERY_IN_UNSETTLED);
+        d->where = QDR_DELIVERY_NOWHERE;
+        d = DEQ_NEXT(d);
+    }
     sys_mutex_unlock(conn->work_lock);
 
     //

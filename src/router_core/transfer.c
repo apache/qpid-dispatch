@@ -107,36 +107,38 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
     int               offer   = -1;
     bool              settled = false;
 
-    while (credit > 0 && !drained) {
-        sys_mutex_lock(conn->work_lock);
-        dlv = DEQ_HEAD(link->undelivered);
-        if (dlv) {
-            DEQ_REMOVE_HEAD(link->undelivered);
-            settled = dlv->settled;
-            if (!settled) {
-                DEQ_INSERT_TAIL(link->unsettled, dlv);
-                dlv->where = QDR_DELIVERY_IN_UNSETTLED;
+    if (link->link_direction == QD_OUTGOING) {
+        while (credit > 0 && !drained) {
+            sys_mutex_lock(conn->work_lock);
+            dlv = DEQ_HEAD(link->undelivered);
+            if (dlv) {
+                DEQ_REMOVE_HEAD(link->undelivered);
+                settled = dlv->settled;
+                if (!settled) {
+                    DEQ_INSERT_TAIL(link->unsettled, dlv);
+                    dlv->where = QDR_DELIVERY_IN_UNSETTLED;
+                } else
+                    dlv->where = QDR_DELIVERY_NOWHERE;
+                credit--;
+                link->total_deliveries++;
+                offer = DEQ_SIZE(link->undelivered);
             } else
-                dlv->where = QDR_DELIVERY_NOWHERE;
-            credit--;
-            link->total_deliveries++;
-            offer = DEQ_SIZE(link->undelivered);
-        } else
-            drained = true;
-        sys_mutex_unlock(conn->work_lock);
+                drained = true;
+            sys_mutex_unlock(conn->work_lock);
 
-        if (dlv) {
-            link->credit_to_core--;
-            core->deliver_handler(core->user_context, link, dlv, settled);
-            if (settled)
-                qdr_delivery_free(dlv);
+            if (dlv) {
+                link->credit_to_core--;
+                core->deliver_handler(core->user_context, link, dlv, settled);
+                if (settled)
+                    qdr_delivery_free(dlv);
+            }
         }
-    }
 
-    if (drained)
-        core->drained_handler(core->user_context, link);
-    else if (offer != -1)
-        core->offer_handler(core->user_context, link, offer);
+        if (drained)
+            core->drained_handler(core->user_context, link);
+        else if (offer != -1)
+            core->offer_handler(core->user_context, link, offer);
+    }
 
     //
     // Handle disposition/settlement updates
