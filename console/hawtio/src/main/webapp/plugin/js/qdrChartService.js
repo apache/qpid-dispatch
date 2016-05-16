@@ -410,6 +410,8 @@ var QDR = (function(QDR) {
 
 	            // this is called when the response is received
 				var saveResponse = function (nodeId, entity, response) {
+					if (!response || !response.attributeNames)
+						return;
 	                //QDR.log.debug("got chart results for " + nodeId + " " + entity);
 	                // records is an array that has data for all names
 	                var records = response.results;
@@ -521,38 +523,73 @@ var QDR = (function(QDR) {
             loadCharts: function () {
                 var charts = angular.fromJson(localStorage["QDRCharts"]);
                 if (charts) {
+                    var nodeList = QDRService.nodeList().map( function (node) {
+                        return node.id;
+                    })
                     charts.forEach(function (chart) {
-                        if (!angular.isDefined(chart.instance)) {
-                            chart.instance = ++instance;
+                        if (nodeList.indexOf(chart.nodeId) >= 0) {
+	                        if (!chart.interval)
+	                            chart.interval = 1000;
+	                        if (!chart.duration)
+	                            chart.duration = 10;
+	                        if (chart.nodeList)
+	                            chart.aggregate = true;
+	                        var newChart = self.registerChart(chart.nodeId, chart.entity, chart.name, chart.attr, chart.interval, true, chart.aggregate);
+	                        newChart.dashboard = true;  // we only save the dashboard charts
+	                        newChart.type = chart.type;
+	                        newChart.rateWindow = chart.rateWindow;
+	                        newChart.areaColor = chart.areaColor ? chart.areaColor : "#c0e0ff";
+	                        newChart.lineColor = chart.lineColor ? chart.lineColor : "#4682b4";
+	                        newChart.duration(chart.duration);
+	                        newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 10;
+	                        if (chart.userTitle)
+	                            newChart.title(chart.userTitle);
                         }
-                        if (chart.instance >= instance)
-                            instance = chart.instance + 1;
-                        if (!chart.duration)
-                            chart.duration = 10;
-                        if (chart.nodeList)
-                            chart.aggregate = true;
-                        if (!chart.hdash)
-                            chart.hdash = false;
-                        if (!chart.dashboard)
-                            chart.dashboard = false;
-                        if (!chart.hdash && !chart.dashboard)
-                            chart.dashboard = true;
-						if (chart.hdash && chart.dashboard)
-							chart.dashboard = false;
-						chart.forceCreate = true;
-						chart.use_instance = true;
-                        var newChart = self.registerChart(chart); //chart.nodeId, chart.entity, chart.name, chart.attr, chart.interval, true, chart.aggregate);
-                        newChart.dashboard = chart.dashboard;
-                        newChart.hdash = chart.hdash;
-                        newChart.hreq = false;
-                        newChart.type = chart.type;
-                        newChart.rateWindow = chart.rateWindow;
-                        newChart.areaColor = chart.areaColor ? chart.areaColor : "#cbe7f3";
-                        newChart.lineColor = chart.lineColor ? chart.lineColor : "#058dc7";
-                        newChart.duration(chart.duration);
-                        newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 10;
-                        if (chart.userTitle)
-                            newChart.title(chart.userTitle);
+                    })
+                }
+            },
+            loadCharts: function () {
+                var charts = angular.fromJson(localStorage["QDRCharts"]);
+                if (charts) {
+					// get array of known ids
+                    var nodeList = QDRService.nodeList().map( function (node) {
+                        return node.id;
+                    })
+                    charts.forEach(function (chart) {
+                        // if this chart is not in the current list of nodes, skip
+                        if (nodeList.indexOf(chart.nodeId) >= 0) {
+	                        if (!angular.isDefined(chart.instance)) {
+	                            chart.instance = ++instance;
+	                        }
+	                        if (chart.instance >= instance)
+	                            instance = chart.instance + 1;
+	                        if (!chart.duration)
+	                            chart.duration = 10;
+	                        if (chart.nodeList)
+	                            chart.aggregate = true;
+	                        if (!chart.hdash)
+	                            chart.hdash = false;
+	                        if (!chart.dashboard)
+	                            chart.dashboard = false;
+	                        if (!chart.hdash && !chart.dashboard)
+	                            chart.dashboard = true;
+							if (chart.hdash && chart.dashboard)
+								chart.dashboard = false;
+							chart.forceCreate = true;
+							chart.use_instance = true;
+	                        var newChart = self.registerChart(chart); //chart.nodeId, chart.entity, chart.name, chart.attr, chart.interval, true, chart.aggregate);
+	                        newChart.dashboard = chart.dashboard;
+	                        newChart.hdash = chart.hdash;
+	                        newChart.hreq = false;
+	                        newChart.type = chart.type;
+	                        newChart.rateWindow = chart.rateWindow;
+	                        newChart.areaColor = chart.areaColor ? chart.areaColor : "#cbe7f3";
+	                        newChart.lineColor = chart.lineColor ? chart.lineColor : "#058dc7";
+	                        newChart.duration(chart.duration);
+	                        newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 10;
+	                        if (chart.userTitle)
+	                            newChart.title(chart.userTitle);
+						}
                     })
                 }
             },

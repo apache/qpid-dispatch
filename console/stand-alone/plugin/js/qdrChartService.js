@@ -358,7 +358,7 @@ var QDR = (function(QDR) {
 
 	            // this is called when the response is received
 				var saveResponse = function (nodeId, entity, response) {
-	                //QDR.log.debug("got chart results for " + nodeId + " " + entity);
+	                QDR.log.debug("got chart results for " + nodeId + " " + entity);
 	                // records an array that has data for all names
 	                var records = response.results;
 	                if (!records)
@@ -397,8 +397,10 @@ var QDR = (function(QDR) {
 				}
 				if (request.aggregate) {
 					var nodeList = QDRService.nodeIdList()
+	                QDR.log.debug("sent multiple chart request for " + nodeList + " " + request.entity, + " " + attrs + " " + request.nodeId);
 					QDRService.getMultipleNodeInfo(nodeList, request.entity, attrs, saveResponse, request.nodeId);
 				} else {
+	                QDR.log.debug("sent chart request for " + request.nodeId + " " + request.entity + " " + attrs);
                     QDRService.getNodeInfo(request.nodeId, request.entity, attrs, saveResponse);
 				}
                 // it is now safe to send another request
@@ -442,23 +444,28 @@ var QDR = (function(QDR) {
             loadCharts: function () {
                 var charts = angular.fromJson(localStorage["QDRCharts"]);
                 if (charts) {
+                    var nodeList = QDRService.nodeList().map( function (node) {
+                        return node.id;
+                    })
                     charts.forEach(function (chart) {
-                        if (!chart.interval)
-                            chart.interval = 1000;
-                        if (!chart.duration)
-                            chart.duration = 10;
-                        if (chart.nodeList)
-                            chart.aggregate = true;
-                        var newChart = self.registerChart(chart.nodeId, chart.entity, chart.name, chart.attr, chart.interval, true, chart.aggregate);
-                        newChart.dashboard = true;  // we only save the dashboard charts
-                        newChart.type = chart.type;
-                        newChart.rateWindow = chart.rateWindow;
-                        newChart.areaColor = chart.areaColor ? chart.areaColor : "#c0e0ff";
-                        newChart.lineColor = chart.lineColor ? chart.lineColor : "#4682b4";
-                        newChart.duration(chart.duration);
-                        newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 10;
-                        if (chart.userTitle)
-                            newChart.title(chart.userTitle);
+                        if (nodeList.indexOf(chart.nodeId) >= 0) {
+	                        if (!chart.interval)
+	                            chart.interval = 1000;
+	                        if (!chart.duration)
+	                            chart.duration = 10;
+	                        if (chart.nodeList)
+	                            chart.aggregate = true;
+	                        var newChart = self.registerChart(chart.nodeId, chart.entity, chart.name, chart.attr, chart.interval, true, chart.aggregate);
+	                        newChart.dashboard = true;  // we only save the dashboard charts
+	                        newChart.type = chart.type;
+	                        newChart.rateWindow = chart.rateWindow;
+	                        newChart.areaColor = chart.areaColor ? chart.areaColor : "#c0e0ff";
+	                        newChart.lineColor = chart.lineColor ? chart.lineColor : "#4682b4";
+	                        newChart.duration(chart.duration);
+	                        newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 10;
+	                        if (chart.userTitle)
+	                            newChart.title(chart.userTitle);
+                        }
                     })
                 }
             },
