@@ -54,7 +54,7 @@ class NodeTracker(object):
     def refresh_entity(self, attributes):
         """Refresh management attributes"""
         attributes.update({
-            "routerId": self.my_id,
+            "id": self.my_id,
             "instance": self.container.instance, # Boot number, integer
             "linkState": [ls for ls in self.link_state.peers], # List of neighbour nodes
             "nextHop":  "(self)",
@@ -383,7 +383,7 @@ class RouterNode(object):
     def refresh_entity(self, attributes):
         """Refresh management attributes"""
         attributes.update({
-            "routerId": self.id,
+            "id": self.id,
             "instance": self.instance, # Boot number, integer
             "linkState": [ls for ls in self.link_state.peers], # List of neighbour nodes
             "nextHop":  self.next_hop_router and self.next_hop_router.id,

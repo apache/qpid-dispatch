@@ -317,9 +317,9 @@ class Qdrouterd(Process):
         """
 
         DEFAULTS = {
-            'listener': {'addr':'0.0.0.0', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120', 'authenticatePeer': 'no'},
-            'connector': {'addr':'127.0.0.1', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120', 'role':'on-demand'},
-            'router': {'mode': 'standalone', 'routerId': 'QDR', 'debugDump': 'qddebug.txt',  'workerThreads': 1}
+            'listener': {'host':'0.0.0.0', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120', 'authenticatePeer': 'no'},
+            'connector': {'host':'127.0.0.1', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120', 'role':'on-demand'},
+            'router': {'mode': 'standalone', 'id': 'QDR', 'debugDump': 'qddebug.txt',  'workerThreads': 1}
         }
 
         def sections(self, name):
@@ -327,7 +327,7 @@ class Qdrouterd(Process):
             return [p for n, p in self if n == name]
 
         @property
-        def router_id(self): return self.sections("router")[0]["routerId"]
+        def router_id(self): return self.sections("router")[0]["id"]
 
         def defaults(self):
             """Fill in default values in gconfiguration"""
@@ -346,7 +346,7 @@ class Qdrouterd(Process):
 
     def __init__(self, name=None, config=Config(), pyinclude=None, wait=True):
         """
-        @param name: name used for for output files, default to routerId from config.
+        @param name: name used for for output files, default to id from config.
         @param config: router configuration
         @keyword wait: wait for router to be ready (call self.wait_ready())
         """
@@ -411,12 +411,12 @@ class Qdrouterd(Process):
         for l in self.config.sections('listener'):
             protocol_family = l.get('protocolFamily')
             if protocol_family == 'IPv6':
-                address_list.append("amqp://[%s]:%s"%(l['addr'], l['port']))
+                address_list.append("amqp://[%s]:%s"%(l['host'], l['port']))
             elif protocol_family == 'IPv4':
-                address_list.append("amqp://%s:%s"%(l['addr'], l['port']))
+                address_list.append("amqp://%s:%s"%(l['host'], l['port']))
             else:
                 # Default to IPv4
-                address_list.append("amqp://%s:%s"%(l['addr'], l['port']))
+                address_list.append("amqp://%s:%s"%(l['host'], l['port']))
 
         return address_list
 
@@ -427,12 +427,12 @@ class Qdrouterd(Process):
         for l in self.config.sections('listener'):
             protocol_family = l.get('protocolFamily')
             if protocol_family == 'IPv6':
-                address_list.append("[%s]:%s"%(l['addr'], l['port']))
+                address_list.append("[%s]:%s"%(l['host'], l['port']))
             elif protocol_family == 'IPv4':
-                address_list.append("%s:%s"%(l['addr'], l['port']))
+                address_list.append("%s:%s"%(l['host'], l['port']))
             else:
                 # Default to IPv4
-                address_list.append("%s:%s"%(l['addr'], l['port']))
+                address_list.append("%s:%s"%(l['host'], l['port']))
 
         return address_list
 

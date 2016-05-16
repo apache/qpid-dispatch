@@ -54,13 +54,13 @@ SCHEMA_1 = {
         "listener": {
             "annotations" : ["entityId"],
             "attributes": {
-                "addr" : {"type":"string"}
+                "host" : {"type":"string"}
             }
         },
         "connector": {
             "annotations" : ["entityId"],
             "attributes": {
-                "addr" : {"type":"string"}
+                "host" : {"type":"string"}
             }
         }
     }
@@ -149,9 +149,9 @@ class SchemaTest(unittest.TestCase):
         s = Schema(**SCHEMA_1)
         self.assertRaises(ValidationError, s.entity, {'type': 'nosuch'})
         self.assertRaises(ValidationError, s.entity, {'type': 'listener', 'nosuch': 'x'})
-        e = s.entity({'type': 'listener', 'name':'x', 'addr':'foo'})
-        self.assertEqual(e.attributes, {'type': 'org.example.listener', 'name':'x', 'addr':'foo'})
-        self.assertEqual(e['addr'], 'foo')
+        e = s.entity({'type': 'listener', 'name':'x', 'host':'foo'})
+        self.assertEqual(e.attributes, {'type': 'org.example.listener', 'name':'x', 'host':'foo'})
+        self.assertEqual(e['host'], 'foo')
         self.assertRaises(ValidationError, e.__setitem__, 'nosuch', 'x')
         try:
             e.nosuch = 'x'

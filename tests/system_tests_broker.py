@@ -52,7 +52,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
         def common_router_conf(self, name, mode='standalone'):
             """Common router configuration for the tests"""
             return Qdrouterd.Config([
-                ('router', {'mode': mode, 'routerId': name})
+                ('router', {'mode': mode, 'id': name})
             ])
 
         def verify_equal_spread(self, send_addresses, receive_addresses):

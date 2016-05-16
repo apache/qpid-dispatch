@@ -84,7 +84,7 @@ attribute of 'ssl-profile' sections.
 
     listener {
         ssl-profile: ssl-profile-one
-        addr: 0.0.0.0
+        host: 0.0.0.0
         port: 20102
         sasl-mechanisms: ANONYMOUS
     }

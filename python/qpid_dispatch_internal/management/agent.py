@@ -256,7 +256,7 @@ class RouterEntity(EntityAdapter):
         self._add_implementation(
             CImplementation(agent.qd, entity_type, self._dispatch))
 
-    def _identifier(self): return self.attributes.get('routerId')
+    def _identifier(self): return self.attributes.get('id')
 
     def create(self):
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
@@ -319,11 +319,11 @@ class PolicyStatsEntity(EntityAdapter):
         return self.attributes.get('applicationName')
 
 
-def _addr_port_identifier(entity):
-    for attr in ['addr', 'port']: # Set default values if need be
+def _host_port_identifier(entity):
+    for attr in ['host', 'port']: # Set default values if need be
         entity.attributes.setdefault(
             attr, entity.entity_type.attribute(attr).missing_value())
-    return "%s:%s" % (entity.attributes['addr'], entity.attributes['port'])
+    return "%s:%s" % (entity.attributes['host'], entity.attributes['port'])
 
 
 class ListenerEntity(EntityAdapter):
@@ -333,7 +333,7 @@ class ListenerEntity(EntityAdapter):
         return config_listener
 
     def _identifier(self):
-        return _addr_port_identifier(self)
+        return _host_port_identifier(self)
 
     def __str__(self):
         return super(ListenerEntity, self).__str__().replace("Entity(", "ListenerEntity(")
@@ -341,7 +341,7 @@ class ListenerEntity(EntityAdapter):
     def _delete(self):
         self._qd.qd_connection_manager_delete_listener(self._dispatch, self._implementations[0].key)
 
-    def _identifier(self): return _addr_port_identifier(self)
+    def _identifier(self): return _host_port_identifier(self)
 
 class ConnectorEntity(EntityAdapter):
     def create(self):
@@ -353,7 +353,7 @@ class ConnectorEntity(EntityAdapter):
         self._qd.qd_connection_manager_delete_connector(self._dispatch, self._implementations[0].key)
 
     def _identifier(self):
-        return _addr_port_identifier(self)
+        return _host_port_identifier(self)
 
     def __str__(self):
         return super(ConnectorEntity, self).__str__().replace("Entity(", "ConnectorEntity(")
@@ -407,7 +407,7 @@ class ConsoleEntity(EntityAdapter):
         return super(ConsoleEntity, self).__str__().replace("Entity(", "ConsoleEntity(")
 
     def create(self):
-        # if a named listener is present, use its addr:port 
+        # if a named listener is present, use its host:port
         name = self.attributes.get('listener')
         if name:
             listeners = self._agent.find_entity_by_type("listener")
@@ -415,7 +415,7 @@ class ConsoleEntity(EntityAdapter):
                 if listener.name == name:
                     try:
                         #required
-                        host   = listener.attributes['addr']
+                        host   = listener.attributes['host']
                         port   = listener.attributes['port']
                         #optional
                         wsport = self.attributes.get('wsport')
@@ -453,7 +453,7 @@ class RouterLinkEntity(EntityAdapter):
 
 class RouterNodeEntity(EntityAdapter):
     def _identifier(self):
-        return self.attributes.get('routerId')
+        return self.attributes.get('id')
 
     def __str__(self):
         return super(RouterNodeEntity, self).__str__().replace("Entity(", "RouterNodeEntity(")
@@ -656,7 +656,7 @@ class ManagementEntity(EntityAdapter):
         router = self._agent.entities.map_type(None, 'router')[0]
         area = router.attributes['area']
         def node_address(node):
-            return str(Address.topological(node.attributes['routerId'], "$management", area))
+            return str(Address.topological(node.attributes['id'], "$management", area))
         return (OK, self._agent.entities.map_type(node_address, 'router.node'))
 
     def get_schema(self, request):
