@@ -472,19 +472,23 @@ class Qdrouterd(Process):
         else:
             return '127.0.0.1'
 
+    def wait_ports(self, **retry_kwargs):
+        wait_ports(self.ports_family, **retry_kwargs)
+
     def wait_connectors(self, **retry_kwargs):
         """
         Wait for all connectors to be connected
         @param retry_kwargs: keyword args for L{retry}
         """
         for c in self.config.sections('connector'):
-            assert retry(lambda: self.is_connected(port=c['port'], host=self.get_host(c.get('protocolFamily'))), **retry_kwargs), "Port not connected %s" % c['port']
+            assert retry(lambda: self.is_connected(port=c['port'], host=self.get_host(c.get('protocolFamily'))),
+                         **retry_kwargs), "Port not connected %s" % c['port']
 
     def wait_ready(self, **retry_kwargs):
         """Wait for ports and connectors to be ready"""
         if not self._wait_ready:
             self._wait_ready = True
-            wait_ports(self.ports_family, **retry_kwargs)
+            self.wait_ports(**retry_kwargs)
             self.wait_connectors(**retry_kwargs)
         return self
 
@@ -500,7 +504,6 @@ class Qdrouterd(Process):
             return retry_exception(lambda: node.query('org.apache.qpid.dispatch.router'))
         except:
             return False
-
 
     def wait_router_connected(self, router_id, **retry_kwargs):
         retry(lambda: self.is_router_connected(router_id), **retry_kwargs)

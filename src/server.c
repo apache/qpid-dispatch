@@ -1163,12 +1163,14 @@ static void cxtr_try_open(void *context)
     //
     if (config->ssl_enabled) {
         pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+
         if (!domain) {
             qd_error(QD_ERROR_RUNTIME, "SSL domain failed for connection to %s:%s",
                      ct->config->host, ct->config->port);
             /* TODO aconway 2014-07-15: Close the connection, clean up. */
             return;
         }
+
         /* TODO aconway 2014-07-15: error handling on all SSL calls. */
 
         // set our trusted database for checking the peer's cert:
@@ -1202,6 +1204,15 @@ static void cxtr_try_open(void *context)
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
                        "SSL local configuration failed for %s:%s",
                        ct->config->host, ct->config->port);
+            }
+        }
+
+        //If ssl is enabled and verify_host_name is true, instruct proton to verify peer name
+        if (config->verify_host_name) {
+            if (pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER_NAME, NULL)) {
+                    qd_log(ct->server->log_source, QD_LOG_ERROR,
+                           "SSL peer host name verification failed for %s:%s",
+                           ct->config->host, ct->config->port);
             }
         }
 
