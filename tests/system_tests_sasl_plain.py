@@ -368,7 +368,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
         cls.routers[0].wait_ports()
         cls.routers[1].wait_ports()
-        cls.routers[1].wait_connectors(timeout=3)
+        cls.routers[1].wait_connectors(timeout=10)
 
     def test_inter_router_plain_over_ssl_exists(self):
         """
@@ -376,19 +376,31 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         """
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
 
-        self.assertEqual(3, len(local_node.query(type='org.apache.qpid.dispatch.connection').results))
+        results = local_node.query(type='org.apache.qpid.dispatch.connection').results
+
+        self.assertEqual(3, len(results))
+
+        search = "QDR.X"
+        found = False
+
+        for N in range(0,3):
+            if results[N][0] == search:
+                found = True
+                break
+
+        self.assertTrue(found, "Connection to %s not found" % search)
 
         # sslProto should be TLSv1/SSLv3
-        self.assertEqual(u'TLSv1/SSLv3', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][4])
+        self.assertEqual(u'TLSv1/SSLv3', results[N][4])
 
         # role should be inter-router
-        self.assertEqual(u'inter-router', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][9])
+        self.assertEqual(u'inter-router', results[N][9])
 
         # sasl must be plain
-        self.assertEqual(u'PLAIN', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][12])
+        self.assertEqual(u'PLAIN', results[N][12])
 
         # user must be test@domain.com
-        self.assertEqual(u'test@domain.com', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][16])
+        self.assertEqual(u'test@domain.com', results[N][16])
 
 if __name__ == '__main__':
     unittest.main(main_module())
