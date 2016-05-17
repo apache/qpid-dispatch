@@ -149,9 +149,10 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0);     CHECK();
     config->ssl_enabled          = has_attrs(entity, ssl_attributes, ssl_attributes_count);
     config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0);     CHECK();
-    config->host                 = qd_entity_opt_string(entity, "host", 0); QD_ERROR_RET();
-    if (! config->host)
+    config->host                 = qd_entity_opt_string(entity, "host", 0);           CHECK();
+    if (! config->host) {
         config->host             = qd_entity_opt_string(entity, "addr", 0);           CHECK();
+    }
     assert(config->host);
 
     //

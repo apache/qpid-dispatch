@@ -538,7 +538,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         //
         // If the delivery is unsettled and the link is inter-router, account for the outstanding delivery.
         //
-        if (!in_delivery->settled && chosen_link_bit >= 0) {
+        if (in_delivery && !in_delivery->settled && chosen_link_bit >= 0) {
             addr->outstanding_deliveries[chosen_link_bit]++;
             out_delivery->tracking_addr = addr;
             addr->tracked_deliveries++;
