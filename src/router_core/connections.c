@@ -638,7 +638,7 @@ qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_i
     if (in_phase)  *in_phase  = addr ? addr->in_phase  : 0;
     if (out_phase) *out_phase = addr ? addr->out_phase : 0;
 
-    return addr ? addr->treatment : QD_TREATMENT_ANYCAST_CLOSEST;
+    return addr ? addr->treatment : QD_TREATMENT_ANYCAST_BALANCED;
 }
 
 
@@ -649,7 +649,7 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_fi
     char *copy    = storage;
     bool  on_heap = false;
     int   length  = qd_field_iterator_length(iter);
-    qd_address_treatment_t trt = QD_TREATMENT_ANYCAST_CLOSEST;
+    qd_address_treatment_t trt = QD_TREATMENT_ANYCAST_BALANCED;
 
     if (length > HASH_STORAGE_SIZE) {
         copy    = (char*) malloc(length + 1);
