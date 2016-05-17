@@ -319,11 +319,11 @@ class PolicyStatsEntity(EntityAdapter):
         return self.attributes.get('applicationName')
 
 
-def _host_port_identifier(entity):
-    for attr in ['host', 'port']: # Set default values if need be
+def _host_port_name_identifier(entity):
+    for attr in ['host', 'port', 'name']: # Set default values if need be
         entity.attributes.setdefault(
             attr, entity.entity_type.attribute(attr).missing_value())
-    return "%s:%s" % (entity.attributes['host'], entity.attributes['port'])
+    return "%s:%s:%s" % (entity.attributes['host'], entity.attributes['port'], entity.attributes['name'])
 
 
 class ListenerEntity(EntityAdapter):
@@ -333,15 +333,13 @@ class ListenerEntity(EntityAdapter):
         return config_listener
 
     def _identifier(self):
-        return _host_port_identifier(self)
+        return _host_port_name_identifier(self)
 
     def __str__(self):
         return super(ListenerEntity, self).__str__().replace("Entity(", "ListenerEntity(")
 
     def _delete(self):
         self._qd.qd_connection_manager_delete_listener(self._dispatch, self._implementations[0].key)
-
-    def _identifier(self): return _host_port_identifier(self)
 
 class ConnectorEntity(EntityAdapter):
     def create(self):
@@ -353,7 +351,7 @@ class ConnectorEntity(EntityAdapter):
         self._qd.qd_connection_manager_delete_connector(self._dispatch, self._implementations[0].key)
 
     def _identifier(self):
-        return _host_port_identifier(self)
+        return _host_port_name_identifier(self)
 
     def __str__(self):
         return super(ConnectorEntity, self).__str__().replace("Entity(", "ConnectorEntity(")
@@ -469,7 +467,7 @@ class RouterAddressEntity(EntityAdapter):
 
 class ConnectionEntity(EntityAdapter):
     def _identifier(self):
-        return self.attributes.get('host')
+        return self.attributes.get('host') + ":" + str(self.attributes.get('identity'))
 
     def __str__(self):
         return super(ConnectionEntity, self).__str__().replace("Entity(", "ConnectionEntity(")

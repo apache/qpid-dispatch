@@ -212,10 +212,15 @@ class QdmanageTest(TestCase):
 
         # Re-create the connector and then try wait_connectors
         self.create(long_type, name, str(QdmanageTest.inter_router_port))
-        full_name = 'connection/0.0.0.0:' + str(QdmanageTest.inter_router_port)
-        output = json.loads(self.run_qdmanage('READ --type=org.apache.qpid.dispatch.connection --name ' + full_name))
 
-        self.assertEquals(full_name, output['name'])
+        results = json.loads(self.run_qdmanage('QUERY --type=org.apache.qpid.dispatch.connection'))
+
+        created = False
+        for result in results:
+            name = result['name']
+            if 'connection/0.0.0.0:%s:' % QdmanageTest.inter_router_port in name:
+                created = True
+        self.assertTrue(created)
 
     def test_zzz_add_connector(self):
         port = self.get_port()
