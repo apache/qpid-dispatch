@@ -437,10 +437,18 @@ class Qdrouterd(Process):
         return address_list
 
     def is_connected(self, port, host='127.0.0.1'):
-        """If router has a connection to host:port return the management info.
+        """If router has a connection to host:port:identity return the management info.
         Otherwise return None"""
         try:
-            return self.management.read(name="connection/%s:%s" % (host, port))
+            ret_val = False
+            response = self.management.query(type="org.apache.qpid.dispatch.connection")
+            index_name = response.attribute_names.index('name')
+            index_identity = response.attribute_names.index('identity')
+            for result in response.results:
+                outs = 'connection/%s:%s:%s' % (host, port, str(result[index_identity]))
+                if result[index_name] == outs:
+                    ret_val = True
+            return ret_val
         except:
             return False
 

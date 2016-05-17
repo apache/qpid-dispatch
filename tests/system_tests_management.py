@@ -257,7 +257,7 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(str(self.router.ports[0]), entity.port)
 
         entity = self.node.read(
-            type=LISTENER, identity='listener/0.0.0.0:%s' % self.router.ports[1])
+            type=LISTENER, identity='listener/0.0.0.0:%s:l1' % self.router.ports[1])
         self.assertEqual('l1', entity.name)
         self.assertEqual(str(self.router.ports[1]), entity.port)
 
