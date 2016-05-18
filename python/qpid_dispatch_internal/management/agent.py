@@ -73,7 +73,7 @@ from cProfile import Profile
 from cStringIO import StringIO
 from ctypes import c_void_p, py_object, c_long
 from subprocess import Popen
-from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
+from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch.management.entity import camelcase
@@ -259,6 +259,12 @@ class RouterEntity(EntityAdapter):
     def _identifier(self): return self.attributes.get('id')
 
     def create(self):
+        try:
+            if self.routerId:
+                self._agent.log(LOG_WARNING, "routerId is deprecated, use id instead")
+        except:
+            pass
+
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
 
     def __str__(self):

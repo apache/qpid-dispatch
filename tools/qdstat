@@ -176,7 +176,9 @@ class BusManager(Node):
             return addr[1]
         return ''
 
-    def _identity_clean(self, identity):
+    def _identity_clean(self, identity, router_id=None):
+        if router_id:
+            return router_id
         if not identity:
             return "-"
         pos = identity.find('/')
@@ -200,9 +202,10 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.router')
 
         router = objects[0]
+        print 'router ', router
         rows.append(('Mode',          router.mode))
         rows.append(('Area',          router.area))
-        rows.append(('Router Id',     self._identity_clean(router.identity)))
+        rows.append(('Router Id',     self._identity_clean(router.identity, router.routerId)))
         rows.append(('Address Count', router.addrCount))
         rows.append(('Link Count',    router.linkCount))
         rows.append(('Node Count',    router.nodeCount))
