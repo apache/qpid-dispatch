@@ -21,45 +21,40 @@ Console operation
 Logging in to a router network
 ------------------------------
 
-The console communicates to the router network using the proton javascript bindings. When run from a web page, the proton bindings use web sockets to send and receive commands. However, the dispatch router requires tcp. Therefore a web-sockets to tcp proxy is used. 
-
 .. image:: console_login.png
 
-Enter the address of a proxy that is connected to a router in the network.
-
-User name and password are not used at this time.
+Enter the address of the websockets to tcp proxy that is connected to a router in the network.
 
 The Autostart checkbox, when checked, will automatically log in with the previous host:port the next time you start the console.
 
 Overview page
 -------------
 
-On the overview page, aggregate information about routers, addresses, and connections is displayed.
-
 .. image:: console_overview.png
+
+On the overview page, aggregate information about routers, addresses, and connections is displayed.
 
 Topology page
 -------------
 
-This page displays the router network in a graphical form showing how the routers are connected and information about the individual routers and links.
-
 .. image:: console_topology.png
 
-Router entity details page
+This page displays the router network in a graphical form showing how the routers are connected and information about the individual routers and links.
+
+List page
 --------------------------
 
 .. image:: console_entity.png
 
 Displays detailed information about entities such as routers, links, addresses, memory.
 
-Numeric attributes can be graphed by clicking on the graph icon.
-
 Charts page
 -----------
 
 .. image:: console_charts.png
 
-This page displays graphs of numeric values that are on the entity details page.
+This page displays graphs of numeric values that are on the list page.
+
 
 Schema page
 -----------
@@ -67,4 +62,3 @@ Schema page
 .. image:: console_schema.png
 
 This page displays the json schema that is used to manage the router network.
-

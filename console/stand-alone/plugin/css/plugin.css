@@ -183,7 +183,7 @@ div#main div ul.nav li.active a {
 }
 
 div#main.qdr {
-    margin-top: 44px !important;
+    margin-top: 56px !important;
 }
 
 div.charts-header {
@@ -600,7 +600,8 @@ input[type="text"], input[type="number"], input[type="password"] {
 }
 
 div.login.container {
-	width: 550px;
+/*	width: 550px; */
+	margin-top: 4em;
 }
 
 #overtree .fancytree-container {

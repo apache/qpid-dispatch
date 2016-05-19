@@ -22,8 +22,6 @@ The console is an HTML based web site that displays information about a qpid dis
 
 The console requires an HTML web server that can serve static html, javascript, style sheets, and images.
 
-The current version of the is read-only. The ability to call management methods that change the running of the router network is planned for a future version of console.
-
 The console only provides limited information about the clients that are attached to the router network and is therfore more appropriate for administrators needing to know the layout and health of the router network.
 
 

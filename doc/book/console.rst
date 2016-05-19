@@ -21,7 +21,7 @@
    contain the root `toctree` directive.
 
 Console
-====================================
+=======
 
 .. toctree::
    :maxdepth: 3

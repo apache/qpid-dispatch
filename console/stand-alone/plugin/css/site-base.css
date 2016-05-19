@@ -19,8 +19,9 @@ under the License.
 * {
   outline: none;
 }
+
 * {
-    font-family: OpenSans;
+    font-family: sans-serif;
 }
 
 a:focus {
@@ -1999,6 +2000,8 @@ div#main div ul.nav li a.nav-primary .caret {
 
 #main-nav {
   max-height: 70px;
+  background-color: #F0f0f0;
+  font-size: 20px;
 }
 
 #main {
@@ -3657,7 +3660,7 @@ th > .indicator:before {
 .connect-column {
   display: inline-block;
   vertical-align: top;
-  width: 550px;
+  width: 34em;
 }
 
 .icon-spacer:before {
@@ -4274,9 +4277,9 @@ ul.dynatree-container {
 }
 
 .pane {
-  position: fixed;
+  position: absolute;
   bottom: 0;
-  top: 70px;
+  top: 100px;
   height: auto;
   width: 300px;
 }
@@ -4317,7 +4320,7 @@ ul.dynatree-container {
 }
 
 .pane.left {
-  left: 0;
+  /*left: 0; */
   z-index: 39;
 }
 
