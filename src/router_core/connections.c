@@ -190,7 +190,7 @@ int qdr_connection_process(qdr_connection_t *conn)
         if (link) {
             if (link->drain_mode)
                 core->drained_handler(core->user_context, link);
-            else
+            if (link->incremental_credit > 0)
                 core->flow_handler(core->user_context, link, link->incremental_credit);
             link->incremental_credit = 0;
             event_count++;
