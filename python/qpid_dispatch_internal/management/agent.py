@@ -385,26 +385,26 @@ class LinkRoutePatternEntity(EntityAdapter):
     def __str__(self):
         return super(LinkRoutePatternEntity, self).__str__().replace("Entity(", "LinkRoutePatternEntity(")
 
-class RouterConfigAddressEntity(EntityAdapter):
+class AddressEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_address(self._dispatch, self)
 
     def __str__(self):
-        return super(RouterConfigAddressEntity, self).__str__().replace("Entity(", "RouterConfigAddressEntity(")
+        return super(AddressEntity, self).__str__().replace("Entity(", "AddressEntity(")
 
-class RouterConfigLinkrouteEntity(EntityAdapter):
+class LinkRouteEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_link_route(self._dispatch, self)
 
     def __str__(self):
-        return super(RouterConfigLinkrouteEntity, self).__str__().replace("Entity(", "RouterConfigLinkrouteEntity(")
+        return super(LinkRouteEntity, self).__str__().replace("Entity(", "LinkRouteEntity(")
 
-class RouterConfigAutolinkEntity(EntityAdapter):
+class AutoLinkEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_auto_link(self._dispatch, self)
 
     def __str__(self):
-        return super(RouterConfigAutolinkEntity, self).__str__().replace("Entity(", "RouterConfigAutolinkEntity(")
+        return super(AutoLinkEntity, self).__str__().replace("Entity(", "AutoLinkEntity(")
 
 class ConsoleEntity(EntityAdapter):
     def __str__(self):
