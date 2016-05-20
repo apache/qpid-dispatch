@@ -333,6 +333,9 @@ class EntityType(object):
             if fullName:
                 self.name = schema.long_name(name)
                 self.short_name = schema.short_name(name)
+
+                if self.short_name.startswith("router.config."):
+                    self.short_name = self.short_name.replace("router.config.", "")
             else:
                 self.name = self.short_name = name
             self.attributes = OrderedDict((k, AttributeType(k, defined_in=self, **v))
@@ -507,6 +510,7 @@ class Schema(object):
 
         self.annotations = parsedefs(Annotation, annotations)
         self.entity_types = parsedefs(EntityType, entityTypes)
+
         self.all_attributes = set()
 
         for e in self.entity_types.itervalues():
