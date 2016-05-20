@@ -103,40 +103,46 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 {
     qdr_connection_t *conn = link->conn;
     qdr_delivery_t   *dlv;
-    bool              drained = false;
     int               offer   = -1;
     bool              settled = false;
+    bool              drain_mode = link->drain_mode;
 
     if (link->link_direction == QD_OUTGOING) {
-        while (credit > 0 && !drained) {
+
+        while (credit > 0) {
             sys_mutex_lock(conn->work_lock);
+
             dlv = DEQ_HEAD(link->undelivered);
-            if (dlv) {
-                DEQ_REMOVE_HEAD(link->undelivered);
-                settled = dlv->settled;
-                if (!settled) {
-                    DEQ_INSERT_TAIL(link->unsettled, dlv);
-                    dlv->where = QDR_DELIVERY_IN_UNSETTLED;
-                } else
-                    dlv->where = QDR_DELIVERY_NOWHERE;
-                credit--;
-                link->total_deliveries++;
-                offer = DEQ_SIZE(link->undelivered);
+
+            if (!dlv) {
+                sys_mutex_unlock(conn->work_lock);
+                break;
+            }
+
+            DEQ_REMOVE_HEAD(link->undelivered);
+            settled = dlv->settled;
+
+            if (!settled) {
+                DEQ_INSERT_TAIL(link->unsettled, dlv);
+                dlv->where = QDR_DELIVERY_IN_UNSETTLED;
             } else
-                drained = true;
+                dlv->where = QDR_DELIVERY_NOWHERE;
+
+            credit--;
+            link->total_deliveries++;
+            offer = DEQ_SIZE(link->undelivered);
+
             sys_mutex_unlock(conn->work_lock);
 
-            if (dlv) {
-                link->credit_to_core--;
-                core->deliver_handler(core->user_context, link, dlv, settled);
-                if (settled)
-                    qdr_delivery_free(dlv);
-            }
+            link->credit_to_core--;
+            core->deliver_handler(core->user_context, link, dlv, settled);
+            if (settled)
+                qdr_delivery_free(dlv);
         }
 
-        if (drained)
+        if (drain_mode)
             core->drained_handler(core->user_context, link);
-        else if (offer != -1)
+        if (offer > 0)
             core->offer_handler(core->user_context, link, offer);
     }
 
@@ -328,6 +334,11 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     bool activate    = false;
 
     //
+    // Record the drain mode for the link
+    //
+    link->drain_mode = drain;
+
+    //
     // If this is an attach-routed link, propagate the flow data downrange.
     // Note that the credit value is incremental.
     //
@@ -345,11 +356,6 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         }
         sys_mutex_unlock(link->conn->work_lock);
     }
-
-    //
-    // Record the drain mode for the link
-    //
-    link->drain_mode = drain;
 
     if (activate)
         qdr_connection_activate_CT(core, link->conn);

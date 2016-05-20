@@ -188,7 +188,10 @@ int qdr_connection_process(qdr_connection_t *conn)
         sys_mutex_unlock(conn->work_lock);
 
         if (link) {
-            core->flow_handler(core->user_context, link, link->incremental_credit);
+            if (link->drain_mode)
+                core->drained_handler(core->user_context, link);
+            else
+                core->flow_handler(core->user_context, link, link->incremental_credit);
             link->incremental_credit = 0;
             event_count++;
         }
