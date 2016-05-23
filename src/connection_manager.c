@@ -29,6 +29,8 @@
 #include <string.h>
 #include <stdio.h>
 
+static char* HOST_ADDR_DEFAULT = "127.0.0.1";
+
 struct qd_config_listener_t {
     bool                is_connector;
     qd_bind_state_t     state;
@@ -123,6 +125,30 @@ static void load_strip_annotations(qd_server_config_t *config, const char* strip
     }
 }
 
+/**
+ * Since both the host and the addr have defaults of 127.0.0.1, we will have to use the non-default wherever it is available.
+ */
+static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
+{
+    char *host = qd_entity_opt_string(entity, "host", 0);
+    char *addr = qd_entity_opt_string(entity, "addr", 0);
+
+    if (strcmp(host, HOST_ADDR_DEFAULT) == 0 && strcmp(addr, HOST_ADDR_DEFAULT) == 0) {
+        config->host = host;
+    }
+    else if (strcmp(host, addr) == 0) {
+        config->host = host;
+    }
+    else if (strcmp(host, HOST_ADDR_DEFAULT) == 0 && strcmp(addr, HOST_ADDR_DEFAULT) != 0) {
+         config->host = addr;
+    }
+    else if (strcmp(host, HOST_ADDR_DEFAULT) != 0 && strcmp(addr, HOST_ADDR_DEFAULT) == 0) {
+         config->host = host;
+    }
+
+    assert(config->host);
+}
+
 static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, qd_entity_t* entity)
 {
     qd_error_clear();
@@ -149,11 +175,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0);     CHECK();
     config->ssl_enabled          = has_attrs(entity, ssl_attributes, ssl_attributes_count);
     config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0);     CHECK();
-    config->host                 = qd_entity_opt_string(entity, "host", 0);           CHECK();
-    if (! config->host) {
-        config->host             = qd_entity_opt_string(entity, "addr", 0);           CHECK();
-    }
-    assert(config->host);
+    set_config_host(config, entity);
 
     //
     // Handle the defaults for link capacity.
