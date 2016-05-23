@@ -831,7 +831,7 @@
         },
 
         "fixedAddress": {
-            "description":"(DEPRECATED) Establishes treatment for addresses starting with a prefix. This entity has been deprecated. Use router.config.address instead",
+            "description":"(DEPRECATED) Establishes treatment for addresses starting with a prefix. This entity has been deprecated. Use address instead",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
@@ -868,7 +868,7 @@
         },
 
         "waypoint": {
-            "description":"(DEPRECATED) A remote node that messages for an address pass through. This entity has been deprecated. Use router.config.autoLink instead",
+            "description":"(DEPRECATED) A remote node that messages for an address pass through. This entity has been deprecated. Use autoLink instead",
             "extends": "configurationEntity",
             "operations": ["CREATE", "DELETE"],
             "attributes": {
@@ -900,7 +900,7 @@
         },
 
         "linkRoutePattern": {
-            "description":"(DEPRECATED) An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node. This entity has been deprecated. Use router.config.linkRoute instead",
+            "description":"(DEPRECATED) An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node. This entity has been deprecated. Use linkRoute instead",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
