@@ -368,7 +368,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
         cls.routers[0].wait_ports()
         cls.routers[1].wait_ports()
-        cls.routers[1].wait_connectors(timeout=10)
+        cls.routers[1].wait_router_connected('QDR.X')
 
     def test_inter_router_plain_over_ssl_exists(self):
         """
@@ -378,7 +378,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
         results = local_node.query(type='org.apache.qpid.dispatch.connection').results
 
-        self.assertEqual(3, len(results))
+        self.assertEqual(4, len(results))
 
         search = "QDR.X"
         found = False
