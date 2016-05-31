@@ -1611,7 +1611,8 @@ void qd_server_listener_free(qd_listener_t* li)
 
 void qd_server_listener_close(qd_listener_t* li)
 {
-    qdpn_listener_close(li->pn_listener);
+    if (li)
+        qdpn_listener_close(li->pn_listener);
 }
 
 
