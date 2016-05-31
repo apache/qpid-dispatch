@@ -329,7 +329,11 @@ def _host_port_name_identifier(entity):
     for attr in ['host', 'port', 'name']: # Set default values if need be
         entity.attributes.setdefault(
             attr, entity.entity_type.attribute(attr).missing_value())
-    return "%s:%s:%s" % (entity.attributes['host'], entity.attributes['port'], entity.attributes['name'])
+
+    if entity.attributes.get('name'):
+        return "%s:%s:%s" % (entity.attributes['host'], entity.attributes['port'], entity.attributes['name'])
+    else:
+        return "%s:%s" % (entity.attributes['host'], entity.attributes['port'])
 
 
 class ListenerEntity(EntityAdapter):
