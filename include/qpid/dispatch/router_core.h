@@ -549,11 +549,13 @@ void qdr_connection_handlers(qdr_core_t                *core,
  * Delivery functions
  ******************************************************************************
  */
-void qdr_delivery_free(qdr_delivery_t *delivery);
-void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disp, bool settled);
+void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disp,
+                                     bool settled, bool ref_given);
 
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
 void *qdr_delivery_get_context(qdr_delivery_t *delivery);
+void qdr_delivery_incref(qdr_delivery_t *delivery);
+void qdr_delivery_decref(qdr_delivery_t *delivery);
 void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *length);
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
 

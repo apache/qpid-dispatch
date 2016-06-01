@@ -116,7 +116,10 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     if (!dlv->settled) {
         if (in_dlv && in_dlv->peer == 0) {
             dlv->peer = in_dlv;
-            in_dlv->peer = dlv;  // TODO - make this a back-list for multicast tracking
+            in_dlv->peer = dlv;
+
+            dlv->ref_count = 1;
+            qdr_delivery_incref(in_dlv);
         }
     }
 
@@ -129,6 +132,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
     sys_mutex_lock(link->conn->work_lock);
     DEQ_INSERT_TAIL(link->undelivered, dlv);
     dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
+    dlv->ref_count++; // We have the lock, don't use the incref function
 
     //
     // If the link isn't already on the links_with_deliveries list, put it there.

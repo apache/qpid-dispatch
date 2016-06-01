@@ -462,6 +462,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
     while (ref) {
         qdr_del_delivery_ref(&updated_deliveries, ref);
+        qdr_delivery_decref(ref->dlv);
         ref = DEQ_HEAD(updated_deliveries);
     }
 
@@ -475,11 +476,12 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     while (dlv) {
         DEQ_REMOVE_HEAD(undelivered);
         peer = dlv->peer;
-        qdr_delivery_free(dlv);
         if (peer) {
             peer->peer = 0;
             qdr_delivery_release_CT(core, peer);
+            qdr_delivery_decref(peer);
         }
+        qdr_delivery_decref(dlv);
         dlv = DEQ_HEAD(undelivered);
     }
 
@@ -498,12 +500,13 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         }
 
         peer = dlv->peer;
-        qdr_delivery_free(dlv);
         if (peer) {
             peer->peer = 0;
             if (link->link_direction == QD_OUTGOING)
                 qdr_delivery_release_CT(core, peer);
+            qdr_delivery_decref(peer);
         }
+        qdr_delivery_decref(dlv);
         dlv = DEQ_HEAD(unsettled);
     }
 

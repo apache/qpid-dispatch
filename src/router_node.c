@@ -251,6 +251,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
             else {
                 pn_delivery_set_context(pnd, delivery);
                 qdr_delivery_set_context(delivery, pnd);
+                qdr_delivery_incref(delivery);
             }
         }
         return;
@@ -329,6 +330,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
             else {
                 pn_delivery_set_context(pnd, delivery);
                 qdr_delivery_set_context(delivery, pnd);
+                qdr_delivery_incref(delivery);
             }
         } else {
             //
@@ -369,23 +371,28 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
 {
     qd_router_t    *router   = (qd_router_t*) context;
     qdr_delivery_t *delivery = (qdr_delivery_t*) pn_delivery_get_context(pnd);
-
-    if (!delivery)
-        return;
+    bool            give_reference = false;
 
     //
     // If the delivery is settled, remove the linkage between the PN and QDR deliveries.
     //
-    if (pn_delivery_settled(pnd)) {
+    if (pn_delivery_settled(pnd) && !!delivery) {
         pn_delivery_set_context(pnd, 0);
         qdr_delivery_set_context(delivery, 0);
+
+        //
+        // Don't decref the delivery here.  Rather, we will _give_ the reference to the core.
+        //
+        give_reference = true;
     }
 
     //
     // Update the disposition of the delivery
     //
-    qdr_delivery_update_disposition(router->router_core, delivery,
-                                    pn_delivery_remote_state(pnd), pn_delivery_settled(pnd));
+    if (!!delivery)
+        qdr_delivery_update_disposition(router->router_core, delivery,
+                                        pn_delivery_remote_state(pnd), pn_delivery_settled(pnd),
+                                        give_reference);
 
     //
     // If settled, close out the delivery
@@ -789,10 +796,10 @@ static void CORE_link_push(void *context, qdr_link_t *link)
 static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *dlv, bool settled)
 {
     qd_router_t *router = (qd_router_t*) context;
-    qd_link_t  *qlink   = (qd_link_t*) qdr_link_get_context(link);
-    pn_link_t  *plink   = qd_link_pn(qlink);
-    const char *tag;
-    int         tag_length;
+    qd_link_t   *qlink  = (qd_link_t*) qdr_link_get_context(link);
+    pn_link_t   *plink  = qd_link_pn(qlink);
+    const char  *tag;
+    int          tag_length;
 
     qdr_delivery_tag(dlv, &tag, &tag_length);
 
@@ -807,13 +814,14 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
     if (!settled && !remote_snd_settled) {
         pn_delivery_set_context(pdlv, dlv);
         qdr_delivery_set_context(dlv, pdlv);
+        qdr_delivery_incref(dlv);
     }
 
     qd_message_send(qdr_delivery_message(dlv), qlink, qdr_link_strip_annotations_out(link));
 
     if (!settled && remote_snd_settled)
         // Tell the core that the delivery has been accepted and settled, since we are settling on behalf of the receiver
-        qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true);
+        qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true, false);
 
     if (settled || remote_snd_settled)
         pn_delivery_settle(pdlv);
@@ -842,6 +850,7 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         qdr_delivery_set_context(dlv, 0);
         pn_delivery_set_context(pnd, 0);
         pn_delivery_settle(pnd);
+        qdr_delivery_decref(dlv);
     }
 }
 

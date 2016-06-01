@@ -199,6 +199,7 @@ typedef enum {
 struct qdr_delivery_t {
     DEQ_LINKS(qdr_delivery_t);
     void                *context;
+    int                  ref_count;
     qdr_link_t          *link;
     qdr_delivery_t      *peer;
     qd_message_t        *msg;
@@ -591,7 +592,6 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit);
 void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr);
 void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv);
-void qdr_delivery_free(qdr_delivery_t *delivery);
 void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);

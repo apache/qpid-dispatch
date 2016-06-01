@@ -43,6 +43,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_i
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
+    dlv->ref_count      = 1;    // referenced by the action
     dlv->link           = link;
     dlv->msg            = msg;
     dlv->to_addr        = 0;
@@ -64,6 +65,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
+    dlv->ref_count      = 1;    // referenced by the action
     dlv->link           = link;
     dlv->msg            = msg;
     dlv->to_addr        = addr;
@@ -87,9 +89,10 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    dlv->link    = link;
-    dlv->msg     = msg;
-    dlv->settled = settled;
+    dlv->ref_count = 1;    // referenced by the action
+    dlv->link      = link;
+    dlv->msg       = msg;
+    dlv->settled   = settled;
 
     action->args.connection.delivery = dlv;
     action->args.connection.tag_length = tag_length;
@@ -119,6 +122,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     dlv->where = QDR_DELIVERY_IN_UNSETTLED;
                 } else
                     dlv->where = QDR_DELIVERY_NOWHERE;
+
                 credit--;
                 link->total_deliveries++;
                 offer = DEQ_SIZE(link->undelivered);
@@ -130,7 +134,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                 link->credit_to_core--;
                 core->deliver_handler(core->user_context, link, dlv, settled);
                 if (settled)
-                    qdr_delivery_free(dlv);
+                    qdr_delivery_decref(dlv);
             }
         }
 
@@ -151,8 +155,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
     qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
     while (ref) {
         core->delivery_update_handler(core->user_context, ref->dlv, ref->dlv->disposition, ref->dlv->settled);
-        if (ref->dlv->settled)
-            qdr_delivery_free(ref->dlv);
+        qdr_delivery_decref(ref->dlv);
         qdr_del_delivery_ref(&updated_deliveries, ref);
         ref = DEQ_HEAD(updated_deliveries);
     }
@@ -205,23 +208,21 @@ void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr, bool ex
 }
 
 
-void qdr_delivery_free(qdr_delivery_t *delivery)
-{
-    if (delivery->msg)
-        qd_message_free(delivery->msg);
-    if (delivery->to_addr)
-        qd_field_iterator_free(delivery->to_addr);
-    qd_bitmask_free(delivery->link_exclusion);
-    free_qdr_delivery_t(delivery);
-}
-
-
-void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition, bool settled)
+void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition,
+                                     bool settled, bool ref_given)
 {
     qdr_action_t *action = qdr_action(qdr_update_delivery_CT, "update_delivery");
     action->args.delivery.delivery    = delivery;
     action->args.delivery.disposition = disposition;
     action->args.delivery.settled     = settled;
+
+    //
+    // The delivery's ref_count must be incremented to protect its travels into the
+    // core thread.  If the caller has given its reference to us, we can simply use
+    // the given ref rather than increment a new one.
+    //
+    if (!ref_given)
+        qdr_delivery_incref(delivery);
 
     qdr_action_enqueue(core, action);
 }
@@ -236,6 +237,41 @@ void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context)
 void *qdr_delivery_get_context(qdr_delivery_t *delivery)
 {
     return delivery->context;
+}
+
+
+void qdr_delivery_incref(qdr_delivery_t *delivery)
+{
+    qdr_connection_t *conn = delivery->link ? delivery->link->conn : 0;
+
+    if (!!conn) {
+        sys_mutex_lock(conn->work_lock);
+        delivery->ref_count++;
+        sys_mutex_unlock(conn->work_lock);
+    }
+}
+
+
+void qdr_delivery_decref(qdr_delivery_t *delivery)
+{
+    qdr_connection_t *conn   = delivery->link ? delivery->link->conn : 0;
+    bool              delete = false;
+    
+    if (!!conn) {
+        sys_mutex_lock(conn->work_lock);
+        assert(delivery->ref_count > 0);
+        delete = --delivery->ref_count == 0;
+        sys_mutex_unlock(conn->work_lock);
+    }
+
+    if (delete) {
+        if (delivery->msg)
+            qd_message_free(delivery->msg);
+        if (delivery->to_addr)
+            qd_field_iterator_free(delivery->to_addr);
+        qd_bitmask_free(delivery->link_exclusion);
+        free_qdr_delivery_t(delivery);
+    }
 }
 
 
@@ -266,6 +302,12 @@ void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 
     if (push || moved)
         qdr_delivery_push_CT(core, dlv);
+
+    //
+    // Remove the unsettled reference
+    //
+    if (moved)
+        qdr_delivery_decref(dlv);
 }
 
 
@@ -358,8 +400,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
 
 static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv, qdr_address_t *addr)
 {
-    int  fanout     = 0;
-    bool presettled = dlv->settled;
+    int fanout = 0;
 
     if (addr) {
         fanout = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false, link->link_type == QD_LINK_CONTROL);
@@ -375,6 +416,9 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
             // Queue the message for later delivery (when the address gets
             // a valid destination).
             //
+            // Use the action-reference as the reference for undelivered rather
+            // than decrementing and incrementing the delivery ref_count.
+            //
             DEQ_INSERT_TAIL(link->undelivered, dlv);
             dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
         } else {
@@ -382,6 +426,7 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
             // Release the delivery
             //
             qdr_delivery_release_CT(core, dlv);
+            qdr_delivery_decref(dlv);
             if (link->link_type == QD_LINK_ROUTER)
                 qdr_link_issue_credit_CT(core, link, 1);
         }
@@ -394,13 +439,14 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
             qdr_link_issue_credit_CT(core, link, 1);
 
             //
-            // If the delivery was pre-settled, free it now.
+            // If the delivery has no more references, free it now.
             //
-            if (presettled) {
-                assert(!dlv->peer);
-                qdr_delivery_free(dlv);
-            }
+            assert(!dlv->peer);
+            qdr_delivery_decref(dlv);
         } else {
+            //
+            // Again, don't bother decrementing then incrementing the ref_count
+            //
             DEQ_INSERT_TAIL(link->unsettled, dlv);
             dlv->where = QDR_DELIVERY_IN_UNSETTLED;
 
@@ -446,6 +492,17 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         if (!dlv->settled) {
             DEQ_INSERT_TAIL(link->unsettled, dlv);
             dlv->where = QDR_DELIVERY_IN_UNSETTLED;
+
+            //
+            // Note, in this case the ref_count is left unchanged as we are transferring
+            // the action's reference to the unsettled list's reference.
+            //
+        } else {
+            //
+            // If the delivery is settled, decrement the ref_count on the delivery.
+            // This count was the owned-by-action count.
+            //
+            qdr_delivery_decref(dlv);
         }
         return;
     }
@@ -460,8 +517,15 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         qdr_address_t *addr = link->owning_addr;
         if (!addr && dlv->to_addr)
             qd_hash_retrieve(core->addr_hash, dlv->to_addr, (void**) &addr);
+
+        //
+        // Give the action reference to the qdr_link_forward function.
+        //
         qdr_link_forward_CT(core, link, dlv, addr);
     } else {
+        //
+        // Take the action reference and use it for undelivered.  Don't decref/incref.
+        //
         DEQ_INSERT_TAIL(link->undelivered, dlv);
         dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
     }
@@ -496,11 +560,13 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qdr_delivery_t *dlv     = action->args.delivery.delivery;
-    qdr_delivery_t *peer    = dlv->peer;
-    bool            push    = false;
-    uint64_t        disp    = action->args.delivery.disposition;
-    bool            settled = action->args.delivery.settled;
+    qdr_delivery_t *dlv        = action->args.delivery.delivery;
+    qdr_delivery_t *peer       = dlv->peer;
+    bool            push       = false;
+    bool            peer_moved = false;
+    bool            dlv_moved  = false;
+    uint64_t        disp       = action->args.delivery.disposition;
+    bool            settled    = action->args.delivery.settled;
 
     //
     // Logic:
@@ -526,21 +592,36 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             peer->settled = true;
             peer->peer = 0;
             dlv->peer  = 0;
+
+            qdr_delivery_decref(dlv);
+            qdr_delivery_decref(peer);
+
             if (peer->link) {
-                bool moved = qdr_delivery_settled_CT(core, peer);
-                if (moved)
+                peer_moved = qdr_delivery_settled_CT(core, peer);
+                if (peer_moved)
                     push = true;
             }
         }
 
         if (dlv->link)
-            qdr_delivery_settled_CT(core, dlv);
-
-        qdr_delivery_free(dlv);
+            dlv_moved = qdr_delivery_settled_CT(core, dlv);
     }
 
     if (push)
         qdr_delivery_push_CT(core, peer);
+
+    //
+    // Release the action reference, possibly freeing the delivery
+    //
+    qdr_delivery_decref(dlv);
+
+    //
+    // Release the unsettled references if the deliveries were moved
+    //
+    if (dlv_moved)
+        qdr_delivery_decref(dlv);
+    if (peer_moved)
+        qdr_delivery_decref(peer);
 }
 
 
@@ -639,6 +720,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 
     sys_mutex_lock(link->conn->work_lock);
     if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
+        dlv->ref_count++; // We have the lock, don't use the incref function
         qdr_add_delivery_ref(&link->updated_deliveries, dlv);
         qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
         activate = true;
