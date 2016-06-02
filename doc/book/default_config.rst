@@ -19,7 +19,7 @@ Configuration
 =============
 
 The default configuration file is installed in
-`install-prefix`/etc/qpid/qdrouterd.conf. This configuration file will
+`install-prefix`/etc/qdrouterd.conf. This configuration file will
 cause the router to run in standalone mode, listening on the standard
 AMQP port (5672). Dispatch Router looks for the configuration file in
 the installed location by default. If you wish to use a different path,

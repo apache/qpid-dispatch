@@ -21,7 +21,7 @@ Introduction
 Overview
 --------
 
-The Dispatch router is an AMQP message message router that provides
+The Dispatch router is an AMQP message router that provides
 advanced interconnect capabilities. It allows flexible routing of
 messages between any AMQP-enabled endpoints, whether they be clients,
 servers, brokers or any other entity that can send or receive standard
