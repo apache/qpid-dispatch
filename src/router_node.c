@@ -374,9 +374,17 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
     bool            give_reference = false;
 
     //
+    // It's important to not do any processing without a qdr_delivery.  When pre-settled
+    // multi-frame deliveries arrive, it's possible for the settlement to register before
+    // the whole message arrives.  Such premature settlement indications must be ignored.
+    //
+    if (!delivery)
+        return;
+
+    //
     // If the delivery is settled, remove the linkage between the PN and QDR deliveries.
     //
-    if (pn_delivery_settled(pnd) && !!delivery) {
+    if (pn_delivery_settled(pnd)) {
         pn_delivery_set_context(pnd, 0);
         qdr_delivery_set_context(delivery, 0);
 
@@ -389,10 +397,9 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
     //
     // Update the disposition of the delivery
     //
-    if (!!delivery)
-        qdr_delivery_update_disposition(router->router_core, delivery,
-                                        pn_delivery_remote_state(pnd), pn_delivery_settled(pnd),
-                                        give_reference);
+    qdr_delivery_update_disposition(router->router_core, delivery,
+                                    pn_delivery_remote_state(pnd), pn_delivery_settled(pnd),
+                                    give_reference);
 
     //
     // If settled, close out the delivery
