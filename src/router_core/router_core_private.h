@@ -267,6 +267,7 @@ struct qdr_link_t {
     int                      incremental_credit;
     bool                     flow_started;   ///< for incoming, true iff initial credit has been granted
     bool                     drain_mode;
+    bool                     drain_mode_changed;
     int                      credit_to_core; ///< Number of the available credits incrementally given to the core
     uint64_t                 total_deliveries;
 };
@@ -545,6 +546,7 @@ struct qdr_core_t {
     qdr_link_flow_t            flow_handler;
     qdr_link_offer_t           offer_handler;
     qdr_link_drained_t         drained_handler;
+    qdr_link_drain_t           drain_handler;
     qdr_link_push_t            push_handler;
     qdr_link_deliver_t         deliver_handler;
     qdr_delivery_update_t      delivery_update_handler;
@@ -589,7 +591,7 @@ void  qdr_agent_setup_CT(qdr_core_t *core);
 void  qdr_forwarder_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
-void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit);
+void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain);
 void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr);
 void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv);
 void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery);

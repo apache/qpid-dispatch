@@ -353,7 +353,7 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     //
     if (moved && link->link_direction == QD_INCOMING &&
         link->link_type != QD_LINK_ROUTER && !link->connected_link)
-        qdr_link_issue_credit_CT(core, link, 1);
+        qdr_link_issue_credit_CT(core, link, 1, false);
 
     return moved;
 }
@@ -364,24 +364,39 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     if (discard)
         return;
 
-    qdr_link_t *link = action->args.connection.link;
-    int  credit      = action->args.connection.credit;
-    bool drain       = action->args.connection.drain;
-    bool activate    = false;
+    qdr_link_t *link   = action->args.connection.link;
+    int  credit        = action->args.connection.credit;
+    bool drain         = action->args.connection.drain;
+    bool activate      = false;
+    bool drain_was_set = !link->drain_mode && drain;
+
+    link->drain_mode = drain;
 
     //
     // If this is an attach-routed link, propagate the flow data downrange.
     // Note that the credit value is incremental.
     //
-    if (link->connected_link)
-        qdr_link_issue_credit_CT(core, link->connected_link, credit);
+    if (link->connected_link) {
+        qdr_link_t *clink = link->connected_link;
+
+        if (clink->link_direction == QD_INCOMING)
+            qdr_link_issue_credit_CT(core, link->connected_link, credit, drain);
+        else {
+            sys_mutex_lock(clink->conn->work_lock);
+            qdr_add_link_ref(&clink->conn->links_with_deliveries, clink, QDR_LINK_LIST_CLASS_DELIVERY);
+            sys_mutex_unlock(clink->conn->work_lock);
+            qdr_connection_activate_CT(core, clink->conn);
+        }
+
+        return;
+    }
 
     //
     // Handle the replenishing of credit outbound
     //
-    if (link->link_direction == QD_OUTGOING && credit > 0) {
+    if (link->link_direction == QD_OUTGOING && (credit > 0 || drain_was_set)) {
         sys_mutex_lock(link->conn->work_lock);
-        if (DEQ_SIZE(link->undelivered) > 0) {
+        if (DEQ_SIZE(link->undelivered) > 0 || drain_was_set) {
             qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
             activate = true;
         }
@@ -389,10 +404,8 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     }
 
     //
-    // Record the drain mode for the link
+    // Activate the connection if we have deliveries to send or drain mode was set.
     //
-    link->drain_mode = drain;
-
     if (activate)
         qdr_connection_activate_CT(core, link->conn);
 }
@@ -428,7 +441,7 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
             qdr_delivery_release_CT(core, dlv);
             qdr_delivery_decref(dlv);
             if (link->link_type == QD_LINK_ROUTER)
-                qdr_link_issue_credit_CT(core, link, 1);
+                qdr_link_issue_credit_CT(core, link, 1, false);
         }
     } else if (fanout > 0) {
         if (dlv->settled) {
@@ -436,7 +449,7 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
             // The delivery is settled.  Keep it off the unsettled list and issue
             // replacement credit for it now.
             //
-            qdr_link_issue_credit_CT(core, link, 1);
+            qdr_link_issue_credit_CT(core, link, 1, false);
 
             //
             // If the delivery has no more references, free it now.
@@ -457,7 +470,7 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
             // are many addresses sharing the link.
             //
             if (link->link_type == QD_LINK_ROUTER)
-                qdr_link_issue_credit_CT(core, link, 1);
+                qdr_link_issue_credit_CT(core, link, 1, false);
         }
     }
 
@@ -629,8 +642,14 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
  * Check the link's accumulated credit.  If the credit given to the connection thread
  * has been issued to Proton, provide the next batch of credit to the connection thread.
  */
-void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit)
+void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain)
 {
+    bool drain_changed = link->drain_mode |= drain;
+    bool activate      = drain_changed;
+
+    link->drain_mode = drain;
+    link->drain_mode_changed = drain_changed;
+
     link->incremental_credit_CT += credit;
     link->flow_started = true;
 
@@ -640,7 +659,10 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit)
         //
         link->incremental_credit    = link->incremental_credit_CT;
         link->incremental_credit_CT = 0;
+        activate = true;
+    }
 
+    if (activate) {
         //
         // Put this link on the connection's has-credit list.
         //
@@ -682,7 +704,7 @@ void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
             // Issue credit to stalled links
             //
             if (!link->flow_started)
-                qdr_link_issue_credit_CT(core, link, link->capacity);
+                qdr_link_issue_credit_CT(core, link, link->capacity, false);
 
             //
             // Drain undelivered deliveries via the forwarder

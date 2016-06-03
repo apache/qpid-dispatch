@@ -188,8 +188,14 @@ int qdr_connection_process(qdr_connection_t *conn)
         sys_mutex_unlock(conn->work_lock);
 
         if (link) {
-            core->flow_handler(core->user_context, link, link->incremental_credit);
-            link->incremental_credit = 0;
+            if (link->incremental_credit > 0) {
+                core->flow_handler(core->user_context, link, link->incremental_credit);
+                link->incremental_credit = 0;
+            }
+            if (link->drain_mode_changed) {
+                core->drain_handler(core->user_context, link, link->drain_mode);
+                link->drain_mode_changed = false;
+            }
             event_count++;
         }
     } while (link);
@@ -331,6 +337,7 @@ void qdr_connection_handlers(qdr_core_t                *core,
                              qdr_link_flow_t            flow,
                              qdr_link_offer_t           offer,
                              qdr_link_drained_t         drained,
+                             qdr_link_drain_t           drain,
                              qdr_link_push_t            push,
                              qdr_link_deliver_t         deliver,
                              qdr_delivery_update_t      delivery_update)
@@ -343,6 +350,7 @@ void qdr_connection_handlers(qdr_core_t                *core,
     core->flow_handler            = flow;
     core->offer_handler           = offer;
     core->drained_handler         = drained;
+    core->drain_handler           = drain;
     core->push_handler            = push;
     core->deliver_handler         = deliver;
     core->delivery_update_handler = delivery_update;
@@ -991,7 +999,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             if (qdr_terminus_is_anonymous(target)) {
                 link->owning_addr = 0;
                 qdr_link_outbound_second_attach_CT(core, link, source, target);
-                qdr_link_issue_credit_CT(core, link, link->capacity);
+                qdr_link_issue_credit_CT(core, link, link->capacity, false);
 
             } else {
                 //
@@ -1032,7 +1040,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     // Issue the initial credit only if there are destinations for the address.
                     //
                     if (DEQ_SIZE(addr->subscriptions) || DEQ_SIZE(addr->rlinks) || qd_bitmask_cardinality(addr->rnodes))
-                        qdr_link_issue_credit_CT(core, link, link->capacity);
+                        qdr_link_issue_credit_CT(core, link, link->capacity, false);
                 }
             }
             break;
@@ -1040,12 +1048,12 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
 
         case QD_LINK_CONTROL:
             qdr_link_outbound_second_attach_CT(core, link, source, target);
-            qdr_link_issue_credit_CT(core, link, link->capacity);
+            qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
 
         case QD_LINK_ROUTER:
             qdr_link_outbound_second_attach_CT(core, link, source, target);
-            qdr_link_issue_credit_CT(core, link, link->capacity);
+            qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
         }
     } else {
@@ -1147,12 +1155,12 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
             //
             qdr_address_t *addr = link->owning_addr;
             if (!addr || (DEQ_SIZE(addr->subscriptions) || DEQ_SIZE(addr->rlinks) || qd_bitmask_cardinality(addr->rnodes)))
-                qdr_link_issue_credit_CT(core, link, link->capacity);
+                qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
 
         case QD_LINK_CONTROL:
         case QD_LINK_ROUTER:
-            qdr_link_issue_credit_CT(core, link, link->capacity);
+            qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
         }
     } else {

@@ -142,8 +142,8 @@ class DrainNoMessagesHandler(MessagingHandler):
     def on_sendable(self, event):
         self.receiver.drain(1)
 
-    def on_drained(self, event):
-        if sender.credit == 0:
+    def on_link_flow(self, event):
+        if self.receiver.credit == 0:
             self.error = None
             self.timer.cancel()
             self.conn.close()
@@ -189,8 +189,8 @@ class DrainNoMoreMessagesHandler(MessagingHandler):
     def on_settled(self, event):
         self.receiver.drain(1)
 
-    def on_drained(self, event):
-        if sender.credit == 0:
+    def on_link_flow(self, event):
+        if self.receiver.credit == 0:
             self.error = None
             self.timer.cancel()
             self.conn.close()

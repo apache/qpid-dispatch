@@ -42,22 +42,22 @@ class DrainSupportTest(TestCase):
         cls.router.wait_ready()
         cls.address = cls.router.addresses[0]
 
-    def test_drain_support_all_messages(self):
+    def test_drain_support_1_all_messages(self):
         drain_support = DrainMessagesHandler(self.address)
         drain_support.run()
         self.assertEqual(drain_support.error, None)
 
-    def test_drain_support_one_message(self):
+    def test_drain_support_2_one_message(self):
         drain_support = DrainOneMessageHandler(self.address)
         drain_support.run()
         self.assertEqual(drain_support.error, None)
 
-    def test_drain_support_no_messages(self):
+    def test_drain_support_3_no_messages(self):
         drain_support = DrainNoMessagesHandler(self.address)
         drain_support.run()
         self.assertEqual(drain_support.error, None)
 
-    def test_drain_support_no_more_messages(self):
+    def test_drain_support_4_no_more_messages(self):
         drain_support = DrainNoMoreMessagesHandler(self.address)
         drain_support.run()
         self.assertEqual(drain_support.error, None)
