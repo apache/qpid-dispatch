@@ -21,6 +21,7 @@ import unittest
 
 from system_test import TestCase, Qdrouterd, main_module
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler
+from system_tests_drain_support import DrainNoMessagesHandler, DrainNoMoreMessagesHandler
 
 class DrainSupportTest(TestCase):
 
@@ -44,12 +45,22 @@ class DrainSupportTest(TestCase):
     def test_drain_support_all_messages(self):
         drain_support = DrainMessagesHandler(self.address)
         drain_support.run()
-        self.assertTrue(drain_support.drain_successful)
+        self.assertEqual(drain_support.error, None)
 
     def test_drain_support_one_message(self):
         drain_support = DrainOneMessageHandler(self.address)
         drain_support.run()
-        self.assertTrue(drain_support.drain_successful)
+        self.assertEqual(drain_support.error, None)
+
+    def test_drain_support_no_messages(self):
+        drain_support = DrainNoMessagesHandler(self.address)
+        drain_support.run()
+        self.assertEqual(drain_support.error, None)
+
+    def test_drain_support_no_more_messages(self):
+        drain_support = DrainNoMoreMessagesHandler(self.address)
+        drain_support.run()
+        self.assertEqual(drain_support.error, None)
 
 if __name__ == '__main__':
     unittest.main(main_module())
