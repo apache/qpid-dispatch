@@ -21,6 +21,14 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton import Message
 
+class Timeout(object):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.timeout()
+
+
 class DrainMessagesHandler(MessagingHandler):
     def __init__(self, address):
         # prefetch is set to zero so that proton does not automatically issue 10 credits.
@@ -31,9 +39,14 @@ class DrainMessagesHandler(MessagingHandler):
         self.sent_count = 0
         self.received_count = 0
         self.address = address
-        self.drain_successful = False
+        self.error = "Unexpected Exit"
+
+    def timeout(self):
+        self.error = "Timeout Expired"
+        self.conn.close()
 
     def on_start(self, event):
+        self.timer = event.reactor.schedule(5, Timeout(self))
         self.conn = event.container.connect(self.address)
 
         # Create a sender and a receiver. They are both listening on the same address
@@ -66,13 +79,15 @@ class DrainMessagesHandler(MessagingHandler):
             # messages. That along with 10 messages received indicates that the drain worked and we can
             # declare that the test is successful
             if self.received_count == 10 and event.link.credit == 0:
-                self.drain_successful = True
+                self.error = None
+                self.timer.cancel()
                 self.receiver.close()
                 self.sender.close()
                 self.conn.close()
 
     def run(self):
         Container(self).run()
+
 
 class DrainOneMessageHandler(DrainMessagesHandler):
     def __init__(self, address):
@@ -94,8 +109,92 @@ class DrainOneMessageHandler(DrainMessagesHandler):
             # messages. That along with 5 messages received (4 earlier messages and 1 extra message for drain=1)
             # indicates that the drain worked and we can declare that the test is successful
             if self.received_count == 5 and event.link.credit == 0:
-                self.drain_successful = True
+                self.error = None
+                self.timer.cancel()
                 self.receiver.close()
                 self.sender.close()
                 self.conn.close()
+
+
+class DrainNoMessagesHandler(MessagingHandler):
+    def __init__(self, address):
+        # prefetch is set to zero so that proton does not automatically issue 10 credits.
+        super(DrainNoMessagesHandler, self).__init__(prefetch=0)
+        self.conn = None
+        self.sender = None
+        self.receiver = None
+        self.address = address
+        self.error = "Unexpected Exit"
+
+    def timeout(self):
+        self.error = "Timeout Expired"
+        self.conn.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(5, Timeout(self))
+        self.conn = event.container.connect(self.address)
+
+        # Create a sender and a receiver. They are both listening on the same address
+        self.receiver = event.container.create_receiver(self.conn, "org.apache.dev")
+        self.sender = event.container.create_sender(self.conn, "org.apache.dev")
+        self.receiver.flow(1)
+
+    def on_sendable(self, event):
+        self.receiver.drain(1)
+
+    def on_drained(self, event):
+        if sender.credit == 0:
+            self.error = None
+            self.timer.cancel()
+            self.conn.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class DrainNoMoreMessagesHandler(MessagingHandler):
+    def __init__(self, address):
+        # prefetch is set to zero so that proton does not automatically issue 10 credits.
+        super(DrainNoMoreMessagesHandler, self).__init__(prefetch=0)
+        self.conn = None
+        self.sender = None
+        self.receiver = None
+        self.address = address
+        self.sent = 0
+        self.rcvd = 0
+        self.error = "Unexpected Exit"
+
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d rcvd=%d" % (self.sent, self.rcvd)
+        self.conn.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(5, Timeout(self))
+        self.conn = event.container.connect(self.address)
+
+        # Create a sender and a receiver. They are both listening on the same address
+        self.receiver = event.container.create_receiver(self.conn, "org.apache.dev")
+        self.sender = event.container.create_sender(self.conn, "org.apache.dev")
+        self.receiver.flow(1)
+
+    def on_sendable(self, event):
+        if self.sent == 0:
+            msg = Message(body="Hello World")
+            event.sender.send(msg)
+            self.sent += 1
+
+    def on_message(self, event):
+        self.rcvd += 1
+
+    def on_settled(self, event):
+        self.receiver.drain(1)
+
+    def on_drained(self, event):
+        if sender.credit == 0:
+            self.error = None
+            self.timer.cancel()
+            self.conn.close()
+
+    def run(self):
+        Container(self).run()
 
