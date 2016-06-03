@@ -28,6 +28,8 @@ from proton.handlers import MessagingHandler
 from proton.reactor import AtMostOnce, Container
 from proton.utils import BlockingConnection, LinkDetached
 
+from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler
+
 from qpid_dispatch.management.client import Node
 
 class LinkRoutePatternTest(TestCase):
@@ -443,6 +445,16 @@ class LinkRoutePatternTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_www_drain_support_all_messages(self):
+        drain_support = DrainMessagesHandler(self.routers[2].addresses[1])
+        drain_support.run()
+        self.assertTrue(drain_support.drain_successful)
+
+    def test_www_drain_support_one_message(self):
+        drain_support = DrainOneMessageHandler(self.routers[2].addresses[1])
+        drain_support.run()
+        self.assertTrue(drain_support.drain_successful)
+
 
 class DeliveryTagsTest(MessagingHandler):
     def __init__(self, sender_address, listening_address, qdstat_address):
@@ -565,7 +577,6 @@ class CloseWithUnsettledTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
-
-
 if __name__ == '__main__':
     unittest.main(main_module())
+

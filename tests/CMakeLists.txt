@@ -72,6 +72,7 @@ add_test(router_policy_test    ${TEST_WRAP} -m unittest -v router_policy_test)
 foreach(py_test_module
 #   system_tests_broker
     system_tests_link_routes
+    system_tests_drain
     system_tests_management
     system_tests_one_router
     system_tests_policy
