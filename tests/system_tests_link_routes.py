@@ -28,7 +28,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import AtMostOnce, Container
 from proton.utils import BlockingConnection, LinkDetached
 
-from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler
+from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler, DrainNoMessagesHandler, DrainNoMoreMessagesHandler
 
 from qpid_dispatch.management.client import Node
 
@@ -448,12 +448,22 @@ class LinkRoutePatternTest(TestCase):
     def test_www_drain_support_all_messages(self):
         drain_support = DrainMessagesHandler(self.routers[2].addresses[1])
         drain_support.run()
-        self.assertTrue(drain_support.drain_successful)
+        self.assertEqual(None, drain_support.error)
 
     def test_www_drain_support_one_message(self):
         drain_support = DrainOneMessageHandler(self.routers[2].addresses[1])
         drain_support.run()
-        self.assertTrue(drain_support.drain_successful)
+        self.assertEqual(None, drain_support.error)
+
+    def test_www_drain_support_no_messages(self):
+        drain_support = DrainNoMessagesHandler(self.routers[2].addresses[1])
+        drain_support.run()
+        self.assertEqual(None, drain_support.error)
+
+    def test_www_drain_support_no_more_messages(self):
+        drain_support = DrainNoMoreMessagesHandler(self.routers[2].addresses[1])
+        drain_support.run()
+        self.assertEqual(None, drain_support.error)
 
 
 class DeliveryTagsTest(MessagingHandler):

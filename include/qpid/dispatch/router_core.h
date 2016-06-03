@@ -527,6 +527,7 @@ typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, qdr_e
 typedef void (*qdr_link_flow_t)          (void *context, qdr_link_t *link, int credit);
 typedef void (*qdr_link_offer_t)         (void *context, qdr_link_t *link, int delivery_count);
 typedef void (*qdr_link_drained_t)       (void *context, qdr_link_t *link);
+typedef void (*qdr_link_drain_t)         (void *context, qdr_link_t *link, bool mode);
 typedef void (*qdr_link_push_t)          (void *context, qdr_link_t *link);
 typedef void (*qdr_link_deliver_t)       (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
 typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
@@ -540,6 +541,7 @@ void qdr_connection_handlers(qdr_core_t                *core,
                              qdr_link_flow_t            flow,
                              qdr_link_offer_t           offer,
                              qdr_link_drained_t         drained,
+                             qdr_link_drain_t           drain,
                              qdr_link_push_t            push,
                              qdr_link_deliver_t         deliver,
                              qdr_delivery_update_t      delivery_update);
