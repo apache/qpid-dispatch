@@ -86,6 +86,8 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
                      # This unauthenticated listener is for qdstat to connect to it.
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
+                                   'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
                      ('router', {'workerThreads': 1,
                                  'id': 'QDR.X',
                                  'mode': 'interior',
@@ -126,6 +128,55 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
         self.assertIn("inter-router", out)
         self.assertIn("test@domain.com(PLAIN)", out)
 
+    def test_qdstat_connect_sasl(self):
+        """
+        Make qdstat use sasl plain authentication.
+        """
+        p = self.popen(
+            ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c', '--sasl-mechanisms=PLAIN',
+             '--sasl-username=test@domain.com', '--sasl-password=password'],
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+
+        out = p.communicate()[0]
+        assert p.returncode == 0, \
+            "qdstat exit status %s, output:\n%s" % (p.returncode, out)
+
+        split_list = out.split()
+
+        # There will be 2 connections that have authenticated using SASL PLAIN. One inter-router connection
+        # and the other connection that this qdstat client is making
+        self.assertEqual(2, split_list.count("test@domain.com(PLAIN)"))
+        self.assertEqual(1, split_list.count("inter-router"))
+        self.assertEqual(1, split_list.count("normal"))
+
+    def test_qdstat_connect_sasl_password_file(self):
+        """
+        Make qdstat use sasl plain authentication with client password specified in a file.
+        """
+        password_file = os.getcwd() + '/sasl-client-password-file.txt'
+        # Create a SASL configuration file.
+        with open(password_file, 'w') as sasl_client_password_file:
+            sasl_client_password_file.write("password")
+
+        sasl_client_password_file.close()
+
+        p = self.popen(
+            ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c', '--sasl-mechanisms=PLAIN',
+             '--sasl-username=test@domain.com', '--sasl-password-file=' + password_file],
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+
+        out = p.communicate()[0]
+        assert p.returncode == 0, \
+            "qdstat exit status %s, output:\n%s" % (p.returncode, out)
+
+        split_list = out.split()
+
+        # There will be 2 connections that have authenticated using SASL PLAIN. One inter-router connection
+        # and the other connection that this qdstat client is making
+        self.assertEqual(2, split_list.count("test@domain.com(PLAIN)"))
+        self.assertEqual(1, split_list.count("inter-router"))
+        self.assertEqual(1, split_list.count("normal"))
+
 
 class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
 
@@ -156,9 +207,11 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                      ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
                                    'sslProfile':'server-ssl-profile',
                                    'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
-                     # This unauthenticated listener is for qdstat to connect to it.
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
+                                   'sslProfile':'server-ssl-profile',
+                                   'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
                                      'cert-db': cls.ssl_file('ca-certificate.pem'),
                                      'cert-file': cls.ssl_file('server-certificate.pem'),
@@ -194,6 +247,35 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
 
         cls.routers[1].wait_router_connected('QDR.X')
 
+    def test_aaa_qdstat_connect_sasl_over_ssl(self):
+        """
+        Make qdstat use sasl plain authentication over ssl.
+        """
+        p = self.popen(
+            ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c',
+             # The following are SASL args
+             '--sasl-mechanisms=PLAIN',
+             '--sasl-username=test@domain.com',
+             '--sasl-password=password',
+             # The following are SSL args
+             '--ssl-trustfile=' + self.ssl_file('ca-certificate.pem'),
+             '--ssl-certificate=' + self.ssl_file('client-certificate.pem'),
+             '--ssl-key=' + self.ssl_file('client-private-key.pem'),
+             '--ssl-password=client-password'],
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+
+        out = p.communicate()[0]
+        assert p.returncode == 0, \
+            "qdstat exit status %s, output:\n%s" % (p.returncode, out)
+
+        split_list = out.split()
+
+        # There will be 2 connections that have authenticated using SASL PLAIN. One inter-router connection
+        # and the other connection that this qdstat client is making
+        self.assertEqual(2, split_list.count("test@domain.com(PLAIN)"))
+        self.assertEqual(1, split_list.count("inter-router"))
+        self.assertEqual(1, split_list.count("normal"))
+
     def test_inter_router_plain_over_ssl_exists(self):
         """The setUpClass sets up two routers with SASL PLAIN enabled over TLS/SSLv3.
 
@@ -219,8 +301,8 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         # user must be test@domain.com
         self.assertEqual(u'test@domain.com', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][16])
 
-class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
 
+class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
     @staticmethod
     def ssl_file(name):
         return os.path.join(DIR, 'ssl_certs', name)
@@ -266,7 +348,8 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
                                     'ssl-profile': 'client-ssl-profile',
                                     'verifyHostName': 'yes',
                                     'saslMechanisms': 'PLAIN',
-                                    'saslUsername': 'test@domain.com', 'saslPassword': 'password'}),
+                                    'saslUsername': 'test@domain.com',
+                                    'saslPassword': 'password'}),
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
                                  'routerId': 'QDR.Y'}),

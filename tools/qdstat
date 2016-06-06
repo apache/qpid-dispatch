@@ -30,7 +30,8 @@ import  qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
-from qpid_dispatch_internal.tools.command import connection_options, main, OptionParser, opts_ssl_domain, opts_url
+from qpid_dispatch_internal.tools.command import connection_options, main, OptionParser, opts_ssl_domain, opts_sasl, \
+        opts_url
 
 def parse_args(argv):
     """ Set global variables for options, return arguments """
@@ -68,8 +69,10 @@ class BusManager(Node):
     def __init__(self, opts):
         self.opts = opts
         super(BusManager, self).__init__(
-            Node.connection(opts_url(opts), opts.router, timeout=opts.timeout,
-                            ssl_domain=opts_ssl_domain(opts)))
+            Node.connection(opts_url(opts), opts.router,
+                            timeout=opts.timeout,
+                            ssl_domain=opts_ssl_domain(opts),
+                            sasl=opts_sasl(self.opts)))
 
     def query(self, entity_type):
         return super(BusManager, self).query(entity_type).get_entities()

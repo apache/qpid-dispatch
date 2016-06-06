@@ -24,7 +24,8 @@ import  qpid_dispatch_site
 from qpid_dispatch.management.client import Node, Url
 from collections import Mapping, Sequence
 from optparse import OptionGroup
-from qpid_dispatch_internal.tools.command import OptionParser, Option, UsageError, connection_options, check_args, main, opts_ssl_domain, opts_url
+from qpid_dispatch_internal.tools.command import OptionParser, Option, UsageError, connection_options, check_args, \
+    main, opts_ssl_domain, opts_url, opts_sasl
 
 def attr_split(attrstr):
     """Split an attribute string of the form name=value or name to indicate None"""
@@ -70,9 +71,11 @@ class QdManage():
         self.clean_opts()
         if self.opts.indent == -1:
             self.opts.indent = None
-        if len(self.args) == 0: raise UsageError("No operation specified")
-        self.node = Node.connect(
-            opts_url(self.opts), self.opts.router, self.opts.timeout, opts_ssl_domain(self.opts))
+        if len(self.args) == 0:
+            raise UsageError("No operation specified")
+        self.node = Node.connect(opts_url(self.opts), self.opts.router, self.opts.timeout,
+                                 opts_ssl_domain(self.opts),
+                                 opts_sasl(self.opts))
         operation = self.args.pop(0)
         method = operation.lower().replace('-','_')
         if operation.upper() in self.operations and hasattr(self, method):
