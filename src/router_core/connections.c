@@ -502,6 +502,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
 
         if (dlv->tracking_addr) {
             int link_bit = link->conn->mask_bit;
+            assert(link_bit >= 0);
             dlv->tracking_addr->outstanding_deliveries[link_bit]--;
             dlv->tracking_addr->tracked_deliveries--;
             dlv->tracking_addr = 0;
@@ -599,6 +600,10 @@ void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t
 
         case QDR_CONDITION_FORBIDDEN:
             work->error = qdr_error("qd:forbidden", "Connectivity to the node is forbidden");
+            break;
+
+        case QDR_CONDITION_WRONG_ROLE:
+            work->error = qdr_error("qd:connection-role", "Link attach forbidden on inter-router connection");
             break;
 
         case QDR_CONDITION_NONE:
@@ -877,6 +882,7 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
                 qd_bitmask_clear_bit(core->neighbor_free_mask, conn->mask_bit);
             else {
                 qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
+                conn->role = QDR_ROLE_NORMAL;
                 return;
             }
 
@@ -925,6 +931,12 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     // Deactivate routes associated with this connection
     //
     qdr_route_connection_closed_CT(core, conn);
+
+    //
+    // Give back the router mask-bit.
+    //
+    if (conn->role == QDR_ROLE_INTER_ROUTER)
+        qd_bitmask_set_bit(core->neighbor_free_mask, conn->mask_bit);
 
     //
     // TODO - Clean up links associated with this connection
@@ -985,6 +997,19 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     //
     if (((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)) {
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN);
+        qdr_terminus_free(source);
+        qdr_terminus_free(target);
+        return;
+    }
+
+    //
+    // Reject ENDPOINT attaches if this is an inter-router connection _and_ there is no
+    // CONTROL link on the connection.  This will prevent endpoints from using inter-router
+    // listeners for normal traffic but will not prevent routed-links from being established.
+    //
+    if (conn->role == QDR_ROLE_INTER_ROUTER && link->link_type == QD_LINK_ENDPOINT &&
+        core->control_links_by_mask_bit[conn->mask_bit] == 0) {
+        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_WRONG_ROLE);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
         return;
