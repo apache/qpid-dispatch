@@ -18,7 +18,7 @@ under the License.
 */
 /**
  * @module QDR
- * @mail QDR
+ * @main QDR
  *
  * The main entry point for the QDR module
  *
@@ -154,7 +154,6 @@ var QDR = (function(QDR) {
   QDR.module.run(function(workspace, viewRegistry, layoutFull, $rootScope, $location, localStorage, QDRService, QDRChartService) {
 		QDR.log.info(QDR.pluginName, " loaded");
 		Core.addCSS(QDR.contextPath + "plugin/css/dispatch.css");
-		Core.addCSS(QDR.contextPath + "plugin/css/qdrTopology.css");
 		Core.addCSS(QDR.contextPath + "plugin/css/plugin.css");
 		//Core.addCSS("https://cdn.rawgit.com/mohsen1/json-formatter/master/dist/json-formatter.min.css");
 		Core.addCSS("https://cdnjs.cloudflare.com/ajax/libs/jquery.tipsy/1.0.2/jquery.tipsy.css");
