@@ -1005,6 +1005,20 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
 
+    def test_15_attach_on_inter_router(self):
+        test = AttachOnInterRouterTest(self.routers[0].addresses[5])
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+class Timeout(object):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.timeout()
+
+
 class ExcessDeliveriesReleasedTest(MessagingHandler):
     def __init__(self, address1, address2):
         super(ExcessDeliveriesReleasedTest, self).__init__(prefetch=0)
@@ -1019,7 +1033,13 @@ class ExcessDeliveriesReleasedTest(MessagingHandler):
         self.n_accepted = 0
         self.n_released = 0
 
+    def timeout(self):
+        self.error = "Timeout Expired"
+        self.conn1.close()
+        self.conn2.close()
+
     def on_start(self, event):
+        self.timer = event.reactor.schedule(5, Timeout(self))
         self.conn1 = event.container.connect(self.address1)
         self.conn2 = event.container.connect(self.address2)
         self.sender   = event.container.create_sender(self.conn1, self.dest)
@@ -1044,11 +1064,37 @@ class ExcessDeliveriesReleasedTest(MessagingHandler):
                 self.error = "Expected 6 received, got %d" % self.n_received
             self.conn1.close()
             self.conn2.close()
+            self.timer.cancel()
 
     def on_message(self, event):
         self.n_received += 1
         if self.n_received == 6:
             self.receiver.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class AttachOnInterRouterTest(MessagingHandler):
+    def __init__(self, address):
+        super(AttachOnInterRouterTest, self).__init__(prefetch=0)
+        self.address = address
+        self.dest = "AOIRtest"
+        self.error = None
+        self.sender = None
+
+    def timeout(self):
+        self.error = "Timeout Expired"
+        self.conn.close()
+
+    def on_start(self, event):
+        self.timer  = event.reactor.schedule(5, Timeout(self))
+        self.conn   = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn, self.dest)
+
+    def on_link_remote_close(self, event):
+        self.conn.close()
+        self.timer.cancel()
 
     def run(self):
         Container(self).run()
