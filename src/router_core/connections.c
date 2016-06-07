@@ -1295,13 +1295,16 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             break;
 
         case QD_LINK_CONTROL:
-            qdr_del_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-            core->control_links_by_mask_bit[conn->mask_bit] = 0;
-            qdr_post_link_lost_CT(core, conn->mask_bit);
+            if (conn->role == QDR_ROLE_INTER_ROUTER) {
+                qdr_del_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+                core->control_links_by_mask_bit[conn->mask_bit] = 0;
+                qdr_post_link_lost_CT(core, conn->mask_bit);
+            }
             break;
 
         case QD_LINK_ROUTER:
-            core->data_links_by_mask_bit[conn->mask_bit] = 0;
+            if (conn->role == QDR_ROLE_INTER_ROUTER)
+                core->data_links_by_mask_bit[conn->mask_bit] = 0;
             break;
         }
     }
