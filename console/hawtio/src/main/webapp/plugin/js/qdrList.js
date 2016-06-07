@@ -129,12 +129,18 @@ var QDR = (function(QDR) {
 				//QDR.log.debug("forcing selectedNode to " + $scope.selectedNode);
 			}
 		}
+		$scope.currentNode = undefined;
 		$scope.nodes.some( function (node, i) {
 			if (node.name === $scope.selectedNode) {
 				$scope.currentNode = $scope.nodes[i]
 				return true;
 			}
 		})
+		if ($scope.currentNode == undefined) {
+			$scope.selectedNode = $scope.nodes[0].name;
+			$scope.selectedNodeId = $scope.nodes[0].id;
+			$scope.currentNode = $scope.nodes[0];
+		}
 
 		var excludedEntities = ["management", "org.amqp.management", "operationalEntity", "entity", "configurationEntity", "dummy", "console"];
 		var aggregateEntities = ["router.address"];
