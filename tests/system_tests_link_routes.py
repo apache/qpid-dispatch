@@ -100,9 +100,9 @@ class LinkRoutePatternTest(TestCase):
                )
         router('C',
                [
-                   ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': c_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    # The client will exclusively use the following listener to connect to QDR.C
                    ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(), 'saslMechanisms': 'ANONYMOUS'}),
+                   ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': c_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    # Note here that the linkRoutePattern is set to org.apache. which makes it backward compatible.
                    # The dot(.) at the end is ignored by the address hashing scheme.
                    ('linkRoutePattern', {'prefix': 'org.apache.'}),
@@ -176,7 +176,7 @@ class LinkRoutePatternTest(TestCase):
         Runs qdstat on router C to make sure that router C has two link routes, one 'in' and one 'out'
 
         """
-        out = self.run_qdstat_linkRoute(self.routers[2].addresses[1])
+        out = self.run_qdstat_linkRoute(self.routers[2].addresses[0])
         out_list = out.split()
 
         self.assertEqual(out_list.count('in'), 2)
@@ -193,7 +193,7 @@ class LinkRoutePatternTest(TestCase):
         hello_world_1 = "Hello World_1!"
 
         # Connects to listener #2 on QDR.C
-        addr = self.routers[2].addresses[1]
+        addr = self.routers[2].addresses[0]
 
         blocking_connection = BlockingConnection(addr)
 
@@ -279,7 +279,7 @@ class LinkRoutePatternTest(TestCase):
         """
         hello_world_3 = "Hello World_3!"
         # Connects to listener #2 on QDR.C
-        addr = self.routers[2].addresses[1]
+        addr = self.routers[2].addresses[0]
 
         blocking_connection = BlockingConnection(addr)
 
@@ -316,7 +316,7 @@ class LinkRoutePatternTest(TestCase):
         made to router QDR.B instead of QDR.C and we expect the message to be link routed successfully.
         """
         hello_world_4 = "Hello World_4!"
-        addr = self.routers[2].addresses[0]
+        addr = self.routers[1].addresses[0]
 
         blocking_connection = BlockingConnection(addr)
 
@@ -384,7 +384,7 @@ class LinkRoutePatternTest(TestCase):
         # will not allow a receiver to be created since there is no route to destination.
 
         # Connects to listener #2 on QDR.C
-        addr = self.routers[2].addresses[1]
+        addr = self.routers[2].addresses[0]
 
         # Now delete linkRoutes on QDR.C to eradicate linkRoutes completely
         local_node = Node.connect(addr, timeout=TIMEOUT)
@@ -433,8 +433,8 @@ class LinkRoutePatternTest(TestCase):
         Tests that the router carries over the delivery tag on a link routed delivery
         """
         listening_address = self.routers[1].addresses[1]
-        sender_address = self.routers[2].addresses[1]
-        qdstat_address = self.routers[2].addresses[1]
+        sender_address = self.routers[2].addresses[0]
+        qdstat_address = self.routers[2].addresses[0]
         test = DeliveryTagsTest(sender_address, listening_address, qdstat_address)
         test.run()
         self.assertTrue(test.message_received)
@@ -446,22 +446,22 @@ class LinkRoutePatternTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_www_drain_support_all_messages(self):
-        drain_support = DrainMessagesHandler(self.routers[2].addresses[1])
+        drain_support = DrainMessagesHandler(self.routers[2].addresses[0])
         drain_support.run()
         self.assertEqual(None, drain_support.error)
 
     def test_www_drain_support_one_message(self):
-        drain_support = DrainOneMessageHandler(self.routers[2].addresses[1])
+        drain_support = DrainOneMessageHandler(self.routers[2].addresses[0])
         drain_support.run()
         self.assertEqual(None, drain_support.error)
 
     def test_www_drain_support_no_messages(self):
-        drain_support = DrainNoMessagesHandler(self.routers[2].addresses[1])
+        drain_support = DrainNoMessagesHandler(self.routers[2].addresses[0])
         drain_support.run()
         self.assertEqual(None, drain_support.error)
 
     def test_www_drain_support_no_more_messages(self):
-        drain_support = DrainNoMoreMessagesHandler(self.routers[2].addresses[1])
+        drain_support = DrainNoMoreMessagesHandler(self.routers[2].addresses[0])
         drain_support.run()
         self.assertEqual(None, drain_support.error)
 
