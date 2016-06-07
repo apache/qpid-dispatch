@@ -54,9 +54,9 @@ The configuration file is made up of sections with this syntax:
 
 ::
 
-    SECTION-NAME {
-        ATTRIBUTE-NAME: ATTRIBUTE-VALUE
-        ATTRIBUTE-NAME: ATTRIBUTE-VALUE
+    sectionName {
+        attributeName: attributeValue
+        attributeName: attributeValue
         ...
     }
 
@@ -68,25 +68,25 @@ configured via management tools as well as via the configuration file.
 *Annotation sections* define a group of attribute values that can be included in
 one or more entity sections.
 
-For example you can define an "ssl-profile" annotation section with SSL credentials
+For example you can define an "sslProfile" annotation section with SSL credentials
 that can be included in multiple "listener" entities. Here's an example, note
-how the 'ssl-profile' attribute of 'listener' sections references the 'name'
-attribute of 'ssl-profile' sections.
+how the 'sslProfile' attribute of 'listener' sections references the 'name'
+attribute of 'sslProfile' sections.
 
 ::
 
-    ssl-profile {
+    sslProfile {
         name: ssl-profile-one
-        cert-db: ca-certificate-1.pem
-        cert-file: server-certificate-1.pem
-        key-file: server-private-key.pem
+        certDb: ca-certificate-1.pem
+        certFile: server-certificate-1.pem
+        keyFile: server-private-key.pem
     }
 
     listener {
-        ssl-profile: ssl-profile-one
+        sslProfile: ssl-profile-one
         host: 0.0.0.0
         port: 20102
-        sasl-mechanisms: ANONYMOUS
+        saslMechanisms: ANONYMOUS
     }
 """)
 

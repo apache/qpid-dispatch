@@ -105,8 +105,8 @@
                 },
                 "sslProfileName": {
                     "type": "string",
-                    "description": "The name of the ssl profile",
-                    "create": false
+                    "description": "The name of the ssl profile. This is for internal use only. Use the 'name' attribute to assign a name to an sslProfile section ",
+                    "create": false 
                 }                
             }
         }
