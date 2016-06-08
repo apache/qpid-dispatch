@@ -25,7 +25,8 @@ var QDR = (function (QDR) {
 	QDR.module.controller('QDR.TopologyFormController', function ($scope, QDRService) {
 
 		$scope.attributes = []
-        var generalCellTemplate = '<div class="ngCellText"><span title="{{row.entity.description}}">{{row.entity.attributeName}}</span></div>';
+        var nameTemplate = '<div title="{{row.entity.description}}" class="ngCellText"><span>{{row.entity.attributeName}}</span></div>';
+        var valueTemplate = '<div title="{{row.entity.attributeValue}}" class="ngCellText"><span>{{row.entity.attributeValue}}</span></div>';
         $scope.topoGridOptions = {
             data: 'attributes',
 			enableColumnResize: true,
@@ -34,11 +35,12 @@ var QDR = (function (QDR) {
             {
                 field: 'attributeName',
                 displayName: 'Attribute',
-                cellTemplate: generalCellTemplate
+                cellTemplate: nameTemplate
             },
             {
                 field: 'attributeValue',
-                displayName: 'Value'
+                displayName: 'Value',
+				cellTemplate: valueTemplate
             }
             ]
         };
@@ -588,7 +590,7 @@ var QDR = (function (QDR) {
 					})
 					// add as 2nd row
 					if (ports.length)
-						attributes.splice(1, 0, {attributeName: 'Listening on', attributeValue: ports});
+						attributes.splice(1, 0, {attributeName: 'Listening on', attributeValue: ports, description: 'The port on which this router is listening for connections'});
 				}
 
 				$scope.$broadcast('showEntityForm', {entity: entity, attributes: attributes})
