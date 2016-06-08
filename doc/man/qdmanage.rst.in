@@ -47,9 +47,7 @@ Operations
 
 `read`
     Print the attributes of an entity specified by the --name or
-    --identity options. With the --stdin option, create entities based
-    on data from stdin. This can be a JSON map of attributes to create a
-    single entity, or a JSON list of maps to create multiple entitiees.
+    --identity options.
 
 `update` [*ATTR=VALUE*...]
     Update the attributes of an existing entity. With the --stdin
