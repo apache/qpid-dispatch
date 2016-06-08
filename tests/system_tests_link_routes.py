@@ -92,7 +92,7 @@ class LinkRoutePatternTest(TestCase):
                    ('connector', {'name': 'broker', 'role': 'route-container', 'host': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    # Only inter router communication must happen on 'inter-router' connectors. This connector makes
                    # a connection from the router B's ephemeral port to c_listener_port
-                   ('connector', {'role': 'inter-router', 'host': '0.0.0.0', 'port': c_listener_port}),
+                   ('connector', {'name': 'routerC', 'role': 'inter-router', 'host': '0.0.0.0', 'port': c_listener_port}),
                    ('linkRoutePattern', {'prefix': 'org.apache', 'connector': 'broker'}),
                    ('linkRoute', {'prefix': 'pulp.task', 'connection': 'test-tag', 'dir': 'in'}),
                    ('linkRoute', {'prefix': 'pulp.task', 'connection': 'test-tag', 'dir': 'out'})
@@ -160,6 +160,44 @@ class LinkRoutePatternTest(TestCase):
         self.assertTrue('"dir": "in"' in out)
         self.assertTrue('"dir": "out"' in out)
         self.assertTrue('"connection": "broker"' in out)
+
+        identity = out[out.find("identity") + 12: out.find("identity") + 13]
+        cmd = 'READ --type=linkRoute --identity=' + identity
+        out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
+        self.assertTrue(identity in out)
+
+        exception_occurred = False
+        try:
+            # This identity should not be found
+            cmd = 'READ --type=linkRoute --identity=9999'
+            out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
+        except Exception, e:
+            exception_occurred = True
+            self.assertTrue("NotFoundStatus: Not Found" in e.message)
+
+        self.assertTrue(exception_occurred)
+
+        exception_occurred = False
+        try:
+            # There is no identity specified, this is a bad request
+            cmd = 'READ --type=linkRoute'
+            out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
+        except Exception, e:
+            exception_occurred = True
+            self.assertTrue("BadRequestStatus: Bad Request" in e.message)
+
+        self.assertTrue(exception_occurred)
+
+        cmd = 'CREATE --type=autoLink addr=127.0.0.1 dir=in connection=routerC'
+        out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
+
+        identity = out[out.find("identity") + 12: out.find("identity") + 14]
+        cmd = 'READ --type=autoLink --identity=' + identity
+        out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
+        self.assertTrue(identity in out)
+
+
+
 
     def test_bbb_qdstat_link_routes_routerB(self):
         """
@@ -393,6 +431,7 @@ class LinkRoutePatternTest(TestCase):
         identity_1 = result_list[0][1]
         identity_2 = result_list[1][1]
         identity_3 = result_list[2][1]
+        identity_4 = result_list[3][1]
         identity_4 = result_list[3][1]
 
         cmd = 'DELETE --type=linkRoute --identity=' + identity_1

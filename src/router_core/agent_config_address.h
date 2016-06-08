@@ -27,6 +27,11 @@ void qdra_config_address_create_CT(qdr_core_t *core, qd_field_iterator_t *name, 
 void qdra_config_address_update_CT(qdr_core_t *core, qdr_query_t *query, qd_parsed_field_t *in_body);
 void qdra_config_address_delete_CT(qdr_core_t *core, qdr_query_t *query, qd_field_iterator_t *name,
                                 qd_field_iterator_t *identity);
+void qdra_config_address_get_CT(qdr_core_t          *core,
+                                qd_field_iterator_t *name,
+                                qd_field_iterator_t *identity,
+                                qdr_query_t         *query,
+                                const char          *qdr_config_address_columns[]);
 
 #define QDR_CONFIG_ADDRESS_COLUMN_COUNT 8
 

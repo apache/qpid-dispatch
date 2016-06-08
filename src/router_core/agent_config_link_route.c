@@ -188,6 +188,23 @@ void qdra_config_link_route_get_first_CT(qdr_core_t *core, qdr_query_t *query, i
 }
 
 
+static void qdr_manage_write_config_link_route_map_CT(qdr_core_t          *core,
+                                                      qdr_link_route_t    *lr,
+                                                      qd_composed_field_t *body,
+                                                      const char          *qdr_config_link_route_columns[])
+{
+    qd_compose_start_map(body);
+
+    for(int i = 0; i < QDR_CONFIG_LINK_ROUTE_COLUMN_COUNT; i++) {
+        qd_compose_insert_string(body, qdr_config_link_route_columns[i]);
+        qdr_config_link_route_insert_column_CT(lr, i, body, false);
+    }
+
+    qd_compose_end_map(body);
+}
+
+
+
 void qdra_config_link_route_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 {
     qdr_link_route_t *lr = 0;
@@ -413,4 +430,40 @@ void qdra_config_link_route_create_CT(qdr_core_t          *core,
             qd_log(core->log, QD_LOG_ERROR, "Error configuring linkRoute: %s", query->status.description);
         qdr_query_free(query);
     }
+}
+
+void qdra_config_link_route_get_CT(qdr_core_t          *core,
+                                   qd_field_iterator_t *name,
+                                   qd_field_iterator_t *identity,
+                                   qdr_query_t         *query,
+                                   const char          *qdr_config_link_route_columns[])
+{
+    qdr_link_route_t *lr = 0;
+
+    if (!name && !identity)
+        query->status = QD_AMQP_BAD_REQUEST;
+    else {
+        if (identity) //If there is identity, ignore the name
+            lr = qdr_link_route_config_find_by_identity_CT(core, identity);
+        else if (name)
+            lr = qdr_link_route_config_find_by_name_CT(core, name);
+
+        if (lr == 0) {
+            // Send back a 404
+            query->status = QD_AMQP_NOT_FOUND;
+        }
+        else {
+            //
+            // Write the columns of the linkRoute entity into the response body.
+            //
+            qdr_manage_write_config_link_route_map_CT(core, lr, query->body, qdr_config_link_route_columns);
+            query->status = QD_AMQP_OK;
+        }
+    }
+
+    //
+    // Enqueue the response.
+    //
+    qdr_agent_enqueue_response_CT(core, query);
+
 }

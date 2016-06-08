@@ -414,3 +414,56 @@ void qdra_config_address_create_CT(qdr_core_t          *core,
     } else
         qdr_query_free(query);
 }
+
+
+static void qdr_manage_write_config_address_map_CT(qdr_core_t          *core,
+                                                   qdr_address_config_t *addr,
+                                                   qd_composed_field_t *body,
+                                                   const char          *qdr_config_address_columns[])
+{
+    qd_compose_start_map(body);
+
+    for(int i = 0; i < QDR_CONFIG_ADDRESS_COLUMN_COUNT; i++) {
+        qd_compose_insert_string(body, qdr_config_address_columns[i]);
+        qdr_config_address_insert_column_CT(addr, i, body, false);
+    }
+
+    qd_compose_end_map(body);
+}
+
+
+void qdra_config_address_get_CT(qdr_core_t          *core,
+                                qd_field_iterator_t *name,
+                                qd_field_iterator_t *identity,
+                                qdr_query_t         *query,
+                                const char          *qdr_config_address_columns[])
+{
+    qdr_address_config_t *addr = 0;
+
+    if (!name && !identity)
+        query->status = QD_AMQP_BAD_REQUEST;
+    else {
+        if (identity) //If there is identity, ignore the name
+            addr = qdr_address_config_find_by_identity_CT(core, identity);
+        else if (name)
+            addr = qdr_address_config_find_by_name_CT(core, name);
+
+        if (addr == 0) {
+            // Send back a 404
+            query->status = QD_AMQP_NOT_FOUND;
+        }
+        else {
+            //
+            // Write the columns of the address entity into the response body.
+            //
+            qdr_manage_write_config_address_map_CT(core, addr, query->body, qdr_config_address_columns);
+            query->status = QD_AMQP_OK;
+        }
+    }
+
+    //
+    // Enqueue the response.
+    //
+    qdr_agent_enqueue_response_CT(core, query);
+
+}

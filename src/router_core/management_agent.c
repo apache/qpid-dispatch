@@ -177,6 +177,12 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
         qd_compose_start_map(ctx->field);
         qd_compose_end_map(ctx->field);
     }
+    else if (ctx->operation_type == QD_ROUTER_OPERATION_READ) {
+        if (status->status / 100 != 2) {
+            qd_compose_start_map(ctx->field);
+            qd_compose_end_map(ctx->field);
+        }
+    }
 
     qd_field_iterator_t *reply_to = 0;
     qd_composed_field_t *fld = 0;

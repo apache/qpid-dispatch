@@ -335,9 +335,9 @@ static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool disc
     qdr_query_t             *query      = action->args.agent.query;
 
     switch (query->entity_type) {
-    case QD_ROUTER_CONFIG_ADDRESS:    break;
-    case QD_ROUTER_CONFIG_LINK_ROUTE: break;
-    case QD_ROUTER_CONFIG_AUTO_LINK:  break;
+    case QD_ROUTER_CONFIG_ADDRESS:    qdra_config_address_get_CT(core, name, identity, query, qdr_config_address_columns); break;
+    case QD_ROUTER_CONFIG_LINK_ROUTE: qdra_config_link_route_get_CT(core, name, identity, query, qdr_config_link_route_columns); break;
+    case QD_ROUTER_CONFIG_AUTO_LINK:  qdra_config_auto_link_get_CT(core, name, identity, query, qdr_config_auto_link_columns); break;
     case QD_ROUTER_CONNECTION:        break;
     case QD_ROUTER_LINK:              break;
     case QD_ROUTER_ADDRESS:           qdra_address_get_CT(core, name, identity, query, qdr_address_columns); break;
