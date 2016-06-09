@@ -311,6 +311,25 @@ void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 }
 
 
+void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *dlv)
+{
+    bool push = dlv->disposition != PN_MODIFIED;
+
+    dlv->disposition = PN_MODIFIED;
+    dlv->settled = true;
+    bool moved = qdr_delivery_settled_CT(core, dlv);
+
+    if (push || moved)
+        qdr_delivery_push_CT(core, dlv);
+
+    //
+    // Remove the unsettled reference
+    //
+    if (moved)
+        qdr_delivery_decref(dlv);
+}
+
+
 bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 {
     //

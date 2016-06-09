@@ -18,16 +18,10 @@
 #
 
 import unittest
-from proton import Message, PENDING, ACCEPTED, REJECTED
+from proton import Message, Delivery, PENDING, ACCEPTED, REJECTED
 from system_test import TestCase, Qdrouterd, main_module
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
-
-# PROTON-828:
-try:
-    from proton import MODIFIED
-except ImportError:
-    from proton import PN_STATUS_MODIFIED as MODIFIED
 
 
 class RouterTest(TestCase):
@@ -1070,6 +1064,11 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_18_released_vs_modified(self):
+        test = ReleasedVsModifiedTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -1251,6 +1250,58 @@ class MultiframePresettledTest(MessagingHandler):
         if not event.delivery.settled:
             self.error = "Received unsettled delivery"
         self.n_received += 1
+        self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+
+class ReleasedVsModifiedTest(MessagingHandler):
+    def __init__(self, address):
+        super(ReleasedVsModifiedTest, self).__init__(prefetch=0, auto_accept=False)
+        self.address = address
+        self.dest = "closest.RVMtest"
+        self.error = None
+        self.count      = 10
+        self.accept     = 6
+        self.n_sent     = 0
+        self.n_received = 0
+        self.n_released = 0
+        self.n_modified = 0
+
+    def check_if_done(self):
+        if self.n_received == self.accept and self.n_released == self.count - self.accept and self.n_modified == self.accept:
+            self.timer.cancel()
+            self.conn.close()
+
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d, received=%d, released=%d, modified=%d" % \
+                     (self.n_sent, self.n_received, self.n_released, self.n_modified)
+        self.conn.close()
+
+    def on_start(self, event):
+        self.timer     = event.reactor.schedule(5, Timeout(self))
+        self.conn      = event.container.connect(self.address)
+        self.sender    = event.container.create_sender(self.conn, self.dest)
+        self.receiver  = event.container.create_receiver(self.conn, self.dest, name="A")
+        self.receiver.flow(self.accept)
+
+    def on_sendable(self, event):
+        for i in range(self.count - self.n_sent):
+            msg = Message(body="RvM-Test")
+            event.sender.send(msg)
+            self.n_sent += 1
+
+    def on_message(self, event):
+        self.n_received += 1
+        if self.n_received == self.accept:
+            self.receiver.close()
+
+    def on_released(self, event):
+        if event.delivery.remote_state == Delivery.MODIFIED:
+            self.n_modified += 1
+        else:
+            self.n_released += 1
         self.check_if_done()
 
     def run(self):
