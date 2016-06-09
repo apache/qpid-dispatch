@@ -512,7 +512,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         if (peer) {
             peer->peer = 0;
             if (link->link_direction == QD_OUTGOING)
-                qdr_delivery_release_CT(core, peer);
+                qdr_delivery_failed_CT(core, peer);
             qdr_delivery_decref(peer);
         }
         qdr_delivery_decref(dlv);

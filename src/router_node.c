@@ -859,8 +859,11 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     //
     // If the disposition has changed, update the proton delivery.
     //
-    if (disp != pn_delivery_remote_state(pnd))
+    if (disp != pn_delivery_remote_state(pnd)) {
+        if (disp == PN_MODIFIED)
+            pn_disposition_set_failed(pn_delivery_local(pnd), true);
         pn_delivery_update(pnd, disp);
+    }
 
     //
     // If the delivery is settled, remove the linkage and settle the proton delivery.
