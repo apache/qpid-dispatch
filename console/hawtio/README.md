@@ -49,7 +49,7 @@ In the above, websockify is listening for ws traffic on port 5673 and will proxy
     listener {
         name: ProxyListener
         role: normal
-        addr: 0.0.0.0
+        host: 0.0.0.0
         port: 20009
         sasl-mechanisms: ANONYMOUS
     }
