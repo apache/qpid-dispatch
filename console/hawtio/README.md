@@ -23,7 +23,7 @@ The dispatch-hawtio-console-<version>.war file should now be in the target direc
 
 Copy the dispatch-hawtio-console-<version>.war file as the following name
 
-    dispatch-hawtio-console.war
+    dispatch-plugin.war
 to the deploy directory of Apache Tomcat or similar Java web container. Ensure the hawtio.war file is present in the same directory. Point a browser at http://\<tomcat-host:port\>/hawtio
 Dispatch Router should be available as a tab in the console.
 
@@ -36,11 +36,12 @@ On the Dispatch Router's console page, select the Connect sub tab. Enter the add
 The console communicates to a router using websockets. 
 The router listens for tcp. Therefore a websockts/tcp proxy is required.
 
-#### Manually running a python websockets/tcp proxy
-
 A popular python based proxy is [websockify](https://github.com/kanaka/websockify). To use it:
 
     $ yum install python-websockify
+
+#### Manually running a python websockets/tcp proxy
+
     $ websockify 5673 0.0.0.0:20009 &
     
 In the above, websockify is listening for ws traffic on port 5673 and will proxy it to 0.0.0.0:20009. One of the routers will need a listener on the proxied port. An example router .conf file entry is:
