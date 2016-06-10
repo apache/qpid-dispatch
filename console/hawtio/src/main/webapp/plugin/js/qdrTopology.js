@@ -48,9 +48,9 @@ var QDR = (function (QDR) {
 		$scope.$on('showEntityForm', function (event, args) {
 			var attributes = args.attributes;
 			var entityTypes = QDRService.schema.entityTypes[args.entity].attributes;
-			Object.keys(attributes).forEach( function (attr) {
-				if (entityTypes[attr])
-					attributes[attr].description = entityTypes[attr]
+			attributes.forEach( function (attr) {
+				if (entityTypes[attr.attributeName] && entityTypes[attr.attributeName].description)
+					attr.description = entityTypes[attr.attributeName].description
 			})
 			$scope.attributes = attributes;
 			$scope.form = args.entity;
@@ -467,11 +467,13 @@ var QDR = (function (QDR) {
 						if (position.y > height)
 							position.y = nodes[parent].y + 40 + Math.cos(Math.PI/2 * client)
 						var node = aNode(id, name, role, nodeInfo, nodes.length, position.x, position.y, j, position.fixed, properties)
-						var nodeType = role === 'normal' ? (properties.console_identifier == 'Dispatch console' ? 'console' : 'client') : 'broker';
+						var nodeType = QDRService.isAConsole(properties, QDRService.valFor(attrs, conns[j], "identity"), role, node.key)
+
 						if (role === 'normal') {
 							node.user = QDRService.valFor(attrs, conns[j], "user")
 							node.isEncrypted = QDRService.valFor(attrs, conns[j], "isEncrypted")
 							node.host = QDRService.valFor(attrs, conns[j], "host")
+							node.connectionId = QDRService.valFor(attrs, conns[j], "identity")
 
 							if (!normalsParent[nodeType]) {
 								normalsParent[nodeType] = node;
@@ -675,9 +677,13 @@ var QDR = (function (QDR) {
 	        path.attr('d', function (d) {
 				//QDR.log.debug("in tick for d");
 				//console.dump(d);
+				var dtx = Math.max(0, Math.min(width, d.target.x)),
+				    dty = Math.max(0, Math.min(height, d.target.y)),
+				    dsx = Math.max(0, Math.min(width, d.source.x)),
+					dsy = Math.max(0, Math.min(height, d.source.y));
 
-	            var deltaX = d.target.x - d.source.x,
-	                deltaY = d.target.y - d.source.y,
+	            var deltaX = dtx - dsx,
+	                deltaY = dty - dsy,
 	                dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
 	                normX = deltaX / dist,
 	                normY = deltaY / dist;
@@ -691,16 +697,23 @@ var QDR = (function (QDR) {
 						sourcePadding = d.left ? radiusNormal + 18  : radiusNormal;
 						targetPadding = d.right ? radiusNormal + 16 : radiusNormal;
 	                }
-	                var sourceX = d.source.x + (sourcePadding * normX),
-	                sourceY = d.source.y + (sourcePadding * normY),
-	                targetX = d.target.x - (targetPadding * normX),
-	                targetY = d.target.y - (targetPadding * normY);
+	                var sourceX = dsx + (sourcePadding * normX),
+	                sourceY = dsy + (sourcePadding * normY),
+	                targetX = dtx - (targetPadding * normX),
+	                targetY = dty - (targetPadding * normY);
+					sourceX = Math.max(0, Math.min(width, sourceX))
+					sourceY = Math.max(0, Math.min(width, sourceY))
+					targetX = Math.max(0, Math.min(width, targetX))
+					targetY = Math.max(0, Math.min(width, targetY))
+
 	            return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY;
 	        });
 
 	        circle.attr('transform', function (d) {
 	            d.x = Math.max(d.x, radiusNormal * 2);
 	            d.y = Math.max(d.y, radiusNormal * 2);
+				d.x = Math.max(0, Math.min(width, d.x))
+				d.y = Math.max(0, Math.min(height, d.y))
 	            return 'translate(' + d.x + ',' + d.y + ')';
 	        });
 	        if (!animate) {
@@ -767,6 +780,14 @@ var QDR = (function (QDR) {
             return null;
         }
 
+		function clearPopups() {
+            d3.select("#crosssection").style("display", "none");
+			$('.hastip').empty();
+            d3.select("#multiple_details").style("display", "none")
+            d3.select("#link_details").style("display", "none")
+			d3.select('#node_context_menu').style('display', 'none');
+
+		}
 		function removeCrosssection() {
 			setTimeout(function () {
 				d3.select("[id^=tooltipsy]").remove()
@@ -884,6 +905,7 @@ var QDR = (function (QDR) {
                 .on("click", function (d) {
                     dblckickPos = d3.mouse(this);
                     d3.event.stopPropagation();
+                    clearPopups();
                     var diameter = 400;
                     var format = d3.format(",d");
                     var pack = d3.layout.pack()
@@ -891,15 +913,12 @@ var QDR = (function (QDR) {
                         .padding(-10)
                         .value(function(d) { return d.size; });
 
+                    d3.select("#crosssection svg").remove();
                     var svg = d3.select("#crosssection").append("svg")
                         .attr("width", diameter)
                         .attr("height", diameter)
                     var svgg = svg.append("g")
                         .attr("transform", "translate(2,2)");
-
-					svg.on('click', function (d) {
-						removeCrosssection();
-					})
 
 					var root = {
 						name: "links between " + d.source.name + " and " + d.target.name,
@@ -1002,15 +1021,13 @@ var QDR = (function (QDR) {
 				// add new circles and set their attr/class/behavior
 		        return g.append('svg:circle')
 		            .attr('class', 'node')
-		            .attr('r', function (d) {
-		                return radii[d.nodeType];
-		            })
+		            .attr('r', function (d) { return radii[d.nodeType] } )
 		            .classed('fixed', function (d) {return d.fixed})
 	                .classed('temp', function(d) { return QDRService.nameFromId(d.key) == '__internal__'; } )
 	                .classed('normal', function(d) { return d.nodeType == 'normal' } )
 	                .classed('inter-router', function(d) { return d.nodeType == 'inter-router' } )
 	                .classed('on-demand', function(d) { return d.nodeType == 'on-demand' } )
-	                .classed('console', function(d) { return d.properties.console_identifier == 'Dispatch console' } )
+	                .classed('console', function(d) { return QDRService.isConsole(d) } )
 	                .classed('artemis', function(d) { return QDRService.isArtemis(d) } )
 	                .classed('qpid-cpp', function(d) { return QDRService.isQpid(d) } )
 	                .classed('client', function(d) { return d.nodeType === 'normal' && !d.properties.console_identifier } )
@@ -1104,8 +1121,7 @@ var QDR = (function (QDR) {
                         selected_node = null;
                     }
                     else {
-						// don't select nodes that represent multiple clients/consoles
-                        if (!d.normals || d.normals.length < 2)
+                        if (d.nodeType !== 'normal' && d.nodeType !== 'on-demand')
                             selected_node = mousedown_node;
                     }
                     for (var i=0; i<links.length; ++i) {
@@ -1138,7 +1154,10 @@ var QDR = (function (QDR) {
 
                 })
                 .on("click", function (d) {
-					if (!d.normals || d.normals.length < 2) {
+                    // clicked on a circle
+                    clearPopups();
+					if (!d.normals) {
+						// circle was a router or a broker
 			            if ( QDRService.isArtemis(d) && Core.ConnectionName === 'Artemis' ) {
 							$location.path('/jmx/attributes?tab=artemis&con=Artemis')
 						}
@@ -1175,13 +1194,13 @@ var QDR = (function (QDR) {
 		                    y = 4;
 		                return y;})
 		            .attr('class', 'id')
-	                .classed('console', function(d) { return d.properties.console_identifier == 'Dispatch console' } )
+   	                .classed('console', function(d) { return QDRService.isConsole(d) } )
 	                .classed('normal', function(d) { return d.nodeType === 'normal' } )
 	                .classed('on-demand', function(d) { return d.nodeType === 'on-demand' } )
 	                .classed('artemis', function(d) { return QDRService.isArtemis(d) } )
 	                .classed('qpid-cpp', function(d) { return QDRService.isQpid(d) } )
 		            .text(function (d) {
-		                if (d.properties.console_identifier == 'Dispatch console') {
+		                if (QDRService.isConsole(d)) {
 		                    return '\uf108'; // icon-desktop for this console
 		                }
 						if (QDRService.isArtemis(d)) {
@@ -1202,7 +1221,7 @@ var QDR = (function (QDR) {
 	                var x = '';
 	                if (d.normals && d.normals.length > 1)
 	                    x = " x " + d.normals.length;
-		            if (d.properties.console_identifier == 'Dispatch console') {
+		            if (QDRService.isConsole(d)) {
 	                    return 'Dispatch console' + x
 	                }
 		            if (d.properties.product == 'qpid-cpp') {
@@ -1221,12 +1240,16 @@ var QDR = (function (QDR) {
 
 			// add subcircles
 			svg.selectAll('.subcircle').remove();
-
-			svg.selectAll('.multiple')
-				.insert('svg:circle', '.normal')
-					.attr('class', 'subcircle')
-					.attr('r', 18)
-
+			var multiples = svg.selectAll('.multiple')
+			multiples.each( function (d) {
+				d.normals.forEach( function (n, i) {
+					if (i<d.normals.length-1 && i<3) // only show a few shadow circles
+						this.insert('svg:circle', ":first-child")
+						.attr('class', 'subcircle node')
+						.attr('r', 15 - i)
+						.attr('transform', "translate("+ 4 * (i+1) +", 0)")
+				}, d3.select(this))
+			})
 
 			// dynamically create the legend based on which node types are present
 			var legendNodes = [];
