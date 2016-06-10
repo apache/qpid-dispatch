@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <Python.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
@@ -335,6 +336,64 @@ void qd_connection_set_user(qd_connection_t *conn)
         conn->user_id = DEFAULT_USER_ID;
 }
 
+
+static void qd_get_next_pn_data(pn_data_t *data, const char **d)
+{
+    if (pn_data_next(data)) {
+        switch (pn_data_type(data)) {
+            case PN_STRING:
+                *d = pn_data_get_string(data).start;
+                break;
+            case PN_SYMBOL:
+                *d = pn_data_get_symbol(data).start;
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+
+/**
+ * Obtains the remote connection properties and sets it as a map on the passed in entity.
+ * @param
+ */
+static qd_error_t qd_set_connection_properties(qd_entity_t* entity, qd_connection_t *conn)
+{
+    // Get the connection properties and stick it into the entity as a map
+    pn_data_t *data = pn_connection_remote_properties(conn->pn_conn);
+    const char *props = "properties";
+    if (data) {
+        size_t count = pn_data_get_map(data);
+        pn_data_enter(data);
+
+        // Create a new map.
+        qd_error_t error_t = qd_entity_set_map(entity, props);
+
+        if (error_t != QD_ERROR_NONE)
+            return error_t;
+
+        for (size_t i = 0; i < count/2; i++) {
+            const char *key   = 0;
+            qd_get_next_pn_data(data, &key);
+            const char *value = 0;
+            qd_get_next_pn_data(data, &value);
+
+            // Now we have a key and value
+            error_t = qd_entity_set_map_key_value(entity, props, key, value);
+
+            if (error_t != QD_ERROR_NONE)
+                return error_t;
+        }
+        pn_data_exit(data);
+    }
+
+    return QD_ERROR_NONE;
+}
+
+
+
+
 qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
 {
     qd_connection_t *conn = (qd_connection_t*)impl;
@@ -368,6 +427,7 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
         qd_entity_set_string(entity, "role", config->role) == 0 &&
         qd_entity_set_string(entity, "dir", conn->connector ? "out" : "in") == 0 &&
         qd_entity_set_string(entity, "user", user) == 0 &&
+        qd_set_connection_properties(entity, conn) == 0 &&
         qd_entity_set_long(entity, "identity", conn->connection_id) == 0 &&
         qd_entity_set_bool(entity, "isAuthenticated", tport && pn_transport_is_authenticated(tport)) == 0 &&
         qd_entity_set_bool(entity, "isEncrypted", tport && pn_transport_is_encrypted(tport)) == 0 &&

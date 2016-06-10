@@ -22,11 +22,13 @@ from proton import Message, Delivery, PENDING, ACCEPTED, REJECTED
 from system_test import TestCase, Qdrouterd, main_module
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
+from proton.utils import BlockingConnection, SyncRequestResponse
+from qpid_dispatch.management.client import Node
 
+CONNECTION_PROPERTIES={u'connection': u'properties'}
 
 class RouterTest(TestCase):
     """System tests involving a single router"""
-
     @classmethod
     def setUpClass(cls):
         """Start a router and a messenger"""
@@ -1068,6 +1070,21 @@ class RouterTest(TestCase):
         test = ReleasedVsModifiedTest(self.address)
         test.run()
         self.assertEqual(None, test.error)
+
+    def test_connection_properties(self):
+        connection = BlockingConnection(self.router.addresses[0],
+                                        timeout=60,
+                                        properties=CONNECTION_PROPERTIES)
+        client = SyncRequestResponse(connection)
+
+        node = Node.connect(self.router.addresses[0])
+
+        results = [[{u'connection': u'properties'}], [{}]]
+
+        self.assertEqual(node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['properties']).results,
+                         results)
+
+        client.connection.close()
 
 
 class Timeout(object):

@@ -96,6 +96,21 @@ qd_error_t qd_entity_clear(qd_entity_t *entity, const char *attribute);
  */
 qd_error_t qd_entity_set_list(qd_entity_t *entity, const char *attribute);
 
+
+/**
+ * Set the attribute to an empty dictionary. To further add key/value pairs to this new dict, use qd_entity_set_map_key_value
+ */
+qd_error_t qd_entity_set_map(qd_entity_t *entity, const char *attribute);
+
+/**
+ * Add a new key/value pair to the attribute which needs to be dict.
+ * @return - QD_ERROR_NONE if there were no errors
+ *         - QD_ERROR_PYTHON if there was an error from the Python side when setting the key/value error
+ *         - QD_ERROR_VALUE if a non-dictionary attribute was specified
+ */
+qd_error_t qd_entity_set_map_key_value(qd_entity_t *entity, const char *attribute, const char *key, const char *value);
+
+
 /// @}
 
 #endif

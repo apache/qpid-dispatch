@@ -156,6 +156,7 @@ BUILTIN_TYPES = OrderedDict(
                           Type("integer", int),
                           Type("list", list),
                           Type("map", dict),
+                          Type("dict", dict),
                           BooleanType()])
 
 def get_type(rep):
