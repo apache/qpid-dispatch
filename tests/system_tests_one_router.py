@@ -21,6 +21,7 @@ import unittest
 from proton import Message, Delivery, PENDING, ACCEPTED, REJECTED
 from system_test import TestCase, Qdrouterd, main_module
 from proton.handlers import MessagingHandler
+from proton.utils import BlockingConnection
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
 
 
@@ -46,6 +47,7 @@ class RouterTest(TestCase):
             ('listener', {'port': cls.tester.get_port(), 'maxFrameSize': '2048', 'stripAnnotations': 'both'}),
             ('listener', {'port': cls.tester.get_port(), 'maxFrameSize': '2048', 'stripAnnotations': 'out'}),
             ('listener', {'port': cls.tester.get_port(), 'maxFrameSize': '2048', 'stripAnnotations': 'in'}),
+            ('listener', {'port': cls.tester.get_port(), 'linkCapacity': 1}),
             
             ('address', {'prefix': 'closest', 'distribution': 'closest'}),
             ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
@@ -987,6 +989,7 @@ class RouterTest(TestCase):
                 pass
 
         self.assertEqual(30, len(rx_set))
+
         self.assertTrue(ca > 0)
         self.assertTrue(cb > 0)
         self.assertTrue(cc > 0)
@@ -1000,6 +1003,10 @@ class RouterTest(TestCase):
         M3.stop()
         M4.stop()
 
+    def test_12a_semantics_balanced(self):
+        test = BalancedHandlerTest(self.address)
+        test.run()
+        self.assertTrue(test.success)
 
     def test_13_to_override(self):
         addr = self.address+"/toov/1"
@@ -1109,6 +1116,57 @@ class SndSettleModeTest(MessagingHandler):
         else:
             self.message_received = False
         event.connection.close()
+
+    def run(self):
+        Container(self).run()
+
+class BalancedHandlerTest(MessagingHandler):
+    """
+    Send two synchronous messages to a balanced address that has two receivers. Each of the receiver should receive
+    one message.
+    """
+    def __init__(self, address):
+        super(BalancedHandlerTest, self).__init__()
+        self.address = address
+        self.recv_a_count = 0
+        self.recv_b_count = 0
+        self.sender = None
+        self.receiver_b = None
+        self.receiver_a = None
+        self.n_sent = 0
+        self.success = False
+        self.dest = "spread.2"
+
+    def on_start(self, event):
+        conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(conn, self.dest)
+        self.receiver_a = event.container.create_receiver(conn, self.dest, name='A')
+        self.receiver_b = event.container.create_receiver(conn, self.dest, name='B')
+
+    def on_message(self, event):
+        if event.receiver == self.receiver_a:
+            self.recv_a_count += 1
+        elif event.receiver == self.receiver_b:
+            self.recv_b_count += 1
+
+        if self.recv_a_count == 1 and self.recv_b_count == 1:
+            self.success = True
+            self.receiver_a.close()
+            self.receiver_b.close()
+            event.connection.close()
+
+    def on_settled(self, event):
+        # Send another message after the first one has been settled. This emulates a synchronous sender
+        if self.n_sent < 2:
+            msg = Message(body="Hello World 2")
+            event.sender.send(msg)
+            self.n_sent += 1
+
+    def on_sendable(self, event):
+        if self.n_sent < 1:
+            msg = Message(body="Hello World 1")
+            event.sender.send(msg)
+            self.n_sent += 1
 
     def run(self):
         Container(self).run()
@@ -1306,7 +1364,6 @@ class ReleasedVsModifiedTest(MessagingHandler):
 
     def run(self):
         Container(self).run()
-
 
 if __name__ == '__main__':
     unittest.main(main_module())
