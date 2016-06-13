@@ -337,7 +337,7 @@ void qd_connection_set_user(qd_connection_t *conn)
 }
 
 
-static void qd_get_next_pn_data(pn_data_t *data, const char **d)
+static void qd_get_next_pn_data(pn_data_t *data, const char **d, int *d1)
 {
     if (pn_data_next(data)) {
         switch (pn_data_type(data)) {
@@ -346,6 +346,9 @@ static void qd_get_next_pn_data(pn_data_t *data, const char **d)
                 break;
             case PN_SYMBOL:
                 *d = pn_data_get_symbol(data).start;
+                break;
+            case PN_INT:
+                *d1 = pn_data_get_int(data);
                 break;
             default:
                 break;
@@ -375,12 +378,17 @@ static qd_error_t qd_set_connection_properties(qd_entity_t* entity, qd_connectio
 
         for (size_t i = 0; i < count/2; i++) {
             const char *key   = 0;
-            qd_get_next_pn_data(data, &key);
-            const char *value = 0;
-            qd_get_next_pn_data(data, &value);
+            // We are assuming for now that all keys are strings
+            qd_get_next_pn_data(data, &key, 0);
+            const char *value_string = 0;
+            int value_int = 0;
+            // We are assuming for now that all values are either strings or integers
+            qd_get_next_pn_data(data, &value_string, &value_int);
 
-            // Now we have a key and value
-            error_t = qd_entity_set_map_key_value(entity, props, key, value);
+            if (value_string)
+                error_t = qd_entity_set_map_key_value_string(entity, props, key, value_string);
+            else if (value_int)
+                error_t = qd_entity_set_map_key_value_int(entity, props, key, value_int);
 
             if (error_t != QD_ERROR_NONE)
                 return error_t;

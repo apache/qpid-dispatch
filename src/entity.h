@@ -108,7 +108,9 @@ qd_error_t qd_entity_set_map(qd_entity_t *entity, const char *attribute);
  *         - QD_ERROR_PYTHON if there was an error from the Python side when setting the key/value error
  *         - QD_ERROR_VALUE if a non-dictionary attribute was specified
  */
-qd_error_t qd_entity_set_map_key_value(qd_entity_t *entity, const char *attribute, const char *key, const char *value);
+qd_error_t qd_entity_set_map_key_value_string(qd_entity_t *entity, const char *attribute, const char *key, const char *value);
+
+qd_error_t qd_entity_set_map_key_value_int(qd_entity_t *entity, const char *attribute, const char *key, int value);
 
 
 /// @}

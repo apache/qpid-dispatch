@@ -25,7 +25,7 @@ from proton.reactor import Container, AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SyncRequestResponse
 from qpid_dispatch.management.client import Node
 
-CONNECTION_PROPERTIES={u'connection': u'properties'}
+CONNECTION_PROPERTIES = {u'connection': u'properties', u'int_property': 6451}
 
 class RouterTest(TestCase):
     """System tests involving a single router"""
@@ -1079,7 +1079,7 @@ class RouterTest(TestCase):
 
         node = Node.connect(self.router.addresses[0])
 
-        results = [[{u'connection': u'properties'}], [{}]]
+        results = [[{u'connection': u'properties', u'int_property': 6451}], [{}]]
 
         self.assertEqual(node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['properties']).results,
                          results)

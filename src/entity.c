@@ -168,8 +168,37 @@ qd_error_t qd_entity_set_map(qd_entity_t *entity, const char *attribute) {
     return qd_entity_set_py(entity, attribute, PyDict_New());
 }
 
-qd_error_t qd_entity_set_map_key_value(qd_entity_t *entity, const char *attribute, const char *key, const char *value)
+qd_error_t qd_entity_set_map_key_value_int(qd_entity_t *entity, const char *attribute, const char *key, int value)
 {
+    if (!key)
+        return  QD_ERROR_VALUE;
+
+    PyObject *py_key = PyString_FromString(key);
+    PyObject *py_value = PyInt_FromLong(value);
+    PyObject *py_attribute = PyString_FromString(attribute);
+
+    qd_error_t ret = QD_ERROR_NONE;
+
+    if (PyDict_Contains((PyObject*)entity, py_attribute) == 1) {
+        PyObject* dict = PyDict_GetItem((PyObject*)entity, py_attribute);
+        if (PyDict_SetItem(dict, py_key, py_value) < 0)
+            ret = QD_ERROR_PYTHON;
+    }
+    else
+        ret = QD_ERROR_VALUE;
+
+    Py_XDECREF(py_key);
+    Py_XDECREF(py_value);
+    Py_XDECREF(py_attribute);
+
+    return ret;
+}
+
+qd_error_t qd_entity_set_map_key_value_string(qd_entity_t *entity, const char *attribute, const char *key, const char *value)
+{
+    if (!key)
+        return  QD_ERROR_VALUE;
+
     PyObject *py_key = PyString_FromString(key);
     PyObject *py_value = PyString_FromString(value);
     PyObject *py_attribute = PyString_FromString(attribute);
