@@ -66,24 +66,24 @@
             "attributes": {
                 "certDb": {
                     "type": "path",
-                    "description": "The path to the database that contains the public certificates of trusted certificate authorities (CA).",
+                    "description": "The absolute path to the database that contains the public certificates of trusted certificate authorities (CA).",
                     "create": true
                 },
                 "certFile": {
                     "type": "path",
-                    "description": "The path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.",
+                    "description": "The absolute path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.",
                     "create": true
 
                 },
                 "keyFile": {
                     "type": "path",
-                    "description": "The path to the file containing the PEM-formatted private key for the above certificate.",
+                    "description": "The absolute path to the file containing the PEM-formatted private key for the above certificate.",
                     "create": true
 
                 },
                 "passwordFile": {
                     "type": "path",
-                    "description": "If the above private key is password protected, this is the path to a file containing the password that unlocks the certificate key.",
+                    "description": "If the above private key is password protected, this is the absolute path to a file containing the password that unlocks the certificate key.",
                     "create": true
 
                 },
@@ -100,7 +100,7 @@
                 },
                 "displayNameFile": {
                     "type": "string",
-                    "description": "The path to the file containing the unique id to dispay name mapping",
+                    "description": "The absolute path to the file containing the unique id to dispay name mapping",
                     "create": true
                 },
                 "sslProfileName": {
@@ -666,7 +666,7 @@
                 },
                 "trustedCerts": {
                     "type": "path",
-                    "description": "This optional setting can be used to reduce the set of available CAs for client authentication.  If used, this setting must provide a path to a PEM file that contains the trusted certificates.",
+                    "description": "This optional setting can be used to reduce the set of available CAs for client authentication.  If used, this setting must provide the absolute path to a PEM file that contains the trusted certificates.",
                     "create": true
                 },
                 "maxFrameSize": {
@@ -1342,7 +1342,7 @@
                 "policyFolder": {
                     "type": "path",
                     "default": "",
-                    "description": "The path to a folder that holds policyRuleset definition .json files. For a small system the rulesets may all be defined in this file. At a larger scale it is better to have the policy files in their own folder and to have none of the rulesets defined here. All rulesets in all .json files in this folder are processed.",
+                    "description": "The absolute path to a folder that holds policyRuleset definition .json files. For a small system the rulesets may all be defined in this file. At a larger scale it is better to have the policy files in their own folder and to have none of the rulesets defined here. All rulesets in all .json files in this folder are processed.",
                     "required": false,
                     "create": true
                 },
