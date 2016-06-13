@@ -354,9 +354,6 @@ DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_treatment_t treatment);
 
-void qdr_add_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
-void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode);
-
 struct qdr_address_config_t {
     DEQ_LINKS(qdr_address_config_t);
     qd_hash_handle_t       *hash_handle;

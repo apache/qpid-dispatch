@@ -285,31 +285,6 @@ void qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_
 }
 
 
-void qdr_add_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode)
-{
-    qdr_router_ref_t *ref = new_qdr_router_ref_t();
-    DEQ_ITEM_INIT(ref);
-    ref->router = rnode;
-    rnode->ref_count++;
-    DEQ_INSERT_TAIL(*ref_list, ref);
-}
-
-
-void qdr_del_node_ref(qdr_router_ref_list_t *ref_list, qdr_node_t *rnode)
-{
-    qdr_router_ref_t *ref = DEQ_HEAD(*ref_list);
-    while (ref) {
-        if (ref->router == rnode) {
-            DEQ_REMOVE(*ref_list, ref);
-            free_qdr_router_ref_t(ref);
-            rnode->ref_count--;
-            break;
-        }
-        ref = DEQ_NEXT(ref);
-    }
-}
-
-
 void qdr_add_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_t *dlv)
 {
     qdr_delivery_ref_t *ref = new_qdr_delivery_ref_t();
