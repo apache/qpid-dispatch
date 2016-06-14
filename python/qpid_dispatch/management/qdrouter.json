@@ -801,7 +801,6 @@
                         "SERVER",
                         "AGENT",
                         "CONTAINER",
-                        "CONFIG",
                         "ERROR",
                         "POLICY",
                         "DEFAULT"
