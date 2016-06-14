@@ -19,7 +19,7 @@
                     "type": "string",
                     "default": "127.0.0.1",
                     "create": true
-                },                
+                },
                 "port": {
                     "description": "Port number or symbolic service name.",
                     "type": "string",
@@ -106,8 +106,8 @@
                 "sslProfileName": {
                     "type": "string",
                     "description": "The name of the ssl profile. This is for internal use only. Use the 'name' attribute to assign a name to an sslProfile section ",
-                    "create": false 
-                }                
+                    "create": false
+                }
             }
         }
     },
@@ -483,7 +483,7 @@
 
             "singleton": true,
             "attributes": {
-            
+
                 "containerName": {
                     "type": "string",
                     "description": "The  name of the AMQP container.  If not specified, the container name will be set to a value of the container's choosing.  The automatically assigned container name is not guaranteed to be persistent across restarts of the container.",
@@ -762,7 +762,7 @@
                     "default": true,
                     "description": "yes: Ensures that when initiating a connection (as a client) the host name in the URL to which this connector connects to matches the host name in the digital certificate that the peer sends back as part of the SSL connection; no: Does not perform host name verification",
                     "create": true
-                },                
+                },
                 "saslUsername": {
                     "type": "string",
                     "required": false,
@@ -775,7 +775,7 @@
                     "description": "The password that the connector is using to connect to a peer.",
                     "create": true,
                     "hidden": true
-                }                                
+                }
             }
         },
 
@@ -797,7 +797,6 @@
                         "CONTAINER",
                         "CONFIG",
                         "ERROR",
-                        "DISPATCH",
                         "POLICY",
                         "DEFAULT"
                     ],
@@ -1197,7 +1196,7 @@
                 "id": {
                     "description": "Remote node identifier.",
                     "type": "string"
-                },                
+                },
                 "instance": {
                     "description": "Remote node boot number.",
                     "type": "integer"
@@ -1310,12 +1309,12 @@
             "description": "Start a websocket/tcp proxy and http file server to serve the web console",
             "extends": "configurationEntity",
             "singleton": true,
-            "attributes": { 
+            "attributes": {
                 "listener": {"type": "string", "description": "The name of the listener to send the proxied tcp traffic to."},
                 "wsport": {"type": "integer", "description": "port on which to listen for websocket traffic", "default": 5673},
                 "proxy": {"type": "string", "description": "The full path to the proxy program to run."},
                 "home": {"type": "string", "description": "The full path to the html/css/js files for the console."},
-                "args": {"type": "string", "description": "Optional args to pass the proxy program for logging, authentication, etc."}  
+                "args": {"type": "string", "description": "Optional args to pass the proxy program for logging, authentication, etc."}
 
             }
         },

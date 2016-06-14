@@ -69,7 +69,6 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     if (qd_error_code()) { qd_dispatch_free(qd); return 0; }
     qd_message_initialize();
     if (qd_error_code()) { qd_dispatch_free(qd); return 0; }
-    qd->log_source = qd_log_source("DISPATCH");
     qd->dl_handle = 0;
     return qd;
 }
