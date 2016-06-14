@@ -59,7 +59,7 @@ class EntityBase(object):
 
     Attribute access:
     - via index operator: entity['foo']
-    - as python attributes: entity.foo (only if attribute name is a legal python identitfier
+    - as python attributes: entity.foo (only if attribute name is a legal python identifier
       after replacing '-' with '_')
 
     @ivar attributes: Map of attribute values for this entity.

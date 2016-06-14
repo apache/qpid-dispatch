@@ -107,7 +107,7 @@ class BooleanType(Type):
 
 
 class EnumValue(str):
-    """A string that convets to an integer value via int()"""
+    """A string that converts to an integer value via int()"""
 
     def __new__(cls, name, value):
         s = super(EnumValue, cls).__new__(cls, name)
@@ -261,7 +261,7 @@ class AttributeType(object):
         """
         Fill in missing default and fixed values.
         """
-        if self.value is not None: # Fixed value attribute
+        if self.value is not None:  # Fixed value attribute
             return self.value
         if self.default is not None:
             return self.default
