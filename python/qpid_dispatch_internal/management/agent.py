@@ -64,7 +64,7 @@ data that may be updated in other threads.
 Temporary solution is to lock the entire dispatch router lock during full refresh.
 Better solution coming soon...
 """
-
+import socket
 import traceback, json, pstats
 from itertools import ifilter, chain
 from traceback import format_exc
@@ -336,7 +336,39 @@ def _host_port_name_identifier(entity):
         return "%s:%s" % (entity.attributes['host'], entity.attributes['port'])
 
 
+def _try_resolve_port_attribute(attributes):
+    """Attempt to get an int value for the port. Modifies the input dict."""
+    AMQPS = "amqps"
+    AMQP = "amqp"
+
+    def _port_int(value):
+        """Convert service, an integer or a service name, into an integer port number."""
+        try:
+            return int(value)
+        except ValueError:
+            try:
+                return socket.getservbyname(value)
+            except socket.error:
+                # Not every system has amqp/amqps defined as a service
+                if value == AMQPS:
+                    return 5671
+                elif value == AMQP:
+                    return 5672
+                else:
+                    raise ValueError("Not a valid port number or service name: '%s'" % value)
+
+    if 'port' in attributes:
+        try:
+            attributes['port'] = _port_int(attributes['port'])
+        except ValueError:
+            pass
+
+
 class ListenerEntity(EntityAdapter):
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
+        _try_resolve_port_attribute(attributes)
+        super(ListenerEntity, self).__init__(agent, entity_type, attributes, validate)
+
     def create(self):
         config_listener = self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
@@ -352,6 +384,10 @@ class ListenerEntity(EntityAdapter):
         self._qd.qd_connection_manager_delete_listener(self._dispatch, self._implementations[0].key)
 
 class ConnectorEntity(EntityAdapter):
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
+        _try_resolve_port_attribute(attributes)
+        super(ConnectorEntity, self).__init__(agent, entity_type, attributes, validate)
+
     def create(self):
         config_connector = self._qd.qd_dispatch_configure_connector(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
