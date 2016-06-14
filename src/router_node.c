@@ -763,15 +763,22 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
 static void CORE_link_flow(void *context, qdr_link_t *link, int credit)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    if (!qlink)
+        return;
+    
     pn_link_t *plink = qd_link_pn(qlink);
 
-    pn_link_flow(plink, credit);
+    if (plink)
+        pn_link_flow(plink, credit);
 }
 
 
 static void CORE_link_offer(void *context, qdr_link_t *link, int delivery_count)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    if (!qlink)
+        return;
+
     pn_link_t *plink = qd_link_pn(qlink);
 
     if (plink)
@@ -782,6 +789,9 @@ static void CORE_link_offer(void *context, qdr_link_t *link, int delivery_count)
 static void CORE_link_drained(void *context, qdr_link_t *link)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    if (!qlink)
+        return;
+
     pn_link_t *plink = qd_link_pn(qlink);
 
     if (plink)
@@ -792,6 +802,9 @@ static void CORE_link_drained(void *context, qdr_link_t *link)
 static void CORE_link_drain(void *context, qdr_link_t *link, bool mode)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    if (!qlink)
+        return;
+
     pn_link_t *plink = qd_link_pn(qlink);
 
     if (plink) {
@@ -803,12 +816,17 @@ static void CORE_link_drain(void *context, qdr_link_t *link, bool mode)
 
 static void CORE_link_push(void *context, qdr_link_t *link)
 {
-    qd_router_t *router      = (qd_router_t*) context;
-    qd_link_t   *qlink       = (qd_link_t*) qdr_link_get_context(link);
-    pn_link_t   *plink       = qd_link_pn(qlink);
-    int          link_credit = pn_link_credit(plink);
+    qd_router_t *router = (qd_router_t*) context;
+    qd_link_t   *qlink  = (qd_link_t*) qdr_link_get_context(link);
+    if (!qlink)
+        return;
+    
+    pn_link_t *plink = qd_link_pn(qlink);
 
-    qdr_link_process_deliveries(router->router_core, link, link_credit);
+    if (plink) {
+        int link_credit = pn_link_credit(plink);
+        qdr_link_process_deliveries(router->router_core, link, link_credit);
+    }
 }
 
 
@@ -816,9 +834,15 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 {
     qd_router_t *router = (qd_router_t*) context;
     qd_link_t   *qlink  = (qd_link_t*) qdr_link_get_context(link);
-    pn_link_t   *plink  = qd_link_pn(qlink);
-    const char  *tag;
-    int          tag_length;
+    if (!qlink)
+        return;
+
+    pn_link_t *plink = qd_link_pn(qlink);
+    if (!plink)
+        return;
+
+    const char *tag;
+    int         tag_length;
 
     qdr_delivery_tag(dlv, &tag, &tag_length);
 
