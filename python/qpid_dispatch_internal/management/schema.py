@@ -207,7 +207,8 @@ class AttributeType(object):
     @ivar graph: If true the attribute could be graphed by a console.
     """
 
-    def __init__(self, name, type=None, defined_in=None, default=None, required=False, unique=False, hidden=False,
+    def __init__(self, name, type=None, defined_in=None, default=None,
+                 required=False, unique=False, hidden=False, deprecated=False,
                  value=None, description="", create=False, update=False, graph=False):
         """
         See L{AttributeType} instance variables.
@@ -218,6 +219,7 @@ class AttributeType(object):
             self.atype = get_type(type)
             self.required = required
             self.hidden = hidden
+            self.deprecated = deprecated
             self.default = default
             self.value = value
             self.unique = unique
@@ -318,7 +320,8 @@ class EntityType(object):
     @ivar referential: True if an entity/annotation can be referred to by name.
     @ivar annotations: List of names of sections annotationd by this entity.
     """
-    def __init__(self, name, schema, attributes=None, operations=None, operationDefs=None, description="", fullName=True, singleton=False, annotations=None, extends=None, referential=False, **kwargs):
+    def __init__(self, name, schema, attributes=None, operations=None, operationDefs=None, description="",
+                 fullName=True, singleton=False, deprecated=False, annotations=None, extends=None, referential=False, **kwargs):
         """
         @param name: name of the entity type.
         @param schema: schema for this type.
@@ -349,6 +352,7 @@ class EntityType(object):
             # List of annotations that are singletons
             self.references = []
             self.singleton = singleton
+            self.deprecated = deprecated
             self.referential = referential
             self._init = False      # Have not yet initialized from base and attributes.
             # Operation definitions

@@ -10,6 +10,7 @@
             "attributes": {
                 "addr": {
                     "description":"(DEPRECATED)IP address: ipv4 or ipv6 literal or a host name. This attribute has been deprecated. Use host instead",
+                    "deprecated": true,
                     "type": "string",
                     "default": "127.0.0.1",
                     "create": true
@@ -480,7 +481,7 @@
         "container": {
             "description":"(DEPRECATED)Attributes related to the AMQP container. This entity has been deprecated. Use the router entity instead.",
             "extends": "configurationEntity",
-
+            "deprecated": true,
             "singleton": true,
             "attributes": {
 
@@ -527,6 +528,7 @@
                     "description":"(DEPRECATED) Router's unique identity. This attribute has been deprecated. Use id instead",
                     "type": "string",
                     "required": false,
+                    "deprecated": true,
                     "create": true
                 },
                 "id": {
@@ -582,6 +584,7 @@
                 "mobileAddrMaxAge": {
                     "type": "integer",
                     "default": 60,
+                    "deprecated": true,
                     "description": "(DEPRECATED) This value is no longer used in the router.",
                     "create": true
                 },
@@ -684,16 +687,19 @@
                 "requirePeerAuth": {
                     "type": "boolean",
                     "create": true,
+                    "deprecated": true,
                     "description": "(DEPRECATED) This attribute is now controlled by the authenticatePeer attribute."
                 },
                 "allowUnsecured": {
                     "type": "boolean",
                     "create": true,
+                    "deprecated": true,
                     "description": "(DEPRECATED) This attribute is now controlled by the requireEncryption attribute."
                 },
                 "allowNoSasl": {
                     "type": "boolean",
                     "create": true,
+                    "deprecated": true,
                     "description": "(DEPRECATED) This attribute is now controlled by the authenticatePeer attribute."
                 },
                 "stripAnnotations": {
@@ -832,6 +838,7 @@
         "fixedAddress": {
             "description":"(DEPRECATED) Establishes treatment for addresses starting with a prefix. This entity has been deprecated. Use address instead",
             "extends": "configurationEntity",
+            "deprecated": true,
             "operations": ["CREATE"],
             "attributes": {
                 "prefix": {
@@ -868,6 +875,7 @@
 
         "waypoint": {
             "description":"(DEPRECATED) A remote node that messages for an address pass through. This entity has been deprecated. Use autoLink instead",
+            "deprecated": true,
             "extends": "configurationEntity",
             "operations": ["CREATE", "DELETE"],
             "attributes": {
@@ -900,6 +908,7 @@
 
         "linkRoutePattern": {
             "description":"(DEPRECATED) An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node. This entity has been deprecated. Use linkRoute instead",
+            "deprecated": true,
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {

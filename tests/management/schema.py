@@ -34,33 +34,46 @@ def replace_od(thing):
     return thing
 
 SCHEMA_1 = {
-    "prefix":"org.example",
+    "prefix": "org.example",
     "annotations": {
         "entityId": {
             "attributes": {
-                "name": {"type":"string", "required": True, "unique":True},
-                "type": {"type":"string", "required": True}
+                "name": {"type": "string",
+                         "required": True,
+                         "unique": True},
+                "type": {"type":"string",
+                         "required": True}
             }
         }
     },
     "entityTypes": {
         "container": {
+            "deprecated": True,
             "singleton": True,
-            "annotations" : ["entityId"],
+            "annotations": ["entityId"],
             "attributes": {
-                "workerThreads" : {"type":"integer", "default": 1}
+                "workerThreads": {"type": "integer", "default": 1},
+                "routerId": {
+                    "description":"(DEPRECATED) Router's unique identity. This attribute has been deprecated. Use id instead",
+                    "type": "string",
+                    "required": False,
+                    "deprecated": True,
+                    "create": True
+                },
             }
         },
         "listener": {
-            "annotations" : ["entityId"],
+            "annotations": ["entityId"],
             "attributes": {
-                "host" : {"type":"string"}
+                "host": {
+                    "type": "string"
+                }
             }
         },
         "connector": {
-            "annotations" : ["entityId"],
+            "annotations": ["entityId"],
             "attributes": {
-                "host" : {"type":"string"}
+                "host": {"type": "string"}
             }
         }
     }
@@ -153,6 +166,19 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual(e.attributes, {'type': 'org.example.listener', 'name':'x', 'host':'foo'})
         self.assertEqual(e['host'], 'foo')
         self.assertRaises(ValidationError, e.__setitem__, 'nosuch', 'x')
+
+        # The container entity itself has been deprecated
+        self.assertTrue(s.entity_types['org.example.container'].deprecated)
+
+        # The routerId attribute of the container entity has been deprecated
+        self.assertTrue(s.entity_types['org.example.container'].attributes['routerId'].deprecated)
+
+        # This will make sure that deprecated flag defaults to false for entities
+        self.assertFalse(s.entity_types['org.example.connector'].deprecated)
+        
+        # This will make sure that deprecated flag defaults to false for attributes of entities
+        self.assertFalse(s.entity_types['org.example.listener'].attributes['host'].deprecated)
+
         try:
             e.nosuch = 'x'
             self.fail("Expected exception")
