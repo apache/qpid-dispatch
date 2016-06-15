@@ -278,6 +278,7 @@ class AttributeType(object):
             ('default', self.default),
             ('required', self.required),
             ('unique', self.unique),
+            ('deprecated', self.deprecated),
             ('description', self.description),
             ('graph', self.graph)
         ])
@@ -469,6 +470,7 @@ class EntityType(object):
             ('operations', self.operations),
             ('description', self.description or None),
             ('references', self.references),
+            ('deprecated', self.deprecated),
             ('singleton', self.singleton)
         ])
 
