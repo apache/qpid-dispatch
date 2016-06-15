@@ -454,6 +454,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     // Start with the local links
     //
     qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
+
     while (link_ref) {
         qdr_link_t *link     = link_ref->link;
         uint32_t    value    = DEQ_SIZE(link->undelivered) + DEQ_SIZE(link->unsettled);
@@ -523,6 +524,18 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
             }
         }
     }
+    else if (best_eligible_link) {
+        //
+        // If we have found a best eligible local link, swap the head and the tail rlinks so that the next message can go
+        // to another rlink of equal cost.
+        //
+        if (DEQ_SIZE(addr->rlinks) > 1) { // Must have more than one local consumer for the swap to be meaningful
+            qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
+            DEQ_REMOVE_HEAD(addr->rlinks);
+            DEQ_INSERT_TAIL(addr->rlinks, link_ref);
+        }
+
+    }
 
     qdr_link_t *chosen_link     = 0;
     int         chosen_link_bit = -1;
@@ -555,6 +568,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
             addr->deliveries_transit++;
         else
             addr->deliveries_egress++;
+
         return 1;
     }
 
