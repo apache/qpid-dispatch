@@ -71,16 +71,42 @@ The configuration file is made up of sections with this syntax:
         ...
     }
 
-There are two types of sections:
 
-*Configuration sections* correspond to configuration entities. They can be queried and
-configured via management tools as well as via the configuration file.
 
-*Annotation sections* define a group of attribute values that can be included in
-one or more entity sections.
+For example you can define a router using the "router" section
 
-For example you can define an "sslProfile" annotation section with SSL credentials
-that can be included in multiple "listener" entities. Here's an example, note
+::
+
+    router {
+        mode: standalone
+        id: Router.A
+        ...
+    }
+
+or define a listener using the "listener" section
+
+::
+
+    listener {
+        host: 0.0.0.0
+        port: 20102
+        saslMechanisms: ANONYMOUS
+        ...
+    }
+
+or define a connector using the "connector" section
+
+::
+
+    connector {
+        role: inter-router
+        host: 0.0.0.0
+        port: 20003
+        saslMechanisms: ANONYMOUS
+        ...
+    }
+
+"sslProfile" section with SSL credentials can be included in multiple "listener" or "connector" entities. Here's an example, note
 how the 'sslProfile' attribute of 'listener' sections references the 'name'
 attribute of 'sslProfile' sections.
 
