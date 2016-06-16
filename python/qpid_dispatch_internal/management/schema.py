@@ -215,8 +215,9 @@ class AttributeType(object):
         """
         try:
             self.name = name
+            self.type = type
             self.defined_in = defined_in
-            self.atype = get_type(type)
+            self.atype = get_type(self.type)
             self.required = required
             self.hidden = hidden
             self.deprecated = deprecated

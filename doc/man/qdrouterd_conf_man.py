@@ -34,6 +34,7 @@ class ManPageWriter(SchemaWriter):
     def __init__(self):
         super(ManPageWriter, self).__init__(sys.stdout, QdSchema())
         self.sslProfileAttributes = []
+        self.connectionRoleAddrPortAttrs = {}
 
     def attribute_type(self, attr, holder):
         # Don't show read-only attributes
@@ -41,10 +42,36 @@ class ManPageWriter(SchemaWriter):
             return
         super(ManPageWriter, self).attribute_type(attr, holder, show_create=False, show_update=False)
 
-    def is_entity_connector_or_listener(self, entity):
-        if CONNECTOR == entity.name or LISTENER == entity.name:
+    def is_entity_connector_or_listener(self, entity_type):
+        if CONNECTOR == entity_type.name or LISTENER == entity_type.name:
             return True
         return False
+
+    def add_connector_listener_attributes(self, entity_type):
+
+        # Artificially add an sslProfile
+        ssl_profile_attr = AttributeType("sslProfile", type="string", defined_in=entity_type,
+                                         create=True, update=True, description="name of the sslProfile ")
+
+        entity_type.attributes[u'sslProfile'] = ssl_profile_attr
+
+        name_attr = entity_type.attributes.get(u'name')
+
+        # We modify this defined_by because otherwise the name does not show up in the doc
+        name_attr.defined_in = entity_type
+
+        # We will have to add the connectionRole and addrPort attributes to listener and connector entities
+        # so that they show up in the man doc page.
+        for attr in self.connectionRoleAddrPortAttrs.keys():
+            annotation = self.connectionRoleAddrPortAttrs.get(attr)
+
+            for key in annotation.attributes.keys():
+                annotation_attr = annotation.attributes.get(key)
+                if not annotation_attr.deprecated:
+                    attr_type = AttributeType(key, type=annotation_attr.type,
+                                              defined_in=entity_type,
+                                              create=True, update=True, description=annotation_attr.description)
+                    entity_type.attributes[key] = attr_type
 
     def man_page(self):
         self.writeln(r"""
@@ -132,7 +159,8 @@ attribute of 'sslProfile' sections.
                 # We are skipping connectionRole and addrPort annotations from the doc because it is
                 # confusing to the user
                 if "addrPort" in annotation.name or "connectionRole" in annotation.name:
-                        continue
+                    self.connectionRoleAddrPortAttrs[annotation.short_name] = annotation
+                    continue
                 used_by = [e.short_name for e in self.schema.entity_types.itervalues()
                            if annotation in e.annotations]
                 with self.section(annotation.short_name):
@@ -159,9 +187,7 @@ attribute of 'sslProfile' sections.
                 if self.is_entity_connector_or_listener(entity_type):
                     for sslProfileAttribute in self.sslProfileAttributes:
                         del entity_type.attributes[sslProfileAttribute]
-                    ssl_profile_attr = AttributeType("sslProfile", type="string", defined_in=entity_type,
-                                                     create=True, update=True, description="name of the sslProfile ")
-                    entity_type.attributes[u'sslProfile'] = ssl_profile_attr
+                    self.add_connector_listener_attributes(entity_type)
 
                 if config in entity_type.all_bases:
                     with self.section(entity_type.short_name):
