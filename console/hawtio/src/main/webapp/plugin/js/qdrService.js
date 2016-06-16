@@ -680,8 +680,11 @@ var QDR = (function(QDR) {
             }
 		if (entity[0] === '.')
 			entity = entity.substr(1, entity.length-1)
-		//return self._send(body, fullAddr, operation, entity);
-		return self._send(body, fullAddr, operation, "org.apache.qpid.dispatch." + entity);
+		var prefix = "org.apache.qpid.dispatch."
+		var configs = ["address", "autoLink", "linkRoute"]
+		if (configs.indexOf(entity) > -1)
+			prefix += "router.config."
+		return self._send(body, fullAddr, operation, prefix + entity);
     },
 
     sendMgmtQuery: function (operation) {
