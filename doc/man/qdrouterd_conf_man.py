@@ -39,7 +39,9 @@ class ManPageWriter(SchemaWriter):
     def attribute_type(self, attr, holder):
         # Don't show read-only attributes
         if not attr.create and not attr.update:
-            return
+            # It is ok to show the console attributes
+            if not holder.short_name == "console":
+                return
         super(ManPageWriter, self).attribute_type(attr, holder, show_create=False, show_update=False)
 
     def is_entity_connector_or_listener(self, entity_type):

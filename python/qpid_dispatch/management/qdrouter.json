@@ -1318,11 +1318,27 @@
             "extends": "configurationEntity",
             "singleton": true,
             "attributes": {
-                "listener": {"type": "string", "description": "The name of the listener to send the proxied tcp traffic to."},
-                "wsport": {"type": "integer", "description": "port on which to listen for websocket traffic", "default": 5673},
-                "proxy": {"type": "string", "description": "The full path to the proxy program to run."},
-                "home": {"type": "string", "description": "The full path to the html/css/js files for the console."},
-                "args": {"type": "string", "description": "Optional args to pass the proxy program for logging, authentication, etc."}
+                "listener": {
+                    "type": "string", 
+                    "description": "The name of the listener to send the proxied tcp traffic to."
+                },
+                "wsport": {
+                    "type": "integer",
+                    "description": "port on which to listen for websocket traffic", 
+                    "default": 5673
+                },
+                "proxy": {
+                    "type": "string",
+                    "description": "The full path to the proxy program to run."
+                 },
+                "home": {
+                    "type": "string",
+                    "description": "The full path to the html/css/js files for the console."
+                },
+                "args": {
+                    "type": "string",
+                    "description": "Optional args to pass the proxy program for logging, authentication, etc."
+                }
 
             }
         },
