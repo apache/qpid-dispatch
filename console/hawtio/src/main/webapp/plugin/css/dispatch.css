@@ -554,6 +554,45 @@ circle.subcircle {
     height: auto !important;
 }
 
+#linkFilter {
+	display: none;
+	padding: 0.5em;
+	border: 1px solid grey;
+	background-color: #F0F0F0;
+	position: absolute;
+}
+
+span.filter-icon {
+	padding-left: 1em;
+}
+
+button.filter-close {
+    width: 15px;
+    height: 20px;
+    padding: 0;
+    position: absolute;
+    right: 4px;
+    top: 4px;
+}
+
+div.filter-title h6 {
+	margin: 0;
+}
+
+.links button.btn-filter {
+	padding: 0 1em 0 0;
+    margin-left: 1em;
+    font-size: 1em;
+}
+
+button.btn-filter {
+	visibility: hidden;
+}
+span.dynatree-expanded button.btn-filter,
+a.dynatree-title:hover button.btn-filter {
+ 	visibility: visible;
+}
+
 div.hdash-button a {
 	color: white;
 }

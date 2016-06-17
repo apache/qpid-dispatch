@@ -33,6 +33,16 @@ under the License.
         </div>
     </hawtio-pane>
     <div class="treeDetails" ng-include="template.url"></div>
+    <div id="linkFilter">
+        <div class="filter-title">
+            <h6>Filter by link type</h6>
+            <button ng-click="filterClose()" type="button" class="btn btn-primary filter-close">x</button>
+        </div>
+        <select ng-init="currentLinkFilter = 'endpoint'" ng-model="currentLinkFilter" ng-change="setLinkFilter(currentLinkFilter)">
+            <option value="">All link types</option>
+            <option value="endpoint" selected>Endpoints only</option>
+        </select>
+    </div>
 </div>
 
 <!-- the following scripts are content that gets loaded into the above div that has the temple.url -->
@@ -54,16 +64,28 @@ under the License.
 
 <script type="text/ng-template" id="addresses.html">
     <div class="row-fluid">
-    <h3>Addresses</h3>
-    <div class="overview">
-        <div class="gridStyle" ng-grid="addressGrid"></div>
-    </div>
+        <h3>Addresses</h3>
+        <div class="overview">
+            <div class="gridStyle" ng-grid="addressGrid"></div>
+        </div>
     </div>
 </script>
 <script type="text/ng-template" id="address.html">
     <div class="row-fluid">
         <h3>Address {{address.data.title}}</h3>
         <div class="gridStyle noHighlight" ng-grid="addressGrid"></div>
+    </div>
+</script>
+<script type="text/ng-template" id="links.html">
+    <div class="row-fluid">
+        <h3>Links</h3>
+        <div class="gridStyle" ng-grid="linksGrid"></div>
+    </div>
+</script>
+<script type="text/ng-template" id="link.html">
+    <div class="row-fluid">
+        <h3>Link {{link.data.title}}</h3>
+        <div class="gridStyle noHighlight" ng-grid="linkGrid"></div>
     </div>
 </script>
 <script type="text/ng-template" id="connections.html">
@@ -79,6 +101,17 @@ under the License.
     <h3>Connection {{connection.data.title}}</h3>
     <div class="gridStyle noHighlight" ng-grid="connectionGrid"></div>
     </div>
+</script>
+<script type="text/ng-template" id="titleHeaderCellTemplate.html">
+    <div title="{{col.displayName}}" class="ngHeaderSortColumn {{col.headerClass}}" ng-style="{'cursor': col.cursor}" ng-class="{ 'ngSorted': !noSortVisible }">
+        <div ng-click="col.sort($event)" ng-class="'colt' + col.index" class="ngHeaderText">{{col.displayName}}</div>
+        <div class="ngSortButtonDown" ng-show="col.showSortButtonDown()"></div>
+        <div class="ngSortButtonUp" ng-show="col.showSortButtonUp()"></div>
+        <div class="ngSortPriority">{{col.sortPriority}}</div>
+    </div>
+</script>
+<script type="text/ng-template" id="titleCellTemplate.html">
+    <div title="{{row.entity[col.field]}}" class="ngCellText">{{row.entity[col.field]}}</div>
 </script>
 <script type="text/ng-template" id="logs.html">
     <div class="row-fluid">

@@ -64,6 +64,8 @@ var QDR = (function (QDR) {
 		$scope.isActive = function (nav) {
 			return nav == $scope.activeTab;
 		}
+		$scope.linkFields = []
+		$scope.link = null;
 		var nodeIds = QDRService.nodeIdList();
 		var currentTimer;
 		var refreshInterval = 5000
@@ -76,6 +78,8 @@ var QDR = (function (QDR) {
 		      { name: 'Router', url: 'router.html'},
               { name: 'Addresses', url: 'addresses.html'},
 		      { name: 'Address', url: 'address.html'},
+              { name: 'Links', url: 'links.html'},
+		      { name: 'Link', url: 'link.html'},
               { name: 'Connections', url: 'connections.html'},
 		      { name: 'Connection', url: 'connection.html'},
               { name: 'Logs', url: 'logs.html'},
@@ -392,6 +396,166 @@ var QDR = (function (QDR) {
 			}, nodeIds[0])
 		}
 
+		var updateLinkGrid = function ( linkFields ) {
+			$scope.linkFields = linkFields
+			// if we have a selected link
+			if ($scope.link) {
+				// find the selected link in the array of all links
+				var links = $scope.linkFields.filter(function (link) {
+					return link.name === $scope.link.data.fields.name;
+				})
+				if (links.length > 0) {
+					// linkInfo() is the function that is called by dynatree when a link is selected
+					// It is passed a dynatree node. We need to simulate that node type to update the link grid
+					linkInfo({data: {title: links[0].title, fields: links[0]}})
+				}
+			}
+
+			$scope.$apply()
+			if (currentTimer) {
+				clearTimeout(currentTimer)
+			}
+			currentTimer = setTimeout(allLinkInfo, refreshInterval);
+		}
+
+		// get info for a all links
+		var allLinkInfo = function (e) {
+			var linkCols = [
+				 {
+					 field: 'link',
+					 displayName: 'link',
+				 },
+				 {
+					 field: 'linkType',
+					 displayName: 'Link type',
+				 },
+				 {
+					 field: 'adminStatus',
+					 displayName: 'Admin status',
+				 },
+				 {
+					 field: 'operStatus',
+					 displayName: 'Oper status',
+				 },
+				 {
+					 field: 'deliveryCount',
+					 displayName: 'Delivery Count',
+				 },
+				 {
+					 field: 'rate',
+					 displayName: 'Rate',
+				 },
+				 {
+					 field: 'uncounts',
+					 displayName: 'UnDelv/UnSett',
+				 },
+				 {
+					 field: 'owningAddr',
+					 displayName: 'Owning Addr',
+				 }
+			]
+			$scope.selectedLinks = []
+			$scope.linksGrid = {
+				data: 'linkFields',
+				columnDefs: linkCols,
+				enableColumnResize: true,
+				multiSelect: false,
+				selectedItems: $scope.selectedLinks,
+				afterSelectionChange: function(data) {
+					if (data.selected) {
+						var selItem = data.entity;
+						var nodeId = selItem.uid
+						$("#overtree").dynatree("getTree").activateKey(nodeId);
+					}
+	            }
+			};
+			getAllLinkFields([updateLinkGrid, updateLinkTree])
+		}
+
+		var getAllLinkFields = function (callbacks) {
+			var linkFields = []
+			var now = Date.now()
+			var rate = function (response, result) {
+				var name = QDRService.valFor(response.attributeNames, result, "linkName").sum
+				var oldname = $scope.linkFields.filter(function (link) {
+					return link.linkName === name
+				})
+				if (oldname.length > 0) {
+					var elapsed = (now - oldname[0].timestamp) / 1000;
+					var delivered = QDRService.valFor(response.attributeNames, result, "deliveryCount").sum - oldname[0].rawDeliveryCount
+					//QDR.log.debug("elapsed " + elapsed + " delivered " + delivered)
+					return elapsed > 0 ? parseFloat(Math.round((delivered/elapsed) * 100) / 100).toFixed(2) : 0;
+				} else {
+					//QDR.log.debug("unable to find old linkName")
+					return 0
+				}
+			}
+			nodeIds = QDRService.nodeIdList()
+			QDRService.getMultipleNodeInfo(nodeIds, "router.link", [], function (nodeIds, entity, response) {
+				response.aggregates.forEach( function (result) {
+					var prettySum = function (field) {
+						var fieldIndex = response.attributeNames.indexOf(field)
+						if (fieldIndex < 0) {
+							return "-"
+						}
+						var val = result[fieldIndex].sum
+						return QDRService.pretty(val)
+					}
+					var uncounts = function () {
+						var und = prettySum('undeliveredCount')
+						var uns = prettySum('unsettledCount')
+						return und + "/" + uns
+					}
+					var nameIndex = response.attributeNames.indexOf('name')
+					var linkName = function () {
+						var details = result[nameIndex].detail
+						var names = []
+						details.forEach( function (detail) {
+							if (detail.node.endsWith(':'))
+								names.push(detail.node.slice(0, -1))
+							else
+								names.push(detail.node)
+						})
+						//var namestr = names.join('-')
+						var namestr = names.length > 0 ? names[0] : ""
+						return namestr + ':' + QDRService.valFor(response.attributeNames, result, "identity").sum
+					}
+					var adminStatus = QDRService.valFor(response.attributeNames, result, "adminStatus").sum
+					var operStatus = QDRService.valFor(response.attributeNames, result, "operStatus").sum
+					var owningAddr = QDRService.valFor(response.attributeNames, result, "owningAddr").sum
+					var linkName = linkName()
+					var linkType = QDRService.valFor(response.attributeNames, result, "linkType").sum
+					if ($scope.currentLinkFilter === "" || $scope.currentLinkFilter === linkType) {
+						linkFields.push({
+							link:       linkName,
+							title:      linkName,
+							uncounts:   uncounts(),
+							operStatus: operStatus,
+							adminStatus:adminStatus,
+							owningAddr: owningAddr,
+							deliveryCount:prettySum("deliveryCount"),
+							rawDeliveryCount: QDRService.valFor(response.attributeNames, result, "deliveryCount").sum,
+							name: QDRService.valFor(response.attributeNames, result, "name").sum,
+							linkName: QDRService.valFor(response.attributeNames, result, "linkName").sum,
+							capacity: QDRService.valFor(response.attributeNames, result, "capacity").sum,
+							connectionId: QDRService.valFor(response.attributeNames, result, "connectionId").sum,
+							linkDir: QDRService.valFor(response.attributeNames, result, "linkDir").sum,
+							linkType: linkType,
+							peer: QDRService.valFor(response.attributeNames, result, "peer").sum,
+							type: QDRService.valFor(response.attributeNames, result, "type").sum,
+							undeliveredCount: QDRService.valFor(response.attributeNames, result, "undeliveredCount").sum,
+							unsettledCount: QDRService.valFor(response.attributeNames, result, "unsettledCount").sum,
+							uid:     linkName,
+							timestamp: now,
+							rate: rate(response, result)
+						})
+					}
+				})
+				callbacks.forEach( function (cb) {
+					cb(linkFields)
+				})
+			}, nodeIds[0])
+		}
 
 		// get info for a all connections
 		var allConnectionInfo = function () {
@@ -483,7 +647,300 @@ var QDR = (function (QDR) {
 			}
 		}
 
+		// display the grid detail info for a single link
+		var linkInfo = function (link) {
+			if (!link)
+				return;
+			$scope.link = link
+			$scope.singleLinkFields = []
+			var cols = [
+				 {
+					 field: 'attribute',
+					 displayName: 'Attribute',
+					 width: '40%'
+				 },
+				 {
+					 field: 'value',
+					 displayName: 'Value',
+					 width: '40%'
+				 }
+			]
+			$scope.linkGrid = {
+				data: 'singleLinkFields',
+				columnDefs: cols,
+				enableColumnResize: true,
+				multiSelect: false
+			}
+
+			var fields = Object.keys(link.data.fields)
+			var excludeFields = ["title", "uid", "uncounts", "rawDeliveryCount", "timestamp"]
+			fields.forEach( function (field) {
+				if (excludeFields.indexOf(field) == -1)
+					$scope.singleLinkFields.push({attribute: field, value: link.data.fields[field]})
+			})
+		}
+
 		// get info for a single connection
+		$scope.connectionModes = [{
+	        content: '<a><i class="icon-list"></i> Attriutes</a>',
+			id: 'attributes',
+			title: "View connection attributes",
+	        isValid: function () { return true; }
+	    },
+	    {
+	        content: '<a><i class="icon-link"></i> Links</a>',
+	        id: 'links',
+	        title: "Show links",
+	        isValid: function () { return true }
+	    }
+	    ];
+        $scope.currentMode = $scope.connectionModes[0];
+		$scope.isModeSelected = function (mode) {
+			return mode === $scope.currentMode;
+		}
+		$scope.connectionLinks = [];
+		var updateConnectionLinks = function () {
+			var n = $scope.connection.data.fields
+			var key = n.routerId
+			var nodeInfo = QDRService.topology.nodeInfo();
+			var links = nodeInfo[key]['.router.link'];
+			var linkTypeIndex = links.attributeNames.indexOf('linkType');
+			var connectionIdIndex = links.attributeNames.indexOf('connectionId');
+			$scope.connectionLinks = [];
+			links.results.forEach( function (link) {
+				if (link[linkTypeIndex] === 'endpoint' && link[connectionIdIndex] === n.identity) {
+					var l = {};
+					l.owningAddr = QDRService.valFor(links.attributeNames, link, 'owningAddr');
+					l.dir = QDRService.valFor(links.attributeNames, link, 'linkDir');
+					if (l.owningAddr && l.owningAddr.length > 2)
+						if (l.owningAddr[0] === 'M')
+							l.owningAddr = l.owningAddr.substr(2)
+						else
+							l.owningAddr = l.owningAddr.substr(1)
+
+					l.adminStatus = QDRService.valFor(links.attributeNames, link, 'adminStatus');
+					l.operStatus = QDRService.valFor(links.attributeNames, link, 'operStatus');
+					l.identity = QDRService.valFor(links.attributeNames, link, 'identity')
+					l.connectionId = QDRService.valFor(links.attributeNames, link, 'connectionId')
+/*
+						l.deliveryCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'deliveryCount'));
+						l.undeliveredCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'undeliveredCount'));
+						l.unsettledCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'unsettledCount'));
+*/
+					// ---------------------------------------------
+					// TODO: remove this fake quiescing/reviving logic when the routers do the work
+					if ($scope.quiesceState.linkStates[l.identity])
+						l.adminStatus = $scope.quiesceState.linkStates[l.identity];
+					if ($scope.quiesceState.operStates[l.identity])
+						l.operStatus = $scope.quiesceState.operStates[l.identity];
+					if ($scope.quiesceState.state == 'quiescing') {
+						if (l.adminStatus === 'enabled') {
+							var chance = Math.floor(Math.random() * 2);
+							if (chance == 1) {
+								l.adminStatus = 'disabled';
+								$scope.quiesceState.linkStates[l.identity] = 'disabled';
+								$scope.quiesceState.operStates[l.identity] = 'idle';
+							}
+						}
+					}
+					if ($scope.quiesceState.state == 'reviving') {
+						if (l.adminStatus === 'disabled') {
+							var chance = Math.floor(Math.random() * 2);
+							if (chance == 1) {
+								l.adminStatus = 'enabled';
+								$scope.quiesceState.linkStates[l.identity] = 'enabled';
+								$scope.quiesceState.operStates[l.identity] = 'up';
+							}
+						}
+					}
+					if ($scope.quiesceState.linkStates[l.identity] === 'disabled') {
+						l.unsettledCount = 0;
+						l.undeliveredCount = 0;
+						l.operState = 'idle'
+						$scope.quiesceState.operStates[l.identity] = l.operState
+					} else {
+						l.deliveryCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'deliveryCount'));
+						l.undeliveredCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'undeliveredCount'));
+						l.unsettledCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'unsettledCount'));
+						l.operState = 'up'
+						$scope.quiesceState.operStates[l.identity] = l.operState
+					}
+					// ---------------------------------------------
+
+					$scope.connectionLinks.push(l)
+				}
+			})
+			$scope.connectionLinksGrid.updateState()
+			$scope.$apply();
+
+		}
+
+		$scope.selectMode = function (mode) {
+			$scope.currentMode = mode;
+			if (mode.id === 'links') {
+		        QDRService.startUpdating();
+		        QDRService.addUpdatedAction("connectionLinks", updateConnectionLinks)
+				updateConnectionLinks();
+			} else {
+	            QDRService.stopUpdating();
+				QDRService.delUpdatedAction("connectionLinks");
+			}
+		}
+		$scope.isValid = function (mode) {
+			return mode.isValid()
+		}
+		$scope.quiesceState = {
+			state: 'enabled',
+			buttonText: 'Quiesce',
+			buttonDisabled: false,
+			linkStates: {},
+			operStates: {}
+		}
+		$scope.quiesceAllClicked = function () {
+			var state = $scope.quiesceState.state;
+			if (state === 'enabled') {
+				// start quiescing all links
+				$scope.quiesceState.state = 'quiescing';
+			} else if (state === 'quiesced') {
+				// start reviving all links
+				$scope.quiesceState.state = 'reviving';
+			}
+			$scope.connectionLinksGrid.updateState();
+		}
+		$scope.quiesceClass = function (row) {
+			var stateClassMap = {
+				enabled: 'btn-primary',
+				quiescing: 'btn-warning',
+				reviving: 'btn-warning',
+				quiesced: 'btn-danger'
+			}
+			return stateClassMap[$scope.quiesceState.state];
+		}
+		$scope.quiesceLinkClass = function (row) {
+			var stateClassMap = {
+				enabled: 'btn-primary',
+				disabled: 'btn-danger'
+			}
+			return stateClassMap[row.entity.adminStatus]
+		}
+		$scope.quiesceLink = function (row) {
+			var state = row.entity.adminStatus === 'enabled' ? 'disabled' : 'enabled';
+			var operState = state === 'enabled' ? 'up' : 'idle';
+			$scope.quiesceState.linkStates[row.entity.identity] = state;
+			$scope.quiesceState.operStates[row.entity.identity] = operState;
+		}
+		$scope.quiesceLinkDisabled = function (row) {
+			return false;
+		}
+		$scope.quiesceLinkText = function (row) {
+			return row.entity.adminStatus === 'disabled' ? "Revive" : "Quiesce";
+		}
+		$scope.quiesceHide = function () {
+			return $scope.connectionLinks.length == 0;
+		}
+		$scope.connectionLinksGrid = {
+			data: 'connectionLinks',
+			updateState: function () {
+				var state = $scope.quiesceState.state;
+
+				// count enabled and disabled links for this connection
+				var enabled = 0, disabled = 0;
+				$scope.connectionLinks.forEach ( function (link) {
+					if (link.adminStatus === 'enabled')
+						++enabled;
+					if (link.adminStatus === 'disabled')
+						++disabled;
+				})
+
+				var linkCount = $scope.connectionLinks.length;
+				if (linkCount == 0) {
+					$scope.quiesceState.buttonText = 'Quiesce';
+					$scope.quiesceState.buttonDisabled = false;
+					$scope.quiesceState.state = 'enabled'
+					return;
+				}
+				// if state is quiescing and any links are enabled, button should say 'Quiescing' and be disabled
+				if (state === 'quiescing' && (enabled > 0)) {
+					$scope.quiesceState.buttonText = 'Quiescing';
+					$scope.quiesceState.buttonDisabled = true;
+				} else
+				// if state is enabled and all links are disabled, button should say Revive and be enabled. set state to quisced
+				// if state is quiescing and all links are disabled, button should say 'Revive' and be enabled. set state to quiesced
+				if ((state === 'quiescing' || state === 'enabled') && (disabled === linkCount)) {
+					$scope.quiesceState.buttonText = 'Revive';
+					$scope.quiesceState.buttonDisabled = false;
+					$scope.quiesceState.state = 'quiesced'
+				} else
+				// if state is reviving and any links are disabled, button should say 'Reviving' and be disabled
+				if (state === 'reviving' && (disabled > 0)) {
+					$scope.quiesceState.buttonText = 'Reviving';
+					$scope.quiesceState.buttonDisabled = true;
+				} else
+				// if state is reviving or quiesced and all links are enabled, button should say 'Quiesce' and be enabled. set state to enabled
+				if ((state === 'reviving' || state === 'quiesced') && (enabled === linkCount)) {
+					$scope.quiesceState.buttonText = 'Quiesce';
+					$scope.quiesceState.buttonDisabled = false;
+					$scope.quiesceState.state = 'enabled'
+				}
+
+				if ($scope.quiesceState.state === 'quiesced') {
+					d3.selectAll('.external.connection.dynatree-active')
+						.classed('quiesced', true)
+				} else {
+					d3.selectAll('.external.connection.dynatree-active.quiesced')
+						.classed('quiesced', false)
+				}
+			},
+            columnDefs: [
+			{
+				field: 'adminStatus',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'Admin state'
+			},
+			{
+				field: 'operStatus',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'Oper state'
+			},
+			{
+				field: 'dir',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'dir'
+			},
+			{
+				field: 'owningAddr',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'Address'
+			},
+			{
+				field: 'deliveryCount',
+				displayName: 'Delivered',
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				cellClass: 'grid-values'
+
+			},
+			{
+				field: 'undeliveredCount',
+				displayName: 'Undelivered',
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				cellClass: 'grid-values'
+			},
+			{
+				field: 'unsettledCount',
+				displayName: 'Unsettled',
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				cellClass: 'grid-values'
+			},
+			{
+				cellClass: 'gridCellButton',
+				cellTemplate: '<button title="{{quiesceLinkText(row)}} this link" type="button" ng-class="quiesceLinkClass(row)" class="btn" ng-click="quiesceLink(row)" ng-disabled="quiesceLinkDisabled(row)">{{quiesceLinkText(row)}}</button>'
+			}
+			]
+		}
 		var connectionInfo = function (connection) {
 			$scope.connection = connection
 			$scope.connectionFields = []
@@ -514,6 +971,7 @@ var QDR = (function (QDR) {
 				clearTimeout(currentTimer)
 				currentTimer = null
 			}
+			$scope.selectMode($scope.currentMode)
 		}
 
 		// get info for a all logs
@@ -557,6 +1015,7 @@ var QDR = (function (QDR) {
 		routers.info = allRouterInfo
 		routers.focus = true
 		routers.expand = true
+		routers.clickFolderMode = 1
 		routers.key = "Routers"
 	    routers.addClass = "routers"
 		topLevelChildren.push(routers)
@@ -575,6 +1034,7 @@ var QDR = (function (QDR) {
 		var addresses = new Folder("Addresses")
 		addresses.type = "Addresses"
 		addresses.info = allAddressInfo
+		addresses.clickFolderMode = 1
 		addresses.key = "Addresses"
 	    addresses.addClass = "addresses"
 		topLevelChildren.push(addresses)
@@ -601,12 +1061,57 @@ var QDR = (function (QDR) {
 		}
 		getAllAddressFields(gotAddressFields)
 
+		$scope.setLinkFilter = function (cur) {
+			// filter out non-matching links from the tree and the grid
+			getAllLinkFields([updateLinkGrid, updateLinkTree])
+		}
+		$scope.filterClose = function () {
+			var filter = $('#linkFilter')
+			filter.hide();
+		}
+		$scope.currentLinkFilter = "endpoint"
+		var filterHtml = "<button type='button' class='btn btn-secondary btn-filter'><span class='filter-icon'><i class='icon-filter'> Filter</span></button>";
+		var links = new Folder("Links " + filterHtml)
+		links.type = "Links"
+		links.info = allLinkInfo
+		links.clickFolderMode = 1
+		links.key = "Links"
+	    links.addClass = "links"
+		topLevelChildren.push(links)
+
+		// called both before the tree is created and whenever a background update is done
+		var updateLinkTree = function (linkFields) {
+			var tree = $("#overtree").dynatree("getTree")
+			var node = tree.count ? tree.getNodeByKey('Links') : null;
+			// if we were called after the tree is created, replace the existing nodes
+			if (node) {
+				node.removeChildren();
+			}
+			linkFields.sort ( function (a,b) { return a.link < b.link ? -1 : a.link > b.link ? 1 : 0})
+			linkFields.forEach( function (link) {
+				var l = new Folder(link.title)
+				l.info = linkInfo
+				l.key = link.uid
+				l.fields = link
+				l.type = "Link"
+				l.addClass = "link"
+				// if node exists, we are updating the existing links
+				if (node)
+					node.addChild(l)
+				else {
+					// we are initializing the data before the tree is created
+					links.children.push(l)
+				}
+			} )
+		}
+		getAllLinkFields([updateLinkGrid, updateLinkTree])
 
 		var connreceived = 0;
 		var connectionsObj = {}
 		var connections = new Folder("Connections")
 		connections.type = "Connections"
 		connections.info = allConnectionInfo
+		connections.clickFolderMode = 1
 		connections.key = "Connections"
 	    connections.addClass = "connections"
 		topLevelChildren.push(connections)
@@ -647,6 +1152,8 @@ var QDR = (function (QDR) {
 					})
 					connectionsObj[host].security = sec
 					connectionsObj[host].authentication = auth
+					connectionsObj[host].routerId = nodeName
+
 				})
 				++connreceived;
 				if (connreceived == expected) {
@@ -660,6 +1167,7 @@ var QDR = (function (QDR) {
 						c.tooltip = connectionsObj[connection].role === "inter-router" ? "inter-router connection" : "external connection"
 						c.addClass = c.tooltip
 						connections.children.push(c)
+
 					})
 				}
 			})
@@ -670,6 +1178,7 @@ var QDR = (function (QDR) {
 		var logs = new Folder("Logs")
 		logs.type = "Logs"
 		logs.info = allLogInfo
+		logs.clickFolderMode = 1
 		logs.key = "Logs"
 		//topLevelChildren.push(logs)
 		nodeIds.forEach( function (nodeId) {
@@ -689,6 +1198,28 @@ var QDR = (function (QDR) {
 					})
 					$('#overtree').dynatree({
 						onActivate: activated,
+						onClick: function (n, e) {
+							if (e.target.className.indexOf('-filter') > -1) {
+								//QDR.log.debug("overtree on click called")
+								e.preventDefault();
+								e.stopPropagation()
+								var filter = $('#linkFilter')
+								var treeLink = $('span.links')
+								filter.css({
+                                              top: treeLink.offset().top + treeLink.height(),
+                                              left: treeLink.offset().left,
+                                              zIndex:5000
+                                            });
+								filter.toggle()
+								$("#overtree").dynatree("getTree").getNodeByKey('Links').activate()
+								/*
+								$(document).click(function (e) {
+									$scope.filterClose()
+								})
+								*/;
+								return false;
+							}
+						},
 						selectMode: 1,
 						activeVisible: false,
 						children: topLevelChildren

@@ -561,8 +561,8 @@ var QDR = (function(QDR) {
 								if (ent.attributes[key] && ent.attributes[key].graph) {
 									if (id != selectedNodeId)
 										aggregate[i].sum += result[i];
-									aggregate[i].detail.push({node: self.nameFromId(id)+':', val: result[i]})
 								}
+								aggregate[i].detail.push({node: self.nameFromId(id)+':', val: result[i]})
 							})
 							return true; // stop looping
 						}
@@ -573,7 +573,7 @@ var QDR = (function(QDR) {
 						// because it was not in the selectedNodeId's results
 						var vals = [];
 						result.forEach( function (val) {
-							vals.push({sum: val, detail: []})
+							vals.push({sum: val, detail: [{node: self.nameFromId(id), val: val}]})
 						})
 						newResponse.aggregates.push(vals)
 					}
@@ -607,8 +607,6 @@ var QDR = (function(QDR) {
 				}
 			}
 			self.schema = response;
-            //self.schema = angular.copy(response);
-            //self.topology.cleanUp(response);
             self.notifyTopologyDone();
         }, ret.error);
       },
