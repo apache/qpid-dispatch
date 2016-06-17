@@ -205,9 +205,6 @@ class BusManager(Node):
         rows.append(('Mode',          router.mode))
         rows.append(('Area',          router.area))
         rows.append(('Router Id',     self._identity_clean(router.identity, router.routerId)))
-        rows.append(('Address Count', router.addrCount))
-        rows.append(('Link Count',    router.linkCount))
-        rows.append(('Node Count',    router.nodeCount))
 
         title = "Router Statistics"
         dispRows = rows
