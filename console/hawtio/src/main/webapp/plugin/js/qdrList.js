@@ -130,12 +130,15 @@ var QDR = (function(QDR) {
 			}
 		}
 		$scope.currentNode = undefined;
-		$scope.nodes.some( function (node, i) {
-			if (node.name === $scope.selectedNode) {
-				$scope.currentNode = $scope.nodes[i]
-				return true;
-			}
-		})
+		var setCurrentNode = function () {
+			$scope.nodes.some( function (node, i) {
+				if (node.name === $scope.selectedNode) {
+					$scope.currentNode = $scope.nodes[i]
+					return true;
+				}
+			})
+		}
+		setCurrentNode();
 		if ($scope.currentNode == undefined) {
 			$scope.selectedNode = $scope.nodes[0].name;
 			$scope.selectedNodeId = $scope.nodes[0].id;
@@ -391,6 +394,7 @@ var QDR = (function(QDR) {
 		$scope.selectNode = function(node) {
 			$scope.selectedNode = node.name;
 			$scope.selectedNodeId = node.id;
+			setCurrentNode();
 			restartUpdate();
 		};
 		$scope.$watch('selectedEntity', function(newValue, oldValue) {
