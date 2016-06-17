@@ -553,3 +553,7 @@ circle.subcircle {
 #multiple_details .ngViewport {
     height: auto !important;
 }
+
+div.hdash-button a {
+	color: white;
+}

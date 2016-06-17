@@ -45,7 +45,7 @@ var QDR = (function(QDR) {
 		$scope.selectedRecordName = localStorage['QDRSelectedRecordName'];
 
 		$scope.modes = [{
-	        content: '<a><i class="icon-list"></i> Attriutes</a>',
+	        content: '<a><i class="icon-list"></i> Attributes</a>',
 			id: 'attributes',
 			op: 'READ',
 			title: "View router attributes",
