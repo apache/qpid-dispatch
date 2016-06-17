@@ -248,6 +248,9 @@ $.getScript('https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.14/d3.min.js', functi
 $.getScript('https://cdn.rawgit.com/jaz303/tipsy/master/src/javascripts/jquery.tipsy.js', function() {});
 // tooltips on the topology page
 $.getScript('https://cdn.rawgit.com/briancray/tooltipsy/master/tooltipsy.min.js', function() {});
+// download string as file
+$.getScript('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2014-11-29/FileSaver.min.js', function() {});
+
 
 // tell the hawtio plugin loader about our plugin so it can be
 // bootstrapped with the rest of angular

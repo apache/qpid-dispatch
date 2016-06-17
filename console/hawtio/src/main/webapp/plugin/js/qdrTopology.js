@@ -1448,7 +1448,7 @@ var QDR = (function (QDR) {
 
   QDR.module.controller("QDR.NodeDialogController", function($scope, QDRService, dialog, newname) {
    		var schema = QDRService.schema;
-   		var myEntities = ['container', 'router', 'log', 'listener' ];
+   		var myEntities = ['router', 'log', 'listener' ];
    		var typeMap = {integer: 'number', string: 'text', path: 'text', boolean: 'boolean'};
 		var newLinks = $('path.temp').toArray();    // jquery array of new links for the added router
 		var nodeInfo = QDRService.topology.nodeInfo();
@@ -1596,7 +1596,7 @@ var QDR = (function (QDR) {
 				ediv.attributes.filter(function (attr) { return attr.name == 'port'})[0].value = ++maxPort;
 				// connectors from other routers need to connect to this addr:port
 				myPort = maxPort;
-				myAddr = ediv.attributes.filter(function (attr) { return attr.name == 'addr'})[0].value
+				myAddr = ediv.attributes.filter(function (attr) { return attr.name == 'host'})[0].value
 
 				// override the role. 'normal' is the default, but we want inter-router
 				ediv.attributes.filter(function( attr ) { return attr.name == 'role'})[0].selected = 'inter-router';
@@ -1622,8 +1622,8 @@ var QDR = (function (QDR) {
 				var res = listener.results[i];
 				var role = QDRService.valFor(attrs, res, 'role');
 				if (role == 'inter-router') {
-					ediv.attributes.filter(function( attr ) { return attr.name == 'addr'})[0].value =
-						QDRService.valFor(attrs, res, 'addr')
+					ediv.attributes.filter(function( attr ) { return attr.name == 'host'})[0].value =
+						QDRService.valFor(attrs, res, 'host')
 					ediv.attributes.filter(function( attr ) { return attr.name == 'port'})[0].value =
 						QDRService.valFor(attrs, res, 'port')
 					break;
@@ -1632,7 +1632,7 @@ var QDR = (function (QDR) {
 			if (link.__data__.right) {
 				// connectors from other nodes need to connect to the new router's listener addr:port
    				ediv.attributes.filter(function (attr) { return attr.name == 'port'})[0].value = myPort;
-   				ediv.attributes.filter(function (attr) { return attr.name == 'addr'})[0].value = myAddr;
+   				ediv.attributes.filter(function (attr) { return attr.name == 'host'})[0].value = myAddr;
 
 				separatedEntities.push(ediv)
 			}
@@ -1659,7 +1659,7 @@ var QDR = (function (QDR) {
 		$scope.attributeType = '';
 		$scope.attributeRequired = '';
 		$scope.attributeUnique = '';
-		$scope.active = 'container'
+		$scope.active = 'router'
 		$scope.fieldsetDivs = "/fieldsetDivs.html"
 		$scope.setActive = function (tabName) {
 			$scope.active = tabName
@@ -1804,22 +1804,15 @@ QDR.module.controller("QDR.DownloadDialogController", function($scope, QDRServic
 
         // handle the download button click
         $scope.download = function () {
-			var blob = new Blob([$scope.output], { type: 'text/plain' });
-	        var downloadLink = angular.element('<a></a>');
-	        downloadLink.attr('href', ($window.URL || $window.webkitURL).createObjectURL(blob));
-	        downloadLink.attr('download', $scope.newRouterName);
-	        downloadLink[0].click();
+			var output = $scope.output + "\n\n"
+			var blob = new Blob([output], { type: 'text/plain;charset=utf-16' });
+			saveAs(blob, $scope.newRouterName);
         }
 
 		$scope.downloadPart = function (part) {
 			var linkName = part.link.__data__.source.name + 'additional.conf';
-			var blob = new Blob([part.output], { type: 'text/plain' });
-	        var downloadLink = angular.element('<a></a>');
-	        downloadLink.attr('href', ($window.URL || $window.webkitURL).createObjectURL(blob));
-	        downloadLink.attr('download', linkName);
-	        downloadLink[0].click();
-
-			QDR.log.debug(part);
+			var blob = new Blob([part.output], { type: 'text/plain;charset=utf-16' });
+			saveAs(blob, linkName);
 		}
 
 		$scope.done = function () {
