@@ -86,7 +86,7 @@ set(QPID_DISPATCH_CONFDIR ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
 find_library(pthread_lib pthread)
 find_library(dl_lib dl)
 find_library(rt_lib rt)
-find_package(Proton 0.12 REQUIRED)
+find_package(Proton 0.13 REQUIRED)
 
 ##
 ## Find Valgrind
