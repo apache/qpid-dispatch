@@ -590,6 +590,22 @@ var QDR = (function(QDR) {
             ret = self.sendMgmtQuery('GET-SCHEMA')
         ).then(ret.id, function(response) {
             //QDR.log.debug("Got schema response");
+			// remove deprecated
+			for (var entityName in response.entityTypes) {
+				var entity = response.entityTypes[entityName]
+				if (entity.deprecated) {
+					// deprecated entity
+				    delete response.entityTypes[entityName]
+				} else {
+					for (var attributeName in entity.attributes) {
+						var attribute = entity.attributes[attributeName]
+						if (attribute.deprecated) {
+							// deprecated attribute
+							delete response.entityTypes[entityName].attributes[attributeName]
+						}
+					}
+				}
+			}
 			self.schema = response;
             //self.schema = angular.copy(response);
             //self.topology.cleanUp(response);
