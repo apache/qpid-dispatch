@@ -250,12 +250,15 @@ var QDR = (function(QDR) {
 			var tree = $("#entityTree").dynatree("getTree");
 			var node = tree.getNodeByKey($scope.selectedEntity)
 			var updatedDetails = false;
+			var scrollTreeDiv = $('.qdr-attributes.pane.left .pane-viewport')
+			var scrollTop = scrollTreeDiv.scrollTop();
 			node.removeChildren();
 			if (tableRows.length == 0) {
 			    node.addChild({
 					addClass:   "no-data",
 			        typeName:   "none",
-			        title:      "no data"
+			        title:      "no data",
+					key:        node.data.key + ".1"
 			    })
 			    $scope.selectedRecordName = $scope.selectedEntity;
 			    updateDetails(fromSchema($scope.selectedEntity));
@@ -291,6 +294,7 @@ var QDR = (function(QDR) {
 				node.select(true);
 				updateDetails(row)
 			}
+			scrollTreeDiv.scrollTop(scrollTop)
 		}
 
 		var schemaProps = function (entityName, key, currentNode) {

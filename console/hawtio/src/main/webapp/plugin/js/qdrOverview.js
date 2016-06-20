@@ -184,29 +184,6 @@ var QDR = (function (QDR) {
 							clearTimeout(currentTimer)
 						}
 						currentTimer = setTimeout(allRouterInfo, refreshInterval);
-/*
-
-						var results = response.aggregates
-						results.forEach ( function (result) {
-
-							var routerId = QDRService.valFor(response.attributeNames, result, "routerId").sum
-							allRouterFields.some( function (connField) {
-								if (routerId === connField.routerId) {
-									response.attributeNames.forEach ( function (attrName) {
-										connField[attrName] = QDRService.valFor(response.attributeNames, result, attrName).sum
-									})
-									return true
-								}
-								return false
-							})
-						})
-						$scope.allRouterFields = allRouterFields
-						$scope.$apply()
-						if (currentTimer) {
-							clearTimeout(currentTimer)
-						}
-						currentTimer = setTimeout(allRouterInfo, refreshInterval);
-*/
 					}, nodeIds[0], false)
 				}
 			}
@@ -1081,10 +1058,15 @@ var QDR = (function (QDR) {
 
 		// called both before the tree is created and whenever a background update is done
 		var updateLinkTree = function (linkFields) {
+			var scrollTree = $('.qdr-overview.pane.left .pane-viewport')
+			var scrollTop = scrollTree.scrollTop();
+			//QDR.log.debug("scrollTop was " + scrollTop)
 			var tree = $("#overtree").dynatree("getTree")
+			var activeNode;
 			var node = tree.count ? tree.getNodeByKey('Links') : null;
 			// if we were called after the tree is created, replace the existing nodes
 			if (node) {
+				activeNode = tree.getActiveNode();
 				node.removeChildren();
 			}
 			linkFields.sort ( function (a,b) { return a.link < b.link ? -1 : a.link > b.link ? 1 : 0})
@@ -1103,6 +1085,11 @@ var QDR = (function (QDR) {
 					links.children.push(l)
 				}
 			} )
+			scrollTree.scrollTop(scrollTop)
+			if (activeNode) {
+				var newNode = tree.getNodeByKey(activeNode.data.key)
+				newNode.activateSilently()
+			}
 		}
 		getAllLinkFields([updateLinkGrid, updateLinkTree])
 
