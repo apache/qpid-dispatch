@@ -37,29 +37,29 @@ updated. Some entity types also support *operations* that can be called.
 
 All management entity types have the following standard attributes:
 
-*type*
+type::
   The fully qualified type of the entity,
   e.g. `org.apache.qpid.dispatch.router`. This document uses the short name
   without the `org.apache.qpid.dispatch` prefix e.g. `router`. The dispatch
   tools will accept the short or long name.
 
-*name*
+name::
   A user-generated identity for the entity.  This can be used in other entities
   that need to refer to the named entity.
 
-*identity*
+identity::
   A system-generated identity of the entity. It includes
   the short type name and some identifying information. E.g. `log/AGENT` or
   `listener/localhost:amqp`
 
 There are two main categories of management entity type.
 
-*Configuration* Entities
+Configuration Entities::
   Parameters that can be set in the configuration file
   (see `qdrouterd.conf(5)` man page) or set at run-time with the `qdmanage(8)`
   tool.
 
-*Operational* Entities
+Operational Entities::
    Run-time status values that can be queried using `qdstat(8)` or `qdmanage(8)` tools.
 """)
 
@@ -84,10 +84,10 @@ operational attributes.
 
         with self.section("Management Operations"):
             self.writeln("""
-The `qdstat(8)` and `qdmanage(8)` tools allow you to view or modify management entity
+The 'qdstat(8)' and 'qdmanage(8)' tools allow you to view or modify management entity
 attributes. They work by invoking *management operations*. You can invoke these operations
 from any AMQP client by sending a message with the appropriate properties and body to the
-`$management` address. The message should have a `reply-to` address indicating where the
+'$management' address. The message should have a 'reply-to' address indicating where the
 response should be sent.
 """)
             def operation_section(title, entity_type):
@@ -95,7 +95,7 @@ response should be sent.
                     self.operation_defs(entity_type)
             operation_section("Operations for all entity types", self.schema.entity_type("entity"))
             for e in self.schema.filter(lambda et: et.operation_defs and not et.name_is("entity")):
-                operation_section("Operations for `%s` entity type" % e.short_name, e)
+                operation_section("Operations for '%s' entity type" % e.short_name, e)
 
 def main():
     """Generate schema markdown documentation from L{QdSchema}"""

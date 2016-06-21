@@ -1,0 +1,12 @@
+Code conventions
+================
+
+Python code
+-----------
+
+Python code should be http://www.python.org/dev/peps/pep-0008/[PEP-8]
+compliant. In particular:
+
+* Use four-space indents
+* Do not use studlyCaps for function, method, and variable names;
+instead use underscore_separated_names

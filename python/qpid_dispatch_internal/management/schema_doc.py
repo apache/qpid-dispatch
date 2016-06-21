@@ -17,7 +17,7 @@
 # under the License
 #
 
-"""Library for generating markdown documentation from a L{schema.Schema}"""
+"""Library for generating asciidoc documentation from a L{schema.Schema}"""
 
 from collections import namedtuple
 import sys
@@ -25,9 +25,7 @@ from .schema import quotestr
 
 
 class SchemaWriter(object):
-    """Write the schema as a markdown document"""
-
-    HEADINGS=r'=-+^*`:"~_#<>'
+    """Write the schema as an asciidoc document"""
 
     def __init__(self, output, schema, quiet=True):
         self.output, self.schema, self.quiet = output, schema, quiet
@@ -45,7 +43,7 @@ class SchemaWriter(object):
 
     def heading(self, text=None, sub=0):
         self._heading += sub
-        if text: self.para("\n%s\n%s" % (text, self.HEADINGS[self._heading]*len(text)))
+        if text: self.para("\n=%s %s" % ("="*self._heading, text))
 
     class Section(namedtuple("Section", ["writer", "heading"])):
         def __enter__(self): self.writer.heading(self.heading, sub=+1)
@@ -67,7 +65,7 @@ class SchemaWriter(object):
                       ])))
 
     def attribute_type(self, attr, holder=None, show_create=True, show_update=True):
-        self.writeln('*%s*%s' % (
+        self.writeln("'%s'%s::" % (
             attr.name, self.attribute_qualifiers(attr, show_create, show_update)))
         if attr.description:
             self.writeln("  %s" % attr.description)
@@ -85,11 +83,11 @@ class SchemaWriter(object):
             message = getattr(op, what)
             if message:
                 if message.body:
-                    self.para("**%s body** %s%s" % (
+                    self.para(".%s body%s\n\n%s" % (
                         what.capitalize(), self.attribute_qualifiers(message.body),
                         message.body.description))
                 if message.properties:
-                    self.para("**%s properties:**" % (what.capitalize()))
+                    self.para(".%s properties" % (what.capitalize()))
                     for prop in message.properties.itervalues():
                         self.attribute_type(prop)
 

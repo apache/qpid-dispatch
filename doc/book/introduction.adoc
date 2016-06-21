@@ -1,25 +1,29 @@
-.. Licensed to the Apache Software Foundation (ASF) under one
-   or more contributor license agreements.  See the NOTICE file
-   distributed with this work for additional information
-   regarding copyright ownership.  The ASF licenses this file
-   to you under the Apache License, Version 2.0 (the
-   "License"); you may not use this file except in compliance
-   with the License.  You may obtain a copy of the License at
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
 
-     http://www.apache.org/licenses/LICENSE-2.0
+  http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing,
-   software distributed under the License is distributed on an
-   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-   KIND, either express or implied.  See the License for the
-   specific language governing permissions and limitations
-   under the License.
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
 
+[[introduction]]
 Introduction
-============
+------------
 
+[[overview]]
 Overview
---------
+~~~~~~~~
 
 The Dispatch router is an AMQP message router that provides
 advanced interconnect capabilities. It allows flexible routing of
@@ -33,17 +37,17 @@ messages with one or more message brokers, and at the same time exchange
 messages directly with other endpoints without involving a broker at
 all.
 
-The router is an intermediary for messages but it is *not* a broker. It
-does not *take responsibility for* messages. It will, however, propagate
+The router is an intermediary for messages but it is _not_ a broker. It
+does not _take responsibility for_ messages. It will, however, propagate
 settlement and disposition across a network such that delivery
 guarantees are met. In other words: the router network will deliver the
-message, possibly via several intermediate routers, *and* it will route
+message, possibly via several intermediate routers, _and_ it will route
 the acknowledgement of that message by the ultimate receiver back across
-the same path. This means that *responsibility* for the message is
-transfered from the original sender to the ultimate receiver *as if they
-were directly connected*. However this is done via a flexible network
-that allows highly configurable routing of the message transparent to
-both sender and receiver.
+the same path. This means that _responsibility_ for the message is
+transfered from the original sender to the ultimate receiver __as if
+they were directly connected__. However this is done via a flexible
+network that allows highly configurable routing of the message
+transparent to both sender and receiver.
 
 There are some patterns where this enables "brokerless messaging"
 approaches that are preferable to brokered approaches. In other cases a
@@ -74,7 +78,7 @@ solves the common difficulty of "stuck messages" when implementing this
 pattern with brokers alone. If a receiver is connected to a broker that
 has no messages, but there are messages on another broker, you have to
 somehow transfer them or leave them "stuck". With a dispatch network,
-*all* the receivers are connected to *all* the brokers. If there is a
+_all_ the receivers are connected to _all_ the brokers. If there is a
 message anywhere it can be delivered to any receiver.
 
 The router is meant to be deployed in topologies of multiple routers,
@@ -89,29 +93,36 @@ Messages not delivered to their final destination will not be
 acknowledged to the sender and therefore the sender can re-send such
 messages if it is disconnected from the network.
 
+[[benefits]]
 Benefits
---------
+~~~~~~~~
 
 Simplifies connectivity
 
-- An endpoint can do all of its messaging through a single transport connection
-- Avoid opening holes in firewalls for incoming connections
+* An endpoint can do all of its messaging through a single transport
+connection
+* Avoid opening holes in firewalls for incoming connections
 
 Provides messaging connectivity where there is no TCP/IP connectivity
 
-- A server or broker can be in a private IP network (behind a NAT firewall) and be accessible by messaging endpoints in other networks (learn more).
+* A server or broker can be in a private IP network (behind a NAT
+firewall) and be accessible by messaging endpoints in other networks
+(learn more).
 
 Simplifies reliability
 
-- Reliability and availability are provided using redundant topology, not server clustering
-- Reliable end-to-end messaging without persistent stores
-- Use a message broker only when you need store-and-forward semantics
+* Reliability and availability are provided using redundant topology,
+not server clustering
+* Reliable end-to-end messaging without persistent stores
+* Use a message broker only when you need store-and-forward semantics
 
+[[features]]
 Features
---------
+~~~~~~~~
 
-- Can be deployed stand-alone or in a network of routers
-  - Supports arbitrary network topology - no restrictions on redundancy
-  - Automatic route computation - adjusts quickly to changes in topology
-- Provides remote access to brokers or other AMQP servers
-- Security
+* Can be deployed stand-alone or in a network of routers
+** Supports arbitrary network topology - no restrictions on redundancy
++
+- Automatic route computation - adjusts quickly to changes in topology
+* Provides remote access to brokers or other AMQP servers
+* Security

@@ -17,143 +17,123 @@
 ## under the License.
 ##
 
+# In old cmake (< 2.8) documentation is built by "make all" so set BUILD_DOC OFF
+# if you don't want that. For new cmake it is only built by "make doc"
+option(BUILD_DOCS "Generate documentation with 'make doc'" ON)
 
-# In recent versions of cmake the documentation is not built automatically, you need to
-# run "make doc", so you can leave this ON. In older (< 2.8) versions, documentation
-# is built by "make all" so you need to turn BUILD_DOCS OFF if you don't want that.
-option(BUILD_DOCS "Generate documentation" ON)
+if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_LESS "2.8")
+  # OPTIONAL does not exist in install before 2.8 so always make and install docs
+  set(DOC_TARGET ALL)
+  macro(install_doc)
+    install(${ARGN})
+  endmacro()
+else()
+  macro(install_doc)
+    install(${ARGN} OPTIONAL)
+  endmacro()
+endif()
+
+# Popular locations
+set(src ${CMAKE_CURRENT_SOURCE_DIR})
+set(bin ${CMAKE_CURRENT_BINARY_DIR})
+set(tools ${CMAKE_SOURCE_DIR}/tools)
+set(schema ../python/qpid_dispatch/management/qdrouter.json)
+set(py_management ../python/qpid_dispatch_internal/management)
+set(schema_depends ${schema} ${py_management}/schema_doc.py ${py_management}/schema.py)
+
+## Always generate and install the asciidoc .adoc source files as a fallback.
+## They are readable even if we don't have the asciidoc tool to generate HTML.
+
+# Generate asciidoc fragments from management schema to incorporate in text
+macro(schema_gen script output)
+  add_custom_command(
+    OUTPUT ${output}
+    COMMAND ${RUN} -s ${script} 1> ${output}
+    DEPENDS ${script} ${schema_depends})
+  list(APPEND GENERATED_TXT "${output}")
+endmacro()
+
+schema_gen(${src}/book/schema_txt.py ${bin}/schema.adoc)
+schema_gen(${src}/man/qdrouterd.conf.5.py ${bin}/qdrouterd.conf.5.adoc)
+
+# Generate asciidoc .adoc from --help output for man pages
+macro(help2txt program)
+  get_filename_component(name ${program} NAME)
+  set(output ${bin}/${name}_help.adoc)
+  add_custom_command(
+    OUTPUT ${output}
+    COMMAND ${RUN} -s ${src}/man/help2txt.py ${program} --help 1> ${output}
+    DEPENDS ${program} ${schema_depends} ${src}/man/help2txt.py)
+  list(APPEND GENERATED_TXT "${output}")
+endmacro()
+
+help2txt(${CMAKE_BINARY_DIR}/router/qdrouterd)
+help2txt(${tools}/qdmanage)
+help2txt(${tools}/qdstat)
+
+add_custom_target(doc_gen ALL DEPENDS ${GENERATED_TXT})
+install(DIRECTORY ${src}/book/ DESTINATION ${QD_DOC_INSTALL_DIR})
+install(FILES ${bin}/schema.adoc DESTINATION ${QD_DOC_INSTALL_DIR})
 
 if(BUILD_DOCS)
+  find_program(ASCIIDOC_EXE asciidoc DOC "Generate HTML documentation")
+  if (ASCIIDOC_EXE)
+    configure_file(${src}/asciidoc.conf.in ${bin}/asciidoc.conf)
 
-  set(src ${CMAKE_CURRENT_SOURCE_DIR})
-  set(bin ${CMAKE_CURRENT_BINARY_DIR})
-  set(tools ${CMAKE_SOURCE_DIR}/tools)
+    # Copy the book dir images for HTML viewing in the build directory.
+    # Don't use configure_file since it truncates .png files at 1st ^Z character
+    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_directory ${src}/book/ ${bin})
 
-  if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_LESS "2.8")
-    # OPTIONAL does not exist in install before 2.8 so always make docs and install
-    add_custom_target(doc ALL)
-  else()
-    set (OPTIONAL OPTIONAL)
-    add_custom_target(doc)
-    add_custom_target(docs DEPENDS doc) # some projects say "make doc" others "make docs" allow both.
-  endif()
-  macro(install_doc)
-    install(${ARGN} ${OPTIONAL})
-  endmacro()
-
-  find_package(Doxygen)
-  find_program(SPHINX_BUILD sphinx-build)
-
-  # Create an option to enable/disable a doc tool and check if the tool is present.
-  # If tool is present, option defaults to ON else OFF.
-  # If option is set ON by user and tool is not present, that is an error.
-  # If tool is not present and option is not set on just issue a status message.
-  #
-  macro(doc_tool tool use var what)
-    if(${var})
-      option(${use} "Generate ${what} with ${tool}" ON)
-    else(${var})
-      option(${use} "Generate ${what} with ${tool}" OFF)
-      if(${use})
-        message(SEND_ERROR "${use} enabled but ${tool} not found.")
-      else(${use})
-        message(STATUS "${tool} not found, not generating ${what}.")
-      endif(${use})
-    endif(${var})
-  endmacro()
-
-  doc_tool(sphinx-build USE_SPHINX SPHINX_BUILD "HTML and man page documentation")
-  doc_tool(doxygen USE_DOXYGEN DOXYGEN_FOUND "API documentation")
-  doc_tool(dot USE_DOT DOT "diagrams in API documentation (also requires doxygen)")
-
-  # Copy configuration and rst sources to build directory to generate book.
-  # Use configure_file to ensure we re-copy if the source changes.
-  configure_file(${src}/conf.py.in ${bin}/conf.py)
-  configure_file(${src}/man/qdmanage.rst.in ${bin}/man/qdmanage.rst)
-  configure_file(${src}/man/qdrouterd.rst.in ${bin}/man/qdrouterd.rst)
-  file(GLOB_RECURSE RST_SRC RELATIVE ${src} *.rst)
-  foreach(file ${RST_SRC})
-    configure_file(${src}/${file} ${bin}/${file} COPYONLY)
-  endforeach()
-
-  # Copy the images. Don't use configure_file since it truncates .png files at 1st ^Z character
-  file(GLOB_RECURSE PNG_SRC RELATIVE ${src} *.png)
-  foreach(file ${PNG_SRC})
-    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src}/${file} ${bin}/${file})
-  endforeach()
-
-  # Generate files from management schema
-  set(schema, "${CMAKE_SOURCE_DIR}/python/qpid_router/management/qdrouterd.json")
-  set(py_management ${CMAKE_SOURCE_DIR}/python/qpid_dispatch_internal/management)
-  set(schema_gen_deps ${py_management}/schema_doc.py ${py_management}/schema.py ${schema})
-
-  macro(schema_gen output script)
-    add_custom_command(
-      OUTPUT ${output}
-      COMMAND ${RUN} -s ${script} 1> ${output}
-      DEPENDS ${script} ${schema_gen_deps}
-      )
-    list(APPEND SCHEMA_GEN ${output})
-  endmacro()
-
-  schema_gen(${bin}/book/schema.rst ${src}/book/schema_rst.py)
-  schema_gen(${bin}/man/qdrouterd.conf.rst ${src}/man/qdrouterd_conf_man.py)
-
-  add_custom_target(doc-schema DEPENDS ${SCHEMA_GEN})
-  add_dependencies(doc doc-schema)
-
-  # Generate rst text from --help output for man pages
-  macro(help2rst program path)
-    set(help ${bin}/man/${program}_help.rst)
-    list(APPEND HELP_GEN ${help})
-    add_custom_command (
-      OUTPUT ${help}
-      COMMAND ${RUN} -s ${src}/man/help2rst.py ${path}/${program} --help > ${help}
-      DEPENDS ${path}/${program} ${schema_doc} ${src}/man/help2rst.py
-      )
-  endmacro()
-
-  help2rst(qdrouterd ${CMAKE_BINARY_DIR}/router)
-  help2rst(qdstat ${tools})
-  help2rst(qdmanage ${tools})
-
-  # Run sphinx to generate HTML and man pages
-  if(USE_SPHINX)
-    foreach(manpage qdmanage.8 qdrouterd.8 qdrouterd.conf.5 qdstat.8)
-      list(APPEND MAN_PAGES ${bin}/man/${manpage})
-      string(REGEX MATCH "[0-9]*$" section  ${manpage})
-      install_doc(FILES ${bin}/man/${manpage}
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/${MAN_INSTALL_DIR}/man${section})
+    # Generate HTML
+    file(GLOB_RECURSE ADOC_SRC *.adoc)
+    foreach(source index book/book man/qdmanage.8 man/qdrouterd.8 man/qdstat.8 ${bin}/qdrouterd.conf.5)
+      get_filename_component(name ${source} NAME)
+      set(output ${bin}/${name}.html)
+      add_custom_command(
+        OUTPUT ${output}
+        COMMAND ${ASCIIDOC_EXE} -b xhtml11 --conf-file=${bin}/asciidoc.conf -o ${output} ${source}.adoc
+        DEPENDS ${source}.adoc ${GENERATED_TXT} ${ADOC_SRC}
+        WORKING_DIRECTORY ${src} # Book include links assume we are in source dir.
+        )
+      list(APPEND DOC_DEPENDS ${output})
+      install_doc(FILES ${output} DESTINATION ${QD_DOC_INSTALL_DIR})
     endforeach()
 
-    set(SPHINX_OUTPUT ${bin}/html/index.html ${bin}/singlehtml/book/book.html ${MAN_PAGES})
+    find_program(A2X_EXE a2x DOC DOC "Generate Unix man pages")
+    if (A2X_EXE)
+      set(A2X_FLAGS --asciidoc-opts=--conf-file=${bin}/asciidoc.conf --asciidoc-opts=-v -D ${bin})
 
-    set(html_raw_options -D html_theme=bare -D html_add_permalinks=".")
-    add_custom_command(
-      OUTPUT ${SPHINX_OUTPUT}
-      # html/ contains plain HTML suitable for embedding in the Qpid website.
-      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b html ${html_raw_options} ${bin} ${bin}/html
-      # dochtml/ is a self-contained site with searching, navigation etc. installed with the docs.
-      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b html ${bin} ${bin}/dochtml
-      # man/ contains Unix man pages.
-      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b man  ${bin} ${bin}/man
-      # singlehtml is a single HTML page
-      COMMAND ${SPHINX_BUILD} -d ${bin}/doctrees -b singlehtml ${bin} ${bin}/singlehtml
-      DEPENDS ${RST_SRC} ${HELP_GEN} ${SCHEMA_GEN}
-      )
-    add_custom_target(doc-sphinx DEPENDS ${SPHINX_OUTPUT})
-    add_dependencies(doc doc-sphinx)
+      # Generate man pages.
+      foreach(source ${src}/man/qdmanage.8 ${src}/man/qdrouterd.8 ${src}/man/qdstat.8 ${bin}/qdrouterd.conf.5)
+        get_filename_component(name ${source} NAME)
+        string(REGEX MATCH "\\.([0-9])$" section ${source}) # Man section number
+        set(output ${bin}/${name})
+        add_custom_command(
+          OUTPUT ${output}
+          COMMAND ${A2X_EXE} ${A2X_FLAGS} -f manpage -D ${bin} ${source}.adoc
+          DEPENDS ${source}.adoc ${GENERATED_TXT})
+        list(APPEND DOC_DEPENDS ${output})
+        install_doc(FILES ${output} DESTINATION ${CMAKE_INSTALL_PREFIX}/${MAN_INSTALL_DIR}/man${section})
+      endforeach()
 
-    install_doc(DIRECTORY ${bin}/dochtml/  DESTINATION ${QD_DOC_INSTALL_DIR}/html)
+      # Generate PDF if we have the latex tool
+      find_program(DBLATEX_EXE dblatex "Generate PDF documentation")
+      if (DBLATEX_EXE)
+        add_custom_command(
+          OUTPUT ${bin}/book.pdf
+          COMMAND ${A2X_EXE} ${A2X_FLAGS} -f pdf ${src}/book/book.adoc
+          DEPENDS ${src}/book/book.adoc ${GENERATED_TXT})
+        list(APPEND DOC_DEPENDS ${bin}/book.pdf)
+        install_doc(FILES ${bin}/book.pdf DESTINATION ${QD_DOC_INSTALL_DIR})
+      else(DBLATEX_EXE)
+        message("Not generating PDF user guide: dblatex not found")
+      endif(DBLATEX_EXE)
+    else(A2X_EXE)
+      message("Not generating Unix Man pages or PDF user guide: a2x not found")
+    endif(A2X_EXE)
+  else(ASCIIDOC_EXE)
+    message("No generated documentation: asciidoc not found")
+  endif(ASCIIDOC_EXE)
 
-    set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES
-      ${bin}/html
-      ${bin}/singlehtml
-      ${bin}/dochtml)
-  endif(USE_SPHINX)
-
-  # Install rst documentation as baseline in case we have no generator
-  install(DIRECTORY ${bin}/ DESTINATION ${QD_DOC_INSTALL_DIR}/rst ${OPTIONAL} FILES_MATCHING PATTERN "*.rst")
-
-
+  add_custom_target(doc ${DOC_TARGET} DEPENDS ${DOC_DEPENDS})
 endif(BUILD_DOCS)

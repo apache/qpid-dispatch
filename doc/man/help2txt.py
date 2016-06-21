@@ -18,14 +18,14 @@
 #
 
 """
-Convett --help output of a program into rst text format.
+Convert --help output of a program into asciidoc text format.
 """
 
 import re, sys
 from qpid_dispatch_internal.compat.subproc import check_output, STDOUT, CalledProcessError
 from os import path
 
-def help2rst(help_out):
+def help2txt(help_out):
     VALUE = r"(?:[\w-]+|<[^>]+>)"
     DEFAULT = r"(?: +\([^)]+\))?"
     OPTION = r"-[\w-]+(?:[ =]%s)?%s" % (VALUE, DEFAULT) # -opt[(=| )value][(default)]
@@ -38,12 +38,12 @@ def help2rst(help_out):
     if (options): help_out = help_out[options.end():]
     result = ""
 
-    def heading(text, underline):
-        return "%s\n%s\n\n" % (text, underline*len(text))
+    def heading(text, depth):
+        return "%s %s\n\n" % ("="*depth, text)
 
     for item in re.finditer(r"%s|%s" % (OPT_HELP, SUBHEAD), help_out, re.IGNORECASE | re.MULTILINE):
         if item.group(3):
-            result += heading(item.group(3).strip(), "~")
+            result += heading(item.group(3).strip(), 3)
         else:
             result += "%s\n:   %s\n\n" % (item.group(1), re.sub("\s+", " ", item.group(2)).strip())
     return result
@@ -51,7 +51,7 @@ def help2rst(help_out):
 def main(argv):
     if len(argv) < 2: raise ValueError("Wrong number of arguments: "+usage)
     program = argv[1:]
-    print help2rst(check_output(program, stderr=STDOUT))
+    print help2txt(check_output(program, stderr=STDOUT))
 
 if __name__ == "__main__":
     try:

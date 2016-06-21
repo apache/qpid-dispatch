@@ -1,0 +1,203 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+[[basic-usage-and-examples]]
+Basic Usage and Examples
+------------------------
+
+[[standalone-and-interior-modes]]
+Standalone and Interior Modes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The router can operate stand-alone or as a node in a network of routers.
+The mode is configured in the _router_ section of the configuration
+file. In stand-alone mode, the router does not attempt to collaborate
+with any other routers and only routes messages among directly connected
+endpoints.
+
+If your router is running in stand-alone mode, _qdstat -a_ will look
+like the following:
+
+-----------------------------------------------------------------------------------------------------------------
+$ qdstat -a
+Router Addresses
+  class   addr                   phs  distrib  in-proc  local  remote  cntnr  in  out  thru  to-proc  from-proc
+  ===============================================================================================================
+  local   $_management_internal       closest  1        0      0       0      0   0    0     0        0
+  local   $displayname                closest  1        0      0       0      0   0    0     0        0
+  mobile  $management            0    closest  1        0      0       0      1   0    0     1        0
+  local   $management                 closest  1        0      0       0      0   0    0     0        0
+  local   temp.1GThUllfR7N+BDP        closest  0        1      0       0      0   0    0     0        0
+-----------------------------------------------------------------------------------------------------------------
+
+Note that there are a number of known addresses. _$management_ is the
+address of the router's embedded management agent.
+_temp.1GThUllfR7N+BDP_ is the temporary reply-to address of the _qdstat_
+client making requests to the agent.
+
+If you change the mode to interior and restart the processs, the same
+command will yield additional addresses which are used for inter-router
+communication:
+
+-------------------------------------------------------------------------------------------------------------------
+$ qdstat -a
+Router Addresses
+  class   addr                   phs  distrib    in-proc  local  remote  cntnr  in  out  thru  to-proc  from-proc
+  =================================================================================================================
+  local   $_management_internal       closest    1        0      0       0      0   0    0     0        0
+  local   $displayname                closest    1        0      0       0      0   0    0     0        0
+  mobile  $management            0    closest    1        0      0       0      1   0    0     1        0
+  local   $management                 closest    1        0      0       0      0   0    0     0        0
+  local   qdhello                     flood      1        0      0       0      0   0    0     0        10
+  local   qdrouter                    flood      1        0      0       0      0   0    0     0        0
+  topo    qdrouter                    flood      1        0      0       0      0   0    0     0        1
+  local   qdrouter.ma                 multicast  1        0      0       0      0   0    0     0        0
+  topo    qdrouter.ma                 multicast  1        0      0       0      0   0    0     0        0
+  local   temp.wfx54+zf+YWQF3T        closest    0        1      0       0      0   0    0     0        0
+-------------------------------------------------------------------------------------------------------------------
+
+[[mobile-subscribers]]
+Mobile Subscribers
+~~~~~~~~~~~~~~~~~~
+
+The term "mobile subscriber" simply refers to the fact that a client may
+connect to the router and subscribe to an address to receive messages
+sent to that address. No matter where in the network the subscriber
+attaches, the messages will be routed to the appropriate destination.
+
+To illustrate a subscription on a stand-alone router, you can use the
+examples that are provided with Qpid Proton. Using the _simple_recv.py_
+example receiver:
+
+-------------------------------------------------
+$ python ./simple_recv.py -a 127.0.0.1/my-address
+-------------------------------------------------
+
+This command creates a receiving link subscribed to the specified
+address. To verify the subscription:
+
+-----------------------------------------------------------------------------------------------------------------
+$ qdstat -a
+Router Addresses
+  class   addr                   phs  distrib  in-proc  local  remote  cntnr  in  out  thru  to-proc  from-proc
+  ===============================================================================================================
+  local   $_management_internal       closest  1        0      0       0      0   0    0     0        0
+  local   $displayname                closest  1        0      0       0      0   0    0     0        0
+  mobile  $management            0    closest  1        0      0       0      2   0    0     2        0
+  local   $management                 closest  1        0      0       0      0   0    0     0        0
+  mobile  my-address             0    closest  0        1      0       0      0   0    0     0        0
+  local   temp.75_d2X23x_KOT51        closest  0        1      0       0      0   0    0     0        0
+-----------------------------------------------------------------------------------------------------------------
+
+You can then, in a separate command window, run a sender to produce
+messages to that address:
+
+-------------------------------------------------
+$ python ./simple_send.py -a 127.0.0.1/my-address
+-------------------------------------------------
+
+[[dynamic-reply-to]]
+Dynamic Reply-To
+~~~~~~~~~~~~~~~~
+
+Dynamic reply-to can be used to obtain a reply-to address that routes
+back to a client's receiving link regardless of how many hops it has to
+take to get there. To illustrate this feature, see below a simple
+program (written in C++ against the qpid::messaging API) that queries
+the management agent of the attached router for a list of other known
+routers' management addresses.
+
+-------------------------------------------------------------------
+#include <qpid/messaging/Address.h>
+#include <qpid/messaging/Connection.h>
+#include <qpid/messaging/Message.h>
+#include <qpid/messaging/Receiver.h>
+#include <qpid/messaging/Sender.h>
+#include <qpid/messaging/Session.h>
+
+using namespace qpid::messaging;
+using namespace qpid::types;
+
+using std::stringstream;
+using std::string;
+
+int main() {
+    const char* url = "amqp:tcp:127.0.0.1:5672";
+    std::string connectionOptions = "{protocol:amqp1.0}";
+
+    Connection connection(url, connectionOptions);
+    connection.open();
+    Session session = connection.createSession();
+    Sender sender = session.createSender("mgmt");
+
+    // create reply receiver and get the reply-to address
+    Receiver receiver = session.createReceiver("#");
+    Address responseAddress = receiver.getAddress();
+
+    Message request;
+    request.setReplyTo(responseAddress);
+    request.setProperty("x-amqp-to", "amqp:/_local/$management");
+    request.setProperty("operation", "DISCOVER-MGMT-NODES");
+    request.setProperty("type", "org.amqp.management");
+    request.setProperty("name, "self");
+
+    sender.send(request);
+    Message response = receiver.fetch();
+    Variant content(response.getContentObject());
+    std::cout << "Response: " << content << std::endl << std::endl;
+
+    connection.close();
+}
+-------------------------------------------------------------------
+
+The equivalent program written in Python against the Proton Messenger
+API:
+
+----------------------------------------------------------------
+from proton import Messenger, Message
+
+def main():
+    host = "0.0.0.0:5672"
+
+    messenger = Messenger()
+    messenger.start()
+    messenger.route("amqp:/*", "amqp://%s/$1" % host)
+    reply_subscription = messenger.subscribe("amqp:/#")
+    reply_address = reply_subscription.address
+
+    request  = Message()
+    response = Message()
+
+    request.address = "amqp:/_local/$management"
+    request.reply_to = reply_address
+    request.properties = {u'operation' : u'DISCOVER-MGMT-NODES',
+                          u'type'      : u'org.amqp.management',
+                          u'name'      : u'self'}
+
+    messenger.put(request)
+    messenger.send()
+    messenger.recv()
+    messenger.get(response)
+
+    print "Response: %r" % response.body
+
+    messenger.stop()
+
+main()
+----------------------------------------------------------------

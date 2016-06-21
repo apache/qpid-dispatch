@@ -18,7 +18,7 @@
 #
 
 """
-Generate the qdrouterd.conf.md man page from the qdrouterd management schema.
+Generate the qdrouterd.conf. man page from the qdrouterd management schema.
 """
 
 import sys
@@ -77,83 +77,85 @@ class ManPageWriter(SchemaWriter):
 
     def man_page(self):
         self.writeln(r"""
-:orphan:
+qdrouterd.conf(5)
+=================
+:doctype: manpage
 
-qdrouterd.conf manual page
-==========================
+NAME
+----
+qdrouterd.conf - configuration file for the dispatch router.
 
-Synopsis
+SYNOPSIS
 --------
+Provides the initial configuration when 'qdrouterd(8)' starts. The configuration
+of a running router can be modified using 'qdmanage(8)'.
 
-qdroutered.conf is the configuration file for the dispatch router.
 
-Description
+DESCRIPTION
 -----------
 
 The configuration file is made up of sections with this syntax:
 
-::
+----
+sectionName {
+    attributeName: attributeValue
+    attributeName: attributeValue
+    ...
+}
+----
 
-    sectionName {
-        attributeName: attributeValue
-        attributeName: attributeValue
-        ...
-    }
+For example you can define a router using the 'router' section
 
+----
+router {
+    mode: standalone
+    id: Router.A
+    ...
+}
+----
 
+or define a listener using the 'listener' section
 
-For example you can define a router using the "router" section
+----
+listener {
+    host: 0.0.0.0
+    port: 20102
+    saslMechanisms: ANONYMOUS
+    ...
+}
+----
 
-::
+or define a connector using the 'connector' section
 
-    router {
-        mode: standalone
-        id: Router.A
-        ...
-    }
+----
+connector {
+    role: inter-router
+    host: 0.0.0.0
+    port: 20003
+    saslMechanisms: ANONYMOUS
+    ...
+}
+----
 
-or define a listener using the "listener" section
-
-::
-
-    listener {
-        host: 0.0.0.0
-        port: 20102
-        saslMechanisms: ANONYMOUS
-        ...
-    }
-
-or define a connector using the "connector" section
-
-::
-
-    connector {
-        role: inter-router
-        host: 0.0.0.0
-        port: 20003
-        saslMechanisms: ANONYMOUS
-        ...
-    }
-
-"sslProfile" section with SSL credentials can be included in multiple "listener" or "connector" entities. Here's an example, note
+An 'sslProfile' section with SSL credentials can be included in multiple 'listener' or 'connector' entities. Here's an example, note
 how the 'sslProfile' attribute of 'listener' sections references the 'name'
 attribute of 'sslProfile' sections.
 
-::
+----
+sslProfile {
+    name: my-ssl
+    certDb: ca-certificate-1.pem
+    certFile: server-certificate-1.pem
+    keyFile: server-private-key.pem
+}
 
-    sslProfile {
-        name: my-ssl
-        certDb: ca-certificate-1.pem
-        certFile: server-certificate-1.pem
-        keyFile: server-private-key.pem
-    }
-
-    listener {
-        sslProfile: my-ssl
-        host: 0.0.0.0
-        port: 20102
-        saslMechanisms: ANONYMOUS
-    }
+listener {
+    sslProfile: my-ssl
+    host: 0.0.0.0
+    port: 20102
+    saslMechanisms: ANONYMOUS
+}
+----
 """)
 
         with self.section("Configuration Sections"):
@@ -198,13 +200,13 @@ attribute of 'sslProfile' sections.
                         self.attribute_types(entity_type)
 
         self.writeln("""
-See also
+SEE ALSO
 --------
 
 *qdrouterd(8)*, *qdmanage(8)*
 
 http://qpid.apache.org/components/dispatch-router
-        """)
+""")
 
 if __name__ == '__main__':
     ManPageWriter().man_page()
