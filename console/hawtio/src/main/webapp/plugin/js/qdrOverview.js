@@ -34,7 +34,7 @@ var QDR = (function (QDR) {
    *
    * Controller that handles the QDR overview page
    */
-	QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', '$timeout', function($scope, QDRService, $location, $timeout) {
+	QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', 'localStorage', '$timeout', function($scope, QDRService, $location, localStorage, $timeout) {
 
 
 		console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
@@ -963,6 +963,7 @@ var QDR = (function (QDR) {
 		var activated = function (node) {
 			//QDR.log.debug("node activated: " + node.data.title)
 			var type = node.data.type;
+			localStorage['QDROverviewKey'] = node.data.parent;
 			var template = $scope.templates.filter( function (tpl) {
 				return tpl.name == type;
 			})
@@ -987,13 +988,17 @@ var QDR = (function (QDR) {
      *
      * -------------------------------------------------
      */
+		var lastKey = localStorage['QDROverviewKey'];
+		if (!lastKey)
+			lastKey = "Routers"
 		var routers = new Folder("Routers")
 		routers.type = "Routers"
 		routers.info = allRouterInfo
-		routers.focus = true
-		routers.expand = true
+		routers.focus = lastKey === 'Routers'
+		routers.expand = lastKey === 'Routers'
 		routers.clickFolderMode = 1
 		routers.key = "Routers"
+		routers.parent = "Routers"
 	    routers.addClass = "routers"
 		topLevelChildren.push(routers)
 		nodeIds.forEach( function (node) {
@@ -1004,6 +1009,7 @@ var QDR = (function (QDR) {
 			router.nodeId = node
 			router.key = node
 			router.addClass = "router"
+			router.parent = "Routers"
 			routers.children.push(router)
 		})
 
@@ -1011,8 +1017,11 @@ var QDR = (function (QDR) {
 		var addresses = new Folder("Addresses")
 		addresses.type = "Addresses"
 		addresses.info = allAddressInfo
+		addresses.focus = lastKey === 'Addresses'
+		addresses.expand = lastKey === 'Addresses'
 		addresses.clickFolderMode = 1
 		addresses.key = "Addresses"
+		addresses.parent = "Addresses"
 	    addresses.addClass = "addresses"
 		topLevelChildren.push(addresses)
 
@@ -1033,6 +1042,7 @@ var QDR = (function (QDR) {
 				a.fields = address
 				a.type = "Address"
 				a.addClass = "address"
+				a.parent = "Addresses"
 				addresses.children.push(a)
 			} )
 		}
@@ -1051,8 +1061,11 @@ var QDR = (function (QDR) {
 		var links = new Folder("Links " + filterHtml)
 		links.type = "Links"
 		links.info = allLinkInfo
+		links.focus = lastKey === 'Links'
+		links.expand = lastKey === 'Links'
 		links.clickFolderMode = 1
 		links.key = "Links"
+		links.parent = "Links"
 	    links.addClass = "links"
 		topLevelChildren.push(links)
 
@@ -1076,6 +1089,7 @@ var QDR = (function (QDR) {
 				l.key = link.uid
 				l.fields = link
 				l.type = "Link"
+				l.parent = "Links"
 				l.addClass = "link"
 				// if node exists, we are updating the existing links
 				if (node)
@@ -1098,8 +1112,11 @@ var QDR = (function (QDR) {
 		var connections = new Folder("Connections")
 		connections.type = "Connections"
 		connections.info = allConnectionInfo
+		connections.focus = lastKey === 'Connections'
+		connections.expand = lastKey === 'Connections'
 		connections.clickFolderMode = 1
 		connections.key = "Connections"
+		connections.parent = "Connections"
 	    connections.addClass = "connections"
 		topLevelChildren.push(connections)
 		nodeIds.forEach( function (nodeId) {
@@ -1153,6 +1170,7 @@ var QDR = (function (QDR) {
 						c.fields = connectionsObj[connection]
 						c.tooltip = connectionsObj[connection].role === "inter-router" ? "inter-router connection" : "external connection"
 						c.addClass = c.tooltip
+						c.parent = "Connections"
 						connections.children.push(c)
 
 					})
@@ -1165,8 +1183,11 @@ var QDR = (function (QDR) {
 		var logs = new Folder("Logs")
 		logs.type = "Logs"
 		logs.info = allLogInfo
+		logs.focus = lastKey === 'Logs'
+		logs.expand = lastKey === 'Logs'
 		logs.clickFolderMode = 1
 		logs.key = "Logs"
+		logs.parent = "Logs"
 		//topLevelChildren.push(logs)
 		nodeIds.forEach( function (nodeId) {
 			QDRService.getNodeInfo(nodeId, ".log", ["name"], function (nodeName, entity, response) {
@@ -1181,6 +1202,7 @@ var QDR = (function (QDR) {
 						l.type = "Log"
 						l.info = logInfo
 						l.key = log
+						l.parent = "Logs"
 						logs.children.push(l)
 					})
 					$('#overtree').dynatree({
