@@ -83,6 +83,11 @@ def connection_options(options, title="Connection Options"):
                      help="Trusted Certificate Authority Database file (PEM Format)")
     group.add_option("--ssl-password", action="store", type="string", metavar="PASSWORD",
                      help="Certificate password, will be prompted if not specifed.")
+    group.add_option("--no-verify-host-name", action="store_true", default=False,
+                     help="Does not ensure that when initiating an SSL connection (as a client) the host name in "
+                          "the URL to which this connector connects to matches the host name in the digital "
+                          "certificate that the peer sends back as part of the SSL connection. Note: This is not"
+                          "recommended in production environments as it is insecure")
     return group
 
 def opts_url(opts):
@@ -99,12 +104,17 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     """Return proton.SSLDomain from command line options or None if no SSL options specified.
     @param opts: Parsed optoins including connection_options()
     """
-    certificate, key, trustfile, password = opts.ssl_certificate, opts.ssl_key, opts.ssl_trustfile, opts.ssl_password
+    certificate, key, trustfile, password, no_verify_host_name = opts.ssl_certificate, \
+                                                                 opts.ssl_key, opts.ssl_trustfile, opts.ssl_password, \
+                                                                 opts.no_verify_host_name
     if not (certificate or trustfile): return None
     domain = SSLDomain(mode)
     if trustfile:
         domain.set_trusted_ca_db(str(trustfile))
-        domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
+        if no_verify_host_name:
+            domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
+        else:
+            domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME, str(trustfile))
     if certificate:
         domain.set_credentials(str(certificate), str(key), str(password))
     return domain
