@@ -113,9 +113,15 @@ try:
             cls.router = cls.tester.qdrouterd('test-router', config)
 
         def run_qdstat(self, args, regexp=None, address=None):
-            p = self.popen(
-                ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args,
-                name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            if address.startswith('amqps'):
+                p = self.popen(
+                    ['qdstat', '--no-verify-host-name', '--bus', str(address or self.router.addresses[0]), '--timeout',
+                     str(system_test.TIMEOUT)] + args, name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            else:
+                p = self.popen(
+                    ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout',
+                     str(system_test.TIMEOUT)] + args, name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+
             out = p.communicate()[0]
             assert p.returncode == 0, \
                 "qdstat exit status %s, output:\n%s" % (p.returncode, out)
