@@ -160,9 +160,9 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
-                                     'cert-db': cls.ssl_file('ca-certificate.pem'),
-                                     'cert-file': cls.ssl_file('server-certificate.pem'),
-                                     'key-file': cls.ssl_file('server-private-key.pem'),
+                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'certFile': cls.ssl_file('server-certificate.pem'),
+                                     'keyFile': cls.ssl_file('server-private-key.pem'),
                                      'password': 'server-password'}),
                      ('router', {'workerThreads': 1,
                                  'id': 'QDR.X',
@@ -175,7 +175,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                      # This router will act like a client. First an SSL connection will be established and then
                      # we will have SASL plain authentication over SSL.
                      ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
-                                    'ssl-profile': 'client-ssl-profile',
+                                    'sslProfile': 'client-ssl-profile',
                                     'verifyHostName': 'no',
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
@@ -186,9 +186,9 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                  'id': 'QDR.Y'}),
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
-                                     'cert-db': cls.ssl_file('ca-certificate.pem'),
-                                     'cert-file': cls.ssl_file('client-certificate.pem'),
-                                     'key-file': cls.ssl_file('client-private-key.pem'),
+                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'certFile': cls.ssl_file('client-certificate.pem'),
+                                     'keyFile': cls.ssl_file('client-private-key.pem'),
                                      'password': 'client-password'}),
         ])
 
@@ -250,9 +250,9 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
                      ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
-                                     'cert-db': cls.ssl_file('ca-certificate.pem'),
-                                     'cert-file': cls.ssl_file('server-certificate.pem'),
-                                     'key-file': cls.ssl_file('server-private-key.pem'),
+                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'certFile': cls.ssl_file('server-certificate.pem'),
+                                     'keyFile': cls.ssl_file('server-private-key.pem'),
                                      'password': 'server-password'}),
                      ('router', {'workerThreads': 1,
                                  'routerId': 'QDR.X',
@@ -263,7 +263,7 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
 
         super(RouterTestVerifyHostNameYes, cls).router('Y', [
                      ('connector', {'addr': '127.0.0.1', 'role': 'inter-router', 'port': x_listener_port,
-                                    'ssl-profile': 'client-ssl-profile',
+                                    'sslProfile': 'client-ssl-profile',
                                     'verifyHostName': 'yes',
                                     'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com', 'saslPassword': 'password'}),
@@ -272,9 +272,9 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
                                  'routerId': 'QDR.Y'}),
                      ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
-                                     'cert-db': cls.ssl_file('ca-certificate.pem'),
-                                     'cert-file': cls.ssl_file('client-certificate.pem'),
-                                     'key-file': cls.ssl_file('client-private-key.pem'),
+                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'certFile': cls.ssl_file('client-certificate.pem'),
+                                     'keyFile': cls.ssl_file('client-private-key.pem'),
                                      'password': 'client-password'}),
         ])
 
@@ -335,9 +335,9 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                      ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
-                                     'cert-db': cls.ssl_file('ca-certificate.pem'),
-                                     'cert-file': cls.ssl_file('server-certificate.pem'),
-                                     'key-file': cls.ssl_file('server-private-key.pem'),
+                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'certFile': cls.ssl_file('server-certificate.pem'),
+                                     'keyFile': cls.ssl_file('server-private-key.pem'),
                                      'password': 'server-password'}),
                      ('router', {'workerThreads': 1,
                                  'routerId': 'QDR.X',
@@ -350,7 +350,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                      # This router will act like a client. First an SSL connection will be established and then
                      # we will have SASL plain authentication over SSL.
                      ('connector', {'addr': '127.0.0.1', 'role': 'inter-router', 'port': x_listener_port,
-                                    'ssl-profile': 'client-ssl-profile',
+                                    'sslProfile': 'client-ssl-profile',
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
                                     'verifyHostName': 'no',
@@ -360,9 +360,9 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                                  'routerId': 'QDR.Y'}),
                      ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
-                                     'cert-db': cls.ssl_file('ca-certificate.pem'),
-                                     'cert-file': cls.ssl_file('client-certificate.pem'),
-                                     'key-file': cls.ssl_file('client-private-key.pem'),
+                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'certFile': cls.ssl_file('client-certificate.pem'),
+                                     'keyFile': cls.ssl_file('client-private-key.pem'),
                                      'password': 'client-password'}),
         ])
 

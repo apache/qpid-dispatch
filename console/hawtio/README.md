@@ -51,7 +51,7 @@ In the above, websockify is listening for ws traffic on port 5673 and will proxy
         role: normal
         host: 0.0.0.0
         port: 20009
-        sasl-mechanisms: ANONYMOUS
+        saslMechanisms: ANONYMOUS
     }
 
 #### Automatically running a proxy with a router

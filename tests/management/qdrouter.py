@@ -35,16 +35,16 @@ ssl-profile {
 }
 listener {
     name: l0
-    sasl-mechanisms: ANONYMOUS
-    ssl-profile: test-profile
+    saslMechanisms: ANONYMOUS
+    sslProfile: test-profile
 }
 listener {
     identity: l1
-    sasl-mechanisms: ANONYMOUS
+    saslMechanisms: ANONYMOUS
     port: 1234
 }
 listener {
-    sasl-mechanisms: ANONYMOUS
+    saslMechanisms: ANONYMOUS
     port: 4567
 }
 """

@@ -25,14 +25,14 @@
 
 router {
     mode: interior
-    router-id: QDR.A
+    routerId: QDR.A
 }
 
-ssl-profile {
-    name: ssl-profile-name
-    cert-db: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/ca-certificate.pem
-    cert-file: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/server-certificate.pem
-    key-file: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/server-private-key.pem
+sslProfile {
+    name: test-ssl
+    certDb: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/ca-certificate.pem
+    certFile: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/server-certificate.pem
+    keyFile: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/server-private-key.pem
     password: server-password
 }
 
@@ -42,36 +42,36 @@ ssl-profile {
 listener {
     host: 0.0.0.0
     port: 20100
-    sasl-mechanisms: ANONYMOUS
+    saslMechanisms: ANONYMOUS
 }
 
 listener {
     role: inter-router
     host: 0.0.0.0
     port: 20102
-    sasl-mechanisms: EXTERNAL
-    ssl-profile: ssl-profile-name
+    saslMechanisms: EXTERNAL
+    sslProfile: test-ssl
     requirePeerAuth: yes
 }
 
-fixed-address {
+fixedAddress {
     prefix: /closest/
     fanout: single
     bias: closest
 }
 
-fixed-address {
+fixedAddress {
     prefix: /spread/
     fanout: single
     bias: spread
 }
 
-fixed-address {
+fixedAddress {
     prefix: /multicast/
     fanout: multiple
 }
 
-fixed-address {
+fixedAddress {
     prefix: /
     fanout: multiple
 }

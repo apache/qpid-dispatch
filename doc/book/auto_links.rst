@@ -50,7 +50,7 @@ through a pair of queues on a broker:
         role: route-container
         host: <hostname>
         port: <port>
-        sasl-mechanisms: ANONYMOUS
+        saslMechanisms: ANONYMOUS
     }
 
     address {
@@ -190,7 +190,7 @@ multiple brokers share the message-queueing load.
         role: route-container
         host: <hostname>
         port: <port>
-        sasl-mechanisms: ANONYMOUS
+        saslMechanisms: ANONYMOUS
     }
 
     connector {
@@ -198,7 +198,7 @@ multiple brokers share the message-queueing load.
         role: route-container
         host: <hostname>
         port: <port>
-        sasl-mechanisms: ANONYMOUS
+        saslMechanisms: ANONYMOUS
     }
 
     address {

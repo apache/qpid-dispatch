@@ -36,8 +36,8 @@ class EntityTest(unittest.TestCase):
         self.assertEqual('FooBar', camelcase('fooBar', capital=True))
 
     def test_entity(self):
-        e = EntityBase({'foo-bar': 'baz'}, type='container', name='x')
-        self.assertEqual(e.attributes, {'type': 'container', 'name':'x', 'foo-bar': 'baz'})
+        e = EntityBase({'fooBar': 'baz'}, type='container', name='x')
+        self.assertEqual(e.attributes, {'type': 'container', 'name':'x', 'fooBar': 'baz'})
         self.assertEqual(e.name, 'x')
         self.assertEqual(e['name'], 'x')
 

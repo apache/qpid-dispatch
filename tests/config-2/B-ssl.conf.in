@@ -19,15 +19,15 @@
 
 router {
     mode: interior
-    router-id: QDR.B
+    routerId: QDR.B
 }
 
 
 ssl-profile {
-    name: ssl-profile-name
-    cert-db: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/ca-certificate.pem
-    cert-file: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/client-certificate.pem
-    key-file: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/client-private-key.pem
+    name: test-ssl
+    certDb: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/ca-certificate.pem
+    certFile: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/client-certificate.pem
+    keyFile: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/client-private-key.pem
     password: client-password
 }
 
@@ -37,15 +37,15 @@ ssl-profile {
 listener {
     host: 0.0.0.0
     port: 20101
-    sasl-mechanisms: ANONYMOUS
+    saslMechanisms: ANONYMOUS
 }
 
 connector {
     role: inter-router
     host: 0.0.0.0
     port: 20102
-    sasl-mechanisms: EXTERNAL
-    ssl-profile: ssl-profile-name
+    saslMechanisms: EXTERNAL
+    sslProfile: test-ssl
 }
 
 fixed-address {

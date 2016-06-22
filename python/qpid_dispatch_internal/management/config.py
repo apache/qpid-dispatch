@@ -88,7 +88,7 @@ class Config(object):
         """
         Find annotation sections (defined by schema) in the content,
         expand references and remove the annotation sections.
-        @param content: ((section-name:{name:value...}))
+        @param content: ((sectionName:{name:value...}))
         """
         def _expand_section(section, annotations):
             """Expand one section"""

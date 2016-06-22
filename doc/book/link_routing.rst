@@ -99,7 +99,7 @@ broker B2:
         role: route-container
         host: <B2-url>
         port: <B2-port>
-        sasl-mechanisms: ANONYMOUS
+        saslMechanisms: ANONYMOUS
     }
 
 This *route-container* connector tells the router how to connect to an

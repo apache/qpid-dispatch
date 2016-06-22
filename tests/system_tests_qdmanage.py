@@ -39,14 +39,14 @@ class QdmanageTest(TestCase):
         cls.inter_router_port = cls.tester.get_port()
         config_1 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'R1'}),
-            ('ssl-profile', {'name': 'server-ssl',
-                             'cert-db': cls.ssl_file('ca-certificate.pem'),
-                             'cert-file': cls.ssl_file('server-certificate.pem'),
-                             'key-file': cls.ssl_file('server-private-key.pem'),
+            ('sslProfile', {'name': 'server-ssl',
+                             'certDb': cls.ssl_file('ca-certificate.pem'),
+                             'certFile': cls.ssl_file('server-certificate.pem'),
+                             'keyFile': cls.ssl_file('server-private-key.pem'),
                              'password': 'server-password'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('connector', {'role': 'inter-router', 'port': cls.inter_router_port}),
-            ('listener', {'port': cls.tester.get_port(), 'ssl-profile': 'server-ssl'})
+            ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl'})
         ])
 
         config_2 = Qdrouterd.Config([

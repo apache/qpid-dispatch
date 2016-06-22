@@ -142,14 +142,14 @@ attribute of 'sslProfile' sections.
 ::
 
     sslProfile {
-        name: ssl-profile-one
+        name: my-ssl
         certDb: ca-certificate-1.pem
         certFile: server-certificate-1.pem
         keyFile: server-private-key.pem
     }
 
     listener {
-        sslProfile: ssl-profile-one
+        sslProfile: my-ssl
         host: 0.0.0.0
         port: 20102
         saslMechanisms: ANONYMOUS

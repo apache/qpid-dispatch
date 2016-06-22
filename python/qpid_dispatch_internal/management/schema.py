@@ -501,8 +501,8 @@ class Schema(object):
     def __init__(self, prefix="", annotations=None, entityTypes=None, description=""):
         """
         @param prefix: Prefix for entity names.
-        @param annotations: Map of  { annotation-name: {attribute-name:value, ... }}
-        @param entity_types: Map of  { entity-type-name: { singleton:, annotation:[...], attributes:{...}}}
+        @param annotations: Map of  { annotationName: {attributeName: value, ... }}
+        @param entity_types: Map of  { entityTypeName: { singleton:, annotation:[...], attributes:{...}}}
         @param description: Human readable description.
         """
         if prefix:

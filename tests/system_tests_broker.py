@@ -91,12 +91,12 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
                 rconf = self.common_router_conf(name, mode='interior')
                 rconf += [
                     ('listener', {'port':self.get_port(), 'role':'normal'}),
-                    ('fixed-address', {'prefix':self.testq, 'phase':0, 'fanout':'single', 'bias':'spread'}),
-                    ('fixed-address', {'prefix':self.testq, 'phase':1, 'fanout':'single', 'bias':'spread'})]
+                    ('fixedAddress', {'prefix':self.testq, 'phase':0, 'fanout':'single', 'bias':'spread'}),
+                    ('fixedAddress', {'prefix':self.testq, 'phase':1, 'fanout':'single', 'bias':'spread'})]
                 for q in self.qpidds:
                     rconf += [
                         ('connector', {'name':q.name, 'port':q.port}),
-                        ('waypoint', {'address':self.testq, 'out-phase':1, 'in-phase':0, 'connector':q.name})]
+                        ('waypoint', {'address':self.testq, 'outPhase':1, 'inPhase':0, 'connector':q.name})]
                 return self.qdrouterd(name, rconf, wait=False)
             routers = [router(i) for i in xrange(len(self.qpidds))]
             for r in routers: r.wait_ready()

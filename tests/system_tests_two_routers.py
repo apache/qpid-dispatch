@@ -1108,16 +1108,16 @@ try:
 
         @staticmethod
         def ssl_config(client_server, connection):
-                connection[1]['ssl-profile'] = 'ssl-profile-name'
+                connection[1]['sslProfile'] = 'test-ssl'
 
                 def ssl_file(name):
                     return os.path.join(DIR, 'ssl_certs', name)
                 return [
-                    ('ssl-profile', {
-                        'name': 'ssl-profile-name',
-                        'cert-db': ssl_file('ca-certificate.pem'),
-                        'cert-file': ssl_file(client_server+'-certificate.pem'),
-                        'key-file': ssl_file(client_server+'-private-key.pem'),
+                    ('sslProfile', {
+                        'name': 'test-ssl',
+                        'certDb': ssl_file('ca-certificate.pem'),
+                        'certFile': ssl_file(client_server+'-certificate.pem'),
+                        'keyFile': ssl_file(client_server+'-private-key.pem'),
                         'password': client_server+'-password'})]
 
 
