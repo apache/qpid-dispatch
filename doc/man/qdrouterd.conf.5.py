@@ -26,6 +26,8 @@ from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.management.schema_doc import SchemaWriter
 from qpid_dispatch_internal.management.schema import AttributeType
 
+from qpid_dispatch_internal.compat import OrderedDict
+
 CONNECTOR = 'org.apache.qpid.dispatch.connector'
 LISTENER = 'org.apache.qpid.dispatch.listener'
 
@@ -34,7 +36,8 @@ class ManPageWriter(SchemaWriter):
     def __init__(self):
         super(ManPageWriter, self).__init__(sys.stdout, QdSchema())
         self.sslProfileAttributes = []
-        self.connectionRoleAddrPortAttrs = {}
+        self.connectionRoleAddrPortAttrs = []
+        self.connectionRoleAddrPortAnnotations = {}
 
     def attribute_type(self, attr, holder):
         # Don't show read-only attributes
@@ -51,29 +54,30 @@ class ManPageWriter(SchemaWriter):
 
     def add_connector_listener_attributes(self, entity_type):
 
-        # Artificially add an sslProfile
-        ssl_profile_attr = AttributeType("sslProfile", type="string", defined_in=entity_type,
-                                         create=True, update=True, description="name of the sslProfile ")
-
-        entity_type.attributes[u'sslProfile'] = ssl_profile_attr
-
-        name_attr = entity_type.attributes.get(u'name')
-
-        # We modify this defined_by because otherwise the name does not show up in the doc
-        name_attr.defined_in = entity_type
+        attr_type = AttributeType('name', type="string", defined_in=entity_type, create=True, update=True,
+                                  description="Unique name optionally assigned by user. Can be changed.")
+        entity_type.attributes['name'] = attr_type
+        self.connectionRoleAddrPortAttrs.append('name')
 
         # We will have to add the connectionRole and addrPort attributes to listener and connector entities
         # so that they show up in the man doc page.
-        for attr in self.connectionRoleAddrPortAttrs.keys():
-            annotation = self.connectionRoleAddrPortAttrs.get(attr)
+        for attr in self.connectionRoleAddrPortAnnotations.keys():
+            annotation = self.connectionRoleAddrPortAnnotations.get(attr)
 
             for key in annotation.attributes.keys():
+                self.connectionRoleAddrPortAttrs.append(key)
                 annotation_attr = annotation.attributes.get(key)
                 if not annotation_attr.deprecated:
                     attr_type = AttributeType(key, type=annotation_attr.type,
                                               defined_in=entity_type,
                                               create=True, update=True, description=annotation_attr.description)
                     entity_type.attributes[key] = attr_type
+
+        # Artificially add an sslProfile
+        ssl_profile_attr = AttributeType("sslProfile", type="string", defined_in=entity_type,
+                                         create=True, update=True, description="name of the sslProfile ")
+
+        entity_type.attributes[u'sslProfile'] = ssl_profile_attr
 
     def man_page(self):
         self.writeln(r"""
@@ -163,7 +167,7 @@ listener {
                 # We are skipping connectionRole and addrPort annotations from the doc because it is
                 # confusing to the user
                 if "addrPort" in annotation.name or "connectionRole" in annotation.name:
-                    self.connectionRoleAddrPortAttrs[annotation.short_name] = annotation
+                    self.connectionRoleAddrPortAnnotations[annotation.short_name] = annotation
                     continue
                 used_by = [e.short_name for e in self.schema.entity_types.itervalues()
                            if annotation in e.annotations]
@@ -180,9 +184,14 @@ listener {
                         for attribute in annotation.attributes.keys():
                             self.sslProfileAttributes.append(attribute)
 
+                        attrs = annotation.attributes
+
+                        annotation.attributes = OrderedDict()
+                        # The name has to appear first in the doc, the other attributes appear after name
                         name_attr = AttributeType("name", type="string", defined_in=annotation,
                                                   create=True, update=True, description="name of the sslProfile ")
                         annotation.attributes[u'name'] = name_attr
+                        annotation.attributes.update(attrs)
 
                     self.attribute_types(annotation)
 
@@ -191,7 +200,16 @@ listener {
                 if self.is_entity_connector_or_listener(entity_type):
                     for sslProfileAttribute in self.sslProfileAttributes:
                         del entity_type.attributes[sslProfileAttribute]
+                    current_attrs = entity_type.attributes
+
+                    entity_type.attributes = OrderedDict()
+                    # The attributes from the annotations must appear first in the doc
                     self.add_connector_listener_attributes(entity_type)
+
+                    for attr in self.connectionRoleAddrPortAttrs:
+                        if current_attrs.get(attr):
+                            del current_attrs[attr]
+                    entity_type.attributes.update(current_attrs)
 
                 if config in entity_type.all_bases:
                     with self.section(entity_type.short_name):
