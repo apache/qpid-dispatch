@@ -993,7 +993,7 @@ var QDR = (function(QDR) {
 
 	                    g.append("path")
 	                        .attr("class", "area")
-							.style("fill", "url(" + attrs.url + "#" + id + ")") //temperature-gradient)")
+							.style("fill", "url(" + attrs.url + "#" + id + ") " + attrs.areaColor) //temperature-gradient)")
                             .attr("d", area.y0(y.range()[0]))
                             .attr("transform", null);
 
