@@ -775,7 +775,8 @@ class Agent(object):
         """Called when a management request is received."""
         def error(e, trace):
             """Raise an error"""
-            self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
+            self.log(LOG_ERROR, "Error performing %s of %s: %s"%(request.properties.get('operation'),
+                                                                 request.properties.get('type'), e))
             self.respond(request, e.status, e.description)
 
         # If there's no reply_to, don't bother to process the request.

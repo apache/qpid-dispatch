@@ -184,7 +184,7 @@ class LinkRoutePatternTest(TestCase):
             out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
         except Exception, e:
             exception_occurred = True
-            self.assertTrue("BadRequestStatus: Bad Request" in e.message)
+            self.assertTrue("BadRequestStatus: No name or identity provided" in e.message)
 
         self.assertTrue(exception_occurred)
 
