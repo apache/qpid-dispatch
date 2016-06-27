@@ -45,6 +45,9 @@ const char *qdr_config_link_route_columns[] =
      "operStatus",
      0};
 
+const char *CONFIG_LINKROUTE_TYPE = "org.apache.qpid.dispatch.router.config.linkRoute";
+
+const qd_amqp_error_t QD_AMQP_NAME_IDENTITY_MISSING = { 400, "No name or identity provided" };
 
 static void qdr_config_link_route_insert_column_CT(qdr_link_route_t *lr, int col, qd_composed_field_t *body, bool as_map)
 {
@@ -70,7 +73,7 @@ static void qdr_config_link_route_insert_column_CT(qdr_link_route_t *lr, int col
     }
 
     case QDR_CONFIG_LINK_ROUTE_TYPE:
-        qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.config.linkRoute");
+        qd_compose_insert_string(body, CONFIG_LINKROUTE_TYPE);
         break;
 
     case QDR_CONFIG_LINK_ROUTE_PREFIX:
@@ -311,8 +314,11 @@ void qdra_config_link_route_delete_CT(qdr_core_t          *core,
 {
     qdr_link_route_t *lr = 0;
 
-    if (!name && !identity)
+    if (!name && !identity) {
         query->status = QD_AMQP_BAD_REQUEST;
+        query->status.description = "No name or identity provided";
+        qd_log(query->log_source, QD_LOG_ERROR, "Error performing DELETE of %s: %s", CONFIG_LINKROUTE_TYPE, query->status.description);
+    }
     else {
         if (identity)
             lr = qdr_link_route_config_find_by_identity_CT(core, identity);
@@ -351,11 +357,14 @@ void qdra_config_link_route_create_CT(qdr_core_t          *core,
         if (!!lr) {
             query->status = QD_AMQP_BAD_REQUEST;
             query->status.description = "Name conflicts with an existing entity";
+            qd_log(query->log_source, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_LINKROUTE_TYPE, query->status.description);
             break;
         }
 
         if (!qd_parse_is_map(in_body)) {
             query->status = QD_AMQP_BAD_REQUEST;
+            query->status.description = "Body of request must be a map";
+            qd_log(query->log_source, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_LINKROUTE_TYPE, query->status.description);
             break;
         }
 
@@ -373,6 +382,8 @@ void qdra_config_link_route_create_CT(qdr_core_t          *core,
         //
         if (!prefix_field || !dir_field) {
             query->status = QD_AMQP_BAD_REQUEST;
+            query->status.description = "prefix and dir fields are mandatory";
+            qd_log(query->log_source, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_LINKROUTE_TYPE, query->status.description);
             break;
         }
 
@@ -381,6 +392,7 @@ void qdra_config_link_route_create_CT(qdr_core_t          *core,
         if (error) {
             query->status = QD_AMQP_BAD_REQUEST;
             query->status.description = error;
+            qd_log(query->log_source, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_LINKROUTE_TYPE, query->status.description);
             break;
         }
 
@@ -389,6 +401,7 @@ void qdra_config_link_route_create_CT(qdr_core_t          *core,
         if (error) {
             query->status = QD_AMQP_BAD_REQUEST;
             query->status.description = error;
+            qd_log(query->log_source, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_LINKROUTE_TYPE, query->status.description);
             break;
         }
 
@@ -440,8 +453,11 @@ void qdra_config_link_route_get_CT(qdr_core_t          *core,
 {
     qdr_link_route_t *lr = 0;
 
-    if (!name && !identity)
+    if (!name && !identity) {
         query->status = QD_AMQP_BAD_REQUEST;
+        query->status.description = "No name or identity provided";
+        qd_log(query->log_source, QD_LOG_ERROR, "Error performing READ of %s: %s", CONFIG_LINKROUTE_TYPE, query->status.description);
+    }
     else {
         if (identity) //If there is identity, ignore the name
             lr = qdr_link_route_config_find_by_identity_CT(core, identity);

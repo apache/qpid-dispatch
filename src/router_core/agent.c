@@ -88,6 +88,7 @@ qdr_query_t *qdr_query(qdr_core_t              *core,
     query->context     = context;
     query->body        = body;
     query->more        = false;
+    query->log_source  = qd_log_source("AGENT");
 
     return query;
 }
