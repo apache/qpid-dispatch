@@ -746,7 +746,7 @@ var QDR = (function (QDR) {
             var aAr = sInfo['.router.node'].attributeNames;
             var vAr = sInfo['.router.node'].results;
             for (var hIdx=0; hIdx<vAr.length; ++hIdx) {
-                var addrT = QDRService.valFor(aAr, vAr[hIdx], "routerId" );
+                var addrT = QDRService.valFor(aAr, vAr[hIdx], "id" );
                 if (addrT == d.name) {
                     //QDR.log.debug("found " + d.name + " at " + hIdx);
                     var nextHop = QDRService.valFor(aAr, vAr[hIdx], "nextHop");
