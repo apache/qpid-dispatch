@@ -53,19 +53,19 @@ OPERATIONS
   Create a new entity with the specified attributes. With the --stdin
   option, read attributes from stdin. This can be a JSON map of
   attributes to create a single entity, or a JSON list of maps to create
-  multiple entitiees.
+  multiple entities.
 
 `read`::
   Print the attributes of an entity specified by the --name or
   --identity options. With the --stdin option, create entities based on
   data from stdin. This can be a JSON map of attributes to create a
-  single entity, or a JSON list of maps to create multiple entitiees.
+  single entity, or a JSON list of maps to create multiple entities.
 
 `update` ['ATTR=VALUE'...]::
   Update the attributes of an existing entity. With the --stdin option,
   read attributes from stdin. This can be a JSON map of attributes to
   update a single entity, or a JSON list of maps to update multiple
-  entitiees. If an ATTR name is listed with no =VALUE, that attribute
+  entities. If an ATTR name is listed with no =VALUE, that attribute
   will be deleted from the entity.
 
 `delete`::
@@ -115,22 +115,22 @@ qdmanage query --type=log
 
 .Enable debug and higher log messages by default:
 --------------------------------------------------------------
-qdmanage udpdate name=log/DEFAULT enable=debug+
+qdmanage update name=log/DEFAULT enable=debug+
 --------------------------------------------------------------
 
-.Enable trace log messages only for the MESSAGE moudle and direct MESSAGE logs to the file "test.log"
+.Enable trace log messages only for the MESSAGE module and direct MESSAGE logs to the file "test.log"
 --------------------------------------------------------------
-qdmanage udpdate name=log/MESSAGE enable=trace output=test.log
+qdmanage update name=log/MESSAGE enable=trace output=test.log
 --------------------------------------------------------------
 
 .Set MESSAGE logging back to the default
 ------------------------------------------------
-qdmanage udpdate name=log/MESSAGE enable=default
+qdmanage update name=log/MESSAGE enable=default
 ------------------------------------------------
 
 .Disable MESSAGE logging
 ---------------------------------------------
-qdmanage udpdate name=log/MESSAGE enable=none
+qdmanage update name=log/MESSAGE enable=none
 ---------------------------------------------
 
 SEE ALSO
