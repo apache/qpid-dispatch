@@ -277,4 +277,32 @@
 
     </plugins>
   </build>
+
+  <profiles>
+    <!-- Profile to override the parent pom profile of the same name to
+         stop creation of a source-release.zip file here, as the overall
+         dispatch source release was generated separately already. -->
+    <profile>
+      <id>apache-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>source-release-assembly</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <skipAssembly>true</skipAssembly>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
