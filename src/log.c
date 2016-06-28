@@ -79,6 +79,7 @@ DEQ_DECLARE(log_sink_t, log_sink_list_t);
 
 static log_sink_list_t sink_list = {0};
 
+static const char* SINK_STDOUT = "stdout";
 static const char* SINK_STDERR = "stderr";
 static const char* SINK_SYSLOG = "syslog";
 static const char* SOURCE_DEFAULT = "DEFAULT";
@@ -117,6 +118,9 @@ static log_sink_t* log_sink_lh(const char* name) {
 
         if (strcmp(name, SINK_STDERR) == 0) {
             file = stderr;
+        }
+        else if (strcmp(name, SINK_STDOUT) == 0) {
+            file = stdout;
         }
         else if (strcmp(name, SINK_SYSLOG) == 0) {
             openlog(0, 0, LOG_DAEMON);
