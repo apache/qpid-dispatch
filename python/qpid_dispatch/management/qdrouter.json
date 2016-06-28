@@ -166,7 +166,7 @@
                     }
                 },
                 "READ": {
-                    "description": "Read attributes of an entity",
+                    "description": "Read attributes of a single entity",
                     "request": {
                         "properties": {
                             "name": {
