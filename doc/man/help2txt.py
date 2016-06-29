@@ -20,7 +20,7 @@
 """
 Convert --help output of a program into asciidoc text format.
 """
-
+from __future__ import print_function
 import re, sys
 from qpid_dispatch_internal.compat.subproc import check_output, STDOUT, CalledProcessError
 from os import path
@@ -51,12 +51,8 @@ def help2txt(help_out):
 def main(argv):
     if len(argv) < 2: raise ValueError("Wrong number of arguments: "+usage)
     program = argv[1:]
-    print help2txt(check_output(program, stderr=STDOUT))
+    print(help2txt(check_output(program)))
 
 if __name__ == "__main__":
-    try:
-        main(sys.argv)
-    except CalledProcessError, e:
-        if hasattr(e, "output") and e.output:
-            print "\n%s\n\n%s\n" % (e, e.output)
-        raise
+    main(sys.argv)
+

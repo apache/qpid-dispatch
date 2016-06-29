@@ -21,61 +21,61 @@
 # if you don't want that. For new cmake it is only built by "make doc"
 option(BUILD_DOCS "Generate documentation with 'make doc'" ON)
 
-if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_LESS "2.8")
-  # OPTIONAL does not exist in install before 2.8 so always make and install docs
-  set(DOC_TARGET ALL)
-  macro(install_doc)
-    install(${ARGN})
-  endmacro()
-else()
-  macro(install_doc)
-    install(${ARGN} OPTIONAL)
-  endmacro()
-endif()
-
-# Popular locations
-set(src ${CMAKE_CURRENT_SOURCE_DIR})
-set(bin ${CMAKE_CURRENT_BINARY_DIR})
-set(tools ${CMAKE_SOURCE_DIR}/tools)
-set(schema ../python/qpid_dispatch/management/qdrouter.json)
-set(py_management ../python/qpid_dispatch_internal/management)
-set(schema_depends ${schema} ${py_management}/schema_doc.py ${py_management}/schema.py)
-
-## Always generate and install the asciidoc .adoc source files as a fallback.
-## They are readable even if we don't have the asciidoc tool to generate HTML.
-
-# Generate asciidoc fragments from management schema to incorporate in text
-macro(schema_gen script output)
-  add_custom_command(
-    OUTPUT ${output}
-    COMMAND ${RUN} -s ${script} 1> ${output}
-    DEPENDS ${script} ${schema_depends})
-  list(APPEND GENERATED_TXT "${output}")
-endmacro()
-
-schema_gen(${src}/book/schema_txt.py ${bin}/schema.adoc)
-schema_gen(${src}/man/qdrouterd.conf.5.py ${bin}/qdrouterd.conf.5.adoc)
-
-# Generate asciidoc .adoc from --help output for man pages
-macro(help2txt program)
-  get_filename_component(name ${program} NAME)
-  set(output ${bin}/${name}_help.adoc)
-  add_custom_command(
-    OUTPUT ${output}
-    COMMAND ${RUN} -s ${src}/man/help2txt.py ${program} --help 1> ${output}
-    DEPENDS ${program} ${schema_depends} ${src}/man/help2txt.py)
-  list(APPEND GENERATED_TXT "${output}")
-endmacro()
-
-help2txt(${CMAKE_BINARY_DIR}/router/qdrouterd)
-help2txt(${tools}/qdmanage)
-help2txt(${tools}/qdstat)
-
-add_custom_target(doc_gen ALL DEPENDS ${GENERATED_TXT})
-install(DIRECTORY ${src}/book/ DESTINATION ${QD_DOC_INSTALL_DIR})
-install(FILES ${bin}/schema.adoc DESTINATION ${QD_DOC_INSTALL_DIR})
-
 if(BUILD_DOCS)
+  if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_LESS "2.8")
+    # OPTIONAL does not exist in install before 2.8 so always make and install docs
+    set(DOC_TARGET ALL)
+    macro(install_doc)
+      install(${ARGN})
+    endmacro()
+  else()
+    macro(install_doc)
+      install(${ARGN} OPTIONAL)
+    endmacro()
+  endif()
+
+  # Popular locations
+  set(src ${CMAKE_CURRENT_SOURCE_DIR})
+  set(bin ${CMAKE_CURRENT_BINARY_DIR})
+  set(tools ${CMAKE_SOURCE_DIR}/tools)
+  set(schema ../python/qpid_dispatch/management/qdrouter.json)
+  set(py_management ../python/qpid_dispatch_internal/management)
+  set(schema_depends ${schema} ${py_management}/schema_doc.py ${py_management}/schema.py)
+
+  ## Always generate and install the asciidoc .adoc source files as a fallback.
+  ## They are readable even if we don't have the asciidoc tool to generate HTML.
+
+  # Generate asciidoc fragments from management schema to incorporate in text
+  macro(schema_gen script output)
+    add_custom_command(
+      OUTPUT ${output}
+      COMMAND ${RUN} -s ${script} 1> ${output}
+      DEPENDS ${script} ${schema_depends})
+    list(APPEND GENERATED_TXT "${output}")
+  endmacro()
+
+  schema_gen(${src}/book/schema_txt.py ${bin}/schema.adoc)
+  schema_gen(${src}/man/qdrouterd.conf.5.py ${bin}/qdrouterd.conf.5.adoc)
+
+  # Generate asciidoc .adoc from --help output for man pages
+  macro(help2txt program)
+    get_filename_component(name ${program} NAME)
+    set(output ${bin}/${name}_help.adoc)
+    add_custom_command(
+      OUTPUT ${output}
+      COMMAND ${RUN} -s ${src}/man/help2txt.py ${program} --help 1> ${output}
+      DEPENDS ${program} ${schema_depends} ${src}/man/help2txt.py)
+    list(APPEND GENERATED_TXT "${output}")
+  endmacro()
+
+  help2txt(${CMAKE_BINARY_DIR}/router/qdrouterd)
+  help2txt(${tools}/qdmanage)
+  help2txt(${tools}/qdstat)
+
+  add_custom_target(doc_gen ALL DEPENDS ${GENERATED_TXT})
+  install(DIRECTORY ${src}/book/ DESTINATION ${QD_DOC_INSTALL_DIR})
+  install(FILES ${bin}/schema.adoc DESTINATION ${QD_DOC_INSTALL_DIR})
+
   find_program(ASCIIDOC_EXE asciidoc DOC "Generate HTML documentation")
   if (ASCIIDOC_EXE)
     configure_file(${src}/asciidoc.conf.in ${bin}/asciidoc.conf)
@@ -126,13 +126,13 @@ if(BUILD_DOCS)
         list(APPEND DOC_DEPENDS ${bin}/book.pdf)
         install_doc(FILES ${bin}/book.pdf DESTINATION ${QD_DOC_INSTALL_DIR})
       else(DBLATEX_EXE)
-        message("Not generating PDF user guide: dblatex not found")
+        message(STATUS "dblatex not found: not generating PDF")
       endif(DBLATEX_EXE)
     else(A2X_EXE)
-      message("Not generating Unix Man pages or PDF user guide: a2x not found")
+      message(STATUS "a2x not found: not generating man pages or PDF")
     endif(A2X_EXE)
   else(ASCIIDOC_EXE)
-    message("No generated documentation: asciidoc not found")
+    message(STATUS "asciidoc not found: not generating HTML, man pages or PDF")
   endif(ASCIIDOC_EXE)
 
   add_custom_target(doc ${DOC_TARGET} DEPENDS ${DOC_DEPENDS})

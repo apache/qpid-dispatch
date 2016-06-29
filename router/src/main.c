@@ -266,15 +266,15 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
 #define DEFAULT_DISPATCH_PYTHON_DIR QPID_DISPATCH_HOME_INSTALLED "/python"
 
 void usage(char **argv) {
-    fprintf(stderr, "Usage: %s [OPTIONS]\n\n", argv[0]);
-    fprintf(stderr, "  -c, --config=PATH (%s)\n", DEFAULT_CONFIG_PATH);
-    fprintf(stderr, "                             Load configuration from file at PATH\n");
-    fprintf(stderr, "  -I, --include=PATH (%s)\n", DEFAULT_DISPATCH_PYTHON_DIR);
-    fprintf(stderr, "                             Location of Dispatch's Python library\n");
-    fprintf(stderr, "  -d, --daemon               Run process as a SysV-style daemon\n");
-    fprintf(stderr, "  -P, --pidfile              If daemon, the file for the stored daemon pid\n");
-    fprintf(stderr, "  -U, --user                 If daemon, the username to run as\n");
-    fprintf(stderr, "  -h, --help                 Print this help\n");
+    fprintf(stdout, "Usage: %s [OPTIONS]\n\n", argv[0]);
+    fprintf(stdout, "  -c, --config=PATH (%s)\n", DEFAULT_CONFIG_PATH);
+    fprintf(stdout, "                             Load configuration from file at PATH\n");
+    fprintf(stdout, "  -I, --include=PATH (%s)\n", DEFAULT_DISPATCH_PYTHON_DIR);
+    fprintf(stdout, "                             Location of Dispatch's Python library\n");
+    fprintf(stdout, "  -d, --daemon               Run process as a SysV-style daemon\n");
+    fprintf(stdout, "  -P, --pidfile              If daemon, the file for the stored daemon pid\n");
+    fprintf(stdout, "  -U, --user                 If daemon, the username to run as\n");
+    fprintf(stdout, "  -h, --help                 Print this help\n");
 }
 
 int main(int argc, char **argv)
