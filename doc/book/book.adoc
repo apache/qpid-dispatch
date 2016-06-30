@@ -56,7 +56,9 @@ include::{generated}/schema.adoc[]
 Console
 -------
 :leveloffset: 1
+
 include::console_overview.adoc[]
 include::console_installation.adoc[]
 include::console_operation.adoc[]
+
 :leveloffset: 0
