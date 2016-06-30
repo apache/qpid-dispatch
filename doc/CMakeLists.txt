@@ -92,7 +92,7 @@ if(BUILD_DOCS)
       add_custom_command(
         OUTPUT ${output}
         COMMAND ${ASCIIDOC_EXE} -b xhtml11 --conf-file=${bin}/asciidoc.conf -o ${output} ${source}.adoc
-        DEPENDS ${source}.adoc ${GENERATED_TXT} ${ADOC_SRC}
+        DEPENDS ${source}.adoc ${GENERATED_TXT} ${ADOC_SRC} ${bin}/asciidoc.conf
         WORKING_DIRECTORY ${src} # Book include links assume we are in source dir.
         )
       list(APPEND DOC_DEPENDS ${output})

@@ -16,7 +16,6 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License
 ////
-
 [[console-operation]]
 Console operation
 -----------------
@@ -25,50 +24,35 @@ Console operation
 Logging in to a router network
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The console communicates to the router network using the proton
-javascript bindings. When run from a web page, the proton bindings use
-web sockets to send and receive commands. However, the dispatch router
-requires tcp. Therefore a web-sockets to tcp proxy is used.
-
 image:console_login.png[image]
 
-Enter the address of a proxy that is connected to a router in the
-network.
+Enter the address of the websockets to tcp proxy that is connected to a router in the network.
 
-User name and password are not used at this time.
-
-The Autostart checkbox, when checked, will automatically log in with the
-previous host:port the next time you start the console.
+The Autostart checkbox, when checked, will automatically log in with the previous host:port the next time you start the console.
 
 [[overview-page]]
 Overview page
 ~~~~~~~~~~~~~
 
-On the overview page, aggregate information about routers, addresses,
-and connections is displayed.
-
 image:console_overview.png[image]
+
+On the overview page, aggregate information about routers, addresses, and connections is displayed.
 
 [[topology-page]]
 Topology page
 ~~~~~~~~~~~~~
 
-This page displays the router network in a graphical form showing how
-the routers are connected and information about the individual routers
-and links.
-
 image:console_topology.png[image]
 
-[[router-entity-details-page]]
-Router entity details page
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+This page displays the router network in a graphical form showing how the routers are connected and information about the individual routers and links.
+
+[[list-page]]
+List page
+~~~~~~~~~
 
 image:console_entity.png[image]
 
-Displays detailed information about entities such as routers, links,
-addresses, memory.
-
-Numeric attributes can be graphed by clicking on the graph icon.
+Displays detailed information about entities such as routers, links, addresses, memory.
 
 [[charts-page]]
 Charts page
@@ -76,8 +60,7 @@ Charts page
 
 image:console_charts.png[image]
 
-This page displays graphs of numeric values that are on the entity
-details page.
+This page displays graphs of numeric values that are on the list page.
 
 [[schema-page]]
 Schema page
@@ -85,5 +68,4 @@ Schema page
 
 image:console_schema.png[image]
 
-This page displays the json schema that is used to manage the router
-network.
+This page displays the json schema that is used to manage the router network.

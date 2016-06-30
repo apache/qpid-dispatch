@@ -29,40 +29,39 @@ The following need to be installed before running a console:
 
 * One or more dispatch routers. See the documentation for the dispatch
 router for help in starting a router network.
-* node.js This is needed to provide a proxy between the console's
-websocket traffic and tcp.
+* A websockets to tcp proxy.
 * A web server. This can be any server capable of serving static
 html/js/css/image files.
 
-A nodejs proxy is distributed with proton. To start the proton's nodejs
-proxy:
+To install a websockets to tcp proxy:
 
--------------------------------------------------
-cd ~/rh-qpid-proton/examples/javascript/messenger
- node proxy.js &
--------------------------------------------------
+----
+sudo dnf install python-websockify
+websockify localhost:5673 localhost:5672
+----
 
 This will start the proxy listening to ws traffic on port 5673 and
 translating it to tcp on port 5672. One of the routers in the network
 needs to have a listener configured on port 5672. That listener's role
 should be 'normal'. For example:
 
-----------------------------
+----
 listener {
    host: 0.0.0.0
    role: normal
    port: amqp
    saslMechanisms: ANONYMOUS
 }
-----------------------------
+----
 
 [[the-console-files]]
 The console files
 ~~~~~~~~~~~~~~~~~
 
-The files for the console are located under the console directory in the
-source tree: app/ bower_components/ css/ img/ index.html lib/ plugin/
-vendor.js
+The files for the console are located under the console/stand-alone
+directory in the source tree
+*  'index.html'
+*  'plugin/'
 
 Copy these files to a directory under the the html or webapps directory
 of your web server. For example, for apache tomcat the files should be

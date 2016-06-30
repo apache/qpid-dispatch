@@ -22,14 +22,14 @@ Configuration
 -------------
 
 The default configuration file is installed in
-'install-prefix/etc/qpid-dispatch/qdrouterd.conf'. This configuration file will
+'{CMAKE_INSTALL_PREFIX}/etc/qpid-dispatch/qdrouterd.conf'. This configuration file will
 cause the router to run in standalone mode, listening on the standard
 AMQP port (5672). Dispatch Router looks for the configuration file in
 the installed location by default. If you wish to use a different path,
 the "-c" command line option will instruct Dispatch Router as to which
 configuration to load.
 
-To run the router, invoke the executable: qdrouterd [-c my-config-file]
+To run the router, invoke the executable: `qdrouterd [-c my-config-file]`
 
 For more details of the configuration file see the 'qdrouterd.conf(5)' man
 page.
