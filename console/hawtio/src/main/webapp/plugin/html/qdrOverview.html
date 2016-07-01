@@ -66,7 +66,7 @@ under the License.
     <div class="row-fluid">
         <h3>Addresses</h3>
         <div class="overview">
-            <div class="gridStyle" ng-grid="addressGrid"></div>
+            <div class="gridStyle" ng-grid="addressesGrid"></div>
         </div>
     </div>
 </script>
@@ -121,5 +121,23 @@ under the License.
 <script type="text/ng-template" id="log.html">
     <div class="row-fluid">
     <h3>Log {{log.data.title}}</h3>
+    </div>
+</script>
+
+<script type="text/ng-template" id="linkRowTemplate.html">
+    <div ng-class="{linkDirIn: row.getProperty('linkDir') == 'in', linkDirOut: row.getProperty('linkDir') == 'out'}">
+        <div ng-style="{ 'cursor': row.cursor }" ng-repeat="col in renderedColumns" ng-class="col.colIndex()" class="ngCell {{col.cellClass}}">
+            <div class="ngVerticalBar" ng-style="{height: rowHeight}" ng-class="{ ngVerticalBarVisible: !$last }">&nbsp;</div>
+            <div ng-cell></div>
+        </div>
+    </div>
+</script>
+
+<script type="text/ng-template" id="linkAggTemplate.html">
+    <div ng-click='row.toggleExpand(); saveGroupState()' ng-style='rowStyle(row)' class='ngAggregate ng-scope' style='top: 0px; height: 48px; left: 0px;'>
+    <span class='ngAggregateText ng-binding'>
+            {{row.label CUSTOM_FILTERS}} ({{row.totalChildren()}} {{AggItemsLabel}})
+        </span>
+    <div ng-class="{true: 'ngAggArrowCollapsed', false: 'ngAggArrowExpanded'}[row.collapsed]"></div>
     </div>
 </script>

@@ -38,6 +38,7 @@ var QDR = (function (QDR) {
 
 
 		console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
+		var columnStateKey = 'QDRColumnKey.';
 
 		// we want attributes to be listed first, so add it at index 0
 		$scope.subLevelTabs = [{
@@ -91,6 +92,7 @@ var QDR = (function (QDR) {
 		var allRouterCols = [
 			 {
 				 field: 'routerId',
+				 saveKey: 'allRouters',
 				 displayName: 'Router'
 			 },
 			 {
@@ -127,6 +129,7 @@ var QDR = (function (QDR) {
 
 		$scope.allRouterSelections = [];
 		$scope.allRouters = {
+		    saveKey: 'allRouters',
 			data: 'allRouterFields',
 			columnDefs: allRouterCols,
 			enableColumnResize: true,
@@ -190,7 +193,7 @@ var QDR = (function (QDR) {
 			nodeIds.forEach ( function (nodeId, i) {
 				QDRService.getNodeInfo(nodeId, ".connection", ["role"], gotNodeInfo)
 			})
-
+			loadColState($scope.allRouters)
 		}
 
 		// get info for a single router
@@ -201,6 +204,7 @@ var QDR = (function (QDR) {
 				 {
 					 field: 'attribute',
 					 displayName: 'Attribute',
+					 saveKey: 'routerGrid',
 					 width: '40%'
 				 },
 				 {
@@ -210,6 +214,7 @@ var QDR = (function (QDR) {
 				 }
 			]
 			$scope.routerGrid = {
+				saveKey: 'routerGrid',
 				data: 'routerFields',
 				columnDefs: cols,
 				enableColumnResize: true,
@@ -229,6 +234,7 @@ var QDR = (function (QDR) {
 				clearTimeout(currentTimer)
 				currentTimer = null
 			}
+	        loadColState($scope.routerGrid);
 		}
 
 		// get info for a all addresses
@@ -237,6 +243,7 @@ var QDR = (function (QDR) {
 			var addressCols = [
 				 {
 					 field: 'address',
+					saveKey: 'addressesGrid',
 					 displayName: 'address'
 				 },
 				 {
@@ -274,7 +281,8 @@ var QDR = (function (QDR) {
 				 }
 			]
 			$scope.selectedAddresses = []
-			$scope.addressGrid = {
+			$scope.addressesGrid = {
+				saveKey: 'addressesGrid',
 				data: 'addressFields',
 				columnDefs: addressCols,
 				enableColumnResize: true,
@@ -298,6 +306,7 @@ var QDR = (function (QDR) {
 				currentTimer = setTimeout(allAddressInfo, refreshInterval);
 			}
 			getAllAddressFields(gotAllAddressFields)
+	        loadColState($scope.addressesGrid);
 		}
 
 		var getAllAddressFields = function (callback) {
@@ -396,57 +405,123 @@ var QDR = (function (QDR) {
 		}
 
 		// get info for a all links
+		var linkCols = [
+			 {
+				 field: 'link',
+				 displayName: 'Link',
+				 groupable:	false,
+				 saveKey: 'linksGrid',
+				 width: '12%'
+			 },
+			 {
+				 field: 'linkType',
+				 displayName: 'Link type',
+				 groupable:	false,
+				 width: '10%'
+			 },
+			 {
+				 field: 'linkDir',
+				 displayName: 'Link dir',
+				 groupable:	false,
+				 width: '8%'
+			 },
+			 {
+				 field: 'adminStatus',
+				 displayName: 'Admin status',
+				 groupable:	false,
+				 width: '10%'
+			 },
+			 {
+				 field: 'operStatus',
+				 displayName: 'Oper status',
+				 groupable:	false,
+				 width: '10%'
+			 },
+			 {
+				 field: 'deliveryCount',
+				 displayName: 'Delivery Count',
+				 groupable:	false,
+				 cellClass: 'grid-align-value',
+				 width: '12%'
+			 },
+			 {
+				 field: 'rate',
+				 displayName: 'Rate',
+				 groupable:	false,
+				 cellClass: 'grid-align-value',
+				 width: '8%'
+			 },
+			 {
+				 field: 'uncounts',
+				 displayName: 'Outstanding',
+				 groupable:	false,
+				 cellClass: 'grid-align-value',
+				 width: '10%'
+			 },
+			 {
+				 field: 'owningAddr',
+				 displayName: 'Address',
+				 groupable:	false,
+				 width: '20%'
+			 }
+		]
+		$scope.selectedLinks = []
+		$scope.linksGrid = {
+			saveKey: 'linksGrid',
+			data: 'linkFields',
+			columnDefs: linkCols,
+			enableColumnResize: true,
+			enableColumnReordering: true,
+			showColumnMenu: true,
+			rowTemplate: 'linkRowTemplate.html',
+			// aggregateTemplate: "linkAggTemplate.html",
+	        multiSelect: false,
+			selectedItems: $scope.selectedLinks,
+			afterSelectionChange: function(data) {
+				if (data.selected) {
+					var selItem = data.entity;
+					var nodeId = selItem.uid
+					$("#overtree").dynatree("getTree").activateKey(nodeId);
+				}
+            }
+		};
+
+
+		$scope.$on('ngGridEventColumns', function (e, columns) {
+			var saveInfo = columns.map( function (col) {
+				return [col.width, col.visible]
+			})
+			var saveKey = columns[0].colDef.saveKey
+			if (saveKey)
+                localStorage.setItem(columnStateKey+saveKey, JSON.stringify(saveInfo));
+        })
+
+        var loadColState = function (grid) {
+            if (!grid)
+                return;
+            var columns = localStorage.getItem(columnStateKey+grid.saveKey);
+            if (columns) {
+                var cols = JSON.parse(columns);
+                cols.forEach( function (col, index) {
+                    grid.columnDefs[index].width = col[0];
+                    grid.columnDefs[index].visible = col[1]
+                })
+            }
+        }
+/*
+$scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
+		$scope.saveGroupState = function () {
+			var groups = $scope.linksGrid.$gridScope.renderedRows;
+			for (var i = 0; i < groups.length; i++) {
+				if (groups[i].label) {
+					localStorage.setItem(groupStateKey + groups[i].label, groups[i].collapsed);
+				}
+			}
+		}
+*/
 		var allLinkInfo = function (e) {
-			var linkCols = [
-				 {
-					 field: 'link',
-					 displayName: 'link',
-				 },
-				 {
-					 field: 'linkType',
-					 displayName: 'Link type',
-				 },
-				 {
-					 field: 'adminStatus',
-					 displayName: 'Admin status',
-				 },
-				 {
-					 field: 'operStatus',
-					 displayName: 'Oper status',
-				 },
-				 {
-					 field: 'deliveryCount',
-					 displayName: 'Delivery Count',
-				 },
-				 {
-					 field: 'rate',
-					 displayName: 'Rate',
-				 },
-				 {
-					 field: 'uncounts',
-					 displayName: 'UnDelv/UnSett',
-				 },
-				 {
-					 field: 'owningAddr',
-					 displayName: 'Owning Addr',
-				 }
-			]
-			$scope.selectedLinks = []
-			$scope.linksGrid = {
-				data: 'linkFields',
-				columnDefs: linkCols,
-				enableColumnResize: true,
-				multiSelect: false,
-				selectedItems: $scope.selectedLinks,
-				afterSelectionChange: function(data) {
-					if (data.selected) {
-						var selItem = data.entity;
-						var nodeId = selItem.uid
-						$("#overtree").dynatree("getTree").activateKey(nodeId);
-					}
-	            }
-			};
 			getAllLinkFields([updateLinkGrid, updateLinkTree])
+	        loadColState($scope.linksGrid);
 		}
 
 		var getAllLinkFields = function (callbacks) {
@@ -479,9 +554,9 @@ var QDR = (function (QDR) {
 						return QDRService.pretty(val)
 					}
 					var uncounts = function () {
-						var und = prettySum('undeliveredCount')
-						var uns = prettySum('unsettledCount')
-						return und + "/" + uns
+						var und = QDRService.valFor(response.attributeNames, result, "undeliveredCount").sum
+						var uns = QDRService.valFor(response.attributeNames, result, "unsettledCount").sum
+						return und + uns
 					}
 					var nameIndex = response.attributeNames.indexOf('name')
 					var linkName = function () {
@@ -497,9 +572,41 @@ var QDR = (function (QDR) {
 						var namestr = names.length > 0 ? names[0] : ""
 						return namestr + ':' + QDRService.valFor(response.attributeNames, result, "identity").sum
 					}
+					var fixAddress = function () {
+						var owningAddr = QDRService.valFor(response.attributeNames, result, "owningAddr").sum || ""
+						/*
+						     - "L*"  =>  "* (local)"
+						     - "M0*" =>  "* (direct)"
+						     - "M1*" =>  "* (dequeue)"
+						     - "MX*" =>  "* (phase X)"
+						*/
+						var address = undefined;
+						var starts = {'L': '(local)', 'M0': '(direct)', 'M1': '(dequeue)'}
+						for (var start in starts) {
+							if (owningAddr.startsWith(start)) {
+								var ends = owningAddr.substr(start.length)
+								address = ends + " " + starts[start]
+								break;
+							}
+						}
+						if (!address) {
+							// check for MX*
+							if (owningAddr.length > 3) {
+								if (owningAddr[0] === 'M') {
+									var phase = parseInt(owningAddress.substr(1))
+									if (phase && !isNaN(phase)) {
+										var phaseStr = phase + "";
+										var star = owningAddress.substr(2 + phaseStr.length)
+										address = star + " " + "(phase " + phaseStr + ")"
+									}
+								}
+							}
+						}
+						return address || owningAddr;
+					}
+
 					var adminStatus = QDRService.valFor(response.attributeNames, result, "adminStatus").sum
 					var operStatus = QDRService.valFor(response.attributeNames, result, "operStatus").sum
-					var owningAddr = QDRService.valFor(response.attributeNames, result, "owningAddr").sum
 					var linkName = linkName()
 					var linkType = QDRService.valFor(response.attributeNames, result, "linkType").sum
 					if ($scope.currentLinkFilter === "" || $scope.currentLinkFilter === linkType) {
@@ -509,8 +616,8 @@ var QDR = (function (QDR) {
 							uncounts:   uncounts(),
 							operStatus: operStatus,
 							adminStatus:adminStatus,
-							owningAddr: owningAddr,
-							deliveryCount:prettySum("deliveryCount"),
+							owningAddr: fixAddress(),
+							deliveryCount:prettySum("deliveryCount") + " ",
 							rawDeliveryCount: QDRService.valFor(response.attributeNames, result, "deliveryCount").sum,
 							name: QDRService.valFor(response.attributeNames, result, "name").sum,
 							linkName: QDRService.valFor(response.attributeNames, result, "linkName").sum,
@@ -540,6 +647,7 @@ var QDR = (function (QDR) {
 			var allConnectionCols = [
 				 {
 					 field: 'host',
+					saveKey: 'allConnGrid',
 					 displayName: 'host'
 				 },
 				 {
@@ -565,6 +673,7 @@ var QDR = (function (QDR) {
 			]
 			$scope.allConnectionSelections = [];
 			$scope.allConnectionGrid = {
+				saveKey: 'allConnGrid',
                 data: 'allConnectionFields',
                 columnDefs: allConnectionCols,
                 enableColumnResize: true,
@@ -587,6 +696,7 @@ var QDR = (function (QDR) {
 				clearTimeout(currentTimer)
 				currentTimer = null
 			}
+	        loadColState($scope.allConnectionGrid);
 		}
 
 		// get info for a single address
@@ -597,6 +707,7 @@ var QDR = (function (QDR) {
 				 {
 					 field: 'attribute',
 					 displayName: 'Attribute',
+					 saveKey: 'addGrid',
 					 width: '40%'
 				 },
 				 {
@@ -606,6 +717,7 @@ var QDR = (function (QDR) {
 				 }
 			]
 			$scope.addressGrid = {
+				saveKey: 'addGrid',
 				data: 'addressFields',
 				columnDefs: cols,
 				enableColumnResize: true,
@@ -622,6 +734,8 @@ var QDR = (function (QDR) {
 				clearTimeout(currentTimer)
 				currentTimer = null
 			}
+	        loadColState($scope.addressGrid);
+
 		}
 
 		// display the grid detail info for a single link
@@ -634,6 +748,7 @@ var QDR = (function (QDR) {
 				 {
 					 field: 'attribute',
 					 displayName: 'Attribute',
+				    saveKey: 'linkGrid',
 					 width: '40%'
 				 },
 				 {
@@ -643,6 +758,7 @@ var QDR = (function (QDR) {
 				 }
 			]
 			$scope.linkGrid = {
+			    saveKey: 'linkGrid',
 				data: 'singleLinkFields',
 				columnDefs: cols,
 				enableColumnResize: true,
@@ -655,6 +771,7 @@ var QDR = (function (QDR) {
 				if (excludeFields.indexOf(field) == -1)
 					$scope.singleLinkFields.push({attribute: field, value: link.data.fields[field]})
 			})
+	        loadColState($scope.linkGrid);
 		}
 
 		// get info for a single connection
@@ -816,6 +933,8 @@ var QDR = (function (QDR) {
 			return $scope.connectionLinks.length == 0;
 		}
 		$scope.connectionLinksGrid = {
+		    saveKey: 'connLinksGrid',
+
 			data: 'connectionLinks',
 			updateState: function () {
 				var state = $scope.quiesceState.state;
@@ -873,6 +992,7 @@ var QDR = (function (QDR) {
 				field: 'adminStatus',
                 cellTemplate: "titleCellTemplate.html",
 				headerCellTemplate: 'titleHeaderCellTemplate.html',
+			    saveKey: 'connLinksGrid',
 				displayName: 'Admin state'
 			},
 			{
@@ -925,6 +1045,7 @@ var QDR = (function (QDR) {
 				 {
 					 field: 'attribute',
 					 displayName: 'Attribute',
+				    saveKey: 'connGrid',
 					 width: '40%'
 				 },
 				 {
@@ -934,6 +1055,7 @@ var QDR = (function (QDR) {
 				 }
 			]
 			$scope.connectionGrid = {
+			    saveKey: 'connGrid',
 				data: 'connectionFields',
 				columnDefs: cols,
 				enableColumnResize: true,
@@ -949,6 +1071,8 @@ var QDR = (function (QDR) {
 				currentTimer = null
 			}
 			$scope.selectMode($scope.currentMode)
+	        loadColState($scope.connectionGrid);
+
 		}
 
 		// get info for a all logs
@@ -960,6 +1084,8 @@ var QDR = (function (QDR) {
 			$scope.log = node
 		}
 
+		// activated is called each time a tree node is clicked
+		// based on which node is clicked, load the correct data grid template and start getting the data
 		var activated = function (node) {
 			//QDR.log.debug("node activated: " + node.data.title)
 			var type = node.data.type;
@@ -968,6 +1094,7 @@ var QDR = (function (QDR) {
 				return tpl.name == type;
 			})
 			$scope.template = template[0];
+			// the nodes info function will fetch the grids data
 			if (node.data.info) {
 				node.data.info(node)
 				if (!$scope.$$phase) $scope.$apply()
@@ -1233,7 +1360,31 @@ var QDR = (function (QDR) {
 						activeVisible: false,
 						children: topLevelChildren
 					})
-					allRouterInfo();
+					// populate the expanded tree node
+					var infoMethods = {
+						Routers: allRouterInfo,
+						Addresses: allAddressInfo,
+						Links: allLinkInfo,
+						Connections: allConnectionInfo,
+						Logs: allLogInfo
+					}
+					if (infoMethods[lastKey]) {
+						var template = $scope.templates.filter( function (tpl) {
+                            return tpl.name == lastKey;
+                        })
+                        $scope.template = template[0];
+						infoMethods[lastKey]();
+					}
+
+			        loadColState($scope.allRouters);
+			        loadColState($scope.routerGrid);
+			        loadColState($scope.addressesGrid);
+			        loadColState($scope.addressGrid);
+			        loadColState($scope.linksGrid);
+			        loadColState($scope.linkGrid);
+			        loadColState($scope.allConnectionGrid);
+			        loadColState($scope.connectionGrid);
+
 				}
 			})
 		})
