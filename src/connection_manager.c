@@ -203,8 +203,40 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             qd_entity_opt_string(entity, "certFile", 0); CHECK();
         config->ssl_private_key_file =
             qd_entity_opt_string(entity, "keyFile", 0); CHECK();
-        config->ssl_password =
-            qd_entity_opt_string(entity, "password", 0); CHECK();
+ 
+       char *pw = qd_entity_opt_string(entity, "password", 0); CHECK();
+       if (pw) {
+          if (!strncmp(pw, "env:", 4)) { /* password in env */
+              char *env = strrchr(pw, ' ');
+              if (!env)
+                  env = pw + 4;
+              else
+                  env += 1;
+
+               const char* passwd = getenv(env);
+               if (passwd) {
+                  qd_entity_set_string(entity, "password", passwd);
+                  free(pw);
+                  pw = qd_entity_opt_string(entity, "password", 0); CHECK();
+               }
+          }
+					
+          if (!strncmp(pw, "literal:", 8)) { /* password as literal */
+              char *tmp = strrchr(pw, ' ');
+              if (!tmp)
+                 tmp = pw + 8;
+              else
+                 tmp += 1;
+
+              qd_entity_set_string(entity, "password", tmp);
+              free(pw);
+              pw = qd_entity_opt_string(entity, "password", 0); CHECK();
+
+          }
+        }
+
+        config->ssl_password = pw;
+	    
         config->ssl_trusted_certificate_db =
             qd_entity_opt_string(entity, "certDb", 0); CHECK();
         config->ssl_trusted_certificates =
