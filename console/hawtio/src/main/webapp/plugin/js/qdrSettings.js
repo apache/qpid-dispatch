@@ -36,38 +36,6 @@ var QDR = (function (QDR) {
     $scope.forms = {};
 
     $scope.formEntity = angular.fromJson(localStorage[QDR.SETTINGS_KEY]) || {address: '', port: '', username: '', password: '', autostart: false};
-    $scope.formConfig = {
-      properties: {
-        address: {
-          //description: "Router address",
-          'type': 'java.lang.String',
-          required: true
-        },
-        port: {
-          //description: 'Router port',
-          'type': 'Integer',
-          tooltip: 'Ports to connect to, by default 5673'
-        },
-        /*
-        username: {
-          description: 'User Name',
-          'type': 'java.lang.String'
-        },
-        password: {
-          description: 'Password',
-          'type': 'password'
-        },
-        useSSL: {
-          description: 'SSL',
-          'type': 'boolean'
-        },*/
-        autostart: {
-          //description: 'Connect at startup',
-          'type': 'boolean',
-          tooltip: 'Whether or not the connection should be started as soon as you log into hawtio'
-        }
-      }
-    };
 
     $scope.$watch('formEntity', function(newValue, oldValue) {
       if (newValue !== oldValue) {
@@ -89,8 +57,7 @@ var QDR = (function (QDR) {
 			QDRService.disconnect();
 			return;
 		}
-
-      if ($scope.forms.settings.$valid) {
+      if ($scope.settings.$valid) {
         $scope.connectionError = false;
         $scope.connecting = true;
         console.log("attempting to connect");

@@ -427,6 +427,10 @@ ul.qdrTopoModes {
 	text-align: right;
 }
 
+.grid-align-value .ngCellText {
+	padding-right: 10px;
+}
+
 .overview .ngRow:hover {
 	background:#e0e0ff;
 }
@@ -835,4 +839,15 @@ i.red {
     height: 5em;
     padding: 4em;
     background-color: #fcfcfc;
+}
+
+.btn:focus {
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+}
+
+select:focus, input[type="file"]:focus, input[type="radio"]:focus, input[type="checkbox"]:focus {
+	outline:3px solid rgba(82, 168, 236, 0.6);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 5px auto -webkit-focus-ring-color;
+    outline-offset: -2px;
 }
