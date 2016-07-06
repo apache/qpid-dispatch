@@ -388,7 +388,6 @@ qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l,
 {
     if (!l || !l->pending) return NULL;
     char name[PN_NAME_MAX];
-    char host[MAX_HOST];
     char serv[MAX_SERV];
     char hostip[MAX_HOST];
 
@@ -401,15 +400,14 @@ qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l,
         qdpn_log_errno(l->driver, "accept");
         return 0;
     } else {
-        int code;
-        if ((code = getnameinfo((struct sockaddr *) &addr, addrlen, host, MAX_HOST, serv, MAX_SERV, 0)) ||
-            (code = getnameinfo((struct sockaddr *) &addr, addrlen, hostip, MAX_HOST, 0, 0, NI_NUMERICHOST))) {
+        int code = getnameinfo((struct sockaddr *) &addr, addrlen, hostip, MAX_HOST, serv, MAX_SERV, NI_NUMERICHOST | NI_NUMERICSERV);
+        if (code != 0) {
             qd_log(l->driver->log, QD_LOG_ERROR, "getnameinfo: %s\n", gai_strerror(code));
             close(sock);
             return 0;
         } else {
             qdpn_configure_sock(l->driver, sock, true);
-            snprintf(name, PN_NAME_MAX-1, "%s:%s", host, serv);
+            snprintf(name, PN_NAME_MAX-1, "%s:%s", hostip, serv);
         }
     }
 
