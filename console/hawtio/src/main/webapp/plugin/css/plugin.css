@@ -620,7 +620,7 @@ div.login.container {
 }
 
 .connect-column.connect-form {
-	width: 30em;
+	width: 20em;
 }
 
 .chartLabels button a {
@@ -673,6 +673,11 @@ span:not(.dynatree-has-children).connection.external .dynatree-icon:before,
 span:not(.dynatree-has-children).connection.normal .dynatree-icon:before {
     content: "\f08e";
 }
+span:not(.dynatree-has-children).connection.external.quiesced .dynatree-icon:before {
+	content: "\f14c";
+	color: red;
+}
+
 span:not(.dynatree-has-children).connection.inter-router .dynatree-icon:before {
      content: "\f152";
 }

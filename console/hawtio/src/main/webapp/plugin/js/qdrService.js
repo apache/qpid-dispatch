@@ -794,10 +794,9 @@ var QDR = (function(QDR) {
 				okay.sender = false;
 			})
 			connection.on('disconnected', function (context) {
-				onDisconnect();
-				self.errorText = "Error: Connection failed"
-				self.executeDisconnectActions();
+				self.errorText = "Connection failed"
 				self.connectionError = true;
+				onDisconnect();
 			})
 			connection.on('connection_close', function (context) {
 				onDisconnect();

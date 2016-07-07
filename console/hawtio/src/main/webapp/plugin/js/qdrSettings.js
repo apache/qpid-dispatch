@@ -55,13 +55,18 @@ var QDR = (function (QDR) {
     $scope.connect = function() {
 		if (QDRService.connected) {
 			QDRService.disconnect();
-			return;
+		return;
 		}
 
-      if ($scope.settings.$valid) {
-        $scope.connectionError = false;
-        $scope.connecting = true;
+		if ($scope.settings.$valid) {
+			$scope.connectionError = false;
+			$scope.connecting = true;
 
+			setTimeout(doConnect, 100)
+		}
+	}
+
+	var doConnect = function () {
         if (!$scope.formEntity.address)
             $scope.formEntity.address = "localhost"
 
@@ -91,7 +96,6 @@ var QDR = (function (QDR) {
 
         QDRService.connect($scope.formEntity);
       }
-    };
 
   }]);
 

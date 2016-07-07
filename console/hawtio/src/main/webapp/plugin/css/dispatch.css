@@ -171,23 +171,33 @@ text.label {
   /*height: 100%; */
 }
 
-/*, div.qdrTopology div#multiple_details .ngViewport*/
 div#topologyForm .ngViewport, div#topologyForm .gridStyle {
     height: inherit !important;
 	min-height: initial !important;
 	overflow: initial;
 }
 
-div#multiple_details {
+div#multiple_details, div#link_details {
 	height: 300px;
-	width: 500px;
+	width: 600px;
 	display: none;
-	padding: 1em;
+	padding: 0.5em;
     border: 1px solid;
 	position: absolute;
 	background-color: white;
 	max-height: 330px !important;
     overflow: hidden;
+}
+div#multiple_details div.ngRow.selected {
+	background-color: #c9dde1 !important;
+}
+
+div.grid-values {
+	text-align: right;
+}
+
+div.grid-values.ngCellText span {
+	padding-right: 4px;
 }
 
 .panel-adjacent {
@@ -554,6 +564,13 @@ circle.subcircle {
     height: auto !important;
 }
 
+#multiple_details .gridCellButton button, #link_details .gridCellButton button {
+    margin: .25em .4em;
+    font-size: 12px;
+    height: 2em;
+	padding-top: .1em;
+}
+
 #linkFilter {
 	display: none;
 	padding: 0.5em;
@@ -595,4 +612,14 @@ a.dynatree-title:hover button.btn-filter {
 
 div.hdash-button a {
 	color: white;
+}
+
+.linkDirIn {
+	color: red;
+	background-color: #f3f3f3;
+}
+
+.linkDirOut {
+	color: blue;
+	background-color: white;
 }
