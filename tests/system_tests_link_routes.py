@@ -476,6 +476,7 @@ class LinkRoutePatternTest(TestCase):
         qdstat_address = self.routers[2].addresses[0]
         test = DeliveryTagsTest(sender_address, listening_address, qdstat_address)
         test.run()
+        self.assertTrue(test.wait_completed)
         self.assertTrue(test.message_received)
         self.assertTrue(test.delivery_tag_verified)
 
@@ -511,6 +512,7 @@ class DeliveryTagsTest(MessagingHandler):
         self.sender_address = sender_address
         self.listening_address = listening_address
         self.sender = None
+        self.wait_completed = False
         self.message_received = False
         self.receiver_connection = None
         self.sender_connection = None
@@ -546,7 +548,9 @@ class DeliveryTagsTest(MessagingHandler):
                 if out == 1:
                     continue_loop = False
                 i+=1
+                sleep(0.25)
 
+            self.wait_completed = True
             self.sender_connection = event.container.connect(self.sender_address)
             self.sender = event.container.create_sender(self.sender_connection, "pulp.task", options=AtMostOnce())
 
