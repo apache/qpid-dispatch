@@ -28,6 +28,7 @@ var QDR = (function (QDR) {
    *
    * Controller that handles the QDR settings page
    */
+
   QDR.module.controller("QDR.SettingsController", ['$scope', 'QDRService', '$location', function($scope, QDRService, $location) {
 
     $scope.connecting = false;
@@ -51,16 +52,20 @@ var QDR = (function (QDR) {
       }
     };
 
-    
     $scope.connect = function() {
 		if (QDRService.connected) {
 			QDRService.disconnect();
 			return;
 		}
+
       if ($scope.settings.$valid) {
         $scope.connectionError = false;
         $scope.connecting = true;
-        console.log("attempting to connect");
+
+        if (!$scope.formEntity.address)
+            $scope.formEntity.address = "localhost"
+
+        console.log("attempting to connect to " + $scope.formEntity.address + ':' + $scope.formEntity.port);
         QDRService.addDisconnectAction(function() {
           QDR.log.debug("disconnect action called");
           $scope.connecting = false;
@@ -82,11 +87,78 @@ var QDR = (function (QDR) {
           //QDR.log.debug("location after the connect " + $location.path());
           $scope.$apply();
         });
+
+
         QDRService.connect($scope.formEntity);
       }
     };
 
   }]);
+
+
+QDR.module.directive('posint', function (){
+   return {
+      require: 'ngModel',
+      link: function(scope, elem, attr, ctrl) {
+
+		  var isPortValid = function (value) {
+			var port = value + ''
+			var n = ~~Number(port);
+			var valid = (port.length === 0) || (String(n) === port && n >= 0)
+			var nono = "-+.,"
+			for (var i=0; i<port.length; ++i) {
+				if (nono.indexOf(port[i]) >= 0) {
+					valid = false;
+					break
+				}
+			}
+			return valid;
+		  }
+
+          //For DOM -> model validation
+          ctrl.$parsers.unshift(function(value) {
+			var valid = isPortValid(value)
+			ctrl.$setValidity('posint', valid)
+			return valid ? value : undefined;
+          });
+
+          //For model -> DOM validation
+          ctrl.$formatters.unshift(function(value) {
+             ctrl.$setValidity('posint', isPortValid(value));
+             return value;
+          });
+      }
+   };
+});
+
+/*
+QDR.module.directive('posint', function() {
+  return {
+    require: 'ngModel',
+    link: function(scope, elm, attrs, ctrl) {
+      ctrl.$validators.posint = function(modelValue, viewValue) {
+        if (ctrl.$isEmpty(modelValue)) {
+          // consider empty models to be valid
+          return true;
+        }
+
+		var port = modelValue + ''
+		var n = ~~Number(port);
+		var valid = (String(n) === port && n >= 0)
+		var nono = "-+.,"
+		for (var i=0; i<port.length; ++i) {
+			if (nono.indexOf(port[i]) >= 0) {
+				valid = false;
+				break
+			}
+		}
+		return valid;
+      };
+    }
+  };
+});
+
+*/
 
   return QDR;
 }(QDR || {}));

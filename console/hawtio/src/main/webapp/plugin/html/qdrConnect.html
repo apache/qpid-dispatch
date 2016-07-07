@@ -42,12 +42,12 @@ under the License.
                           <div class="control-group" ng-show="true">
                               <label class="strong control-label">Address: </label>
                               <div class="controls">
-                                  <input type="text" ng-model="formEntity.address" name="address" required="required" autofocus="autofocus" class="ng-pristine ng-valid ng-valid-required"><span class="help-block"></span></div>
+                                  <input type="text" ng-model="formEntity.address" placeholder="localhost" name="address" autofocus="autofocus" class="ng-pristine ng-valid ng-valid-required"><span class="help-block"></span></div>
                           </div>
                           <div class="control-group" ng-show="true">
                               <label class="control-label" title="Ports to connect to, by default 5673">Port: </label>
                               <div class="controls">
-                                  <input type="number" tooltip="Ports to connect to, by default 5673" ng-model="formEntity.port" name="port" title="Ports to connect to, by default 5673" class="ng-scope ng-pristine ng-valid ng-valid-number"><span class="help-block"></span></div>
+                                  <input type="number" ng-pattern="/^[0-9]+$/" placeholder="5673" tooltip="Ports to connect to, by default 5673" ng-model="formEntity.port" name="port" title="Ports to connect to, by default 5673" class="ng-scope ng-pristine ng-valid ng-valid-number"><span class="help-block"></span></div>
                           </div>
                           <div class="control-group" ng-show="true">
                               <label class="control-label" title="Whether or not the connection should be started as soon as you log into hawtio">Autostart: </label>
