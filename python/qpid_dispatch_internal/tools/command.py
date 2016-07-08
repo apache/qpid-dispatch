@@ -83,6 +83,9 @@ def connection_options(options, title="Connection Options"):
                      help="Trusted Certificate Authority Database file (PEM Format)")
     group.add_option("--ssl-password", action="store", type="string", metavar="PASSWORD",
                      help="Certificate password, will be prompted if not specifed.")
+    group.add_option("--ssl-allow-peer-name-mismatch", action="store_true", default=False,
+                     help="Verify the peer host name matches the certificate. Default true, "
+                          "setting to false is insecure .")
     return group
 
 def opts_url(opts):
@@ -99,12 +102,19 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     """Return proton.SSLDomain from command line options or None if no SSL options specified.
     @param opts: Parsed optoins including connection_options()
     """
-    certificate, key, trustfile, password = opts.ssl_certificate, opts.ssl_key, opts.ssl_trustfile, opts.ssl_password
+    certificate, key, trustfile, password, ssl_allow_peer_name_mismatch = opts.ssl_certificate, opts.ssl_key, \
+                                                                          opts.ssl_trustfile, \
+                                                                          opts.ssl_password, \
+                                                                          opts.ssl_allow_peer_name_mismatch
+
     if not (certificate or trustfile): return None
     domain = SSLDomain(mode)
     if trustfile:
         domain.set_trusted_ca_db(str(trustfile))
-        domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
+        if ssl_allow_peer_name_mismatch:
+            domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
+        else:
+            domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME, str(trustfile))
     if certificate:
         domain.set_credentials(str(certificate), str(key), str(password))
     return domain
