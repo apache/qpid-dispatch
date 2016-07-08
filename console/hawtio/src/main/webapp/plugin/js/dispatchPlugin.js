@@ -133,6 +133,20 @@ var QDR = (function(QDR) {
                         function(g0,g1,g2){return g1.toUpperCase() + g2.toLowerCase();});
 	        }
 	  })
+	  .filter('safePlural', function () {
+	        return function (str) {
+				var es = ['x', 'ch', 'ss', 'sh']
+				for (var i=0; i<es.length; ++i) {
+					if (str.endsWith(es[i]))
+						return str + 'es'
+				}
+				if (str.endsWith('y'))
+					return str.substr(0, str.length-2) + 'ies'
+				if (str.endsWith('s'))
+					return str;
+				return str + 's'
+	        }
+	  })
 /*
 	QDR.module.config(['$locationProvider', function($locationProvider) {
         $locationProvider.html5Mode(true);
