@@ -152,7 +152,20 @@ var QDR = (function(QDR) {
    *     topLevelTabs array.
    */
   QDR.module.run(function(workspace, viewRegistry, layoutFull, $rootScope, $location, localStorage, QDRService, QDRChartService) {
-		QDR.log.info(QDR.pluginName, " loaded");
+		QDR.log.info("*************creating Dispatch Console************");
+		var curPath = $location.path()
+		if (curPath !== '/dispatch_plugin') {
+				var toPath = QDR.pluginRoot + "/connect";
+				$location.path(toPath);
+				if (curPath.startsWith(QDR.pluginRoot)) {
+					var org = curPath.substr(QDR.pluginRoot.length + 1)
+					if (org !== "connect")
+						$location.search('org', org)
+				}
+				$location.replace();
+		}
+
+
 		Core.addCSS(QDR.contextPath + "plugin/css/dispatch.css");
 		Core.addCSS(QDR.contextPath + "plugin/css/plugin.css");
 		//Core.addCSS("https://cdn.rawgit.com/mohsen1/json-formatter/master/dist/json-formatter.min.css");

@@ -36,7 +36,6 @@ var QDR = (function (QDR) {
    */
 	QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', 'localStorage', '$timeout', function($scope, QDRService, $location, localStorage, $timeout) {
 
-
 		console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
 		var columnStateKey = 'QDRColumnKey.';
 
