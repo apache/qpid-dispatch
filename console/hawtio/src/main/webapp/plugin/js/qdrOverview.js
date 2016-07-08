@@ -38,6 +38,8 @@ var QDR = (function (QDR) {
 
 		console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
 		var columnStateKey = 'QDRColumnKey.';
+		var OverviewExpandedKey = "QDROverviewExpanded"
+		var OverviewFocusKey = "QDROverviewFocus"
 
 		// we want attributes to be listed first, so add it at index 0
 		$scope.subLevelTabs = [{
@@ -1083,12 +1085,44 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 			$scope.log = node
 		}
 
+		// loads the tree node name that had the focus last
+		var loadFocusNode = function () {
+			return localStorage[OverviewFocusKey] || 'Routers'
+		}
+		// saved the tree node name that currently hsas the focus
+		var saveFocused = function (node) {
+			localStorage[OverviewFocusKey] = node;
+		}
+		// loads list that was saved
+		var loadExpandedNodeList = function () {
+			return angular.fromJson(localStorage[OverviewExpandedKey]) || [];
+		}
+		// save node names that are expanded
+		var saveExpanded = function () {
+			var list = [];
+			$("#overtree").dynatree("getRoot").visit(function(node){
+                if (node.isExpanded()) {
+                    list.push(node.data.parent)
+                }
+            });
+			localStorage[OverviewExpandedKey] = JSON.stringify(list)
+		}
+		// expand tree nodes that were previously expanded
+		var restoreExpanded = function () {
+			var expanded = angular.fromJson(localStorage[OverviewExpandedKey]);
+			$("#overtree").dynatree("getRoot").visit(function(node){
+				node.expand(expanded.indexOf(node.parent))
+            });
+		}
+
 		// activated is called each time a tree node is clicked
 		// based on which node is clicked, load the correct data grid template and start getting the data
 		var activated = function (node) {
 			//QDR.log.debug("node activated: " + node.data.title)
 			var type = node.data.type;
-			localStorage['QDROverviewKey'] = node.data.parent;
+			saveExpanded()
+			saveFocused(node.data.parent)
+
 			var template = $scope.templates.filter( function (tpl) {
 				return tpl.name == type;
 			})
@@ -1100,7 +1134,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 			}
 
 		}
-        $scope.template = $scope.templates[0];
+        $scope.template = {url: ''};
 
 		if (!QDRService.connected) {
 			// we are not connected. we probably got here from a bookmark or manual page reload
@@ -1114,14 +1148,15 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
      *
      * -------------------------------------------------
      */
-		var lastKey = localStorage['QDROverviewKey'];
-		if (!lastKey)
-			lastKey = "Routers"
+        var lastKey = loadFocusNode();
+		var expandedNodeList = loadExpandedNodeList();
+		if (expandedNodeList.length == 0)
+			expandedNodeList = ['Routers']
 		var routers = new Folder("Routers")
 		routers.type = "Routers"
 		routers.info = allRouterInfo
 		routers.focus = lastKey === 'Routers'
-		routers.expand = lastKey === 'Routers'
+		routers.expand = (expandedNodeList.indexOf("Routers") > -1)
 		routers.clickFolderMode = 1
 		routers.key = "Routers"
 		routers.parent = "Routers"
@@ -1144,7 +1179,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 		addresses.type = "Addresses"
 		addresses.info = allAddressInfo
 		addresses.focus = lastKey === 'Addresses'
-		addresses.expand = lastKey === 'Addresses'
+		addresses.expand = (expandedNodeList.indexOf("Addresses") > -1)
 		addresses.clickFolderMode = 1
 		addresses.key = "Addresses"
 		addresses.parent = "Addresses"
@@ -1188,7 +1223,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 		links.type = "Links"
 		links.info = allLinkInfo
 		links.focus = lastKey === 'Links'
-		links.expand = lastKey === 'Links'
+		links.expand = (expandedNodeList.indexOf("Links") > -1)
 		links.clickFolderMode = 1
 		links.key = "Links"
 		links.parent = "Links"
@@ -1239,7 +1274,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 		connections.type = "Connections"
 		connections.info = allConnectionInfo
 		connections.focus = lastKey === 'Connections'
-		connections.expand = lastKey === 'Connections'
+		connections.expand = (expandedNodeList.indexOf("Connections") > -1)
 		connections.clickFolderMode = 1
 		connections.key = "Connections"
 		connections.parent = "Connections"
@@ -1310,7 +1345,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 		logs.type = "Logs"
 		logs.info = allLogInfo
 		logs.focus = lastKey === 'Logs'
-		logs.expand = lastKey === 'Logs'
+		logs.expand = (expandedNodeList.indexOf("Logs") > -1)
 		logs.clickFolderMode = 1
 		logs.key = "Logs"
 		logs.parent = "Logs"
@@ -1359,6 +1394,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 						activeVisible: false,
 						children: topLevelChildren
 					})
+					saveExpanded();
 					// populate the expanded tree node
 					var infoMethods = {
 						Routers: allRouterInfo,
@@ -1374,6 +1410,11 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
                         $scope.template = template[0];
 						infoMethods[lastKey]();
 					}
+					expandedNodeList.forEach ( function (node) {
+						if (infoMethods[node] && node !== lastKey) {
+							infoMethods[node]()
+						}
+					})
 
 			        loadColState($scope.allRouters);
 			        loadColState($scope.routerGrid);
