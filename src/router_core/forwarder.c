@@ -444,7 +444,8 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     //
     // Find all the possible outbound links for this delivery, searching for the one with the
     // smallest eligible value.  Value = outstanding_deliveries + minimum_downrange_cost.
-    // A link is ineligible if the outstanding_deliveries is equal to the link's capacity.
+    // A link is ineligible if the outstanding_deliveries is equal to or greater than the
+    // link's capacity.
     //
     // If there are no eligible links, use the best ineligible link.  Zero fanout should be returned
     // only if there are no available destinations.
@@ -521,6 +522,16 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
                     ineligible_link_value    = value;
                 }
             }
+        }
+    } else if (best_eligible_link) {
+        //
+        // Rotate the rlinks list to enhance the appearance of balance when there is
+        // little load (see DISPATCH-367)
+        //
+        if (DEQ_SIZE(addr->rlinks) > 1) {
+            link_ref = DEQ_HEAD(addr->rlinks);
+            DEQ_REMOVE_HEAD(addr->rlinks);
+            DEQ_INSERT_TAIL(addr->rlinks, link_ref);
         }
     }
 

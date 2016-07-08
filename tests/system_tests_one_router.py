@@ -1071,6 +1071,11 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_19_appearance_of_balance(self):
+        test = AppearanceOfBalanceTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
     def test_connection_properties(self):
         connection = BlockingConnection(self.router.addresses[0],
                                         timeout=60,
@@ -1319,6 +1324,64 @@ class ReleasedVsModifiedTest(MessagingHandler):
             self.n_modified += 1
         else:
             self.n_released += 1
+        self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+
+class AppearanceOfBalanceTest(MessagingHandler):
+    def __init__(self, address):
+        super(AppearanceOfBalanceTest, self).__init__()
+        self.address = address
+        self.dest = "balanced.AppearanceTest"
+        self.error = None
+        self.count        = 9
+        self.n_sent       = 0
+        self.n_received_a = 0
+        self.n_received_b = 0
+        self.n_received_c = 0
+
+    def check_if_done(self):
+        if self.n_received_a + self.n_received_b + self.n_received_c == self.count:
+            if self.n_received_a != 3 or self.n_received_b != 3 or self.n_received_c != 3:
+                self.error = "Incorrect Distribution: %d/%d/%d" % (self.n_received_a, self.n_received_b, self.n_received_c)
+            self.timer.cancel()
+            self.conn.close()
+
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d rcvd=%d/%d/%d" % \
+                     (self.n_sent, self.n_received_a, self.n_received_b, self.n_received_c)
+        self.conn.close()
+
+    def on_start(self, event):
+        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.conn       = event.container.connect(self.address)
+        self.sender     = event.container.create_sender(self.conn, self.dest)
+        self.receiver_a = event.container.create_receiver(self.conn, self.dest, name="A")
+        self.receiver_b = event.container.create_receiver(self.conn, self.dest, name="B")
+        self.receiver_c = event.container.create_receiver(self.conn, self.dest, name="C")
+
+    def send(self):
+        if self.n_sent < self.count:
+            msg = Message(body="Appearance-Test")
+            self.sender.send(msg)
+            self.n_sent += 1
+
+    def on_sendable(self, event):
+        if self.n_sent == 0:
+            self.send()
+
+    def on_message(self, event):
+        if event.receiver == self.receiver_a:
+            self.n_received_a += 1
+        if event.receiver == self.receiver_b:
+            self.n_received_b += 1
+        if event.receiver == self.receiver_c:
+            self.n_received_c += 1
+
+    def on_accepted(self, event):
+        self.send()
         self.check_if_done()
 
     def run(self):
