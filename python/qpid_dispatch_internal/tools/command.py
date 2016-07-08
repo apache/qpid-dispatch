@@ -83,7 +83,40 @@ def connection_options(options, title="Connection Options"):
                      help="Trusted Certificate Authority Database file (PEM Format)")
     group.add_option("--ssl-password", action="store", type="string", metavar="PASSWORD",
                      help="Certificate password, will be prompted if not specifed.")
+    # Use the --ssl-password-file option to avoid having the --ssl-password in history or scripts.
+    group.add_option("--ssl-password-file", action="store", type="string", metavar="SSL-PASSWORD-FILE",
+                     help="Certificate password, will be prompted if not specifed.")
+
+    group.add_option("--sasl-mechanisms", action="store", type="string", metavar="SASL-MECHANISMS",
+                     help="Allowed sasl mechanisms to be supplied during the sasl handshake.")
+    group.add_option("--sasl-username", action="store", type="string", metavar="SASL-USERNAME",
+                     help="User name for SASL plain authentication")
+    group.add_option("--sasl-password", action="store", type="string", metavar="SASL-PASSWORD",
+                     help="Password for SASL plain authentication")
+    # Use the --sasl-password-file option to avoid having the --sasl-password in history or scripts.
+    group.add_option("--sasl-password-file", action="store", type="string", metavar="SASL-PASSWORD-FILE",
+                     help="Password for SASL plain authentication")
+
     return group
+
+
+def get_password(file=None):
+    if file:
+        with open(file, 'r') as password_file:
+            return str(password_file.read()).strip() # Remove leading and trailing characters
+    return None
+
+class Sasl(object):
+    """
+    A simple object to hold sasl mechanisms, sasl username and password
+    """
+    def __init__(self, mechs=None, user=None, password=None, sasl_password_file=None):
+        self.mechs = mechs
+        self.user = user
+        self.password = password
+        self.sasl_password_file = sasl_password_file
+        if self.sasl_password_file:
+            self.password = get_password(self.sasl_password_file)
 
 def opts_url(opts):
     """Fix up default URL settings based on options"""
@@ -95,12 +128,26 @@ def opts_url(opts):
 
     return url
 
+def opts_sasl(opts):
+    mechs, user, password, sasl_password_file = opts.sasl_mechanisms, opts.sasl_username, opts.sasl_password, opts.sasl_password_file
+    if not (mechs or user or password or sasl_password_file):
+        return None
+
+    return Sasl(mechs, user, password, sasl_password_file)
+
 def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     """Return proton.SSLDomain from command line options or None if no SSL options specified.
     @param opts: Parsed optoins including connection_options()
     """
-    certificate, key, trustfile, password = opts.ssl_certificate, opts.ssl_key, opts.ssl_trustfile, opts.ssl_password
-    if not (certificate or trustfile): return None
+    certificate, key, trustfile, password, password_file = opts.ssl_certificate, opts.ssl_key, opts.ssl_trustfile, \
+                                                           opts.ssl_password, opts.ssl_password_file
+
+    if not (certificate or trustfile):
+        return None
+
+    if password_file:
+        password = get_password(password_file)
+
     domain = SSLDomain(mode)
     if trustfile:
         domain.set_trusted_ca_db(str(trustfile))

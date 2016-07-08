@@ -72,7 +72,7 @@ class Node(object):
     """Client proxy for an AMQP management node"""
 
     @staticmethod
-    def connection(url=None, router=None, timeout=10, ssl_domain=None):
+    def connection(url=None, router=None, timeout=10, ssl_domain=None, sasl=None):
         """Return a BlockingConnection suitable for connecting to a management node
         @param url: URL of the management node.
         @param router: If address does not contain a path, use the management node for this router ID.
@@ -86,12 +86,18 @@ class Node(object):
             else:
                 url.path = u'$management'
 
-        return BlockingConnection(url, timeout=timeout, ssl_domain=ssl_domain)
+        # if sasl_mechanism is unicode, convert it to python string
+        return BlockingConnection(url,
+                                  timeout=timeout,
+                                  ssl_domain=ssl_domain,
+                                  allowed_mechs=str(sasl.mechs) if sasl else None,
+                                  user=str(sasl.user) if sasl else None,
+                                  password=str(sasl.password) if sasl else None)
 
     @staticmethod
-    def connect(url=None, router=None, timeout=10, ssl_domain=None):
+    def connect(url=None, router=None, timeout=10, ssl_domain=None, sasl=None):
         """Return a Node connected with the given parameters, see L{connection}"""
-        return Node(Node.connection(url, router, timeout, ssl_domain))
+        return Node(Node.connection(url, router, timeout, ssl_domain, sasl))
 
     def __init__(self, connection, locales=None):
         """

@@ -122,10 +122,7 @@ try:
             if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
             return out
 
-        def ssl_test(self, url_name, arg_names):
-            """Run simple SSL connection test with supplied parameters.
-            See test_ssl_* below.
-            """
+        def get_ssl_args(self):
             args = dict(
                 trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
                 bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
@@ -134,6 +131,13 @@ try:
                 client_pass = ['--ssl-password', 'client-password'])
             args['client_cert_all'] = args['client_cert'] + args['client_key'] + args['client_pass']
 
+            return args
+
+        def ssl_test(self, url_name, arg_names):
+            """Run simple SSL connection test with supplied parameters.
+            See test_ssl_* below.
+            """
+            args = self.get_ssl_args()
             addrs = [self.router.addresses[i] for i in xrange(4)];
             urls = dict(zip(['none', 'strict', 'unsecured', 'auth'], addrs) +
                         zip(['none_s', 'strict_s', 'unsecured_s', 'auth_s'],
@@ -220,6 +224,27 @@ except SSLUnavailable:
         def test_skip(self):
             self.skipTest("Proton SSL support unavailable.")
 
+try:
+    SSLDomain(SSLDomain.MODE_CLIENT)
+    class QdstatSslTestSslPasswordFile(QdstatSslTest):
+        """
+        Tests the --ssl-password-file command line parameter
+        """
+        def get_ssl_args(self):
+            args = dict(
+                trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
+                bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
+                client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')],
+                client_key = ['--ssl-key', self.ssl_file('client-private-key.pem')],
+                client_pass = ['--ssl-password-file', self.ssl_file('client-password-file.txt')])
+            args['client_cert_all'] = args['client_cert'] + args['client_key'] + args['client_pass']
+
+            return args
+
+except SSLUnavailable:
+    class QdstatSslTest(system_test.TestCase):
+        def test_skip(self):
+            self.skipTest("Proton SSL support unavailable.")
 
 try:
     SSLDomain(SSLDomain.MODE_CLIENT)

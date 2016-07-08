@@ -218,7 +218,8 @@ class QdmanageTest(TestCase):
         created = False
         for result in results:
             name = result['name']
-            if 'connection/0.0.0.0:%s:' % QdmanageTest.inter_router_port in name:
+            conn_name = 'connection/0.0.0.0:%s:' % QdmanageTest.inter_router_port
+            if conn_name in name:
                 created = True
         self.assertTrue(created)
 
@@ -309,6 +310,57 @@ class QdmanageTest(TestCase):
             exception_occurred = True
 
         self.assertTrue(exception_occurred)
+
+class QdmanageTestSsl(QdmanageTest):
+
+    @classmethod
+    def setUpClass(cls):
+        super(QdmanageTestSsl, cls).setUpClass()
+
+    def address(self):
+        return self.router_1.addresses[1]
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(),
+                                             '--indent=-1',
+                                             '--ssl-trustfile=' + self.ssl_file('ca-certificate.pem'),
+                                             '--ssl-certificate=' + self.ssl_file('client-certificate.pem'),
+                                             '--ssl-key=' + self.ssl_file('client-private-key.pem'),
+                                             '--ssl-password=client-password',
+                                             '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception, e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
+
+    def test_create_delete_connector(self):
+        long_type = 'org.apache.qpid.dispatch.connector'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+        name = output[0]['name']
+
+        # Delete an existing connector
+        delete_command = 'DELETE --type=' + long_type + ' --name=' + name
+        self.run_qdmanage(delete_command)
+        output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(output, [])
+
+        # Re-create the connector and then try wait_connectors
+        self.create(long_type, name, str(QdmanageTestSsl.inter_router_port))
+
+        results = json.loads(self.run_qdmanage('QUERY --type=org.apache.qpid.dispatch.connection'))
+
+        created = False
+        for result in results:
+            name = result['name']
+            conn_name = 'connection/0.0.0.0:%s:' % QdmanageTestSsl.inter_router_port
+            if conn_name in name:
+                created = True
+        self.assertTrue(created)
 
 if __name__ == '__main__':
     unittest.main(main_module())
