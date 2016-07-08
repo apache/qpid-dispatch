@@ -184,7 +184,6 @@ var QDR = (function(QDR) {
 			$('#entityTree').dynatree({
 				onActivate: onTreeSelected,
 				onExpand: onTreeNodeExpanded,
-				autoCollapse: true,
 				selectMode: 1,
 				activeVisible: false,
 				children: entityTreeChildren
