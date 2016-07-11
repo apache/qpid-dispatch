@@ -328,7 +328,8 @@ class QdmanageTestSsl(QdmanageTest):
                                              '--ssl-certificate=' + self.ssl_file('client-certificate.pem'),
                                              '--ssl-key=' + self.ssl_file('client-private-key.pem'),
                                              '--ssl-password=client-password',
-                                             '--timeout', str(TIMEOUT)],
+                                             '--timeout', str(TIMEOUT),
+                                             '--ssl-disable-peer-name-verify'],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
         out = p.communicate(input)[0]
         try:

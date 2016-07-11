@@ -96,6 +96,9 @@ def connection_options(options, title="Connection Options"):
     # Use the --sasl-password-file option to avoid having the --sasl-password in history or scripts.
     group.add_option("--sasl-password-file", action="store", type="string", metavar="SASL-PASSWORD-FILE",
                      help="Password for SASL plain authentication")
+    group.add_option("--ssl-disable-peer-name-verify", action="store_true", default=False,
+                     help="Disables SSL peer name verification. WARNING - This option is insecure and must not be used "
+                          "in production environments")
 
     return group
 
@@ -139,8 +142,13 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     """Return proton.SSLDomain from command line options or None if no SSL options specified.
     @param opts: Parsed optoins including connection_options()
     """
-    certificate, key, trustfile, password, password_file = opts.ssl_certificate, opts.ssl_key, opts.ssl_trustfile, \
-                                                           opts.ssl_password, opts.ssl_password_file
+
+    certificate, key, trustfile, password, password_file, ssl_disable_peer_name_verify = opts.ssl_certificate,\
+                                                                                         opts.ssl_key,\
+                                                                                         opts.ssl_trustfile,\
+                                                                                         opts.ssl_password,\
+                                                                                         opts.ssl_password_file, \
+                                                                                         opts.ssl_disable_peer_name_verify
 
     if not (certificate or trustfile):
         return None
@@ -149,9 +157,14 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
         password = get_password(password_file)
 
     domain = SSLDomain(mode)
+
     if trustfile:
         domain.set_trusted_ca_db(str(trustfile))
-        domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
+        if ssl_disable_peer_name_verify:
+            domain.set_peer_authentication(SSLDomain.VERIFY_PEER, str(trustfile))
+        else:
+            domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME, str(trustfile))
+
     if certificate:
         domain.set_credentials(str(certificate), str(key), str(password))
     return domain

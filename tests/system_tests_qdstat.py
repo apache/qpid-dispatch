@@ -39,6 +39,7 @@ class QdstatTest(system_test.TestCase):
         p = self.popen(
             ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args,
             name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+
         out = p.communicate()[0]
         assert p.returncode == 0, \
             "qdstat exit status %s, output:\n%s" % (p.returncode, out)
@@ -114,8 +115,10 @@ try:
 
         def run_qdstat(self, args, regexp=None, address=None):
             p = self.popen(
-                ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args,
+                ['qdstat', '--bus', str(address or self.router.addresses[0]), '--ssl-disable-peer-name-verify',
+                 '--timeout', str(system_test.TIMEOUT) ] + args,
                 name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+
             out = p.communicate()[0]
             assert p.returncode == 0, \
                 "qdstat exit status %s, output:\n%s" % (p.returncode, out)
