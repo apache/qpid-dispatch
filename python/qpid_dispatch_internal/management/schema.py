@@ -470,6 +470,7 @@ class EntityType(object):
                 if k != 'type')), # Don't dump 'type' attribute, dumped separately.
             ('operations', self.operations),
             ('description', self.description or None),
+            ('fullyQualifiedType', self.name or None),
             ('references', self.references),
             ('deprecated', self.deprecated),
             ('singleton', self.singleton)
