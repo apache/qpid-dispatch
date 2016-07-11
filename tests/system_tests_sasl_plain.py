@@ -258,6 +258,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
              '--sasl-username=test@domain.com',
              '--sasl-password=password',
              # The following are SSL args
+             '--ssl-disable-peer-name-verify',
              '--ssl-trustfile=' + self.ssl_file('ca-certificate.pem'),
              '--ssl-certificate=' + self.ssl_file('client-certificate.pem'),
              '--ssl-key=' + self.ssl_file('client-private-key.pem'),
