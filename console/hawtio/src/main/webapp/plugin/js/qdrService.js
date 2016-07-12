@@ -782,54 +782,62 @@ var QDR = (function(QDR) {
 			}
 			var onDisconnect = function () {
 				//QDR.log.warn("Disconnected");
+				self.errorText = "Connection failed"
+				self.connectionError = true;
 				stop();
 				self.executeDisconnectActions();
 			}
 
 			QDR.log.debug("****** calling rhea.connect ********")
-            var connection = self.rhea.connect({
+			var connection;
+			try {
+                connection = self.rhea.connect({
                     connection_details:ws('ws://' + baseAddress, ["binary", "AMQWSB10"]),
                     reconnect:true,
                     properties: {console_identifier: 'Dispatch console'}
-            });
-			connection.on('connection_open', function (context) {
-				QDR.log.debug("connection_opened")
-				okay.connection = true;
-				okay.receiver = false;
-				okay.sender = false;
-			})
-			connection.on('disconnected', function (context) {
-				self.errorText = "Connection failed"
-				self.connectionError = true;
-				onDisconnect();
-			})
-			connection.on('connection_close', function (context) {
-				onDisconnect();
-				self.errorText = "Disconnected"
-			})
+	            });
+			}
+			catch (e) {
+				onDisconnect();;
+			}
 
-			var sender = connection.open_sender();
-			sender.on('sender_open', function (context) {
-				QDR.log.debug("sender_opened")
-				okay.sender = true
-				maybeStart()
-			})
-			sender.on('sendable', function (context) {
-				//QDR.log.debug("sendable")
-				self.sendable = true;
-				maybeStart();
-			})
+			if (!self.connectionError) {
+				connection.on('connection_open', function (context) {
+					QDR.log.debug("connection_opened")
+					okay.connection = true;
+					okay.receiver = false;
+					okay.sender = false;
+				})
+				connection.on('disconnected', function (context) {
+					onDisconnect();
+				})
+				connection.on('connection_close', function (context) {
+					onDisconnect();
+					self.errorText = "Disconnected"
+				})
 
-			var receiver = connection.open_receiver({source: {dynamic: true}});
-			receiver.on('receiver_open', function (context) {
-				QDR.log.debug("receiver_opened")
-				okay.receiver = true;
-				maybeStart()
-			})
-			receiver.on("message", function (context) {
-				self.correlator.resolve(context);
-			});
+				var sender = connection.open_sender();
+				sender.on('sender_open', function (context) {
+					QDR.log.debug("sender_opened")
+					okay.sender = true
+					maybeStart()
+				})
+				sender.on('sendable', function (context) {
+					//QDR.log.debug("sendable")
+					self.sendable = true;
+					maybeStart();
+				})
 
+				var receiver = connection.open_receiver({source: {dynamic: true}});
+				receiver.on('receiver_open', function (context) {
+					QDR.log.debug("receiver_opened")
+					okay.receiver = true;
+					maybeStart()
+				})
+				receiver.on("message", function (context) {
+					self.correlator.resolve(context);
+				});
+			}
 		}
       }
     }

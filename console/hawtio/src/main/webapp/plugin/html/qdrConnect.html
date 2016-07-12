@@ -48,7 +48,7 @@ under the License.
                               <label tabindex="-1" class="control-label" title="Ports to connect to, by default 5673">Port: </label>
                               <div class="controls">
                                   <input tabindex="2" posint type="number" placeholder="5673" tooltip="Ports to connect to, by default 5673" ng-model="formEntity.port" name="port" title="Ports to connect to, by default 5673">
-                                  <span ng-show="settings.port.$error.posint">Positive integers only</span>
+                                  <span ng-show="settings.port.$error.range">Must be 1 through 65535</span>
                               </div>
                           </div>
                           <div class="control-group" ng-show="true">

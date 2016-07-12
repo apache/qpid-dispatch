@@ -29,7 +29,7 @@ var QDR = (function (QDR) {
    * Controller that handles the QDR settings page
    */
 
-  QDR.module.controller("QDR.SettingsController", ['$scope', 'QDRService', '$location', function($scope, QDRService, $location) {
+  QDR.module.controller("QDR.SettingsController", ['$scope', 'QDRService', '$timeout', '$location', function($scope, QDRService, $timeout, $location) {
 
     $scope.connecting = false;
     $scope.connectionError = false;
@@ -61,8 +61,7 @@ var QDR = (function (QDR) {
 		if ($scope.settings.$valid) {
 			$scope.connectionError = false;
 			$scope.connecting = true;
-
-			setTimeout(doConnect, 100)
+			$timeout( doConnect )   // timeout so connecting animation can display
 		}
 	}
 
@@ -71,29 +70,26 @@ var QDR = (function (QDR) {
             $scope.formEntity.address = "localhost"
 
         console.log("attempting to connect to " + $scope.formEntity.address + ':' + $scope.formEntity.port);
-        QDRService.addDisconnectAction(function() {
-          QDR.log.debug("disconnect action called");
-          $scope.connecting = false;
-          $scope.connectionErrorText = QDRService.errorText;
-          $scope.connectionError = true;
-          $scope.$apply();
-        });
+	    QDRService.addDisconnectAction(function () {
+			$timeout( function () {
+				QDR.log.debug("disconnect action called");
+                $scope.connecting = false;
+                $scope.connectionErrorText = QDRService.errorText;
+                $scope.connectionError = true;
+        	})
+	    });
         QDRService.addConnectAction(function() {
           //QDR.log.debug("got connection notification");
-          $scope.connecting = false;
-
-          var searchObject = $location.search();
-          var goto = "overview";
-          if (searchObject.org) {
-			goto = searchObject.org;
-          }
-          //QDR.log.debug("location before the connect " + $location.path());
-          $location.path(QDR.pluginRoot +"/" + goto);
-          //QDR.log.debug("location after the connect " + $location.path());
-          $scope.$apply();
+			$timeout( function () {
+				$scope.connecting = false;
+				var searchObject = $location.search();
+				var goto = "overview";
+				if (searchObject.org) {
+					goto = searchObject.org;
+				}
+				$location.path(QDR.pluginRoot +"/" + goto);
+			})
         });
-
-
         QDRService.connect($scope.formEntity);
       }
 
@@ -102,67 +98,60 @@ var QDR = (function (QDR) {
 
 QDR.module.directive('posint', function (){
    return {
-      require: 'ngModel',
-      link: function(scope, elem, attr, ctrl) {
+	require: 'ngModel',
 
-		  var isPortValid = function (value) {
-			var port = value + ''
-			var n = ~~Number(port);
-			var valid = (port.length === 0) || (String(n) === port && n >= 0)
+	link: function(scope, elem, attr, ctrl) {
+		// input type number allows + and - but we don't want them so filter them out
+		elem.bind('keypress', function (event) {
+			var nkey = !event.charCode ? event.which : event.charCode;
+			var skey = String.fromCharCode(nkey);
 			var nono = "-+.,"
-			for (var i=0; i<port.length; ++i) {
-				if (nono.indexOf(port[i]) >= 0) {
-					valid = false;
-					break
+			if (nono.indexOf(skey) >= 0) {
+				event.preventDefault();
+				return false;
+			}
+			// firefox doesn't filter out non-numeric input. it just sets the ctrl to invalid
+			if (/[\!\@\#\$\%^&*\(\)]/.test(skey) && event.shiftKey || // prevent shift numbers
+				!(                                      // prevent all but the following
+					nkey <= 0 ||                            // arrows
+					nkey == 8 ||                            // delete|backspace
+					nkey == 13 ||                           // enter
+					(nkey >= 37 && nkey <=40) ||            // arrows
+					event.ctrlKey || event.altKey ||        // ctrl-v, etc.
+					/[0-9]/.test(skey))                     // numbers
+				) {
+					event.preventDefault();
+					return false;
+			}
+		})
+		// check the current value of input
+		var _isPortInvalid = function (value) {
+			var port = value + ''
+			var isErrRange = false;
+			// empty string is valid
+			if (port.length !== 0) {
+				var n = ~~Number(port);
+				if (n < 1 || n > 65535) {
+					isErrRange = true;
 				}
 			}
-			return valid;
-		  }
+			ctrl.$setValidity('range', !isErrRange)
+			return isErrRange;
+		}
 
-          //For DOM -> model validation
-          ctrl.$parsers.unshift(function(value) {
-			var valid = isPortValid(value)
-			ctrl.$setValidity('posint', valid)
-			return valid ? value : undefined;
-          });
+		//For DOM -> model validation
+		ctrl.$parsers.unshift(function(value) {
+			return _isPortInvalid(value) ? undefined : value;
+		});
 
-          //For model -> DOM validation
-          ctrl.$formatters.unshift(function(value) {
-             ctrl.$setValidity('posint', isPortValid(value));
-             return value;
-          });
+		//For model -> DOM validation
+		ctrl.$formatters.unshift(function(value) {
+			_isPortInvalid(value);
+			return value;
+		});
       }
    };
 });
-
-/*
-QDR.module.directive('posint', function() {
-  return {
-    require: 'ngModel',
-    link: function(scope, elm, attrs, ctrl) {
-      ctrl.$validators.posint = function(modelValue, viewValue) {
-        if (ctrl.$isEmpty(modelValue)) {
-          // consider empty models to be valid
-          return true;
-        }
-
-		var port = modelValue + ''
-		var n = ~~Number(port);
-		var valid = (String(n) === port && n >= 0)
-		var nono = "-+.,"
-		for (var i=0; i<port.length; ++i) {
-			if (nono.indexOf(port[i]) >= 0) {
-				valid = false;
-				break
-			}
-		}
-		return valid;
-      };
-    }
-  };
-});
-
-*/
 
   return QDR;
 }(QDR || {}));

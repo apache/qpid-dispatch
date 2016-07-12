@@ -861,6 +861,6 @@ btn.disabled, .btn[disabled] {
     opacity: 0.35;
 }
 
-#dispatch-login-container .ng-invalid-posint {
+#dispatch-login-container .ng-invalid-range {
 	border-color: #e9322d !important;
 }
