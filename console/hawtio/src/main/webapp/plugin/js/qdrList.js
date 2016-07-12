@@ -654,9 +654,6 @@ var QDR = (function(QDR) {
 					if (field.name !== 'identity')
 						attributes[field.name] = value
 				}
-				if (!attributes.type)
-					attributes.type = $scope.selectedEntity;
-
 			})
 			QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, gotMethodResponse)
 		}

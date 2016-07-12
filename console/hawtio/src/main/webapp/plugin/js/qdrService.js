@@ -115,16 +115,6 @@ var QDR = (function(QDR) {
       errorText: undefined,
 	  connectionError: undefined,
 
-		typeMap: {
-			listener:   'org.apache.qpid.dispatch.listener',
-			connector:  'org.apache.qpid.dispatch.connector',
-			link:       'org.apache.qpid.dispatch.router.link',
-			node:       'org.apache.qpid.dispatch.router.node',
-			linkRoute:  'org.apache.qpid.dispatch.router.config.linkRoute',
-			address:    'org.apache.qpid.dispatch.router.config.address',
-			autoLink:   'org.apache.qpid.dispatch.router.config.autoLink'
-		},
-
       isConnected: function() {
         return self.connected;
       },
@@ -664,8 +654,13 @@ var QDR = (function(QDR) {
 			var application_properties = {
 				operation:  operation
 			}
-			if (attrs.type)
-				application_properties.type = self.typeMap[attrs.type] || attrs.type;
+			var ent = self.schema.entityTypes[entity];
+			var fullyQualifiedType = ent.fullyQualifiedType;
+			if (fullyQualifiedType) {
+				application_properties.type = fullyQualifiedType
+			}
+			else
+				application_properties.type = entity;
 			if (attrs.name)
 				application_properties.name = attrs.name;
 			var msg = {
