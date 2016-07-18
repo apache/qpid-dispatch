@@ -109,12 +109,6 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
             break;
 
         case QDR_LINK_OWNING_ADDR:
-            if(link->terminus_addr)
-                qd_compose_insert_string(body, link->terminus_addr);
-            else
-            if (link->connected_link && link->connected_link->terminus_addr)
-                qd_compose_insert_string(body, link->connected_link->terminus_addr);
-            else
             if (link->owning_addr)
                 qd_compose_insert_string(body, address_key(link->owning_addr));
             else

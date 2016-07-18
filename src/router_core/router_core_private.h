@@ -251,7 +251,6 @@ struct qdr_link_t {
     qd_link_type_t           link_type;
     qd_direction_t           link_direction;
     char                    *name;
-    char                    *terminus_addr;      /// CAUTION - The terminus_addr holds the full address of the link route. Used only for link routes
     int                      detach_count;       ///< 0, 1, or 2 depending on the state of the lifecycle
     qdr_address_t           *owning_addr;        ///< [ref] Address record that owns this link
     qdr_link_t              *connected_link;     ///< [ref] If this is a link-route, reference the connected link
@@ -593,7 +592,6 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain);
 void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr);
 void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv);
-void qdr_link_free(qdr_link_t *link);
 void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *delivery);

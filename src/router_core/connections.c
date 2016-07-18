@@ -55,12 +55,6 @@ qdr_terminus_t *qdr_terminus_router_data(void)
 // Interface Functions
 //==================================================================================
 
-void qdr_link_free(qdr_link_t *link)
-{
-    free(link->terminus_addr);
-    free_qdr_link_t(link);
-}
-
 qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   incoming,
                                         qdr_connection_role_t  role,
@@ -153,7 +147,7 @@ int qdr_connection_process(qdr_connection_t *conn)
             core->detach_handler(core->user_context, work->link, work->error, false);
             if (work->error)
                 qdr_error_free(work->error);
-            qdr_link_free(work->link);
+            free_qdr_link_t(work->link);
             break;
         }
 
@@ -291,7 +285,6 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->capacity       = conn->link_capacity;
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
-    link->terminus_addr  = 0;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -567,7 +560,6 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
-    link->terminus_addr  = 0;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -959,7 +951,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
         // Clean up the link and all its associated state.
         //
         qdr_link_cleanup_CT(core, conn, link); // link_cleanup disconnects and frees the ref.
-        qdr_link_free(link);
+        free_qdr_link_t(link);
         link_ref = DEQ_HEAD(conn->links);
     }
 
@@ -981,28 +973,6 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     free_qdr_connection_t(conn);
 }
 
-/**
- * Sets the terminus address in the case of a link routed attach.
- */
-static void set_terminus_address(qdr_link_t *link, qd_direction_t dir)
-{
-    qd_link_t *qd_link = (qd_link_t *) qdr_link_get_context(link);
-    char *terminus_addr = 0;
-    if (dir == QD_INCOMING) {
-        terminus_addr = (char*)pn_terminus_get_address(pn_link_remote_target((pn_link_t  *)qd_link_pn(qd_link)));
-    }
-    else {
-        terminus_addr = (char*)pn_terminus_get_address(pn_link_remote_source((pn_link_t  *)qd_link_pn(qd_link)));
-    }
-
-    if (terminus_addr) {
-         char *term_addr = malloc((strlen(terminus_addr) + 3) * sizeof(char));
-         term_addr[0] = '\0';
-         strcat(term_addr, "M0");
-         strcat(term_addr, terminus_addr);
-         link->terminus_addr = term_addr;
-    }
-}
 
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
@@ -1075,7 +1045,6 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     //
                     // This is a link-routed destination, forward the attach to the next hop
                     //
-                    set_terminus_address(link, dir);
                     success = qdr_forward_attach_CT(core, addr, link, source, target);
                     if (!success) {
                         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
@@ -1129,13 +1098,11 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 qdr_terminus_free(target);
             }
 
-            else if (link_route) {
+            else if (link_route)
                 //
                 // This is a link-routed destination, forward the attach to the next hop
                 //
-                set_terminus_address(link, dir);
                 qdr_forward_attach_CT(core, addr, link, source, target);
-            }
 
             else {
                 //
@@ -1354,7 +1321,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NONE);
     } else {
         qdr_link_cleanup_CT(core, conn, link);
-        qdr_link_free(link);
+        free_qdr_link_t(link);
     }
 
     //
