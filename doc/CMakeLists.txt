@@ -20,7 +20,8 @@
 # In old cmake (< 2.8) documentation is built by "make all" so set BUILD_DOC OFF
 # if you don't want that. For new cmake it is only built by "make doc"
 option(BUILD_DOCS "Generate documentation with 'make doc'" ON)
-option(BUILD_DOCS_VERBOSE "Verbose output from doc tools for debugging" OFF)
+option(DOC_VERBOSE "Verbose output from doc tools for debugging" OFF)
+option(DOC_XMLLINT "Use xmllint to verify XML output" OFF)
 
 if(BUILD_DOCS)
   if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}" VERSION_LESS "2.8")
@@ -35,11 +36,6 @@ if(BUILD_DOCS)
     endmacro()
   endif()
 
-  if (BUILD_DOCS_VERBOSE)
-    set(VFLAG "-v")
-  endif()
-
-
   # Popular locations
   set(src ${CMAKE_CURRENT_SOURCE_DIR})
   set(bin ${CMAKE_CURRENT_BINARY_DIR})
@@ -47,6 +43,17 @@ if(BUILD_DOCS)
   set(schema ../python/qpid_dispatch/management/qdrouter.json)
   set(py_management ../python/qpid_dispatch_internal/management)
   set(schema_depends ${schema} ${py_management}/schema_doc.py ${py_management}/schema.py)
+
+  # Flags for doc tools, based on cmake options
+  set(ADOC_FLAGS "--conf-file=${bin}/asciidoc.conf")
+  set(A2X_FLAGS "--asciidoc-opts=--conf-file=${bin}/asciidoc.conf" -D${bin})
+  if (DOC_VERBOSE)
+    set(ADOC_FLAGS ${ADOC_FLAGS} -v)
+    set(A2X_FLAGS ${A2X_FLAGS} -v)
+  endif()
+  if (NOT DOC_XMLLINT)
+    set(A2X_FLAGS ${A2X_FLAGS} --no-xmllint)
+  endif()
 
   # Generate asciidoc fragments from management schema to incorporate in text
   macro(schema_gen script output)
@@ -92,7 +99,6 @@ if(BUILD_DOCS)
     foreach(source index book/book man/qdmanage.8 man/qdrouterd.8 man/qdstat.8 ${bin}/qdrouterd.conf.5)
       get_filename_component(name ${source} NAME)
       set(output ${bin}/${name}.html)
-      set(ADOC_FLAGS ${VFLAG} --conf-file=${bin}/asciidoc.conf)
       add_custom_command(
         OUTPUT ${output} ${output}.in
         # Pretty .html for direct viewing.
@@ -108,8 +114,6 @@ if(BUILD_DOCS)
 
     find_program(A2X_EXE a2x DOC DOC "Generate Unix man pages")
     if (A2X_EXE)
-      set(A2X_FLAGS ${VFLAG} --asciidoc-opts=--conf-file=${bin}/asciidoc.conf -D ${bin})
-
       # Generate man pages.
       foreach(source ${src}/man/qdmanage.8 ${src}/man/qdrouterd.8 ${src}/man/qdstat.8 ${bin}/qdrouterd.conf.5)
         get_filename_component(name ${source} NAME)
