@@ -29,6 +29,7 @@
 typedef struct qd_connection_manager_t qd_connection_manager_t;
 typedef struct qd_config_connector_t qd_config_connector_t;
 typedef struct qd_config_listener_t qd_config_listener_t;
+typedef struct qd_config_ssl_profile_t qd_config_ssl_profile_t;
 
 typedef void (*qd_connection_manager_handler_t) (void *context, qd_connection_t *conn);
 
@@ -50,13 +51,19 @@ void qd_connection_manager_free(qd_connection_manager_t *cm);
 /**
  * Free all the resources associated with a config listener
  */
-void qd_config_listener_free(qd_config_listener_t *cl);
+void qd_config_listener_free(qd_connection_manager_t *cm, qd_config_listener_t *cl);
+
+/**
+ * Free the SSL Profile. Only SSL Profiles that are not referenced from other connectors/listeners can be freed.
+ * @return true if the ssl_profile has been freed, false if it is being referenced and cannot be freed
+ */
+bool qd_config_ssl_profile_free(qd_connection_manager_t *cm, qd_config_ssl_profile_t *ssl_profile);
 
 
 /**
  * Free all the resources associated with a config connector
  */
-void qd_config_connector_free(qd_config_connector_t *cl);
+void qd_config_connector_free(qd_connection_manager_t *cm, qd_config_connector_t *cl);
 
 
 /**

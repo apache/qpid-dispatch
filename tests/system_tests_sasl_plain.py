@@ -17,9 +17,10 @@
 # under the License.
 #
 
-import unittest, os, time
-from subprocess import PIPE, Popen
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT
+import unittest, os, json
+from time import sleep
+from subprocess import PIPE, Popen, STDOUT
+from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
 
 from qpid_dispatch.management.client import Node
 
@@ -394,6 +395,8 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
     def ssl_file(name):
         return os.path.join(DIR, 'ssl_certs', name)
 
+    x_listener_port = None
+
     @classmethod
     def setUpClass(cls):
         """
@@ -409,6 +412,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         cls.routers = []
 
         x_listener_port = cls.tester.get_port()
+        RouterTestVerifyHostNameNo.x_listener_port = x_listener_port
         y_listener_port = cls.tester.get_port()
 
         super(RouterTestVerifyHostNameNo, cls).router('X', [
@@ -433,7 +437,9 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         super(RouterTestVerifyHostNameNo, cls).router('Y', [
                      # This router will act like a client. First an SSL connection will be established and then
                      # we will have SASL plain authentication over SSL.
-                     ('connector', {'addr': '127.0.0.1', 'role': 'inter-router', 'port': x_listener_port,
+                     ('connector', {'name': 'connectorToX',
+                                    'addr': '127.0.0.1', 'role': 'inter-router',
+                                    'port': x_listener_port,
                                     'sslProfile': 'client-ssl-profile',
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
@@ -442,7 +448,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
                                  'routerId': 'QDR.Y'}),
-                     ('listener', {'addr': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
                                      'certDb': cls.ssl_file('ca-certificate.pem'),
                                      'certFile': cls.ssl_file('client-certificate.pem'),
@@ -454,20 +460,26 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         cls.routers[1].wait_ports()
         cls.routers[1].wait_router_connected('QDR.X')
 
-    def test_inter_router_plain_over_ssl_exists(self):
-        """
-        Tests to make sure that an inter-router connection exists between the routers since verifyHostName is 'no'.
-        """
-        local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
+    @staticmethod
+    def ssl_file(name):
+        return os.path.join(DIR, 'ssl_certs', name)
 
-        results = local_node.query(type='org.apache.qpid.dispatch.connection').results
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(), '--indent=-1', '--timeout',
+                                             str(TIMEOUT)], stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception, e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
 
-        self.assertEqual(4, len(results))
-
+    def common_asserts(self, results):
         search = "QDR.X"
         found = False
 
-        for N in range(0,3):
+        for N in range(0, len(results)):
             if results[N][0] == search:
                 found = True
                 break
@@ -485,6 +497,110 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
         # user must be test@domain.com
         self.assertEqual(u'test@domain.com', results[N][16])
+
+    def test_inter_router_plain_over_ssl_exists(self):
+        """
+        Tests to make sure that an inter-router connection exists between the routers since verifyHostName is 'no'.
+        """
+        local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
+
+        results = local_node.query(type='org.apache.qpid.dispatch.connection').results
+
+        self.common_asserts(results)
+
+    def test_zzz_delete_create_connector(self):
+        """
+        Delete an ssl profile before deleting the connector and make sure it fails.
+        Delete an ssl profile after deleting the connector and make sure it succeeds.
+        Re-add the deleted connector and associate it with an ssl profile and make sure
+        that the two routers are able to communicate over the connection.
+        """
+
+        ssl_profile_name = 'client-ssl-profile'
+
+        delete_command = 'DELETE --type=sslProfile --name=' + ssl_profile_name
+
+        cannot_delete = False
+        try:
+            json.loads(self.run_qdmanage(delete_command, address=self.routers[1].addresses[0]))
+        except Exception as e:
+            cannot_delete = True
+            self.assertTrue('ForbiddenStatus: SSL Profile is referenced by other listeners/connectors' in e.message)
+
+        self.assertTrue(cannot_delete)
+
+        # Deleting the connector
+        delete_command = 'DELETE --type=connector --name=connectorToX'
+        self.run_qdmanage(delete_command, address=self.routers[1].addresses[0])
+
+        #Assert here that the connection to QDR.X is gone
+
+        # Re-add connector
+        connector_create_command = 'CREATE --type=connector name=connectorToX host=127.0.0.1 port=' + \
+                                   str(RouterTestVerifyHostNameNo.x_listener_port) + \
+                                   ' saslMechanisms=PLAIN sslProfile=' + ssl_profile_name + \
+                                   ' role=inter-router verifyHostName=no saslUsername=test@domain.com' \
+                                   ' saslPassword=password'
+
+        json.loads(self.run_qdmanage(connector_create_command, address=self.routers[1].addresses[0]))
+        sleep(1)
+        local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
+        results = local_node.query(type='org.apache.qpid.dispatch.connection').results
+        self.common_asserts(results)
+
+    def test_zzz_delete_create_ssl_profile(self):
+        """
+        Deletes a connector and its corresponding ssl profile and recreates both
+        """
+
+        ssl_profile_name = 'client-ssl-profile'
+
+        # Deleting the connector first and then its SSL profile must work.
+        delete_command = 'DELETE --type=connector --name=connectorToX'
+        self.run_qdmanage(delete_command, address=self.routers[1].addresses[0])
+
+        # Delete the connector's associated ssl profile
+        delete_command = 'DELETE --type=sslProfile --name=' + ssl_profile_name
+        self.run_qdmanage(delete_command, address=self.routers[1].addresses[0])
+
+        local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
+        results = local_node.query(type='org.apache.qpid.dispatch.connection').results
+        search = "QDR.X"
+        found = False
+
+        for N in range(0, 3):
+            if results[N][0] == search:
+                found = True
+                break
+
+        self.assertFalse(found)
+
+        # re-create the ssl profile
+        long_type = 'org.apache.qpid.dispatch.sslProfile'
+        ssl_create_command = 'CREATE --type=' + long_type + ' certFile=' + self.ssl_file('client-certificate.pem') + \
+                             ' keyFile=' + self.ssl_file('client-private-key.pem') + ' password=client-password' + \
+                             ' name=' + ssl_profile_name + ' certDb=' + self.ssl_file('ca-certificate.pem')
+
+        output = json.loads(self.run_qdmanage(ssl_create_command, address=self.routers[1].addresses[0]))
+        name = output['name']
+        self.assertEqual(name, ssl_profile_name)
+
+        # Re-add connector
+        connector_create_command = 'CREATE --type=connector name=connectorToX host=127.0.0.1 port=' + \
+                                   str(RouterTestVerifyHostNameNo.x_listener_port) + \
+                                   ' saslMechanisms=PLAIN sslProfile=' + ssl_profile_name + \
+                                   ' role=inter-router verifyHostName=no saslUsername=test@domain.com' \
+                                   ' saslPassword=password'
+
+        json.loads(self.run_qdmanage(connector_create_command, address=self.routers[1].addresses[0]))
+
+        sleep(1)
+
+        local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
+        results = local_node.query(type='org.apache.qpid.dispatch.connection').results
+
+        self.common_asserts(results)
+
 
 if __name__ == '__main__':
     unittest.main(main_module())
