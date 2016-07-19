@@ -17,9 +17,10 @@
 # under the License.
 #
 
-import unittest, os
+import unittest, os, json
+from subprocess import PIPE, STDOUT
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
-from system_test import TestCase, Qdrouterd, main_module, DIR
+from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
 
@@ -31,6 +32,8 @@ except ImportError:
 
 
 class RouterTest(TestCase):
+
+    inter_router_port = None
 
     @staticmethod
     def ssl_config(client_server, connection):
@@ -72,10 +75,8 @@ class RouterTest(TestCase):
         router('A', 'server',
                ('listener', {'role': 'inter-router', 'port': inter_router_port}))
         router('B', 'client',
-               ('connector',
-                {'role': 'inter-router',
-                 'port': inter_router_port,
-                 'verifyHostName': 'no'}))
+               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port,
+                              'verifyHostName': 'no'}))
 
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')
@@ -1099,28 +1100,58 @@ class AttachOnInterRouterTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
-
-
 try:
     SSLDomain(SSLDomain.MODE_CLIENT)
 
     class RouterTestSsl(RouterTest):
 
         @staticmethod
+        def ssl_file(name):
+            return os.path.join(DIR, 'ssl_certs', name)
+
+        def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
+            p = self.popen(
+                ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(), '--indent=-1', '--timeout',
+                                                 str(TIMEOUT)], stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+            out = p.communicate(input)[0]
+            try:
+                p.teardown()
+            except Exception, e:
+                raise Exception("%s\n%s" % (e, out))
+            return out
+
+        @staticmethod
         def ssl_config(client_server, connection):
                 connection[1]['sslProfile'] = 'test-ssl'
 
-                def ssl_file(name):
-                    return os.path.join(DIR, 'ssl_certs', name)
                 return [
                     ('sslProfile', {
                         'name': 'test-ssl',
-                        'certDb': ssl_file('ca-certificate.pem'),
-                        'certFile': ssl_file(client_server+'-certificate.pem'),
-                        'keyFile': ssl_file(client_server+'-private-key.pem'),
+                        'certDb': RouterTestSsl.ssl_file('ca-certificate.pem'),
+                        'certFile': RouterTestSsl.ssl_file(client_server+'-certificate.pem'),
+                        'keyFile': RouterTestSsl.ssl_file(client_server+'-private-key.pem'),
                         'password': client_server+'-password'})]
 
+        def test_zzz_delete_ssl_profile(self):
+            """
+            Delete an ssl profile before deleting the connector and make sure it fails.
+            """
+            delete_command = 'DELETE --type=sslProfile --name=test-ssl'
+            cannot_delete = False
+            try:
+                json.loads(self.run_qdmanage(delete_command, address=self.routers[1].addresses[0]))
+            except Exception as e:
+                cannot_delete = True
+                self.assertTrue('ForbiddenStatus: SSL Profile is referenced by other listeners/connectors' in e.message)
 
+            self.assertTrue(cannot_delete)
+
+            # Deleting the listener first and then the SSL profile must work.
+            delete_command = 'DELETE --type=connector --name=connectorToA'
+            self.run_qdmanage(delete_command, address=self.routers[1].addresses[0])
+
+            delete_command = 'DELETE --type=sslProfile --name=test-ssl'
+            self.run_qdmanage(delete_command, address=self.routers[1].addresses[0])
 
 except SSLUnavailable:
     class RouterTestSsl(TestCase):

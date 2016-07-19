@@ -200,8 +200,7 @@ class AttributeType(object):
     @ivar value: Fixed value for the attribute. Can be a reference.
     @ivar unique: True if the attribute value is unique.
     @ivar description: Description of the attribute type.
-    @ivar annotation: Annotation section or None
-    @ivar defined_in: Annotation or EntityType in which this attribute is defined.
+    @ivar defined_in: EntityType in which this attribute is defined.
     @ivar create: If true the attribute can be set by CREATE.
     @ivar update: If true the attribute can be modified by UPDATE.
     @ivar graph: If true the attribute could be graphed by a console.
@@ -319,16 +318,14 @@ class EntityType(object):
     @ivar short_name: Un-prefixed short name.
     @ivar attributes: Map of L{AttributeType} for entity.
     @ivar singleton: If true only one entity of this type is allowed.
-    @ivar referential: True if an entity/annotation can be referred to by name.
-    @ivar annotations: List of names of sections annotationd by this entity.
+    @ivar referential: True if an entity can be referred to by name from another entity.
     """
     def __init__(self, name, schema, attributes=None, operations=None, operationDefs=None, description="",
-                 fullName=True, singleton=False, deprecated=False, annotations=None, extends=None, referential=False, **kwargs):
+                 fullName=True, singleton=False, deprecated=False, extends=None, referential=False, **kwargs):
         """
         @param name: name of the entity type.
         @param schema: schema for this type.
         @param singleton: True if entity type is a singleton.
-        @param annotations: List of names of annotation types for this entity.
         @param attributes: Map of attributes {name: {type:, default:, required:, unique:}}
         @param description: Human readable description.
         @param operations: Allowed operations, list of operation names.
@@ -347,11 +344,10 @@ class EntityType(object):
             self.attributes = OrderedDict((k, AttributeType(k, defined_in=self, **v))
                                               for k, v in (attributes or {}).iteritems())
             self.operations = operations or []
-            # Bases and annotations are resolved in self.init()
+            # Bases are resolved in self.init()
             self.base = extends
             self.all_bases = []
-            self.annotations = annotations or []
-            # List of annotations that are singletons
+
             self.references = []
             self.singleton = singleton
             self.deprecated = deprecated
@@ -365,7 +361,7 @@ class EntityType(object):
             raise ValidationError, "%s '%s': %s" % (type(self).__name__, name, msg), trace
 
     def init(self):
-        """Find bases and annotations after all types are loaded."""
+        """Find bases after all types are loaded."""
         if self._init: return
         self._init = True
         if self.base:
@@ -373,12 +369,6 @@ class EntityType(object):
             self.base.init()
             self.all_bases = [self.base] + self.base.all_bases
             self._extend(self.base, 'extend')
-        if self.annotations:
-            self.references = [x for x in self.annotations
-                                if self.schema.annotation(x).referential]
-            self.annotations = [self.schema.annotation(a) for a in self.annotations]
-        for a in self.annotations:
-            self._extend(a, 'be annotated')
 
     def _extend(self, other, how):
         """Add attributes and operations from other"""
@@ -407,7 +397,7 @@ class EntityType(object):
 
     @property
     def my_attributes(self):
-        """Return only attribute types defined in this annotation or entity type"""
+        """Return only attribute types defined in this entity type"""
         return [a for a in self.attributes.itervalues() if a.defined_in == self]
 
     def validate(self, attributes, check_singleton=None, **kwargs):
@@ -483,10 +473,6 @@ class EntityType(object):
     def name_is(self, name):
         return self.name == self.schema.long_name(name)
 
-class Annotation(EntityType):
-    """An annotation defines attributes, operations etc. that can be re-used by multiple EntityTypes."""
-    pass
-
 
 
 class Schema(object):
@@ -496,14 +482,12 @@ class Schema(object):
 
     @ivar prefix: Prefix to prepend to short entity type names.
     @ivar entityTypes: Map of L{EntityType} by name.
-    @ivar annotations: Map of L{Annotation} by name.
     @ivar description: Text description of schema.
     """
-    def __init__(self, prefix="", annotations=None, entityTypes=None, description=""):
+    def __init__(self, prefix="", entityTypes=None, description=""):
         """
         @param prefix: Prefix for entity names.
-        @param annotations: Map of  { annotationName: {attributeName: value, ... }}
-        @param entity_types: Map of  { entityTypeName: { singleton:, annotation:[...], attributes:{...}}}
+        @param entity_types: Map of  { entityTypeName: { singleton:, attributes:{...}}}
         @param description: Human readable description.
         """
         if prefix:
@@ -517,7 +501,6 @@ class Schema(object):
             return OrderedDict((self.long_name(k), cls(k, self, **v))
                                for k, v in (defs or {}).iteritems())
 
-        self.annotations = parsedefs(Annotation, annotations)
         self.entity_types = parsedefs(EntityType, entityTypes)
 
         self.all_attributes = set()
@@ -544,8 +527,6 @@ class Schema(object):
         """Return json-friendly representation"""
         return OrderedDict([
             ('prefix', self.prefix),
-            ('annotations',
-             OrderedDict((a.short_name, a.dump()) for a in self.annotations.itervalues())),
             ('entityTypes',
              OrderedDict((e.short_name, e.dump()) for e in self.entity_types.itervalues()))
         ])
@@ -558,9 +539,6 @@ class Schema(object):
 
     def entity_type(self, name, error=True):
         return self._lookup(self.entity_types, name, "No such entity type '%s'", error)
-
-    def annotation(self, name, error=True):
-        return self._lookup(self.annotations, name, "No such annotation '%s'", error)
 
     def validate_entity(self, attributes, check_required=True, add_default=True,
                         check_unique=None, check_singleton=None):

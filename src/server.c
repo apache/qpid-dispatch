@@ -400,6 +400,10 @@ static qd_error_t qd_set_connection_properties(qd_entity_t* entity, qd_connectio
 }
 
 
+qd_error_t qd_entity_refresh_sslProfile(qd_entity_t* entity, void *impl)
+{
+    return QD_ERROR_NONE;
+}
 
 
 qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
@@ -647,7 +651,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         }
 
         // Set up SSL if configured
-        if (config->ssl_enabled) {
+        if (config->ssl_profile) {
             qd_log(qd_server->log_source, QD_LOG_TRACE, "Configuring SSL on %s",
                    log_incoming(logbuf, sizeof(logbuf), cxtr));
             if (listener_setup_ssl(ctx, config, tport) != QD_ERROR_NONE) {
@@ -1229,7 +1233,7 @@ static void cxtr_try_open(void *context)
     //
     // Set up SSL if appropriate
     //
-    if (config->ssl_enabled) {
+    if (config->ssl_profile) {
         pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
 
         if (!domain) {

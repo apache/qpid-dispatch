@@ -92,10 +92,10 @@ class QdrouterTest(unittest.TestCase):
         ]
         self.assertEqual(content, expect)
 
-        content = conf._expand(content)
         expect = [
             [u'router', {u'mode': u'standalone', u'id': u'QDR'}],
-            [u'listener', {u'password': u'secret', u'name': u'l0', u'sslProfileName': u'test-profile', u'saslMechanisms': u'ANONYMOUS'}],
+            [u'sslProfile', {u'password': u'secret', u'name': u'test-profile'}],
+            [u'listener', {u'name': u'l0', u'sslProfile': u'test-profile', u'saslMechanisms': u'ANONYMOUS'}],
             [u'listener', {u'port': u'1234', u'identity': u'l1', u'saslMechanisms': u'ANONYMOUS'}],
             [u'listener', {u'port': u'4567', u'saslMechanisms': u'ANONYMOUS'}]
         ]

@@ -83,32 +83,6 @@ class Config(object):
         sections = json.loads(js_text)
         return sections
 
-
-    def _expand(self, content):
-        """
-        Find annotation sections (defined by schema) in the content,
-        expand references and remove the annotation sections.
-        @param content: ((sectionName:{name:value...}))
-        """
-        def _expand_section(section, annotations):
-            """Expand one section"""
-            attrs = section[1]
-
-            for k in attrs.keys(): # Iterate over keys() because we will modify attr
-                inc = [i[1] for i in annotations if i[0] == k and i[1]['name'] == attrs[k]]
-                if inc:
-                    assert len(inc) == 1
-                    inc = copy(inc[0])
-                    if k == u'sslProfile':
-                        inc[u'sslProfileName'] = inc[u'name']
-                    del inc['name']
-                    attrs.update(inc)
-                    del attrs[k] # Delete the annotation attribute.
-            return section
-        annotations = [s for s in content if self.schema.annotation(s[0], error=False)]
-        return [_expand_section(s, annotations) for s in content
-                if self.schema.is_configuration(self.schema.entity_type(s[0], False))]
-
     def get_config_types(self):
         return self.config_types
 
@@ -128,7 +102,6 @@ class Config(object):
             for et in self.get_config_types():
                 if et.singleton and not [s for s in sections if s[0] == et.short_name]:
                     sections.append((et.short_name, {}))
-            sections = self._expand(sections)
             entities = [dict(type=self.schema.long_name(s[0]), **s[1]) for s in sections]
             self.schema.validate_all(entities)
             self.entities = entities
@@ -186,15 +159,15 @@ def configure_dispatch(dispatch, lib_handle, filename):
     policyDefaultApplication = config.by_type('policy')[0]['defaultApplication']
     policyDefaultApplicationEnabled = config.by_type('policy')[0]['defaultApplicationEnabled']
     # Remaining configuration
-    for t in "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", \
+    for t in "sslProfile", "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", \
              "router.config.address", "router.config.linkRoute", "router.config.autoLink", \
              "policy", "policyRuleset":
         for a in config.by_type(t):
             configure(a)
-            if t == "listener":
+            if t == "sslProfile":
                 display_file_name = a.get('displayNameFile')
                 if display_file_name:
-                    ssl_profile_name = a.get('sslProfileName')
+                    ssl_profile_name = a.get('name')
                     displayname_service.add(ssl_profile_name, display_file_name)
 
     for e in config.entities:
