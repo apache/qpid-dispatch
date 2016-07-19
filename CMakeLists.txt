@@ -155,6 +155,7 @@ add_subdirectory(tests)
 add_subdirectory(python)
 add_subdirectory(router)
 add_subdirectory(doc)
+add_subdirectory(console)
 
 # reconfigure.in is a workaround to force cmake re-configuration. For example,
 # we use GLOB to collect .h files for install and apidoc, so if you _remove_ a
