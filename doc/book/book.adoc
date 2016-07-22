@@ -39,6 +39,12 @@ include::auto_links.adoc[]
 
 :leveloffset: 0
 
+:leveloffset: 2
+
+include::policy.adoc[]
+
+:leveloffset: 0
+
 [[technical-details-and-specifications]]
 Technical Details and Specifications
 ------------------------------------
