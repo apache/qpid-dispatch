@@ -23,12 +23,14 @@ var QDR = (function (QDR) {
 
     QDR.module.controller("QDR.SchemaController", ['$scope', '$location', 'QDRService', function($scope, $location, QDRService) {
 		if (!QDRService.connected) {
-			// we are not connected. we probably got here from a bookmark or manual page reload
-			$location.path("/dispatch_plugin/connect")
-			$location.search('org', "schema");
-
+			QDRService.redirectWhenConnected("schema")
 			return;
 		}
+		// we are currently connected. setup a handler to get notified if we are ever disconnected
+		QDRService.addDisconnectAction( function () {
+			QDRService.redirectWhenConnected("schema")
+			$scope.$apply();
+		})
 
         var keys2kids = function (tree, obj) {
 

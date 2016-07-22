@@ -1137,10 +1137,14 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
         $scope.template = {url: ''};
 
 		if (!QDRService.connected) {
-			// we are not connected. we probably got here from a bookmark or manual page reload
-			$location.path("/dispatch_plugin/connect")
+			QDRService.redirectWhenConnected("overview")
 			return;
 		}
+		// we are currently connected. setup a handler to get notified if we are ever disconnected
+		QDRService.addDisconnectAction( function () {
+			QDRService.redirectWhenConnected("overview")
+			$scope.$apply();
+		})
 
 	/* --------------------------------------------------
 	 *

@@ -82,12 +82,6 @@ var QDR = (function (QDR) {
           //QDR.log.debug("got connection notification");
 			$timeout( function () {
 				$scope.connecting = false;
-				var searchObject = $location.search();
-				var goto = "overview";
-				if (searchObject.org) {
-					goto = searchObject.org;
-				}
-				$location.path(QDR.pluginRoot +"/" + goto);
 			})
         });
         QDRService.connect($scope.formEntity);

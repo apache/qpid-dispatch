@@ -94,10 +94,14 @@ var QDR = (function (QDR) {
 
 		if (!QDRService.connected) {
 			// we are not connected. we probably got here from a bookmark or manual page reload
-			$location.path("/dispatch_plugin/connect")
-			$location.search('org', "topology");
+			QDRService.redirectWhenConnected("topology");
 			return;
 		}
+		// we are currently connected. setup a handler to get notified if we are ever disconnected
+		QDRService.addDisconnectAction( function () {
+			QDRService.redirectWhenConnected("topology");
+			$scope.$apply();
+		})
 
 		QDR.log.debug("started QDR.TopologyController with urlPrefix: " + $location.absUrl());
 		var urlPrefix = $location.absUrl();
@@ -483,7 +487,6 @@ var QDR = (function (QDR) {
 								getLink(parent, nodes.length-1, dir);
 								client++;
 							} else {
-
 								normalsParent[nodeType].normals.push(node)
 							}
 						} else {

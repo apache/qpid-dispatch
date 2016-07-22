@@ -23,7 +23,7 @@ var QDR = (function(QDR) {
 
   // The QDR service handles the connection to
   // the server in the background
-  QDR.module.factory("QDRService", ['$rootScope', '$http', '$resource', '$location', function($rootScope, $http, $resource, $location) {
+  QDR.module.factory("QDRService", ['$rootScope', '$http', '$timeout', '$resource', '$location', function($rootScope, $http, $timeout, $resource, $location) {
     var self = {
 
 	  rhea: require("rhea"),
@@ -57,21 +57,45 @@ var QDR = (function(QDR) {
       executeConnectActions: function() {
         self.connectActions.forEach(function(action) {
           //QDR.log.debug("executing connect action " + action);
-          action.apply();
+			try {
+                action.apply();
+            } catch (e) {
+                // in case the page that registered the handler has been unloaded
+            }
         });
         self.connectActions = [];
+        $timeout( function () {
+            var searchObject = $location.search();
+            var goto = "overview";
+            if (searchObject.org) {
+                goto = searchObject.org;
+            }
+            $location.search('org', null)
+            $location.path(QDR.pluginRoot +"/" + goto);
+        })
+
       },
       executeDisconnectActions: function() {
         self.disconnectActions.forEach(function(action) {
-          action.apply();
+			try {
+                action.apply();
+            } catch (e) {
+                // in case the page that registered the handler has been unloaded
+            }
         });
         self.disconnectActions = [];
       },
       executeUpdatedActions: function() {
         for (action in self.updatedActions) {
-            self.updatedActions[action].apply();
+			try {
+                self.updatedActions[action].apply();
+            } catch (e) {}
         }
       },
+	redirectWhenConnected: function (org) {
+		$location.path("/" + QDR.pluginName + "/connect")
+		$location.search('org', org);
+	},
 
       notifyTopologyDone: function() {
         //QDR.log.debug("got Toplogy done notice");
@@ -150,7 +174,6 @@ var QDR = (function(QDR) {
     
     onSubscription: function() {
         self.getSchema();
-        self.topology.get();
      },
 
     startUpdating: function () {
@@ -446,7 +469,6 @@ var QDR = (function(QDR) {
             //this.miniDump();
             //this.dump();
             self.notifyTopologyDone();
-
          },
          dump: function (prefix) {
             if (prefix)
@@ -607,7 +629,7 @@ var QDR = (function(QDR) {
 				}
 			}
 			self.schema = response;
-            self.notifyTopologyDone();
+	        self.topology.get();
         }, ret.error);
       },
 
@@ -768,6 +790,7 @@ var QDR = (function(QDR) {
 				self.sender = null;
 				self.receiver = null;
 				self.sendable = false;
+				self.gotTopology = false;
 			}
 			var maybeStart = function () {
 				if (okay.connection && okay.sender && okay.receiver && self.sendable && !self.connected) {

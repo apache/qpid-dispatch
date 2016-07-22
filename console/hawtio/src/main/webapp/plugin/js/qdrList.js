@@ -34,10 +34,14 @@ var QDR = (function(QDR) {
 		$scope.details = {};
 		if (!QDRService.connected) {
 			// we are not connected. we probably got here from a bookmark or manual page reload
-			$location.path("/dispatch_plugin/connect")
-			$location.search('org', "list");
+			QDRService.redirectWhenConnected("list");
 			return;
 		}
+		// we are currently connected. setup a handler to get notified if we are ever disconnected
+		QDRService.addDisconnectAction( function () {
+			QDRService.redirectWhenConnected("list")
+			$scope.$apply();
+		})
 
 		$scope.selectedEntity = localStorage['QDRSelectedEntity'];
 		$scope.selectedNode = localStorage['QDRSelectedNode'];
