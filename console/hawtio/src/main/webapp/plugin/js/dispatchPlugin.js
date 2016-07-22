@@ -196,6 +196,11 @@ var QDR = (function(QDR) {
 			QDRChartService.init(); // initialize charting service after we are connected
 		});
 		if (settings && settings.autostart) {
+			QDRService.addDisconnectAction( function () {
+				$location.path(QDR.pluginRoot + "/connect");
+				$location.replace();
+				$rootScope.$apply();
+			})
 			QDRService.addConnectAction(function() {
 				if ($location.path().startsWith(QDR.pluginRoot)) {
 					var lastLocation = localStorage[QDR.LAST_LOCATION];

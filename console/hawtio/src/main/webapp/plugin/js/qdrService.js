@@ -782,7 +782,6 @@ var QDR = (function(QDR) {
 			}
 			var onDisconnect = function () {
 				//QDR.log.warn("Disconnected");
-				self.errorText = "Connection failed"
 				self.connectionError = true;
 				stop();
 				self.executeDisconnectActions();
@@ -798,9 +797,10 @@ var QDR = (function(QDR) {
 	            });
 			}
 			catch (e) {
-				onDisconnect();;
+				QDR.log.debug("exception caught on connect")
+				self.errorText = "Connection failed"
+				onDisconnect();
 			}
-
 			if (!self.connectionError) {
 				connection.on('connection_open', function (context) {
 					QDR.log.debug("connection_opened")
@@ -809,11 +809,14 @@ var QDR = (function(QDR) {
 					okay.sender = false;
 				})
 				connection.on('disconnected', function (context) {
+					QDR.log.debug("connection disconnected")
+					self.errorText = "Unable to connect"
 					onDisconnect();
 				})
 				connection.on('connection_close', function (context) {
-					onDisconnect();
+					QDR.log.debug("connection closed")
 					self.errorText = "Disconnected"
+					onDisconnect();
 				})
 
 				var sender = connection.open_sender();
