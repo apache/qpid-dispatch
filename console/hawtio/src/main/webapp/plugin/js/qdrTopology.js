@@ -513,9 +513,6 @@ var QDR = (function (QDR) {
 				.on('tick', tick)
 				.start()
 
-			//drag = force.drag()
-            //    .on("dragstart", dragstart);
-
 			svg.append("svg:defs").selectAll('marker')
 				.data(["end-arrow", "end-arrow-selected"])      // Different link/path types can be defined here
 				.enter().append("svg:marker")    // This section adds in the arrows
@@ -625,7 +622,7 @@ var QDR = (function (QDR) {
 				}
 				nodeIndex++
 			}
-            QDR.log.warn("unable to find containerIndex for " + _id);
+            //QDR.log.warn("unable to find containerIndex for " + _id);
             return -1;
         }
 
@@ -1289,8 +1286,8 @@ var QDR = (function (QDR) {
 			lsvg.exit().remove();
 			var svgEl = document.getElementById("svglegend"),
 				bb = svgEl.getBBox();
-			svgEl.style.height = bb.y + bb.height;
-			svgEl.style.width = bb.x + bb.width;
+			svgEl.style.height = (bb.y + bb.height) + 'px';
+			svgEl.style.width = (bb.x + bb.width) + 'px';
 
 	        if (!mousedown_node || !selected_node)
 	            return;
