@@ -779,6 +779,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
         //
         qd_field_iterator_t *dnp_address = qdr_terminus_dnp_address(terminus);
         if (dnp_address) {
+            qd_address_iterator_reset_view(dnp_address, ITER_VIEW_ADDRESS_HASH);
             qd_address_iterator_override_prefix(dnp_address, qdr_prefix_for_dir(dir));
             qd_hash_retrieve_prefix(core->addr_hash, dnp_address, (void**) &addr);
             qd_field_iterator_free(dnp_address);
@@ -1098,11 +1099,17 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 qdr_terminus_free(target);
             }
 
-            else if (link_route)
+            else if (link_route) {
                 //
                 // This is a link-routed destination, forward the attach to the next hop
                 //
-                qdr_forward_attach_CT(core, addr, link, source, target);
+                bool success = qdr_forward_attach_CT(core, addr, link, source, target);
+                if (!success) {
+                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                    qdr_terminus_free(source);
+                    qdr_terminus_free(target);
+                }
+            }
 
             else {
                 //
