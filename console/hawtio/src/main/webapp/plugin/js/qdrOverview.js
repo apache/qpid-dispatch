@@ -46,14 +46,14 @@ var QDR = (function (QDR) {
 		    content: '<i class="icon-list"></i> Attributes',
 		    title: "View the attribute values on your selection",
 		    isValid: function (workspace) { return true; },
-		    href: function () { return "#/dispatch-plugin/attributes"; },
+		    href: function () { return "#/" + QDR.pluginName + "/attributes"; },
 		    index: 0
 		},
 		{
 		    content: '<i class="icon-leaf"></i> Operations',
 		    title: "Execute operations on your selection",
 		    isValid: function (workspace) { return true; },
-		    href: function () { return "#/dispatch-plugin/operations"; },
+		    href: function () { return "#/" + QDR.pluginName + "/operations"; },
 		    index: 1
 		}]
 		$scope.activeTab = $scope.subLevelTabs[0];
@@ -294,7 +294,6 @@ var QDR = (function (QDR) {
 						var selItem = data.entity;
 						var nodeId = selItem.uid
 						$("#overtree").dynatree("getTree").activateKey(nodeId);
-
 					}
 	            }
 			};
@@ -686,7 +685,6 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
                         var nodeId = selItem.host
                         // activate Routers->nodeId in the tree
                         $("#overtree").dynatree("getTree").activateKey(nodeId);
-
                     }
                 }
             };
@@ -1115,6 +1113,12 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
             });
 		}
 
+		// expanded is called when a node is expanded
+		// here we save the expanded node so it can be restored when the page reloads
+		var expanded = function (flag, node) {
+			saveExpanded();
+		}
+
 		// activated is called each time a tree node is clicked
 		// based on which node is clicked, load the correct data grid template and start getting the data
 		var activated = function (node) {
@@ -1372,6 +1376,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 					})
 					$('#overtree').dynatree({
 						onActivate: activated,
+						onExpand: expanded,
 						onClick: function (n, e) {
 							if (e.target.className.indexOf('-filter') > -1) {
 								//QDR.log.debug("overtree on click called")
