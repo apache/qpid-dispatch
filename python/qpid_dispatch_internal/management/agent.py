@@ -317,12 +317,12 @@ class VhostEntity(EntityAdapter):
         self._policy.create_ruleset(self.attributes)
 
     def _identifier(self):
-        return self.attributes.get('applicationName')
+        return self.attributes.get('vhostName')
 
 
 class PolicyStatsEntity(EntityAdapter):
     def _identifier(self):
-        return self.attributes.get('applicationName')
+        return self.attributes.get('vhostName')
 
 
 def _host_port_name_identifier(entity):

@@ -38,7 +38,7 @@ class PolicyKeys(object):
     KW_IGNORED_NAME             = "name"
     KW_IGNORED_IDENTITY         = "identity"
     KW_IGNORED_TYPE             = "type"
-    KW_APPLICATION_NAME         = "applicationName"
+    KW_VHOST_NAME         = "vhostName"
 
     # Policy ruleset key words
     KW_MAXCONN                     = "maxConnections"
@@ -100,7 +100,7 @@ class PolicyCompiler(object):
         PolicyKeys.KW_IGNORED_NAME,
         PolicyKeys.KW_IGNORED_IDENTITY,
         PolicyKeys.KW_IGNORED_TYPE,
-        PolicyKeys.KW_APPLICATION_NAME,
+        PolicyKeys.KW_VHOST_NAME,
         PolicyKeys.KW_MAXCONN,
         PolicyKeys.KW_MAXCONNPERHOST,
         PolicyKeys.KW_MAXCONNPERUSER,
@@ -410,7 +410,7 @@ class AppStats(object):
     def refresh_entity(self, attributes):
         """Refresh management attributes"""
         entitymap = {}
-        entitymap[PolicyKeys.KW_APPLICATION_NAME] =     self.my_id
+        entitymap[PolicyKeys.KW_VHOST_NAME] =     self.my_id
         entitymap[PolicyKeys.KW_CONNECTIONS_APPROVED] = self.conn_mgr.connections_approved
         entitymap[PolicyKeys.KW_CONNECTIONS_DENIED] =   self.conn_mgr.connections_denied
         entitymap[PolicyKeys.KW_CONNECTIONS_CURRENT] =  self.conn_mgr.connections_active
@@ -503,7 +503,7 @@ class PolicyLocal(object):
         warnings = []
         diag = []
         candidate = {}
-        name = attributes[PolicyKeys.KW_APPLICATION_NAME]
+        name = attributes[PolicyKeys.KW_VHOST_NAME]
         result = self._policy_compiler.compile_access_ruleset(name, attributes, candidate, warnings, diag)
         if not result:
             raise PolicyError( "Policy '%s' is invalid: %s" % (name, diag[0]) )
@@ -729,7 +729,7 @@ class PolicyLocal(object):
         Test function to load a policy.
         @return:
         """
-        ruleset_str = '["policyAccessRuleset", {"applicationName": "photoserver","maxConnections": 50,"maxConnPerUser": 5,"maxConnPerHost": 20,"userGroups": {"anonymous":       "anonymous","users":           "u1, u2","paidsubscribers": "p1, p2","test":            "zeke, ynot","admin":           "alice, bob","superuser":       "ellen"},"ingressHostGroups": {"Ten18":     "10.18.0.0-10.18.255.255","EllensWS":  "72.135.2.9","TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255","localhost": "127.0.0.1, ::1","TheWorld":  "*"},"ingressPolicies": {"anonymous":       "TheWorld","users":           "TheWorld","paidsubscribers": "TheWorld","test":            "TheLabs","admin":           "Ten18, TheLabs, localhost","superuser":       "EllensWS, localhost"},"connectionAllowDefault": true,'
+        ruleset_str = '["policyAccessRuleset", {"vhostName": "photoserver","maxConnections": 50,"maxConnPerUser": 5,"maxConnPerHost": 20,"userGroups": {"anonymous":       "anonymous","users":           "u1, u2","paidsubscribers": "p1, p2","test":            "zeke, ynot","admin":           "alice, bob","superuser":       "ellen"},"ingressHostGroups": {"Ten18":     "10.18.0.0-10.18.255.255","EllensWS":  "72.135.2.9","TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255","localhost": "127.0.0.1, ::1","TheWorld":  "*"},"ingressPolicies": {"anonymous":       "TheWorld","users":           "TheWorld","paidsubscribers": "TheWorld","test":            "TheLabs","admin":           "Ten18, TheLabs, localhost","superuser":       "EllensWS, localhost"},"connectionAllowDefault": true,'
         ruleset_str += '"settings": {'
         ruleset_str += '"anonymous":      {"maxFrameSize": 111111,"maxMessageSize":   111111,"maxSessionWindow": 111111,"maxSessions":           1,"maxSenders":           11,"maxReceivers":         11,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public",                           "targets": ""},'
         ruleset_str += '"users":          {"maxFrameSize": 222222,"maxMessageSize":   222222,"maxSessionWindow": 222222,"maxSessions":           2,"maxSenders":           22,"maxReceivers":         22,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private",                  "targets": "public"},'

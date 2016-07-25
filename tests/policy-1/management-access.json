@@ -24,7 +24,7 @@
 #    unnamed host- proton 0.13
 [
   ["vhost", {
-      "applicationName": "",
+      "vhostName": "",
       "maxConnections": 50,
       "maxConnPerUser": 5,
       "maxConnPerHost": 20,
@@ -46,7 +46,7 @@
     }
   ],
   ["vhost", {
-      "applicationName": "0.0.0.0",
+      "vhostName": "0.0.0.0",
       "maxConnections": 50,
       "maxConnPerUser": 5,
       "maxConnPerHost": 20,
@@ -68,7 +68,7 @@
     }
   ],
   ["vhost", {
-      "applicationName": "localhost",
+      "vhostName": "localhost",
       "maxConnections": 50,
       "maxConnPerUser": 5,
       "maxConnPerHost": 20,

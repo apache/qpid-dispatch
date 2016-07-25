@@ -1381,13 +1381,13 @@
         },
 
         "vhost": {
-            "description": "Per application definition of the locations from which users may connect and the groups to which users belong.",
+            "description": "AMQP virtual host policy definition of users, user groups, allowed remote hosts, and AMQP restrictions.",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
-                "applicationName": {
+                "vhostName": {
                     "type": "string",
-                    "description": "The application name.",
+                    "description": "The vhost name.",
                     "required": true
                 },
                 "maxConnections": {
@@ -1446,12 +1446,12 @@
         },
 
         "policyStats": {
-            "description": "Per application connection and access statistics.",
+            "description": "Virtual host connection and access statistics.",
             "extends": "operationalEntity",
             "attributes": {
-                "applicationName": {
+                "vhostName": {
                     "type": "string",
-                    "description": "The application name."
+                    "description": "The vhost name."
                 },
                 "connectionsApproved": {"type": "integer", "graph": true},
                 "connectionsDenied": {"type": "integer", "graph": true},

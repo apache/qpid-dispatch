@@ -20,7 +20,7 @@
     # The safari policy ruleset
     ["vhost",
         {
-            "applicationName": "safari",
+            "vhostName": "safari",
             "maxConnections": 10,
             "maxConnPerUser": 2,
             "maxConnPerHost": 5,
