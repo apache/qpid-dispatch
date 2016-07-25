@@ -65,8 +65,8 @@ struct qd_policy_t {
     void                 *py_policy_manager;
                           // configured settings
     int                   max_connection_limit;
-    char                 *policyFolder;
-    bool                  enableAccessRules;
+    char                 *policyDir;
+    bool                  enableVhostPolicy;
                           // live statistics
     int                   connections_processed;
     int                   connections_denied;
@@ -83,8 +83,8 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
     policy->qd                   = qd;
     policy->log_source           = qd_log_source("POLICY");
     policy->max_connection_limit = 0;
-    policy->policyFolder         = 0;
-    policy->enableAccessRules    = false;
+    policy->policyDir         = 0;
+    policy->enableVhostPolicy    = false;
     policy->connections_processed= 0;
     policy->connections_denied   = 0;
     policy->connections_current  = 0;
@@ -99,8 +99,8 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
  **/
 void qd_policy_free(qd_policy_t *policy)
 {
-    if (policy->policyFolder)
-        free(policy->policyFolder);
+    if (policy->policyDir)
+        free(policy->policyDir);
     free(policy);
 }
 
@@ -110,19 +110,19 @@ void qd_policy_free(qd_policy_t *policy)
 
 qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
 {
-    policy->max_connection_limit = qd_entity_opt_long(entity, "maximumConnections", 0); CHECK();
+    policy->max_connection_limit = qd_entity_opt_long(entity, "maxConnections", 0); CHECK();
     if (policy->max_connection_limit < 0)
-        return qd_error(QD_ERROR_CONFIG, "maximumConnections must be >= 0");
-    policy->policyFolder =
-        qd_entity_opt_string(entity, "policyFolder", 0); CHECK();
-    policy->enableAccessRules = qd_entity_opt_bool(entity, "enableAccessRules", false); CHECK();
-    qd_log(policy->log_source, QD_LOG_INFO, "Policy configured maximumConnections: %d, policyFolder: '%s', access rules enabled: '%s'",
-           policy->max_connection_limit, policy->policyFolder, (policy->enableAccessRules ? "true" : "false"));
+        return qd_error(QD_ERROR_CONFIG, "maxConnections must be >= 0");
+    policy->policyDir =
+        qd_entity_opt_string(entity, "policyDir", 0); CHECK();
+    policy->enableVhostPolicy = qd_entity_opt_bool(entity, "enableVhostPolicy", false); CHECK();
+    qd_log(policy->log_source, QD_LOG_INFO, "Policy configured maxConnections: %d, policyDir: '%s', access rules enabled: '%s'",
+           policy->max_connection_limit, policy->policyDir, (policy->enableVhostPolicy ? "true" : "false"));
     return QD_ERROR_NONE;
 
 error:
-    if (policy->policyFolder)
-        free(policy->policyFolder);
+    if (policy->policyDir)
+        free(policy->policyDir);
     qd_policy_free(policy);
     return qd_error_code();
 }
@@ -222,7 +222,7 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
 
     n_connections -= 1;
     assert (n_connections >= 0);
-    if (policy->enableAccessRules) {
+    if (policy->enableVhostPolicy) {
         // HACK ALERT: TODO: This should be deferred to a Python thread
         qd_python_lock_state_t lock_state = qd_python_lock();
         PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
@@ -262,7 +262,7 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
 // allow or deny the Open. Denied Open attempts are
 // effected by returning Open and then Close_with_condition.
 //
-/** Look up user/host/app in python policyRuleset and give the AMQP Open
+/** Look up user/host/app in python vhost and give the AMQP Open
  *  a go-no_go decision. Return false if the mechanics of calling python
  *  fails. A policy lookup will deny the connection by returning a blank
  *  usergroup name in the name buffer.
@@ -707,7 +707,7 @@ void qd_policy_amqp_open(void *context, bool discard)
         qd_policy_t *policy = qd->policy;
         bool connection_allowed = true;
 
-        if (policy->enableAccessRules) {
+        if (policy->enableVhostPolicy) {
             // Open connection or not based on policy.
             pn_transport_t *pn_trans = pn_connection_transport(conn);
             const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);

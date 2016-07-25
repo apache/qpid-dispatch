@@ -80,14 +80,13 @@ class PolicyManager(object):
     #
     # Management interface to set the default application
     #
-    def set_default_application(self, name, enabled):
+    def set_default_vhost(self, name):
         """
         Set default application
         @param name:
-        @param enabled
         @return:
         """
-        self._policy_local.set_default_application(name, enabled)
+        self._policy_local.set_default_vhost(name)
 
     #
     # Runtime query interface

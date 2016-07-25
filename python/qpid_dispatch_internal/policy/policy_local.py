@@ -487,14 +487,10 @@ class PolicyLocal(object):
         # Entries destroyed as sockets closed
         self._connections = {}
 
-        # _default_application is a string
-        #  holds the name of the policyRuleset to use when the
+        # _default_vhost is a string
+        #  holds the name of the vhost to use when the
         #  open.hostname is not found in the rulesetdb
-        self._default_application = ""
-
-        # _default_application_enabled is a boolean
-        #  controls default application fallback logic
-        self._default_application_enabled = False
+        self._default_vhost = ""
 
     #
     # Service interfaces
@@ -559,22 +555,24 @@ class PolicyLocal(object):
         """
         return self.rulesetdb.keys()
 
-    def set_default_application(self, name, enabled):
+    def set_default_vhost(self, name):
         """
-        Set the default application name and control its enablement.
-        Raise PolicyError if the named application is enabled but absent.
+        Set the default vhost name.
         @param name: the name of the default application
-        @param enabled: default application ruleset logic is active
         @return: none
         """
-        self._default_application = name
-        self._default_application_enabled = enabled
-        if enabled:
-            if not name in self.policy_db_get_names():
-                raise PolicyError("Policy fallback defaultApplication '%s' does not exist" % name)
-            self._manager.log_info("Policy fallback defaultApplication is enabled: '%s'" % name)
-        else:
-            self._manager.log_info("Policy fallback defaultApplication is disabled")
+        self._default_vhost = name
+        self._manager.log_info("Policy fallback defaultVhost is enabled: '%s'" % name)
+
+
+    def default_vhost_enabled(self):
+        """
+        The default vhost is enabled if the name is not blank and
+        the vhost is defined in rulesetdb.
+        @return:
+        """
+        return not self._default_vhost == "" and self._default_vhost in self.rulesetdb
+
 
     #
     # Runtime query interface
@@ -596,8 +594,8 @@ class PolicyLocal(object):
         try:
             app = app_in
             if not app_in in self.rulesetdb:
-                if self._default_application_enabled:
-                    app = self._default_application
+                if self.default_vhost_enabled():
+                    app = self._default_vhost
                 else:
                     self._manager.log_info(
                         "DENY AMQP Open for user '%s', host '%s', application '%s': "
@@ -684,8 +682,9 @@ class PolicyLocal(object):
         """
         try:
             appname = appname_in
-            if not appname in self.rulesetdb and self._default_application_enabled:
-                appname = self._default_application
+            if not appname in self.rulesetdb:
+                if self.default_vhost_enabled():
+                    appname = self._default_vhost
 
             if not appname in self.rulesetdb:
                 self._manager.log_info(

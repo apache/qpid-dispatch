@@ -312,7 +312,7 @@ class PolicyEntity(EntityAdapter):
         return self.attributes.get('module')
 
 
-class PolicyRulesetEntity(EntityAdapter):
+class VhostEntity(EntityAdapter):
     def create(self):
         self._policy.create_ruleset(self.attributes)
 

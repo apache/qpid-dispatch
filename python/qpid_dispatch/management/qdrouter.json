@@ -1346,38 +1346,31 @@
             "extends": "configurationEntity",
             "singleton": true,
             "attributes": {
-                "maximumConnections": {
+                "maxConnections": {
                     "type": "integer",
                     "default": 0,
-                    "description": "Global maximum number of concurrent client connections allowed. Zero implies no limit. This limit is always enforced even if no other policy settings have been defined.",
+                    "description": "Global maximum number of concurrent client connections allowed. This limit is always enforced even if no other policy settings have been defined.",
                     "required": false,
                     "create": true
                 },
-                "enableAccessRules": {
+                "enableVhostPolicy": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Enable user rule set processing and connection denial.",
+                    "description": "Enable vhost policy connection denial, and resource limit enforcement",
                     "required": false,
                     "create": true
                 },
-                "policyFolder": {
+                "policyDir": {
                     "type": "path",
                     "default": "",
-                    "description": "The absolute path to a folder that holds policyRuleset definition .json files. For a small system the rulesets may all be defined in this file. At a larger scale it is better to have the policy files in their own folder and to have none of the rulesets defined here. All rulesets in all .json files in this folder are processed.",
+                    "description": "Absolute path to a directory that holds vhost definition .json files. All vhost definitions in all .json files in this directory are processed.",
                     "required": false,
                     "create": true
                 },
-                "defaultApplication": {
+                "defaultVhost": {
                     "type": "string",
-                    "default": "",
-                    "description": "Application policyRuleset to use for connections with no open.hostname or a hostname that does not match any existing policy. For users that don't wish to use open.hostname or any multi-tennancy feature, this default policy can be the only policy in effect for the network.",
-                    "required": false,
-                    "create": true
-                },
-                "defaultApplicationEnabled": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Enable defaultApplication policy fallback logic.",
+                    "default": "$default",
+                    "description": "Vhost rule set name to use for connections with a vhost that is otherwise not defined. Default vhost processing may be disabled either by erasing the definition of defaultVhost or by not defining a vhost object named '$default'.",
                     "required": false,
                     "create": true
                 },
@@ -1387,7 +1380,7 @@
             }
         },
 
-        "policyRuleset": {
+        "vhost": {
             "description": "Per application definition of the locations from which users may connect and the groups to which users belong.",
             "extends": "configurationEntity",
             "operations": ["CREATE"],

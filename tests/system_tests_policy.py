@@ -35,7 +35,7 @@ class AbsoluteConnectionCountLimit(TestCase):
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
-            ('policy', {'maximumConnections': 2})
+            ('policy', {'maxConnections': 2, 'enableVhostPolicy': 'false'})
         ])
 
         cls.router = cls.tester.qdrouterd('conn-limit-router', config, wait=True)
@@ -82,7 +82,7 @@ class LoadPolicyFromFolder(TestCase):
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
-            ('policy', {'maximumConnections': 2, 'policyFolder': policy_config_path, 'enableAccessRules': 'true'})
+            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'})
         ])
 
         cls.router = cls.tester.qdrouterd('conn-limit-router', config, wait=True)
@@ -104,7 +104,7 @@ class LoadPolicyFromFolder(TestCase):
     def test_verify_policies_are_loaded(self):
         addr = self.address()
 
-        rulesets = json.loads(self.run_qdmanage('query --type=policyRuleset'))
+        rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
         self.assertEqual(len(rulesets), 5)
 
 class SenderReceiverLimits(TestCase):
@@ -121,7 +121,7 @@ class SenderReceiverLimits(TestCase):
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
-            ('policy', {'maximumConnections': 2, 'policyFolder': policy_config_path, 'enableAccessRules': 'true'})
+            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'})
         ])
 
         cls.router = cls.tester.qdrouterd('SenderReceiverLimits', config, wait=True)

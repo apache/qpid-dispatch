@@ -19,7 +19,7 @@
 
 [
     # The boardwalk policy ruleset
-    ["policyRuleset",
+    ["vhost",
         {
             "applicationName": "boardwalk",
             "maxConnections": 10,

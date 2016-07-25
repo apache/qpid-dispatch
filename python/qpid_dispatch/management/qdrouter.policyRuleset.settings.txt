@@ -21,9 +21,9 @@ The schema `qdrouterd.json` is a JSON format file that defines annotations and
 entity types of the Qpid Dispatch Router management model.  The model is based
 on the AMQP management specification.
 
-Schema entity `policyRuleset` includes several attributes of type map. In the current form the management schema provides no way to define the keys and values in these attributes. These maps cannot be specified in the schema and they cannot be checked by the schema processing. 
+Schema entity `vhost` includes several attributes of type map. In the current form the management schema provides no way to define the keys and values in these attributes. These maps cannot be specified in the schema and they cannot be checked by the schema processing. 
 
-Until the schema is extended specify embedded maps this document describes the policyRuleset settings.
+Until the schema is extended specify embedded maps this document describes the vhost settings.
 
   "policyAppSettings": {
       "description": "For a given user group define the policy settings applied to the user's AMQP connection.",
