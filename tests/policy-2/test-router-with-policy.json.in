@@ -32,8 +32,8 @@
     ["vhost", {
       "vhostName": "photoserver",
       "maxConnections": 50,
-      "maxConnPerUser": 5,
-      "maxConnPerHost": 20,
+      "maxConnectionsPerUser": 5,
+      "maxConnectionsPerHost": 20,
       "userGroups": {
         "anonymous":       "anonymous",
         "users":           "u1, u2",
@@ -148,8 +148,8 @@
   ["vhost", {
       "vhostName": "",
       "maxConnections": 50,
-      "maxConnPerUser": 5,
-      "maxConnPerHost": 20,
+      "maxConnectionsPerUser": 5,
+      "maxConnectionsPerHost": 20,
       "connectionAllowDefault": true,
       "settings": {
         "default" : {
@@ -170,8 +170,8 @@
   ["vhost", {
       "vhostName": "0.0.0.0",
       "maxConnections": 50,
-      "maxConnPerUser": 5,
-      "maxConnPerHost": 20,
+      "maxConnectionsPerUser": 5,
+      "maxConnectionsPerHost": 20,
       "connectionAllowDefault": true,
       "settings": {
         "default" : {
@@ -192,8 +192,8 @@
   ["vhost", {
       "vhostName": "localhost",
       "maxConnections": 50,
-      "maxConnPerUser": 5,
-      "maxConnPerHost": 20,
+      "maxConnectionsPerUser": 5,
+      "maxConnectionsPerHost": 20,
       "connectionAllowDefault": true,
       "settings": {
         "default" : {

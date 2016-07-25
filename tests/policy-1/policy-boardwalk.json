@@ -23,8 +23,8 @@
         {
             "vhostName": "boardwalk",
             "maxConnections": 10,
-            "maxConnPerUser": 2,
-            "maxConnPerHost": 5,
+            "maxConnectionsPerUser": 2,
+            "maxConnectionsPerHost": 5,
             "userGroups": {
                 "anonymous": "anonymous",
                 "users": "u1 u2 u3",

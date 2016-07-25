@@ -4,8 +4,8 @@
   ["vhost", {
       "vhostName": "",
       "maxConnections": 50,
-      "maxConnPerUser": 2,
-      "maxConnPerHost": 4,
+      "maxConnectionsPerUser": 2,
+      "maxConnectionsPerHost": 4,
       "connectionAllowDefault": true,
       "settings": {
         "default" : {
@@ -26,8 +26,8 @@
   ["vhost", {
       "vhostName": "0.0.0.0",
       "maxConnections": 50,
-      "maxConnPerUser": 2,
-      "maxConnPerHost": 4,
+      "maxConnectionsPerUser": 2,
+      "maxConnectionsPerHost": 4,
       "connectionAllowDefault": true,
       "settings": {
         "default" : {
@@ -48,8 +48,8 @@
   ["vhost", {
       "vhostName": "localhost",
       "maxConnections": 50,
-      "maxConnPerUser": 2,
-      "maxConnPerHost": 4,
+      "maxConnectionsPerUser": 2,
+      "maxConnectionsPerHost": 4,
       "connectionAllowDefault": true,
       "settings": {
         "default" : {

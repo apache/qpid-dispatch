@@ -1397,14 +1397,14 @@
                     "required": false,
                     "create": true
                 },
-                "maxConnPerUser": {
+                "maxConnectionsPerUser": {
                     "type": "integer",
                     "default": 0,
                     "description": "Maximum number of concurrent client connections allowed for any single user. Zero implies no limit.",
                     "required": false,
                     "create": true
                 },
-                "maxConnPerHost": {
+                "maxConnectionsPerHost": {
                     "type": "integer",
                     "default": 0,
                     "description": "Maximum number of concurrent client connections allowed for any remote host. Zero implies no limit.",
