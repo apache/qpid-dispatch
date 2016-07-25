@@ -25,7 +25,7 @@ from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
 
 from proton import Message, Endpoint
 from proton.handlers import MessagingHandler
-from proton.reactor import AtMostOnce, Container
+from proton.reactor import AtMostOnce, Container, DynamicNodeProperties
 from proton.utils import BlockingConnection, LinkDetached
 
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler, DrainNoMessagesHandler, DrainNoMoreMessagesHandler
@@ -466,6 +466,11 @@ class LinkRoutePatternTest(TestCase):
         drain_support.run()
         self.assertEqual(None, drain_support.error)
 
+    def test_dynamic_source(self):
+        test = DynamicSourceTest(self.routers[1].addresses[0], self.routers[1].addresses[1])
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class DeliveryTagsTest(MessagingHandler):
     def __init__(self, sender_address, listening_address, qdstat_address):
@@ -587,6 +592,57 @@ class CloseWithUnsettledTest(MessagingHandler):
 
     def on_message(self, event):
         self.conn_normal.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class DynamicSourceTest(MessagingHandler):
+    ##
+    ## This test verifies that a dynamic source can be propagated via link-route to
+    ## a route-container.
+    ##
+    def __init__(self, normal_addr, route_addr):
+        super(DynamicSourceTest, self).__init__(prefetch=0, auto_accept=False)
+        self.normal_addr = normal_addr
+        self.route_addr  = route_addr
+        self.dest = "pulp.task.DynamicSource"
+        self.address = "DynamicSourceAddress"
+        self.error = None
+
+    def timeout(self):
+        self.error = "Timeout Expired - Check for cores"
+        self.conn_normal.close()
+        self.conn_route.close()
+
+    def on_start(self, event):
+        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.conn_route = event.container.connect(self.route_addr)
+
+    def on_connection_opened(self, event):
+        if event.connection == self.conn_route:
+            self.conn_normal = event.container.connect(self.normal_addr)
+        elif event.connection == self.conn_normal:
+            self.receiver = event.container.create_receiver(self.conn_normal, None, dynamic=True,options=DynamicNodeProperties({"x-opt-qd.address":u"pulp.task.abc"}))
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            if self.receiver.remote_source.address != self.address:
+                self.error = "Expected %s, got %s" % (self.address, self.receiver.remote_source.address)
+            self.conn_normal.close()
+            self.conn_route.close()
+            self.timer.cancel()
+
+    def on_link_opening(self, event):
+        if event.sender:
+            self.sender = event.sender
+            if not self.sender.remote_source.dynamic:
+                self.error = "Expected sender with dynamic source"
+                self.conn_normal.close()
+                self.conn_route.close()
+                self.timer.cancel()
+            self.sender.source.address = self.address
+            self.sender.open()
 
     def run(self):
         Container(self).run()

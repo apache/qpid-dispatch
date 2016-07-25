@@ -169,7 +169,7 @@ qd_field_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term)
             if (pn_data_next(props)) {
                 pn_bytes_t val = pn_data_get_string(props);
                 if (val.start && *val.start != '\0')
-                    return qd_field_iterator_string(val.start);
+                    return qd_field_iterator_binary(val.start, val.size);
             }
         }
     }
