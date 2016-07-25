@@ -24,6 +24,7 @@
 
 static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_link_check_credit_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
@@ -180,6 +181,14 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
     action->args.connection.credit = credit;
     action->args.connection.drain  = drain_mode;
 
+    qdr_action_enqueue(core, action);
+}
+
+
+void qdr_link_check_credit(qdr_core_t *core, qdr_link_t *link)
+{
+    qdr_action_t *action = qdr_action(qdr_link_check_credit_CT, "link_check_credit");
+    action->args.connection.link = link;
     qdr_action_enqueue(core, action);
 }
 
@@ -427,6 +436,16 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     //
     if (activate)
         qdr_connection_activate_CT(core, link->conn);
+}
+
+
+static void qdr_link_check_credit_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    if (discard)
+        return;
+
+    qdr_link_t *link = action->args.connection.link;
+    qdr_link_issue_credit_CT(core, link, 0, false);
 }
 
 

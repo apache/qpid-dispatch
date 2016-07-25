@@ -1076,6 +1076,11 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_20_batched_settlement(self):
+        test = BatchedSettlementTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
     def test_connection_properties(self):
         connection = BlockingConnection(self.router.addresses[0],
                                         timeout=60,
@@ -1382,6 +1387,61 @@ class AppearanceOfBalanceTest(MessagingHandler):
 
     def on_accepted(self, event):
         self.send()
+        self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+
+class BatchedSettlementTest(MessagingHandler):
+    def __init__(self, address):
+        super(BatchedSettlementTest, self).__init__(auto_accept=False)
+        self.address = address
+        self.dest = "balanced.BatchedSettlement"
+        self.error = None
+        self.count       = 20000
+        self.batch_count = 200
+        self.n_sent      = 0
+        self.n_received  = 0
+        self.n_settled   = 0
+        self.batch       = []
+
+    def check_if_done(self):
+        if self.n_settled == self.count:
+            self.timer.cancel()
+            self.conn.close()
+
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d rcvd=%d settled=%d" % \
+                     (self.n_sent, self.n_received, self.n_settled)
+        self.conn.close()
+
+    def on_start(self, event):
+        self.timer    = event.reactor.schedule(20, Timeout(self))
+        self.conn     = event.container.connect(self.address)
+        self.sender   = event.container.create_sender(self.conn, self.dest)
+        self.receiver = event.container.create_receiver(self.conn, self.dest)
+
+    def send(self):
+        if self.n_sent < self.count:
+            while self.sender.credit > 0:
+                msg = Message(body="Batch-Test")
+                self.sender.send(msg)
+                self.n_sent += 1
+
+    def on_sendable(self, event):
+        if self.n_sent < self.count:
+            self.send()
+
+    def on_message(self, event):
+        self.n_received += 1
+        self.batch.insert(0, event.delivery)
+        if len(self.batch) == self.batch_count:
+            while len(self.batch) > 0:
+                self.accept(self.batch.pop())
+
+    def on_accepted(self, event):
+        self.n_settled += 1
         self.check_if_done()
 
     def run(self):

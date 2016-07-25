@@ -191,6 +191,16 @@ int qdr_connection_process(qdr_connection_t *conn)
             if (link->incremental_credit > 0) {
                 core->flow_handler(core->user_context, link, link->incremental_credit);
                 link->incremental_credit = 0;
+
+                //
+                // Note:  This unprotected read of a CT-only value is safe in this case.
+                // If there is pending credit on the link that needs to be pushed down to
+                // Proton, we need to give the core a kick to make sure it is sent.  It is
+                // possible that no more credit will be issued to cause the movement of CT
+                // credit to Proton credit (see DISPATCH-458).
+                //
+                if (link->incremental_credit_CT > 0)
+                    qdr_link_check_credit(core, link);
             }
             if (link->drain_mode_changed) {
                 core->drain_handler(core->user_context, link, link->drain_mode);

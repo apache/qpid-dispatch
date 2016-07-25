@@ -627,4 +627,11 @@ qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,
                        qd_composed_field_t     *body);
+
+//
+// Cause the core to check credit on an incoming link that might have CT credit but
+// no IO/Proton credit.
+//
+void qdr_link_check_credit(qdr_core_t *core, qdr_link_t *link);
+
 #endif
