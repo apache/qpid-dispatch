@@ -273,9 +273,9 @@ class PolicyCompiler(object):
         """
         cerror = []
         # rulesets may not come through standard config so make nice defaults
-        policy_out[PolicyKeys.KW_MAXCONN] = 0
-        policy_out[PolicyKeys.KW_MAXCONNPERHOST] = 0
-        policy_out[PolicyKeys.KW_MAXCONNPERUSER] = 0
+        policy_out[PolicyKeys.KW_MAXCONN] = 65535
+        policy_out[PolicyKeys.KW_MAXCONNPERHOST] = 65535
+        policy_out[PolicyKeys.KW_MAXCONNPERUSER] = 65535
         policy_out[PolicyKeys.KW_USER_GROUPS] = {}
         policy_out[PolicyKeys.KW_INGRESS_HOST_GROUPS] = {}
         policy_out[PolicyKeys.KW_INGRESS_POLICIES] = {}

@@ -82,7 +82,7 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
 
     policy->qd                   = qd;
     policy->log_source           = qd_log_source("POLICY");
-    policy->max_connection_limit = 0;
+    policy->max_connection_limit = 65535;
     policy->policyDir         = 0;
     policy->enableVhostPolicy    = false;
     policy->connections_processed= 0;
@@ -110,7 +110,7 @@ void qd_policy_free(qd_policy_t *policy)
 
 qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
 {
-    policy->max_connection_limit = qd_entity_opt_long(entity, "maxConnections", 0); CHECK();
+    policy->max_connection_limit = qd_entity_opt_long(entity, "maxConnections", 65535); CHECK();
     if (policy->max_connection_limit < 0)
         return qd_error(QD_ERROR_CONFIG, "maxConnections must be >= 0");
     policy->policyDir =
@@ -192,22 +192,15 @@ bool qd_policy_socket_accept(void *context, const char *hostname)
 {
     qd_policy_t *policy = (qd_policy_t *)context;
     bool result = true;
-
-    if (policy->max_connection_limit == 0) {
-        // Policy not in force; connection counted and allowed
+    if (n_connections < policy->max_connection_limit) {
+        // connection counted and allowed
         n_connections += 1;
+        qd_log(policy->log_source, QD_LOG_TRACE, "ALLOW Connection '%s' based on global connection count. N= %d", hostname, n_connections);
     } else {
-        // Policy in force
-        if (n_connections < policy->max_connection_limit) {
-            // connection counted and allowed
-            n_connections += 1;
-            qd_log(policy->log_source, QD_LOG_TRACE, "ALLOW Connection '%s' based on global connection count. N= %d", hostname, n_connections);
-        } else {
-            // connection denied
-            result = false;
-            n_denied += 1;
-            qd_log(policy->log_source, QD_LOG_INFO, "DENY Connection '%s' based on global connection count. N= %d", hostname, n_connections);
-        }
+        // connection denied
+        result = false;
+        n_denied += 1;
+        qd_log(policy->log_source, QD_LOG_INFO, "DENY Connection '%s' based on global connection count. N= %d", hostname, n_connections);
     }
     n_processed += 1;
     return result;
@@ -247,11 +240,9 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
         }
         qd_python_unlock(lock_state);
     }
-    if (policy->max_connection_limit > 0) {
-        const char *hostname = qdpn_connector_name(conn->pn_cxtr);
-        qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d. N= %d.",
-                hostname, conn->n_sessions, conn->n_senders, conn->n_receivers, n_connections);
-    }
+    const char *hostname = qdpn_connector_name(conn->pn_cxtr);
+    qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d. nConnections= %d.",
+            hostname, conn->n_sessions, conn->n_senders, conn->n_receivers, n_connections);
 }
 
 

@@ -1348,7 +1348,7 @@
             "attributes": {
                 "maxConnections": {
                     "type": "integer",
-                    "default": 0,
+                    "default": 65535,
                     "description": "Global maximum number of concurrent client connections allowed. This limit is always enforced even if no other policy settings have been defined.",
                     "required": false,
                     "create": true
@@ -1356,7 +1356,7 @@
                 "enableVhostPolicy": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Enable vhost policy connection denial, and resource limit enforcement",
+                    "description": "Enable vhost policy user groups, connection denial, and resource limit enforcement",
                     "required": false,
                     "create": true
                 },
@@ -1392,22 +1392,22 @@
                 },
                 "maxConnections": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Maximum number of concurrent client connections allowed. Zero implies no limit.",
+                    "default": 65535,
+                    "description": "Maximum number of concurrent client connections allowed.",
                     "required": false,
                     "create": true
                 },
                 "maxConnectionsPerUser": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Maximum number of concurrent client connections allowed for any single user. Zero implies no limit.",
+                    "default": 65535,
+                    "description": "Maximum number of concurrent client connections allowed for any single user.",
                     "required": false,
                     "create": true
                 },
                 "maxConnectionsPerHost": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Maximum number of concurrent client connections allowed for any remote host. Zero implies no limit.",
+                    "default": 65535,
+                    "description": "Maximum number of concurrent client connections allowed for any remote host.",
                     "required": false,
                     "create": true
                 },
