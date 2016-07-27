@@ -25,13 +25,18 @@ Schema entity `vhost` includes several attributes of type map. In the current fo
 
 Until the schema is extended specify embedded maps this document describes the vhost settings.
 
-  "policyAppSettings": {
-      "description": "For a given user group define the policy settings applied to the user's AMQP connection.",
+  "vhostUserGroupSettings": {
+      "description": "For a given user group define group membership, remote hosts, the policy settings applied to the user's AMQP connection.",
       "extends": "configurationEntity",
       "attributes": {
-          "userGroupName": {
+          "users": {
               "type": "string",
-              "description": "The user group to which these settings apply.",
+              "description": "CSV string or list of authenticated user names. A user may belong to one group only.",
+              "required": true
+          },
+          "remoteHosts": {
+              "type": "string",
+              "description": "CSV string of numeric host IP addresses or address ranges from which the users may connect.",
               "required": true
           },
           "maxFrameSize": {
@@ -75,7 +80,7 @@ Until the schema is extended specify embedded maps this document describes the v
               "required": false,
               "create": true
           },
-          "allowDynamicSrc": {
+          "allowDynamicSource": {
               "type": "boolean",
               "description": "This connection is allowed to use the dynamic link source feature.",
               "default": false,

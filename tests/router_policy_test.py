@@ -157,7 +157,7 @@ class PolicyFile(TestCase):
         self.assertTrue(upolicy['maxSenders']               == 44)
         self.assertTrue(upolicy['maxReceivers']             == 44)
         self.assertTrue(upolicy['allowAnonymousSender'])
-        self.assertTrue(upolicy['allowDynamicSrc'])
+        self.assertTrue(upolicy['allowDynamicSource'])
         self.assertTrue(upolicy['targets'] == 'private')
         self.assertTrue(upolicy['sources'] == 'private')
 
@@ -217,7 +217,7 @@ class PolicyFileApplicationFallback(TestCase):
         self.assertTrue(upolicy['maxSenders']               == 44)
         self.assertTrue(upolicy['maxReceivers']             == 44)
         self.assertTrue(upolicy['allowAnonymousSender'])
-        self.assertTrue(upolicy['allowDynamicSrc'])
+        self.assertTrue(upolicy['allowDynamicSource'])
         self.assertTrue(upolicy['targets'] == 'private')
         self.assertTrue(upolicy['sources'] == 'private')
 

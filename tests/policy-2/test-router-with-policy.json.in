@@ -34,111 +34,102 @@
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
-      "userGroups": {
-        "anonymous":       "anonymous",
-        "users":           "u1, u2",
-        "paidsubscribers": "p1, p2",
-        "test":            "zeke, ynot",
-        "admin":           "alice, bob",
-        "superuser":       "ellen"
-      },
-      "ingressHostGroups": {
-        "Ten18":     "10.18.0.0-10.18.255.255",
-        "EllensWS":  "72.135.2.9",
-        "TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255",
-        "localhost": "127.0.0.1, ::1",
-        "TheWorld":  "*"
-      },
-      "ingressPolicies": {
-        "anonymous":       "TheWorld",
-        "users":           "TheWorld",
-        "paidsubscribers": "TheWorld",
-        "test":            "TheLabs",
-        "admin":           "Ten18, TheLabs, localhost",
-        "superuser":       "EllensWS, localhost"
-      },
-      "connectionAllowDefault": true,
-      "settings": {
+      "allowUnknownUser": true,
+      "groups": {
         "anonymous" : {
+          "users":            "anonymous",
+          "remoteHosts":      "*",
           "maxFrameSize":     111111,
           "maxMessageSize":   111111,
           "maxSessionWindow": 111111,
           "maxSessions":           1,
           "maxSenders":           11,
           "maxReceivers":         11,
-          "allowDynamicSrc":      false,
+          "allowDynamicSource":   false,
           "allowAnonymousSender": false,
           "sources": "public",
           "targets": ""
         },
         "users" : {
+          "users":            "u1, u2",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      false,
+          "allowDynamicSource":   false,
           "allowAnonymousSender": false,
           "sources": "public, private",
           "targets": "public"
         },
         "paidsubscribers" : {
+          "users":            "p1, p2",
+          "remoteHosts":      "*",
           "maxFrameSize":     333333,
           "maxMessageSize":   333333,
           "maxSessionWindow": 333333,
           "maxSessions":           3,
           "maxSenders":           33,
           "maxReceivers":         33,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": false,
           "sources": "public, private",
           "targets": "public, private"
         },
         "test" : {
+          "users":            "zeke, ynot",
+          "remoteHosts":      "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255",
           "maxFrameSize":     444444,
           "maxMessageSize":   444444,
           "maxSessionWindow": 444444,
           "maxSessions":           4,
           "maxSenders":           44,
           "maxReceivers":         44,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "private",
           "targets": "private"
         },
         "admin" : {
+          "users":            "alice, bob",
+          "remoteHosts":      "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255, 10.18.0.0-10.18.255.255, 127.0.0.1, ::1",
           "maxFrameSize":     555555,
           "maxMessageSize":   555555,
           "maxSessionWindow": 555555,
           "maxSessions":           5,
           "maxSenders":           55,
           "maxReceivers":         55,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "public, private, management",
           "targets": "public, private, management"
         },
         "superuser" : {
+          "users":            "ellen",
+          "remoteHosts":      "72.135.2.9, 127.0.0.1, ::1",
           "maxFrameSize":     666666,
           "maxMessageSize":   666666,
           "maxSessionWindow": 666666,
           "maxSessions":           6,
           "maxSenders":           66,
           "maxReceivers":         66,
-          "allowDynamicSrc":      false,
+          "allowDynamicSource":      false,
           "allowAnonymousSender": false,
           "sources": "public, private, management, root",
           "targets": "public, private, management, root"
         },
-        "default" : {
+        "$default" : {
+          "users":            "*",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      false,
+          "allowDynamicSource":      false,
           "allowAnonymousSender": false,
           "sources": "public, private",
           "targets": "public"
@@ -150,16 +141,18 @@
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
-      "connectionAllowDefault": true,
-      "settings": {
-        "default" : {
+      "allowUnknownUser": true,
+      "groups": {
+        "$default" : {
+          "users":            "*",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "public, private, $management",
           "targets": "public, private, $management"
@@ -172,16 +165,18 @@
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
-      "connectionAllowDefault": true,
-      "settings": {
-        "default" : {
+      "allowUnknownUser": true,
+      "groups": {
+        "$default" : {
+          "users":            "*",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":      true,
           "allowAnonymousSender": true,
           "sources": "public, private, $management",
           "targets": "public, private, $management"
@@ -194,16 +189,18 @@
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
-      "connectionAllowDefault": true,
-      "settings": {
-        "default" : {
+      "allowUnknownUser": true,
+      "groups": {
+        "$default" : {
+          "users":            "*",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":      true,
           "allowAnonymousSender": true,
           "sources": "public, private, $management",
           "targets": "public, private, $management"

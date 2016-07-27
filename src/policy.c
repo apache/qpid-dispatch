@@ -336,7 +336,7 @@ bool qd_policy_open_lookup_user(
                     settings->maxSenders           = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSenders", 0);
                     settings->maxReceivers         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxReceivers", 0);
                     settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
-                    settings->allowDynamicSrc      = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSrc", false);
+                    settings->allowDynamicSource      = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
                     settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
                     settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
                     settings->denialCounts         = (qd_policy_denial_counts_t*)
@@ -651,7 +651,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     // Approve receiver link based on source
     bool dynamic_src = pn_terminus_is_dynamic(pn_link_remote_source(pn_link));
     if (dynamic_src) {
-        bool lookup = qd_conn->policy_settings->allowDynamicSrc;
+        bool lookup = qd_conn->policy_settings->allowDynamicSource;
         qd_log(qd_conn->server->qd->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
             "%s AMQP Attach receiver dynamic source for user '%s', host '%s', app '%s',",
             (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, app);

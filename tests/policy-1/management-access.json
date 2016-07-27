@@ -28,7 +28,7 @@
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
-      "connectionAllowDefault": true,
+      "allowUnknownUser": true,
       "settings": {
         "default" : {
           "maxFrameSize":     222222,
@@ -37,7 +37,7 @@
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":      true,
           "allowAnonymousSender": true,
           "sources": "$management",
           "targets": "$management"
@@ -50,7 +50,7 @@
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
-      "connectionAllowDefault": true,
+      "allowUnknownUser": true,
       "settings": {
         "default" : {
           "maxFrameSize":     222222,
@@ -59,7 +59,7 @@
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":      true,
           "allowAnonymousSender": true,
           "sources": "$management",
           "targets": "$management"
@@ -72,7 +72,7 @@
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
-      "connectionAllowDefault": true,
+      "allowUnknownUser": true,
       "settings": {
         "default" : {
           "maxFrameSize":     222222,
@@ -81,7 +81,7 @@
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":      true,
           "allowAnonymousSender": true,
           "sources": "$management",
           "targets": "$management"

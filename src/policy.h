@@ -48,7 +48,7 @@ struct qd_policy__settings_s {
     int  maxSessions;
     int  maxSenders;
     int  maxReceivers;
-    bool allowDynamicSrc;
+    bool allowDynamicSource;
     bool allowAnonymousSender;
     char *sources;
     char *targets;

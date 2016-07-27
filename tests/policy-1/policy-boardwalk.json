@@ -40,7 +40,7 @@
                 "anonymous": "Ten18, TheLabs",
                 "superuser": "Localhost, EllensWS"
             },
-            "connectionAllowDefault": true,
+            "allowUnknownUser": true,
             "settings": {
                 "anonymous": {
                     "maxFrameSize": 111111,
@@ -49,7 +49,7 @@
                     "maxSessions": 1,
                     "maxSenders": 11,
                     "maxReceivers": 11,
-                    "allowDynamicSrc": false,
+                    "allowDynamicSource": false,
                     "allowAnonymousSender": false,
                     "sources": "public",
                     "targets": ""
@@ -61,7 +61,7 @@
                     "maxSessions": 2,
                     "maxSenders": 22,
                     "maxReceivers": 22,
-                    "allowDynamicSrc": false,
+                    "allowDynamicSource": false,
                     "allowAnonymousSender": false,
                     "sources": "public, private",
                     "targets": "public"
@@ -73,7 +73,7 @@
                     "maxSessions": 6,
                     "maxSenders": 66,
                     "maxReceivers": 66,
-                    "allowDynamicSrc": false,
+                    "allowDynamicSource": false,
                     "allowAnonymousSender": false,
                     "sources": "public, private, management, root",
                     "targets": "public, private, management, root"
@@ -85,7 +85,7 @@
                     "maxSessions": 2,
                     "maxSenders": 22,
                     "maxReceivers": 22,
-                    "allowDynamicSrc": false,
+                    "allowDynamicSource": false,
                     "allowAnonymousSender": false,
                     "sources": "public, private",
                     "targets": "public"
