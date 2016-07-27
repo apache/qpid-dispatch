@@ -1346,38 +1346,31 @@
             "extends": "configurationEntity",
             "singleton": true,
             "attributes": {
-                "maximumConnections": {
+                "maxConnections": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Global maximum number of concurrent client connections allowed. Zero implies no limit. This limit is always enforced even if no other policy settings have been defined.",
+                    "default": 65535,
+                    "description": "Global maximum number of concurrent client connections allowed. This limit is always enforced even if no other policy settings have been defined.",
                     "required": false,
                     "create": true
                 },
-                "enableAccessRules": {
+                "enableVhostPolicy": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Enable user rule set processing and connection denial.",
+                    "description": "Enable vhost policy user groups, connection denial, and resource limit enforcement",
                     "required": false,
                     "create": true
                 },
-                "policyFolder": {
+                "policyDir": {
                     "type": "path",
                     "default": "",
-                    "description": "The absolute path to a folder that holds policyRuleset definition .json files. For a small system the rulesets may all be defined in this file. At a larger scale it is better to have the policy files in their own folder and to have none of the rulesets defined here. All rulesets in all .json files in this folder are processed.",
+                    "description": "Absolute path to a directory that holds vhost definition .json files. All vhost definitions in all .json files in this directory are processed.",
                     "required": false,
                     "create": true
                 },
-                "defaultApplication": {
+                "defaultVhost": {
                     "type": "string",
-                    "default": "",
-                    "description": "Application policyRuleset to use for connections with no open.hostname or a hostname that does not match any existing policy. For users that don't wish to use open.hostname or any multi-tennancy feature, this default policy can be the only policy in effect for the network.",
-                    "required": false,
-                    "create": true
-                },
-                "defaultApplicationEnabled": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Enable defaultApplication policy fallback logic.",
+                    "default": "$default",
+                    "description": "Vhost rule set name to use for connections with a vhost that is otherwise not defined. Default vhost processing may be disabled either by erasing the definition of defaultVhost or by not defining a vhost object named '$default'.",
                     "required": false,
                     "create": true
                 },
@@ -1387,63 +1380,45 @@
             }
         },
 
-        "policyRuleset": {
-            "description": "Per application definition of the locations from which users may connect and the groups to which users belong.",
+        "vhost": {
+            "description": "AMQP virtual host policy definition of users, user groups, allowed remote hosts, and AMQP restrictions.",
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
-                "applicationName": {
+                "id": {
                     "type": "string",
-                    "description": "The application name.",
+                    "description": "The vhost name.",
                     "required": true
                 },
                 "maxConnections": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Maximum number of concurrent client connections allowed. Zero implies no limit.",
+                    "default": 65535,
+                    "description": "Maximum number of concurrent client connections allowed.",
                     "required": false,
                     "create": true
                 },
-                "maxConnPerUser": {
+                "maxConnectionsPerUser": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Maximum number of concurrent client connections allowed for any single user. Zero implies no limit.",
+                    "default": 65535,
+                    "description": "Maximum number of concurrent client connections allowed for any single user.",
                     "required": false,
                     "create": true
                 },
-                "maxConnPerHost": {
+                "maxConnectionsPerHost": {
                     "type": "integer",
-                    "default": 0,
-                    "description": "Maximum number of concurrent client connections allowed for any remote host. Zero implies no limit.",
+                    "default": 65535,
+                    "description": "Maximum number of concurrent client connections allowed for any remote host.",
                     "required": false,
                     "create": true
                 },
-                "userGroups": {
-                    "type": "map",
-                    "description": "A map where each key is a user group name and the corresponding value is a CSV string naming the users in that group. Users who are assigned to one or more groups are deemed 'restricted'. Restricted users are subject to connection ingress policy and are assigned policy settings based on the assigned user groups. Unrestricted users may be allowed or denied. If unrestricted users are allowed to connect then they are assigned to user group default.",
-                    "required": false,
-                    "create": true
-                },
-                "ingressHostGroups": {
-                    "type": "map",
-                    "description": "A map where each key is an ingress host group name and the corresponding value is a CSV string naming the IP addresses or address ranges in that group. IP addresses may be FQDN strings or numeric IPv4 or IPv6 host addresses. A host range is two host addresses of the same address family separated with a hyphen.  The wildcard host address '*' represents any host address.",
-                    "required": false,
-                    "create": true
-                },
-                "ingressPolicies": {
-                    "type": "map",
-                    "description": "A map where each key is a user group name and the corresponding value is a CSV string naming the ingress host group names that restrict the ingress host for the user group. Users who are members of the user group are allowed to connect only from a host in one of the named ingress host groups.",
-                    "required": false,
-                    "create": true
-                },
-                "connectionAllowDefault": {
+                "allowUnknownUser": {
                     "type": "boolean",
                     "description": "Unrestricted users, those who are not members of a defined user group, are allowed to connect to this application. Unrestricted users are assigned to the 'default' user group and receive 'default' settings.",
                     "default": false,
                     "required": false,
                     "create": true
                 },
-                "settings": {
+                "groups": {
                     "type": "map",
                     "description": "A map where each key is a user group name and the value is a map of the corresponding settings for that group.",
                     "required": false,
@@ -1453,12 +1428,12 @@
         },
 
         "policyStats": {
-            "description": "Per application connection and access statistics.",
+            "description": "Virtual host connection and access statistics.",
             "extends": "operationalEntity",
             "attributes": {
-                "applicationName": {
+                "id": {
                     "type": "string",
-                    "description": "The application name."
+                    "description": "The vhost name."
                 },
                 "connectionsApproved": {"type": "integer", "graph": true},
                 "connectionsDenied": {"type": "integer", "graph": true},

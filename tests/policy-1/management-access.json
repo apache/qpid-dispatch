@@ -23,21 +23,23 @@
 #    localhost   - proton 0.13
 #    unnamed host- proton 0.13
 [
-  ["policyRuleset", {
-      "applicationName": "",
+  ["vhost", {
+      "id": "",
       "maxConnections": 50,
-      "maxConnPerUser": 5,
-      "maxConnPerHost": 20,
-      "connectionAllowDefault": true,
-      "settings": {
-        "default" : {
+      "maxConnectionsPerUser": 5,
+      "maxConnectionsPerHost": 20,
+      "allowUnknownUser": true,
+      "groups": {
+        "$default" : {
+          "users":            "*",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "$management",
           "targets": "$management"
@@ -45,21 +47,23 @@
       }
     }
   ],
-  ["policyRuleset", {
-      "applicationName": "0.0.0.0",
+  ["vhost", {
+      "id": "0.0.0.0",
       "maxConnections": 50,
-      "maxConnPerUser": 5,
-      "maxConnPerHost": 20,
-      "connectionAllowDefault": true,
-      "settings": {
-        "default" : {
+      "maxConnectionsPerUser": 5,
+      "maxConnectionsPerHost": 20,
+      "allowUnknownUser": true,
+      "groups": {
+        "$default" : {
+          "users":            "*",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "$management",
           "targets": "$management"
@@ -67,21 +71,23 @@
       }
     }
   ],
-  ["policyRuleset", {
-      "applicationName": "localhost",
+  ["vhost", {
+      "id": "localhost",
       "maxConnections": 50,
-      "maxConnPerUser": 5,
-      "maxConnPerHost": 20,
-      "connectionAllowDefault": true,
-      "settings": {
-        "default" : {
+      "maxConnectionsPerUser": 5,
+      "maxConnectionsPerHost": 20,
+      "allowUnknownUser": true,
+      "groups": {
+        "$default" : {
+          "users":            "*",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSrc":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "$management",
           "targets": "$management"

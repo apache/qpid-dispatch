@@ -22,6 +22,7 @@
 """
 
 import json
+import pdb
 from policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr
 
 """
@@ -38,27 +39,25 @@ class PolicyKeys(object):
     KW_IGNORED_NAME             = "name"
     KW_IGNORED_IDENTITY         = "identity"
     KW_IGNORED_TYPE             = "type"
-    KW_APPLICATION_NAME         = "applicationName"
+    KW_VHOST_NAME               = "id"
 
     # Policy ruleset key words
     KW_MAXCONN                     = "maxConnections"
-    KW_MAXCONNPERHOST              = "maxConnPerHost"
-    KW_MAXCONNPERUSER              = "maxConnPerUser"
-    KW_USER_GROUPS                 = "userGroups"
-    KW_INGRESS_HOST_GROUPS         = "ingressHostGroups"
-    KW_INGRESS_POLICIES            = "ingressPolicies"
-    KW_CONNECTION_ALLOW_DEFAULT    = "connectionAllowDefault"
-    KW_SETTINGS                    = "settings"
+    KW_MAXCONNPERHOST              = "maxConnectionsPerHost"
+    KW_MAXCONNPERUSER              = "maxConnectionsPerUser"
+    KW_CONNECTION_ALLOW_DEFAULT    = "allowUnknownUser"
+    KW_GROUPS                      = "groups"
 
     # Policy settings key words
-    KW_USER_GROUP_NAME          = "userGroupName"
+    KW_USERS                    = "users"
+    KW_REMOTE_HOSTS             = "remoteHosts"
     KW_MAX_FRAME_SIZE           = "maxFrameSize"
     KW_MAX_MESSAGE_SIZE         = "maxMessageSize"
     KW_MAX_SESSION_WINDOW       = "maxSessionWindow"
     KW_MAX_SESSIONS             = "maxSessions"
     KW_MAX_SENDERS              = "maxSenders"
     KW_MAX_RECEIVERS            = "maxReceivers"
-    KW_ALLOW_DYNAMIC_SRC        = "allowDynamicSrc"
+    KW_ALLOW_DYNAMIC_SRC        = "allowDynamicSource"
     KW_ALLOW_ANONYMOUS_SENDER   = "allowAnonymousSender"
     KW_SOURCES                  = "sources"
     KW_TARGETS                  = "targets"
@@ -72,7 +71,7 @@ class PolicyKeys(object):
 
     # What settings does a user get when allowed to connect but
     # not restricted by a user group?
-    KW_DEFAULT_SETTINGS         = "default"
+    KW_DEFAULT_SETTINGS         = "$default"
 
     # Config file separator character for two IP addresses in a range
     KC_CONFIG_IP_SEP            = "-"
@@ -100,18 +99,17 @@ class PolicyCompiler(object):
         PolicyKeys.KW_IGNORED_NAME,
         PolicyKeys.KW_IGNORED_IDENTITY,
         PolicyKeys.KW_IGNORED_TYPE,
-        PolicyKeys.KW_APPLICATION_NAME,
+        PolicyKeys.KW_VHOST_NAME,
         PolicyKeys.KW_MAXCONN,
         PolicyKeys.KW_MAXCONNPERHOST,
         PolicyKeys.KW_MAXCONNPERUSER,
-        PolicyKeys.KW_USER_GROUPS,
-        PolicyKeys.KW_INGRESS_HOST_GROUPS,
-        PolicyKeys.KW_INGRESS_POLICIES,
         PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT,
-        PolicyKeys.KW_SETTINGS
+        PolicyKeys.KW_GROUPS
         ]
 
     allowed_settings_options = [
+        PolicyKeys.KW_USERS,
+        PolicyKeys.KW_REMOTE_HOSTS,
         PolicyKeys.KW_MAX_FRAME_SIZE,
         PolicyKeys.KW_MAX_MESSAGE_SIZE,
         PolicyKeys.KW_MAX_SESSION_WINDOW,
@@ -154,14 +152,15 @@ class PolicyCompiler(object):
         return True
 
 
-    def compile_connection_groups(self, name, submap_in, submap_out, warnings, errors):
+    def compile_connection_group(self, vhostname, groupname, val, list_out, warnings, errors):
         """
         Handle an ingressHostGroups submap.
         Each origin value is verified. On a successful run the submap
         is replaced parsed lists of HostAddr objects.
-        @param[in] name application name
-        @param[in] submap_in user input origin list as text strings
-        @param[out] submap_out user inputs replaced with HostAddr objects
+        @param[in] vhostname vhost name
+        @param[in] groupname vhost/group name
+        @param[in] val origin list as text string
+        @param[out] list_out user inputs replaced with HostAddr objects
         @param[out] warnings nonfatal irregularities observed
         @param[out] errors descriptions of failure
         @return - origins is usable. If True then warnings[] may contain useful
@@ -169,26 +168,37 @@ class PolicyCompiler(object):
                   warnings[] may contain info and errors[0] will hold the
                   description of why the origin was rejected.
         """
-        key = PolicyKeys.KW_INGRESS_HOST_GROUPS
-        for coname in submap_in:
+        key = PolicyKeys.KW_REMOTE_HOSTS
+        # convert val string to list of host specs
+        if type(val) is str:
+            # 'abc, def, mytarget'
+            val = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
+        elif type(val) is list:
+            # ['abc', 'def', 'mytarget']
+            pass
+        elif type(val) is unicode:
+            # u'abc, def, mytarget'
+            val = [x.strip(' ') for x in str(val).split(PolicyKeys.KC_CONFIG_LIST_SEP)]
+        else:
+            errors.append(
+                "Policy vhost '%s' user group '%s' option '%s' has illegal value '%s'. Type must be 'str' or 'list' but is '%s;" %
+                (vhostname, groupname, key, val, type(val)))
+            return False
+        for coname in val:
             try:
-                ostr = str(submap_in[coname])
-                olist = [x.strip(' ') for x in ostr.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
-                submap_out[coname] = []
-                for co in olist:
-                    coha = HostAddr(co, PolicyKeys.KC_CONFIG_IP_SEP)
-                    submap_out[coname].append(coha)
+                coha = HostAddr(coname, PolicyKeys.KC_CONFIG_IP_SEP)
+                list_out.append(coha)
             except Exception, e:
-                errors.append("Application '%s' option '%s' connectionOption '%s' failed to translate: '%s'." %
-                                (name, key, coname, e))
+                errors.append("Policy vhost '%s' user group '%s' option '%s' connectionOption '%s' failed to translate: '%s'." %
+                                (vhostname, groupname, key, coname, e))
                 return False
         return True
 
 
-    def compile_app_settings(self, appname, usergroup, policy_in, policy_out, warnings, errors):
+    def compile_app_settings(self, vhostname, usergroup, policy_in, policy_out, warnings, errors):
         """
         Compile a schema from processed json format to local internal format.
-        @param[in] name application name
+        @param[in] name vhost name
         @param[in] policy_in user config settings
         @param[out] policy_out validated Internal format
         @param[out] warnings nonfatal irregularities observed
@@ -199,12 +209,14 @@ class PolicyCompiler(object):
                   description of why the policy was rejected.
         """
         # rulesets may not come through standard config so make nice defaults
-        policy_out[PolicyKeys.KW_MAX_FRAME_SIZE] = 65536
+        policy_out[PolicyKeys.KW_USERS] = ''
+        policy_out[PolicyKeys.KW_REMOTE_HOSTS] = ''
+        policy_out[PolicyKeys.KW_MAX_FRAME_SIZE] = 2147483647
         policy_out[PolicyKeys.KW_MAX_MESSAGE_SIZE] = 0
         policy_out[PolicyKeys.KW_MAX_SESSION_WINDOW] = 2147483647
-        policy_out[PolicyKeys.KW_MAX_SESSIONS] = 10
-        policy_out[PolicyKeys.KW_MAX_SENDERS] = 10
-        policy_out[PolicyKeys.KW_MAX_RECEIVERS] = 10
+        policy_out[PolicyKeys.KW_MAX_SESSIONS] = 65536
+        policy_out[PolicyKeys.KW_MAX_SENDERS] = 2147483647
+        policy_out[PolicyKeys.KW_MAX_RECEIVERS] = 2147483647
         policy_out[PolicyKeys.KW_ALLOW_DYNAMIC_SRC] = False
         policy_out[PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER] = False
         policy_out[PolicyKeys.KW_SOURCES] = ''
@@ -213,8 +225,8 @@ class PolicyCompiler(object):
         cerror = []
         for key, val in policy_in.iteritems():
             if key not in self.allowed_settings_options:
-                warnings.append("Application '%s' user group '%s' option '%s' is ignored." %
-                                (appname, usergroup, key))
+                warnings.append("Policy vhost '%s' user group '%s' option '%s' is ignored." %
+                                (vhostname, usergroup, key))
             if key in [PolicyKeys.KW_MAX_FRAME_SIZE,
                        PolicyKeys.KW_MAX_MESSAGE_SIZE,
                        PolicyKeys.KW_MAX_RECEIVERS,
@@ -223,19 +235,27 @@ class PolicyCompiler(object):
                        PolicyKeys.KW_MAX_SESSIONS
                        ]:
                 if not self.validateNumber(val, 0, 0, cerror):
-                    errors.append("Application '%s' user group '%s' option '%s' has error '%s'." %
-                                  (appname, usergroup, key, cerror[0]))
+                    errors.append("Policy vhost '%s' user group '%s' option '%s' has error '%s'." %
+                                  (vhostname, usergroup, key, cerror[0]))
                     return False
                 policy_out[key] = val
+            elif key == PolicyKeys.KW_REMOTE_HOSTS:
+                # Conection groups are lists of IP addresses that need to be
+                # converted into binary structures for comparisons.
+                val_out = []
+                if not self.compile_connection_group(vhostname, usergroup, val, val_out, warnings, errors):
+                    return False
+                policy_out[key] = val_out
             elif key in [PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER,
                          PolicyKeys.KW_ALLOW_DYNAMIC_SRC
                          ]:
                 if not type(val) is bool:
-                    errors.append("Application '%s' user group '%s' option '%s' has illegal boolean value '%s'." %
-                                  (appname, usergroup, key, val))
+                    errors.append("Policy vhost '%s' user group '%s' option '%s' has illegal boolean value '%s'." %
+                                  (vhostname, usergroup, key, val))
                     return False
                 policy_out[key] = val
-            elif key in [PolicyKeys.KW_SOURCES,
+            elif key in [PolicyKeys.KW_USERS,
+                         PolicyKeys.KW_SOURCES,
                          PolicyKeys.KW_TARGETS
                          ]:
                 # accept a string or list
@@ -249,8 +269,8 @@ class PolicyCompiler(object):
                     # u'abc, def, mytarget'
                     val = [x.strip(' ') for x in str(val).split(PolicyKeys.KC_CONFIG_LIST_SEP)]
                 else:
-                    errors.append("Application '%s' user group '%s' option '%s' has illegal value '%s'. Type must be 'str' or 'list' but is '%s;" %
-                                  (appname, usergroup, key, val, type(val)))
+                    errors.append("Policy vhost '%s' user group '%s' option '%s' has illegal value '%s'. Type must be 'str' or 'list' but is '%s;" %
+                                  (vhostname, usergroup, key, val, type(val)))
                 # deduplicate address lists
                 val = list(set(val))
                 # output result is CSV string with no white space between values: 'abc,def,mytarget'
@@ -261,7 +281,7 @@ class PolicyCompiler(object):
     def compile_access_ruleset(self, name, policy_in, policy_out, warnings, errors):
         """
         Compile a schema from processed json format to local internal format.
-        @param[in] name application name
+        @param[in] name vhost name
         @param[in] policy_in raw policy to be validated
         @param[out] policy_out validated Internal format
         @param[out] warnings nonfatal irregularities observed
@@ -273,67 +293,36 @@ class PolicyCompiler(object):
         """
         cerror = []
         # rulesets may not come through standard config so make nice defaults
-        policy_out[PolicyKeys.KW_MAXCONN] = 0
-        policy_out[PolicyKeys.KW_MAXCONNPERHOST] = 0
-        policy_out[PolicyKeys.KW_MAXCONNPERUSER] = 0
-        policy_out[PolicyKeys.KW_USER_GROUPS] = {}
-        policy_out[PolicyKeys.KW_INGRESS_HOST_GROUPS] = {}
-        policy_out[PolicyKeys.KW_INGRESS_POLICIES] = {}
+        policy_out[PolicyKeys.KW_MAXCONN] = 65535
+        policy_out[PolicyKeys.KW_MAXCONNPERHOST] = 65535
+        policy_out[PolicyKeys.KW_MAXCONNPERUSER] = 65535
         policy_out[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT] = False
-        policy_out[PolicyKeys.KW_SETTINGS] = {}
+        policy_out[PolicyKeys.KW_GROUPS] = {}
 
         # validate the options
         for key, val in policy_in.iteritems():
             if key not in self.allowed_ruleset_options:
-                warnings.append("Application '%s' option '%s' is ignored." %
+                warnings.append("Policy vhost '%s' option '%s' is ignored." %
                                 (name, key))
             if key in [PolicyKeys.KW_MAXCONN,
                        PolicyKeys.KW_MAXCONNPERHOST,
                        PolicyKeys.KW_MAXCONNPERUSER
                        ]:
                 if not self.validateNumber(val, 0, 65535, cerror):
-                    msg = ("Application '%s' option '%s' has error '%s'." % 
+                    msg = ("Policy vhost '%s' option '%s' has error '%s'." % 
                            (name, key, cerror[0]))
                     errors.append(msg)
                     return False
                 policy_out[key] = val
-            elif key in [PolicyKeys.KW_USER_GROUPS,
-                         PolicyKeys.KW_INGRESS_HOST_GROUPS,
-                         PolicyKeys.KW_INGRESS_POLICIES
-                         ]:
-                try:
-                    if not type(val) is dict:
-                        errors.append("Application '%s' option '%s' must be of type 'dict' but is '%s'" %
-                                      (name, key, type(val)))
-                        return False
-                    if key == PolicyKeys.KW_INGRESS_HOST_GROUPS:
-                        # Conection groups are lists of IP addresses that need to be
-                        # converted into binary structures for comparisons.
-                        val_out = {}
-                        if not self.compile_connection_groups(name, val, val_out, warnings, errors):
-                            return False
-                        policy_out[key] = {}
-                        policy_out[key].update(val_out)
-                    else:
-                        # deduplicate ingressPolicy and userGroups lists
-                        for k,v in val.iteritems():
-                            v = [x.strip(' ') for x in v.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
-                            v = list(set(v))
-                            val[k] = v
-                        policy_out[key] = val
-                except Exception, e:
-                    errors.append("Application '%s' option '%s' error processing map: %s" %
-                                  (name, key, e))
-                    return False
             elif key in [PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]:
                 if not type(val) is bool:
-                    errors.append("Application '%s' option '%s' must be of type 'bool' but is '%s'" %
+                    errors.append("Policy vhost '%s' option '%s' must be of type 'bool' but is '%s'" %
                                   (name, key, type(val)))
                     return False
                 policy_out[key] = val
-            elif key in [PolicyKeys.KW_SETTINGS]:
+            elif key in [PolicyKeys.KW_GROUPS]:
                 if not type(val) is dict:
-                    errors.append("Application '%s' option '%s' must be of type 'dict' but is '%s'" %
+                    errors.append("Policy vhost '%s' option '%s' must be of type 'dict' but is '%s'" %
                                   (name, key, type(val)))
                     return False
                 for skey, sval in val.iteritems():
@@ -344,37 +333,28 @@ class PolicyCompiler(object):
                     policy_out[key][skey].update(newsettings)
 
         # Verify that each user is in only one group.
-        # Verify that each user group has defined settings
         # Create user-to-group map for looking up user's group
         policy_out[PolicyKeys.RULESET_U2G_MAP] = {}
-        if PolicyKeys.KW_USER_GROUPS in policy_out:
-            for group, userlist in policy_out[PolicyKeys.KW_USER_GROUPS].iteritems():
-                for user in userlist:
-                    if user in policy_out[PolicyKeys.RULESET_U2G_MAP]:
-                        errors.append("Application '%s' user '%s' is in multiple user groups '%s' and '%s'" %
-                                      (name, user, policy_out[PolicyKeys.RULESET_U2G_MAP][user], group))
-                        return False
-                    else:
-                        policy_out[PolicyKeys.RULESET_U2G_MAP][user] = group
-                if not group in policy_out[PolicyKeys.KW_SETTINGS]:
-                    errors.append("Application '%s' user group '%s' has no defined settings" %
-                                  (name, group))
-                    return False
+        if PolicyKeys.KW_GROUPS in policy_out:
+            for group, groupsettings in policy_out[PolicyKeys.KW_GROUPS].iteritems():
+                if PolicyKeys.KW_USERS in groupsettings:
+                    users = [x.strip(' ') for x in groupsettings[PolicyKeys.KW_USERS].split(PolicyKeys.KC_CONFIG_LIST_SEP)]
+                    for user in users:
+                        if user in policy_out[PolicyKeys.RULESET_U2G_MAP]:
+                            errors.append("Policy vhost '%s' user '%s' is in multiple user groups '%s' and '%s'" %
+                                          (name, user, policy_out[PolicyKeys.RULESET_U2G_MAP][user], group))
+                            return False
+                        else:
+                            policy_out[PolicyKeys.RULESET_U2G_MAP][user] = group
+                else:
+                    warnings.append("Policy vhost '%s' user group '%s' has no defined users. This policy has no effect" % (name, group))
 
         # Default connections require a default settings
         if policy_out[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]:
-            if not PolicyKeys.KW_DEFAULT_SETTINGS in policy_out[PolicyKeys.KW_SETTINGS]:
-                errors.append("Application '%s' allows connections by default but default settings are not defined" %
+            if not PolicyKeys.KW_DEFAULT_SETTINGS in policy_out[PolicyKeys.KW_GROUPS]:
+                errors.append("Policy vhost '%s' allows connections by default but default settings are not defined" %
                               (name))
                 return False
-
-        # Each ingress policy name reference must exist in ingressHostGroups
-        for cipname, cip in policy_out[PolicyKeys.KW_INGRESS_POLICIES].iteritems():
-            for co in cip:
-                if not co in policy_out[PolicyKeys.KW_INGRESS_HOST_GROUPS]:
-                    errors.append("Application '%s' connection ingress policy '%s' references ingress host group '%s' but that group does not exist"
-                                  (name, cipname, co))
-                    return False
 
         return True
 
@@ -383,7 +363,7 @@ class PolicyCompiler(object):
 #
 class AppStats(object):
     """
-    Maintain live state and statistics for an application.
+    Maintain live state and statistics for an vhost.
     """
     def __init__(self, id, manager, ruleset):
         self.my_id = id
@@ -410,7 +390,7 @@ class AppStats(object):
     def refresh_entity(self, attributes):
         """Refresh management attributes"""
         entitymap = {}
-        entitymap[PolicyKeys.KW_APPLICATION_NAME] =     self.my_id
+        entitymap[PolicyKeys.KW_VHOST_NAME] =     self.my_id
         entitymap[PolicyKeys.KW_CONNECTIONS_APPROVED] = self.conn_mgr.connections_approved
         entitymap[PolicyKeys.KW_CONNECTIONS_DENIED] =   self.conn_mgr.connections_denied
         entitymap[PolicyKeys.KW_CONNECTIONS_CURRENT] =  self.conn_mgr.connections_active
@@ -457,14 +437,14 @@ class PolicyLocal(object):
         self._manager = manager
 
         # rulesetdb is a map
-        #  key : application name
+        #  key : vhost name
         #  val : ruleset for this app
         # created by configuration
         # augmented by policy compiler
         self.rulesetdb = {}
 
         # settingsdb is a map
-        #  key : <application name>
+        #  key : <vhost name>
         #  val : a map
         #   key : <user group name>
         #   val : settings to use for user's connection
@@ -472,7 +452,7 @@ class PolicyLocal(object):
         self.settingsdb = {}
 
         # statsdb is a map
-        #  key : <application name>
+        #  key : <vhost name>
         #  val : AppStats object
         self.statsdb = {}
 
@@ -487,14 +467,10 @@ class PolicyLocal(object):
         # Entries destroyed as sockets closed
         self._connections = {}
 
-        # _default_application is a string
-        #  holds the name of the policyRuleset to use when the
+        # _default_vhost is a string
+        #  holds the name of the vhost to use when the
         #  open.hostname is not found in the rulesetdb
-        self._default_application = ""
-
-        # _default_application_enabled is a boolean
-        #  controls default application fallback logic
-        self._default_application_enabled = False
+        self._default_vhost = ""
 
     #
     # Service interfaces
@@ -507,26 +483,26 @@ class PolicyLocal(object):
         warnings = []
         diag = []
         candidate = {}
-        name = attributes[PolicyKeys.KW_APPLICATION_NAME]
+        name = attributes[PolicyKeys.KW_VHOST_NAME]
         result = self._policy_compiler.compile_access_ruleset(name, attributes, candidate, warnings, diag)
         if not result:
-            raise PolicyError( "Policy '%s' is invalid: %s" % (name, diag[0]) )
+            raise PolicyError("Policy '%s' is invalid: %s" % (name, diag[0]))
         if len(warnings) > 0:
             for warning in warnings:
                 self._manager.log_warning(warning)
         if name not in self.rulesetdb:
             self.statsdb[name] = AppStats(name, self._manager, candidate)
-            self._manager.log_info("Created policy rules for application %s" % name)
+            self._manager.log_info("Created policy rules for vhost %s" % name)
         else:
             self.statsdb[name].update_ruleset(candidate)
-            self._manager.log_info("Updated policy rules for application %s" % name)
+            self._manager.log_info("Updated policy rules for vhost %s" % name)
         self.rulesetdb[name] = {}
         self.rulesetdb[name].update(candidate)
 
     def policy_read(self, name):
         """
-        Read policy for named application
-        @param[in] name application name
+        Read policy for named vhost
+        @param[in] name vhost name
         @return policy data in raw user format
         """
         return self.rulesetdb[name]
@@ -534,19 +510,17 @@ class PolicyLocal(object):
     def policy_update(self, name, policy):
         """
         Update named policy
-        @param[in] name application name
+        @param[in] name vhost name
         @param[in] policy data in raw user input
         """
-        if not name in self.rulesetdb:
-            raise PolicyError("Policy '%s' does not exist" % name)
-        self.policy_create(name, policy)
+        raise PolicyError("Policy updatd function not implemented")
 
     def policy_delete(self, name):
         """
         Delete named policy
-        @param[in] name application name
+        @param[in] name vhost name
         """
-        if not name in self.rulesetdb:
+        if name not in self.rulesetdb:
             raise PolicyError("Policy '%s' does not exist" % name)
         del self.rulesetdb[name]
 
@@ -555,111 +529,111 @@ class PolicyLocal(object):
     #
     def policy_db_get_names(self):
         """
-        Return a list of application names in this policy
+        Return a list of vhost names in this policy
         """
         return self.rulesetdb.keys()
 
-    def set_default_application(self, name, enabled):
+    def set_default_vhost(self, name):
         """
-        Set the default application name and control its enablement.
-        Raise PolicyError if the named application is enabled but absent.
-        @param name: the name of the default application
-        @param enabled: default application ruleset logic is active
+        Set the default vhost name.
+        @param name: the name of the default vhost
         @return: none
         """
-        self._default_application = name
-        self._default_application_enabled = enabled
-        if enabled:
-            if not name in self.policy_db_get_names():
-                raise PolicyError("Policy fallback defaultApplication '%s' does not exist" % name)
-            self._manager.log_info("Policy fallback defaultApplication is enabled: '%s'" % name)
-        else:
-            self._manager.log_info("Policy fallback defaultApplication is disabled")
+        self._default_vhost = name
+        self._manager.log_info("Policy fallback defaultVhost is defined: '%s'" % name)
+
+    def default_vhost_enabled(self):
+        """
+        The default vhost is enabled if the name is not blank and
+        the vhost is defined in rulesetdb.
+        @return:
+        """
+        return not self._default_vhost == "" and self._default_vhost in self.rulesetdb
 
     #
     # Runtime query interface
     #
-    def lookup_user(self, user, host, app_in, conn_name, conn_id):
+    def lookup_user(self, user, rhost, vhost_in, conn_name, conn_id):
         """
         Lookup function called from C.
-        Determine if a user on host accessing app through AMQP Open is allowed
+        Determine if a user on host accessing vhost through AMQP Open is allowed
         according to the policy access rules.
-        If allowed then return the policy settings name. If stats.can_connect
+        If allowed then return the policy vhost settings name. If stats.can_connect
         returns true then it has registered and counted the connection.
         @param[in] user connection authId
-        @param[in] host connection remote host numeric IP address as string
-        @param[in] app_in application user is accessing
+        @param[in] rhost connection remote host numeric IP address as string
+        @param[in] vhost_in vhost user is accessing
         @param[in] conn_name connection name used for tracking reports
         @param[in] conn_id internal connection id
         @return settings user-group name if allowed; "" if not allowed
         """
         try:
-            app = app_in
-            if not app_in in self.rulesetdb:
-                if self._default_application_enabled:
-                    app = self._default_application
+            # choose rule set based on incoming vhost or default vhost
+            vhost = vhost_in
+            if vhost_in not in self.rulesetdb:
+                if self.default_vhost_enabled():
+                    vhost = self._default_vhost
                 else:
                     self._manager.log_info(
-                        "DENY AMQP Open for user '%s', host '%s', application '%s': "
-                        "No policy defined for application" % (user, host, app))
+                        "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
+                        "No policy defined for vhost" % (user, rhost, vhost))
                     return ""
+            ruleset = self.rulesetdb[vhost]
 
-            ruleset = self.rulesetdb[app]
-
-            if not app in self.statsdb:
+            # look up the stats
+            if vhost not in self.statsdb:
                 msg = (
-                    "DENY AMQP Open for user '%s', host '%s', application '%s': "
-                    "INTERNAL: Policy is defined but stats are missing" % (user, host, app))
+                    "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
+                    "INTERNAL: Policy is defined but stats are missing" % (user, rhost, vhost))
                 raise PolicyError(msg)
-            stats = self.statsdb[app]
-            # User in a group or default?
+            stats = self.statsdb[vhost]
+
+            # Get settings for user in a user group or in default
             if user in ruleset[PolicyKeys.RULESET_U2G_MAP]:
                 usergroup = ruleset[PolicyKeys.RULESET_U2G_MAP][user]
+            elif "*" in ruleset[PolicyKeys.RULESET_U2G_MAP]:
+                usergroup = ruleset[PolicyKeys.RULESET_U2G_MAP]["*"]
             else:
                 if ruleset[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]:
                     usergroup = PolicyKeys.KW_DEFAULT_SETTINGS
                 else:
                     self._manager.log_info(
-                        "DENY AMQP Open for user '%s', host '%s', application '%s': "
-                        "User is not in a user group and default users are denied" % (user, host, app))
+                        "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
+                        "User is not in a user group and unknown users are denied" % (user, rhost, vhost))
                     stats.count_other_denial()
                     return ""
-            # User in usergroup allowed to connect from host?
-            if usergroup in ruleset[PolicyKeys.KW_INGRESS_POLICIES]:
-                # User's usergroup is restricted to connecting from a host
-                # defined by the group's ingress policy
-                allowed = False
-                uhs = HostStruct(host)
-                cglist = ruleset[PolicyKeys.KW_INGRESS_POLICIES][usergroup]
-                for cg in cglist:
-                    for cohost in ruleset[PolicyKeys.KW_INGRESS_HOST_GROUPS][cg]:
-                        if cohost.match_bin(uhs):
-                            allowed = True
-                            break
-                    if allowed:
+            groupsettings = ruleset[PolicyKeys.KW_GROUPS][usergroup]
+
+            # User in usergroup allowed to connect from rhost?
+            allowed = False
+            if PolicyKeys.KW_REMOTE_HOSTS in groupsettings:
+                # Users are restricted to connecting from a rhost
+                # defined by the group's remoteHost list
+                cglist = groupsettings[PolicyKeys.KW_REMOTE_HOSTS]
+                uhs = HostStruct(rhost)
+                for cohost in cglist:
+                    if cohost.match_bin(uhs):
+                        allowed = True
                         break
-            else:
-                # User's usergroup has no ingress policy so allow
-                allowed = True
             if not allowed:
                 self._manager.log_info(
-                    "DENY AMQP Open for user '%s', host '%s', application '%s': "
-                    "User is not allowed to connect from this network host" % (user, host, app))
+                    "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
+                    "User is not allowed to connect from this network host" % (user, rhost, vhost))
                 stats.count_other_denial()
                 return ""
 
             # This user passes administrative approval.
             # Now check live connection counts
             diags = []
-            if not stats.can_connect(conn_name, user, host, diags):
+            if not stats.can_connect(conn_name, user, rhost, diags):
                 for diag in diags:
                     self._manager.log_info(
-                        "DENY AMQP Open for user '%s', host '%s', application '%s': "
-                        "%s" % (user, host, app, diag))
+                        "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
+                        "%s" % (user, rhost, vhost, diag))
                 return ""
 
             # Record facts about this connection to use during teardown
-            facts = ConnectionFacts(user, host, app, conn_name)
+            facts = ConnectionFacts(user, rhost, vhost, conn_name)
             self._connections[conn_id] = facts
 
             # Return success
@@ -667,42 +641,43 @@ class PolicyLocal(object):
 
         except Exception, e:
             self._manager.log_info(
-                "DENY AMQP Open lookup_user failed for user '%s', host '%s', application '%s': "
-                "Internal error: %s" % (user, host, app, e))
+                "DENY AMQP Open lookup_user failed for user '%s', rhost '%s', vhost '%s': "
+                "Internal error: %s" % (user, rhost, vhost, e))
             # return failure
             return ""
 
-    def lookup_settings(self, appname_in, name, upolicy):
+    def lookup_settings(self, vhost_in, groupname, upolicy):
         """
         Given a settings name, return the aggregated policy blob.
-        @param[in] appname: application user is accessing
-        @param[in] name: user group name
+        @param[in] vhost_in: vhost user is accessing
+        @param[in] groupname: user group name
         @param[out] upolicy: dict holding policy values - the settings blob
                     TODO: make this a c struct
         @return if lookup worked
         # Note: the upolicy output is a non-nested dict with settings of interest
         """
         try:
-            appname = appname_in
-            if not appname in self.rulesetdb and self._default_application_enabled:
-                appname = self._default_application
+            vhost = vhost_in
+            if vhost not in self.rulesetdb:
+                if self.default_vhost_enabled():
+                    vhost = self._default_vhost
 
-            if not appname in self.rulesetdb:
+            if vhost not in self.rulesetdb:
                 self._manager.log_info(
-                        "lookup_settings fail for application '%s', user group '%s': "
-                        "No policy defined for this application" % (appname, name))
+                        "lookup_settings fail for vhost '%s', user group '%s': "
+                        "No policy defined for this vhost" % (vhost, groupname))
                 return False
 
-            ruleset = self.rulesetdb[appname]
+            ruleset = self.rulesetdb[vhost]
 
-            if not name in ruleset[PolicyKeys.KW_SETTINGS]:
+            if groupname not in ruleset[PolicyKeys.KW_GROUPS]:
                 self._manager.log_trace(
-                        "lookup_settings fail for application '%s', user group '%s': "
-                        "This application has no settings for the user group" % (appname, name))
+                        "lookup_settings fail for vhost '%s', user group '%s': "
+                        "This vhost has no settings for the user group" % (vhost, groupname))
                 return False
 
-            upolicy.update(ruleset[PolicyKeys.KW_SETTINGS][name])
-            upolicy[PolicyKeys.KW_CSTATS] = self.statsdb[appname].get_cstats()
+            upolicy.update(ruleset[PolicyKeys.KW_GROUPS][groupname])
+            upolicy[PolicyKeys.KW_CSTATS] = self.statsdb[vhost].get_cstats()
             return True
         except Exception, e:
             return False
@@ -730,16 +705,17 @@ class PolicyLocal(object):
         Test function to load a policy.
         @return:
         """
-        ruleset_str = '["policyAccessRuleset", {"applicationName": "photoserver","maxConnections": 50,"maxConnPerUser": 5,"maxConnPerHost": 20,"userGroups": {"anonymous":       "anonymous","users":           "u1, u2","paidsubscribers": "p1, p2","test":            "zeke, ynot","admin":           "alice, bob","superuser":       "ellen"},"ingressHostGroups": {"Ten18":     "10.18.0.0-10.18.255.255","EllensWS":  "72.135.2.9","TheLabs":   "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255","localhost": "127.0.0.1, ::1","TheWorld":  "*"},"ingressPolicies": {"anonymous":       "TheWorld","users":           "TheWorld","paidsubscribers": "TheWorld","test":            "TheLabs","admin":           "Ten18, TheLabs, localhost","superuser":       "EllensWS, localhost"},"connectionAllowDefault": true,'
-        ruleset_str += '"settings": {'
-        ruleset_str += '"anonymous":      {"maxFrameSize": 111111,"maxMessageSize":   111111,"maxSessionWindow": 111111,"maxSessions":           1,"maxSenders":           11,"maxReceivers":         11,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public",                           "targets": ""},'
-        ruleset_str += '"users":          {"maxFrameSize": 222222,"maxMessageSize":   222222,"maxSessionWindow": 222222,"maxSessions":           2,"maxSenders":           22,"maxReceivers":         22,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private",                  "targets": "public"},'
-        ruleset_str += '"paidsubscribers":{"maxFrameSize": 333333,"maxMessageSize":   333333,"maxSessionWindow": 333333,"maxSessions":           3,"maxSenders":           33,"maxReceivers":         33,"allowDynamicSrc":      true, "allowAnonymousSender": false,"sources": "public, private",                  "targets": "public, private"},'
-        ruleset_str += '"test":           {"maxFrameSize": 444444,"maxMessageSize":   444444,"maxSessionWindow": 444444,"maxSessions":           4,"maxSenders":           44,"maxReceivers":         44,"allowDynamicSrc":      true, "allowAnonymousSender": true, "sources": "private",                          "targets": "private"},'
-        ruleset_str += '"admin":          {"maxFrameSize": 555555,"maxMessageSize":   555555,"maxSessionWindow": 555555,"maxSessions":           5,"maxSenders":           55,"maxReceivers":         55,"allowDynamicSrc":      true, "allowAnonymousSender": true, "sources": "public, private, management",      "targets": "public, private, management"},'
-        ruleset_str += '"superuser":      {"maxFrameSize": 666666,"maxMessageSize":   666666,"maxSessionWindow": 666666,"maxSessions":           6,"maxSenders":           66,"maxReceivers":         66,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private, management, root","targets": "public, private, management, root"},'
-        ruleset_str += '"default":        {"maxFrameSize": 222222,"maxMessageSize":   222222,"maxSessionWindow": 222222,"maxSessions":           2,"maxSenders":           22,"maxReceivers":         22,"allowDynamicSrc":      false,"allowAnonymousSender": false,"sources": "public, private",                  "targets": "public"}'
+        ruleset_str = '["vhost", {"id": "photoserver", "maxConnections": 50, "maxConnectionsPerUser": 5, "maxConnectionsPerHost": 20, "allowUnknownUser": true,'
+        ruleset_str += '"groups": {'
+        ruleset_str += '"anonymous":       { "users": "anonymous", "remoteHosts": "*", "maxFrameSize": 111111, "maxMessageSize": 111111, "maxSessionWindow": 111111, "maxSessions": 1, "maxSenders": 11, "maxReceivers": 11, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public", "targets": "" },'
+        ruleset_str += '"users":           { "users": "u1, u2", "remoteHosts": "*", "maxFrameSize": 222222, "maxMessageSize": 222222, "maxSessionWindow": 222222, "maxSessions": 2, "maxSenders": 22, "maxReceivers": 22, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public, private", "targets": "public" },'
+        ruleset_str += '"paidsubscribers": { "users": "p1, p2", "remoteHosts": "*", "maxFrameSize": 333333, "maxMessageSize": 333333, "maxSessionWindow": 333333, "maxSessions": 3, "maxSenders": 33, "maxReceivers": 33, "allowDynamicSource": true, "allowAnonymousSender": false, "sources": "public, private", "targets": "public, private" },'
+        ruleset_str += '"test":            { "users": "zeke, ynot", "remoteHosts": "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255", "maxFrameSize": 444444, "maxMessageSize": 444444, "maxSessionWindow": 444444, "maxSessions": 4, "maxSenders": 44, "maxReceivers": 44, "allowDynamicSource": true, "allowAnonymousSender": true, "sources": "private", "targets": "private" },'
+        ruleset_str += '"admin":           { "users": "alice, bob", "remoteHosts": "10.48.0.0-10.48.255.255, 192.168.100.0-192.168.100.255, 10.18.0.0-10.18.255.255, 127.0.0.1, ::1", "maxFrameSize": 555555, "maxMessageSize": 555555, "maxSessionWindow": 555555, "maxSessions": 5, "maxSenders": 55, "maxReceivers": 55, "allowDynamicSource": true, "allowAnonymousSender": true, "sources": "public, private, management", "targets": "public, private, management" },'
+        ruleset_str += '"superuser":       { "users": "ellen", "remoteHosts": "72.135.2.9, 127.0.0.1, ::1", "maxFrameSize": 666666, "maxMessageSize": 666666, "maxSessionWindow": 666666, "maxSessions": 6, "maxSenders": 66, "maxReceivers": 66, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public, private, management, root", "targets": "public, private, management, root" },'
+        ruleset_str += '"$default":        { "users": "*", "remoteHosts": "*", "maxFrameSize": 222222, "maxMessageSize": 222222, "maxSessionWindow": 222222, "maxSessions": 2, "maxSenders": 22, "maxReceivers": 22, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public, private", "targets": "public" }'
         ruleset_str += '}}]'
+
         ruleset = json.loads(ruleset_str)
 
         self.create_ruleset(ruleset[1])

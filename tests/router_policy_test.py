@@ -157,7 +157,7 @@ class PolicyFile(TestCase):
         self.assertTrue(upolicy['maxSenders']               == 44)
         self.assertTrue(upolicy['maxReceivers']             == 44)
         self.assertTrue(upolicy['allowAnonymousSender'])
-        self.assertTrue(upolicy['allowDynamicSrc'])
+        self.assertTrue(upolicy['allowDynamicSource'])
         self.assertTrue(upolicy['targets'] == 'private')
         self.assertTrue(upolicy['sources'] == 'private')
 
@@ -200,8 +200,8 @@ class PolicyFileApplicationFallback(TestCase):
         self.assertTrue(
             self.policy.lookup_user('zeke', '192.168.100.5', 'galleria', "connid", 5) == '')
 
-        # Enable the fallback defaultApplication and show the same user can now connect
-        self.policy.set_default_application('photoserver', True)
+        # Enable the fallback defaultVhost and show the same user can now connect
+        self.policy.set_default_vhost('photoserver')
         settingsname = self.policy.lookup_user('zeke', '192.168.100.5', 'galleria', "connid", 5)
         self.assertTrue(settingsname == 'test')
 
@@ -217,22 +217,14 @@ class PolicyFileApplicationFallback(TestCase):
         self.assertTrue(upolicy['maxSenders']               == 44)
         self.assertTrue(upolicy['maxReceivers']             == 44)
         self.assertTrue(upolicy['allowAnonymousSender'])
-        self.assertTrue(upolicy['allowDynamicSrc'])
+        self.assertTrue(upolicy['allowDynamicSource'])
         self.assertTrue(upolicy['targets'] == 'private')
         self.assertTrue(upolicy['sources'] == 'private')
 
         # Disable fallback and show failure again
-        self.policy.set_default_application('', False)
+        self.policy.set_default_vhost('')
         self.assertTrue(
             self.policy.lookup_user('zeke', '192.168.100.5', 'galleria', "connid", 5) == '')
-
-        # Configuration will not allow default application to point to bogus app ruleset
-        was_allowed = True
-        try:
-            self.policy.set_default_application('foobar', True)
-        except:
-            was_allowed = False
-        self.assertTrue(was_allowed == False)
 
 class PolicyAppConnectionMgrTests(TestCase):
 

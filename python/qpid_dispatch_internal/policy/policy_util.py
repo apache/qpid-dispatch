@@ -293,9 +293,9 @@ class PolicyAppConnectionMgr(object):
         if host in self.per_host_state:
             n_host = len(self.per_host_state[host])
 
-        allowbytotal = self.max_total == 0 or self.connections_active < self.max_total
-        allowbyuser  = self.max_per_user == 0 or n_user < self.max_per_user
-        allowbyhost  = self.max_per_host == 0 or n_host < self.max_per_host
+        allowbytotal = self.connections_active < self.max_total
+        allowbyuser  = n_user < self.max_per_user
+        allowbyhost  = n_host < self.max_per_host
 
         if allowbytotal and allowbyuser and allowbyhost:
             if not user in self.per_user_state:

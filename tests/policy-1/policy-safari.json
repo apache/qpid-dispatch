@@ -18,74 +18,66 @@
 ##
 [
     # The safari policy ruleset
-    ["policyRuleset",
+    ["vhost",
         {
-            "applicationName": "safari",
+            "id": "safari",
             "maxConnections": 10,
-            "maxConnPerUser": 2,
-            "maxConnPerHost": 5,
-            "userGroups": {
-                "anonymous": "anonymous",
-                "clients": "moja mbili",
-                "guides": "kata hapa"
-            },
-            "ingressHostGroups": {
-                "basecamp": "72.135.2.9",
-                "mobile": "10.48.0.0-10.48.255.255, 192.168.0.0-192.168.255.255",
-                "Localhost": "127.0.0.1, ::1",
-		"TheWorld": "*"
-            },
-            "ingressPolicies": {
-                "anonymous": "TheWorld",
-                "clients": "basecamp",
-		"guides": "basecamp, mobile, Localhost"
-            },
-            "connectionAllowDefault": true,
-            "settings": {
+            "maxConnectionsPerUser": 2,
+            "maxConnectionsPerHost": 5,
+            "allowUnknownUser": true,
+            "groups": {
                 "anonymous": {
+                    "users": "anonymous",
+                    "remoteHosts": "*",
                     "maxFrameSize": 111111,
                     "maxMessageSize": 111111,
                     "maxSessionWindow": 111111,
                     "maxSessions": 1,
                     "maxSenders": 11,
                     "maxReceivers": 11,
-                    "allowDynamicSrc": false,
+                    "allowDynamicSource": false,
                     "allowAnonymousSender": false,
                     "sources": "public",
                     "targets": ""
                 },
                 "clients": {
+                    "users": "moja, mbili",
+                    "remoteHosts": "72.135.2.9",
                     "maxFrameSize": 222222,
                     "maxMessageSize": 222222,
                     "maxSessionWindow": 222222,
                     "maxSessions": 2,
                     "maxSenders": 22,
                     "maxReceivers": 22,
-                    "allowDynamicSrc": false,
+                    "allowDynamicSource": false,
                     "allowAnonymousSender": false,
                     "sources": "public, private",
                     "targets": "public"
                 },
                 "guides": {
+                    "users": "kata, hapa",
+                    "remoteHosts": "72.135.2.9, 10.48.0.0-10.48.255.255, 192.168.0.0-192.168.255.255, 127.0.0.1, ::1",
                     "maxFrameSize": 666666,
                     "maxMessageSize": 666666,
                     "maxSessionWindow": 666666,
                     "maxSessions": 6,
                     "maxSenders": 66,
                     "maxReceivers": 66,
-                    "allowDynamicSrc": false,
+                    "allowDynamicSource": false,
                     "allowAnonymousSender": false,
                     "sources": "public, private, management, root",
                     "targets": "public, private, management, root"
                 },
-                "default": {
+                "$default": {
+                    "users": "*",
+                    "remoteHosts": "*",
                     "maxFrameSize": 222222,
                     "maxMessageSize": 222222,
                     "maxSessionWindow": 222222,
                     "maxSessions": 2,
                     "maxSenders": 22,
                     "maxReceivers": 22,
-                    "allowDynamicSrc": false,
+                    "allowDynamicSource": false,
                     "allowAnonymousSender": false,
                     "sources": "public, private",
                     "targets": "public"

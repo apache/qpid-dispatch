@@ -78,44 +78,43 @@ class PolicyManager(object):
         self._policy_local.create_ruleset(attributes)
 
     #
-    # Management interface to set the default application
+    # Management interface to set the default vhost
     #
-    def set_default_application(self, name, enabled):
+    def set_default_vhost(self, name):
         """
         Set default application
         @param name:
-        @param enabled
         @return:
         """
-        self._policy_local.set_default_application(name, enabled)
+        self._policy_local.set_default_vhost(name)
 
     #
     # Runtime query interface
     #
-    def lookup_user(self, user, host, app, conn_name, conn_id):
+    def lookup_user(self, user, rhost, vhost, conn_name, conn_id):
         """
         Lookup function called from C.
         Determine if a user on host accessing app through AMQP Open is allowed
         according to the policy access rules.
         If allowed then return the policy settings name
         @param[in] user connection authId
-        @param[in] host connection remote host numeric IP address as string
-        @param[in] app application user is accessing
+        @param[in] rhost connection remote host numeric IP address as string
+        @param[in] vhost application user is accessing
         @param[in] conn_name connection name for accounting purposes
         @param[in] conn_id internal connection id
         @return settings user-group name if allowed; "" if not allowed
         """
-        return self._policy_local.lookup_user(user, host, app, conn_name, conn_id)
+        return self._policy_local.lookup_user(user, rhost, vhost, conn_name, conn_id)
 
-    def lookup_settings(self, appname, name, upolicy):
+    def lookup_settings(self, vhost, name, upolicy):
         """
         Given a settings name, return the aggregated policy blob.
-        @param[in] appname: application user is accessing
+        @param[in] vhost: vhost user is accessing
         @param[in] name: user group name
         @param[out] upolicy: map that receives the settings
         @return settings were retrieved or not
         """
-        return self._policy_local.lookup_settings(appname, name, upolicy)
+        return self._policy_local.lookup_settings(vhost, name, upolicy)
 
     def close_connection(self, conn_id):
         """
@@ -128,18 +127,18 @@ class PolicyManager(object):
 #
 #
 #
-def policy_lookup_user(mgr, user, host, app, conn_name, conn_id):
+def policy_lookup_user(mgr, user, rhost, vhost, conn_name, conn_id):
     """
     Look up a user in the policy database
     Called by C code
     @param mgr:
     @param user:
-    @param host:
-    @param app:
+    @param rhost:
+    @param vhost:
     @param conn_name:
     @return:
     """
-    return mgr.lookup_user(user, host, app, conn_name, conn_id)
+    return mgr.lookup_user(user, rhost, vhost, conn_name, conn_id)
 
 #
 #
@@ -157,13 +156,13 @@ def policy_close_connection(mgr, conn_id):
 #
 #
 #
-def policy_lookup_settings(mgr, appname, name, upolicy):
+def policy_lookup_settings(mgr, vhost, name, upolicy):
     """
-    Return settings for <app, usergroup> in upolicy map
+    Return settings for <vhost, usergroup> in upolicy map
     @param mgr:
-    @param appname:
+    @param vhost:
     @param name:
     @param upolicy:
     @return:
     """
-    return mgr.lookup_settings(appname, name, upolicy)
+    return mgr.lookup_settings(vhost, name, upolicy)

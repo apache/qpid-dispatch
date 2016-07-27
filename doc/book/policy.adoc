@@ -101,7 +101,7 @@ policy = {
 }
 
 vhost = {
-    name: vhost name
+    id: vhost-name
     <connection limits>
     groups: {
         group-name: {
@@ -120,7 +120,7 @@ created as needed.
 |====
 | attribute           | default    | description
 | maxConnections      | 65535      | Global maximum number of concurrent client connections allowed. This limit is always enforced even if no other policy settings have been defined. This limit is applied to all incoming connections regardless of remote host, authenticated user, or targeted vhost.
-| enableVhostPolicy   | true       | Enable vhost policy connection denial, and resource limit enforcement.
+| enableVhostPolicy   | false      | Enable vhost policy connection denial, and resource limit enforcement.
 | policyDir           | ""         | Absolute path to a directory that holds vhost definition .json files. All vhost definitions in all .json files in this directory are processed.
 | defaultVhost        | "$default" | Vhost rule set name to use for connections with a vhost that is otherwise not defined. Default vhost processing may be disabled either by erasing the definition of _defaultVhost_ or by not defining a _vhost_ object named _$default_.
 |====
@@ -130,9 +130,9 @@ created as needed.
 [options="header", cols="35,15,50"]
 |====
 | attribute                   | default  | description
-| name                        |          | Vhost name. A unique name is required.
-| maxConnections              | 65535    | Maximum number of concurrent client connections allowed
-| maxConnectionsPerUser       | 65535    | Maximum number of concurrent client connections allowed for any single user.
+| id                          |          | Vhost name must be unique.
+| maxConnections              | 65535    | Maximum number of concurrent client connections allowed.
+| maxConnectionsPerUser       | 65535    | Maximum number of concurrent client connections allowed for any user.
 | maxConnectionsPerRemoteHost | 65535    | Maximum number of concurrent client connections allowed for any remote host.
 | allowUnknownUser            | false    | Allow unknown users who are not members of a defined user group. Unknown users are assigned to the '$default' user group and receive '$default' settings.
 | groups                      |          | A map where each key is a user group name and the value is a Vhost User Group Settings map.
@@ -146,18 +146,18 @@ This object is the data value contained in entries in the policy/groups map.
 |====
 | Section/Attribute    | default | description
 | *Group Membership*             | |
-| users                | ""      | List of authenticated users in this group
+| users                | ""      | List of authenticated users in this group.
 | *Connection Restrictions*      | |
 | remoteHosts          | ""      | List of remote hosts from which the users may connect. List values may be host names, numeric IP addresses, numeric IP address ranges, or the wildcard '*'. An empty list denies all access.
 | *AMQP Connection Open Limits*  | |
-| maxFrameSize         | 2^32-1  | Largest frame that may be sent on this connection. (AMQP Open, max-frame-size)
+| maxFrameSize         | 2^31-1  | Largest frame that may be sent on this connection. (AMQP Open, max-frame-size)
 | maxSessions          | 65535   | Maximum number of sessions that may be created on this connection. (AMQP Open, channel-max)
 | *AMQP Session Begin Limits*    | |
-| maxSessionWindow     | 2^32-1  |Incoming capacity for new sessions. (AMQP Begin, incoming-window)
+| maxSessionWindow     | 2^31-1  |Incoming capacity for new sessions. (AMQP Begin, incoming-window)
 | *AMQP Link Attach*             | |
 | maxMessageSize       | 0       | Largest message size supported by links created on this connection. If this field is zero there is no maximum size imposed by the link endpoint. (AMQP Attach, max-message-size)
-| maxSenders           | 2^32-1  | Maximum number of sending links that may be created on this connection.
-| maxReceivers         | 2^32-1  | Maximum number of receiving links that may be created on this connection.
+| maxSenders           | 2^31-1  | Maximum number of sending links that may be created on this connection.
+| maxReceivers         | 2^31-1  | Maximum number of receiving links that may be created on this connection.
 | allowDynamicSource   | false   | This connection is allowed to create receiving links using the Dynamic Link Source feature.
 | allowAnonymousSender | false   | This connection is allowed to create sending links using the Anonymous Sender feature.
 | sources              | ""      | List of Source addresses allowed when creating receiving links. This list may be expressed as a CSV string or as a list of strings. An empty list denies all access.
@@ -193,10 +193,17 @@ terminated with a single asterisk character.
 
 === AMQP Source and Target Wildcard and Name Substitution
 
-The rule definitions for `sources` and `targets` may include the token
-'*{user}*' or a trailing asterisk.
+The rule definitions for `sources` and `targets` may include the username
+substitution token
 
-The _{user}_ token is replaced with the authenticated user name for
+[options="nowrap"]
+----
+    {user}
+----
+
+or a trailing asterisk.
+
+The username substitution token is replaced with the authenticated user name for
 the connection. Using this token, an administrator may allow access to
 some resources specific to each user without having to name each user
 individually. This token is substituted once for the leftmost

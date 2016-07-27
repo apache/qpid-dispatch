@@ -34,7 +34,7 @@ listener {
 }
 
 policy {
-    maximumConnections: 10
-    enableAccessRules: true
-    policyFolder: ${CMAKE_CURRENT_BINARY_DIR}/policy-1
+    maxConnections: 10
+    enableVhostPolicy: true
+    policyDir: ${CMAKE_CURRENT_BINARY_DIR}/policy-1
 }
