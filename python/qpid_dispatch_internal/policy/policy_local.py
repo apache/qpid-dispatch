@@ -39,7 +39,7 @@ class PolicyKeys(object):
     KW_IGNORED_NAME             = "name"
     KW_IGNORED_IDENTITY         = "identity"
     KW_IGNORED_TYPE             = "type"
-    KW_VHOST_NAME               = "vhostName"
+    KW_VHOST_NAME               = "id"
 
     # Policy ruleset key words
     KW_MAXCONN                     = "maxConnections"
@@ -705,7 +705,7 @@ class PolicyLocal(object):
         Test function to load a policy.
         @return:
         """
-        ruleset_str = '["vhost", {"vhostName": "photoserver", "maxConnections": 50, "maxConnectionsPerUser": 5, "maxConnectionsPerHost": 20, "allowUnknownUser": true,'
+        ruleset_str = '["vhost", {"id": "photoserver", "maxConnections": 50, "maxConnectionsPerUser": 5, "maxConnectionsPerHost": 20, "allowUnknownUser": true,'
         ruleset_str += '"groups": {'
         ruleset_str += '"anonymous":       { "users": "anonymous", "remoteHosts": "*", "maxFrameSize": 111111, "maxMessageSize": 111111, "maxSessionWindow": 111111, "maxSessions": 1, "maxSenders": 11, "maxReceivers": 11, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public", "targets": "" },'
         ruleset_str += '"users":           { "users": "u1, u2", "remoteHosts": "*", "maxFrameSize": 222222, "maxMessageSize": 222222, "maxSessionWindow": 222222, "maxSessions": 2, "maxSenders": 22, "maxReceivers": 22, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public, private", "targets": "public" },'

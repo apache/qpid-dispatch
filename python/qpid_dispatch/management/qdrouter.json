@@ -1385,7 +1385,7 @@
             "extends": "configurationEntity",
             "operations": ["CREATE"],
             "attributes": {
-                "vhostName": {
+                "id": {
                     "type": "string",
                     "description": "The vhost name.",
                     "required": true
@@ -1431,7 +1431,7 @@
             "description": "Virtual host connection and access statistics.",
             "extends": "operationalEntity",
             "attributes": {
-                "vhostName": {
+                "id": {
                     "type": "string",
                     "description": "The vhost name."
                 },

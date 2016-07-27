@@ -2,7 +2,7 @@
 # Ruleset with differing number of senders and receivers
 # so tests can determine that correct limit is matched.
   ["vhost", {
-      "vhostName": "",
+      "id": "",
       "maxConnections": 50,
       "maxConnectionsPerUser": 2,
       "maxConnectionsPerHost": 4,
@@ -26,7 +26,7 @@
     }
   ],
   ["vhost", {
-      "vhostName": "0.0.0.0",
+      "id": "0.0.0.0",
       "maxConnections": 50,
       "maxConnectionsPerUser": 2,
       "maxConnectionsPerHost": 4,
@@ -50,7 +50,7 @@
     }
   ],
   ["vhost", {
-      "vhostName": "localhost",
+      "id": "localhost",
       "maxConnections": 50,
       "maxConnectionsPerUser": 2,
       "maxConnectionsPerHost": 4,
