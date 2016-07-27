@@ -63,20 +63,21 @@ Until the schema is extended specify embedded maps this document describes the v
           "maxSessions": {
               "type": "integer",
               "description": "Maximum number of sessions that may be created on this connection. Zero implies system default. (AMQP Open, channel-max)",
-              "default": 10,
+              "default": 2147483647,
               "required": false,
               "create": true
           },
           "maxSenders": {
               "type": "integer",
               "description": "Maximum number of sending links that may be created on this connection. Zero implies system default.",
-              "default": 10,
+              "default": 2147483647,
               "required": false,
               "create": true
           },
           "maxReceivers": {
               "type": "integer",
               "description": "Maximum number of receiving links that may be created on this connection. Zero implies system default.",
+              "default": 2147483647,
               "required": false,
               "create": true
           },

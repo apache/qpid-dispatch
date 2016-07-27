@@ -29,15 +29,17 @@
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
       "allowUnknownUser": true,
-      "settings": {
-        "default" : {
+      "groups": {
+        "$default" : {
+          "users":            "*",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSource":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "$management",
           "targets": "$management"
@@ -51,15 +53,17 @@
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
       "allowUnknownUser": true,
-      "settings": {
-        "default" : {
+      "groups": {
+        "$default" : {
+          "users":            "*",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSource":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "$management",
           "targets": "$management"
@@ -73,15 +77,17 @@
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
       "allowUnknownUser": true,
-      "settings": {
-        "default" : {
+      "groups": {
+        "$default" : {
+          "users":            "*",
+          "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":           22,
           "maxReceivers":         22,
-          "allowDynamicSource":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "$management",
           "targets": "$management"

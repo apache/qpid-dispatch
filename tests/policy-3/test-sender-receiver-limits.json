@@ -7,15 +7,17 @@
       "maxConnectionsPerUser": 2,
       "maxConnectionsPerHost": 4,
       "allowUnknownUser": true,
-      "settings": {
-        "default" : {
+      "groups": {
+        "$default" : {
+          "users": "*",
+          "remoteHosts": "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":            2,
           "maxReceivers":          4,
-          "allowDynamicSource":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "*",
           "targets": "*"
@@ -29,15 +31,17 @@
       "maxConnectionsPerUser": 2,
       "maxConnectionsPerHost": 4,
       "allowUnknownUser": true,
-      "settings": {
-        "default" : {
+      "groups": {
+        "$default" : {
+          "users": "*",
+          "remoteHosts": "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":            2,
           "maxReceivers":          4,
-          "allowDynamicSource":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "*",
           "targets": "*"
@@ -51,15 +55,17 @@
       "maxConnectionsPerUser": 2,
       "maxConnectionsPerHost": 4,
       "allowUnknownUser": true,
-      "settings": {
-        "default" : {
+      "groups": {
+        "$default" : {
+          "users": "*",
+          "remoteHosts": "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
           "maxSessionWindow": 222222,
           "maxSessions":           2,
           "maxSenders":            2,
           "maxReceivers":          4,
-          "allowDynamicSource":      true,
+          "allowDynamicSource":   true,
           "allowAnonymousSender": true,
           "sources": "*",
           "targets": "*"
