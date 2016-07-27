@@ -101,7 +101,7 @@ policy = {
 }
 
 vhost = {
-    name: vhost name
+    id: vhost-name
     <connection limits>
     groups: {
         group-name: {
@@ -130,9 +130,9 @@ created as needed.
 [options="header", cols="35,15,50"]
 |====
 | attribute                   | default  | description
-| name                        |          | Vhost name. A unique name is required.
-| maxConnections              | 65535    | Maximum number of concurrent client connections allowed
-| maxConnectionsPerUser       | 65535    | Maximum number of concurrent client connections allowed for any single user.
+| id                          |          | Vhost name must be unique.
+| maxConnections              | 65535    | Maximum number of concurrent client connections allowed.
+| maxConnectionsPerUser       | 65535    | Maximum number of concurrent client connections allowed for any user.
 | maxConnectionsPerRemoteHost | 65535    | Maximum number of concurrent client connections allowed for any remote host.
 | allowUnknownUser            | false    | Allow unknown users who are not members of a defined user group. Unknown users are assigned to the '$default' user group and receive '$default' settings.
 | groups                      |          | A map where each key is a user group name and the value is a Vhost User Group Settings map.
@@ -146,7 +146,7 @@ This object is the data value contained in entries in the policy/groups map.
 |====
 | Section/Attribute    | default | description
 | *Group Membership*             | |
-| users                | ""      | List of authenticated users in this group
+| users                | ""      | List of authenticated users in this group.
 | *Connection Restrictions*      | |
 | remoteHosts          | ""      | List of remote hosts from which the users may connect. List values may be host names, numeric IP addresses, numeric IP address ranges, or the wildcard '*'. An empty list denies all access.
 | *AMQP Connection Open Limits*  | |
@@ -193,10 +193,17 @@ terminated with a single asterisk character.
 
 === AMQP Source and Target Wildcard and Name Substitution
 
-The rule definitions for `sources` and `targets` may include the token
-'*{user}*' or a trailing asterisk.
+The rule definitions for `sources` and `targets` may include the username
+substitution token
 
-The _{user}_ token is replaced with the authenticated user name for
+[options="nowrap"]
+----
+    {user}
+----
+
+or a trailing asterisk.
+
+The username substitution token is replaced with the authenticated user name for
 the connection. Using this token, an administrator may allow access to
 some resources specific to each user without having to name each user
 individually. This token is substituted once for the leftmost
