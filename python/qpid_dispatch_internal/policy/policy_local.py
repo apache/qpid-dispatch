@@ -211,12 +211,12 @@ class PolicyCompiler(object):
         # rulesets may not come through standard config so make nice defaults
         policy_out[PolicyKeys.KW_USERS] = ''
         policy_out[PolicyKeys.KW_REMOTE_HOSTS] = ''
-        policy_out[PolicyKeys.KW_MAX_FRAME_SIZE] = 65536
+        policy_out[PolicyKeys.KW_MAX_FRAME_SIZE] = 2147483647
         policy_out[PolicyKeys.KW_MAX_MESSAGE_SIZE] = 0
         policy_out[PolicyKeys.KW_MAX_SESSION_WINDOW] = 2147483647
-        policy_out[PolicyKeys.KW_MAX_SESSIONS] = 10
-        policy_out[PolicyKeys.KW_MAX_SENDERS] = 10
-        policy_out[PolicyKeys.KW_MAX_RECEIVERS] = 10
+        policy_out[PolicyKeys.KW_MAX_SESSIONS] = 65536
+        policy_out[PolicyKeys.KW_MAX_SENDERS] = 2147483647
+        policy_out[PolicyKeys.KW_MAX_RECEIVERS] = 2147483647
         policy_out[PolicyKeys.KW_ALLOW_DYNAMIC_SRC] = False
         policy_out[PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER] = False
         policy_out[PolicyKeys.KW_SOURCES] = ''
@@ -347,7 +347,7 @@ class PolicyCompiler(object):
                         else:
                             policy_out[PolicyKeys.RULESET_U2G_MAP][user] = group
                 else:
-                    warnings.append("Policy vhost '%s' user group '%s' has no defined users. This policy has ne effect" % (name, group))
+                    warnings.append("Policy vhost '%s' user group '%s' has no defined users. This policy has no effect" % (name, group))
 
         # Default connections require a default settings
         if policy_out[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT]:
