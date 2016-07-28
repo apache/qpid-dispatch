@@ -17,13 +17,14 @@ The dispatch-hawtio-console.war file is pre-built and can be installed alongside
 
     $ mvn clean install
 
-The dispatch-hawtio-console-<version>.war file should now be in the target directory.
+The dispatch-hawtio-console-<version>-SNAPSHOT.war file should now be in the target directory.
 
 ## Apache Tomcat installation
 
-Copy the dispatch-hawtio-console-<version>.war file as the following name
+Copy the dispatch-hawtio-console-<version>-SNAPSHOT.war file as the following name
 
-    dispatch-plugin.war
+    dispatch-hawtio-console.war
+    
 to the deploy directory of Apache Tomcat or similar Java web container. Ensure the hawtio.war file is present in the same directory. Point a browser at http://\<tomcat-host:port\>/hawtio
 Dispatch Router should be available as a tab in the console.
 

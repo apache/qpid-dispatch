@@ -33,7 +33,7 @@ var QDR = (function (QDR) {
 
 	if (!QDRService.connected && !$routeParams.chid) {
 		// we are not connected. we probably got here from a bookmark or manual page reload
-		$location.path("/dispatch_plugin/connect")
+		$location.path("/" + QDR.pluginName + "/connect")
         $location.search('org', "charts");
 		return;
 	}

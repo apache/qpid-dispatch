@@ -34,39 +34,31 @@ var QDR = (function (QDR) {
         content: '<i class="icon-cogs"></i> Connect',
         title: "Connect to a router",
         isValid: function () { return true; },
-        href: "#/dispatch_plugin/connect"
+        href: "#/" + QDR.pluginName + "/connect"
     },
     {
         content: '<i class="fa fa-home"></i> Overview',
         title: "View router overview",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#/dispatch_plugin/overview"
+        href: "#/" + QDR.pluginName + "/overview"
       },
     {
         content: '<i class="icon-list "></i> Entities',
         title: "View the attributes of the router entities",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#/dispatch_plugin/list"
+        href: "#/" + QDR.pluginName + "/list"
       },
     {
         content: '<i class="icon-star-empty"></i> Topology',
         title: "View router network topology",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#/dispatch_plugin/topology"
+        href: "#/" + QDR.pluginName + "/topology"
       },
-/*
-    {
-        content: '<i class="icon-bar-chart"></i> Charts',
-        title: "View charts",
-        isValid: function (QDRService, $location) { return QDRService.isConnected(); },
-        href: "#/dispatch_plugin/charts"
-    },
-*/
     {
         content: '<i class="icon-align-left"></i> Schema',
         title: "View dispatch schema",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#/dispatch_plugin/schema",
+        href: "#/" + QDR.pluginName + "/schema",
         right: true
 
       }
@@ -95,7 +87,7 @@ QDR.NavBarController = function($scope, QDRService, QDRChartService, $location, 
     };
 
     $scope.hasChart = function (link) {
-        if (link.href == "#/dispatch_plugin/charts") {
+        if (link.href == "#/" + QDR.pluginName + "/charts") {
             return QDRChartService.charts.some(function (c) { return c.dashboard });
         }
     }

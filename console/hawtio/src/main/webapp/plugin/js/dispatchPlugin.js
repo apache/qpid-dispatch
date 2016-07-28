@@ -31,7 +31,7 @@ var QDR = (function(QDR) {
    *
    * The name of this plugin
    */
-  QDR.pluginName = 'dispatch_plugin';
+  QDR.pluginName = 'dispatch_hawtio_console';
   QDR.pluginRoot = "/" + QDR.pluginName;
   /**
    * @property log
@@ -48,7 +48,7 @@ var QDR = (function(QDR) {
    * The top level path of this plugin on the server
    *
    */
-  QDR.contextPath = "/dispatch-plugin/";
+  QDR.contextPath = "/dispatch-hawtio-console/";
 
   /**
    * @property templatePath
@@ -70,7 +70,7 @@ var QDR = (function(QDR) {
    * workspace, viewRegistry and layoutFull used by the
    * run function
    */
-  QDR.module = angular.module('dispatch_plugin', ['bootstrap', 'hawtio-ui', 'hawtio-forms', 'ui.bootstrap.dialog', 'hawtioCore'])
+  QDR.module = angular.module(QDR.pluginName, ['bootstrap', 'hawtio-ui', 'hawtio-forms', 'ui.bootstrap.dialog', 'hawtioCore'])
       .config(function($routeProvider) {
         /**
          * Here we define the route for our plugin.  One note is
@@ -79,25 +79,25 @@ var QDR = (function(QDR) {
          * routeProvider has been configured with.
          */
 		 $routeProvider
-			.when('/dispatch_plugin', {
+			.when('/' + QDR.pluginName, {
 				templateUrl: QDR.templatePath + 'qdrConnect.html'
 			})
-			.when('/dispatch_plugin/overview', {
+			.when('/' + QDR.pluginName + '/overview', {
 				templateUrl: QDR.templatePath + 'qdrOverview.html'
 			})
-			.when('/dispatch_plugin/topology', {
+			.when('/' + QDR.pluginName + '/topology', {
 				templateUrl: QDR.templatePath + 'qdrTopology.html'
 			})
-			.when('/dispatch_plugin/list', {
+			.when('/' + QDR.pluginName + '/list', {
 				templateUrl: QDR.templatePath + 'qdrList.html'
 			})
-			.when('/dispatch_plugin/schema', {
+			.when('/' + QDR.pluginName + '/schema', {
 				templateUrl: QDR.templatePath + 'qdrSchema.html'
 			})
-			.when('/dispatch_plugin/charts', {
+			.when('/' + QDR.pluginName + '/charts', {
 				templateUrl: QDR.templatePath + 'qdrCharts.html'
 			})
-			.when('/dispatch_plugin/connect', {
+			.when('/' + QDR.pluginName + '/connect', {
 				templateUrl: QDR.templatePath + 'qdrConnect.html'
 			})
       })
@@ -168,7 +168,7 @@ var QDR = (function(QDR) {
   QDR.module.run(function(workspace, viewRegistry, layoutFull, $rootScope, $location, localStorage, QDRService, QDRChartService) {
 		QDR.log.info("*************creating Dispatch Console************");
 		var curPath = $location.path()
-		if (curPath !== '/dispatch_plugin') {
+		if (curPath !== '/' + QDR.pluginName) {
 				var toPath = QDR.pluginRoot + "/connect";
 				$location.path(toPath);
 				if (curPath.startsWith(QDR.pluginRoot)) {
@@ -189,7 +189,7 @@ var QDR = (function(QDR) {
 
 		// tell hawtio that we have our own custom layout for
 		// our view
-		viewRegistry["dispatch_plugin"] = QDR.templatePath + "qdrLayout.html";
+		viewRegistry[QDR.pluginName] = QDR.templatePath + "qdrLayout.html";
 
 		var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);
 		QDRService.addConnectAction(function() {
@@ -270,8 +270,8 @@ var QDR = (function(QDR) {
       content: "Dispatch Router",
       title: "Dispatch console",
       isValid: function(workspace) { return true; },
-      href: function() { return "#/dispatch_plugin"; },
-      isActive: function(workspace) { return workspace.isLinkActive("dispatch_plugin"); }
+      href: function() { return "#/" + QDR.pluginName; },
+      isActive: function(workspace) { return workspace.isLinkActive(QDR.pluginName); }
     });
 
   });
