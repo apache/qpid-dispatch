@@ -39,7 +39,7 @@ var QDR = (function (QDR) {
 		console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
 		var columnStateKey = 'QDRColumnKey.';
 		var OverviewExpandedKey = "QDROverviewExpanded"
-		var OverviewFocusKey = "QDROverviewFocus"
+		var OverviewActivatedKey = "QDROverviewActivated"
 
 		// we want attributes to be listed first, so add it at index 0
 		$scope.subLevelTabs = [{
@@ -68,7 +68,6 @@ var QDR = (function (QDR) {
 		}
 		$scope.linkFields = []
 		$scope.link = null;
-		var nodeIds = QDRService.nodeIdList();
 		var currentTimer;
 		var refreshInterval = 5000
 	    $scope.modes = [
@@ -89,37 +88,6 @@ var QDR = (function (QDR) {
         ];
 		var topLevelChildren = [];
 
-		$scope.allRouterFields = [];
-		var allRouterCols = [
-			 {
-				 field: 'routerId',
-				 saveKey: 'allRouters',
-				 displayName: 'Router'
-			 },
-			 {
-				 field: 'area',
-				 displayName: 'Area'
-			 },
-			 {
-				 field: 'mode',
-				 displayName: 'Mode'
-			 },
-			 {
-				 field: 'connections',
-				 displayName: 'External connections'
-			 },
-             {
-                 field: 'addrCount',
-                 displayName: 'Address count'
-             },
-             {
-                 field: 'linkCount',
-                 displayName: 'Link count'
-             }
-		];
-
-                    //cellTemplate: '<div class="ngCellText"><a ng-click="openMessageDialog(row)">{{row.entity.JMSMessageID}}</a></div>',
-
 		$scope.allRouterSelected = function (row ) {
 			console.log("row selected" + row)
 		}
@@ -128,11 +96,38 @@ var QDR = (function (QDR) {
 			$("#overtree").dynatree("getTree").activateKey(nodeId);
         }
 
+		$scope.allRouterFields = [];
 		$scope.allRouterSelections = [];
 		$scope.allRouters = {
 		    saveKey: 'allRouters',
 			data: 'allRouterFields',
-			columnDefs: allRouterCols,
+			columnDefs: [
+                 {
+                     field: 'routerId',
+                     saveKey: 'allRouters',
+                     displayName: 'Router'
+                 },
+                 {
+                     field: 'area',
+                     displayName: 'Area'
+                 },
+                 {
+                     field: 'mode',
+                     displayName: 'Mode'
+                 },
+                 {
+                     field: 'connections',
+                     displayName: 'External connections'
+                 },
+                 {
+                     field: 'addrCount',
+                     displayName: 'Address count'
+                 },
+                 {
+                     field: 'linkCount',
+                     displayName: 'Link count'
+                 }
+            ],
 			enableColumnResize: true,
 			multiSelect: false,
 			selectedItems: $scope.allRouterSelections,
@@ -149,7 +144,7 @@ var QDR = (function (QDR) {
 
 		// get info for all routers
 		var allRouterInfo = function () {
-			nodeIds = QDRService.nodeIdList()
+			var nodeIds = QDRService.nodeIdList()
 			var expected = Object.keys(nodeIds).length
 			var received = 0;
 			var allRouterFields = [];
@@ -183,11 +178,6 @@ var QDR = (function (QDR) {
 							})
 						}
 						$scope.allRouterFields = allRouterFields
-						$scope.$apply()
-						if (currentTimer) {
-							clearTimeout(currentTimer)
-						}
-						currentTimer = setTimeout(allRouterInfo, refreshInterval);
 					}, nodeIds[0], false)
 				}
 			}
@@ -195,33 +185,35 @@ var QDR = (function (QDR) {
 				QDRService.getNodeInfo(nodeId, ".connection", ["role"], gotNodeInfo)
 			})
 			loadColState($scope.allRouters)
+			updateRouterTree(nodeIds)
 		}
+
+		$scope.routerFields = []
+        $scope.routerGrid = {
+            saveKey: 'routerGrid',
+            data: 'routerFields',
+            columnDefs: [
+                 {
+                     field: 'attribute',
+                     displayName: 'Attribute',
+                     saveKey: 'routerGrid',
+                     width: '40%'
+                 },
+                 {
+                     field: 'value',
+                     displayName: 'Value',
+                     width: '40%'
+                 }
+            ],
+            enableColumnResize: true,
+            multiSelect: false
+        }
 
 		// get info for a single router
 		var routerInfo = function (node) {
 			$scope.router = node
-			$scope.routerFields = []
-			var cols = [
-				 {
-					 field: 'attribute',
-					 displayName: 'Attribute',
-					 saveKey: 'routerGrid',
-					 width: '40%'
-				 },
-				 {
-					 field: 'value',
-					 displayName: 'Value',
-					 width: '40%'
-				 }
-			]
-			$scope.routerGrid = {
-				saveKey: 'routerGrid',
-				data: 'routerFields',
-				columnDefs: cols,
-				enableColumnResize: true,
-				multiSelect: false
-			}
 
+			$scope.routerFields = [];
 			$scope.allRouterFields.some( function (field) {
 				if (field.routerId === node.data.title) {
 					Object.keys(field).forEach ( function (key) {
@@ -231,85 +223,90 @@ var QDR = (function (QDR) {
 					return true
 				}
 			})
-			if (currentTimer) {
-				clearTimeout(currentTimer)
-				currentTimer = null
-			}
 	        loadColState($scope.routerGrid);
 		}
 
-		// get info for a all addresses
-		var allAddressInfo = function () {
-			$scope.addressFields = []
-			var addressCols = [
-				 {
-					 field: 'address',
-					saveKey: 'addressesGrid',
-					 displayName: 'address'
-				 },
-				 {
-					 field: 'class',
-					 displayName: 'class'
-				 },
-				 {
-					 field: 'phase',
-					 displayName: 'phase',
-					 cellClass: 'grid-align-value'
-				 },
-				 {
-					 field: 'inproc',
-					 displayName: 'in-proc'
-				 },
-				 {
-					 field: 'local',
-					 displayName: 'local',
-					 cellClass: 'grid-align-value'
-				 },
-				 {
-					 field: 'remote',
-					 displayName: 'remote',
-					 cellClass: 'grid-align-value'
-				 },
-				 {
-					 field: 'in',
-					 displayName: 'in',
-					 cellClass: 'grid-align-value'
-				 },
-				 {
-					 field: 'out',
-					 displayName: 'out',
-					 cellClass: 'grid-align-value'
-				 }
-			]
-			$scope.selectedAddresses = []
-			$scope.addressesGrid = {
-				saveKey: 'addressesGrid',
-				data: 'addressFields',
-				columnDefs: addressCols,
-				enableColumnResize: true,
-				multiSelect: false,
-				selectedItems: $scope.selectedAddresses,
-				afterSelectionChange: function(data) {
-					if (data.selected) {
-						var selItem = data.entity;
-						var nodeId = selItem.uid
-						$("#overtree").dynatree("getTree").activateKey(nodeId);
-					}
-	            }
-			};
-			var gotAllAddressFields = function ( addressFields ) {
-				$scope.addressFields = 	addressFields
-				$scope.$apply()
-				if (currentTimer) {
-					clearTimeout(currentTimer)
+		$scope.addressesData = []
+		$scope.selectedAddresses = []
+		$scope.addressesGrid = {
+			saveKey: 'addressesGrid',
+			data: 'addressesData',
+			columnDefs: [
+                 {
+                     field: 'address',
+                    saveKey: 'addressesGrid',
+                     displayName: 'address'
+                 },
+                 {
+                     field: 'class',
+                     displayName: 'class'
+                 },
+                 {
+                     field: 'phase',
+                     displayName: 'phase',
+                     cellClass: 'grid-align-value'
+                 },
+                 {
+                     field: 'inproc',
+                     displayName: 'in-proc'
+                 },
+                 {
+                     field: 'local',
+                     displayName: 'local',
+                     cellClass: 'grid-align-value'
+                 },
+                 {
+                     field: 'remote',
+                     displayName: 'remote',
+                     cellClass: 'grid-align-value'
+                 },
+                 {
+                     field: 'in',
+                     displayName: 'in',
+                     cellClass: 'grid-align-value'
+                 },
+                 {
+                     field: 'out',
+                     displayName: 'out',
+                     cellClass: 'grid-align-value'
+                 }
+            ],
+			enableColumnResize: true,
+			multiSelect: false,
+			selectedItems: $scope.selectedAddresses,
+			afterSelectionChange: function(data) {
+				if (data.selected) {
+					var selItem = data.entity;
+					var nodeId = selItem.uid
+					$("#overtree").dynatree("getTree").activateKey(nodeId);
 				}
-				currentTimer = setTimeout(allAddressInfo, refreshInterval);
+            }
+		};
+
+		// get info for all addresses
+		var allAddressInfo = function () {
+			var gotAllAddressFields = function ( addressFields ) {
+				// update the grid's data
+				addressFields.sort ( function (a,b) { return a.address < b.address ? -1 : a.address > b.address ? 1 : 0})
+				addressFields[0].title = addressFields[0].address
+				for (var i=1; i<addressFields.length; ++i) {
+					if (addressFields[i].address === addressFields[i-1].address) {
+						addressFields[i-1].title = addressFields[i-1].address + " (" + addressFields[i-1]['class'] + ")"
+						addressFields[i].title = addressFields[i].address + " (" + addressFields[i]['class'] + ")"
+					} else
+						addressFields[i].title = addressFields[i].address
+				}
+				$scope.addressesData = addressFields
+
+				// repopulate the tree's child nodes
+				updateAddressTree(addressFields)
 			}
 			getAllAddressFields(gotAllAddressFields)
 	        loadColState($scope.addressesGrid);
 		}
 
 		var getAllAddressFields = function (callback) {
+			var nodeIds = QDRService.nodeIdList()
 			var addr_class = function (addr) {
 				if (!addr) return "-"
 		        if (addr[0] == 'M')  return "mobile"
@@ -348,7 +345,6 @@ var QDR = (function (QDR) {
 			}
 
 			var addressFields = []
-			nodeIds = QDRService.nodeIdList()
 			QDRService.getMultipleNodeInfo(nodeIds, "router.address", [], function (nodeIds, entity, response) {
 				response.aggregates.forEach( function (result) {
 					var prettySum = function (field) {
@@ -396,80 +392,73 @@ var QDR = (function (QDR) {
 					linkInfo({data: {title: links[0].title, fields: links[0]}})
 				}
 			}
-
-			$scope.$apply()
-			if (currentTimer) {
-				clearTimeout(currentTimer)
-			}
-			currentTimer = setTimeout(allLinkInfo, refreshInterval);
 		}
 
 		// get info for a all links
-		var linkCols = [
-			 {
-				 field: 'link',
-				 displayName: 'Link',
-				 groupable:	false,
-				 saveKey: 'linksGrid',
-				 width: '12%'
-			 },
-			 {
-				 field: 'linkType',
-				 displayName: 'Link type',
-				 groupable:	false,
-				 width: '10%'
-			 },
-			 {
-				 field: 'linkDir',
-				 displayName: 'Link dir',
-				 groupable:	false,
-				 width: '8%'
-			 },
-			 {
-				 field: 'adminStatus',
-				 displayName: 'Admin status',
-				 groupable:	false,
-				 width: '10%'
-			 },
-			 {
-				 field: 'operStatus',
-				 displayName: 'Oper status',
-				 groupable:	false,
-				 width: '10%'
-			 },
-			 {
-				 field: 'deliveryCount',
-				 displayName: 'Delivery Count',
-				 groupable:	false,
-				 cellClass: 'grid-align-value',
-				 width: '12%'
-			 },
-			 {
-				 field: 'rate',
-				 displayName: 'Rate',
-				 groupable:	false,
-				 cellClass: 'grid-align-value',
-				 width: '8%'
-			 },
-			 {
-				 field: 'uncounts',
-				 displayName: 'Outstanding',
-				 groupable:	false,
-				 cellClass: 'grid-align-value',
-				 width: '10%'
-			 },
-			 {
-				 field: 'owningAddr',
-				 displayName: 'Address',
-				 groupable:	false,
-				 width: '20%'
-			 }
-		]
 		$scope.selectedLinks = []
 		$scope.linksGrid = {
 			saveKey: 'linksGrid',
 			data: 'linkFields',
-			columnDefs: linkCols,
+			columnDefs: [
+                 {
+                     field: 'link',
+                     displayName: 'Link',
+                     groupable:	false,
+                     saveKey: 'linksGrid',
+                     width: '12%'
+                 },
+                 {
+                     field: 'linkType',
+                     displayName: 'Link type',
+                     groupable:	false,
+                     width: '10%'
+                 },
+                 {
+                     field: 'linkDir',
+                     displayName: 'Link dir',
+                     groupable:	false,
+                     width: '8%'
+                 },
+                 {
+                     field: 'adminStatus',
+                     displayName: 'Admin status',
+                     groupable:	false,
+                     width: '10%'
+                 },
+                 {
+                     field: 'operStatus',
+                     displayName: 'Oper status',
+                     groupable:	false,
+                     width: '10%'
+                 },
+                 {
+                     field: 'deliveryCount',
+                     displayName: 'Delivery Count',
+                     groupable:	false,
+                     cellClass: 'grid-align-value',
+                     width: '12%'
+                 },
+                 {
+                     field: 'rate',
+                     displayName: 'Rate',
+                     groupable:	false,
+                     cellClass: 'grid-align-value',
+                     width: '8%'
+                 },
+                 {
+                     field: 'uncounts',
+                     displayName: 'Outstanding',
+                     groupable:	false,
+                     cellClass: 'grid-align-value',
+                     width: '10%'
+                 },
+                 {
+                     field: 'owningAddr',
+                     displayName: 'Address',
+                     groupable:	false,
+                     width: '20%'
+                 }
+            ],
 			enableColumnResize: true,
 			enableColumnReordering: true,
 			showColumnMenu: true,
@@ -508,23 +497,13 @@ var QDR = (function (QDR) {
                 })
             }
         }
-/*
-$scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
-		$scope.saveGroupState = function () {
-			var groups = $scope.linksGrid.$gridScope.renderedRows;
-			for (var i = 0; i < groups.length; i++) {
-				if (groups[i].label) {
-					localStorage.setItem(groupStateKey + groups[i].label, groups[i].collapsed);
-				}
-			}
-		}
-*/
-		var allLinkInfo = function (e) {
+		var allLinkInfo = function () {
 			getAllLinkFields([updateLinkGrid, updateLinkTree])
 	        loadColState($scope.linksGrid);
 		}
 
 		var getAllLinkFields = function (callbacks) {
+			var nodeIds = QDRService.nodeIdList()
 			var linkFields = []
 			var now = Date.now()
 			var rate = function (response, result) {
@@ -542,7 +521,6 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 					return 0
 				}
 			}
-			nodeIds = QDRService.nodeIdList()
 			QDRService.getMultipleNodeInfo(nodeIds, "router.link", [], function (nodeIds, entity, response) {
 				response.aggregates.forEach( function (result) {
 					var prettySum = function (field) {
@@ -641,100 +619,116 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 			}, nodeIds[0])
 		}
 
+		$scope.allConnectionFields = []
+		$scope.allConnectionSelections = [];
+		$scope.allConnectionGrid = {
+			saveKey: 'allConnGrid',
+            data: 'allConnectionFields',
+            columnDefs: [
+                 {
+                     field: 'host',
+                    saveKey: 'allConnGrid',
+                     displayName: 'host'
+                 },
+                 {
+                     field: 'container',
+                     displayName: 'container'
+                 },
+                 {
+                     field: 'role',
+                     displayName: 'role'
+                 },
+                 {
+                     field: 'dir',
+                     displayName: 'dir'
+                 },
+                 {
+                     field: 'security',
+                     displayName: 'security'
+                 },
+                 {
+                     field: 'authentication',
+                     displayName: 'authentication'
+                 }
+            ],
+            enableColumnResize: true,
+            multiSelect: false,
+            selectedItems: $scope.allConnectionSelections,
+            afterSelectionChange: function(data) {
+                if (data.selected) {
+                    var selItem = $scope.allConnectionSelections[0]
+                    var nodeId = selItem.host
+                    // activate Routers->nodeId in the tree
+                    $("#overtree").dynatree("getTree").activateKey(nodeId);
+                }
+            }
+        };
 		// get info for a all connections
 		var allConnectionInfo = function () {
-			$scope.allConnectionFields = []
-			var allConnectionCols = [
-				 {
-					 field: 'host',
-					saveKey: 'allConnGrid',
-					 displayName: 'host'
-				 },
-				 {
-					 field: 'container',
-					 displayName: 'container'
-				 },
-				 {
-					 field: 'role',
-					 displayName: 'role'
-				 },
-				 {
-					 field: 'dir',
-					 displayName: 'dir'
-				 },
-				 {
-					 field: 'security',
-					 displayName: 'security'
-				 },
-				 {
-					 field: 'authentication',
-					 displayName: 'authentication'
-				 }
-			]
-			$scope.allConnectionSelections = [];
-			$scope.allConnectionGrid = {
-				saveKey: 'allConnGrid',
-                data: 'allConnectionFields',
-                columnDefs: allConnectionCols,
-                enableColumnResize: true,
-                multiSelect: false,
-                selectedItems: $scope.allConnectionSelections,
-                afterSelectionChange: function(data) {
-                    if (data.selected) {
-                        var selItem = $scope.allConnectionSelections[0]
-                        var nodeId = selItem.host
-                        // activate Routers->nodeId in the tree
-                        $("#overtree").dynatree("getTree").activateKey(nodeId);
-                    }
-                }
-            };
-			connections.children.forEach( function (connection) {
-				$scope.allConnectionFields.push(connection.fields)
+			var nodeIds = QDRService.nodeIdList()
+			updateConnectionTree(nodeIds)
+			$scope.allConnectionFields = [];;
+            var connectionNodes = $("#overtree").dynatree("getTree").getNodeByKey('Connections').getChildren()
+			connectionNodes.forEach( function (connection) {
+				$scope.allConnectionFields.push(connection.data.fields)
 			})
-			if (currentTimer) {
-				clearTimeout(currentTimer)
-				currentTimer = null
-			}
 	        loadColState($scope.allConnectionGrid);
+		}
+
+		$scope.addressFields = []
+		$scope.addressGrid = {
+			saveKey: 'addGrid',
+			data: 'addressFields',
+			columnDefs: [
+                 {
+                     field: 'attribute',
+                     displayName: 'Attribute',
+                     saveKey: 'addGrid',
+                     width: '40%'
+                 },
+                 {
+                     field: 'value',
+                     displayName: 'Value',
+                     width: '40%'
+                 }
+            ],
+			enableColumnResize: true,
+			multiSelect: false
 		}
 
 		// get info for a single address
 		var addressInfo = function (address) {
+			if (!address)
+				return;
 			$scope.address = address
-			$scope.addressFields = []
-			var cols = [
-				 {
-					 field: 'attribute',
-					 displayName: 'Attribute',
-					 saveKey: 'addGrid',
-					 width: '40%'
-				 },
-				 {
-					 field: 'value',
-					 displayName: 'Value',
-					 width: '40%'
-				 }
-			]
-			$scope.addressGrid = {
-				saveKey: 'addGrid',
-				data: 'addressFields',
-				columnDefs: cols,
-				enableColumnResize: true,
-				multiSelect: false
-			}
+			$scope.addressFields = [];
 
 			var fields = Object.keys(address.data.fields)
 			fields.forEach( function (field) {
 				if (field != "title" && field != "uid")
 					$scope.addressFields.push({attribute: field, value: address.data.fields[field]})
 			})
-
-			if (currentTimer) {
-				clearTimeout(currentTimer)
-				currentTimer = null
-			}
 	        loadColState($scope.addressGrid);
+		}
 
+		$scope.singleLinkFields = []
+		$scope.linkGrid = {
+		    saveKey: 'linkGrid',
+			data: 'singleLinkFields',
+			columnDefs: [
+                 {
+                    field: 'attribute',
+                    displayName: 'Attribute',
+                     width: '40%'
+                 },
+                 {
+                    field: 'value',
+                    displayName: 'Value',
+                    width: '40%'
+                 }
+            ],
+			enableColumnResize: true,
+			multiSelect: false
 		}
 
 		// display the grid detail info for a single link
@@ -742,28 +736,8 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 			if (!link)
 				return;
 			$scope.link = link
-			$scope.singleLinkFields = []
-			var cols = [
-				 {
-					 field: 'attribute',
-					 displayName: 'Attribute',
-				    saveKey: 'linkGrid',
-					 width: '40%'
-				 },
-				 {
-					 field: 'value',
-					 displayName: 'Value',
-					 width: '40%'
-				 }
-			]
-			$scope.linkGrid = {
-			    saveKey: 'linkGrid',
-				data: 'singleLinkFields',
-				columnDefs: cols,
-				enableColumnResize: true,
-				multiSelect: false
-			}
 
+			$scope.singleLinkFields = [];
 			var fields = Object.keys(link.data.fields)
 			var excludeFields = ["title", "uid", "uncounts", "rawDeliveryCount", "timestamp"]
 			fields.forEach( function (field) {
@@ -864,18 +838,14 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 				}
 			})
 			$scope.connectionLinksGrid.updateState()
-			$scope.$apply();
-
 		}
 
 		$scope.selectMode = function (mode) {
 			$scope.currentMode = mode;
 			if (mode.id === 'links') {
-		        QDRService.startUpdating();
 		        QDRService.addUpdatedAction("connectionLinks", updateConnectionLinks)
 				updateConnectionLinks();
 			} else {
-	            QDRService.stopUpdating();
 				QDRService.delUpdatedAction("connectionLinks");
 			}
 		}
@@ -1037,41 +1007,38 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 			}
 			]
 		}
+
+		$scope.connectionFields = []
+		$scope.connectionGrid = {
+		    saveKey: 'connGrid',
+			data: 'connectionFields',
+			columnDefs: [
+                 {
+                     field: 'attribute',
+                     displayName: 'Attribute',
+                    saveKey: 'connGrid',
+                     width: '40%'
+                 },
+                 {
+                     field: 'value',
+                     displayName: 'Value',
+                     width: '40%'
+                 }
+            ],
+			enableColumnResize: true,
+			multiSelect: false
+		}
+
 		var connectionInfo = function (connection) {
 			$scope.connection = connection
-			$scope.connectionFields = []
-			var cols = [
-				 {
-					 field: 'attribute',
-					 displayName: 'Attribute',
-				    saveKey: 'connGrid',
-					 width: '40%'
-				 },
-				 {
-					 field: 'value',
-					 displayName: 'Value',
-					 width: '40%'
-				 }
-			]
-			$scope.connectionGrid = {
-			    saveKey: 'connGrid',
-				data: 'connectionFields',
-				columnDefs: cols,
-				enableColumnResize: true,
-				multiSelect: false
-			}
 
+			$scope.connectionFields = [];
 			var fields = Object.keys(connection.data.fields)
 			fields.forEach( function (field) {
 				$scope.connectionFields.push({attribute: field, value: connection.data.fields[field]})
 			})
-			if (currentTimer) {
-				clearTimeout(currentTimer)
-				currentTimer = null
-			}
 			$scope.selectMode($scope.currentMode)
 	        loadColState($scope.connectionGrid);
-
 		}
 
 		// get info for a all logs
@@ -1083,40 +1050,48 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 			$scope.log = node
 		}
 
-		// loads the tree node name that had the focus last
-		var loadFocusNode = function () {
-			return localStorage[OverviewFocusKey] || 'Routers'
+		var getExpandedList = function () {
+			var list = [];
+			var tree = $("#overtree").dynatree("getRoot");
+			if (tree.length !== 0) {
+				tree.visit(function(node){
+	                if (node.isExpanded()) {
+	                    list.push(node.data.parent)
+	                }
+	            });
+			}
+			return list;
 		}
-		// saved the tree node name that currently hsas the focus
-		var saveFocused = function (node) {
-			localStorage[OverviewFocusKey] = node;
+
+		var updateExpanded = function () {
+			var tree = $("#overtree").dynatree("getRoot");
+			if (tree.length !== 0) {
+				tree.visit(function(node){
+	                if (node.isExpanded() || node.isActive()) {
+	                    node.data.info(node)
+	                }
+	            });
+			}
+		}
+
+		// loads the tree node name that was last selected
+		var loadActivatedNode = function () {
+			return localStorage[OverviewActivatedKey] || 'Routers'
+		}
+		// saved the tree node name that is currently selected
+		var saveActivated = function (key) {
+			localStorage[OverviewActivatedKey] = key;
+			lastKey = key;
 		}
 		// loads list that was saved
 		var loadExpandedNodeList = function () {
 			return angular.fromJson(localStorage[OverviewExpandedKey]) || [];
 		}
-		// save node names that are expanded
-		var saveExpanded = function () {
-			var list = [];
-			$("#overtree").dynatree("getRoot").visit(function(node){
-                if (node.isExpanded()) {
-                    list.push(node.data.parent)
-                }
-            });
-			localStorage[OverviewExpandedKey] = JSON.stringify(list)
-		}
-		// expand tree nodes that were previously expanded
-		var restoreExpanded = function () {
-			var expanded = angular.fromJson(localStorage[OverviewExpandedKey]);
-			$("#overtree").dynatree("getRoot").visit(function(node){
-				node.expand(expanded.indexOf(node.parent))
-            });
-		}
-
-		// expanded is called when a node is expanded
+		// called when a node is expanded
 		// here we save the expanded node so it can be restored when the page reloads
-		var expanded = function (flag, node) {
-			saveExpanded();
+		var saveExpanded = function () {
+			var list = getExpandedList();
+			localStorage[OverviewExpandedKey] = JSON.stringify(list)
 		}
 
 		// activated is called each time a tree node is clicked
@@ -1125,7 +1100,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 			//QDR.log.debug("node activated: " + node.data.title)
 			var type = node.data.type;
 			saveExpanded()
-			saveFocused(node.data.parent)
+			saveActivated(node.data.key)
 
 			var template = $scope.templates.filter( function (tpl) {
 				return tpl.name == type;
@@ -1133,8 +1108,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 			$scope.template = template[0];
 			// the nodes info function will fetch the grids data
 			if (node.data.info) {
-				node.data.info(node)
-				if (!$scope.$$phase) $scope.$apply()
+				$timeout(function () {node.data.info(node)})
 			}
 
 		}
@@ -1144,6 +1118,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 			QDRService.redirectWhenConnected("overview")
 			return;
 		}
+
 		// we are currently connected. setup a handler to get notified if we are ever disconnected
 		QDRService.addDisconnectAction( function () {
 			QDRService.redirectWhenConnected("overview")
@@ -1156,66 +1131,91 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
      *
      * -------------------------------------------------
      */
-        var lastKey = loadFocusNode();
+		// utility function called by each top level tree node when it needs to populate its child nodes
+		var updateLeaves = function (leaves, parentKey, parentFolder, worker) {
+			var scrollTree = $('.qdr-overview.pane.left .pane-viewport')
+			var scrollTop = scrollTree.scrollTop();
+			var tree = $("#overtree").dynatree("getTree")
+			var parentNode = tree.count ? tree.getNodeByKey(parentKey) : null;
+			// if we were called after the tree is created, replace the existing nodes
+			var activeNode;
+			if (parentNode) {
+				activeNode = tree.getActiveNode();
+				parentNode.removeChildren();
+			}
+			leaves.forEach( function (leaf) {
+				var childFolder = worker(leaf)
+				if (parentNode)
+					parentNode.addChild(childFolder)
+				else
+					parentFolder.children.push(childFolder)
+			})
+			scrollTree.scrollTop(scrollTop)
+			if (activeNode) {
+				var newNode = tree.getNodeByKey(activeNode.data.key)
+				newNode.activateSilently()
+			}
+		}
+
+		// get saved tree state
+        var lastKey = loadActivatedNode();
 		var expandedNodeList = loadExpandedNodeList();
-		if (expandedNodeList.length == 0)
-			expandedNodeList = ['Routers']
+
+		// create a routers tree branch
 		var routers = new Folder("Routers")
 		routers.type = "Routers"
 		routers.info = allRouterInfo
-		routers.focus = lastKey === 'Routers'
+		routers.activate = lastKey === 'Routers'
 		routers.expand = (expandedNodeList.indexOf("Routers") > -1)
 		routers.clickFolderMode = 1
 		routers.key = "Routers"
 		routers.parent = "Routers"
 	    routers.addClass = "routers"
 		topLevelChildren.push(routers)
-		nodeIds.forEach( function (node) {
-			var name = QDRService.nameFromId(node)
-			var router = new Folder(name)
-			router.type = "Router"
-			router.info = routerInfo
-			router.nodeId = node
-			router.key = node
-			router.addClass = "router"
-			router.parent = "Routers"
-			routers.children.push(router)
-		})
+		// called when the list of routers changes
+		var updateRouterTree = function (nodes) {
+			var worker = function (node) {
+				var name = QDRService.nameFromId(node)
+				var router = new Folder(name)
+				router.type = "Router"
+				router.info = routerInfo
+				router.nodeId = node
+				router.key = node
+				router.addClass = "router"
+				router.parent = "Routers"
+				router.activate = lastKey === node
+				return router;
+			}
+			updateLeaves(nodes, "Routers", routers, worker)
+		}
+		updateRouterTree(QDRService.nodeIdList());
 
-		var expected = nodeIds.length;
+		// create an addresses tree branch
 		var addresses = new Folder("Addresses")
 		addresses.type = "Addresses"
 		addresses.info = allAddressInfo
-		addresses.focus = lastKey === 'Addresses'
+		addresses.activate = lastKey === 'Addresses'
 		addresses.expand = (expandedNodeList.indexOf("Addresses") > -1)
 		addresses.clickFolderMode = 1
 		addresses.key = "Addresses"
 		addresses.parent = "Addresses"
 	    addresses.addClass = "addresses"
 		topLevelChildren.push(addresses)
-
-		var gotAddressFields = function (addressFields) {
-			addressFields.sort ( function (a,b) { return a.address < b.address ? -1 : a.address > b.address ? 1 : 0})
-			addressFields[0].title = addressFields[0].address
-			for (var i=1; i<addressFields.length; ++i) {
-				if (addressFields[i].address === addressFields[i-1].address) {
-					addressFields[i-1].title = addressFields[i-1].address + " (" + addressFields[i-1]['class'] + ")"
-					addressFields[i].title = addressFields[i].address + " (" + addressFields[i]['class'] + ")"
-				} else
-					addressFields[i].title = addressFields[i].address
-			}
-			addressFields.forEach( function (address) {
+		var updateAddressTree = function (addressFields) {
+			var worker = function (address) {
 				var a = new Folder(address.title)
 				a.info = addressInfo
 				a.key = address.uid
 				a.fields = address
 				a.type = "Address"
 				a.addClass = "address"
+				a.activate = lastKey === address.uid
 				a.parent = "Addresses"
-				addresses.children.push(a)
-			} )
+				return a;
+			}
+			updateLeaves(addressFields, "Addresses", addresses, worker)
 		}
-		getAllAddressFields(gotAddressFields)
+		allAddressInfo();
 
 		$scope.setLinkFilter = function (cur) {
 			// filter out non-matching links from the tree and the grid
@@ -1230,7 +1230,7 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 		var links = new Folder("Links " + filterHtml)
 		links.type = "Links"
 		links.info = allLinkInfo
-		links.focus = lastKey === 'Links'
+		links.activate = lastKey === 'Links'
 		links.expand = (expandedNodeList.indexOf("Links") > -1)
 		links.clickFolderMode = 1
 		links.key = "Links"
@@ -1240,124 +1240,111 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 
 		// called both before the tree is created and whenever a background update is done
 		var updateLinkTree = function (linkFields) {
-			var scrollTree = $('.qdr-overview.pane.left .pane-viewport')
-			var scrollTop = scrollTree.scrollTop();
-			//QDR.log.debug("scrollTop was " + scrollTop)
-			var tree = $("#overtree").dynatree("getTree")
-			var activeNode;
-			var node = tree.count ? tree.getNodeByKey('Links') : null;
-			// if we were called after the tree is created, replace the existing nodes
-			if (node) {
-				activeNode = tree.getActiveNode();
-				node.removeChildren();
-			}
-			linkFields.sort ( function (a,b) { return a.link < b.link ? -1 : a.link > b.link ? 1 : 0})
-			linkFields.forEach( function (link) {
+			var worker = function (link) {
 				var l = new Folder(link.title)
 				l.info = linkInfo
 				l.key = link.uid
 				l.fields = link
 				l.type = "Link"
 				l.parent = "Links"
+				l.activate = lastKey === link.uid
 				l.addClass = "link"
-				// if node exists, we are updating the existing links
-				if (node)
-					node.addChild(l)
-				else {
-					// we are initializing the data before the tree is created
-					links.children.push(l)
-				}
-			} )
-			scrollTree.scrollTop(scrollTop)
-			if (activeNode) {
-				var newNode = tree.getNodeByKey(activeNode.data.key)
-				newNode.activateSilently()
+				return l;
 			}
+			linkFields.sort ( function (a,b) { return a.link < b.link ? -1 : a.link > b.link ? 1 : 0})
+			updateLeaves(linkFields, "Links", links, worker)
 		}
-		getAllLinkFields([updateLinkGrid, updateLinkTree])
+		allLinkInfo();
 
-		var connreceived = 0;
-		var connectionsObj = {}
 		var connections = new Folder("Connections")
 		connections.type = "Connections"
 		connections.info = allConnectionInfo
-		connections.focus = lastKey === 'Connections'
+		connections.activate = lastKey === 'Connections'
 		connections.expand = (expandedNodeList.indexOf("Connections") > -1)
 		connections.clickFolderMode = 1
 		connections.key = "Connections"
 		connections.parent = "Connections"
 	    connections.addClass = "connections"
 		topLevelChildren.push(connections)
-		nodeIds.forEach( function (nodeId) {
 
-			QDRService.getNodeInfo(nodeId, ".connection", [], function (nodeName, entity, response) {
-				response.results.forEach( function (result) {
+		updateConnectionTree = function (nodes) {
+			var connectionsObj = {}
+			var expected = nodes.length;
+			var connreceived = 0;
+			nodes.forEach( function (nodeId) {
+				QDRService.getNodeInfo(nodeId, ".connection", [], function (nodeName, entity, response) {
+					response.results.forEach( function (result) {
 
-					var auth = "no_auth"
-					var sasl = QDRService.valFor(response.attributeNames, result, "sasl")
-					if (QDRService.valFor(response.attributeNames, result, "isAuthenticated")) {
-						auth = sasl
-						if (sasl === "ANONYMOUS")
-							auth = "anonymous-user"
-						else {
+						var auth = "no_auth"
+						var sasl = QDRService.valFor(response.attributeNames, result, "sasl")
+						if (QDRService.valFor(response.attributeNames, result, "isAuthenticated")) {
+							auth = sasl
+							if (sasl === "ANONYMOUS")
+								auth = "anonymous-user"
+							else {
+								if (sasl === "GSSAPI")
+									sasl = "Kerberos"
+								if (sasl === "EXTERNAL")
+									sasl = "x.509"
+								auth = QDRService.valFor(response.attributeNames, result, "user") + "(" +
+										QDRService.valFor(response.attributeNames, result, "sslCipher") + ")"
+								}
+						}
+
+						var sec = "no-security"
+						if (QDRService.valFor(response.attributeNames, result, "isEncrypted")) {
 							if (sasl === "GSSAPI")
-								sasl = "Kerberos"
-							if (sasl === "EXTERNAL")
-								sasl = "x.509"
-							auth = QDRService.valFor(response.attributeNames, result, "user") + "(" +
-									QDRService.valFor(response.attributeNames, result, "sslCipher") + ")"
-							}
-					}
+								sec = "Kerberos"
+							else
+								sec = QDRService.valFor(response.attributeNames, result, "sslProto") + "(" +
+										QDRService.valFor(response.attributeNames, result, "sslCipher") + ")"
+						}
 
-					var sec = "no-security"
-					if (QDRService.valFor(response.attributeNames, result, "isEncrypted")) {
-						if (sasl === "GSSAPI")
-							sec = "Kerberos"
-						else
-							sec = QDRService.valFor(response.attributeNames, result, "sslProto") + "(" +
-									QDRService.valFor(response.attributeNames, result, "sslCipher") + ")"
-					}
+						var host = QDRService.valFor(response.attributeNames, result, "host")
+						connectionsObj[host] = {}
+						response.attributeNames.forEach( function (attribute, i) {
+							connectionsObj[host][attribute] = result[i]
+						})
+						connectionsObj[host].security = sec
+						connectionsObj[host].authentication = auth
+						connectionsObj[host].routerId = nodeName
 
-					var host = QDRService.valFor(response.attributeNames, result, "host")
-					connectionsObj[host] = {}
-					response.attributeNames.forEach( function (attribute, i) {
-						connectionsObj[host][attribute] = result[i]
 					})
-					connectionsObj[host].security = sec
-					connectionsObj[host].authentication = auth
-					connectionsObj[host].routerId = nodeName
-
+					++connreceived;
+					if (connreceived == expected) {
+						var worker = function (connection) {
+							var c = new Folder(connection)
+							c.type = "Connection"
+							c.info = connectionInfo
+							c.key = connection
+							c.fields = connectionsObj[connection]
+							c.tooltip = connectionsObj[connection].role === "inter-router" ? "inter-router connection" : "external connection"
+							c.addClass = c.tooltip
+							c.parent = "Connections"
+							c.activate = lastKey === connection
+							return c
+						}
+						var allConnections = Object.keys(connectionsObj).sort()
+						updateLeaves(allConnections, "Connections", connections, worker)
+					}
 				})
-				++connreceived;
-				if (connreceived == expected) {
-					var allConnections = Object.keys(connectionsObj).sort()
-					allConnections.forEach(function (connection) {
-						var c = new Folder(connection)
-						c.type = "Connection"
-						c.info = connectionInfo
-						c.key = connection
-						c.fields = connectionsObj[connection]
-						c.tooltip = connectionsObj[connection].role === "inter-router" ? "inter-router connection" : "external connection"
-						c.addClass = c.tooltip
-						c.parent = "Connections"
-						connections.children.push(c)
-
-					})
-				}
 			})
-		})
+		}
+		updateConnectionTree(QDRService.nodeIdList())
 
 		var logsreceived = 0;
 		var logObj = {}
 		var logs = new Folder("Logs")
 		logs.type = "Logs"
 		logs.info = allLogInfo
-		logs.focus = lastKey === 'Logs'
+		logs.activate = lastKey === 'Logs'
 		logs.expand = (expandedNodeList.indexOf("Logs") > -1)
 		logs.clickFolderMode = 1
 		logs.key = "Logs"
 		logs.parent = "Logs"
 		//topLevelChildren.push(logs)
+		var nodeIds = QDRService.nodeIdList()
+		var expected = nodeIds.length;
 		nodeIds.forEach( function (nodeId) {
 			QDRService.getNodeInfo(nodeId, ".log", ["name"], function (nodeName, entity, response) {
 				response.results.forEach( function (result) {
@@ -1372,11 +1359,12 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 						l.info = logInfo
 						l.key = log
 						l.parent = "Logs"
+						l.activate = lastKey === log
 						logs.children.push(l)
 					})
 					$('#overtree').dynatree({
 						onActivate: activated,
-						onExpand: expanded,
+						onExpand: saveExpanded,
 						onClick: function (n, e) {
 							if (e.target.className.indexOf('-filter') > -1) {
 								//QDR.log.debug("overtree on click called")
@@ -1391,11 +1379,6 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
                                             });
 								filter.toggle()
 								$("#overtree").dynatree("getTree").getNodeByKey('Links').activate()
-								/*
-								$(document).click(function (e) {
-									$scope.filterClose()
-								})
-								*/;
 								return false;
 							}
 						},
@@ -1403,27 +1386,20 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 						activeVisible: false,
 						children: topLevelChildren
 					})
-					saveExpanded();
-					// populate the expanded tree node
-					var infoMethods = {
-						Routers: allRouterInfo,
-						Addresses: allAddressInfo,
-						Links: allLinkInfo,
-						Connections: allConnectionInfo,
-						Logs: allLogInfo
+					// simulate a click on the previous active node
+					var active = $("#overtree").dynatree("getActiveNode");
+					if (!active) {
+						active = $("#overtree").dynatree("getTree").getNodeByKey("Routers")
 					}
-					if (infoMethods[lastKey]) {
-						var template = $scope.templates.filter( function (tpl) {
-                            return tpl.name == lastKey;
-                        })
-                        $scope.template = template[0];
-						infoMethods[lastKey]();
-					}
-					expandedNodeList.forEach ( function (node) {
-						if (infoMethods[node] && node !== lastKey) {
-							infoMethods[node]()
-						}
+					activated(active);
+
+					// populate the data for each expanded node
+					updateExpanded();
+					QDRService.addUpdatedAction( "overview", function () {
+						$timeout(updateExpanded);
 					})
+					// update the node list
+					QDRService.startUpdating()
 
 			        loadColState($scope.allRouters);
 			        loadColState($scope.routerGrid);
@@ -1439,6 +1415,8 @@ $scope.linksGrid.ngGrid.rowFactory.aggCache[rowIndex].toggleExpand();
 		})
 
         $scope.$on("$destroy", function( event ) {
+			QDRService.stopUpdating()
+			QDRService.delUpdatedAction("overview")
 			if (currentTimer) {
 				clearTimeout(currentTimer)
 				currentTimer = null;

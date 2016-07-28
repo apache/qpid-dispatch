@@ -202,6 +202,12 @@ var QDR = (function(QDR) {
 				$rootScope.$apply();
 			})
 			QDRService.addConnectAction(function() {
+	            var searchObject = $location.search();
+				// the redirect will be handled by QDRService when connected
+	            if (searchObject.org) {
+					return;
+	            }
+
 				if ($location.path().startsWith(QDR.pluginRoot)) {
 					var lastLocation = localStorage[QDR.LAST_LOCATION];
 					if (!angular.isDefined(lastLocation))

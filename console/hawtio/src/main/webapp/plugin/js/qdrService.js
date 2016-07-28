@@ -89,7 +89,9 @@ var QDR = (function(QDR) {
         for (action in self.updatedActions) {
 			try {
                 self.updatedActions[action].apply();
-            } catch (e) {}
+            } catch (e) {
+                delete self.updatedActions[action]
+            }
         }
       },
 	redirectWhenConnected: function (org) {
@@ -390,9 +392,9 @@ var QDR = (function(QDR) {
         // results contains more nodes than actually respond within
         // the timeout. However, if the responses we get don't contain
         // the missing node, assume we are done.
-            QDR.log.debug("timed out waiting for management responses");
+            QDR.log.info("timed out waiting for management responses");
             // note: can't use 'this' in a timeout handler
-            self.topology.dump("state at timeout");
+            self.topology.miniDump("state at timeout");
             // check if _nodeInfo is consistent
             if (self.topology.isConsistent()) {
                 //TODO: notify controllers which node was dropped
@@ -472,22 +474,22 @@ var QDR = (function(QDR) {
          },
          dump: function (prefix) {
             if (prefix)
-                QDR.log.debug(prefix);
-            QDR.log.debug("---");
+                QDR.log.info(prefix);
+            QDR.log.info("---");
             for (var key in this._nodeInfo) {
-                QDR.log.debug(key);
+                QDR.log.info(key);
                 console.dump(this._nodeInfo[key]);
-                QDR.log.debug("---");
+                QDR.log.info("---");
             }
             QDR.log.debug("was still expecting:");
             console.dump(this._expected);
         },
          miniDump: function (prefix) {
             if (prefix)
-                QDR.log.debug(prefix);
-            QDR.log.debug("---");
+                QDR.log.info(prefix);
+            QDR.log.info("---");
             console.dump(Object.keys(this._nodeInfo));
-            QDR.log.debug("---");
+            QDR.log.info("---");
         },
         onerror: function (err) {
             this._gettingTopo = false;
@@ -876,7 +878,7 @@ var QDR = (function(QDR) {
 (function() {
     console.dump = function(object) {
         if (window.JSON && window.JSON.stringify)
-            console.log(JSON.stringify(object,undefined,2));
+            QDR.log.info(JSON.stringify(object,undefined,2));
         else
             console.log(object);
     };

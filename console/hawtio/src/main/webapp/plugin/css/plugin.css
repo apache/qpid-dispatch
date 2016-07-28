@@ -435,7 +435,10 @@ ul.qdrTopoModes {
 	background:#e0e0ff;
 }
 
-.qdr-overview.pane.left, .qdr-attributes.pane.left, .qdr-topology.pane.left {
+.qdr-overview.pane.left, .qdr-attributes.pane.left {
+	top: 100px;
+}
+.qdr-topology.pane.left {
 	top: 104px;
 }
 .qdr-overview.pane.left {

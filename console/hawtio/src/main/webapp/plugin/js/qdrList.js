@@ -271,9 +271,19 @@ var QDR = (function(QDR) {
 			return (schemaEntity.operations.indexOf("CREATE") > -1)
 		}
 
+		var stopUpdating = function () {
+			if (angular.isDefined(updateIntervalHandle)) {
+				clearInterval(updateIntervalHandle);
+			}
+			updateIntervalHandle = undefined;
+		}
+
 		// the data for the selected entity is available, populate the tree
 		var updateEntityChildren = function (entity, tableRows, expand) {
 			var tree = $("#entityTree").dynatree("getTree");
+			if (!tree.getNodeByKey) {
+				return stopUpdating()
+			}
 			var node = tree.getNodeByKey(entity)
 			var updatedDetails = false;
 			var scrollTreeDiv = $('.qdr-attributes.pane.left .pane-viewport')
@@ -416,19 +426,21 @@ var QDR = (function(QDR) {
 		}
 
 		var restartUpdate = function () {
-			if (updateIntervalHandle) {
-				clearInterval(updateIntervalHandle)
-			}
+			stopUpdating();
 			updateTableData($scope.selectedEntity, true);
 			updateIntervalHandle = setInterval(updateExpandedEntities, updateInterval);
 		}
 		var updateExpandedEntities = function () {
 			var tree = $("#entityTree").dynatree("getTree");
-			tree.visit( function (node) {
-				if (node.isExpanded()) {
-					updateTableData(node.data.key, node.data.key === $scope.selectedEntity)
-				}
-			})
+			if (tree.visit) {
+				tree.visit( function (node) {
+					if (node.isExpanded()) {
+						updateTableData(node.data.key, node.data.key === $scope.selectedEntity)
+					}
+				})
+			} else {
+				stopUpdating();
+			}
 		}
 
 		$scope.selectNode = function(node) {
@@ -644,10 +656,7 @@ var QDR = (function(QDR) {
 		};
 		$scope.$on("$destroy", function( event ) {
 			//QDR.log.debug("scope destroyed for qdrList");
-			if (angular.isDefined(updateIntervalHandle)) {
-				clearInterval(updateIntervalHandle);
-				updateIntervalHandle = undefined;
-			};
+			stopUpdating();
 		});
 
 		function gotMethodResponse (nodeName, entity, response, context) {
