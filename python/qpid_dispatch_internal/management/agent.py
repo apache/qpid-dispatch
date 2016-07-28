@@ -320,7 +320,7 @@ class VhostEntity(EntityAdapter):
         return self.attributes.get('id')
 
 
-class PolicyStatsEntity(EntityAdapter):
+class VhostStatsEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('id')
 

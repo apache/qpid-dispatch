@@ -1427,7 +1427,7 @@
             }
         },
 
-        "policyStats": {
+        "vhostStats": {
             "description": "Virtual host connection and access statistics.",
             "extends": "operationalEntity",
             "attributes": {
