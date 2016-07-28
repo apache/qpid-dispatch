@@ -9,7 +9,6 @@
       "allowUnknownUser": true,
       "groups": {
         "$default" : {
-          "users": "*",
           "remoteHosts": "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
@@ -33,7 +32,6 @@
       "allowUnknownUser": true,
       "groups": {
         "$default" : {
-          "users": "*",
           "remoteHosts": "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
@@ -57,7 +55,6 @@
       "allowUnknownUser": true,
       "groups": {
         "$default" : {
-          "users": "*",
           "remoteHosts": "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,

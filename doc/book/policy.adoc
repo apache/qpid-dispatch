@@ -181,16 +181,6 @@ specify all hosts.
 The asterisk must stand alone and cannot be appended to a host name
 or to an IP address fragment.
 
-=== User Name Wildcard
-
-User names in group name lists may be specified by a name prefix
-terminated with a single asterisk character.
-
-[options="nowrap"]
-----
-    users: customer*, admin, employee*
-----
-
 === AMQP Source and Target Wildcard and Name Substitution
 
 The rule definitions for `sources` and `targets` may include the username
@@ -248,9 +238,9 @@ policy {
 vhost {
     name: $default                 <2>
     maxConnectionsPerUser: 10      <3>
+    allowUnknownUser: true         <4>
     groups: {
-        all: {
-            users: *               <4>
+        $default: {
             remoteHosts: *         <5>
             sources: *             <6>
             targets: *             <6>
@@ -262,8 +252,8 @@ vhost {
 <1> The global maxConnections limit of 100 is enforced.
 <2> No normal vhost names are defined; user is assigned to default vhost '$default'.
 <3> The vhost maxConnectionsPerUser limit of 10 is enforced.
-<4> User name is found in user group 'all'
-<5> The user is allowed to connect from any remote host. The connection is approved and the user gets user group 'all' settings.
+<4> No groups are defined to have any users but allowUnknownUser is true so all users are assigned to group $default.
+<5> The user is allowed to connect from any remote host.
 <6> The user is allowed to connect to any source or target in the AMQP network. Router system-wide values are used for the other AMQP settings that are unspecified in the vhost rules.
 
 === Example 3. Admins Must Connect From Localhost
@@ -337,7 +327,7 @@ vhost {
     name: traders.com                            <1>
     groups: {
         traders: {
-            users: trader-*                      <2>
+            users: trader-1, trader-2, ...       <2>
             maxFrameSize: 10000                  <3>
             maxSessionWindow: 500                <3>
             maxSessions: 1                       <4>
@@ -355,7 +345,7 @@ vhost {
 ----
 
 <1> These rules are for vhost traders.com.
-<2> The 'traders' group includes any user whose name begins with _trader-_.
+<2> The 'traders' group includes trader-1, trader-2, and any other user defined in the list.
 <3> _maxFrameSize_ and _maxSessionWindow_ allow for at most 5,000,000 bytes of data to be in flight on each session.
 <4> Only one session per connection is allowed.
 <5> In the 'feeds' group two users are defined.

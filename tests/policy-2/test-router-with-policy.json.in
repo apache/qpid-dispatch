@@ -121,7 +121,6 @@
           "targets": "public, private, management, root"
         },
         "$default" : {
-          "users":            "*",
           "remoteHosts":      "*",
           "maxFrameSize":     222222,
           "maxMessageSize":   222222,
