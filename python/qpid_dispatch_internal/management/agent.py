@@ -311,6 +311,9 @@ class PolicyEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('module')
 
+    def __str__(self):
+        return super(PolicyEntity, self).__str__().replace("Entity(", "PolicyEntity(")
+
 
 class VhostEntity(EntityAdapter):
     def create(self):
@@ -319,10 +322,16 @@ class VhostEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('id')
 
+    def __str__(self):
+        return super(VhostEntity, self).__str__().replace("Entity(", "VhostEntity(")
+
 
 class VhostStatsEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('id')
+
+    def __str__(self):
+        return super(VhostStatsEntity, self).__str__().replace("Entity(", "VhostStatsEntity(")
 
 
 def _host_port_name_identifier(entity):
