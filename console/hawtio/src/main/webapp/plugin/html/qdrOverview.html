@@ -98,8 +98,18 @@ under the License.
 </script>
 <script type="text/ng-template" id="connection.html">
     <div class="row-fluid">
-    <h3>Connection {{connection.data.title}}</h3>
-    <div class="gridStyle noHighlight" ng-grid="connectionGrid"></div>
+        <ul class="nav nav-tabs">
+            <li ng-repeat="mode in connectionModes" ng-show="isValid(mode)" ng-click="selectMode(mode)" ng-class="{active : isModeSelected(mode)}" title="{{mode.title}}" ng-bind-html-unsafe="mode.content"> </li>
+        </ul>
+        <div ng-show="currentMode.id === 'attributes'" class="selectedItems">
+            <h3>Connection {{connection.data.title}}</h3>
+            <div class="gridStyle noHighlight" ng-grid="connectionGrid"></div>
+        </div>
+        <div ng-show="currentMode.id === 'links'" class="selectedItems">
+            <h3>External links for connection {{connection.data.title}}</h3>
+            <!-- <button title="{{quiesceState.buttonText}} links" type="button" ng-hide="quiesceHide()" ng-class="quiesceClass()" class="btn" ng-click="quiesceAllClicked()" ng-disabled="quiesceState.buttonDisabled">{{quiesceState.buttonText}}</button> -->
+            <div class="gridStyle noHighlight" ng-grid="connectionLinksGrid"></div>
+        </div>
     </div>
 </script>
 <script type="text/ng-template" id="titleHeaderCellTemplate.html">

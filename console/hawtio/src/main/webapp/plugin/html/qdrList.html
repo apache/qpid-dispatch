@@ -57,6 +57,7 @@ under the License.
                         <!-- ng-pattern="testPattern(attribute)" -->
                         <input ng-if="attribute.type == 'number'" type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.rawValue" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
                         <input ng-if="attribute.type == 'text'" type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.attributeValue" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
+                        <textarea ng-if="attribute.type == 'textarea'" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.attributeValue" ng-required="attribute.required" class="ui-widget-content ui-corner-all"></textarea>
                         <span ng-if="attribute.type == 'disabled'" >{{getAttributeValue(attribute)}}</span>
                     </div>
                     <div ng-if="attribute.input == 'select'">

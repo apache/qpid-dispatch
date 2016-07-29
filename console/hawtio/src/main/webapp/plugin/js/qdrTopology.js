@@ -69,28 +69,199 @@ var QDR = (function (QDR) {
     QDR.module.controller("QDR.TopologyController", ['$scope', '$rootScope', 'QDRService', '$location', '$timeout', '$dialog',
     function($scope, $rootScope, QDRService, $location, $timeout, $dialog) {
 
-		$scope.multiData = [{name: ''}, {name: ''}, {name: ''}]
+        $scope.multiData = []
+        $scope.selectedClient = [];
+        $scope.quiesceState = {}
+        var dontHide = false;
+		$scope.quiesceConnection = function (row) {
+			var entity = row.entity;
+			var state = $scope.quiesceState[entity.connectionId].state;
+			if (state === 'enabled') {
+				// start quiescing all links
+				$scope.quiesceState[entity.connectionId].state = 'quiescing';
+			} else if (state === 'quiesced') {
+				// start reviving all links
+				$scope.quiesceState[entity.connectionId].state = 'reviving';
+			}
+			$scope.multiDetails.updateState(entity);
+			dontHide = true;
+			$scope.multiDetails.selectRow(row.rowIndex, true);
+			$scope.multiDetails.showLinksList(row)
+		}
+		$scope.quiesceDisabled = function (row) {
+			return $scope.quiesceState[row.entity.connectionId].buttonDisabled;
+		}
+		$scope.quiesceText = function (row) {
+			return $scope.quiesceState[row.entity.connectionId].buttonText;
+		}
+		$scope.quiesceClass = function (row) {
+			var stateClassMap = {
+				enabled: 'btn-primary',
+				quiescing: 'btn-warning',
+				reviving: 'btn-warning',
+				quiesced: 'btn-danger'
+			}
+			return stateClassMap[$scope.quiesceState[row.entity.connectionId].state];
+		}
         $scope.multiDetails = {
             data: 'multiData',
+			selectedItems: $scope.selectedClient,
+			multiSelect: false,
+			afterSelectionChange: function (obj) {
+				if (obj.selected && obj.orig) {
+					var detailsDiv = d3.select('#link_details')
+					var isVis = detailsDiv.style('display') === 'block';
+					if (!dontHide && isVis && $scope.connectionId === obj.entity.connectionId) {
+						hideLinkDetails();
+						return;
+					}
+					dontHide = false;
+					$scope.multiDetails.showLinksList(obj)
+				}
+			},
+			showLinksList: function (obj) {
+				$scope.linkData = obj.entity.linkData;
+				$scope.connectionId = obj.entity.connectionId;
+				var visibleLen = Math.min(obj.entity.linkData.length, 10)
+				var left = parseInt(d3.select('#multiple_details').style("left"))
+				var detailsDiv = d3.select('#link_details')
+	            detailsDiv
+	                .style({
+	                    display: 'block',
+	                    opacity: 1,
+	                    left: (left + 20) + "px",
+	                    top:  (mouseY + 20 + $(document).scrollTop()) + "px",
+	                    height: (visibleLen + 1) * 30 + "px", // +1 for the header row
+	                    'overflow-y': obj.entity.linkData > 10 ? 'scroll' : 'hidden'})
+			},
+			updateState: function (entity) {
+				var state = $scope.quiesceState[entity.connectionId].state
+
+				// count enabled and disabled links for this connection
+				var enabled = 0, disabled = 0;
+				entity.linkData.forEach ( function (link) {
+					if (link.adminStatus === 'enabled')
+						++enabled;
+					if (link.adminStatus === 'disabled')
+						++disabled;
+				})
+
+				var linkCount = entity.linkData.length;
+				// if state is quiescing and any links are enabled, button should say 'Quiescing' and be disabled
+				if (state === 'quiescing' && (enabled > 0)) {
+					$scope.quiesceState[entity.connectionId].buttonText = 'Quiescing';
+					$scope.quiesceState[entity.connectionId].buttonDisabled = true;
+				} else
+				// if state is enabled and all links are disabled, button should say Revive and be enabled. set state to quisced
+				// if state is quiescing and all links are disabled, button should say 'Revive' and be enabled. set state to quiesced
+				if ((state === 'quiescing' || state === 'enabled') && (disabled === linkCount)) {
+					$scope.quiesceState[entity.connectionId].buttonText = 'Revive';
+					$scope.quiesceState[entity.connectionId].buttonDisabled = false;
+					$scope.quiesceState[entity.connectionId].state = 'quiesced'
+				} else
+				// if state is reviving and any links are disabled, button should say 'Reviving' and be disabled
+				if (state === 'reviving' && (disabled > 0)) {
+					$scope.quiesceState[entity.connectionId].buttonText = 'Reviving';
+					$scope.quiesceState[entity.connectionId].buttonDisabled = true;
+				} else
+				// if state is reviving or quiesced and all links are enabled, button should say 'Quiesce' and be enabled. set state to enabled
+				if ((state === 'reviving' || state === 'quiesced') && (enabled === linkCount)) {
+					$scope.quiesceState[entity.connectionId].buttonText = 'Quiesce';
+					$scope.quiesceState[entity.connectionId].buttonDisabled = false;
+					$scope.quiesceState[entity.connectionId].state = 'enabled'
+				}
+			},
             columnDefs: [
             {
                 field: 'host',
-                displayName: 'Host'
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+                displayName: 'Connection host'
             },
             {
                 field: 'user',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
                 displayName: 'User'
             },
 			{
 				field: 'properties',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
 				displayName: 'Properties'
-			},
+			}/*,
 			{
-				field: 'isEncrypted',
-				displayName: 'Encrypted'
-			}
+				cellClass: 'gridCellButton',
+				cellTemplate: '<button title="{{quiesceText(row)}} the links" type="button" ng-class="quiesceClass(row)" class="btn" ng-click="$event.stopPropagation();quiesceConnection(row)" ng-disabled="quiesceDisabled(row)">{{quiesceText(row)}}</button>'
+			}*/
             ]
         };
+		$scope.linkData = [];
+		$scope.quiesceLinkClass = function (row) {
+			var stateClassMap = {
+				enabled: 'btn-primary',
+				disabled: 'btn-danger'
+			}
+			return stateClassMap[row.entity.adminStatus]
+			//return stateClassMap[$scope.quiesceState[row.entity.connectionId].linkStates[row.entity.identity]];
+		}
+		$scope.quiesceLink = function (row) {
+			var state = row.entity.adminStatus === 'enabled' ? 'disabled' : 'enabled';
+			$scope.quiesceState[row.entity.connectionId].linkStates[row.entity.identity] = state;
+		}
+		$scope.quiesceLinkDisabled = function (row) {
+			return false;
+		}
+		$scope.quiesceLinkText = function (row) {
+			return row.entity.adminStatus === 'disabled' ? "Revive" : "Quiesce";
+		}
+		$scope.linkDetails = {
+			data: 'linkData',
+            columnDefs: [
+			{
+				field: 'adminStatus',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'Admin stat'
+			},
+			{
+				field: 'dir',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'dir'
+			},
+			{
+				field: 'owningAddr',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'Address'
+			},
+			{
+				field: 'deliveryCount',
+				displayName: 'Delivered',
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				cellClass: 'grid-values'
+
+			},
+			{
+				field: 'undeliveredCount',
+				displayName: 'Undelivered',
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				cellClass: 'grid-values'
+			},
+			{
+				field: 'unsettledCount',
+				displayName: 'Unsettled',
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				cellClass: 'grid-values'
+			}/*,
+
+			{
+				cellClass: 'gridCellButton',
+				cellTemplate: '<button title="{{quiesceLinkText(row)}} this link" type="button" ng-class="quiesceLinkClass(row)" class="btn" ng-click="quiesceLink(row)" ng-disabled="quiesceLinkDisabled(row)">{{quiesceLinkText(row)}}</button>'
+			}*/
+			]
+		}
 
 		if (!QDRService.connected) {
 			// we are not connected. we probably got here from a bookmark or manual page reload
@@ -806,6 +977,16 @@ var QDR = (function (QDR) {
                 .style("opacity", 0)
                 .each("end", function (d) {
                     d3.select("#multiple_details").style("display", "none")
+                    stopUpdateConnectionsGrid();
+                })
+			hideLinkDetails();
+		}
+		function hideLinkDetails() {
+            d3.select("#link_details").transition()
+                .duration(500)
+                .style("opacity", 0)
+                .each("end", function (d) {
+                    d3.select("#link_details").style("display", "none")
                 })
 		}
 
@@ -904,6 +1085,7 @@ var QDR = (function (QDR) {
                 })
                 .on("click", function (d) {
                     dblckickPos = d3.mouse(this);
+                    QDR.log.debug("dblckickPos is [" + dblckickPos[0] + ", " + dblckickPos[1] + "]")
                     d3.event.stopPropagation();
                     clearPopups();
                     var diameter = 400;
@@ -1011,7 +1193,6 @@ var QDR = (function (QDR) {
 	        circle.selectAll('circle')
 	            .classed('selected', function (d) { return (d === selected_node) })
 	            .classed('fixed', function (d) { return (d.fixed & 0b1) })
-  			    //.classed('multiple', function(d) { return (d.normals && d.normals.length > 1)  } )
 
 			// add new circle nodes. if nodes[] is longer than the existing paths, add a new path for each new element
 	        var g = circle.enter().append('svg:g')
@@ -1165,19 +1346,7 @@ var QDR = (function (QDR) {
 					}
                     clickPos = d3.mouse(this);
                     d3.event.stopPropagation();
-                    $scope.multiData = []
-                    d.normals.forEach( function (n) {
-                        $scope.multiData.push(n)
-                    })
-                    $scope.$apply();
-                    d3.select('#multiple_details')
-                        .style({
-                            display: 'block',
-                            opacity: 1,
-                            height: (d.normals.length + 1) * 30 + "px",
-                            'overflow-y': d.normals.length > 10 ? 'scroll' : 'hidden',
-		                    left: (mouseX + $(document).scrollLeft()) + "px",
-                            top:  (mouseY + $(document).scrollTop()) + "px"})
+					startUpdateConnectionsGrid(d);
 				})
 
 			var appendContent = function (g) {
@@ -1299,6 +1468,124 @@ var QDR = (function (QDR) {
 	        force.start();
 
 	    }
+
+		var startUpdateConnectionsGrid = function (d) {
+			var extendConnections = function () {
+				$scope.multiData = []
+				var normals = d.normals;
+				// find updated normals for d
+		        d3.selectAll('.normal')
+                    .each(function(newd) {
+                        if (newd.id == d.id && newd.name == d.name) {
+                            normals = newd.normals;
+                        }
+                    });
+				if (normals) {
+					normals.forEach( function (n) {
+						var nodeInfo = QDRService.topology.nodeInfo();
+						var links = nodeInfo[n.key]['.router.link'];
+						var linkTypeIndex = links.attributeNames.indexOf('linkType');
+						var connectionIdIndex = links.attributeNames.indexOf('connectionId');
+						n.linkData = [];
+						links.results.forEach( function (link) {
+							if (link[linkTypeIndex] === 'endpoint' && link[connectionIdIndex] === n.connectionId) {
+								var l = {};
+								l.owningAddr = QDRService.valFor(links.attributeNames, link, 'owningAddr');
+								l.dir = QDRService.valFor(links.attributeNames, link, 'linkDir');
+								if (l.owningAddr && l.owningAddr.length > 2)
+									if (l.owningAddr[0] === 'M')
+										l.owningAddr = l.owningAddr.substr(2)
+									else
+										l.owningAddr = l.owningAddr.substr(1)
+
+								l.deliveryCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'deliveryCount'));
+								l.undeliveredCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'undeliveredCount'));
+								l.unsettledCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'unsettledCount'));
+								l.adminStatus = QDRService.valFor(links.attributeNames, link, 'adminStatus');
+								l.identity = QDRService.valFor(links.attributeNames, link, 'identity')
+								l.connectionId = QDRService.valFor(links.attributeNames, link, 'connectionId')
+
+								// TODO: remove this fake quiescing/reviving logic when the routers do the work
+								initConnState(n.connectionId)
+								if ($scope.quiesceState[n.connectionId].linkStates[l.identity])
+									l.adminStatus = $scope.quiesceState[n.connectionId].linkStates[l.identity];
+								if ($scope.quiesceState[n.connectionId].state == 'quiescing') {
+									if (l.adminStatus === 'enabled') {
+										// 25% chance of switching
+										var chance = Math.floor(Math.random() * 2);
+										if (chance == 1) {
+											l.adminStatus = 'disabled';
+											$scope.quiesceState[n.connectionId].linkStates[l.identity] = 'disabled';
+										}
+									}
+								}
+								if ($scope.quiesceState[n.connectionId].state == 'reviving') {
+									if (l.adminStatus === 'disabled') {
+										// 25% chance of switching
+										var chance = Math.floor(Math.random() * 2);
+										if (chance == 1) {
+											l.adminStatus = 'enabled';
+											$scope.quiesceState[n.connectionId].linkStates[l.identity] = 'enabled';
+										}
+									}
+								}
+								QDR.log.debug("pushing link state for " + l.owningAddr + " status: "+ l.adminStatus)
+
+
+								n.linkData.push(l)
+							}
+						})
+						$scope.multiData.push(n)
+						if (n.connectionId == $scope.connectionId)
+							$scope.linkData = n.linkData;
+						initConnState(n.connectionId)
+						$scope.multiDetails.updateState(n)
+					})
+				}
+				$scope.$apply();
+
+	            d3.select('#multiple_details')
+	                .style({
+	                    height: (normals.length + 1) * 30 + "px",
+	                    'overflow-y': normals.length > 10 ? 'scroll' : 'hidden'
+					})
+			}
+
+	        QDRService.addUpdatedAction("normalsStats", extendConnections)
+			extendConnections();
+			clearPopups();
+			var display = 'block'
+			var left = mouseX + $(document).scrollLeft()
+			if (d.normals.length === 1) {
+				display = 'none'
+				left = left - 30;
+				mouseY = mouseY - 20
+			}
+            d3.select('#multiple_details')
+                .style({
+                    display: display,
+                    opacity: 1,
+                    left: (mouseX + $(document).scrollLeft()) + "px",
+                    top:  (mouseY + $(document).scrollTop()) + "px"})
+            if (d.normals.length === 1) {
+				// simulate a click on the connection to popup the link details
+                $scope.multiDetails.showLinksList( {entity: d} )
+            }
+		}
+		var stopUpdateConnectionsGrid = function () {
+	        QDRService.delUpdatedAction("normalsStats");
+		}
+
+		var initConnState = function (id) {
+			if (!angular.isDefined($scope.quiesceState[id])) {
+				$scope.quiesceState[id] = {
+					state:          'enabled',
+					buttonText:     'Quiesce',
+					buttonDisabled: false,
+					linkStates:     {}
+				}
+			}
+		}
 
         function nextHop(thisNode, d) {
             if ((thisNode) && (thisNode != d)) {

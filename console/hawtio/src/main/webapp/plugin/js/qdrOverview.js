@@ -1000,11 +1000,11 @@ var QDR = (function (QDR) {
 				displayName: 'Unsettled',
 				headerCellTemplate: 'titleHeaderCellTemplate.html',
 				cellClass: 'grid-values'
-			},
+			}/*,
 			{
 				cellClass: 'gridCellButton',
 				cellTemplate: '<button title="{{quiesceLinkText(row)}} this link" type="button" ng-class="quiesceLinkClass(row)" class="btn" ng-click="quiesceLink(row)" ng-disabled="quiesceLinkDisabled(row)">{{quiesceLinkText(row)}}</button>'
-			}
+			}*/
 			]
 		}
 
