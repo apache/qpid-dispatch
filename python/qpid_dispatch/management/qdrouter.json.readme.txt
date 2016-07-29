@@ -19,7 +19,7 @@ under the License.
 
 # The qdrouter management schema
 
-The schema `qdrouterd.json` is a JSON format file that defines annotations and
+The schema `qdrouterd.json` is a JSON format file that defines
 entity types of the Qpid Dispatch Router management model.  The model is based
 on the AMQP management specification.
 
@@ -30,7 +30,7 @@ The schema is a JSON map with the following keys:
 
 - "entityTypes": map of entity type names to definitions (see below)
 
-Annotation and entity type definition maps have the following keys:
+Entity type definition maps have the following keys:
 
 - "description": documentation string.
 - "fullName": if true use the type name as-is, do not apply the schema prefix.
@@ -41,7 +41,6 @@ Annotation and entity type definition maps have the following keys:
 Entity type definitions also have these fields:
 
 - "extends": Name of base type. The new type includes attributes, operations and operationDefs from the base type.
-- "annotations": List of annotation names. The new type includes operations and attributes from all the annotations.
 
 Operation definitions are optional, you can call an operation in the operations
 list without an operation definition. They have the following fields:

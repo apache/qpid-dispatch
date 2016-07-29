@@ -108,7 +108,7 @@ class SchemaWriter(object):
                 self.warn("Warning no description for %s" % entity_type)
             if entity_type.operations:
                 self.para("Operations allowed: `%s`\n\n" % "`, `".join(entity_type.operations))
-            for a in entity_type.annotations: self.attribute_types(a)
+
             self.attribute_types(entity_type)
             if entity_type.operation_defs:
                 self.operation_defs(entity_type)

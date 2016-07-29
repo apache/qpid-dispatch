@@ -18,6 +18,7 @@
 #
 
 import re, json, unittest, os
+from time import sleep
 from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR, wait_port
 from subprocess import PIPE, STDOUT
 from qpid_dispatch_internal.compat import OrderedDict, dictify
@@ -164,6 +165,17 @@ class QdmanageTest(TestCase):
         self.assertEquals(schema, dictify(json.loads(actual)))
         actual = self.run_qdmanage("get-schema")
         self.assertEquals(schema, dictify(json.loads(actual)))
+
+    def test_get_annotations(self):
+        """
+        The qdmanage GET-ANNOTATIONS call must return an empty dict since we don't support annotations at the moment.
+        """
+        out = json.loads(self.run_qdmanage("get-annotations"))
+        self.assertTrue(len(out) == 0)
+
+    def test_get_types(self):
+        out = json.loads(self.run_qdmanage("get-types"))
+        self.assertEqual(len(out), 27)
 
     def test_get_log(self):
         log = json.loads(self.run_qdmanage("get-log limit=1"))[0]
@@ -362,6 +374,64 @@ class QdmanageTestSsl(QdmanageTest):
             if conn_name in name:
                 created = True
         self.assertTrue(created)
+
+    def test_create_delete_ssl_profile(self):
+        """
+
+        """
+        long_type = 'org.apache.qpid.dispatch.sslProfile'
+        ssl_profile_name = 'ssl-profile-test'
+        ssl_create_command = 'CREATE --type=' + long_type + ' certFile=' + self.ssl_file('server-certificate.pem') + \
+                         ' keyFile=' + self.ssl_file('server-private-key.pem') + ' password=server-password' + \
+                         ' name=' + ssl_profile_name + ' certDb=' + self.ssl_file('ca-certificate.pem')
+
+        output = json.loads(self.run_qdmanage(ssl_create_command))
+        name = output['name']
+        self.assertEqual(name, ssl_profile_name)
+
+        long_type = 'org.apache.qpid.dispatch.listener'
+        listener_name = 'sslListener'
+        port = self.get_port()
+        listener_create_command = 'CREATE --type=' + long_type + ' --name=sslListener host=127.0.0.1 port=' + str(port) + \
+                                  ' saslMechanisms=EXTERNAL sslProfile=' + ssl_profile_name + \
+                                  ' requireSsl=yes authenticatePeer=yes'
+        output = json.loads(self.run_qdmanage(listener_create_command))
+        name = output['name']
+        self.assertEqual(name, listener_name)
+
+        sleep(1)
+        query_command = 'QUERY --type=listener'
+
+        # Query on the port that was created by the preceding listener create
+        output = json.loads(self.run_qdmanage(query_command, address="127.0.0.1:"+str(port)))
+
+        ssl_listener_present = False
+
+        for out in output:
+            if out['name'] == 'sslListener':
+                ssl_listener_present = True
+                self.assertEqual(out['sslProfile'], 'ssl-profile-test')
+
+        self.assertEqual(len(output), 3)
+        self.assertTrue(ssl_listener_present)
+
+        # Delete the SSL Profile. This will fail because there is a listener referencing the SSL profile.
+        delete_command = 'DELETE --type=sslProfile --name=' + ssl_profile_name
+        cannot_delete = False
+        try:
+            json.loads(self.run_qdmanage(delete_command))
+        except Exception as e:
+            cannot_delete = True
+            self.assertTrue('ForbiddenStatus: SSL Profile is referenced by other listeners/connectors' in e.message)
+
+        self.assertTrue(cannot_delete)
+
+        # Deleting the listener first and then the SSL profile must work.
+        delete_command = 'DELETE --type=listener --name=' + listener_name
+        self.run_qdmanage(delete_command)
+
+        delete_command = 'DELETE --type=sslProfile --name=' + ssl_profile_name
+        self.run_qdmanage(delete_command)
 
 if __name__ == '__main__':
     unittest.main(main_module())

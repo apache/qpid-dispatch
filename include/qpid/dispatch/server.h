@@ -286,11 +286,6 @@ typedef struct qd_server_config_t {
     int sasl_maxssf;
 
     /**
-     * SSL is enabled for this connection iff true.
-     */
-    bool ssl_enabled;
-
-    /**
      * Iff true, SSL/TLS must be used on the connection.
      */
     bool ssl_required;
@@ -363,6 +358,11 @@ typedef struct qd_server_config_t {
      * '5'(sha512 certificate fingerprint)
      */
     char *ssl_uid_format;
+
+    /**
+     * The name of the related ssl profile.
+     */
+    char *ssl_profile;
 
     /**
      * Full path to the file that contains the uid to display name mapping.
