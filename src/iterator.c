@@ -390,6 +390,9 @@ qd_field_iterator_t* qd_address_iterator_binary(const char *text, int length, qd
 
 qd_field_iterator_t *qd_address_iterator_buffer(qd_buffer_t *buffer, int offset, int length, qd_iterator_view_t view)
 {
+    if (!buffer)
+        return 0;
+
     qd_field_iterator_t *iter = new_qd_field_iterator_t();
     if (!iter)
         return 0;

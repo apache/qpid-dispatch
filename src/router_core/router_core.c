@@ -71,16 +71,6 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     //
     core->thread = sys_thread(router_core_thread, core);
 
-    //
-    // Perform outside-of-thread setup for the management agent
-    //
-    core->agent_subscription_mobile = qdr_core_subscribe(core, "$management", 'M', '0',
-                                                         QD_TREATMENT_ANYCAST_CLOSEST,
-                                                         qdr_management_agent_on_message, core);
-    core->agent_subscription_local = qdr_core_subscribe(core, "$management", 'L', '0',
-                                                        QD_TREATMENT_ANYCAST_CLOSEST,
-                                                        qdr_management_agent_on_message, core);
-
     return core;
 }
 

@@ -27,6 +27,7 @@
 #include "router_core_private.h"
 #include "dispatch_private.h"
 #include "agent_link.h"
+#include "schema_enum.h"
 #include "alloc.h"
 
 const char *ENTITY = "entityType";
@@ -72,14 +73,15 @@ typedef enum {
 
 
 typedef struct qd_management_context_t {
-    qd_message_t               *msg;
-    qd_message_t               *source;
-    qd_composed_field_t        *field;
-    qdr_query_t                *query;
-    qdr_core_t                 *core;
-    int                         count;
-    int                         current_count;
-    qd_router_operation_type_t  operation_type;
+    qd_message_t                *response;
+    qd_composed_field_t         *out_body;
+    qd_field_iterator_t         *reply_to;
+    qd_field_iterator_t         *correlation_id;
+    qdr_query_t                 *query;
+    qdr_core_t                  *core;
+    int                          count;
+    int                          current_count;
+    qd_schema_entity_operation_t operation_type;
 } qd_management_context_t ;
 
 ALLOC_DECLARE(qd_management_context_t);
@@ -88,22 +90,22 @@ ALLOC_DEFINE(qd_management_context_t);
 /**
  * Convenience function to create and initialize context (qd_management_context_t)
  */
-static qd_management_context_t* qd_management_context(qd_message_t               *msg,
-                                                      qd_message_t               *source,
-                                                      qd_composed_field_t        *field,
-                                                      qdr_query_t                *query,
-                                                      qdr_core_t                 *core,
-                                                      qd_router_operation_type_t operation_type,
-                                                      int                        count)
+static qd_management_context_t* qd_management_context(qd_field_iterator_t          *reply_to,
+                                                      qd_field_iterator_t          *correlation_id,
+                                                      qdr_query_t                  *query,
+                                                      qdr_core_t                   *core,
+                                                      qd_schema_entity_operation_t operation_type,
+                                                      int                          count)
 {
     qd_management_context_t *ctx = new_qd_management_context_t();
-    ctx->count  = count;
-    ctx->field  = field;
-    ctx->msg    = msg;
-    ctx->source = qd_message_copy(source);
-    ctx->query  = query;
-    ctx->current_count = 0;
-    ctx->core   = core;
+    ctx->response       = qd_message();
+    ctx->out_body       = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
+    ctx->reply_to       = reply_to;
+    ctx->correlation_id = correlation_id;
+    ctx->query          = query;
+    ctx->core           = core;
+    ctx->count          = count;
+    ctx->current_count  = 0;
     ctx->operation_type = operation_type;
 
     return ctx;
@@ -131,18 +133,16 @@ static void qd_set_response_status(const qd_amqp_error_t *error, qd_composed_fie
 }
 
 
-static void qd_set_properties(qd_message_t        *msg,
-                              qd_field_iterator_t **reply_to,
+static void qd_set_properties(qd_field_iterator_t *correlation_id,
+                              qd_field_iterator_t *reply_to,
                               qd_composed_field_t **fld)
 {
-    qd_field_iterator_t *correlation_id = qd_message_field_iterator_typed(msg, QD_FIELD_CORRELATION_ID);
-    // Grab the reply_to field from the incoming message. This is the address we will send the response to.
-    *reply_to = qd_message_field_iterator(msg, QD_FIELD_REPLY_TO);
+    // Set the correlation_id and reply_to on fld
     *fld = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
     qd_compose_start_list(*fld);
     qd_compose_insert_null(*fld);                           // message-id
     qd_compose_insert_null(*fld);                           // user-id
-    qd_compose_insert_string_iterator(*fld, *reply_to);     // to
+    qd_compose_insert_string_iterator(*fld, reply_to);     // to
     qd_compose_insert_null(*fld);                           // subject
     qd_compose_insert_null(*fld);
     qd_compose_insert_typed_iterator(*fld, correlation_id);
@@ -153,34 +153,34 @@ static void qd_set_properties(qd_message_t        *msg,
 
 static void qd_manage_response_handler(void *context, const qd_amqp_error_t *status, bool more)
 {
-    qd_management_context_t *ctx = (qd_management_context_t*) context;
+    qd_management_context_t *mgmt_ctx = (qd_management_context_t*) context;
 
-    if (ctx->operation_type == QD_ROUTER_OPERATION_QUERY) {
+    if (mgmt_ctx->operation_type == QD_SCHEMA_ENTITY_OPERATION_QUERY) {
         if (status->status / 100 == 2) { // There is no error, proceed to conditionally call get_next
             if (more) {
-               ctx->current_count++; // Increment how many you have at hand
-               if (ctx->count != ctx->current_count) {
-                   qdr_query_get_next(ctx->query);
+               mgmt_ctx->current_count++; // Increment how many you have at hand
+               if (mgmt_ctx->count != mgmt_ctx->current_count) {
+                   qdr_query_get_next(mgmt_ctx->query);
                    return;
                } else
                    //
                    // This is the one case where the core agent won't free the query itself.
                    //
-                   qdr_query_free(ctx->query);
+                   qdr_query_free(mgmt_ctx->query);
             }
         }
-        qd_compose_end_list(ctx->field);
-        qd_compose_end_map(ctx->field);
+        qd_compose_end_list(mgmt_ctx->out_body);
+        qd_compose_end_map(mgmt_ctx->out_body);
     }
-    else if (ctx->operation_type == QD_ROUTER_OPERATION_DELETE) {
+    else if (mgmt_ctx->operation_type == QD_SCHEMA_ENTITY_OPERATION_DELETE) {
         // The body of the delete response message MUST consist of an amqp-value section containing a Map with zero entries.
-        qd_compose_start_map(ctx->field);
-        qd_compose_end_map(ctx->field);
+        qd_compose_start_map(mgmt_ctx->out_body);
+        qd_compose_end_map(mgmt_ctx->out_body);
     }
-    else if (ctx->operation_type == QD_ROUTER_OPERATION_READ) {
+    else if (mgmt_ctx->operation_type == QD_SCHEMA_ENTITY_OPERATION_READ) {
         if (status->status / 100 != 2) {
-            qd_compose_start_map(ctx->field);
-            qd_compose_end_map(ctx->field);
+            qd_compose_start_map(mgmt_ctx->out_body);
+            qd_compose_end_map(mgmt_ctx->out_body);
         }
     }
 
@@ -189,14 +189,14 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
 
     // Start composing the message.
     // First set the properties on the message like reply_to, correlation-id etc.
-    qd_set_properties(ctx->source, &reply_to, &fld);
+    qd_set_properties(mgmt_ctx->correlation_id, mgmt_ctx->reply_to, &fld);
 
     // Second, set the status on the message, QD_AMQP_OK or QD_AMQP_BAD_REQUEST and so on.
     qd_set_response_status(status, &fld);
 
     // Finally, compose and send the message.
-    qd_message_compose_3(ctx->msg, fld, ctx->field);
-    qdr_send_to1(ctx->core, ctx->msg, reply_to, true, false);
+    qd_message_compose_3(mgmt_ctx->response, fld, mgmt_ctx->out_body);
+    qdr_send_to1(mgmt_ctx->core, mgmt_ctx->response, reply_to, true, false);
 
     // We have come to the very end. Free the appropriate memory.
     // Just go over this with Ted to see if I freed everything.
@@ -204,25 +204,31 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     qd_field_iterator_free(reply_to);
     qd_compose_free(fld);
 
-    qd_message_free(ctx->msg);
-    qd_message_free(ctx->source);
-    qd_compose_free(ctx->field);
+    qd_message_free(mgmt_ctx->response);
+    qd_compose_free(mgmt_ctx->out_body);
 
-    free_qd_management_context_t(ctx);
+    free_qd_management_context_t(mgmt_ctx);
 }
 
 
-static void qd_core_agent_query_handler(qdr_core_t                 *core,
-                                        qd_router_entity_type_t     entity_type,
-                                        qd_router_operation_type_t  operation_type,
-                                        qd_message_t               *msg,
-                                        int                        *count,
-                                        int                        *offset)
+void qd_core_agent_query_handler(void                       *ctx,
+                                 qd_field_iterator_t        *reply_to,
+                                 qd_field_iterator_t        *correlation_id,
+                                 qd_router_entity_type_t     entity_type,
+                                 qd_router_operation_type_t  operation_type,
+                                 int                        *count,
+                                 int                        *offset,
+                                 qd_parsed_field_t          *in_body)
 {
+    qdr_core_t *core = (qdr_core_t*)ctx;
+
+    // Call local function that creates and returns a local qd_management_context_t object containing the values passed in.
+    qd_management_context_t *mgmt_ctx = qd_management_context(reply_to, correlation_id, 0, core, operation_type, (*count));
+
     //
     // Add the Body.
     //
-    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
+    qd_composed_field_t *field = mgmt_ctx->out_body;
 
     // Start a map in the body. Look for the end map in the callback function, qd_manage_response_handler.
     qd_compose_start_map(field);
@@ -230,127 +236,107 @@ static void qd_core_agent_query_handler(qdr_core_t                 *core,
     //add a "attributeNames" key
     qd_compose_insert_string(field, ATTRIBUTE_NAMES);
 
-    // Call local function that creates and returns a local qd_management_context_t object containing the values passed in.
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, field, 0, core, operation_type, (*count));
-
     // Grab the attribute names from the incoming message body. The attribute names will be used later on in the response.
     qd_parsed_field_t *attribute_names_parsed_field = 0;
 
-    qd_field_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
-
-    qd_parsed_field_t *body = qd_parse(body_iter);
-    if (body != 0 && qd_parse_is_map(body)) {
-        attribute_names_parsed_field = qd_parse_value_by_key(body, ATTRIBUTE_NAMES);
+    if (in_body != 0 && qd_parse_is_map(in_body)) {
+        attribute_names_parsed_field = qd_parse_value_by_key(in_body, ATTRIBUTE_NAMES);
     }
 
     // Set the callback function.
     qdr_manage_handler(core, qd_manage_response_handler);
-    ctx->query = qdr_manage_query(core, ctx, entity_type, attribute_names_parsed_field, field);
+    mgmt_ctx->query = qdr_manage_query(core, mgmt_ctx, entity_type, attribute_names_parsed_field, field);
 
     //Add the attribute names
-    qdr_query_add_attribute_names(ctx->query); //this adds a list of attribute names like ["attribute1", "attribute2", "attribute3", "attribute4",]
+    qdr_query_add_attribute_names(mgmt_ctx->query); //this adds a list of attribute names like ["attribute1", "attribute2", "attribute3", "attribute4",]
     qd_compose_insert_string(field, results); //add a "results" key
     qd_compose_start_list(field); //start the list for results
 
-    qdr_query_get_first(ctx->query, (*offset));
+    qdr_query_get_first(mgmt_ctx->query, (*offset));
 
-    qd_field_iterator_free(body_iter);
-    qd_parse_free(body);
+    qd_parse_free(in_body);
 }
 
 
-static void qd_core_agent_read_handler(qdr_core_t                 *core,
-                                       qd_message_t               *msg,
-                                       qd_router_entity_type_t     entity_type,
-                                       qd_router_operation_type_t  operation_type,
-                                       qd_field_iterator_t        *identity_iter,
-                                       qd_field_iterator_t        *name_iter)
+void qd_core_agent_read_handler(void                       *ctx,
+                                qd_field_iterator_t        *reply_to,
+                                qd_field_iterator_t        *correlation_id,
+                                qd_router_entity_type_t     entity_type,
+                                qd_router_operation_type_t  operation_type,
+                                qd_field_iterator_t        *identity_iter,
+                                qd_field_iterator_t        *name_iter)
 {
-    //
-    // Add the Body
-    //
-    qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
+    qdr_core_t *core = (qdr_core_t*)ctx;
 
     // Set the callback function.
     qdr_manage_handler(core, qd_manage_response_handler);
 
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, body, 0, core, operation_type, 0);
+    qd_management_context_t *mgmt_ctx = qd_management_context(reply_to, correlation_id, 0, core, operation_type, 0);
 
     //Call the read API function
-    qdr_manage_read(core, ctx, entity_type, name_iter, identity_iter, body);
+    qdr_manage_read(core, mgmt_ctx, entity_type, name_iter, identity_iter, mgmt_ctx->out_body);
 }
 
 
-static void qd_core_agent_create_handler(qdr_core_t                 *core,
-                                         qd_message_t               *msg,
-                                         qd_router_entity_type_t     entity_type,
-                                         qd_router_operation_type_t  operation_type,
-                                         qd_field_iterator_t        *name_iter)
+void qd_core_agent_create_handler(void                       *ctx,
+                                  qd_field_iterator_t        *reply_to,
+                                  qd_field_iterator_t        *correlation_id,
+                                  qd_router_entity_type_t     entity_type,
+                                  qd_router_operation_type_t  operation_type,
+                                  qd_field_iterator_t        *name_iter,
+                                  qd_parsed_field_t          *in_body)
 {
-    //
-    // Add the Body
-    //
-    qd_composed_field_t *out_body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
+    qdr_core_t *core = (qdr_core_t*)ctx;
+    // Set the callback function.
+    qdr_manage_handler(core, qd_manage_response_handler);
+
+    // Call local function that creates and returns a qd_management_context_t containing the values passed in.
+    qd_management_context_t *mgmt_ctx = qd_management_context(reply_to, correlation_id, 0, core, operation_type, 0);
+
+    qdr_manage_create(core, mgmt_ctx, entity_type, name_iter, in_body, mgmt_ctx->out_body);
+
+}
+
+
+void qd_core_agent_update_handler(void                       *ctx,
+                                  qd_field_iterator_t        *reply_to,
+                                  qd_field_iterator_t        *correlation_id,
+                                  qd_router_entity_type_t     entity_type,
+                                  qd_router_operation_type_t  operation_type,
+                                  qd_field_iterator_t        *identity_iter,
+                                  qd_field_iterator_t        *name_iter,
+                                  qd_parsed_field_t          *in_body)
+{
+    qdr_core_t *core = (qdr_core_t*)ctx;
+
+    // Set the callback function.
+    qdr_manage_handler(core, qd_manage_response_handler);
+
+    qd_management_context_t *mgmt_ctx = qd_management_context(reply_to, correlation_id, 0, core, operation_type, 0);
+
+    qdr_manage_update(core, mgmt_ctx, entity_type, name_iter, identity_iter, in_body, mgmt_ctx->out_body);
+}
+
+
+void qd_core_agent_delete_handler(void                       *ctx,
+                                  qd_field_iterator_t        *reply_to,
+                                  qd_field_iterator_t        *correlation_id,
+                                  qd_message_t               *msg,
+                                  qd_router_entity_type_t     entity_type,
+                                  qd_router_operation_type_t  operation_type,
+                                  qd_field_iterator_t        *identity_iter,
+                                  qd_field_iterator_t        *name_iter)
+{
+    qdr_core_t *core = (qdr_core_t*)ctx;
 
     // Set the callback function.
     qdr_manage_handler(core, qd_manage_response_handler);
 
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
+    qd_management_context_t *mgmt_ctx = qd_management_context(reply_to, correlation_id, 0, core, operation_type, 0);
 
-    qd_field_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
-
-    qd_parsed_field_t *in_body = qd_parse(body_iter);
-
-    qdr_manage_create(core, ctx, entity_type, name_iter, in_body, out_body);
-
-    qd_field_iterator_free(body_iter);
-}
-
-
-static void qd_core_agent_update_handler(qdr_core_t                 *core,
-                                         qd_message_t               *msg,
-                                         qd_router_entity_type_t     entity_type,
-                                         qd_router_operation_type_t  operation_type,
-                                         qd_field_iterator_t        *identity_iter,
-                                         qd_field_iterator_t        *name_iter)
-{
-    qd_composed_field_t *out_body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
-
-    // Set the callback function.
-    qdr_manage_handler(core, qd_manage_response_handler);
-
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
-
-    qd_field_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
-    qd_parsed_field_t *in_body= qd_parse(iter);
-    qd_field_iterator_free(iter);
-
-    qdr_manage_update(core, ctx, entity_type, name_iter, identity_iter, in_body, out_body);
-
-}
-
-
-static void qd_core_agent_delete_handler(qdr_core_t                 *core,
-                                         qd_message_t               *msg,
-                                         qd_router_entity_type_t     entity_type,
-                                         qd_router_operation_type_t  operation_type,
-                                         qd_field_iterator_t        *identity_iter,
-                                         qd_field_iterator_t        *name_iter)
-{
-    //
-    // Add the Body
-    //
-    qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
-
-    // Set the callback function.
-    qdr_manage_handler(core, qd_manage_response_handler);
-
-    // Call local function that creates and returns a qd_management_context_t containing the values passed in.
-    qd_management_context_t *ctx = qd_management_context(qd_message(), msg, body, 0, core, operation_type, 0);
-
-    qdr_manage_delete(core, ctx, entity_type, name_iter, identity_iter);
+    qdr_manage_delete(core, mgmt_ctx, entity_type, name_iter, identity_iter);
 }
 
 
@@ -358,7 +344,7 @@ static void qd_core_agent_delete_handler(qdr_core_t                 *core,
  * Checks the content of the message to see if this can be handled by the C-management agent. If this agent cannot handle it, it will be
  * forwarded to the Python agent.
  */
-static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
+bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
                                   qd_router_entity_type_t     *entity_type,
                                   qd_router_operation_type_t  *operation_type,
                                   qd_field_iterator_t        **identity_iter,
@@ -443,57 +429,5 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
         (*offset) = 0;
 
     return true;
-}
-
-
-/**
- *
- * Handler for the management agent.
- *
- */
-void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id, int unused_cost)
-{
-    qdr_core_t *core = (qdr_core_t*) context;
-    qd_field_iterator_t *app_properties_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
-
-    qd_router_entity_type_t    entity_type = 0;
-    qd_router_operation_type_t operation_type = 0;
-
-    qd_field_iterator_t *identity_iter = 0;
-    qd_field_iterator_t *name_iter = 0;
-
-    int32_t count = 0;
-    int32_t offset = 0;
-
-    qd_parsed_field_t *properties_fld = qd_parse(app_properties_iter);
-
-    if (qd_can_handle_request(properties_fld, &entity_type, &operation_type, &identity_iter, &name_iter, &count, &offset)) {
-        switch (operation_type) {
-        case QD_ROUTER_OPERATION_QUERY:
-            qd_core_agent_query_handler(core, entity_type, operation_type, msg, &count, &offset);
-            break;
-        case QD_ROUTER_OPERATION_CREATE:
-            qd_core_agent_create_handler(core, msg, entity_type, operation_type, name_iter);
-            break;
-        case QD_ROUTER_OPERATION_READ:
-            qd_core_agent_read_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
-            break;
-        case QD_ROUTER_OPERATION_UPDATE:
-            qd_core_agent_update_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
-            break;
-        case QD_ROUTER_OPERATION_DELETE:
-            qd_core_agent_delete_handler(core, msg, entity_type, operation_type, identity_iter, name_iter);
-            break;
-        }
-    } else {
-        //
-        // The C management agent is not going to handle this request. Forward it off to Python.
-        //
-        qdr_send_to2(core, msg, MANAGEMENT_INTERNAL, false, false);
-    }
-
-    qd_field_iterator_free(app_properties_iter);
-    qd_parse_free(properties_fld);
-
 }
 

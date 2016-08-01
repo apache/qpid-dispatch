@@ -83,7 +83,7 @@ from .qdrouter import QdSchema
 from ..router.message import Message
 from ..router.address import Address
 from ..policy.policy_manager import PolicyManager
-
+from . import AgentRequestHandler
 
 def dictstr(d):
     """Stringify a dict in the form 'k=v, k=v ...' instead of '{k:v, ...}'"""
@@ -333,6 +333,9 @@ class VhostStatsEntity(EntityAdapter):
 
     def __str__(self):
         return super(VhostStatsEntity, self).__str__().replace("Entity(", "VhostStatsEntity(")
+
+    def __str__(self):
+        return super(PolicyStatsEntity, self).__str__().replace("Entity(", "PolicyStatsEntity(")
 
 
 def _host_port_name_identifier(entity):
@@ -741,29 +744,28 @@ class ManagementEntity(EntityAdapter):
                 out.close()
         raise BadRequestStatus("Bad profile request %s" % (request))
 
-class Agent(object):
-    """AMQP managment agent. Manages entities, directs requests to the correct entity."""
+class ManagementAgent(object):
+    """
+    AMQP managment agent. Manages entities, directs requests to the correct entity.
+    """
 
-    def __init__(self, dispatch, qd):
+    def __init__(self, address, agent_adapter, dispatch, qd, schema=QdSchema()):
         self.qd = qd
+        self.address = address
+        self.agent_adapter = agent_adapter
         self.dispatch = dispatch
-        self.schema = QdSchema()
+        self.schema = schema
         self.entities = EntityCache(self)
         self.request_lock = Lock()
         self.log_adapter = LogAdapter("AGENT")
         self.policy = PolicyManager(self)
         self.management = self.create_entity({"type": "management"})
         self.add_entity(self.management)
+        self.io = IoAdapter(self.receive, address, 'L', '0', TREATMENT_ANYCAST_CLOSEST)
 
     def log(self, level, text):
         info = traceback.extract_stack(limit=2)[0] # Caller frame info
         self.log_adapter.log(level, text, info[0], info[1])
-
-    def activate(self, address):
-        """Register the management address to receive management requests"""
-        self.entities.refresh_from_c()
-        self.log(LOG_INFO, "Activating management agent on %s" % address)
-        self.io = IoAdapter(self.receive, address, 'L', '0', TREATMENT_ANYCAST_CLOSEST)
 
     def entity_class(self, entity_type):
         """Return the class that implements entity_type"""
@@ -784,69 +786,11 @@ class Agent(object):
         entity_type = self.schema.entity_type(attributes['type'])
         return self.entity_class(entity_type)(self, entity_type, attributes)
 
-    def respond(self, request, status=OK, description=None, body=None):
-        """Send a response to the client"""
-        if body is None: body = {}
-        description = description or STATUS_TEXT[status]
-        response = Message(
-            address=request.reply_to,
-            correlation_id=request.correlation_id,
-            properties={'statusCode': status, 'statusDescription': description},
-            body=body)
-        self.log(LOG_DEBUG, "Agent response:\n  %s\n  Responding to: \n  %s"%(response, request))
-        try:
-            self.io.send(response)
-        except:
-            self.log(LOG_ERROR, "Can't respond to %s: %s"%(request, format_exc()))
-
-    def receive(self, request, unused_link_id, unused_cost):
-        """Called when a management request is received."""
-        def error(e, trace):
-            """Raise an error"""
-            self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
-            self.respond(request, e.status, e.description)
-
-        # If there's no reply_to, don't bother to process the request.
-        if not request.reply_to:
-            return
-
-        # Coarse locking, handle one request at a time.
-        with self.request_lock:
-            try:
-                self.entities.refresh_from_c()
-                self.log(LOG_DEBUG, "Agent request %s"% request)
-                status, body = self.handle(request)
-                self.respond(request, status=status, body=body)
-            except ManagementError, e:
-                error(e, format_exc())
-            except ValidationError, e:
-                error(BadRequestStatus(str(e)), format_exc())
-            except Exception, e:
-                error(InternalServerErrorStatus("%s: %s"%(type(e).__name__, e)), format_exc())
-
     def entity_type(self, type):
-        try: return self.schema.entity_type(type)
-        except ValidationError, e: raise NotFoundStatus(str(e))
-
-    def handle(self, request):
-        """
-        Handle a request.
-        Dispatch management node requests to self, entity requests to the entity.
-        @return: (response-code, body)
-        """
-        operation = required_property('operation', request)
-        if operation.lower() == 'create':
-            # Create requests are entity requests but must be handled by the agent since
-            # the entity does not yet exist.
-            return self.create(request)
-        else:
-            target = self.find_entity(request)
-            target.entity_type.allowed(operation, request.body)
-            try:
-                method = getattr(target, operation.lower().replace("-", "_"))
-            except AttributeError:
-                not_implemented(operation, target.type)
-            return method(request)
+        try:
+            return self.schema.entity_type(type)
+        except ValidationError, e:
+            raise NotFoundStatus(str(e))
 
     def _create(self, attributes):
         """Create an entity, called externally or from configuration file."""
@@ -901,12 +845,19 @@ class Agent(object):
         """Remove and internal python implementation object."""
         self.entities.remove_implementation(id(implementation))
 
+    def requested_entity_type(self, request):
+        entity_type = request.properties.get('entityType')
+        if entity_type:
+            return self.schema.entity_type(entity_type)
+        return None
+
     def find_entity(self, request):
         """Find the entity addressed by request"""
 
         requested_type = request.properties.get('type')
         if requested_type:
             requested_type = self.schema.entity_type(requested_type)
+
         # ids is a map of identifying attribute values
         ids = dict((k, request.properties.get(k))
                    for k in ['name', 'identity'] if k in request.properties)
@@ -945,3 +896,113 @@ class Agent(object):
 
     def find_entity_by_type(self, type):
         return self.entities.map_type(None, type)
+
+    def handle(self, request):
+        """
+        Handle a request.
+        Dispatch management node requests to self, entity requests to the entity.
+        @return: (response-code, body)
+        """
+        # Get the operation from the request. This could be CREATE or READ or UPDATE or DELETE or QUERY
+        operation = required_property('operation', request)
+
+        # Get the entity type from the request. For e.g. entity_type could be a connector entity or a listener entity
+        entity_type = self.requested_entity_type(request)
+
+        # Get the type from the request
+        requested_type = request.properties.get('type') # Should be org.amqp.management
+        if requested_type:
+            requested_type = self.schema.entity_type(requested_type)
+            if operation not in requested_type.operations:
+                # Is the operation allowed on the entity_type, if not throw an exception
+                entity_type.allowed(operation)
+
+        # target = self.find_entity(request)
+
+        # Parameters required to post the request to the work queue
+        reply_to = request.reply_to
+        correlation_id = request.correlation_id
+        entity_type_ordinality = entity_type.ordinality
+        #operation_ordinality = operation.ordinality
+
+        print 'reply_to, correlation_id, entity_type_ordinality ', reply_to, correlation_id, entity_type_ordinality
+
+        if operation:
+            operation = operation.lower()
+            if operation == 'create':
+
+                # request.body is already a map with the create parameters
+                # request.properties has the operation, name, type
+                request_handler.qd_post_management_request(operation, entity_type_ordinality, correlation_id, reply_to,
+                                                           request.body)
+
+            request_type = request.properties.get('type')
+            if self.schema.is_long_name(request_type):
+                enum_type = self.schema.type_map.get(request_type)
+            else:
+                # Get the corresponding long name from short name
+                long_type = self.schema.short_long_type_map.get(request_type)
+                enum_type = self.schema.type_map.get(long_type)
+
+            # post an entry into the work queue
+            #qd_dispatch_post_management_request(self.dispatch, oper, enum_type)
+
+        else:
+            raise not_implemented(operation, target.type)
+        """
+        if operation.lower() == 'create':
+            # Create requests are entity requests but must be handled by the agent since
+            # the entity does not yet exist.
+            return self.create(request)
+        else:
+            target = self.find_entity(request)
+            target.entity_type.allowed(operation, request.body)
+            try:
+                method = getattr(target, operation.lower().replace("-", "_"))
+            except AttributeError:
+                not_implemented(operation, target.type)
+            return method(request)
+        """
+
+    def respond(self, request, status=OK, description=None, body=None):
+        """Send a response to the client"""
+        if body is None: body = {}
+        description = description or STATUS_TEXT[status]
+        response = Message(
+            address=request.reply_to,
+            correlation_id=request.correlation_id,
+            properties={'statusCode': status, 'statusDescription': description},
+            body=body)
+        self.log(LOG_DEBUG, "Agent response:\n  %s\n  Responding to: \n  %s"%(response, request))
+        try:
+            self.io.send(response)
+        except:
+            self.log(LOG_ERROR, "Can't respond to %s: %s"%(request, format_exc()))
+
+    def receive(self, request, unused_link_id, unused_cost):
+        """
+        Called when a management request is received.
+        The init function registers this function as the one to be called by creating an IOAdapter.
+        """
+        # If there's no reply_to, don't bother to process the request.
+        if not request.reply_to:
+            return
+
+        def error(e, trace):
+            """Raise an error"""
+            self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
+            self.respond(request, e.status, e.description)
+
+        # Coarse locking, handle one request at a time.
+        with self.request_lock:
+            try:
+                self.entities.refresh_from_c()
+                self.log(LOG_DEBUG, "Agent request %s"% request)
+                status, body = self.handle(request)
+                self.respond(request, status=status, body=body)
+            except ManagementError, e:
+                error(e, format_exc())
+            except ValidationError, e:
+                error(BadRequestStatus(str(e)), format_exc())
+            except Exception, e:
+                error(InternalServerErrorStatus("%s: %s"%(type(e).__name__, e)), format_exc())

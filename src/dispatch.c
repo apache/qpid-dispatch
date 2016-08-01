@@ -174,6 +174,14 @@ qd_error_t qd_dispatch_configure_auto_link(qd_dispatch_t *qd, qd_entity_t *entit
     return qd_error_code();
 }
 
+/*qd_error_t qd_dispatch_post_management_request(qd_dispatch_t *qd,
+                                               qd_schema_entity_operation_t operation,
+                                               qd_schema_entity_type_t entity_type) {
+    if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
+    qd_router_configure_auto_link(qd->router, entity);
+    return qd_error_code();
+}*/
+
 qd_error_t qd_dispatch_configure_policy(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_error_t err;

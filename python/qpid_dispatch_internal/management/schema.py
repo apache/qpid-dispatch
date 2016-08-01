@@ -208,7 +208,7 @@ class AttributeType(object):
 
     def __init__(self, name, type=None, defined_in=None, default=None,
                  required=False, unique=False, hidden=False, deprecated=False,
-                 value=None, description="", create=False, update=False, graph=False):
+                 value=None, description="", create=False, update=False, graph=False, ordinality=0):
         """
         See L{AttributeType} instance variables.
         """
@@ -224,6 +224,7 @@ class AttributeType(object):
             self.value = value
             self.unique = unique
             self.description = description
+            self.ordinality = ordinality
             if self.value is not None and self.default is not None:
                 raise ValidationError("Attribute '%s' has default value and fixed value" %
                                       self.name)
@@ -321,7 +322,7 @@ class EntityType(object):
     @ivar referential: True if an entity can be referred to by name from another entity.
     """
     def __init__(self, name, schema, attributes=None, operations=None, operationDefs=None, description="",
-                 fullName=True, singleton=False, deprecated=False, extends=None, referential=False, **kwargs):
+                 fullName=True, singleton=False, deprecated=False, extends=None, referential=False, ordinality=0, **kwargs):
         """
         @param name: name of the entity type.
         @param schema: schema for this type.
@@ -341,8 +342,9 @@ class EntityType(object):
                     self.short_name = self.short_name.replace("router.config.", "")
             else:
                 self.name = self.short_name = name
+
             self.attributes = OrderedDict((k, AttributeType(k, defined_in=self, **v))
-                                              for k, v in (attributes or {}).iteritems())
+                                          for k, v in (attributes or {}).iteritems())
             self.operations = operations or []
             # Bases are resolved in self.init()
             self.base = extends
@@ -352,6 +354,7 @@ class EntityType(object):
             self.singleton = singleton
             self.deprecated = deprecated
             self.referential = referential
+            self.ordinality = ordinality
             self._init = False      # Have not yet initialized from base and attributes.
             # Operation definitions
             self.operation_defs = dict((name, OperationDef(name, **op))
@@ -381,13 +384,21 @@ class EntityType(object):
         self.operations += other.operations
         check(self.attributes.iterkeys(), other.attributes.itervalues(), "attributes")
         self.attributes.update(other.attributes)
+
         if other.name == 'entity':
             # Fill in entity "type" attribute automatically.
             self.attributes["type"]["value"] = self.name
 
-    def extends(self, base): return base in self.all_bases
+        ordinality = 0
+        for attrib in self.attributes.values():
+            attrib.ordinality = ordinality
+            ordinality += 1
 
-    def is_a(self, type): return type == self or self.extends(type)
+    def extends(self, base):
+        return base in self.all_bases
+
+    def is_a(self, type):
+        return type == self or self.extends(type)
 
     def attribute(self, name):
         """Get the AttributeType for name"""
@@ -433,7 +444,7 @@ class EntityType(object):
 
         return attributes
 
-    def allowed(self, op, body):
+    def allowed(self, op):
         """Raise exception if op is not a valid operation on entity."""
         op = op.upper()
         if not op in self.operations:
@@ -505,23 +516,35 @@ class Schema(object):
 
         self.all_attributes = set()
 
+        ordinality = 0
         for e in self.entity_types.itervalues():
             e.init()
+            e.ordinality = ordinality
             self.all_attributes.update(e.attributes.keys())
+            ordinality += 1
 
     def short_name(self, name):
         """Remove prefix from name if present"""
-        if not name: return name
+        if not name:
+            return name
         if name.startswith(self.prefixdot):
             name = name[len(self.prefixdot):]
         return name
 
     def long_name(self, name):
         """Add prefix to unqualified name"""
-        if not name: return name
+        if not name:
+            return name
         if not name.startswith(self.prefixdot):
             name = self.prefixdot + name
         return name
+
+    def is_long_name(self, name):
+        if not name:
+            return False
+        if self.prefixdot in name:
+            return True
+        return False
 
     def dump(self):
         """Return json-friendly representation"""

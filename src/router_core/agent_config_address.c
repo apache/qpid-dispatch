@@ -19,6 +19,7 @@
 
 #include <qpid/dispatch/ctools.h>
 #include "agent_config_address.h"
+#include "schema_enum.h"
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -322,11 +323,11 @@ void qdra_config_address_create_CT(qdr_core_t          *core,
         //
         // Extract the fields from the request
         //
-        qd_parsed_field_t *prefix_field    = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_PREFIX]);
-        qd_parsed_field_t *distrib_field   = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_DISTRIBUTION]);
-        qd_parsed_field_t *waypoint_field  = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_WAYPOINT]);
-        qd_parsed_field_t *in_phase_field  = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_IN_PHASE]);
-        qd_parsed_field_t *out_phase_field = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_OUT_PHASE]);
+        qd_parsed_field_t *prefix_field    = qd_parse_value_by_key(in_body, qdr_config_address_columns[QD_SCHEMA_FIXEDADDRESS_ATTRIBUTES_PREFIX]);
+        qd_parsed_field_t *distrib_field   = qd_parse_value_by_key(in_body, qdr_config_address_columns[QD_SCHEMA_ADDRESS_ATTRIBUTES_DISTRIBUTION]);
+        qd_parsed_field_t *waypoint_field  = qd_parse_value_by_key(in_body, qdr_config_address_columns[QD_SCHEMA_ADDRESS_ATTRIBUTES_WAYPOINT]);
+        qd_parsed_field_t *in_phase_field  = qd_parse_value_by_key(in_body, qdr_config_address_columns[QD_SCHEMA_ADDRESS_ATTRIBUTES_INGRESSPHASE]);
+        qd_parsed_field_t *out_phase_field = qd_parse_value_by_key(in_body, qdr_config_address_columns[QD_SCHEMA_ADDRESS_ATTRIBUTES_EGRESSPHASE]);
 
         //
         // Prefix field is mandatory.  Fail if it is not here.
