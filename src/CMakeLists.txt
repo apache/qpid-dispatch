@@ -65,7 +65,7 @@ set(qpid_dispatch_SOURCES
   python_embedded.c
   router_agent.c
   router_config.c
-  router_core/agent.c
+  router_core/agent_core.c
   router_core/agent_address.c
   router_core/agent_config_address.c
   router_core/agent_config_auto_link.c
@@ -83,7 +83,7 @@ set(qpid_dispatch_SOURCES
   router_core/transfer.c
   router_node.c
   router_pynode.c
-  agent_adapter.c
+  agent.c
   schema_enum.c
   server.c
   timer.c
@@ -95,7 +95,7 @@ if(USE_MEMORY_POOL)
 endif()
 
 set_property(
-  SOURCE python_embedded.c router_pynode.c agent_adapter.c
+  SOURCE python_embedded.c router_pynode.c agent.c
   PROPERTY COMPILE_FLAGS -Wno-strict-aliasing
   )
 
