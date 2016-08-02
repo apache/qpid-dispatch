@@ -463,7 +463,6 @@ var QDR = (function (QDR) {
             $(".contextMenu").fadeOut(200);
         });
 
-
 		// set up SVG for D3
 	    var width, height;
 	    var tpdiv = $('#topology');
@@ -474,6 +473,10 @@ var QDR = (function (QDR) {
 	    var radiusNormal = 15;
 	    width = tpdiv.width() - gap;
 	    height = $('#main').height() - $('#topology').position().top - gap;
+		if (width < 10 && height < 10) {
+			QDR.log.info("page width and height are abynormal: returning before very bad things happen")
+			return;
+		}
 
 	    var svg, lsvg;
 		var force;
@@ -537,7 +540,6 @@ var QDR = (function (QDR) {
 
 		// initialize the nodes and links array from the QDRService.topology._nodeInfo object
 		var initForceGraph = function () {
-            //QDR.log.debug("initForceGraph called");
 			nodes = [];
 			links = [];
 
@@ -1178,7 +1180,6 @@ var QDR = (function (QDR) {
 					svgg.transition().attr("transform", "translate(2,2) scale(1)")
                 })
 
-
 	        // remove old links
 	        path.exit().remove();
 
@@ -1383,6 +1384,7 @@ var QDR = (function (QDR) {
 		                return d.name.length>7 ? d.name.substr(0,6)+'...' : d.name;
 		        });
 			}
+
 			appendContent(g)
 
 			var appendTitle = function (g) {
@@ -1444,6 +1446,7 @@ var QDR = (function (QDR) {
 					// 45px between lines and add 10px space after 1st line
 					return "translate(0, "+(45*i+(i>0?10:0))+")"
 				})
+
 			appendCircle(lg)
 			appendContent(lg)
 			appendTitle(lg)
@@ -1453,10 +1456,18 @@ var QDR = (function (QDR) {
 				.attr('class', "label")
 				.text(function (d) {return d.key })
 			lsvg.exit().remove();
-			var svgEl = document.getElementById("svglegend"),
-				bb = svgEl.getBBox();
-			svgEl.style.height = (bb.y + bb.height) + 'px';
-			svgEl.style.width = (bb.x + bb.width) + 'px';
+			var svgEl = document.getElementById('svglegend')
+			if (svgEl) {
+				var bb;
+				// firefox can throw an exception on getBBox on an svg element
+				try {
+					bb = svgEl.getBBox();
+				} catch (e) {
+					bb = {y: 0, height: 200, x: 0, width: 200}
+				}
+				svgEl.style.height = (bb.y + bb.height) + 'px';
+				svgEl.style.width = (bb.x + bb.width) + 'px';
+			}
 
 	        if (!mousedown_node || !selected_node)
 	            return;

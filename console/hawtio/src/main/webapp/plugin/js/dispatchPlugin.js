@@ -79,25 +79,25 @@ var QDR = (function(QDR) {
          * routeProvider has been configured with.
          */
 		 $routeProvider
-			.when('/' + QDR.pluginName, {
+			.when(QDR.pluginRoot, {
 				templateUrl: QDR.templatePath + 'qdrConnect.html'
 			})
-			.when('/' + QDR.pluginName + '/overview', {
+			.when(QDR.pluginRoot + '/overview', {
 				templateUrl: QDR.templatePath + 'qdrOverview.html'
 			})
-			.when('/' + QDR.pluginName + '/topology', {
+			.when(QDR.pluginRoot + '/topology', {
 				templateUrl: QDR.templatePath + 'qdrTopology.html'
 			})
-			.when('/' + QDR.pluginName + '/list', {
+			.when(QDR.pluginRoot + '/list', {
 				templateUrl: QDR.templatePath + 'qdrList.html'
 			})
-			.when('/' + QDR.pluginName + '/schema', {
+			.when(QDR.pluginRoot + '/schema', {
 				templateUrl: QDR.templatePath + 'qdrSchema.html'
 			})
-			.when('/' + QDR.pluginName + '/charts', {
+			.when(QDR.pluginRoot + '/charts', {
 				templateUrl: QDR.templatePath + 'qdrCharts.html'
 			})
-			.when('/' + QDR.pluginName + '/connect', {
+			.when(QDR.pluginRoot + '/connect', {
 				templateUrl: QDR.templatePath + 'qdrConnect.html'
 			})
       })
@@ -168,17 +168,22 @@ var QDR = (function(QDR) {
   QDR.module.run(function(workspace, viewRegistry, layoutFull, $rootScope, $location, localStorage, QDRService, QDRChartService) {
 		QDR.log.info("*************creating Dispatch Console************");
 		var curPath = $location.path()
-		if (curPath !== '/' + QDR.pluginName) {
-				var toPath = QDR.pluginRoot + "/connect";
-				$location.path(toPath);
-				if (curPath.startsWith(QDR.pluginRoot)) {
-					var org = curPath.substr(QDR.pluginRoot.length + 1)
-					if (org !== "connect")
-						$location.search('org', org)
-				}
-				$location.replace();
+		var lastLocation = localStorage[QDR.LAST_LOCATION];
+		if (!angular.isDefined(lastLocation)) {
+			lastLocation = "connect";
 		}
-
+		if (lastLocation.startsWith(QDR.pluginRoot)) {
+			lastLocation = lastLocation.substr(QDR.pluginRoot.length+1)
+		}
+		if (curPath.startsWith(QDR.pluginRoot)) {
+			var org = curPath.substr(QDR.pluginRoot.length + 1)
+			if (curPath === QDR.pluginRoot && (!org || org.length===0 || org !== 'connect')) {
+				org = lastLocation
+			}
+			if (org && org.length > 0) {
+				$location.search('org', org)
+			}
+		}
 
 		Core.addCSS(QDR.contextPath + "plugin/css/dispatch.css");
 		Core.addCSS(QDR.contextPath + "plugin/css/plugin.css");
@@ -230,15 +235,16 @@ var QDR = (function(QDR) {
         });
 
 		$rootScope.$on( "$routeChangeStart", function(event, next, current) {
-			if (next.templateUrl == QDR.templatePath + "qdrConnect.html" && QDRService.connected) {
+			if (next && next.templateUrl == QDR.templatePath + "qdrConnect.html" && QDRService.connected) {
 				// clicked connect from another dispatch page
-				if (current.loadedTemplateUrl.startsWith(QDR.contextPath)) {
+				if (current && current.loadedTemplateUrl.startsWith(QDR.contextPath)) {
 					return;
 				}
 				// clicked the Dispatch Router top level tab from a different plugin
 				var lastLocation = localStorage[QDR.LAST_LOCATION];
-				if (!angular.isDefined(lastLocation))
+				if (!angular.isDefined(lastLocation)) {
 					lastLocation = QDR.pluginRoot + "/overview";
+				}
 				// show the last page visited
 				$location.path(lastLocation)
 			}

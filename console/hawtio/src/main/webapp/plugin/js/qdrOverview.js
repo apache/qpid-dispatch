@@ -68,7 +68,6 @@ var QDR = (function (QDR) {
 		}
 		$scope.linkFields = []
 		$scope.link = null;
-		var currentTimer;
 		var refreshInterval = 5000
 	    $scope.modes = [
 	    	{title: 'Overview', name: 'Overview', right: false}
@@ -1417,10 +1416,6 @@ var QDR = (function (QDR) {
         $scope.$on("$destroy", function( event ) {
 			QDRService.stopUpdating()
 			QDRService.delUpdatedAction("overview")
-			if (currentTimer) {
-				clearTimeout(currentTimer)
-				currentTimer = null;
-			}
         });
 
     }]);

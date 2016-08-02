@@ -35,22 +35,13 @@ var QDR = (function(QDR) {
 		var updateInterval = 5000;
 		var ListExpandedKey = "QDRListExpanded";
 		$scope.details = {};
-		if (!QDRService.connected) {
-			// we are not connected. we probably got here from a bookmark or manual page reload
-			QDRService.redirectWhenConnected("list");
-			return;
-		}
-		// we are currently connected. setup a handler to get notified if we are ever disconnected
-		QDRService.addDisconnectAction( function () {
-			QDRService.redirectWhenConnected("list")
-			$scope.$apply();
-		})
 
-		$scope.selectedEntity = localStorage['QDRSelectedEntity'];
+		$scope.selectedEntity = localStorage['QDRSelectedEntity'] || "address";
 		$scope.selectedNode = localStorage['QDRSelectedNode'];
 		$scope.selectedNodeId = localStorage['QDRSelectedNodeId'];
 		$scope.selectedRecordName = localStorage['QDRSelectedRecordName'];
-
+		$scope.nodes = []
+		$scope.currentNode = undefined;
 		$scope.modes = [{
 	        content: '<a><i class="icon-list"></i> Attributes</a>',
 			id: 'attributes',
@@ -127,6 +118,17 @@ var QDR = (function(QDR) {
 			return mode.isValid()
 		}
 
+		if (!QDRService.connected) {
+			// we are not connected. we probably got here from a bookmark or manual page reload
+			QDRService.redirectWhenConnected("list");
+			return;
+		}
+		// we are currently connected. setup a handler to get notified if we are ever disconnected
+		QDRService.addDisconnectAction( function () {
+			QDRService.redirectWhenConnected("list")
+			$scope.$apply();
+		})
+
 		$scope.nodes = QDRService.nodeList().sort(function (a, b) { return a.name.toLowerCase() > b.name.toLowerCase()});
 		// unable to get node list? Bail.
 		if ($scope.nodes.length == 0) {
@@ -141,7 +143,6 @@ var QDR = (function(QDR) {
 				//QDR.log.debug("forcing selectedNode to " + $scope.selectedNode);
 			}
 		}
-		$scope.currentNode = undefined;
 		var setCurrentNode = function () {
 			$scope.nodes.some( function (node, i) {
 				if (node.name === $scope.selectedNode) {

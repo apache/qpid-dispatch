@@ -64,15 +64,18 @@ var QDR = (function(QDR) {
             }
         });
         self.connectActions = [];
-        $timeout( function () {
-            var searchObject = $location.search();
-            var goto = "overview";
-            if (searchObject.org) {
-                goto = searchObject.org;
-            }
-            $location.search('org', null)
-            $location.path(QDR.pluginRoot +"/" + goto);
-        })
+		if ($location.path().startsWith(QDR.pluginRoot)) {
+	        $timeout( function () {
+
+	            var searchObject = $location.search();
+	            var goto = "overview";
+	            if (searchObject.org) {
+	                goto = searchObject.org;
+	            }
+	            $location.search('org', null)
+	            $location.path(QDR.pluginRoot +"/" + goto);
+	        })
+		}
 
       },
       executeDisconnectActions: function() {
@@ -179,8 +182,8 @@ var QDR = (function(QDR) {
      },
 
     startUpdating: function () {
-        QDR.log.info("startUpdating called")
         self.stopUpdating();
+        QDR.log.info("startUpdating called")
         self.topology.get();
         self.stop = setInterval(function() {
             self.topology.get();

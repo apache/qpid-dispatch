@@ -79,6 +79,9 @@ QDR.NavBarController = function($scope, QDRService, QDRChartService, $location, 
     };
 
     $scope.isActive = function(href) {
+		// highlight the connect tab if we are on the root page
+		if (($location.path() === QDR.pluginRoot) && (href.split("#")[1] === QDR.pluginRoot + "/connect"))
+			return true
         return href.split("#")[1] == $location.path();
     };
 
