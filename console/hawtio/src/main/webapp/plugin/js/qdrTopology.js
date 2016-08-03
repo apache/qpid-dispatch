@@ -846,30 +846,47 @@ var QDR = (function (QDR) {
 
 	    // update force layout (called automatically each iteration)
 	    function tick() {
+	        circle.attr('transform', function (d) {
+                var cradius;
+                if (d.nodeType == "inter-router") {
+					cradius = d.left ? radius + 8  : radius;
+                } else {
+					cradius = d.left ? radiusNormal + 18  : radiusNormal;
+                }
+	            d.x = Math.max(d.x, radiusNormal * 2);
+	            d.y = Math.max(d.y, radiusNormal * 2);
+				d.x = Math.max(0, Math.min(width-cradius, d.x))
+				d.y = Math.max(0, Math.min(height-cradius, d.y))
+	            return 'translate(' + d.x + ',' + d.y + ')';
+	        });
+
 	        // draw directed edges with proper padding from node centers
 	        path.attr('d', function (d) {
 				//QDR.log.debug("in tick for d");
 				//console.dump(d);
-				var dtx = Math.max(0, Math.min(width, d.target.x)),
-				    dty = Math.max(0, Math.min(height, d.target.y)),
-				    dsx = Math.max(0, Math.min(width, d.source.x)),
-					dsy = Math.max(0, Math.min(height, d.source.y));
+                var sourcePadding, targetPadding, r;
+
+                if (d.target.nodeType == "inter-router") {
+					r = radius;
+					//                       right arrow  left line start
+					sourcePadding = d.left ? radius + 8  : radius;
+					//                      left arrow      right line start
+					targetPadding = d.right ? radius + 16 : radius;
+                } else {
+					r = radiusNormal - 18;
+					sourcePadding = d.left ? radiusNormal + 18  : radiusNormal;
+					targetPadding = d.right ? radiusNormal + 16 : radiusNormal;
+                }
+				var dtx = Math.max(targetPadding, Math.min(width-r, d.target.x)),
+				    dty = Math.max(targetPadding, Math.min(height-r, d.target.y)),
+				    dsx = Math.max(sourcePadding, Math.min(width-r, d.source.x)),
+					dsy = Math.max(sourcePadding, Math.min(height-r, d.source.y));
 
 	            var deltaX = dtx - dsx,
 	                deltaY = dty - dsy,
 	                dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
 	                normX = deltaX / dist,
 	                normY = deltaY / dist;
-	                var sourcePadding, targetPadding;
-	                if (d.target.nodeType == "inter-router") {
-						//                       right arrow  left line start
-						sourcePadding = d.left ? radius + 8  : radius;
-						//                      left arrow      right line start
-						targetPadding = d.right ? radius + 16 : radius;
-	                } else {
-						sourcePadding = d.left ? radiusNormal + 18  : radiusNormal;
-						targetPadding = d.right ? radiusNormal + 16 : radiusNormal;
-	                }
 	                var sourceX = dsx + (sourcePadding * normX),
 	                sourceY = dsy + (sourcePadding * normY),
 	                targetX = dtx - (targetPadding * normX),
@@ -882,13 +899,6 @@ var QDR = (function (QDR) {
 	            return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY;
 	        });
 
-	        circle.attr('transform', function (d) {
-	            d.x = Math.max(d.x, radiusNormal * 2);
-	            d.y = Math.max(d.y, radiusNormal * 2);
-				d.x = Math.max(0, Math.min(width, d.x))
-				d.y = Math.max(0, Math.min(height, d.y))
-	            return 'translate(' + d.x + ',' + d.y + ')';
-	        });
 	        if (!animate) {
 	            animate = true;
 	            force.stop();
