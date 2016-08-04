@@ -476,9 +476,7 @@ class LinkRoutePatternTest(TestCase):
         qdstat_address = self.routers[2].addresses[0]
         test = DeliveryTagsTest(sender_address, listening_address, qdstat_address)
         test.run()
-        self.assertTrue(test.wait_completed)
-        self.assertTrue(test.message_received)
-        self.assertTrue(test.delivery_tag_verified)
+        self.assertEqual(None, test.error)
 
     def test_close_with_unsettled(self):
         test = CloseWithUnsettledTest(self.routers[1].addresses[0], self.routers[1].addresses[1])
@@ -511,25 +509,42 @@ class LinkRoutePatternTest(TestCase):
         self.assertEqual(None, test.error)
 
 
+class Timeout(object):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.timeout()
+
+
 class DeliveryTagsTest(MessagingHandler):
     def __init__(self, sender_address, listening_address, qdstat_address):
         super(DeliveryTagsTest, self).__init__()
         self.sender_address = sender_address
         self.listening_address = listening_address
         self.sender = None
-        self.wait_completed = False
-        self.message_received = False
         self.receiver_connection = None
         self.sender_connection = None
         self.qdstat_address = qdstat_address
         self.id = '1235'
         self.times = 1
+        self.sent = 0
+        self.rcvd = 0
         self.delivery_tag_verified = False
         # The delivery tag we are going to send in the transfer frame
         # We will later make sure that the same delivery tag shows up on the receiving end in the link routed case.
         self.delivery_tag = '92319'
+        self.error = None
+
+    def timeout(self):
+        self.error = "Timeout expired: sent=%d rcvd=%d" % (self.sent, self.rcvd)
+        if self.receiver_connection:
+            self.receiver_connection.close()
+        if self.sender_connection:
+            self.sender_connection.close()
 
     def on_start(self, event):
+        self.timer               = event.reactor.schedule(5, Timeout(self))
         self.receiver_connection = event.container.connect(self.listening_address)
 
     def on_connection_remote_open(self, event):
@@ -552,10 +567,10 @@ class DeliveryTagsTest(MessagingHandler):
                 out = local_node.read(type='org.apache.qpid.dispatch.router.address', name='Dpulp.task').remoteCount
                 if out == 1:
                     continue_loop = False
-                i+=1
-                sleep(0.25)
+                else:
+                    i += 1
+                    sleep(0.25)
 
-            self.wait_completed = True
             self.sender_connection = event.container.connect(self.sender_address)
             self.sender = event.container.create_sender(self.sender_connection, "pulp.task", options=AtMostOnce())
 
@@ -563,29 +578,23 @@ class DeliveryTagsTest(MessagingHandler):
         if self.times == 1:
             msg = Message(body="Hello World")
             self.sender.send(msg, tag=self.delivery_tag)
-            self.sender_connection.close()
-            self.times +=1
+            self.times += 1
+            self.sent += 1
 
     def on_message(self, event):
         if "Hello World" == event.message.body:
-            self.message_received = True
+            self.rcvd += 1
 
         # If the tag on the delivery is the same as the tag we sent with the initial transfer, it means
         # that the router has propagated the delivery tag successfully because of link routing.
-        if self.delivery_tag == event.delivery.tag:
-            self.delivery_tag_verified = True
+        if self.delivery_tag != event.delivery.tag:
+            self.error = "Delivery-tag: expected:%r got:%r" % (self.delivery_tag, event.delivery.tag)
         self.receiver_connection.close()
+        self.sender_connection.close()
+        self.timer.cancel()
 
     def run(self):
         Container(self).run()
-
-
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
 
 
 class CloseWithUnsettledTest(MessagingHandler):

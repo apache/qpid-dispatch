@@ -315,15 +315,7 @@ static int close_handler(qd_container_t *container, void* conn_context, pn_conne
                 node->ntype->link_detach_handler(node->context, link, QD_LOST);
             }
         }
-        pn_link_close(pn_link);
         pn_link = pn_link_next(pn_link, 0);
-    }
-
-    // teardown all sessions
-    pn_session_t *ssn = pn_session_head(conn, 0);
-    while (ssn) {
-        pn_session_close(ssn);
-        ssn = pn_session_next(ssn, 0);
     }
 
     // close the connection
@@ -787,10 +779,9 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     link->close_sess_with_link = true;
 
     //
-    // Keep the borrowed references
+    // Keep the borrowed link reference
     //
     pn_incref(link->pn_link);
-    pn_incref(link->pn_sess);
 
     pn_link_set_context(link->pn_link, link);
 

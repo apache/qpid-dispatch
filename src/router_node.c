@@ -753,6 +753,13 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
     qd_link_close(qlink);
 
     //
+    // This is the last event for this link that we are going to send into Proton.
+    // Remove the core->proton linkage.  Note that the proton->core linkage may still
+    // be intact and needed.
+    //
+    qdr_link_set_context(link, 0);
+
+    //
     // If this is the second detach, free the qd_link
     //
     if (!first)

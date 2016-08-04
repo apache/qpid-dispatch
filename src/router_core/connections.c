@@ -1268,6 +1268,15 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     //
     if (link->connected_link) {
         qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE);
+
+        //
+        // If the link is completely detached, release its resources
+        //
+        if (link->detach_count == 2) {
+            qdr_link_cleanup_CT(core, conn, link);
+            free_qdr_link_t(link);
+        }
+
         return;
     }
 
