@@ -1771,6 +1771,14 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     ctx->deferred_call_lock = sys_mutex();
     ctx->event_stall  = false;
     ctx->policy_counted = false;
+    ctx->role           = 0;
+
+    // Copy the role from the connector config
+    if (ctx->connector && ctx->connector->config) {
+        int role_length    = strlen(ctx->connector->config->role) + 1;
+        ctx->role          = (char*) malloc(role_length);
+        strcpy(ctx->role, ctx->connector->config->role);
+    }
 
     ufd->context = context;
     ufd->server  = qd_server;
