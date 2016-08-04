@@ -19,4 +19,6 @@
 """Qpid Dispatch internal management package."""
 
 
+from .agent import ManagementAgent
 
+__all__ = ["ManagementAgent"]

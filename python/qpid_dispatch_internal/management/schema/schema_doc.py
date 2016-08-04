@@ -21,7 +21,8 @@
 
 from collections import namedtuple
 import sys
-from .schema import quotestr
+
+from python.qpid_dispatch_internal.management.schema.schema import quotestr
 
 
 class SchemaWriter(object):

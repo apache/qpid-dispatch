@@ -29,7 +29,12 @@ A Schema can be loaded/dumped to a json file.
 import sys
 from qpid_dispatch.management.entity import EntityBase
 from qpid_dispatch.management.error import NotImplementedStatus
-from ..compat import OrderedDict
+from ...compat import OrderedDict, JSON_LOAD_KWARGS
+import json
+from pkgutil import get_data
+
+from python.qpid_dispatch_internal.management.schema import schema
+
 
 class ValidationError(Exception):
     """Error raised if schema validation fails"""
@@ -477,9 +482,11 @@ class EntityType(object):
             ('singleton', self.singleton)
         ])
 
-    def __repr__(self): return "%s(%s)" % (type(self).__name__, self.name)
+    def __repr__(self):
+        return "%s(%s)" % (type(self).__name__, self.name)
 
-    def __str__(self): return self.name
+    def __str__(self):
+        return self.name
 
     def name_is(self, name):
         return self.name == self.schema.long_name(name)
@@ -627,6 +634,55 @@ class Schema(object):
             return self.entity_types.itervalues()
         else:
             return self.filter(lambda t: t.is_a(type))
+
+
+class QdSchema(Schema):
+    """
+    Qpid Dispatch Router management schema.
+    """
+
+    CONFIGURATION_ENTITY = u"configurationEntity"
+    OPERATIONAL_ENTITY = u"operationalEntity"
+
+    def __init__(self):
+        """Load schema."""
+        qd_schema = get_data('qpid_dispatch.management', 'qdrouter.json')
+        try:
+            super(QdSchema, self).__init__(**json.loads(qd_schema, **JSON_LOAD_KWARGS))
+        except Exception,e:
+            raise ValueError("Invalid schema qdrouter.json: %s" % e)
+        self.configuration_entity = self.entity_type(self.CONFIGURATION_ENTITY)
+        self.operational_entity = self.entity_type(self.OPERATIONAL_ENTITY)
+
+    def validate_full(self, entities, **kwargs):
+        """
+        In addition to L{schema.Schema.validate}, check the following:
+
+        listeners and connectors can only have role=inter-router if the
+        router has mode=interior.
+
+
+        @param entities: List of attribute name:value maps.
+        @param kwargs: See L{schema.Schema.validate}
+        """
+        entities = list(entities) # Need to traverse twice
+        super(QdSchema, self).validate_all(entities, **kwargs)
+        inter_router = not_interior = None
+        for e in entities:
+            if self.short_name(e.type) == "router" and e.mode != "interior":
+                not_interior = e.mode
+            if self.short_name(e.type) in ["listener", "connector"] and e.role == "inter-router":
+                inter_router = e
+            if not_interior and inter_router:
+                raise schema.ValidationError(
+                    "role='inter-router' only allowed with router mode='interior' for %s." % inter_router)
+
+    def is_configuration(self, entity_type):
+        return entity_type and self.configuration_entity in entity_type.all_bases
+
+    def is_operational(self, entity_type):
+        return entity_type and self.operational_entity in entity_type.all_bases
+
 
 class SchemaEntity(EntityBase):
     """A map of attributes associated with an L{EntityType}"""

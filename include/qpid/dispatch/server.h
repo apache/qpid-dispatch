@@ -90,17 +90,6 @@ void qd_server_run(qd_dispatch_t *qd);
 
 
 /**
- * Start the server threads and return immediately - The non-blocking version.
- *
- * Start the operation of the server, including launching all of the worker
- * threads.
- *
- * @param qd The dispatch handle returned by qd_dispatch.
- */
-void qd_server_start(qd_dispatch_t *qd);
-
-
-/**
  * Stop the server
  *
  * Stop the server and join all of its worker threads.  This function may be

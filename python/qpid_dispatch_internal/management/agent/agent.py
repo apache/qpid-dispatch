@@ -66,7 +66,11 @@ Temporary solution is to lock the entire dispatch router lock during full refres
 Better solution coming soon...
 """
 
-import traceback, json, pstats
+import traceback
+import json
+import pstats
+import sys
+import re
 from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
@@ -74,16 +78,17 @@ from cProfile import Profile
 from cStringIO import StringIO
 from ctypes import c_void_p, py_object, c_long
 from subprocess import Popen
-from ..dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
+
+from python.qpid_dispatch_internal.dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
 from qpid_dispatch.management.entity import camelcase
-from .schema import ValidationError, SchemaEntity, EntityType
-from .qdrouter import QdSchema
-from ..router.message import Message
-from ..router.address import Address
-from ..policy.policy_manager import PolicyManager
-from . import AgentRequestHandler
+from python.qpid_dispatch_internal.management.schema.schema import ValidationError, SchemaEntity, EntityType
+from schema.schema import QdSchema
+from python.qpid_dispatch_internal.router.message import Message
+from python.qpid_dispatch_internal.router.address import Address
+from python.qpid_dispatch_internal.policy.policy_manager import PolicyManager
+
 
 def dictstr(d):
     """Stringify a dict in the form 'k=v, k=v ...' instead of '{k:v, ...}'"""
@@ -154,8 +159,8 @@ class EntityAdapter(SchemaEntity):
         # Direct __dict__ access to avoid validation as schema attributes
         self.__dict__['_agent'] = agent
         self.__dict__['_log'] = agent.log
-        self.__dict__['_qd'] = agent.qd
-        self.__dict__['_dispatch'] = agent.dispatch
+        #self.__dict__['_qd'] = agent.qd
+        #self.__dict__['_dispatch'] = agent.dispatch
         self.__dict__['_policy'] = agent.policy
         self.__dict__['_implementations'] = []
 
@@ -744,24 +749,107 @@ class ManagementEntity(EntityAdapter):
                 out.close()
         raise BadRequestStatus("Bad profile request %s" % (request))
 
-class ManagementAgent(object):
+class ManagementAgent:
     """
     AMQP managment agent. Manages entities, directs requests to the correct entity.
     """
 
-    def __init__(self, address, agent_adapter, dispatch, qd, schema=QdSchema()):
-        self.qd = qd
+    def __init__(self, address, agent_adapter, config_file, schema=QdSchema(), raw_json=False):
         self.address = address
         self.agent_adapter = agent_adapter
-        self.dispatch = dispatch
         self.schema = schema
-        self.entities = EntityCache(self)
-        self.request_lock = Lock()
+        for e in self.schema.entity_types.itervalues():
+            print e
+        self.config_file = config_file  # full path to config file
+        self.config_types = [et for et in schema.entity_types.itervalues()
+                                     if schema.is_configuration(et)]
+        if self.config_file:
+            try:
+                self.load(self.config_file, raw_json)
+            except Exception, e:
+                raise Exception, "Cannot load configuration file %s: %s" % (config_file, e), sys.exc_info()[2]
+        else:
+            self.entities = []
         self.log_adapter = LogAdapter("AGENT")
         self.policy = PolicyManager(self)
         self.management = self.create_entity({"type": "management"})
-        self.add_entity(self.management)
+        # self.add_entity(self.management)
+        print "Hello ManagementAgent******** 2"
         self.io = IoAdapter(self.receive, address, 'L', '0', TREATMENT_ANYCAST_CLOSEST)
+        print "Hello ManagementAgent******** 3"
+
+    @staticmethod
+    def _parse(lines):
+        """Parse config file format into a section list"""
+        begin = re.compile(r'([\w-]+)[ \t]*{') # WORD {
+        end = re.compile(r'}')                 # }
+        attr = re.compile(r'([\w-]+)[ \t]*:[ \t]*(.+)') # WORD1: VALUE
+
+        def sub(line):
+            """Do substitutions to make line json-friendly"""
+            line = line.split('#')[0].strip() # Strip comments
+            line = re.sub(begin, r'["\1", {', line)
+            line = re.sub(end, r'}],', line)
+            line = re.sub(attr, r'"\1": "\2",', line)
+            return line
+
+        js_text = "[%s]"%("\n".join([sub(l) for l in lines]))
+        spare_comma = re.compile(r',\s*([]}])') # Strip spare commas
+        js_text = re.sub(spare_comma, r'\1', js_text)
+        # Convert dictionary keys to camelCase
+        sections = json.loads(js_text)
+        for s in sections:
+            s[0] = camelcase(s[0])
+            s[1] = dict((camelcase(k), v) for k, v in s[1].iteritems())
+            if s[0] == "address":   s[0] = "router.config.address"
+            if s[0] == "linkRoute": s[0] = "router.config.linkRoute"
+            if s[0] == "autoLink":  s[0] = "router.config.autoLink"
+        return sections
+
+    @staticmethod
+    def _parserawjson(lines):
+        """Parse raw json config file format into a section list"""
+        def sub(line):
+            """Do substitutions to make line json-friendly"""
+            line = line.split('#')[0].strip() # Strip comments
+            return line
+        js_text = "%s"%("\n".join([sub(l) for l in lines]))
+        sections = json.loads(js_text)
+        return sections
+
+    def post_management_request(self, entity):
+        """
+        the passed in entity must be a dict
+        """
+        pass
+
+    def _load_entities(self):
+        for entity in self.entities:
+            self.agent_adapter.post_management_request()
+
+    def get_config_types(self):
+        return self.config_types
+
+    def load(self, source, raw_json=False):
+        """
+        Load a configuration file.
+        @param source: A file name, open file object or iterable list of lines
+        @param raw_json: Source is pure json not needing conf-style substitutions
+        """
+        if isinstance(source, basestring):
+            raw_json |= source.endswith(".json")
+            with open(source) as f:
+                self.load(f, raw_json)
+        else:
+            sections = self._parserawjson(source) if raw_json else self._parse(source)
+            # Add missing singleton sections
+            for et in self.get_config_types():
+                if et.singleton and not [s for s in sections if s[0] == et.short_name]:
+                    sections.append((et.short_name, {}))
+
+            entities = [dict(type=self.schema.long_name(s[0]), **s[1]) for s in sections]
+            self.schema.validate_all(entities)
+            self.entities = entities
 
     def log(self, level, text):
         info = traceback.extract_stack(limit=2)[0] # Caller frame info
@@ -778,7 +866,6 @@ class ManagementAgent(object):
 
     def create_entity(self, attributes):
         """Create an instance of the implementation class for an entity"""
-
         if attributes.get('identity') is not None:
             raise BadRequestStatus("'identity' attribute cannot be specified %s" % attributes)
         if attributes.get('type') is None:

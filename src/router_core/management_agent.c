@@ -62,16 +62,6 @@ const unsigned char *MANAGEMENT_READ   = (unsigned char*) "READ";
 const unsigned char *MANAGEMENT_UPDATE = (unsigned char*) "UPDATE";
 const unsigned char *MANAGEMENT_DELETE = (unsigned char*) "DELETE";
 
-
-typedef enum {
-    QD_ROUTER_OPERATION_QUERY,
-    QD_ROUTER_OPERATION_CREATE,
-    QD_ROUTER_OPERATION_READ,
-    QD_ROUTER_OPERATION_UPDATE,
-    QD_ROUTER_OPERATION_DELETE
-} qd_router_operation_type_t;
-
-
 typedef struct qd_management_context_t {
     qd_message_t                *response;
     qd_composed_field_t         *out_body;
@@ -210,12 +200,15 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     free_qd_management_context_t(mgmt_ctx);
 }
 
+// ----------------------------------------------------------------------------------------
+//----------------------- CORE HANDLERS ---------------------------------------------------
+// ----------------------------------------------------------------------------------------
 
 void qd_core_agent_query_handler(void                       *ctx,
                                  qd_field_iterator_t        *reply_to,
                                  qd_field_iterator_t        *correlation_id,
                                  qd_router_entity_type_t     entity_type,
-                                 qd_router_operation_type_t  operation_type,
+                                 qd_schema_entity_operation_t  operation_type,
                                  int                        *count,
                                  int                        *offset,
                                  qd_parsed_field_t          *in_body)
@@ -262,7 +255,7 @@ void qd_core_agent_read_handler(void                       *ctx,
                                 qd_field_iterator_t        *reply_to,
                                 qd_field_iterator_t        *correlation_id,
                                 qd_router_entity_type_t     entity_type,
-                                qd_router_operation_type_t  operation_type,
+                                qd_schema_entity_operation_t  operation_type,
                                 qd_field_iterator_t        *identity_iter,
                                 qd_field_iterator_t        *name_iter)
 {
@@ -283,7 +276,7 @@ void qd_core_agent_create_handler(void                       *ctx,
                                   qd_field_iterator_t        *reply_to,
                                   qd_field_iterator_t        *correlation_id,
                                   qd_router_entity_type_t     entity_type,
-                                  qd_router_operation_type_t  operation_type,
+                                  qd_schema_entity_operation_t  operation_type,
                                   qd_field_iterator_t        *name_iter,
                                   qd_parsed_field_t          *in_body)
 {
@@ -299,14 +292,14 @@ void qd_core_agent_create_handler(void                       *ctx,
 }
 
 
-void qd_core_agent_update_handler(void                       *ctx,
-                                  qd_field_iterator_t        *reply_to,
-                                  qd_field_iterator_t        *correlation_id,
-                                  qd_router_entity_type_t     entity_type,
-                                  qd_router_operation_type_t  operation_type,
-                                  qd_field_iterator_t        *identity_iter,
-                                  qd_field_iterator_t        *name_iter,
-                                  qd_parsed_field_t          *in_body)
+void qd_core_agent_update_handler(void                         *ctx,
+                                  qd_field_iterator_t          *reply_to,
+                                  qd_field_iterator_t          *correlation_id,
+                                  qd_router_entity_type_t       entity_type,
+                                  qd_schema_entity_operation_t  operation_type,
+                                  qd_field_iterator_t         *identity_iter,
+                                  qd_field_iterator_t         *name_iter,
+                                  qd_parsed_field_t           *in_body)
 {
     qdr_core_t *core = (qdr_core_t*)ctx;
 
@@ -319,14 +312,14 @@ void qd_core_agent_update_handler(void                       *ctx,
 }
 
 
-void qd_core_agent_delete_handler(void                       *ctx,
-                                  qd_field_iterator_t        *reply_to,
-                                  qd_field_iterator_t        *correlation_id,
-                                  qd_message_t               *msg,
-                                  qd_router_entity_type_t     entity_type,
-                                  qd_router_operation_type_t  operation_type,
-                                  qd_field_iterator_t        *identity_iter,
-                                  qd_field_iterator_t        *name_iter)
+void qd_core_agent_delete_handler(void                         *ctx,
+                                  qd_field_iterator_t          *reply_to,
+                                  qd_field_iterator_t          *correlation_id,
+                                  qd_message_t                 *msg,
+                                  qd_router_entity_type_t       entity_type,
+                                  qd_schema_entity_operation_t  operation_type,
+                                  qd_field_iterator_t          *identity_iter,
+                                  qd_field_iterator_t          *name_iter)
 {
     qdr_core_t *core = (qdr_core_t*)ctx;
 
@@ -338,96 +331,3 @@ void qd_core_agent_delete_handler(void                       *ctx,
 
     qdr_manage_delete(core, mgmt_ctx, entity_type, name_iter, identity_iter);
 }
-
-
-/**
- * Checks the content of the message to see if this can be handled by the C-management agent. If this agent cannot handle it, it will be
- * forwarded to the Python agent.
- */
-bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
-                                  qd_router_entity_type_t     *entity_type,
-                                  qd_router_operation_type_t  *operation_type,
-                                  qd_field_iterator_t        **identity_iter,
-                                  qd_field_iterator_t        **name_iter,
-                                  int                         *count,
-                                  int                         *offset)
-{
-    // The must be a property field and that property field should be a AMQP map. This is true for QUERY but I need
-    // to check if it true for CREATE, UPDATE and DELETE
-    if (properties_fld == 0 || !qd_parse_is_map(properties_fld))
-        return false;
-
-    //
-    // Only certain entity types can be handled by this agent.
-    // 'entityType': 'org.apache.qpid.dispatch.router.address
-    // 'entityType': 'org.apache.qpid.dispatch.router.link'
-    // TODO - Add more entity types here. The above is not a complete list.
-
-    qd_parsed_field_t *parsed_field = qd_parse_value_by_key(properties_fld, IDENTITY);
-    if (parsed_field!=0) {
-        *identity_iter = qd_parse_raw(parsed_field);
-    }
-    parsed_field = qd_parse_value_by_key(properties_fld, NAME);
-    if (parsed_field!=0) {
-        *name_iter = qd_parse_raw(parsed_field);
-    }
-
-    parsed_field = qd_parse_value_by_key(properties_fld, ENTITY);
-
-    if (parsed_field == 0) { // Sometimes there is no 'entityType' but 'type' might be available.
-        parsed_field = qd_parse_value_by_key(properties_fld, TYPE);
-        if (parsed_field == 0)
-            return false;
-    }
-
-    if (qd_field_iterator_equal(qd_parse_raw(parsed_field), address_entity_type))
-        *entity_type = QD_ROUTER_ADDRESS;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), link_entity_type))
-        *entity_type = QD_ROUTER_LINK;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), config_address_entity_type))
-        *entity_type = QD_ROUTER_CONFIG_ADDRESS;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), link_route_entity_type))
-        *entity_type = QD_ROUTER_CONFIG_LINK_ROUTE;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), auto_link_entity_type))
-        *entity_type = QD_ROUTER_CONFIG_AUTO_LINK;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), console_entity_type))
-        *entity_type = QD_ROUTER_FORBIDDEN;
-    else
-        return false;
-
-
-    parsed_field = qd_parse_value_by_key(properties_fld, OPERATION);
-
-    if (parsed_field == 0)
-        return false;
-
-    if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_QUERY))
-        (*operation_type) = QD_ROUTER_OPERATION_QUERY;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_CREATE))
-        (*operation_type) = QD_ROUTER_OPERATION_CREATE;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_READ))
-        (*operation_type) = QD_ROUTER_OPERATION_READ;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_UPDATE))
-        (*operation_type) = QD_ROUTER_OPERATION_UPDATE;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_DELETE))
-        (*operation_type) = QD_ROUTER_OPERATION_DELETE;
-    else
-        // This is an unknown operation type. cannot be handled, return false.
-        return false;
-
-    // Obtain the count and offset.
-    parsed_field = qd_parse_value_by_key(properties_fld, COUNT);
-    if (parsed_field)
-        (*count) = qd_parse_as_int(parsed_field);
-    else
-        (*count) = -1;
-
-    parsed_field = qd_parse_value_by_key(properties_fld, OFFSET);
-    if (parsed_field)
-        (*offset) = qd_parse_as_int(parsed_field);
-    else
-        (*offset) = 0;
-
-    return true;
-}
-

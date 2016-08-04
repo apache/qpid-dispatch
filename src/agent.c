@@ -17,39 +17,105 @@
  * under the License.
  */
 
-#include <qpid/dispatch/python_embedded.h>
+#include <Python.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <qpid/dispatch/python_embedded.h>
+//#include <qpid/dispatch/compose.h>
 
 #include "agent.h"
 #include "agent_private.h"
 #include "schema_enum.h"
+#include "compose_private.h"
 
 #define MANAGEMENT_MODULE "qpid_dispatch_internal.management"
 
-typedef struct {
-    PyObject_HEAD
-    qd_agent_t *agent;
+//static PyObject *qd_post_management_request(PyObject *self,
+//                                            PyObject *args,
+//                                            PyObject *keywds)
+static PyObject *qd_post_management_request(PyObject *self,
+                                            PyObject *args)
 
-} AgentRequestAdapter;
+{
+    int operation;    //Is this a CREATE, READ, UPDATE, DELETE or QUERY
+    int entity_type;  // Is this a listener or connector or address.... etc.
+    int count = 0;        // used for queries only
+    int offset = 0;       //used for queries only
+    PyObject *cid      = 0;
+    PyObject *reply_to = 0;
+    PyObject *name     = 0;
+    PyObject *identity = 0;
+    PyObject *body     = 0;
+
+    //static char *kwlist[] = {"operation", "entity_type", "count", "offset", "cid", "reply_to", "name", "identity", "body"};
+
+    //if (!PyArg_ParseTupleAndKeywords(args, keywds, "iiiiooooo", kwlist, &operation, &entity_type, &count, &offset, cid, reply_to, name, identity, body))
+    //    return 0;
+    if (!PyArg_ParseTuple(args, "iiiiooooo", &operation, &entity_type, &count, &offset, cid, reply_to, name, identity, body))
+        return 0;
+
+    qd_composed_field_t *field = qd_compose_subfield(0);
+
+    //Insert operation
+    qd_py_to_composed(cid, field);
+    qd_py_to_composed(reply_to, field);
+    qd_py_to_composed(name, field);
+    qd_py_to_composed(identity, field);
+    qd_py_to_composed(body, field);
+
+    qd_buffer_list_t *buffers = qd_compose_buffers(field);
+
+    //
+    // Create a request and add it to the work_queue
+    //
+    qd_agent_request_t *request = NEW(qd_agent_request_t);
+    request->buffer_list = buffers;
+    request->count = count;
+    request->entity_type = entity_type;
+    request->operation = operation;
+
+    AgentAdapter *adapter = ((AgentAdapter*) self);
+    request->ctx = adapter->agent->handlers[entity_type]->ctx;
+    qd_management_work_item_t *work_item = NEW(qd_management_work_item_t);
+    work_item->request = request;
+    //
+    // Add work item to the work item list after locking the work item list
+    //
+    sys_mutex_lock(adapter->agent->lock);
+    DEQ_INSERT_TAIL(adapter->agent->work_queue, work_item);
+    sys_mutex_unlock(adapter->agent->lock);
+
+    //
+    // Create a work item (qd_management_work_item_t)
+    //
+    work_item->request = request;
+
+    //
+    // TODO - Kick off processing of the work queue
+    //
+    qd_timer_schedule(adapter->agent->timer, 0);
+
+    return Py_None;
+}
 
 /**
- * Declare all the methods in the AgentRequestAdapter.
+ * Declare all the methods in the AgentAdapter.
  * post_management_request is the name of the method that the python side would call and qd_post_management_request is the C implementation
  * of the function.
  */
-static PyMethodDef AgentRequestAdapter_functions[] = {
+static PyMethodDef AgentAdapter_functions[] = {
+    //{"post_management_request", (PyCFunction)qd_post_management_request, METH_VARARGS|METH_KEYWORDS, "Posts a management request to a work queue"},
     {"post_management_request", qd_post_management_request, METH_VARARGS, "Posts a management request to a work queue"},
     {0, 0, 0, 0} // <-- Not sure why we need this
 };
 
-static PyTypeObject AgentRequestAdapterType = {
+static PyTypeObject AgentAdapterType = {
     PyObject_HEAD_INIT(0)
     0,                              /* ob_size*/
-    MANAGEMENT_MODULE ".AgentRequestAdapter",  /* tp_name*/
-    sizeof(AgentRequestAdapter),    /* tp_basicsize*/
+    MANAGEMENT_MODULE ".AgentAdapter",  /* tp_name*/
+    sizeof(AgentAdapter),    /* tp_basicsize*/
     0,                              /* tp_itemsize*/
     0,                              /* tp_dealloc*/
     0,                              /* tp_print*/
@@ -74,7 +140,7 @@ static PyTypeObject AgentRequestAdapterType = {
     0,                              /* tp_weaklistoffset */
     0,                              /* tp_iter */
     0,                              /* tp_iternext */
-    AgentRequestAdapter_functions,  /* tp_methods */
+    AgentAdapter_functions,  /* tp_methods */
     0,                              /* tp_members */
     0,                              /* tp_getset */
     0,                              /* tp_base */
@@ -96,39 +162,109 @@ static PyTypeObject AgentRequestAdapterType = {
     0                               /* tp_version_tag */
 };
 
-PyObject* qd_agent_init(char *agentClass, char *address, PyObject *pythonManagementModule, const char *config_path)
+
+/*static void process_work_queue(void *context)
 {
-    // Create a new instance of AgentRequestAdapterType
-    AgentRequestAdapterType.tp_new = PyType_GenericNew;
-    PyType_Ready(&AgentRequestAdapterType);
+    qd_agent_t *agent = (qd_agent_t *)context;
+    qd_management_work_item_t *work_item = DEQ_HEAD(agent->work_queue);
+
+    //TODO - The following works well with core but no corresponding functions for non-core
+    while(work_item) {
+            qd_agent_request_t *request = work_item->request;
+            qd_entity_type_handler_t *handler = agent->handlers[request->entity_type];
+            switch (request->operation) {
+                case QD_SCHEMA_ENTITY_OPERATION_READ:
+                    handler->read_handler(request->ctx,request);
+                    break;
+                case QD_SCHEMA_ENTITY_OPERATION_DELETE:
+                    handler->delete_handler(request->ctx, request);
+                    break;
+                case QD_SCHEMA_ENTITY_OPERATION_CREATE:
+                    handler->create_handler(request->ctx, request);
+                    break;
+                case QD_SCHEMA_ENTITY_OPERATION_UPDATE:
+                    handler->update_handler(request->ctx, request);
+                    break;
+                case QD_SCHEMA_ENTITY_OPERATION_QUERY:
+                    handler->query_handler(request->ctx, request);
+                    break;
+                case QD_SCHEMA_ENTITY_OPERATION_ENUM_COUNT:
+                    break;
+            }
+
+            work_item = DEQ_NEXT(work_item);
+    }
+}*/
+
+qd_agent_t* qd_agent(qd_dispatch_t *qd, char *address, const char *config_path)
+{
+    //
+    // Create a new instance of AgentAdapterType
+    //
+    AgentAdapterType.tp_new = PyType_GenericNew;
+    PyType_Ready(&AgentAdapterType);
 
     // Load the qpid_dispatch_internal.management Python module
+    PyObject *module = PyImport_ImportModule(MANAGEMENT_MODULE);
 
-    if (!pythonManagementModule) {
+    if (!module) {
         qd_error_py();
-        qd_log(log_source, QD_LOG_CRITICAL, "Cannot load dispatch extension module '%s'", MANAGEMENT_MODULE);
+        //qd_log(log_source, QD_LOG_CRITICAL, "Cannot load dispatch extension module '%s'", MANAGEMENT_MODULE);
         abort();
     }
 
-    PyTypeObject *agentRequestAdapterType = &AgentRequestAdapterType;
-    Py_INCREF(agentRequestAdapterType);
+    PyTypeObject *agentAdapterType = &AgentAdapterType;
+    Py_INCREF(agentAdapterType);
 
-    //Use the "AgentRequestAdapter" name to add the AgentRequestAdapterType to the management
-    PyModule_AddObject(pythonManagementModule, "AgentRequestAdapter", (PyObject*) &AgentRequestAdapterType);
-    // Now we have added AgentRequestAdapter to the qpid_dispatch_internal.management python module
+    //Use the "AgentAdapter" name to add the AgentAdapterType to the management
+    PyModule_AddObject(module, "AgentAdapter", (PyObject*) &AgentAdapterType);
+    PyObject *adapterType     = PyObject_GetAttrString(module, "AgentAdapter");
+    PyObject *adapterInstance = PyObject_CallObject(adapterType, 0);
 
-    PyObject *adapterType     = PyObject_GetAttrString(pythonManagementModule, "AgentRequestAdapter");
-    PyObject * adapterInstance = PyObject_CallObject(adapterType, 0);
-    adapter = ((AgentRequestAdapter*) adapterInstance);
-    ((AgentRequestAdapter*) adapterInstance)->log_source = qd_log_source("AGENT");
-    qd_management_work_list_t  work_queue = 0;
-    DEQ_INIT(work_queue);
-    ((AgentRequestAdapter*) adapterInstance)->work_queue = work_queue;
-    ((AgentRequestAdapter*) adapterInstance)->lock = sys_mutex();
-    initialize_handlers(((AgentRequestAdapter*) adapterInstance)->handlers);
+    //
+    //Instantiate the new agent and return it
+    //
+    qd_agent_t *agent = NEW(qd_agent_t);
+    agent->adapter = ((AgentAdapter*) adapterInstance);
+    agent->qd = qd;
+    agent->address = address;
+    agent->config_file = config_path;
+    agent->log_source = qd_log_source("AGENT");
+    //agent->timer = qd_timer(qd, process_work_queue, agent);
+    DEQ_INIT(agent->work_queue);
+    agent->lock = sys_mutex();
 
+    //
+    // Initialize the handlers to zeros
+    //
+    for (int i=0; i < QD_SCHEMA_ENTITY_TYPE_ENUM_COUNT; i++)
+        agent->handlers[i] = 0;
+
+    Py_DECREF(agentAdapterType);
+    Py_DECREF(module);
+
+    //TODO - This is a test
+    qd_agent_start(agent);
+
+    printf ("qd_agent 6\n");
+
+    return agent;
+}
+
+
+qd_error_t qd_agent_start(qd_agent_t *agent)
+{
+    // Load the qpid_dispatch_internal.management Python module
+    PyObject *module = PyImport_ImportModule(MANAGEMENT_MODULE);
+
+    char *class = "ManagementAgent";
+
+    //
     //Instantiate the ManagementAgent class found in qpid_dispatch_internal/management/agent.py
-    PyObject* pClass = PyObject_GetAttrString(pythonManagementModule, agentClass);
+    //
+    PyObject* pClass = PyObject_GetAttrString(module, class); QD_ERROR_PY_RET();
+
+    printf("Hello world %i\n", PyClass_Check(pClass));
 
     //
     // Constructor Arguments for ManagementAgent
@@ -136,240 +272,56 @@ PyObject* qd_agent_init(char *agentClass, char *address, PyObject *pythonManagem
     PyObject* pArgs = PyTuple_New(3);
 
    // arg 0: management address $management
-   PyObject *address = PyString_FromString(address);
+   PyObject *address = PyString_FromString(agent->address);
    PyTuple_SetItem(pArgs, 0, address);
 
    // arg 1: adapter instance
-   PyTuple_SetItem(pArgs, 1, adapterInstance);
+   PyTuple_SetItem(pArgs, 1, (PyObject*)agent->adapter);
 
    // arg 2: config file location
-   PyObject *config_file = PyString_FromString(config_path);
+   PyObject *config_file = PyString_FromString((char *)agent->config_file);
    PyTuple_SetItem(pArgs, 2, config_file);
+
+   printf("Hello world 2\n");
 
    //
    // Instantiate the ManagementAgent class
    //
-   PyObject* pyManagementInstance = PyInstance_New(pClass, pArgs, 0);
-   if (pyManagementInstance) {}
+   PyObject* pyManagementInstance = PyInstance_New(pClass, pArgs, 0); QD_ERROR_PY_RET();
+   printf("Hello world 3\n");
+   if (!pyManagementInstance) {
+       qd_log(agent->log_source, QD_LOG_CRITICAL, "Cannot create instance of Python class '%s.%s'", MANAGEMENT_MODULE, class);
+   }
    Py_DECREF(pArgs);
-   Py_DECREF(adapterType);
-   Py_DECREF(pythonManagementModule);
-
-   //TODO - should I return an adapter or an instance of the entire management agent object?
-   return adapterInstance;
-}
-
-/***
- * Adds a management
- */
-static PyObject *qd_post_management_request(PyObject *self, //TODO - Do we need so many arguments or can I just pass a list with everything in it?
-                                            PyObject *arg1, // Operation(CRUDQ) to be performed.
-                                            PyObject *arg2, // Entity type
-                                            PyObject *arg3, // count
-                                            PyObject *arg4, // offset
-                                            PyObject *arg5, // Correlation-id
-                                            PyObject *arg6, // Reply to
-                                            PyObject *arg7, // Name
-                                            PyObject *arg8, // identity
-                                            PyObject *arg9) // Request body
-{
-    int operation;    //Is this a CREATE, READ, UPDATE, DELETE or QUERY
-    int entity_type;  // Is this a listener or connector or address.... etc.
-    int count = 0;        // used for queries only
-    int offset = 0;       //used for queries only
-    PyObject *cid      = 0;
-    PyObject *reply_to = 0;
-    PyObject *name     = 0;
-    PyObject *identity = 0;
-    PyObject *body     = 0;
-
-    if (!PyArg_ParseTuple(arg1, "i", &operation))
-        return 0;
-    if (!PyArg_ParseTuple(arg2, "i", &entity_type))
-        return 0;
-    if (!PyArg_ParseTuple(arg3, "i", &count))
-        return 0;
-    if (!PyArg_ParseTuple(arg4, "i", &offset))
-        return 0;
-    if (!PyArg_ParseTuple(arg3, "o", &cid))
-        return 0;
-    if (!PyArg_ParseTuple(arg4, "o", &reply_to))
-        return 0;
-    if (!PyArg_ParseTuple(arg5, "o", &name))
-        return 0;
-    if (!PyArg_ParseTuple(arg6, "o", &identity))
-        return 0;
-    if (!PyArg_ParseTuple(arg7, "o", &body))
-        return 0;
-
-    //
-    // correlation id
-    //
-    qd_composed_field_t *cid_field = qd_compose_subfield(0);
-    qd_py_to_composed(body, cid_field);
-    qd_buffer_list_t cid_buffers = qd_compose_buffers(cid_field);
-    // TODO - this is not correct. what if the buffer length is more than 512?
-    qd_buffer_t buffer = DEQ_HEAD(cid_buffers);
-    qd_field_iterator_t cid_iter = qd_address_iterator_buffer(buffer, 0, qd_buffer_list_length(cid_buffers), ITER_VIEW_ALL);
-
-
-    qd_composed_field_t *reply_to_field = qd_compose_subfield(0);
-    qd_py_to_composed(body, reply_to_field);
-    qd_buffer_list_t reply_to_buffers = qd_compose_buffers(reply_to_field);
-    // TODO - this is not correct. what if the buffer length is more than 512?
-    qd_field_iterator_t reply_to_iter = qd_address_iterator_buffer(DEQ_HEAD(reply_to_buffers), 0, qd_buffer_list_length(reply_to_buffers), ITER_VIEW_ALL);
-
-    qd_composed_field_t *identity_field = qd_compose_subfield(0);
-    qd_py_to_composed(body, identity_field);
-    qd_buffer_list_t identity_buffers = qd_compose_buffers(identity_field);
-    // TODO - this is not correct. what if the buffer length is more than 512?
-    qd_field_iterator_t identity_iter = qd_address_iterator_buffer(DEQ_HEAD(identity_buffers), 0, qd_buffer_list_length(identity_buffers), ITER_VIEW_ALL);
-
-    qd_composed_field_t *name_field = qd_compose_subfield(0);
-    qd_py_to_composed(body, name_field);
-    qd_buffer_list_t name_buffers = qd_compose_buffers(name_field);
-    // TODO - this is not correct. what if the buffer length is more than 512?
-    qd_field_iterator_t name_iter = qd_address_iterator_buffer(DEQ_HEAD(name_buffers), 0, qd_buffer_list_length(name_buffers), ITER_VIEW_ALL);
-
-
-    qd_composed_field_t *body_field = qd_compose_subfield(0);
-    qd_py_to_composed(body, body_field);
-    qd_buffer_list_t body_buffers = qd_compose_buffers(body_field);
-    // TODO - this is not correct. what if the buffer length is more than 512?
-    qd_field_iterator_t body_iter = qd_address_iterator_buffer(DEQ_HEAD(body_buffers), 0, qd_buffer_list_length(body_buffers), ITER_VIEW_ALL);
-
-
-    qd_entity_type_handler_t handler = qd_agent_handler_for_type(entity_type);
-
-    //
-    // Create a work item (qd_management_work_item_t)
-    //
-    qd_management_work_item_t work_item = NEW(qd_management_work_item_t);
-    work_item->count          = count;
-    work_item->offset         = offset;
-    work_item->operation      = operation;
-    work_item->entity_type    = entity_type;
-    work_item->ctx            = handler->ctx;
-    work_item->reply_to       = reply_to_iter;
-    work_item->correlation_id = cid_iter;
-    work_item->identity_iter  = identity_iter;
-    work_item->name_iter      = name_iter;
-    work_item->in_body        = body_iter;
-
-    //
-    // Add work item to the work item list after locking the work item list
-    //
-    sys_mutex_lock(adapter->lock);
-    DEQ_INSERT_TAIL(adapter->work_queue, work_item);
-    sys_mutex_unlock(adapter->lock);
-
-    //
-    // TODO - Kick off processing of the work queue
-    //
-    return Py_None;
+   Py_DECREF(pClass);
+   return qd_error_code();
 }
 
 
-void qd_register_handlers(void *ctx,
-                          PyObject *pyAdapter,
-                          qd_schema_entity_type_t entity_type,
-                          qd_agent_handler_t create_handler,
-                          qd_agent_handler_t read_handler,
-                          qd_agent_handler_t update_handler,
-                          qd_agent_handler_t delete_handler,
-                          qd_agent_handler_t query_handler)
+void qd_agent_register_handlers(qd_agent_t *agent,
+                                void *ctx,
+                                qd_schema_entity_type_t entity_type,
+                                qd_agent_handler_t create_handler,
+                                qd_agent_handler_t read_handler,
+                                qd_agent_handler_t update_handler,
+                                qd_agent_handler_t delete_handler,
+                                qd_agent_handler_t query_handler)
 {
-    AgentRequestAdapter* adapter = ((AgentRequestAdapter*) pyAdapter);
-    qd_entity_type_handler_t entity_handler = NEW(qd_entity_type_handler_t);
+    qd_entity_type_handler_t *entity_handler = NEW(qd_entity_type_handler_t);
+    entity_handler->ctx            = ctx;
+    entity_handler->entity_type    = entity_type;
     entity_handler->delete_handler = delete_handler;
     entity_handler->update_handler = update_handler;
     entity_handler->query_handler  = query_handler;
     entity_handler->create_handler = create_handler;
     entity_handler->read_handler   = read_handler;
 
-    //Store the entity_handler in the appropriate cell of the handler array index by the enum qd_schema_entity_type_t
-    adapter->handlers[entity_type] = entity_handler;
-
-}
-
-static qd_entity_type_handler_t *qd_agent_handler_for_type(qd_schema_entity_type_t entity_type, AgentRequestAdapter* adapter)
-{
-    return adapter->handlers[entity_type];
-}
-
-static void initialize_handlers(AgentRequestAdapter* adapter)
-{
-    for (int i=0; i < QD_SCHEMA_ENTITY_TYPE_ENUM_COUNT; i++)
-    {
-            adapter->handlers[i] = 0;
-    }
+    //Store the entity_handler in the appropriate cell of the handler array indexed by the enum qd_schema_entity_type_t
+    agent->handlers[entity_type] = entity_handler;
 }
 
 
-static process_work_queue(qd_management_work_list_t  work_queue, AgentRequestAdapter* adapter)
-{
-    qd_management_work_item_t work_item = DEQ_HEAD(work_queue);
-
-    qd_entity_type_handler_t handler = qd_agent_handler_for_type(work_item->entity_type, adapter);
-
-    //TODO - The following works well with core but no corresponding functions for non-core
-    while(work_item) {
-            switch (work_item->operation) {
-                case QD_SCHEMA_ENTITY_OPERATION_READ:
-                    handler->read_handler(work_item->ctx,
-                                          work_item->reply_to,
-                                          work_item->correlation_id,
-                                          work_item->entity_type,
-                                          work_item->operation,
-                                          work_item->identity_iter,
-                                          work_item->name_iter);
-                    break;
-                case QD_SCHEMA_ENTITY_OPERATION_DELETE:
-                    handler->delete_handler(work_item->ctx,
-                                            work_item->reply_to,
-                                            work_item->correlation_id,
-                                            work_item->entity_type,
-                                            work_item->operation,
-                                            work_item->identity_iter,
-                                            work_item->name_iter);
-                    break;
-                case QD_SCHEMA_ENTITY_OPERATION_CREATE:
-                    handler->create_handler(work_item->ctx,
-                                            work_item->reply_to,
-                                            work_item->correlation_id,
-                                            work_item->entity_type,
-                                            work_item->operation,
-                                            work_item->name_iter,
-                                            work_item->in_body);
-                    break;
-                case QD_SCHEMA_ENTITY_OPERATION_UPDATE:
-                    handler->update_handler(work_item->ctx,
-                                            work_item->reply_to,
-                                            work_item->correlation_id,
-                                            work_item->entity_type,
-                                            work_item->operation,
-                                            work_item->identity_iter,
-                                            work_item->name_iter,
-                                            work_item->in_body);
-                    break;
-                case QD_SCHEMA_ENTITY_OPERATION_QUERY:
-                    handler->query_handler(work_item->ctx,
-                                            work_item->reply_to,
-                                            work_item->correlation_id,
-                                            work_item->entity_type,
-                                            work_item->operation,
-                                            work_item->count,
-                                            work_item->offset,
-                                            work_item->in_body);
-                    break;
-            }
-
-            work_item = DEQ_NEXT(work_item);
-    }
-}
-
-
-PyObject* qd_agent_adapter_finalize(PyObject *adapter)
+void qd_agent_free(qd_agent_t *agent)
 {
 
 }

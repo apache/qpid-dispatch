@@ -264,7 +264,10 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
 
 static PyObject* qd_get_agent(PyObject *self, PyObject *args) {
     RouterAdapter *adapter = (RouterAdapter*) self;
-    PyObject *agent = adapter->router->qd->agent;
+    if (adapter) {
+
+    }
+    PyObject *agent = 0 ;//adapter->router->qd->agent;
     if (agent) {
         Py_INCREF(agent);
         return agent;
@@ -435,6 +438,7 @@ qd_error_t qd_router_python_setup(qd_router_t *router)
 
     pModule = PyImport_ImportModule("qpid_dispatch_internal.router"); QD_ERROR_PY_RET();
     pClass = PyObject_GetAttrString(pModule, "RouterEngine");
+    printf ("qd_router_python_setup 2 %p \n", pClass);
     Py_DECREF(pModule);
     QD_ERROR_PY_RET();
 

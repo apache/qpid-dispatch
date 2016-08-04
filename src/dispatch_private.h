@@ -41,6 +41,7 @@ typedef struct qd_config_address_t   qd_config_address_t;
 #include <qpid/dispatch/router.h>
 #include <qpid/dispatch/connection_manager.h>
 #include "policy.h"
+#include "agent.h"
 #include "server_private.h"
 #include "router_private.h"
 
@@ -48,10 +49,11 @@ struct qd_dispatch_t {
     qd_server_t             *server;
     qd_container_t          *container;
     qd_router_t             *router;
-    void                    *agent;
+    //void                    *agent;
     qd_connection_manager_t *connection_manager;
     qd_policy_t             *policy;
     void                    *dl_handle;
+    qd_agent_t              *agent;
 
     int    thread_count;
     char  *sasl_config_path;
@@ -80,7 +82,7 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity);
 
 /**
  * Prepare Dispatch for operation.  This must be called prior to
- * calling qd_server_run or qd_server_start.
+ * calling qd_server_run.
  *
  * @param qd The dispatch handle returned by qd_dispatch
  */

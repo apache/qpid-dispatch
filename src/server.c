@@ -1452,26 +1452,6 @@ void qd_server_run(qd_dispatch_t *qd)
 }
 
 
-void qd_server_start(qd_dispatch_t *qd)
-{
-    qd_server_t *qd_server = qd->server;
-    int i;
-
-    if (!qd_server)
-        return;
-
-    assert(qd_server->conn_handler); // Server can't run without a connection handler.
-
-    for (i = 0; i < qd_server->thread_count; i++)
-        thread_start(qd_server->threads[i]);
-
-    qd_server->heartbeat_timer = qd_timer(qd, heartbeat_cb, qd_server);
-    qd_timer_schedule(qd_server->heartbeat_timer, HEARTBEAT_INTERVAL);
-
-    qd_server_announce(qd_server);
-}
-
-
 void qd_server_stop(qd_dispatch_t *qd)
 {
     qd_server_t *qd_server = qd->server;

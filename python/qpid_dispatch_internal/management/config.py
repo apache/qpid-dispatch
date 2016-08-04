@@ -21,13 +21,15 @@
 Configuration file parsing
 """
 
-import json, re, sys
+import json
+import re
+import sys
 import os
-from copy import copy
-from qpid_dispatch.management.entity import camelcase
 
+from qpid_dispatch.management.entity import camelcase
 from ..dispatch import QdDll
-from .qdrouter import QdSchema
+from python.qpid_dispatch_internal.management.schema.qdrouter import QdSchema
+
 
 class Config(object):
     """Load config entities from qdrouterd.conf and validated against L{QdSchema}."""
@@ -128,7 +130,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     config = Config(filename)
 
     # NOTE: Can't import agent till dispatch C extension module is initialized.
-    from .agent import Agent
+    from python.qpid_dispatch_internal.management.agent.agent import Agent
     agent = Agent(dispatch, qd)
     qd.qd_dispatch_set_agent(dispatch, agent)
 

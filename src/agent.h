@@ -1,5 +1,5 @@
-#ifndef __agent_adapter_h__
-#define __agent_adapter_h__
+#ifndef __agent_h__
+#define __agent_h__
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,7 +20,6 @@
  * under the License.
  */
 #include "schema_enum.h"
-#include "agent_private.h"
 
 typedef struct qd_agent_t qd_agent_t;
 typedef struct qd_agent_request_t qd_agent_request_t;
@@ -29,7 +28,7 @@ typedef struct qd_agent_request_t qd_agent_request_t;
  * Creates a new agent with the passed in address and whose configuration is located at config path.
  * @see qd_agent_start to start the agent
  */
-qd_agent_t* qd_agent(char *address, const char *config_path);
+qd_agent_t* qd_agent(qd_dispatch_t *qd, char *address, const char *config_path);
 
 /**
  * Free the agent and its components
@@ -57,6 +56,6 @@ void qd_agent_register_handlers(qd_agent_t *agent,
  * Loads the contents of the config file located in config_path
  * Agent starts listening on the provided address
  */
-void qd_agent_start(qd_agent_t *agent);
+qd_error_t qd_agent_start(qd_agent_t *agent);
 
 #endif
