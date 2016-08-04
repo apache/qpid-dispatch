@@ -44,9 +44,10 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     core->router_id   = id;
 
     //
-    // Set up the logging source for the router core
+    // Set up the logging sources for the router core
     //
-    core->log = qd_log_source("ROUTER_CORE");
+    core->log       = qd_log_source("ROUTER_CORE");
+    core->agent_log = qd_log_source("AGENT");
 
     //
     // Set up the threading support

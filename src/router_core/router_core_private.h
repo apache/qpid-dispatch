@@ -503,6 +503,7 @@ ALLOC_DECLARE(qdr_conn_identifier_t);
 struct qdr_core_t {
     qd_dispatch_t     *qd;
     qd_log_source_t   *log;
+    qd_log_source_t   *agent_log;
     sys_thread_t      *thread;
     bool               running;
     qdr_action_list_t  action_list;
