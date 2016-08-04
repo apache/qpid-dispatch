@@ -102,6 +102,8 @@ static void free_qd_connection(qd_connection_t *ctx)
     if (ctx->free_user_id)
         free((char*)ctx->user_id);
 
+    free(ctx->role);
+
     free_qd_connection_t(ctx);
 }
 
@@ -409,8 +411,6 @@ qd_error_t qd_entity_refresh_sslProfile(qd_entity_t* entity, void *impl)
 qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
 {
     qd_connection_t *conn = (qd_connection_t*)impl;
-    const qd_server_config_t *config =
-        conn->connector ? conn->connector->config : conn->listener->config;
     pn_transport_t *tport = 0;
     pn_sasl_t      *sasl  = 0;
     pn_ssl_t       *ssl   = 0;
@@ -436,7 +436,7 @@ qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
                              conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0) == 0 &&
         connection_entity_update_host(entity, conn) == 0 &&
         qd_entity_set_string(entity, "sasl", mech) == 0 &&
-        qd_entity_set_string(entity, "role", config->role) == 0 &&
+        qd_entity_set_string(entity, "role", conn->role) == 0 &&
         qd_entity_set_string(entity, "dir", conn->connector ? "out" : "in") == 0 &&
         qd_entity_set_string(entity, "user", user) == 0 &&
         qd_set_connection_properties(entity, conn) == 0 &&
@@ -612,6 +612,12 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->deferred_call_lock = sys_mutex();
         ctx->event_stall  = false;
         ctx->policy_counted = policy_counted;
+
+        // Copy the role from the listener config
+        int role_length    = strlen(ctx->listener->config->role) + 1;
+        ctx->role          = (char*) malloc(role_length);
+        memset(ctx->role, 0, role_length);
+        strcpy(ctx->role, ctx->listener->config->role);
 
         pn_connection_t *conn = pn_connection();
         ctx->collector = pn_collector();
@@ -1155,6 +1161,12 @@ static void cxtr_try_open(void *context)
     ctx->n_senders       = 0;
     ctx->n_receivers     = 0;
     ctx->open_container  = 0;
+
+    // Copy the role from the connector config
+    int role_length    = strlen(ctx->connector->config->role) + 1;
+    ctx->role          = (char*) malloc(role_length);
+    memset(ctx->role, 0, role_length);
+    strcpy(ctx->role, ctx->connector->config->role);
 
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
