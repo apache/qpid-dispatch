@@ -162,6 +162,7 @@ struct qdr_query_t {
     int                      next_offset;
     bool                     more;
     qd_amqp_error_t          status;
+    qd_log_source_t         *log_source;
 };
 
 DEQ_DECLARE(qdr_query_t, qdr_query_list_t); 

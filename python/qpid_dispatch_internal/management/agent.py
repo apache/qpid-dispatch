@@ -803,7 +803,7 @@ class Agent(object):
         """Called when a management request is received."""
         def error(e, trace):
             """Raise an error"""
-            self.log(LOG_ERROR, "Error dispatching %s: %s\n%s"%(request, e, trace))
+            self.log(LOG_ERROR, "Error performing %s: %s"%(request.properties.get('operation'), e.message))
             self.respond(request, e.status, e.description)
 
         # If there's no reply_to, don't bother to process the request.
@@ -917,7 +917,7 @@ class Agent(object):
             if not requested_type or self.management.entity_type.is_a(requested_type):
                 return self.management
             else:
-                raise BadRequestStatus("No name or identity provided")
+                raise BadRequestStatus("%s: No name or identity provided" % requested_type)
 
         def attrvals():
             """String form of the id attribute values for error messages"""
