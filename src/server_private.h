@@ -116,6 +116,7 @@ struct qd_connection_t {
     sys_mutex_t              *deferred_call_lock;
     bool                      event_stall;
     bool                      policy_counted;
+    char                     *role;  //The specified role of the connection, e.g. "normal", "inter-router", "route-container" etc.
 };
 
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
