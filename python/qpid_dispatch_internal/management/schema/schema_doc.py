@@ -22,7 +22,7 @@
 from collections import namedtuple
 import sys
 
-from python.qpid_dispatch_internal.management.schema.schema import quotestr
+from .qd_schema import quotestr
 
 
 class SchemaWriter(object):

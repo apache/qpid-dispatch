@@ -42,7 +42,7 @@ if(BUILD_DOCS)
   set(tools ${CMAKE_SOURCE_DIR}/tools)
   set(schema ../python/qpid_dispatch/management/qdrouter.json)
   set(py_management ../python/qpid_dispatch_internal/management)
-  set(schema_depends ${schema} ${py_management}/schema/schema_doc.py ${py_management}/schema/schema.py)
+  set(schema_depends ${schema} ${py_management}/schema/schema_doc.py ${py_management}/schema/qd_schema.py)
 
   # Flags for doc tools, based on cmake options
   set(ADOC_FLAGS "--conf-file=${bin}/asciidoc.conf")

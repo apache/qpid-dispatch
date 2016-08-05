@@ -79,15 +79,14 @@ from cStringIO import StringIO
 from ctypes import c_void_p, py_object, c_long
 from subprocess import Popen
 
-from python.qpid_dispatch_internal.dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
+from qpid_dispatch_internal.dispatch import IoAdapter, LogAdapter, LOG_INFO, LOG_WARNING, LOG_DEBUG, LOG_ERROR, TREATMENT_ANYCAST_CLOSEST
 from qpid_dispatch.management.error import ManagementError, OK, CREATED, NO_CONTENT, STATUS_TEXT, \
     BadRequestStatus, InternalServerErrorStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
 from qpid_dispatch.management.entity import camelcase
-from python.qpid_dispatch_internal.management.schema.schema import ValidationError, SchemaEntity, EntityType
-from schema.schema import QdSchema
-from python.qpid_dispatch_internal.router.message import Message
-from python.qpid_dispatch_internal.router.address import Address
-from python.qpid_dispatch_internal.policy.policy_manager import PolicyManager
+from qpid_dispatch_internal.management.schema.qd_schema import ValidationError, SchemaEntity, EntityType, QdSchema
+from qpid_dispatch_internal.router.message import Message
+from qpid_dispatch_internal.router.address import Address
+from qpid_dispatch_internal.policy.policy_manager import PolicyManager
 
 
 def dictstr(d):

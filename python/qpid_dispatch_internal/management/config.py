@@ -28,7 +28,7 @@ import os
 
 from qpid_dispatch.management.entity import camelcase
 from ..dispatch import QdDll
-from python.qpid_dispatch_internal.management.schema.qdrouter import QdSchema
+from qid_dispatch_internal.management.schema.schema import QdSchema
 
 
 class Config(object):
@@ -130,7 +130,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     config = Config(filename)
 
     # NOTE: Can't import agent till dispatch C extension module is initialized.
-    from python.qpid_dispatch_internal.management.agent.agent import Agent
+    from qpid_dispatch_internal.management.agent.agent import Agent
     agent = Agent(dispatch, qd)
     qd.qd_dispatch_set_agent(dispatch, agent)
 

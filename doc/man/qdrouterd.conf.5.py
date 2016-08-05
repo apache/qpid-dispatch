@@ -22,11 +22,8 @@ Generate the qdrouterd.conf. man page from the qdrouterd management schema.
 """
 
 import sys
-from qpid_dispatch_internal.management.qdrouter import QdSchema
-from qpid_dispatch_internal.management.schema_doc import SchemaWriter
-from qpid_dispatch_internal.management.schema import AttributeType
-
-from qpid_dispatch_internal.compat import OrderedDict
+from qpid_dispatch_internal.management.schema.qd_schema import QdSchema
+from qpid_dispatch_internal.management.schema.schema_doc import SchemaWriter
 
 CONNECTOR = 'org.apache.qpid.dispatch.connector'
 LISTENER = 'org.apache.qpid.dispatch.listener'

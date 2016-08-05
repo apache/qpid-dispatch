@@ -30,4 +30,5 @@ PYTHON_LIB=$(python -c "from distutils.sysconfig import get_python_lib; print ge
 
 export LD_LIBRARY_PATH=$INSTALL_DIR/lib64:$INSTALL_DIR/lib:$LD_LIBRARY_PATH
 export PYTHONPATH=$PYTHON_LIB:$PYTHONPATH
+echo 'PYTHONPATH' $PYTHONPATH
 export PATH=$INSTALL_DIR/sbin:$INSTALL_DIR/bin:$SOURCE_DIR/bin:$PATH

@@ -21,9 +21,9 @@
 Generate the schema.md chapter for the dispatch book from the qdrouter.json schema.
 """
 
-import sys, re
-from qpid_dispatch_internal.management.schema.schema import QdSchema
-from qpid_dispatch_internal.management.schema_doc import SchemaWriter
+import sys
+from qpid_dispatch_internal.management.schema.qd_schema import QdSchema
+from qpid_dispatch_internal.management.schema.schema_doc import SchemaWriter
 
 class BookSchemaWriter(SchemaWriter):
 

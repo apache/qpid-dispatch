@@ -30,7 +30,8 @@
 #include "schema_enum.h"
 #include "compose_private.h"
 
-#define MANAGEMENT_MODULE "qpid_dispatch_internal.management"
+#define MANAGEMENT_INTERNAL_MODULE "qpid_dispatch_internal.management.agent"
+#define MANAGEMENT_MODULE "qpid_dispatch.management"
 
 //static PyObject *qd_post_management_request(PyObject *self,
 //                                            PyObject *args,
@@ -114,7 +115,7 @@ static PyMethodDef AgentAdapter_functions[] = {
 static PyTypeObject AgentAdapterType = {
     PyObject_HEAD_INIT(0)
     0,                              /* ob_size*/
-    MANAGEMENT_MODULE ".AgentAdapter",  /* tp_name*/
+    MANAGEMENT_INTERNAL_MODULE ".AgentAdapter",  /* tp_name*/
     sizeof(AgentAdapter),    /* tp_basicsize*/
     0,                              /* tp_itemsize*/
     0,                              /* tp_dealloc*/
@@ -198,20 +199,33 @@ static PyTypeObject AgentAdapterType = {
 
 qd_agent_t* qd_agent(qd_dispatch_t *qd, char *address, const char *config_path)
 {
+    printf("In qd_agent 1\n");
     //
     // Create a new instance of AgentAdapterType
     //
     AgentAdapterType.tp_new = PyType_GenericNew;
     PyType_Ready(&AgentAdapterType);
 
+    PyObject *module1 = PyImport_ImportModule(MANAGEMENT_MODULE);
     // Load the qpid_dispatch_internal.management Python module
-    PyObject *module = PyImport_ImportModule(MANAGEMENT_MODULE);
+    PyObject *module = PyImport_ImportModule(MANAGEMENT_INTERNAL_MODULE);
 
-    if (!module) {
+    printf("In qd_agent 2\n");
+
+    if (!module1) {
+            printf("In qd_agent 2.1\n");
         qd_error_py();
-        //qd_log(log_source, QD_LOG_CRITICAL, "Cannot load dispatch extension module '%s'", MANAGEMENT_MODULE);
+        //qd_log(log_source, QD_LOG_CRITICAL, "Cannot load dispatch extension module '%s'", MANAGEMENT_INTERNAL_MODULE);
         abort();
     }
+
+    if (!module) {
+            printf("In qd_agent 2.0\n");
+        qd_error_py();
+        //qd_log(log_source, QD_LOG_CRITICAL, "Cannot load dispatch extension module '%s'", MANAGEMENT_INTERNAL_MODULE);
+        abort();
+    }
+
 
     PyTypeObject *agentAdapterType = &AgentAdapterType;
     Py_INCREF(agentAdapterType);
@@ -219,7 +233,9 @@ qd_agent_t* qd_agent(qd_dispatch_t *qd, char *address, const char *config_path)
     //Use the "AgentAdapter" name to add the AgentAdapterType to the management
     PyModule_AddObject(module, "AgentAdapter", (PyObject*) &AgentAdapterType);
     PyObject *adapterType     = PyObject_GetAttrString(module, "AgentAdapter");
+    printf("In qd_agent 3\n");
     PyObject *adapterInstance = PyObject_CallObject(adapterType, 0);
+    printf("In qd_agent 4\n");
 
     //
     //Instantiate the new agent and return it
@@ -254,8 +270,11 @@ qd_agent_t* qd_agent(qd_dispatch_t *qd, char *address, const char *config_path)
 
 qd_error_t qd_agent_start(qd_agent_t *agent)
 {
+    printf("In qd_agent_start 0 \n");
     // Load the qpid_dispatch_internal.management Python module
-    PyObject *module = PyImport_ImportModule(MANAGEMENT_MODULE);
+    PyObject *module = PyImport_ImportModule(MANAGEMENT_INTERNAL_MODULE);
+
+    printf("In qd_agent_start 1\n");
 
     char *class = "ManagementAgent";
 
@@ -290,7 +309,7 @@ qd_error_t qd_agent_start(qd_agent_t *agent)
    PyObject* pyManagementInstance = PyInstance_New(pClass, pArgs, 0); QD_ERROR_PY_RET();
    printf("Hello world 3\n");
    if (!pyManagementInstance) {
-       qd_log(agent->log_source, QD_LOG_CRITICAL, "Cannot create instance of Python class '%s.%s'", MANAGEMENT_MODULE, class);
+       qd_log(agent->log_source, QD_LOG_CRITICAL, "Cannot create instance of Python class '%s.%s'", MANAGEMENT_INTERNAL_MODULE, class);
    }
    Py_DECREF(pArgs);
    Py_DECREF(pClass);

@@ -108,6 +108,7 @@ static void check(int fd) {
 
 static void main_process(const char *config_path, const char *python_pkgdir, int fd)
 {
+    printf ("In main_process\n");
     qd_error_clear();
     struct stat st;
     if (stat(python_pkgdir, &st))
@@ -279,6 +280,7 @@ void usage(char **argv) {
 
 int main(int argc, char **argv)
 {
+    printf ("In main of dispatch\n");
     argv0 = argv[0];
     const char *config_path   = DEFAULT_CONFIG_PATH;
     const char *python_pkgdir = DEFAULT_DISPATCH_PYTHON_DIR;
