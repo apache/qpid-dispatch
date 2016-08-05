@@ -306,8 +306,10 @@ class OperationDef(object):
             self.name = name
             self.description = description
             self.request = self.response = None
-            if request: self.request = MessageDef(**request)
-            if response: self.response = MessageDef(**response)
+            if request:
+                self.request = MessageDef(**request)
+            if response:
+                self.response = MessageDef(**response)
         except:
             ex, msg, trace = sys.exc_info()
             raise ValidationError, "Operation '%s': %s" % (name, msg), trace

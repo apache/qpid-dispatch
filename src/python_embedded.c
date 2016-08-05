@@ -50,6 +50,7 @@ void qd_python_initialize(qd_dispatch_t *qd, const char *python_pkgdir)
     log_source = qd_log_source("PYTHON");
     dispatch = qd;
     ilock = sys_mutex();
+    printf("python_pkgdir %s \n", python_pkgdir);
     if (python_pkgdir)
         dispatch_python_pkgdir = PyString_FromString(python_pkgdir);
 

@@ -162,18 +162,19 @@ class EntityAdapter(SchemaEntity):
         #self.__dict__['_dispatch'] = agent.dispatch
         self.__dict__['_policy'] = agent.policy
         self.__dict__['_implementations'] = []
+        print 'entity_type.ordinality ', entity_type.ordinality
 
     def validate(self, **kwargs):
         """Set default identity and name if not already set, then do schema validation"""
-        identity = self.attributes.get("identity")
-        name = self.attributes.get("name")
-        if identity:
-            if not name:
-                self.attributes[u"name"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
-        else:
-            self.attributes[u"identity"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
-            if not name:
-                self.attributes.setdefault(u'name', self.attributes[u'identity'])
+        # identity = self.attributes.get("identity")
+        # name = self.attributes.get("name")
+        # if identity:
+        #    if not name:
+        #        self.attributes[u"name"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
+        # else:
+        #    self.attributes[u"identity"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
+        #    if not name:
+        #        self.attributes.setdefault(u'name', self.attributes[u'identity'])
 
         super(EntityAdapter, self).validate(**kwargs)
 
@@ -757,11 +758,10 @@ class ManagementAgent:
         self.address = address
         self.agent_adapter = agent_adapter
         self.schema = schema
-        for e in self.schema.entity_types.itervalues():
-            print e
         self.config_file = config_file  # full path to config file
         self.config_types = [et for et in schema.entity_types.itervalues()
                                      if schema.is_configuration(et)]
+        self.policy = PolicyManager(self)
         if self.config_file:
             try:
                 self.load(self.config_file, raw_json)
@@ -770,12 +770,10 @@ class ManagementAgent:
         else:
             self.entities = []
         self.log_adapter = LogAdapter("AGENT")
-        self.policy = PolicyManager(self)
+
         self.management = self.create_entity({"type": "management"})
         # self.add_entity(self.management)
-        print "Hello ManagementAgent******** 2"
-        self.io = IoAdapter(self.receive, address, 'L', '0', TREATMENT_ANYCAST_CLOSEST)
-        print "Hello ManagementAgent******** 3"
+        #self.io = IoAdapter(self.receive, address, 'L', '0', TREATMENT_ANYCAST_CLOSEST)
 
     @staticmethod
     def _parse(lines):
@@ -816,18 +814,44 @@ class ManagementAgent:
         sections = json.loads(js_text)
         return sections
 
-    def post_management_request(self, entity):
+    def post_request(self, cid, reply_to,
+                     name=None,
+                     identity=None,
+                     body=None,
+                     operation_ordinality=None,
+                     entity_type_ordinality=None,
+                     count=0,
+                     offset=0):
         """
-        the passed in entity must be a dict
+        Calls the
         """
-        pass
+        self.agent_adapter.post_management_request(cid=cid, reply_to=reply_to, name=name, identity=identity, body=body,
+                                                   operation_ordinality=operation_ordinality,
+                                                   entity_type_ordinality=entity_type_ordinality, count=count,
+                                                   offset=offset)
 
-    def _load_entities(self):
-        for entity in self.entities:
-            self.agent_adapter.post_management_request()
+    def _create_config_entities(self):
+        print 'In _create_config_entities ******************** '
+        for adapter in self.adapters:
+            operation_ordinality = 1 # You have to get this from somewhere
+            print adapter.attributes
+            self.post_request(cid=None, reply_to=None,
+                              operation_ordinality=operation_ordinality,
+                              entity_type_ordinality=adapter.entity_type.ordinality,
+                              body=adapter.attributes)
 
     def get_config_types(self):
         return self.config_types
+
+    def entity_adapters(self, entities):
+        self.adapters = []
+        local_entities = list(entities)
+
+        for entity in local_entities:
+            entity_type = entity['type']
+            del entity['type']
+            adapter = EntityAdapter(self, entity_type, attributes=entity, validate=True)
+            self.adapters.append(adapter)
 
     def load(self, source, raw_json=False):
         """
@@ -846,9 +870,12 @@ class ManagementAgent:
                 if et.singleton and not [s for s in sections if s[0] == et.short_name]:
                     sections.append((et.short_name, {}))
 
-            entities = [dict(type=self.schema.long_name(s[0]), **s[1]) for s in sections]
-            self.schema.validate_all(entities)
+            entities = [dict(type=self.schema.entity_type(self.schema.long_name(s[0])), **s[1]) for s in sections]
+            #self.schema.validate_all(entities)
             self.entities = entities
+            self.entity_adapters(self.entities)
+            print 'self.adapters ************** ', self.adapters
+            self._create_config_entities()
 
     def log(self, level, text):
         info = traceback.extract_stack(limit=2)[0] # Caller frame info
