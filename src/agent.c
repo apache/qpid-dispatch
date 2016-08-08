@@ -33,11 +33,9 @@
 #define MANAGEMENT_INTERNAL_MODULE "qpid_dispatch_internal.management.agent"
 #define MANAGEMENT_MODULE "qpid_dispatch.management"
 
-//static PyObject *qd_post_management_request(PyObject *self,
-//                                            PyObject *args,
-//                                            PyObject *keywds)
 static PyObject *qd_post_management_request(PyObject *self,
-                                            PyObject *args)
+                                            PyObject *args,
+                                            PyObject *keywds)
 
 {
     int operation;    //Is this a CREATE, READ, UPDATE, DELETE or QUERY
@@ -50,12 +48,28 @@ static PyObject *qd_post_management_request(PyObject *self,
     PyObject *identity = 0;
     PyObject *body     = 0;
 
-    //static char *kwlist[] = {"operation", "entity_type", "count", "offset", "cid", "reply_to", "name", "identity", "body"};
+    static char *kwlist[] = {"cid", "reply_to",  "name", "identity", "body", "operation", "entity_type", "count", "offset", NULL};
 
-    //if (!PyArg_ParseTupleAndKeywords(args, keywds, "iiiiooooo", kwlist, &operation, &entity_type, &count, &offset, cid, reply_to, name, identity, body))
-    //    return 0;
-    if (!PyArg_ParseTuple(args, "iiiiooooo", &operation, &entity_type, &count, &offset, cid, reply_to, name, identity, body))
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "OOOOOiiii", kwlist, &cid, &reply_to, &name, &identity, &body, &operation, &entity_type, &count, &offset))
         return 0;
+
+    if (cid == Py_None) {
+            printf("cid is None *********\n");
+    }
+    if (reply_to == Py_None) {
+                printf("reply_to is None *********\n");
+        }
+    if (name == Py_None) {
+                printf("name is None *********\n");
+        }
+    if (identity == Py_None) {
+                printf("identity is None *********\n");
+        }
+
+    printf("operation is %i \n", operation);
+    printf("entity_type is %i \n", entity_type);
+    printf("count is %i \n", count);
+    printf("offset is %i \n", offset);
 
     qd_composed_field_t *field = qd_compose_subfield(0);
 
@@ -108,7 +122,7 @@ static PyObject *qd_post_management_request(PyObject *self,
  */
 static PyMethodDef AgentAdapter_functions[] = {
     //{"post_management_request", (PyCFunction)qd_post_management_request, METH_VARARGS|METH_KEYWORDS, "Posts a management request to a work queue"},
-    {"post_management_request", qd_post_management_request, METH_VARARGS, "Posts a management request to a work queue"},
+    {"post_management_request", (PyCFunction)qd_post_management_request, METH_VARARGS|METH_KEYWORDS, "Posts a management request to a work queue"},
     {0, 0, 0, 0} // <-- Not sure why we need this
 };
 

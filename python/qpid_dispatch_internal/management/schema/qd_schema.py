@@ -121,6 +121,7 @@ class EnumType(Type):
         @param tags: A list of string values for the enumerated type.
         """
         assert isinstance(tags, list)
+        print "tags is ", tags
         super(EnumType, self).__init__("enum%s"%([str(t) for t in tags]), int)
         self.tags = tags
 
@@ -132,11 +133,12 @@ class EnumType(Type):
         @return: An EnumValue.
         """
         if value in self.tags:
-            return EnumValue(value, self.tags.index(value))
+            return self.tags.index(value)
+            # return EnumValue(value, self.tags.index(value))
         else:
             try:
                 i = int(value)
-                return EnumValue(self.tags[i], i)
+                return i
             except (ValueError, IndexError):
                 pass
         raise ValidationError("Invalid value for %s: %r"%(self.name, value))

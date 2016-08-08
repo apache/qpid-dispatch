@@ -162,7 +162,6 @@ class EntityAdapter(SchemaEntity):
         #self.__dict__['_dispatch'] = agent.dispatch
         self.__dict__['_policy'] = agent.policy
         self.__dict__['_implementations'] = []
-        print 'entity_type.ordinality ', entity_type.ordinality
 
     def validate(self, **kwargs):
         """Set default identity and name if not already set, then do schema validation"""
@@ -825,9 +824,15 @@ class ManagementAgent:
         """
         Calls the
         """
-        self.agent_adapter.post_management_request(cid=cid, reply_to=reply_to, name=name, identity=identity, body=body,
-                                                   operation_ordinality=operation_ordinality,
-                                                   entity_type_ordinality=entity_type_ordinality, count=count,
+        print 'body is *********** ', body
+        self.agent_adapter.post_management_request(cid=cid,
+                                                   reply_to=reply_to,
+                                                   name=name,
+                                                   identity=identity,
+                                                   body=body,
+                                                   operation=operation_ordinality,
+                                                   entity_type=entity_type_ordinality,
+                                                   count=count,
                                                    offset=offset)
 
     def _create_config_entities(self):
