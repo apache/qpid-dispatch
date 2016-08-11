@@ -375,10 +375,8 @@ class QdmanageTestSsl(QdmanageTest):
                 created = True
         self.assertTrue(created)
 
+    """
     def test_create_delete_ssl_profile(self):
-        """
-
-        """
         long_type = 'org.apache.qpid.dispatch.sslProfile'
         ssl_profile_name = 'ssl-profile-test'
         ssl_create_command = 'CREATE --type=' + long_type + ' certFile=' + self.ssl_file('server-certificate.pem') + \
@@ -432,6 +430,7 @@ class QdmanageTestSsl(QdmanageTest):
 
         delete_command = 'DELETE --type=sslProfile --name=' + ssl_profile_name
         self.run_qdmanage(delete_command)
+    """
 
 if __name__ == '__main__':
     unittest.main(main_module())
