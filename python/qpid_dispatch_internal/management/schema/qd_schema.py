@@ -1,21 +1,21 @@
-##
-## Licensed to the Apache Software Foundation (ASF) under one
-## or more contributor license agreements.  See the NOTICE file
-## distributed with this work for additional information
-## regarding copyright ownership.  The ASF licenses this file
-## to you under the Apache License, Version 2.0 (the
-## "License"); you may not use this file except in compliance
-## with the License.  You may obtain a copy of the License at
-##
-##   http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing,
-## software distributed under the License is distributed on an
-## "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-## KIND, either express or implied.  See the License for the
-## specific language governing permissions and limitations
-## under the License
-##
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License
+#
 
 """
 Schema for AMQP management entity types.
@@ -121,7 +121,6 @@ class EnumType(Type):
         @param tags: A list of string values for the enumerated type.
         """
         assert isinstance(tags, list)
-        print "tags is ", tags
         super(EnumType, self).__init__("enum%s"%([str(t) for t in tags]), int)
         self.tags = tags
 
@@ -303,10 +302,11 @@ class MessageDef(object):
 
 class OperationDef(object):
     """An operation definition"""
-    def __init__(self, name, description=None, request=None, response=None):
+    def __init__(self, name, description=None, request=None, response=None, ordinality=None):
         try:
             self.name = name
             self.description = description
+            self.ordinality = ordinality
             self.request = self.response = None
             if request:
                 self.request = MessageDef(**request)
@@ -509,7 +509,6 @@ class Schema(object):
         @param entity_types: Map of  { entityTypeName: { singleton:, attributes:{...}}}
         @param description: Human readable description.
         """
-        print "In Schema init *******"
         if prefix:
             self.prefix = prefix.strip('.')
             self.prefixdot = self.prefix + '.'
@@ -526,9 +525,16 @@ class Schema(object):
         self.all_attributes = set()
 
         ordinality = 0
+        operation_def_ordinality = 0
+        self.all_operation_defs = OrderedDict()
         for e in self.entity_types.itervalues():
             e.init()
             e.ordinality = ordinality
+            for key in e.operation_defs:
+                op_def = e.operation_defs[key]
+                op_def.ordinality = operation_def_ordinality
+                operation_def_ordinality += 1
+                self.all_operation_defs[key] = op_def
             self.all_attributes.update(e.attributes.keys())
             ordinality += 1
 
@@ -650,7 +656,6 @@ class QdSchema(Schema):
         """Load schema."""
         qd_schema = get_data('qpid_dispatch.management', 'qdrouter.json')
         try:
-            print "In QdSchema init *****"
             super(QdSchema, self).__init__(**json.loads(qd_schema, **JSON_LOAD_KWARGS))
         except Exception,e:
             raise ValueError("Invalid schema qdrouter.json: %s" % e)

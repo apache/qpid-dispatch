@@ -35,9 +35,15 @@ qd_agent_t* qd_agent(qd_dispatch_t *qd, char *address, const char *config_path);
  */
 void qd_agent_free(qd_agent_t *agent);
 
+/**
+ * Start the agent.
+ * Loads the contents of the config file located in config_path
+ * Agent starts listening on the provided address
+ */
+qd_error_t qd_agent_start(qd_agent_t *agent);
 
-typedef void (*qd_agent_handler_t) (void *context,
-                                    qd_agent_request_t *request);
+
+typedef void (*qd_agent_handler_t) (qd_agent_request_t *request);
 
 /**
  * Register CRUDQ handlers for a particular entity type
@@ -52,10 +58,12 @@ void qd_agent_register_handlers(qd_agent_t *agent,
                                 qd_agent_handler_t query_handler);
 
 /**
- * Start the agent.
- * Loads the contents of the config file located in config_path
- * Agent starts listening on the provided address
+ * Functions that return the components of a request (qd_agent_request_t).
  */
-qd_error_t qd_agent_start(qd_agent_t *agent);
+qd_buffer_list_t *get_request_buffers(qd_agent_request_t *request);
+qd_schema_entity_type_t get_request_entity_type(qd_agent_request_t *request);
+int get_request_count(qd_agent_request_t *request);
+int get_request_offset(qd_agent_request_t *request);
+void *get_request_context(qd_agent_request_t *request);
 
 #endif

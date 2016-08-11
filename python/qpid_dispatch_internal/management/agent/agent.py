@@ -769,7 +769,7 @@ class ManagementAgent:
         else:
             self.entities = []
         self.log_adapter = LogAdapter("AGENT")
-
+        self.adapters = []
         self.management = self.create_entity({"type": "management"})
         # self.add_entity(self.management)
         #self.io = IoAdapter(self.receive, address, 'L', '0', TREATMENT_ANYCAST_CLOSEST)
@@ -838,10 +838,9 @@ class ManagementAgent:
     def _create_config_entities(self):
         print 'In _create_config_entities ******************** '
         for adapter in self.adapters:
-            operation_ordinality = 1 # You have to get this from somewhere
             print adapter.attributes
             self.post_request(cid=None, reply_to=None,
-                              operation_ordinality=operation_ordinality,
+                              operation_ordinality=self.all_operation_defs.get('CREATE').ordinality,
                               entity_type_ordinality=adapter.entity_type.ordinality,
                               body=adapter.attributes)
 
@@ -849,7 +848,7 @@ class ManagementAgent:
         return self.config_types
 
     def entity_adapters(self, entities):
-        self.adapters = []
+
         local_entities = list(entities)
 
         for entity in local_entities:
@@ -1041,7 +1040,7 @@ class ManagementAgent:
         reply_to = request.reply_to
         correlation_id = request.correlation_id
         entity_type_ordinality = entity_type.ordinality
-        #operation_ordinality = operation.ordinality
+        operation_ordinality = self.schema.all_operation_defs.get(operation.uppercase())
 
         print 'reply_to, correlation_id, entity_type_ordinality ', reply_to, correlation_id, entity_type_ordinality
 
@@ -1051,8 +1050,11 @@ class ManagementAgent:
 
                 # request.body is already a map with the create parameters
                 # request.properties has the operation, name, type
-                request_handler.qd_post_management_request(operation, entity_type_ordinality, correlation_id, reply_to,
-                                                           request.body)
+                self.post_request(correlation_id,
+                                  reply_to,
+                                  operation_ordinality=operation_ordinality,
+                                  entity_type_ordinality=entity_type_ordinality,
+                                  body=request.body)
 
             request_type = request.properties.get('type')
             if self.schema.is_long_name(request_type):

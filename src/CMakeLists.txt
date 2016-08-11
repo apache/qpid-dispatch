@@ -60,6 +60,7 @@ set(qpid_dispatch_SOURCES
   message.c
   parse.c
   policy.c
+  management_agent.c
   posix/driver.c
   posix/threading.c
   python_embedded.c
@@ -78,7 +79,6 @@ set(qpid_dispatch_SOURCES
   router_core/router_core.c
   router_core/router_core_thread.c
   router_core/route_tables.c
-  router_core/management_agent.c
   router_core/terminus.c
   router_core/transfer.c
   router_node.c

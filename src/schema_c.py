@@ -81,10 +81,10 @@ class Generator(object):
             return "typedef enum {\n" + \
                 ",\n".join(["    " + self.name(tag) for tag in tags]) + \
                 "\n} %s;\n\n" % self.type_name + \
-                "extern const char *%s[%s];\n\n" %  (self.array, self.count)
+                "extern const char *%s[%s];\n\n" %  (self.array_name, self.count)
 
         def defn(self):
-            return "const char *%s[%s] = {\n" % (self.array, self.count) + \
+            return "const char *%s[%s] = {\n" % (self.array_name, self.count) + \
                 ",\n".join('    "%s"'%(self.name(tag)) for tag in self.tags) + \
                 "\n};\n\n"
 
@@ -96,11 +96,23 @@ class Generator(object):
             self.generator, self.entity, self.tags = generator, entity, tags
             self.enum_name = name
             self.type_name = generator.type_name([entity.short_name, self.enum_name])
-            self.array = self.generator.prefix_name([entity.short_name, self.enum_name, 'names'])
+            self.array_name = self.generator.prefix_name([entity.short_name, self.enum_name, 'names'])
             self.count = self.name('ENUM_COUNT')
 
         def name(self, tag):
             return self.generator.prefix_name([self.entity.short_name, self.enum_name, tag]).upper()
+
+        def defn(self):
+            return "const char *%s[%s] = {\n" % (self.array_name, self.count) + \
+                ",\n".join('    "%s"'%(tag) for tag in self.tags) + \
+                "\n};\n\n"
+
+        def decl(self):
+            tags = self.tags + ['ENUM_COUNT']
+            return "typedef enum {\n" + \
+                ",\n".join(["    " + self.name(tag) for tag in tags]) + \
+                "\n} %s;\n\n" % self.type_name + \
+                "extern const char *%s[%s];\n\n" %  (self.array_name, self.count)
 
     class OperationDefEnumGenerator(BaseEnumGenerator):
         """
@@ -110,7 +122,7 @@ class Generator(object):
             self.generator, self.entity, self.tags = generator, entity, tags
             self.enum_name = name
             self.type_name = generator.type_name([entity.short_name, self.enum_name])
-            self.array = self.generator.prefix_name([entity.short_name, self.enum_name, 'names'])
+            self.array_name = self.generator.prefix_name([entity.short_name, self.enum_name, 'names'])
             self.count = self.name('ENUM_COUNT')
 
         def name(self, tag):
@@ -124,7 +136,7 @@ class Generator(object):
             self.generator, self.entity, self.attribute = generator, entity, attribute
             self.tags = tags
             self.type_name = generator.type_name([entity.short_name, attribute.name])
-            self.array = self.generator.prefix_name([entity.short_name, attribute.name, 'names'])
+            self.array_name = self.generator.prefix_name([entity.short_name, attribute.name, 'names'])
             self.count = self.name('ENUM_COUNT')
 
         def name(self, tag):
@@ -139,20 +151,20 @@ class Generator(object):
         # Create an enum for the operations CREATE, READ, UPDATE, DELETE, QUERY
         base_entity = self.schema.entity_types.get(self.schema.prefixdot + 'entity')
         enums.append(self.OperationDefEnumGenerator(self, base_entity, "operation",
-                                                    base_entity.operation_defs.keys() + ['QUERY']))
+                                                    self.schema.all_operation_defs.keys()))
 
         # Create enum for entity types
         entity_types = self.schema.entity_types.keys()
         entity_types = [w.replace('org.apache.qpid.dispatch.', '') for w in entity_types]
-        enums.append(self.OperationDefEnumGenerator(self, base_entity, "type", entity_types))
+        enums.append(self.EntityTypeEnumGenerator(self, base_entity, "type", entity_types))
 
-        # Create enums for attributes
+        # Create enums for attributes of entities
         entity_types = self.schema.entity_types
         for entity_type in entity_types.values():
             attribute_names = []
             for attrib in entity_type.attributes.values():
                 attribute_names.append(attrib.name)
-            enums.append(self.OperationDefEnumGenerator(self, entity_type, "attributes", attribute_names))
+            enums.append(self.EntityTypeEnumGenerator(self, entity_type, "attributes", attribute_names))
 
         self.header('schema_enum', '\n'.join(e.decl() for e in enums))
         self.source('schema_enum', '#include "schema_enum.h"\n\n' + '\n'.join(e.defn() for e in enums))
