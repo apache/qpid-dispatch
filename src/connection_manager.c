@@ -452,6 +452,8 @@ bool qd_config_ssl_profile_free(qd_connection_manager_t *cm, qd_config_ssl_profi
     }
     sys_mutex_unlock(cm->ssl_profile_lock);
 
+    DEQ_REMOVE(cm->config_ssl_profiles, ssl_profile);
+
     free(ssl_profile->name);
     free(ssl_profile->ssl_password);
     free(ssl_profile->ssl_trusted_certificate_db);
@@ -486,8 +488,7 @@ bool qd_connection_manager_delete_ssl_profile(qd_dispatch_t *qd, void *impl)
     qd_config_ssl_profile_t *ssl_profile = (qd_config_ssl_profile_t*) impl;
     if(ssl_profile) {
         bool freed = qd_config_ssl_profile_free(qd->connection_manager, ssl_profile);
-        if (freed)
-            DEQ_REMOVE(qd->connection_manager->config_ssl_profiles, ssl_profile);
+
         return freed;
     }
     return false;
