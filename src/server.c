@@ -320,6 +320,21 @@ static const char *qd_transport_get_user(qd_connection_t *conn, pn_transport_t *
 }
 
 
+/**
+ * Allocate a new qd_connection
+ *  with DEQ items initialized, call lock allocated, and all other fields cleared.
+ */
+qd_connection_t *qd_connection_allocate()
+{
+    qd_connection_t *ctx = new_qd_connection_t();
+    ZERO(ctx);
+    DEQ_ITEM_INIT(ctx);
+    DEQ_INIT(ctx->deferred_calls);
+    ctx->deferred_call_lock = sys_mutex();
+    return ctx;
+}
+
+
 void qd_connection_set_user(qd_connection_t *conn)
 {
     pn_transport_t *tport = pn_connection_transport(conn->pn_conn);
@@ -585,32 +600,13 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         qd_log(qd_server->log_source, QD_LOG_DEBUG, "Accepting %s",
                log_incoming(logbuf, sizeof(logbuf), cxtr));
         
-        ctx = new_qd_connection_t();
-        DEQ_ITEM_INIT(ctx);
+        ctx = qd_connection_allocate();
         ctx->server        = qd_server;
-        ctx->opened        = false;
-        ctx->closed        = false;
         ctx->owner_thread  = CONTEXT_UNSPECIFIED_OWNER;
-        ctx->enqueued      = 0;
         ctx->pn_cxtr       = cxtr;
-        ctx->collector     = 0;
-        ctx->ssl           = 0;
         ctx->listener      = qdpn_listener_context(listener);
-        ctx->connector     = 0;
         ctx->context       = ctx->listener->context;
-        ctx->user_context  = 0;
-        ctx->link_context  = 0;
-        ctx->ufd           = 0;
-        ctx->user_id       = 0;
-        ctx->free_user_id  = false;
         ctx->connection_id = qd_server->next_connection_id++; // Increment the connection id so the next connection can use it
-        ctx->policy_settings = 0;
-        ctx->n_senders       = 0;
-        ctx->n_receivers     = 0;
-        ctx->open_container  = 0;
-        DEQ_INIT(ctx->deferred_calls);
-        ctx->deferred_call_lock = sys_mutex();
-        ctx->event_stall  = false;
         ctx->policy_counted = policy_counted;
 
         // Copy the role from the listener config
@@ -1138,38 +1134,18 @@ static void cxtr_try_open(void *context)
     if (ct->state != CXTR_STATE_CONNECTING)
         return;
 
-    qd_connection_t *ctx = new_qd_connection_t();
-    DEQ_ITEM_INIT(ctx);
+    qd_connection_t *ctx = qd_connection_allocate();
     ctx->server       = ct->server;
-    ctx->opened       = false;
-    ctx->closed       = false;
     ctx->owner_thread = CONTEXT_UNSPECIFIED_OWNER;
-    ctx->enqueued     = 0;
     ctx->pn_conn      = pn_connection();
     ctx->collector    = pn_collector();
-    ctx->ssl          = 0;
-    ctx->listener     = 0;
     ctx->connector    = ct;
     ctx->context      = ct->context;
-    ctx->user_context = 0;
-    ctx->link_context = 0;
-    ctx->ufd          = 0;
-    ctx->user_id      = 0;
-    ctx->free_user_id = false;
-    ctx->policy_settings = 0;
-    ctx->n_senders       = 0;
-    ctx->n_receivers     = 0;
-    ctx->open_container  = 0;
 
     // Copy the role from the connector config
     int role_length    = strlen(ctx->connector->config->role) + 1;
     ctx->role          = (char*) malloc(role_length);
     strcpy(ctx->role, ctx->connector->config->role);
-
-    DEQ_INIT(ctx->deferred_calls);
-    ctx->deferred_call_lock = sys_mutex();
-    ctx->event_stall  = false;
-    ctx->policy_counted = false;
 
     qd_log(ct->server->log_source, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
 
@@ -1745,33 +1721,10 @@ qd_user_fd_t *qd_user_fd(qd_dispatch_t *qd, int fd, void *context)
     if (!ufd)
         return 0;
 
-    qd_connection_t *ctx = new_qd_connection_t();
-    DEQ_ITEM_INIT(ctx);
+    qd_connection_t *ctx = qd_connection_allocate();
     ctx->server       = qd_server;
-    ctx->opened       = false;
-    ctx->closed       = false;
     ctx->owner_thread = CONTEXT_NO_OWNER;
-    ctx->enqueued     = 0;
-    ctx->pn_conn      = 0;
-    ctx->collector    = 0;
-    ctx->ssl          = 0;
-    ctx->listener     = 0;
-    ctx->connector    = 0;
-    ctx->context      = 0;
-    ctx->user_context = 0;
-    ctx->link_context = 0;
     ctx->ufd          = ufd;
-    ctx->user_id       = 0;
-    ctx->free_user_id  = false;
-    ctx->policy_settings = 0;
-    ctx->n_senders       = 0;
-    ctx->n_receivers     = 0;
-    ctx->open_container  = 0;
-    DEQ_INIT(ctx->deferred_calls);
-    ctx->deferred_call_lock = sys_mutex();
-    ctx->event_stall  = false;
-    ctx->policy_counted = false;
-    ctx->role           = 0;
 
     // Copy the role from the connector config
     if (ctx->connector && ctx->connector->config) {
