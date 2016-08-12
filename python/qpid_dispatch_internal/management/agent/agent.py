@@ -761,6 +761,7 @@ class ManagementAgent:
         self.config_types = [et for et in schema.entity_types.itervalues()
                                      if schema.is_configuration(et)]
         self.policy = PolicyManager(self)
+        self.adapters = []
         if self.config_file:
             try:
                 self.load(self.config_file, raw_json)
@@ -769,7 +770,7 @@ class ManagementAgent:
         else:
             self.entities = []
         self.log_adapter = LogAdapter("AGENT")
-        self.adapters = []
+
         self.management = self.create_entity({"type": "management"})
         # self.add_entity(self.management)
         #self.io = IoAdapter(self.receive, address, 'L', '0', TREATMENT_ANYCAST_CLOSEST)
@@ -824,7 +825,6 @@ class ManagementAgent:
         """
         Calls the
         """
-        print 'body is *********** ', body
         self.agent_adapter.post_management_request(cid=cid,
                                                    reply_to=reply_to,
                                                    name=name,
@@ -835,14 +835,27 @@ class ManagementAgent:
                                                    count=count,
                                                    offset=offset)
 
+    def _transform_attributes(self, adapter):
+        transformed = {}
+        # adapter.attributes has something like this -
+        # {u'mobileAddrMaxAge': 60, u'raIntervalFlux': 4, u'workerThreads': 4, u'helloInterval': 1, u'area': '0',
+        # u'helloMaxAge': 3, u'saslConfigName': 'qdrouterd', u'remoteLsMaxAge': 60, u'raInterval': 30, u'mode': 0,
+        # 'type': 'org.apache.qpid.dispatch.router', u'id': 'Router.A'}
+        # We want to create a new dict with the keys as the ordinality of the respective keys from the above dict
+        # like this - {0: 'Router.A', 1: 0, 2: '0', 3: 1, 4: 3, 5: 30, 6: 4, 7: 60, 11: 4, 14: 'qdrouterd', 16: 60}
+        #
+        for key in adapter.attributes.keys():
+            if key == 'type':
+                continue
+            transformed[adapter.entity_type.attributes.get(key).ordinality] = adapter.attributes.get(key)
+        return transformed
+
     def _create_config_entities(self):
-        print 'In _create_config_entities ******************** '
         for adapter in self.adapters:
-            print adapter.attributes
             self.post_request(cid=None, reply_to=None,
-                              operation_ordinality=self.all_operation_defs.get('CREATE').ordinality,
+                              operation_ordinality=self.schema.all_operation_defs.get('CREATE').ordinality,
                               entity_type_ordinality=adapter.entity_type.ordinality,
-                              body=adapter.attributes)
+                              body=self._transform_attributes(adapter))
 
     def get_config_types(self):
         return self.config_types
@@ -874,11 +887,9 @@ class ManagementAgent:
                 if et.singleton and not [s for s in sections if s[0] == et.short_name]:
                     sections.append((et.short_name, {}))
 
-            entities = [dict(type=self.schema.entity_type(self.schema.long_name(s[0])), **s[1]) for s in sections]
-            #self.schema.validate_all(entities)
-            self.entities = entities
+            self.entities = [dict(type=self.schema.entity_type(self.schema.long_name(s[0])), **s[1]) for s in sections]
+            #self.schema.validate_all(self.entities)
             self.entity_adapters(self.entities)
-            print 'self.adapters ************** ', self.adapters
             self._create_config_entities()
 
     def log(self, level, text):

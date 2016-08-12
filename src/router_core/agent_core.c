@@ -176,10 +176,10 @@ qdr_query_t *qdr_manage_query(qdr_core_t              *core,
                               void                    *context,
                               qd_router_entity_type_t  type,
                               qd_parsed_field_t       *attribute_names,
-                              qd_composed_field_t     *body)
+                              qd_composed_field_t     *out_body)
 {
 
-    qdr_query_t* query = qdr_query(core, context, type, body);
+    qdr_query_t* query = qdr_query(core, context, type, out_body);
 
     switch (query->entity_type) {
         case QD_SCHEMA_ENTITY_TYPE_ROUTER_CONFIG_ADDRESS:   qdr_agent_set_columns(query, attribute_names, qdr_config_address_columns, QDR_CONFIG_ADDRESS_COLUMN_COUNT);  break;
@@ -355,7 +355,7 @@ static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool di
     qd_parsed_field_t       *in_body    = action->args.agent.in_body;
 
     switch (query->entity_type) {
-        case QD_SCHEMA_ENTITY_TYPE_ROUTER_CONFIG_ADDRESS:                      qdra_config_address_create_CT(core, name, query, in_body); break;
+        case QD_SCHEMA_ENTITY_TYPE_ROUTER_CONFIG_ADDRESS:   qdra_config_address_create_CT(core, name, query, in_body); break;
         case QD_SCHEMA_ENTITY_TYPE_ROUTER_CONFIG_LINKROUTE: qdra_config_link_route_create_CT(core, name, query, in_body); break;
         case QD_SCHEMA_ENTITY_TYPE_ROUTER_CONFIG_AUTOLINK:  qdra_config_auto_link_create_CT(core, name, query, in_body); break;
         case QD_SCHEMA_ENTITY_TYPE_CONNECTION:              break;

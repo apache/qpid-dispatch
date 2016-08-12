@@ -726,11 +726,11 @@ qd_amqp_error_t qd_connection_manager_read_ssl_profile(qd_dispatch_t *qd,
     return status;
 }
 
-qd_amqp_error_t qd_connection_manager_query_ssl_profile(qd_dispatch_t *qd,
-                                                        int offset,
-                                                        int count,
-                                                        qd_parsed_field_t     *in_body,
-                                                        qd_composed_field_t     *out_body)
+qd_amqp_error_t qd_connection_manager_query_ssl_profile(qd_dispatch_t       *qd,
+                                                        int                  offset,
+                                                        int                  count,
+                                                        qd_parsed_field_t   *in_body,
+                                                        qd_composed_field_t *out_body)
 {
     return QD_AMQP_OK;
 }
