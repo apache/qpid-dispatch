@@ -1081,6 +1081,11 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_21_presettled_overflow(self):
+        test = PresettledOverflowTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
     def test_connection_properties(self):
         connection = BlockingConnection(self.router.addresses[0],
                                         timeout=60,
@@ -1443,6 +1448,54 @@ class BatchedSettlementTest(MessagingHandler):
     def on_accepted(self, event):
         self.n_settled += 1
         self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+
+class PresettledOverflowTest(MessagingHandler):
+    def __init__(self, address):
+        super(PresettledOverflowTest, self).__init__(prefetch=0)
+        self.address = address
+        self.dest = "balanced.PresettledOverflow"
+        self.error = None
+        self.count       = 500
+        self.n_sent      = 0
+        self.n_received  = 0
+        self.last_seq    = -1
+
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d rcvd=%d last_seq=%d" % (self.n_sent, self.n_received, self.last_seq)
+        self.conn.close()
+
+    def on_start(self, event):
+        self.timer    = event.reactor.schedule(5, Timeout(self))
+        self.conn     = event.container.connect(self.address)
+        self.sender   = event.container.create_sender(self.conn, self.dest)
+        self.receiver = event.container.create_receiver(self.conn, self.dest)
+        self.receiver.flow(10)
+
+    def send(self):
+        while self.n_sent < self.count and self.sender.credit > 0:
+            msg = Message(body={"seq": self.n_sent})
+            dlv = self.sender.send(msg)
+            dlv.settle()
+            self.n_sent += 1
+        if self.n_sent == self.count:
+            self.receiver.flow(self.count)
+
+    def on_sendable(self, event):
+        if self.n_sent < self.count:
+            self.send()
+
+    def on_message(self, event):
+        self.n_received += 1
+        self.last_seq = event.message.body["seq"]
+        if self.last_seq == self.count - 1:
+            if self.n_received == self.count:
+                self.error = "No deliveries were dropped"
+            self.conn.close()
+            self.timer.cancel()
 
     def run(self):
         Container(self).run()

@@ -42,7 +42,7 @@ class DrainMessagesHandler(MessagingHandler):
         self.error = "Unexpected Exit"
 
     def timeout(self):
-        self.error = "Timeout Expired"
+        self.error = "Timeout Expired: sent: %d rcvd: %d" % (self.sent_count, self.received_count)
         self.conn.close()
 
     def on_start(self, event):
@@ -56,7 +56,7 @@ class DrainMessagesHandler(MessagingHandler):
 
     def on_sendable(self, event):
         if self.sent_count < 10:
-            msg = Message(body="Hello World")
+            msg = Message(body="Hello World", properties={'seq': self.sent_count})
             dlv = event.sender.send(msg)
             dlv.settle()
             self.sent_count += 1

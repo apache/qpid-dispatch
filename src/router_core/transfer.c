@@ -261,26 +261,49 @@ void qdr_delivery_incref(qdr_delivery_t *delivery)
 }
 
 
-void qdr_delivery_decref(qdr_delivery_t *delivery)
+static void qdr_delivery_decref_internal(qdr_delivery_t *delivery, bool lock_held)
 {
     qdr_connection_t *conn   = delivery->link ? delivery->link->conn : 0;
     bool              delete = false;
     
     if (!!conn) {
-        sys_mutex_lock(conn->work_lock);
+        if (!lock_held)
+            sys_mutex_lock(conn->work_lock);
         assert(delivery->ref_count > 0);
         delete = --delivery->ref_count == 0;
-        sys_mutex_unlock(conn->work_lock);
+        if (!lock_held)
+            sys_mutex_unlock(conn->work_lock);
     }
 
     if (delete) {
         if (delivery->msg)
             qd_message_free(delivery->msg);
+
         if (delivery->to_addr)
             qd_field_iterator_free(delivery->to_addr);
+
+        if (delivery->tracking_addr) {
+            int link_bit = conn->mask_bit;
+            delivery->tracking_addr->outstanding_deliveries[link_bit]--;
+            delivery->tracking_addr->tracked_deliveries--;
+            delivery->tracking_addr = 0;
+        }
+
         qd_bitmask_free(delivery->link_exclusion);
         free_qdr_delivery_t(delivery);
     }
+}
+
+
+void qdr_delivery_decref(qdr_delivery_t *delivery)
+{
+    qdr_delivery_decref_internal(delivery, false);
+}
+
+
+void qdr_delivery_decref_LH(qdr_delivery_t *delivery)
+{
+    qdr_delivery_decref_internal(delivery, true);
 }
 
 
