@@ -23,7 +23,7 @@ var QDR = (function(QDR) {
 
   // The QDR service handles the connection to
   // the server in the background
-  QDR.module.factory("QDRService", ['$rootScope', '$http', '$resource', '$location', function($rootScope, $http, $resource, $location) {
+  QDR.module.factory("QDRService", ['$rootScope', '$http', '$timeout', '$resource', '$location', function($rootScope, $http, $timeout, $resource, $location) {
     var self = {
 
 	  rhea: require("rhea"),
@@ -57,21 +57,50 @@ var QDR = (function(QDR) {
       executeConnectActions: function() {
         self.connectActions.forEach(function(action) {
           //QDR.log.debug("executing connect action " + action);
-          action.apply();
+			try {
+                action.apply();
+            } catch (e) {
+                // in case the page that registered the handler has been unloaded
+            }
         });
         self.connectActions = [];
+		if ($location.path().startsWith(QDR.pluginRoot)) {
+	        $timeout( function () {
+
+	            var searchObject = $location.search();
+	            var goto = "overview";
+	            if (searchObject.org && searchObject.org !== "connect") {
+	                goto = searchObject.org;
+	            }
+	            $location.search('org', null)
+	            $location.path(QDR.pluginRoot +"/" + goto);
+	        })
+		}
+
       },
       executeDisconnectActions: function() {
         self.disconnectActions.forEach(function(action) {
-          action.apply();
+			try {
+                action.apply();
+            } catch (e) {
+                // in case the page that registered the handler has been unloaded
+            }
         });
         self.disconnectActions = [];
       },
       executeUpdatedActions: function() {
         for (action in self.updatedActions) {
-            self.updatedActions[action].apply();
+			try {
+                self.updatedActions[action].apply();
+            } catch (e) {
+                delete self.updatedActions[action]
+            }
         }
       },
+	redirectWhenConnected: function (org) {
+		$location.path("/" + QDR.pluginName + "/connect")
+		$location.search('org', org);
+	},
 
       notifyTopologyDone: function() {
         //QDR.log.debug("got Toplogy done notice");
@@ -150,12 +179,11 @@ var QDR = (function(QDR) {
     
     onSubscription: function() {
         self.getSchema();
-        self.topology.get();
      },
 
     startUpdating: function () {
-        QDR.log.info("startUpdating called")
         self.stopUpdating();
+        QDR.log.info("startUpdating called")
         self.topology.get();
         self.stop = setInterval(function() {
             self.topology.get();
@@ -191,6 +219,8 @@ var QDR = (function(QDR) {
       },
 
       humanify: function (s) {
+          if (!s || s.length === 0)
+			return s;
           var t = s.charAt(0).toUpperCase() + s.substr(1).replace(/[A-Z]/g, ' $&');
           return t.replace(".", " ");
       },
@@ -253,6 +283,44 @@ var QDR = (function(QDR) {
 
 		isQpid: function (d) {
 			return d.nodeType ==='on-demand' && (d.properties && d.properties.product === 'qpid-cpp');
+		},
+
+		isAConsole: function (properties, connectionId, nodeType, key) {
+			return self.isConsole({properties: properties, connectionId: connectionId, nodeType: nodeType, key: key})
+		},
+		isConsole: function (d) {
+			// TODO: use connection properties when available
+			if (d.properties.console_identifier == 'Dispatch console')
+				return true;
+			// until connection properties can difinitively identify consoles:
+			var connid = d.connectionId;
+			if (connid && d.nodeType === 'normal') {
+				// find all the endpoint links for this router that have this connid
+				var linkInfo = self.topology.nodeInfo()[d.key]['.router.link']
+				var outs = 0, ins = 0;
+				var outaddr, inaddr;
+				linkInfo.results.forEach( function (link) {
+					if (self.valFor(linkInfo.attributeNames, link, 'connectionId') == connid &&
+						self.valFor(linkInfo.attributeNames, link, 'linkType') == 'endpoint') {
+						if (self.valFor(linkInfo.attributeNames, link, 'linkDir') == 'in') {
+							++ins;
+							inaddr = self.valFor(linkInfo.attributeNames, link, 'owningAddr')
+						}
+						if (self.valFor(linkInfo.attributeNames, link, 'linkDir') == 'out') {
+							++outs;
+							outaddr = self.valFor(linkInfo.attributeNames, link, 'owningAddr')
+						}
+						return true;
+					}
+				})
+				// consoles have 1 out link with an address that starts with Ltemp. and
+				// 1 in link with no address
+				if (outs == 1 && ins == 1 &&
+					inaddr == null && outaddr.startsWith('Ltemp.')) {
+					return true;
+				}
+			}
+			return false;
 		},
 
       /*
@@ -329,9 +397,9 @@ var QDR = (function(QDR) {
         // results contains more nodes than actually respond within
         // the timeout. However, if the responses we get don't contain
         // the missing node, assume we are done.
-            QDR.log.debug("timed out waiting for management responses");
+            QDR.log.info("timed out waiting for management responses");
             // note: can't use 'this' in a timeout handler
-            self.topology.dump("state at timeout");
+            self.topology.miniDump("state at timeout");
             // check if _nodeInfo is consistent
             if (self.topology.isConsistent()) {
                 //TODO: notify controllers which node was dropped
@@ -402,60 +470,31 @@ var QDR = (function(QDR) {
             if (this._expected[id].indexOf(key) == -1)
                 this._expected[id].push(key);
         },
-/*
-The response looks like:
-{
-    ".router": {
-        "results": [
-            [4, "router/QDR.X", 1, "0", 3, 60, 60, 11, "QDR.X", 30, "interior", "org.apache.qpid.dispatch.router", 5, 12, "router/QDR.X"]
-        ],
-        "attributeNames": ["raIntervalFlux", "name", "helloInterval", "area", "helloMaxAge", "mobileAddrMaxAge", "remoteLsMaxAge", "addrCount", "routerId", "raInterval", "mode", "type", "nodeCount", "linkCount", "identity"]
-    },
-    ".connection": {
-        "results": [
-            ["QDR.B", "connection/0.0.0.0:20002", "operational", "0.0.0.0:20002", "inter-router", "connection/0.0.0.0:20002", "ANONYMOUS", "org.apache.qpid.dispatch.connection", "out"],
-            ["QDR.A", "connection/0.0.0.0:20001", "operational", "0.0.0.0:20001", "inter-router", "connection/0.0.0.0:20001", "ANONYMOUS", "org.apache.qpid.dispatch.connection", "out"],
-            ["b2de2f8c-ef4a-4415-9a23-000c2f86e85d", "connection/localhost:33669", "operational", "localhost:33669", "normal", "connection/localhost:33669", "ANONYMOUS", "org.apache.qpid.dispatch.connection", "in"]
-        ],
-        "attributeNames": ["container", "name", "state", "host", "role", "identity", "sasl", "type", "dir"]
-    },
-    ".router.node": {
-        "results": [
-            ["QDR.A", null],
-            ["QDR.B", null],
-            ["QDR.C", "QDR.A"],
-            ["QDR.D", "QDR.A"],
-            ["QDR.Y", "QDR.A"]
-        ],
-        "attributeNames": ["routerId", "nextHop"]
-    }
-}*/
         ondone: function () {
             clearTimeout(this.timerHandle);
             this._gettingTopo = false;
             //this.miniDump();
             //this.dump();
             self.notifyTopologyDone();
-
          },
          dump: function (prefix) {
             if (prefix)
-                QDR.log.debug(prefix);
-            QDR.log.debug("---");
+                QDR.log.info(prefix);
+            QDR.log.info("---");
             for (var key in this._nodeInfo) {
-                QDR.log.debug(key);
+                QDR.log.info(key);
                 console.dump(this._nodeInfo[key]);
-                QDR.log.debug("---");
+                QDR.log.info("---");
             }
             QDR.log.debug("was still expecting:");
             console.dump(this._expected);
         },
          miniDump: function (prefix) {
             if (prefix)
-                QDR.log.debug(prefix);
-            QDR.log.debug("---");
+                QDR.log.info(prefix);
+            QDR.log.info("---");
             console.dump(Object.keys(this._nodeInfo));
-            QDR.log.debug("---");
+            QDR.log.info("---");
         },
         onerror: function (err) {
             this._gettingTopo = false;
@@ -523,16 +562,10 @@ The response looks like:
 			//QDR.log.debug("got all results for  " + entity);
 			// aggregate the responses
 			var newResponse = {};
-			newResponse['aggregates'] = [];
 			var thisNode = responses[selectedNodeId];
-			if (!thisNode) {
-				newResponse['attributeNames'] = ['name'];
-				newResponse['results'] = [''];
-				callback(nodeNames, entity, newResponse);
-				return;
-			}
 			newResponse['attributeNames'] = thisNode.attributeNames;
 			newResponse['results'] = thisNode.results;
+			newResponse['aggregates'] = [];
 			for (var i=0; i<thisNode.results.length; ++i) {
 				var result = thisNode.results[i];
 				var vals = [];
@@ -557,8 +590,8 @@ The response looks like:
 								if (ent.attributes[key] && ent.attributes[key].graph) {
 									if (id != selectedNodeId)
 										aggregate[i].sum += result[i];
-									aggregate[i].detail.push({node: self.nameFromId(id)+':', val: result[i]})
 								}
+								aggregate[i].detail.push({node: self.nameFromId(id)+':', val: result[i]})
 							})
 							return true; // stop looping
 						}
@@ -569,7 +602,7 @@ The response looks like:
 						// because it was not in the selectedNodeId's results
 						var vals = [];
 						result.forEach( function (val) {
-							vals.push({sum: val, detail: []})
+							vals.push({sum: val, detail: [{node: self.nameFromId(id), val: val}]})
 						})
 						newResponse.aggregates.push(vals)
 					}
@@ -586,10 +619,24 @@ The response looks like:
             ret = self.sendMgmtQuery('GET-SCHEMA')
         ).then(ret.id, function(response) {
             //QDR.log.debug("Got schema response");
+			// remove deprecated
+			for (var entityName in response.entityTypes) {
+				var entity = response.entityTypes[entityName]
+				if (entity.deprecated) {
+					// deprecated entity
+				    delete response.entityTypes[entityName]
+				} else {
+					for (var attributeName in entity.attributes) {
+						var attribute = entity.attributes[attributeName]
+						if (attribute.deprecated) {
+							// deprecated attribute
+							delete response.entityTypes[entityName].attributes[attributeName]
+						}
+					}
+				}
+			}
 			self.schema = response;
-            //self.schema = angular.copy(response);
-            //self.topology.cleanUp(response);
-            self.notifyTopologyDone();
+	        self.topology.get();
         }, ret.error);
       },
 
@@ -636,8 +683,13 @@ The response looks like:
 			var application_properties = {
 				operation:  operation
 			}
-			if (attrs.type)
-				application_properties.type = attrs.type;
+			var ent = self.schema.entityTypes[entity];
+			var fullyQualifiedType = ent.fullyQualifiedType;
+			if (fullyQualifiedType) {
+				application_properties.type = fullyQualifiedType
+			}
+			else
+				application_properties.type = entity;
 			if (attrs.name)
 				application_properties.name = attrs.name;
 			var msg = {
@@ -676,8 +728,11 @@ The response looks like:
             }
 		if (entity[0] === '.')
 			entity = entity.substr(1, entity.length-1)
-		//return self._send(body, fullAddr, operation, entity);
-		return self._send(body, fullAddr, operation, "org.apache.qpid.dispatch." + entity);
+		var prefix = "org.apache.qpid.dispatch."
+		var configs = ["address", "autoLink", "linkRoute"]
+		if (configs.indexOf(entity) > -1)
+			prefix += "router.config."
+		return self._send(body, fullAddr, operation, prefix + entity);
     },
 
     sendMgmtQuery: function (operation) {
@@ -742,8 +797,8 @@ The response looks like:
 				self.sender = null;
 				self.receiver = null;
 				self.sendable = false;
+				self.gotTopology = false;
 			}
-
 			var maybeStart = function () {
 				if (okay.connection && okay.sender && okay.receiver && self.sendable && !self.connected) {
 					QDR.log.info("okay to start")
@@ -757,55 +812,65 @@ The response looks like:
 			}
 			var onDisconnect = function () {
 				//QDR.log.warn("Disconnected");
+				self.connectionError = true;
 				stop();
 				self.executeDisconnectActions();
 			}
 
 			QDR.log.debug("****** calling rhea.connect ********")
-            var connection = self.rhea.connect({
+			var connection;
+			try {
+                connection = self.rhea.connect({
                     connection_details:ws('ws://' + baseAddress, ["binary", "AMQWSB10"]),
                     reconnect:true,
                     properties: {console_identifier: 'Dispatch console'}
-            });
-			connection.on('connection_open', function (context) {
-				QDR.log.debug("connection_opened")
-				okay.connection = true;
-				okay.receiver = false;
-				okay.sender = false;
-			})
-			connection.on('disconnected', function (context) {
+	            });
+			}
+			catch (e) {
+				QDR.log.debug("exception caught on connect")
+				self.errorText = "Connection failed"
 				onDisconnect();
-				self.errorText = "Error: Connection failed"
-				self.executeDisconnectActions();
-				self.connectionError = true;
-			})
-			connection.on('connection_close', function (context) {
-				onDisconnect();
-				self.errorText = "Disconnected"
-			})
+			}
+			if (!self.connectionError) {
+				connection.on('connection_open', function (context) {
+					QDR.log.debug("connection_opened")
+					okay.connection = true;
+					okay.receiver = false;
+					okay.sender = false;
+				})
+				connection.on('disconnected', function (context) {
+					QDR.log.debug("connection disconnected")
+					self.errorText = "Unable to connect"
+					onDisconnect();
+				})
+				connection.on('connection_close', function (context) {
+					QDR.log.debug("connection closed")
+					self.errorText = "Disconnected"
+					onDisconnect();
+				})
 
-			var sender = connection.open_sender();
-			sender.on('sender_open', function (context) {
-				QDR.log.debug("sender_opened")
-				okay.sender = true
-				maybeStart()
-			})
-			sender.on('sendable', function (context) {
-				//QDR.log.debug("sendable")
-				self.sendable = true;
-				maybeStart();
-			})
+				var sender = connection.open_sender();
+				sender.on('sender_open', function (context) {
+					QDR.log.debug("sender_opened")
+					okay.sender = true
+					maybeStart()
+				})
+				sender.on('sendable', function (context) {
+					//QDR.log.debug("sendable")
+					self.sendable = true;
+					maybeStart();
+				})
 
-			var receiver = connection.open_receiver({source: {dynamic: true}});
-			receiver.on('receiver_open', function (context) {
-				QDR.log.debug("receiver_opened")
-				okay.receiver = true;
-				maybeStart()
-			})
-			receiver.on("message", function (context) {
-				self.correlator.resolve(context);
-			});
-
+				var receiver = connection.open_receiver({source: {dynamic: true}});
+				receiver.on('receiver_open', function (context) {
+					QDR.log.debug("receiver_opened")
+					okay.receiver = true;
+					maybeStart()
+				})
+				receiver.on("message", function (context) {
+					self.correlator.resolve(context);
+				});
+			}
 		}
       }
     }
@@ -818,7 +883,7 @@ The response looks like:
 (function() {
     console.dump = function(object) {
         if (window.JSON && window.JSON.stringify)
-            console.log(JSON.stringify(object,undefined,2));
+            QDR.log.info(JSON.stringify(object,undefined,2));
         else
             console.log(object);
     };

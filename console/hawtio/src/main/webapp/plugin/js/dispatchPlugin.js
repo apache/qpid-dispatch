@@ -82,6 +82,12 @@ var QDR = (function(QDR) {
 			.when(QDR.pluginRoot, {
 				templateUrl: QDR.templatePath + 'qdrConnect.html'
 			})
+			.when(QDR.pluginRoot + '/', {
+				templateUrl: QDR.templatePath + 'qdrConnect.html'
+			})
+			.when(QDR.pluginRoot + '/connect', {
+				templateUrl: QDR.templatePath + 'qdrConnect.html'
+			})
 			.when(QDR.pluginRoot + '/overview', {
 				templateUrl: QDR.templatePath + 'qdrOverview.html'
 			})
@@ -97,9 +103,6 @@ var QDR = (function(QDR) {
 			.when(QDR.pluginRoot + '/charts', {
 				templateUrl: QDR.templatePath + 'qdrCharts.html'
 			})
-			.when(QDR.pluginRoot + '/connect', {
-				templateUrl: QDR.templatePath + 'qdrConnect.html'
-			})
       })
 	  .config(function ($compileProvider) {
 			var cur = $compileProvider.urlSanitizationWhitelist();
@@ -111,6 +114,7 @@ var QDR = (function(QDR) {
 	  })
 	  .filter('to_trusted', function($sce){
 			return function(text) {
+			debugger;
 				return $sce.trustAsHtml(text);
 			};
       })
@@ -165,18 +169,22 @@ var QDR = (function(QDR) {
    *     plugin.  This is just a matter of adding to the workspace's
    *     topLevelTabs array.
    */
-  QDR.module.run(function(workspace, viewRegistry, layoutFull, $rootScope, $location, localStorage, QDRService, QDRChartService) {
+  QDR.module.run(function(workspace, viewRegistry, layoutFull, $route, $rootScope, $location, localStorage, QDRService, QDRChartService) {
 		QDR.log.info("*************creating Dispatch Console************");
 		var curPath = $location.path()
-		var lastLocation = localStorage[QDR.LAST_LOCATION];
-		if (!angular.isDefined(lastLocation)) {
-			lastLocation = "connect";
-		}
+		QDR.log.info("curPath is " + curPath)
+		var lastLocation = localStorage[QDR.LAST_LOCATION] || "connect"
 		if (lastLocation.startsWith(QDR.pluginRoot)) {
 			lastLocation = lastLocation.substr(QDR.pluginRoot.length+1)
+			if (lastLocation === '')
+				lastLocation = "overview"
 		}
+		$location.path(QDR.pluginRoot + "/connect");
 		if (curPath.startsWith(QDR.pluginRoot)) {
 			var org = curPath.substr(QDR.pluginRoot.length + 1)
+			if (org === '') {
+				org = lastLocation
+			}
 			if (curPath === QDR.pluginRoot && (!org || org.length===0 || org !== 'connect')) {
 				org = lastLocation
 			}
@@ -228,8 +236,9 @@ var QDR = (function(QDR) {
         $rootScope.$on('$routeChangeSuccess', function() {
             var path = $location.path();
 			if (path.startsWith(QDR.pluginRoot)) {
-				if (path != QDR.pluginRoot && path != QDR.pluginRoot + "/connect") {
-		            localStorage[QDR.LAST_LOCATION] = $location.path();
+				if (path !== QDR.pluginRoot && path !== (QDR.pluginRoot + "/") && path !== (QDR.pluginRoot + "/connect")) {
+		            localStorage[QDR.LAST_LOCATION] = path;
+QDR.log.info("saving page changed to " + path)
 				}
 			}
         });
@@ -237,40 +246,17 @@ var QDR = (function(QDR) {
 		$rootScope.$on( "$routeChangeStart", function(event, next, current) {
 			if (next && next.templateUrl == QDR.templatePath + "qdrConnect.html" && QDRService.connected) {
 				// clicked connect from another dispatch page
-				if (current && current.loadedTemplateUrl.startsWith(QDR.contextPath)) {
+				if (current && current.loadedTemplateUrl && current.loadedTemplateUrl.startsWith(QDR.contextPath)) {
 					return;
 				}
 				// clicked the Dispatch Router top level tab from a different plugin
-				var lastLocation = localStorage[QDR.LAST_LOCATION];
-				if (!angular.isDefined(lastLocation)) {
-					lastLocation = QDR.pluginRoot + "/overview";
-				}
+				var lastLocation = localStorage[QDR.LAST_LOCATION] || (QDR.pluginRoot + "/overview");
 				// show the last page visited
+QDR.log.info("showing dispatch tab: going to page " + lastLocation)
 				$location.path(lastLocation)
 			}
 	    });
-    /* Set up top-level link to our plugin.  Requires an object
-       with the following attributes:
 
-         id - the ID of this plugin, used by the perspective plugin
-              and by the preferences page
-         content - The text or HTML that should be shown in the tab
-         title - This will be the tab's tooltip
-         isValid - A function that returns whether or not this
-                   plugin has functionality that can be used for
-                   the current JVM.  The workspace object is passed
-                   in by hawtio's navbar controller which lets
-                   you inspect the JMX tree, however you can do
-                   any checking necessary and return a boolean
-         href - a function that returns a link, normally you'd
-                return a hash link like #/foo/bar but you can
-                also return a full URL to some other site
-         isActive - Called by hawtio's navbar to see if the current
-                    $location.url() matches up with this plugin.
-                    Here we use a helper from workspace that
-                    checks if $location.url() starts with our
-                    route.
-     */
     workspace.topLevelTabs.push({
       id: "dispatch",
       content: "Dispatch Router",

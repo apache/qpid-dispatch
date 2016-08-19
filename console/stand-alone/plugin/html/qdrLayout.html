@@ -16,11 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
-<ul class="nav nav-tabs connected" ng-controller="QDR.NavBarController">
-  <li ng-repeat="link in breadcrumbs" ng-show="isValid(link)" ng-class='{active : isActive(link.href), "pull-right" : isRight(link), haschart: hasChart(link)}'>
-    <a ng-href="{{link.href}}{{hash}}" ng-bind-html="link.content | to_trusted"></a>
+<ul class="nav nav-tabs connected dispatch-view" ng-controller="QDR.NavBarController">
+  <li ng-repeat="link in breadcrumbs" title="{{link.title}}" ng-show="isValid(link)" ng-class='{active : isActive(link.href), "pull-right" : isRight(link), haschart: hasChart(link)}'>
+    <a ng-href="{{link.href}}{{hash}}" ng-bind-html-unsafe="link.content"></a>
   </li>
 </ul>
-<div class="row-fluid">
+<div class="row-fluid dispatch-router">
   <div ng-view></div>
 </div>

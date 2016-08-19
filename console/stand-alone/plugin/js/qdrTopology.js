@@ -21,20 +21,12 @@ under the License.
  */
 var QDR = (function (QDR) {
 
-  /**
-   * @function TopologyFormController
-   *
-   * @param $scope
-   * @param QDRService
-   *
-   * The controller for the topology page's connection/router info form on the left
-   *
-   */
-	QDR.module.controller('QDR.TopologyFormController', ['$scope', 'QDRService',
-	function ($scope, QDRService) {
+
+	QDR.module.controller('QDR.TopologyFormController', function ($scope, QDRService) {
 
 		$scope.attributes = []
-        var generalCellTemplate = '<div class="ngCellText"><span title="{{row.entity.description}}">{{row.entity.attributeName}}</span></div>';
+        var nameTemplate = '<div title="{{row.entity.description}}" class="ngCellText"><span>{{row.entity.attributeName}}</span></div>';
+        var valueTemplate = '<div title="{{row.entity.attributeValue}}" class="ngCellText"><span>{{row.entity.attributeValue}}</span></div>';
         $scope.topoGridOptions = {
             data: 'attributes',
 			enableColumnResize: true,
@@ -43,11 +35,12 @@ var QDR = (function (QDR) {
             {
                 field: 'attributeName',
                 displayName: 'Attribute',
-                cellTemplate: generalCellTemplate
+                cellTemplate: nameTemplate
             },
             {
                 field: 'attributeValue',
-                displayName: 'Value'
+                displayName: 'Value',
+				cellTemplate: valueTemplate
             }
             ]
         };
@@ -55,9 +48,9 @@ var QDR = (function (QDR) {
 		$scope.$on('showEntityForm', function (event, args) {
 			var attributes = args.attributes;
 			var entityTypes = QDRService.schema.entityTypes[args.entity].attributes;
-			Object.keys(attributes).forEach( function (attr) {
-				if (entityTypes[attr])
-					attributes[attr].description = entityTypes[attr]
+			attributes.forEach( function (attr) {
+				if (entityTypes[attr.attributeName] && entityTypes[attr.attributeName].description)
+					attr.description = entityTypes[attr.attributeName].description
 			})
 			$scope.attributes = attributes;
 			$scope.form = args.entity;
@@ -65,53 +58,225 @@ var QDR = (function (QDR) {
 		$scope.$on('showAddForm', function (event) {
 			$scope.form = 'add';
 		})
-		$scope.getTableHeight = function (rows) {
-            return {height: ((rows.length+2) * 30) + "px"};
-        }
+	})
 
-	}])
 
   /**
    * @method TopologyController
    *
    * Controller that handles the QDR topology page
    */
-    QDR.module.controller("QDR.TopologyController", ['$scope', '$rootScope', 'uiGridConstants', 'QDRService', '$uibModal', '$location', '$timeout',
-    function($scope, $rootScope, uiGridConstants, QDRService, $uibModal, $location, $timeout) {
+    QDR.module.controller("QDR.TopologyController", ['$scope', '$rootScope', 'QDRService', '$location', '$timeout', '$dialog',
+    function($scope, $rootScope, QDRService, $location, $timeout, $dialog) {
 
-		$scope.multiData = [{name: ''}, {name: ''}, {name: ''}]
+        $scope.multiData = []
+        $scope.selectedClient = [];
+        $scope.quiesceState = {}
+        var dontHide = false;
+		$scope.quiesceConnection = function (row) {
+			var entity = row.entity;
+			var state = $scope.quiesceState[entity.connectionId].state;
+			if (state === 'enabled') {
+				// start quiescing all links
+				$scope.quiesceState[entity.connectionId].state = 'quiescing';
+			} else if (state === 'quiesced') {
+				// start reviving all links
+				$scope.quiesceState[entity.connectionId].state = 'reviving';
+			}
+			$scope.multiDetails.updateState(entity);
+			dontHide = true;
+			$scope.multiDetails.selectRow(row.rowIndex, true);
+			$scope.multiDetails.showLinksList(row)
+		}
+		$scope.quiesceDisabled = function (row) {
+			return $scope.quiesceState[row.entity.connectionId].buttonDisabled;
+		}
+		$scope.quiesceText = function (row) {
+			return $scope.quiesceState[row.entity.connectionId].buttonText;
+		}
+		$scope.quiesceClass = function (row) {
+			var stateClassMap = {
+				enabled: 'btn-primary',
+				quiescing: 'btn-warning',
+				reviving: 'btn-warning',
+				quiesced: 'btn-danger'
+			}
+			return stateClassMap[$scope.quiesceState[row.entity.connectionId].state];
+		}
         $scope.multiDetails = {
             data: 'multiData',
+			selectedItems: $scope.selectedClient,
+			multiSelect: false,
+			afterSelectionChange: function (obj) {
+				if (obj.selected && obj.orig) {
+					var detailsDiv = d3.select('#link_details')
+					var isVis = detailsDiv.style('display') === 'block';
+					if (!dontHide && isVis && $scope.connectionId === obj.entity.connectionId) {
+						hideLinkDetails();
+						return;
+					}
+					dontHide = false;
+					$scope.multiDetails.showLinksList(obj)
+				}
+			},
+			showLinksList: function (obj) {
+				$scope.linkData = obj.entity.linkData;
+				$scope.connectionId = obj.entity.connectionId;
+				var visibleLen = Math.min(obj.entity.linkData.length, 10)
+				var left = parseInt(d3.select('#multiple_details').style("left"))
+				var detailsDiv = d3.select('#link_details')
+	            detailsDiv
+	                .style({
+	                    display: 'block',
+	                    opacity: 1,
+	                    left: (left + 20) + "px",
+	                    top:  (mouseY + 20 + $(document).scrollTop()) + "px",
+	                    height: (visibleLen + 1) * 30 + "px", // +1 for the header row
+	                    'overflow-y': obj.entity.linkData > 10 ? 'scroll' : 'hidden'})
+			},
+			updateState: function (entity) {
+				var state = $scope.quiesceState[entity.connectionId].state
+
+				// count enabled and disabled links for this connection
+				var enabled = 0, disabled = 0;
+				entity.linkData.forEach ( function (link) {
+					if (link.adminStatus === 'enabled')
+						++enabled;
+					if (link.adminStatus === 'disabled')
+						++disabled;
+				})
+
+				var linkCount = entity.linkData.length;
+				// if state is quiescing and any links are enabled, button should say 'Quiescing' and be disabled
+				if (state === 'quiescing' && (enabled > 0)) {
+					$scope.quiesceState[entity.connectionId].buttonText = 'Quiescing';
+					$scope.quiesceState[entity.connectionId].buttonDisabled = true;
+				} else
+				// if state is enabled and all links are disabled, button should say Revive and be enabled. set state to quisced
+				// if state is quiescing and all links are disabled, button should say 'Revive' and be enabled. set state to quiesced
+				if ((state === 'quiescing' || state === 'enabled') && (disabled === linkCount)) {
+					$scope.quiesceState[entity.connectionId].buttonText = 'Revive';
+					$scope.quiesceState[entity.connectionId].buttonDisabled = false;
+					$scope.quiesceState[entity.connectionId].state = 'quiesced'
+				} else
+				// if state is reviving and any links are disabled, button should say 'Reviving' and be disabled
+				if (state === 'reviving' && (disabled > 0)) {
+					$scope.quiesceState[entity.connectionId].buttonText = 'Reviving';
+					$scope.quiesceState[entity.connectionId].buttonDisabled = true;
+				} else
+				// if state is reviving or quiesced and all links are enabled, button should say 'Quiesce' and be enabled. set state to enabled
+				if ((state === 'reviving' || state === 'quiesced') && (enabled === linkCount)) {
+					$scope.quiesceState[entity.connectionId].buttonText = 'Quiesce';
+					$scope.quiesceState[entity.connectionId].buttonDisabled = false;
+					$scope.quiesceState[entity.connectionId].state = 'enabled'
+				}
+			},
             columnDefs: [
             {
                 field: 'host',
-                displayName: 'Host'
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+                displayName: 'Connection host'
             },
             {
                 field: 'user',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
                 displayName: 'User'
             },
 			{
 				field: 'properties',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
 				displayName: 'Properties'
-			},
+			}/*,
 			{
-				field: 'isEncrypted',
-				displayName: 'Encrypted'
-			}
+				cellClass: 'gridCellButton',
+				cellTemplate: '<button title="{{quiesceText(row)}} the links" type="button" ng-class="quiesceClass(row)" class="btn" ng-click="$event.stopPropagation();quiesceConnection(row)" ng-disabled="quiesceDisabled(row)">{{quiesceText(row)}}</button>'
+			}*/
             ]
         };
+		$scope.linkData = [];
+		$scope.quiesceLinkClass = function (row) {
+			var stateClassMap = {
+				enabled: 'btn-primary',
+				disabled: 'btn-danger'
+			}
+			return stateClassMap[row.entity.adminStatus]
+			//return stateClassMap[$scope.quiesceState[row.entity.connectionId].linkStates[row.entity.identity]];
+		}
+		$scope.quiesceLink = function (row) {
+			var state = row.entity.adminStatus === 'enabled' ? 'disabled' : 'enabled';
+			$scope.quiesceState[row.entity.connectionId].linkStates[row.entity.identity] = state;
+		}
+		$scope.quiesceLinkDisabled = function (row) {
+			return false;
+		}
+		$scope.quiesceLinkText = function (row) {
+			return row.entity.adminStatus === 'disabled' ? "Revive" : "Quiesce";
+		}
+		$scope.linkDetails = {
+			data: 'linkData',
+            columnDefs: [
+			{
+				field: 'adminStatus',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'Admin stat'
+			},
+			{
+				field: 'dir',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'dir'
+			},
+			{
+				field: 'owningAddr',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'Address'
+			},
+			{
+				field: 'deliveryCount',
+				displayName: 'Delivered',
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				cellClass: 'grid-values'
+
+			},
+			{
+				field: 'undeliveredCount',
+				displayName: 'Undelivered',
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				cellClass: 'grid-values'
+			},
+			{
+				field: 'unsettledCount',
+				displayName: 'Unsettled',
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				cellClass: 'grid-values'
+			}/*,
+
+			{
+				cellClass: 'gridCellButton',
+				cellTemplate: '<button title="{{quiesceLinkText(row)}} this link" type="button" ng-class="quiesceLinkClass(row)" class="btn" ng-click="quiesceLink(row)" ng-disabled="quiesceLinkDisabled(row)">{{quiesceLinkText(row)}}</button>'
+			}*/
+			]
+		}
 
 		if (!QDRService.connected) {
 			// we are not connected. we probably got here from a bookmark or manual page reload
-			$location.path("/dispatch_plugin/connect")
-			$location.search('org', "topology");
+			QDRService.redirectWhenConnected("topology");
 			return;
 		}
+		// we are currently connected. setup a handler to get notified if we are ever disconnected
+		QDRService.addDisconnectAction( function () {
+			QDRService.redirectWhenConnected("topology");
+			$scope.$apply();
+		})
 
-		QDR.log.debug("started QDR.TopologyController with urlPrefix: " + $location.absUrl());
-		//var urlPrefix = $location.absUrl();
-		var urlPrefix = window.location.pathname;
+		var urlPrefix = $location.absUrl();
+		urlPrefix = urlPrefix.split("#")[0]
+		QDR.log.debug("started QDR.TopologyController with urlPrefix: " + urlPrefix);
 
 		$scope.addingNode = {
 			step: 0,
@@ -139,7 +304,6 @@ var QDR = (function (QDR) {
 
 	    $scope.modes = [
 	    	{title: 'Topology view', name: 'Diagram', right: false},
-	    	/* {title: '3D Globe view', name: 'Globe', right: false}, */
 	    	/* {title: 'Add a new router node', name: 'Add Router', right: true} */
 	    	];
 		$scope.mode = "Diagram";
@@ -300,7 +464,6 @@ var QDR = (function (QDR) {
             $(".contextMenu").fadeOut(200);
         });
 
-
 		// set up SVG for D3
 	    var width, height;
 	    var tpdiv = $('#topology');
@@ -310,7 +473,14 @@ var QDR = (function (QDR) {
 	    var radius = 25;
 	    var radiusNormal = 15;
 	    width = tpdiv.width() - gap;
-	    height = $(document).height() - gap;
+	    var top = tpdiv.offset().top
+		var tpform = $('#topologyForm')
+		var tpformHeight = tpform.height()
+	    height = Math.max(window.innerHeight, tpformHeight + top) - top - gap;
+		if (width < 10) {
+			QDR.log.info("page width and height are abynormal: returning before very bad things happen")
+			return;
+		}
 
 	    var svg, lsvg;
 		var force;
@@ -372,13 +542,8 @@ var QDR = (function (QDR) {
             }
         }
 
-		var cities = ["Raleigh"];
-		var possibleCities = ["Boston","Tel Aviv-Yafo", "Brno", "Toronto", "Beijing", , "Ashburn", "Raleigh"]
-		//var drag;
-		// create an bare svg element and
 		// initialize the nodes and links array from the QDRService.topology._nodeInfo object
 		var initForceGraph = function () {
-            //QDR.log.debug("initForceGraph called");
 			nodes = [];
 			links = [];
 
@@ -449,7 +614,6 @@ var QDR = (function (QDR) {
 			// initialize the list of links
 			var source = 0;
 			var client = 1;
-			cities = ["Raleigh"];
 			for (var id in nodeInfo) {
 				var onode = nodeInfo[id];
 				var conns = onode['.connection'].results;
@@ -484,11 +648,13 @@ var QDR = (function (QDR) {
 						if (position.y > height)
 							position.y = nodes[parent].y + 40 + Math.cos(Math.PI/2 * client)
 						var node = aNode(id, name, role, nodeInfo, nodes.length, position.x, position.y, j, position.fixed, properties)
-						var nodeType = role === 'normal' ? (properties.console_identifier == 'Dispatch console' ? 'console' : 'client') : 'broker';
+						var nodeType = QDRService.isAConsole(properties, QDRService.valFor(attrs, conns[j], "identity"), role, node.key)
+
 						if (role === 'normal') {
 							node.user = QDRService.valFor(attrs, conns[j], "user")
 							node.isEncrypted = QDRService.valFor(attrs, conns[j], "isEncrypted")
 							node.host = QDRService.valFor(attrs, conns[j], "host")
+							node.connectionId = QDRService.valFor(attrs, conns[j], "identity")
 
 							if (!normalsParent[nodeType]) {
 								normalsParent[nodeType] = node;
@@ -498,7 +664,6 @@ var QDR = (function (QDR) {
 								getLink(parent, nodes.length-1, dir);
 								client++;
 							} else {
-
 								normalsParent[nodeType].normals.push(node)
 							}
 						} else {
@@ -524,9 +689,6 @@ var QDR = (function (QDR) {
 				.gravity(0.0001)
 				.on('tick', tick)
 				.start()
-
-			//drag = force.drag()
-            //    .on("dragstart", dragstart);
 
 			svg.append("svg:defs").selectAll('marker')
 				.data(["end-arrow", "end-arrow-selected"])      // Different link/path types can be defined here
@@ -573,217 +735,6 @@ var QDR = (function (QDR) {
 
 		}
 
-        var initGlobe = function (clients) {
-			d3.select(window)
-				.on("mousemove", mousemove)
-				.on("mouseup", mouseup);
-
-			var width = 960,
-				height = 500;
-
-			var proj = d3.geo.orthographic()
-				.scale(220)
-				.translate([width / 2, height / 2])
-				.clipAngle(90);
-
-			var path = d3.geo.path().projection(proj).pointRadius(1.5);
-
-			var links = [],
-				arcLines = [];
-
-			var graticule = d3.geo.graticule();
-			d3.select("#geology svg").remove();
-			var svg = d3.select("#geology").append("svg")
-				.attr("width", width)
-				.attr("height", height)
-				.on("mousedown", mousedown);
-
-			queue()
-				.defer(d3.json, "plugin/data/world-110m.json")
-				.defer(d3.json, "plugin/data/places1.json")
-				.await(ready);
-
-			function ready(error, world, places) {
-			  var ocean_fill = svg.append("defs").append("radialGradient")
-					.attr("id", "ocean_fill")
-					.attr("cx", "75%")
-					.attr("cy", "25%");
-				  ocean_fill.append("stop").attr("offset", "5%").attr("stop-color", "#fff");
-				  ocean_fill.append("stop").attr("offset", "100%").attr("stop-color", "#eef");
-
-			  var globe_highlight = svg.append("defs").append("radialGradient")
-					.attr("id", "globe_highlight")
-					.attr("cx", "75%")
-					.attr("cy", "25%");
-				  globe_highlight.append("stop")
-					.attr("offset", "5%").attr("stop-color", "#ffd")
-					.attr("stop-opacity","0.6");
-				  globe_highlight.append("stop")
-					.attr("offset", "100%").attr("stop-color", "#ba9")
-					.attr("stop-opacity","0.1");
-
-			  var globe_shading = svg.append("defs").append("radialGradient")
-					.attr("id", "globe_shading")
-					.attr("cx", "55%")
-					.attr("cy", "45%");
-				  globe_shading.append("stop")
-					.attr("offset","30%").attr("stop-color", "#fff")
-					.attr("stop-opacity","0")
-				  globe_shading.append("stop")
-					.attr("offset","100%").attr("stop-color", "#505962")
-					.attr("stop-opacity","0.2")
-
-			  var drop_shadow = svg.append("defs").append("radialGradient")
-					.attr("id", "drop_shadow")
-					.attr("cx", "50%")
-					.attr("cy", "50%");
-				  drop_shadow.append("stop")
-					.attr("offset","20%").attr("stop-color", "#000")
-					.attr("stop-opacity",".5")
-				  drop_shadow.append("stop")
-					.attr("offset","100%").attr("stop-color", "#000")
-					.attr("stop-opacity","0")
-
-			  svg.append("ellipse")
-				.attr("cx", 440).attr("cy", 450)
-				.attr("rx", proj.scale()*.90)
-				.attr("ry", proj.scale()*.25)
-				.attr("class", "noclicks")
-				.style("fill", "url("+urlPrefix+"#drop_shadow)");
-
-			  svg.append("circle")
-				.attr("cx", width / 2).attr("cy", height / 2)
-				.attr("r", proj.scale())
-				.attr("class", "noclicks")
-				.style("fill", "url("+urlPrefix+"#ocean_fill)");
-
-			  svg.append("path")
-				.datum(topojson.object(world, world.objects.land))
-				.attr("class", "land noclicks")
-				.attr("d", path);
-
-			  svg.append("path")
-				.datum(graticule)
-				.attr("class", "graticule noclicks")
-				.attr("d", path);
-
-			  svg.append("circle")
-				.attr("cx", width / 2).attr("cy", height / 2)
-				.attr("r", proj.scale())
-				.attr("class","noclicks")
-				.style("fill", "url("+urlPrefix+"#globe_highlight)");
-
-			  svg.append("circle")
-				.attr("cx", width / 2).attr("cy", height / 2)
-				.attr("r", proj.scale())
-				.attr("class","noclicks")
-				.style("fill", "url("+urlPrefix+"#globe_shading)");
-
-			  var filtered = places.features.filter( function (feature) {
-			    return clients.indexOf(feature.properties.NAME) > -1
-			  })
-			  svg.append("g").attr("class","points")
-				  .selectAll("text").data(filtered)
-				.enter().append("path")
-				  .attr("class", "point")
-				  .attr("d", path);
-
-				svg.append("g").attr("class","labels")
-				  .selectAll("text").data(filtered)
-				  .enter().append("text")
-				  .attr("class", "label")
-				  .text(function(d) { return d.properties.NAME })
-
-				position_labels();
-
-			  // spawn links between cities as source/target coord pairs
-			  places.features.forEach(function(a, i) {
-				if (clients.indexOf(a.properties.NAME) > -1) {
-					places.features.forEach(function(b, j) {
-					  if (b.properties.NAME === 'Raleigh') {
-					  if (j > i) {	// avoid duplicates
-						links.push({
-						  source: a.geometry.coordinates,
-						  target: b.geometry.coordinates
-						});
-					  }
-					  }
-					});
-				}
-			  });
-
-			  // build geoJSON features from links array
-			  links.forEach(function(e,i,a) {
-				var feature =   { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [e.source,e.target] }}
-				arcLines.push(feature)
-			  })
-
-			  svg.append("g").attr("class","arcs")
-				.selectAll("path").data(arcLines)
-				.enter().append("path")
-				  .attr("class","arc")
-				  .attr("d",path)
-			  refresh();
-			}
-
-			function position_labels() {
-			  var centerPos = proj.invert([width/2,height/2]);
-
-			  var arc = d3.geo.greatArc();
-
-			  svg.selectAll(".label")
-				.attr("transform", function(d) {
-				  var loc = proj(d.geometry.coordinates),
-					x = loc[0],
-					y = loc[1];
-				  var offset = x < width/2 ? -5 : 5;
-				  return "translate(" + (x+offset) + "," + (y-2) + ")"
-				})
-				.style("display",function(d) {
-				  var d = arc.distance({source: d.geometry.coordinates, target: centerPos});
-				  return (d > 1.57) ? 'none' : 'inline';
-				})
-			}
-
-			function refresh() {
-			  svg.selectAll(".land").attr("d", path);
-			  svg.selectAll(".point").attr("d", path);
-			  svg.selectAll(".graticule").attr("d", path);
-			  svg.selectAll(".arc").attr("d", path);
-			  position_labels();
-			}
-
-			// modified from http://bl.ocks.org/1392560
-			var m0, o0;
-			o0 = angular.fromJson(localStorage["QDR.rotate"]);
-			if (o0)
-				proj.rotate(o0);
-
-			function mousedown() {
-			  m0 = [d3.event.pageX, d3.event.pageY];
-			  o0 = proj.rotate();
-			  d3.event.preventDefault();
-			}
-			function mousemove() {
-			  if (m0) {
-				var m1 = [d3.event.pageX, d3.event.pageY]
-				  , o1 = [o0[0] + (m1[0] - m0[0]) / 6, o0[1] + (m0[1] - m1[1]) / 6];
-				o1[1] = o1[1] > 30  ? 30  :
-						o1[1] < -30 ? -30 :
-						o1[1];
-				proj.rotate(o1);
-				refresh();
-			  }
-			}
-			function mouseup() {
-			  if (m0) {
-				mousemove();
-				m0 = null;
-				localStorage["QDR.rotate"] = angular.toJson(proj.rotate());
-			  }
-			}
-        }
-
 		function updateForm (key, entity, resultIndex) {
 			var nodeInfo = QDRService.topology.nodeInfo();
 			var onode = nodeInfo[key]
@@ -818,7 +769,7 @@ var QDR = (function (QDR) {
 					})
 					// add as 2nd row
 					if (ports.length)
-						attributes.splice(1, 0, {attributeName: 'Listening on', attributeValue: ports});
+						attributes.splice(1, 0, {attributeName: 'Listening on', attributeValue: ports, description: 'The port on which this router is listening for connections'});
 				}
 
 				$scope.$broadcast('showEntityForm', {entity: entity, attributes: attributes})
@@ -848,7 +799,7 @@ var QDR = (function (QDR) {
 				}
 				nodeIndex++
 			}
-            QDR.log.warn("unable to find containerIndex for " + _id);
+            //QDR.log.warn("unable to find containerIndex for " + _id);
             return -1;
         }
 
@@ -899,38 +850,59 @@ var QDR = (function (QDR) {
 
 	    // update force layout (called automatically each iteration)
 	    function tick() {
+	        circle.attr('transform', function (d) {
+                var cradius;
+                if (d.nodeType == "inter-router") {
+					cradius = d.left ? radius + 8  : radius;
+                } else {
+					cradius = d.left ? radiusNormal + 18  : radiusNormal;
+                }
+	            d.x = Math.max(d.x, radiusNormal * 2);
+	            d.y = Math.max(d.y, radiusNormal * 2);
+				d.x = Math.max(0, Math.min(width-cradius, d.x))
+				d.y = Math.max(0, Math.min(height-cradius, d.y))
+	            return 'translate(' + d.x + ',' + d.y + ')';
+	        });
+
 	        // draw directed edges with proper padding from node centers
 	        path.attr('d', function (d) {
 				//QDR.log.debug("in tick for d");
 				//console.dump(d);
+                var sourcePadding, targetPadding, r;
 
-	            var deltaX = d.target.x - d.source.x,
-	                deltaY = d.target.y - d.source.y,
+                if (d.target.nodeType == "inter-router") {
+					r = radius;
+					//                       right arrow  left line start
+					sourcePadding = d.left ? radius + 8  : radius;
+					//                      left arrow      right line start
+					targetPadding = d.right ? radius + 16 : radius;
+                } else {
+					r = radiusNormal - 18;
+					sourcePadding = d.left ? radiusNormal + 18  : radiusNormal;
+					targetPadding = d.right ? radiusNormal + 16 : radiusNormal;
+                }
+				var dtx = Math.max(targetPadding, Math.min(width-r, d.target.x)),
+				    dty = Math.max(targetPadding, Math.min(height-r, d.target.y)),
+				    dsx = Math.max(sourcePadding, Math.min(width-r, d.source.x)),
+					dsy = Math.max(sourcePadding, Math.min(height-r, d.source.y));
+
+	            var deltaX = dtx - dsx,
+	                deltaY = dty - dsy,
 	                dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
 	                normX = deltaX / dist,
 	                normY = deltaY / dist;
-	                var sourcePadding, targetPadding;
-	                if (d.target.nodeType == "inter-router") {
-						//                       right arrow  left line start
-						sourcePadding = d.left ? radius + 8  : radius;
-						//                      left arrow      right line start
-						targetPadding = d.right ? radius + 16 : radius;
-	                } else {
-						sourcePadding = d.left ? radiusNormal + 18  : radiusNormal;
-						targetPadding = d.right ? radiusNormal + 16 : radiusNormal;
-	                }
-	                var sourceX = d.source.x + (sourcePadding * normX),
-	                sourceY = d.source.y + (sourcePadding * normY),
-	                targetX = d.target.x - (targetPadding * normX),
-	                targetY = d.target.y - (targetPadding * normY);
+	                var sourceX = dsx + (sourcePadding * normX),
+	                sourceY = dsy + (sourcePadding * normY),
+	                targetX = dtx - (targetPadding * normX),
+	                targetY = dty - (targetPadding * normY);
+					sourceX = Math.max(0, Math.min(width, sourceX))
+					sourceY = Math.max(0, Math.min(width, sourceY))
+					targetX = Math.max(0, Math.min(width, targetX))
+					targetY = Math.max(0, Math.min(width, targetY))
+
 	            return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY;
 	        });
 
-	        circle.attr('transform', function (d) {
-	            d.x = Math.max(d.x, radiusNormal * 2);
-	            d.y = Math.max(d.y, radiusNormal * 2);
-	            return 'translate(' + d.x + ',' + d.y + ')';
-	        });
 	        if (!animate) {
 	            animate = true;
 	            force.stop();
@@ -961,7 +933,7 @@ var QDR = (function (QDR) {
             var aAr = sInfo['.router.node'].attributeNames;
             var vAr = sInfo['.router.node'].results;
             for (var hIdx=0; hIdx<vAr.length; ++hIdx) {
-                var addrT = QDRService.valFor(aAr, vAr[hIdx], "routerId" );
+                var addrT = QDRService.valFor(aAr, vAr[hIdx], "id" );
                 if (addrT == d.name) {
                     //QDR.log.debug("found " + d.name + " at " + hIdx);
                     var nextHop = QDRService.valFor(aAr, vAr[hIdx], "nextHop");
@@ -995,6 +967,14 @@ var QDR = (function (QDR) {
             return null;
         }
 
+		function clearPopups() {
+            d3.select("#crosssection").style("display", "none");
+			$('.hastip').empty();
+            d3.select("#multiple_details").style("display", "none")
+            d3.select("#link_details").style("display", "none")
+			d3.select('#node_context_menu').style('display', 'none');
+
+		}
 		function removeCrosssection() {
 			setTimeout(function () {
 				d3.select("[id^=tooltipsy]").remove()
@@ -1013,6 +993,16 @@ var QDR = (function (QDR) {
                 .style("opacity", 0)
                 .each("end", function (d) {
                     d3.select("#multiple_details").style("display", "none")
+                    stopUpdateConnectionsGrid();
+                })
+			hideLinkDetails();
+		}
+		function hideLinkDetails() {
+            d3.select("#link_details").transition()
+                .duration(500)
+                .style("opacity", 0)
+                .each("end", function (d) {
+                    d3.select("#link_details").style("display", "none")
                 })
 		}
 
@@ -1053,7 +1043,7 @@ var QDR = (function (QDR) {
 				    }
 				    return;
 				  }
-				        //QDR.log.debug("showing connections form");
+			        //QDR.log.debug("showing connections form");
 					var resultIndex = 0; // the connection to use
                     var left = d.left ? d.target : d.source;
 					// right is the node that the arrow points to, left is the other node
@@ -1078,7 +1068,8 @@ var QDR = (function (QDR) {
                             left = d.target;
                             resultIndex = left.resultIndex;
                         }
-                        updateForm(left.key, 'connection', resultIndex);
+						if (resultIndex)
+                            updateForm(left.key, 'connection', resultIndex);
                     }
 
 					mousedown_link = d;
@@ -1110,7 +1101,9 @@ var QDR = (function (QDR) {
                 })
                 .on("click", function (d) {
                     dblckickPos = d3.mouse(this);
+                    QDR.log.debug("dblckickPos is [" + dblckickPos[0] + ", " + dblckickPos[1] + "]")
                     d3.event.stopPropagation();
+                    clearPopups();
                     var diameter = 400;
                     var format = d3.format(",d");
                     var pack = d3.layout.pack()
@@ -1118,15 +1111,12 @@ var QDR = (function (QDR) {
                         .padding(-10)
                         .value(function(d) { return d.size; });
 
+                    d3.select("#crosssection svg").remove();
                     var svg = d3.select("#crosssection").append("svg")
                         .attr("width", diameter)
                         .attr("height", diameter)
                     var svgg = svg.append("g")
                         .attr("transform", "translate(2,2)");
-
-					svg.on('click', function (d) {
-						removeCrosssection();
-					})
 
 					var root = {
 						name: "links between " + d.source.name + " and " + d.target.name,
@@ -1189,6 +1179,7 @@ var QDR = (function (QDR) {
 	                node.append("circle")
 	                      .attr("r", function(d) { return d.r; });
 
+//	                node.filter(function(d) { return !d.children; }).append("text")
 	                node.append("text")
 	                      .attr("dy", function (d) { return d.children ? "-10em" : ".3em"})
 	                      .style("text-anchor", "middle")
@@ -1202,7 +1193,6 @@ var QDR = (function (QDR) {
 
 					svgg.transition().attr("transform", "translate(2,2) scale(1)")
                 })
-
 
 	        // remove old links
 	        path.exit().remove();
@@ -1227,15 +1217,13 @@ var QDR = (function (QDR) {
 				// add new circles and set their attr/class/behavior
 		        return g.append('svg:circle')
 		            .attr('class', 'node')
-		            .attr('r', function (d) {
-		                return radii[d.nodeType];
-		            })
+		            .attr('r', function (d) { return radii[d.nodeType] } )
 		            .classed('fixed', function (d) {return d.fixed})
 	                .classed('temp', function(d) { return QDRService.nameFromId(d.key) == '__internal__'; } )
 	                .classed('normal', function(d) { return d.nodeType == 'normal' } )
 	                .classed('inter-router', function(d) { return d.nodeType == 'inter-router' } )
 	                .classed('on-demand', function(d) { return d.nodeType == 'on-demand' } )
-	                .classed('console', function(d) { return d.properties.console_identifier == 'Dispatch console' } )
+	                .classed('console', function(d) { return QDRService.isConsole(d) } )
 	                .classed('artemis', function(d) { return QDRService.isArtemis(d) } )
 	                .classed('qpid-cpp', function(d) { return QDRService.isQpid(d) } )
 	                .classed('client', function(d) { return d.nodeType === 'normal' && !d.properties.console_identifier } )
@@ -1329,8 +1317,7 @@ var QDR = (function (QDR) {
                         selected_node = null;
                     }
                     else {
-						// don't select nodes that represent multiple clients/consoles
-                        if (!d.normals || d.normals.length < 2)
+                        if (d.nodeType !== 'normal' && d.nodeType !== 'on-demand')
                             selected_node = mousedown_node;
                     }
                     for (var i=0; i<links.length; ++i) {
@@ -1363,7 +1350,10 @@ var QDR = (function (QDR) {
 
                 })
                 .on("click", function (d) {
-					if (!d.normals || d.normals.length < 2) {
+                    // clicked on a circle
+                    clearPopups();
+					if (!d.normals) {
+						// circle was a router or a broker
 			            if ( QDRService.isArtemis(d) && Core.ConnectionName === 'Artemis' ) {
 							$location.path('/jmx/attributes?tab=artemis&con=Artemis')
 						}
@@ -1371,19 +1361,7 @@ var QDR = (function (QDR) {
 					}
                     clickPos = d3.mouse(this);
                     d3.event.stopPropagation();
-                    $scope.multiData = []
-                    d.normals.forEach( function (n) {
-                        $scope.multiData.push(n)
-                    })
-                    $scope.$apply();
-                    d3.select('#multiple_details')
-                        .style({
-                            display: 'block',
-                            opacity: 1,
-                            height: (d.normals.length + 1) * 30 + "px",
-                            'overflow-y': d.normals.length > 10 ? 'scroll' : 'hidden',
-		                    left: (mouseX + $(document).scrollLeft()) + "px",
-                            top:  (mouseY + $(document).scrollTop()) + "px"})
+					startUpdateConnectionsGrid(d);
 				})
 
 			var appendContent = function (g) {
@@ -1400,13 +1378,13 @@ var QDR = (function (QDR) {
 		                    y = 4;
 		                return y;})
 		            .attr('class', 'id')
-	                .classed('console', function(d) { return d.properties.console_identifier == 'Dispatch console' } )
+   	                .classed('console', function(d) { return QDRService.isConsole(d) } )
 	                .classed('normal', function(d) { return d.nodeType === 'normal' } )
 	                .classed('on-demand', function(d) { return d.nodeType === 'on-demand' } )
 	                .classed('artemis', function(d) { return QDRService.isArtemis(d) } )
 	                .classed('qpid-cpp', function(d) { return QDRService.isQpid(d) } )
 		            .text(function (d) {
-		                if (d.properties.console_identifier == 'Dispatch console') {
+		                if (QDRService.isConsole(d)) {
 		                    return '\uf108'; // icon-desktop for this console
 		                }
 						if (QDRService.isArtemis(d)) {
@@ -1420,6 +1398,7 @@ var QDR = (function (QDR) {
 		                return d.name.length>7 ? d.name.substr(0,6)+'...' : d.name;
 		        });
 			}
+
 			appendContent(g)
 
 			var appendTitle = function (g) {
@@ -1427,7 +1406,7 @@ var QDR = (function (QDR) {
 	                var x = '';
 	                if (d.normals && d.normals.length > 1)
 	                    x = " x " + d.normals.length;
-		            if (d.properties.console_identifier == 'Dispatch console') {
+		            if (QDRService.isConsole(d)) {
 	                    return 'Dispatch console' + x
 	                }
 		            if (d.properties.product == 'qpid-cpp') {
@@ -1446,12 +1425,16 @@ var QDR = (function (QDR) {
 
 			// add subcircles
 			svg.selectAll('.subcircle').remove();
-
-			svg.selectAll('.multiple')
-				.insert('svg:circle', '.normal')
-					.attr('class', 'subcircle')
-					.attr('r', 18)
-
+			var multiples = svg.selectAll('.multiple')
+			multiples.each( function (d) {
+				d.normals.forEach( function (n, i) {
+					if (i<d.normals.length-1 && i<3) // only show a few shadow circles
+						this.insert('svg:circle', ":first-child")
+						.attr('class', 'subcircle node')
+						.attr('r', 15 - i)
+						.attr('transform', "translate("+ 4 * (i+1) +", 0)")
+				}, d3.select(this))
+			})
 
 			// dynamically create the legend based on which node types are present
 			var legendNodes = [];
@@ -1477,6 +1460,7 @@ var QDR = (function (QDR) {
 					// 45px between lines and add 10px space after 1st line
 					return "translate(0, "+(45*i+(i>0?10:0))+")"
 				})
+
 			appendCircle(lg)
 			appendContent(lg)
 			appendTitle(lg)
@@ -1486,10 +1470,18 @@ var QDR = (function (QDR) {
 				.attr('class', "label")
 				.text(function (d) {return d.key })
 			lsvg.exit().remove();
-			var svgEl = document.getElementById("svglegend"),
-				bb = svgEl.getBBox();
-			svgEl.style.height = bb.y + bb.height;
-			svgEl.style.width = bb.x + bb.width;
+			var svgEl = document.getElementById('svglegend')
+			if (svgEl) {
+				var bb;
+				// firefox can throw an exception on getBBox on an svg element
+				try {
+					bb = svgEl.getBBox();
+				} catch (e) {
+					bb = {y: 0, height: 200, x: 0, width: 200}
+				}
+				svgEl.style.height = (bb.y + bb.height) + 'px';
+				svgEl.style.width = (bb.x + bb.width) + 'px';
+			}
 
 	        if (!mousedown_node || !selected_node)
 	            return;
@@ -1501,6 +1493,124 @@ var QDR = (function (QDR) {
 	        force.start();
 
 	    }
+
+		var startUpdateConnectionsGrid = function (d) {
+			var extendConnections = function () {
+				$scope.multiData = []
+				var normals = d.normals;
+				// find updated normals for d
+		        d3.selectAll('.normal')
+                    .each(function(newd) {
+                        if (newd.id == d.id && newd.name == d.name) {
+                            normals = newd.normals;
+                        }
+                    });
+				if (normals) {
+					normals.forEach( function (n) {
+						var nodeInfo = QDRService.topology.nodeInfo();
+						var links = nodeInfo[n.key]['.router.link'];
+						var linkTypeIndex = links.attributeNames.indexOf('linkType');
+						var connectionIdIndex = links.attributeNames.indexOf('connectionId');
+						n.linkData = [];
+						links.results.forEach( function (link) {
+							if (link[linkTypeIndex] === 'endpoint' && link[connectionIdIndex] === n.connectionId) {
+								var l = {};
+								l.owningAddr = QDRService.valFor(links.attributeNames, link, 'owningAddr');
+								l.dir = QDRService.valFor(links.attributeNames, link, 'linkDir');
+								if (l.owningAddr && l.owningAddr.length > 2)
+									if (l.owningAddr[0] === 'M')
+										l.owningAddr = l.owningAddr.substr(2)
+									else
+										l.owningAddr = l.owningAddr.substr(1)
+
+								l.deliveryCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'deliveryCount'));
+								l.undeliveredCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'undeliveredCount'));
+								l.unsettledCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'unsettledCount'));
+								l.adminStatus = QDRService.valFor(links.attributeNames, link, 'adminStatus');
+								l.identity = QDRService.valFor(links.attributeNames, link, 'identity')
+								l.connectionId = QDRService.valFor(links.attributeNames, link, 'connectionId')
+
+								// TODO: remove this fake quiescing/reviving logic when the routers do the work
+								initConnState(n.connectionId)
+								if ($scope.quiesceState[n.connectionId].linkStates[l.identity])
+									l.adminStatus = $scope.quiesceState[n.connectionId].linkStates[l.identity];
+								if ($scope.quiesceState[n.connectionId].state == 'quiescing') {
+									if (l.adminStatus === 'enabled') {
+										// 25% chance of switching
+										var chance = Math.floor(Math.random() * 2);
+										if (chance == 1) {
+											l.adminStatus = 'disabled';
+											$scope.quiesceState[n.connectionId].linkStates[l.identity] = 'disabled';
+										}
+									}
+								}
+								if ($scope.quiesceState[n.connectionId].state == 'reviving') {
+									if (l.adminStatus === 'disabled') {
+										// 25% chance of switching
+										var chance = Math.floor(Math.random() * 2);
+										if (chance == 1) {
+											l.adminStatus = 'enabled';
+											$scope.quiesceState[n.connectionId].linkStates[l.identity] = 'enabled';
+										}
+									}
+								}
+								QDR.log.debug("pushing link state for " + l.owningAddr + " status: "+ l.adminStatus)
+
+
+								n.linkData.push(l)
+							}
+						})
+						$scope.multiData.push(n)
+						if (n.connectionId == $scope.connectionId)
+							$scope.linkData = n.linkData;
+						initConnState(n.connectionId)
+						$scope.multiDetails.updateState(n)
+					})
+				}
+				$scope.$apply();
+
+	            d3.select('#multiple_details')
+	                .style({
+	                    height: (normals.length + 1) * 30 + "px",
+	                    'overflow-y': normals.length > 10 ? 'scroll' : 'hidden'
+					})
+			}
+
+	        QDRService.addUpdatedAction("normalsStats", extendConnections)
+			extendConnections();
+			clearPopups();
+			var display = 'block'
+			var left = mouseX + $(document).scrollLeft()
+			if (d.normals.length === 1) {
+				display = 'none'
+				left = left - 30;
+				mouseY = mouseY - 20
+			}
+            d3.select('#multiple_details')
+                .style({
+                    display: display,
+                    opacity: 1,
+                    left: (mouseX + $(document).scrollLeft()) + "px",
+                    top:  (mouseY + $(document).scrollTop()) + "px"})
+            if (d.normals.length === 1) {
+				// simulate a click on the connection to popup the link details
+                $scope.multiDetails.showLinksList( {entity: d} )
+            }
+		}
+		var stopUpdateConnectionsGrid = function () {
+	        QDRService.delUpdatedAction("normalsStats");
+		}
+
+		var initConnState = function (id) {
+			if (!angular.isDefined($scope.quiesceState[id])) {
+				$scope.quiesceState[id] = {
+					state:          'enabled',
+					buttonText:     'Quiesce',
+					buttonDisabled: false,
+					linkStates:     {}
+				}
+			}
+		}
 
         function nextHop(thisNode, d) {
             if ((thisNode) && (thisNode != d)) {
@@ -1541,7 +1651,6 @@ var QDR = (function (QDR) {
                 d3.select("#svg_legend svg").remove();
                 animate = true;
                 initForceGraph();
-                initGlobe(cities);
                 //if ($location.path().startsWith("/topology"))
                 //    Core.notification('info', "Qpid dispatch router topology changed");
 
@@ -1609,29 +1718,31 @@ var QDR = (function (QDR) {
 		saveChanged();
         QDRService.startUpdating();
 
-		initGlobe(cities)//, "Boston", "Tel Aviv-Yafo"]);
-
 	    function doAddDialog(NewRouterName) {
-		    var modalInstance = $uibModal.open({
-		        animation: true,
+		    var d = $dialog.dialog({
+				dialogClass: "modal dlg-large",
+				backdrop: true,
+				keyboard: true,
+				backdropClick: true,
 		        controller: 'QDR.NodeDialogController',
 		        templateUrl: 'node-config-template.html',
-		        size: 'lg',
 		        resolve: {
 		            newname: function () {
 		                return NewRouterName;
 		            }
 		        }
 		    });
-		    modalInstance.result.then(function (result) {
+		    d.open().then(function (result) {
 				if (result)
-					setTimeout(doDownloadDialog, 100, result);
+					doDownloadDialog(result);
 		    });
         };
 
 	    function doDownloadDialog(result) {
-		    var modalInstance = $uibModal.open({
-		        animation: true,
+		    d = $dialog.dialog({
+				backdrop: true,
+				keyboard: true,
+				backdropClick: true,
 				controller: 'QDR.DownloadDialogController',
 		        templateUrl: 'download-dialog-template.html',
 		        resolve: {
@@ -1640,12 +1751,16 @@ var QDR = (function (QDR) {
 		            }
 		        }
 		    });
+		    d.open().then(function (result) {
+		    //QDR.log.debug("download dialog done")
+		    })
+            if (!$scope.$$phase) $scope.$apply()
         };
   }]);
 
-  QDR.module.controller("QDR.NodeDialogController", function($scope, QDRService, $uibModalInstance, newname) {
+  QDR.module.controller("QDR.NodeDialogController", function($scope, QDRService, dialog, newname) {
    		var schema = QDRService.schema;
-   		var myEntities = ['container', 'router', 'log', 'listener' ];
+   		var myEntities = ['router', 'log', 'listener' ];
    		var typeMap = {integer: 'number', string: 'text', path: 'text', boolean: 'boolean'};
 		var newLinks = $('path.temp').toArray();    // jquery array of new links for the added router
 		var nodeInfo = QDRService.topology.nodeInfo();
@@ -1793,7 +1908,7 @@ var QDR = (function (QDR) {
 				ediv.attributes.filter(function (attr) { return attr.name == 'port'})[0].value = ++maxPort;
 				// connectors from other routers need to connect to this addr:port
 				myPort = maxPort;
-				myAddr = ediv.attributes.filter(function (attr) { return attr.name == 'addr'})[0].value
+				myAddr = ediv.attributes.filter(function (attr) { return attr.name == 'host'})[0].value
 
 				// override the role. 'normal' is the default, but we want inter-router
 				ediv.attributes.filter(function( attr ) { return attr.name == 'role'})[0].selected = 'inter-router';
@@ -1819,8 +1934,8 @@ var QDR = (function (QDR) {
 				var res = listener.results[i];
 				var role = QDRService.valFor(attrs, res, 'role');
 				if (role == 'inter-router') {
-					ediv.attributes.filter(function( attr ) { return attr.name == 'addr'})[0].value =
-						QDRService.valFor(attrs, res, 'addr')
+					ediv.attributes.filter(function( attr ) { return attr.name == 'host'})[0].value =
+						QDRService.valFor(attrs, res, 'host')
 					ediv.attributes.filter(function( attr ) { return attr.name == 'port'})[0].value =
 						QDRService.valFor(attrs, res, 'port')
 					break;
@@ -1829,7 +1944,7 @@ var QDR = (function (QDR) {
 			if (link.__data__.right) {
 				// connectors from other nodes need to connect to the new router's listener addr:port
    				ediv.attributes.filter(function (attr) { return attr.name == 'port'})[0].value = myPort;
-   				ediv.attributes.filter(function (attr) { return attr.name == 'addr'})[0].value = myAddr;
+   				ediv.attributes.filter(function (attr) { return attr.name == 'host'})[0].value = myAddr;
 
 				separatedEntities.push(ediv)
 			}
@@ -1845,9 +1960,6 @@ var QDR = (function (QDR) {
 
 		})
 
-        $scope.cancel = function () {
-            $uibModalInstance.close()
-        };
 		$scope.testPattern = function (attr) {
 			if (attr.rawtype == 'path')
 				return /^(\/)?([^/\0]+(\/)?)+$/;
@@ -1859,7 +1971,7 @@ var QDR = (function (QDR) {
 		$scope.attributeType = '';
 		$scope.attributeRequired = '';
 		$scope.attributeUnique = '';
-		$scope.active = 'container'
+		$scope.active = 'router'
 		$scope.fieldsetDivs = "/fieldsetDivs.html"
 		$scope.setActive = function (tabName) {
 			$scope.active = tabName
@@ -1879,8 +1991,11 @@ var QDR = (function (QDR) {
         // handle the download button click
         // copy the dialog's values to the original node
         $scope.download = function () {
-	        $uibModalInstance.close({entities: $scope.entities, annotations: annotations});
+	        dialog.close({entities: $scope.entities, annotations: annotations});
         }
+        $scope.cancel = function () {
+            dialog.close()
+        };
 
 		$scope.selectAnnotationTab = function (tabName) {
             var tabs = $( "#tabs" ).tabs();
@@ -1902,8 +2017,7 @@ var QDR = (function (QDR) {
 
   });
 
-QDR.module.controller("QDR.DownloadDialogController", function($scope, QDRService, $templateCache, $window, $uibModalInstance, results) {
-
+QDR.module.controller("QDR.DownloadDialogController", function($scope, QDRService, $templateCache, $window, dialog, results) {
 		var result = results.entities;
 		var annotations = results.annotations;
 		var annotationKeys = Object.keys(annotations);
@@ -2002,26 +2116,19 @@ QDR.module.controller("QDR.DownloadDialogController", function($scope, QDRServic
 
         // handle the download button click
         $scope.download = function () {
-			var blob = new Blob([$scope.output], { type: 'text/plain' });
-	        var downloadLink = angular.element('<a></a>');
-	        downloadLink.attr('href', ($window.URL || $window.webkitURL).createObjectURL(blob));
-	        downloadLink.attr('download', $scope.newRouterName);
-	        downloadLink[0].click();
+			var output = $scope.output + "\n\n"
+			var blob = new Blob([output], { type: 'text/plain;charset=utf-16' });
+			saveAs(blob, $scope.newRouterName);
         }
 
 		$scope.downloadPart = function (part) {
 			var linkName = part.link.__data__.source.name + 'additional.conf';
-			var blob = new Blob([part.output], { type: 'text/plain' });
-	        var downloadLink = angular.element('<a></a>');
-	        downloadLink.attr('href', ($window.URL || $window.webkitURL).createObjectURL(blob));
-	        downloadLink.attr('download', linkName);
-	        downloadLink[0].click();
-
-			QDR.log.debug(part);
+			var blob = new Blob([part.output], { type: 'text/plain;charset=utf-16' });
+			saveAs(blob, linkName);
 		}
 
 		$scope.done = function () {
-	        $uibModalInstance.close();
+	        dialog.close();
 		}
 });
 

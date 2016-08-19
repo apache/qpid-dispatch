@@ -20,7 +20,7 @@ under the License.
  * @module QDR
  * @main QDR
  *
- * The main entrypoint for the QDR module
+ * The main entry point for the QDR module
  *
  */
 var QDR = (function(QDR) {
@@ -32,6 +32,8 @@ var QDR = (function(QDR) {
    * The name of this plugin
    */
   QDR.pluginName = "QDR";
+  QDR.pluginRoot = "";
+  QDR.isStandalone = true;
 
   /**
    * @property log
@@ -49,7 +51,6 @@ var QDR = (function(QDR) {
   QDR.srcBase = "plugin/";
   QDR.templatePath = QDR.srcBase + "html/";
   QDR.cssPath = QDR.srcBase + "css/";
-
   /**
    * @property SETTINGS_KEY
    * @type {string}
@@ -65,8 +66,7 @@ var QDR = (function(QDR) {
    *
    * This plugin's angularjs module instance
    */
-  QDR.module = angular.module(QDR.pluginName, ['ngAnimate', 'ngResource', 'ngRoute', 'ui.grid', 'ui.grid.selection',
-    'ui.grid.autoResize', 'jsonFormatter', 'ui.bootstrap', 'ui.slider'/*, 'minicolors' */]);
+  QDR.module = angular.module(QDR.pluginName, ['ngResource', 'ngGrid', 'ui.bootstrap', 'ui.slider'/*, 'minicolors' */]);
 
   // set up the routing for this plugin
   QDR.module.config(function($routeProvider) {
@@ -92,18 +92,16 @@ var QDR = (function(QDR) {
       .when('/connect', {
           templateUrl: QDR.templatePath + 'qdrConnect.html'
         })
+      .otherwise({
+          templateUrl: QDR.templatePath + 'qdrConnect.html'
+        })
   });
 
-  QDR.module.config(['$compileProvider', function ($compileProvider) {
-	var cur = $compileProvider.aHrefSanitizationWhitelist();
-    $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|ftp|mailto|file|blob):/);
-	cur = $compileProvider.aHrefSanitizationWhitelist();
-  }]);
-
-	QDR.module.config(function (JSONFormatterConfigProvider) {
-		// Enable the hover preview feature
-        JSONFormatterConfigProvider.hoverPreviewEnabled = true;
-	});
+	QDR.module.config(function ($compileProvider) {
+		var cur = $compileProvider.urlSanitizationWhitelist();
+		$compileProvider.urlSanitizationWhitelist(/^\s*(https?|ftp|mailto|file|blob):/);
+		cur = $compileProvider.urlSanitizationWhitelist();
+	})
 
 	QDR.module.filter('to_trusted', ['$sce', function($sce){
           return function(text) {
@@ -117,6 +115,30 @@ var QDR = (function(QDR) {
 		};
 	});
 
+	QDR.module.filter('Pascalcase', function () {
+		return function (str) {
+			if (!str)
+				return "";
+			return str.replace(/(\w)(\w*)/g,
+			function(g0,g1,g2){return g1.toUpperCase() + g2.toLowerCase();});
+		}
+	})
+
+    QDR.module.filter('safePlural', function () {
+	        return function (str) {
+				var es = ['x', 'ch', 'ss', 'sh']
+				for (var i=0; i<es.length; ++i) {
+					if (str.endsWith(es[i]))
+						return str + 'es'
+				}
+				if (str.endsWith('y'))
+					return str.substr(0, str.length-2) + 'ies'
+				if (str.endsWith('s'))
+					return str;
+				return str + 's'
+	        }
+	})
+
 	QDR.logger = function ($log) {
 		var log = $log;
 
@@ -129,37 +151,57 @@ var QDR = (function(QDR) {
 	}
     // one-time initialization happens in the run function
     // of our module
-	QDR.module.run( ["$rootScope", "$location", "$log", "QDRService", "QDRChartService",  function ($rootScope, $location, $log, QDRService, QDRChartService) {
+	QDR.module.run( ["$rootScope", '$route', '$timeout', "$location", "$log", "QDRService", "QDRChartService",  function ($rootScope, $route, $timeout, $location, $log, QDRService, QDRChartService) {
 		QDR.log = new QDR.logger($log);
-		QDR.log.debug("QDR.module.run()")
+		QDR.log.info("*************creating Dispatch Console************");
+		var curPath = $location.path()
+		var org = curPath.substr(1)
+		if (org && org.length > 0 && org !== "connect") {
+			$location.search('org', org)
+		} else {
+			$location.search('org', null)
+		}
 
 		QDRService.initProton();
 		var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);
-		var lastLocation = localStorage[QDR.LAST_LOCATION];
-		if (!angular.isDefined(lastLocation))
-			lastLocation = "/overview";
-
 		QDRService.addConnectAction(function() {
 			QDRChartService.init(); // initialize charting service after we are connected
 		});
 		if (settings && settings.autostart) {
+			QDRService.addDisconnectAction( function () {
+				$timeout(function () {
+					var lastLocation = localStorage[QDR.LAST_LOCATION] || "/overview";
+					org = lastLocation.substr(1)
+					$location.path("/connect");
+					$location.search('org', org)
+				})
+			})
 			QDRService.addConnectAction(function() {
-				$location.path(lastLocation);
-				$location.replace();
-				$rootScope.$apply();
+	            var searchObject = $location.search();
+				// the redirect will be handled by QDRService when connected
+	            if (searchObject.org) {
+					return;
+	            }
+				// there was no org= parameter, so redirect to last known location
+	            $timeout(function () {
+					var lastLocation = localStorage[QDR.LAST_LOCATION] || "/overview";
+					$location.path(lastLocation);
+				})
 			});
 			QDRService.connect(settings);
         } else {
-			setTimeout(function () {
-	            $location.url('/connect')
-				$location.replace();
-			}, 100)
+            $timeout(function () {
+				$location.path('/connect')
+				$location.search('org', org)
+            })
         }
 
         $rootScope.$on('$routeChangeSuccess', function() {
-            localStorage[QDR.LAST_LOCATION] = $location.$$path;
+            var path = $location.path();
+			if (path !== "/connect") {
+	            localStorage[QDR.LAST_LOCATION] = path;
+			}
         });
-
 
 	}]);
 
@@ -195,3 +237,18 @@ var QDR = (function(QDR) {
 
   return QDR;
 }(QDR || {}));
+
+var Folder = (function () {
+    function Folder(title) {
+        this.title = title;
+		this.children = [];
+		this.folder = true;
+    }
+    return Folder;
+})();
+var Leaf = (function () {
+    function Leaf(title) {
+        this.title = title;
+    }
+    return Leaf;
+})();

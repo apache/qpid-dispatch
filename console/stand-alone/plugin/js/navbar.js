@@ -34,39 +34,38 @@ var QDR = (function (QDR) {
         content: '<i class="icon-cogs"></i> Connect',
         title: "Connect to a router",
         isValid: function () { return true; },
-        href: "#connect"
+        href: "#" + QDR.pluginRoot + "/connect"
     },
     {
-        content: '<i class="fa fa-home"></i> Overview',
+        content: '<i class="icon-home"></i> Overview',
         title: "View router overview",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#/overview"
+        href: "#" + QDR.pluginRoot + "/overview"
+      },
+    {
+        content: '<i class="icon-list "></i> Entities',
+        title: "View the attributes of the router entities",
+        isValid: function (QDRService) { return QDRService.isConnected(); },
+        href: "#" + QDR.pluginRoot + "/list"
       },
     {
         content: '<i class="icon-star-empty"></i> Topology',
         title: "View router network topology",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#/topology"
-      },
-    {
-        content: '<i class="icon-list "></i> List',
-        title: "View router nodes as a list",
-        isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#/list"
+        href: "#" + QDR.pluginRoot + "/topology"
       },
     {
         content: '<i class="icon-bar-chart"></i> Charts',
         title: "View charts",
-        isValid: function (QDRService, $location) { return QDRService.isConnected(); },
+        isValid: function (QDRService, $location) { return QDRService.isConnected() && QDR.isStandalone; },
         href: "#/charts"
     },
     {
         content: '<i class="icon-align-left"></i> Schema',
         title: "View dispatch schema",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#/schema",
+        href: "#" + QDR.pluginRoot + "/schema",
         right: true
-
       }
   ];
   /**
@@ -78,28 +77,16 @@ var QDR = (function (QDR) {
    * The controller for this plugin's navigation bar
    *
    */
-  QDR.module.controller("QDR.NavBarController", ['$scope', '$sce', 'QDRService', 'QDRChartService', '$location', function($scope, $sce, QDRService, QDRChartService, $location) {
-
-	QDR.log.debug("navbar started with location.url: " + $location.url());
-	QDR.log.debug("navbar started with window.location.pathname : " + window.location.pathname);
-
-    if ($location.path().startsWith("/topology")
-    && !QDRService.isConnected()) {
-      $location.path("/connect");
-    }
-
-    if ($location.path().startsWith("/connect")
-    && QDRService.isConnected()) {
-      $location.path("/topology");
-    }
-
+  QDR.module.controller("QDR.NavBarController", ['$scope', 'QDRService', 'QDRChartService', '$routeParams', '$location', function($scope, QDRService, QDRChartService, $routeParams, $location) {
     $scope.breadcrumbs = QDR.breadcrumbs;
-
     $scope.isValid = function(link) {
       return link.isValid(QDRService, $location);
     };
 
     $scope.isActive = function(href) {
+		// highlight the connect tab if we are on the root page
+		if (($location.path() === QDR.pluginRoot) && (href.split("#")[1] === QDR.pluginRoot + "/connect"))
+			return true
         return href.split("#")[1] == $location.path();
     };
 
@@ -112,7 +99,29 @@ var QDR = (function (QDR) {
             return QDRChartService.charts.some(function (c) { return c.dashboard });
         }
     }
+
+	$scope.isDashboardable = function () {
+		return  ($location.path().indexOf("schema") < 0 && $location.path().indexOf("connect") < 0);
+	}
+
+	$scope.addToDashboardLink = function () {
+		var href = "#" + $location.path();
+		var size = angular.toJson({
+                size_x: 2,
+                size_y: 2
+              });
+
+        var routeParams = angular.toJson($routeParams);
+        var title = "Dispatch Router";
+	    return "/hawtio/#/dashboard/add?tab=dashboard" +
+	          "&href=" + encodeURIComponent(href) +
+	          "&routeParams=" + encodeURIComponent(routeParams) +
+	          "&title=" + encodeURIComponent(title) +
+	          "&size=" + encodeURIComponent(size);
+    };
+
   }]);
+
 
   return QDR;
 

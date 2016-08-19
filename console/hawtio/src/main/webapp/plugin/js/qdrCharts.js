@@ -27,16 +27,21 @@ var QDR = (function (QDR) {
    * Controller that handles displaying a chart on the hawtio dashboard page. Only one chart is displayed per instance of this
    * page
    */
-  QDR.module.controller("QDR.ChartsController", function($scope, QDRService, QDRChartService, $dialog, $location, localStorage, $routeParams) {
+  QDR.module.controller("QDR.ChartsController", function($scope, QDRService, QDRChartService, $dialog, $location, $routeParams) {
 
 	var updateTimer = null;
 
 	if (!QDRService.connected && !$routeParams.chid) {
 		// we are not connected. we probably got here from a bookmark or manual page reload
-		$location.path("/" + QDR.pluginName + "/connect")
-        $location.search('org', "charts");
+		QDRService.redirectWhenConnected("charts");
 		return;
 	}
+	// we are currently connected. setup a handler to get notified if we are ever disconnected
+	QDRService.addDisconnectAction( function () {
+		QDRService.redirectWhenConnected("charts")
+		$scope.$apply();
+	})
+
 
     $scope.svgCharts = [];
     // create an svg object for each chart
@@ -74,7 +79,7 @@ var QDR = (function (QDR) {
 	// the link that the above login prompt will display
 	$scope.loginHref = QDR.pluginName + "/connect";
 
-	// call by ng-init in the html when the page is loaded
+	// called by ng-init in the html when the page is loaded
 	$scope.chartsLoaded = function () {
         $scope.svgCharts.forEach(function (svgChart) {
             QDRChartService.sendChartRequest(svgChart.chart.request(), true);
@@ -169,7 +174,7 @@ var QDR = (function (QDR) {
   });
 
 	// the edit chart properties dialog
-  QDR.module.controller("QDR.ChartDialogController", function($scope, QDRChartService, $location, dialog, $rootScope, localStorage, chart, updateTick) {
+  QDR.module.controller("QDR.ChartDialogController", function($scope, QDRChartService, $location, dialog, $rootScope, chart, updateTick) {
 
 		UI.colors[0] = "#cbe7f3"
 		UI.colors[1] = "#058dc7"
@@ -178,7 +183,7 @@ var QDR = (function (QDR) {
         var dialogSvgChart = null;
         $scope.svgDivId = "dialogChart";    // the div id for the svg chart
 
-		var updateTimer = null;
+	var updateTimer = null;
         $scope.chart = chart;  // the underlying chart object from the dashboard
         $scope.dialogChart = $scope.chart.copy(); // the chart object for this dialog
         $scope.userTitle = $scope.chart.title();
@@ -191,8 +196,9 @@ var QDR = (function (QDR) {
         })
 		$scope.$watch("dialogChart.areaColor", function (newValue, oldValue) {
 			if (newValue !== oldValue) {
-				if (dialogSvgChart)
+				if (dialogSvgChart) {
                     dialogSvgChart.tick($scope.svgDivId);
+                }
 			}
 		})
 		$scope.$watch("dialogChart.lineColor", function (newValue, oldValue) {
@@ -219,8 +225,8 @@ var QDR = (function (QDR) {
 			QDRChartService.unRegisterChart($scope.dialogChart);     // remove the chart
 		}
 		$scope.okClick = function () {
-			cleanup();
-	        dialog.close();
+		    cleanup();
+	            dialog.close();
 	    };
 
 		var initRateSlider = function () {
@@ -283,9 +289,9 @@ var QDR = (function (QDR) {
         // update the chart on the popup dialog
         var updateDialogChart = function () {
             // draw the chart using the current data
-            if (dialogSvgChart)
+            if (dialogSvgChart) {
                 dialogSvgChart.tick($scope.svgDivId);
-
+			}
             // draw the chart again in 1 second
 			var updateRate = localStorage['updateRate'] ? localStorage['updateRate'] : 5000;
 			if (updateTimer)
@@ -301,6 +307,16 @@ var QDR = (function (QDR) {
                 return;
             }
             dialogSvgChart = new QDRChartService.AreaChart($scope.dialogChart);
+			$('input[name=lineColor]').val($scope.dialogChart.lineColor);
+			$('input[name=areaColor]').val($scope.dialogChart.areaColor);
+			$('input[name=areaColor]').on('input', function (e) {
+				$scope.dialogChart.areaColor = $(this).val();
+                updateDialogChart()
+			})
+			$('input[name=lineColor]').on('input', function (e) {
+				$scope.dialogChart.lineColor = $(this).val();
+                updateDialogChart()
+			})
 			if (updateTimer)
 				clearTimeout(updateTimer);
             updateDialogChart();

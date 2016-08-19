@@ -55,10 +55,10 @@ under the License.
             <tab ng-hide="$parent.chart.aggregate()" heading="Colors">
                 <legend>Chart colors</legend>
                 <div class="colorPicker">
-                    <div class="colorText">Area ({{dialogChart.areaColor}}):</div><div hawtio-color-picker="dialogChart.areaColor"></div>
+                    <label>Line: <input id="lineColor" name="lineColor" type="color" /></label>
                 </div>
                 <div class="colorPicker">
-                    <div class="colorText">Line ({{dialogChart.lineColor}}):</div><div hawtio-color-picker="dialogChart.lineColor"></div>
+                    <label>Area: <input id="areaColor" name="areaColor" type="color" /></label>
                 </div>
                 <div style="clear:both;"> </div>
             </tab>

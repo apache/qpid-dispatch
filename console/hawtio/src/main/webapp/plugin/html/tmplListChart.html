@@ -1,0 +1,12 @@
+<div class="modal-header">
+    <h3 class="modal-title">Chart {{chart.attr() | humanify}}</h3>
+</div>
+<div class="modal-body">
+    <div id="{{svgDivId}}" class="d3Chart"></div>
+</div>
+<div class="modal-footer">
+        <span>
+            <div class="btn btn-success hdash-button" ng-click="addHChart()" title="Add this chart to a dashboard"><a ng-href="{{addToDashboardLink()}}"><i class="icon-share"></i> Add this chart to a dashboard</a></div>
+        </span>
+    <button class="btn btn-primary" type="button" ng-click="ok()">Close</button>
+</div>

@@ -1,0 +1,1 @@
+../../../../../../stand-alone/plugin/js/qdrListChart.js

@@ -21,7 +21,7 @@ under the License.
 }
 
 * {
-    font-family: sans-serif;
+    font-family: 'Open Sans', sans-serif;
 }
 
 a:focus {
@@ -2004,8 +2004,8 @@ div#main div ul.nav li a.nav-primary .caret {
   font-size: 20px;
 }
 
-#main {
-  margin-top: 44px !important;
+div#main.qdr {
+  margin-top: 40px !important;
 }
 
 dd.file-list {
@@ -3344,7 +3344,7 @@ fs-donut svg g text.units {
 
 /* hack to work around strange tabset behavior */
 tabset > .tabbable > ul {
-  display: none;
+/*  display: none; */
 }
 /* end hack */
 
@@ -4503,4 +4503,225 @@ div#main div ul.nav {
     background-image: linear-gradient(to bottom, #ffffff, #f2f2f2);
     background-repeat: repeat-x;
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.1);
+}
+
+ul.dynatree-container {
+  background: inherit;
+}
+ul.dynatree-container li {
+  background: inherit;
+}
+
+i.expandable-indicator {
+  color: #666;
+}
+
+span.dynatree-expander {
+  color: #728271;
+}
+
+span.dynatree-icon {
+  color: #EECA7C;
+}
+span:not(.dynatree-has-children) .dynatree-icon:before {
+  color: gray;
+}
+
+span.dynatree-empty,
+span.dynatree-vline,
+span.dynatree-connector,
+span.dynatree-expander,
+span.dynatree-icon,
+span.dynatree-checkbox,
+span.dynatree-radio,
+span.dynatree-drag-helper-img,
+#dynatree-drop-marker
+{
+    font-family: FontAwesome;
+    font-weight: normal;
+    font-style: normal;
+    display: inline-block;
+    text-decoration: inherit;
+    background-image: none;
+    vertical-align: middle;
+}
+
+.dynatree-checkbox {
+    color: #888888
+}
+
+/* Dynatree checkbox */
+span.dynatree-checkbox:before
+{
+    margin-top: 1px;
+    background-position: 0 0;
+    cursor: pointer;
+    content: "";
+}
+
+span.dynatree-checkbox:before:hover
+{
+    background-position: 0 0;
+    content: "";
+}
+
+.dynatree-selected span.dynatree-checkbox:before
+{
+    margin-top: 1px;
+    background-position: 0 0;
+    cursor: pointer;
+    content: "\f00c";
+}
+
+.dynatree-selected span.dynatree-checkbox:before:hover
+{
+    background-position: 0 0;
+    content: "\f00c";
+}
+
+
+.dynatree-expander {
+    color: #888888
+}
+
+/* Dynatree expander */
+span.dynatree-expander:before
+{
+    margin-top: 1px;
+    background-position: 0 0;
+    cursor: pointer;
+    content: "\f054";
+}
+
+span.dynatree-expander:before:hover
+{
+    background-position: 0 0;
+    content: "\f054";
+}
+
+.dynatree-exp-e span.dynatree-expander:before,  /* Expanded, not delayed, not last sibling */
+.dynatree-exp-ed span.dynatree-expander:before,  /* Expanded, delayed, not last sibling */
+.dynatree-exp-el span.dynatree-expander:before,  /* Expanded, not delayed, last sibling */
+.dynatree-exp-edl span.dynatree-expander:before  /* Expanded, delayed, last sibling */
+{
+    background-position: 0 0;
+    content: "\f078";
+}
+.dynatree-exp-e span.dynatree-expander:before:hover,  /* Expanded, not delayed, not last sibling */
+.dynatree-exp-ed span.dynatree-expander:before:hover,  /* Expanded, delayed, not last sibling */
+.dynatree-exp-el span.dynatree-expander:before:hover,  /* Expanded, not delayed, last sibling */
+.dynatree-exp-edl span.dynatree-expander:before:hover  /* Expanded, delayed, last sibling */
+{
+    background-position: 0 0;
+    content: "\f0da";
+}
+
+/* closed folder */
+.dynatree-ico-cf span.dynatree-icon:before {
+    background-position: 0 0;
+    content: "\f07b";
+}
+
+/* open folder */
+.dynatree-ico-ef span.dynatree-icon:before {
+    background-position: 0 0;
+    content: "\f07c";
+}
+
+span.dynatree-icon:before {
+    background-position: 0px 0px;
+    content: "\f013";
+}
+
+span.dynatree-folder a {
+    font-weight: normal;
+}
+
+div.treeContainer ul.dynatree-container {
+	border: 0px;
+}
+
+.pane {
+    position: fixed;
+    bottom: 0;
+    top: 70px;
+    height: auto;
+    width: 300px;
+}
+
+.pane>.pane-wrapper {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+.pane.left .pane-viewport {
+    margin-left: 10px;
+    right: 5px;
+    margin-right: 0;
+}
+
+.pane-viewport {
+    border-top: 1px solid #d4d4d4;
+}
+.pane-viewport {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    overflow: auto;
+    margin-right: 10px;
+}
+
+.pane-content {
+    float: none;
+    position: static;
+}
+.pane-content {
+    width: auto;
+    height: auto;
+}
+
+.pane.left .pane-bar {
+    border-right: 1px solid #d4d4d4;
+}
+.pane.left .pane-bar, .pane.right {
+    right: 0;
+}
+.pane-bar {
+    background: white;
+}
+.pane-bar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    cursor: ew-resize;
+    height: 100%;
+}
+
+div#overview-controller, div#list-controller {
+	padding-left: 300px;
+}
+
+.ngViewport.ng-scope{
+    height: auto !important;
+    overflow-y: hidden;
+}
+
+.ngTopPanel.ng-scope, .ngHeaderContainer{
+    width: auto !important;
+}
+
+.qdr-overview.pane.left, .qdr-attributes.pane.left, .qdr-topology.pane.left {
+	top: 70px;
+}
+
+div.chartContainer {
+	width: auto;
+}
+
+div.chartOptions div.duration {
+    width: 30em !important;
 }

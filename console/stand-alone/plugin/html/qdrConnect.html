@@ -36,66 +36,44 @@ under the License.
                   </div>
               </div>
               <div class="connect-column connect-form">
-                  <div class="span2 offset4">
-                      <!-- <div simple-form name="settings" data="formConfig" entity="formEntity"></div> -->
-                      <form class="form-horizontal no-bottom-margin" novalidate name="settings" action="" method="post">
-                          <fieldset>
-                              <div class="control-group">
-                                  <label class="control-label">Address: </label>
-                                  <div class="controls">
-                                      <input type="text" description="Router address" ng-model="formEntity.address" name="address" required="required" autofocus="autofocus" class="ng-pristine ng-valid ng-valid-required">
-                                      <span class="help-block"></span>
-                                  </div>
+                  <form class="hawtio-form form-horizontal no-bottom-margin" novalidate ng-submit="connect()" name="settings">
+                      <fieldset>
+                          <div class="control-group" ng-show="true">
+                              <label class="strong control-label">Address: </label>
+                              <div class="controls">
+                                  <input tabindex="1" type="text" ng-model="formEntity.address" placeholder="localhost" name="address" autofocus="autofocus" class="ng-pristine ng-valid ng-valid-required"></div>
+                          </div>
+                          <div class="control-group" ng-show="true">
+                              <label tabindex="-1" class="control-label" title="Ports to connect to, by default 5673">Port: </label>
+                              <div class="controls">
+                                  <input tabindex="2" posint type="number" placeholder="5673" tooltip="Ports to connect to, by default 5673" ng-model="formEntity.port" name="port" title="Ports to connect to, by default 5673">
+                                  <span ng-show="settings.port.$error.range">Must be 1 through 65535</span>
                               </div>
-                              <div class="control-group">
-                                  <label class="control-label" title="Port to connect to, by default 5673">Port: </label>
-                                  <div class="controls">
-                                      <input type="number" description="Router port" tooltip="Ports to connect to, by default 5672" ng-model="formEntity.port" name="port" title="Port to connect to, by default 5673" class="ng-scope ng-pristine ng-valid ng-valid-number">
-                                      <span class="help-block"></span>
-                                  </div>
-                              </div>
-                              <!--
-                                              <div class="control-group">
-                                                  <label class="control-label">Username: </label>
-                                                  <div class="controls">
-                                                      <input type="text" description="User Name" ng-model="formEntity.username" name="username" class="ng-pristine ng-valid">
-                                                      <span class="help-block"></span>
-                                                  </div>
-                                              </div>
-                                              <div class="control-group">
-                                                  <label class="control-label">Password: </label>
-                                                  <div class="controls">
-                                                      <input type="password" description="Password" ng-model="formEntity.password" name="password" class="ng-pristine ng-valid">
-                                                      <span class="help-block"></span>
-                                                  </div>
-                                              </div>
-                              -->
-                              <div class="control-group">
-                                  <label class="control-label" title="Whether or not the connection should be started as soon as you navigate to the console">Autostart: </label>
-                                  <div class="controls">
-                                      <input type="checkbox" description="Connect at startup" tooltip="Whether or not the connection should be started as soon as you navigate to the console" ng-model="formEntity.autostart" name="autostart" title="Whether or not the connection should be started as soon as you log into hawtio" class="ng-scope ng-pristine ng-valid">
-                                      <span class="help-block"></span>
-                                  </div>
-                              </div>
-                              <input type="submit" style="position: absolute; left: -9999px; width: 1px; height: 1px;">
-                          </fieldset>
-                      </form>
-                      <p></p>
-                      <div>
-                          <button class="btn btn-primary pull-right" ng-disabled="settings.$invalid" ng-click="connect()">{{buttonText()}}</button>
-                      </div>
-                  </div>
+                          </div>
+                          <div class="control-group" ng-show="true">
+                              <label tabindex="-1" class="control-label" title="Whether or not the connection should be started as soon as you log into hawtio">Autostart: </label>
+                              <div class="controls">
+                                  <input tabindex="3" type="checkbox" tooltip="Whether or not the connection should be started as soon as you log into hawtio" ng-model="formEntity.autostart" name="autostart" title="Whether or not the connection should be started as soon as you log into hawtio"
+                                         class="ng-scope ng-pristine ng-valid"></div>
+                          </div>
+                          <input tabindex="-1" type="submit" style="position: absolute; left: -9999px; width: 1px; height: 1px;">
+                          <p></p>
+                          <div>
+                              <button type="submit" tabindex="4" class="btn btn-primary pull-right" ng-disabled="settings.$invalid">{{buttonText()}}</button>
+                              <!-- <button tabindex="-1" class="btn btn-secondary pull-right" ng-click="connect1()">Debug</button> -->
+                          </div>
+                      </fieldset>
+                  </form>
               </div>
           </div>
       </div>
 
-  <div class="span4 centered" ng-show="connecting">
-    <i class="icon-spin icon-spinner icon-4x"></i>
-    <p>Please wait, connecting now...</p>
-  </div>
-  <div class="centered" ng-show="connectionError">
-    <p>There was a connection error: {{connectionErrorText}}</p>
-  </div>
+      <div class="centered" ng-show="connecting">
+        <i class="icon-spin icon-spinner icon-4x"></i>
+        <p>Please wait, connecting now...</p>
+      </div>
+      <div class="centered" ng-show="connectionError">
+        <p>There was a connection error: {{connectionErrorText}}</p>
+      </div>
 
-  <div class="span4"></div>
 </div>

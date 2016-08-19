@@ -22,8 +22,8 @@ under the License.
 var QDR = (function(QDR) {
 
     // The QDR chart service handles periodic gathering data for charts and displaying the charts
-    QDR.module.factory("QDRChartService", ['$rootScope', 'QDRService', '$http', '$resource',
-    function($rootScope, QDRService, $http, $resource) {
+    QDR.module.factory("QDRChartService", ['$rootScope', 'QDRService', '$http', '$resource', '$location',
+    function($rootScope, QDRService, $http, $resource, $location) {
 
         var instance = 0;   // counter for chart instances
         var bases = [];
@@ -56,26 +56,32 @@ var QDR = (function(QDR) {
 
         // Object that represents a visible chart
         // There can be multiple of these per ChartBase (eg. one rate  and one value chart)
-        function Chart(name, attr, request) {
+        function Chart(opts, request) { //name, attr, cinstance, request) {
 
-            var base = findBase(name, attr, request);
+            var base = findBase(opts.name, opts.attr, request);
             if (!base) {
-                base = new ChartBase(name, attr, request);
+                base = new ChartBase(opts.name, opts.attr, request);
                 bases.push(base);
             }
             this.base = base;
-            this.instance = instance++;
+            this.instance = angular.isDefined(opts.instance) ? opts.instance : ++instance;
             this.dashboard = false;     // is this chart on the dashboard page
-            this.type = "value";        // value or rate
-            this.rateWindow = 1000;     // calculate the rate of change over this time interval. higher == smother graph
-            this.areaColor = "#c0e0ff"; // the chart's area color when not an empty string
-            this.lineColor = "#4682b4"; // the chart's line color when not an empty string
-            this.visibleDuration = 10;  // number of minutes of data to show (<= base.duration)
+            this.hdash = false;         // is this chart on the hawtio dashboard page
+            this.hreq = false;          // has this hdash chart been requested
+            this.type = opts.type ? opts.type: "value";        // value or rate
+            this.rateWindow = opts.rateWindow ? opts.rateWindow : 1000;     // calculate the rate of change over this time interval. higher == smother graph
+            this.areaColor = "#cbe7f3"; // the chart's area color when not an empty string
+            this.lineColor = "#058dc7"; // the chart's line color when not an empty string
+            this.visibleDuration = opts.visibleDuration ? opts.visibleDuration : 10;  // number of minutes of data to show (<= base.duration)
             this.userTitle = null;      // user title overrides title()
 
             // generate a unique id for this chart
             this.id = function () {
-                var key = this.request().nodeId + this.request().entity + this.name() + this.attr() + "_" + this.instance;
+                var name = this.name()
+                var nameparts = name.split('/');
+                if (nameparts.length == 2)
+                    name = nameparts[1];
+                var key = QDRService.nameFromId(this.request().nodeId) + this.request().entity + name + this.attr() + "_" + this.instance + "_" + (this.request().aggregate ? "1" : "0");
                 // remove all characters except letters,numbers, and _
                 return key.replace(/[^\w]/gi, '')
             }
@@ -87,6 +93,9 @@ var QDR = (function(QDR) {
                 o.lineColor = this.lineColor;
                 o.visibleDuration = this.visibleDuration;
                 o.userTitle = this.userTitle;
+				o.dashboard = this.dashboard;
+				o.hdash = this.hdash;
+			    o.instance = this.instance;
                 this.base.copyProps(o);
             }
             this.name = function (_) {
@@ -109,6 +118,11 @@ var QDR = (function(QDR) {
                 this.base.request.entity = _;
                 return this;
             }
+			this.aggregate = function (_) {
+				if (!arguments.length) return this.base.request.aggregate;
+				this.base.request.aggregate = _;
+				return this;
+			}
             this.request = function (_) {
                 if (!arguments.length) return this.base.request;
                 this.base.request = _;
@@ -145,8 +159,16 @@ var QDR = (function(QDR) {
                 return this;
             }
             this.copy = function () {
-                var chart = self.registerChart(this.nodeId(), this.entity(),
-                            this.name(), this.attr(), this.interval(), true, this.base.request.aggregate);
+                var chart = self.registerChart({
+                    nodeId: this.nodeId(),
+                    entity: this.entity(),
+                    name:   this.name(),
+                    attr:   this.attr(),
+                    interval: this.interval(),
+                    forceCreate: true,
+                    aggregate: this.aggregate(),
+                    hdash: this.hdash
+                })
                 chart.type = this.type;
                 chart.areaColor = this.areaColor;
                 chart.lineColor = this.lineColor;
@@ -167,17 +189,17 @@ var QDR = (function(QDR) {
         }
 
         // Object that represents the management request to fetch and store data for multiple charts
-        function ChartRequest(nodeId, entity, name, attr, interval, aggregate) {
-            this.duration = 10;         // number of minutes to keep the data
-            this.nodeId = nodeId;       // eg amqp:/_topo/0/QDR.A/$management
-            this.entity = entity;       // eg .router.address
+        function ChartRequest(opts) { //nodeId, entity, name, attr, interval, aggregate) {
+            this.duration = opts.duration || 10;    // number of minutes to keep the data
+            this.nodeId = opts.nodeId;              // eg amqp:/_topo/0/QDR.A/$management
+            this.entity = opts.entity;              // eg .router.address
 			// sorted since the responses will always be sorted
-			this.aggregate = aggregate;   // list of nodeIds for aggregate charts
-            this.datum = {};            // object containing array of arrays for each attr
-                                        // like {attr1: [[date,value],[date,value]...], attr2: [[date,value]...]}
+			this.aggregate = opts.aggregate;        // list of nodeIds for aggregate charts
+            this.datum = {};                        // object containing array of arrays for each attr
+                                                    // like {attr1: [[date,value],[date,value]...], attr2: [[date,value]...]}
 
-            this.interval = interval;   // number of milliseconds between updates to data
-            this.setTimeoutHandle = null;   // used to cancel the next request
+            this.interval = opts.interval || 1000;  // number of milliseconds between updates to data
+            this.setTimeoutHandle = null;           // used to cancel the next request
             // copy the savable properties to an object
 
 			this.data = function (name, attr) {
@@ -193,7 +215,7 @@ var QDR = (function(QDR) {
 					this.datum[name][attr] = [];
 				}
 			}
-			this.addAttrName(name, attr)
+			this.addAttrName(opts.name, opts.attr)
 
             this.copyProps = function (o) {
                 o.nodeId = this.nodeId;
@@ -232,6 +254,8 @@ var QDR = (function(QDR) {
 				return Object.keys(attrs);
 			}
         };
+
+        // Below here are the properties and methods available on QDRChartService
         var self = {
             charts: [],         // list of charts to gather data for
             chartRequests: [],  // the management request info (multiple charts can be driven off of a single request
@@ -251,12 +275,15 @@ var QDR = (function(QDR) {
 				return ret;
 			},
 
-            findCharts: function (name, attr, nodeId, entity) {
+            findCharts: function (opts) { //name, attr, nodeId, entity, hdash) {
+                if (!opts.hdash)
+                    opts.hdash = false; // rather than undefined
                 return self.charts.filter( function (chart) {
-                    return (chart.name() == name &&
-                            chart.attr() == attr &&
-                            chart.nodeId() == nodeId &&
-                            chart.entity() == entity)
+                    return (chart.name() == opts.name &&
+                            chart.attr() == opts.attr &&
+                            chart.nodeId() == opts.nodeId &&
+                            chart.entity() == opts.entity &&
+                            chart.hdash == opts.hdash)
                 });
             },
 
@@ -290,22 +317,24 @@ var QDR = (function(QDR) {
                 }
             },
 
-            registerChart: function (nodeId, entity, name, attr, interval, forceCreate, aggregate) {
-                var request = self.findChartRequest(nodeId, entity, aggregate);
+            registerChart: function (opts) { //nodeId, entity, name, attr, interval, instance, forceCreate, aggregate, hdash) {
+                var request = self.findChartRequest(opts.nodeId, opts.entity, opts.aggregate);
                 if (request) {
                     // add any new attr or name to the list
-                    request.addAttrName(name, attr)
+                    request.addAttrName(opts.name, opts.attr)
                 } else {
                     // the nodeId/entity did not already exist, so add a new request and chart
-                    QDR.log.debug("added new request: " + nodeId + " " + entity);
-                    request = new ChartRequest(nodeId, entity, name, attr, interval, aggregate);
+                    QDR.log.debug("added new request: " + opts.nodeId + " " + opts.entity);
+                    request = new ChartRequest(opts); //nodeId, entity, name, attr, interval, aggregate);
                     self.chartRequests.push(request);
                     self.startCollecting(request);
                 }
-                var charts = self.findCharts(name, attr, nodeId, entity);
+                var charts = self.findCharts(opts); //name, attr, nodeId, entity, hdash);
                 var chart;
-                if (charts.length == 0 || forceCreate) {
-                    chart = new Chart(name, attr, request);
+                if (charts.length == 0 || opts.forceCreate) {
+                    if (!opts.use_instance && opts.instance)
+                        delete opts.instance;
+                    chart = new Chart(opts, request) //opts.name, opts.attr, opts.instance, request);
                     self.charts.push(chart);
                 } else {
                     chart = charts[0];
@@ -317,6 +346,16 @@ var QDR = (function(QDR) {
             // if all attrs are gone for this request, remove the request
             unRegisterChart: function (chart) {
                 // remove the chart
+
+				// TODO: how do we remove charts that were added to the hawtio dashboard but then removed?
+				// We don't get a notification that they were removed. Instead, we could just stop sending
+				// the request in the background and only send the request when the chart's tick() event is triggered
+                //if (chart.hdash) {
+				//	chart.dashboard = false;
+				//	self.saveCharts();
+                //    return;
+                //}
+
                 for (var i=0; i<self.charts.length; ++i) {
                     var c = self.charts[i];
                     if (chart.equals(c)) {
@@ -337,6 +376,8 @@ var QDR = (function(QDR) {
                         }
                     }
                 }
+				self.saveCharts();
+
             },
 
             stopCollecting: function (request) {
@@ -350,16 +391,29 @@ var QDR = (function(QDR) {
                 // Using setTimeout instead of setInterval because the response may take longer than interval
                 request.setTimeoutHandle = setTimeout(self.sendChartRequest, request.interval, request);
             },
+			shouldRequest: function (request) {
+				// see if any of the charts associated with this request have either dialog, dashboard, or hreq
+				return self.charts.some( function (chart) {
+					return (chart.dashboard || chart.hreq) || (!chart.dashboard && !chart.hdash);
+				});
+			},
             // send the request
-            sendChartRequest: function (request) {
+            sendChartRequest: function (request, once) {
+				if (!once && !self.shouldRequest(request)) {
+	                request.setTimeoutHandle = setTimeout(self.sendChartRequest, request.interval, request)
+					return;
+				}
+
                 // ensure the response has the name field so we can associate the response values with the correct chart
                 var attrs = request.attrs();
                 attrs.push("name");
 
 	            // this is called when the response is received
 				var saveResponse = function (nodeId, entity, response) {
-	                QDR.log.debug("got chart results for " + nodeId + " " + entity);
-	                // records an array that has data for all names
+					if (!response || !response.attributeNames)
+						return;
+	                //QDR.log.debug("got chart results for " + nodeId + " " + entity);
+	                // records is an array that has data for all names
 	                var records = response.results;
 	                if (!records)
 	                    return;
@@ -397,27 +451,52 @@ var QDR = (function(QDR) {
 				}
 				if (request.aggregate) {
 					var nodeList = QDRService.nodeIdList()
-	                QDR.log.debug("sent multiple chart request for " + nodeList + " " + request.entity, + " " + attrs + " " + request.nodeId);
 					QDRService.getMultipleNodeInfo(nodeList, request.entity, attrs, saveResponse, request.nodeId);
 				} else {
-	                QDR.log.debug("sent chart request for " + request.nodeId + " " + request.entity + " " + attrs);
                     QDRService.getNodeInfo(request.nodeId, request.entity, attrs, saveResponse);
 				}
-                // it is now safe to send another request
+                // it is now safe to schedule another request
+                if (once)
+                    return;
                 request.setTimeoutHandle = setTimeout(self.sendChartRequest, request.interval, request)
             },
 
             numCharts: function () {
-                return self.charts.length;
+                return self.charts.filter( function (chart) { return chart.dashboard }).length;
+                //return self.charts.length;
             },
 
             isAttrCharted: function (nodeId, entity, name, attr) {
-                var charts = self.findCharts(name, attr, nodeId, entity);
+                var charts = self.findCharts({
+                    name: name,
+                    attr: attr,
+                    nodeId: nodeId,
+                    entity: entity
+                })
                 // if any of the matching charts are on the dashboard page, return true
                 return charts.some(function (chart) {
                     return (chart.dashboard) });
             },
 
+			addHDash: function (chart) {
+				chart.hdash = true;
+				self.saveCharts();
+				/*
+				if (!chart.hdash) {
+                    var dashChart = self.registerChart(chart.nodeId(), chart.entity(),
+                            chart.name(), chart.attr(), chart.interval(), true, chart.aggregate(), true);
+					dashChart.dashboard = true;
+					dashChart.hdash = false;
+					chart.dashboard = false;
+					chart.hdash = true;
+					self.saveCharts();
+				}
+				*/
+			},
+			delHDash: function (chart) {
+				chart.hdash = false;
+				self.saveCharts();
+			},
             addDashboard: function (chart) {
                 chart.dashboard = true;
                 self.saveCharts();
@@ -434,7 +513,7 @@ var QDR = (function(QDR) {
                 self.charts.forEach(function (chart) {
                     var minChart = {};
                     // don't save chart unless it is on the dashboard
-                    if (chart.dashboard) {
+                    if (chart.dashboard || chart.hdash) {
                         chart.copyProps(minChart);
                         minCharts.push(minChart);
                     }
@@ -469,8 +548,53 @@ var QDR = (function(QDR) {
                     })
                 }
             },
+            loadCharts: function () {
+                var charts = angular.fromJson(localStorage["QDRCharts"]);
+                if (charts) {
+					// get array of known ids
+                    var nodeList = QDRService.nodeList().map( function (node) {
+                        return node.id;
+                    })
+                    charts.forEach(function (chart) {
+                        // if this chart is not in the current list of nodes, skip
+                        if (nodeList.indexOf(chart.nodeId) >= 0) {
+	                        if (!angular.isDefined(chart.instance)) {
+	                            chart.instance = ++instance;
+	                        }
+	                        if (chart.instance >= instance)
+	                            instance = chart.instance + 1;
+	                        if (!chart.duration)
+	                            chart.duration = 10;
+	                        if (chart.nodeList)
+	                            chart.aggregate = true;
+	                        if (!chart.hdash)
+	                            chart.hdash = false;
+	                        if (!chart.dashboard)
+	                            chart.dashboard = false;
+	                        if (!chart.hdash && !chart.dashboard)
+	                            chart.dashboard = true;
+							if (chart.hdash && chart.dashboard)
+								chart.dashboard = false;
+							chart.forceCreate = true;
+							chart.use_instance = true;
+	                        var newChart = self.registerChart(chart); //chart.nodeId, chart.entity, chart.name, chart.attr, chart.interval, true, chart.aggregate);
+	                        newChart.dashboard = chart.dashboard;
+	                        newChart.hdash = chart.hdash;
+	                        newChart.hreq = false;
+	                        newChart.type = chart.type;
+	                        newChart.rateWindow = chart.rateWindow;
+	                        newChart.areaColor = chart.areaColor ? chart.areaColor : "#cbe7f3";
+	                        newChart.lineColor = chart.lineColor ? chart.lineColor : "#058dc7";
+	                        newChart.duration(chart.duration);
+	                        newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 10;
+	                        if (chart.userTitle)
+	                            newChart.title(chart.userTitle);
+						}
+                    })
+                }
+            },
 
-            AreaChart: function (chart, url) {
+            AreaChart: function (chart) {
                 if (!chart)
                     return;
 
@@ -478,11 +602,7 @@ var QDR = (function(QDR) {
 				var stacked = chart.request().aggregate;
                 this.chart = chart; // reference to underlying chart
                 this.svgchart = null;
-                if (url)
-                    url = "/dispatch" + url;
-                else
-                    url = "";
-                this.url = url;
+                this.url = $location.absUrl();
 
                 // callback function. called by svgchart when binding data
                 // the variable 'this' refers to the svg and not the AreaChart,
@@ -600,7 +720,8 @@ var QDR = (function(QDR) {
                                 this.chart.name(),
                                 QDRService.nameFromId(this.chart.nodeId()),
                                 this.chart.entity(),
-                                stacked)
+                                stacked,
+                                this.chart.visibleDuration)
                             .tooltipGenerator(tooltipGenerator);
 
                     }
@@ -619,7 +740,7 @@ var QDR = (function(QDR) {
                 }
             },
 
-            timeSeriesStackedChart: function (id, width, height, attrName, name, node, entity, stacked) {
+            timeSeriesStackedChart: function (id, width, height, attrName, name, node, entity, stacked, visibleDuration) {
 				var margin = {top: 20, right: 18, bottom: 10, left: 15}
 				// attrs that can be changed after the chart is created by using
 				// chart.attr(<attrname>, <attrvalue>);
@@ -633,18 +754,19 @@ var QDR = (function(QDR) {
 							type: "value",      // value or rate
 							areaColor: "",      // can be set for non-stacked charts
 							lineColor: "",      // can be set for non-stacked charts
-							zoom: false         // should the y-axis range start at 0 or the min data value
+							zoom: false,         // should the y-axis range start at 0 or the min data value
+							visibleDuration: visibleDuration
 				}
 				var width = width - margin.left - margin.right,
-					height = height - margin.top - margin.bottom
+					height = height - margin.top - margin.bottom,
 					yAxisTransitionDuration = 0
 
 				var x = d3.time.scale()
 			    var y = d3.scale.linear()
 			          .rangeRound([height, 0]);
-                // The x-accessor for the path generator; xScale ∘ xValue.
+                // The x-accessor for the path generator; xScale * xValue.
 				var X = function (d) { return x(d[0]) }
-                // The x-accessor for the path generator; yScale ∘ yValue.
+                // The x-accessor for the path generator; yScale * yValue.
                 var Y = function Y(d) { return y(d[1]) }
 
                 var xAxis = d3.svg.axis().scale(x).orient("bottom")
@@ -672,7 +794,6 @@ var QDR = (function(QDR) {
 			          .y(function (d) { return d.value; });
 
 			    var area = d3.svg.area()
-
 				if (stacked) {
 			        area.interpolate("cardinal")
 			          .x(function (d) { return x(d.date); })
@@ -691,7 +812,22 @@ var QDR = (function(QDR) {
 			        .append("g")
 			          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-			    var clip = svg.append("defs").append("svg:clipPath")
+				sv.append("linearGradient")
+				      .attr("id", id) //"temperature-gradient")
+				      .attr("gradientUnits", "userSpaceOnUse")
+				      .attr("x1", 0).attr("y1", height *.5 )
+				      .attr("x2", 0).attr("y2", height * 1.2)
+				    .selectAll("stop")
+				      .data([
+				        {offset: "0%", opacity: 1},
+				        {offset: "100%", opacity: 0}
+				      ])
+				    .enter().append("stop")
+				      .attr("offset", function(d) { return d.offset; })
+				      .attr("stop-opacity", function(d) { return d.opacity; })
+				      .attr("stop-color", function(d) { return "#cbe7f3" });
+/*
+      			var clip = svg.append("defs").append("svg:clipPath")
 			        .attr("id", "clip")
 			        .append("svg:rect")
 			        .attr("id", "clip-rect")
@@ -699,7 +835,7 @@ var QDR = (function(QDR) {
 			        .attr("y", "0")
 			        .attr("width", width)
 			        .attr("height", height);
-
+*/
 				// we want all our areas to appear before the axiis
 				svg.append("g")
 					.attr("class", "section-container")
@@ -741,8 +877,11 @@ var QDR = (function(QDR) {
 				focus.append("foreignObject")
 					.attr('class', 'svg-tooltip')
 					.append("xhtml:span");
-
-
+/*
+				var transition = d3.select({}).transition()
+				    .duration(2000)
+				    .ease("linear");
+*/
                 function chart(selection) {
                     selection.each(function(data) {
 
@@ -769,12 +908,15 @@ var QDR = (function(QDR) {
 					}
 
                     var extent = d3.extent(data, function(d) {return d[0];});
+                    //var points = data.length;
+					//var futureDate = new Date(data[points-1][0].getTime() - attrs.visibleDuration * 60 * 1000);
+                    //extent = [futureDate, data[points-1][0]]
                     x.domain(extent)
                       .range([0, width - margin.left - margin.right]);
 
                     // Update the y-scale.
-                    var min = attrs.zoom ? 0 : d3.min(data, function(d) {return d[1]});
-                    var max = d3.max(data, function(d) {return d[1]});
+                    var min = attrs.zoom ? 0 : d3.min(data, function(d) {return d[1]}) *.99;
+                    var max = d3.max(data, function(d) {return d[1]}) * 1.01;
                     var mean = d3.mean(data, function(d) {return d[1]});
                     //max = max * 1.01;
                     var diff = (max - min);
@@ -839,7 +981,6 @@ var QDR = (function(QDR) {
 
 						series.exit().remove()
 
-						//series.exit().remove()
 						// each time the data is updated, update each section
 						container.selectAll(".series .streamPath").data(seriesArr)
 							.attr("d", function (d) { return area(d.values); })
@@ -847,23 +988,30 @@ var QDR = (function(QDR) {
 	                    var series = container.selectAll(".series")
 	                      .data([data], function(d) { return d; })
 
-	                      series.enter().append("g")
-	                        .append("path")
-	                        .attr("class", "area")
-						  series.enter().append("path")
-	                        .attr("class", "line")
+						var g = series.enter().append("g")
+							.attr("class", "series")
 
+	                    g.append("path")
+	                        .attr("class", "area")
+							.style("fill", "url(" + attrs.url + "#" + id + ") " + attrs.areaColor) //temperature-gradient)")
+                            .attr("d", area.y0(y.range()[0]))
+                            .attr("transform", null);
+
+	                    g.append("path")
+	                        .attr("class", "line")
+							.style("stroke", attrs.lineColor)
+                            .attr("d", line)
+/*
+debugger;
+						g.transition()
+							.duration(2000)
+                            .attr("transform", "translate(-4)");
+*/
 						series.exit().remove()
 
-                        // Update the area path.
-                        container.select(".area").data([data])
-                          .attr("d", area.y0(y.range()[0]))
-						  .style("fill", attrs.areaColor);
+						sv.selectAll("stop")
+					        .attr("stop-color", attrs.areaColor)
 
-                        //Update the line path.
-                        container.select(".line").data([data])
-                          .attr("d", line)
-						  .style("stroke", attrs.lineColor)
 					}
                     // Update the x-axis.
                     svg.select(".x.axis")

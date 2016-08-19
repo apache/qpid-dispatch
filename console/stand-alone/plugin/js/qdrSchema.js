@@ -21,9 +21,50 @@ under the License.
  */
 var QDR = (function (QDR) {
 
-    QDR.module.controller("QDR.SchemaController", ['$scope', 'QDRService', function($scope, QDRService) {
+    QDR.module.controller("QDR.SchemaController", ['$scope', '$location', 'QDRService', function($scope, $location, QDRService) {
+		if (!QDRService.connected) {
+			QDRService.redirectWhenConnected("schema")
+			return;
+		}
+		// we are currently connected. setup a handler to get notified if we are ever disconnected
+		QDRService.addDisconnectAction( function () {
+			QDRService.redirectWhenConnected("schema")
+			$scope.$apply();
+		})
 
-        $scope.schema = QDRService.schema;
+        var keys2kids = function (tree, obj) {
+
+			if (obj === Object(obj)) {
+				tree.children = []
+	            for (var key in obj) {
+	                var kid = {title: key}
+	                if (obj[key] === Object(obj[key])) {
+	                    kid.isFolder = true
+	                    keys2kids(kid, obj[key])
+	                } else {
+						kid.title += (': ' + JSON.stringify(obj[key],null,2))
+	                }
+	                tree.children.push(kid)
+	            }
+			}
+        }
+
+		var tree = []
+		for (var key in QDRService.schema) {
+			var kid = {title: key}
+			var val = QDRService.schema[key]
+			if (val === Object(val))
+				keys2kids(kid, val)
+			else
+				kid.title += (': ' + JSON.stringify(val,null,2))
+
+			tree.push(kid);
+		}
+        $('#schema').dynatree({
+			minExpandLevel: 2,
+            children: tree
+        })
+
 
     }]);
 

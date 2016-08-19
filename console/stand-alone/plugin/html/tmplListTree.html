@@ -1,0 +1,17 @@
+<div class="qdr-attributes pane left" position="left" width="300">
+    <div class="pane-wrapper">
+        <div class="pane-header-wrapper">
+        </div>
+        <div class="pane-viewport">
+            <div class="pane-content">
+                <div class="treeContainer">
+                    <div class="tree-header"><select ng-options="node as node.name for node in nodes" ng-model="currentNode" ng-change="selectNode(currentNode)"></select></div>
+                    <div id="entityTree" onSelect="onTreeSelected" onRoot="onRootReady" hideRoot="true"></div>
+                    <div ng-init="treeReady()"></div>
+                </div>
+            </div>
+        </div>
+        <div class="pane-bar"></div>
+    </div>
+</div>
+<ng-include src="'listGrid.html'"></ng-include>
