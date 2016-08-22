@@ -174,6 +174,7 @@ struct qd_server_t {
     int                       pause_next_sequence;
     int                       pause_now_serving;
     qd_signal_handler_cb_t    signal_handler;
+    bool                      signal_handler_running;
     void                     *signal_context;
     int                       pending_signal;
     qd_connection_list_t      connections;
