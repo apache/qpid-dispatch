@@ -683,13 +683,15 @@ static void handle_signals_LH(qd_server_t *qd_server)
 {
     int signum = qd_server->pending_signal;
 
-    if (signum) {
+    if (signum && !qd_server->signal_handler_running) {
+        qd_server->signal_handler_running = true;
         qd_server->pending_signal = 0;
         if (qd_server->signal_handler) {
             sys_mutex_unlock(qd_server->lock);
             qd_server->signal_handler(qd_server->signal_context, signum);
             sys_mutex_lock(qd_server->lock);
         }
+        qd_server->signal_handler_running = false;
     }
 }
 
@@ -1338,15 +1340,16 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 
     DEQ_INIT(qd_server->work_queue);
     DEQ_INIT(qd_server->pending_timers);
-    qd_server->a_thread_is_waiting = false;
-    qd_server->threads_active      = 0;
-    qd_server->pause_requests      = 0;
-    qd_server->threads_paused      = 0;
-    qd_server->pause_next_sequence = 0;
-    qd_server->pause_now_serving   = 0;
-    qd_server->pending_signal      = 0;
-    qd_server->heartbeat_timer     = 0;
-    qd_server->next_connection_id  = 1;
+    qd_server->a_thread_is_waiting    = false;
+    qd_server->threads_active         = 0;
+    qd_server->pause_requests         = 0;
+    qd_server->threads_paused         = 0;
+    qd_server->pause_next_sequence    = 0;
+    qd_server->pause_now_serving      = 0;
+    qd_server->pending_signal         = 0;
+    qd_server->signal_handler_running = false;
+    qd_server->heartbeat_timer        = 0;
+    qd_server->next_connection_id     = 1;
 
     qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 
