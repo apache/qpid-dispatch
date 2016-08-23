@@ -118,7 +118,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
             dlv->peer = in_dlv;
             in_dlv->peer = dlv;
 
-            dlv->ref_count = 1;
+            sys_atomic_init(&dlv->ref_count, 1);
             qdr_delivery_incref(in_dlv);
         }
     }
@@ -162,7 +162,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
 
     DEQ_INSERT_TAIL(link->undelivered, dlv);
     dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
-    dlv->ref_count++; // We have the lock, don't use the incref function
+    sys_atomic_inc(&dlv->ref_count);
 
     //
     // If the link isn't already on the links_with_deliveries list, put it there.

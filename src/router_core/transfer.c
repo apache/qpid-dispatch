@@ -44,7 +44,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_i
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    dlv->ref_count      = 1;    // referenced by the action
+    sys_atomic_init(&dlv->ref_count, 1); // referenced by the action
     dlv->link           = link;
     dlv->msg            = msg;
     dlv->to_addr        = 0;
@@ -66,7 +66,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    dlv->ref_count      = 1;    // referenced by the action
+    sys_atomic_init(&dlv->ref_count, 1); // referenced by the action
     dlv->link           = link;
     dlv->msg            = msg;
     dlv->to_addr        = addr;
@@ -90,7 +90,7 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    dlv->ref_count = 1;    // referenced by the action
+    sys_atomic_init(&dlv->ref_count, 1); // referenced by the action
     dlv->link      = link;
     dlv->msg       = msg;
     dlv->settled   = settled;
@@ -248,15 +248,12 @@ void *qdr_delivery_get_context(qdr_delivery_t *delivery)
     return delivery->context;
 }
 
-
 void qdr_delivery_incref(qdr_delivery_t *delivery)
 {
     qdr_connection_t *conn = delivery->link ? delivery->link->conn : 0;
 
     if (!!conn) {
-        sys_mutex_lock(conn->work_lock);
-        delivery->ref_count++;
-        sys_mutex_unlock(conn->work_lock);
+        sys_atomic_inc(&delivery->ref_count);
     }
 }
 
@@ -267,12 +264,9 @@ static void qdr_delivery_decref_internal(qdr_delivery_t *delivery, bool lock_hel
     bool              delete = false;
     
     if (!!conn) {
-        if (!lock_held)
-            sys_mutex_lock(conn->work_lock);
-        assert(delivery->ref_count > 0);
-        delete = --delivery->ref_count == 0;
-        if (!lock_held)
-            sys_mutex_unlock(conn->work_lock);
+        uint32_t ref_count = sys_atomic_dec(&delivery->ref_count);
+        assert(ref_count > 0);
+        delete = (ref_count - 1) == 0;
     }
 
     if (delete) {
@@ -803,7 +797,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 
     sys_mutex_lock(link->conn->work_lock);
     if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
-        dlv->ref_count++; // We have the lock, don't use the incref function
+        sys_atomic_inc(&dlv->ref_count);
         qdr_add_delivery_ref(&link->updated_deliveries, dlv);
         qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
         activate = true;

@@ -20,6 +20,7 @@
 #include <qpid/dispatch/connection_manager.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
+#include <qpid/dispatch/atomic.h>
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
 #include "server_private.h"
@@ -33,16 +34,16 @@ static char* HOST_ADDR_DEFAULT = "127.0.0.1";
 
 struct qd_config_ssl_profile_t {
     DEQ_LINKS(qd_config_ssl_profile_t);
-    uint64_t   identity;
-    char      *name;
-    char      *ssl_password;
-    char      *ssl_trusted_certificate_db;
-    char      *ssl_trusted_certificates;
-    char      *ssl_uid_format;
-    char      *ssl_display_name_file;
-    char      *ssl_certificate_file;
-    char      *ssl_private_key_file;
-    int       ref_count;
+    uint64_t     identity;
+    char        *name;
+    char        *ssl_password;
+    char        *ssl_trusted_certificate_db;
+    char        *ssl_trusted_certificates;
+    char        *ssl_uid_format;
+    char        *ssl_display_name_file;
+    char        *ssl_certificate_file;
+    char        *ssl_private_key_file;
+    sys_atomic_t ref_count;
 };
 
 struct qd_config_listener_t {
@@ -224,9 +225,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             config->ssl_uid_format = (*ssl_profile)->ssl_uid_format;
             config->ssl_display_name_file = (*ssl_profile)->ssl_display_name_file;
         }
-        sys_mutex_lock(qd->connection_manager->ssl_profile_lock);
-        (*ssl_profile)->ref_count++;
-        sys_mutex_unlock(qd->connection_manager->ssl_profile_lock);
+        sys_atomic_inc(&(*ssl_profile)->ref_count);
     }
 
     free(stripAnnotations);
@@ -254,9 +253,8 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     ssl_profile->ssl_trusted_certificates   = qd_entity_opt_string(entity, "trustedCerts", 0); CHECK();
     ssl_profile->ssl_uid_format             = qd_entity_opt_string(entity, "uidFormat", 0); CHECK();
     ssl_profile->ssl_display_name_file      = qd_entity_opt_string(entity, "displayNameFile", 0); CHECK();
-    sys_mutex_lock(qd->connection_manager->ssl_profile_lock);
-    ssl_profile->ref_count                  = 0;
-    sys_mutex_unlock(qd->connection_manager->ssl_profile_lock);
+
+    sys_atomic_init(&ssl_profile->ref_count, 0);
     qd_log(cm->log_source, QD_LOG_INFO, "Created SSL Profile with name %s ", ssl_profile->name);
     return ssl_profile;
 
@@ -416,9 +414,7 @@ void qd_config_connector_free(qd_connection_manager_t *cm, qd_config_connector_t
         qd_server_connector_free(cc->connector);
 
     if (cc->ssl_profile) {
-        sys_mutex_lock(cm->ssl_profile_lock);
-        cc->ssl_profile->ref_count--;
-        sys_mutex_unlock(cm->ssl_profile_lock);
+        sys_atomic_inc(&cc->ssl_profile->ref_count);
     }
 
     free(cc);
@@ -434,9 +430,7 @@ void qd_config_listener_free(qd_connection_manager_t *cm, qd_config_listener_t *
     }
 
     if (cl->ssl_profile) {
-        sys_mutex_lock(cm->ssl_profile_lock);
-        cl->ssl_profile->ref_count--;
-        sys_mutex_unlock(cm->ssl_profile_lock);
+        sys_atomic_dec(&cl->ssl_profile->ref_count);
     }
 
     free(cl);
@@ -445,12 +439,9 @@ void qd_config_listener_free(qd_connection_manager_t *cm, qd_config_listener_t *
 
 bool qd_config_ssl_profile_free(qd_connection_manager_t *cm, qd_config_ssl_profile_t *ssl_profile)
 {
-    sys_mutex_lock(cm->ssl_profile_lock);
-    if (ssl_profile->ref_count != 0) {
-        sys_mutex_unlock(cm->ssl_profile_lock);
+    if (sys_atomic_get(&ssl_profile->ref_count) != 0) {
         return false;
     }
-    sys_mutex_unlock(cm->ssl_profile_lock);
 
     DEQ_REMOVE(cm->config_ssl_profiles, ssl_profile);
 
