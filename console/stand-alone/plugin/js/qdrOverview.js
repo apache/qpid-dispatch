@@ -834,19 +834,12 @@ var QDR = (function (QDR) {
 			}
 			return stateClassMap[row.entity.adminStatus]
 		}
+
 		$scope.quiesceLink = function (row, $event) {
-			function gotMethodResponse (nodeName, entity, response, context) {
-				var statusCode = context.message.application_properties.statusCode;
-				if (statusCode < 200 || statusCode >= 300) {
-					Core.notification('error', context.message.application_properties.statusDescription);
-				}
-			}
-			var nodeId = row.entity.nodeId;
-			var entity = row.entity.type;
-			var attributes = {adminStatus: 'disabled', name: row.entity.name, identity: row.entity.identity};
-			QDRService.sendMethod(nodeId, entity, attributes, "UPDATE", gotMethodResponse)
+			QDRService.quiesceLink(row.entity.nodeId, row.entity.name);
 			$event.stopPropagation()
 		}
+
 		$scope.quiesceLinkDisabled = function (row) {
 			return (row.entity.operStatus !== 'up' && row.entity.operStatus !== 'down')
 		}

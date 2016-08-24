@@ -341,6 +341,19 @@ var QDR = (function(QDR) {
 
 			return self.isConsole(conn)
 		},
+
+		quiesceLink: function (nodeId, name) {
+			function gotMethodResponse (nodeName, entity, response, context) {
+				var statusCode = context.message.application_properties.statusCode;
+				if (statusCode < 200 || statusCode >= 300) {
+					Core.notification('error', context.message.application_properties.statusDescription);
+				}
+			}
+			var attributes = {adminStatus: 'disabled', name: name};
+			self.sendMethod(nodeId, "router.link", attributes, "UPDATE", gotMethodResponse)
+		},
+
+
       /*
        * send the management messages that build up the topology
        *

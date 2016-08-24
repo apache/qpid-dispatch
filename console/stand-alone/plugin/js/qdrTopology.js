@@ -131,7 +131,7 @@ var QDR = (function (QDR) {
 	                    opacity: 1,
 	                    left: (left + 20) + "px",
 	                    top:  (mouseY + 20 + $(document).scrollTop()) + "px",
-	                    height: (visibleLen + 1) * 30 + "px", // +1 for the header row
+	                    height: ((visibleLen + 1) * 30) + 40 + "px", // +1 for the header row
 	                    'overflow-y': obj.entity.linkData > 10 ? 'scroll' : 'hidden'})
 			},
 			updateState: function (entity) {
@@ -205,18 +205,7 @@ var QDR = (function (QDR) {
 			return stateClassMap[row.entity.adminStatus]
 		}
 		$scope.quiesceLink = function (row) {
-			function gotMethodResponse (nodeName, entity, response, context) {
-				var statusCode = context.message.application_properties.statusCode;
-				if (statusCode < 200 || statusCode >= 300) {
-					Core.notification('error', context.message.application_properties.statusDescription);
-				} else {
-
-				}
-			}
-			var nodeId = row.entity.nodeId;
-			var entity = row.entity.type;
-			var attributes = {adminStatus: 'disabled', name: row.entity.name, identity: row.entity.identity};
-			QDRService.sendMethod(nodeId, entity, attributes, "UPDATE", gotMethodResponse)
+			QDRService.quiesceLink(row.entity.nodeId, row.entity.name);
 		}
 		$scope.quiesceLinkDisabled = function (row) {
 			return (row.entity.operStatus !== 'up' && row.entity.operStatus !== 'down')
@@ -1585,7 +1574,7 @@ var QDR = (function (QDR) {
 
 	            d3.select('#multiple_details')
 	                .style({
-	                    height: (normals.length + 1) * 30 + "px",
+	                    height: ((normals.length + 1) * 30) + 40 + "px",
 	                    'overflow-y': normals.length > 10 ? 'scroll' : 'hidden'
 					})
 			}
