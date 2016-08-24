@@ -598,7 +598,7 @@ var QDR = (function(QDR) {
 				name:       $scope.selectedRecordName,
 				attr:       rowEntity.name,
 				type:       "rate",
-				rateWindow: udateInterval,
+				rateWindow: updateInterval,
 				visibleDuration: 1,
 				forceCreate: true,
 				aggregate:   true});

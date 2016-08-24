@@ -289,10 +289,10 @@ var QDR = (function(QDR) {
 			return self.isConsole({properties: properties, connectionId: connectionId, nodeType: nodeType, key: key})
 		},
 		isConsole: function (d) {
-			// TODO: use connection properties when available
+			// use connection properties if available
 			if (d.properties.console_identifier == 'Dispatch console')
 				return true;
-			// until connection properties can difinitively identify consoles:
+			// do it the hard way:
 			var connid = d.connectionId;
 			if (connid && d.nodeType === 'normal') {
 				// find all the endpoint links for this router that have this connid
@@ -323,6 +323,24 @@ var QDR = (function(QDR) {
 			return false;
 		},
 
+		flatten: function (attributes, result) {
+			var flat = {}
+			attributes.forEach( function (attr, i) {
+				flat[attr] = result[i]
+			})
+			return flat;
+		},
+		isConsoleLink: function (link) {
+			// find the connection for this link
+			var conns = self.topology.nodeInfo()[link.nodeId]['.connection']
+			var connIndex = conns.attributeNames.indexOf("identity")
+			var linkCons = conns.results.filter ( function (conn) {
+				return conn[connIndex] === link.connectionId;
+			})
+			var conn = self.flatten(conns.attributeNames, linkCons[0]);
+
+			return self.isConsole(conn)
+		},
       /*
        * send the management messages that build up the topology
        *
@@ -684,12 +702,8 @@ var QDR = (function(QDR) {
 				operation:  operation
 			}
 			var ent = self.schema.entityTypes[entity];
-			var fullyQualifiedType = ent.fullyQualifiedType;
-			if (fullyQualifiedType) {
-				application_properties.type = fullyQualifiedType
-			}
-			else
-				application_properties.type = entity;
+			var fullyQualifiedType = ent ? ent.fullyQualifiedType : entity;
+			application_properties.type = fullyQualifiedType || entity;
 			if (attrs.name)
 				application_properties.name = attrs.name;
 			var msg = {

@@ -203,17 +203,26 @@ var QDR = (function (QDR) {
 				disabled: 'btn-danger'
 			}
 			return stateClassMap[row.entity.adminStatus]
-			//return stateClassMap[$scope.quiesceState[row.entity.connectionId].linkStates[row.entity.identity]];
 		}
 		$scope.quiesceLink = function (row) {
-			var state = row.entity.adminStatus === 'enabled' ? 'disabled' : 'enabled';
-			$scope.quiesceState[row.entity.connectionId].linkStates[row.entity.identity] = state;
+			function gotMethodResponse (nodeName, entity, response, context) {
+				var statusCode = context.message.application_properties.statusCode;
+				if (statusCode < 200 || statusCode >= 300) {
+					Core.notification('error', context.message.application_properties.statusDescription);
+				} else {
+
+				}
+			}
+			var nodeId = row.entity.nodeId;
+			var entity = row.entity.type;
+			var attributes = {adminStatus: 'disabled', name: row.entity.name, identity: row.entity.identity};
+			QDRService.sendMethod(nodeId, entity, attributes, "UPDATE", gotMethodResponse)
 		}
 		$scope.quiesceLinkDisabled = function (row) {
-			return false;
+			return (row.entity.operStatus !== 'up' && row.entity.operStatus !== 'down')
 		}
 		$scope.quiesceLinkText = function (row) {
-			return row.entity.adminStatus === 'disabled' ? "Revive" : "Quiesce";
+			return row.entity.operStatus === 'down' ? "Revive" : "Quiesce";
 		}
 		$scope.linkDetails = {
 			data: 'linkData',
@@ -222,7 +231,13 @@ var QDR = (function (QDR) {
 				field: 'adminStatus',
                 cellTemplate: "titleCellTemplate.html",
 				headerCellTemplate: 'titleHeaderCellTemplate.html',
-				displayName: 'Admin stat'
+				displayName: 'Admin state'
+			},
+			{
+				field: 'operStatus',
+                cellTemplate: "titleCellTemplate.html",
+				headerCellTemplate: 'titleHeaderCellTemplate.html',
+				displayName: 'Oper state'
 			},
 			{
 				field: 'dir',
@@ -244,22 +259,15 @@ var QDR = (function (QDR) {
 
 			},
 			{
-				field: 'undeliveredCount',
-				displayName: 'Undelivered',
+				field: 'uncounts',
+				displayName: 'Outstanding',
 				headerCellTemplate: 'titleHeaderCellTemplate.html',
 				cellClass: 'grid-values'
 			},
 			{
-				field: 'unsettledCount',
-				displayName: 'Unsettled',
-				headerCellTemplate: 'titleHeaderCellTemplate.html',
-				cellClass: 'grid-values'
-			}/*,
-
-			{
 				cellClass: 'gridCellButton',
 				cellTemplate: '<button title="{{quiesceLinkText(row)}} this link" type="button" ng-class="quiesceLinkClass(row)" class="btn" ng-click="quiesceLink(row)" ng-disabled="quiesceLinkDisabled(row)">{{quiesceLinkText(row)}}</button>'
-			}*/
+			}
 			]
 		}
 
@@ -1524,11 +1532,17 @@ var QDR = (function (QDR) {
 										l.owningAddr = l.owningAddr.substr(1)
 
 								l.deliveryCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'deliveryCount'));
-								l.undeliveredCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'undeliveredCount'));
-								l.unsettledCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'unsettledCount'));
+								l.uncounts = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'undeliveredCount') +
+																QDRService.valFor(links.attributeNames, link, 'unsettledCount'))
+								//l.undeliveredCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'undeliveredCount'));
+								//l.unsettledCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'unsettledCount'));
 								l.adminStatus = QDRService.valFor(links.attributeNames, link, 'adminStatus');
+								l.operStatus = QDRService.valFor(links.attributeNames, link, 'operStatus');
 								l.identity = QDRService.valFor(links.attributeNames, link, 'identity')
 								l.connectionId = QDRService.valFor(links.attributeNames, link, 'connectionId')
+								l.nodeId = n.key
+								l.type = QDRService.valFor(links.attributeNames, link, 'type')
+								l.name = QDRService.valFor(links.attributeNames, link, 'name')
 
 								// TODO: remove this fake quiescing/reviving logic when the routers do the work
 								initConnState(n.connectionId)

@@ -20,16 +20,6 @@ under the License.
 
 <script type="text/ng-template" id="overviewGrid.html">
     <div class="gridDetails" ng-include="template.url"></div>
-    <div id="linkFilter">
-        <div class="filter-title">
-            <h6>Filter by link type</h6>
-            <button ng-click="filterClose()" type="button" class="btn btn-primary filter-close">x</button>
-        </div>
-        <select ng-init="currentLinkFilter = 'endpoint'" ng-model="currentLinkFilter" ng-change="setLinkFilter(currentLinkFilter)">
-            <option value="">All link types</option>
-            <option value="endpoint" selected>Endpoints only</option>
-        </select>
-    </div>
 </script>
 <!-- the following scripts are content that gets loaded into the above div that has the temple.url -->
 <script type="text/ng-template" id="routers.html">
@@ -64,7 +54,16 @@ under the License.
 </script>
 <script type="text/ng-template" id="links.html">
     <div class="row-fluid">
-        <h3>Links</h3>
+        <h3>Links <button type='button' ng-click="filterToggle()" class='btn btn-secondary btn-filter'>Filter</button></h3>
+        <div id="linkFilter">
+            <div class="filter-title">
+                <h6>Filter links</h6>
+                <button ng-click="filterToggle()" type="button" class="btn btn-primary filter-close">x</button>
+            </div>
+            <div class="formLine"><label for="hideConsoles">Hide console links</label><input name="hideConsoles" id="hideConsoles" type="checkbox" ng-model="filter.hideConsoles"/></div>
+            <div class="formLine"><label for="endpointOnly">Endpoints only</label><input name="linkTypes" id="endpointOnly" type="radio" ng-model="filter.endpointsOnly" value="true"/>
+                <label for="allLinks">All link types</label><input name="linkTypes" id="allLinks" type="radio" ng-model="filter.endpointsOnly" value="false"/></div>
+        </div>
         <div class="gridStyle" ng-grid="linksGrid"></div>
     </div>
 </script>
@@ -93,7 +92,6 @@ under the License.
         </div>
         <div ng-show="currentMode.id === 'links'" class="selectedItems">
             <h3>External links for connection {{connection.data.title}}</h3>
-            <!-- <button title="{{quiesceState.buttonText}} links" type="button" ng-hide="quiesceHide()" ng-class="quiesceClass()" class="btn" ng-click="quiesceAllClicked()" ng-disabled="quiesceState.buttonDisabled">{{quiesceState.buttonText}}</button> -->
             <div class="gridStyle noHighlight" ng-grid="connectionLinksGrid"></div>
         </div>
     </div>

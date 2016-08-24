@@ -179,7 +179,7 @@ div#topologyForm .ngViewport, div#topologyForm .gridStyle {
 
 div#multiple_details, div#link_details {
 	height: 300px;
-	width: 600px;
+	width: 700px;
 	display: none;
 	padding: 0.5em;
     border: 1px solid;
@@ -580,6 +580,12 @@ circle.subcircle {
 	border: 1px solid grey;
 	background-color: #F0F0F0;
 	position: absolute;
+	z-index: 100;
+	right: 1em;
+}
+div.formLine label, div.formLine input {
+	display: inline-block;
+	padding: 0 8px;
 }
 
 span.filter-icon {
@@ -596,7 +602,7 @@ button.filter-close {
 }
 
 div.filter-title h6 {
-	margin: 0;
+	margin: 0 0 0.5em 0;
 }
 
 .links button.btn-filter {
@@ -606,7 +612,7 @@ div.filter-title h6 {
 }
 
 button.btn-filter {
-	visibility: hidden;
+	float: right;
 }
 span.dynatree-expanded button.btn-filter,
 a.dynatree-title:hover button.btn-filter {
