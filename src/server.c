@@ -35,6 +35,7 @@
 #include <time.h>
 #include <string.h>
 #include <errno.h>
+#include <inttypes.h>
 
 static __thread qd_server_t *thread_server = 0;
 
@@ -116,7 +117,7 @@ static void qd_transport_tracer(pn_transport_t *transport, const char *message)
 {
     qd_connection_t *ctx = (qd_connection_t*) pn_transport_get_context(transport);
     if (ctx)
-        qd_log(ctx->server->log_source, QD_LOG_TRACE, "[%d]:%s", ctx->connection_id, message);
+        qd_log(ctx->server->log_source, QD_LOG_TRACE, "[%"PRIu64"]:%s", ctx->connection_id, message);
 }
 
 static qd_error_t connection_entity_update_host(qd_entity_t* entity, qd_connection_t *conn)
