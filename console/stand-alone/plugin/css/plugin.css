@@ -673,6 +673,10 @@ span:not(.dynatree-has-children).router\.address .dynatree-icon:before {
     content: "\f0ac";
 }
 
+span.address-link .dynatree-icon:before {
+    content: "\f0ac";
+}
+
 span:not(.dynatree-has-children).connection.external .dynatree-icon:before,
 span:not(.dynatree-has-children).connection.normal .dynatree-icon:before {
     content: "\f08e";

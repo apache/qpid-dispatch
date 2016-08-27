@@ -41,6 +41,7 @@ var QDR = (function (QDR) {
 		var OVERVIEWEXPANDEDKEY = "QDROverviewExpanded"
 		var OVERVIEWACTIVATEDKEY = "QDROverviewActivated"
 		var FILTERKEY = "QDROverviewFilters"
+		var OVERVIEWMODEIDS = "QDROverviewModeIds"
 		var treeRoot;   // the dynatree root node. initialized once log data is received
 
 		// we want attributes to be listed first, so add it at index 0
@@ -317,6 +318,7 @@ var QDR = (function (QDR) {
 		        if (addr[0] == 'L')  return "local"
 		        if (addr[0] == 'C')  return "link-incoming"
 		        if (addr[0] == 'D')  return "link-outgoing"
+		        if (addr[0] == 'T')  return "topo"
 		        return "unknown: " + addr[0]
 			}
 
@@ -522,11 +524,17 @@ var QDR = (function (QDR) {
 	        loadColState($scope.linksGrid);
 		}
 
-		var getAllLinkFields = function (callbacks) {
+		var getAllLinkFields = function (completionCallbacks, selectionCallback) {
+			if (!$scope.linkFields) {
+				QDR.log.info("$scope.linkFields was not defined")
+				return;
+			}
 			var nodeIds = QDRService.nodeIdList()
 			var linkFields = []
 			var now = Date.now()
 			var rate = function (response, result) {
+				if (!$scope.linkFields)
+					return 0;
 				var name = QDRService.valFor(response.attributeNames, result, "linkName")
 				var oldname = $scope.linkFields.filter(function (link) {
 					return link.linkName === name
@@ -564,7 +572,9 @@ var QDR = (function (QDR) {
 						return namestr + ':' + QDRService.valFor(response.attributeNames, result, "identity")
 					}
 					var fixAddress = function () {
+						var addresses = []
 						var owningAddr = QDRService.valFor(response.attributeNames, result, "owningAddr") || ""
+						var rawAddress = owningAddr
 						/*
 						     - "L*"  =>  "* (local)"
 						     - "M0*" =>  "* (direct)"
@@ -577,6 +587,7 @@ var QDR = (function (QDR) {
 							if (owningAddr.startsWith(start)) {
 								var ends = owningAddr.substr(start.length)
 								address = ends + " " + starts[start]
+								rawAddress = ends
 								break;
 							}
 						}
@@ -593,41 +604,47 @@ var QDR = (function (QDR) {
 								}
 							}
 						}
-						return address || owningAddr;
+						addresses[0] = address || owningAddr
+						addresses[1] = rawAddress
+						return addresses
 					}
-					var adminStatus = QDRService.valFor(response.attributeNames, result, "adminStatus")
-					var operStatus = QDRService.valFor(response.attributeNames, result, "operStatus")
-					var linkName = linkName()
-					var linkType = QDRService.valFor(response.attributeNames, result, "linkType")
-					linkFields.push({
-						link:       linkName,
-						title:      linkName,
-						uncounts:   uncounts(),
-						operStatus: operStatus,
-						adminStatus:adminStatus,
-						owningAddr: fixAddress(),
-						deliveryCount:prettyVal("deliveryCount") + " ",
-						rawDeliveryCount: QDRService.valFor(response.attributeNames, result, "deliveryCount"),
-						name: QDRService.valFor(response.attributeNames, result, "name"),
-						linkName: QDRService.valFor(response.attributeNames, result, "linkName"),
-						capacity: QDRService.valFor(response.attributeNames, result, "capacity"),
-						connectionId: QDRService.valFor(response.attributeNames, result, "connectionId"),
-						linkDir: QDRService.valFor(response.attributeNames, result, "linkDir"),
-						linkType: linkType,
-						peer: QDRService.valFor(response.attributeNames, result, "peer"),
-						type: QDRService.valFor(response.attributeNames, result, "type"),
-						undeliveredCount: QDRService.valFor(response.attributeNames, result, "undeliveredCount"),
-						unsettledCount: QDRService.valFor(response.attributeNames, result, "unsettledCount"),
-						uid:     linkName,
-						timestamp: now,
-						rate: rate(response, result),
-						nodeId: nodeName,
-						identity: QDRService.valFor(response.attributeNames, result, "identity")
-					})
+					if (!selectionCallback || selectionCallback(response, result)) {
+						var adminStatus = QDRService.valFor(response.attributeNames, result, "adminStatus")
+						var operStatus = QDRService.valFor(response.attributeNames, result, "operStatus")
+						var linkName = linkName()
+						var linkType = QDRService.valFor(response.attributeNames, result, "linkType")
+						var addresses = fixAddress();
+						linkFields.push({
+							link:       linkName,
+							title:      linkName,
+							uncounts:   uncounts(),
+							operStatus: operStatus,
+							adminStatus:adminStatus,
+							owningAddr: addresses[0],
+							rawAddress: addresses[1],
+							deliveryCount:prettyVal("deliveryCount") + " ",
+							rawDeliveryCount: QDRService.valFor(response.attributeNames, result, "deliveryCount"),
+							name: QDRService.valFor(response.attributeNames, result, "name"),
+							linkName: QDRService.valFor(response.attributeNames, result, "linkName"),
+							capacity: QDRService.valFor(response.attributeNames, result, "capacity"),
+							connectionId: QDRService.valFor(response.attributeNames, result, "connectionId"),
+							linkDir: QDRService.valFor(response.attributeNames, result, "linkDir"),
+							linkType: linkType,
+							peer: QDRService.valFor(response.attributeNames, result, "peer"),
+							type: QDRService.valFor(response.attributeNames, result, "type"),
+							undeliveredCount: QDRService.valFor(response.attributeNames, result, "undeliveredCount"),
+							unsettledCount: QDRService.valFor(response.attributeNames, result, "unsettledCount"),
+							uid:     linkName,
+							timestamp: now,
+							rate: rate(response, result),
+							nodeId: nodeName,
+							identity: QDRService.valFor(response.attributeNames, result, "identity")
+						})
+					}
 				})
 				if (expected === ++received) {
 					linkFields.sort ( function (a,b) { return a.link < b.link ? -1 : a.link > b.link ? 1 : 0})
-					callbacks.forEach( function (cb) {
+					completionCallbacks.forEach( function (cb) {
 						cb(linkFields)
 					})
 				}
@@ -683,14 +700,73 @@ var QDR = (function (QDR) {
         };
 		// get info for a all connections
 		var allConnectionInfo = function () {
-			var nodeIds = QDRService.nodeIdList()
-			updateConnectionTree(nodeIds)
-			$scope.allConnectionFields = [];;
-            var connectionNodes = $("#overtree").dynatree("getTree").getNodeByKey('Connections').getChildren()
-			connectionNodes.forEach( function (connection) {
-				$scope.allConnectionFields.push(connection.data.fields)
-			})
+			getAllConnectionFields([updateConnectionGrid, updateConnectionTree])
 	        loadColState($scope.allConnectionGrid);
+		}
+		// called after conection data is available
+		var updateConnectionGrid = function (connectionFields) {
+			$scope.allConnectionFields = connectionFields;
+		}
+
+		// get the connection data for all nodes
+		// called periodically
+		// creates a connectionFields array and calls the callbacks (updateTree and updateGrid)
+		var getAllConnectionFields = function (callbacks) {
+			var nodeIds = QDRService.nodeIdList()
+			var connectionFields = [];
+			var expected = nodeIds.length;
+			var received = 0;
+			var gotConnectionInfo = function (nodeName, entity, response) {
+				response.results.forEach( function (result) {
+
+					var auth = "no_auth"
+					var sasl = QDRService.valFor(response.attributeNames, result, "sasl")
+					if (QDRService.valFor(response.attributeNames, result, "isAuthenticated")) {
+						auth = sasl
+						if (sasl === "ANONYMOUS")
+							auth = "anonymous-user"
+						else {
+							if (sasl === "GSSAPI")
+								sasl = "Kerberos"
+							if (sasl === "EXTERNAL")
+								sasl = "x.509"
+							auth = QDRService.valFor(response.attributeNames, result, "user") + "(" +
+									QDRService.valFor(response.attributeNames, result, "sslCipher") + ")"
+							}
+					}
+
+					var sec = "no-security"
+					if (QDRService.valFor(response.attributeNames, result, "isEncrypted")) {
+						if (sasl === "GSSAPI")
+							sec = "Kerberos"
+						else
+							sec = QDRService.valFor(response.attributeNames, result, "sslProto") + "(" +
+									QDRService.valFor(response.attributeNames, result, "sslCipher") + ")"
+					}
+
+					var host = QDRService.valFor(response.attributeNames, result, "host")
+					var connField = {
+						host: host,
+						security: sec,
+						authentication: auth,
+						routerId: nodeName,
+						uid: host + QDRService.valFor(response.attributeNames, result, "identity")
+					}
+					response.attributeNames.forEach( function (attribute, i) {
+						connField[attribute] = result[i]
+					})
+					connectionFields.push(connField)
+				})
+				if (expected === ++received) {
+					connectionFields.sort ( function (a,b) { return a.host < b.host ? -1 : a.host > b.host ? 1 : 0})
+					callbacks.forEach( function (cb) {
+						cb(connectionFields)
+					})
+				}
+			}
+			nodeIds.forEach( function (nodeId) {
+				QDRService.getNodeInfo(nodeId, ".connection", [], gotConnectionInfo)
+			})
 		}
 
 		$scope.addressFields = []
@@ -719,8 +795,14 @@ var QDR = (function (QDR) {
 			if (!address)
 				return;
 			$scope.address = address
-			$scope.addressFields = [];
+			var currentEntity = getCurrentLinksEntity();
+			// we are viewing the addressLinks page
+			if (currentEntity === 'Address' && entityModes[currentEntity].currentModeId === 'links') {
+				updateModeLinks()
+				return;
+			}
 
+			$scope.addressFields = [];
 			var fields = Object.keys(address.data.fields)
 			fields.forEach( function (field) {
 				if (field != "title" && field != "uid")
@@ -766,67 +848,78 @@ var QDR = (function (QDR) {
 		}
 
 		// get info for a single connection
-		$scope.connectionModes = [{
+		$scope.gridModes = [{
 	        content: '<a><i class="icon-list"></i> Attriutes</a>',
 			id: 'attributes',
-			title: "View connection attributes",
-	        isValid: function () { return true; }
+			title: "View attributes"
 	    },
 	    {
 	        content: '<a><i class="icon-link"></i> Links</a>',
 	        id: 'links',
-	        title: "Show links",
-	        isValid: function () { return true }
+	        title: "Show links"
 	    }
 	    ];
-        $scope.currentMode = $scope.connectionModes[0];
-		$scope.isModeSelected = function (mode) {
-			return mode === $scope.currentMode;
+		var saveModeIds = function () {
+			var modeIds = {Address: entityModes.Address.currentModeId, Connection: entityModes.Connection.currentModeId}
+			localStorage[OVERVIEWMODEIDS] = JSON.stringify(modeIds)
 		}
-		$scope.connectionLinks = [];
-		var updateConnectionLinks = function () {
-			var n = $scope.connection.data.fields
-			var key = n.routerId
-			var nodeInfo = QDRService.topology.nodeInfo();
-			var links = nodeInfo[key]['.router.link'];
-			var linkTypeIndex = links.attributeNames.indexOf('linkType');
-			var connectionIdIndex = links.attributeNames.indexOf('connectionId');
-			$scope.connectionLinks = [];
-			links.results.forEach( function (link) {
-				if (link[linkTypeIndex] === 'endpoint' && link[connectionIdIndex] === n.identity) {
-					var l = {};
-					l.owningAddr = QDRService.valFor(links.attributeNames, link, 'owningAddr');
-					l.dir = QDRService.valFor(links.attributeNames, link, 'linkDir');
-					if (l.owningAddr && l.owningAddr.length > 2)
-						if (l.owningAddr[0] === 'M')
-							l.owningAddr = l.owningAddr.substr(2)
-						else
-							l.owningAddr = l.owningAddr.substr(1)
-
-					l.adminStatus = QDRService.valFor(links.attributeNames, link, 'adminStatus');
-					l.operStatus = QDRService.valFor(links.attributeNames, link, 'operStatus');
-					l.identity = QDRService.valFor(links.attributeNames, link, 'identity')
-					l.connectionId = QDRService.valFor(links.attributeNames, link, 'connectionId')
-					l.nodeId = key;
-					l.type = 'router.link';
-					l.name = QDRService.valFor(links.attributeNames, link, 'name')
-					$scope.connectionLinks.push(l)
-				}
-			})
+		var loadModeIds = function () {
+			return angular.fromJson(localStorage[OVERVIEWMODEIDS]) ||
+				{Address: 'attributes', Connection: 'attributes'}
+		}
+		var savedModeIds = loadModeIds()
+	    var entityModes = {
+	        Address: {
+	            currentModeId: savedModeIds.Address,
+	            filter: function (response, result) {
+					var owningAddr = QDRService.valFor(response.attributeNames, result, "owningAddr")
+					var id = $scope.address.data.fields.uid
+					return (owningAddr === $scope.address.data.fields.uid)
+	            }
+	        },
+	        Connection: {
+	            currentModeId: savedModeIds.Connection,
+	            filter: function (response, result) {
+					var connectionId = QDRService.valFor(response.attributeNames, result, "connectionId")
+					return (connectionId === $scope.connection.data.fields.identity)
+	            }
+	        }
+	    }
+		$scope.selectMode = function (mode, entity) {
+			if (!mode || !entity)
+				return;
+			entityModes[entity].currentModeId = mode.id;
+			saveModeIds();
+			if (mode.id === 'links')
+				updateModeLinks();
+		}
+		$scope.isModeSelected = function (mode, entity) {
+			return mode.id === entityModes[entity].currentModeId
+		}
+		$scope.isModeVisible = function (entity, id) {
+			return entityModes[entity].currentModeId === id
 		}
 
-		$scope.selectMode = function (mode) {
-			$scope.currentMode = mode;
-			if (mode.id === 'links') {
-		        QDRService.addUpdatedAction("connectionLinks", updateConnectionLinks)
-				updateConnectionLinks();
-			} else {
-				QDRService.delUpdatedAction("connectionLinks");
+		var updateEntityLinkGrid = function (linkFields) {
+			$timeout(function () {$scope.linkFields = linkFields})
+		}
+		// based on which entity is selected, get and filter the links
+		var updateModeLinks = function () {
+			var currentEntity = getCurrentLinksEntity()
+			if (!currentEntity)
+				return;
+			var selectionCallback = entityModes[currentEntity].filter;
+			getAllLinkFields([updateEntityLinkGrid], selectionCallback)
+		}
+		var getCurrentLinksEntity = function () {
+			var currentEntity;
+			var active = $("#overtree").dynatree("getActiveNode");
+			if (active) {
+				currentEntity = active.data.type;
 			}
+			return currentEntity;
 		}
-		$scope.isValid = function (mode) {
-			return mode.isValid()
-		}
+
 		$scope.quiesceLinkClass = function (row) {
 			var stateClassMap = {
 				enabled: 'btn-primary',
@@ -845,61 +938,6 @@ var QDR = (function (QDR) {
 		}
 		$scope.quiesceLinkText = function (row) {
 			return row.entity.adminStatus === 'disabled' ? "Revive" : "Quiesce";
-		}
-		$scope.connectionLinksGrid = {
-		    saveKey: 'connLinksGrid',
-
-			data: 'connectionLinks',
-            columnDefs: [
-			{
-				field: 'adminStatus',
-                cellTemplate: "titleCellTemplate.html",
-				headerCellTemplate: 'titleHeaderCellTemplate.html',
-			    saveKey: 'connLinksGrid',
-				displayName: 'Admin state'
-			},
-			{
-				field: 'operStatus',
-                cellTemplate: "titleCellTemplate.html",
-				headerCellTemplate: 'titleHeaderCellTemplate.html',
-				displayName: 'Oper state'
-			},
-			{
-				field: 'dir',
-                cellTemplate: "titleCellTemplate.html",
-				headerCellTemplate: 'titleHeaderCellTemplate.html',
-				displayName: 'dir'
-			},
-			{
-				field: 'owningAddr',
-                cellTemplate: "titleCellTemplate.html",
-				headerCellTemplate: 'titleHeaderCellTemplate.html',
-				displayName: 'Address'
-			},
-			{
-				field: 'deliveryCount',
-				displayName: 'Delivered',
-				headerCellTemplate: 'titleHeaderCellTemplate.html',
-				cellClass: 'grid-values'
-
-			},
-			{
-				field: 'undeliveredCount',
-				displayName: 'Undelivered',
-				headerCellTemplate: 'titleHeaderCellTemplate.html',
-				cellClass: 'grid-values'
-			},
-			{
-				field: 'unsettledCount',
-				displayName: 'Unsettled',
-				headerCellTemplate: 'titleHeaderCellTemplate.html',
-				cellClass: 'grid-values'
-			},
-			{
-				cellClass: 'gridCellButton',
-				cellTemplate: '<button title="{{quiesceLinkText(row)}} this link" type="button" ng-class="quiesceLinkClass(row)" class="btn" ng-click="quiesceLink(row, $event)" ng-disabled="quiesceLinkDisabled(row)">{{quiesceLinkText(row)}}</button>'
-			}
-			]
 		}
 
 		$scope.connectionFields = []
@@ -924,12 +962,22 @@ var QDR = (function (QDR) {
 		}
 
 		var connectionInfo = function (connection) {
+			if (!connection)
+				return;
 			$scope.connection = connection
+
+			var currentEntity = getCurrentLinksEntity();
+			// we are viewing the connectionLinks page
+			if (currentEntity === 'Connection' && entityModes[currentEntity].currentModeId === 'links') {
+				updateModeLinks()
+				return;
+			}
 
 			$scope.connectionFields = [];
 			var fields = Object.keys(connection.data.fields)
 			fields.forEach( function (field) {
-				$scope.connectionFields.push({attribute: field, value: connection.data.fields[field]})
+				if (field != "title" && field != "uid")
+					$scope.connectionFields.push({attribute: field, value: connection.data.fields[field]})
 			})
 			$scope.selectMode($scope.currentMode)
 	        loadColState($scope.connectionGrid);
@@ -988,7 +1036,7 @@ var QDR = (function (QDR) {
 		var saveExpanded = function () {
 			var list = getExpandedList();
 			localStorage[OVERVIEWEXPANDEDKEY] = JSON.stringify(list)
-		}
+			expandedNodeList = list		}
 
 		// activated is called each time a tree node is clicked
 		// based on which node is clicked, load the correct data grid template and start getting the data
@@ -1171,70 +1219,22 @@ var QDR = (function (QDR) {
 	    connections.addClass = "connections"
 		topLevelChildren.push(connections)
 
-		updateConnectionTree = function (nodes) {
-			var connectionsObj = {}
-			var expected = nodes.length;
-			var connreceived = 0;
-			nodes.forEach( function (nodeId) {
-				QDRService.getNodeInfo(nodeId, ".connection", [], function (nodeName, entity, response) {
-					response.results.forEach( function (result) {
-
-						var auth = "no_auth"
-						var sasl = QDRService.valFor(response.attributeNames, result, "sasl")
-						if (QDRService.valFor(response.attributeNames, result, "isAuthenticated")) {
-							auth = sasl
-							if (sasl === "ANONYMOUS")
-								auth = "anonymous-user"
-							else {
-								if (sasl === "GSSAPI")
-									sasl = "Kerberos"
-								if (sasl === "EXTERNAL")
-									sasl = "x.509"
-								auth = QDRService.valFor(response.attributeNames, result, "user") + "(" +
-										QDRService.valFor(response.attributeNames, result, "sslCipher") + ")"
-								}
-						}
-
-						var sec = "no-security"
-						if (QDRService.valFor(response.attributeNames, result, "isEncrypted")) {
-							if (sasl === "GSSAPI")
-								sec = "Kerberos"
-							else
-								sec = QDRService.valFor(response.attributeNames, result, "sslProto") + "(" +
-										QDRService.valFor(response.attributeNames, result, "sslCipher") + ")"
-						}
-
-						var host = QDRService.valFor(response.attributeNames, result, "host")
-						connectionsObj[host] = {}
-						response.attributeNames.forEach( function (attribute, i) {
-							connectionsObj[host][attribute] = result[i]
-						})
-						connectionsObj[host].security = sec
-						connectionsObj[host].authentication = auth
-						connectionsObj[host].routerId = nodeName
-
-					})
-					++connreceived;
-					if (connreceived == expected) {
-						var worker = function (connection) {
-							var c = new Folder(connection)
-							c.type = "Connection"
-							c.info = connectionInfo
-							c.key = connection
-							c.fields = connectionsObj[connection]
-							c.tooltip = connectionsObj[connection].role === "inter-router" ? "inter-router connection" : "external connection"
-							c.addClass = c.tooltip
-							c.parent = "Connections"
-							c.activate = lastKey === connection
-							return c
-						}
-						var allConnections = Object.keys(connectionsObj).sort()
-						updateLeaves(allConnections, "Connections", connections, worker)
-					}
-				})
-			})
+		updateConnectionTree = function (connectionFields) {
+			var worker = function (connection) {
+				var c = new Folder(connection.host)
+				c.type = "Connection"
+				c.info = connectionInfo
+				c.key = connection.uid
+				c.fields = connection
+				c.tooltip = connection.role === "inter-router" ? "inter-router connection" : "external connection"
+				c.addClass = c.tooltip
+				c.parent = "Connections"
+				c.activate = lastKey === connection.uid
+				return c
+			}
+			updateLeaves(connectionFields, "Connections", connections, worker)
 		}
-		updateConnectionTree(QDRService.nodeIdList())
+ 		allConnectionInfo()
 
 		var htmlReady = false;
 		var dataReady = false;
@@ -1299,7 +1299,7 @@ var QDR = (function (QDR) {
 			activated(active);
 
 			// populate the data for each expanded node
-			updateExpanded();
+			$timeout(updateExpanded);
 			QDRService.addUpdatedAction( "overview", function () {
 				$timeout(updateExpanded);
 			})

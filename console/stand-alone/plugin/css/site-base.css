@@ -4707,6 +4707,7 @@ div#overview-controller, div#list-controller {
 
 .ngViewport.ng-scope{
     height: auto !important;
+	width: auto !important;
     overflow-y: hidden;
 }
 
