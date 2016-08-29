@@ -262,6 +262,12 @@ var QDR = (function(QDR) {
 
             init: function () {
                 self.loadCharts();
+                QDRService.addDisconnectAction( function () {
+					self.charts.forEach( function (chart) {
+						self.unRegisterChart(chart, true)
+					})
+					QDRService.addConnectAction(self.init);
+                })
             },
 
 			findChartRequest: function (nodeId, entity, aggregate) {
@@ -299,7 +305,7 @@ var QDR = (function(QDR) {
                 }
             },
 
-            delChart: function (chart) {
+            delChart: function (chart, skipSave) {
                 var foundBases = 0;
                 for (var i=0; i<self.charts.length; ++i) {
                     var c = self.charts[i];
@@ -307,7 +313,7 @@ var QDR = (function(QDR) {
 						++foundBases;
                     if (c.equals(chart)) {
                         self.charts.splice(i, 1);
-                        if (chart.dashboard)
+                        if (chart.dashboard && !skipSave)
                             self.saveCharts();
                     }
                 }
@@ -344,7 +350,7 @@ var QDR = (function(QDR) {
 
             // remove the chart for name/attr
             // if all attrs are gone for this request, remove the request
-            unRegisterChart: function (chart) {
+            unRegisterChart: function (chart, skipSave) {
                 // remove the chart
 
 				// TODO: how do we remove charts that were added to the hawtio dashboard but then removed?
@@ -360,7 +366,7 @@ var QDR = (function(QDR) {
                     var c = self.charts[i];
                     if (chart.equals(c)) {
                         var request = chart.request();
-                        self.delChart(chart);
+                        self.delChart(chart, skipSave);
                         if (request) {
                             // see if any other charts use this attr
                             for (var i=0; i<self.charts.length; ++i) {
@@ -376,8 +382,8 @@ var QDR = (function(QDR) {
                         }
                     }
                 }
-				self.saveCharts();
-
+                if (!skipSave)
+					self.saveCharts();
             },
 
             stopCollecting: function (request) {
@@ -481,17 +487,6 @@ var QDR = (function(QDR) {
 			addHDash: function (chart) {
 				chart.hdash = true;
 				self.saveCharts();
-				/*
-				if (!chart.hdash) {
-                    var dashChart = self.registerChart(chart.nodeId(), chart.entity(),
-                            chart.name(), chart.attr(), chart.interval(), true, chart.aggregate(), true);
-					dashChart.dashboard = true;
-					dashChart.hdash = false;
-					chart.dashboard = false;
-					chart.hdash = true;
-					self.saveCharts();
-				}
-				*/
 			},
 			delHDash: function (chart) {
 				chart.hdash = false;
@@ -519,34 +514,6 @@ var QDR = (function(QDR) {
                     }
                 })
                 localStorage["QDRCharts"] = angular.toJson(minCharts);
-            },
-            loadCharts: function () {
-                var charts = angular.fromJson(localStorage["QDRCharts"]);
-                if (charts) {
-                    var nodeList = QDRService.nodeList().map( function (node) {
-                        return node.id;
-                    })
-                    charts.forEach(function (chart) {
-                        if (nodeList.indexOf(chart.nodeId) >= 0) {
-	                        if (!chart.interval)
-	                            chart.interval = 1000;
-	                        if (!chart.duration)
-	                            chart.duration = 10;
-	                        if (chart.nodeList)
-	                            chart.aggregate = true;
-	                        var newChart = self.registerChart(chart.nodeId, chart.entity, chart.name, chart.attr, chart.interval, true, chart.aggregate);
-	                        newChart.dashboard = true;  // we only save the dashboard charts
-	                        newChart.type = chart.type;
-	                        newChart.rateWindow = chart.rateWindow;
-	                        newChart.areaColor = chart.areaColor ? chart.areaColor : "#c0e0ff";
-	                        newChart.lineColor = chart.lineColor ? chart.lineColor : "#4682b4";
-	                        newChart.duration(chart.duration);
-	                        newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 10;
-	                        if (chart.userTitle)
-	                            newChart.title(chart.userTitle);
-                        }
-                    })
-                }
             },
             loadCharts: function () {
                 var charts = angular.fromJson(localStorage["QDRCharts"]);
