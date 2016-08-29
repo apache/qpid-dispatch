@@ -292,34 +292,6 @@ var QDR = (function(QDR) {
 			// use connection properties if available
 			if (d.properties.console_identifier == 'Dispatch console')
 				return true;
-			// do it the hard way:
-			var connid = d.connectionId;
-			if (connid && d.nodeType === 'normal') {
-				// find all the endpoint links for this router that have this connid
-				var linkInfo = self.topology.nodeInfo()[d.key]['.router.link']
-				var outs = 0, ins = 0;
-				var outaddr, inaddr;
-				linkInfo.results.forEach( function (link) {
-					if (self.valFor(linkInfo.attributeNames, link, 'connectionId') == connid &&
-						self.valFor(linkInfo.attributeNames, link, 'linkType') == 'endpoint') {
-						if (self.valFor(linkInfo.attributeNames, link, 'linkDir') == 'in') {
-							++ins;
-							inaddr = self.valFor(linkInfo.attributeNames, link, 'owningAddr')
-						}
-						if (self.valFor(linkInfo.attributeNames, link, 'linkDir') == 'out') {
-							++outs;
-							outaddr = self.valFor(linkInfo.attributeNames, link, 'owningAddr')
-						}
-						return true;
-					}
-				})
-				// consoles have 1 out link with an address that starts with Ltemp. and
-				// 1 in link with no address
-				if (outs == 1 && ins == 1 &&
-					inaddr == null && outaddr.startsWith('Ltemp.')) {
-					return true;
-				}
-			}
 			return false;
 		},
 

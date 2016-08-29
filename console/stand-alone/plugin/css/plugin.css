@@ -898,3 +898,7 @@ btn.disabled, .btn[disabled] {
 div#durationSlider, div#rateSlider {
 	margin-top: 1em;
 }
+
+.list-grid {
+	padding-left: 10px;
+}
