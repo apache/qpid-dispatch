@@ -676,6 +676,10 @@ span:not(.dynatree-has-children).address.mobile .dynatree-icon:before,
 span:not(.dynatree-has-children).router\.address.mobile .dynatree-icon:before {
     content: "\f109";
 }
+span:not(.dynatree-has-children).address.internal.mobile .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.internal.mobile .dynatree-icon:before {
+    content: "\f0ac";
+}
 span:not(.dynatree-has-children).address.router .dynatree-icon:before,
 span:not(.dynatree-has-children).router\.address.router .dynatree-icon:before {
     content: "\f047";

@@ -352,6 +352,14 @@ var QDR = (function(QDR) {
 			var attributes = {adminStatus: 'disabled', name: name};
 			self.sendMethod(nodeId, "router.link", attributes, "UPDATE", gotMethodResponse)
 		},
+		addr_text: function (addr) {
+	        if (!addr)
+	            return "-"
+	        if (addr[0] == 'M')
+	            return addr.substring(2)
+	        else
+	            return addr.substring(1)
+		},
 		addr_class: function (addr) {
 			if (!addr) return "-"
 	        if (addr[0] == 'M')  return "mobile"

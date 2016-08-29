@@ -169,12 +169,13 @@ var QDR = (function (QDR) {
 					QDRService.getMultipleNodeInfo(nodeIds, "router", [], function (nodeIds, entity, responses) {
 						for(var r in responses) {
 							var result = responses[r]
-							var routerId = QDRService.valFor(result.attributeNames, result.results[0], "routerId")
+							var routerId = QDRService.valFor(result.attributeNames, result.results[0], "id")
 							allRouterFields.some( function (connField) {
 								if (routerId === connField.routerId) {
 									result.attributeNames.forEach ( function (attrName) {
 										connField[attrName] = QDRService.valFor(result.attributeNames, result.results[0], attrName)
 									})
+									connField['routerId'] = connField.id
 									return true
 								}
 								return false
@@ -220,8 +221,10 @@ var QDR = (function (QDR) {
 			$scope.allRouterFields.some( function (field) {
 				if (field.routerId === node.data.title) {
 					Object.keys(field).forEach ( function (key) {
-						if (key !== '$$hashKey')
-							$scope.routerFields.push({attribute: key, value: field[key]})
+						if (key !== '$$hashKey') {
+							var attr = (key === 'connections') ? 'External connections' : key
+							$scope.routerFields.push({attribute: attr, value: field[key]})
+						}
 					})
 					return true
 				}
@@ -322,15 +325,6 @@ var QDR = (function (QDR) {
 		        return "unknown: " + addr[0]
 			}
 
-			var addr_text = function (addr) {
-		        if (!addr)
-		            return "-"
-		        if (addr[0] == 'M')
-		            return addr.substring(2)
-		        else
-		            return addr.substring(1)
-			}
-
 			var addr_phase = function (addr) {
 		        if (!addr)
 		            return "-"
@@ -355,7 +349,7 @@ var QDR = (function (QDR) {
 					var identity = QDRService.identity_clean(uid)
 
 					addressFields.push({
-						address: addr_text(identity),
+						address: QDRService.addr_text(identity),
 						'class': QDRService.addr_class(identity),
 						phase:   addr_phase(identity),
 						inproc:  prettySum("inProcess"),
@@ -683,7 +677,7 @@ var QDR = (function (QDR) {
             afterSelectionChange: function(data) {
                 if (data.selected) {
                     var selItem = $scope.allConnectionSelections[0]
-                    var nodeId = selItem.host
+                    var nodeId = selItem.uid
                     // activate Routers->nodeId in the tree
                     $("#overtree").dynatree("getTree").activateKey(nodeId);
                 }
@@ -1150,6 +1144,8 @@ var QDR = (function (QDR) {
 				a.fields = address
 				a.type = "Address"
 				a.tooltip = address['class'] + " address"
+				if (address.address === '$management')
+					a.tooltip = "internal " + a.tooltip
 				a.addClass = a.tooltip
 				a.activate = lastKey === address.uid
 				a.parent = "Addresses"

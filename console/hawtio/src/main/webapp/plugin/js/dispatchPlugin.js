@@ -179,8 +179,8 @@ var QDR = (function(QDR) {
 			if (lastLocation === '')
 				lastLocation = "overview"
 		}
-		$location.path(QDR.pluginRoot + "/connect");
 		if (curPath.startsWith(QDR.pluginRoot)) {
+			$location.path(QDR.pluginRoot + "/connect");
 			var org = curPath.substr(QDR.pluginRoot.length + 1)
 			if (org === '') {
 				org = lastLocation

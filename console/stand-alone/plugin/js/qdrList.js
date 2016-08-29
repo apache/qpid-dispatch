@@ -166,7 +166,11 @@ var QDR = (function(QDR) {
 			},
 			"router.address": function (row) {
 				var identity = QDRService.identity_clean(row.identity.value)
-				return QDRService.addr_class(identity)
+				var address = QDRService.addr_text(identity)
+				var cls = QDRService.addr_class(identity)
+				if (address === "$management")
+					cls = "internal " + cls
+				return cls
 			}
 		}
 

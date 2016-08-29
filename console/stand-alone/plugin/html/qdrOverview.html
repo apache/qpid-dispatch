@@ -52,11 +52,11 @@ under the License.
         <ul class="nav nav-tabs">
             <li ng-repeat="mode in gridModes" ng-click="selectMode(mode,'Address')" ng-class="{active : isModeSelected(mode,'Address')}" title="{{mode.title}}" ng-bind-html-unsafe="mode.content"> </li>
         </ul>
-        <div ng-show="isModeVisible('Address','attributes')" class="selectedItems">
+        <div ng-if="isModeVisible('Address','attributes')" class="selectedItems">
             <h3>Address {{address.data.title}}</h3>
             <div class="gridStyle noHighlight" ng-grid="addressGrid"></div>
         </div>
-        <div ng-show="isModeVisible('Address','links')" class="selectedItems">
+        <div ng-if="isModeVisible('Address','links')" class="selectedItems">
             <h3>Links for address {{address.data.title}}</h3>
             <div class="gridStyle" ng-grid="linksGrid"></div>
         </div>
@@ -98,11 +98,11 @@ under the License.
         <ul class="nav nav-tabs">
             <li ng-repeat="mode in gridModes" ng-click="selectMode(mode,'Connection')" ng-class="{active : isModeSelected(mode,'Connection')}" title="{{mode.title}}" ng-bind-html-unsafe="mode.content"> </li>
         </ul>
-        <div ng-show="isModeVisible('Connection','attributes')" class="selectedItems">
+        <div ng-if="isModeVisible('Connection','attributes')" class="selectedItems">
             <h3>Connection {{connection.data.title}}</h3>
             <div class="gridStyle noHighlight" ng-grid="connectionGrid"></div>
         </div>
-        <div ng-show="isModeVisible('Connection','links')" class="selectedItems">
+        <div ng-if="isModeVisible('Connection','links')" class="selectedItems">
             <h3>Links for connection {{connection.data.title}}</h3>
             <div class="gridStyle" ng-grid="linksGrid"></div>
         </div>
