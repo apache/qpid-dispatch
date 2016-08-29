@@ -352,7 +352,25 @@ var QDR = (function(QDR) {
 			var attributes = {adminStatus: 'disabled', name: name};
 			self.sendMethod(nodeId, "router.link", attributes, "UPDATE", gotMethodResponse)
 		},
-
+		addr_class: function (addr) {
+			if (!addr) return "-"
+	        if (addr[0] == 'M')  return "mobile"
+	        if (addr[0] == 'R')  return "router"
+	        if (addr[0] == 'A')  return "area"
+	        if (addr[0] == 'L')  return "local"
+	        if (addr[0] == 'C')  return "link-incoming"
+	        if (addr[0] == 'D')  return "link-outgoing"
+	        if (addr[0] == 'T')  return "topo"
+	        return "unknown: " + addr[0]
+		},
+		identity_clean: function (identity) {
+	        if (!identity)
+	            return "-"
+	        var pos = identity.indexOf('/')
+	        if (pos >= 0)
+	            return identity.substring(pos + 1)
+	        return identity
+		},
 
       /*
        * send the management messages that build up the topology

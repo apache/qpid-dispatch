@@ -155,11 +155,18 @@ var QDR = (function(QDR) {
 		var excludedEntities = ["management", "org.amqp.management", "operationalEntity", "entity", "configurationEntity", "dummy", "console"];
 		var aggregateEntities = ["router.address"];
 		var classOverrides = {
-			"connection": function (row) {
-				return row.role.value;
+			"connection": function (row, nodeId) {
+				var isConsole = QDRService.isAConsole (row.properties.value, row.identity.value, row.role.value, nodeId)
+				return isConsole ? "console" : row.role.value === "inter-router" ? "inter-router" : "external";
 			},
-			"router.link": function (row) {
-				return row.linkType.value;
+			"router.link": function (row, nodeId) {
+				var link = {nodeId: nodeId, connectionId: row.connectionId.value}
+				var isConsole = QDRService.isConsoleLink(link)
+				return isConsole ? "console" : row.linkType.value;
+			},
+			"router.address": function (row) {
+				var identity = QDRService.identity_clean(row.identity.value)
+				return QDRService.addr_class(identity)
 			}
 		}
 
@@ -298,11 +305,12 @@ var QDR = (function(QDR) {
 				tableRows.forEach( function (row) {
 					var addClass = entity;
 					if (classOverrides[entity]) {
-						addClass += " " + classOverrides[entity](row);
+						addClass += " " + classOverrides[entity](row, $scope.currentNode.id);
 					}
 					var child = {
                         typeName:   "attribute",
                         addClass:   addClass,
+                        tooltip:    addClass,
                         key:        row.name.value,
                         title:      row.name.value,
                         details:    row

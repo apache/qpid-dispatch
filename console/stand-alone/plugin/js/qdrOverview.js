@@ -339,15 +339,6 @@ var QDR = (function (QDR) {
 		        return ''
 			}
 
-			var identity_clean = function (identity) {
-		        if (!identity)
-		            return "-"
-		        var pos = identity.indexOf('/')
-		        if (pos >= 0)
-		            return identity.substring(pos + 1)
-		        return identity
-			}
-
 			var addressFields = []
 			QDRService.getMultipleNodeInfo(nodeIds, "router.address", [], function (nodeIds, entity, response) {
 				response.aggregates.forEach( function (result) {
@@ -361,11 +352,11 @@ var QDR = (function (QDR) {
 					}
 
 					var uid = QDRService.valFor(response.attributeNames, result, "identity").sum
-					var identity = identity_clean(uid)
+					var identity = QDRService.identity_clean(uid)
 
 					addressFields.push({
 						address: addr_text(identity),
-						'class': addr_class(identity),
+						'class': QDRService.addr_class(identity),
 						phase:   addr_phase(identity),
 						inproc:  prettySum("inProcess"),
 						local:   prettySum("subscriberCount"),
@@ -1158,7 +1149,8 @@ var QDR = (function (QDR) {
 				a.key = address.uid
 				a.fields = address
 				a.type = "Address"
-				a.addClass = "address"
+				a.tooltip = address['class'] + " address"
+				a.addClass = a.tooltip
 				a.activate = lastKey === address.uid
 				a.parent = "Addresses"
 				return a;
@@ -1195,13 +1187,18 @@ var QDR = (function (QDR) {
 		var updateLinkTree = function (linkFields) {
 			var worker = function (link) {
 				var l = new Folder(link.title)
+				var isConsole = QDRService.isConsoleLink(link)
 				l.info = linkInfo
 				l.key = link.uid
 				l.fields = link
 				l.type = "Link"
 				l.parent = "Links"
 				l.activate = lastKey === link.uid
-				l.addClass = "link"
+				if (isConsole)
+					l.tooltip = "console link"
+				else
+					l.tooltip = link.linkType  + " link"
+				l.addClass = l.tooltip
 				return l;
 			}
 			updateLeaves(linkFields, "Links", links, worker)
@@ -1222,11 +1219,15 @@ var QDR = (function (QDR) {
 		updateConnectionTree = function (connectionFields) {
 			var worker = function (connection) {
 				var c = new Folder(connection.host)
+				var isConsole = QDRService.isAConsole (connection.properties, connection.identity, connection.role, connection.routerId)
 				c.type = "Connection"
 				c.info = connectionInfo
 				c.key = connection.uid
 				c.fields = connection
-				c.tooltip = connection.role === "inter-router" ? "inter-router connection" : "external connection"
+				if (isConsole)
+					c.tooltip = "console connection"
+				else
+					c.tooltip = connection.role === "inter-router" ? "inter-router connection" : "external connection"
 				c.addClass = c.tooltip
 				c.parent = "Connections"
 				c.activate = lastKey === connection.uid

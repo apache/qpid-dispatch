@@ -672,12 +672,22 @@ span:not(.dynatree-has-children).address .dynatree-icon:before,
 span:not(.dynatree-has-children).router\.address .dynatree-icon:before {
     content: "\f0ac";
 }
+span:not(.dynatree-has-children).address.mobile .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.mobile .dynatree-icon:before {
+    content: "\f109";
+}
+span:not(.dynatree-has-children).address.router .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.router .dynatree-icon:before {
+    content: "\f047";
+}
 
 span.address-link .dynatree-icon:before {
     content: "\f0ac";
 }
 
-span:not(.dynatree-has-children).connection.external .dynatree-icon:before,
+span:not(.dynatree-has-children).connection.external .dynatree-icon:before {
+    content: "\f109";
+}
 span:not(.dynatree-has-children).connection.normal .dynatree-icon:before {
     content: "\f08e";
 }
@@ -685,9 +695,8 @@ span:not(.dynatree-has-children).connection.external.quiesced .dynatree-icon:bef
 	content: "\f14c";
 	color: red;
 }
-
 span:not(.dynatree-has-children).connection.inter-router .dynatree-icon:before {
-     content: "\f152";
+     content: "\f07e";
 }
 span:not(.dynatree-has-children).no-data .dynatree-icon:before {
      content: "\f05e";
@@ -695,9 +704,6 @@ span:not(.dynatree-has-children).no-data .dynatree-icon:before {
 }
 span:not(.dynatree-has-children).loading .dynatree-icon:before {
      content: "\f254";
-}
-span:not(.dynatree-has-children).router\.node .dynatree-icon:before {
-     content: "\f013";
 }
 span:not(.dynatree-has-children).connector .dynatree-icon:before {
      content: "\f126";
@@ -708,17 +714,29 @@ span:not(.dynatree-has-children).container .dynatree-icon:before {
 span:not(.dynatree-has-children).log .dynatree-icon:before {
      content: "\f0f6";
 }
-span:not(.dynatree-has-children).router\.link.inter-router .dynatree-icon:before {
-     content: "\f04e";
+span:not(.dynatree-has-children).router\.node .dynatree-icon:before {
+     content: "\f013";
 }
-span:not(.dynatree-has-children).router\.link.endpoint .dynatree-icon:before {
-     content: "\f051";
+span:not(.dynatree-has-children).link.inter-router .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.inter-router .dynatree-icon:before{
+     content: "\f07e";
+}
+span:not(.dynatree-has-children).link.endpoint .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.endpoint .dynatree-icon:before{
+     content: "\f109";
+}
+span:not(.dynatree-has-children).link.console .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.console .dynatree-icon:before {
+     content: "\f108";
 }
 span:not(.dynatree-has-children).listener .dynatree-icon:before {
      content: "\f025";
 }
 span:not(.dynatree-has-children).connection .dynatree-icon:before {
      content: "\f07e";
+}
+span:not(.dynatree-has-children).connection.console .dynatree-icon:before {
+     content: "\f108";
 }
 span:not(.dynatree-has-children).waypoint .dynatree-icon:before {
      content: "\f0ec";
