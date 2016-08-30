@@ -188,7 +188,9 @@ var QDR = (function(QDR) {
 			if (curPath === QDR.pluginRoot && (!org || org.length===0 || org !== 'connect')) {
 				org = lastLocation
 			}
-			if (org && org.length > 0) {
+			if (org === 'connect')
+				$location.search('org', null);
+			else if (org && org.length > 0) {
 				$location.search('org', org)
 			}
 		}

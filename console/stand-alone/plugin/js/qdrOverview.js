@@ -461,6 +461,7 @@ var QDR = (function (QDR) {
 					width: '15%'
 				},
 				{
+					displayName: 'Quiesce',
                     cellClass: 'gridCellButton',
                     cellTemplate: '<button title="{{quiesceLinkText(row)}} this link" type="button" ng-class="quiesceLinkClass(row)" class="btn" ng-click="quiesceLink(row, $event)" ng-disabled="quiesceLinkDisabled(row)">{{quiesceLinkText(row)}}</button>',
 					width: '10%'
