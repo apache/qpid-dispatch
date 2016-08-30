@@ -87,10 +87,10 @@ under the License.
 
 <script type="text/ng-template" id="connections.html">
     <div class="row-fluid">
-    <h3>Connections</h3>
-    <div class="overview">
-        <div class="gridStyle" ng-grid="allConnectionGrid"></div>
-    </div>
+        <h3>Connections</h3>
+        <div class="overview">
+            <div class="gridStyle" ng-grid="allConnectionGrid"></div>
+        </div>
     </div>
 </script>
 <script type="text/ng-template" id="connection.html">
@@ -122,12 +122,32 @@ under the License.
 </script>
 <script type="text/ng-template" id="logs.html">
     <div class="row-fluid">
-    <h3>Logs</h3>
+        <h3>Recent log entries</h3>
+        <div class="overview">
+            <div class="gridStyle" ng-grid="allLogGrid"></div>
+        </div>
     </div>
 </script>
 <script type="text/ng-template" id="log.html">
     <div class="row-fluid">
-    <h3>Log {{log.data.title}}</h3>
+        <h3>{{log.data.title}}</h3>
+        <div ng-if="logFields.length > 0">
+            <table class="log-entry" ng-repeat="entry in logFields track by $index">
+                <tr>
+                    <td>Router</td><td>{{entry.nodeId}}</td>
+                </tr>
+                <tr>
+                    <td align="left" colspan="2">{{entry.time}}</td>
+                </tr>
+                <tr>
+                    <td>Source</td><td>{{entry.source}}:{{entry.line}}</td>
+                </tr>
+                <tr>
+                    <td valign="middle">Message</td><td valign="middle"><pre>{{entry.message}}</pre></td>
+                </tr>
+            </table>
+        </div>
+        <div ng-if="logFields.length == 0">No log entries for {{log.data.title}}</div>
     </div>
 </script>
 

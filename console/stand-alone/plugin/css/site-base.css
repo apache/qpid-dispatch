@@ -4277,11 +4277,11 @@ ul.dynatree-container {
 }
 
 .pane {
-  position: absolute;
-  bottom: 0;
-  top: 100px;
-  height: auto;
-  width: 300px;
+	position: absolute;
+    bottom: 0;
+    top: 70px;
+    height: auto;
+    width: 300px;
 }
 
 .pane > .pane-wrapper {
@@ -4639,14 +4639,6 @@ span.dynatree-folder a {
 
 div.treeContainer ul.dynatree-container {
 	border: 0px;
-}
-
-.pane {
-    position: fixed;
-    bottom: 0;
-    top: 70px;
-    height: auto;
-    width: 300px;
 }
 
 .pane>.pane-wrapper {

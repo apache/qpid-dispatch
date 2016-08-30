@@ -973,13 +973,96 @@ var QDR = (function (QDR) {
 	        loadColState($scope.connectionGrid);
 		}
 
+		$scope.allLogFields = []
+		$scope.allLogSelections = [];
+		$scope.allLogGrid = {
+			saveKey: 'allLogGrid',
+            data: 'allLogFields',
+            columnDefs: [
+                 {
+                     field: 'module',
+                    saveKey: 'allLogGrid',
+                     displayName: 'Module'
+                 },
+                 {
+                     field: 'enable',
+                     displayName: 'Enable'
+                 },
+                 {
+                     field: 'count',
+                     displayName: 'Count'
+                 }
+            ],
+            enableColumnResize: true,
+            multiSelect: false,
+            selectedItems: $scope.allLogSelections,
+            afterSelectionChange: function(data) {
+                if (data.selected) {
+                    var selItem = $scope.allLogSelections[0]
+                    var nodeId = selItem.module
+                    // activate in the tree
+                    $("#overtree").dynatree("getTree").activateKey(nodeId);
+                }
+            }
+        };
+
 		// get info for a all logs
+		var allLogEntries = []
 		var allLogInfo = function () {
+			var nodeIds = QDRService.nodeIdList()
+			var expected = nodeIds.length;
+			var received = 0;
+			var logResults = []
+			var gotLogInfo = function (nodeId, entity, response, context) {
+				var statusCode = context.message.application_properties.statusCode;
+				if (statusCode < 200 || statusCode >= 300) {
+					Core.notification('error', context.message.application_properties.statusDescription);
+					//QDR.log.debug(context.message.application_properties.statusDescription)
+					return;
+				}
+				var logFields = response.map( function (result) {
+					return {
+						nodeId: QDRService.nameFromId(nodeId),
+						name: result[0],
+						type: result[1],
+						message: result[2],
+						source: result[3],
+						line: result[4],
+						time: Date(result[5]).toString()
+					}
+				})
+				logResults.push.apply(logResults, logFields) // append new array to existing
+				if (expected == ++received) {
+					logResults.sort( function (a, b) {
+						return b.name - a.name
+					})
+
+					$scope.allLogFields = [];
+					var logsRoot = $("#overtree").dynatree("getTree").getNodeByKey('Logs')
+					logsRoot.visit( function (logModule) {
+						$scope.allLogFields.push({module: logModule.data.key,
+							enable: logModule.data.enable,
+							count: logResults.filter( function (entry) {
+								return entry.name === logModule.data.key
+							}).length
+						})
+					})
+					allLogEntries = logResults
+				}
+			}
+			nodeIds.forEach( function (node) {
+				QDRService.sendMethod(node, undefined, {}, "GET-LOG", gotLogInfo)
+			})
+
 		}
 
 		// get info for a single log
 		var logInfo = function (node) {
 			$scope.log = node
+			$scope.logFields = allLogEntries.filter( function (log) {
+				return node.data.key === log.name
+			})
+			$scope.$apply();
 		}
 
 		var getExpandedList = function () {
@@ -1240,8 +1323,6 @@ var QDR = (function (QDR) {
 
 		var htmlReady = false;
 		var dataReady = false;
-		var logsreceived = 0;
-		var logObj = {}
 		var logs = new Folder("Logs")
 		logs.type = "Logs"
 		logs.info = allLogInfo
@@ -1250,30 +1331,25 @@ var QDR = (function (QDR) {
 		logs.clickFolderMode = 1
 		logs.key = "Logs"
 		logs.parent = "Logs"
-		//topLevelChildren.push(logs)
+		topLevelChildren.push(logs)
 		var nodeIds = QDRService.nodeIdList()
-		var expected = nodeIds.length;
-		nodeIds.forEach( function (nodeId) {
-			QDRService.getNodeInfo(nodeId, ".log", ["name"], function (nodeName, entity, response) {
-				response.results.forEach( function (result) {
-					logObj[result[0]] = 1    // use object to collapse duplicates
-				})
-				++logsreceived;
-				if (logsreceived == expected) {
-					var allLogs = Object.keys(logObj).sort()
-					allLogs.forEach(function (log) {
-						var l = new Folder(log)
-						l.type = "Log"
-						l.info = logInfo
-						l.key = log
-						l.parent = "Logs"
-						l.activate = lastKey === log
-						logs.children.push(l)
-					})
-					dataReady = true;
-					initTreeAndGrid();
-				}
+		QDRService.getNodeInfo(nodeIds[0], "log", ["module", "enable"], function (nodeName, entity, response) {
+			var moduleIndex = response.attributeNames.indexOf('module')
+			response.results.sort( function (a,b) {return a[moduleIndex] < b[moduleIndex] ? -1 : a[moduleIndex] > b[moduleIndex] ? 1 : 0})
+			response.results.forEach( function (result) {
+				var entry = QDRService.flatten(response.attributeNames, result)
+				var l = new Folder(entry.module)
+				l.type = "Log"
+				l.info = logInfo
+				l.key = entry.module
+				l.parent = "Logs"
+				l.activate = lastKey === l.key
+				l.enable = entry.enable
+				l.addClass = "log"
+				logs.children.push(l)
 			})
+			dataReady = true;
+			initTreeAndGrid();
 		})
 		var initTreeAndGrid = function () {
 			if (!htmlReady || !dataReady)

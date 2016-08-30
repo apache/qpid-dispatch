@@ -282,6 +282,9 @@ div.qdr-attributes.pane, div.qdr-topology.pane {
 	position: absolute;
 	margin-left: 10px;
 }
+div.qdr-overview.pane {
+	position: absolute;
+}
 div.qdr-topology.pane.left {
 	width: auto;
 }
