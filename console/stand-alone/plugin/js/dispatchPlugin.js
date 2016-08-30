@@ -68,6 +68,12 @@ var QDR = (function(QDR) {
    */
   QDR.module = angular.module(QDR.pluginName, ['ngResource', 'ngGrid', 'ui.bootstrap', 'ui.slider'/*, 'minicolors' */]);
 
+  Core = {
+	  notification: function (severity, msg) {
+        $.notify(msg, severity);
+    }
+  }
+
   // set up the routing for this plugin
   QDR.module.config(function($routeProvider) {
     $routeProvider

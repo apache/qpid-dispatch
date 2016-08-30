@@ -88,7 +88,16 @@ var QDR = (function(QDR) {
 			$scope.currentMode = mode;
 			if (mode.id === 'log') {
 				$scope.logResults = "getting recent log entries...";
-				QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, {}, $scope.currentMode.op, function (nodeName, entity, response, context) {
+				attrs = {
+					name: $scope.selectedRecordName
+				}
+				QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attrs, $scope.currentMode.op, function (nodeName, entity, response, context) {
+					var statusCode = context.message.application_properties.statusCode;
+					if (statusCode < 200 || statusCode >= 300) {
+						Core.notification('error', context.message.application_properties.statusDescription);
+						//QDR.log.debug(context.message.application_properties.statusDescription)
+						return;
+					}
 					$scope.logResults = response.filter( function (entry) {
 						return entry[0] === $scope.detailsObject.module
 					}).sort( function (a, b) {

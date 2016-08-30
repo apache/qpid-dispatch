@@ -292,6 +292,8 @@ var QDR = (function (QDR) {
 		// get info for all addresses
 		var allAddressInfo = function () {
 			var gotAllAddressFields = function ( addressFields ) {
+				if (!addressFields || addressFields.length === 0)
+					return;
 				// update the grid's data
 				addressFields.sort ( function (a,b) { return a.address < b.address ? -1 : a.address > b.address ? 1 : 0})
 				addressFields[0].title = addressFields[0].address
@@ -876,8 +878,10 @@ var QDR = (function (QDR) {
 				return;
 			entityModes[entity].currentModeId = mode.id;
 			saveModeIds();
-			if (mode.id === 'links')
+			if (mode.id === 'links') {
+				$scope.linkFields = [];
 				updateModeLinks();
+			}
 		}
 		$scope.isModeSelected = function (mode, entity) {
 			return mode.id === entityModes[entity].currentModeId
