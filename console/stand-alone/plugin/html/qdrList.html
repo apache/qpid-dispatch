@@ -69,20 +69,24 @@ under the License.
             </fieldset>
         </div>
         <div ng-show="currentMode.id === 'log'">
-            <table class="log-entry" ng-repeat="entry in logResults track by $index">
-                <tr>
-                    <td align="left" colspan="2">{{entry.time}}</td>
-                </tr>
-                <tr>
-                    <td>Type</td><td>{{entry.type}}</td>
-                </tr>
-                <tr>
-                    <td>Source</td><td>{{entry.source}}:{{entry.line}}</td>
-                </tr>
-                <tr>
-                    <td valign="middle">Message</td><td valign="middle"><pre>{{entry.message}}</pre></td>
-                </tr>
-            </table>
+            <div ng-if="logResults.length > 0">
+                <table class="log-entry" ng-repeat="entry in logResults track by $index">
+                    <tr>
+                        <td align="left" colspan="2">{{entry.time}}</td>
+                    </tr>
+                    <tr>
+                        <td>Type</td><td>{{entry.type}}</td>
+                    </tr>
+                    <tr>
+                        <td>Source</td><td>{{entry.source}}:{{entry.line}}</td>
+                    </tr>
+                    <tr>
+                        <td valign="middle">Message</td><td valign="middle"><pre>{{entry.message}}</pre></td>
+                    </tr>
+                </table>
+            </div>
+            <div ng-if="logResults.length == 0 && !fetchingLog">No log entries for {{selectedRecordName}}</div>
+            <div ng-if="fetchingLog">Fetching logs for {{selectedRecordName}}</div>
         </div>
     </div>
 </script>

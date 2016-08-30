@@ -84,14 +84,15 @@ var QDR = (function(QDR) {
 		$scope.isModeSelected = function (mode) {
 			return mode === $scope.currentMode;
 		}
+		$scope.fetchingLog = false;
 		$scope.selectMode = function (mode) {
 			$scope.currentMode = mode;
 			if (mode.id === 'log') {
-				$scope.logResults = "getting recent log entries...";
-				attrs = {
-					name: $scope.selectedRecordName
-				}
-				QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attrs, $scope.currentMode.op, function (nodeName, entity, response, context) {
+				$scope.logResults = [];
+				$scope.fetchingLog = true;
+				var entity; // undefined since it is not supported in the GET-LOG call
+				QDRService.sendMethod($scope.currentNode.id, entity, {}, $scope.currentMode.op, function (nodeName, entity, response, context) {
+					$scope.fetchingLog = false;
 					var statusCode = context.message.application_properties.statusCode;
 					if (statusCode < 200 || statusCode >= 300) {
 						Core.notification('error', context.message.application_properties.statusDescription);

@@ -712,9 +712,11 @@ var QDR = (function(QDR) {
 			var application_properties = {
 				operation:  operation
 			}
-			var ent = self.schema.entityTypes[entity];
-			var fullyQualifiedType = ent ? ent.fullyQualifiedType : entity;
-			application_properties.type = fullyQualifiedType || entity;
+			if (entity) {
+				var ent = self.schema.entityTypes[entity];
+				var fullyQualifiedType = ent ? ent.fullyQualifiedType : entity;
+				application_properties.type = fullyQualifiedType || entity;
+			}
 			if (attrs.name)
 				application_properties.name = attrs.name;
 			var msg = {
