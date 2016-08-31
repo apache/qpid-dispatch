@@ -162,9 +162,7 @@ class NeighborTest(unittest.TestCase):
         self.sent = []
         self.local_link_state = None
         self.engine = HelloProtocol(self, self)
-        self.engine.tick(0.5)
-        self.assertEqual(self.sent, [])
-        self.engine.tick(1.5)
+        self.engine.tick(1.0)
         self.assertEqual(len(self.sent), 1)
         dest, msg = self.sent.pop(0)
         self.assertEqual(dest, "amqp:/_local/qdhello")

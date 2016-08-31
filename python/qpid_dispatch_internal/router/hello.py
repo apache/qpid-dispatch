@@ -25,20 +25,22 @@ class HelloProtocol(object):
     This module is responsible for running the HELLO protocol.
     """
     def __init__(self, container, node_tracker):
-        self.container       = container
-        self.node_tracker    = node_tracker
-        self.id              = self.container.id
-        self.last_hello_time = 0.0
-        self.hello_interval  = container.config.helloInterval
-        self.hello_max_age   = container.config.helloMaxAge
-        self.hellos          = {}
-        self.dup_reported    = False
+        self.container        = container
+        self.node_tracker     = node_tracker
+        self.id               = self.container.id
+        self.ticks            = 0.0
+        self.last_hello_ticks = 0.0
+        self.hello_interval   = container.config.helloInterval
+        self.hello_max_age    = container.config.helloMaxAge
+        self.hellos           = {}
+        self.dup_reported     = False
 
 
     def tick(self, now):
         self._expire_hellos(now)
-        if now - self.last_hello_time >= self.hello_interval:
-            self.last_hello_time = now
+        self.ticks += 1.0
+        if self.ticks - self.last_hello_ticks >= self.hello_interval:
+            self.last_hello_ticks = self.ticks
             msg = MessageHELLO(None, self.id, self.hellos.keys(), self.container.instance)
             self.container.send('amqp:/_local/qdhello', msg)
             self.container.log_hello(LOG_TRACE, "SENT: %r" % msg)
