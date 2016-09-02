@@ -798,7 +798,7 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
 
                     if (ctx->connector) {
                         ce = QD_CONN_EVENT_CONNECTOR_OPEN;
-                        ctx->connector->delay = 0;
+                        ctx->connector->delay = 2000;  // Delay on re-connect in case there is a recurring error
                     } else
                         assert(ctx->listener);
 

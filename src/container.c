@@ -309,13 +309,14 @@ static int close_handler(qd_container_t *container, void* conn_context, pn_conne
     pn_link_t *pn_link = pn_link_head(conn, 0);
     while (pn_link) {
         qd_link_t *link = (qd_link_t*) pn_link_get_context(pn_link);
+        pn_link_t *next = pn_link_next(pn_link, 0);
         if (link) {
             qd_node_t *node = link->node;
             if (node) {
                 node->ntype->link_detach_handler(node->context, link, QD_LOST);
             }
         }
-        pn_link = pn_link_next(pn_link, 0);
+        pn_link = next;
     }
 
     // close the connection
@@ -779,9 +780,10 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     link->close_sess_with_link = true;
 
     //
-    // Keep the borrowed link reference
+    // Keep the borrowed references
     //
     pn_incref(link->pn_link);
+    pn_incref(link->pn_sess);
 
     pn_link_set_context(link->pn_link, link);
 
