@@ -520,15 +520,16 @@ var QDR = (function (QDR) {
 			var nodeIds = QDRService.nodeIdList()
 			var linkFields = []
 			var now = Date.now()
-			var rate = function (response, result) {
+			var rate = function (linkName, response, result) {
 				if (!$scope.linkFields)
 					return 0;
-				var name = QDRService.valFor(response.attributeNames, result, "linkName")
 				var oldname = $scope.linkFields.filter(function (link) {
-					return link.linkName === name
+					return link.link === linkName
 				})
-				if (oldname.length > 0) {
+				if (oldname.length === 1) {
 					var elapsed = (now - oldname[0].timestamp) / 1000;
+					if (elapsed < 0)
+						return 0
 					var delivered = QDRService.valFor(response.attributeNames, result, "deliveryCount") - oldname[0].rawDeliveryCount
 					//QDR.log.debug("elapsed " + elapsed + " delivered " + delivered)
 					return elapsed > 0 ? parseFloat(Math.round((delivered/elapsed) * 100) / 100).toFixed(2) : 0;
@@ -553,7 +554,7 @@ var QDR = (function (QDR) {
 					var uncounts = function () {
 						var und = QDRService.valFor(response.attributeNames, result, "undeliveredCount")
 						var uns = QDRService.valFor(response.attributeNames, result, "unsettledCount")
-						return und + uns
+						return QDRService.pretty(und + uns)
 					}
 					var linkName = function () {
 						var namestr = QDRService.nameFromId(nodeName)
@@ -624,7 +625,7 @@ var QDR = (function (QDR) {
 							unsettledCount: QDRService.valFor(response.attributeNames, result, "unsettledCount"),
 							uid:     linkName,
 							timestamp: now,
-							rate: rate(response, result),
+							rate: QDRService.pretty(rate(linkName, response, result)),
 							nodeId: nodeName,
 							identity: QDRService.valFor(response.attributeNames, result, "identity")
 						})

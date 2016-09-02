@@ -848,7 +848,7 @@ var QDR = (function(QDR) {
 			var connection;
 			try {
                 connection = self.rhea.connect({
-                    connection_details:ws('ws://' + baseAddress, ["binary", "AMQWSB10"]),
+                    connection_details:ws('ws://' + baseAddress, ["binary", "base64", "AMQWSB10"]),
                     reconnect:true,
                     properties: {console_identifier: 'Dispatch console'}
 	            });
