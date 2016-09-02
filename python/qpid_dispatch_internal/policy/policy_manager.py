@@ -78,6 +78,26 @@ class PolicyManager(object):
         self._policy_local.create_ruleset(attributes)
 
     #
+    # Management interface to delete a ruleset
+    #
+    def delete_ruleset(self, id):
+        """
+        Delete named policy ruleset
+        @param[in] id: ruleset name
+        """
+        self._policy_local.policy_delete(id)
+
+    #
+    # Management interface to update a ruleset
+    #
+    def update_ruleset(self, attributes):
+        """
+        Update named policy ruleset
+        @param[in] id: ruleset name
+        """
+        self._policy_local.create_ruleset(attributes)
+
+    #
     # Management interface to set the default vhost
     #
     def set_default_vhost(self, name):

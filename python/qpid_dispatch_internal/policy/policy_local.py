@@ -477,7 +477,7 @@ class PolicyLocal(object):
     #
     def create_ruleset(self, attributes):
         """
-        Create named policy ruleset
+        Create or update named policy ruleset.
         @param[in] attributes: from config
         """
         warnings = []
@@ -491,29 +491,15 @@ class PolicyLocal(object):
             for warning in warnings:
                 self._manager.log_warning(warning)
         if name not in self.rulesetdb:
-            self.statsdb[name] = AppStats(name, self._manager, candidate)
+            if name not in self.statsdb:
+                self.statsdb[name] = AppStats(name, self._manager, candidate)
             self._manager.log_info("Created policy rules for vhost %s" % name)
         else:
             self.statsdb[name].update_ruleset(candidate)
             self._manager.log_info("Updated policy rules for vhost %s" % name)
+        # TODO: ruleset lock
         self.rulesetdb[name] = {}
         self.rulesetdb[name].update(candidate)
-
-    def policy_read(self, name):
-        """
-        Read policy for named vhost
-        @param[in] name vhost name
-        @return policy data in raw user format
-        """
-        return self.rulesetdb[name]
-
-    def policy_update(self, name, policy):
-        """
-        Update named policy
-        @param[in] name vhost name
-        @param[in] policy data in raw user input
-        """
-        raise PolicyError("Policy updatd function not implemented")
 
     def policy_delete(self, name):
         """
@@ -522,6 +508,7 @@ class PolicyLocal(object):
         """
         if name not in self.rulesetdb:
             raise PolicyError("Policy '%s' does not exist" % name)
+        # TODO: ruleset lock
         del self.rulesetdb[name]
 
     #

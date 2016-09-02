@@ -1271,46 +1271,52 @@
         "vhost": {
             "description": "AMQP virtual host policy definition of users, user groups, allowed remote hosts, and AMQP restrictions.",
             "extends": "configurationEntity",
-            "operations": ["CREATE"],
+            "operations": ["CREATE", "UPDATE", "DELETE"],
             "attributes": {
                 "id": {
                     "type": "string",
                     "description": "The vhost name.",
-                    "required": true
+                    "required": true,
+                    "create": true
                 },
                 "maxConnections": {
                     "type": "integer",
                     "default": 65535,
                     "description": "Maximum number of concurrent client connections allowed.",
                     "required": false,
-                    "create": true
+                    "create": true,
+                    "update": true
                 },
                 "maxConnectionsPerUser": {
                     "type": "integer",
                     "default": 65535,
                     "description": "Maximum number of concurrent client connections allowed for any single user.",
                     "required": false,
-                    "create": true
+                    "create": true,
+                    "update": true
                 },
                 "maxConnectionsPerHost": {
                     "type": "integer",
                     "default": 65535,
                     "description": "Maximum number of concurrent client connections allowed for any remote host.",
                     "required": false,
-                    "create": true
+                    "create": true,
+                    "update": true
                 },
                 "allowUnknownUser": {
                     "type": "boolean",
                     "description": "Unrestricted users, those who are not members of a defined user group, are allowed to connect to this application. Unrestricted users are assigned to the 'default' user group and receive 'default' settings.",
                     "default": false,
                     "required": false,
-                    "create": true
+                    "create": true,
+                    "update": true
                 },
                 "groups": {
                     "type": "map",
                     "description": "A map where each key is a user group name and the value is a map of the corresponding settings for that group.",
                     "required": false,
-                    "create": true
+                    "create": true,
+                    "update": true
                 }
             }
         },

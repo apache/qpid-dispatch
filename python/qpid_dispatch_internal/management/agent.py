@@ -315,7 +315,6 @@ class PolicyEntity(EntityAdapter):
     def __str__(self):
         return super(PolicyEntity, self).__str__().replace("Entity(", "PolicyEntity(")
 
-
 class VhostEntity(EntityAdapter):
     def create(self):
         self._policy.create_ruleset(self.attributes)
@@ -325,6 +324,12 @@ class VhostEntity(EntityAdapter):
 
     def __str__(self):
         return super(VhostEntity, self).__str__().replace("Entity(", "VhostEntity(")
+
+    def _delete(self):
+        self._policy.delete_ruleset(self.id)
+
+    def _update(self):
+        self._policy.update_ruleset(self.attributes)
 
 
 class VhostStatsEntity(EntityAdapter):

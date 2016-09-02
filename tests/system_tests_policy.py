@@ -107,6 +107,132 @@ class LoadPolicyFromFolder(TestCase):
         rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
         self.assertEqual(len(rulesets), 5)
 
+    def new_policy(self):
+        return """
+{
+    "id": "dispatch-494",
+    "maxConnections": 50,
+    "maxConnectionsPerHost": 20,
+    "maxConnectionsPerUser": 8,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 9999,
+            "maxFrameSize": 222222,
+            "sources": "public, private, $management",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targets": "public, private, $management",
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
+    def updated_policy(self):
+        return """
+{
+    "id": "dispatch-494",
+    "maxConnections": 500,
+    "maxConnectionsPerHost": 2,
+    "maxConnectionsPerUser": 30,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 123,
+            "users": "*",
+            "maxSessionWindow": 9999,
+            "maxFrameSize": 222222,
+            "sources": "public, private, $management",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targets": "public, private, $management",
+            "maxSenders": 222
+        }
+    }
+}
+"""
+
+    def test_verify_policy_add_update_delete(self):
+        # verify current vhost count
+        rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+        self.assertEqual(len(rulesets), 5)
+
+        # create
+        self.run_qdmanage('create --type=vhost --name=dispatch-494 --stdin', input=self.new_policy())
+        rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+        self.assertEqual(len(rulesets), 6)
+        found = False
+        for ruleset in rulesets:
+            if ruleset['id'] == 'dispatch-494':
+                found = True
+                self.assertEqual(ruleset['maxConnections'], 50)
+                self.assertEqual(ruleset['maxConnectionsPerHost'], 20)
+                self.assertEqual(ruleset['maxConnectionsPerUser'], 8)
+                break
+        self.assertTrue(found)
+
+        # update
+        self.run_qdmanage('update --type=vhost --name=dispatch-494 --stdin', input=self.updated_policy())
+        rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+        self.assertEqual(len(rulesets), 6)
+        found = False
+        for ruleset in rulesets:
+            if ruleset['id'] == 'dispatch-494':
+                found = True
+                self.assertEqual(ruleset['maxConnections'], 500)
+                self.assertEqual(ruleset['maxConnectionsPerHost'], 2)
+                self.assertEqual(ruleset['maxConnectionsPerUser'], 30)
+                break
+        self.assertTrue(found)
+
+        # delete
+        self.run_qdmanage('delete --type=vhost --name=dispatch-494')
+        rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+        self.assertEqual(len(rulesets), 5)
+        absent = True
+        for ruleset in rulesets:
+            if ruleset['id'] == 'dispatch-494':
+                absent = False
+                break
+        self.assertTrue(absent)
+
+    def test_repeated_create_delete(self):
+        for i in range(0, 10):
+            rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+            self.assertEqual(len(rulesets), 5)
+
+            # create
+            self.run_qdmanage('create --type=vhost --name=dispatch-494 --stdin', input=self.new_policy())
+            rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+            self.assertEqual(len(rulesets), 6)
+            found = False
+            for ruleset in rulesets:
+                if ruleset['id'] == 'dispatch-494':
+                    found = True
+                    break
+            self.assertTrue(found)
+
+            # delete
+            self.run_qdmanage('delete --type=vhost --name=dispatch-494')
+            rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+            self.assertEqual(len(rulesets), 5)
+            absent = True
+            for ruleset in rulesets:
+                if ruleset['id'] == 'dispatch-494':
+                    absent = False
+                    break
+            self.assertTrue(absent)
+
+
 class SenderReceiverLimits(TestCase):
     """
     Verify that specifying a policy folder from the router conf file
