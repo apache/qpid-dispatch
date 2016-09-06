@@ -87,6 +87,36 @@ class AutolinkTest(TestCase):
         self.assertEqual(None, test.error)
 
 
+    def test_03_autolink_sender(self):
+        """
+        Create a route-container connection and a normal sender.  Ensure that messages sent on the sender
+        link are received by the route container and that settlement propagates back to the sender.
+        """
+        test = AutolinkSenderTest(self.normal_address, self.route_address)
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_04_autolink_receiver(self):
+        """
+        Create a route-container connection and a normal receiver.  Ensure that messages sent from the
+        route-container are received by the receiver and that settlement propagates back to the sender.
+        """
+        test = AutolinkReceiverTest(self.normal_address, self.route_address)
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_05_inter_container_transfer(self):
+        """
+        Create a route-container connection and a normal receiver.  Ensure that messages sent from the
+        route-container are received by the receiver and that settlement propagates back to the sender.
+        """
+        test = InterContainerTransferTest(self.normal_address, self.route_address)
+        test.run()
+        self.assertEqual(None, test.error)
+
+
 class Timeout(object):
     def __init__(self, parent):
         self.parent = parent
@@ -189,6 +219,191 @@ class AutolinkCreditTest(MessagingHandler):
     def run(self):
         container = Container(self)
         container.container_id = 'container.1'
+        container.run()
+
+
+class AutolinkSenderTest(MessagingHandler):
+    def __init__(self, normal_address, route_address):
+        super(AutolinkSenderTest, self).__init__()
+        self.normal_address = normal_address
+        self.route_address  = route_address
+        self.dest           = 'node.1'
+        self.count          = 275
+        self.normal_conn    = None
+        self.route_conn     = None
+        self.error          = None
+        self.last_action    = "None"
+        self.n_sent         = 0
+        self.n_received     = 0
+        self.n_settled      = 0
+
+    def timeout(self):
+        self.error = "Timeout Expired: last_action=%s n_sent=%d n_received=%d n_settled=%d" % \
+                     (self.last_action, self.n_sent, self.n_received, self.n_settled)
+        if self.normal_conn:
+            self.normal_conn.close()
+        if self.route_conn:
+            self.route_conn.close()
+
+    def on_start(self, event):
+        self.timer       = event.reactor.schedule(5, Timeout(self))
+        self.route_conn  = event.container.connect(self.route_address)
+        self.last_action = "Connected route container"
+
+    def on_link_opening(self, event):
+        if event.sender:
+            event.sender.source.address = event.sender.remote_source.address
+        if event.receiver:
+            event.receiver.target.address = event.receiver.remote_target.address
+
+    def on_link_opened(self, event):
+        if event.receiver and not self.normal_conn:
+            self.normal_conn = event.container.connect(self.normal_address)
+            self.sender      = event.container.create_sender(self.normal_conn, self.dest)
+            self.last_action = "Attached normal sender"
+
+    def on_sendable(self, event):
+        if event.sender == self.sender:
+            while self.n_sent < self.count and event.sender.credit > 0:
+                msg = Message(body="AutoLinkTest")
+                self.sender.send(msg)
+                self.n_sent += 1
+
+    def on_message(self, event):
+        self.n_received += 1
+        self.accept(event.delivery)
+
+    def on_settled(self, event):
+        self.n_settled += 1
+        if self.n_settled == self.count:
+            self.timer.cancel()
+            self.normal_conn.close()
+            self.route_conn.close()
+
+    def run(self):
+        container = Container(self)
+        container.container_id = 'container.1'
+        container.run()
+
+
+class AutolinkReceiverTest(MessagingHandler):
+    def __init__(self, normal_address, route_address):
+        super(AutolinkReceiverTest, self).__init__()
+        self.normal_address = normal_address
+        self.route_address  = route_address
+        self.dest           = 'node.1'
+        self.count          = 275
+        self.normal_conn    = None
+        self.route_conn     = None
+        self.error          = None
+        self.last_action    = "None"
+        self.n_sent         = 0
+        self.n_received     = 0
+        self.n_settled      = 0
+
+    def timeout(self):
+        self.error = "Timeout Expired: last_action=%s n_sent=%d n_received=%d n_settled=%d" % \
+                     (self.last_action, self.n_sent, self.n_received, self.n_settled)
+        if self.normal_conn:
+            self.normal_conn.close()
+        if self.route_conn:
+            self.route_conn.close()
+
+    def on_start(self, event):
+        self.timer       = event.reactor.schedule(5, Timeout(self))
+        self.route_conn  = event.container.connect(self.route_address)
+        self.last_action = "Connected route container"
+
+    def on_link_opening(self, event):
+        if event.sender:
+            event.sender.source.address = event.sender.remote_source.address
+            self.sender = event.sender
+        if event.receiver:
+            event.receiver.target.address = event.receiver.remote_target.address
+
+    def on_link_opened(self, event):
+        if event.sender and not self.normal_conn:
+            self.normal_conn = event.container.connect(self.normal_address)
+            self.receiver    = event.container.create_receiver(self.normal_conn, self.dest)
+            self.last_action = "Attached normal receiver"
+
+    def on_sendable(self, event):
+        if event.sender == self.sender:
+            while self.n_sent < self.count and event.sender.credit > 0:
+                msg = Message(body="AutoLinkTest")
+                self.sender.send(msg)
+                self.n_sent += 1
+
+    def on_message(self, event):
+        self.n_received += 1
+        self.accept(event.delivery)
+
+    def on_settled(self, event):
+        self.n_settled += 1
+        if self.n_settled == self.count:
+            self.timer.cancel()
+            self.normal_conn.close()
+            self.route_conn.close()
+
+    def run(self):
+        container = Container(self)
+        container.container_id = 'container.1'
+        container.run()
+
+
+class InterContainerTransferTest(MessagingHandler):
+    def __init__(self, normal_address, route_address):
+        super(InterContainerTransferTest, self).__init__()
+        self.normal_address = normal_address
+        self.route_address  = route_address
+        self.count          = 275
+        self.conn_1         = None
+        self.conn_2         = None
+        self.error          = None
+        self.n_sent         = 0
+        self.n_received     = 0
+        self.n_settled      = 0
+
+    def timeout(self):
+        self.error = "Timeout Expired:  n_sent=%d n_received=%d n_settled=%d" % \
+                     (self.n_sent, self.n_received, self.n_settled)
+        self.conn_1.close()
+        self.conn_2.close()
+
+    def on_start(self, event):
+        self.timer  = event.reactor.schedule(5, Timeout(self))
+        event.container.container_id = 'container.2'
+        self.conn_1 = event.container.connect(self.route_address)
+        event.container.container_id = 'container.3'
+        self.conn_2 = event.container.connect(self.route_address)
+
+    def on_link_opening(self, event):
+        if event.sender:
+            event.sender.source.address = event.sender.remote_source.address
+            self.sender = event.sender
+        if event.receiver:
+            event.receiver.target.address = event.receiver.remote_target.address
+
+    def on_sendable(self, event):
+        if event.sender == self.sender:
+            while self.n_sent < self.count and event.sender.credit > 0:
+                msg = Message(body="AutoLinkTest")
+                self.sender.send(msg)
+                self.n_sent += 1
+
+    def on_message(self, event):
+        self.n_received += 1
+        self.accept(event.delivery)
+
+    def on_settled(self, event):
+        self.n_settled += 1
+        if self.n_settled == self.count:
+            self.timer.cancel()
+            self.conn_1.close()
+            self.conn_2.close()
+
+    def run(self):
+        container = Container(self)
         container.run()
 
 
