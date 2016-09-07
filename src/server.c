@@ -23,6 +23,7 @@
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/server.h>
+#include "qpid/dispatch/python_embedded.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include "dispatch_private.h"
@@ -132,6 +133,19 @@ static qd_error_t connection_entity_update_host(qd_entity_t* entity, qd_connecti
     else
         return qd_entity_set_string(entity, "host", qdpn_connector_name(conn->pn_cxtr));
 }
+
+
+/**
+ * Save displayNameService object instance and ImportModule address
+ * Called with qd_python_lock held
+ */
+qd_error_t qd_register_display_name_service(qd_dispatch_t *qd, void *displaynameservice)
+{
+    qd->server->py_displayname_obj    = displaynameservice;
+    qd->server->py_displayname_module = PyImport_ImportModule("qpid_dispatch_internal.display_name.display_name");
+    return qd->server->py_displayname_module ? QD_ERROR_NONE : qd_error(QD_ERROR_RUNTIME, "Fail importing DisplayNameService module");
+}
+
 
 /**
  * Returns a char pointer to a user id which is constructed from components specified in the config->ssl_uid_format.
@@ -309,6 +323,32 @@ static const char *qd_transport_get_user(qd_connection_t *conn, pn_transport_t *
                         strcat(user_id, (char *) fingerprint);
                     }
                 }
+            }
+            if (config->ssl_display_name_file) {
+                // Translate extracted id into display name
+                qd_python_lock_state_t lock_state = qd_python_lock();
+                PyObject *module = (PyObject*)conn->server->py_displayname_module;
+                PyObject *query = PyObject_GetAttrString(module, "display_name_local_query");
+                if (query) {
+                    PyObject *result = PyObject_CallFunction(query, "(Oss)",
+                                                            (PyObject *)conn->server->py_displayname_obj,
+                                                            config->ssl_profile, user_id);
+                    if (result) {
+                        const char *res_string = PyString_AsString(result);
+                        free(user_id);
+                        user_id = malloc(strlen(res_string) + 1);
+                        user_id[0] = '\0';
+                        strcat(user_id, res_string);
+                        Py_XDECREF(result);
+                    } else {
+                        qd_log(conn->server->log_source, QD_LOG_DEBUG, "Internal: failed to read displaynameservice query result");
+                    }
+                    Py_XDECREF(query);
+                } else {
+                    qd_log(conn->server->log_source, QD_LOG_DEBUG, "Internal: failed to locate query function");
+                }
+                Py_XDECREF(module);
+                qd_python_unlock(lock_state);
             }
             qd_log(conn->server->log_source, QD_LOG_DEBUG, "User id is '%s' ", user_id);
             return user_id;
@@ -1351,6 +1391,8 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->signal_handler_running = false;
     qd_server->heartbeat_timer        = 0;
     qd_server->next_connection_id     = 1;
+    qd_server->py_displayname_module  = 0;
+    qd_server->py_displayname_obj     = 0;
 
     qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 

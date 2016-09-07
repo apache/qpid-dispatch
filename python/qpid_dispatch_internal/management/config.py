@@ -155,6 +155,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
 
     from qpid_dispatch_internal.display_name.display_name import DisplayNameService
     displayname_service = DisplayNameService("$displayname")
+    qd.qd_dispatch_register_display_name_service(dispatch, displayname_service)
     policyDir = config.by_type('policy')[0]['policyDir']
     policyDefaultVhost = config.by_type('policy')[0]['defaultVhost']
     # Remaining configuration

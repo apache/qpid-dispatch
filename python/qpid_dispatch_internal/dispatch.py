@@ -80,6 +80,8 @@ class QdDll(ctypes.PyDLL):
         self._prototype(self.qd_dispatch_policy_c_counts_free, None, [c_long], check=False)
         self._prototype(self.qd_dispatch_policy_c_counts_refresh, None, [c_long, py_object])
 
+        self._prototype(self.qd_dispatch_register_display_name_service, None, [self.qd_dispatch_p, py_object])
+
         self._prototype(self.qd_dispatch_set_agent, None, [self.qd_dispatch_p, py_object])
 
         self._prototype(self.qd_router_setup_late, None, [self.qd_dispatch_p])
