@@ -22,8 +22,6 @@ from proton import Message, Delivery, PENDING, ACCEPTED, REJECTED
 from system_test import TestCase, Qdrouterd, main_module
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
-from proton.utils import BlockingConnection, SyncRequestResponse
-from qpid_dispatch.management.client import Node
 
 CONNECTION_PROPERTIES = {u'connection': u'properties', u'int_property': 6451}
 
@@ -113,6 +111,16 @@ class AutolinkTest(TestCase):
         route-container are received by the receiver and that settlement propagates back to the sender.
         """
         test = InterContainerTransferTest(self.normal_address, self.route_address)
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_06_manage_autolinks(self):
+        """
+        Create a route-container connection and a normal receiver.  Ensure that messages sent from the
+        route-container are received by the receiver and that settlement propagates back to the sender.
+        """
+        test = ManageAutolinksTest(self.normal_address, self.route_address)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -401,6 +409,94 @@ class InterContainerTransferTest(MessagingHandler):
             self.timer.cancel()
             self.conn_1.close()
             self.conn_2.close()
+
+    def run(self):
+        container = Container(self)
+        container.run()
+
+
+class ManageAutolinksTest(MessagingHandler):
+    def __init__(self, normal_address, route_address):
+        super(ManageAutolinksTest, self).__init__()
+        self.normal_address = normal_address
+        self.route_address  = route_address
+        self.count          = 5
+        self.normal_conn    = None
+        self.route_conn     = None
+        self.error          = None
+        self.n_created      = 0
+        self.n_attached     = 0
+        self.n_deleted      = 0
+        self.n_detached     = 0
+
+    def timeout(self):
+        self.error = "Timeout Expired: n_created=%d n_attached=%d n_deleted=%d n_detached=%d" % \
+                     (self.n_created, self.n_attached, self.n_deleted, self.n_detached)
+        self.normal_conn.close()
+        self.route_conn.close()
+
+    def on_start(self, event):
+        self.timer  = event.reactor.schedule(5, Timeout(self))
+        event.container.container_id = 'container.new'
+        self.route_conn  = event.container.connect(self.route_address)
+        self.normal_conn = event.container.connect(self.normal_address)
+        self.reply       = event.container.create_receiver(self.normal_conn, dynamic=True)
+        self.agent       = event.container.create_sender(self.normal_conn, "$management");
+
+    def on_link_opening(self, event):
+        if event.sender:
+            event.sender.source.address = event.sender.remote_source.address
+        if event.receiver:
+            event.receiver.target.address = event.receiver.remote_target.address
+
+    def on_link_opened(self, event):
+        if event.receiver == self.reply:
+            self.reply_to = self.reply.remote_source.address
+        if event.connection == self.route_conn:
+            self.n_attached += 1
+            if self.n_attached == self.count:
+                self.send_ops()
+
+    def on_link_remote_close(self, event):
+        self.n_detached += 1
+        if self.n_detached == self.count:
+            self.timer.cancel()
+            self.normal_conn.close()
+            self.route_conn.close()
+
+    def send_ops(self):
+        if self.n_created < self.count:
+            while self.n_created < self.count and self.agent.credit > 0:
+                props = {'operation': 'CREATE',
+                         'type': 'org.apache.qpid.dispatch.router.config.autoLink',
+                         'name': 'AL.%d' % self.n_created }
+                body  = {'dir': 'out',
+                         'containerId': 'container.new',
+                         'addr': 'node.%d' % self.n_created }
+                msg = Message(properties=props, body=body, reply_to=self.reply_to)
+                self.agent.send(msg)
+                self.n_created += 1
+        elif self.n_attached == self.count and self.n_deleted < self.count:
+            while self.n_deleted < self.count and self.agent.credit > 0:
+                props = {'operation': 'DELETE',
+                         'type': 'org.apache.qpid.dispatch.router.config.autoLink',
+                         'name': 'AL.%d' % self.n_deleted }
+                body  = {}
+                msg = Message(properties=props, body=body, reply_to=self.reply_to)
+                self.agent.send(msg)
+                self.n_deleted += 1
+
+    def on_sendable(self, event):
+        if event.sender == self.agent:
+            self.send_ops()
+
+    def on_message(self, event):
+        if event.message.properties['statusCode'] / 100 != 2:
+            self.error = 'Op Error: %d %s' % (event.message.properties['statusCode'],
+                                              event.message.properties['statusDescription'])
+            self.timer.cancel()
+            self.normal_conn.close()
+            self.route_conn.close()
 
     def run(self):
         container = Container(self)
