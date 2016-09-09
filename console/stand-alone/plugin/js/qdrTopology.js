@@ -462,29 +462,49 @@ var QDR = (function (QDR) {
         });
 
 		// set up SVG for D3
-	    var width, height;
-	    var tpdiv = $('#topology');
 	    var colors = {'inter-router': "#EAEAEA", 'normal': "#F0F000", 'on-demand': '#00F000'};
-	    var gap = 5;
 	    var radii = {'inter-router': 25, 'normal': 15, 'on-demand': 15};
 	    var radius = 25;
 	    var radiusNormal = 15;
-	    width = tpdiv.width() - gap;
-	    var top = tpdiv.offset().top
-		var tpform = $('#topologyForm')
-		var tpformHeight = tpform.height()
-	    height = Math.max(window.innerHeight, tpformHeight + top) - top - gap;
-		if (width < 10) {
-			QDR.log.info("page width and height are abynormal: returning before very bad things happen")
-			return;
-		}
-
 	    var svg, lsvg;
 		var force;
 		var animate = false; // should the force graph organize itself when it is displayed
 		var path, circle;
 		var savedKeys = {};
 		var dblckickPos = [0,0];
+		var width = 0;
+		var height = 0;
+
+		var getSizes = function () {
+			var legendWidth = 196;
+		    var gap = 5;
+			var width = $('#topology').width() - gap - legendWidth;
+		    var top = $('#topology').offset().top
+			var tpformHeight = $('#topologyForm').height()
+		    var height = Math.max(window.innerHeight, tpformHeight + top) - top - gap;
+			if (width < 10) {
+				QDR.log.info("page width and height are abnormal w:" + width + " height:" + height)
+				return [0,0];
+			}
+			return [width, height]
+		}
+		var resize = function () {
+			var sizes = getSizes();
+			width = sizes[0]
+			height = sizes[1]
+			if (width > 0) {
+			    // set attrs and 'resume' force
+			    svg.attr('width', width);
+			    svg.attr('height', height);
+			    force.size(sizes).resume();
+			}
+		}
+		window.addEventListener('resize', resize);
+		var sizes = getSizes()
+		width = sizes[0]
+		height = sizes[1]
+		if (width <= 0 || height <= 0)
+			return
 
 	    // set up initial nodes and links
 	    //  - nodes are known by 'id', not by index in array.
@@ -1715,6 +1735,7 @@ var QDR = (function (QDR) {
             QDRService.stopUpdating();
             QDRService.delUpdatedAction("topology");
 			d3.select("#SVG_ID").remove();
+			window.removeEventListener('resize', resize);
         });
 
 		initForceGraph();
