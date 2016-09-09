@@ -190,6 +190,12 @@ qd_error_t qd_dispatch_register_policy_manager(qd_dispatch_t *qd, qd_entity_t *e
 }
 
 
+qd_error_t qd_dispatch_register_display_name_service(qd_dispatch_t *qd, void *object)
+{
+    return qd_register_display_name_service(qd, object);
+}
+
+
 long qd_dispatch_policy_c_counts_alloc()
 {
     return qd_policy_c_counts_alloc();

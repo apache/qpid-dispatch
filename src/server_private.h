@@ -180,6 +180,8 @@ struct qd_server_t {
     qd_connection_list_t      connections;
     qd_timer_t               *heartbeat_timer;
     uint64_t                 next_connection_id;
+    void                     *py_displayname_module;
+    void                     *py_displayname_obj;
 };
 
 ALLOC_DECLARE(qd_work_item_t);

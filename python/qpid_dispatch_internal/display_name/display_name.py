@@ -92,7 +92,6 @@ class DisplayNameService(object):
             body = {'user_name': user_name if user_name else user_id}
         else:
             body = {'user_name': user_id}
-
         return body
 
     def receive(self, message, unused_link_id, unused_cost):
@@ -123,3 +122,14 @@ class DisplayNameService(object):
 
         self.io_adapter[0].send(response)
 
+
+def display_name_local_query(displaynameservice, profile_name, user_id):
+    """
+    Local query interface for reading cached name translations from C code
+    @param displaynameservice: DisplayNameService python instance
+    @param profile_name: connection's sslProfile name
+    @param user_id: Name formatted from SSL cert fields
+    @return: Name to be used as connection's authenticated user
+    """
+    body = displaynameservice.query(profile_name, user_id)
+    return body['user_name']

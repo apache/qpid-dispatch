@@ -659,6 +659,16 @@ qd_connector_t *qd_server_connect(qd_dispatch_t *qd, const qd_server_config_t *c
  */
 void qd_server_connector_free(qd_connector_t* ct);
 
+
+
+/**
+ * Store address of display name service py object for C code use
+ *
+ * @param qd The dispatch handle returned by qd_dispatch.
+ * @param display_name_service address of python object
+ */
+qd_error_t qd_register_display_name_service(qd_dispatch_t *qd, void *display_name_service);
+
 /**
  * @}
  */
