@@ -256,9 +256,16 @@ div.chartContainer div.aChart {
     margin-top: 0.5em;
 }
 
-div.qdr-attributes .tree-header select {
-	width: 100%;
+#list-controller .tree-header {
+    position: absolute;
+    height: auto;
 }
+
+#list-controller select {
+	height: auto;
+	float: left;
+}
+
 
 div#main.qdr div ul.nav li.active a {
   background-color: #e0e0ff !important;
@@ -444,7 +451,7 @@ ul.qdrTopoModes {
 }
 
 .qdr-overview.pane.left, .qdr-attributes.pane.left {
-	top: 100px;
+	top: 104px;
 }
 .qdr-topology.pane.left {
 	top: 104px;
@@ -454,8 +461,12 @@ ul.qdrTopoModes {
 }
 
 .treeContainer {
-	width: 250px;
+	width: 100%;
 	float: left;
+}
+
+.pane-content {
+	overflow: auto;
 }
 
 #entityNames {
@@ -904,4 +915,8 @@ div#durationSlider, div#rateSlider {
 
 .list-grid {
 	padding-left: 10px;
+}
+
+div#list-controller {
+    padding-left: 300px;
 }

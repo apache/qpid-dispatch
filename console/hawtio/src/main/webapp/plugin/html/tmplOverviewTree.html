@@ -1,4 +1,11 @@
-<hawtio-pane class="qdr-overview" position="left" width="300">
+<script type="text/ng-template" id="overviewheader.html">
+    <div class="expand-collapse" ng-controller="QDR.OverviewController">
+        <i class="icon-chevron-down clickable" title="Expand all nodes" ng-click="expandAll()"></i>
+        <i class="icon-chevron-up clickable" title="Unexpand all nodes" ng-click="contractAll()"></i>
+    </div>
+</script>
+
+<hawtio-pane class="qdr-overview" position="left" width="300" header="overviewheader.html">
     <div class="treeContainer">
         <div id="overtree"></div>
     </div>

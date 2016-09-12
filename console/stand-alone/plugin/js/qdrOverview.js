@@ -931,6 +931,16 @@ var QDR = (function (QDR) {
 			return row.entity.adminStatus === 'disabled' ? "Revive" : "Quiesce";
 		}
 
+		$scope.expandAll = function () {
+			$("#overtree").dynatree("getRoot").visit(function(node){
+                node.expand(true);
+            });
+		}
+		$scope.contractAll = function () {
+			$("#overtree").dynatree("getRoot").visit(function(node){
+                node.expand(false);
+            })
+		}
 		$scope.connectionFields = []
 		$scope.connectionGrid = {
 		    saveKey: 'connGrid',
@@ -1110,7 +1120,8 @@ var QDR = (function (QDR) {
 		var saveExpanded = function () {
 			var list = getExpandedList();
 			localStorage[OVERVIEWEXPANDEDKEY] = JSON.stringify(list)
-			expandedNodeList = list		}
+			expandedNodeList = list
+		}
 
 		// activated is called each time a tree node is clicked
 		// based on which node is clicked, load the correct data grid template and start getting the data

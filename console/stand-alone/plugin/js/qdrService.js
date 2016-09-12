@@ -290,7 +290,7 @@ var QDR = (function(QDR) {
 		},
 		isConsole: function (d) {
 			// use connection properties if available
-			if (d.properties.console_identifier == 'Dispatch console')
+			if (d && d['properties'] && d['properties']['console_identifier'] == 'Dispatch console')
 				return true;
 			return false;
 		},
@@ -298,7 +298,8 @@ var QDR = (function(QDR) {
 		flatten: function (attributes, result) {
 			var flat = {}
 			attributes.forEach( function (attr, i) {
-				flat[attr] = result[i]
+				if (result && result.length > i)
+					flat[attr] = result[i]
 			})
 			return flat;
 		},

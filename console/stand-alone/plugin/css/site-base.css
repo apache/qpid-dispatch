@@ -4659,7 +4659,7 @@ div.treeContainer ul.dynatree-container {
 }
 .pane-viewport {
     position: absolute;
-    top: 0;
+    top: 24px;
     bottom: 0;
     left: 0;
     overflow: auto;

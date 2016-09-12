@@ -28,8 +28,8 @@ var QDR = (function(QDR) {
    *
    * Controller for the main interface
    */
-	QDR.module.controller("QDR.ListController", ['$scope', '$location', '$dialog', '$filter', 'QDRService', 'QDRChartService',
-		function ($scope, $location, $dialog, $filter, QDRService, QDRChartService) {
+	QDR.module.controller("QDR.ListController", ['$scope', '$location', '$dialog', '$filter', '$timeout', 'QDRService', 'QDRChartService',
+		function ($scope, $location, $dialog, $filter, $timeout, QDRService, QDRChartService) {
 
 		var updateIntervalHandle = undefined;
 		var updateInterval = 5000;
@@ -118,6 +118,17 @@ var QDR = (function(QDR) {
 		}
 		$scope.isValid = function (mode) {
 			return mode.isValid()
+		}
+
+		$scope.expandAll = function () {
+			$("#entityTree").dynatree("getRoot").visit(function(node){
+                node.expand(true);
+            });
+		}
+		$scope.contractAll = function () {
+			$("#entityTree").dynatree("getRoot").visit(function(node){
+                node.expand(false);
+            });
 		}
 
 		if (!QDRService.connected) {
@@ -232,34 +243,36 @@ var QDR = (function(QDR) {
 			})
 			localStorage[ListExpandedKey] = JSON.stringify(list)
 
-			if (expanded)
-				onTreeSelected(node);
+			//if (expanded)
+		    //	onTreeSelected(node);
 		}
 		// a tree node was selected
 		var onTreeSelected = function (selectedNode) {
-			if ($scope.currentMode.id === 'operations')
-				$scope.currentMode = $scope.modes[0];
-			else if ($scope.currentMode.id === 'log')
-				$scope.selectMode($scope.currentMode)
-			else if ($scope.currentMode.id === 'delete') {
-				// clicked on a tree node while on the delete screen -> switch to attribute screen
-				$scope.currentMode = $scope.modes[0];
-			}
-			if (selectedNode.data.typeName === "entity") {
-				$scope.selectedEntity = selectedNode.data.key;
-				$scope.operations = lookupOperations()
-			} else if (selectedNode.data.typeName === 'attribute') {
-				$scope.selectedEntity = selectedNode.parent.data.key;
-				$scope.operations = lookupOperations()
-				$scope.selectedRecordName = selectedNode.data.key;
-				updateDetails(selectedNode.data.details);   // update the table on the right
-				$("#entityTree").dynatree("getRoot").visit(function(node){
-				   node.select(false);
-				});
-				selectedNode.select();
-			}
-			$scope.$apply();
+			$timeout( function () {
+				if ($scope.currentMode.id === 'operations')
+					$scope.currentMode = $scope.modes[0];
+				else if ($scope.currentMode.id === 'log')
+					$scope.selectMode($scope.currentMode)
+				else if ($scope.currentMode.id === 'delete') {
+					// clicked on a tree node while on the delete screen -> switch to attribute screen
+					$scope.currentMode = $scope.modes[0];
+				}
+				if (selectedNode.data.typeName === "entity") {
+					$scope.selectedEntity = selectedNode.data.key;
+					$scope.operations = lookupOperations()
+				} else if (selectedNode.data.typeName === 'attribute') {
+					$scope.selectedEntity = selectedNode.parent.data.key;
+					$scope.operations = lookupOperations()
+					$scope.selectedRecordName = selectedNode.data.key;
+					updateDetails(selectedNode.data.details);   // update the table on the right
+					$("#entityTree").dynatree("getRoot").visit(function(node){
+					   node.select(false);
+					});
+					selectedNode.select();
+				}
+			})
 		}
+
 		// fill in an empty results recoord based on the entities schema
 		var fromSchema = function (entityName) {
 			var row = {}

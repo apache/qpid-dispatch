@@ -661,3 +661,12 @@ div.topoGrid .ui-grid-viewport {
 	margin: 0 0 10px 0;
     padding-bottom: 4px;
 }
+
+.expand-collapse {
+	float: right;
+	margin-right: 0.5em;
+}
+
+.pane-viewport {
+	top: 24px !important;
+}
