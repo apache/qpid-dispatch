@@ -59,7 +59,7 @@ var QDR = (function(QDR) {
   QDR.templatePath = QDR.contextPath + "plugin/html/";
 
   QDR.SETTINGS_KEY = 'QDRSettings';
-  QDR.LAST_LOCATION = "QDRLastLocation";
+  QDR.LAST_LOCATION = "QDRLastLocationHawt";
 
   /**
    * @property module
