@@ -455,12 +455,14 @@ static int qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_
             dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
         } else {
             //
-            // Release the delivery
+            // Message was not delivered and the link is anonymous, drop the delivery.
             //
-            qdr_delivery_release_CT(core, dlv);
+            // If the delivery is not settled, release it.
+            //
+            if (!dlv->settled)
+                qdr_delivery_release_CT(core, dlv);
             qdr_delivery_decref(dlv);
-            if (link->link_type == QD_LINK_ROUTER)
-                qdr_link_issue_credit_CT(core, link, 1, false);
+            qdr_link_issue_credit_CT(core, link, 1, false);
         }
     } else if (fanout > 0) {
         if (dlv->settled) {
