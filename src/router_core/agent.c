@@ -112,7 +112,7 @@ void qdr_manage_create(qdr_core_t              *core,
 
     // Create a query object here
     action->args.agent.query = qdr_query(core, context, type, out_body);
-    action->args.agent.name = name;
+    action->args.agent.name = qdr_field_from_iter(name);
     action->args.agent.in_body = in_body;
 
     qdr_action_enqueue(core, action);
@@ -129,8 +129,8 @@ void qdr_manage_delete(qdr_core_t *core,
 
     // Create a query object here
     action->args.agent.query = qdr_query(core, context, type, 0);
-    action->args.agent.name = name;
-    action->args.agent.identity = identity;
+    action->args.agent.name = qdr_field_from_iter(name);
+    action->args.agent.identity = qdr_field_from_iter(identity);
 
     qdr_action_enqueue(core, action);
 }
@@ -147,8 +147,8 @@ void qdr_manage_read(qdr_core_t *core,
 
     // Create a query object here
     action->args.agent.query = qdr_query(core, context, entity_type, body);
-    action->args.agent.identity  = identity;
-    action->args.agent.name = name;
+    action->args.agent.identity  = qdr_field_from_iter(identity);
+    action->args.agent.name = qdr_field_from_iter(name);
 
     qdr_action_enqueue(core, action);
 }
@@ -164,8 +164,8 @@ void qdr_manage_update(qdr_core_t              *core,
 {
     qdr_action_t *action = qdr_action(qdr_manage_update_CT, "manage_update");
     action->args.agent.query = qdr_query(core, context, type, out_body);
-    action->args.agent.name = name;
-    action->args.agent.identity = identity;
+    action->args.agent.name = qdr_field_from_iter(name);
+    action->args.agent.identity = qdr_field_from_iter(identity);
     action->args.agent.in_body = in_body;
 
     qdr_action_enqueue(core, action);
@@ -330,8 +330,8 @@ static void qdr_agent_forbidden(qdr_core_t *core, qdr_query_t *query, bool op_qu
 
 static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qd_field_iterator_t     *identity   = action->args.agent.identity;
-    qd_field_iterator_t     *name       = action->args.agent.name;
+    qd_field_iterator_t     *identity   = qdr_field_iterator(action->args.agent.identity);
+    qd_field_iterator_t     *name       = qdr_field_iterator(action->args.agent.name);
     qdr_query_t             *query      = action->args.agent.query;
 
     switch (query->entity_type) {
@@ -345,12 +345,15 @@ static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool disc
     case QD_ROUTER_EXCHANGE:          break;
     case QD_ROUTER_BINDING:           break;
    }
+
+    qdr_field_free(action->args.agent.name);
+    qdr_field_free(action->args.agent.identity);
 }
 
 
 static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qd_field_iterator_t     *name       = action->args.agent.name;
+    qd_field_iterator_t     *name       = qdr_field_iterator(action->args.agent.name);
     qdr_query_t             *query      = action->args.agent.query;
     qd_parsed_field_t       *in_body    = action->args.agent.in_body;
 
@@ -367,14 +370,15 @@ static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool di
 
    }
 
+   qdr_field_free(action->args.agent.name);
    qd_parse_free(in_body);
 }
 
 
 static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qd_field_iterator_t     *name       = action->args.agent.name;
-    qd_field_iterator_t     *identity   = action->args.agent.identity;
+    qd_field_iterator_t     *name       = qdr_field_iterator(action->args.agent.name);
+    qd_field_iterator_t     *identity   = qdr_field_iterator(action->args.agent.identity);
     qdr_query_t             *query      = action->args.agent.query;
 
     switch (query->entity_type) {
@@ -388,12 +392,15 @@ static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_EXCHANGE:          break;
     case QD_ROUTER_BINDING:           break;
    }
+
+   qdr_field_free(action->args.agent.name);
+   qdr_field_free(action->args.agent.identity);
 }
 
 static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qd_field_iterator_t     *identity   = action->args.agent.identity;
-    qd_field_iterator_t     *name       = action->args.agent.name;
+    qd_field_iterator_t     *identity   = qdr_field_iterator(action->args.agent.identity);
+    qd_field_iterator_t     *name       = qdr_field_iterator(action->args.agent.name);
     qdr_query_t             *query      = action->args.agent.query;
     qd_parsed_field_t       *in_body    = action->args.agent.in_body;
 
@@ -409,7 +416,9 @@ static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_BINDING:           break;
    }
 
-    qd_parse_free(in_body);
+   qdr_field_free(action->args.agent.name);
+   qdr_field_free(action->args.agent.identity);
+   qd_parse_free(in_body);
 }
 
 

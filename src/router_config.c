@@ -280,7 +280,14 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
         qd_parsed_field_t   *in_body = qd_parse(iter);
         qd_field_iterator_free(iter);
 
-        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_ADDRESS, 0, in_body, 0);
+        qd_field_iterator_t *name_iter = 0;
+
+        if (name)
+            name_iter = qd_field_iterator_string(name);
+
+        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_ADDRESS, name_iter, in_body, 0);
+
+        qd_field_iterator_free(name_iter);
 
 
     } while(0);
@@ -365,7 +372,14 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
         qd_parsed_field_t   *in_body = qd_parse(iter);
         qd_field_iterator_free(iter);
 
-        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_LINK_ROUTE, 0, in_body, 0);
+        qd_field_iterator_t *name_iter = 0;
+
+        if (name)
+            name_iter = qd_field_iterator_string(name);
+
+        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_LINK_ROUTE, name_iter, in_body, 0);
+
+        qd_field_iterator_free(name_iter);
 
     } while(0);
 
@@ -450,7 +464,14 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
         qd_parsed_field_t   *in_body = qd_parse(iter);
         qd_field_iterator_free(iter);
 
-        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_AUTO_LINK, 0, in_body, 0);
+        qd_field_iterator_t *name_iter = 0;
+
+        if (name)
+            name_iter = qd_field_iterator_string(name);
+
+        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_AUTO_LINK, name_iter, in_body, 0);
+
+        qd_field_iterator_free(name_iter);
 
     } while (0);
 

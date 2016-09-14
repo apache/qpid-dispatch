@@ -47,6 +47,9 @@ class QdmanageTest(TestCase):
                              'password': 'server-password'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('connector', {'role': 'inter-router', 'port': cls.inter_router_port}),
+            ('address', {'name': 'test-address', 'prefix': 'abcd', 'distribution': 'multicast'}),
+            ('linkRoute', {'name': 'test-link-route', 'prefix': 'xyz', 'dir': 'in'}),
+            ('autoLink', {'name': 'test-auto-link', 'addr': 'mnop', 'dir': 'out'}),
             ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl'})
         ])
 
@@ -209,6 +212,30 @@ class QdmanageTest(TestCase):
         create_command = 'CREATE --type=' + type + ' --name=' + name + ' host=0.0.0.0 port=' + port
         connector = json.loads(self.run_qdmanage(create_command))
         return connector
+
+    def test_check_address_name(self):
+        long_type = 'org.apache.qpid.dispatch.router.config.address'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(output[0]['name'], "test-address")
+        self.assertEqual(output[0]['distribution'], "multicast")
+        self.assertEqual(output[0]['prefix'], "abcd")
+
+    def test_check_link_route_name(self):
+        long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(output[0]['name'], "test-link-route")
+        self.assertEqual(output[0]['dir'], "in")
+        self.assertEqual(output[0]['prefix'], "xyz")
+
+    def test_check_auto_link_name(self):
+        long_type = 'org.apache.qpid.dispatch.router.config.autoLink'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(output[0]['name'], "test-auto-link")
+        self.assertEqual(output[0]['dir'], "out")
+        self.assertEqual(output[0]['addr'], "mnop")
 
     def test_create_delete_connector(self):
         long_type = 'org.apache.qpid.dispatch.connector'
