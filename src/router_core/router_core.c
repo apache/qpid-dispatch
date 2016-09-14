@@ -143,6 +143,9 @@ qdr_field_t *qdr_field(const char *text)
 
 qdr_field_t *qdr_field_from_iter(qd_field_iterator_t *iter)
 {
+    if (!iter)
+        return 0;
+
     qdr_field_t *field = new_qdr_field_t();
     qd_buffer_t *buf;
     int          remaining;
@@ -164,6 +167,14 @@ qdr_field_t *qdr_field_from_iter(qd_field_iterator_t *iter)
     field->iterator = qd_field_iterator_buffer(DEQ_HEAD(field->buffers), 0, length);
 
     return field;
+}
+
+qd_field_iterator_t *qdr_field_iterator(qdr_field_t *field)
+{
+    if (!field)
+        return 0;
+
+    return field->iterator;
 }
 
 
