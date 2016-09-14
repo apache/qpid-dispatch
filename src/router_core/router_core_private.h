@@ -61,6 +61,7 @@ typedef struct {
 
 qdr_field_t *qdr_field(const char *string);
 qdr_field_t *qdr_field_from_iter(qd_field_iterator_t *iter);
+qd_field_iterator_t *qdr_field_iterator(qdr_field_t *field);
 void qdr_field_free(qdr_field_t *field);
 char *qdr_field_copy(qdr_field_t *field);
 
@@ -137,8 +138,8 @@ struct qdr_action_t {
         struct {
             qdr_query_t             *query;
             int                      offset;
-            qd_field_iterator_t     *identity;
-            qd_field_iterator_t     *name;
+            qdr_field_t             *identity;
+            qdr_field_t             *name;
             qd_parsed_field_t       *in_body;
         } agent;
 
