@@ -137,6 +137,8 @@ static qd_parsed_field_t *qd_parse_internal(qd_field_iterator_t *iter, qd_parsed
 
 qd_parsed_field_t *qd_parse(qd_field_iterator_t *iter)
 {
+    if (!iter)
+        return 0;
     return qd_parse_internal(iter, 0);
 }
 
