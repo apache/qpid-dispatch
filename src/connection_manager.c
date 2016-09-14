@@ -262,7 +262,7 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
 
     error:
         qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create ssl profile: %s", qd_error_message());
-        free(ssl_profile);
+        qd_config_ssl_profile_free(cm, ssl_profile);
         return 0;
 }
 
@@ -359,24 +359,21 @@ void qd_connection_manager_free(qd_connection_manager_t *cm)
     qd_config_listener_t *cl = DEQ_HEAD(cm->config_listeners);
     while (cl) {
         DEQ_REMOVE_HEAD(cm->config_listeners);
-        qd_server_listener_free(cl->listener);
         qd_server_config_free(&cl->configuration);
-        free(cl);
+        qd_config_listener_free(cm, cl);
         cl = DEQ_HEAD(cm->config_listeners);
     }
 
     qd_config_connector_t *cc = DEQ_HEAD(cm->config_connectors);
     while (cc) {
         DEQ_REMOVE_HEAD(cm->config_connectors);
-        qd_server_connector_free(cc->connector);
         qd_server_config_free(&cc->configuration);
-        free(cc);
+        qd_config_connector_free(cm, cc);
         cc = DEQ_HEAD(cm->config_connectors);
     }
 
     qd_config_ssl_profile_t *sslp = DEQ_HEAD(cm->config_ssl_profiles);
     while (sslp) {
-        DEQ_REMOVE_HEAD(cm->config_ssl_profiles);
         qd_config_ssl_profile_free(cm, sslp);
         sslp = DEQ_HEAD(cm->config_ssl_profiles);
     }
@@ -486,11 +483,8 @@ void qd_connection_manager_delete_listener(qd_dispatch_t *qd, void *impl)
 bool qd_connection_manager_delete_ssl_profile(qd_dispatch_t *qd, void *impl)
 {
     qd_config_ssl_profile_t *ssl_profile = (qd_config_ssl_profile_t*) impl;
-    if(ssl_profile) {
-        bool freed = qd_config_ssl_profile_free(qd->connection_manager, ssl_profile);
-
-        return freed;
-    }
+    if(ssl_profile)
+        return qd_config_ssl_profile_free(qd->connection_manager, ssl_profile);
     return false;
 }
 
