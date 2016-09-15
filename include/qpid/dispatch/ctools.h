@@ -32,6 +32,12 @@
 #define NEW_ARRAY(t,n)     (t*)  malloc(sizeof(t)*(n))
 #define NEW_PTR_ARRAY(t,n) (t**) malloc(sizeof(t*)*(n))
 
+//
+// If available, use aligned_alloc for cache-line-aligned allocations.  Otherwise
+// fall back to plain malloc.
+//
+#define NEW_CACHE_ALIGNED(t,p) posix_memalign((void*) &p, 64, (sizeof(t) + (sizeof(t) % 64 ? 64 - (sizeof(t) % 64) : 0)))
+
 #define ZERO(p)            memset(p, 0, sizeof(*p))
 
 #define DEQ_DECLARE(i,d) typedef struct { \

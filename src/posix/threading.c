@@ -31,35 +31,21 @@
 
 struct sys_mutex_t {
     pthread_mutex_t mutex;
-#ifndef NDEBUG
-    // In a debug build, used to assert correct use of mutex.
-    int             acquired;
-#endif
 };
-
-
-// NOTE: normally it is incorrect for an assert expression to have side effects,
-// since it could change the behavior between a debug and a release build.  In
-// this case however the mutex->acquired field only exists in a debug build, so
-// we want operations on mutex->acquired to be compiled out of a release build.
-#define ACQUIRE(mutex) assert(!mutex->acquired++)
-#define RELEASE(mutex) assert(!--mutex->acquired)
 
 
 sys_mutex_t *sys_mutex(void)
 {
-    sys_mutex_t *mutex = NEW(sys_mutex_t);
+    sys_mutex_t *mutex = 0;
+    NEW_CACHE_ALIGNED(sys_mutex_t, mutex);
+    assert(mutex != 0);
     pthread_mutex_init(&(mutex->mutex), 0);
-#ifndef NDEBUG
-    mutex->acquired = 0;
-#endif
     return mutex;
 }
 
 
 void sys_mutex_free(sys_mutex_t *mutex)
 {
-    assert(!mutex->acquired);
     pthread_mutex_destroy(&(mutex->mutex));
     free(mutex);
 }
@@ -69,13 +55,11 @@ void sys_mutex_lock(sys_mutex_t *mutex)
 {
     int result = pthread_mutex_lock(&(mutex->mutex));
     assert(result == 0);
-    ACQUIRE(mutex);
 }
 
 
 void sys_mutex_unlock(sys_mutex_t *mutex)
 {
-    RELEASE(mutex);
     int result = pthread_mutex_unlock(&(mutex->mutex));
     assert(result == 0);
 }
@@ -88,7 +72,8 @@ struct sys_cond_t {
 
 sys_cond_t *sys_cond(void)
 {
-    sys_cond_t *cond = NEW(sys_cond_t);
+    sys_cond_t *cond = 0;
+    NEW_CACHE_ALIGNED(sys_cond_t, cond);
     pthread_cond_init(&(cond->cond), 0);
     return cond;
 }
@@ -103,10 +88,8 @@ void sys_cond_free(sys_cond_t *cond)
 
 void sys_cond_wait(sys_cond_t *cond, sys_mutex_t *held_mutex)
 {
-    RELEASE(held_mutex);
     int result = pthread_cond_wait(&(cond->cond), &(held_mutex->mutex));
     assert(result == 0);
-    ACQUIRE(held_mutex);
 }
 
 
