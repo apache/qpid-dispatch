@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include "entity.h"
 #include "entity_cache.h"
+#include "config.h"
 
 #if !defined(NDEBUG)
 #define QD_MEMORY_DEBUG 1
@@ -89,8 +90,10 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
         DEQ_INIT(desc->global_pool->free_list);
         desc->lock = sys_mutex();
         DEQ_INIT(desc->tpool_list);
+#if QD_MEMORY_STATS
         desc->stats = NEW(qd_alloc_stats_t);
         memset(desc->stats, 0, sizeof(qd_alloc_stats_t));
+#endif
 
         qd_alloc_type_t *type_item = NEW(qd_alloc_type_t);
         DEQ_ITEM_INIT(type_item);
@@ -114,7 +117,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
     //
     // If the descriptor is not initialized, set it up now.
     //
-    if (desc->trailer != PATTERN_BACK)
+    if (desc->header != PATTERN_FRONT)
         qd_alloc_init(desc);
 
     //
@@ -122,7 +125,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
     // thread-local pool for this type.
     //
     if (*tpool == 0) {
-        *tpool = NEW(qd_alloc_pool_t);
+        NEW_CACHE_ALIGNED(qd_alloc_pool_t, *tpool);
         DEQ_ITEM_INIT(*tpool);
         DEQ_INIT((*tpool)->free_list);
         sys_mutex_lock(desc->lock);
@@ -157,8 +160,10 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
         //
         // Rebalance a full batch from the global free list to the thread list.
         //
+#if QD_MEMORY_STATS
         desc->stats->batches_rebalanced_to_threads++;
         desc->stats->held_by_threads += desc->config->transfer_batch_size;
+#endif
         for (idx = 0; idx < desc->config->transfer_batch_size; idx++) {
             item = DEQ_HEAD(desc->global_pool->free_list);
             DEQ_REMOVE_HEAD(desc->global_pool->free_list);
@@ -169,17 +174,20 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
         // Allocate a full batch from the heap and put it on the thread list.
         //
         for (idx = 0; idx < desc->config->transfer_batch_size; idx++) {
-            item = (qd_alloc_item_t*) malloc(sizeof(qd_alloc_item_t) + desc->total_size
+            size_t size = sizeof(qd_alloc_item_t) + desc->total_size
 #ifdef QD_MEMORY_DEBUG
-                                             + sizeof(uint32_t)
+                                                  + sizeof(uint32_t)
 #endif
-                                             );
+                ;
+            ALLOC_CACHE_ALIGNED(size, item);
             if (item == 0)
                 break;
             DEQ_ITEM_INIT(item);
             DEQ_INSERT_TAIL(pool->free_list, item);
+#if QD_MEMORY_STATS
             desc->stats->held_by_threads++;
             desc->stats->total_alloc_from_heap++;
+#endif
         }
     }
     sys_mutex_unlock(desc->lock);
@@ -240,8 +248,10 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p)
     // rebalanced back to the global list.
     //
     sys_mutex_lock(desc->lock);
+#if QD_MEMORY_STATS
     desc->stats->batches_rebalanced_to_global++;
     desc->stats->held_by_threads -= desc->config->transfer_batch_size;
+#endif
     for (idx = 0; idx < desc->config->transfer_batch_size; idx++) {
         item = DEQ_HEAD(pool->free_list);
         DEQ_REMOVE_HEAD(pool->free_list);
@@ -257,7 +267,9 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p)
             item = DEQ_HEAD(desc->global_pool->free_list);
             DEQ_REMOVE_HEAD(desc->global_pool->free_list);
             free(item);
+#if QD_MEMORY_STATS
             desc->stats->total_free_to_heap++;
+#endif
         }
     }
 
@@ -308,7 +320,9 @@ void qd_alloc_finalize(void)
         while (item) {
             DEQ_REMOVE_HEAD(desc->global_pool->free_list);
             free(item);
+#if QD_MEMORY_STATS
             desc->stats->total_free_to_heap++;
+#endif
             item = DEQ_HEAD(desc->global_pool->free_list);
         }
         free(desc->global_pool);
@@ -323,7 +337,9 @@ void qd_alloc_finalize(void)
             while (item) {
                 DEQ_REMOVE_HEAD(tpool->free_list);
                 free(item);
+#if QD_MEMORY_STATS
                 desc->stats->total_free_to_heap++;
+#endif
                 item = DEQ_HEAD(tpool->free_list);
             }
 
@@ -335,16 +351,20 @@ void qd_alloc_finalize(void)
         //
         // Check the stats for lost items
         //
+#if QD_MEMORY_STATS
         if (dump_file && desc->stats->total_free_to_heap < desc->stats->total_alloc_from_heap)
             fprintf(dump_file,
                     "alloc.c: Items of type '%s' remain allocated at shutdown: %"PRId64"\n",
                     desc->type_name,
                     desc->stats->total_alloc_from_heap - desc->stats->total_free_to_heap);
+#endif
 
         //
         // Reclaim the descriptor components
         //
+#if QD_MEMORY_STATS
         free(desc->stats);
+#endif
         sys_mutex_free(desc->lock);
         desc->lock = 0;
         desc->trailer = 0;
@@ -365,12 +385,15 @@ qd_error_t qd_entity_refresh_allocator(qd_entity_t* entity, void *impl) {
         qd_entity_set_long(entity, "typeSize", alloc_type->desc->total_size) == 0 &&
         qd_entity_set_long(entity, "transferBatchSize", alloc_type->desc->config->transfer_batch_size) == 0 &&
         qd_entity_set_long(entity, "localFreeListMax", alloc_type->desc->config->local_free_list_max) == 0 &&
-        qd_entity_set_long(entity, "globalFreeListMax", alloc_type->desc->config->global_free_list_max) == 0 &&
-        qd_entity_set_long(entity, "totalAllocFromHeap", alloc_type->desc->stats->total_alloc_from_heap) == 0 &&
+        qd_entity_set_long(entity, "globalFreeListMax", alloc_type->desc->config->global_free_list_max) == 0
+#if QD_MEMORY_STATS
+        && qd_entity_set_long(entity, "totalAllocFromHeap", alloc_type->desc->stats->total_alloc_from_heap) == 0 &&
         qd_entity_set_long(entity, "totalFreeToHeap", alloc_type->desc->stats->total_free_to_heap) == 0 &&
         qd_entity_set_long(entity, "heldByThreads", alloc_type->desc->stats->held_by_threads) == 0 &&
         qd_entity_set_long(entity, "batchesRebalancedToThreads", alloc_type->desc->stats->batches_rebalanced_to_threads) == 0 &&
-        qd_entity_set_long(entity, "batchesRebalancedToGlobal", alloc_type->desc->stats->batches_rebalanced_to_global) == 0)
+        qd_entity_set_long(entity, "batchesRebalancedToGlobal", alloc_type->desc->stats->batches_rebalanced_to_global) == 0
+#endif
+        )
         return QD_ERROR_NONE;
     return qd_error_code();
 }

@@ -62,7 +62,7 @@ typedef struct {
     size_t               *additional_size;
     size_t                total_size;
     qd_alloc_config_t    *config;
-    qd_alloc_stats_t     *stats;
+    qd_alloc_stats_t     *stats           __attribute__((aligned(64)));
     qd_alloc_pool_t      *global_pool;
     sys_mutex_t          *lock;
     qd_alloc_pool_list_t  tpool_list;
@@ -87,7 +87,7 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p);
  *@internal
  */
 #define ALLOC_DEFINE_CONFIG(T,S,A,C)                                \
-    qd_alloc_type_desc_t __desc_##T = {0, #T, S, A, 0, C, 0, 0, 0, {0,0}, 0}; \
+    qd_alloc_type_desc_t __desc_##T  __attribute__((aligned(64))) = {0, #T, S, A, 0, C, 0, 0, 0, {0,0}, 0}; \
     __thread qd_alloc_pool_t *__local_pool_##T = 0;                     \
     T *new_##T(void) { return (T*) qd_alloc(&__desc_##T, &__local_pool_##T); }  \
     void free_##T(T *p) { qd_dealloc(&__desc_##T, &__local_pool_##T, (void*) p); } \

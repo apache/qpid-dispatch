@@ -28,6 +28,7 @@ project(qpid-dispatch C)
 
 # Build time switch to turn off memory pooling.
 option(USE_MEMORY_POOL "Use per-thread memory pools" ON)
+option(QD_MEMORY_STATS "Track memory pool usage statistics" ON)
 
 file(STRINGS "${CMAKE_SOURCE_DIR}/VERSION.txt" QPID_DISPATCH_VERSION)
 
