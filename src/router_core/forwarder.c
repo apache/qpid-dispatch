@@ -104,10 +104,11 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     uint64_t       *tag = (uint64_t*) dlv->tag;
 
     ZERO(dlv);
-    dlv->link    = link;
-    dlv->msg     = qd_message_copy(msg);
-    dlv->settled = !in_dlv || in_dlv->settled;
-    *tag         = core->next_tag++;
+    dlv->link       = link;
+    dlv->msg        = qd_message_copy(msg);
+    dlv->settled    = !in_dlv || in_dlv->settled;
+    dlv->presettled = dlv->settled;
+    *tag            = core->next_tag++;
     dlv->tag_length = 8;
 
     //

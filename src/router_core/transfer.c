@@ -50,6 +50,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_i
     dlv->to_addr        = 0;
     dlv->origin         = ingress;
     dlv->settled        = settled;
+    dlv->presettled     = settled;
     dlv->link_exclusion = link_exclusion;
 
     action->args.connection.delivery = dlv;
@@ -72,6 +73,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     dlv->to_addr        = addr;
     dlv->origin         = ingress;
     dlv->settled        = settled;
+    dlv->presettled     = settled;
     dlv->link_exclusion = link_exclusion;
 
     action->args.connection.delivery = dlv;
@@ -91,9 +93,10 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
 
     ZERO(dlv);
     sys_atomic_init(&dlv->ref_count, 1); // referenced by the action
-    dlv->link      = link;
-    dlv->msg       = msg;
-    dlv->settled   = settled;
+    dlv->link       = link;
+    dlv->msg        = msg;
+    dlv->settled    = settled;
+    dlv->presettled = settled;
 
     action->args.connection.delivery = dlv;
     action->args.connection.tag_length = tag_length;
@@ -260,7 +263,8 @@ void qdr_delivery_incref(qdr_delivery_t *delivery)
 
 static void qdr_delivery_decref_internal(qdr_delivery_t *delivery, bool lock_held)
 {
-    qdr_connection_t *conn   = delivery->link ? delivery->link->conn : 0;
+    qdr_link_t       *link   = delivery->link;
+    qdr_connection_t *conn   = link ? link->conn : 0;
     bool              delete = false;
     
     if (!!conn) {
@@ -281,6 +285,19 @@ static void qdr_delivery_decref_internal(qdr_delivery_t *delivery, bool lock_hel
             delivery->tracking_addr->outstanding_deliveries[link_bit]--;
             delivery->tracking_addr->tracked_deliveries--;
             delivery->tracking_addr = 0;
+        }
+
+        if (link) {
+            if (delivery->presettled)
+                link->presettled_deliveries++;
+            else if (delivery->disposition == PN_ACCEPTED)
+                link->accepted_deliveries++;
+            else if (delivery->disposition == PN_REJECTED)
+                link->rejected_deliveries++;
+            else if (delivery->disposition == PN_RELEASED)
+                link->released_deliveries++;
+            else if (delivery->disposition == PN_MODIFIED)
+                link->modified_deliveries++;
         }
 
         qd_bitmask_free(delivery->link_exclusion);

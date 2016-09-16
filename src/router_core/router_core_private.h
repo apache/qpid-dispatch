@@ -210,6 +210,7 @@ struct qdr_delivery_t {
     qd_field_iterator_t *origin;
     uint64_t             disposition;
     bool                 settled;
+    bool                 presettled;
     qdr_delivery_where_t where;
     uint8_t              tag[32];
     int                  tag_length;
@@ -272,7 +273,13 @@ struct qdr_link_t {
     bool                     drain_mode;
     bool                     drain_mode_changed;
     int                      credit_to_core; ///< Number of the available credits incrementally given to the core
-    uint64_t                 total_deliveries;
+
+    uint64_t total_deliveries;
+    uint64_t presettled_deliveries;
+    uint64_t accepted_deliveries;
+    uint64_t rejected_deliveries;
+    uint64_t released_deliveries;
+    uint64_t modified_deliveries;
 };
 
 ALLOC_DECLARE(qdr_link_t);

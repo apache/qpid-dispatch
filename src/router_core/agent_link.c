@@ -36,6 +36,11 @@
 #define QDR_LINK_CONNECTION_ID      12
 #define QDR_LINK_ADMIN_STATE        13
 #define QDR_LINK_OPER_STATE         14
+#define QDR_LINK_PRESETTLED_COUNT   15
+#define QDR_LINK_ACCEPTED_COUNT     16
+#define QDR_LINK_REJECTED_COUNT     17
+#define QDR_LINK_RELEASED_COUNT     18
+#define QDR_LINK_MODIFIED_COUNT     19
 
 const char *qdr_link_columns[] =
     {"name",
@@ -53,6 +58,11 @@ const char *qdr_link_columns[] =
      "connectionId", // The connection id of the owner connection
      "adminStatus",
      "operStatus",
+     "presettledCount",
+     "acceptedCount",
+     "rejectedCount",
+     "releasedCount",
+     "modifiedCount",
      0};
 
 static const char *qd_link_type_name(qd_link_type_t lt)
@@ -77,96 +87,116 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
     char *text = 0;
 
     switch(col) {
-        case QDR_LINK_NAME: {
-            if (link->name)
-                qd_compose_insert_string(body, link->name);
-            else
-                qd_compose_insert_null(body);
-            break;
-        }
-
-        case QDR_LINK_IDENTITY: {
-            char id[100];
-            snprintf(id, 100, "%"PRId64, link->identity);
-            qd_compose_insert_string(body, id);
-            break;
-        }
-
-        case QDR_LINK_TYPE:
-            qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.link");
-            break;
-
-        case QDR_LINK_LINK_NAME:
+    case QDR_LINK_NAME: {
+        if (link->name)
             qd_compose_insert_string(body, link->name);
-            break;
-
-        case QDR_LINK_LINK_TYPE:
-            qd_compose_insert_string(body, qd_link_type_name(link->link_type));
-            break;
-
-        case QDR_LINK_LINK_DIR:
-            qd_compose_insert_string(body, link->link_direction == QD_INCOMING ? "in" : "out");
-            break;
-
-        case QDR_LINK_OWNING_ADDR:
-            if (link->owning_addr)
-                qd_compose_insert_string(body, address_key(link->owning_addr));
-            else
-                qd_compose_insert_null(body);
-            break;
-
-        case QDR_LINK_CAPACITY:
-            qd_compose_insert_uint(body, link->capacity);
-            break;
-
-        case QDR_LINK_PEER:
-            if (link->connected_link) {
-                char id[100];
-                snprintf(id, 100, "%"PRId64, link->connected_link->identity);
-                qd_compose_insert_string(body, id);
-              } else
-                qd_compose_insert_null(body);
-            break;
-
-        case QDR_LINK_UNDELIVERED_COUNT:
-            qd_compose_insert_ulong(body, DEQ_SIZE(link->undelivered));
-            break;
-
-        case QDR_LINK_UNSETTLED_COUNT:
-            qd_compose_insert_ulong(body, DEQ_SIZE(link->unsettled));
-            break;
-
-        case QDR_LINK_DELIVERY_COUNT:
-            qd_compose_insert_ulong(body, link->total_deliveries);
-            break;
-
-        case QDR_LINK_CONNECTION_ID:
-            qd_compose_insert_ulong(body, link->conn->management_id);
-            break;
-
-        case QDR_LINK_ADMIN_STATE:
-            text = link->admin_enabled ? "enabled" : "disabled";
-            qd_compose_insert_string(body, text);
-            break;
-
-        case QDR_LINK_OPER_STATE:
-            switch (link->oper_status) {
-            case QDR_LINK_OPER_UP:        text = "up";        break;
-            case QDR_LINK_OPER_DOWN:      text = "down";      break;
-            case QDR_LINK_OPER_QUIESCING: text = "quiescing"; break;
-            case QDR_LINK_OPER_IDLE:      text = "idle";      break;
-            default:
-                text = 0;
-            }
-            if (!!text)
-                qd_compose_insert_string(body, text);
-            else
-                qd_compose_insert_null(body);
-            break;
-
-        default:
+        else
             qd_compose_insert_null(body);
-            break;
+        break;
+    }
+
+    case QDR_LINK_IDENTITY: {
+        char id[100];
+        snprintf(id, 100, "%"PRId64, link->identity);
+        qd_compose_insert_string(body, id);
+        break;
+    }
+
+    case QDR_LINK_TYPE:
+        qd_compose_insert_string(body, "org.apache.qpid.dispatch.router.link");
+        break;
+
+    case QDR_LINK_LINK_NAME:
+        qd_compose_insert_string(body, link->name);
+        break;
+
+    case QDR_LINK_LINK_TYPE:
+        qd_compose_insert_string(body, qd_link_type_name(link->link_type));
+        break;
+
+    case QDR_LINK_LINK_DIR:
+        qd_compose_insert_string(body, link->link_direction == QD_INCOMING ? "in" : "out");
+        break;
+
+    case QDR_LINK_OWNING_ADDR:
+        if (link->owning_addr)
+            qd_compose_insert_string(body, address_key(link->owning_addr));
+        else
+            qd_compose_insert_null(body);
+        break;
+
+    case QDR_LINK_CAPACITY:
+        qd_compose_insert_uint(body, link->capacity);
+        break;
+
+    case QDR_LINK_PEER:
+        if (link->connected_link) {
+            char id[100];
+            snprintf(id, 100, "%"PRId64, link->connected_link->identity);
+            qd_compose_insert_string(body, id);
+        } else
+            qd_compose_insert_null(body);
+        break;
+
+    case QDR_LINK_UNDELIVERED_COUNT:
+        qd_compose_insert_ulong(body, DEQ_SIZE(link->undelivered));
+        break;
+
+    case QDR_LINK_UNSETTLED_COUNT:
+        qd_compose_insert_ulong(body, DEQ_SIZE(link->unsettled));
+        break;
+
+    case QDR_LINK_DELIVERY_COUNT:
+        qd_compose_insert_ulong(body, link->total_deliveries);
+        break;
+
+    case QDR_LINK_CONNECTION_ID:
+        qd_compose_insert_ulong(body, link->conn->management_id);
+        break;
+
+    case QDR_LINK_ADMIN_STATE:
+        text = link->admin_enabled ? "enabled" : "disabled";
+        qd_compose_insert_string(body, text);
+        break;
+
+    case QDR_LINK_OPER_STATE:
+        switch (link->oper_status) {
+        case QDR_LINK_OPER_UP:        text = "up";        break;
+        case QDR_LINK_OPER_DOWN:      text = "down";      break;
+        case QDR_LINK_OPER_QUIESCING: text = "quiescing"; break;
+        case QDR_LINK_OPER_IDLE:      text = "idle";      break;
+        default:
+            text = 0;
+        }
+        if (!!text)
+            qd_compose_insert_string(body, text);
+        else
+            qd_compose_insert_null(body);
+        break;
+
+    case QDR_LINK_PRESETTLED_COUNT:
+        qd_compose_insert_ulong(body, link->presettled_deliveries);
+        break;
+
+    case QDR_LINK_ACCEPTED_COUNT:
+        qd_compose_insert_ulong(body, link->accepted_deliveries);
+        break;
+
+    case QDR_LINK_REJECTED_COUNT:
+        qd_compose_insert_ulong(body, link->rejected_deliveries);
+        break;
+
+    case QDR_LINK_RELEASED_COUNT:
+        qd_compose_insert_ulong(body, link->released_deliveries);
+        break;
+
+    case QDR_LINK_MODIFIED_COUNT:
+        qd_compose_insert_ulong(body, link->modified_deliveries);
+        break;
+
+    default:
+        qd_compose_insert_null(body);
+        break;
     }
 }
 

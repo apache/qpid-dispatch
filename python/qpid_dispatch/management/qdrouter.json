@@ -1008,6 +1008,31 @@
                     "type": "integer",
                     "graph": true,
                     "description": "The total number of deliveries that have traversed this link."
+                },
+                "presettledCount": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of pre-settled deliveries."
+                },
+                "acceptedCount": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of accepted deliveries."
+                },
+                "rejectedCount": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of rejected deliveries."
+                },
+                "releasedCount": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of released deliveries."
+                },
+                "modifiedCount": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of modified deliveries."
                 }
             }
         },
