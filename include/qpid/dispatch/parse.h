@@ -91,6 +91,18 @@ uint8_t qd_parse_tag(qd_parsed_field_t *field);
  */
 qd_field_iterator_t *qd_parse_raw(qd_parsed_field_t *field);
 
+
+/**
+ * Return an iterator for the typed content of the field. Contains the type followed by the raw content.
+ *
+ * IMPORTANT: The returned iterator is owned by the field and *must not* be
+ * freed by the caller of this function.
+ *
+ * @param field The field pointer returned by qd_parse.
+ * @return A field iterator that describes the field's typed content.
+ */
+qd_field_iterator_t *qd_parse_typed(qd_parsed_field_t *field);
+
 /**
  * Return the raw content as an unsigned integer up to 32-bits.  This is
  * valid only for scalar fields of a fixed size of 4-octets or fewer.

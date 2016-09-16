@@ -70,6 +70,14 @@ static char *test_parser_fixed_scalars(void *context)
         qd_field_iterator_t *field  = qd_field_iterator_binary(fs_vectors[idx].data,
                                                                fs_vectors[idx].length);
         qd_parsed_field_t *parsed = qd_parse(field);
+
+        qd_field_iterator_t *typed_iter = qd_parse_typed(parsed);
+
+        int length = qd_field_iterator_length(typed_iter);
+
+        if (length != fs_vectors[idx].length)
+            return "Length of typed iterator does not match actual length";
+
         if (!qd_parse_ok(parsed)) return "Unexpected Parse Error";
         if (qd_parse_tag(parsed) != fs_vectors[idx].expected_tag) {
             sprintf(error, "(%d) Tag: Expected %02x, Got %02x", idx,
