@@ -46,6 +46,7 @@ qdr_error_t *qdr_error_from_pn(pn_condition_t *pn)
         error->description = qdr_field(desc);
 
     error->info = pn_data(0);
+    pn_data_copy(error->info, pn_condition_info(pn));
 
     return error;
 }
