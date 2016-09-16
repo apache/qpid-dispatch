@@ -561,7 +561,7 @@ qd_message_t *qd_message()
 
     memset(msg->content, 0, sizeof(qd_message_content_t));
     msg->content->lock        = sys_mutex();
-    msg->content->ref_count   = 1;
+    sys_atomic_init(&msg->content->ref_count, 1);
     msg->content->parse_depth = QD_DEPTH_NONE;
     msg->content->parsed_message_annotations = 0;
 
@@ -581,9 +581,7 @@ void qd_message_free(qd_message_t *in_msg)
 
     qd_message_content_t *content = msg->content;
 
-    sys_mutex_lock(content->lock);
-    rc = --content->ref_count;
-    sys_mutex_unlock(content->lock);
+    rc = sys_atomic_dec(&content->ref_count) - 1;
 
     if (rc == 0) {
         if (content->parsed_message_annotations)
@@ -621,9 +619,7 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
 
     copy->content = content;
 
-    sys_mutex_lock(content->lock);
-    content->ref_count++;
-    sys_mutex_unlock(content->lock);
+    sys_atomic_inc(&content->ref_count);
 
     return (qd_message_t*) copy;
 }
