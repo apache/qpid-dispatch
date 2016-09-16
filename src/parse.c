@@ -30,6 +30,7 @@ struct qd_parsed_field_t {
     qd_parsed_field_list_t  children;
     uint8_t                 tag;
     qd_field_iterator_t    *raw_iter;
+    qd_field_iterator_t    *typed_iter;
     const char             *parse_error;
 };
 
@@ -111,6 +112,7 @@ static qd_parsed_field_t *qd_parse_internal(qd_field_iterator_t *iter, qd_parsed
     DEQ_INIT(field->children);
     field->parent   = p;
     field->raw_iter = 0;
+    field->typed_iter = qd_field_iterator_dup(iter);
 
     uint32_t length;
     uint32_t count;
@@ -152,6 +154,9 @@ void qd_parse_free(qd_parsed_field_t *field)
     if (field->raw_iter)
         qd_field_iterator_free(field->raw_iter);
 
+    if (field->typed_iter)
+        qd_field_iterator_free(field->typed_iter);
+
     qd_parsed_field_t *sub_field = DEQ_HEAD(field->children);
     while (sub_field) {
         qd_parsed_field_t *next = DEQ_NEXT(sub_field);
@@ -186,6 +191,12 @@ uint8_t qd_parse_tag(qd_parsed_field_t *field)
 qd_field_iterator_t *qd_parse_raw(qd_parsed_field_t *field)
 {
     return field->raw_iter;
+}
+
+
+qd_field_iterator_t *qd_parse_typed(qd_parsed_field_t *field)
+{
+    return field->typed_iter;
 }
 
 
