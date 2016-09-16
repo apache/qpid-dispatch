@@ -22,6 +22,7 @@
 #include "dispatch_private.h"
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/threading.h>
+#include <qpid/dispatch/atomic.h>
 #include <qpid/dispatch/log.h>
 #include <memory.h>
 
@@ -201,7 +202,7 @@ typedef enum {
 struct qdr_delivery_t {
     DEQ_LINKS(qdr_delivery_t);
     void                *context;
-    int                  ref_count;
+    sys_atomic_t         ref_count;
     qdr_link_t          *link;
     qdr_delivery_t      *peer;
     qd_message_t        *msg;
