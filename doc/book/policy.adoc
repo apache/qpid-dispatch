@@ -160,6 +160,7 @@ This object is the data value contained in entries in the policy/groups map.
 | maxReceivers         | 2^31-1  | Maximum number of receiving links that may be created on this connection.
 | allowDynamicSource   | false   | This connection is allowed to create receiving links using the Dynamic Link Source feature.
 | allowAnonymousSender | false   | This connection is allowed to create sending links using the Anonymous Sender feature.
+| allowUserIdProxy     | false   | This connection is allowed to send messages with a user_id property that differs from the connection's authenticated user id.
 | sources              | ""      | List of Source addresses allowed when creating receiving links. This list may be expressed as a CSV string or as a list of strings. An empty list denies all access.
 | targets              | ""      | List of Target addresses allowed when creating sending links. This list may be expressed as a CSV string or as a list of strings. An empty list denies all access.
 |====

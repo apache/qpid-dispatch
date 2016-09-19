@@ -59,6 +59,7 @@ class PolicyKeys(object):
     KW_MAX_RECEIVERS            = "maxReceivers"
     KW_ALLOW_DYNAMIC_SRC        = "allowDynamicSource"
     KW_ALLOW_ANONYMOUS_SENDER   = "allowAnonymousSender"
+    KW_ALLOW_USERID_PROXY       = "allowUserIdProxy"
     KW_SOURCES                  = "sources"
     KW_TARGETS                  = "targets"
 
@@ -118,6 +119,7 @@ class PolicyCompiler(object):
         PolicyKeys.KW_MAX_RECEIVERS,
         PolicyKeys.KW_ALLOW_DYNAMIC_SRC,
         PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER,
+        PolicyKeys.KW_ALLOW_USERID_PROXY,
         PolicyKeys.KW_SOURCES,
         PolicyKeys.KW_TARGETS
         ]
@@ -219,6 +221,7 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_MAX_RECEIVERS] = 2147483647
         policy_out[PolicyKeys.KW_ALLOW_DYNAMIC_SRC] = False
         policy_out[PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER] = False
+        policy_out[PolicyKeys.KW_ALLOW_USERID_PROXY] = False
         policy_out[PolicyKeys.KW_SOURCES] = ''
         policy_out[PolicyKeys.KW_TARGETS] = ''
 
@@ -247,7 +250,8 @@ class PolicyCompiler(object):
                     return False
                 policy_out[key] = val_out
             elif key in [PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER,
-                         PolicyKeys.KW_ALLOW_DYNAMIC_SRC
+                         PolicyKeys.KW_ALLOW_DYNAMIC_SRC,
+                         PolicyKeys.KW_ALLOW_USERID_PROXY
                          ]:
                 if not type(val) is bool:
                     errors.append("Policy vhost '%s' user group '%s' option '%s' has illegal boolean value '%s'." %

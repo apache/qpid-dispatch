@@ -95,6 +95,13 @@ Until the schema is extended specify embedded maps this document describes the v
               "required": false,
               "create": true
           },
+          "allowUserIdProxy": {
+              "type": "boolean",
+              "description": "This connection is allowed to send messages with a user_id property that differs from the connection authenticated user name.",
+              "default": false,
+              "required": false,
+              "create": true
+          },
           "sources": {
               "type": "string",
               "description": "List of Source addresses allowed when creating receiving links.",

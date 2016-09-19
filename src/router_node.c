@@ -264,6 +264,18 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     bool anonymous_link = qdr_link_is_anonymous(rlink);
 
     //
+    // Determine if the user of this connection is allowed to proxy the
+    // user_id of messages. A message user_id is proxied when the
+    // property value differs from the authenticated user name of the connection.
+    // If the user is not allowed to proxy the user_id then the message user_id
+    // must be blank or it must be equal to the connection user name.
+    //
+    bool             check_user = false;
+    qd_connection_t *conn       = qd_link_connection(link);
+    if (conn->policy_settings) 
+        check_user = !conn->policy_settings->allowUserIdProxy;
+
+    //
     // Validate the content of the delivery as an AMQP message.  This is done partially, only
     // to validate that we can find the fields we need to route the message.
     //
@@ -271,10 +283,28 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     // 'to' field.  If the link is not anonymous, we don't need the 'to' field as we will be
     // using the address from the link target.
     //
-    qd_message_depth_t  validation_depth = anonymous_link ? QD_DEPTH_PROPERTIES : QD_DEPTH_MESSAGE_ANNOTATIONS;
+    qd_message_depth_t  validation_depth = (anonymous_link || check_user) ? QD_DEPTH_PROPERTIES : QD_DEPTH_MESSAGE_ANNOTATIONS;
     bool                valid_message    = qd_message_check(msg, validation_depth);
 
     if (valid_message) {
+        if (check_user) {
+            // This connection must not allow proxied user_id
+            qd_field_iterator_t *userid_iter  = qd_message_field_iterator(msg, QD_FIELD_USER_ID);
+            if (userid_iter) {
+                // The user_id property has been specified
+                if (qd_field_iterator_remaining(userid_iter) > 0) {
+                    // user_id property in message is not blank
+                    if (!qd_field_iterator_equal(userid_iter, (const unsigned char *)conn->user_id)) {
+                        // This message is rejected: attempted user proxy is disallowed
+                        qd_log(router->log_source, QD_LOG_DEBUG, "Message rejected due to user_id proxy violation. User:%s", conn->user_id);
+                        pn_delivery_update(pnd, PN_REJECTED);
+                        pn_delivery_settle(pnd);
+                        return;
+                    }
+                }
+            }
+        }
+
         qd_parsed_field_t   *in_ma        = qd_message_message_annotations(msg);
         qd_bitmask_t        *link_exclusions;
         bool                 strip        = qdr_link_strip_annotations_in(rlink);

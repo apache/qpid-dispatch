@@ -50,6 +50,7 @@ struct qd_policy__settings_s {
     int  maxReceivers;
     bool allowDynamicSource;
     bool allowAnonymousSender;
+    bool allowUserIdProxy;
     char *sources;
     char *targets;
     qd_policy_denial_counts_t *denialCounts;

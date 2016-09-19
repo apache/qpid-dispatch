@@ -337,6 +337,7 @@ bool qd_policy_open_lookup_user(
                     settings->maxReceivers         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxReceivers", 0);
                     settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
                     settings->allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
+                    settings->allowUserIdProxy     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
                     settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
                     settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
                     settings->denialCounts         = (qd_policy_denial_counts_t*)
