@@ -65,7 +65,7 @@ add_test(unit_tests            ${TEST_WRAP} --vg unit_tests ${CMAKE_CURRENT_SOUR
 
 # Unit test python modules
 add_test(router_engine_test    ${TEST_WRAP} -m unittest -v router_engine_test)
-add_test(managemet_test        ${TEST_WRAP} -m unittest -v management)
+add_test(management_test       ${TEST_WRAP} -m unittest -v management)
 add_test(router_policy_test    ${TEST_WRAP} -m unittest -v router_policy_test)
 
 # System test python modules
