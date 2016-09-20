@@ -311,5 +311,41 @@ class QdSSLUseridProxy(QdSSLUseridTest):
         self.assertEqual('elaine', rm.body['user_name'])
 
 
+    def test_message_user_id_proxy_zzz_credit_handled(self):
+        # Test for DISPATCH-519. Make sure the REJECTED messages result
+        # in the client receiving credit.
+        credit_limit = 250   # router issues 250 credits
+        ssl_opts = dict()
+        ssl_opts['ssl-trustfile'] = self.ssl_file('ca-certificate.pem')
+        ssl_opts['ssl-certificate'] = self.ssl_file('client-certificate.pem')
+        ssl_opts['ssl-key'] = self.ssl_file('client-private-key.pem')
+        ssl_opts['ssl-password'] = 'client-password'
+
+        # create the SSL domain object
+        domain = self.create_ssl_domain(ssl_opts)
+
+        # Send a message with bad user_id. This message should be rejected.
+        # Connection has user_id 'user13'.
+        addr = self.address(13).replace("amqp", "amqps")
+        blocking_connection = BlockingConnection(addr, ssl_domain=domain)
+        blocking_sender = blocking_connection.create_sender("$management")
+
+        request = proton.Message()
+        request.user_id = u"bad-user-id"
+
+        for i in range(0, credit_limit+1):
+            result = Delivery.ACCEPTED
+            try:
+                delivery = blocking_sender.send(request, timeout=10)
+                result = delivery.remote_state
+            except proton.utils.SendException as e:
+                result = e.state
+            except proton.utils.Timeout as e:
+                self.assertTrue(False, "Timed out waiting for send credit")
+
+            self.assertTrue(result == Delivery.REJECTED,
+                            "Router accepted a message with user_id that did not match connection user_id")
+
+
 if __name__ == '__main__':
     unittest.main(main_module())

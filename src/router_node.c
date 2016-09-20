@@ -297,8 +297,10 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
                     if (!qd_field_iterator_equal(userid_iter, (const unsigned char *)conn->user_id)) {
                         // This message is rejected: attempted user proxy is disallowed
                         qd_log(router->log_source, QD_LOG_DEBUG, "Message rejected due to user_id proxy violation. User:%s", conn->user_id);
+                        pn_link_flow(pn_link, 1);
                         pn_delivery_update(pnd, PN_REJECTED);
                         pn_delivery_settle(pnd);
+                        qd_message_free(msg);
                         return;
                     }
                 }
@@ -366,8 +368,10 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
             //
             // The message is now and will always be unroutable because there is no address.
             //
+            pn_link_flow(pn_link, 1);
             pn_delivery_update(pnd, PN_REJECTED);
             pn_delivery_settle(pnd);
+            qd_message_free(msg);
         }
 
         //
@@ -388,8 +392,10 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
         //
         // Message is invalid.  Reject the message and don't involve the router core.
         //
+        pn_link_flow(pn_link, 1);
         pn_delivery_update(pnd, PN_REJECTED);
         pn_delivery_settle(pnd);
+        qd_message_free(msg);
     }
 }
 
