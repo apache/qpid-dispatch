@@ -416,7 +416,7 @@ class RouterTest(TestCase):
         ingress_message = Message()
         ingress_message.address = addr
         ingress_message.body = {'message': 'Hello World!'}
-        ingress_message_annotations = {}        
+        ingress_message_annotations = {'work': 'hard', 'stay': 'humble'}
         
         ingress_message.annotations = ingress_message_annotations
         
@@ -436,14 +436,17 @@ class RouterTest(TestCase):
         
         self.assertEqual(egress_message_annotations.__class__, dict)
         self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
+        self.assertEqual(egress_message_annotations['work'], 'hard')
+        self.assertEqual(egress_message_annotations['stay'], 'humble')
         self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
         
         M1.stop()
         M2.stop()
         
-    #This unit test is currently skipped because dispatch router do not pass thru custom message annotations. Once the feature is added the @unittest.skip decorator can be removed.
-    #The stripAnnotations property is set to 'no'
-    def notest_08a_test_strip_message_annotations_no_custom_not_implemented(self):
+    # This unit test is currently skipped because dispatch router do not pass thru custom message annotations.
+    # Once the feature is added the @unittest.skip decorator can be removed.
+    # The stripAnnotations property is set to 'no'
+    def test_08a_strip_message_annotations_custom(self):
         addr = "amqp:/message_annotations_strip_no_custom/1"
         
         M1 = self.messenger()
@@ -462,8 +465,7 @@ class RouterTest(TestCase):
         ingress_message.body = {'message': 'Hello World!'}
         ingress_message_annotations = {}
         ingress_message_annotations['custom-annotation'] = '1/Custom_Annotation'
-        
-        
+
         ingress_message.annotations = ingress_message_annotations
         
         M1.put(ingress_message)
@@ -474,10 +476,9 @@ class RouterTest(TestCase):
         egress_message = Message()
         M2.get(egress_message)
         
-        #Make sure 'Hello World!' is in the message body dict
+        # Make sure 'Hello World!' is in the message body dict
         self.assertEqual('Hello World!', egress_message.body['message'])
-        
-        
+
         egress_message_annotations = egress_message.annotations
         
         self.assertEqual(egress_message_annotations.__class__, dict)
@@ -537,9 +538,9 @@ class RouterTest(TestCase):
         M1.stop()
         M2.stop()
         
-    #Test to see if the dispatch router specific annotations were stripped.
-    #The stripAnnotations property is set to 'both'
-    #Send a message to the router with pre-existing ingress and trace annotations and make sure that nothing comes out.
+    # Test to see if the dispatch router specific annotations were stripped.
+    # The stripAnnotations property is set to 'both'
+    # Send a message to the router with pre-existing ingress and trace annotations and make sure that nothing comes out.
     def test_08a_test_strip_message_annotations_both_add_ingress_trace(self):
         addr = "amqp:/strip_message_annotations_both_add_ingress_trace/1"
         
@@ -559,10 +560,13 @@ class RouterTest(TestCase):
         ingress_message.body = {'message': 'Hello World!'}
         
         ##
-        ## Pre-existing ingress and trace. Intentionally populate the trace with the 0/QDR.A which is the trace of the first router.
-        ## If the inbound annotations were not stripped, the router would drop this message since it would consider this message as being looped.
-        ##
-        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['0/QDR.A']}
+        # Pre-existing ingress and trace. Intentionally populate the trace with the 0/QDR.A which is the trace
+        # of the first router. If the inbound annotations were not stripped, the router would drop this message
+        # since it would consider this message as being looped.
+        #
+        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router',
+                                       'x-opt-qd.trace': ['0/QDR.A'],
+                                       'work': 'hard'}
         ingress_message.annotations = ingress_message_annotations
         
         #Put and send the message
@@ -573,15 +577,15 @@ class RouterTest(TestCase):
         M2.recv(1)
         egress_message = Message()
         M2.get(egress_message)
-        
-        self.assertEqual(egress_message.annotations, None)
+
+        # Router specific annotations will be stripped. User defined annotations will not be stripped.
+        self.assertEqual(egress_message.annotations, {'work': 'hard'})
         
         M1.stop()
         M2.stop()
 
-
-    #Send in pre-existing trace and ingress and annotations and make sure that there are no outgoing annotations.
-    #stripAnnotations property is set to "in"
+    # Send in pre-existing trace and ingress and annotations and make sure that there are no outgoing annotations.
+    # stripAnnotations property is set to "in"
     def test_08a_test_strip_message_annotations_out(self):
         addr = "amqp:/strip_message_annotations_out/1"
         
@@ -616,6 +620,45 @@ class RouterTest(TestCase):
         
         self.assertEqual(egress_message.annotations, None)
         
+        M1.stop()
+        M2.stop()
+
+    # Send in pre-existing trace and ingress and annotations and make sure that there are no outgoing annotations.
+    # stripAnnotations property is set to "in"
+    def test_08a_test_strip_message_annotations_out_custom(self):
+        addr = "amqp:/strip_message_annotations_out/1"
+
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.route("amqp:/*", self.routers[0].addresses[3]+"/$1")
+        M2.route("amqp:/*", self.routers[1].addresses[3]+"/$1")
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+        self.routers[0].wait_address("strip_message_annotations_out/1", 0, 1)
+
+        ingress_message = Message()
+        ingress_message.address = addr
+        ingress_message.body = {'message': 'Hello World!'}
+        ingress_message_annotations = {'work': 'hard'}
+        ingress_message.annotations = ingress_message_annotations
+
+        # Put and send the message
+        M1.put(ingress_message)
+        M1.send()
+
+        # Receive the message
+        egress_message = Message()
+        M2.recv(1)
+        M2.get(egress_message)
+
+        # Make sure 'Hello World!' is in the message body dict
+        self.assertEqual('Hello World!', egress_message.body['message'])
+
+        self.assertEqual(egress_message.annotations, {'work': 'hard'})
+
         M1.stop()
         M2.stop()
     

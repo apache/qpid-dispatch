@@ -464,8 +464,7 @@ class RouterTest(TestCase):
     # The default for stripAnnotations is "both" (which means strip annotations on both ingress and egress)
     # This test will test the stripAnnotations = no option - meaning no annotations must be stripped.
     # We will send in a custom annotation and make that we get back 3 annotations on the received message
-    # Skipping this test temporarily
-    def notest_08a_test_strip_message_annotations_no_custom_not_implemented(self):
+    def test_08a_strip_message_annotations_custom(self):
         addr = self.router.addresses[1]+"/strip_message_annotations_no_custom/1"
 
         M1 = self.messenger()
@@ -480,7 +479,6 @@ class RouterTest(TestCase):
         ingress_message.body = {'message': 'Hello World!'}
         ingress_message_annotations = {}
         ingress_message_annotations['custom-annotation'] = '1/Custom_Annotation'
-
 
         ingress_message.annotations = ingress_message_annotations
 
@@ -535,7 +533,6 @@ class RouterTest(TestCase):
         #Make sure 'Hello World!' is in the message body dict
         self.assertEqual('Hello World!', egress_message.body['message'])
 
-
         egress_message_annotations = egress_message.annotations
 
         self.assertEqual(egress_message_annotations.__class__, dict)
@@ -545,7 +542,7 @@ class RouterTest(TestCase):
         M1.stop()
         M2.stop()
 
-    #stripAnnotations property is set to "no"
+    # stripAnnotations property is set to "no"
     def test_08a_test_strip_message_annotations_no_add_trace(self):
         addr = self.router.addresses[1]+"/strip_message_annotations_no_add_trace/1"
 
@@ -560,12 +557,12 @@ class RouterTest(TestCase):
         ingress_message.address = addr
         ingress_message.body = {'message': 'Hello World!'}
 
-        ##
-        ## Pre-existing ingress and trace
-        ##
-        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['0/QDR.1']}
-        ingress_message.annotations = ingress_message_annotations
-
+        #
+        # Pre-existing ingress and trace
+        #
+        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router',
+                                       'x-opt-qd.trace': ['0/QDR.1'],
+                                       'work': 'hard'}
         ingress_message.annotations = ingress_message_annotations
 
         M1.put(ingress_message)
@@ -576,22 +573,22 @@ class RouterTest(TestCase):
         egress_message = Message()
         M2.get(egress_message)
 
-        #Make sure 'Hello World!' is in the message body dict
+        # Make sure 'Hello World!' is in the message body dict
         self.assertEqual('Hello World!', egress_message.body['message'])
-
 
         egress_message_annotations = egress_message.annotations
 
         self.assertEqual(egress_message_annotations.__class__, dict)
         self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], 'ingress-router')
+        # Make sure the user defined annotation also makes it out.
+        self.assertEqual(egress_message_annotations['work'], 'hard')
         self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.1', '0/QDR'])
 
         M1.stop()
         M2.stop()
 
-
-    #Dont send any pre-existing ingress or trace annotations. Make sure that there are no outgoing message annotations
-    #stripAnnotations property is set to "both"
+    # Dont send any pre-existing ingress or trace annotations. Make sure that there are no outgoing message annotations
+    # stripAnnotations property is set to "both"
     def test_08a_test_strip_message_annotations_both(self):
         addr = self.router.addresses[2]+"/strip_message_annotations_both/1"
 
@@ -616,6 +613,39 @@ class RouterTest(TestCase):
         M2.get(egress_message)
 
         self.assertEqual(egress_message.annotations, None)
+
+        M1.stop()
+        M2.stop()
+
+    # Dont send any pre-existing ingress or trace annotations. Send in a custom annotation.
+    # Make sure that the custom annotation comes out and nothing else.
+    # stripAnnotations property is set to "both"
+    def test_08a_test_strip_message_annotations_both_custom(self):
+        addr = self.router.addresses[2]+"/strip_message_annotations_both/1"
+
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
+        ingress_message = Message()
+        ingress_message.address = addr
+        ingress_message.body = {'message': 'Hello World!'}
+        ingress_message_annotations = {'stay': 'humble'}
+        ingress_message.annotations = ingress_message_annotations
+
+        #Put and send the message
+        M1.put(ingress_message)
+        M1.send()
+
+        # Receive the message
+        M2.recv(1)
+        egress_message = Message()
+        M2.get(egress_message)
+
+        self.assertEqual(egress_message.annotations, ingress_message_annotations)
 
         M1.stop()
         M2.stop()

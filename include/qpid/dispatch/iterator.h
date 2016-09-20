@@ -180,6 +180,8 @@ void qd_address_iterator_set_phase(qd_field_iterator_t *iter, char phase);
  */
 void qd_address_iterator_override_prefix(qd_field_iterator_t *iter, char prefix);
 
+void qd_address_iterator_set_length(qd_field_iterator_t *iter, int length);
+
 /**
  * Return the current octet in the iterator's view and step to the next.
  */

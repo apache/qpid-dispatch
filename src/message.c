@@ -787,44 +787,93 @@ static void send_handler(void *context, const unsigned char *start, int length)
     pn_link_send(pnl, (const char*) start, length);
 }
 
-// create a buffer chain holding the outgoing message annotations section
-static bool compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t *out)
+/**
+ * Returns true if the data backing the iterator matches any of the router specific annotations like "x-opt-qd.ingress" or
+ * "x-opt-qd.trace" or "x-opt-qd.to" or "x-opt-qd.phase
+ */
+static bool qd_message_is_custom_annotation(qd_field_iterator_t *iter)
 {
-    if (!DEQ_IS_EMPTY(msg->ma_to_override) ||
-        !DEQ_IS_EMPTY(msg->ma_trace) ||
-        !DEQ_IS_EMPTY(msg->ma_ingress)) {
+    if (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_TRACE)
+            || qd_field_iterator_equal(iter, (unsigned char*) QD_MA_INGRESS)
+            || qd_field_iterator_equal(iter, (unsigned char*) QD_MA_TO)
+            || qd_field_iterator_equal(iter, (unsigned char*) QD_MA_PHASE))
+        return false;
+    return true;
+}
 
-        qd_composed_field_t *out_ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
-        qd_compose_start_map(out_ma);
 
-        if (!DEQ_IS_EMPTY(msg->ma_to_override)) {
-            qd_compose_insert_symbol(out_ma, QD_MA_TO);
-            qd_compose_insert_buffers(out_ma, &msg->ma_to_override);
+// create a buffer chain holding the outgoing message annotations section
+static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t *out, bool strip_annotations)
+{
+    qd_composed_field_t *out_ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
+
+    bool map_started = false;
+
+    //We will have to add the custom annotations
+    qd_parsed_field_t   *in_ma = msg->content->parsed_message_annotations;
+
+    if (in_ma) {
+        uint32_t count = qd_parse_sub_count(in_ma);
+
+        for (uint32_t idx = 0; idx < count; idx++) {
+            qd_parsed_field_t *sub_key  = qd_parse_sub_key(in_ma, idx);
+            if (!sub_key)
+                continue;
+
+            qd_field_iterator_t *iter = qd_parse_raw(sub_key);
+
+            if (qd_message_is_custom_annotation(iter)) {
+                if (!map_started) {
+                    qd_compose_start_map(out_ma);
+                    map_started = true;
+                }
+                qd_parsed_field_t *sub_value = qd_parse_sub_value(in_ma, idx);
+                qd_compose_insert_typed_iterator(out_ma, qd_parse_typed(sub_key));
+                qd_compose_insert_typed_iterator(out_ma, qd_parse_typed(sub_value));
+            }
         }
-
-        if (!DEQ_IS_EMPTY(msg->ma_trace)) {
-            qd_compose_insert_symbol(out_ma, QD_MA_TRACE);
-            qd_compose_insert_buffers(out_ma, &msg->ma_trace);
-        }
-
-        if (!DEQ_IS_EMPTY(msg->ma_ingress)) {
-            qd_compose_insert_symbol(out_ma, QD_MA_INGRESS);
-            qd_compose_insert_buffers(out_ma, &msg->ma_ingress);
-        }
-
-        if (msg->ma_phase != 0) {
-            qd_compose_insert_symbol(out_ma, QD_MA_PHASE);
-            qd_compose_insert_int(out_ma, msg->ma_phase);
-        }
-
-        qd_compose_end_map(out_ma);
-
-        qd_compose_take_buffers(out_ma, out);
-        qd_compose_free(out_ma);
-        return true;
     }
 
-    return false;
+    //Add the dispatch router specific annotations only if strip_annotations is false.
+    if (!strip_annotations) {
+        if (!DEQ_IS_EMPTY(msg->ma_to_override) ||
+            !DEQ_IS_EMPTY(msg->ma_trace) ||
+            !DEQ_IS_EMPTY(msg->ma_ingress) ||
+            msg->ma_phase != 0) {
+
+            if (!map_started) {
+                qd_compose_start_map(out_ma);
+                map_started = true;
+            }
+
+            if (!DEQ_IS_EMPTY(msg->ma_to_override)) {
+                qd_compose_insert_symbol(out_ma, QD_MA_TO);
+                qd_compose_insert_buffers(out_ma, &msg->ma_to_override);
+            }
+
+            if (!DEQ_IS_EMPTY(msg->ma_trace)) {
+                qd_compose_insert_symbol(out_ma, QD_MA_TRACE);
+                qd_compose_insert_buffers(out_ma, &msg->ma_trace);
+            }
+
+            if (!DEQ_IS_EMPTY(msg->ma_ingress)) {
+                qd_compose_insert_symbol(out_ma, QD_MA_INGRESS);
+                qd_compose_insert_buffers(out_ma, &msg->ma_ingress);
+            }
+
+            if (msg->ma_phase != 0) {
+                qd_compose_insert_symbol(out_ma, QD_MA_PHASE);
+                qd_compose_insert_int(out_ma, msg->ma_phase);
+            }
+        }
+    }
+
+    if (map_started) {
+        qd_compose_end_map(out_ma);
+        qd_compose_take_buffers(out_ma, out);
+    }
+
+    qd_compose_free(out_ma);
 }
 
 void qd_message_send(qd_message_t *in_msg,
@@ -845,64 +894,67 @@ void qd_message_send(qd_message_t *in_msg,
     qd_buffer_list_t new_ma;
     DEQ_INIT(new_ma);
 
-    if (strip_annotations || compose_message_annotations(msg, &new_ma)) {
-        //
-        // This is the case where the message annotations have been modified.
-        // The message send must be divided into sections:  The existing header;
-        // the new message annotations; the rest of the existing message.
-        // Note that the original message annotations that are still in the
-        // buffer chain must not be sent.
-        //
-        // Start by making sure that we've parsed the message sections through
-        // the message annotations
-        //
-        // ??? NO LONGER NECESSARY???
-        if (!qd_message_check(in_msg, QD_DEPTH_MESSAGE_ANNOTATIONS)) {
-            qd_log(log_source, QD_LOG_ERROR, "Cannot send: %s", qd_error_message);
-            return;
-        }
+    // Process  the message annotations if any
+    compose_message_annotations(msg, &new_ma, strip_annotations);
 
-        //
-        // Send header if present
-        //
-        cursor = qd_buffer_base(buf);
-        if (content->section_message_header.length > 0) {
-            buf    = content->section_message_header.buffer;
-            cursor = content->section_message_header.offset + qd_buffer_base(buf);
-            advance(&cursor, &buf,
-                    content->section_message_header.length + content->section_message_header.hdr_length,
-                    send_handler, (void*) pnl);
-        }
-
-        //
-        // Send new message annotations
-        //
-        qd_buffer_t *da_buf = DEQ_HEAD(new_ma);
-        while (da_buf) {
-            pn_link_send(pnl, (char*) qd_buffer_base(da_buf), qd_buffer_size(da_buf));
-            da_buf = DEQ_NEXT(da_buf);
-        }
-        qd_buffer_list_free_buffers(&new_ma);
-
-        //
-        // Skip over replaced message annotations
-        //
-        if (content->section_message_annotation.length > 0)
-            advance(&cursor, &buf,
-                    content->section_message_annotation.hdr_length + content->section_message_annotation.length,
-                    0, 0);
-
-        //
-        // Send remaining partial buffer
-        //
-        if (buf) {
-            size_t len = qd_buffer_size(buf) - (cursor - qd_buffer_base(buf));
-            advance(&cursor, &buf, len, send_handler, (void*) pnl);
-        }
-
-        // Fall through to process the remaining buffers normally
-        // Note that 'advance' will have moved us to the next buffer in the chain.
+    //
+    // This is the case where the message annotations have been modified.
+    // The message send must be divided into sections:  The existing header;
+    // the new message annotations; the rest of the existing message.
+    // Note that the original message annotations that are still in the
+    // buffer chain must not be sent.
+    //
+    // Start by making sure that we've parsed the message sections through
+    // the message annotations
+    //
+    // ??? NO LONGER NECESSARY???
+    if (!qd_message_check(in_msg, QD_DEPTH_MESSAGE_ANNOTATIONS)) {
+        qd_log(log_source, QD_LOG_ERROR, "Cannot send: %s", qd_error_message);
+        return;
     }
+
+    //
+    // Send header if present
+    //
+    cursor = qd_buffer_base(buf);
+    if (content->section_message_header.length > 0) {
+        buf    = content->section_message_header.buffer;
+        cursor = content->section_message_header.offset + qd_buffer_base(buf);
+        advance(&cursor, &buf,
+                content->section_message_header.length + content->section_message_header.hdr_length,
+                send_handler, (void*) pnl);
+    }
+
+    //
+    // Send new message annotations
+    //
+    qd_buffer_t *da_buf = DEQ_HEAD(new_ma);
+    while (da_buf) {
+        char *to_send = (char*) qd_buffer_base(da_buf);
+        pn_link_send(pnl, to_send, qd_buffer_size(da_buf));
+        da_buf = DEQ_NEXT(da_buf);
+    }
+    qd_buffer_list_free_buffers(&new_ma);
+
+    //
+    // Skip over replaced message annotations
+    //
+    if (content->section_message_annotation.length > 0)
+        advance(&cursor, &buf,
+                content->section_message_annotation.hdr_length + content->section_message_annotation.length,
+                0, 0);
+
+    //
+    // Send remaining partial buffer
+    //
+    if (buf) {
+        size_t len = qd_buffer_size(buf) - (cursor - qd_buffer_base(buf));
+        advance(&cursor, &buf, len, send_handler, (void*) pnl);
+    }
+
+    // Fall through to process the remaining buffers normally
+    // Note that 'advance' will have moved us to the next buffer in the chain.
+
 
     while (buf) {
         pn_link_send(pnl, (char*) qd_buffer_base(buf), qd_buffer_size(buf));
@@ -1140,9 +1192,9 @@ void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *b
     qd_compose_end_list(field);
 
     qd_buffer_list_t out_ma;
-    if (compose_message_annotations((qd_message_pvt_t*)msg, &out_ma)) {
-        qd_compose_insert_buffers(field, &out_ma);
-    }
+    DEQ_INIT(out_ma);
+    compose_message_annotations((qd_message_pvt_t*)msg, &out_ma, false);
+    qd_compose_insert_buffers(field, &out_ma);
 
     field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
     qd_compose_start_list(field);
