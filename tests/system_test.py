@@ -18,38 +18,14 @@
 #
 
 """System test library, provides tools for tests that start multiple processes,
-with special support for qpidd and qdrouter processes.
+with special support for qdrouter processes.
 
 Features:
 - Create separate directories for each test.
 - Save logs, sub-process output, core files etc.
 - Automated clean-up after tests: kill sub-processes etc.
-- Tools to manipulate qpidd and qdrouter configuration files.
+- Tools to manipulate qdrouter configuration files.
 - Sundry other tools.
-
-To run qpidd, additional to basic dispatch requirements:
- - qpidd with AMQP 1.0 support
- - qpidtoollibs python module from qpid/tools
- - qpid_messaging python module from qpid/cpp
-
-You can set this up from packages on fedora:
-
-  sudo yum install protonc qpid-cpp-server qpid-tools python-qpid-proton python-qpid_messaging
-
-Here's how to build from source assuming you use default install prefix /usr/local
-
-With a  qpid-proton checkout at $PROTON
- cd $PROTON/<build-directory>; make install
-With a qpid checkout at $QPID:
- cd $QPID/qpid/cpp/<build-directory>; make install
- cd $QPID/qpid/tools; ./setup.py install --prefix /usr/local
- cd $QPID/qpid/python; ./setup.py install --prefix /usr/local
-
-And finally make sure to set up your environment:
-
-export PATH="$PATH:/usr/local/sbin:/usr/local/bin"
-export PYTHONPATH="$PYTHONPATH:/usr/local/lib/proton/bindings/python:/usr/local/lib64/proton/bindings/python:/usr/local/lib/python2.7/site-packages:/usr/local/lib64/python2.7/site-packages"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib64"
 """
 
 import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re
@@ -102,12 +78,9 @@ DIR = os.path.dirname(__file__)
 def _check_requirements():
     """If requirements are missing, return a message, else return empty string."""
     missing = MISSING_MODULES
-    required_exes = ['qpidd', 'qdrouterd']
+    required_exes = ['qdrouterd']
     missing += ["No exectuable %s"%e for e in required_exes if not find_exe(e)]
-    if find_exe('qpidd'):
-        p = subprocess.Popen(['qpidd', '--help'], stdout=subprocess.PIPE)
-        if not "AMQP 1.0" in p.communicate()[0]:
-            missing.append("No AMQP 1.0 support in qpidd")
+
     if missing:
         return "%s: %s"%(__name__, ", ".join(missing))
 
@@ -339,7 +312,6 @@ class Qdrouterd(Process):
         def __str__(self):
             """Generate config file content. Calls default() first."""
             def props(p):
-                """qpidd.conf format of dict p"""
                 return "".join(["    %s: %s\n"%(k, v) for k, v in p.iteritems()])
             self.defaults()
             return "".join(["%s {\n%s}\n"%(n, props(p)) for n, p in self])
@@ -516,50 +488,6 @@ class Qdrouterd(Process):
     def wait_router_connected(self, router_id, **retry_kwargs):
         retry(lambda: self.is_router_connected(router_id), **retry_kwargs)
 
-class Qpidd(Process):
-    """Run a Qpid Daemon"""
-
-    class Config(dict, Config):
-        """qpidd.conf contents. Use like  a dict, str() generates qpidd.conf format"""
-        def __str__(self):
-            return "".join(["%s=%s\n"%(k, v) for k, v in self.iteritems()])
-
-    def __init__(self, name=None, config=Config(), port=None, wait=True):
-        self.config = Qpidd.Config(
-            {'auth':'no',
-             'log-to-stderr':'false', 'log-to-file':name+".log",
-             'data-dir':name+".data"})
-        self.config.update(config)
-        if port:
-            self.config['port'] = port
-        super(Qpidd, self).__init__(
-            ['qpidd', '--config', self.config.write(name)],
-            name=name, expect=Process.RUNNING)
-        self.port = self.config['port'] or 5672
-        self.address = "127.0.0.1:%s"%self.port
-
-        self._management = None
-        if wait:
-            self.wait_ready()
-
-    def qm_connect(self):
-        """Make a qpid_messaging connection to the broker"""
-        if not qm:
-            raise Exception("No qpid_messaging module available")
-        return qm.Connection.establish(self.address)
-
-    @property
-    def management(self, **kwargs):
-        """Get the management agent proxy for this broker"""
-        if not qpidtoollibs:
-            raise Exception("No qpidtoollibs module available")
-        if not self._management:
-            self._management = qpidtoollibs.BrokerAgent(self.qm_connect(), **kwargs)
-        return self._management
-
-    def wait_ready(self):
-        wait_port(self.port)
-
 class Messenger(proton.Messenger):
     """Convenience additions to proton.Messenger"""
 
@@ -646,10 +574,6 @@ class Tester(object):
     def qdrouterd(self, *args, **kwargs):
         """Return a Qdrouterd that will be cleaned up on teardown"""
         return self.cleanup(Qdrouterd(*args, **kwargs))
-
-    def qpidd(self, *args, **kwargs):
-        """Return a Qpidd that will be cleaned up on teardown"""
-        return self.cleanup(Qpidd(*args, **kwargs))
 
     def messenger(self, name=None, cleanup=True, **kwargs):
         """Return a started Messenger that will be cleaned up on teardown."""
