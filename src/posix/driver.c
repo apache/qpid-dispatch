@@ -36,6 +36,7 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <time.h>
+#include <sys/eventfd.h>
 
 #ifdef __sun
 #include <signal.h>
@@ -68,6 +69,10 @@ const char *protocol_family_ipv6 = "IPv6";
 const char *AF_INET6_STR = "AF_INET6";
 const char *AF_INET_STR = "AF_INET";
 
+static inline void ignore_result(int unused_result) {
+    (void) unused_result;
+}
+
 struct qdpn_driver_t {
     qd_log_source_t *log;
     pn_trace_t       trace;
@@ -88,7 +93,7 @@ struct qdpn_driver_t {
     size_t          capacity;
     struct pollfd  *fds;
     size_t          nfds;
-    int             ctrl[2]; //pipe for updating selectable status
+    int             efd;    // Event-FD for signaling the poll (driver-wakeup)
     pn_timestamp_t  wakeup;
 };
 
@@ -845,20 +850,17 @@ qdpn_driver_t *qdpn_driver()
     d->capacity = 0;
     d->fds = NULL;
     d->nfds = 0;
-    d->ctrl[0] = 0;
-    d->ctrl[1] = 0;
+    d->efd  = 0;
     d->trace = ((pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
                 (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
                 (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF));
     d->wakeup = 0;
 
-    // XXX
-    if (pipe(d->ctrl)) {
-        perror("Can't create control pipe");
+    d->efd = eventfd(0, EFD_NONBLOCK);
+    if (d->efd < 0) {
+        perror("Can't create eventfd");
+        exit(1);
     }
-
-    qdpn_configure_sock(d, d->ctrl[0], false);
-    qdpn_configure_sock(d, d->ctrl[1], false);
 
 #ifdef __sun
     struct sigaction act;
@@ -878,8 +880,7 @@ void qdpn_driver_free(qdpn_driver_t *d)
 {
     if (!d) return;
 
-    close(d->ctrl[0]);
-    close(d->ctrl[1]);
+    close(d->efd);
     while (DEQ_HEAD(d->connectors))
         qdpn_connector_free(DEQ_HEAD(d->connectors));
     while (DEQ_HEAD(d->listeners))
@@ -891,16 +892,11 @@ void qdpn_driver_free(qdpn_driver_t *d)
 
 int qdpn_driver_wakeup(qdpn_driver_t *d)
 {
-    if (d) {
-        ssize_t count = write(d->ctrl[1], "x", 1);
-        if (count <= 0) {
-            return count;
-        } else {
-            return 0;
-        }
-    } else {
-        return PN_ARG_ERR;
-    }
+    static uint64_t efd_delta = 1;
+
+    if (d)
+        ignore_result(write(d->efd, &efd_delta, sizeof(uint64_t)));
+    return 0;
 }
 
 static void qdpn_driver_rebuild(qdpn_driver_t *d)
@@ -915,7 +911,7 @@ static void qdpn_driver_rebuild(qdpn_driver_t *d)
     d->wakeup = 0;
     d->nfds = 0;
 
-    d->fds[d->nfds].fd = d->ctrl[0];
+    d->fds[d->nfds].fd = d->efd;
     d->fds[d->nfds].events = POLLIN;
     d->fds[d->nfds].revents = 0;
     d->nfds++;
@@ -970,9 +966,8 @@ int qdpn_driver_wait_3(qdpn_driver_t *d)
     bool woken = false;
     if (d->fds[0].revents & POLLIN) {
         woken = true;
-        //clear the pipe
-        char buffer[512];
-        while (read(d->ctrl[0], buffer, 512) == 512);
+        char buffer[sizeof(uint64_t)];
+        ignore_result(read(d->efd, buffer, sizeof(uint64_t)));
     }
 
     sys_mutex_lock(d->lock);
