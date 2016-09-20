@@ -623,6 +623,13 @@ var QDR = (function (QDR) {
 							type: QDRService.valFor(response.attributeNames, result, "type"),
 							undeliveredCount: QDRService.valFor(response.attributeNames, result, "undeliveredCount"),
 							unsettledCount: QDRService.valFor(response.attributeNames, result, "unsettledCount"),
+
+							acceptedCount: prettyVal("acceptedCount"),
+							modifiedCount: prettyVal("modifiedCount"),
+							presettledCount: prettyVal("presettledCount"),
+							rejectedCount: prettyVal("rejectedCount"),
+							releasedCount: prettyVal("releasedCount"),
+
 							uid:     linkName,
 							timestamp: now,
 							rate: QDRService.pretty(rate(linkName, response, result)),
