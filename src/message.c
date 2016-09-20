@@ -791,14 +791,24 @@ static void send_handler(void *context, const unsigned char *start, int length)
  * Returns true if the data backing the iterator matches any of the router specific annotations like "x-opt-qd.ingress" or
  * "x-opt-qd.trace" or "x-opt-qd.to" or "x-opt-qd.phase
  */
-static bool qd_message_is_custom_annotation(qd_field_iterator_t *iter)
+static bool qd_message_is_router_annotation(qd_field_iterator_t *iter)
 {
-    if (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_TRACE)
-            || qd_field_iterator_equal(iter, (unsigned char*) QD_MA_INGRESS)
-            || qd_field_iterator_equal(iter, (unsigned char*) QD_MA_TO)
-            || qd_field_iterator_equal(iter, (unsigned char*) QD_MA_PHASE))
-        return false;
-    return true;
+    bool is_router_annotation = true;
+    int i = 0;
+    while(! qd_field_iterator_end(iter)) {
+        char oct = qd_field_iterator_octet(iter);
+        char annotation_octet = QD_MA_PREFIX[i];
+        if (annotation_octet == '\0')
+            break;
+        if (oct != annotation_octet) {
+            is_router_annotation = false;
+            break;
+        }
+        i+=1;
+    }
+
+    qd_field_iterator_reset(iter);
+    return is_router_annotation;
 }
 
 
@@ -822,7 +832,7 @@ static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
 
             qd_field_iterator_t *iter = qd_parse_raw(sub_key);
 
-            if (qd_message_is_custom_annotation(iter)) {
+            if (!qd_message_is_router_annotation(iter)) {
                 if (!map_started) {
                     qd_compose_start_map(out_ma);
                     map_started = true;

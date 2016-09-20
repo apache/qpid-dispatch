@@ -91,6 +91,7 @@ enum {
 
 /** @name Message Annotation Headers */
 /// @{
+extern const char * const QD_MA_PREFIX;
 extern const char * const QD_MA_INGRESS;  ///< Ingress Router
 extern const char * const QD_MA_TRACE;    ///< Trace
 extern const char * const QD_MA_TO;       ///< To-Override
