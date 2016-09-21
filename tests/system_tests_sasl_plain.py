@@ -29,15 +29,7 @@ class RouterTestPlainSaslCommon(TestCase):
     @classmethod
     def router(cls, name, connection):
 
-        config = [
-            ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
-            ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
-            ('fixedAddress', {'prefix': '/multicast/', 'fanout': 'multiple'}),
-            ('fixedAddress', {'prefix': '/', 'fanout': 'multiple'}),
-
-        ] + connection
-
-        config = Qdrouterd.Config(config)
+        config = Qdrouterd.Config(connection)
 
         cls.routers.append(cls.tester.qdrouterd(name, config, wait=False))
 

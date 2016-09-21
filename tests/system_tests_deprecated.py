@@ -52,6 +52,10 @@ class RouterTestDeprecated(RouterTestPlainSaslCommon):
                                     'saslConfigPath': os.getcwd()}),
                      ('linkRoutePattern', {'prefix': 'org.apache'}),
                      ('router', {'routerId': 'QDR.X', 'mode': 'interior'}),
+                     ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
+                     ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
+                     ('fixedAddress', {'prefix': '/multicast/', 'fanout': 'multiple'}),
+                     ('fixedAddress', {'prefix': '/', 'fanout': 'multiple'}),
         ])
 
         super(RouterTestDeprecated, cls).router('Y', [
@@ -70,6 +74,10 @@ class RouterTestDeprecated(RouterTestPlainSaslCommon):
                      ('listener', {'addr': '0.0.0.0',
                                    'role': 'normal',
                                    'port': y_listener_port}),
+                     ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
+                     ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
+                     ('fixedAddress', {'prefix': '/multicast/', 'fanout': 'multiple'}),
+                     ('fixedAddress', {'prefix': '/', 'fanout': 'multiple'}),
         ])
 
         cls.routers[1].wait_router_connected('QDR.X')

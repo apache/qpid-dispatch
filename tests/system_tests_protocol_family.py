@@ -63,11 +63,6 @@ class ProtocolFamilyTest(TestCase):
                 # Specify host as ::1 and protocol family as IPv6
                 ('listener', {'host': '::1', 'protocolFamily': 'IPv6', 'port': cls.tester.get_port(protocol_family='IPv6')}),
 
-                ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
-                ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
-                ('fixedAddress', {'prefix': '/multicast/', 'fanout': 'multiple'}),
-                ('fixedAddress', {'prefix': '/', 'fanout': 'multiple'}),
-
             ] + connection
 
             config = Qdrouterd.Config(config)

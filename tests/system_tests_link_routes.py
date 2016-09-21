@@ -32,11 +32,11 @@ from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHand
 
 from qpid_dispatch.management.client import Node
 
-class LinkRoutePatternTest(TestCase):
+class LinkRouteTest(TestCase):
     """
-    Tests the linkRoutePattern property of the dispatch router.
+    Tests the linkRoute property of the dispatch router.
 
-    Sets up 3 routers (one of which is acting as a broker(QDR.A)). 2 routers have linkRoutePattern set to 'org.apache.'
+    Sets up 3 routers (one of which is acting as a broker(QDR.A)). 2 routers have linkRoute set to 'org.apache.'
     (please see configs in the setUpClass method to get a sense of how the routers and their connections are configured)
     The tests in this class send and receive messages across this network of routers to link routable addresses.
     Uses the Python Blocking API to send/receive messages. The blocking api plays neatly into the synchronous nature
@@ -57,17 +57,12 @@ class LinkRoutePatternTest(TestCase):
     @classmethod
     def setUpClass(cls):
         """Start three routers"""
-        super(LinkRoutePatternTest, cls).setUpClass()
+        super(LinkRouteTest, cls).setUpClass()
 
         def router(name, connection):
 
             config = [
                 ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
-                ('fixedAddress', {'prefix': '/closest/', 'fanout': 'single', 'bias': 'closest'}),
-                ('fixedAddress', {'prefix': '/spread/', 'fanout': 'single', 'bias': 'spread'}),
-                ('fixedAddress', {'prefix': '/multicast/', 'fanout': 'multiple'}),
-                ('fixedAddress', {'prefix': '/', 'fanout': 'multiple'}),
-
             ] + connection
 
             config = Qdrouterd.Config(config)
@@ -93,7 +88,10 @@ class LinkRoutePatternTest(TestCase):
                    # Only inter router communication must happen on 'inter-router' connectors. This connector makes
                    # a connection from the router B's ephemeral port to c_listener_port
                    ('connector', {'name': 'routerC', 'role': 'inter-router', 'host': '0.0.0.0', 'port': c_listener_port}),
-                   ('linkRoutePattern', {'prefix': 'org.apache', 'connector': 'broker'}),
+
+                   ('linkRoute', {'prefix': 'org.apache', 'connection': 'broker', 'dir': 'in'}),
+                   ('linkRoute', {'prefix': 'org.apache', 'connection': 'broker', 'dir': 'out'}),
+
                    ('linkRoute', {'prefix': 'pulp.task', 'connection': 'test-tag', 'dir': 'in'}),
                    ('linkRoute', {'prefix': 'pulp.task', 'connection': 'test-tag', 'dir': 'out'})
                 ]
@@ -103,9 +101,11 @@ class LinkRoutePatternTest(TestCase):
                    # The client will exclusively use the following listener to connect to QDR.C
                    ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(), 'saslMechanisms': 'ANONYMOUS'}),
                    ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': c_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
-                   # Note here that the linkRoutePattern is set to org.apache. which makes it backward compatible.
                    # The dot(.) at the end is ignored by the address hashing scheme.
-                   ('linkRoutePattern', {'prefix': 'org.apache.'}),
+
+                   ('linkRoute', {'prefix': 'org.apache.', 'dir': 'in'}),
+                   ('linkRoute', {'prefix': 'org.apache.', 'dir': 'out'}),
+
                    ('linkRoute', {'prefix': 'pulp.task', 'dir': 'in'}),
                    ('linkRoute', {'prefix': 'pulp.task', 'dir': 'out'})
                 ]
@@ -222,11 +222,11 @@ class LinkRoutePatternTest(TestCase):
 
     def test_ddd_partial_link_route_match(self):
         """
-        The linkRoutePattern on Routers C and B is set to org.apache.
+        The linkRoute on Routers C and B is set to org.apache.
         Creates a receiver listening on the address 'org.apache.dev' and a sender that sends to address 'org.apache.dev'.
         Sends a message to org.apache.dev via router QDR.C and makes sure that the message was successfully
         routed (using partial address matching) and received using pre-created links that were created as a
-        result of specifying addresses in the linkRoutePattern attribute('org.apache.').
+        result of specifying addresses in the linkRoute attribute('org.apache.').
         """
         hello_world_1 = "Hello World_1!"
 
@@ -309,11 +309,11 @@ class LinkRoutePatternTest(TestCase):
 
     def test_full_link_route_match(self):
         """
-        The linkRoutePattern on Routers C and B is set to org.apache.
+        The linkRoute on Routers C and B is set to org.apache.
         Creates a receiver listening on the address 'org.apache' and a sender that sends to address 'org.apache'.
         Sends a message to org.apache via router QDR.C and makes sure that the message was successfully
         routed (using full address matching) and received using pre-created links that were created as a
-        result of specifying addresses in the linkRoutePattern attribute('org.apache.').
+        result of specifying addresses in the linkRoute attribute('org.apache.').
         """
         hello_world_3 = "Hello World_3!"
         # Connects to listener #2 on QDR.C
