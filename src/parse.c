@@ -141,7 +141,7 @@ static qd_parsed_field_t *qd_parse_internal(qd_field_iterator_t *iter, qd_parsed
     field->parse_error = get_type_info(iter, &field->tag, &size, &count, &length_of_size, &length_of_count);
 
     if (!field->parse_error) {
-        qd_address_iterator_set_length(field->typed_iter, size + length_of_size + 1); // + 1 accounts for the tag length
+        qd_field_iterator_trim(field->typed_iter, size + length_of_size + 1); // + 1 accounts for the tag length
 
         field->raw_iter = qd_field_iterator_sub(iter, size - length_of_count);
 
