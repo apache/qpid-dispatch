@@ -382,13 +382,29 @@ void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file
 static PyObject *inc_none() { Py_INCREF(Py_None); return Py_None; }
 
 /// Return the log buffer up to limit as a python list. Called by management agent.
-PyObject *qd_log_recent_py(long limit) {
+PyObject *qd_log_recent_py(long limit, char *module) {
     if (PyErr_Occurred()) return NULL;
     PyObject *list = PyList_New(0);
     PyObject *py_entry = NULL;
     if (!list) goto error;
     qd_log_entry_t *entry = DEQ_TAIL(entries);
+
+    if (module) {
+        // Convert module to uppercase
+        int i = 0;
+        while(module[i] && module[i] >= 'a' && module[i] <= 'z') {
+            module[i]=toupper(module[i]);
+            i++;
+        }
+    }
+
     while (entry && limit) {
+        if (module && entry->module) {
+            if (strcmp(module, entry->module) != 0) {
+                entry = DEQ_PREV(entry);
+                continue;
+            }
+        }
         const int ENTRY_SIZE=6;
         py_entry = PyList_New(ENTRY_SIZE);
         if (!py_entry) goto error;
@@ -405,7 +421,8 @@ PyObject *qd_log_recent_py(long limit) {
         if (PyErr_Occurred()) goto error;
         PyList_Insert(list, 0, py_entry);
         Py_DECREF(py_entry);
-        if (limit > 0) --limit;
+        if (limit > 0)
+            --limit;
         entry = DEQ_PREV(entry);
     }
     return list;

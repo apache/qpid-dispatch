@@ -93,7 +93,7 @@ class QdDll(ctypes.PyDLL):
         self._prototype(self.qd_entity_refresh_begin, c_long, [py_object])
         self._prototype(self.qd_entity_refresh_end, None, [])
 
-        self._prototype(self.qd_log_recent_py, py_object, [c_long])
+        self._prototype(self.qd_log_recent_py, py_object, [c_long, c_char_p])
 
     def _errcheck(self, result, func, args):
         if self.qd_error_code():
