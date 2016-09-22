@@ -538,8 +538,9 @@ void qd_connection_set_user(qd_connection_t *conn);
  * internal work list and be invoked for processing by a worker thread.
  *
  * @param conn The connection over which the application wishes to send data
+ * @param awaken Iff true, wakeup the driver poll after the activation
  */
-void qd_server_activate(qd_connection_t *conn);
+void qd_server_activate(qd_connection_t *conn, bool awaken);
 
 
 /**

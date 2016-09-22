@@ -434,9 +434,11 @@ DEQ_DECLARE(qdr_connection_work_t, qdr_connection_work_list_t);
 
 struct qdr_connection_t {
     DEQ_LINKS(qdr_connection_t);
+    DEQ_LINKS_N(ACTIVATE, qdr_connection_t);
     qdr_core_t                 *core;
     void                       *user_context;
     bool                        incoming;
+    bool                        in_activate_list;
     qdr_connection_role_t       role;
     int                         inter_router_cost;
     qdr_conn_identifier_t      *conn_id;
@@ -524,7 +526,9 @@ struct qdr_core_t {
     qd_timer_t              *work_timer;
 
     qdr_connection_list_t open_connections;
+    qdr_connection_list_t connections_to_activate;
     qdr_link_list_t       open_links;
+
     //
     // Agent section
     //
@@ -586,7 +590,6 @@ struct qdr_core_t {
 
     uint64_t              next_identifier;
     sys_mutex_t          *id_lock;
-
 
     qdr_forwarder_t      *forwarders[QD_TREATMENT_LINK_BALANCED + 1];
 };

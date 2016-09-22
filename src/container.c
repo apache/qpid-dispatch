@@ -933,7 +933,7 @@ void qd_link_activate(qd_link_t *link)
     if (!ctx)
         return;
 
-    qd_server_activate(ctx);
+    qd_server_activate(ctx, true);
 }
 
 

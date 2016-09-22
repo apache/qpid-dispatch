@@ -219,8 +219,9 @@ int qdr_connection_process(qdr_connection_t *conn);
  *
  * @param context The context supplied when the callback was registered
  * @param conn The connection object to be activated
+ * @param awaken Iff true, awaken the driver poll loop after the activation
  */
-typedef void (*qdr_connection_activate_t) (void *context, qdr_connection_t *conn);
+typedef void (*qdr_connection_activate_t) (void *context, qdr_connection_t *conn, bool awaken);
 
 /**
  ******************************************************************************

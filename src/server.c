@@ -1580,7 +1580,7 @@ void qd_server_resume(qd_dispatch_t *qd)
 }
 
 
-void qd_server_activate(qd_connection_t *ctx)
+void qd_server_activate(qd_connection_t *ctx, bool awaken)
 {
     if (!ctx)
         return;
@@ -1591,7 +1591,8 @@ void qd_server_activate(qd_connection_t *ctx)
 
     if (!qdpn_connector_closed(ctor)) {
         qdpn_connector_activate(ctor, QDPN_CONNECTOR_WRITABLE);
-        qdpn_driver_wakeup(ctx->server->driver);
+        if (awaken)
+            qdpn_driver_wakeup(ctx->server->driver);
     }
 }
 
@@ -1668,7 +1669,7 @@ void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, vo
     DEQ_INSERT_TAIL(conn->deferred_calls, dc);
     sys_mutex_unlock(conn->deferred_call_lock);
 
-    qd_server_activate(conn);
+    qd_server_activate(conn, true);
 }
 
 
@@ -1676,7 +1677,7 @@ void qd_connection_set_event_stall(qd_connection_t *conn, bool stall)
 {
     conn->event_stall = stall;
      if (!stall)
-         qd_server_activate(conn);
+         qd_server_activate(conn, true);
 }
 
 
