@@ -635,8 +635,10 @@ class ManagementEntity(EntityAdapter):
 
     def requested_type(self, request):
         type = request.properties.get('entityType')
-        if type: return self._schema.entity_type(type)
-        else: return None
+        if type:
+            return self._schema.entity_type(type)
+        else:
+            return None
 
     def query(self, request):
         """Management node query operation"""
@@ -705,15 +707,33 @@ class ManagementEntity(EntityAdapter):
 
     def _intprop(self, request, prop):
         value = request.properties.get(prop)
-        if value is not None: value = int(value)
+        if value is not None:
+            value = int(value)
         return value
 
     def get_json_schema(self, request):
         return (OK, json.dumps(self._schema.dump(), indent=self._intprop(request, "indent")))
 
+    def is_log_module_valid(self, module):
+        module_valid = False
+        if module:
+            log_type = self._schema.prefixdot + 'log'
+            for module_type in self._schema.entity_types.get(log_type).attributes['module'].type:
+                if str(module_type) == module.upper():
+                    module_valid = True
+                    break
+
+        return module_valid
+
     def get_log(self, request):
-        logs = self._qd.qd_log_recent_py(self._intprop(request, "limit") or -1)
-        return (OK, logs)
+        module = request.properties.get("module")
+
+        if module and not self.is_log_module_valid(module):
+            raise BadRequestStatus("Invalid module %s " % module)
+
+        logs = self._qd.qd_log_recent_py(self._intprop(request, "limit") or -1,
+                                         module)
+        return OK, logs
 
     def profile(self, request):
         """Start/stop the python profiler, returns profile results"""
