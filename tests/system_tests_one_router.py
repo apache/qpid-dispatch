@@ -356,7 +356,6 @@ class RouterTest(TestCase):
         M1 = self.messenger()
         M2 = self.messenger()
 
-
         M1.start()
         M2.start()
         M2.subscribe(addr)
@@ -366,10 +365,9 @@ class RouterTest(TestCase):
 
         tm.address = addr
 
-
-        ##
-        ## No inbound delivery annotations
-        ##
+        #
+        # No inbound delivery annotations
+        #
         for i in range(10):
             tm.body = {'number': i}
             M1.put(tm)
@@ -384,9 +382,9 @@ class RouterTest(TestCase):
             self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR')
             self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR'])
 
-        ##
-        ## Pre-existing ingress
-        ##
+        #
+        # Pre-existing ingress
+        #
         tm.annotations = {'x-opt-qd.ingress': 'ingress-router'}
         for i in range(10):
             tm.body = {'number': i}
@@ -402,9 +400,9 @@ class RouterTest(TestCase):
             self.assertEqual(ma['x-opt-qd.ingress'], 'ingress-router')
             self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR'])
 
-        ##
-        ## Invalid trace type
-        ##
+        #
+        # Invalid trace type
+        #
         tm.annotations = {'x-opt-qd.trace' : 45}
         for i in range(10):
             tm.body = {'number': i}
@@ -420,9 +418,9 @@ class RouterTest(TestCase):
             self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR')
             self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR'])
 
-        ##
-        ## Empty trace
-        ##
+        #
+        # Empty trace
+        #
         tm.annotations = {'x-opt-qd.trace' : []}
         for i in range(10):
             tm.body = {'number': i}
@@ -438,9 +436,9 @@ class RouterTest(TestCase):
             self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR')
             self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR'])
 
-        ##
-        ## Non-empty trace
-        ##
+        #
+        # Non-empty trace
+        #
         tm.annotations = {'x-opt-qd.trace' : ['0/first.hop']}
         for i in range(10):
             tm.body = {'number': i}
@@ -490,9 +488,8 @@ class RouterTest(TestCase):
         egress_message = Message()
         M2.get(egress_message)
 
-        #Make sure 'Hello World!' is in the message body dict
+        # Make sure 'Hello World!' is in the message body dict
         self.assertEqual('Hello World!', egress_message.body['message'])
-
 
         egress_message_annotations = egress_message.annotations
 
@@ -504,7 +501,7 @@ class RouterTest(TestCase):
         M1.stop()
         M2.stop()
 
-    #stripAnnotations property is set to "no"
+    # stripAnnotations property is set to "no"
     def test_08a_test_strip_message_annotations_no(self):
         addr = self.router.addresses[1]+"/strip_message_annotations_no/1"
 
@@ -633,7 +630,9 @@ class RouterTest(TestCase):
         ingress_message = Message()
         ingress_message.address = addr
         ingress_message.body = {'message': 'Hello World!'}
-        ingress_message_annotations = {'stay': 'humble'}
+
+        # Only annotations with prefix "x-opt-qd." will be stripped
+        ingress_message_annotations = {'stay': 'humble', 'x-opt-qd': 'work'}
         ingress_message.annotations = ingress_message_annotations
 
         #Put and send the message

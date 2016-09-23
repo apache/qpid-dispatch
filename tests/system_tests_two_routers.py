@@ -566,7 +566,8 @@ class RouterTest(TestCase):
         #
         ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router',
                                        'x-opt-qd.trace': ['0/QDR.A'],
-                                       'work': 'hard'}
+                                       'work': 'hard',
+                                       'x-opt-qd': 'humble'}
         ingress_message.annotations = ingress_message_annotations
         
         #Put and send the message
@@ -578,8 +579,8 @@ class RouterTest(TestCase):
         egress_message = Message()
         M2.get(egress_message)
 
-        # Router specific annotations will be stripped. User defined annotations will not be stripped.
-        self.assertEqual(egress_message.annotations, {'work': 'hard'})
+        # Router specific annotations (annotations with prefix "x-opt-qd.") will be stripped. User defined annotations will not be stripped.
+        self.assertEqual(egress_message.annotations, {'work': 'hard', 'x-opt-qd': 'humble'})
         
         M1.stop()
         M2.stop()
@@ -642,7 +643,9 @@ class RouterTest(TestCase):
         ingress_message = Message()
         ingress_message.address = addr
         ingress_message.body = {'message': 'Hello World!'}
-        ingress_message_annotations = {'work': 'hard'}
+
+        # Annotations with prefix "x-opt-qd." will be skipped
+        ingress_message_annotations = {'work': 'hard', "x-opt-qd": "custom", "x-opt-qd.": "custom"}
         ingress_message.annotations = ingress_message_annotations
 
         # Put and send the message
@@ -657,7 +660,7 @@ class RouterTest(TestCase):
         # Make sure 'Hello World!' is in the message body dict
         self.assertEqual('Hello World!', egress_message.body['message'])
 
-        self.assertEqual(egress_message.annotations, {'work': 'hard'})
+        self.assertEqual(egress_message.annotations, {'work': 'hard', "x-opt-qd": "custom"})
 
         M1.stop()
         M2.stop()
