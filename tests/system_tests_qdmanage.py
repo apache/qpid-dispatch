@@ -185,6 +185,19 @@ class QdmanageTest(TestCase):
         self.assertEquals(['AGENT', 'trace'], log[0:2])
         self.assertRegexpMatches(log[2], 'get-log')
 
+        log = json.loads(self.run_qdmanage("get-log module=policy"))[0]
+        self.assertTrue(log[0], "POLICY")
+
+        log = json.loads(self.run_qdmanage("get-log limit=2 module=policy"))
+        self.assertEquals(2, len(log))
+
+        # Use uppercase module=POLICY
+        log = json.loads(self.run_qdmanage("get-log limit=2 module=POLICY"))
+        self.assertEquals(2, len(log))
+
+        log = json.loads(self.run_qdmanage("get-log module=policy"))
+        self.assertTrue(len(log) > 2)
+
     def test_ssl(self):
         """Simple test for SSL connection. Note system_tests_qdstat has a more complete SSL test"""
         url = Url(self.router_1.addresses[1], scheme="amqps")
