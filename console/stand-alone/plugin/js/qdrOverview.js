@@ -461,13 +461,13 @@ var QDR = (function (QDR) {
 					displayName: 'Address',
 					groupable:	false,
 					width: '15%'
-				},
+				}/*,
 				{
 					displayName: 'Quiesce',
                     cellClass: 'gridCellButton',
                     cellTemplate: '<button title="{{quiesceLinkText(row)}} this link" type="button" ng-class="quiesceLinkClass(row)" class="btn" ng-click="quiesceLink(row, $event)" ng-disabled="quiesceLinkDisabled(row)">{{quiesceLinkText(row)}}</button>',
 					width: '10%'
-                }
+                }*/
             ],
 			enableColumnResize: true,
 			enableColumnReordering: true,
@@ -502,8 +502,10 @@ var QDR = (function (QDR) {
             if (columns) {
                 var cols = JSON.parse(columns);
                 cols.forEach( function (col, index) {
-                    grid.columnDefs[index].width = col[0];
-                    grid.columnDefs[index].visible = col[1]
+					if (grid.columnDefs[index]) {
+	                    grid.columnDefs[index].width = col[0];
+	                    grid.columnDefs[index].visible = col[1]
+					}
                 })
             }
         }
@@ -610,29 +612,31 @@ var QDR = (function (QDR) {
 							operStatus: operStatus,
 							adminStatus:adminStatus,
 							owningAddr: addresses[0],
-							rawAddress: addresses[1],
-							deliveryCount:prettyVal("deliveryCount") + " ",
-							rawDeliveryCount: QDRService.valFor(response.attributeNames, result, "deliveryCount"),
-							name: QDRService.valFor(response.attributeNames, result, "name"),
-							linkName: QDRService.valFor(response.attributeNames, result, "linkName"),
-							capacity: QDRService.valFor(response.attributeNames, result, "capacity"),
-							connectionId: QDRService.valFor(response.attributeNames, result, "connectionId"),
-							linkDir: QDRService.valFor(response.attributeNames, result, "linkDir"),
-							linkType: linkType,
-							peer: QDRService.valFor(response.attributeNames, result, "peer"),
-							type: QDRService.valFor(response.attributeNames, result, "type"),
-							undeliveredCount: QDRService.valFor(response.attributeNames, result, "undeliveredCount"),
-							unsettledCount: QDRService.valFor(response.attributeNames, result, "unsettledCount"),
 
 							acceptedCount: prettyVal("acceptedCount"),
 							modifiedCount: prettyVal("modifiedCount"),
 							presettledCount: prettyVal("presettledCount"),
 							rejectedCount: prettyVal("rejectedCount"),
 							releasedCount: prettyVal("releasedCount"),
+							deliveryCount:prettyVal("deliveryCount") + " ",
+
+							rate: QDRService.pretty(rate(linkName, response, result)),
+							capacity: QDRService.valFor(response.attributeNames, result, "capacity"),
+							undeliveredCount: QDRService.valFor(response.attributeNames, result, "undeliveredCount"),
+							unsettledCount: QDRService.valFor(response.attributeNames, result, "unsettledCount"),
+
+							rawAddress: addresses[1],
+							rawDeliveryCount: QDRService.valFor(response.attributeNames, result, "deliveryCount"),
+							name: QDRService.valFor(response.attributeNames, result, "name"),
+							linkName: QDRService.valFor(response.attributeNames, result, "linkName"),
+							connectionId: QDRService.valFor(response.attributeNames, result, "connectionId"),
+							linkDir: QDRService.valFor(response.attributeNames, result, "linkDir"),
+							linkType: linkType,
+							peer: QDRService.valFor(response.attributeNames, result, "peer"),
+							type: QDRService.valFor(response.attributeNames, result, "type"),
 
 							uid:     linkName,
 							timestamp: now,
-							rate: QDRService.pretty(rate(linkName, response, result)),
 							nodeId: nodeName,
 							identity: QDRService.valFor(response.attributeNames, result, "identity")
 						})
@@ -835,7 +839,7 @@ var QDR = (function (QDR) {
 
 			$scope.singleLinkFields = [];
 			var fields = Object.keys(link.data.fields)
-			var excludeFields = ["title", "uid", "uncounts", "rawDeliveryCount", "timestamp"]
+			var excludeFields = ["title", "uid", "uncounts", "rawDeliveryCount", "timestamp", "rawAddress"]
 			fields.forEach( function (field) {
 				if (excludeFields.indexOf(field) == -1)
 					$scope.singleLinkFields.push({attribute: field, value: link.data.fields[field]})
@@ -1069,7 +1073,7 @@ var QDR = (function (QDR) {
 				}
 			}
 			nodeIds.forEach( function (node) {
-				QDRService.sendMethod(node, undefined, {}, "GET-LOG", gotLogInfo)
+				QDRService.sendMethod(node, undefined, {}, "GET-LOG", {}, gotLogInfo)
 			})
 
 		}

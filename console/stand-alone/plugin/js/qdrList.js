@@ -91,7 +91,7 @@ var QDR = (function(QDR) {
 				$scope.logResults = [];
 				$scope.fetchingLog = true;
 				var entity; // undefined since it is not supported in the GET-LOG call
-				QDRService.sendMethod($scope.currentNode.id, entity, {}, $scope.currentMode.op, function (nodeName, entity, response, context) {
+				QDRService.sendMethod($scope.currentNode.id, entity, {}, {}, $scope.currentMode.op, function (nodeName, entity, response, context) {
 					$scope.fetchingLog = false;
 					var statusCode = context.message.application_properties.statusCode;
 					if (statusCode < 200 || statusCode >= 300) {
@@ -720,11 +720,11 @@ var QDR = (function(QDR) {
 						attributes[field.name] = value
 				}
 			})
-			QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, gotMethodResponse)
+			QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, undefined, gotMethodResponse)
 		}
 		$scope.remove = function () {
 			var attributes = {type: $scope.selectedEntity, name: $scope.selectedRecordName}
-			QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, gotMethodResponse)
+			QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, undefined, gotMethodResponse)
 		}
 
 		function doDialog(chart) {

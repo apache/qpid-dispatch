@@ -323,7 +323,7 @@ var QDR = (function(QDR) {
 				}
 			}
 			var attributes = {adminStatus: 'disabled', name: name};
-			self.sendMethod(nodeId, "router.link", attributes, "UPDATE", gotMethodResponse)
+			self.sendMethod(nodeId, "router.link", attributes, "UPDATE", undefined, gotMethodResponse)
 		},
 		addr_text: function (addr) {
 	        if (!addr)
@@ -682,10 +682,10 @@ var QDR = (function(QDR) {
         }, ret.error);
       },
 
-	sendMethod: function (nodeId, entity, attrs, operation, callback) {
+	sendMethod: function (nodeId, entity, attrs, operation, props, callback) {
 		var ret;
 		self.correlator.request(
-			ret = self._sendMethod(nodeId, entity, attrs, operation)
+			ret = self._sendMethod(nodeId, entity, attrs, operation, props)
 		).then(ret.id, function (response, context) {
 				callback(nodeId, entity, response, context);
 		}, ret.error);
@@ -702,7 +702,7 @@ var QDR = (function(QDR) {
 		return fullAddr;
 	},
 
-	_sendMethod: function (toAddr, entity, attrs, operation) {
+	_sendMethod: function (toAddr, entity, attrs, operation, props) {
 		var fullAddr = self._fullAddr(toAddr);
 		var ret = {id: self.correlator.corr()};
 		if (!self.sender || !self.sendable) {
@@ -720,6 +720,9 @@ var QDR = (function(QDR) {
 			}
 			if (attrs.name)
 				application_properties.name = attrs.name;
+			if (props) {
+				jQuery.extend(application_properties, props);
+			}
 			var msg = {
 	                body: attrs,
 	                properties: {
