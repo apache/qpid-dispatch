@@ -938,6 +938,7 @@ static void qdpn_driver_rebuild(qdpn_driver_t *d)
         }
         c = DEQ_NEXT(c);
     }
+
     sys_mutex_unlock(d->lock);
 }
 
@@ -1013,6 +1014,16 @@ int qdpn_driver_wait_3(qdpn_driver_t *d)
         c = DEQ_NEXT(c);
     }
 
+    //
+    // Rotate the head connector to the tail.  This improves the fairness of polling on
+    // open FDs.
+    //
+    c = DEQ_HEAD(d->connectors);
+    if (c) {
+        DEQ_REMOVE_HEAD(d->connectors);
+        DEQ_INSERT_TAIL(d->connectors, c);
+    }
+    
     d->listener_next = DEQ_HEAD(d->listeners);
     d->connector_next = DEQ_HEAD(d->connectors);
     sys_mutex_unlock(d->lock);
