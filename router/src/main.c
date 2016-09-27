@@ -29,6 +29,7 @@
 #include <getopt.h>
 #include <errno.h>
 #include "config.h"
+#include "version.h"
 
 static int            exit_with_sigint = 0;
 static qd_dispatch_t *dispatch = 0;
@@ -293,11 +294,12 @@ int main(int argc, char **argv)
     {"pidfile", required_argument, 0, 'P'},
     {"user",    required_argument, 0, 'U'},
     {"help",    no_argument,       0, 'h'},
+    {"version", no_argument,       0, 'v'},
     {0,         0,                 0,  0}
     };
 
     while (1) {
-        int c = getopt_long(argc, argv, "c:I:dP:U:h", long_options, 0);
+        int c = getopt_long(argc, argv, "c:I:dP:U:h:v", long_options, 0);
         if (c == -1)
             break;
 
@@ -324,6 +326,10 @@ int main(int argc, char **argv)
 
         case 'h' :
             usage(argv);
+            exit(0);
+
+        case 'v' :
+            fprintf(stdout, "Qpid Dispatch Router %i.%i.%i\n", QPID_DISPATCH_VERSION_MAJOR, QPID_DISPATCH_VERSION_MINOR, QPID_DISPATCH_VERSION_PATCH);
             exit(0);
 
         case '?' :
