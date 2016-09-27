@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#define      QPID_DISPATCH_VERSION        "${QPID_DISPATCH_VERSION}"
 #cmakedefine DEFAULT_CONFIG_PATH          "${DEFAULT_CONFIG_PATH}"
 #cmakedefine QPID_DISPATCH_HOME_INSTALLED "${QPID_DISPATCH_HOME_INSTALLED}"
 
