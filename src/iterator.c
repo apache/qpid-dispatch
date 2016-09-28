@@ -444,6 +444,15 @@ void qd_address_iterator_set_phase(qd_field_iterator_t *iter, char phase)
     iter->phase = phase;
 }
 
+void qd_field_iterator_trim(qd_field_iterator_t *iter, int length)
+{
+    if (qd_field_iterator_length(iter) > length) {
+        iter->start_pointer        = iter->pointer;
+        iter->start_pointer.length = length;
+        iter->view_start_pointer   = iter->start_pointer;
+        iter->pointer              = iter->start_pointer;
+    }
+}
 
 void qd_address_iterator_override_prefix(qd_field_iterator_t *iter, char prefix)
 {

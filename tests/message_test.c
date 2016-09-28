@@ -65,7 +65,6 @@ static char* test_send_to_messenger(void *context)
 {
     qd_message_t         *msg     = qd_message();
     qd_message_content_t *content = MSG_CONTENT(msg);
-
     qd_message_compose_1(msg, "test_addr_0", 0);
     qd_buffer_t *buf = DEQ_HEAD(content->buffers);
     if (buf == 0) return "Expected a buffer in the test message";
@@ -289,7 +288,6 @@ static char* test_send_message_annotations(void *context)
 int message_tests(void)
 {
     int result = 0;
-
     TEST_CASE(test_send_to_messenger, 0);
     TEST_CASE(test_receive_from_messenger, 0);
     TEST_CASE(test_message_properties, 0);

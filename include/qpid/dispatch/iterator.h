@@ -181,6 +181,15 @@ void qd_address_iterator_set_phase(qd_field_iterator_t *iter, char phase);
 void qd_address_iterator_override_prefix(qd_field_iterator_t *iter, char prefix);
 
 /**
+ * Trims octets from the end of the iterator's field by reducing the length of the iterator.
+ *
+ * @param iter - the iterator whose length should be trimmed
+ * @param length - the length of the trimmed field.  If greater than or equal to the current length,
+ *                 then there shall be no effect.
+ */
+void qd_field_iterator_trim(qd_field_iterator_t *iter, int length);
+
+/**
  * Return the current octet in the iterator's view and step to the next.
  */
 unsigned char qd_field_iterator_octet(qd_field_iterator_t *iter);

@@ -37,29 +37,48 @@ struct qd_parsed_field_t {
 ALLOC_DECLARE(qd_parsed_field_t);
 ALLOC_DEFINE(qd_parsed_field_t);
 
-
-static char *get_type_info(qd_field_iterator_t *iter, uint8_t *tag, uint32_t *length, uint32_t *count, uint32_t *clen)
+/**
+ * size = the number of bytes following the tag
+ * count = the number of elements. Applies only to compound structures
+ */
+static char *get_type_info(qd_field_iterator_t *iter, uint8_t *tag, uint32_t *size, uint32_t *count, uint32_t *length_of_size, uint32_t *length_of_count)
 {
     if (qd_field_iterator_end(iter))
         return "Insufficient Data to Determine Tag";
-    *tag      = qd_field_iterator_octet(iter);
-    *count    = 0;
-    *length   = 0;
-    *clen     = 0;
+
+    *tag             = qd_field_iterator_octet(iter);
+    *count           = 0;
+    *size            = 0;
+    *length_of_count = 0;
+    *length_of_size  = 0;
+
 
     switch (*tag & 0xF0) {
-    case 0x40: *length = 0;  break;
-    case 0x50: *length = 1;  break;
-    case 0x60: *length = 2;  break;
-    case 0x70: *length = 4;  break;
-    case 0x80: *length = 8;  break;
-    case 0x90: *length = 16; break;
+    case 0x40:
+        *size = 0;
+        break;
+    case 0x50:
+        *size = 1;
+        break;
+    case 0x60:
+        *size = 2;
+        break;
+    case 0x70:
+        *size = 4;
+        break;
+    case 0x80:
+        *size = 8;
+        break;
+    case 0x90:
+        *size = 16;
+        break;
     case 0xB0:
     case 0xD0:
     case 0xF0:
-        *length += ((unsigned int) qd_field_iterator_octet(iter)) << 24;
-        *length += ((unsigned int) qd_field_iterator_octet(iter)) << 16;
-        *length += ((unsigned int) qd_field_iterator_octet(iter)) << 8;
+        *size += ((unsigned int) qd_field_iterator_octet(iter)) << 24;
+        *size += ((unsigned int) qd_field_iterator_octet(iter)) << 16;
+        *size += ((unsigned int) qd_field_iterator_octet(iter)) << 8;
+        *length_of_size = 3;
         // fall through to the next case
 
     case 0xA0:
@@ -67,7 +86,8 @@ static char *get_type_info(qd_field_iterator_t *iter, uint8_t *tag, uint32_t *le
     case 0xE0:
         if (qd_field_iterator_end(iter))
             return "Insufficient Data to Determine Length";
-        *length += (unsigned int) qd_field_iterator_octet(iter);
+        *size += (unsigned int) qd_field_iterator_octet(iter);
+        *length_of_size += 1;
         break;
 
     default:
@@ -80,7 +100,7 @@ static char *get_type_info(qd_field_iterator_t *iter, uint8_t *tag, uint32_t *le
         *count += ((unsigned int) qd_field_iterator_octet(iter)) << 24;
         *count += ((unsigned int) qd_field_iterator_octet(iter)) << 16;
         *count += ((unsigned int) qd_field_iterator_octet(iter)) << 8;
-        *clen = 3;
+        *length_of_count = 3;
         // fall through to the next case
 
     case 0xC0:
@@ -88,19 +108,18 @@ static char *get_type_info(qd_field_iterator_t *iter, uint8_t *tag, uint32_t *le
         if (qd_field_iterator_end(iter))
             return "Insufficient Data to Determine Count";
         *count += (unsigned int) qd_field_iterator_octet(iter);
-        *clen += 1;
+        *length_of_count += 1;
         break;
     }
 
     if ((*tag == QD_AMQP_MAP8 || *tag == QD_AMQP_MAP32) && (*count & 1))
         return "Odd Number of Elements in a Map";
 
-    if (*clen > *length)
+    if (*length_of_count > *size)
         return "Insufficient Length to Determine Count";
 
     return 0;
 }
-
 
 static qd_parsed_field_t *qd_parse_internal(qd_field_iterator_t *iter, qd_parsed_field_t *p)
 {
@@ -114,15 +133,20 @@ static qd_parsed_field_t *qd_parse_internal(qd_field_iterator_t *iter, qd_parsed
     field->raw_iter = 0;
     field->typed_iter = qd_field_iterator_dup(iter);
 
-    uint32_t length;
-    uint32_t count;
-    uint32_t length_of_count;
+    uint32_t size            = 0;
+    uint32_t count           = 0;
+    uint32_t length_of_count = 0;
+    uint32_t length_of_size  = 0;
 
-    field->parse_error = get_type_info(iter, &field->tag, &length, &count, &length_of_count);
+    field->parse_error = get_type_info(iter, &field->tag, &size, &count, &length_of_size, &length_of_count);
 
     if (!field->parse_error) {
-        field->raw_iter = qd_field_iterator_sub(iter, length);
-        qd_field_iterator_advance(iter, length - length_of_count);
+        qd_field_iterator_trim(field->typed_iter, size + length_of_size + 1); // + 1 accounts for the tag length
+
+        field->raw_iter = qd_field_iterator_sub(iter, size - length_of_count);
+
+        qd_field_iterator_advance(iter, size - length_of_count);
+
         for (uint32_t idx = 0; idx < count; idx++) {
             qd_parsed_field_t *child = qd_parse_internal(field->raw_iter, field);
             DEQ_INSERT_TAIL(field->children, child);
