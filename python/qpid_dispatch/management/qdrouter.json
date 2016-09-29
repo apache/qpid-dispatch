@@ -424,8 +424,8 @@
                     "create": true
                 },
                 "addrCount": {
-                    "type":
-                    "integer", "description":"Number of addresses known to the router.",
+                    "type": "integer",
+                    "description":"Number of addresses known to the router.",
                     "graph": true
                 },
                 "linkCount": {
