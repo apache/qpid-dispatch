@@ -301,9 +301,11 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
                         pn_delivery_update(pnd, PN_REJECTED);
                         pn_delivery_settle(pnd);
                         qd_message_free(msg);
+                        qd_field_iterator_free(userid_iter);
                         return;
                     }
                 }
+                qd_field_iterator_free(userid_iter);
             }
         }
 
