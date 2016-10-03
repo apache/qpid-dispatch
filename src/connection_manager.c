@@ -183,6 +183,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->inter_router_cost    = qd_entity_opt_long(entity, "cost", 1);             CHECK();
     config->protocol_family      = qd_entity_opt_string(entity, "protocolFamily", 0); CHECK();
     config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize");        CHECK();
+    config->max_sessions         = qd_entity_get_long(entity, "maxSessions");         CHECK();
+    config->max_session_window   = qd_entity_get_long(entity, "maxSessionWindow");    CHECK();
     config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds");  CHECK();
     config->sasl_username        = qd_entity_opt_string(entity, "saslUsername", 0);   CHECK();
     config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0);   CHECK();
@@ -192,10 +194,16 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     set_config_host(config, entity);
 
     //
-    // Handle the defaults for link capacity.
+    // Handle the defaults for various settings
     //
     if (config->link_capacity == 0)
         config->link_capacity = 250;
+
+    if (config->max_sessions == 0)
+        config->max_sessions = 32768;
+
+    if (config->max_session_window == 0)
+        config->max_session_window = 1000000;
 
     //
     // For now we are hardwiring this attribute to true.  If there's an outcry from the

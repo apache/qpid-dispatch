@@ -612,6 +612,19 @@
                     "description": "Defaults to 16384.  If specified, it is the maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.",
                     "create": true
                 },
+                "maxSessions": {
+                    "type": "integer",
+                    "default": 32768,
+                    "description": "Defaults to 32768.  The maximum number of sessions that can be simultaneously active on the connection. Setting this value to zero selects the default number of sessions.",
+                    "create": true
+                },
+                "maxSessionWindow": {
+                    "type": "integer",
+                    "description": "Incoming window measured in octets for sessions created on this connection. The AMQP negotiated session incoming window, measured in transfers, is calculated to be (maxSessionWindow / maxFrameSize). Setting this value to zero selects the default session window size.",
+                    "default": 1000000,
+                    "required": false,
+                    "create": true
+                },
                 "idleTimeoutSeconds": {
                     "type": "integer",
                     "default": 16,
@@ -724,6 +737,19 @@
                     "type": "integer",
                     "default": 65536,
                     "description": "Maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.",
+                    "create": true
+                },
+                "maxSessions": {
+                    "type": "integer",
+                    "default": 32768,
+                    "description": "Defaults to 32768.  The maximum number of sessions that can be simultaneously active on the connection. Setting this value to zero selects the default number of sessions.",
+                    "create": true
+                },
+                "maxSessionWindow": {
+                    "type": "integer",
+                    "description": "Incoming window measured in octets for sessions created on this connection. The AMQP negotiated session incoming window, measured in transfers, is calculated to be (maxSessionWindow / maxFrameSize). Setting this value to zero selects the default session window size.",
+                    "default": 1000000,
+                    "required": false,
                     "create": true
                 },
                 "idleTimeoutSeconds": {
