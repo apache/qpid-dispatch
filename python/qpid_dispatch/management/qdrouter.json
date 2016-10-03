@@ -609,18 +609,18 @@
                 "maxFrameSize": {
                     "type": "integer",
                     "default": 16384,
-                    "description": "Defaults to 16384.  If specified, it is the maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.",
+                    "description": "Defaults to 16384.  If specified, it is the maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity. Policy settings, if specified, will overwrite this value.",
                     "create": true
                 },
                 "maxSessions": {
                     "type": "integer",
                     "default": 32768,
-                    "description": "Defaults to 32768.  The maximum number of sessions that can be simultaneously active on the connection. Setting this value to zero selects the default number of sessions.",
+                    "description": "Defaults to 32768.  The maximum number of sessions that can be simultaneously active on the connection. Setting this value to zero selects the default number of sessions. Policy settings, if specified, will overwrite this value.",
                     "create": true
                 },
                 "maxSessionWindow": {
                     "type": "integer",
-                    "description": "Incoming window measured in octets for sessions created on this connection. The AMQP negotiated session incoming window, measured in transfers, is calculated to be (maxSessionWindow / maxFrameSize). Setting this value to zero selects the default session window size.",
+                    "description": "Incoming window measured in octets for sessions created on this connection. The AMQP negotiated session incoming window, measured in transfers, is calculated to be (maxSessionWindow / maxFrameSize). Setting this value to zero selects the default session window size. Policy settings, if specified, will overwrite this value.",
                     "default": 1000000,
                     "required": false,
                     "create": true
@@ -713,14 +713,13 @@
                     "required": false,
                     "create": true,
                     "description": "For the 'inter-router' role only.  This value assigns a cost metric to the inter-router connection.  The default (and minimum) value is one.  Higher values represent higher costs.  The cost is used to influence the routing algorithm as it attempts to use the path with the lowest total cost from ingress to egress."
-                },                
-                            
+                },
                 "sslProfile": {
                     "type": "string",
                     "required": false,
                     "description": "Name of the sslProfile.",
                     "create": true
-                },            
+                },
                 "saslMechanisms": {
                     "type": "string",
                     "required": false,
@@ -736,18 +735,18 @@
                 "maxFrameSize": {
                     "type": "integer",
                     "default": 65536,
-                    "description": "Maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity.",
+                    "description": "Maximum frame size in octets that will be used in the connection-open negotiation with a connected peer.  The frame size is the largest contiguous set of uninterrupted data that can be sent for a message delivery over the connection. Interleaving of messages on different links is done at frame granularity. Policy settings, if specified, will overwrite this value.",
                     "create": true
                 },
                 "maxSessions": {
                     "type": "integer",
                     "default": 32768,
-                    "description": "Defaults to 32768.  The maximum number of sessions that can be simultaneously active on the connection. Setting this value to zero selects the default number of sessions.",
+                    "description": "Defaults to 32768.  The maximum number of sessions that can be simultaneously active on the connection. Setting this value to zero selects the default number of sessions. Policy settings, if specified, will overwrite this value.",
                     "create": true
                 },
                 "maxSessionWindow": {
                     "type": "integer",
-                    "description": "Incoming window measured in octets for sessions created on this connection. The AMQP negotiated session incoming window, measured in transfers, is calculated to be (maxSessionWindow / maxFrameSize). Setting this value to zero selects the default session window size.",
+                    "description": "Incoming window measured in octets for sessions created on this connection. The AMQP negotiated session incoming window, measured in transfers, is calculated to be (maxSessionWindow / maxFrameSize). Setting this value to zero selects the default session window size. Policy settings, if specified, will overwrite this value.",
                     "default": 1000000,
                     "required": false,
                     "create": true
