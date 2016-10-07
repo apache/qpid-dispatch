@@ -184,7 +184,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->protocol_family      = qd_entity_opt_string(entity, "protocolFamily", 0); CHECK();
     config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize");        CHECK();
     config->max_sessions         = qd_entity_get_long(entity, "maxSessions");         CHECK();
-    config->max_session_window   = qd_entity_get_long(entity, "maxSessionWindow");    CHECK();
+    uint64_t ssn_frames          = qd_entity_get_long(entity, "maxSessionFrames");    CHECK();
     config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds");  CHECK();
     config->sasl_username        = qd_entity_opt_string(entity, "saslUsername", 0);   CHECK();
     config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0);   CHECK();
@@ -199,11 +199,35 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     if (config->link_capacity == 0)
         config->link_capacity = 250;
 
-    if (config->max_sessions == 0)
+    if (config->max_sessions == 0 || config->max_sessions > 32768)
+        // Proton disallows > 32768
         config->max_sessions = 32768;
 
-    if (config->max_session_window == 0)
-        config->max_session_window = 1000000;
+    if (config->max_frame_size < QD_AMQP_MIN_MAX_FRAME_SIZE)
+        // Silently promote the minimum max-frame-size
+        // Proton will do this but the number is needed for the
+        // incoming capacity calculation.
+        config->max_frame_size = QD_AMQP_MIN_MAX_FRAME_SIZE;
+
+    //
+    // Given session frame count and max frame size compute session incoming_capacity
+    // Limit total capacity to 2^31-1.
+    // 
+    uint64_t mfs      = (uint64_t)config->max_frame_size;
+    uint64_t trial_ic = ssn_frames * mfs;
+    uint64_t limit    = (1ll << 31) - 1;
+    if (trial_ic < limit) {
+        // Silently promote incoming capacity of zero to one
+        config->incoming_capacity = 
+            (trial_ic < QD_AMQP_MIN_MAX_FRAME_SIZE ? QD_AMQP_MIN_MAX_FRAME_SIZE : trial_ic);
+    } else {
+        config->incoming_capacity = limit;
+        uint64_t computed_ssn_frames = limit / mfs;
+        qd_log(qd->connection_manager->log_source, QD_LOG_WARNING,
+               "Server configuation for I/O adapter entity name:'%s', host:'%s', port:'%s', "
+               "requested maxSessionFrames truncated from %llu to %llu",
+               config->name, config->host, config->port, ssn_frames, computed_ssn_frames);
+    }
 
     //
     // For now we are hardwiring this attribute to true.  If there's an outcry from the

@@ -764,10 +764,9 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
 {
     qd_link_t *link = new_qd_link_t();
     const qd_server_config_t * cf = qd_connection_config(conn);
-    assert(cf);
 
     link->pn_sess = pn_session(qd_connection_pn(conn));
-    pn_session_set_incoming_capacity(link->pn_sess, cf->max_session_window);
+    pn_session_set_incoming_capacity(link->pn_sess, cf->incoming_capacity);
 
     if (dir == QD_OUTGOING)
         link->pn_link = pn_sender(link->pn_sess, name);

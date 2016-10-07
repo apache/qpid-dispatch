@@ -438,8 +438,7 @@ void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_con
         capacity = qd_conn->policy_settings->maxSessionWindow;
     } else {
         const qd_server_config_t * cf = qd_connection_config(qd_conn);
-        assert(cf);
-        capacity = cf->max_session_window;
+        capacity = cf->incoming_capacity;
     }
     pn_session_set_incoming_capacity(ssn, capacity);
 }

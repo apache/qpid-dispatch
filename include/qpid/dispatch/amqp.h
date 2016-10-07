@@ -30,6 +30,13 @@
 
 
 /**
+ * AMQP Constants
+ */
+typedef enum {
+    QD_AMQP_MIN_MAX_FRAME_SIZE = 512
+} qd_amqp_constants_t;
+
+/**
  * AMQP Performative Tags
  */
 typedef enum {

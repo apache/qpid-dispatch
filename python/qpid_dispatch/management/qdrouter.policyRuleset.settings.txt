@@ -42,7 +42,7 @@ Until the schema is extended specify embedded maps this document describes the v
           "maxFrameSize": {
               "type": "integer",
               "description": "Largest frame that may be sent on this connection. Zero implies system default. Policy setting overwrites values specified for a listener or connector. (AMQP Open, max-frame-size)",
-              "default": 65536,
+              "default": 16384,
               "required": false,
               "create": true
           },
@@ -56,7 +56,7 @@ Until the schema is extended specify embedded maps this document describes the v
           "maxSessionWindow": {
               "type": "integer",
               "description": "Largest incoming window in octets for sessions created on this connection. Zero implies system default. Policy setting overwrites values specified for a listener or connector. (AMQP Begin, incoming-window)",
-              "default": 1000000,
+              "default": 1638400,
               "required": false,
               "create": true
           },

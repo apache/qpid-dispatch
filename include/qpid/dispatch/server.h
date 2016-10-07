@@ -419,19 +419,16 @@ typedef struct qd_server_config_t {
 
     /**
      * The max_sessions value is the number of sessions allowed on the Connection. 
-     * This value minus one is the Open performative channel-max setting.
      */
     uint32_t max_sessions;
 
     /**
-     * The max_session_window value is the maximum number of outstanding octets that are
-     * allowed to be in flight on a session. This value is used to calculate the number of
-     * outstanding transfers that are allowed by the formula:
-     *   incoming_window = max_session_window / max_frame_size
-     * If max_session_window=1000000 and max_frame_size=32768 then 30 transfers may
-     * be outstanding before session flow control begins.
+     * The incoming capacity value is calculated to be (sessionMaxFrames * maxFrameSize).
+     * In a round about way the calculation forces the AMQP Begin/incoming-capacity value
+     * to equal the specified sessionMaxFrames value measured in units of transfer frames.
+     * This calculation is done to satisfy proton pn_session_set_incoming_capacity().
      */
-    uint32_t max_session_window;
+    uint32_t incoming_capacity;
 
     /**
      * The idle timeout, in seconds.  If the peer sends no data frames in this many seconds, the

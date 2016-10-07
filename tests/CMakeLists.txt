@@ -78,6 +78,7 @@ foreach(py_test_module
     system_tests_one_router
     system_tests_policy
     system_tests_protocol_family
+    system_tests_protocol_settings
     system_tests_qdmanage
     system_tests_qdstat
     system_tests_sasl_plain
