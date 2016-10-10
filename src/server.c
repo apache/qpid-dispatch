@@ -680,6 +680,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         //
         pn_transport_set_server(tport);
         pn_transport_set_max_frame(tport, config->max_frame_size);
+        pn_transport_set_channel_max(tport, config->max_sessions - 1);
         pn_transport_set_idle_timeout(tport, config->idle_timeout_seconds * 1000);
 
         //
@@ -1247,6 +1248,7 @@ static void cxtr_try_open(void *context)
     // Configure the transport
     //
     pn_transport_set_max_frame(tport, config->max_frame_size);
+    pn_transport_set_channel_max(tport, config->max_sessions - 1);
     pn_transport_set_idle_timeout(tport, config->idle_timeout_seconds * 1000);
 
     //
