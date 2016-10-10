@@ -312,5 +312,114 @@ class MaxFrameMaxSessionFramesZeroTest(TestCase):
             self.assertTrue(" incoming-window=1," in begin_lines[0])
 
 
+class ConnectorSettingsDefaultTest(TestCase):
+    """
+    The internal logic for protocol settings in listener and connector
+    is common code. This test makes sure that defaults in the connector
+    config make it to the wire.
+    """
+    inter_router_port = None
+
+    @staticmethod
+    def ssl_config(client_server, connection):
+        return []  # Over-ridden by RouterTestSsl
+
+    @classmethod
+    def setUpClass(cls):
+        """Start two routers"""
+        super(ConnectorSettingsDefaultTest, cls).setUpClass()
+
+        def router(name, client_server, connection):
+            config = cls.ssl_config(client_server, connection) + [
+                ('router', {'mode': 'interior', 'id': 'QDR.%s' % name}),
+
+                ('listener', {'port': cls.tester.get_port()}),
+                connection
+            ]
+
+            config = Qdrouterd.Config(config)
+
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+
+        cls.routers = []
+
+        inter_router_port = cls.tester.get_port()
+
+        router('A', 'server',
+               ('listener', {'role': 'inter-router', 'port': inter_router_port}))
+        router('B', 'client',
+               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port,
+                              'verifyHostName': 'no'}))
+
+        cls.routers[0].wait_router_connected('QDR.B')
+        cls.routers[1].wait_router_connected('QDR.A')
+
+    def test_connector_default(self):
+        with  open('../setUpClass/A.log', 'r') as router_log:
+            log_lines = router_log.read().split("\n")
+            open_lines = [s for s in log_lines if "<- @open" in s]
+            # defaults
+            self.assertTrue(' max-frame-size=16384,' in open_lines[0])
+            self.assertTrue(' channel-max=32767,' in open_lines[0])
+            begin_lines = [s for s in log_lines if "<- @begin" in s]
+            # defaults
+            self.assertTrue(" incoming-window=100," in begin_lines[0])
+
+
+class ConnectorSettingsNondefaultTest(TestCase):
+    """
+    The internal logic for protocol settings in listener and connector
+    is common code. This test makes sure that settings in the connector
+    config make it to the wire. The listener tests test the setting logic.
+    """
+    inter_router_port = None
+
+    @staticmethod
+    def ssl_config(client_server, connection):
+        return []  # Over-ridden by RouterTestSsl
+
+    @classmethod
+    def setUpClass(cls):
+        """Start two routers"""
+        super(ConnectorSettingsNondefaultTest, cls).setUpClass()
+
+        def router(name, client_server, connection):
+            config = cls.ssl_config(client_server, connection) + [
+                ('router', {'mode': 'interior', 'id': 'QDR.%s' % name}),
+
+                ('listener', {'port': cls.tester.get_port()}),
+                connection
+            ]
+
+            config = Qdrouterd.Config(config)
+
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+
+        cls.routers = []
+
+        inter_router_port = cls.tester.get_port()
+
+        router('A', 'server',
+               ('listener', {'role': 'inter-router', 'port': inter_router_port}))
+        router('B', 'client',
+               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port,
+                              'maxFrameSize': '2048', 'maxSessionFrames': '10', 'maxSessions': '20',
+                              'verifyHostName': 'no'}))
+
+        cls.routers[0].wait_router_connected('QDR.B')
+        cls.routers[1].wait_router_connected('QDR.A')
+
+    def test_connector_default(self):
+        with  open('../setUpClass/A.log', 'r') as router_log:
+            log_lines = router_log.read().split("\n")
+            open_lines = [s for s in log_lines if "<- @open" in s]
+            # nondefaults
+            self.assertTrue(' max-frame-size=2048,' in open_lines[0])
+            self.assertTrue(' channel-max=19,' in open_lines[0])
+            begin_lines = [s for s in log_lines if "<- @begin" in s]
+            # nondefaults
+            self.assertTrue(" incoming-window=10," in begin_lines[0])
+
+
 if __name__ == '__main__':
     unittest.main(main_module())
