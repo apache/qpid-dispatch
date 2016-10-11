@@ -150,15 +150,19 @@ static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
 
     if (strcmp(host, HOST_ADDR_DEFAULT) == 0 && strcmp(addr, HOST_ADDR_DEFAULT) == 0) {
         config->host = host;
+        free(addr);
     }
     else if (strcmp(host, addr) == 0) {
         config->host = host;
+        free(addr);
     }
     else if (strcmp(host, HOST_ADDR_DEFAULT) == 0 && strcmp(addr, HOST_ADDR_DEFAULT) != 0) {
          config->host = addr;
+         free(host);
     }
     else if (strcmp(host, HOST_ADDR_DEFAULT) != 0 && strcmp(addr, HOST_ADDR_DEFAULT) == 0) {
          config->host = host;
+         free(addr);
     }
 
     assert(config->host);
@@ -305,6 +309,7 @@ qd_config_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entit
     cl->is_connector = false;
     cl->state = QD_BIND_NONE;
     cl->listener = 0;
+    cl->ssl_profile = 0;
     qd_config_ssl_profile_t *ssl_profile = 0;
     if (load_server_config(qd, &cl->configuration, entity, &ssl_profile) != QD_ERROR_NONE) {
         qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create config listener: %s", qd_error_message());
