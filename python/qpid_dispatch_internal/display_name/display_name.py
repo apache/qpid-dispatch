@@ -121,6 +121,7 @@ class DisplayNameService(object):
         if message.reply_to:
             response = Message(address=message.reply_to,
                                body=body,
+                               properties={},
                                correlation_id=message.correlation_id)
         else:
             # If there is no reply_to, we simple won't respond.
