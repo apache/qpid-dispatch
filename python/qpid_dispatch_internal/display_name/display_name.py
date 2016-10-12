@@ -116,9 +116,15 @@ class DisplayNameService(object):
             self.log(LOG_ERROR, "Exception in raw message processing: body=%r\n%s" %
                      (message.body, format_exc(LOG_STACK_LIMIT)))
 
-        response = Message(address=message.reply_to,
-                           body=body,
-                           correlation_id=message.correlation_id)
+        # Make sure the incoming message has a reply_to, otherwise don't bother responding.
+        # This check will make sure that the core thread does not crash.
+        if message.reply_to:
+            response = Message(address=message.reply_to,
+                               body=body,
+                               correlation_id=message.correlation_id)
+        else:
+            # If there is no reply_to, we simple won't respond.
+            return
 
         self.io_adapter[0].send(response)
 
