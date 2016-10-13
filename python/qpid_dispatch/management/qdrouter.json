@@ -964,6 +964,12 @@
                     "create": true,
                     "required": false
                 },
+                "externalAddr": {
+                    "type": "string",
+                    "description": "If present, an alternate address of the node on the remote container.  This is used if the node has a different address than the address used internally by the router to route deliveries.",
+                    "create": true,
+                    "required": false
+                },
                 "linkRef": {
                     "type": "string",
                     "description": "Reference to the org.apache.qpid.dispatch.router.link if the link exists",

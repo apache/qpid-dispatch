@@ -37,7 +37,8 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
                                             qd_direction_t       dir,
                                             int                  phase,
                                             qd_parsed_field_t   *conn_id,
-                                            bool                 is_container);
+                                            bool                 is_container,
+                                            qd_parsed_field_t   *external_addr);
 
 void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *auto_link);
 

@@ -401,14 +401,16 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
     char *dir       = 0;
     char *container = 0;
     char *c_name    = 0;
+    char *ext_addr  = 0;
 
     do {
-        name      = qd_entity_opt_string(entity, "name", 0);        QD_ERROR_BREAK();
-        addr      = qd_entity_get_string(entity, "addr");           QD_ERROR_BREAK();
-        dir       = qd_entity_get_string(entity, "dir");            QD_ERROR_BREAK();
-        container = qd_entity_opt_string(entity, "containerId", 0); QD_ERROR_BREAK();
-        c_name    = qd_entity_opt_string(entity, "connection", 0);  QD_ERROR_BREAK();
-        long  phase     = qd_entity_opt_long(entity, "phase", -1);  QD_ERROR_BREAK();
+        name      = qd_entity_opt_string(entity, "name", 0);         QD_ERROR_BREAK();
+        addr      = qd_entity_get_string(entity, "addr");            QD_ERROR_BREAK();
+        dir       = qd_entity_get_string(entity, "dir");             QD_ERROR_BREAK();
+        container = qd_entity_opt_string(entity, "containerId", 0);  QD_ERROR_BREAK();
+        c_name    = qd_entity_opt_string(entity, "connection", 0);   QD_ERROR_BREAK();
+        ext_addr  = qd_entity_opt_string(entity, "externalAddr", 0); QD_ERROR_BREAK();
+        long  phase     = qd_entity_opt_long(entity, "phase", -1);   QD_ERROR_BREAK();
 
         //
         // Formulate this configuration as a route and create it through the core management API.
@@ -446,6 +448,11 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
             qd_compose_insert_string(body, c_name);
         }
 
+        if (ext_addr) {
+            qd_compose_insert_string(body, "externalAddr");
+            qd_compose_insert_string(body, ext_addr);
+        }
+
         qd_compose_end_map(body);
 
         int              length = 0;
@@ -480,6 +487,7 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
     free(dir);
     free(container);
     free(c_name);
+    free(ext_addr);
 
     return qd_error_code();
 }

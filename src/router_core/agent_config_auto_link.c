@@ -31,9 +31,10 @@
 #define QDR_CONFIG_AUTO_LINK_PHASE         5
 #define QDR_CONFIG_AUTO_LINK_CONNECTION    6
 #define QDR_CONFIG_AUTO_LINK_CONTAINER_ID  7
-#define QDR_CONFIG_AUTO_LINK_LINK_REF      8
-#define QDR_CONFIG_AUTO_LINK_OPER_STATUS   9
-#define QDR_CONFIG_AUTO_LINK_LAST_ERROR    10
+#define QDR_CONFIG_AUTO_LINK_EXT_ADDR      8
+#define QDR_CONFIG_AUTO_LINK_LINK_REF      9
+#define QDR_CONFIG_AUTO_LINK_OPER_STATUS   10
+#define QDR_CONFIG_AUTO_LINK_LAST_ERROR    11
 
 const char *qdr_config_auto_link_columns[] =
     {"name",
@@ -44,6 +45,7 @@ const char *qdr_config_auto_link_columns[] =
      "phase",
      "connection",
      "containerId",
+     "externalAddr",
      "linkRef",
      "operStatus",
      "lastError",
@@ -108,6 +110,13 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
             }
         }
         qd_compose_insert_null(body);
+        break;
+
+    case QDR_CONFIG_AUTO_LINK_EXT_ADDR:
+        if (al->external_addr)
+            qd_compose_insert_string(body, al->external_addr);
+        else
+            qd_compose_insert_null(body);
         break;
 
     case QDR_CONFIG_AUTO_LINK_LINK_REF:
@@ -360,6 +369,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t          *core,
         qd_parsed_field_t *phase_field      = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_PHASE]);
         qd_parsed_field_t *connection_field = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_CONNECTION]);
         qd_parsed_field_t *container_field  = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_CONTAINER_ID]);
+        qd_parsed_field_t *external_addr    = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_EXT_ADDR]);
 
         //
         // Addr and dir fields are mandatory.  Fail if they're not both here.
@@ -402,7 +412,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t          *core,
         bool               is_container = !!container_field;
         qd_parsed_field_t *in_use_conn  = is_container ? container_field : connection_field;
 
-        al = qdr_route_add_auto_link_CT(core, name, addr_field, dir, phase, in_use_conn, is_container);
+        al = qdr_route_add_auto_link_CT(core, name, addr_field, dir, phase, in_use_conn, is_container, external_addr);
 
         //
         // Compose the result map for the response.

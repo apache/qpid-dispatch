@@ -46,17 +46,27 @@ class AutolinkTest(TestCase):
             ('listener', {'port': cls.tester.get_port(), 'role': 'route-container'}),
 
             #
+            # Set up the prefix 'node' as a prefix for waypoint addresses
+            #
+            ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
+
+            #
             # Create a pair of default auto-links for 'node.1'
             #
             ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'dir': 'in'}),
             ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'dir': 'out'}),
-            ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
 
             #
             # Create a pair of auto-links on non-default phases for container-to-container transfers
             #
             ('autoLink', {'addr': 'xfer.2', 'containerId': 'container.2', 'dir': 'in',  'phase': '4'}),
             ('autoLink', {'addr': 'xfer.2', 'containerId': 'container.3', 'dir': 'out', 'phase': '4'}),
+
+            #
+            # Create a pair of auto-links with a different external address
+            #
+            ('autoLink', {'addr': 'node.2', 'externalAddr': 'ext.2', 'containerId': 'container.4', 'dir': 'in'}),
+            ('autoLink', {'addr': 'node.2', 'externalAddr': 'ext.2', 'containerId': 'container.4', 'dir': 'out'}),
         ])
 
         cls.router = cls.tester.qdrouterd(name, config)
@@ -70,7 +80,7 @@ class AutolinkTest(TestCase):
         Create the route-container connection and verify that the appropriate links are attached.
         Disconnect, reconnect, and verify that the links are re-attached.
         """
-        test = AutolinkAttachTest(self.route_address)
+        test = AutolinkAttachTest('container.1', self.route_address, 'node.1')
         test.run()
         self.assertEqual(None, test.error)
 
@@ -90,7 +100,7 @@ class AutolinkTest(TestCase):
         Create a route-container connection and a normal sender.  Ensure that messages sent on the sender
         link are received by the route container and that settlement propagates back to the sender.
         """
-        test = AutolinkSenderTest(self.normal_address, self.route_address)
+        test = AutolinkSenderTest('container.1', self.normal_address, self.route_address, 'node.1', 'node.1')
         test.run()
         self.assertEqual(None, test.error)
 
@@ -100,7 +110,7 @@ class AutolinkTest(TestCase):
         Create a route-container connection and a normal receiver.  Ensure that messages sent from the
         route-container are received by the receiver and that settlement propagates back to the sender.
         """
-        test = AutolinkReceiverTest(self.normal_address, self.route_address)
+        test = AutolinkReceiverTest('container.1', self.normal_address, self.route_address, 'node.1', 'node.1')
         test.run()
         self.assertEqual(None, test.error)
 
@@ -125,6 +135,37 @@ class AutolinkTest(TestCase):
         self.assertEqual(None, test.error)
 
 
+    def test_07_autolink_attach_with_ext_addr(self):
+        """
+        Create the route-container connection and verify that the appropriate links are attached.
+        Disconnect, reconnect, and verify that the links are re-attached.  Verify that the node addresses
+        in the links are the configured external address.
+        """
+        test = AutolinkAttachTest('container.4', self.route_address, 'ext.2')
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_08_autolink_sender_with_ext_addr(self):
+        """
+        Create a route-container connection and a normal sender.  Ensure that messages sent on the sender
+        link are received by the route container and that settlement propagates back to the sender.
+        """
+        test = AutolinkSenderTest('container.4', self.normal_address, self.route_address, 'node.2', 'ext.2')
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_09_autolink_receiver_with_ext_addr(self):
+        """
+        Create a route-container connection and a normal receiver.  Ensure that messages sent from the
+        route-container are received by the receiver and that settlement propagates back to the sender.
+        """
+        test = AutolinkReceiverTest('container.4', self.normal_address, self.route_address, 'node.2', 'ext.2')
+        test.run()
+        self.assertEqual(None, test.error)
+
+
 class Timeout(object):
     def __init__(self, parent):
         self.parent = parent
@@ -134,12 +175,14 @@ class Timeout(object):
 
 
 class AutolinkAttachTest(MessagingHandler):
-    def __init__(self, address):
+    def __init__(self, cid, address, node_addr):
         super(AutolinkAttachTest, self).__init__(prefetch=0)
-        self.address  = address
-        self.error    = None
-        self.sender   = None
-        self.receiver = None
+        self.cid       = cid
+        self.address   = address
+        self.node_addr = node_addr
+        self.error     = None
+        self.sender    = None
+        self.receiver  = None
 
         self.n_rx_attach = 0
         self.n_tx_attach = 0
@@ -159,14 +202,14 @@ class AutolinkAttachTest(MessagingHandler):
     def on_link_opened(self, event):
         if event.sender:
             self.n_tx_attach += 1
-            if event.sender.remote_source.address != 'node.1':
-                self.error = "Expected sender address 'node.1', got '%s'" % event.sender.remote_source.address
+            if event.sender.remote_source.address != self.node_addr:
+                self.error = "Expected sender address '%s', got '%s'" % (self.node_addr, event.sender.remote_source.address)
                 self.timer.cancel()
                 self.conn.close()
         elif event.receiver:
             self.n_rx_attach += 1
-            if event.receiver.remote_target.address != 'node.1':
-                self.error = "Expected receiver address 'node.1', got '%s'" % event.receiver.remote_target.address
+            if event.receiver.remote_target.address != self.node_addr:
+                self.error = "Expected receiver address '%s', got '%s'" % (self.node_addr, event.receiver.remote_target.address)
                 self.timer.cancel()
                 self.conn.close()
         if self.n_tx_attach == 1 and self.n_rx_attach == 1:
@@ -177,7 +220,7 @@ class AutolinkAttachTest(MessagingHandler):
 
     def run(self):
         container = Container(self)
-        container.container_id = 'container.1'
+        container.container_id = self.cid
         container.run()
 
 
@@ -231,11 +274,13 @@ class AutolinkCreditTest(MessagingHandler):
 
 
 class AutolinkSenderTest(MessagingHandler):
-    def __init__(self, normal_address, route_address):
+    def __init__(self, cid, normal_address, route_address, addr, ext_addr):
         super(AutolinkSenderTest, self).__init__()
+        self.cid            = cid
         self.normal_address = normal_address
         self.route_address  = route_address
-        self.dest           = 'node.1'
+        self.dest           = addr
+        self.ext_addr       = ext_addr
         self.count          = 275
         self.normal_conn    = None
         self.route_conn     = None
@@ -290,16 +335,18 @@ class AutolinkSenderTest(MessagingHandler):
 
     def run(self):
         container = Container(self)
-        container.container_id = 'container.1'
+        container.container_id = self.cid
         container.run()
 
 
 class AutolinkReceiverTest(MessagingHandler):
-    def __init__(self, normal_address, route_address):
+    def __init__(self, cid, normal_address, route_address, addr, ext_addr):
         super(AutolinkReceiverTest, self).__init__()
+        self.cid            = cid
         self.normal_address = normal_address
         self.route_address  = route_address
-        self.dest           = 'node.1'
+        self.dest           = addr
+        self.ext_addr       = ext_addr
         self.count          = 275
         self.normal_conn    = None
         self.route_conn     = None
@@ -355,7 +402,7 @@ class AutolinkReceiverTest(MessagingHandler):
 
     def run(self):
         container = Container(self)
-        container.container_id = 'container.1'
+        container.container_id = self.cid
         container.run()
 
 
