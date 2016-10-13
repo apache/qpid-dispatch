@@ -99,12 +99,12 @@ _inactive_. This can be observed by using the `qdstat` tool:
 ---------------------------
 $ qdstat --autolinks
 AutoLinks
-  addr          dir  phase  link  status    lastErr
-  ===================================================
-  queue.first   in   1            inactive
-  queue.first   out  0            inactive
-  queue.second  in   1            inactive
-  queue.second  out  0            inactive
+  addr          dir  phs  extAddr  link  status    lastErr
+  ========================================================
+  queue.first   in   1                   inactive
+  queue.first   out  0                   inactive
+  queue.second  in   1                   inactive
+  queue.second  out  0                   inactive
 ---------------------------
 
 If a broker comes online with a queue called 'queue.first', the
@@ -113,12 +113,12 @@ auto-links will attempt to activate:
 --------------------
 $ qdstat --autolinks
 AutoLinks
-  addr          dir  phase  link  status  lastErr
-  ======================================================================
-  queue.first   in   1      6     active
-  queue.first   out  0      7     active
-  queue.second  in   1            failed  Node not found: queue.second
-  queue.second  out  0            failed  Node not found: queue.second
+  addr          dir  phs  extAddr  link  status  lastErr
+  ===========================================================================
+  queue.first   in   1             6     active
+  queue.first   out  0             7     active
+  queue.second  in   1                   failed  Node not found: queue.second
+  queue.second  out  0                   failed  Node not found: queue.second
 --------------------
 
 Note that two of the auto-links are in _failed_ state because the queue
@@ -255,3 +255,69 @@ qdmanage create --type org.apache.qpid.dispatch.connector host=<host> port=<port
 qdmanage create --type org.apache.qpid.dispatch.router.config.autoLink addr=queue.first dir=in connection=broker3
 qdmanage create --type org.apache.qpid.dispatch.router.config.autoLink addr=queue.first dir=out connection=broker3
 ----
+
+[[address-renaming]]
+Using a Different External Address on an Auto-Link
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes, greater flexibility is needed with regard to the addressing
+of a waypoint.  For example, the above sharded-queue example requires
+that the two instances of the queue have the same name/address.
+Auto-links can be configured with an independent +externalAddr+ that
+allows the waypoint to have a different address than that which is
+used by the senders and receivers.
+
+Here's an example:
+
+----
+connector {
+    name: broker
+    role: route-container
+    host: <hostname>
+    port: <port>
+    saslMechanisms: ANONYMOUS
+}
+
+address {
+    prefix: queue
+    waypoint: yes
+}
+
+autoLink {
+    addr: queue.first
+    externalAddr: broker_queue
+    dir: in
+    connection: broker
+}
+
+autoLink {
+    addr: queue.first
+    externalAddr: broker_queue
+    dir: out
+    connection: broker
+}
+
+----
+
+In the above configuration, the router network provides waypoint
+routing for the address _queue.first_, where senders and receivers use
+that address to send and receive messages.  However, the queue on the
+broker is named "broker_queue".  The address is translated through the
+auto-link that is established to the broker.
+
+In this example, the endpoints (senders and receivers) are unaware of
+the _broker_queue_ address and simply interact with _queue.first_.
+Likewise, the broker is unaware of the _queue.first_ address and
+behaves as though a sender and a receiver is attached each using the
+address _broker_queue_.
+
+The +qdstat+ tool shows the external address for auto-links.
+
+--------------------
+$ qdstat --autolinks
+AutoLinks
+  addr          dir  phs  extAddr       link  status  lastErr
+  ===========================================================
+  queue.first   in   1    broker_queue  6     active
+  queue.first   out  0    broker_queue  7     active
+--------------------
