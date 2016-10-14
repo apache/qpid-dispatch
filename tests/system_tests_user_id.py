@@ -111,8 +111,8 @@ class QdSSLUseridTest(TestCase):
                              'keyFile': cls.ssl_file('server-private-key.pem'),
                              'password': 'server-password'}),
 
-            # one component of uidFormat is invalid (x), the unrecognized component will be ignored,
-            # this will be treated like 'uidFormat': '1'
+            # one component of uidFormat is invalid (x), this will result in an error in the fingerprint calculation.
+            # The user_id will fall back to proton's pn_transport_get_user
             ('sslProfile', {'name': 'server-ssl10',
                              'certDb': cls.ssl_file('ca-certificate.pem'),
                              'certFile': cls.ssl_file('server-certificate.pem'),
@@ -308,74 +308,6 @@ class QdSSLUseridTest(TestCase):
         node = Node.connect(addr, ssl_domain=domain)
         user_id = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[13][0]
         self.assertEqual("user13", user_id)
-
-        M1 = self.messenger()
-        M1.route("amqp:/*", self.address(14)+"/$1")
-
-        subscription = M1.subscribe("amqp:/#")
-
-        reply_to = subscription.address
-        addr = 'amqp:/_local/$displayname'
-
-        tm = Message()
-        rm = Message()
-        tm.address = addr
-        tm.reply_to = reply_to
-        tm.body = {'profilename': 'server-ssl10', 'opcode': 'QUERY', 'userid': '94745961c5646ee0129536b3acef1eea0d8d2f26f8c353455233027bcd47'}
-        M1.put(tm)
-
-        M1.send()
-        M1.recv(1)
-        M1.get(rm)
-        self.assertEqual('elaine', rm.body['user_name'])
-
-        tm = Message()
-        rm = Message()
-        tm.address = addr
-        tm.reply_to = reply_to
-        tm.body =  {'profilename': 'server-ssl-unknown', 'opcode': 'QUERY', 'userid': '94745961c5646ee0129536b3acef1eea0d8d2f26f8c3ed08ece4f8f3027bcd48'}
-        M1.put(tm)
-        M1.send()
-        M1.recv(1)
-        M1.get(rm)
-        self.assertEqual('94745961c5646ee0129536b3acef1eea0d8d2f26f8c3ed08ece4f8f3027bcd48', rm.body['user_name'])
-
-        # The profile name, userid pair have a matching user name
-        tm = Message()
-        rm = Message()
-        tm.address = addr
-        tm.reply_to = reply_to
-        tm.body = {'profilename': 'server-ssl12', 'opcode': 'QUERY', 'userid': '94745961c5646ee0129536b3acef1eea0d8d2f26f8c3ed08ece4f8f3027bcd48'}
-        M1.put(tm)
-        M1.send()
-        M1.recv(1)
-        M1.get(rm)
-        self.assertEqual('johndoe', rm.body['user_name'])
-
-        tm = Message()
-        rm = Message()
-        tm.address = addr
-        tm.reply_to = reply_to
-        tm.body =  {'profilename': 'server-ssl10', 'opcode': 'QUERY', 'userid': '12345'}
-        M1.put(tm)
-        M1.send()
-        M1.recv(1)
-        M1.get(rm)
-        self.assertEqual('12345', rm.body['user_name'])
-
-        tm = Message()
-        rm = Message()
-        tm.address = addr
-        tm.reply_to = reply_to
-        tm.user_id = "bad-user-id" # policy is disabled; user proxy is allowed
-        tm.body = {'profilename': 'server-ssl10', 'opcode': 'QUERY', 'userid': '12345'}
-        M1.put(tm)
-        M1.send()
-        M1.recv(1)
-        M1.get(rm)
-        self.assertEqual('12345', rm.body['user_name'])
-
-        M1.stop()
 
         node.close()
 

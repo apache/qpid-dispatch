@@ -263,54 +263,6 @@ class QdSSLUseridProxy(QdSSLUseridTest):
         self.assertTrue (result == Delivery.REJECTED,
                         "Router accepted a message with user_id that did not match connection user_id")
 
-    def test_message_user_id_proxy_blank_name_allowed(self):
-        # Send a message with a blank user_id that should be allowed
-        M1 = self.messenger()
-        M1.route("amqp:/*", self.address(14) + "/$1")
-
-        subscription = M1.subscribe("amqp:/#")
-
-        reply_to = subscription.address
-        addr = 'amqp:/_local/$displayname'
-
-        tm = Message()
-        rm = Message()
-        tm.address = addr
-        tm.reply_to = reply_to
-        tm.body = {'profilename': 'server-ssl10', 'opcode': 'QUERY',
-                   'userid': '94745961c5646ee0129536b3acef1eea0d8d2f26f8c353455233027bcd47'}
-        M1.put(tm)
-
-        M1.send()
-        M1.recv(1)
-        M1.get(rm)
-        self.assertEqual('elaine', rm.body['user_name'])
-
-    def test_message_user_id_proxy_correct_name_allowed(self):
-        # Send a message with a good user_id that should be allowed
-        M2 = self.messenger()
-        M2.route("amqp:/*", self.address(14) + "/$1")
-
-        subscription = M2.subscribe("amqp:/#")
-
-        reply_to = subscription.address
-        addr = 'amqp:/_local/$displayname'
-
-        tm = Message()
-        rm = Message()
-        tm.address = addr
-        tm.reply_to = reply_to
-        tm.user_id = "anonymous"
-        tm.body = {'profilename': 'server-ssl10', 'opcode': 'QUERY',
-                   'userid': '94745961c5646ee0129536b3acef1eea0d8d2f26f8c353455233027bcd47'}
-        M2.put(tm)
-
-        M2.send()
-        M2.recv(1)
-        M2.get(rm)
-        self.assertEqual('elaine', rm.body['user_name'])
-
-
     def test_message_user_id_proxy_zzz_credit_handled(self):
         # Test for DISPATCH-519. Make sure the REJECTED messages result
         # in the client receiving credit.
