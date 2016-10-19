@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load breadcrumb_nav %}
+{% load i18n %}
+{% block title %}{% trans "Topology" %}{% endblock %}
+
+{% block content %}
+<div class='topbar'>
+  {% include "header/_header.html" %}
+</div>
+<div id='main_content' class="topology-container">
+  {% include "horizon/_messages.html" %}
+  {% block sidebar %}
+    {% include 'horizon/common/_sidebar.html' %}
+  {% endblock %}
+  <div id='content_body'>
+    <div class='container-fluid'>
+      <div class="row">
+        <div class="col-xs-12">
+          <div class="page-breadcrumb">
+            {% block breadcrumb_nav %}
+              {% breadcrumb_nav %}
+            {% endblock %}
+          </div>
+
+          {% block page_header %}
+          {% endblock %}
+          {% block main %}
+          <ng-include src="'dispatch/topology.html'"></ng-include>
+          {% endblock %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

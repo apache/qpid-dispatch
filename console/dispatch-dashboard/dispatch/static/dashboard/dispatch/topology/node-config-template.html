@@ -1,0 +1,51 @@
+<!--
+    This is the template for the node edit dialog that is displayed.
+-->
+<div class="modal-header">
+    <h3 class="modal-title">Configure new router</h3>
+</div>
+<div class="modal-body">
+    <form novalidate name="editForm">
+
+        <tabset vertical="true" class="tabs-left">
+            <tab ng-repeat="entity in entities"> <!-- ng-class="{separated: entity.tabName == 'listener0'}" -->
+                <tab-heading>
+                    <i ng-if="entity.icon !== ''" ng-class="entity.icon ? 'ui-icon-arrowthick-1-w' : 'ui-icon-arrowthick-1-e'" class="ui-icon"></i>{{entity.humanName}}
+                </tab-heading>
+                <div class="entity-description">{{entity.description}}</div>
+                <fieldset>
+                    <div ng-mouseenter="showDescription(attribute, $event)" ng-repeat="attribute in entity.attributes">
+                        <label for="{{attribute.name}}">{{attribute.humanName}}</label>
+                        <!-- we can't do <input type="{angular expression}"> because... jquery throws an exception because... -->
+                        <div ng-if="attribute.input == 'input'">
+                            <!-- ng-pattern="testPattern(attribute)" -->
+                            <input ng-if="attribute.type == 'number'" type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
+                            <input ng-if="attribute.type == 'text'" type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
+                        </div>
+                        <div ng-if="attribute.input == 'select'">
+                            <select id="{{attribute.name}}" ng-model="attribute.selected" ng-options="item for item in attribute.rawtype"></select>
+                        </div>
+                        <div ng-if="attribute.input == 'boolean'" class="boolean">
+                            <label><input type="radio" ng-model="attribute.value" value="true"> True</label>
+                            <label><input type="radio" ng-model="attribute.value" value="false"> False</label>
+                        </div>
+                    </div>
+                </fieldset>
+                <div class="attr-description">{{attributeDescription}}
+                    <div class="attr-type">{{attributeType}}</div>
+                    <div class="attr-required">{{attributeRequired}}</div>
+                    <div class="attr-unique">{{attributeUnique}}</div>
+                </div>
+                <div class="attr-annotations" ng-repeat="annotation in entity.annotatedBy">
+                    <span>You can also enter the <button ng-click="selectAnnotationTab(annotation)">{{annotation}}</button> values.</span>
+                </div>
+            </tab>
+        </tabset>
+
+
+    </form>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-primary" type="button" ng-click="download()">Download</button>
+    <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+</div>

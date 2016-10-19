@@ -1,0 +1,2135 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
+
+@import "https://cdn.rawgit.com/angular-ui/bower-ui-grid/master/ui-grid.min.css";
+@import "https://cdn.rawgit.com/mar10/dynatree/master/dist/skin/ui.dynatree.css";
+
+$sep-width: 6px;
+$left-width: 200px;
+$pane-top: 50px;
+#paneSep {
+	background-color: #FFF;
+    position: absolute;
+    top: $pane-top;
+    bottom: 0;
+    left: 200px;
+    width: $sep-width;
+    cursor: e-resize;
+    border-right: 1px solid #CCC;
+}
+
+#paneLeft {
+    position: absolute;
+    top: $pane-top;
+    bottom: 0;
+    left: 0;
+    width: $left-width;
+    overflow: auto;
+}
+
+#paneRight {
+    position: absolute;
+    top: $pane-top;
+    bottom: 0;
+    left: $left-width + $sep-width;
+    right: 0;
+    overflow: hidden;
+    margin: 0 1em;
+}
+
+$topology-left-width: 400px;
+$topology-pane-top: 80px;
+div.topology-container #paneLeft {
+  top: $topology-pane-top;
+  width: $topology-left-width;
+}
+div.topology-container #paneRight {
+  top: $topology-pane-top;
+  left: $topology-left-width + $sep-width;
+}
+div.topology-container #paneSep {
+  top: $topology-pane-top;
+  left: $topology-left-width;
+}
+
+.ui-grid-viewport {
+/*    overflow: auto; */
+}
+div.qdr-attributes span.dynatree-selected a {
+    background-color: #e0e0ff;
+}
+
+.qdr-overview.pane.left span:not(.dynatree-has-children) .dynatree-icon:before,
+.qdr-attributes.pane.left span:not(.dynatree-has-children) .dynatree-icon:before {
+    color: green;
+}
+
+span:not(.dynatree-has-children).address .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address .dynatree-icon:before {
+    content: "\f0ac";
+}
+span:not(.dynatree-has-children).address.mobile .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.mobile .dynatree-icon:before {
+    content: "\f109";
+}
+span:not(.dynatree-has-children).address.internal.mobile .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.internal.mobile .dynatree-icon:before {
+    content: "\f0ac";
+}
+span:not(.dynatree-has-children).address.router .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.router .dynatree-icon:before {
+    content: "\f047";
+}
+
+span.address-link .dynatree-icon:before {
+    content: "\f0ac";
+}
+
+span:not(.dynatree-has-children).connection.external .dynatree-icon:before {
+    content: "\f109";
+}
+span:not(.dynatree-has-children).connection.normal .dynatree-icon:before {
+    content: "\f08e";
+}
+span:not(.dynatree-has-children).connection.external.quiesced .dynatree-icon:before {
+	content: "\f14c";
+	color: red;
+}
+span:not(.dynatree-has-children).connection.inter-router .dynatree-icon:before {
+     content: "\f07e";
+}
+span:not(.dynatree-has-children).no-data .dynatree-icon:before {
+     content: "\f05e";
+     color: red !important;
+}
+span:not(.dynatree-has-children).loading .dynatree-icon:before {
+     content: "\f254";
+}
+span:not(.dynatree-has-children).connector .dynatree-icon:before {
+     content: "\f126";
+}
+span:not(.dynatree-has-children).container .dynatree-icon:before {
+     content: "\f16c";
+}
+span:not(.dynatree-has-children).log .dynatree-icon:before {
+     content: "\f0f6";
+}
+span:not(.dynatree-has-children).router\.node .dynatree-icon:before {
+     content: "\f013";
+}
+span:not(.dynatree-has-children).link.inter-router .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.inter-router .dynatree-icon:before{
+     content: "\f07e";
+}
+span:not(.dynatree-has-children).link.endpoint .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.endpoint .dynatree-icon:before{
+     content: "\f109";
+}
+span:not(.dynatree-has-children).link.console .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.console .dynatree-icon:before {
+     content: "\f108";
+}
+span:not(.dynatree-has-children).listener .dynatree-icon:before {
+     content: "\f025";
+}
+span:not(.dynatree-has-children).connection .dynatree-icon:before {
+     content: "\f07e";
+}
+span:not(.dynatree-has-children).connection.console .dynatree-icon:before {
+     content: "\f108";
+}
+span:not(.dynatree-has-children).waypoint .dynatree-icon:before {
+     content: "\f0ec";
+}
+span:not(.dynatree-has-children).router .dynatree-icon:before {
+     content: "\f047";
+}
+span:not(.dynatree-has-children).fixedAddress .dynatree-icon:before {
+     content: "\f015";
+}
+span:not(.dynatree-has-children).linkRoutePattern .dynatree-icon:before {
+     content: "\f039";
+}
+span:not(.dynatree-has-children).allocator .dynatree-icon:before {
+     content: "\f170";
+}
+
+span.filter-icon {
+	padding-left: 1em;
+}
+
+button.filter-close {
+    width: 15px;
+    height: 20px;
+    padding: 0;
+    position: absolute;
+    right: 4px;
+    top: 4px;
+}
+
+div.filter-title h6 {
+	margin: 0 0 0.5em 0;
+}
+
+.links button.btn-filter {
+	padding: 0 1em 0 0;
+    margin-left: 1em;
+    font-size: 1em;
+}
+
+button.btn-filter {
+	float: right;
+}
+span.dynatree-expanded button.btn-filter,
+a.dynatree-title:hover button.btn-filter {
+ 	visibility: visible;
+}
+
+div.hdash-button a {
+	color: white;
+}
+
+.linkDirIn {
+	color: red;
+	background-color: #f3f3f3;
+}
+
+.linkDirOut {
+	color: blue;
+	background-color: white;
+}
+
+ul.dynatree-container {
+  background: inherit;
+}
+ul.dynatree-container li {
+  background: inherit;
+}
+
+span.dynatree-icon {
+  position: relative;
+  top: -2px;
+  font-size: 17px;
+}
+
+span:not(.dynatree-has-children) .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f013";
+}
+
+ul.inline,
+ol.inline {
+  margin-left: 0;
+  list-style: none;
+}
+
+ul.inline > li,
+ol.inline > li {
+  display: inline-block;
+  padding-right: 2px;
+  padding-left: 2px;
+}
+
+[class^="dynatree-folder icon-"], [class*=" dynatree-folder icon-"] {
+
+}
+
+[class^="dynatree-folder icon-"]:before, [class*=" dynatree-folder icon-"]:before {
+  font-size: 17px;
+  margin-left: 18px;
+}
+
+
+[class^="dynatree-folder icon-"], [class*=" dynatree-folder icon-"] .dynatree-connector {
+  display: none;
+}
+
+[class^="dynatree-folder icon-"], [class*=" dynatree-folder icon-"] .dynatree-icon {
+  display: none;
+}
+
+ul.dynatree-container {
+  overflow: visible;
+}
+
+ul.dynatree-container {
+  background: inherit;
+}
+ul.dynatree-container li {
+  background: inherit;
+}
+
+i.expandable-indicator {
+  color: #666;
+}
+
+span.dynatree-expander {
+  color: #728271;
+}
+
+span.dynatree-icon {
+  color: #EECA7C;
+}
+span:not(.dynatree-has-children) .dynatree-icon:before {
+  color: gray;
+}
+
+span.dynatree-empty,
+span.dynatree-vline,
+span.dynatree-connector,
+span.dynatree-expander,
+span.dynatree-icon,
+span.dynatree-checkbox,
+span.dynatree-radio,
+span.dynatree-drag-helper-img,
+#dynatree-drop-marker
+{
+    font-family: FontAwesome;
+    font-weight: normal;
+    font-style: normal;
+    display: inline-block;
+    text-decoration: inherit;
+    background-image: none;
+    vertical-align: middle;
+}
+
+.dynatree-checkbox {
+    color: #888888
+}
+
+/* Dynatree checkbox */
+span.dynatree-checkbox:before
+{
+    margin-top: 1px;
+    background-position: 0 0;
+    cursor: pointer;
+    content: "";
+}
+
+span.dynatree-checkbox:before:hover
+{
+    background-position: 0 0;
+    content: "";
+}
+
+.dynatree-selected span.dynatree-checkbox:before
+{
+    margin-top: 1px;
+    background-position: 0 0;
+    cursor: pointer;
+    content: "\f00c";
+}
+
+.dynatree-selected span.dynatree-checkbox:before:hover
+{
+    background-position: 0 0;
+    content: "\f00c";
+}
+
+
+.dynatree-expander {
+    color: #888888
+}
+
+/* Dynatree expander */
+span.dynatree-expander:before
+{
+    margin-top: 1px;
+    background-position: 0 0;
+    cursor: pointer;
+    content: "\f054";
+}
+
+span.dynatree-expander:before:hover
+{
+    background-position: 0 0;
+    content: "\f054";
+}
+
+.dynatree-exp-e span.dynatree-expander:before,  /* Expanded, not delayed, not last sibling */
+.dynatree-exp-ed span.dynatree-expander:before,  /* Expanded, delayed, not last sibling */
+.dynatree-exp-el span.dynatree-expander:before,  /* Expanded, not delayed, last sibling */
+.dynatree-exp-edl span.dynatree-expander:before  /* Expanded, delayed, last sibling */
+{
+    background-position: 0 0;
+    content: "\f078";
+}
+.dynatree-exp-e span.dynatree-expander:before:hover,  /* Expanded, not delayed, not last sibling */
+.dynatree-exp-ed span.dynatree-expander:before:hover,  /* Expanded, delayed, not last sibling */
+.dynatree-exp-el span.dynatree-expander:before:hover,  /* Expanded, not delayed, last sibling */
+.dynatree-exp-edl span.dynatree-expander:before:hover  /* Expanded, delayed, last sibling */
+{
+    background-position: 0 0;
+    content: "\f0da";
+}
+
+/* closed folder */
+.dynatree-ico-cf span.dynatree-icon:before {
+    background-position: 0 0;
+    content: "\f07b";
+}
+
+/* open folder */
+.dynatree-ico-ef span.dynatree-icon:before {
+    background-position: 0 0;
+    content: "\f07c";
+}
+
+span.dynatree-icon:before {
+    background-position: 0px 0px;
+    content: "\f013";
+}
+
+span.dynatree-folder a {
+    font-weight: normal;
+}
+
+div.treeContainer ul.dynatree-container {
+	border: 0px;
+}
+
+#linkFilter {
+	display: none;
+	padding: 0.5em;
+	border: 1px solid grey;
+	background-color: #F0F0F0;
+	position: absolute;
+	z-index: 100;
+	right: 1em;
+}
+
+span.filter-icon {
+	padding-left: 1em;
+}
+
+button.filter-close {
+    width: 15px;
+    height: 20px;
+    padding: 0;
+    position: absolute;
+    right: 4px;
+    top: 4px;
+}
+
+div.filter-title h6 {
+	margin: 0 0 0.5em 0;
+}
+
+.links button.btn-filter {
+	padding: 0 1em 0 0;
+    margin-left: 1em;
+    font-size: 1em;
+}
+
+button.btn-filter {
+	float: right;
+}
+
+div.formLine label, div.formLine input {
+	display: inline-block;
+	padding: 0 8px;
+}
+
+.ui-grid {
+  border: 0;
+/*  height: auto; */
+}
+
+
+.ui-grid-viewport {
+/*  height: 100% !important; */
+/*  overflow-x: auto !important; */
+}
+/*
+.ui-grid-row.ui-grid-row-selected > [ui-grid-row] > .ui-grid-cell {
+  background-color: #e0e0ff;
+}
+*/
+.grid:not(.noHighlight) .ui-grid-row:hover .ui-grid-cell-contents {
+	background-color: #EEE;
+}
+
+.ui-grid-top-panel {
+  background: inherit;
+}
+
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
+
+svg {
+  background-color: transparent;
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+svg:not(.active):not(.ctrl) {
+  cursor: crosshair;
+}
+#end-arrow-selected, #start-arrow-selected {
+	stroke: #00F;
+	fill: #00F;
+}
+
+path.link {
+  fill: none;
+  stroke: #000;
+  stroke-width: 4px;
+  cursor: default;
+}
+
+svg:not(.active):not(.ctrl) path.link {
+  cursor: pointer;
+}
+
+path.link.selected {
+  stroke-dasharray: 10,2;
+  stroke: #00F  !important;
+}
+
+
+path.link.highlighted {
+    stroke: #0F0 !important;
+
+}
+
+path.link.temp {
+  opacity: 0.3;
+}
+path.link.temp.over {
+  opacity: 0.8;
+  stroke-dasharray: 10,2;
+}
+
+path.link.dragline {
+  pointer-events: none;
+}
+
+path.link.hidden {
+  stroke-width: 0;
+}
+
+
+circle.node {
+    stroke-width: 1.5px;
+    cursor: pointer;
+    stroke: darkgray;
+    fill: lightgray;
+}
+
+circle.node.reflexive {
+    stroke: #F00 !important;
+    stroke-width: 2.5px;
+}
+circle.node.selected {
+    stroke: #F00 !important;
+    stroke-width: 2px;
+    fill: #e0e0ff !important;
+}
+circle.node.inter-router {
+    fill: #EAEAEA;
+}
+circle.node.normal {
+    fill: #F0F000;
+}
+circle.node.on-demand {
+    fill: #C0FFC0;
+}
+circle.node.on-demand.artemis {
+	fill: #FCC;
+	/*opacity: 0.2; */
+}
+
+circle.node.fixed {
+    stroke-dasharray: 10,2;
+}
+circle.node.temp {
+    stroke: #f80;
+    fill: #f0f0ff;
+}
+
+text {
+  font: 12px sans-serif;
+  pointer-events: none;
+  /*font-family: monospace;*/
+
+}
+
+.tooltipsy
+{
+    padding: 10px;
+/*    max-width: 320px;*/
+    color: #303030;
+    background-color: #fcfcfe;
+    border: 1px solid #deca7e;
+    border-radius: 5px;
+}
+
+.tiptable {
+
+}
+.tiptable tr {
+	border-bottom: 1px solid #ccc;
+}
+
+.tiptable tr:last-child {
+	border-bottom: 0px;
+}
+
+.tiptable tr:nth-child(even) {
+	background: #fcfcfe;
+}
+.tiptable tr:nth-child(odd) {
+	background: #FFF
+}
+
+text.id {
+  text-anchor: middle;
+  font-weight: bold;
+}
+
+text.label {
+  text-anchor: start;
+  font-weight: bold;
+}
+
+.row-fluid.tertiary {
+  position: relative;
+  left: 20px;
+}
+
+.row-fluid.tertiary.left {
+  float: left;
+}
+
+.row-fluid.tertiary.panel {
+  width: 410px;
+  /*height: 100%; */
+}
+/*
+div#topologyForm .ngViewport, div#topologyForm .grid {
+  height: inherit !important;
+	min-height: initial !important;
+	overflow: initial;
+}
+*/
+
+#topologyForm {
+  max-height: 20em;
+}
+
+div#multiple_details, div#link_details {
+	height: 300px;
+	width: 700px;
+/*	display: none; */
+  visibility: hidden;
+	padding: 0.5em;
+  border: 1px solid;
+	position: absolute;
+	background-color: white;
+	max-height: 330px !important;
+  overflow: hidden;
+  z-index: 99;
+}
+
+/*
+div#multiple_details div.ngRow.selected {
+	background-color: #c9dde1 !important;
+}
+*/
+div.grid-values {
+	text-align: right;
+}
+
+div.grid-values.ngCellText span {
+	padding-right: 4px;
+}
+
+.panel-adjacent {
+  margin-left: 430px;
+}
+
+#topologyForm.selected {
+  border: 1px solid red;
+}
+#topologyForm {
+    border: 1px solid white;
+    padding: 1em 1.5em;
+}
+
+div.qdr-topology.pane.left .ngViewport {
+    /* border: 1px solid lightgray; */
+}
+
+#topologyForm > div {
+  /* width:396px; */
+}
+
+/* globe */
+.land {
+  fill: #999;
+  stroke-opacity: 1;
+}
+
+.graticule {
+  fill: none;
+  stroke: black;
+  stroke-width:.5;
+  opacity:.1;
+}
+
+.labels {
+    font: 18px sans-serif;
+    fill: black;
+    opacity: .85;
+	text-anchor: middle;
+}
+
+.noclicks { pointer-events:none; }
+
+.point {  opacity:.6; }
+
+.arcs {
+  opacity:.7;
+  stroke: darkgreen;
+  stroke-width: 3;
+}
+.flyers {
+  stroke-width:1;
+  opacity: 0;
+  stroke: darkred;
+}
+.arc, .flyer {
+  stroke-linejoin: round;
+  fill:none;
+}
+.arc { }
+.arc:hover {
+  stroke: darkred;
+}
+.flyer { }
+.flyer:hover {
+  stroke: darkgreen;
+}
+.arc.inter-router {
+  stroke: darkblue;
+}
+
+#addNodeForm {
+  padding: 1em;
+}
+
+
+li.currentStep {
+  font-weight: bold;
+}
+
+.qdrTopology div.panel {
+  position: absolute;
+}
+/*
+.ui-dialog-titlebar {
+    border: 0;
+    background: transparent;
+}
+*/
+
+/*
+.ui-tabs.ui-tabs-vertical {
+    padding: 0;
+    width: 48em;
+}
+.ui-tabs.ui-tabs-vertical .ui-widget-header {
+    border: none;
+}
+.ui-tabs.ui-tabs-vertical .ui-tabs-nav {
+    float: left;
+    width: 10em;
+    background: #CCC;
+    border-radius: 4px 0 0 4px;
+    border-right: 1px solid gray;
+}
+.ui-tabs.ui-tabs-vertical .ui-tabs-nav li {
+    clear: left;
+    width: 100%;
+    margin: 0.1em 0;
+    border: 1px solid gray;
+    border-width: 1px 0 1px 1px;
+    border-radius: 4px 0 0 4px;
+    overflow: hidden;
+    position: relative;
+    right: -2px;
+    z-index: 2;
+}
+.ui-tabs.ui-tabs-vertical .ui-tabs-nav li a {
+    display: block;
+    width: 100%;
+    padding: 0.1em 1em;
+}
+.ui-tabs.ui-tabs-vertical .ui-tabs-nav li a:hover {
+    cursor: pointer;
+}
+.ui-tabs.ui-tabs-vertical .ui-tabs-nav li.ui-tabs-active {
+    margin-bottom: 0.2em;
+    padding-bottom: 0;
+    border-right: 1px solid white;
+}
+.ui-tabs.ui-tabs-vertical .ui-tabs-nav li:last-child {
+    margin-bottom: 10px;
+}
+.ui-tabs.ui-tabs-vertical .ui-tabs-panel {
+    float: left;
+    width: 34em;
+    border-left: 1px solid gray;
+    border-radius: 0;
+    position: relative;
+    left: -1px;
+}
+
+.ui-tabs .ui-tabs-nav li.ui-tabs-selected {
+    right: -3px !important;
+}
+
+.ui-tabs li i.ui-icon {
+    display: inline-block;
+}
+*/
+.ui-tabs .ui-tabs-panel {
+    /* padding-top: 0 !important; */
+}
+
+.ui-widget-content fieldset {
+  float: left;
+  padding: 0 1em 0 0;
+}
+
+.entity-description {
+  color: #960;
+  font-size: 90%;
+}
+
+.attr-description {
+  padding-top: 1.5em;
+  float: right;
+  width: 17em;
+}
+.attr-annotations {
+    padding-top: 2.5em;
+    clear: both;
+}
+.attr-annotations > span {
+    padding-top: 0.5em;
+    border-top: 1px dashed darkgray;
+    display: block;
+}
+
+.attr-type {
+    color: #990;
+    font-size: 85%;
+}
+.attr-required {
+    color: red;
+    font-size: 85%;
+}
+.attr-unique {
+    color: green;
+    font-size: 85%;
+}
+
+#tabs.nodeEntities {
+  border: 0;
+}
+
+#tabs ul.nodeTabs {
+  background: #fff;
+}
+
+#tabs #Container {
+  border-left: 1px solid #aaa;
+}
+
+#tabs.ui-tabs .ui-tabs-nav li {
+  border-bottom: 1px solid #aaa !important;
+}
+
+.entity-fields {
+  /* height: 400px; */
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+
+div.boolean label:first-child {
+    float: left;
+    margin-right: 1em;
+}
+div.boolean {
+    padding-bottom: 1em;
+}
+
+.entity-fields label {
+    font-weight: 600;
+    margin-top: 0.5em;
+	display: inline;
+}
+
+.aggregate {
+	text-align: right;
+}
+
+.aggregate i {
+	float: right;
+    margin: 3px 3px 3px 8px;
+}
+
+.aggregate .hastip {
+	padding: 5px;
+}
+
+.subTip .tipsy-inner {
+	background-color: white;
+	color: black;
+	font-size: 1.3em;
+	border: 1px solid black;
+}
+
+.subTip .tipsy-arrow-n { border-bottom-color: black; }
+.subTip .tipsy-arrow-s { border-top-color: black; }
+.subTip .tipsy-arrow-e { border-left-color: black; }
+.subTip .tipsy-arrow-w { border-right-color: black; }
+
+
+.contextMenu {
+    display:none;
+	position:absolute;
+	left:30px;
+	top:-30px;
+	z-index:999;
+	/* width:300px; */
+}
+.contextMenu ul {
+	width:300px;
+	margin:0;
+	padding-left: 0;
+	list-style:none;
+	background:#fff;
+	color:#333;
+    font-weight: 600;
+	/* -moz-border-radius:5px; -webkit-border-radius:5px; border-radius:5px; */
+	-moz-box-shadow:5px 5px 5px #ddd; -webkit-box-shadow:5px 5px 5px #999; box-shadow:5px 5px 5px #ddd;
+	border: 1px solid #aaa;
+}
+.contextMenu ul li {
+	padding:5px 10px;
+	/* border-bottom: solid 1px #ccc; */
+}
+.contextMenu ul li:hover {
+	background:#4a90d9; color:#fff;
+}
+.contextMenu ul li:last-child {
+    border:none;
+}
+
+.na {
+    display: none;
+}
+.contextMenu ul li.new {
+    display: block;
+}
+.contextMenu ul li.adding, .contextMenu ul li.adding + li {
+    display: block;
+}
+.contextMenu ul li.force-display {
+    display: block;
+}
+.contextMenu ul li.context-separator {
+    background-color: lightgray;
+    height: 1px;
+    padding: 0;
+}
+
+.ui-tabs.ui-tabs-vertical .ui-tabs-nav li.separated {
+    margin-top: 1em;
+}
+
+#crosssection {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+}
+
+.node circle {
+/*  fill: rgb(31, 119, 180);
+  fill-opacity: .25; */
+  fill: #cfe2f3;
+  fill-opacity: .98;
+  stroke: black;
+  stroke-width: 3px;
+}
+
+circle.subcircle {
+    stroke-width: 1px;
+    /* stroke-dasharray: 2; */
+    fill-opacity: 0;
+    stroke: darkgray;
+}
+
+.leaf circle {
+  fill: #6fa8dc;
+  fill-opacity: 0.95;
+  stroke-width: 3px;
+}
+
+.leaf circle[title] {
+    font-family: monospace;
+
+}
+
+#svg_legend {
+    position: absolute;
+    top: 74px;
+    right: 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fcfcfc;
+    margin-right: 1.3em;
+	padding: 1em;
+}
+
+#svg_legend svg {
+    height: 235px;
+    width: 180px;
+}
+
+/*
+#multiple_details div.grid {
+	min-height: 70px !important;
+	height: auto !important;
+}
+
+#multiple_details .ngViewport {
+    height: auto !important;
+}
+
+#multiple_details .gridCellButton button, #link_details .gridCellButton button {
+    margin: .25em .4em;
+    font-size: 12px;
+    height: 2em;
+	padding-top: .1em;
+}
+*/
+
+#linkFilter {
+	display: none;
+	padding: 0.5em;
+	border: 1px solid grey;
+	background-color: #F0F0F0;
+	position: absolute;
+	z-index: 100;
+	right: 1em;
+}
+div.formLine label, div.formLine input {
+	display: inline-block;
+	padding: 0 8px;
+}
+
+span.filter-icon {
+	padding-left: 1em;
+}
+
+button.filter-close {
+    width: 15px;
+    height: 20px;
+    padding: 0;
+    position: absolute;
+    right: 4px;
+    top: 4px;
+}
+
+div.filter-title h6 {
+	margin: 0 0 0.5em 0;
+}
+
+.links button.btn-filter {
+	padding: 0 1em 0 0;
+    margin-left: 1em;
+    font-size: 1em;
+}
+
+button.btn-filter {
+	float: right;
+}
+span.dynatree-expanded button.btn-filter,
+a.dynatree-title:hover button.btn-filter {
+ 	visibility: visible;
+}
+
+div.hdash-button a {
+	color: white;
+}
+
+.linkDirIn {
+	color: red;
+	background-color: #f3f3f3;
+}
+
+.linkDirOut {
+	color: blue;
+	background-color: white;
+}
+
+div.topoGrid .ui-grid-viewport {
+	overflow: hidden !important;
+}
+
+@-moz-document url-prefix() {
+    .btn {padding: 2px 12px 8px !important;}
+}
+
+.ui-fancytree.fancytree-container {
+	font-size: 14px;
+}
+
+.grid-title {
+    background-color: #FAFAFA;
+    background-image: -moz-linear-gradient(top, #ffffff, #f2f2f2);
+    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#ffffff), to(#f2f2f2));
+    background-image: -webkit-linear-gradient(top, #ffffff, #f2f2f2);
+    background-image: -o-linear-gradient(top, #ffffff, #f2f2f2);
+    background-image: linear-gradient(to bottom, #ffffff, #f2f2f2);
+    background-repeat: repeat-x;
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#FFFFFF', endColorstr='#F2F2F2', GradientType=0);
+    border-bottom: 1px solid #d4d4d4;
+    text-shadow: 0 1px 0 #FFFFFF;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+	margin: 0 0 10px 0;
+    padding-bottom: 4px;
+}
+
+.expand-collapse {
+	float: right;
+	margin-right: 0.5em;
+}
+
+.pane-viewport {
+	top: 24px !important;
+}/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
+main-display > .span8 {
+  height: 100%;
+  position: relative;
+}
+
+ul.qdrListNodes > li > span {
+  padding: 6px 20px; 6px; 6px;
+  display: block;
+}
+
+.qdrList .gridStyle {
+    width: 20em;
+    margin-right: 0;
+    float: left;
+}
+
+
+.qdrList div.gridDetails {
+    width: auto;
+}
+
+.selectedItems {
+    /* margin-left: 21em; */
+}
+
+.qdrListPane {
+    top: 110px;
+}
+
+.qdrListActions {
+    width: auto;
+}
+
+div.listAttrName {
+    padding-top: 5px;
+}
+
+div.listAttrName i.icon-bar-chart {
+    float: right;
+    margin: 3px 5px;
+}
+
+div.listAttrName i.icon-bar-chart.active, div.hastip i.icon-bar-chart.active, li.haschart i {
+    background-color: #AAFFAA;
+}
+
+div#main div ul.nav li a:not(.btn) {
+    background: initial !important;
+}
+
+div#main div ul.nav li.active a {
+    background-color: #f0f0ff !important;
+}
+
+div#main.qdr {
+    margin-top: 56px !important;
+}
+
+div.charts-header {
+  font-size: 1.2em;
+  color: #666666;
+  margin: 1em 0;
+}
+
+.selectedNode, .selectedAction, .selectedEntity {
+    font-weight: 600;
+    color: #606066;
+}
+
+.okButton {
+    text-align: center;
+    margin: 1em;
+}
+
+span.showChartsLink {
+    border: 1px solid blue;
+    padding: 1px 2px;
+}
+
+div.listGraphs p {
+    margin: 1em 0 2em 2em;
+    text-align: center;
+}
+
+div.centered {
+    text-align: center;
+    margin: 4em;
+}
+
+.modal-body.centered {
+	margin: 0;
+}
+
+/* dialog */
+div.aChart {
+    height: 200px;
+    width:  400px;
+    margin: 1em;
+}
+
+/* dashboard */
+div.aChart.hDash {
+	/* width: 21em; */
+	/* height: 17em; */
+	width: 100%;
+	height: 87%;
+	margin: 0;
+	padding: 0;
+
+}
+div.chartContainer {
+    float: left;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+/* the x and y axis lines */
+.d3Chart g.axis path.domain {
+    stroke-width: 1;
+    stroke: black;
+}
+
+/* the line surrounding the area chart */
+div.d3Chart path {
+/*    stroke: black; */
+    stroke-width: 0;
+/*	opacity: 0.5; */
+}
+
+/* the line above the area chart */
+/* the color gets overridden */
+div.d3Chart path.line {
+    stroke: steelblue;
+    stroke-width: 1.5;
+    fill: none;
+    opacity: 1;
+}
+
+.mo-rect {
+    fill: #ffffdd;
+    stroke: #f0f0f0;
+    stroke-width: 1;
+}
+
+.mo-guide {
+    fill: none;
+    stroke: #d0d0d0;
+    stroke-width: 2;
+    stroke-dasharray: 3,3;
+}
+
+div.d3Chart .title {
+    /* text-decoration: underline; */
+    font-weight: bold;
+}
+
+
+.axis line, .axis path {
+  fill: none;
+  shape-rendering: crispEdges;
+  stroke-width: 1;
+  stroke: #000000;
+}
+
+.axis line {
+  stroke: #C0C0C0;
+  stroke-dasharray: 1,1;
+  opacity: 0.5;
+}
+
+.y.axis text, .x.axis text, .focus text, div.d3Chart .title {
+    font-size: 12px;
+}
+
+.y.axis path {
+   stroke: #000;
+ }
+
+.overlay {
+   fill: none;
+   pointer-events: all;
+ }
+
+.focus circle {
+   fill: none;
+   stroke: steelblue;
+ }
+.focus .fo-table {
+	/* box-shadow: 2px 2px 3px #EEE; */
+}
+
+div.d3Chart {
+    padding: 1em 0;
+    border: 1px solid #C0C0C0;
+}
+div.d3Chart.hDash {
+    border: 0px;
+}
+
+div.d3Chart .axis path {
+	display: inherit;
+}
+.c3-circle {
+	display: none;
+}
+
+.fo-table {
+	border: 1px solid darkgray;
+	background-color: white;
+	font-size: .85em;
+}
+
+.fo-table td {
+	padding: 4px;
+	border-left: 1px solid darkgray;
+}
+.fo-table tr.detail td {
+	padding: 1px 4px;
+}
+.fo-title {
+	color: white;
+	background-color: darkgray;
+}
+
+.fo-table-legend {
+	width: 8px;
+	height: 8px;
+	border: 1px solid black;
+	margin: 0 4px;
+	display: inline-block;
+}
+
+svg .legend {
+	dominant-baseline: central;
+}
+
+div.chartContainer div.aChart {
+    margin-top: 0.5em;
+}
+
+#list-controller .tree-header {
+    position: absolute;
+    height: auto;
+}
+
+#list-controller select {
+	height: auto;
+	float: left;
+}
+
+
+div#main.qdr div ul.nav li.active a {
+  background-color: #e0e0ff !important;
+  color: #000000;
+}
+
+div#main.qdr .selected, .box.selected {
+  color: #000000;
+  text-shadow: none;
+}
+
+/* the selected node on the list page */
+div.qdrList li.active, ul.qdrListNodes li.active {
+    background-color: #e0e0ff;
+}
+
+div.qdr-attributes span.dynatree-selected a {
+    background-color: #e0e0ff;
+}
+div.qdr-attributes.pane, div.qdr-topology.pane {
+	position: absolute;
+	margin-left: 10px;
+}
+div.qdr-overview.pane {
+	position: absolute;
+}
+div.qdr-topology.pane.left {
+	width: auto;
+}
+
+/* the selected row in the name table */
+div#main.qdr div.qdrList div.selected {
+  background-color: #e0e0ff !important;
+}
+
+#dialogChart {
+    height: 200px;
+}
+
+div.qdrCharts p.chartLabels button {
+    float: right;
+}
+
+div.qdrCharts p.chartLabels {
+     padding-right: 1em;;
+ }
+
+p.dialogHeader {
+    text-align: center;
+}
+
+p.dialogHeader input {
+    margin-top: 10px;
+    width: 480px;
+}
+
+.ui-slider-tick {
+  position: absolute;
+  background-color: #666;
+  width: 2px;
+  height: 8px;
+  top: 12px;
+  z-index: -1;
+}
+
+label.rateGroup {
+    float: left;
+}
+
+div.chartOptions div.dlg-slider {
+    float: left;
+    margin-left: 2em;
+    width: 28em;
+    font-size: 14px;
+}
+
+div.chartOptions div.duration {
+  width: 35em !important;
+}
+
+div.chartOptions .slider {
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+input[type="radio"] {
+    margin-top: 0 !important;
+}
+
+div.chartOptions legend {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+div.chartOptions span.minicolors-swatch {
+    width: 14px;
+    height: 14px;
+}
+
+.minicolors-input {
+    width: 4em;
+    padding: 0 0 0 24px !important;
+}
+
+div.colorPicker div.colorText {
+	display: inline-block;
+	width: 10em;
+}
+div.colorPicker div:nth-of-type(1), /* first span under div.colorPicker */
+ div.minicolors{
+    float:left;
+    margin-right: 0.5em;
+}
+
+div.chartOptions p.sep {
+    height: 1em;
+}
+
+ul.nav-tabs {
+    border-bottom: 1px solid #ddd !important;
+}
+
+.chartOptions ul.nav-tabs {
+    margin-bottom: 0px !important;
+}
+
+div.tabbable div.tab-content {
+    overflow: visible;
+}
+
+div.tabbable ul.nav-tabs > .active > a {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-bottom-color: transparent;
+}
+
+
+div.tabbable .tab-pane {
+    background-color: #f8f8f8;
+    padding: 12px;
+    border-right: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+div.dlg-large div.tabbable .tab-pane {
+	margin-left: 11em;
+}
+
+div.tabbable ul.nav-tabs {
+  margin-bottom: 0;
+}
+
+ul.qdrTopoModes {
+    position: relative;
+    top: -10px;
+}
+.overview.section {
+	/* width: 35em; */
+}
+.overview.section .ngGrid {
+	height: 12em !important;
+	min-height: 12em !important;
+}
+
+.overview.routers.section .ngGrid {
+ 	height: 16em !important;
+ 	min-height: 16em !important;
+}
+.overview.routers.section {
+ 	/*width: 15em; */
+ }
+
+.grid-align-value {
+	text-align: right;
+}
+
+.grid-align-value .ngCellText {
+	padding-right: 10px;
+}
+
+.overview .ngRow:hover {
+	background:#e0e0ff;
+}
+
+.qdr-overview.pane.left, .qdr-attributes.pane.left {
+	top: 104px;
+}
+.qdr-topology.pane.left {
+	top: 104px;
+}
+.qdr-overview.pane.left, .qdr-attributes.pane.left, .qdr-topology.pane.left {
+	left: 10px;
+}
+
+.treeContainer {
+	width: 100%;
+	float: left;
+}
+
+.pane-content {
+	overflow: auto;
+}
+
+#entityNames {
+    width: 20em;
+    float: left;
+}
+
+.treeDetails {
+	margin-left: 260px;
+}
+
+.gridStyle:not(.noHighlight) .ui-grid-row:hover .ui-grid-cell-contents {
+	background-color: #e0e0ff;
+}
+
+.ngCellText {
+	padding: 4px 0 0 4px;
+}
+
+.ui-grid-row.ui-grid-row-selected > [ui-grid-row] > .ui-grid-cell {
+  background-color: #e0e0ff;
+}
+
+.tab-content .tab-pane {
+    background-color: #f8f8f8;
+    padding: 12px;
+    border-right: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+div.chartOptions ul.nav-tabs > .active > a {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-bottom-color: transparent;
+}
+
+div.chartOptions label:nth-of-type(2) {
+    margin-left: 1em;
+}
+div.chartOptions label {
+	font-weight: normal;
+	display: inline-block;
+}
+
+/*
+.form-horizontal .control-label {
+    float: left;
+    width: 160px;
+    padding-top: 5px;
+    text-align: right;
+}
+
+.form-horizontal .controls {
+    margin-left: 180px;
+}
+
+.form-horizontal input,  {
+    display: inline-block;
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+input[type="text"], input[type="number"], input[type="password"] {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    -webkit-transition: border linear 0.2s, box-shadow linear 0.2s;
+    -moz-transition: border linear 0.2s, box-shadow linear 0.2s;
+    -o-transition: border linear 0.2s, box-shadow linear 0.2s;
+    transition: border linear 0.2s, box-shadow linear 0.2s;
+}
+
+input[type="text"], input[type="number"], input[type="password"] {
+    display: inline-block;
+    width: 200px;
+    padding: 4px 6px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 20px;
+    color: #555555;
+    vertical-align: middle;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+.login input[type="checkbox"] {
+	margin-top: 0.75em;
+}
+*/
+
+#dispatch-login-container {
+	/* width: 18.5em; */
+	margin-top: 2em;
+}
+/*
+div.login.container {
+	width: 550px;
+}
+*/
+
+
+#overtree .fancytree-container {
+	border: 0px;
+}
+
+#overtree span.fancytree-alert-icon.ui-icon-refresh {
+	background-position: -64px -80px;
+}
+#overtree span.fancytree-alert-icon.ui-icon-transfer-e-w {
+	background-position: -112px -80px;
+}
+
+#alerts {
+	position: fixed;
+	right: 0;
+	top: 0;
+	z-index: 100;
+}
+
+.alert-enter,
+.alert-leave,
+.alert-move {
+  -webkit-transition: 1s linear all;
+  -moz-transition: 1s linear all;
+  -o-transition: 1s linear all;
+  transition: 1s linear all;
+  position:relative;
+}
+
+.alert-enter {
+  left:-10px;
+  opacity:0;
+}
+.alert-enter.alert-enter-active {
+  left:0;
+  opacity:1;
+}
+
+.alert-leave {
+  left:0;
+  opacity:1;
+}
+.alert-leave.alert-leave-active {
+  left:-10px;
+  opacity:0;
+}
+
+.alert-move {
+  opacity:0.5;
+}
+.alert-move.alert-move-active {
+  opacity:1;
+}
+
+.overview .table-striped tr:hover  td {
+	background-color: #e0e0ff !important;
+}
+
+#entityNames div.ngViewport {
+	overflow-x: hidden;
+}
+
+.connect-column.connect-form {
+	width: 20em;
+}
+
+.chartLabels button a {
+	text-decoration: none;
+}
+
+.fancytree-ico-c.router .fancytree-icon {
+
+}
+
+.tabs-left .nav-tabs {
+	float: left;
+}
+.tabs-left .nav-tabs > li {
+/*	float: initial; */
+}
+
+div.modal.dlg-large {
+	width: 53em;
+}
+
+button.hdash-button a {
+	text-decoration: none;
+	color: #fff;
+}
+
+div.widget-body > div {
+	height: 100%;
+}
+
+div.qdrCharts {
+	height: 100%;
+}
+
+ul.dispatch-view {
+	margin-bottom: 0 !important;
+}
+
+.qdr-overview.pane.left span:not(.dynatree-has-children) .dynatree-icon:before,
+.qdr-attributes.pane.left span:not(.dynatree-has-children) .dynatree-icon:before {
+    color: green;
+}
+
+span:not(.dynatree-has-children).address .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address .dynatree-icon:before {
+    content: "\f0ac";
+}
+span:not(.dynatree-has-children).address.mobile .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.mobile .dynatree-icon:before {
+    content: "\f109";
+}
+span:not(.dynatree-has-children).address.internal.mobile .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.internal.mobile .dynatree-icon:before {
+    content: "\f0ac";
+}
+span:not(.dynatree-has-children).address.router .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.router .dynatree-icon:before {
+    content: "\f047";
+}
+
+span.address-link .dynatree-icon:before {
+    content: "\f0ac";
+}
+
+span:not(.dynatree-has-children).connection.external .dynatree-icon:before {
+    content: "\f109";
+}
+span:not(.dynatree-has-children).connection.normal .dynatree-icon:before {
+    content: "\f08e";
+}
+span:not(.dynatree-has-children).connection.external.quiesced .dynatree-icon:before {
+	content: "\f14c";
+	color: red;
+}
+span:not(.dynatree-has-children).connection.inter-router .dynatree-icon:before {
+     content: "\f07e";
+}
+span:not(.dynatree-has-children).no-data .dynatree-icon:before {
+     content: "\f05e";
+     color: red !important;
+}
+span:not(.dynatree-has-children).loading .dynatree-icon:before {
+     content: "\f254";
+}
+span:not(.dynatree-has-children).connector .dynatree-icon:before {
+     content: "\f126";
+}
+span:not(.dynatree-has-children).container .dynatree-icon:before {
+     content: "\f16c";
+}
+span:not(.dynatree-has-children).log .dynatree-icon:before {
+     content: "\f0f6";
+}
+span:not(.dynatree-has-children).router\.node .dynatree-icon:before {
+     content: "\f013";
+}
+span:not(.dynatree-has-children).link.inter-router .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.inter-router .dynatree-icon:before{
+     content: "\f07e";
+}
+span:not(.dynatree-has-children).link.endpoint .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.endpoint .dynatree-icon:before{
+     content: "\f109";
+}
+span:not(.dynatree-has-children).link.console .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.console .dynatree-icon:before {
+     content: "\f108";
+}
+span:not(.dynatree-has-children).listener .dynatree-icon:before {
+     content: "\f025";
+}
+span:not(.dynatree-has-children).connection .dynatree-icon:before {
+     content: "\f07e";
+}
+span:not(.dynatree-has-children).connection.console .dynatree-icon:before {
+     content: "\f108";
+}
+span:not(.dynatree-has-children).waypoint .dynatree-icon:before {
+     content: "\f0ec";
+}
+span:not(.dynatree-has-children).router .dynatree-icon:before {
+     content: "\f047";
+}
+span:not(.dynatree-has-children).fixedAddress .dynatree-icon:before {
+     content: "\f015";
+}
+span:not(.dynatree-has-children).linkRoutePattern .dynatree-icon:before {
+     content: "\f039";
+}
+span:not(.dynatree-has-children).allocator .dynatree-icon:before {
+     content: "\f170";
+}
+
+.ngCellText {
+/*    color: #333333; */
+}
+
+.changed {
+    color: #339933;
+}
+
+div.dispatch-router div.help {
+    width: auto;
+    padding: 1em;
+    background-color: lavender;
+    border-radius: 6px;
+    margin-top: 1em;
+    text-align: center;
+}
+
+div.operations tr:nth-child(even) {
+	background: #f3f3f3;
+}
+div.operations tr:nth-child(odd), div.operations tr:last-child {
+	background: #fff;
+}
+
+div.operations tr input {
+	margin: 0;
+	padding: 3px 6px;
+}
+div.operations table {
+    width: 100%;
+}
+div.operations th {
+    width: 50%;
+    border-bottom: 1px solid #cccccc;
+    text-align: left;
+}
+div.operations td:nth-child(odd), div.operations th:nth-child(odd) {
+	border-right: 1px solid #cccccc;
+}
+div.operations td:nth-child(odd) {
+	padding-left: 0;
+}
+div.operations td:nth-child(even), div.operations th:nth-child(even) {
+	padding-left: 5px;
+}
+div.operations th {
+	padding: 5px;
+}
+div.operations .tab-pane.active {
+    padding: 12px 12px 12px 0;
+}
+div.operations label {
+    padding-top: 4px;
+    margin-bottom: 4px;
+}
+.qdrListActions .ngGrid {
+	/*min-height: 40em;
+	height: 100%; */
+}
+div.qdrListActions .ngViewport {
+    height: initial !important;
+}
+
+div.operations .boolean {
+    padding-bottom: 0;
+}
+
+table.log-entry {
+    margin-bottom: 1em;
+    border-top: 1px solid black;
+}
+
+table.log-entry pre {
+    background-color: #f5f5f5;
+    color: inherit;
+    margin: 0;
+}
+
+circle.node.normal.console {
+    fill: lightcyan;
+}
+
+text.console, text.on-demand, text.normal {
+	font-family: FontAwesome;
+	font-weight: normal;
+	font-size: 16px;
+}
+
+@font-face {
+    font-family:"Brokers";
+    src: url("brokers.ttf") /* TTF file for CSS3 browsers */
+}
+
+text.artemis.on-demand {
+    font-family: Brokers;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+text.qpid-cpp.on-demand {
+    font-family: Brokers;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+i.red {
+	color: red;
+}
+
+.qdrListActions div.delete {
+    width: 20em;
+    margin: auto;
+    border: 1px solid #eaeaea;
+    height: 5em;
+    padding: 4em;
+    background-color: #fcfcfc;
+}
+
+.btn:focus {
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+}
+
+select:focus, input[type="file"]:focus, input[type="radio"]:focus, input[type="checkbox"]:focus {
+	outline:3px solid rgba(82, 168, 236, 0.6);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 5px auto -webkit-focus-ring-color;
+    outline-offset: -2px;
+}
+
+btn.disabled, .btn[disabled] {
+    opacity: 0.35;
+}
+
+#dispatch-login-container .ng-invalid-range {
+	border-color: #e9322d !important;
+}
+
+div#durationSlider, div#rateSlider {
+	margin-top: 1em;
+}
+
+.list-grid {
+	padding-left: 10px;
+}
+
+div#list-controller {
+    padding-left: 300px;
+}
+
+div.topology-container #content_body,
+div.topology-container #content_body .container-fluid,
+div.topology-container #content_body .container-fluid .row,
+div.topology-container #content_body .container-fluid .row .col-xs-12 {
+  height: inherit;
+}
+
+#overview-controller {
+  position: relative;
+}
+
+#overview-controller div.grid {
+  padding-left: 1em;
+}
+
+.overview-dropdown {
+  float: left;
+  color: #666;
+}
+
+.overview-dropdown * {
+  color: inherit;
+}
+
+.overview-dropdown.selected,
+ .overview-dropdown.selected1 {
+  color: black;
+}
+
+.overview-dropdown select {
+  border: 1px solid black;
+  background: initial;
+  padding: 0.5em;
+  font-size: small;
+}
+
+#overview_dropdowns, #overview_charts {
+  display: flex;
+  justify-content: space-between;
+}
+
+.dropdown-entity {
+  font-weight: bold;
+}
+
+.link-menu-item label {
+  font-weight: normal;
+  padding-left: 8px;
+}
+
+.link-menu-item input {
+  margin: 0 0 0 4px;
+  position: relative;
+  top: 4px;
+}
+
+#overview_charts .d3Chart {
+    height: 180px;
+    width: 300px;
+    border: 0;
+    /*background-color: #EEE;*/
+    float: left;
+}

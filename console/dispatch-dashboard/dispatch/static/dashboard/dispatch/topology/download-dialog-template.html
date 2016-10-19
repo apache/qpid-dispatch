@@ -1,0 +1,23 @@
+<div class="modal-header">
+    <h3 class="modal-title">Configure new router</h3>
+</div>
+<div class="modal-body">
+
+    <label title="Show descriptions and default values in confile files"><input type="checkbox" ng-model="verbose"> Verbose output</label>
+    <div>
+        <button ng-click="download()">Download</button>
+        <button class="btn" zero-clipboard data-clipboard-text="{{output}}" title="Copy to clipboard">
+            <i class="icon-copy"></i>
+        </button> configuration file for {{newRouterName}}
+    </div>
+    <div ng-repeat="part in parts">
+        <button ng-click="downloadPart(part)">Download</button>
+        <button class="btn" zero-clipboard data-clipboard-text="{{part.output}}" title="Copy to clipboard">
+            <i class="icon-copy"></i>
+        </button> connector section for {{part.name}}
+    </div>
+
+</div>
+<div class="modal-footer">
+    <button class="btn btn-primary" type="button" ng-click="done()">Done</button>
+</div>
