@@ -117,7 +117,7 @@ if(BUILD_DOCS)
       # Generate man pages.
       foreach(source ${src}/man/qdmanage.8 ${src}/man/qdrouterd.8 ${src}/man/qdstat.8 ${bin}/qdrouterd.conf.5)
         get_filename_component(name ${source} NAME)
-        string(REGEX MATCH "\\.([0-9])$" section ${source}) # Man section number
+        string(REGEX REPLACE ".*\\.([0-9])$" "\\1" section ${source}) # Man section number
         set(output ${bin}/${name})
         add_custom_command(
           OUTPUT ${output}
