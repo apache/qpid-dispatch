@@ -2599,11 +2599,11 @@ li.profile-selector-folder span.folder-title:hover, li.profile div.profile-selec
   margin: 3px;
 }
 
+
 .loading {
   position: relative;
   top: 140px;
 }
-
 .loading p {
   margin-top: 20px;
   font-weight: bold;
