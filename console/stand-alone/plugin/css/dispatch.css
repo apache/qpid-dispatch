@@ -51,18 +51,27 @@ path.link.selected {
   stroke: #00F  !important;
 }
 
-
-path.link.highlighted {
-    stroke: #0F0 !important;
-
-}
-
 path.link.temp {
   opacity: 0.3;
 }
 path.link.temp.over {
   opacity: 0.8;
   stroke-dasharray: 10,2;
+}
+path.link.small {
+  stroke-width: 2.5;
+  stroke: green;
+}
+path.link.highlighted {
+    stroke: #0F0 !important;
+}
+marker#start-arrow-highlighted,
+marker#end-arrow-highlighted {
+    fill: #0F0;
+}
+marker#start-arrow-small,
+marker#end-arrow-small {
+    fill: green;
 }
 
 path.link.dragline {
@@ -72,7 +81,6 @@ path.link.dragline {
 path.link.hidden {
   stroke-width: 0;
 }
-
 
 circle.node {
     stroke-width: 1.5px;
@@ -669,4 +677,7 @@ div.topoGrid .ui-grid-viewport {
 
 .pane-viewport {
 	top: 24px !important;
+}
+.dynatree-node.loading {
+  position: initial;
 }
