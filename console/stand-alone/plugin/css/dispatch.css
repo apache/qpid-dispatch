@@ -60,18 +60,18 @@ path.link.temp.over {
 }
 path.link.small {
   stroke-width: 2.5;
-  stroke: green;
+  stroke: darkgray;
 }
 path.link.highlighted {
-    stroke: #0F0 !important;
+    stroke: #F00 !important;
 }
 marker#start-arrow-highlighted,
 marker#end-arrow-highlighted {
-    fill: #0F0;
+    fill: #F00;
 }
 marker#start-arrow-small,
 marker#end-arrow-small {
-    fill: green;
+    fill: darkgray;
 }
 
 path.link.dragline {
@@ -83,26 +83,32 @@ path.link.hidden {
 }
 
 circle.node {
-    stroke-width: 1.5px;
-    cursor: pointer;
-    stroke: darkgray;
-    fill: lightgray;
+  stroke-width: 1.5px;
+  cursor: pointer;
+  stroke: darkgray;
+  fill: lightgray;
 }
 
 circle.node.reflexive {
-    stroke: #F00 !important;
-    stroke-width: 2.5px;
+  stroke: #F00 !important;
+  stroke-width: 2.5px;
 }
 circle.node.selected {
-    stroke: #F00 !important;
-    stroke-width: 2px;
-    fill: #e0e0ff !important;
+  stroke: #F00 !important;
+  stroke-width: 2px;
+  fill: #e0e0ff !important;
+}
+circle.node.highlighted {
+  stroke: #F00;
 }
 circle.node.inter-router {
     fill: #EAEAEA;
 }
 circle.node.normal {
     fill: #F0F000;
+}
+circle.node.normal.out {
+    fill: #C0F0C0;
 }
 circle.node.on-demand {
     fill: #C0FFC0;

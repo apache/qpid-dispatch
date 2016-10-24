@@ -170,7 +170,8 @@ var QDR = (function(QDR) {
 
 		QDRService.initProton();
 		var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);
-		QDRService.addConnectAction(function() {
+		QDRService.addUpdatedAction("initChartService", function() {
+      QDRService.delUpdatedAction("initChartService")
 			QDRChartService.init(); // initialize charting service after we are connected
 		});
 		if (settings && settings.autostart) {
@@ -183,31 +184,41 @@ var QDR = (function(QDR) {
 				})
 			})
 			QDRService.addConnectAction(function() {
-	            var searchObject = $location.search();
-				// the redirect will be handled by QDRService when connected
-	            if (searchObject.org) {
-					return;
-	            }
-				// there was no org= parameter, so redirect to last known location
-	            $timeout(function () {
-					var lastLocation = localStorage[QDR.LAST_LOCATION] || "/overview";
-					$location.path(lastLocation);
-				})
+        QDRService.getSchema(function () {
+          QDR.log.debug("got schema after connection")
+          QDRService.addUpdatedAction("initialized", function () {
+            QDRService.delUpdatedAction("initialized")
+            QDR.log.debug("got initial topology")
+            $timeout(function() {
+              if ($location.path().startsWith(QDR.pluginRoot)) {
+                  var searchObject = $location.search();
+                  var goto = "overview";
+                  if (searchObject.org && searchObject.org !== "connect") {
+                    goto = searchObject.org;
+                  }
+                  $location.search('org', null)
+                  $location.path(QDR.pluginRoot + "/" + goto);
+              }
+            })
+          })
+          QDR.log.debug("requesting a topology")
+          QDRService.topology.get()
+        })
 			});
 			QDRService.connect(settings);
-        } else {
-            $timeout(function () {
-				$location.path('/connect')
-				$location.search('org', org)
-            })
-        }
+    } else {
+      $timeout(function () {
+			  $location.path('/connect')
+			  $location.search('org', org)
+      })
+    }
 
-        $rootScope.$on('$routeChangeSuccess', function() {
-            var path = $location.path();
+    $rootScope.$on('$routeChangeSuccess', function() {
+      var path = $location.path();
 			if (path !== "/connect") {
-	            localStorage[QDR.LAST_LOCATION] = path;
+	      localStorage[QDR.LAST_LOCATION] = path;
 			}
-        });
+    });
 
 	}]);
 

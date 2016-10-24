@@ -142,37 +142,7 @@ var QDR = (function(QDR) {
 			$scope.$apply();
 		})
 
-		$scope.nodes = QDRService.nodeList().sort(function (a, b) { return a.name.toLowerCase() > b.name.toLowerCase()});
-		// unable to get node list? Bail.
-		if ($scope.nodes.length == 0) {
-			$location.path("/" + QDR.pluginName + "/connect")
-			$location.search('org', "list");
-		}
-		if (!angular.isDefined($scope.selectedNode)) {
-			//QDR.log.debug("selectedNode was " + $scope.selectedNode);
-			if ($scope.nodes.length > 0) {
-				$scope.selectedNode = $scope.nodes[0].name;
-				$scope.selectedNodeId = $scope.nodes[0].id;
-				//QDR.log.debug("forcing selectedNode to " + $scope.selectedNode);
-			}
-		}
-		var setCurrentNode = function () {
-			$scope.nodes.some( function (node, i) {
-				if (node.name === $scope.selectedNode) {
-					$scope.currentNode = $scope.nodes[i]
-					return true;
-				}
-			})
-		}
-		setCurrentNode();
-		if ($scope.currentNode == undefined) {
-			if ($scope.nodes.length > 0) {
-				$scope.selectedNode = $scope.nodes[0].name;
-				$scope.selectedNodeId = $scope.nodes[0].id;
-				$scope.currentNode = $scope.nodes[0];
-			}
-		}
-
+		$scope.nodes = []
 		var excludedEntities = ["management", "org.amqp.management", "operationalEntity", "entity", "configurationEntity", "dummy", "console"];
 		var aggregateEntities = ["router.address"];
 		var classOverrides = {
@@ -201,37 +171,8 @@ var QDR = (function(QDR) {
 			return ops;
 		}
 
-        var entityTreeChildren = [];
-        var expandedList = angular.fromJson(localStorage[ListExpandedKey]) || [];
-        var sortedEntities = Object.keys(QDRService.schema.entityTypes).sort();
-		sortedEntities.forEach( function (entity) {
-			if (excludedEntities.indexOf(entity) == -1) {
-				if (!angular.isDefined($scope.selectedEntity)) {
-					$scope.selectedEntity = entity;
-					$scope.operations = lookupOperations()
-				}
-				var e = new Folder(entity)
-				e.typeName = "entity"
-                e.key = entity
-				e.expand = (expandedList.indexOf(entity) > -1)
-				var placeHolder = new Folder("loading...")
-				placeHolder.addClass = "loading"
-			    e.children = [placeHolder]
-				entityTreeChildren.push(e)
-			}
-		})
-		$scope.treeReady = function () {
-			$('#entityTree').dynatree({
-				onActivate: onTreeSelected,
-				onExpand: onTreeNodeExpanded,
-				selectMode: 1,
-				activeVisible: false,
-				debugLevel: 0,
-				children: entityTreeChildren
-			})
-			restartUpdate();    // start getting the data now that the tree is created
-			updateExpandedEntities();
-		};
+    var entityTreeChildren = [];
+    var expandedList = angular.fromJson(localStorage[ListExpandedKey]) || [];
 		var onTreeNodeExpanded = function (expanded, node) {
 			// save the list of entities that are expanded
 			var tree = $("#entityTree").dynatree("getTree");
@@ -243,8 +184,8 @@ var QDR = (function(QDR) {
 			})
 			localStorage[ListExpandedKey] = JSON.stringify(list)
 
-			//if (expanded)
-		    //	onTreeSelected(node);
+			if (expanded)
+		    onTreeSelected(node);
 		}
 		// a tree node was selected
 		var onTreeSelected = function (selectedNode) {
@@ -581,7 +522,7 @@ var QDR = (function(QDR) {
 			fixTooltips();
 		}
 
-	    var titleFromAlt = function (alt) {
+    var titleFromAlt = function (alt) {
 			if (alt && alt.length) {
 				var data = angular.fromJson(alt);
 				var table = "<table class='tiptable'><tbody>";
@@ -594,8 +535,9 @@ var QDR = (function(QDR) {
 				return table;
 			}
 			return '';
-	    }
-		var fixTooltips = function () {
+	  }
+
+    var fixTooltips = function () {
 			if ($('.hastip').length == 0) {
 				setTimeout(fixTooltips, 100);
 				return;
@@ -747,6 +689,86 @@ var QDR = (function(QDR) {
 		    d.open().then(function(result) { console.log("d.open().then"); });
 
 		};
+
+    var treeReady = false;
+    var serviceReady = false;
+    // called after we know for sure the schema is fetched and the routers are all ready
+    QDRService.addUpdatedAction("initList", function () {
+      QDRService.stopUpdating();
+      QDRService.delUpdatedAction("initList")
+
+      $scope.nodes = QDRService.nodeList().sort(function (a, b) { return a.name.toLowerCase() > b.name.toLowerCase()});
+      // unable to get node list? Bail.
+      if ($scope.nodes.length == 0) {
+        $location.path("/" + QDR.pluginName + "/connect")
+        $location.search('org', "list");
+      }
+      if (!angular.isDefined($scope.selectedNode)) {
+        //QDR.log.debug("selectedNode was " + $scope.selectedNode);
+        if ($scope.nodes.length > 0) {
+          $scope.selectedNode = $scope.nodes[0].name;
+          $scope.selectedNodeId = $scope.nodes[0].id;
+          //QDR.log.debug("forcing selectedNode to " + $scope.selectedNode);
+        }
+      }
+      var setCurrentNode = function () {
+        $scope.nodes.some( function (node, i) {
+          if (node.name === $scope.selectedNode) {
+            $scope.currentNode = $scope.nodes[i]
+            return true;
+          }
+        })
+      }
+      setCurrentNode();
+      if ($scope.currentNode == undefined) {
+        if ($scope.nodes.length > 0) {
+          $scope.selectedNode = $scope.nodes[0].name;
+          $scope.selectedNodeId = $scope.nodes[0].id;
+          $scope.currentNode = $scope.nodes[0];
+        }
+      }
+      var sortedEntities = Object.keys(QDRService.schema.entityTypes).sort();
+      sortedEntities.forEach( function (entity) {
+        if (excludedEntities.indexOf(entity) == -1) {
+          if (!angular.isDefined($scope.selectedEntity)) {
+            $scope.selectedEntity = entity;
+            $scope.operations = lookupOperations()
+          }
+          var e = new Folder(entity)
+          e.typeName = "entity"
+          e.key = entity
+          e.expand = (expandedList.indexOf(entity) > -1)
+          var placeHolder = new Folder("loading...")
+          placeHolder.addClass = "loading"
+          e.children = [placeHolder]
+          entityTreeChildren.push(e)
+        }
+      })
+      serviceReady = true;
+      initTree();
+    })
+    $scope.treeReady = function () {
+      treeReady = true;
+      initTree();
+    }
+
+    var initTree = function () {
+      if (!treeReady || !serviceReady)
+        return;
+      $('#entityTree').dynatree({
+        onActivate: onTreeSelected,
+        onExpand: onTreeNodeExpanded,
+        selectMode: 1,
+        activeVisible: false,
+        debugLevel: 0,
+        children: entityTreeChildren
+      })
+      restartUpdate();    // start getting the data now that the tree is created
+      updateExpandedEntities();
+    };
+    QDRService.startUpdating();
+
+
 	}]);
 
     return QDR;
