@@ -86,7 +86,6 @@ circle.node {
   stroke-width: 1.5px;
   cursor: pointer;
   stroke: darkgray;
-  fill: lightgray;
 }
 
 circle.node.reflexive {
@@ -104,7 +103,7 @@ circle.node.highlighted {
 circle.node.inter-router {
     fill: #EAEAEA;
 }
-circle.node.normal {
+circle.node.normal.in {
     fill: #F0F000;
 }
 circle.node.normal.out {

@@ -711,7 +711,6 @@ var QDR = (function(QDR) {
                 node.host = connection.host
                 node.connectionId = connection.identity
                 node.cdir = cdir
-
                 // determine arrow direction by using the link directions
                 if (!normalsParent[nodeType+cdir]) {
                   normalsParent[nodeType+cdir] = node;
@@ -744,12 +743,12 @@ var QDR = (function(QDR) {
           .linkDistance(function(d) {
             if (d.target.nodeType === 'inter-router')
               return 80
-            if (d.target.properties.console_identifier)
+            if (d.target.cdir === 'both')
               return 70
             return 55
           })
           .charge(function(d) {
-            return (d.nodeType === 'inter-router') ? -3000 : (d.properties.console_identifier ? -300 : -30)
+            return (d.nodeType === 'inter-router') ? -3000 : (d.cdir === 'both' ? -300 : -30)
           })
           .friction(.10)
           .gravity(0.0001)
@@ -779,6 +778,15 @@ var QDR = (function(QDR) {
           .attr("orient", "auto")
           .append("svg:path")
             .attr('d', 'M 10 -5 L 0 0 L 10 5 z');
+
+        var grad = svg.append("svg:defs").append("linearGradient")
+          .attr("id", "half-circle")
+          .attr("x1", "0%")
+          .attr("x2", "0%")
+          .attr("y1", "100%")
+          .attr("y2", "0%");
+        grad.append("stop").attr("offset", "50%").style("stop-color", "#C0F0C0");
+        grad.append("stop").attr("offset", "50%").style("stop-color", "#F0F000");
 
         // handles to link and node element groups
         path = svg.append('svg:g').selectAll('path'),
@@ -1365,6 +1373,12 @@ var QDR = (function(QDR) {
             .attr('r', function(d) {
               return radii[d.nodeType]
             })
+            .attr('fill', function (d) {
+              if (d.cdir === 'both' && !QDRService.isConsole(d)) {
+                return 'url(' + urlPrefix + '#half-circle)'
+              }
+              return null;
+            })
             .classed('fixed', function(d) {
               return d.fixed
             })
@@ -1928,26 +1942,21 @@ var QDR = (function(QDR) {
       });
 
       function handleInitialUpdate() {
-//QDR.log.debug("initital update done")
         QDRService.delUpdatedAction("topologyInitialized")
+        // now we only need to update connections during steady-state
         QDRService.setUpdateEntities([".connection"])
         // we currently have all entities available on all routers
         saveChanged();
         animate = true;
         initForceGraph();
         QDRService.initEntity(".router.node", function () {})
-        // now we only need to update connections during steady-state
-//QDR.log.debug("now only need to get connection")
         QDRService.addUpdatedAction("topology", function() {
-//QDR.log.debug("topology minimal update done. checking for changed")
           var changed = hasChanged()
           // there is a new node, we need to get all of it's entities before drawing the svg
           if (changed > 0) {
-            //QDR.log.debug("oops, a new router was added! regetting all entities")
             QDRService.delUpdatedAction("topology")
             setupInitialUpdate()
           } else if (changed === -1) {
-            //QDR.log.debug("a router was dropped! no need to reget entities")
             // we lost a node, we can draw the new svg immediately
             saveChanged();
             animate = true;
