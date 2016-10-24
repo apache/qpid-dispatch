@@ -884,6 +884,8 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             //
             // No action needed for NORMAL connections
             //
+            qdr_field_free(action->args.connection.connection_label);
+            qdr_field_free(action->args.connection.container_id);
             return;
         }
 
@@ -897,6 +899,8 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             else {
                 qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
                 conn->role = QDR_ROLE_NORMAL;
+                qdr_field_free(action->args.connection.connection_label);
+                qdr_field_free(action->args.connection.container_id);
                 return;
             }
 
