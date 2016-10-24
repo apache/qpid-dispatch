@@ -745,10 +745,10 @@ var QDR = (function(QDR) {
               return 80
             if (d.target.cdir === 'both')
               return 70
-            return 55
+            return 70
           })
           .charge(function(d) {
-            return (d.nodeType === 'inter-router') ? -3000 : (d.cdir === 'both' ? -300 : -30)
+            return (d.nodeType === 'inter-router') ? -3000 : -300
           })
           .friction(.10)
           .gravity(0.0001)
@@ -1617,6 +1617,12 @@ var QDR = (function(QDR) {
             if (QDRService.isArtemis(d)) {
               return 'Broker - Artemis' + x
             }
+            if (d.cdir === 'in')
+              return 'Sender' + x
+            if (d.cdir === 'out')
+              return 'Receiver' + x
+            if (d.cdir === 'both')
+              return 'Sender/Receiver' + x
             return d.nodeType == 'normal' ? 'client' + x : (d.nodeType == 'on-demand' ? 'broker' : 'Router ' + d.name)
           })
         }
@@ -1643,22 +1649,22 @@ var QDR = (function(QDR) {
         legendNodes.push(aNode("Router", "", "inter-router", undefined, 0, 0, 0, 0, false, {}))
 
         if (!svg.selectAll('circle.console').empty()) {
-          legendNodes.push(aNode("Dispatch console", "", "normal", undefined, 1, 0, 0, 0, false, {
+          legendNodes.push(aNode("Console", "", "normal", undefined, 1, 0, 0, 0, false, {
             console_identifier: 'Dispatch console'
           }))
         }
         if (!svg.selectAll('circle.client.in').empty()) {
-          var node = aNode("Client sender", "", "normal", undefined, 2, 0, 0, 0, false, {})
+          var node = aNode("Sender", "", "normal", undefined, 2, 0, 0, 0, false, {})
           node.cdir = "in"
           legendNodes.push(node)
         }
         if (!svg.selectAll('circle.client.out').empty()) {
-          var node = aNode("Client receiver", "", "normal", undefined, 3, 0, 0, 0, false, {})
+          var node = aNode("Receiver", "", "normal", undefined, 3, 0, 0, 0, false, {})
           node.cdir = "out"
           legendNodes.push(node)
         }
         if (!svg.selectAll('circle.qpid-cpp').empty()) {
-          legendNodes.push(aNode("Qpid cpp broker", "", "on-demand", undefined, 4, 0, 0, 0, false, {
+          legendNodes.push(aNode("Qpid broker", "", "on-demand", undefined, 4, 0, 0, 0, false, {
             product: 'qpid-cpp'
           }))
         }
