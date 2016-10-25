@@ -202,6 +202,7 @@ var QDR = (function(QDR) {
             })
           })
           QDR.log.debug("requesting a topology")
+          QDRService.setUpdateEntities([])
           QDRService.topology.get()
         })
 			});

@@ -28,7 +28,7 @@ var QDR = (function(QDR) {
 
       rhea: require("rhea"),
 
-      timeout: 4,             // seconds to wait before assuming a request has failed
+      timeout: 10,             // seconds to wait before assuming a request has failed
       updateInterval: 2000,   // milliseconds between background updates
       connectActions: [],
       disconnectActions: [],
@@ -124,7 +124,7 @@ console.dump(e)
           self.gotTopology = true;
           //$rootScope.$apply();
         } else {
-          QDR.log.debug("topology model was just updated");
+          //QDR.log.debug("topology model was just updated");
         }
         self.executeUpdatedActions();
 
@@ -347,6 +347,12 @@ console.dump(e)
         return identity
       },
 
+      queueDepth: function () {
+        var qdepth = self.maxCorrelatorDepth - self.correlator.depth()
+        if (qdepth <= 0)
+          qdepth = 1;
+        return qdepth;
+      },
       // check if all nodes have this entity. if not, get them
       initEntity: function (entity, callback) {
         var callNeeded = Object.keys(self.topology._nodeInfo).some( function (node) {
@@ -363,14 +369,38 @@ console.dump(e)
         if (Object.prototype.toString.call(entities) !== '[object Array]') {
           entities = [entities]
         }
-        var qdepth = self.maxCorrelatorDepth - self.correlator.depth()
-        if (qdepth <= 0)
-          qdepth = 1;
-        var q = queue(qdepth)
+        var q = queue(self.queueDepth())
         for (node in self.topology._nodeInfo) {
           for (var i=0; i<entities.length; ++i) {
             var entity = entities[i]
             q.defer(self.ensureNodeInfo, node, entity, [], q)
+          }
+        }
+        q.await(function (error) {
+          callback();
+        })
+      },
+
+      // enusre all the topology nones have all these entities
+      ensureAllEntities: function (entityAttribs, callback) {
+        self.ensureEntities(Object.keys(self.topology._nodeInfo), entityAttribs, callback)
+      },
+
+      // ensure these nodes have all these entities. don't fetch unless forced to
+      ensureEntities: function (nodes, entityAttribs, callback) {
+        if (Object.prototype.toString.call(entityAttribs) !== '[object Array]') {
+          entityAttribs = [entityAttribs]
+        }
+        if (Object.prototype.toString.call(nodes) !== '[object Array]') {
+          nodes = [nodes]
+        }
+        var q = queue(self.queueDepth())
+        for (var n=0; n<nodes.length; ++n) {
+          for (var i=0; i<entityAttribs.length; ++i) {
+            var ea = entityAttribs[i]
+            // if we don'e already have the entity or we want to force a refresh
+            if (!self.topology._nodeInfo[nodes[n]][ea.entity] || ea.force)
+              q.defer(self.ensureNodeInfo, nodes[n], ea.entity, ea.attrs || [], q)
           }
         }
         q.await(function (error) {
@@ -404,7 +434,7 @@ console.dump(e)
         _waitTimer: null,
         _getTimer: null,
         _autoUpdatedEntities: [],
-        _lastRequestTime: null,
+        q: null,
 
         nodeInfo: function() {
           return self.topology._nodeInfo
@@ -413,8 +443,10 @@ console.dump(e)
         get: function() {
           if (self.topology._gettingTopo) {
             QDR.log.debug("asked to get topology but was already getting it")
-            return;
+            if (self.topology.q)
+              self.topology.q.abort()
           }
+          self.topology.q = null
           if (!self.connected) {
             QDR.log.debug("topology get failed because !self.connected")
             return;
@@ -453,23 +485,21 @@ console.dump(e)
               }
 
               // also refresh any entities that were requested
-              var qdepth = self.maxCorrelatorDepth - self.correlator.depth()
-              if (qdepth <= 0)
-                qdepth = 1;
-              q = queue(qdepth)
-              for (node in self.topology._nodeInfo) {
-                for (var i=0; i<self.topology._autoUpdatedEntities.length; ++i) {
-                  var entity = self.topology._autoUpdatedEntities[i]
-                  self.topology.expect(node, entity)
-                  q.defer(self.ensureNodeInfo, node, entity, [], q)
+              self.topology.q = queue(self.queueDepth())
+              for (var i=0; i<self.topology._autoUpdatedEntities.length; ++i) {
+                var entity = self.topology._autoUpdatedEntities[i]
+                //QDR.log.debug("queuing requests for all nodes for " + entity)
+                for (node in self.topology._nodeInfo) {
+                  //self.topology.expect(node, entity)
+                  self.topology.q.defer(self.ensureNodeInfo, node, entity, [], self.topology.q)
                 }
               }
-              self.topology._lastRequestTime = Date.now()
-              self.topology._waitTimer = setTimeout(self.topology.timedOut, self.timeout * 1000, q);
-              q.await(function (error) {
-QDR.log.debug("Done awaiting for topology. error is " + error)
-                if (!error)
-                  self.topology.ondone();
+              clearTimeout(self.topology._waitTimer)
+              self.topology._waitTimer = setTimeout(self.topology.timedOut, self.timeout * 1000, self.topology.q);
+              self.topology.q.await(function (error) {
+//QDR.log.debug("Done awaiting for topology. error is " + error)
+                self.topology._gettingTopo = false;
+                self.topology.ondone(error)
               })
             };
           });
@@ -488,11 +518,11 @@ QDR.log.debug("Done awaiting for topology. error is " + error)
           // note: can't use 'this' in a timeout handler
           self.topology.miniDump("state at timeout");
           // check if _nodeInfo is consistent
-          if (self.topology.isConsistent()) {
+          //if (self.topology.isConsistent()) {
             q.abort()
-            self.topology.ondone();
-            return;
-          }
+            //self.topology.ondone();
+          //  return;
+          //}
           self.topology.onerror(Error("management responses are not consistent"));
         },
         isConsistent: function() {
@@ -524,7 +554,7 @@ QDR.log.debug("Done awaiting for topology. error is " + error)
           return true;
         },
 
-        addNodeInfo: function(id, entity, values) {
+        addNodeInfo: function(id, entity, values, q) {
           if (self.topology._waitTimer)
             clearTimeout(self.topology._waitTimer)
           self.topology._waitTimer = setTimeout(self.topology.timedOut, self.timeout * 1000, q);
@@ -559,13 +589,14 @@ QDR.log.debug("Done awaiting for topology. error is " + error)
           if (self.topology._expected[id].indexOf(key) == -1)
             self.topology._expected[id].push(key);
         },
-        ondone: function() {
+        ondone: function(waserror) {
+          clearTimeout(self.topology._getTimer);
           clearTimeout(self.topology._waitTimer);
           self.topology._waitTimer = null;
-          self.topology._gettingTopo = false;
           if (self.updating)
             self.topology._getTimer = setTimeout(self.topology.get, self.updateInterval);
-          self.notifyTopologyDone();
+          if (!waserror)
+            self.notifyTopologyDone();
         },
         dump: function(prefix) {
           if (prefix)
@@ -589,8 +620,7 @@ QDR.log.debug("Done awaiting for topology. error is " + error)
         onerror: function(err) {
           self.topology._gettingTopo = false;
           QDR.log.debug("Err:" + err);
-          self.executeDisconnectActions();
-
+          //self.executeDisconnectActions();
         }
 
       },
@@ -607,22 +637,12 @@ QDR.log.debug("Done awaiting for topology. error is " + error)
         }, ret.error);
       },
 
-      makeMgmtCalls: function(id) {
-QDR.log.debug("called makeMgmtCalls with id of " + id)
-        var keys = [".router", ".connection", ".container", ".router.node", ".listener", ".router.link"];
-        $.each(keys, function(i, key) {
-          self.topology.expect(id, key);
-          self.getNodeInfo(id, key, [], self.topology.addNodeInfo);
-        });
-      },
-
       // should only be called from a q.defer() statement
       ensureNodeInfo: function (nodeId, entity, attrs, q, callback) {
-        QDR.log.debug("queuing request for " + nodeId + " " + entity)
+        //QDR.log.debug("queuing request for " + nodeId + " " + entity)
         self.getNodeInfo(nodeId, entity, attrs, function (nodeName, dotentity, response) {
-          QDR.log.debug("got response for " + nodeId + " " + entity)
-          self.topology.addNodeInfo(nodeName, dotentity, response)
-          //self.topology._nodeInfo[nodeName][dotentity] = response
+          //QDR.log.debug("got response for " + nodeId + " " + entity)
+          self.topology.addNodeInfo(nodeName, dotentity, response, q)
           callback(null)
         })
         return {

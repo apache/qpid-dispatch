@@ -106,6 +106,7 @@ QDR.log.debug(QDR.pluginRoot + "/" + goto)
             })
           })
           QDR.log.debug("requesting a topology")
+          QDRService.setUpdateEntities([])
           QDRService.topology.get()
         })
       });
