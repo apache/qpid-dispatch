@@ -478,7 +478,7 @@ QDR.log.debug("showEntityForm")
       var height = 0;
 
       var getSizes = function() {
-        var legendWidth = 196;
+        var legendWidth = 143;
         var gap = 5;
         var width = $('#topology').width() - gap - legendWidth;
         var top = $('#topology').offset().top
@@ -760,15 +760,15 @@ QDR.log.debug("showEntityForm")
           .size([width, height])
           .linkDistance(function(d) {
             if (d.target.nodeType === 'inter-router')
-              return 80
+              return 70
             if (d.target.cdir === 'both')
               return 25
-            return 15
+            return 25
           })
           .charge(function(d) {
-            return (d.nodeType === 'inter-router') ? -3000 : -750
+            return (d.nodeType === 'inter-router') ? -800 : -900
           })
-          .friction(.50)
+          .friction(.10)
           .gravity(0.0001)
           .on('tick', tick)
           .start()
@@ -851,10 +851,14 @@ QDR.log.debug("showEntityForm")
         })
 
         // if any clients don't yet have link directions, get the links for those nodes and restart the graph
-        var unknownNodes = unknowns.map( function (un) {
-          return un.key
-        })
+        // collapse the unknown node.keys using an object
+        var unknownNodes = {}
+        for (var i=0; i<unknowns.length; ++i) {
+          unknownNodes[unknowns[i].key] = 1
+        }
+        unknownNodes = Object.keys(unknownNodes)
         if (unknownNodes.length) {
+QDR.log.debug("there were " + unknownNodes.length + " connections with normal links")
           QDRService.ensureEntities(unknownNodes, {entity: ".router.link"}, function () {
             // now that all nodes with clients have link info, update the nodes
             animate = true;
@@ -2008,8 +2012,8 @@ QDR.log.debug("showEntityForm")
       function setupInitialUpdate() {
         // make sure all router nodes have .connection info. if not then fetch any missing info
         QDRService.ensureAllEntities(
-          //[{entity: ".connection"}, {entity: ".router.link", attrs: ["linkType","connectionId","linkDir"]}],
-          [{entity: ".connection"}],
+          [{entity: ".connection"}, {entity: ".router.link", attrs: ["linkType","connectionId","linkDir"]}],
+          //[{entity: ".connection"}],
             handleInitialUpdate)
       }
       setupInitialUpdate();
