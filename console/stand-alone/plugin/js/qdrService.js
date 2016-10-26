@@ -181,6 +181,7 @@ console.dump(e)
         self.topology.get();
       },
       stopUpdating: function(silent) {
+        self.updating = false;
         if (self.topology._getTimer) {
           clearTimeout(self.topology._getTimer)
           self.topology._getTimer = null;
@@ -189,9 +190,11 @@ console.dump(e)
           clearTimeout(self.topology._waitTimer)
           self.topology._waitTimer = null;
         }
+        if (self.topology._gettingTopo) {
+          self.topology.q.abort()
+        }
         if (!silent)
           QDR.log.info("stopUpdating called")
-        self.updating = false;
       },
 
       initProton: function() {
