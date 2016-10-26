@@ -167,6 +167,7 @@ var QDR = (function(QDR) {
 		} else {
 			$location.search('org', null)
 		}
+    QDR.queue = d3.queue;
 
 		QDRService.initProton();
 		var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);

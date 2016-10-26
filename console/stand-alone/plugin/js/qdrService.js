@@ -369,7 +369,7 @@ console.dump(e)
         if (Object.prototype.toString.call(entities) !== '[object Array]') {
           entities = [entities]
         }
-        var q = queue(self.queueDepth())
+        var q = QDR.queue(self.queueDepth())
         for (node in self.topology._nodeInfo) {
           for (var i=0; i<entities.length; ++i) {
             var entity = entities[i]
@@ -394,7 +394,7 @@ console.dump(e)
         if (Object.prototype.toString.call(nodes) !== '[object Array]') {
           nodes = [nodes]
         }
-        var q = queue(self.queueDepth())
+        var q = QDR.queue(self.queueDepth())
         for (var n=0; n<nodes.length; ++n) {
           for (var i=0; i<entityAttribs.length; ++i) {
             var ea = entityAttribs[i]
@@ -485,7 +485,7 @@ console.dump(e)
               }
 
               // also refresh any entities that were requested
-              self.topology.q = queue(self.queueDepth())
+              self.topology.q = QDR.queue(self.queueDepth())
               for (var i=0; i<self.topology._autoUpdatedEntities.length; ++i) {
                 var entity = self.topology._autoUpdatedEntities[i]
                 //QDR.log.debug("queuing requests for all nodes for " + entity)

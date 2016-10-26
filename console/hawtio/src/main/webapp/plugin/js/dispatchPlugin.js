@@ -276,6 +276,10 @@ QDR.log.info("showing dispatch tab: going to page " + lastLocation)
 
 // force an more modern version of d3 to load
 $.getScript('https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.14/d3.min.js', function() {});
+$.getScript('https://cdnjs.cloudflare.com/ajax/libs/d3-queue/3.0.3/d3-queue.min.js', function() {
+  QDR.queue = d3.queue;
+});
+
 // tooltips on the list page
 $.getScript('https://cdn.rawgit.com/jaz303/tipsy/master/src/javascripts/jquery.tipsy.js', function() {});
 // tooltips on the topology page
