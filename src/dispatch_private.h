@@ -141,4 +141,16 @@ void qd_dispatch_unregister_entity(qd_dispatch_t *qd, void *impl);
 /** Set the agent */
 void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent);
 
+/**
+ * Set a new router id, freeing the prior id string
+ * TAKES OWNERSHIP OF THE POINTER PASSED TO IT
+ */
+void qd_dispatch_set_router_id(qd_dispatch_t *qd, char *_id);
+
+/**
+ * Set a new router area, freeing the prior area string
+ * TAKES OWNERSHIP OF THE POINTER PASSED TO IT
+ */
+void qd_dispatch_set_router_area(qd_dispatch_t *qd, char *_area);
+
 #endif
