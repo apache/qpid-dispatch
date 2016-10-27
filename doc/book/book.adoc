@@ -24,6 +24,7 @@ Qpid Dispatch Router Book
 :doctype: book
 
 include::introduction.adoc[]
+include::theory_of_operation.adoc[]
 
 [[using-qpid-dispatch]]
 Using Qpid Dispatch
