@@ -364,6 +364,7 @@ DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_treatment_t treatment);
+void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr);
 
 struct qdr_address_config_t {
     DEQ_LINKS(qdr_address_config_t);
@@ -377,6 +378,7 @@ struct qdr_address_config_t {
 
 ALLOC_DECLARE(qdr_address_config_t);
 DEQ_DECLARE(qdr_address_config_t, qdr_address_config_list_t);
+void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr);
 
 
 //
