@@ -106,6 +106,29 @@ void qdr_core_free(qdr_core_t *core)
     sys_mutex_free(core->work_lock);
     sys_mutex_free(core->id_lock);
     qd_timer_free(core->work_timer);
+    for (int i = 0; i <= QD_TREATMENT_LINK_BALANCED; ++i) {
+        if (core->forwarders[i]) {
+            free(core->forwarders[i]);
+        }
+    }
+    if (core->addr_hash) {
+        qd_hash_free(core->addr_hash);
+    }
+    if (core->conn_id_hash) {
+        qd_hash_free(core->conn_id_hash);
+    }
+    if (core->query_lock) {
+        sys_mutex_free(core->query_lock);
+    }
+    if (core->routers_by_mask_bit) {
+        free(core->routers_by_mask_bit);
+    }
+    if (core->control_links_by_mask_bit) {
+        free(core->control_links_by_mask_bit);
+    }
+    if (core->data_links_by_mask_bit) {
+        free(core->data_links_by_mask_bit);
+    }
     free(core);
 }
 
