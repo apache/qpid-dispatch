@@ -295,8 +295,7 @@ static void qdr_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
         rnode->owning_addr       = addr;
         rnode->mask_bit          = router_maskbit;
         rnode->next_hop          = 0;
-        rnode->peer_control_link = 0;
-        rnode->peer_data_link    = 0;
+        rnode->link_mask_bit     = -1;
         rnode->ref_count         = 0;
         rnode->valid_origins     = qd_bitmask(0);
         rnode->cost              = 0;
@@ -423,8 +422,7 @@ static void qdr_set_link_CT(qdr_core_t *core, qdr_action_t *action, bool discard
     // Add the peer_link reference to the router record.
     //
     qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
-    rnode->peer_control_link = core->control_links_by_mask_bit[link_maskbit];
-    rnode->peer_data_link    = core->data_links_by_mask_bit[link_maskbit];
+    rnode->link_mask_bit = link_maskbit;
 }
 
 
@@ -443,8 +441,7 @@ static void qdr_remove_link_CT(qdr_core_t *core, qdr_action_t *action, bool disc
     }
 
     qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
-    rnode->peer_control_link = 0;
-    rnode->peer_data_link    = 0;
+    rnode->link_mask_bit = -1;
 }
 
 
