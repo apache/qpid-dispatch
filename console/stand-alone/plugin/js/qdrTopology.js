@@ -1106,12 +1106,12 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
         }, 1010);
         d3.select("#crosssection svg g").transition()
           .duration(1000)
-          .attr("transform", "translate(" + (dblckickPos[0] - 140) + "," + (dblckickPos[1] - 100) + ") scale(0)")
-          .style("opacity", 0)
-          .each("end", function(d) {
-            d3.select("#crosssection svg").remove();
-            d3.select("#crosssection").style("display", "none");
-          });
+          .attr("transform", "scale(0)")
+            .style("opacity", 0)
+            .each("end", function (d) {
+                d3.select("#crosssection svg").remove();
+                d3.select("#crosssection").style("display","none");
+            });
         d3.select("#multiple_details").transition()
           .duration(500)
           .style("opacity", 0)
@@ -1251,42 +1251,39 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
               .style('top', (mouseY + $(document).scrollTop()) + "px")
               .style('display', 'block');
           })
-          .on("click", function(d) {    // left click a path
-            dblckickPos = d3.mouse(this);
-            QDR.log.debug("dblckickPos is [" + dblckickPos[0] + ", " + dblckickPos[1] + "]")
+          // left click a path
+          .on("click", function (d) {
+            var clickPos = d3.mouse(this);
             d3.event.stopPropagation();
             clearPopups();
-
-            var showCrosssection = function () {
+            var showCrossSection = function() {
               var diameter = 400;
               var format = d3.format(",d");
               var pack = d3.layout.pack()
-                .size([diameter - 4, diameter - 4])
-                .padding(-10)
-                .value(function(d) {
-                  return d.size;
-                });
+                  .size([diameter - 4, diameter - 4])
+                  .padding(-10)
+                  .value(function(d) { return d.size; });
 
               d3.select("#crosssection svg").remove();
               var svg = d3.select("#crosssection").append("svg")
-                .attr("width", diameter)
-                .attr("height", diameter)
+                  .attr("width", diameter)
+                  .attr("height", diameter)
               var svgg = svg.append("g")
-                .attr("transform", "translate(2,2)");
+                  .attr("transform", "translate(2,2)");
 
               var root = {
-                name: "links between " + d.source.name + " and " + d.target.name,
+                name: " Links between " + d.source.name + " and " + d.target.name,
                 children: []
               }
               var nodeInfo = QDRService.topology.nodeInfo();
               var connections = nodeInfo[d.source.key]['.connection'];
               var containerIndex = connections.attributeNames.indexOf('container');
-              connections.results.some(function(connection) {
+              connections.results.some ( function (connection) {
                 if (connection[containerIndex] == d.target.routerId) {
                   root.attributeNames = connections.attributeNames;
                   root.obj = connection;
                   root.desc = "Connection";
-                  return true; // stop looping after 1 match
+                  return true;    // stop looping after 1 match
                 }
                 return false;
               })
@@ -1300,12 +1297,13 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
               var nameIndex = links.attributeNames.indexOf('name');
               var linkDirIndex = links.attributeNames.indexOf('linkDir');
 
-              if (roleIndex < 0 || identityIndex < 0 || connectionIdIndex < 0 || linkTypeIndex < 0 || nameIndex < 0 || linkDirIndex < 0)
+              if (roleIndex < 0 || identityIndex < 0 || connectionIdIndex < 0
+                || linkTypeIndex < 0 || nameIndex < 0 || linkDirIndex < 0)
                 return;
-              links.results.forEach(function(link) {
+              links.results.forEach ( function (link) {
                 if (root.obj && link[connectionIdIndex] == root.obj[identityIndex] && link[linkTypeIndex] == root.obj[roleIndex])
-                  root.children.push({
-                    name: "(" + link[linkDirIndex] + ") " + link[nameIndex],
+                  root.children.push (
+                    { name: " " + link[linkDirIndex] + " ",
                     size: 100,
                     obj: link,
                     desc: "Link",
@@ -1317,16 +1315,12 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
               var node = svgg.datum(root).selectAll(".node")
                 .data(pack.nodes)
                 .enter().append("g")
-                .attr("class", function(d) {
-                  return d.children ? "parent node hastip" : "leaf node hastip";
-                })
-                .attr("transform", function(d) {
-                  return "translate(" + d.x + "," + d.y + ")" + (!d.children ? "scale(0.9)" : "");
-                })
-                .attr("title", function(d) {
+                .attr("class", function(d) { return d.children ? "parent node hastip" : "leaf node hastip"; })
+                .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")" + (!d.children ? "scale(0.9)" : ""); })
+                .attr("title", function (d) {
                   var title = "<h4>" + d.desc + "</h4><table class='tiptable'><tbody>";
                   if (d.attributeNames)
-                    d.attributeNames.forEach(function(n, i) {
+                    d.attributeNames.forEach( function (n, i) {
                       title += "<tr><td>" + n + "</td><td>";
                       title += d.obj[i] != null ? d.obj[i] : '';
                       title += '</td></tr>';
@@ -1334,33 +1328,33 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
                   title += "</tbody></table>"
                   return title
                 })
-
               node.append("circle")
-                .attr("r", function(d) {
-                  return d.r;
-                });
+                .attr("r", function(d) { return d.r; });
 
-              //                  node.filter(function(d) { return !d.children; }).append("text")
+  //          node.filter(function(d) { return !d.children; }).append("text")
               node.append("text")
-                .attr("dy", function(d) {
-                  return d.children ? "-10em" : ".3em"
-                })
+                .attr("dy", function (d) { return d.children ? "-10em" : ".5em"})
                 .style("text-anchor", "middle")
                 .text(function(d) {
-                  return d.name.substring(0, d.r / 3);
+                    return d.name.substring(0, d.r / 3);
                 });
+              $('.hastip').tooltipsy({ alignTo: 'cursor'});
+              svgg.attr("transform", "translate(2,2) scale(0.01)")
 
-              $('.hastip').tooltipsy({
-                alignTo: 'cursor'
-              });
-              svgg.attr("transform", "translate(" + (dblckickPos[0] - 140) + "," + (dblckickPos[1] - 100) + ") scale(0.01)")
-              d3.select("#crosssection").style("display", "block");
+              var bounds = $("#topology").position()
+              d3.select("#crosssection")
+                .style("display", "block")
+                .style("left", (clickPos[0] + bounds.left) + "px")
+                .style("top", (clickPos[1] + bounds.top) + "px")
 
-              svgg.transition().attr("transform", "translate(2,2) scale(1)")
+              svgg.transition()
+                .attr("transform", "translate(2,2) scale(1)")
+                .each("end", function ()  {
+                  d3.selectAll("#crosssection g.leaf text").attr("dy", ".3em")
+                })
             }
-            QDRService.ensureEntities(d.key, {entity: ".router.link", force: true}, showCrosssection)
+            QDRService.ensureEntities(d.source.key, {entity: '.router.link', force: true}, showCrossSection)
           })
-
         // remove old links
         path.exit().remove();
 
