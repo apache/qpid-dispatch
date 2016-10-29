@@ -191,7 +191,8 @@ console.dump(e)
           self.topology._waitTimer = null;
         }
         if (self.topology._gettingTopo) {
-          self.topology.q.abort()
+          if (self.topology.q)
+            self.topology.q.abort()
         }
         if (!silent)
           QDR.log.info("stopUpdating called")
@@ -284,9 +285,7 @@ console.dump(e)
       },
       isConsole: function(d) {
         // use connection properties if available
-        if (d && d['properties'] && d['properties']['console_identifier'] == 'Dispatch console')
-          return true;
-        return false;
+        return (d && d['properties'] && d['properties']['console_identifier'] === 'Dispatch console')
       },
 
       flatten: function(attributes, result) {
@@ -354,6 +353,7 @@ console.dump(e)
         var qdepth = self.maxCorrelatorDepth - self.correlator.depth()
         if (qdepth <= 0)
           qdepth = 1;
+//QDR.log.debug("queueDepth requested " + qdepth + "(" + self.correlator.depth() + ")")
         return qdepth;
       },
       // check if all nodes have this entity. if not, get them
@@ -386,11 +386,13 @@ console.dump(e)
 
       // enusre all the topology nones have all these entities
       ensureAllEntities: function (entityAttribs, callback) {
+QDR.log.debug("ensureAllEntities called")
         self.ensureEntities(Object.keys(self.topology._nodeInfo), entityAttribs, callback)
       },
 
       // ensure these nodes have all these entities. don't fetch unless forced to
       ensureEntities: function (nodes, entityAttribs, callback) {
+QDR.log.debug("ensureEntities called")
         if (Object.prototype.toString.call(entityAttribs) !== '[object Array]') {
           entityAttribs = [entityAttribs]
         }
@@ -408,6 +410,51 @@ console.dump(e)
         }
         q.await(function (error) {
           callback();
+        })
+      },
+
+      // get/refreshes entities for all topology.nodes
+      // call doneCallback when all data is available
+      // optionally supply a resultCallBack that will be called as each result is avaialble
+      // if a resultCallBack is supplied, the calling function is responsible for accumulating the responses
+      //   otherwise the responses will be returned to the doneCallback as an object
+      // There is a 10 second limit between each response
+      fetchAllEntities: function (entityAttribs, doneCallback, resultCallback) {
+//QDR.log.debug("fetchAllEntities")
+        var timeoutLimit = 10
+        var timeoutHandle = null;
+        var q = QDR.queue(self.queueDepth())
+        var results = {}
+        if (!resultCallback) {
+          resultCallback = function (nodeName, dotentity, response) {
+            if (!results[nodeName])
+              results[nodeName] = {}
+            results[nodeName][dotentity] = angular.copy(response);
+          }
+        }
+        var gotAResponse = function (nodeName, dotentity, response) {
+          clearTimeout(timeoutHandle)
+          timeoutHandle = setTimeout(timedOut, timeoutLimit * 1000)
+          resultCallback(nodeName, dotentity, response)
+        }
+        var timedOut = function () {
+QDR.log.debug("fetchAllEntities timed out")
+          q.abort()
+        }
+        if (Object.prototype.toString.call(entityAttribs) !== '[object Array]') {
+          entityAttribs = [entityAttribs]
+        }
+        timeoutHandle = setTimeout(timedOut, timeoutLimit * 1000)
+        var nodes = Object.keys(self.topology._nodeInfo)
+        for (var n=0; n<nodes.length; ++n) {
+          for (var i=0; i<entityAttribs.length; ++i) {
+            var ea = entityAttribs[i]
+            q.defer(self.fetchNodeInfo, nodes[n], ea.entity, ea.attrs || [], gotAResponse)
+          }
+        }
+        q.await(function (error) {
+          clearTimeout(timeoutHandle)
+          doneCallback(results);
         })
       },
 
@@ -444,6 +491,7 @@ console.dump(e)
         },
 
         get: function() {
+QDR.log.debug("topology get called")
           if (self.topology._gettingTopo) {
             QDR.log.debug("asked to get topology but was already getting it")
             if (self.topology.q)
@@ -483,7 +531,7 @@ console.dump(e)
               // add any new nodes
               for (var i=0; i<response.length; ++i) {
                 if (!angular.isDefined(self.topology._nodeInfo[response[i]])) {
-                  self.topology._nodeInfo[response[i]] = {};
+                  self.topology._nodeInfo[angular.copy(response[i])] = {};
                 }
               }
 
@@ -502,6 +550,7 @@ console.dump(e)
               self.topology.q.await(function (error) {
 //QDR.log.debug("Done awaiting for topology. error is " + error)
                 self.topology._gettingTopo = false;
+                self.topology.q = null
                 self.topology.ondone(error)
               })
             };
@@ -566,7 +615,8 @@ console.dump(e)
             if (!(id in self.topology._nodeInfo)) {
               self.topology._nodeInfo[id] = {};
             }
-            self.topology._nodeInfo[id][entity] = values;
+            // copy the values to allow garbage collector to reclaim their memory
+            self.topology._nodeInfo[id][entity] = angular.copy(values)
           }
 
           // remove the id / entity from _expected
@@ -630,16 +680,19 @@ console.dump(e)
 
       getRemoteNodeInfo: function(callback) {
         //QDR.log.debug("getRemoteNodeInfo called");
-        var ret;
-        // first get the list of remote node names
-        self.correlator.request(
-          ret = self.sendMgmtQuery('GET-MGMT-NODES')
-        ).then(ret.id, function(response, context) {
-          callback(response, context);
-          self.topology.cleanUp(response);
-        }, ret.error);
+        setTimeout(function () {
+          var ret;
+          // first get the list of remote node names
+          self.correlator.request(
+            ret = self.sendMgmtQuery('GET-MGMT-NODES')
+          ).then(ret.id, function(response, context) {
+            callback(response, context);
+            self.topology.cleanUp(response);
+          }, ret.error);
+        }, 1)
       },
 
+      // sends a request and updates the topology.nodeInfo object with the response
       // should only be called from a q.defer() statement
       ensureNodeInfo: function (nodeId, entity, attrs, q, callback) {
         //QDR.log.debug("queuing request for " + nodeId + " " + entity)
@@ -654,6 +707,15 @@ console.dump(e)
             //self.topology._nodeInfo[nodeId][entity] = {attributeNames: [], results: [[]]};
           }
         }
+      },
+
+      // sends request and returns the response
+      // should only be called from a q.defer() statement
+      fetchNodeInfo: function (nodeId, entity, attrs, heartbeat, callback) {
+        self.getNodeInfo(nodeId, entity, attrs, function (nodeName, dotentity, response) {
+          heartbeat(nodeName, dotentity, response)
+          callback(null)
+        })
       },
 
       getMultipleNodeInfo: function(nodeNames, entity, attrs, callback, selectedNodeId, aggregate) {
@@ -773,21 +835,25 @@ console.dump(e)
 
       getNodeInfo: function(nodeName, entity, attrs, callback) {
         //QDR.log.debug("getNodeInfo called with nodeName: " + nodeName + " and entity " + entity);
-        var ret;
-        self.correlator.request(
-          ret = self.sendQuery(nodeName, entity, attrs)
-        ).then(ret.id, function(response) {
-          callback(nodeName, entity, response);
-        }, ret.error);
+        setTimeout(function () {
+          var ret;
+          self.correlator.request(
+            ret = self.sendQuery(nodeName, entity, attrs)
+          ).then(ret.id, function(response) {
+            callback(nodeName, entity, response);
+          }, ret.error);
+        }, 1)
       },
 
       sendMethod: function(nodeId, entity, attrs, operation, props, callback) {
-        var ret;
-        self.correlator.request(
-          ret = self._sendMethod(nodeId, entity, attrs, operation, props)
-        ).then(ret.id, function(response, context) {
-          callback(nodeId, entity, response, context);
-        }, ret.error);
+        setTimeout(function () {
+          var ret;
+          self.correlator.request(
+            ret = self._sendMethod(nodeId, entity, attrs, operation, props)
+          ).then(ret.id, function(response, context) {
+            callback(nodeId, entity, response, context);
+          }, ret.error);
+        }, 1)
       },
 
       _fullAddr: function(toAddr) {
@@ -834,8 +900,8 @@ console.dump(e)
             application_properties: application_properties
           }
           self.sender.send(msg);
-          console.dump("------- method called -------")
-          console.dump(msg)
+          //console.dump("------- method called -------")
+          //console.dump(msg)
         } catch (e) {
           error = "error sending: " + e;
           QDR.log.error(error)
@@ -1020,6 +1086,7 @@ console.dump(e)
   }]);
 
   return QDR;
+
 }(QDR || {}));
 
 (function() {
@@ -1030,3 +1097,47 @@ console.dump(e)
       console.log(object);
   };
 })();
+
+function ngGridFlexibleHeightPlugin (opts) {
+    var self = this;
+    self.grid = null;
+    self.scope = null;
+    self.init = function (scope, grid, services) {
+        self.domUtilityService = services.DomUtilityService;
+        self.grid = grid;
+        self.scope = scope;
+        var recalcHeightForData = function () { setTimeout(innerRecalcForData, 1); };
+        var innerRecalcForData = function () {
+            var gridId = self.grid.gridId;
+            var footerPanelSel = '.' + gridId + ' .ngFooterPanel';
+            var extraHeight = self.grid.$topPanel.height() + $(footerPanelSel).height();
+            var naturalHeight = self.grid.$canvas.height() + 1;
+            if (opts != null) {
+                if (opts.minHeight != null && (naturalHeight + extraHeight) < opts.minHeight) {
+                    naturalHeight = opts.minHeight - extraHeight - 2;
+                }
+                if (opts.maxHeight != null && (naturalHeight + extraHeight) > opts.maxHeight) {
+                    naturalHeight = opts.maxHeight;
+                }
+            }
+
+            var newViewportHeight = naturalHeight + 3;
+            if (!self.scope.baseViewportHeight || self.scope.baseViewportHeight !== newViewportHeight) {
+                self.grid.$viewport.css('height', newViewportHeight + 'px');
+                self.grid.$root.css('height', (newViewportHeight + extraHeight) + 'px');
+                self.scope.baseViewportHeight = newViewportHeight;
+                self.domUtilityService.RebuildGrid(self.scope, self.grid);
+            }
+        };
+        self.scope.catHashKeys = function () {
+            var hash = '',
+                idx;
+            for (idx in self.scope.renderedRows) {
+                hash += self.scope.renderedRows[idx].$$hashKey;
+            }
+            return hash;
+        };
+        self.scope.$watch('catHashKeys()', innerRecalcForData);
+        self.scope.$watch(self.grid.config.data, recalcHeightForData);
+    };
+}
