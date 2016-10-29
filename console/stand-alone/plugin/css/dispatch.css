@@ -221,7 +221,9 @@ div.grid-values.ngCellText span {
   border: 1px solid red;
 }
 #topologyForm {
-    border: 1px solid white;
+  border-right: 1px solid lightgray;
+  border-bottom: 1px solid lightgray;
+    /*border: 1px solid white;*/
     padding: 2px;
     /* position: relative; */
     /* top: -8px; */
@@ -691,10 +693,12 @@ div.topoGrid .ui-grid-viewport {
   position: absolute;
   right: 0.5em;
   top: 1em;
+  border: 0;
 }
 
 .showLeft {
   position: absolute;
   top: 1em;
   left: 0.5em;
+  border: 0;
 }

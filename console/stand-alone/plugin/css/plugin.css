@@ -294,7 +294,7 @@ div.qdr-overview.pane {
 }
 div.qdr-topology.pane.left {
 	width: auto;
-  border-right: 1px solid lightgray;
+  /*border-right: 1px solid lightgray; */
 }
 
 /* the selected row in the name table */
