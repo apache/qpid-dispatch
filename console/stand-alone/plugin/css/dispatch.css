@@ -686,3 +686,15 @@ div.topoGrid .ui-grid-viewport {
 .dynatree-node.loading {
   position: initial;
 }
+
+.hideLeft {
+  position: absolute;
+  right: 0.5em;
+  top: 1em;
+}
+
+.showLeft {
+  position: absolute;
+  top: 1em;
+  left: 0.5em;
+}

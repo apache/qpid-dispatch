@@ -38,6 +38,8 @@ under the License.
                 <button ng-click="cancel()">Cancel</button>
             </div>
         </div>
+        <button ng-if="panelVisible" ng-click="hideLeftPane()" class="hideLeft" title="Hide"><i class="icon-step-backward"></i></button>
+        <button ng-if="!panelVisible" ng-click="showLeftPane()" class="hideLeft" title="Show"><i class="icon-step-forward"></i></button>
     </div>
     <div class="panel-adjacent">
 

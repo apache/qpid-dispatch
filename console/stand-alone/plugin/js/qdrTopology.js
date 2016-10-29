@@ -28,7 +28,7 @@ var QDR = (function(QDR) {
     var valueTemplate = '<div title="{{row.entity.attributeValue}}" class="ngCellText"><span>{{row.entity.attributeValue}}</span></div>';
     $scope.topoGridOptions = {
       data: 'attributes',
-      enableColumnResize: true,
+      enableColumnResize: false,
       multiSelect: false,
       columnDefs: [{
         field: 'attributeName',
@@ -42,7 +42,6 @@ var QDR = (function(QDR) {
     };
     $scope.form = ''
     $scope.$on('showEntityForm', function(event, args) {
-QDR.log.debug("showEntityForm")
       var attributes = args.attributes;
       var entityTypes = QDRService.schema.entityTypes[args.entity].attributes;
       attributes.forEach(function(attr) {
@@ -65,10 +64,38 @@ QDR.log.debug("showEntityForm")
   QDR.module.controller("QDR.TopologyController", ['$scope', '$rootScope', 'QDRService', '$location', '$timeout', '$dialog',
     function($scope, $rootScope, QDRService, $location, $timeout, $dialog) {
 
+      $scope.panelVisible = true  // show/hide the panel on the left
       $scope.multiData = []
       $scope.selectedClient = [];
       $scope.quiesceState = {}
       var dontHide = false;
+
+      $scope.hideLeftPane = function () {
+        d3.select(".qdr-topology.pane.left")
+          .transition().duration(300).ease("sin-in")
+          .style("left" , "-380px")
+
+        d3.select(".panel-adjacent")
+          .transition().duration(300).ease("sin-in")
+          .style("margin-left", "30px")
+          .each("end", function () {
+            resize()
+            $timeout(function () {QDR.log.debug("done with transition. setting scope ");$scope.panelVisible = false})
+          })
+      }
+      $scope.showLeftPane = function () {
+        d3.select(".qdr-topology.pane.left")
+          .transition().duration(300).ease("sin-out")
+          .style("left" , "0px")
+
+        d3.select(".panel-adjacent")
+          .transition().duration(300).ease("sin-out")
+          .style("margin-left", "430px")
+          .each("end", function () {
+            resize()
+            $timeout(function () {QDR.log.debug("done with transition. setting scope ");$scope.panelVisible = true})
+          })
+      }
       $scope.quiesceConnection = function(row) {
         var entity = row.entity;
         var state = $scope.quiesceState[entity.connectionId].state;
