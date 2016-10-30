@@ -607,7 +607,7 @@ var QDR = (function(QDR) {
           return "in"
         if (outCount > 0)
           return "out"
-        return connection.dir
+        return "unknown"
       }
 
       var savePositions = function () {
@@ -621,7 +621,9 @@ var QDR = (function(QDR) {
           })
       }
 
-      var initializeNodes = function (nodeInfo, nodeCount, height) {
+      var initializeNodes = function (nodeInfo) {
+        var nodeCount = Object.keys(nodeInfo).length
+        nodes = []
         var yInit = 10;
         for (var id in nodeInfo) {
           var name = QDRService.nameFromId(id);
@@ -644,6 +646,7 @@ var QDR = (function(QDR) {
       }
 
       var initializeLinks = function (nodeInfo, unknowns) {
+        links = [];
         var source = 0;
         var client = 1;
         for (var id in nodeInfo) {
@@ -661,8 +664,9 @@ var QDR = (function(QDR) {
             if (role == "inter-router") {
               var connId = connection.container
               var target = getContainerIndex(connId, nodeInfo);
-              if (target >= 0)
-                getLink(source, target, dir);
+              if (target >= 0) {
+                getLink(source, target, dir, "", connection.name);
+              }
             } else if (role == "normal" || role == "on-demand") {
               // not a router, but an external client
               var name = QDRService.nameFromId(id) + "." + client;
@@ -696,7 +700,7 @@ var QDR = (function(QDR) {
                     nodes.push(node);
                     node.normals = [node];
                     // now add a link
-                    getLink(source, nodes.length - 1, cdir, "small");
+                    getLink(source, nodes.length - 1, cdir, "small", connection.name);
                     client++;
                   } else {
                     normalsParent[nodeType+cdir].normals.push(node)
@@ -707,7 +711,7 @@ var QDR = (function(QDR) {
               } else {
                 nodes.push(node)
                   // now add a link
-                getLink(source, nodes.length - 1, dir, "small");
+                getLink(source, nodes.length - 1, dir, "small", connection.name);
                 client++;
               }
             }
@@ -774,13 +778,11 @@ var QDR = (function(QDR) {
 
         // initialize the list of nodes
         var nodeInfo = QDRService.topology.nodeInfo();
-        var nodeCount = Object.keys(nodeInfo).length;
-        initializeNodes(nodeInfo, nodeCount, height)
+        initializeNodes(nodeInfo)
 
         // initialize the list of links
         var unknowns = []
         initializeLinks(nodeInfo, unknowns)
-
         $scope.schema = QDRService.schema;
         // init D3 force layout
         force = d3.layout.force()
@@ -880,20 +882,36 @@ var QDR = (function(QDR) {
         })
 
         // if any clients don't yet have link directions, get the links for those nodes and restart the graph
-        // collapse the unknown node.keys using an object
+        if (unknowns.length > 0)
+          setTimeout(resolveUnknowns, 10, nodeInfo, unknowns)
+      }
+
+      var resolveUnknowns = function (nodeInfo, unknowns) {
         var unknownNodes = {}
+        // collapse the unknown node.keys using an object
         for (var i=0; i<unknowns.length; ++i) {
           unknownNodes[unknowns[i].key] = 1
         }
         unknownNodes = Object.keys(unknownNodes)
         if (unknownNodes.length) {
-QDR.log.debug("there were " + unknownNodes.length + " connections with normal links")
-          QDRService.ensureEntities(unknownNodes, {entity: ".router.link"}, function () {
-            // now that all nodes with clients have link info, update the nodes
-            animate = true;
-            initForceGraph();
-          })
+          QDR.log.debug("there were " + unknownNodes.length + " connections with normal links")
+          console.dump(unknownNodes)
+          for (var i=0; i<unknownNodes.length; ++i) {
+            setTimeout(function (node) {
+              QDRService.ensureEntities(node, {entity: ".router.link", attrs: ["linkType","connectionId","linkDir"], force: true}, function () {
+                // now that all nodes with clients have link info, add any normal clients
+                // initialize the list of links
+                initializeNodes(nodeInfo)
+                initializeLinks(nodeInfo, [])
+                animate = true;
+                force.nodes(nodes).links(links).start();
+                restart();
+              })
+            }, 100, unknownNodes[i])
+          }
+
         }
+
       }
 
       function updateForm(key, entity, resultIndex) {
@@ -962,7 +980,7 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
         return -1;
       }
 
-      function getLink(_source, _target, dir, cls) {
+      function getLink(_source, _target, dir, cls, uid) {
         for (var i = 0; i < links.length; i++) {
           var s = links[i].source,
               t = links[i].target;
@@ -985,7 +1003,8 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
           target: _target,
           left: dir != "out",
           right: (dir == "out" || dir == "both"),
-          cls: cls
+          cls: cls,
+          uid: uid,
         };
         return links.push(link) - 1;
       }
@@ -1172,7 +1191,7 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
         circle.call(force.drag);
 
         // path (link) group
-        path = path.data(links);
+        path = path.data(links, function(d) {return d.uid});
 
         // update existing links
         path.classed('selected', function(d) {
@@ -1540,7 +1559,7 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
                 return;
 
               // add a link from the clicked node to the new node
-              getLink(d.id, nodes.length - 1, "in", "temp");
+              getLink(d.id, nodes.length - 1, "in", "temp", "__internal__");
               $scope.addingNode.hasLink = true;
               if (!$scope.$$phase) $scope.$apply()
                 // add new elements to the svg
@@ -1689,6 +1708,14 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
         })
 
         // dynamically create the legend based on which node types are present
+        // the legend
+        d3.select("#svg_legend svg").remove();
+        lsvg = d3.select("#svg_legend")
+          .append('svg')
+          .attr('id', 'svglegend')
+        lsvg = lsvg.append('svg:g')
+          .attr('transform', 'translate(' + (radii['inter-router'] + 2) + ',' + (radii['inter-router'] + 2) + ')')
+          .selectAll('g');
         var legendNodes = [];
         legendNodes.push(aNode("Router", "", "inter-router", undefined, 0, 0, 0, 0, false, {}))
 
@@ -1721,7 +1748,7 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
           legendNodes.push(aNode("Artemis broker", "", "on-demand", undefined, 6, 0, 0, 0, false, {}))
         }
         lsvg = lsvg.data(legendNodes, function(d) {
-          return d.id;
+          return d.key;
         });
         var lg = lsvg.enter().append('svg:g')
           .attr('transform', function(d, i) {
@@ -1953,13 +1980,6 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
             return 1;
           // if the number of connections for this node chaanged
           if (nodeInfo[key]['.connection'].results.length != savedKeys[key]) {
-            /*
-            QDR.log.debug("number of connections changed for " + key);
-            QDR.log.debug("QDRService.topology._nodeInfo[key]['.connection'].results.length");
-            console.dump(QDRService.topology._nodeInfo[key]['.connection'].results.length);
-            QDR.log.debug("savedKeys[key]");
-            console.dump(savedKeys[key]);
-            */
             return -1;
           }
         }
@@ -2023,8 +2043,21 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
           } else if (changed === -1) {
             // we lost a node (or a client), we can draw the new svg immediately
             saveChanged();
-            animate = true;
-            initForceGraph();
+            var nodeInfo = QDRService.topology.nodeInfo();
+            initializeNodes(nodeInfo)
+
+            var unknowns = []
+            initializeLinks(nodeInfo, unknowns)
+            if (unknowns.length > 0) {
+              resolveUnknowns(nodeInfo, unknowns)
+            }
+            else {
+              force.nodes(nodes).links(links).start();
+              animate = true;
+              restart();
+            }
+
+            //initForceGraph();
           } else {
             //QDR.log.debug("topology didn't change")
           }
@@ -2035,7 +2068,8 @@ QDR.log.debug("there were " + unknownNodes.length + " connections with normal li
       function setupInitialUpdate() {
         // make sure all router nodes have .connection info. if not then fetch any missing info
         QDRService.ensureAllEntities(
-          [{entity: ".connection"}, {entity: ".router.link", attrs: ["linkType","connectionId","linkDir"]}],
+//          [{entity: ".connection"}, {entity: ".router.lin.router.link", attrs: ["linkType","connectionId","linkDir"]}],
+          [{entity: ".connection"}],
           //[{entity: ".connection"}],
             handleInitialUpdate)
       }

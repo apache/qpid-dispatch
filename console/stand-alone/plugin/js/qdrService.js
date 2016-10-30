@@ -27,7 +27,6 @@ var QDR = (function(QDR) {
     var self = {
 
       rhea: require("rhea"),
-
       timeout: 10,             // seconds to wait before assuming a request has failed
       updateInterval: 2000,   // milliseconds between background updates
       connectActions: [],
