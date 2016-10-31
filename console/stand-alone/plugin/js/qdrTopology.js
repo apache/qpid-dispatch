@@ -465,9 +465,19 @@ var QDR = (function(QDR) {
         restart(false);
         tick();
       }
+      var setNodesFixed = function (name, b) {
+        nodes.some(function (n) {
+          if (n.name === name) {
+            n.fixed = b;
+            return true;
+          }
+        })
+      }
       $scope.setFixed = function(b) {
         if ($scope.contextNode) {
           $scope.contextNode.fixed = b;
+          setNodesFixed($scope.contextNode.name, b)
+          savePositions()
         }
         restart();
       }
@@ -546,6 +556,10 @@ var QDR = (function(QDR) {
       var links = [];
 
       var aNode = function(id, name, nodeType, nodeInfo, nodeIndex, x, y, resultIndex, fixed, properties) {
+        for (var i=0; i<nodes.length; ++i) {
+          if (nodes[i].name === name)
+            return nodes[i]
+        }
         properties = properties || {};
         var routerId = QDRService.nameFromId(id)
         return {
@@ -558,7 +572,7 @@ var QDR = (function(QDR) {
           y: y,
           id: nodeIndex,
           resultIndex: resultIndex,
-          fixed: fixed,
+          fixed: !!+fixed,
           cls: name == NewRouterName ? 'temp' : ''
         };
       };
@@ -611,14 +625,13 @@ var QDR = (function(QDR) {
       }
 
       var savePositions = function () {
-        d3.selectAll('#SVG_ID circle.inter-router')
-          .each( function (d) {
-            localStorage[d.name] = angular.toJson({
-              x: d.x,
-              y: d.y,
-              fixed: d.fixed
-            });
-          })
+        nodes.forEach( function (d) {
+          localStorage[d.name] = angular.toJson({
+            x: Math.round(d.x),
+            y: Math.round(d.y),
+            fixed: d.fixed ? 1 : 0,
+          });
+        })
       }
 
       var initializeNodes = function (nodeInfo) {
@@ -720,10 +733,38 @@ var QDR = (function(QDR) {
         }
       }
 
+      // vary the following force graph attributes based on nodeCount
+      // <= 6 routers returns min, >= 80 routers returns max, interpolate linearly
+      var forceScale = function(nodeCount, min, max) {
+        var count = nodeCount
+        if (nodeCount < 6) count = 6
+        if (nodeCount > 80) count = 80
+        var x = d3.scale.linear()
+          .domain([6,80])
+          .range([min, max]);
+//QDR.log.debug("forceScale(" + nodeCount + ", " + min + ", " + max + "  returns " + x(count) + " " + x(nodeCount))
+        return x(count)
+      }
+      var linkDistance = function (d, nodeCount) {
+        if (d.target.nodeType === 'inter-router')
+          return forceScale(nodeCount, 150, 70)
+        return forceScale(nodeCount, 75, 25)
+      }
+      var charge = function (d, nodeCount) {
+        if (d.nodeType === 'inter-router')
+          return forceScale(nodeCount, -1800, -900)
+        return -900
+      }
+      var gravity = function (d, nodeCount) {
+        return forceScale(nodeCount, 0.0001, 0.1)
+      }
+
       // initialize the nodes and links array from the QDRService.topology._nodeInfo object
       var initForceGraph = function() {
         nodes = [];
         links = [];
+        var nodeInfo = QDRService.topology.nodeInfo();
+        var nodeCount = Object.keys(nodeInfo).length
 
         var oldSelectedNode = selected_node
         var oldMouseoverNode = mouseover_node
@@ -777,7 +818,6 @@ var QDR = (function(QDR) {
         mouseup_node = null;
 
         // initialize the list of nodes
-        var nodeInfo = QDRService.topology.nodeInfo();
         initializeNodes(nodeInfo)
 
         // initialize the list of links
@@ -789,18 +829,10 @@ var QDR = (function(QDR) {
           .nodes(nodes)
           .links(links)
           .size([width, height])
-          .linkDistance(function(d) {
-            if (d.target.nodeType === 'inter-router')
-              return 70
-            if (d.target.cdir === 'both')
-              return 25
-            return 25
-          })
-          .charge(function(d) {
-            return (d.nodeType === 'inter-router') ? -800 : -900
-          })
+          .linkDistance(function(d) { return linkDistance(d, nodeCount) })
+          .charge(function(d) { return charge(d, nodeCount) })
           .friction(.10)
-          .gravity(0.0001)
+          .gravity(function(d) { return gravity(d, nodeCount) })
           .on('tick', tick)
           .start()
 
@@ -846,9 +878,9 @@ var QDR = (function(QDR) {
           circle
             .attr('cx', function(d) {
               localStorage[d.name] = angular.toJson({
-                x: d.x,
-                y: d.y,
-                fixed: d.fixed
+                x: Math.round(d.x),
+                y: Math.round(d.y),
+                fixed: d.fixed ? 1 : 0,
               });
               return d.x;
             });
@@ -905,7 +937,7 @@ var QDR = (function(QDR) {
                 initializeLinks(nodeInfo, [])
                 animate = true;
                 force.nodes(nodes).links(links).start();
-                restart();
+                restart(false);
               })
             }, 100, unknownNodes[i])
           }
@@ -1420,7 +1452,7 @@ var QDR = (function(QDR) {
             return (d === selected_node)
           })
           .classed('fixed', function(d) {
-            return (d.fixed & 0b1)
+            return d.fixed
           })
 
         // add new circle nodes. if nodes[] is longer than the existing paths, add a new path for each new element
@@ -1546,8 +1578,10 @@ var QDR = (function(QDR) {
             if (cur_mouse[0] != initial_mouse_down_position[0] ||
               cur_mouse[1] != initial_mouse_down_position[1]) {
               console.log("mouse pos changed. making this node fixed")
-              d3.select(this).classed("fixed", d.fixed = true);
+              d.fixed = true;
+              setNodesFixed(d.name, true)
               resetMouseVars();
+              restart();
               return;
             }
 
@@ -1582,9 +1616,11 @@ var QDR = (function(QDR) {
             restart(false);
 
           })
-          .on("dblclick", function(d) {
+          .on("dblclick", function(d) { // circle
             if (d.fixed) {
-              d3.select(this).classed("fixed", d.fixed = false);
+              d.fixed = false
+              setNodesFixed(d.name, false)
+              restart() // redraw the node without a dashed line
               force.start(); // let the nodes move to a new position
             }
             if (QDRService.nameFromId(d.key) == '__internal__') {
@@ -1592,7 +1628,7 @@ var QDR = (function(QDR) {
               if (!$scope.$$phase) $scope.$apply()
             }
           })
-          .on("contextmenu", function(d) {
+          .on("contextmenu", function(d) {  // circle
             $(document).click();
             d3.event.preventDefault();
             $scope.contextNode = d;
@@ -1603,7 +1639,9 @@ var QDR = (function(QDR) {
               .style('display', 'block');
 
           })
-          .on("click", function(d) {
+          .on("click", function(d) {  // circle
+            if (!mouseup_node)
+              return;
             // clicked on a circle
             clearPopups();
             if (!d.normals) {
@@ -2000,13 +2038,7 @@ var QDR = (function(QDR) {
       // we are about to leave the page, save the node positions
       $rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {
         //QDR.log.debug("locationChangeStart");
-        nodes.forEach(function(d) {
-          localStorage[d.name] = angular.toJson({
-            x: d.x,
-            y: d.y,
-            fixed: d.fixed
-          });
-        });
+        savePositions()
         $scope.addingNode.step = 0;
       });
       // When the DOM element is removed from the page,
