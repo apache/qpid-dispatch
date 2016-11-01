@@ -57,6 +57,8 @@ var QDR = (function(QDR) {
       gotTopology: false,
       errorText: undefined,
       connectionError: undefined,
+      useTestData: false,
+      fakeNodeInfo: null,
 
       addConnectAction: function(action) {
         if (angular.isFunction(action)) {
@@ -676,9 +678,26 @@ QDR.log.debug("topology get called")
         }
 
       },
-
       getRemoteNodeInfo: function(callback) {
         //QDR.log.debug("getRemoteNodeInfo called");
+        if (self.useTestData) {
+          var returnFake = function () {
+            var allNodes = Object.keys(self.fakeNodeInfo)
+            callback(allNodes, null)
+          }
+          if (!self.fakeNodeInfo) {
+            d3.json("plugin/data/alldatafor80routers.txt", function (error, data) {
+              if (!error) {
+                self.fakeNodeInfo = data
+                //self.topology._nodeInfo = data;
+                returnFake()
+              }
+            })
+          } else {
+            returnFake()
+          }
+          return;
+        }
         setTimeout(function () {
           var ret;
           // first get the list of remote node names
@@ -834,6 +853,13 @@ QDR.log.debug("topology get called")
 
       getNodeInfo: function(nodeName, entity, attrs, callback) {
         //QDR.log.debug("getNodeInfo called with nodeName: " + nodeName + " and entity " + entity);
+        if (self.useTestData) {
+          setTimeout(function () {
+            var response = self.fakeNodeInfo[nodeName][entity]
+            callback(nodeName, entity, response)
+          }, 100)
+          return;
+        }
         setTimeout(function () {
           var ret;
           self.correlator.request(
