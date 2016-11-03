@@ -58,6 +58,7 @@ void qd_tracemask_free(qd_tracemask_t *tm)
         if (tm->router_by_mask_bit[i])
             qd_tracemask_del_router(tm, i);
     }
+    free(tm->router_by_mask_bit);
 
     qd_hash_free(tm->hash);
     sys_rwlock_free(tm->lock);
