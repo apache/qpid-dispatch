@@ -129,6 +129,11 @@ void qdr_core_free(qdr_core_t *core)
     qd_hash_free(core->conn_id_hash);
     //TODO what about the actual connection identifier objects?
 
+    qdr_node_t *rnode = 0;
+    while ( (rnode = DEQ_HEAD(core->routers)) ) {
+        qdr_router_node_free(core, rnode);
+    }
+
     if (core->query_lock)                sys_mutex_free(core->query_lock);
     if (core->routers_by_mask_bit)       free(core->routers_by_mask_bit);
     if (core->control_links_by_mask_bit) free(core->control_links_by_mask_bit);
@@ -138,6 +143,14 @@ void qdr_core_free(qdr_core_t *core)
     free(core);
 }
 
+void qdr_router_node_free(qdr_core_t *core, qdr_node_t *rnode)
+{
+    qd_bitmask_free(rnode->valid_origins);
+    DEQ_REMOVE(core->routers, rnode);
+    core->routers_by_mask_bit[rnode->mask_bit] = 0;
+    core->cost_epoch++;
+    free_qdr_node_t(rnode);
+}
 
 ALLOC_DECLARE(qdr_field_t);
 ALLOC_DEFINE(qdr_field_t);

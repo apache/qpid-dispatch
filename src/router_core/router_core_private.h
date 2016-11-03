@@ -183,6 +183,7 @@ struct qdr_node_t {
 
 ALLOC_DECLARE(qdr_node_t);
 DEQ_DECLARE(qdr_node_t, qdr_node_list_t);
+void qdr_router_node_free(qdr_core_t *core, qdr_node_t *rnode);
 
 #define PEER_CONTROL_LINK(c,n) ((n->link_mask_bit >= 0) ? (c)->control_links_by_mask_bit[n->link_mask_bit] : 0)
 #define PEER_DATA_LINK(c,n)    ((n->link_mask_bit >= 0) ? (c)->data_links_by_mask_bit[n->link_mask_bit] : 0)

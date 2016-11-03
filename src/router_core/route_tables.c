@@ -350,6 +350,7 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     }
 
     qdr_node_t    *rnode = core->routers_by_mask_bit[router_maskbit];
+    assert(rnode->maskbit == router_maskbit);
     qdr_address_t *oaddr = rnode->owning_addr;
     assert(oaddr);
 
@@ -379,13 +380,8 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     //
     // Free the router node and the owning address records.
     //
-    qd_bitmask_free(rnode->valid_origins);
-    DEQ_REMOVE(core->routers, rnode);
-    core->cost_epoch++;
-    free_qdr_node_t(rnode);
-
+    qdr_router_node_free(core, rnode);
     qdr_core_remove_address(core, oaddr);
-    core->routers_by_mask_bit[router_maskbit] = 0;
 }
 
 
