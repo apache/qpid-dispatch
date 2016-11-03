@@ -149,6 +149,8 @@ static log_sink_t* log_sink_lh(const char* name) {
 }
 
 
+typedef enum {DEFAULT, NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, N_LEVELS} level_index_t;
+
 struct qd_log_source_t {
     DEQ_LINKS(qd_log_source_t);
     char *module;
@@ -156,6 +158,7 @@ struct qd_log_source_t {
     int timestamp;              /* boolean or -1 means not set */
     int source;                 /* boolean or -1 means not set */
     bool syslog;
+    uint64_t severity_histogram[N_LEVELS];
     log_sink_t *sink;
 };
 
@@ -165,7 +168,6 @@ static sys_mutex_t          *log_lock = 0;
 static sys_mutex_t          *log_source_lock = 0;
 static qd_log_source_list_t  source_list = {0};
 
-typedef enum {DEFAULT, NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, N_LEVELS} level_index_t;
 
 typedef struct level_t {
     const char* name;
@@ -304,6 +306,7 @@ static void qd_log_source_defaults(qd_log_source_t *log_source) {
     log_source->timestamp = -1;
     log_source->source = -1;
     log_source->sink = 0;
+    memset ( log_source->severity_histogram, 0, sizeof(uint64_t) * N_LEVELS );
 }
 
 /// Caller must hold the log_source_lock
@@ -355,6 +358,14 @@ bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
 
 void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file, int line, const char *fmt, ...)
 {
+    /*-----------------------------------------------
+      Count this log-event in this log's histogram
+      whether or not this log is currently enabled.
+      We can always decide not to look at it later,
+      based on its used/unused status.
+    -----------------------------------------------*/
+    source->severity_histogram [ level ] ++;
+
     if (!qd_log_enabled(source, level)) return;
 
     qd_log_entry_t *entry = new_qd_log_entry_t();
