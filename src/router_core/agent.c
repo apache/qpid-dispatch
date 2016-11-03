@@ -245,8 +245,8 @@ static void qdr_agent_emit_columns(qdr_query_t *query, const char *qdr_columns[]
     qd_compose_start_list(query->body);
     int i = 0;
     while (query->columns[i] >= 0) {
-        assert(query->columns[i] < column_count);
-        qd_compose_insert_string(query->body, qdr_columns[query->columns[i]]);
+        if (query->columns[i] < column_count)
+            qd_compose_insert_string(query->body, qdr_columns[query->columns[i]]);
         i++;
     }
     qd_compose_end_list(query->body);
@@ -266,11 +266,12 @@ static void qdr_agent_set_columns(qdr_query_t *query,
         // Either the attribute_names field is absent, it's not a list, or it's an empty list.
         // In this case, we will include all available attributes.
         //
+        if (column_count > QDR_AGENT_MAX_COLUMNS)
+            column_count = QDR_AGENT_MAX_COLUMNS;
         int i;
         for (i = 0; i < column_count; i++)
             query->columns[i] = i;
         query->columns[i] = -1;
-        assert(i < QDR_AGENT_MAX_COLUMNS);
         return;
     }
 
