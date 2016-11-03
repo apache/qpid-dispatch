@@ -559,8 +559,8 @@ qd_message_t *qd_message()
         return 0;
     }
 
-    memset(msg->content, 0, sizeof(qd_message_content_t));
-    msg->content->lock        = sys_mutex();
+    ZERO(msg->content);
+    msg->content->lock = sys_mutex();
     sys_atomic_init(&msg->content->ref_count, 1);
     msg->content->parse_depth = QD_DEPTH_NONE;
     msg->content->parsed_message_annotations = 0;
@@ -796,8 +796,7 @@ static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
     bool map_started = false;
 
     //We will have to add the custom annotations
-    qd_parsed_field_t   *in_ma = msg->content->parsed_message_annotations;
-
+    qd_parsed_field_t *in_ma = qd_parse_dup(msg->content->parsed_message_annotations);
     if (in_ma) {
         uint32_t count = qd_parse_sub_count(in_ma);
 
@@ -818,6 +817,8 @@ static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
                 qd_compose_insert_typed_iterator(out_ma, qd_parse_typed(sub_value));
             }
         }
+
+        qd_parse_free(in_ma);
     }
 
     //Add the dispatch router specific annotations only if strip_annotations is false.

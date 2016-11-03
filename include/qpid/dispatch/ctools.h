@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <memory.h>
 
 #define CT_ASSERT(exp) { assert(exp); }
 

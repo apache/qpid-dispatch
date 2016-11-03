@@ -26,12 +26,12 @@ DEQ_DECLARE(qd_parsed_field_t, qd_parsed_field_list_t);
 
 struct qd_parsed_field_t {
     DEQ_LINKS(qd_parsed_field_t);
-    qd_parsed_field_t      *parent;
-    qd_parsed_field_list_t  children;
-    uint8_t                 tag;
-    qd_field_iterator_t    *raw_iter;
-    qd_field_iterator_t    *typed_iter;
-    const char             *parse_error;
+    const qd_parsed_field_t *parent;
+    qd_parsed_field_list_t   children;
+    uint8_t                  tag;
+    qd_field_iterator_t     *raw_iter;
+    qd_field_iterator_t     *typed_iter;
+    const char              *parse_error;
 };
 
 ALLOC_DECLARE(qd_parsed_field_t);
@@ -191,6 +191,37 @@ void qd_parse_free(qd_parsed_field_t *field)
     }
 
     free_qd_parsed_field_t(field);
+}
+
+
+static qd_parsed_field_t *qd_parse_dup_internal(const qd_parsed_field_t *field, const qd_parsed_field_t *parent)
+{
+    qd_parsed_field_t *dup = new_qd_parsed_field_t();
+
+    if (dup == 0)
+        return 0;
+
+    ZERO(dup);
+    dup->parent      = parent;
+    dup->tag         = field->tag;
+    dup->raw_iter    = qd_field_iterator_dup(field->raw_iter);
+    dup->typed_iter  = qd_field_iterator_dup(field->typed_iter);
+    dup->parse_error = field->parse_error;
+
+    qd_parsed_field_t *child = DEQ_HEAD(field->children);
+    while (child) {
+        qd_parsed_field_t *dup_child = qd_parse_dup_internal(child, field);
+        DEQ_INSERT_TAIL(dup->children, dup_child);
+        child = DEQ_NEXT(child);
+    }
+
+    return dup;
+}
+
+
+qd_parsed_field_t *qd_parse_dup(const qd_parsed_field_t *field)
+{
+    return field ? qd_parse_dup_internal(field, 0) : 0;
 }
 
 
