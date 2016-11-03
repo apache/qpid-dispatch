@@ -98,14 +98,17 @@ void qdr_core_free(qdr_core_t *core)
     //
     // Free the core resources
     //
-    qdr_core_unsubscribe(core->agent_subscription_mobile);
-    qdr_core_unsubscribe(core->agent_subscription_local);
     sys_thread_free(core->thread);
     sys_cond_free(core->action_cond);
     sys_mutex_free(core->action_lock);
     sys_mutex_free(core->work_lock);
     sys_mutex_free(core->id_lock);
     qd_timer_free(core->work_timer);
+    //we can't call qdr_core_unsubscribe on the subscriptions because the action processing thread has
+    //already been shut down. But, all the action would have done at this point is free the subscriptions
+    //so we just do that directly.
+    free(core->agent_subscription_mobile);
+    free(core->agent_subscription_local);
 
     for (int i = 0; i <= QD_TREATMENT_LINK_BALANCED; ++i) {
         if (core->forwarders[i]) {
