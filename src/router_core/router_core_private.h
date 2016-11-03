@@ -142,6 +142,7 @@ struct qdr_action_t {
             qdr_field_t             *identity;
             qdr_field_t             *name;
             qd_parsed_field_t       *in_body;
+            qd_buffer_list_t         body_buffers;
         } agent;
 
     } args;

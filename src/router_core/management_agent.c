@@ -303,7 +303,9 @@ static void qd_core_agent_create_handler(qdr_core_t                 *core,
 
     qd_parsed_field_t *in_body = qd_parse(body_iter);
 
-    qdr_manage_create(core, ctx, entity_type, name_iter, in_body, out_body);
+    qd_buffer_list_t empty_list;
+    DEQ_INIT(empty_list);
+    qdr_manage_create(core, ctx, entity_type, name_iter, in_body, out_body, empty_list);
 
     qd_field_iterator_free(body_iter);
 }
