@@ -113,9 +113,15 @@ void qdr_core_free(qdr_core_t *core)
 ALLOC_DECLARE(qdr_field_t);
 ALLOC_DEFINE(qdr_field_t);
 
+
 qdr_field_t *qdr_field(const char *text)
 {
     size_t length  = text ? strlen(text) : 0;
+    return qdr_field_with_length(text, length);
+}
+
+qdr_field_t *qdr_field_with_length(const char *text, size_t length)
+{
     size_t ilength = length;
 
     if (length == 0)

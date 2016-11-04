@@ -21,11 +21,15 @@
 
 #include "router_core_private.h"
 
+#define QDR_CONN_ID_MATCHER_CONN_LABEL   0
+#define QDR_CONN_ID_MATCHER_CONTAINER_ID 1
+#define QDR_CONN_ID_MATCHER_GROUP_ID     2
+
 qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_field_iterator_t    *name,
                                               qd_parsed_field_t      *prefix_field,
                                               qd_parsed_field_t      *conn_id,
-                                              bool                    is_container,
+                                              int matcher,
                                               qd_address_treatment_t  treatment,
                                               qd_direction_t          dir);
 
@@ -37,7 +41,7 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
                                             qd_direction_t       dir,
                                             int                  phase,
                                             qd_parsed_field_t   *conn_id,
-                                            bool                 is_container,
+                                            int matcher,
                                             qd_parsed_field_t   *external_addr);
 
 void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *auto_link);
@@ -45,7 +49,7 @@ void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *auto_link);
 void qdr_route_connection_opened_CT(qdr_core_t       *core,
                                     qdr_connection_t *conn,
                                     qdr_field_t      *field,
-                                    bool              is_container);
+                                    int              matcher);
 
 void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn);
 

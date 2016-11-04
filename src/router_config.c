@@ -306,6 +306,7 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
     char *name      = 0;
     char *prefix    = 0;
     char *container = 0;
+    char *group     = 0;
     char *c_name    = 0;
     char *distrib   = 0;
     char *dir       = 0;
@@ -314,6 +315,7 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
         name      = qd_entity_opt_string(entity, "name", 0);         QD_ERROR_BREAK();
         prefix    = qd_entity_get_string(entity, "prefix");          QD_ERROR_BREAK();
         container = qd_entity_opt_string(entity, "containerId", 0);  QD_ERROR_BREAK();
+        group     = qd_entity_opt_string(entity, "groupId", 0);      QD_ERROR_BREAK();
         c_name    = qd_entity_opt_string(entity, "connection", 0);   QD_ERROR_BREAK();
         distrib   = qd_entity_opt_string(entity, "distribution", 0); QD_ERROR_BREAK();
         dir       = qd_entity_opt_string(entity, "dir", 0);          QD_ERROR_BREAK();
@@ -337,6 +339,11 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
         if (container) {
             qd_compose_insert_string(body, "containerId");
             qd_compose_insert_string(body, container);
+        }
+
+        if (group) {
+            qd_compose_insert_string(body, "groupId");
+            qd_compose_insert_string(body, group);
         }
 
         if (c_name) {
@@ -386,6 +393,7 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
     free(name);
     free(prefix);
     free(container);
+    free(group);
     free(c_name);
     free(distrib);
     free(dir);
@@ -400,6 +408,7 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
     char *addr      = 0;
     char *dir       = 0;
     char *container = 0;
+    char *group     = 0;
     char *c_name    = 0;
     char *ext_addr  = 0;
 
@@ -408,6 +417,7 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
         addr      = qd_entity_get_string(entity, "addr");            QD_ERROR_BREAK();
         dir       = qd_entity_get_string(entity, "dir");             QD_ERROR_BREAK();
         container = qd_entity_opt_string(entity, "containerId", 0);  QD_ERROR_BREAK();
+        group     = qd_entity_opt_string(entity, "groupId", 0);      QD_ERROR_BREAK();
         c_name    = qd_entity_opt_string(entity, "connection", 0);   QD_ERROR_BREAK();
         ext_addr  = qd_entity_opt_string(entity, "externalAddr", 0); QD_ERROR_BREAK();
         long  phase     = qd_entity_opt_long(entity, "phase", -1);   QD_ERROR_BREAK();
@@ -441,6 +451,11 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
         if (container) {
             qd_compose_insert_string(body, "containerId");
             qd_compose_insert_string(body, container);
+        }
+
+        if (group) {
+            qd_compose_insert_string(body, "groupId");
+            qd_compose_insert_string(body, group);
         }
 
         if (c_name) {
@@ -486,6 +501,7 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
     free(addr);
     free(dir);
     free(container);
+    free(group);
     free(c_name);
     free(ext_addr);
 

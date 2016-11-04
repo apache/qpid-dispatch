@@ -166,6 +166,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         uint64_t               management_id,
                                         const char            *label,
                                         const char            *remote_container_id,
+                                        pn_bytes_t             group_id,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out,
                                         int                    link_capacity);

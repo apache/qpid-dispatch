@@ -36,6 +36,7 @@ const char * const QD_CONNECTION_PROPERTY_PRODUCT_KEY   = "product";
 const char * const QD_CONNECTION_PROPERTY_PRODUCT_VALUE = "qpid-dispatch-router";
 const char * const QD_CONNECTION_PROPERTY_VERSION_KEY   = "version";
 const char * const QD_CONNECTION_PROPERTY_COST_KEY      = "qd.inter-router-cost";
+const char * const QD_CONNECTION_PROPERTY_GROUP_KEY     = "qd.route-container-group";
 
 const qd_amqp_error_t QD_AMQP_OK = { 200, "OK" };
 const qd_amqp_error_t QD_AMQP_CREATED = { 201, "Created" };

@@ -35,6 +35,7 @@
 #define QDR_CONFIG_AUTO_LINK_LINK_REF      9
 #define QDR_CONFIG_AUTO_LINK_OPER_STATUS   10
 #define QDR_CONFIG_AUTO_LINK_LAST_ERROR    11
+#define QDR_CONFIG_AUTO_LINK_GROUP_ID      12
 
 const char *qdr_config_auto_link_columns[] =
     {"name",
@@ -49,6 +50,7 @@ const char *qdr_config_auto_link_columns[] =
      "linkRef",
      "operStatus",
      "lastError",
+     "groupId",
      0};
 
 const char *CONFIG_AUTOLINK_TYPE = "org.apache.qpid.dispatch.router.config.autoLink";
@@ -98,6 +100,7 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
 
     case QDR_CONFIG_AUTO_LINK_CONNECTION:
     case QDR_CONFIG_AUTO_LINK_CONTAINER_ID:
+    case QDR_CONFIG_AUTO_LINK_GROUP_ID:
         if (al->conn_id) {
             key = (const char*) qd_hash_key_by_handle(al->conn_id->hash_handle);
             if (key && key[0] == 'L' && col == QDR_CONFIG_AUTO_LINK_CONNECTION) {
@@ -105,6 +108,10 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
                 break;
             }
             if (key && key[0] == 'C' && col == QDR_CONFIG_AUTO_LINK_CONTAINER_ID) {
+                qd_compose_insert_string(body, &key[1]);
+                break;
+            }
+            if (key && key[0] == 'G' && col == QDR_CONFIG_AUTO_LINK_GROUP_ID) {
                 qd_compose_insert_string(body, &key[1]);
                 break;
             }
@@ -369,6 +376,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t          *core,
         qd_parsed_field_t *phase_field      = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_PHASE]);
         qd_parsed_field_t *connection_field = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_CONNECTION]);
         qd_parsed_field_t *container_field  = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_CONTAINER_ID]);
+        qd_parsed_field_t *group_field      = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_GROUP_ID]);
         qd_parsed_field_t *external_addr    = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_EXT_ADDR]);
 
         //
@@ -409,10 +417,18 @@ void qdra_config_auto_link_create_CT(qdr_core_t          *core,
         //
         // The request is good.  Create the entity.
         //
-        bool               is_container = !!container_field;
-        qd_parsed_field_t *in_use_conn  = is_container ? container_field : connection_field;
+        int matcher = QDR_CONN_ID_MATCHER_CONN_LABEL;
+        qd_parsed_field_t *in_use_conn  = connection_field;
 
-        al = qdr_route_add_auto_link_CT(core, name, addr_field, dir, phase, in_use_conn, is_container, external_addr);
+        if (!!container_field) {
+            matcher = QDR_CONN_ID_MATCHER_CONTAINER_ID;
+            in_use_conn = container_field;
+        } else if (!!group_field) {
+            matcher = QDR_CONN_ID_MATCHER_GROUP_ID;
+            in_use_conn = group_field;
+        }
+
+        al = qdr_route_add_auto_link_CT(core, name, addr_field, dir, phase, in_use_conn, matcher, external_addr);
 
         //
         // Compose the result map for the response.
