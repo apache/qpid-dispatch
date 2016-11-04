@@ -120,6 +120,8 @@ static void main_process(const char *config_path, const char *python_pkgdir, int
     dispatch = qd_dispatch(python_pkgdir);
     check(fd);
     log_source = qd_log_source("MAIN"); /* Logging is initialized by qd_dispatch. */
+    qd_dispatch_validate_config(config_path);
+    check(fd);
     qd_dispatch_load_config(dispatch, config_path);
     check(fd);
 
