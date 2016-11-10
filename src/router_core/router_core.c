@@ -30,6 +30,10 @@ ALLOC_DEFINE(qdr_router_ref_t);
 ALLOC_DEFINE(qdr_link_ref_t);
 ALLOC_DEFINE(qdr_general_work_t);
 ALLOC_DEFINE(qdr_connection_ref_t);
+ALLOC_DEFINE(qdr_connection_info_t);
+
+const char * const QDR_CONNECTION_DIR_IN         = "in";
+const char * const QDR_CONNECTION_DIR_OUT = "out";
 
 static void qdr_general_handler(void *context);
 

@@ -252,14 +252,15 @@ class QdmanageTest(TestCase):
         # Re-create the connector and then try wait_connectors
         self.create(long_type, name, str(QdmanageTest.inter_router_port))
 
-        results = json.loads(self.run_qdmanage('QUERY --type=org.apache.qpid.dispatch.connection'))
-
+        outputs = json.loads(self.run_qdmanage(query_command))
         created = False
-        for result in results:
-            name = result['name']
-            conn_name = 'connection/0.0.0.0:%s:' % QdmanageTest.inter_router_port
-            if conn_name in name:
+        for output in outputs:
+            conn_name = 'connector/127.0.0.1:%s' % QdmanageTest.inter_router_port
+            conn_name_1 = 'connector/0.0.0.0:%s' % QdmanageTest.inter_router_port
+            if conn_name == output['name'] or conn_name_1 == output['name']:
                 created = True
+                break
+
         self.assertTrue(created)
 
     def test_zzz_add_connector(self):
@@ -392,14 +393,15 @@ class QdmanageTestSsl(QdmanageTest):
         # Re-create the connector and then try wait_connectors
         self.create(long_type, name, str(QdmanageTestSsl.inter_router_port))
 
-        results = json.loads(self.run_qdmanage('QUERY --type=org.apache.qpid.dispatch.connection'))
 
+        outputs = json.loads(self.run_qdmanage(query_command))
         created = False
-        for result in results:
-            name = result['name']
-            conn_name = 'connection/0.0.0.0:%s:' % QdmanageTestSsl.inter_router_port
-            if conn_name in name:
+        for output in outputs:
+            conn_name = 'connector/127.0.0.1:%s' % QdmanageTestSsl.inter_router_port
+            conn_name_1 = 'connector/0.0.0.0:%s' % QdmanageTestSsl.inter_router_port
+            if conn_name == output['name'] or conn_name_1 == output['name']:
                 created = True
+                break
         self.assertTrue(created)
 
     def test_create_delete_ssl_profile(self):

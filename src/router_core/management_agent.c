@@ -46,6 +46,7 @@ const unsigned char *auto_link_entity_type      = (unsigned char*) "org.apache.q
 const unsigned char *address_entity_type        = (unsigned char*) "org.apache.qpid.dispatch.router.address";
 const unsigned char *link_entity_type           = (unsigned char*) "org.apache.qpid.dispatch.router.link";
 const unsigned char *console_entity_type        = (unsigned char*) "org.apache.qpid.dispatch.console";
+const unsigned char *connection_entity_type     = (unsigned char*) "org.apache.qpid.dispatch.connection";
 
 const char * const status_description = "statusDescription";
 const char * const correlation_id = "correlation-id";
@@ -120,13 +121,10 @@ static void qd_set_response_status(const qd_amqp_error_t *error, qd_composed_fie
     //
     *field = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, *field);
     qd_compose_start_map(*field);
-
     qd_compose_insert_string(*field, status_description);
     qd_compose_insert_string(*field, error->description);
-
     qd_compose_insert_string(*field, status_code);
     qd_compose_insert_uint(*field, error->status);
-
     qd_compose_end_map(*field);
 }
 
@@ -196,6 +194,7 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
 
     // Finally, compose and send the message.
     qd_message_compose_3(ctx->msg, fld, ctx->field);
+
     qdr_send_to1(ctx->core, ctx->msg, reply_to, true, false);
 
     // We have come to the very end. Free the appropriate memory.
@@ -404,6 +403,8 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
         *entity_type = QD_ROUTER_CONFIG_LINK_ROUTE;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), auto_link_entity_type))
         *entity_type = QD_ROUTER_CONFIG_AUTO_LINK;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), connection_entity_type))
+        *entity_type = QD_ROUTER_CONNECTION;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), console_entity_type))
         *entity_type = QD_ROUTER_FORBIDDEN;
     else
