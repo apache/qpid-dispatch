@@ -57,8 +57,6 @@ var QDR = (function(QDR) {
       gotTopology: false,
       errorText: undefined,
       connectionError: undefined,
-      useTestData: false,
-      fakeNodeInfo: null,
 
       addConnectAction: function(action) {
         if (angular.isFunction(action)) {
@@ -381,19 +379,18 @@ console.dump(e)
           }
         }
         q.await(function (error) {
+          clearTimeout(self.topology._waitTimer)
           callback();
         })
       },
 
       // enusre all the topology nones have all these entities
-      ensureAllEntities: function (entityAttribs, callback) {
-QDR.log.debug("ensureAllEntities called")
-        self.ensureEntities(Object.keys(self.topology._nodeInfo), entityAttribs, callback)
+      ensureAllEntities: function (entityAttribs, callback, extra) {
+        self.ensureEntities(Object.keys(self.topology._nodeInfo), entityAttribs, callback, extra)
       },
 
       // ensure these nodes have all these entities. don't fetch unless forced to
-      ensureEntities: function (nodes, entityAttribs, callback) {
-QDR.log.debug("ensureEntities called")
+      ensureEntities: function (nodes, entityAttribs, callback, extra) {
         if (Object.prototype.toString.call(entityAttribs) !== '[object Array]') {
           entityAttribs = [entityAttribs]
         }
@@ -410,7 +407,8 @@ QDR.log.debug("ensureEntities called")
           }
         }
         q.await(function (error) {
-          callback();
+          clearTimeout(self.topology._waitTimer)
+          callback(extra);
         })
       },
 
@@ -450,7 +448,7 @@ QDR.log.debug("fetchAllEntities timed out")
         for (var n=0; n<nodes.length; ++n) {
           for (var i=0; i<entityAttribs.length; ++i) {
             var ea = entityAttribs[i]
-            q.defer(self.fetchNodeInfo, nodes[n], ea.entity, ea.attrs || [], gotAResponse)
+            q.defer(self.fetchNodeInfo, nodes[n], ea.entity, ea.attrs || [], q, gotAResponse)
           }
         }
         q.await(function (error) {
@@ -481,7 +479,6 @@ QDR.log.debug("fetchAllEntities timed out")
         _gettingTopo: false,
         _nodeInfo: {},
         _lastNodeInfo: {},
-        _expected: {},
         _waitTimer: null,
         _getTimer: null,
         _autoUpdatedEntities: [],
@@ -513,9 +510,6 @@ QDR.log.debug("topology get called")
           self.topology._gettingTopo = true;
 
           self.errorText = undefined;
-          //self.topology.cleanUp(self.topology._nodeInfo);
-          //self.topology._nodeInfo = {};
-          self.topology._expected = {};
 
           // get the list of nodes to query.
           // once this completes, we will get the info for each node returned
@@ -542,14 +536,11 @@ QDR.log.debug("topology get called")
                 var entity = self.topology._autoUpdatedEntities[i]
                 //QDR.log.debug("queuing requests for all nodes for " + entity)
                 for (node in self.topology._nodeInfo) {
-                  //self.topology.expect(node, entity)
                   self.topology.q.defer(self.ensureNodeInfo, node, entity, [], self.topology.q)
                 }
               }
-              clearTimeout(self.topology._waitTimer)
-              self.topology._waitTimer = setTimeout(self.topology.timedOut, self.timeout * 1000, self.topology.q);
               self.topology.q.await(function (error) {
-//QDR.log.debug("Done awaiting for topology. error is " + error)
+                clearTimeout(self.topology._waitTimer)
                 self.topology._gettingTopo = false;
                 self.topology.q = null
                 self.topology.ondone(error)
@@ -565,52 +556,16 @@ QDR.log.debug("topology get called")
         timedOut: function(q) {
           // a node dropped out. this happens when the get-mgmt-nodex
           // results contains more nodes than actually respond within
-          // the timeout. However, if the responses we get don't contain
-          // the missing node, assume we are done.
+          // the timeout
           QDR.log.info("timed out waiting for management responses");
           // note: can't use 'this' in a timeout handler
           self.topology.miniDump("state at timeout");
-          // check if _nodeInfo is consistent
-          //if (self.topology.isConsistent()) {
-            q.abort()
-            //self.topology.ondone();
-          //  return;
-          //}
-          self.topology.onerror(Error("management responses are not consistent"));
-        },
-        isConsistent: function() {
-          // see if the responses we have so far reference any nodes
-          // for which we don't have a response
-          var gotKeys = {};
-          for (var id in self.topology._nodeInfo) {
-            var onode = self.topology._nodeInfo[id];
-            var conn = onode['.connection'];
-            // get list of node names in the connection data
-            if (conn) {
-              var containerIndex = conn.attributeNames.indexOf('container');
-              var connectionResults = conn.results;
-              if (containerIndex >= 0)
-                for (var j = 0; j < connectionResults.length; ++j) {
-                  // inter-router connection to a valid dispatch connection name
-                  gotKeys[connectionResults[j][containerIndex]] = ""; // just add the key
-                }
-            }
-          }
-          // gotKeys now contains all the container names that we have received
-          // Are any of the keys that are still expected in the gotKeys list?
-          var keys = Object.keys(gotKeys);
-          for (var id in self.topology._expected) {
-            var key = self.nameFromId(id);
-            if (key in keys)
-              return false;
-          }
-          return true;
+          q.abort()
+          //self.topology.onerror(Error("management responses are not consistent"));
         },
 
         addNodeInfo: function(id, entity, values, q) {
-          if (self.topology._waitTimer)
-            clearTimeout(self.topology._waitTimer)
-          self.topology._waitTimer = setTimeout(self.topology.timedOut, self.timeout * 1000, q);
+          clearTimeout(self.topology._waitTimer)
           // save the results in the nodeInfo object
           if (id) {
             if (!(id in self.topology._nodeInfo)) {
@@ -619,29 +574,7 @@ QDR.log.debug("topology get called")
             // copy the values to allow garbage collector to reclaim their memory
             self.topology._nodeInfo[id][entity] = angular.copy(values)
           }
-
-          // remove the id / entity from _expected
-          if (id in self.topology._expected) {
-            var entities = self.topology._expected[id];
-            var idx = entities.indexOf(entity);
-            if (idx > -1) {
-              entities.splice(idx, 1);
-              if (entities.length == 0)
-                delete self.topology._expected[id];
-            }
-          }
-          // see if the expected obj is empty
-          //if (Object.getOwnPropertyNames(self.topology._expected).length == 0)
-          //  self.topology.ondone();
           self.topology.cleanUp(values);
-        },
-        expect: function(id, key) {
-          if (!key || !id)
-            return;
-          if (!(id in self.topology._expected))
-            self.topology._expected[id] = [];
-          if (self.topology._expected[id].indexOf(key) == -1)
-            self.topology._expected[id].push(key);
         },
         ondone: function(waserror) {
           clearTimeout(self.topology._getTimer);
@@ -649,7 +582,7 @@ QDR.log.debug("topology get called")
           self.topology._waitTimer = null;
           if (self.updating)
             self.topology._getTimer = setTimeout(self.topology.get, self.updateInterval);
-          if (!waserror)
+          //if (!waserror)
             self.notifyTopologyDone();
         },
         dump: function(prefix) {
@@ -661,8 +594,6 @@ QDR.log.debug("topology get called")
             console.dump(self.topology._nodeInfo[key]);
             QDR.log.info("---");
           }
-          QDR.log.debug("was still expecting:");
-          console.dump(self.topology._expected);
         },
         miniDump: function(prefix) {
           if (prefix)
@@ -680,24 +611,7 @@ QDR.log.debug("topology get called")
       },
       getRemoteNodeInfo: function(callback) {
         //QDR.log.debug("getRemoteNodeInfo called");
-        if (self.useTestData) {
-          var returnFake = function () {
-            var allNodes = Object.keys(self.fakeNodeInfo)
-            callback(allNodes, null)
-          }
-          if (!self.fakeNodeInfo) {
-            d3.json("plugin/data/alldatafor80routers.txt", function (error, data) {
-              if (!error) {
-                self.fakeNodeInfo = data
-                //self.topology._nodeInfo = data;
-                returnFake()
-              }
-            })
-          } else {
-            returnFake()
-          }
-          return;
-        }
+
         setTimeout(function () {
           var ret;
           // first get the list of remote node names
@@ -714,7 +628,7 @@ QDR.log.debug("topology get called")
       // should only be called from a q.defer() statement
       ensureNodeInfo: function (nodeId, entity, attrs, q, callback) {
         //QDR.log.debug("queuing request for " + nodeId + " " + entity)
-        self.getNodeInfo(nodeId, entity, attrs, function (nodeName, dotentity, response) {
+        self.getNodeInfo(nodeId, entity, attrs, q, function (nodeName, dotentity, response) {
           //QDR.log.debug("got response for " + nodeId + " " + entity)
           self.topology.addNodeInfo(nodeName, dotentity, response, q)
           callback(null)
@@ -729,8 +643,8 @@ QDR.log.debug("topology get called")
 
       // sends request and returns the response
       // should only be called from a q.defer() statement
-      fetchNodeInfo: function (nodeId, entity, attrs, heartbeat, callback) {
-        self.getNodeInfo(nodeId, entity, attrs, function (nodeName, dotentity, response) {
+      fetchNodeInfo: function (nodeId, entity, attrs, q, heartbeat, callback) {
+        self.getNodeInfo(nodeId, entity, attrs, q, function (nodeName, dotentity, response) {
           heartbeat(nodeName, dotentity, response)
           callback(null)
         })
@@ -742,19 +656,20 @@ QDR.log.debug("topology get called")
         var responses = {};
         var gotNodesResult = function(nodeName, dotentity, response) {
           responses[nodeName] = response;
-          if (Object.keys(responses).length == nodeNames.length) {
-            if (aggregate)
-              self.aggregateNodeInfo(nodeNames, entity, selectedNodeId, responses, callback);
-            else {
-              callback(nodeNames, entity, responses)
-            }
-          }
         }
 
+        var q = QDR.queue(self.queueDepth())
         nodeNames.forEach(function(id) {
-            self.getNodeInfo(id, '.' + entity, attrs, gotNodesResult);
-          })
-          //TODO: implement a timeout in case not all requests complete
+            q.defer(self.fetchNodeInfo, id, '.' + entity, attrs, q, gotNodesResult)
+        })
+        q.await(function (error) {
+          clearTimeout(self.topology._waitTimer)
+          if (aggregate)
+            self.aggregateNodeInfo(nodeNames, entity, selectedNodeId, responses, callback);
+          else {
+            callback(nodeNames, entity, responses)
+          }
+        })
       },
 
       aggregateNodeInfo: function(nodeNames, entity, selectedNodeId, responses, callback) {
@@ -851,15 +766,10 @@ QDR.log.debug("topology get called")
         callback()
       },
 
-      getNodeInfo: function(nodeName, entity, attrs, callback) {
+      getNodeInfo: function(nodeName, entity, attrs, q, callback) {
         //QDR.log.debug("getNodeInfo called with nodeName: " + nodeName + " and entity " + entity);
-        if (self.useTestData) {
-          setTimeout(function () {
-            var response = self.fakeNodeInfo[nodeName][entity]
-            callback(nodeName, entity, response)
-          }, 100)
-          return;
-        }
+        clearTimeout(self.topology._waitTimer)
+        self.topology._waitTimer = setTimeout(self.topology.timedOut, self.timeout * 1000, q);
         setTimeout(function () {
           var ret;
           self.correlator.request(
