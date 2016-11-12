@@ -690,6 +690,15 @@ var QDR = (function(QDR) {
 
 		};
 
+    var setCurrentNode = function () {
+      $scope.nodes.some( function (node, i) {
+        if (node.name === $scope.selectedNode) {
+          $scope.currentNode = $scope.nodes[i]
+          return true;
+        }
+      })
+    }
+
     var treeReady = false;
     var serviceReady = false;
     // called after we know for sure the schema is fetched and the routers are all ready
@@ -710,14 +719,6 @@ var QDR = (function(QDR) {
           $scope.selectedNodeId = $scope.nodes[0].id;
           //QDR.log.debug("forcing selectedNode to " + $scope.selectedNode);
         }
-      }
-      var setCurrentNode = function () {
-        $scope.nodes.some( function (node, i) {
-          if (node.name === $scope.selectedNode) {
-            $scope.currentNode = $scope.nodes[i]
-            return true;
-          }
-        })
       }
       setCurrentNode();
       if ($scope.currentNode == undefined) {
