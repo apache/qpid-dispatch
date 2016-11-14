@@ -768,16 +768,19 @@ QDR.log.debug("topology get called")
 
       getNodeInfo: function(nodeName, entity, attrs, q, callback) {
         //QDR.log.debug("getNodeInfo called with nodeName: " + nodeName + " and entity " + entity);
+        if (!callback) {
+          callback = q
+          q = undefined
+        }
         clearTimeout(self.topology._waitTimer)
-        self.topology._waitTimer = setTimeout(self.topology.timedOut, self.timeout * 1000, q);
-        setTimeout(function () {
-          var ret;
-          self.correlator.request(
-            ret = self.sendQuery(nodeName, entity, attrs)
-          ).then(ret.id, function(response) {
-            callback(nodeName, entity, response);
-          }, ret.error);
-        }, 1)
+        if (q)
+          self.topology._waitTimer = setTimeout(self.topology.timedOut, self.timeout * 1000, q);
+        var ret;
+        self.correlator.request(
+          ret = self.sendQuery(nodeName, entity, attrs)
+        ).then(ret.id, function(response) {
+          callback(nodeName, entity, response);
+        }, ret.error);
       },
 
       sendMethod: function(nodeId, entity, attrs, operation, props, callback) {
