@@ -348,6 +348,41 @@ class LinkRouteTest(TestCase):
 
         blocking_connection.close()
 
+    def test_custom_annotations_match(self):
+        """
+        The linkRoute on Routers C and B is set to org.apache.
+        Creates a receiver listening on the address 'org.apache' and a sender that sends to address 'org.apache'.
+        Sends a message with custom annotations to org.apache via router QDR.C and makes sure that the message was successfully
+        routed (using full address matching) and received using pre-created links that were created as a
+        result of specifying addresses in the linkRoute attribute('org.apache.'). Make sure custom annotations arrived as well.
+        """
+        hello_world_3 = "Hello World_3!"
+        # Connects to listener #2 on QDR.C
+        addr = self.routers[2].addresses[0]
+
+        blocking_connection = BlockingConnection(addr)
+
+        # Receive on org.apache
+        blocking_receiver = blocking_connection.create_receiver(address="org.apache")
+
+        apply_options = AtMostOnce()
+
+        # Sender to  to org.apache
+        blocking_sender = blocking_connection.create_sender(address="org.apache", options=apply_options)
+        msg = Message(body=hello_world_3)
+        annotations = {'custom-annotation': '1/Custom_Annotation'}
+        msg.annotations = annotations
+
+        # Send a message
+        blocking_sender.send(msg)
+
+        received_message = blocking_receiver.receive()
+
+        self.assertEqual(hello_world_3, received_message.body)
+        self.assertEqual(received_message.annotations, annotations)
+
+        blocking_connection.close()
+
     def test_full_link_route_match_1(self):
         """
         This test is pretty much the same as the previous test (test_full_link_route_match) but the connection is
@@ -515,7 +550,6 @@ class Timeout(object):
 
     def on_timer_task(self, event):
         self.parent.timeout()
-
 
 class DeliveryTagsTest(MessagingHandler):
     def __init__(self, sender_address, listening_address, qdstat_address):

@@ -619,6 +619,8 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
 
     copy->content = content;
 
+    qd_message_message_annotations((qd_message_t *)copy);
+
     sys_atomic_inc(&content->ref_count);
 
     return (qd_message_t*) copy;
