@@ -1,0 +1,398 @@
+{
+  "nodes": [
+    {
+      "index": 0, 
+      "nodeType": "inter-router", 
+      "name": "R.0", 
+      "weight": 4, 
+      "px": 164.29187931882578, 
+      "py": 175.80207806090868, 
+      "resultIndex": null, 
+      "id": 0, 
+      "routerId": "R.0", 
+      "host": "0.0.0.0:20001", 
+      "highlighted": false, 
+      "key": "amqp:/_topo/0/R.0/$management", 
+      "y": 175.8087056018603, 
+      "x": 164.29388840186058, 
+      "fixed": 0, 
+      "properties": {}, 
+      "cls": ""
+    }, 
+    {
+      "weight": 1, 
+      "isEncrypted": false, 
+      "resultIndex": 0, 
+      "id": 1, 
+      "index": 1, 
+      "px": 100.46794372031725, 
+      "py": 223.7253838476624, 
+      "highlighted": false, 
+      "routerId": "R.0", 
+      "cls": "", 
+      "nodeType": "normal", 
+      "connectionId": 1, 
+      "host": "0.0.0.0:20002", 
+      "user": "anonymous", 
+      "key": "amqp:/_topo/0/R.0/$management", 
+      "cdir": "both", 
+      "properties": {
+        "console_identifier": "Dispatch console"
+      }, 
+      "name": "R.0.1", 
+      "normals": [
+        {
+          "name": "R.0.1", 
+          "addr": "addr1"
+        }, 
+        {
+          "name": "R.0.8", 
+          "addr": "addr1"
+        }
+      ], 
+      "y": 223.74204007613326, 
+      "x": 100.45333632665597, 
+      "fixed": 0
+    }, 
+    {
+      "weight": 1, 
+      "isEncrypted": false, 
+      "resultIndex": 0, 
+      "id": 2, 
+      "index": 2, 
+      "px": 243.83192673800565, 
+      "py": 171.34084903772512, 
+      "highlighted": false, 
+      "routerId": "R.0", 
+      "cls": "", 
+      "nodeType": "normal", 
+      "connectionId": 3, 
+      "host": "0.0.0.0:20004", 
+      "user": "anonymous", 
+      "key": "amqp:/_topo/0/R.0/$management", 
+      "cdir": "out", 
+      "properties": {}, 
+      "name": "R.0.4", 
+      "normals": [
+        {
+          "name": "R.0.4", 
+          "addr": "addr1"
+        }, 
+        {
+          "name": "R.0.5", 
+          "addr": "addr1"
+        }, 
+        {
+          "name": "R.0.6", 
+          "addr": "addr1"
+        }
+      ], 
+      "y": 171.34342749529537, 
+      "x": 243.85250914335518, 
+      "fixed": false
+    }, 
+    {
+      "weight": 1, 
+      "isEncrypted": false, 
+      "resultIndex": 0, 
+      "id": 3, 
+      "index": 3, 
+      "px": 102.4586287826755, 
+      "py": 125.00260883166828, 
+      "highlighted": false, 
+      "routerId": "R.0", 
+      "cls": "", 
+      "nodeType": "normal", 
+      "connectionId": 3, 
+      "host": "0.0.0.0:20005", 
+      "user": "anonymous", 
+      "key": "amqp:/_topo/0/R.0/$management", 
+      "cdir": "in", 
+      "properties": {}, 
+      "name": "R.0.3", 
+      "normals": [
+        {
+          "name": "R.0.3", 
+          "addr": "addr1"
+        }, 
+        {
+          "name": "R.0.4", 
+          "addr": "addr1"
+        }
+      ], 
+      "y": 124.99076765235854, 
+      "x": 102.4404612736399, 
+      "fixed": false
+    }, 
+    {
+      "weight": 1, 
+      "isEncrypted": false, 
+      "resultIndex": 0, 
+      "id": 4, 
+      "index": 4, 
+      "px": 183.762386523301, 
+      "py": 98.37984932621536, 
+      "highlighted": false, 
+      "routerId": "R.0", 
+      "cls": "", 
+      "nodeType": "normal", 
+      "connectionId": 4, 
+      "host": "0.0.0.0:20006", 
+      "user": "anonymous", 
+      "key": "amqp:/_topo/0/R.0/$management", 
+      "cdir": "both", 
+      "properties": {}, 
+      "name": "R.0.7", 
+      "normals": [
+        {
+          "name": "R.0.7", 
+          "addr": "addr1"
+        }
+      ], 
+      "y": 98.36087509657327, 
+      "x": 183.77066774374404, 
+      "fixed": false
+    }
+  ], 
+  "links": [
+    {
+      "right": true, 
+      "uid": "0.1", 
+      "highlighted": false, 
+      "source": {
+        "index": 0, 
+        "nodeType": "inter-router", 
+        "name": "R.0", 
+        "weight": 4, 
+        "px": 164.29187931882578, 
+        "py": 175.80207806090868, 
+        "resultIndex": null, 
+        "id": 0, 
+        "routerId": "R.0", 
+        "host": "0.0.0.0:20001", 
+        "highlighted": false, 
+        "key": "amqp:/_topo/0/R.0/$management", 
+        "y": 175.8087056018603, 
+        "x": 164.29388840186058, 
+        "fixed": 0, 
+        "properties": {}, 
+        "cls": ""
+      }, 
+      "left": true, 
+      "cls": "small", 
+      "target": {
+        "weight": 1, 
+        "isEncrypted": false, 
+        "resultIndex": 0, 
+        "id": 1, 
+        "index": 1, 
+        "px": 100.46794372031725, 
+        "py": 223.7253838476624, 
+        "highlighted": false, 
+        "routerId": "R.0", 
+        "cls": "", 
+        "nodeType": "normal", 
+        "connectionId": 1, 
+        "host": "0.0.0.0:20002", 
+        "user": "anonymous", 
+        "key": "amqp:/_topo/0/R.0/$management", 
+        "cdir": "both", 
+        "properties": {
+          "console_identifier": "Dispatch console"
+        }, 
+        "name": "R.0.1", 
+        "normals": [
+          {
+            "name": "R.0.1", 
+            "addr": "addr1"
+          }, 
+          {
+            "name": "R.0.8", 
+            "addr": "addr1"
+          }
+        ], 
+        "y": 223.74204007613326, 
+        "x": 100.45333632665597, 
+        "fixed": 0
+      }
+    }, 
+    {
+      "right": true, 
+      "uid": "0.2", 
+      "highlighted": false, 
+      "source": {
+        "index": 0, 
+        "nodeType": "inter-router", 
+        "name": "R.0", 
+        "weight": 4, 
+        "px": 164.29187931882578, 
+        "py": 175.80207806090868, 
+        "resultIndex": null, 
+        "id": 0, 
+        "routerId": "R.0", 
+        "host": "0.0.0.0:20001", 
+        "highlighted": false, 
+        "key": "amqp:/_topo/0/R.0/$management", 
+        "y": 175.8087056018603, 
+        "x": 164.29388840186058, 
+        "fixed": 0, 
+        "properties": {}, 
+        "cls": ""
+      }, 
+      "left": false, 
+      "cls": "small", 
+      "target": {
+        "weight": 1, 
+        "isEncrypted": false, 
+        "resultIndex": 0, 
+        "id": 2, 
+        "index": 2, 
+        "px": 243.83192673800565, 
+        "py": 171.34084903772512, 
+        "highlighted": false, 
+        "routerId": "R.0", 
+        "cls": "", 
+        "nodeType": "normal", 
+        "connectionId": 3, 
+        "host": "0.0.0.0:20004", 
+        "user": "anonymous", 
+        "key": "amqp:/_topo/0/R.0/$management", 
+        "cdir": "out", 
+        "properties": {}, 
+        "name": "R.0.4", 
+        "normals": [
+          {
+            "name": "R.0.4", 
+            "addr": "addr1"
+          }, 
+          {
+            "name": "R.0.5", 
+            "addr": "addr1"
+          }, 
+          {
+            "name": "R.0.6", 
+            "addr": "addr1"
+          }
+        ], 
+        "y": 171.34342749529537, 
+        "x": 243.85250914335518, 
+        "fixed": false
+      }
+    }, 
+    {
+      "right": false, 
+      "uid": "connection/0.0.0.0:20005:3", 
+      "highlighted": false, 
+      "source": {
+        "index": 0, 
+        "nodeType": "inter-router", 
+        "name": "R.0", 
+        "weight": 4, 
+        "px": 164.29187931882578, 
+        "py": 175.80207806090868, 
+        "resultIndex": null, 
+        "id": 0, 
+        "routerId": "R.0", 
+        "host": "0.0.0.0:20001", 
+        "highlighted": false, 
+        "key": "amqp:/_topo/0/R.0/$management", 
+        "y": 175.8087056018603, 
+        "x": 164.29388840186058, 
+        "fixed": 0, 
+        "properties": {}, 
+        "cls": ""
+      }, 
+      "left": true, 
+      "cls": "small", 
+      "target": {
+        "weight": 1, 
+        "isEncrypted": false, 
+        "resultIndex": 0, 
+        "id": 3, 
+        "index": 3, 
+        "px": 102.4586287826755, 
+        "py": 125.00260883166828, 
+        "highlighted": false, 
+        "routerId": "R.0", 
+        "cls": "", 
+        "nodeType": "normal", 
+        "connectionId": 3, 
+        "host": "0.0.0.0:20005", 
+        "user": "anonymous", 
+        "key": "amqp:/_topo/0/R.0/$management", 
+        "cdir": "in", 
+        "properties": {}, 
+        "name": "R.0.3", 
+        "normals": [
+          {
+            "name": "R.0.3", 
+            "addr": "addr1"
+          }, 
+          {
+            "name": "R.0.4", 
+            "addr": "addr1"
+          }
+        ], 
+        "y": 124.99076765235854, 
+        "x": 102.4404612736399, 
+        "fixed": false
+      }
+    }, 
+    {
+      "right": true, 
+      "uid": "connection/0.0.0.0:20006:4", 
+      "highlighted": false, 
+      "source": {
+        "index": 0, 
+        "nodeType": "inter-router", 
+        "name": "R.0", 
+        "weight": 4, 
+        "px": 164.29187931882578, 
+        "py": 175.80207806090868, 
+        "resultIndex": null, 
+        "id": 0, 
+        "routerId": "R.0", 
+        "host": "0.0.0.0:20001", 
+        "highlighted": false, 
+        "key": "amqp:/_topo/0/R.0/$management", 
+        "y": 175.8087056018603, 
+        "x": 164.29388840186058, 
+        "fixed": 0, 
+        "properties": {}, 
+        "cls": ""
+      }, 
+      "left": true, 
+      "cls": "small", 
+      "target": {
+        "weight": 1, 
+        "isEncrypted": false, 
+        "resultIndex": 0, 
+        "id": 4, 
+        "index": 4, 
+        "px": 183.762386523301, 
+        "py": 98.37984932621536, 
+        "highlighted": false, 
+        "routerId": "R.0", 
+        "cls": "", 
+        "nodeType": "normal", 
+        "connectionId": 4, 
+        "host": "0.0.0.0:20006", 
+        "user": "anonymous", 
+        "key": "amqp:/_topo/0/R.0/$management", 
+        "cdir": "both", 
+        "properties": {}, 
+        "name": "R.0.7", 
+        "normals": [
+          {
+            "name": "R.0.7", 
+            "addr": "addr1"
+          }
+        ], 
+        "y": 98.36087509657327, 
+        "x": 183.77066774374404, 
+        "fixed": false
+      }
+    }
+  ], 
+  "topology": "config-1"
+}

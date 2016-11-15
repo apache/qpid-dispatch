@@ -1,0 +1,143 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<div class="qdrTopology row-fluid" ng-controller="QDR.TopologyController">
+    <div class="qdr-topology pane left" ng-controller="QDR.TopologyFormController">
+        <div id="topologyForm" ng-class="{selected : isSelected()}">
+            <!-- <div ng-repeat="form in forms" ng-show="isVisible(form)" ng-class='{selected : isSelected(form)}'> -->
+            <div ng-show="form == 'router'">
+                <h4>Router Info</h4>
+                <div class="gridStyle" ng-grid="topoGridOptions"></div>
+            </div>
+            <div ng-show="form == 'connection'">
+                <h4>Connection Info</h4>
+                <div class="gridStyle" ng-grid="topoGridOptions"></div>
+            </div>
+            <div id="addNodeForm" ng-show="form == 'add'">
+                <h4>Add a new router</h4>
+                <ul>
+                    <li>Click on an existing router to create a connection to the new router</li>
+                    <li>Double-click on the new router to <button ng-click="editNewRouter()">edit</button> its properties</li>
+                    <li ng-show="addingNode.hasLink" >Right-click on a new connection to edit its properties</li>
+                </ul>
+                <button ng-click="cancel()">Cancel</button>
+            </div>
+        </div>
+        <button ng-if="panelVisible" ng-click="hideLeftPane()" class="hideLeft" title="Hide"><i class="icon-step-backward"></i></button>
+        <button ng-if="!panelVisible" ng-click="showLeftPane()" class="hideLeft" title="Show"><i class="icon-step-forward"></i></button>
+    </div>
+    <div class="panel-adjacent">
+        <div id="buttonBar">
+            <button class="btn btn-primary" type="button" ng-click="Publish()">Publish</button>
+            <button class="btn btn-primary" type="button" ng-click="Duplicate()">Duplicate</button>
+            <button class="btn btn-primary" type="button" ng-click="Clear()">Clear</button>
+            <select ng-model="mockTopologyDir" ng-options="item for item in mockTopologies"></select>
+            <button class="btn btn-primary" type="button" ng-click="settings()">Settings</button>
+        </div>
+            <!--
+        <ul class="nav nav-tabs ng-scope qdrTopoModes">
+            <li ng-repeat="mode in modes" ng-class="{active : isModeActive(mode.name), 'pull-right' : isRight(mode)}" ng-click="selectMode('{{mode.name}}')" >
+                <a data-placement="bottom" class="ng-binding"> {{mode.name}} </a></li>
+        </ul>
+-->
+        <div id="topology" ng-show="mode == 'Diagram'"><!-- d3 toplogy here --></div>
+        <div id="geology" ng-show="mode == 'Globe'"><!-- d3 globe here --></div>
+        <div id="crosssection"><!-- d3 pack here --></div>
+        <!-- <div id="addRouter" ng-show="mode == 'Add Node'"></div> -->
+        <div id="node_context_menu" class="contextMenu">
+            <ul>
+                <li class="na" ng-class="{'force-display': !isFixed()}" ng-click="setFixed(true)">Freeze in place</li>
+                <li class="na" ng-class="{'force-display': isFixed()}" ng-click="setFixed(false)">Unfreeze</li>
+                <li ng-class="{'na': contextNode.nodeType !== 'inter-router'}" class="context-separator"></li>
+                <li ng-class="{'na': contextNode.nodeType !== 'inter-router'}" ng-click="addToNode('sender')">Add a sender</li>
+                <li ng-class="{'na': contextNode.nodeType !== 'inter-router'}" ng-click="addToNode('receiver')">Add a receiver</li>
+                <li ng-class="{'na': contextNode.nodeType !== 'inter-router'}" ng-click="addToNode('both')">Add a sender/receiver</li>
+                <li ng-class="{'na': contextNode.nodeType !== 'inter-router'}" ng-click="addToNode('console')">Add a console</li>
+                <li ng-class="{'na': contextNode.nodeType !== 'inter-router'}" class="context-separator"></li>
+                <li ng-class="{'na': contextNode.nodeType !== 'inter-router'}" ng-click="addToNode('Artemis')">Add an Artemis broker</li>
+                <li ng-class="{'na': contextNode.nodeType !== 'inter-router'}" ng-click="addToNode('Qpid')">Add a Qpid broker</li>
+                <li ng-class="{'na': contextNode.nodeType !== 'inter-router'}" class="context-separator"></li>
+                <li ng-click="delNode()">Delete this node</li>
+            </ul>
+        </div>
+        <div id="svg_context_menu" class="contextMenu">
+            <ul>
+                <li ng-click="addAnotherNode()">Add a new router</li>
+            </ul>
+        </div>
+        <div id="link_context_menu" class="contextMenu">
+            <ul>
+                <li ng-click="reverseLink()">Reverse connection direction</li>
+                <li ng-click="removeLink()">Remove connection</li>
+            </ul>
+        </div>
+        <div id="svg_legend"></div>
+    </div>
+</div>
+
+
+<script type="text/ng-template" id="titleHeaderCellTemplate.html">
+    <div title="{{col.displayName}}" class="ngHeaderSortColumn {{col.headerClass}}" ng-style="{'cursor': col.cursor}" ng-class="{ 'ngSorted': !noSortVisible }">
+        <div ng-click="col.sort($event)" ng-class="'colt' + col.index" class="ngHeaderText">{{col.displayName}}</div>
+        <div class="ngSortButtonDown" ng-show="col.showSortButtonDown()"></div>
+        <div class="ngSortButtonUp" ng-show="col.showSortButtonUp()"></div>
+        <div class="ngSortPriority">{{col.sortPriority}}</div>
+    </div>
+</script>
+<script type="text/ng-template" id="titleCellTemplate.html">
+    <div title="{{row.entity[col.field]}}" class="ngCellText">{{row.entity[col.field]}}</div>
+</script>
+
+<!--
+    This is the template for the node edit dialog that is displayed.
+-->
+<script type="text/ng-template" id="node-config-template.html">
+    <div class="modal-header">
+        <h3 class="modal-title">Configure new routers/clients</h3>
+    </div>
+    <div class="modal-body">
+        <form novalidate name="editForm">
+
+            <div class="entity-description">{{entity.description}}</div>
+            <fieldset>
+                <div ng-repeat="attribute in entity.attributes">
+                    <label for="{{attribute.name}}">{{attribute.humanName}}</label>
+<!-- we can't do <input type="{angular expression}"> because... jquery throws an exception because... -->
+                    <div ng-if="attribute.input == 'input'">
+                        <!-- ng-pattern="testPattern(attribute)" -->
+                        <input ng-if="attribute.type == 'number'" type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
+                        <input ng-if="attribute.type == 'text'" type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
+                    </div>
+                    <div ng-if="attribute.input == 'select'">
+                        <select id="{{attribute.name}}" ng-model="attribute.selected" ng-options="item for item in attribute.rawtype"></select>
+                    </div>
+                    <div ng-if="attribute.input == 'boolean'" class="boolean">
+                        <label><input type="radio" ng-model="attribute.value" value="true"> True</label>
+                        <label><input type="radio" ng-model="attribute.value" value="false"> False</label>
+                    </div>
+                </div>
+            </fieldset>
+
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="button" ng-click="setSettings()">OK</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+</script>
+

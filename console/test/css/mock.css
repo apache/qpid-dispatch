@@ -1,0 +1,13 @@
+#buttonBar {
+  margin-left: 2em;
+}
+
+#buttonBar select {
+  position: relative;
+  top: 6px;
+}
+
+path.more {
+  stroke-width: 1;
+  stroke: black;
+}
