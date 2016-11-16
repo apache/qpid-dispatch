@@ -719,7 +719,7 @@ var QDR = (function (QDR) {
         }
       }
       nodeIds.forEach( function (nodeId) {
-        QDRService.getNodeInfo(nodeId, "router.link", [], gotLinkInfo);
+        QDRService.fetchEntity(nodeId, "router.link", [], gotLinkInfo);
       })
     }
 
@@ -839,7 +839,7 @@ var QDR = (function (QDR) {
         }
       }
       nodeIds.forEach( function (nodeId) {
-        QDRService.getNodeInfo(nodeId, ".connection", [], gotConnectionInfo)
+        QDRService.fetchEntity(nodeId, ".connection", [], gotConnectionInfo)
       })
     }
 
@@ -1178,7 +1178,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
         })
       }
       if ($scope.allLogFields.length == 0) {
-        QDRService.getNodeInfo(nodeIds[0], "log", ["module"], function (nodeName, entity, response) {
+        QDRService.fetchEntity(nodeIds[0], "log", ["module"], function (nodeName, entity, response) {
           var moduleIndex = response.attributeNames.indexOf("module")
           response.results.sort( function (a,b) {return a[moduleIndex] < b[moduleIndex] ? -1 : a[moduleIndex] > b[moduleIndex] ? 1 : 0})
           response.results.forEach( function (result) {

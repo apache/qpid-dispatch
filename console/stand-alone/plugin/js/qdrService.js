@@ -412,6 +412,19 @@ console.dump(e)
         })
       },
 
+      // queue up a request to get certain attributes for one entity for a node and return the results
+      fetchEntity: function (node, entity, attrs, callback) {
+        var results = {}
+        var gotResponse = function (nodeName, dotentity, response) {
+          results = response
+        }
+        var q = QDR.queue(self.queueDepth())
+        q.defer(self.fetchNodeInfo, node, entity, attrs, q, gotResponse)
+        q.await(function (error) {
+          callback(node, entity, results)
+        })
+      },
+
       // get/refreshes entities for all topology.nodes
       // call doneCallback when all data is available
       // optionally supply a resultCallBack that will be called as each result is avaialble
@@ -420,8 +433,6 @@ console.dump(e)
       // There is a 10 second limit between each response
       fetchAllEntities: function (entityAttribs, doneCallback, resultCallback) {
 //QDR.log.debug("fetchAllEntities")
-        var timeoutLimit = 10
-        var timeoutHandle = null;
         var q = QDR.queue(self.queueDepth())
         var results = {}
         if (!resultCallback) {
@@ -432,18 +443,11 @@ console.dump(e)
           }
         }
         var gotAResponse = function (nodeName, dotentity, response) {
-          clearTimeout(timeoutHandle)
-          timeoutHandle = setTimeout(timedOut, timeoutLimit * 1000)
           resultCallback(nodeName, dotentity, response)
-        }
-        var timedOut = function () {
-QDR.log.debug("fetchAllEntities timed out")
-          q.abort()
         }
         if (Object.prototype.toString.call(entityAttribs) !== '[object Array]') {
           entityAttribs = [entityAttribs]
         }
-        timeoutHandle = setTimeout(timedOut, timeoutLimit * 1000)
         var nodes = Object.keys(self.topology._nodeInfo)
         for (var n=0; n<nodes.length; ++n) {
           for (var i=0; i<entityAttribs.length; ++i) {
@@ -452,7 +456,6 @@ QDR.log.debug("fetchAllEntities timed out")
           }
         }
         q.await(function (error) {
-          clearTimeout(timeoutHandle)
           doneCallback(results);
         })
       },
@@ -489,7 +492,6 @@ QDR.log.debug("fetchAllEntities timed out")
         },
 
         get: function() {
-QDR.log.debug("topology get called")
           if (self.topology._gettingTopo) {
             QDR.log.debug("asked to get topology but was already getting it")
             if (self.topology.q)
@@ -514,7 +516,6 @@ QDR.log.debug("topology get called")
           // get the list of nodes to query.
           // once this completes, we will get the info for each node returned
           self.getRemoteNodeInfo(function(response, context) {
-            //QDR.log.debug("got remote node list of ");
             if (Object.prototype.toString.call(response) === '[object Array]') {
               // remove dropped nodes
               var keys = Object.keys(self.topology._nodeInfo)
@@ -529,7 +530,6 @@ QDR.log.debug("topology get called")
                   self.topology._nodeInfo[angular.copy(response[i])] = {};
                 }
               }
-
               // also refresh any entities that were requested
               self.topology.q = QDR.queue(self.queueDepth())
               for (var i=0; i<self.topology._autoUpdatedEntities.length; ++i) {
@@ -540,7 +540,6 @@ QDR.log.debug("topology get called")
                 }
               }
               self.topology.q.await(function (error) {
-                clearTimeout(self.topology._waitTimer)
                 self.topology._gettingTopo = false;
                 self.topology.q = null
                 self.topology.ondone(error)
@@ -557,7 +556,7 @@ QDR.log.debug("topology get called")
           // a node dropped out. this happens when the get-mgmt-nodex
           // results contains more nodes than actually respond within
           // the timeout
-          QDR.log.info("timed out waiting for management responses");
+          QDR.log.debug("timed out waiting for management responses");
           // note: can't use 'this' in a timeout handler
           self.topology.miniDump("state at timeout");
           q.abort()
@@ -663,7 +662,6 @@ QDR.log.debug("topology get called")
             q.defer(self.fetchNodeInfo, id, '.' + entity, attrs, q, gotNodesResult)
         })
         q.await(function (error) {
-          clearTimeout(self.topology._waitTimer)
           if (aggregate)
             self.aggregateNodeInfo(nodeNames, entity, selectedNodeId, responses, callback);
           else {
@@ -768,17 +766,15 @@ QDR.log.debug("topology get called")
 
       getNodeInfo: function(nodeName, entity, attrs, q, callback) {
         //QDR.log.debug("getNodeInfo called with nodeName: " + nodeName + " and entity " + entity);
-        if (!callback) {
-          callback = q
-          q = undefined
+        var timedOut = function (q) {
+          q.abort()
         }
-        clearTimeout(self.topology._waitTimer)
-        if (q)
-          self.topology._waitTimer = setTimeout(self.topology.timedOut, self.timeout * 1000, q);
+        var atimer = setTimeout(timedOut, self.timeout * 1000, q);
         var ret;
         self.correlator.request(
           ret = self.sendQuery(nodeName, entity, attrs)
         ).then(ret.id, function(response) {
+          clearTimeout(atimer)
           callback(nodeName, entity, response);
         }, ret.error);
       },
