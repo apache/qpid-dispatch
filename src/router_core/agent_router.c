@@ -172,10 +172,6 @@ void qdra_router_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     //
     query->status = QD_AMQP_OK;
 
-    //
-    // If the offset goes beyond the set of links, end the query now.
-    //
-    //
     if (offset >= 1) {
         query->more = false;
         qdr_agent_enqueue_response_CT(core, query);
@@ -183,15 +179,9 @@ void qdra_router_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     }
 
     //
-    // Write the columns of the link into the response body.
+    // Write the columns of core into the response body.
     //
     qdr_agent_write_router_CT(query, core);
-
-    //
-    // Advance to the next address
-    //
-    //query->next_offset = offset;
-    //qdr_manage_advance_link_CT(query, link);
 
     //
     // Enqueue the response.
