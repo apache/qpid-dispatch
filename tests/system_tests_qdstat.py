@@ -50,7 +50,13 @@ class QdstatTest(system_test.TestCase):
         self.run_qdstat(['--help'], r'Usage: qdstat')
 
     def test_general(self):
-        self.run_qdstat(['--general'], r'(?s)Router Statistics.*Mode\s*Standalone')
+        out = self.run_qdstat(['--general'], r'(?s)Router Statistics.*Mode\s*Standalone')
+        self.assertTrue("Connections  1" in out)
+        self.assertTrue("Nodes        0" in out)
+        self.assertTrue("Auto Links   0" in out)
+        self.assertTrue("Link Routes  0" in out)
+        self.assertTrue("Router Id    QDR.A" in out)
+        self.assertTrue("Mode         standalone" in out)
 
     def test_connections(self):
         self.run_qdstat(['--connections'], r'host.*container.*role')

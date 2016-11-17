@@ -212,7 +212,13 @@ class BusManager(Node):
         router = objects[0]
         rows.append(('Mode',          router.mode))
         rows.append(('Area',          router.area))
-        rows.append(('Router Id',     self._identity_clean(router.identity, router.routerId)))
+        rows.append(('Router Id',     router.routerId))
+        rows.append(('Link Routes',   router.linkRouteCount))
+        rows.append(('Auto Links',    router.autoLinkCount))
+        rows.append(('Links',         router.linkCount))
+        rows.append(('Nodes',         router.nodeCount))
+        rows.append(('Addresses',     router.addrCount))
+        rows.append(('Connections',   router.connectionCount))
 
         title = "Router Statistics"
         dispRows = rows

@@ -46,6 +46,7 @@ const unsigned char *auto_link_entity_type      = (unsigned char*) "org.apache.q
 const unsigned char *address_entity_type        = (unsigned char*) "org.apache.qpid.dispatch.router.address";
 const unsigned char *link_entity_type           = (unsigned char*) "org.apache.qpid.dispatch.router.link";
 const unsigned char *console_entity_type        = (unsigned char*) "org.apache.qpid.dispatch.console";
+const unsigned char *router_entity_type         = (unsigned char*) "org.apache.qpid.dispatch.router";
 
 const char * const status_description = "statusDescription";
 const char * const correlation_id = "correlation-id";
@@ -404,6 +405,8 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
         *entity_type = QD_ROUTER_CONFIG_LINK_ROUTE;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), auto_link_entity_type))
         *entity_type = QD_ROUTER_CONFIG_AUTO_LINK;
+    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), router_entity_type))
+        *entity_type = QD_ROUTER_ROUTER;
     else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), console_entity_type))
         *entity_type = QD_ROUTER_FORBIDDEN;
     else
