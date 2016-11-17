@@ -527,39 +527,9 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         }
         break;
 
-    case PN_EVENT_NONE :
-    case PN_REACTOR_INIT :
-    case PN_REACTOR_QUIESCED :
-    case PN_REACTOR_FINAL :
-    case PN_TIMER_TASK :
-    case PN_CONNECTION_INIT :
-    case PN_CONNECTION_BOUND :
-    case PN_CONNECTION_UNBOUND :
-    case PN_CONNECTION_LOCAL_OPEN :
-    case PN_CONNECTION_LOCAL_CLOSE :
-    case PN_CONNECTION_FINAL :
-    case PN_SESSION_INIT :
-    case PN_SESSION_LOCAL_OPEN :
-    case PN_SESSION_FINAL :
-    case PN_LINK_INIT :
-    case PN_LINK_LOCAL_OPEN :
-    case PN_LINK_FINAL :
-    case PN_TRANSPORT :
-    case PN_TRANSPORT_ERROR :
-    case PN_TRANSPORT_HEAD_CLOSED :
-    case PN_TRANSPORT_TAIL_CLOSED :
-    case PN_TRANSPORT_CLOSED :
-    case PN_TRANSPORT_AUTHENTICATED :
-    case PN_SELECTABLE_INIT :
-    case PN_SELECTABLE_UPDATED :
-    case PN_SELECTABLE_READABLE :
-    case PN_SELECTABLE_WRITABLE :
-    case PN_SELECTABLE_ERROR :
-    case PN_SELECTABLE_EXPIRED :
-    case PN_SELECTABLE_FINAL :
-        break;
+     default:
+      break;
     }
-
     return 1;
 }
 
