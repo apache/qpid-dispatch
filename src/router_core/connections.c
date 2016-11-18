@@ -452,6 +452,15 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     }
 
     //
+    // If this link is involved in inter-router communication, remove its reference
+    // from the core mask-bit tables
+    //
+    if (link->link_type == QD_LINK_CONTROL)
+        core->control_links_by_mask_bit[conn->mask_bit] = 0;
+    if (link->link_type == QD_LINK_ROUTER)
+        core->data_links_by_mask_bit[conn->mask_bit] = 0;
+
+    //
     // Clean up the lists of deliveries on this link
     //
     qdr_delivery_ref_list_t updated_deliveries;
@@ -884,6 +893,8 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             //
             // No action needed for NORMAL connections
             //
+            qdr_field_free(action->args.connection.connection_label);
+            qdr_field_free(action->args.connection.container_id);
             return;
         }
 
@@ -897,6 +908,8 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             else {
                 qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
                 conn->role = QDR_ROLE_NORMAL;
+                qdr_field_free(action->args.connection.connection_label);
+                qdr_field_free(action->args.connection.container_id);
                 return;
             }
 

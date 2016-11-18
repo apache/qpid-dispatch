@@ -31,8 +31,12 @@ svg:not(.active):not(.ctrl) {
   cursor: crosshair;
 }
 #end-arrow-selected, #start-arrow-selected {
-	stroke: #00F;
-	fill: #00F;
+	stroke: #33F;
+	fill: #33F;
+}
+path.link.selected {
+  stroke-dasharray: 10,2;
+  stroke: #33F  !important;
 }
 
 path.link {
@@ -44,11 +48,6 @@ path.link {
 
 svg:not(.active):not(.ctrl) path.link {
   cursor: pointer;
-}
-
-path.link.selected {
-  stroke-dasharray: 10,2;
-  stroke: #00F  !important;
 }
 
 path.link.temp {
@@ -63,11 +62,11 @@ path.link.small {
   stroke: darkgray;
 }
 path.link.highlighted {
-    stroke: #F00 !important;
+    stroke: #6F6 !important;
 }
 marker#start-arrow-highlighted,
 marker#end-arrow-highlighted {
-    fill: #F00;
+    fill: #6F6;
 }
 marker#start-arrow-small,
 marker#end-arrow-small {
@@ -93,12 +92,12 @@ circle.node.reflexive {
   stroke-width: 2.5px;
 }
 circle.node.selected {
-  stroke: #F00 !important;
+  stroke: #6F6 !important;
   stroke-width: 2px;
   fill: #e0e0ff !important;
 }
 circle.node.highlighted {
-  stroke: #F00;
+  stroke: #6F6;
 }
 circle.node.inter-router {
     fill: #EAEAEA;
@@ -218,7 +217,7 @@ div.grid-values.ngCellText span {
 }
 
 #topologyForm.selected {
-  border: 1px solid red;
+  border: 1px solid blue;
 }
 #topologyForm {
   border-right: 1px solid lightgray;

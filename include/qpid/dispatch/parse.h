@@ -50,6 +50,14 @@ qd_parsed_field_t *qd_parse(qd_field_iterator_t *iter);
 void qd_parse_free(qd_parsed_field_t *field);
 
 /**
+ * Create a duplicate parsed field, referring to the same base data.
+ *
+ * @param field A field pointer returned by qd_parse.
+ * @return A separate field that is a duplicate of the supplied field.
+ */
+qd_parsed_field_t *qd_parse_dup(const qd_parsed_field_t *field);
+
+/**
  * Check to see if the field parse was successful (i.e. the field was
  * well-formed).
  *

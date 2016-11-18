@@ -95,6 +95,44 @@ qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path)
     return qd_error_code();
 }
 
+qd_error_t qd_dispatch_validate_config(const char *config_path)
+{
+	FILE* config_file = NULL;
+	char config_data = '\0';
+	qd_error_t validation_error = QD_ERROR_CONFIG;
+
+	do {
+		if (!config_path) {
+			validation_error = qd_error(QD_ERROR_VALUE, "Configuration path value was empty");
+			break;
+		}
+
+		config_file = fopen(config_path, "r");
+		if (!config_file) {
+			validation_error = qd_error(QD_ERROR_NOT_FOUND, "Configuration file could not be opened");
+			break;
+		}
+
+		// TODO Check the actual minimum number of bytes required for the smallest valid configuration file
+		if (!fread((void*)&config_data, 1, 1, config_file)) {
+			validation_error = qd_error(QD_ERROR_CONFIG, "Configuration file was empty");
+			break;
+		}
+
+		// TODO Add real validation code
+
+		validation_error = QD_ERROR_NONE;
+	} while (false); // do once
+
+	if (config_file)
+	{
+		fclose(config_file);
+	}
+
+	return validation_error;
+}
+
+
 /**
  * The Container Entity has been deprecated and will be removed in the future. Use the RouterEntity instead.
  */

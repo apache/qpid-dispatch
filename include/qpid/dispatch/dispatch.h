@@ -54,6 +54,12 @@ void qd_dispatch_free(qd_dispatch_t *qd);
  */
 qd_error_t qd_dispatch_load_config(qd_dispatch_t *qd, const char *config_path);
 
+/**
+ * Validate the configuration file.
+ *
+ * @param config_path The path to the configuration file.
+ */
+qd_error_t qd_dispatch_validate_config(const char *config_path);
 
 /**
  * @}

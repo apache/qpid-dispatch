@@ -174,8 +174,7 @@ struct qdr_node_t {
     qdr_address_t    *owning_addr;
     int               mask_bit;
     qdr_node_t       *next_hop;           ///< Next hop node _if_ this is not a neighbor node
-    qdr_link_t       *peer_control_link;  ///< Outgoing control link _if_ this is a neighbor node
-    qdr_link_t       *peer_data_link;     ///< Outgoing data link _if_ this is a neighbor node
+    int               link_mask_bit;      ///< Mask bit of inter-router connection if this is a neighbor node
     uint32_t          ref_count;
     qd_bitmask_t     *valid_origins;
     int               cost;
@@ -183,6 +182,9 @@ struct qdr_node_t {
 
 ALLOC_DECLARE(qdr_node_t);
 DEQ_DECLARE(qdr_node_t, qdr_node_list_t);
+
+#define PEER_CONTROL_LINK(c,n) ((n->link_mask_bit >= 0) ? (c)->control_links_by_mask_bit[n->link_mask_bit] : 0)
+#define PEER_DATA_LINK(c,n)    ((n->link_mask_bit >= 0) ? (c)->data_links_by_mask_bit[n->link_mask_bit] : 0)
 
 
 struct qdr_router_ref_t {

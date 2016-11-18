@@ -41,6 +41,13 @@ int main(int argc, char** argv)
 
     // Call qd_dispatch() first initialize allocator used by other tests.
     qd_dispatch_t *qd = qd_dispatch(0);
+
+    qd_dispatch_validate_config(argv[1]);
+    if (qd_error_code()) {
+        printf("Config failed: %s\n", qd_error_message());
+        return 1;
+    }
+
     qd_dispatch_load_config(qd, argv[1]);
     if (qd_error_code()) {
         printf("Config failed: %s\n", qd_error_message());
