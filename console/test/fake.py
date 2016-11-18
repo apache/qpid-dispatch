@@ -82,13 +82,23 @@ class Manager(object):
         return onlyfiles
 
     def QUERY(self, request):
-        node = request.address
-        nid = node.split('/')[2]
+        #pdb.set_trace()
+        if not getattr(request, "address"):
+            nodes = self.GET_MGMT_NODES(request)
+            node = nodes[0]
+        else:
+            node = request.address
+        print "node is"
+        pprint (node)
+        nid = node.split('/')[-2]
         fullentity = request.properties["entityType"]
         entity = fullentity[len("org.apache.qpid.dispatch"):]
         if self.verbose:
             pprint("nid is " + nid + " entity is " + entity)
-        requestedAttrs = request.body["attributeNames"]
+        if not "arrtibuteNmaes" in request.body:
+            requestedAttrs = []
+        else:
+            requestedAttrs = request.body["attributeNames"]
         if not os.path.isfile(self.base + self.topology + "/" + nid + ".json"):
             return {"results": [], "attributeNames": requestedAttrs}
         with open(self.base + self.topology + "/" + nid + ".json") as fp:
@@ -289,7 +299,8 @@ class MockRouter(MessagingHandler):
     def on_message(self, event):
         ret = self.manager.operation(event.message.properties["operation"], event.message)
         m = Message(address=event.message.reply_to, body=ret,
-            correlation_id=event.message.correlation_id)
+            correlation_id=event.message.correlation_id,
+            properties={"statusCode": 200} )
         self.senders[event.message.reply_to].send(m)
 
 parser = optparse.OptionParser(usage="usage: %prog [options]")
