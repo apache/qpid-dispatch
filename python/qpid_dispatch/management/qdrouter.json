@@ -841,46 +841,45 @@
                     "type": "string",
                     "description": "Where to send log messages. Can be 'stderr', 'stdout', 'syslog' or a file name.",
                     "update": true
+                }
+            }
+        },
+
+        "logStats": {
+            "description": "histogram of the different severity-levels of events on the given log.",
+            "extends": "operationalEntity",
+            "attributes": {
+                "id": {
+                    "description": "Stats Histogram identifier.",
+                    "type": "string"
                 },
-                "default": {
-                    "type": "integer",
-                    "description": "how many entries in the severity-level histogram at the DEFAULT level",
-                    "update": "true"
-                },
-                "trace": {
-                    "type": "integer",
-                    "description": "how many entries in the severity-level histogram at the TRACE level",
-                    "update": "true"
-                },
-                "debug": {
-                    "type": "integer",
-                    "description": "how many entries in the severity-level histogram at the DEBUG level",
-                    "update": "true"
-                },
-                "info": {
-                    "type": "integer",
-                    "description": "how many entries in the severity-level histogram at the INFO level",
-                    "update": "true"
-                },
-                "notice": {
-                    "type": "integer",
-                    "description": "how many entries in the severity-level histogram at the NOTICE level",
-                    "update": "true"
-                },
-                "warning": {
-                    "type": "integer",
-                    "description": "how many entries in the severity-level histogram at the WARNING level",
-                    "update": "true"
-                },
-                "error": {
-                    "type": "integer",
-                    "description": "how many entries in the severity-level histogram at the ERROR level",
-                    "update": "true"
-                },
-                "critical": {
-                    "type": "integer",
-                    "description": "how many entries in the severity-level histogram at the CRITICAL level",
-                    "update": "true"
+                "traceCount": {
+                    "description": "How many trace-level events have happened on this log.",
+                    "type": "integer"
+                } ,
+                "debugCount": {
+                    "description": "How many debug-level events have happened on this log.",
+                    "type": "integer"
+                } ,
+                "infoCount": {
+                    "description": "How many info-level events have happened on this log.",
+                    "type": "integer"
+                } ,
+                "noticeCount": {
+                    "description": "How many notice-level events have happened on this log.",
+                    "type": "integer"
+                } ,
+                "warningCount": {
+                    "description": "How many warning-level events have happened on this log.",
+                    "type": "integer"
+                } ,
+                "errorCount": {
+                    "description": "How many error-level events have happened on this log.",
+                    "type": "integer"
+                } ,
+                "criticalCount": {
+                    "description": "How many critical-level events have happened on this log.",
+                    "type": "integer"
                 }
             }
         },

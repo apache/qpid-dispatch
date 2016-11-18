@@ -178,12 +178,44 @@ class QdmanageTest(TestCase):
 
     def test_get_types(self):
         out = json.loads(self.run_qdmanage("get-types"))
-        self.assertEqual(len(out), 27)
+        self.assertEqual(len(out), 28)
 
     def test_get_log(self):
         log = json.loads(self.run_qdmanage("get-log limit=1"))[0]
         self.assertEquals(['AGENT', 'trace'], log[0:2])
         self.assertRegexpMatches(log[2], 'get-log')
+
+    def test_get_logstats(self):
+        query_command = 'QUERY --type=logStats'
+        logs = json.loads(self.run_qdmanage(query_command))
+        # Each value returned by the above query should be
+        # a log, and each log should contain an entry for each
+        # log level.
+        log_levels = [ 'criticalCount',
+                       'debugCount',
+                       'errorCount',
+                       'infoCount',
+                       'noticeCount',
+                       'traceCount',
+                       'warningCount'
+                     ]
+        n_log_levels = len ( log_levels )
+
+        good_logs = 0
+
+        for log_dict in logs:
+            log_levels_present = 0
+            log_levels_missing = 0
+            for log_level in log_levels:
+                if log_level in log_dict:
+                    log_levels_present += 1
+                else:
+                    log_levels_missing += 1
+            
+            if log_levels_present == n_log_levels:
+                good_logs += 1
+
+        self.assertEquals ( good_logs, len(logs) )
 
     def test_ssl(self):
         """Simple test for SSL connection. Note system_tests_qdstat has a more complete SSL test"""

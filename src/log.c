@@ -21,6 +21,7 @@
 
 #include "log_private.h"
 #include "entity.h"
+#include "entity_cache.h"
 #include "aprintf.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/dispatch.h>
@@ -36,6 +37,8 @@
 #define TEXT_MAX QD_LOG_TEXT_MAX
 #define LOG_MAX (QD_LOG_TEXT_MAX+128)
 #define LIST_MAX 1000
+
+const char *QD_LOG_STATS_TYPE = "logStats";
 
 static qd_log_source_t      *default_log_source=0;
 static qd_log_source_t      *logging_log_source=0;
@@ -59,6 +62,7 @@ ALLOC_DEFINE(qd_log_entry_t);
 
 DEQ_DECLARE(qd_log_entry_t, qd_log_list_t);
 static qd_log_list_t         entries = {0};
+
 
 static void qd_log_entry_free_lh(qd_log_entry_t* entry) {
     DEQ_REMOVE(entries, entry);
@@ -158,8 +162,8 @@ struct qd_log_source_t {
     int timestamp;              /* boolean or -1 means not set */
     int source;                 /* boolean or -1 means not set */
     bool syslog;
-    uint64_t severity_histogram[N_LEVELS];
     log_sink_t *sink;
+    uint64_t severity_histogram [ N_LEVELS ];
 };
 
 DEQ_DECLARE(qd_log_source_t, qd_log_source_list_t);
@@ -192,6 +196,7 @@ static level_t levels[] = {
     LEVEL("critical", QD_LOG_CRITICAL, LOG_CRIT)
 };
 
+
 static const char level_names[TEXT_MAX]; /* Set up in qd_log_initialize */
 
 /// Return NULL and set qd_error if not a valid bit.
@@ -203,6 +208,17 @@ static const level_t* level_for_bit(int bit) {
         return NULL;
     }
     return &levels[i];
+}
+
+/// Return NONE and set qd_error if not a valid bit.
+static level_index_t level_index_for_bit(int bit) {
+    level_index_t i = 0;
+    while (i < N_LEVELS && levels[i].bit != bit) ++i;
+    if (i == N_LEVELS) {
+        qd_error(QD_ERROR_CONFIG, "'%d' is not a valid log level bit.", bit);
+        return NONE;
+    }
+    return i;
 }
 
 /// Return NULL and set qd_error if not a valid level.
@@ -223,6 +239,7 @@ static const char* level_name(int level) {
 }
 
 static const char *SEPARATORS=", ;:";
+
 
 /// Calculate the bit mask for a log enable string. Return -1 and set qd_error on error.
 static int enable_mask(const char *enable_) {
@@ -322,6 +339,7 @@ static qd_log_source_t *qd_log_source_lh(const char *module)
         strcpy(log_source->module, module);
         qd_log_source_defaults(log_source);
         DEQ_INSERT_TAIL(source_list, log_source);
+        qd_entity_cache_add ( QD_LOG_STATS_TYPE, log_source );
     }
     return log_source;
 }
@@ -364,7 +382,11 @@ void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file
       We can always decide not to look at it later,
       based on its used/unused status.
     -----------------------------------------------*/
-    source->severity_histogram [ level ] ++;
+    level_index_t level_index = level_index_for_bit(level);
+    if (NONE == level_index)
+        qd_error_clear();
+    else
+        source->severity_histogram [ level_index ] ++;
 
     if (!qd_log_enabled(source, level)) return;
 
@@ -518,4 +540,19 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     sys_mutex_unlock(log_source_lock);
 
     return qd_error_code();
+}
+
+qd_error_t qd_entity_refresh_logStats(qd_entity_t* entity, void *impl) {
+    qd_log_source_t *log = (qd_log_source_t*)impl;
+
+    qd_entity_set_long ( entity, "traceCount",    log->severity_histogram[TRACE] );
+    qd_entity_set_long ( entity, "debugCount",    log->severity_histogram[DEBUG] );
+    qd_entity_set_long ( entity, "infoCount",     log->severity_histogram[INFO] );
+    qd_entity_set_long ( entity, "noticeCount",   log->severity_histogram[NOTICE] );
+    qd_entity_set_long ( entity, "warningCount",  log->severity_histogram[WARNING] );
+    qd_entity_set_long ( entity, "errorCount",    log->severity_histogram[ERROR] );
+    qd_entity_set_long ( entity, "criticalCount", log->severity_histogram[CRITICAL] );
+    qd_entity_set_string(entity, "id", log->module);
+
+    return QD_ERROR_NONE;
 }
