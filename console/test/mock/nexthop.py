@@ -77,7 +77,7 @@ class Hopper(object):
                 if self.verbose:
                     print " ------- returning " + str(self.table[f][t])
                 ret = self.table[f][t]
-                self.table = {}
+                #self.table = {}
                 return ret
             for n in node.children:
                 q.append(n)
@@ -108,7 +108,7 @@ class Hopper(object):
                     self.table[n][a] = p
 
             def loop(ancestors):
-                for i in range(1): #range(len(ancestors)):
+                for i in range(len(ancestors)):
                     start = ancestors[i]
                     for j in range(i+1, len(ancestors)):
                         stop = ancestors[j]
