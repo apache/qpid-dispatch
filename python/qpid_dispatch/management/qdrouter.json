@@ -841,6 +841,46 @@
                     "type": "string",
                     "description": "Where to send log messages. Can be 'stderr', 'stdout', 'syslog' or a file name.",
                     "update": true
+                },
+                "default": {
+                    "type": "integer",
+                    "description": "how many entries in the severity-level histogram at the DEFAULT level",
+                    "update": "true"
+                },
+                "trace": {
+                    "type": "integer",
+                    "description": "how many entries in the severity-level histogram at the TRACE level",
+                    "update": "true"
+                },
+                "debug": {
+                    "type": "integer",
+                    "description": "how many entries in the severity-level histogram at the DEBUG level",
+                    "update": "true"
+                },
+                "info": {
+                    "type": "integer",
+                    "description": "how many entries in the severity-level histogram at the INFO level",
+                    "update": "true"
+                },
+                "notice": {
+                    "type": "integer",
+                    "description": "how many entries in the severity-level histogram at the NOTICE level",
+                    "update": "true"
+                },
+                "warning": {
+                    "type": "integer",
+                    "description": "how many entries in the severity-level histogram at the WARNING level",
+                    "update": "true"
+                },
+                "error": {
+                    "type": "integer",
+                    "description": "how many entries in the severity-level histogram at the ERROR level",
+                    "update": "true"
+                },
+                "critical": {
+                    "type": "integer",
+                    "description": "how many entries in the severity-level histogram at the CRITICAL level",
+                    "update": "true"
                 }
             }
         },
