@@ -18,10 +18,8 @@
 #
 
 import unittest, os, json
-from time import sleep
 from subprocess import PIPE, Popen, STDOUT
 from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
-
 from qpid_dispatch.management.client import Node
 
 class RouterTestPlainSaslCommon(TestCase):
@@ -103,7 +101,8 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
         cls.routers[1].wait_router_connected('QDR.X')
 
     def test_inter_router_plain_exists(self):
-        """The setUpClass sets up two routers with SASL PLAIN enabled.
+        """
+        Check authentication of inter-router link is PLAIN.
 
         This test makes executes a qdstat -c via an unauthenticated listener to
         QDR.X and makes sure that the output has an "inter-router" connection to
@@ -535,7 +534,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                                    ' saslPassword=password'
 
         json.loads(self.run_qdmanage(connector_create_command, address=self.routers[1].addresses[0]))
-        sleep(1)
+        self.routers[1].wait_connectors()
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
         results = local_node.query(type='org.apache.qpid.dispatch.connection').results
         self.common_asserts(results)
@@ -585,9 +584,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                                    ' saslPassword=password'
 
         json.loads(self.run_qdmanage(connector_create_command, address=self.routers[1].addresses[0]))
-
-        sleep(1)
-
+        self.routers[1].wait_connectors()
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
         results = local_node.query(type='org.apache.qpid.dispatch.connection').results
 
