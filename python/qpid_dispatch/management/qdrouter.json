@@ -884,45 +884,6 @@
             }
         },
 
-        "logStats": {
-            "description": "histogram of the different severity-levels of events on the given log.",
-            "extends": "operationalEntity",
-            "attributes": {
-                "id": {
-                    "description": "Stats Histogram identifier.",
-                    "type": "string"
-                },
-                "traceCount": {
-                    "description": "How many trace-level events have happened on this log.",
-                    "type": "integer"
-                } ,
-                "debugCount": {
-                    "description": "How many debug-level events have happened on this log.",
-                    "type": "integer"
-                } ,
-                "infoCount": {
-                    "description": "How many info-level events have happened on this log.",
-                    "type": "integer"
-                } ,
-                "noticeCount": {
-                    "description": "How many notice-level events have happened on this log.",
-                    "type": "integer"
-                } ,
-                "warningCount": {
-                    "description": "How many warning-level events have happened on this log.",
-                    "type": "integer"
-                } ,
-                "errorCount": {
-                    "description": "How many error-level events have happened on this log.",
-                    "type": "integer"
-                } ,
-                "criticalCount": {
-                    "description": "How many critical-level events have happened on this log.",
-                    "type": "integer"
-                }
-            }
-        },
-
         "router.config.address": {
             "description": "Entity type for address configuration.  This is used to configure the treatment of message-routed deliveries within a particular address-space.  The configuration controls distribution and address phasing.",
             "extends": "configurationEntity",
