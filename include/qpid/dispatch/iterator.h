@@ -25,7 +25,7 @@
 #include <qpid/dispatch/iovec.h>
 
 /**@file
- * Iterate over message buffer chains and addresse fields.
+ * Iterate over message buffer chains and address fields.
  *
  *
  * @defgroup iterator iterator

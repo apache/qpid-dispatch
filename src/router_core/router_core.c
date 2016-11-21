@@ -98,17 +98,59 @@ void qdr_core_free(qdr_core_t *core)
     //
     // Free the core resources
     //
-    qdr_core_unsubscribe(core->agent_subscription_mobile);
-    qdr_core_unsubscribe(core->agent_subscription_local);
     sys_thread_free(core->thread);
     sys_cond_free(core->action_cond);
     sys_mutex_free(core->action_lock);
     sys_mutex_free(core->work_lock);
     sys_mutex_free(core->id_lock);
     qd_timer_free(core->work_timer);
+    //we can't call qdr_core_unsubscribe on the subscriptions because the action processing thread has
+    //already been shut down. But, all the action would have done at this point is free the subscriptions
+    //so we just do that directly.
+    free(core->agent_subscription_mobile);
+    free(core->agent_subscription_local);
+
+    for (int i = 0; i <= QD_TREATMENT_LINK_BALANCED; ++i) {
+        if (core->forwarders[i]) {
+            free(core->forwarders[i]);
+        }
+    }
+
+    qdr_address_t *addr = 0;
+    while ( (addr = DEQ_HEAD(core->addrs)) ) {
+        qdr_core_remove_address(core, addr);
+    }
+    qdr_address_config_t *addr_config = 0;
+    while ( (addr_config = DEQ_HEAD(core->addr_config))) {
+        qdr_core_remove_address_config(core, addr_config);
+    }
+    qd_hash_free(core->addr_hash);
+
+    qd_hash_free(core->conn_id_hash);
+    //TODO what about the actual connection identifier objects?
+
+    qdr_node_t *rnode = 0;
+    while ( (rnode = DEQ_HEAD(core->routers)) ) {
+        qdr_router_node_free(core, rnode);
+    }
+
+    if (core->query_lock)                sys_mutex_free(core->query_lock);
+    if (core->routers_by_mask_bit)       free(core->routers_by_mask_bit);
+    if (core->control_links_by_mask_bit) free(core->control_links_by_mask_bit);
+    if (core->data_links_by_mask_bit)    free(core->data_links_by_mask_bit);
+    if (core->neighbor_free_mask)        qd_bitmask_free(core->neighbor_free_mask);
+
     free(core);
 }
 
+void qdr_router_node_free(qdr_core_t *core, qdr_node_t *rnode)
+{
+    qd_bitmask_free(rnode->valid_origins);
+    DEQ_REMOVE(core->routers, rnode);
+    core->routers_by_mask_bit[rnode->mask_bit] = 0;
+    core->cost_epoch++;
+    free_qdr_node_t(rnode);
+}
 
 ALLOC_DECLARE(qdr_field_t);
 ALLOC_DEFINE(qdr_field_t);
@@ -241,7 +283,6 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
     if (!addr) {
         addr = qdr_address_CT(core, treatment);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
-        DEQ_ITEM_INIT(addr);
         DEQ_INSERT_TAIL(core->addrs, addr);
         addr->block_deletion = true;
         addr->local = (aclass == 'L');
@@ -250,6 +291,37 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
     return addr;
 }
 
+void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
+{
+    // Remove the address from the list and hash index
+    qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
+    DEQ_REMOVE(core->addrs, addr);
+
+    // Free resources associated with this address
+    qd_hash_handle_free(addr->hash_handle);
+    qd_bitmask_free(addr->rnodes);
+    if (addr->treatment == QD_TREATMENT_ANYCAST_CLOSEST) {
+        qd_bitmask_free(addr->closest_remotes);
+    }
+    else if (addr->treatment == QD_TREATMENT_ANYCAST_BALANCED) {
+        free(addr->outstanding_deliveries);
+    }
+    free_qdr_address_t(addr);
+}
+
+void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr)
+{
+    // Remove the address from the list and the hash index.
+    qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
+    DEQ_REMOVE(core->addr_config, addr);
+
+    // Free resources associated with this address.
+    if (addr->name) {
+        free(addr->name);
+    }
+    qd_hash_handle_free(addr->hash_handle);
+    free_qdr_address_config_t(addr);
+}
 
 void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls)
 {

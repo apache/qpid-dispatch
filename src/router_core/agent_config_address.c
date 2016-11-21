@@ -272,19 +272,7 @@ void qdra_config_address_delete_CT(qdr_core_t          *core,
             addr = qdr_address_config_find_by_name_CT(core, name);
 
         if (addr) {
-            //
-            // Remove the address from the list and the hash index.
-            //
-            qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
-            DEQ_REMOVE(core->addr_config, addr);
-
-            //
-            // Free resources associated with this address.
-            //
-            if (addr->name)
-                free(addr->name);
-            free_qdr_address_config_t(addr);
-
+            qdr_core_remove_address_config(core, addr);
             query->status = QD_AMQP_NO_CONTENT;
         } else
             query->status = QD_AMQP_NOT_FOUND;

@@ -26,6 +26,27 @@
 #include "entity_cache.h"
 #include "schema_enum.h"
 
+static void qdi_router_configure_body(qdr_core_t              *core,
+                                      qd_composed_field_t     *body,
+                                      qd_router_entity_type_t  type,
+                                      char                    *name)
+{
+    qd_buffer_list_t buffers;
+    qd_compose_take_buffers(body, &buffers);
+
+    qd_field_iterator_t *iter = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, qd_buffer_list_length(&buffers));
+    qd_parsed_field_t   *in_body = qd_parse(iter);
+    qd_field_iterator_free(iter);
+
+    qd_field_iterator_t *name_iter = 0;
+    if (name)
+        name_iter = qd_field_iterator_string(name);
+
+    qdr_manage_create(core, 0, type, name_iter, in_body, 0, buffers);
+
+    qd_field_iterator_free(name_iter);
+}
+
 qd_error_t qd_router_configure_fixed_address(qd_router_t *router, qd_entity_t *entity)
 {
     static bool deprecate_warning = true;
@@ -79,23 +100,8 @@ qd_error_t qd_router_configure_fixed_address(qd_router_t *router, qd_entity_t *e
     qd_compose_insert_string(body, distrib);
     qd_compose_end_map(body);
 
-    int              length = 0;
-    qd_buffer_list_t buffers;
-
-    qd_compose_take_buffers(body, &buffers);
+    qdi_router_configure_body(router->router_core, body, QD_ROUTER_CONFIG_ADDRESS, 0);
     qd_compose_free(body);
-
-    qd_buffer_t *buf = DEQ_HEAD(buffers);
-    while (buf) {
-        length += qd_buffer_size(buf);
-        buf = DEQ_NEXT(buf);
-    }
-
-    qd_field_iterator_t *iter = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
-    qd_parsed_field_t   *in_body = qd_parse(iter);
-    qd_field_iterator_free(iter);
-
-    qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_ADDRESS, 0, in_body, 0);
 
     free(prefix);
     return qd_error_code();
@@ -160,23 +166,8 @@ static void qd_router_add_link_route(qdr_core_t *core, const char *prefix, const
 
     qd_compose_end_map(body);
 
-    int              length = 0;
-    qd_buffer_list_t buffers;
-
-    qd_compose_take_buffers(body, &buffers);
+    qdi_router_configure_body(core, body, QD_ROUTER_CONFIG_LINK_ROUTE, 0);
     qd_compose_free(body);
-
-    qd_buffer_t *buf = DEQ_HEAD(buffers);
-    while (buf) {
-        length += qd_buffer_size(buf);
-        buf = DEQ_NEXT(buf);
-    }
-
-    qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
-    qd_parsed_field_t   *in_body = qd_parse(iter);
-    qd_field_iterator_free(iter);
-
-    qdr_manage_create(core, 0, QD_ROUTER_CONFIG_LINK_ROUTE, 0, in_body, 0);
 }
 
 
@@ -264,32 +255,8 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 
         qd_compose_end_map(body);
 
-        int              length = 0;
-        qd_buffer_list_t buffers;
-
-        qd_compose_take_buffers(body, &buffers);
+        qdi_router_configure_body(router->router_core, body, QD_ROUTER_CONFIG_ADDRESS, name);
         qd_compose_free(body);
-
-        qd_buffer_t *buf = DEQ_HEAD(buffers);
-        while (buf) {
-            length += qd_buffer_size(buf);
-            buf = DEQ_NEXT(buf);
-        }
-
-        qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
-        qd_parsed_field_t   *in_body = qd_parse(iter);
-        qd_field_iterator_free(iter);
-
-        qd_field_iterator_t *name_iter = 0;
-
-        if (name)
-            name_iter = qd_field_iterator_string(name);
-
-        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_ADDRESS, name_iter, in_body, 0);
-
-        qd_field_iterator_free(name_iter);
-
-
     } while(0);
 
     free(name);
@@ -356,31 +323,8 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
 
         qd_compose_end_map(body);
 
-        int              length = 0;
-        qd_buffer_list_t buffers;
-
-        qd_compose_take_buffers(body, &buffers);
+        qdi_router_configure_body(router->router_core, body, QD_ROUTER_CONFIG_LINK_ROUTE, name);
         qd_compose_free(body);
-
-        qd_buffer_t *buf = DEQ_HEAD(buffers);
-        while (buf) {
-            length += qd_buffer_size(buf);
-            buf = DEQ_NEXT(buf);
-        }
-
-        qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
-        qd_parsed_field_t   *in_body = qd_parse(iter);
-        qd_field_iterator_free(iter);
-
-        qd_field_iterator_t *name_iter = 0;
-
-        if (name)
-            name_iter = qd_field_iterator_string(name);
-
-        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_LINK_ROUTE, name_iter, in_body, 0);
-
-        qd_field_iterator_free(name_iter);
-
     } while(0);
 
     free(name);
@@ -455,31 +399,8 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
 
         qd_compose_end_map(body);
 
-        int              length = 0;
-        qd_buffer_list_t buffers;
-
-        qd_compose_take_buffers(body, &buffers);
+        qdi_router_configure_body(router->router_core, body, QD_ROUTER_CONFIG_AUTO_LINK, name);
         qd_compose_free(body);
-
-        qd_buffer_t *buf = DEQ_HEAD(buffers);
-        while (buf) {
-            length += qd_buffer_size(buf);
-            buf = DEQ_NEXT(buf);
-        }
-
-        qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
-        qd_parsed_field_t   *in_body = qd_parse(iter);
-        qd_field_iterator_free(iter);
-
-        qd_field_iterator_t *name_iter = 0;
-
-        if (name)
-            name_iter = qd_field_iterator_string(name);
-
-        qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_AUTO_LINK, name_iter, in_body, 0);
-
-        qd_field_iterator_free(name_iter);
-
     } while (0);
 
     free(name);

@@ -106,7 +106,8 @@ void qdr_manage_create(qdr_core_t              *core,
                        qd_router_entity_type_t  type,
                        qd_field_iterator_t     *name,
                        qd_parsed_field_t       *in_body,
-                       qd_composed_field_t     *out_body)
+                       qd_composed_field_t     *out_body,
+                       qd_buffer_list_t         body_buffers)
 {
     qdr_action_t *action = qdr_action(qdr_manage_create_CT, "manage_create");
 
@@ -114,6 +115,7 @@ void qdr_manage_create(qdr_core_t              *core,
     action->args.agent.query = qdr_query(core, context, type, out_body);
     action->args.agent.name = qdr_field_from_iter(name);
     action->args.agent.in_body = in_body;
+    action->args.agent.body_buffers = body_buffers;
 
     qdr_action_enqueue(core, action);
 }
@@ -354,9 +356,10 @@ static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool disc
 
 static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qd_field_iterator_t     *name       = qdr_field_iterator(action->args.agent.name);
-    qdr_query_t             *query      = action->args.agent.query;
-    qd_parsed_field_t       *in_body    = action->args.agent.in_body;
+    qd_field_iterator_t     *name         = qdr_field_iterator(action->args.agent.name);
+    qdr_query_t             *query        = action->args.agent.query;
+    qd_parsed_field_t       *in_body      = action->args.agent.in_body;
+    qd_buffer_list_t         body_buffers = action->args.agent.body_buffers;
 
     switch (query->entity_type) {
     case QD_ROUTER_CONFIG_ADDRESS:    qdra_config_address_create_CT(core, name, query, in_body); break;
@@ -373,6 +376,7 @@ static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool di
 
    qdr_field_free(action->args.agent.name);
    qd_parse_free(in_body);
+   qd_buffer_list_free_buffers(&body_buffers);
 }
 
 

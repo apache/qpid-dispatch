@@ -98,9 +98,13 @@ static void qd_server_config_free(qd_server_config_t *cf)
     if (!cf) return;
     free(cf->host);
     free(cf->port);
-    free(cf->name);
     free(cf->role);
-    free(cf->sasl_mechanisms);
+    if (cf->name)            free(cf->name);
+    if (cf->protocol_family) free(cf->protocol_family);
+    if (cf->sasl_username)   free(cf->sasl_username);
+    if (cf->sasl_password)   free(cf->sasl_password);
+    if (cf->sasl_mechanisms) free(cf->sasl_mechanisms);
+    if (cf->ssl_profile)     free(cf->ssl_profile);
 
     memset(cf, 0, sizeof(*cf));
 }
@@ -164,6 +168,10 @@ static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
          config->host = host;
          free(addr);
     }
+    else {
+        free(host);
+        free(addr);
+    }
 
     assert(config->host);
 }
@@ -174,7 +182,6 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
 
     bool authenticatePeer   = qd_entity_opt_bool(entity, "authenticatePeer",  false);    CHECK();
     bool verifyHostName     = qd_entity_opt_bool(entity, "verifyHostName",    true);     CHECK();
-    char *stripAnnotations  = qd_entity_opt_string(entity, "stripAnnotations", 0);       CHECK();
     bool requireEncryption  = qd_entity_opt_bool(entity, "requireEncryption", false);    CHECK();
     bool requireSsl         = qd_entity_opt_bool(entity, "requireSsl",        false);    CHECK();
     bool depRequirePeerAuth = qd_entity_opt_bool(entity, "requirePeerAuth",   false);    CHECK();
@@ -240,11 +247,14 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->allowInsecureAuthentication = true;
     config->verify_host_name = verifyHostName;
 
+    char *stripAnnotations  = qd_entity_opt_string(entity, "stripAnnotations", 0);
     load_strip_annotations(config, stripAnnotations);
+    free(stripAnnotations);
+    stripAnnotations = 0;
+    CHECK();
 
     config->requireAuthentication = authenticatePeer || depRequirePeerAuth;
     config->requireEncryption     = requireEncryption || !depAllowUnsecured;
-
 
     if (config->ssl_profile) {
         config->ssl_required = requireSsl || !depAllowUnsecured;
@@ -264,7 +274,6 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
         sys_atomic_inc(&(*ssl_profile)->ref_count);
     }
 
-    free(stripAnnotations);
     return QD_ERROR_NONE;
 
   error:

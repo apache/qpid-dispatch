@@ -84,6 +84,17 @@ qd_hash_t *qd_hash(int bucket_exponent, int batch_size, int value_is_const)
     return h;
 }
 
+//remove the given item from the given bucket of the given hash
+//return the key if non-null key pointer given, otherwise, free the memory
+static void qd_hash_internal_remove_item(qd_hash_t *h, bucket_t *bucket, qd_hash_item_t *item, unsigned char **key) {
+    if (key)
+        *key = item->key;
+    else
+        free(item->key);
+    DEQ_REMOVE(bucket->items, item);
+    free_qd_hash_item_t(item);
+    h->size--;
+}
 
 void qd_hash_free(qd_hash_t *h)
 {
@@ -94,9 +105,7 @@ void qd_hash_free(qd_hash_t *h)
     for (idx = 0; idx < h->bucket_count; idx++) {
         item = DEQ_HEAD(h->buckets[idx].items);
         while (item) {
-            free(item->key);
-            DEQ_REMOVE_HEAD(h->buckets[idx].items);
-            free_qd_hash_item_t(item);
+            qd_hash_internal_remove_item(h, &h->buckets[idx], item, 0);
             item = DEQ_HEAD(h->buckets[idx].items);
         }
     }
@@ -119,7 +128,7 @@ static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, qd_field_iterator_t
     while (item) {
         if (qd_field_iterator_equal(key, item->key))
             break;
-        item = item->next;
+        item = DEQ_NEXT(item);
     }
 
     if (item) {
@@ -174,12 +183,18 @@ qd_error_t qd_hash_insert_const(qd_hash_t *h, qd_field_iterator_t *key, const vo
 {
     assert(h->is_const);
 
-    int             error = 0;
-    qd_hash_item_t *item  = qd_hash_internal_insert(h, key, &error, handle);
+    int             exists = 0;
+    qd_hash_item_t *item  = qd_hash_internal_insert(h, key, &exists, handle);
 
-    if (item)
-        item->v.val_const = val;
-    return error;
+    if (!item)
+        return QD_ERROR_ALLOC;
+
+    if (exists)
+        return QD_ERROR_ALREADY_EXISTS;
+
+    item->v.val_const = val;
+
+    return QD_ERROR_NONE;
 }
 
 
@@ -192,7 +207,7 @@ static qd_hash_item_t *qd_hash_internal_retrieve_with_hash(qd_hash_t *h, uint32_
 	while (item) {
 		if (qd_field_iterator_equal(key, item->key))
 			break;
-		item = item->next;
+		item = DEQ_NEXT(item);
 	}
 
 	return item;
@@ -230,6 +245,9 @@ void qd_hash_retrieve_prefix(qd_hash_t *h, qd_field_iterator_t *iter, void **val
 void qd_hash_retrieve_prefix_const(qd_hash_t *h, qd_field_iterator_t *iter, const void **val)
 {
     assert(h->is_const);
+
+    //Hash individual segments by iterating thru the octets in the iterator.
+    qd_iterator_hash_segments(iter);
 
     uint32_t hash = 0;
 
@@ -276,24 +294,15 @@ qd_error_t qd_hash_retrieve_const(qd_hash_t *h, qd_field_iterator_t *key, const 
 
 qd_error_t qd_hash_remove(qd_hash_t *h, qd_field_iterator_t *key)
 {
-    uint32_t   idx  = qd_iterator_hash_function(key) & h->bucket_mask;
-    qd_hash_item_t *item = DEQ_HEAD(h->buckets[idx].items);
+    //the retrieve function will re-apply the bucket_mask, but that is ok
+    //we apply it here because we need the bucket index to do the remove
+    uint32_t        idx  = qd_iterator_hash_function(key) & h->bucket_mask;
+    qd_hash_item_t *item = qd_hash_internal_retrieve_with_hash(h, idx, key);
+    if (!item)
+        return QD_ERROR_NOT_FOUND;
 
-    while (item) {
-        if (qd_field_iterator_equal(key, item->key))
-            break;
-        item = item->next;
-    }
-
-    if (item) {
-        free(item->key);
-        DEQ_REMOVE(h->buckets[idx].items, item);
-        free_qd_hash_item_t(item);
-        h->size--;
-        return QD_ERROR_NONE;
-    }
-
-    return QD_ERROR_NOT_FOUND;
+    qd_hash_internal_remove_item(h, &h->buckets[idx], item, 0);
+    return QD_ERROR_NONE;
 }
 
 
@@ -326,9 +335,6 @@ qd_error_t qd_hash_remove_by_handle2(qd_hash_t *h, qd_hash_handle_t *handle, uns
 {
     if (!handle)
         return QD_ERROR_NOT_FOUND;
-    *key = handle->item->key;
-    DEQ_REMOVE(handle->bucket->items, handle->item);
-    free_qd_hash_item_t(handle->item);
-    h->size--;
+    qd_hash_internal_remove_item(h, handle->bucket, handle->item, key);
     return QD_ERROR_NONE;
 }

@@ -142,6 +142,7 @@ struct qdr_action_t {
             qdr_field_t             *identity;
             qdr_field_t             *name;
             qd_parsed_field_t       *in_body;
+            qd_buffer_list_t         body_buffers;
         } agent;
 
     } args;
@@ -182,6 +183,7 @@ struct qdr_node_t {
 
 ALLOC_DECLARE(qdr_node_t);
 DEQ_DECLARE(qdr_node_t, qdr_node_list_t);
+void qdr_router_node_free(qdr_core_t *core, qdr_node_t *rnode);
 
 #define PEER_CONTROL_LINK(c,n) ((n->link_mask_bit >= 0) ? (c)->control_links_by_mask_bit[n->link_mask_bit] : 0)
 #define PEER_DATA_LINK(c,n)    ((n->link_mask_bit >= 0) ? (c)->data_links_by_mask_bit[n->link_mask_bit] : 0)
@@ -364,6 +366,7 @@ DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_treatment_t treatment);
+void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr);
 
 struct qdr_address_config_t {
     DEQ_LINKS(qdr_address_config_t);
@@ -377,6 +380,7 @@ struct qdr_address_config_t {
 
 ALLOC_DECLARE(qdr_address_config_t);
 DEQ_DECLARE(qdr_address_config_t, qdr_address_config_list_t);
+void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr);
 
 
 //

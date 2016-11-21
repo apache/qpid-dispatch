@@ -594,7 +594,8 @@ typedef struct qdr_query_t qdr_query_t;
  * @param out_body A composed field for the body of the response message
  */
 void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                       qd_field_iterator_t *name, qd_parsed_field_t *in_body, qd_composed_field_t *out_body);
+                       qd_field_iterator_t *name, qd_parsed_field_t *in_body, qd_composed_field_t *out_body,
+                       qd_buffer_list_t body_buffers);
 
 /**
  * qdr_manage_delete
