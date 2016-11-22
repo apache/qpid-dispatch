@@ -1123,10 +1123,10 @@ class RouterTest(TestCase):
 
         node = Node.connect(self.router.addresses[0])
 
-        results = [[{u'connection': u'properties', u'int_property': 6451}], [{}]]
+        results = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'properties']).results
 
-        self.assertEqual(node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['properties']).results,
-                         results)
+        self.assertEqual(results[0][0][u'connection'], u'properties')
+        self.assertEqual(results[0][0][u'int_property'], 6451)
 
         client.connection.close()
 

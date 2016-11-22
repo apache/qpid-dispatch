@@ -69,6 +69,7 @@ set(qpid_dispatch_SOURCES
   router_core/agent_address.c
   router_core/agent_config_address.c
   router_core/agent_config_auto_link.c
+  router_core/agent_connection.c
   router_core/agent_config_link_route.c
   router_core/agent_link.c
   router_core/connections.c
