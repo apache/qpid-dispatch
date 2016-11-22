@@ -849,10 +849,6 @@
             "description": "histogram of the different severity-levels of events on the given log.",
             "extends": "operationalEntity",
             "attributes": {
-                "id": {
-                    "description": "Stats Histogram identifier.",
-                    "type": "string"
-                },
                 "traceCount": {
                     "description": "How many trace-level events have happened on this log.",
                     "type": "integer"

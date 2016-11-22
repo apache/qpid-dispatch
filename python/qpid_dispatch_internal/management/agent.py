@@ -517,7 +517,7 @@ class ConnectionEntity(EntityAdapter):
 
 class LogStatsEntity(EntityAdapter):
     def _identifier(self):
-        return self.attributes.get('id')
+        return self.attributes.get('identity')
 
     def __str__(self):
         return super(LogStatsEntity, self).__str__().replace("Entity(", "LogStatsEntity(")
