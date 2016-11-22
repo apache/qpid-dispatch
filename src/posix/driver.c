@@ -903,10 +903,14 @@ static void qdpn_driver_rebuild(qdpn_driver_t *d)
 {
     sys_mutex_lock(d->lock);
     size_t size = DEQ_SIZE(d->listeners) + DEQ_SIZE(d->connectors);
-    while (d->capacity < size + 1) {
-        d->capacity = d->capacity ? 2*d->capacity : 16;
+    if (d->capacity < size + 1) {
+        d->capacity = d->capacity > 16 ? d->capacity : 16;
+        while (d->capacity < size + 1) {
+            d->capacity *= 2;
+        }
         d->fds = (struct pollfd *) realloc(d->fds, d->capacity*sizeof(struct pollfd));
     }
+
 
     d->wakeup = 0;
     d->nfds = 0;
