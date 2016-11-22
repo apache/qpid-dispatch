@@ -209,7 +209,7 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
             //
             // Set the umask to 0
             //
-            if (umask(0) < 0) fail(pipefd[1], "Can't set umask");
+            umask(0);
 
             //
             // Set the current directory to "/" to avoid blocking
