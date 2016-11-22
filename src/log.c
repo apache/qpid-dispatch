@@ -156,6 +156,7 @@ typedef enum {DEFAULT, NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICA
 #define MIN_VALID_LEVEL_INDEX TRACE
 #define MAX_VALID_LEVEL_INDEX CRITICAL
 #define N_LEVEL_INDICES (MAX_VALID_LEVEL_INDEX - MIN_VALID_LEVEL_INDEX + 1)
+#define LEVEL_INDEX(LEVEL) ((LEVEL) - TRACE)
 
 struct qd_log_source_t {
     DEQ_LINKS(qd_log_source_t);
@@ -553,13 +554,13 @@ qd_error_t qd_entity_refresh_logStats(qd_entity_t* entity, void *impl) {
     char identity_str [ TEXT_MAX ];
     snprintf ( identity_str, TEXT_MAX - 1, "logStats/%s", log->module );
 
-    qd_entity_set_long ( entity, "traceCount",    log->severity_histogram[TRACE] );
-    qd_entity_set_long ( entity, "debugCount",    log->severity_histogram[DEBUG] );
-    qd_entity_set_long ( entity, "infoCount",     log->severity_histogram[INFO] );
-    qd_entity_set_long ( entity, "noticeCount",   log->severity_histogram[NOTICE] );
-    qd_entity_set_long ( entity, "warningCount",  log->severity_histogram[WARNING] );
-    qd_entity_set_long ( entity, "errorCount",    log->severity_histogram[ERROR] );
-    qd_entity_set_long ( entity, "criticalCount", log->severity_histogram[CRITICAL] );
+    qd_entity_set_long ( entity, "traceCount",    log->severity_histogram[LEVEL_INDEX(TRACE)] );
+    qd_entity_set_long ( entity, "debugCount",    log->severity_histogram[LEVEL_INDEX(DEBUG)] );
+    qd_entity_set_long ( entity, "infoCount",     log->severity_histogram[LEVEL_INDEX(INFO)] );
+    qd_entity_set_long ( entity, "noticeCount",   log->severity_histogram[LEVEL_INDEX(NOTICE)] );
+    qd_entity_set_long ( entity, "warningCount",  log->severity_histogram[LEVEL_INDEX(WARNING)] );
+    qd_entity_set_long ( entity, "errorCount",    log->severity_histogram[LEVEL_INDEX(ERROR)] );
+    qd_entity_set_long ( entity, "criticalCount", log->severity_histogram[LEVEL_INDEX(CRITICAL)] );
     qd_entity_set_string(entity, "identity", identity_str );
 
     return QD_ERROR_NONE;
