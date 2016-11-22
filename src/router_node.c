@@ -557,6 +557,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     bool                   strip_annotations_out = false;
     int                    link_capacity = 1;
     const char            *name = 0;
+    pn_bytes_t             group_id = {0, 0};
     uint64_t               connection_id = qd_connection_connection_id(conn);
     pn_connection_t       *pn_conn = qd_connection_pn(conn);
 
@@ -593,10 +594,35 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
         //
         if (remote_cost > cost)
             cost = remote_cost;
+    } else if (role == QDR_ROLE_ROUTE_CONTAINER) {
+        // Check remote properties for a group id
+        //
+        pn_data_t *props = pn_conn ? pn_connection_remote_properties(pn_conn) : 0;
+        if (props) {
+            pn_data_rewind(props);
+            pn_data_next(props);
+            if (props && pn_data_type(props) == PN_MAP) {
+                pn_data_enter(props);
+                while (pn_data_next(props)) {
+                    if (pn_data_type(props) == PN_SYMBOL) {
+                        pn_bytes_t sym = pn_data_get_symbol(props);
+                        if (sym.size == strlen(QD_CONNECTION_PROPERTY_GROUP_KEY) &&
+                            strcmp(sym.start, QD_CONNECTION_PROPERTY_GROUP_KEY) == 0) {
+                            pn_data_next(props);
+                            if (pn_data_type(props) == PN_STRING) {
+                                group_id = pn_data_get_string(props);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, cost, connection_id, name,
                                                    pn_connection_remote_container(pn_conn),
+                                                   group_id,
                                                    strip_annotations_in, strip_annotations_out, link_capacity);
 
     qd_connection_set_context(conn, qdrc);

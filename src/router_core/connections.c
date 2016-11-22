@@ -62,6 +62,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         uint64_t               management_id,
                                         const char            *label,
                                         const char            *remote_container_id,
+                                        pn_bytes_t             group_id,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out,
                                         int                    link_capacity)
@@ -87,6 +88,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     action->args.connection.conn             = conn;
     action->args.connection.connection_label = qdr_field(label);
     action->args.connection.container_id     = qdr_field(remote_container_id);
+    action->args.connection.group_id         = qdr_field_with_length(group_id.start, group_id.size);
     qdr_action_enqueue(core, action);
 
     return conn;
@@ -895,6 +897,7 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             //
             qdr_field_free(action->args.connection.connection_label);
             qdr_field_free(action->args.connection.container_id);
+            qdr_field_free(action->args.connection.group_id);
             return;
         }
 
@@ -910,6 +913,7 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
                 conn->role = QDR_ROLE_NORMAL;
                 qdr_field_free(action->args.connection.connection_label);
                 qdr_field_free(action->args.connection.container_id);
+                qdr_field_free(action->args.connection.group_id);
                 return;
             }
 
@@ -932,18 +936,29 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             //
 
             //
-            // If there's a connection label, use it as the identifier.  Otherwise, use the remote
-            // container id.
+            // The connection identifier is matched in the following order:
+            // 1. Remote group id property
+            // 2. Connection label
+            // 3. Remote container id
             //
-            qdr_field_t *cid = action->args.connection.connection_label ?
-                action->args.connection.connection_label : action->args.connection.container_id;
+            qdr_field_t *cid = action->args.connection.group_id;
+            int matcher = QDR_CONN_ID_MATCHER_GROUP_ID;
+            if (!cid) {
+                cid = action->args.connection.connection_label;
+                matcher = QDR_CONN_ID_MATCHER_CONN_LABEL;
+            }
+            if (!cid) {
+                cid = action->args.connection.container_id;
+                matcher = QDR_CONN_ID_MATCHER_CONTAINER_ID;
+            }
             if (cid)
-                qdr_route_connection_opened_CT(core, conn, cid, action->args.connection.connection_label == 0);
+                qdr_route_connection_opened_CT(core, conn, cid, matcher);
         }
     }
 
     qdr_field_free(action->args.connection.connection_label);
     qdr_field_free(action->args.connection.container_id);
+    qdr_field_free(action->args.connection.group_id);
 }
 
 

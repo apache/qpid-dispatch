@@ -61,6 +61,7 @@ typedef struct {
 } qdr_field_t;
 
 qdr_field_t *qdr_field(const char *string);
+qdr_field_t *qdr_field_with_length(const char *string, size_t length);
 qdr_field_t *qdr_field_from_iter(qd_field_iterator_t *iter);
 qd_field_iterator_t *qdr_field_iterator(qdr_field_t *field);
 void qdr_field_free(qdr_field_t *field);
@@ -96,6 +97,7 @@ struct qdr_action_t {
             qdr_connection_t *conn;
             qdr_field_t      *connection_label;
             qdr_field_t      *container_id;
+            qdr_field_t      *group_id;
             qdr_link_t       *link;
             qdr_delivery_t   *delivery;
             qd_message_t     *msg;
@@ -505,10 +507,10 @@ DEQ_DECLARE(qdr_auto_link_t, qdr_auto_link_list_t);
 
 
 struct qdr_conn_identifier_t {
-    qd_hash_handle_t      *hash_handle;
-    qdr_connection_t      *open_connection;
-    qdr_link_route_list_t  link_route_refs;
-    qdr_auto_link_list_t   auto_link_refs;
+    qd_hash_handle_t          *hash_handle;
+    qdr_connection_ref_list_t  connection_refs;
+    qdr_link_route_list_t      link_route_refs;
+    qdr_auto_link_list_t       auto_link_refs;
 };
 
 ALLOC_DECLARE(qdr_conn_identifier_t);

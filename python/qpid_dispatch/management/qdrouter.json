@@ -902,6 +902,12 @@
                     "create": true,
                     "required": false
                 },
+                "groupId": {
+                    "type": "string",
+                    "description": "GroupID for the target container",
+                    "create": true,
+                    "required": false
+                },
                 "connection": {
                     "type": "string",
                     "description": "The name from a connector or listener",
@@ -955,6 +961,12 @@
                 "containerId": {
                     "type": "string",
                     "description": "ContainerID for the target container",
+                    "create": true,
+                    "required": false
+                },
+                "groupId": {
+                    "type": "string",
+                    "description": "GroupID for the target container",
                     "create": true,
                     "required": false
                 },

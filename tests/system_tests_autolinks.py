@@ -18,7 +18,7 @@
 #
 
 import unittest
-from proton import Message, Delivery, PENDING, ACCEPTED, REJECTED
+from proton import Message, Delivery, PENDING, ACCEPTED, REJECTED, symbol
 from system_test import TestCase, Qdrouterd, main_module
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
@@ -67,6 +67,12 @@ class AutolinkTest(TestCase):
             #
             ('autoLink', {'addr': 'node.2', 'externalAddr': 'ext.2', 'containerId': 'container.4', 'dir': 'in'}),
             ('autoLink', {'addr': 'node.2', 'externalAddr': 'ext.2', 'containerId': 'container.4', 'dir': 'out'}),
+
+            #
+            # Create a pair of auto-links with a group id
+            #
+            ('autoLink', {'addr': 'node.3', 'groupId': 'group.1', 'dir': 'in'}),
+            ('autoLink', {'addr': 'node.3', 'groupId': 'group.1', 'dir': 'out'}),
         ])
 
         cls.router = cls.tester.qdrouterd(name, config)
@@ -165,6 +171,16 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_10_autolink_group_id(self):
+        """
+        Create an autolink with a group id. Ensure that multiple connections will get attached
+        links.
+        """
+        properties = {symbol(u'qd.route-container-group'): u'group.1'}
+        test = AutolinkAttachTest('container.5', self.route_address, 'node.3', properties)
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -175,14 +191,15 @@ class Timeout(object):
 
 
 class AutolinkAttachTest(MessagingHandler):
-    def __init__(self, cid, address, node_addr):
+    def __init__(self, cid, address, node_addr, connect_properties={}):
         super(AutolinkAttachTest, self).__init__(prefetch=0)
-        self.cid       = cid
-        self.address   = address
-        self.node_addr = node_addr
-        self.error     = None
-        self.sender    = None
-        self.receiver  = None
+        self.cid                = cid
+        self.connect_properties = connect_properties
+        self.address            = address
+        self.node_addr          = node_addr
+        self.error              = None
+        self.sender             = None
+        self.receiver           = None
 
         self.n_rx_attach = 0
         self.n_tx_attach = 0
@@ -193,11 +210,11 @@ class AutolinkAttachTest(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(5, Timeout(self))
-        self.conn  = event.container.connect(self.address)
+        self.conn  = event.container.connect(self.address, properties=self.connect_properties)
 
     def on_connection_closed(self, event):
         if self.n_tx_attach == 1:
-            self.conn  = event.container.connect(self.address)
+            self.conn = event.container.connect(self.address, properties=self.connect_properties)
 
     def on_link_opened(self, event):
         if event.sender:

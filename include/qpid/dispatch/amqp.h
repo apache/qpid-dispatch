@@ -128,6 +128,7 @@ extern const char * const QD_CONNECTION_PROPERTY_PRODUCT_KEY;
 extern const char * const QD_CONNECTION_PROPERTY_PRODUCT_VALUE;
 extern const char * const QD_CONNECTION_PROPERTY_VERSION_KEY;
 extern const char * const QD_CONNECTION_PROPERTY_COST_KEY;
+extern const char * const QD_CONNECTION_PROPERTY_GROUP_KEY;
 /// @}
 
 /** @name AMQP error codes. */
