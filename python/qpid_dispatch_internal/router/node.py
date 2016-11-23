@@ -59,7 +59,8 @@ class NodeTracker(object):
             "linkState": [ls for ls in self.link_state.peers], # List of neighbour nodes
             "nextHop":  "(self)",
             "validOrigins": [],
-            "address": Address.topological(self.my_id, area=self.container.area)
+            "address": Address.topological(self.my_id, area=self.container.area),
+            "lastTopoChange" : "%10.6f" % self.last_topology_change
         })
 
 
