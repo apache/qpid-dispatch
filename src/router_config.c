@@ -91,9 +91,9 @@ qd_error_t qd_router_configure_fixed_address(qd_router_t *router, qd_entity_t *e
         buf = DEQ_NEXT(buf);
     }
 
-    qd_field_iterator_t *iter = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
+    qd_iterator_t *iter = qd_iterator_buffer(DEQ_HEAD(buffers), 0, length, ITER_VIEW_ALL);
     qd_parsed_field_t   *in_body = qd_parse(iter);
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
 
     qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_ADDRESS, 0, in_body, 0);
 
@@ -172,9 +172,9 @@ static void qd_router_add_link_route(qdr_core_t *core, const char *prefix, const
         buf = DEQ_NEXT(buf);
     }
 
-    qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
+    qd_iterator_t *iter    = qd_iterator_buffer(DEQ_HEAD(buffers), 0, length, ITER_VIEW_ALL);
     qd_parsed_field_t   *in_body = qd_parse(iter);
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
 
     qdr_manage_create(core, 0, QD_ROUTER_CONFIG_LINK_ROUTE, 0, in_body, 0);
 }
@@ -276,18 +276,18 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
             buf = DEQ_NEXT(buf);
         }
 
-        qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
+        qd_iterator_t *iter    = qd_iterator_buffer(DEQ_HEAD(buffers), 0, length, ITER_VIEW_ALL);
         qd_parsed_field_t   *in_body = qd_parse(iter);
-        qd_field_iterator_free(iter);
+        qd_iterator_free(iter);
 
-        qd_field_iterator_t *name_iter = 0;
+        qd_iterator_t *name_iter = 0;
 
         if (name)
-            name_iter = qd_field_iterator_string(name);
+            name_iter = qd_iterator_string(name, ITER_VIEW_ALL);
 
         qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_ADDRESS, name_iter, in_body, 0);
 
-        qd_field_iterator_free(name_iter);
+        qd_iterator_free(name_iter);
 
 
     } while(0);
@@ -368,18 +368,18 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
             buf = DEQ_NEXT(buf);
         }
 
-        qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
+        qd_iterator_t *iter    = qd_iterator_buffer(DEQ_HEAD(buffers), 0, length, ITER_VIEW_ALL);
         qd_parsed_field_t   *in_body = qd_parse(iter);
-        qd_field_iterator_free(iter);
+        qd_iterator_free(iter);
 
-        qd_field_iterator_t *name_iter = 0;
+        qd_iterator_t *name_iter = 0;
 
         if (name)
-            name_iter = qd_field_iterator_string(name);
+            name_iter = qd_iterator_string(name, ITER_VIEW_ALL);
 
         qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_LINK_ROUTE, name_iter, in_body, 0);
 
-        qd_field_iterator_free(name_iter);
+        qd_iterator_free(name_iter);
 
     } while(0);
 
@@ -467,18 +467,18 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
             buf = DEQ_NEXT(buf);
         }
 
-        qd_field_iterator_t *iter    = qd_field_iterator_buffer(DEQ_HEAD(buffers), 0, length);
-        qd_parsed_field_t   *in_body = qd_parse(iter);
-        qd_field_iterator_free(iter);
+        qd_iterator_t     *iter    = qd_iterator_buffer(DEQ_HEAD(buffers), 0, length, ITER_VIEW_ALL);
+        qd_parsed_field_t *in_body = qd_parse(iter);
+        qd_iterator_free(iter);
 
-        qd_field_iterator_t *name_iter = 0;
+        qd_iterator_t *name_iter = 0;
 
         if (name)
-            name_iter = qd_field_iterator_string(name);
+            name_iter = qd_iterator_string(name, ITER_VIEW_ALL);
 
         qdr_manage_create(router->router_core, 0, QD_ROUTER_CONFIG_AUTO_LINK, name_iter, in_body, 0);
 
-        qd_field_iterator_free(name_iter);
+        qd_iterator_free(name_iter);
 
     } while (0);
 

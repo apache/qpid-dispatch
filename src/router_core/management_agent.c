@@ -131,11 +131,11 @@ static void qd_set_response_status(const qd_amqp_error_t *error, qd_composed_fie
 }
 
 
-static void qd_set_properties(qd_message_t        *msg,
-                              qd_field_iterator_t **reply_to,
+static void qd_set_properties(qd_message_t         *msg,
+                              qd_iterator_t       **reply_to,
                               qd_composed_field_t **fld)
 {
-    qd_field_iterator_t *correlation_id = qd_message_field_iterator_typed(msg, QD_FIELD_CORRELATION_ID);
+    qd_iterator_t *correlation_id = qd_message_field_iterator_typed(msg, QD_FIELD_CORRELATION_ID);
     // Grab the reply_to field from the incoming message. This is the address we will send the response to.
     *reply_to = qd_message_field_iterator(msg, QD_FIELD_REPLY_TO);
     *fld = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
@@ -147,7 +147,7 @@ static void qd_set_properties(qd_message_t        *msg,
     qd_compose_insert_null(*fld);
     qd_compose_insert_typed_iterator(*fld, correlation_id);
     qd_compose_end_list(*fld);
-    qd_field_iterator_free(correlation_id);
+    qd_iterator_free(correlation_id);
 }
 
 
@@ -184,7 +184,7 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
         }
     }
 
-    qd_field_iterator_t *reply_to = 0;
+    qd_iterator_t       *reply_to = 0;
     qd_composed_field_t *fld = 0;
 
     // Start composing the message.
@@ -201,7 +201,7 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     // We have come to the very end. Free the appropriate memory.
     // Just go over this with Ted to see if I freed everything.
 
-    qd_field_iterator_free(reply_to);
+    qd_iterator_free(reply_to);
     qd_compose_free(fld);
 
     qd_message_free(ctx->msg);
@@ -236,7 +236,7 @@ static void qd_core_agent_query_handler(qdr_core_t                 *core,
     // Grab the attribute names from the incoming message body. The attribute names will be used later on in the response.
     qd_parsed_field_t *attribute_names_parsed_field = 0;
 
-    qd_field_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+    qd_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
 
     qd_parsed_field_t *body = qd_parse(body_iter);
     if (body != 0 && qd_parse_is_map(body)) {
@@ -254,7 +254,7 @@ static void qd_core_agent_query_handler(qdr_core_t                 *core,
 
     qdr_query_get_first(ctx->query, (*offset));
 
-    qd_field_iterator_free(body_iter);
+    qd_iterator_free(body_iter);
     qd_parse_free(body);
 }
 
@@ -263,8 +263,8 @@ static void qd_core_agent_read_handler(qdr_core_t                 *core,
                                        qd_message_t               *msg,
                                        qd_router_entity_type_t     entity_type,
                                        qd_router_operation_type_t  operation_type,
-                                       qd_field_iterator_t        *identity_iter,
-                                       qd_field_iterator_t        *name_iter)
+                                       qd_iterator_t              *identity_iter,
+                                       qd_iterator_t              *name_iter)
 {
     //
     // Add the Body
@@ -286,7 +286,7 @@ static void qd_core_agent_create_handler(qdr_core_t                 *core,
                                          qd_message_t               *msg,
                                          qd_router_entity_type_t     entity_type,
                                          qd_router_operation_type_t  operation_type,
-                                         qd_field_iterator_t        *name_iter)
+                                         qd_iterator_t              *name_iter)
 {
     //
     // Add the Body
@@ -299,13 +299,13 @@ static void qd_core_agent_create_handler(qdr_core_t                 *core,
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
     qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
 
-    qd_field_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+    qd_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
 
     qd_parsed_field_t *in_body = qd_parse(body_iter);
 
     qdr_manage_create(core, ctx, entity_type, name_iter, in_body, out_body);
 
-    qd_field_iterator_free(body_iter);
+    qd_iterator_free(body_iter);
 }
 
 
@@ -313,8 +313,8 @@ static void qd_core_agent_update_handler(qdr_core_t                 *core,
                                          qd_message_t               *msg,
                                          qd_router_entity_type_t     entity_type,
                                          qd_router_operation_type_t  operation_type,
-                                         qd_field_iterator_t        *identity_iter,
-                                         qd_field_iterator_t        *name_iter)
+                                         qd_iterator_t              *identity_iter,
+                                         qd_iterator_t              *name_iter)
 {
     qd_composed_field_t *out_body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 
@@ -323,9 +323,9 @@ static void qd_core_agent_update_handler(qdr_core_t                 *core,
 
     qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
 
-    qd_field_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+    qd_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
     qd_parsed_field_t *in_body= qd_parse(iter);
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
 
     qdr_manage_update(core, ctx, entity_type, name_iter, identity_iter, in_body, out_body);
 
@@ -336,8 +336,8 @@ static void qd_core_agent_delete_handler(qdr_core_t                 *core,
                                          qd_message_t               *msg,
                                          qd_router_entity_type_t     entity_type,
                                          qd_router_operation_type_t  operation_type,
-                                         qd_field_iterator_t        *identity_iter,
-                                         qd_field_iterator_t        *name_iter)
+                                         qd_iterator_t              *identity_iter,
+                                         qd_iterator_t              *name_iter)
 {
     //
     // Add the Body
@@ -361,8 +361,8 @@ static void qd_core_agent_delete_handler(qdr_core_t                 *core,
 static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
                                   qd_router_entity_type_t     *entity_type,
                                   qd_router_operation_type_t  *operation_type,
-                                  qd_field_iterator_t        **identity_iter,
-                                  qd_field_iterator_t        **name_iter,
+                                  qd_iterator_t              **identity_iter,
+                                  qd_iterator_t              **name_iter,
                                   int                         *count,
                                   int                         *offset)
 {
@@ -394,17 +394,17 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
             return false;
     }
 
-    if (qd_field_iterator_equal(qd_parse_raw(parsed_field), address_entity_type))
+    if (qd_iterator_equal(qd_parse_raw(parsed_field), address_entity_type))
         *entity_type = QD_ROUTER_ADDRESS;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), link_entity_type))
+    else if (qd_iterator_equal(qd_parse_raw(parsed_field), link_entity_type))
         *entity_type = QD_ROUTER_LINK;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), config_address_entity_type))
+    else if (qd_iterator_equal(qd_parse_raw(parsed_field), config_address_entity_type))
         *entity_type = QD_ROUTER_CONFIG_ADDRESS;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), link_route_entity_type))
+    else if (qd_iterator_equal(qd_parse_raw(parsed_field), link_route_entity_type))
         *entity_type = QD_ROUTER_CONFIG_LINK_ROUTE;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), auto_link_entity_type))
+    else if (qd_iterator_equal(qd_parse_raw(parsed_field), auto_link_entity_type))
         *entity_type = QD_ROUTER_CONFIG_AUTO_LINK;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), console_entity_type))
+    else if (qd_iterator_equal(qd_parse_raw(parsed_field), console_entity_type))
         *entity_type = QD_ROUTER_FORBIDDEN;
     else
         return false;
@@ -415,15 +415,15 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
     if (parsed_field == 0)
         return false;
 
-    if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_QUERY))
+    if (qd_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_QUERY))
         (*operation_type) = QD_ROUTER_OPERATION_QUERY;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_CREATE))
+    else if (qd_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_CREATE))
         (*operation_type) = QD_ROUTER_OPERATION_CREATE;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_READ))
+    else if (qd_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_READ))
         (*operation_type) = QD_ROUTER_OPERATION_READ;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_UPDATE))
+    else if (qd_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_UPDATE))
         (*operation_type) = QD_ROUTER_OPERATION_UPDATE;
-    else if (qd_field_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_DELETE))
+    else if (qd_iterator_equal(qd_parse_raw(parsed_field), MANAGEMENT_DELETE))
         (*operation_type) = QD_ROUTER_OPERATION_DELETE;
     else
         // This is an unknown operation type. cannot be handled, return false.
@@ -454,13 +454,13 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
 void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id, int unused_cost)
 {
     qdr_core_t *core = (qdr_core_t*) context;
-    qd_field_iterator_t *app_properties_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
+    qd_iterator_t *app_properties_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
 
     qd_router_entity_type_t    entity_type = 0;
     qd_router_operation_type_t operation_type = 0;
 
-    qd_field_iterator_t *identity_iter = 0;
-    qd_field_iterator_t *name_iter = 0;
+    qd_iterator_t *identity_iter = 0;
+    qd_iterator_t *name_iter = 0;
 
     int32_t count = 0;
     int32_t offset = 0;
@@ -492,7 +492,7 @@ void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unuse
         qdr_send_to2(core, msg, MANAGEMENT_INTERNAL, false, false);
     }
 
-    qd_field_iterator_free(app_properties_iter);
+    qd_iterator_free(app_properties_iter);
     qd_parse_free(properties_fld);
 
 }

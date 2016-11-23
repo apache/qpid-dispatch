@@ -26,15 +26,15 @@ ALLOC_DEFINE(qdr_auto_link_t);
 ALLOC_DEFINE(qdr_conn_identifier_t);
 
 
-static qdr_conn_identifier_t *qdr_route_declare_id_CT(qdr_core_t          *core,
-                                                      qd_field_iterator_t *conn_id,
-                                                      bool                 is_container)
+static qdr_conn_identifier_t *qdr_route_declare_id_CT(qdr_core_t    *core,
+                                                      qd_iterator_t *conn_id,
+                                                      bool           is_container)
 {
     char                   prefix = is_container ? 'C' : 'L';
     qdr_conn_identifier_t *cid    = 0;
 
-    qd_address_iterator_reset_view(conn_id, ITER_VIEW_ADDRESS_HASH);
-    qd_address_iterator_override_prefix(conn_id, prefix);
+    qd_iterator_reset_view(conn_id, ITER_VIEW_ADDRESS_HASH);
+    qd_iterator_annotate_prefix(conn_id, prefix);
 
     qd_hash_retrieve(core->conn_id_hash, conn_id, (void**) &cid);
     if (!cid) {
@@ -164,7 +164,7 @@ static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, q
 
 
 qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
-                                              qd_field_iterator_t    *name,
+                                              qd_iterator_t          *name,
                                               qd_parsed_field_t      *prefix_field,
                                               qd_parsed_field_t      *conn_id,
                                               bool                    is_container,
@@ -178,16 +178,16 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
     //
     ZERO(lr);
     lr->identity  = qdr_identifier(core);
-    lr->name      = name ? (char*) qd_field_iterator_copy(name) : 0;
+    lr->name      = name ? (char*) qd_iterator_copy(name) : 0;
     lr->dir       = dir;
     lr->treatment = treatment;
 
     //
     // Find or create an address for link-attach routing
     //
-    qd_field_iterator_t *iter = qd_parse_raw(prefix_field);
-    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    qd_address_iterator_override_prefix(iter, dir == QD_INCOMING ? 'C' : 'D');
+    qd_iterator_t *iter = qd_parse_raw(prefix_field);
+    qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    qd_iterator_annotate_prefix(iter, dir == QD_INCOMING ? 'C' : 'D');
 
     qd_hash_retrieve(core->addr_hash, iter, (void*) &lr->addr);
     if (!lr->addr) {
@@ -249,7 +249,7 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
 
 
 qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
-                                            qd_field_iterator_t *name,
+                                            qd_iterator_t       *name,
                                             qd_parsed_field_t   *addr_field,
                                             qd_direction_t       dir,
                                             int                  phase,
@@ -264,18 +264,18 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
     //
     ZERO(al);
     al->identity      = qdr_identifier(core);
-    al->name          = name ? (char*) qd_field_iterator_copy(name) : 0;
+    al->name          = name ? (char*) qd_iterator_copy(name) : 0;
     al->dir           = dir;
     al->phase         = phase;
     al->state         = QDR_AUTO_LINK_STATE_INACTIVE;
-    al->external_addr = external_addr ? (char*) qd_field_iterator_copy(qd_parse_raw(external_addr)) : 0;
+    al->external_addr = external_addr ? (char*) qd_iterator_copy(qd_parse_raw(external_addr)) : 0;
 
     //
     // Find or create an address for the auto_link destination
     //
-    qd_field_iterator_t *iter = qd_parse_raw(addr_field);
-    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    qd_address_iterator_set_phase(iter, (char) phase + '0');
+    qd_iterator_t *iter = qd_parse_raw(addr_field);
+    qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    qd_iterator_annotate_phase(iter, (char) phase + '0');
 
     qd_hash_retrieve(core->addr_hash, iter, (void*) &al->addr);
     if (!al->addr) {

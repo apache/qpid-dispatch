@@ -86,16 +86,16 @@ static void quote(char* bytes, int n, char **begin, char *end) {
 static void copy_field(qd_message_t *msg,  int field, int max, char *pre, char *post,
                        char **begin, char *end)
 {
-    qd_field_iterator_t* iter = qd_message_field_iterator(msg, field);
+    qd_iterator_t* iter = qd_message_field_iterator(msg, field);
     if (iter) {
         aprintf(begin, end, "%s", pre);
-        qd_field_iterator_reset(iter);
-        for (int j = 0; !qd_field_iterator_end(iter) && j < max; ++j) {
-            char byte = qd_field_iterator_octet(iter);
+        qd_iterator_reset(iter);
+        for (int j = 0; !qd_iterator_end(iter) && j < max; ++j) {
+            char byte = qd_iterator_octet(iter);
             quote(&byte, 1, begin, end);
         }
         aprintf(begin, end, "%s", post);
-        qd_field_iterator_free(iter);
+        qd_iterator_free(iter);
     }
 }
 
@@ -633,7 +633,7 @@ qd_parsed_field_t *qd_message_message_annotations(qd_message_t *in_msg)
     if (content->parsed_message_annotations)
         return content->parsed_message_annotations;
 
-    qd_field_iterator_t *ma = qd_message_field_iterator(in_msg, QD_FIELD_MESSAGE_ANNOTATION);
+    qd_iterator_t *ma = qd_message_field_iterator(in_msg, QD_FIELD_MESSAGE_ANNOTATION);
     if (ma == 0)
         return 0;
 
@@ -641,13 +641,13 @@ qd_parsed_field_t *qd_message_message_annotations(qd_message_t *in_msg)
     if (content->parsed_message_annotations == 0 ||
         !qd_parse_ok(content->parsed_message_annotations) ||
         !qd_parse_is_map(content->parsed_message_annotations)) {
-        qd_field_iterator_free(ma);
+        qd_iterator_free(ma);
         qd_parse_free(content->parsed_message_annotations);
         content->parsed_message_annotations = 0;
         return 0;
     }
 
-    qd_field_iterator_free(ma);
+    qd_iterator_free(ma);
     return content->parsed_message_annotations;
 }
 
@@ -805,9 +805,9 @@ static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
             if (!sub_key)
                 continue;
 
-            qd_field_iterator_t *iter = qd_parse_raw(sub_key);
+            qd_iterator_t *iter = qd_parse_raw(sub_key);
 
-            if (!qd_field_iterator_prefix(iter, QD_MA_PREFIX)) {
+            if (!qd_iterator_prefix(iter, QD_MA_PREFIX)) {
                 if (!map_started) {
                     qd_compose_start_map(out_ma);
                     map_started = true;
@@ -1099,17 +1099,17 @@ int qd_message_check(qd_message_t *in_msg, qd_message_depth_t depth)
 }
 
 
-qd_field_iterator_t *qd_message_field_iterator_typed(qd_message_t *msg, qd_message_field_t field)
+qd_iterator_t *qd_message_field_iterator_typed(qd_message_t *msg, qd_message_field_t field)
 {
     qd_field_location_t *loc = qd_message_field_location(msg, field);
     if (!loc)
         return 0;
 
-    return qd_field_iterator_buffer(loc->buffer, loc->offset, loc->length + loc->hdr_length);
+    return qd_iterator_buffer(loc->buffer, loc->offset, loc->length + loc->hdr_length, ITER_VIEW_ALL);
 }
 
 
-qd_field_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_field_t field)
+qd_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_field_t field)
 {
     qd_field_location_t *loc = qd_message_field_location(msg, field);
     if (!loc)
@@ -1122,7 +1122,7 @@ qd_field_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_fie
     unsigned char *cursor = qd_buffer_base(loc->buffer) + loc->offset;
     advance(&cursor, &buffer, loc->hdr_length, 0, 0);
 
-    return qd_field_iterator_buffer(buffer, cursor - qd_buffer_base(buffer), loc->length);
+    return qd_iterator_buffer(buffer, cursor - qd_buffer_base(buffer), loc->length, ITER_VIEW_ALL);
 }
 
 

@@ -22,7 +22,7 @@
 #include "router_core_private.h"
 
 qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
-                                              qd_field_iterator_t    *name,
+                                              qd_iterator_t          *name,
                                               qd_parsed_field_t      *prefix_field,
                                               qd_parsed_field_t      *conn_id,
                                               bool                    is_container,
@@ -32,7 +32,7 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
 void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr);
 
 qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
-                                            qd_field_iterator_t *name,
+                                            qd_iterator_t       *name,
                                             qd_parsed_field_t   *addr_field,
                                             qd_direction_t       dir,
                                             int                  phase,

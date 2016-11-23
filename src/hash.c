@@ -111,13 +111,13 @@ size_t qd_hash_size(qd_hash_t *h)
 }
 
 
-static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, qd_field_iterator_t *key, int *exists, qd_hash_handle_t **handle)
+static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, qd_iterator_t *key, int *exists, qd_hash_handle_t **handle)
 {
-    unsigned long   idx  = qd_iterator_hash_function(key) & h->bucket_mask;
+    unsigned long   idx  = qd_iterator_hash_view(key) & h->bucket_mask;
     qd_hash_item_t *item = DEQ_HEAD(h->buckets[idx].items);
 
     while (item) {
-        if (qd_field_iterator_equal(key, item->key))
+        if (qd_iterator_equal(key, item->key))
             break;
         item = item->next;
     }
@@ -134,7 +134,7 @@ static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, qd_field_iterator_t
         return 0;
 
     DEQ_ITEM_INIT(item);
-    item->key = qd_field_iterator_copy(key);
+    item->key = qd_iterator_copy(key);
 
     DEQ_INSERT_TAIL(h->buckets[idx].items, item);
     h->size++;
@@ -153,7 +153,7 @@ static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, qd_field_iterator_t
 }
 
 
-qd_error_t qd_hash_insert(qd_hash_t *h, qd_field_iterator_t *key, void *val, qd_hash_handle_t **handle)
+qd_error_t qd_hash_insert(qd_hash_t *h, qd_iterator_t *key, void *val, qd_hash_handle_t **handle)
 {
     int             exists = 0;
     qd_hash_item_t *item   = qd_hash_internal_insert(h, key, &exists, handle);
@@ -170,7 +170,7 @@ qd_error_t qd_hash_insert(qd_hash_t *h, qd_field_iterator_t *key, void *val, qd_
 }
 
 
-qd_error_t qd_hash_insert_const(qd_hash_t *h, qd_field_iterator_t *key, const void *val, qd_hash_handle_t **handle)
+qd_error_t qd_hash_insert_const(qd_hash_t *h, qd_iterator_t *key, const void *val, qd_hash_handle_t **handle)
 {
     assert(h->is_const);
 
@@ -183,14 +183,14 @@ qd_error_t qd_hash_insert_const(qd_hash_t *h, qd_field_iterator_t *key, const vo
 }
 
 
-static qd_hash_item_t *qd_hash_internal_retrieve_with_hash(qd_hash_t *h, uint32_t hash, qd_field_iterator_t *key)
+static qd_hash_item_t *qd_hash_internal_retrieve_with_hash(qd_hash_t *h, uint32_t hash, qd_iterator_t *key)
 {
     uint32_t   idx  = hash & h->bucket_mask;
 
 	qd_hash_item_t *item = DEQ_HEAD(h->buckets[idx].items);
 
 	while (item) {
-		if (qd_field_iterator_equal(key, item->key))
+		if (qd_iterator_equal(key, item->key))
 			break;
 		item = item->next;
 	}
@@ -199,22 +199,22 @@ static qd_hash_item_t *qd_hash_internal_retrieve_with_hash(qd_hash_t *h, uint32_
 }
 
 
-static qd_hash_item_t *qd_hash_internal_retrieve(qd_hash_t *h, qd_field_iterator_t *key)
+static qd_hash_item_t *qd_hash_internal_retrieve(qd_hash_t *h, qd_iterator_t *key)
 {
-    uint32_t hash = qd_iterator_hash_function(key);
+    uint32_t hash = qd_iterator_hash_view(key);
     return qd_hash_internal_retrieve_with_hash(h, hash, key);
 }
 
 
-void qd_hash_retrieve_prefix(qd_hash_t *h, qd_field_iterator_t *iter, void **val)
+void qd_hash_retrieve_prefix(qd_hash_t *h, qd_iterator_t *iter, void **val)
 {
 	//Hash individual segments by iterating thru the octets in the iterator.
-	qd_iterator_hash_segments(iter);
+	qd_iterator_hash_view_segments(iter);
 
 	uint32_t hash = 0;
 
 	qd_hash_item_t *item;
-	while (qd_iterator_hash_and_reset(iter, &hash)) {
+	while (qd_iterator_next_segment(iter, &hash)) {
 		item = qd_hash_internal_retrieve_with_hash(h, hash, iter);
 		if (item)
 			break;
@@ -227,7 +227,7 @@ void qd_hash_retrieve_prefix(qd_hash_t *h, qd_field_iterator_t *iter, void **val
 }
 
 
-void qd_hash_retrieve_prefix_const(qd_hash_t *h, qd_field_iterator_t *iter, const void **val)
+void qd_hash_retrieve_prefix_const(qd_hash_t *h, qd_iterator_t *iter, const void **val)
 {
     assert(h->is_const);
 
@@ -235,7 +235,7 @@ void qd_hash_retrieve_prefix_const(qd_hash_t *h, qd_field_iterator_t *iter, cons
 
     qd_hash_item_t *item;
 
-    while (qd_iterator_hash_and_reset(iter, &hash)) {
+    while (qd_iterator_next_segment(iter, &hash)) {
         item = qd_hash_internal_retrieve_with_hash(h, hash, iter);
         if (item)
             break;
@@ -248,7 +248,7 @@ void qd_hash_retrieve_prefix_const(qd_hash_t *h, qd_field_iterator_t *iter, cons
 }
 
 
-qd_error_t qd_hash_retrieve(qd_hash_t *h, qd_field_iterator_t *key, void **val)
+qd_error_t qd_hash_retrieve(qd_hash_t *h, qd_iterator_t *key, void **val)
 {
     qd_hash_item_t *item = qd_hash_internal_retrieve(h, key);
     if (item)
@@ -260,7 +260,7 @@ qd_error_t qd_hash_retrieve(qd_hash_t *h, qd_field_iterator_t *key, void **val)
 }
 
 
-qd_error_t qd_hash_retrieve_const(qd_hash_t *h, qd_field_iterator_t *key, const void **val)
+qd_error_t qd_hash_retrieve_const(qd_hash_t *h, qd_iterator_t *key, const void **val)
 {
     assert(h->is_const);
 
@@ -274,13 +274,13 @@ qd_error_t qd_hash_retrieve_const(qd_hash_t *h, qd_field_iterator_t *key, const 
 }
 
 
-qd_error_t qd_hash_remove(qd_hash_t *h, qd_field_iterator_t *key)
+qd_error_t qd_hash_remove(qd_hash_t *h, qd_iterator_t *key)
 {
-    uint32_t   idx  = qd_iterator_hash_function(key) & h->bucket_mask;
+    uint32_t   idx  = qd_iterator_hash_view(key) & h->bucket_mask;
     qd_hash_item_t *item = DEQ_HEAD(h->buckets[idx].items);
 
     while (item) {
-        if (qd_field_iterator_equal(key, item->key))
+        if (qd_iterator_equal(key, item->key))
             break;
         item = item->next;
     }

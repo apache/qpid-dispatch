@@ -250,11 +250,11 @@ void qdra_config_auto_link_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 static const char *qdra_auto_link_direction_CT(qd_parsed_field_t *field, qd_direction_t *dir)
 {
     if (field) {
-        qd_field_iterator_t *iter = qd_parse_raw(field);
-        if (qd_field_iterator_equal(iter, (unsigned char*) "in")) {
+        qd_iterator_t *iter = qd_parse_raw(field);
+        if (qd_iterator_equal(iter, (unsigned char*) "in")) {
             *dir = QD_INCOMING;
             return 0;
-        } else if (qd_field_iterator_equal(iter, (unsigned char*) "out")) {
+        } else if (qd_iterator_equal(iter, (unsigned char*) "out")) {
             *dir = QD_OUTGOING;
             return 0;
         }
@@ -264,7 +264,7 @@ static const char *qdra_auto_link_direction_CT(qd_parsed_field_t *field, qd_dire
 }
 
 
-static qdr_auto_link_t *qdr_auto_link_config_find_by_identity_CT(qdr_core_t *core, qd_field_iterator_t *identity)
+static qdr_auto_link_t *qdr_auto_link_config_find_by_identity_CT(qdr_core_t *core, qd_iterator_t *identity)
 {
     if (!identity)
         return 0;
@@ -274,7 +274,7 @@ static qdr_auto_link_t *qdr_auto_link_config_find_by_identity_CT(qdr_core_t *cor
         // Convert the passed in identity to a char*
         char id[100];
         snprintf(id, 100, "%"PRId64, rc->identity);
-        if (qd_field_iterator_equal(identity, (const unsigned char*) id))
+        if (qd_iterator_equal(identity, (const unsigned char*) id))
             break;
         rc = DEQ_NEXT(rc);
     }
@@ -284,14 +284,14 @@ static qdr_auto_link_t *qdr_auto_link_config_find_by_identity_CT(qdr_core_t *cor
 }
 
 
-static qdr_auto_link_t *qdr_auto_link_config_find_by_name_CT(qdr_core_t *core, qd_field_iterator_t *name)
+static qdr_auto_link_t *qdr_auto_link_config_find_by_name_CT(qdr_core_t *core, qd_iterator_t *name)
 {
     if (!name)
         return 0;
 
     qdr_auto_link_t *rc = DEQ_HEAD(core->auto_links);
     while (rc) { // Sometimes the name can be null
-        if (rc->name && qd_field_iterator_equal(name, (const unsigned char*) rc->name))
+        if (rc->name && qd_iterator_equal(name, (const unsigned char*) rc->name))
             break;
         rc = DEQ_NEXT(rc);
     }
@@ -300,10 +300,10 @@ static qdr_auto_link_t *qdr_auto_link_config_find_by_name_CT(qdr_core_t *core, q
 }
 
 
-void qdra_config_auto_link_delete_CT(qdr_core_t          *core,
-                                      qdr_query_t         *query,
-                                      qd_field_iterator_t *name,
-                                      qd_field_iterator_t *identity)
+void qdra_config_auto_link_delete_CT(qdr_core_t    *core,
+                                     qdr_query_t   *query,
+                                     qd_iterator_t *name,
+                                     qd_iterator_t *identity)
 {
     qdr_auto_link_t *al = 0;
 
@@ -331,10 +331,10 @@ void qdra_config_auto_link_delete_CT(qdr_core_t          *core,
     qdr_agent_enqueue_response_CT(core, query);
 }
 
-void qdra_config_auto_link_create_CT(qdr_core_t          *core,
-                                      qd_field_iterator_t *name,
-                                      qdr_query_t         *query,
-                                      qd_parsed_field_t   *in_body)
+void qdra_config_auto_link_create_CT(qdr_core_t        *core,
+                                     qd_iterator_t     *name,
+                                     qdr_query_t       *query,
+                                     qd_parsed_field_t *in_body)
 {
     while (true) {
         //
@@ -342,7 +342,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t          *core,
         //
         qdr_auto_link_t *al = DEQ_HEAD(core->auto_links);
         while (al) {
-            if (name && al->name && qd_field_iterator_equal(name, (const unsigned char*) al->name))
+            if (name && al->name && qd_iterator_equal(name, (const unsigned char*) al->name))
                 break;
             al = DEQ_NEXT(al);
         }
@@ -463,11 +463,11 @@ static void qdr_manage_write_config_auto_link_map_CT(qdr_core_t          *core,
 }
 
 
-void qdra_config_auto_link_get_CT(qdr_core_t        *core,
-                                qd_field_iterator_t *name,
-                                qd_field_iterator_t *identity,
-                                qdr_query_t         *query,
-                                const char          *qdr_config_auto_link_columns[])
+void qdra_config_auto_link_get_CT(qdr_core_t    *core,
+                                  qd_iterator_t *name,
+                                  qd_iterator_t *identity,
+                                  qdr_query_t   *query,
+                                  const char    *qdr_config_auto_link_columns[])
 {
     qdr_auto_link_t *al = 0;
 

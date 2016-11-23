@@ -208,16 +208,16 @@ void qdra_config_address_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 static qd_address_treatment_t qdra_address_treatment_CT(qd_parsed_field_t *field)
 {
     if (field) {
-        qd_field_iterator_t *iter = qd_parse_raw(field);
-        if (qd_field_iterator_equal(iter, (unsigned char*) "multicast"))    return QD_TREATMENT_MULTICAST_ONCE;
-        if (qd_field_iterator_equal(iter, (unsigned char*) "closest"))      return QD_TREATMENT_ANYCAST_CLOSEST;
-        if (qd_field_iterator_equal(iter, (unsigned char*) "balanced"))     return QD_TREATMENT_ANYCAST_BALANCED;
+        qd_iterator_t *iter = qd_parse_raw(field);
+        if (qd_iterator_equal(iter, (unsigned char*) "multicast"))    return QD_TREATMENT_MULTICAST_ONCE;
+        if (qd_iterator_equal(iter, (unsigned char*) "closest"))      return QD_TREATMENT_ANYCAST_CLOSEST;
+        if (qd_iterator_equal(iter, (unsigned char*) "balanced"))     return QD_TREATMENT_ANYCAST_BALANCED;
     }
     return QD_TREATMENT_ANYCAST_BALANCED;
 }
 
 
-static qdr_address_config_t *qdr_address_config_find_by_identity_CT(qdr_core_t *core, qd_field_iterator_t *identity)
+static qdr_address_config_t *qdr_address_config_find_by_identity_CT(qdr_core_t *core, qd_iterator_t *identity)
 {
     if (!identity)
         return 0;
@@ -227,7 +227,7 @@ static qdr_address_config_t *qdr_address_config_find_by_identity_CT(qdr_core_t *
         // Convert the passed in identity to a char*
         char id[100];
         snprintf(id, 100, "%"PRId64, rc->identity);
-        if (qd_field_iterator_equal(identity, (const unsigned char*) id))
+        if (qd_iterator_equal(identity, (const unsigned char*) id))
             break;
         rc = DEQ_NEXT(rc);
     }
@@ -237,14 +237,14 @@ static qdr_address_config_t *qdr_address_config_find_by_identity_CT(qdr_core_t *
 }
 
 
-static qdr_address_config_t *qdr_address_config_find_by_name_CT(qdr_core_t *core, qd_field_iterator_t *name)
+static qdr_address_config_t *qdr_address_config_find_by_name_CT(qdr_core_t *core, qd_iterator_t *name)
 {
     if (!name)
         return 0;
 
     qdr_address_config_t *rc = DEQ_HEAD(core->addr_config);
     while (rc) { // Sometimes the name can be null
-        if (rc->name && qd_field_iterator_equal(name, (const unsigned char*) rc->name))
+        if (rc->name && qd_iterator_equal(name, (const unsigned char*) rc->name))
             break;
         rc = DEQ_NEXT(rc);
     }
@@ -253,10 +253,10 @@ static qdr_address_config_t *qdr_address_config_find_by_name_CT(qdr_core_t *core
 }
 
 
-void qdra_config_address_delete_CT(qdr_core_t          *core,
-                                   qdr_query_t         *query,
-                                   qd_field_iterator_t *name,
-                                   qd_field_iterator_t *identity)
+void qdra_config_address_delete_CT(qdr_core_t    *core,
+                                   qdr_query_t   *query,
+                                   qd_iterator_t *name,
+                                   qd_iterator_t *identity)
 {
     qdr_address_config_t *addr = 0;
 
@@ -296,10 +296,10 @@ void qdra_config_address_delete_CT(qdr_core_t          *core,
     qdr_agent_enqueue_response_CT(core, query);
 }
 
-void qdra_config_address_create_CT(qdr_core_t          *core,
-                                   qd_field_iterator_t *name,
-                                   qdr_query_t         *query,
-                                   qd_parsed_field_t   *in_body)
+void qdra_config_address_create_CT(qdr_core_t         *core,
+                                   qd_iterator_t      *name,
+                                   qdr_query_t        *query,
+                                   qd_parsed_field_t  *in_body)
 {
     while (true) {
         //
@@ -307,7 +307,7 @@ void qdra_config_address_create_CT(qdr_core_t          *core,
         //
         qdr_address_config_t *addr = DEQ_HEAD(core->addr_config);
         while (addr) {
-            if (name && addr->name && qd_field_iterator_equal(name, (const unsigned char*) addr->name))
+            if (name && addr->name && qd_iterator_equal(name, (const unsigned char*) addr->name))
                 break;
             addr = DEQ_NEXT(addr);
         }
@@ -348,9 +348,9 @@ void qdra_config_address_create_CT(qdr_core_t          *core,
         //
         // Ensure that there isn't another configured address with the same prefix
         //
-        qd_field_iterator_t *iter = qd_parse_raw(prefix_field);
-        qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-        qd_address_iterator_override_prefix(iter, 'Z');
+        qd_iterator_t *iter = qd_parse_raw(prefix_field);
+        qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+        qd_iterator_annotate_prefix(iter, 'Z');
         addr = 0;
         qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
         if (!!addr) {
@@ -388,7 +388,7 @@ void qdra_config_address_create_CT(qdr_core_t          *core,
         //
         addr = new_qdr_address_config_t();
         DEQ_ITEM_INIT(addr);
-        addr->name      = name ? (char*) qd_field_iterator_copy(name) : 0;
+        addr->name      = name ? (char*) qd_iterator_copy(name) : 0;
         addr->identity  = qdr_identifier(core);
         addr->treatment = qdra_address_treatment_CT(distrib_field);
         addr->in_phase  = in_phase;
@@ -443,11 +443,11 @@ static void qdr_manage_write_config_address_map_CT(qdr_core_t          *core,
 }
 
 
-void qdra_config_address_get_CT(qdr_core_t          *core,
-                                qd_field_iterator_t *name,
-                                qd_field_iterator_t *identity,
-                                qdr_query_t         *query,
-                                const char          *qdr_config_address_columns[])
+void qdra_config_address_get_CT(qdr_core_t    *core,
+                                qd_iterator_t *name,
+                                qd_iterator_t *identity,
+                                qdr_query_t   *query,
+                                const char    *qdr_config_address_columns[])
 {
     qdr_address_config_t *addr = 0;
 

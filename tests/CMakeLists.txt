@@ -27,7 +27,6 @@ include_directories(
 ##
 set(unit_test_SOURCES
     compose_test.c
-    parse_test.c
     policy_test.c
     run_unit_tests.c
     server_test.c
@@ -43,6 +42,7 @@ target_link_libraries(unit_tests qpid-dispatch)
 
 set(unit_test_size_SOURCES
     field_test.c
+    parse_test.c
     message_test.c
     buffer_test.c
     run_unit_tests_size.c

@@ -662,7 +662,7 @@ static char qdr_prefix_for_dir(qd_direction_t dir)
 }
 
 
-qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_iterator_t *iter, int *in_phase, int *out_phase)
+qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_iterator_t *iter, int *in_phase, int *out_phase)
 {
     qdr_address_config_t *addr = 0;
 
@@ -670,9 +670,9 @@ qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_i
     // Set the prefix to 'Z' for configuration and do a prefix-retrieve to get the most
     // specific match
     //
-    qd_address_iterator_override_prefix(iter, 'Z');
+    qd_iterator_annotate_prefix(iter, 'Z');
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
-    qd_address_iterator_override_prefix(iter, '\0');
+    qd_iterator_annotate_prefix(iter, '\0');
     if (in_phase)  *in_phase  = addr ? addr->in_phase  : 0;
     if (out_phase) *out_phase = addr ? addr->out_phase : 0;
 
@@ -680,13 +680,13 @@ qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_field_i
 }
 
 
-qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_field_iterator_t *iter)
+qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_iterator_t *iter)
 {
 #define HASH_STORAGE_SIZE 1000
     char  storage[HASH_STORAGE_SIZE + 1];
     char *copy    = storage;
     bool  on_heap = false;
-    int   length  = qd_field_iterator_length(iter);
+    int   length  = qd_iterator_length(iter);
     qd_address_treatment_t trt = QD_TREATMENT_ANYCAST_BALANCED;
 
     if (length > HASH_STORAGE_SIZE) {
@@ -694,7 +694,7 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_fi
         on_heap = true;
     }
 
-    qd_field_iterator_strncpy(iter, copy, length + 1);
+    qd_iterator_strncpy(iter, copy, length + 1);
 
     if (copy[0] == 'C' || copy[0] == 'D')
         //
@@ -708,13 +708,13 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_fi
         // Handle the mobile address case
         //
         copy[1] = 'Z';
-        qd_field_iterator_t  *config_iter = qd_field_iterator_string(&copy[1]);
+        qd_iterator_t  *config_iter = qd_iterator_string(&copy[1], ITER_VIEW_ALL);
         qdr_address_config_t *addr = 0;
 
         qd_hash_retrieve_prefix(core->addr_hash, config_iter, (void**) &addr);
         if (addr)
             trt = addr->treatment;
-        qd_field_iterator_free(config_iter);
+        qd_iterator_free(config_iter);
     }
 
     if (on_heap)
@@ -799,12 +799,12 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
         // in the dynamic node properties.  If so, look that address up as a link-routed
         // destination.
         //
-        qd_field_iterator_t *dnp_address = qdr_terminus_dnp_address(terminus);
+        qd_iterator_t *dnp_address = qdr_terminus_dnp_address(terminus);
         if (dnp_address) {
-            qd_address_iterator_reset_view(dnp_address, ITER_VIEW_ADDRESS_HASH);
-            qd_address_iterator_override_prefix(dnp_address, qdr_prefix_for_dir(dir));
+            qd_iterator_reset_view(dnp_address, ITER_VIEW_ADDRESS_HASH);
+            qd_iterator_annotate_prefix(dnp_address, qdr_prefix_for_dir(dir));
             qd_hash_retrieve_prefix(core->addr_hash, dnp_address, (void**) &addr);
-            qd_field_iterator_free(dnp_address);
+            qd_iterator_free(dnp_address);
             *link_route = true;
             return addr;
         }
@@ -826,7 +826,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
             // unlikely).
             //
             qdr_generate_temp_addr(core, temp_addr, 200);
-            qd_field_iterator_t *temp_iter = qd_address_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
+            qd_iterator_t *temp_iter = qd_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
             qd_hash_retrieve(core->addr_hash, temp_iter, (void**) &addr);
             if (!addr) {
                 addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_CLOSEST);
@@ -835,7 +835,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
                 qdr_terminus_set_address(terminus, temp_addr);
                 generating = false;
             }
-            qd_field_iterator_free(temp_iter);
+            qd_iterator_free(temp_iter);
         }
         return addr;
     }
@@ -850,9 +850,9 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
     // The terminus has a non-dynamic address that we need to look up.  First, look for
     // a link-route destination for the address.
     //
-    qd_field_iterator_t *iter = qdr_terminus_get_address(terminus);
-    qd_address_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    qd_address_iterator_override_prefix(iter, qdr_prefix_for_dir(dir));
+    qd_iterator_t *iter = qdr_terminus_get_address(terminus);
+    qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    qd_iterator_annotate_prefix(iter, qdr_prefix_for_dir(dir));
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
     if (addr) {
         *link_route = true;
@@ -867,9 +867,9 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
     int addr_phase;
     qd_address_treatment_t treat = qdr_treatment_for_address_CT(core, iter, &in_phase, &out_phase);
 
-    qd_address_iterator_override_prefix(iter, '\0'); // Cancel previous override
+    qd_iterator_annotate_prefix(iter, '\0'); // Cancel previous override
     addr_phase = dir == QD_INCOMING ? in_phase : out_phase;
-    qd_address_iterator_set_phase(iter, (char) addr_phase + '0');
+    qd_iterator_annotate_phase(iter, (char) addr_phase + '0');
 
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr && create_if_not_found) {

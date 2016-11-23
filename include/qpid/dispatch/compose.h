@@ -190,7 +190,7 @@ void qd_compose_insert_string(qd_composed_field_t *field, const char *value);
  * @param iter An iterator for a string value.  The caller is responsible for freeing
  *        this iterator after the call is complete.
  */
-void qd_compose_insert_string_iterator(qd_composed_field_t *field, qd_field_iterator_t *iter);
+void qd_compose_insert_string_iterator(qd_composed_field_t *field, qd_iterator_t *iter);
 
 /**
  * Insert a symbol into the field.
@@ -207,7 +207,7 @@ void qd_compose_insert_symbol(qd_composed_field_t *field, const char *value);
  * @param iter An iterator for a typed value.  The caller is responsible for freeing
  *        this iterator after the call is complete.
  */
-void qd_compose_insert_typed_iterator(qd_composed_field_t *field, qd_field_iterator_t *iter);
+void qd_compose_insert_typed_iterator(qd_composed_field_t *field, qd_iterator_t *iter);
 
 /**
  * Begin composing a new sub field that can be appended to a composed field.

@@ -85,29 +85,14 @@ struct qd_container_t {
 
 static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
 {
-    sys_mutex_lock(container->lock);
-    qd_node_t  *node = 0;
-    const char *source = pn_terminus_get_address(pn_link_remote_source(pn_link));
-    qd_field_iterator_t *iter;
-    // TODO - Extract the name from the structured source
-
-    if (source) {
-        iter   = qd_address_iterator_string(source, ITER_VIEW_NODE_ID);
-        qd_hash_retrieve(container->node_map, iter, (void*) &node);
-        qd_field_iterator_free(iter);
-    }
-    sys_mutex_unlock(container->lock);
+    qd_node_t *node = container->default_node;
 
     if (node == 0) {
-        if (container->default_node)
-            node = container->default_node;
-        else {
-            pn_condition_t *cond = pn_link_condition(pn_link);
-            pn_condition_set_name(cond, "amqp:not-found");
-            pn_condition_set_description(cond, "Source node does not exist");
-            pn_link_close(pn_link);
-            return;
-        }
+        pn_condition_t *cond = pn_link_condition(pn_link);
+        pn_condition_set_name(cond, "amqp:not-found");
+        pn_condition_set_description(cond, "Source node does not exist");
+        pn_link_close(pn_link);
+        return;
     }
 
     qd_link_t *link = new_qd_link_t();
@@ -136,28 +121,14 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
 
 static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
 {
-    sys_mutex_lock(container->lock);
-    qd_node_t   *node = 0;
-    const char  *target = pn_terminus_get_address(pn_link_remote_target(pn_link));
-    qd_field_iterator_t *iter;
-
-    if (target) {
-        iter   = qd_address_iterator_string(target, ITER_VIEW_NODE_ID);
-        qd_hash_retrieve(container->node_map, iter, (void*) &node);
-        qd_field_iterator_free(iter);
-    }
-    sys_mutex_unlock(container->lock);
+    qd_node_t *node = container->default_node;
 
     if (node == 0) {
-        if (container->default_node)
-            node = container->default_node;
-        else {
-            pn_condition_t *cond = pn_link_condition(pn_link);
-            pn_condition_set_name(cond, "amqp:not-found");
-            pn_condition_set_description(cond, "Target node does not exist");
-            pn_link_close(pn_link);
-            return;
-        }
+        pn_condition_t *cond = pn_link_condition(pn_link);
+        pn_condition_set_name(cond, "amqp:not-found");
+        pn_condition_set_description(cond, "Target node does not exist");
+        pn_link_close(pn_link);
+        return;
     }
 
     qd_link_t *link = new_qd_link_t();
@@ -615,7 +586,7 @@ int qd_container_register_node_type(qd_dispatch_t *qd, const qd_node_type_t *nt)
     qd_container_t *container = qd->container;
 
     int result;
-    qd_field_iterator_t *iter = qd_field_iterator_string(nt->type_name);
+    qd_iterator_t *iter = qd_iterator_string(nt->type_name, ITER_VIEW_ALL);
     qdc_node_type_t     *nt_item = NEW(qdc_node_type_t);
     DEQ_ITEM_INIT(nt_item);
     nt_item->ntype = nt;
@@ -625,7 +596,7 @@ int qd_container_register_node_type(qd_dispatch_t *qd, const qd_node_type_t *nt)
     DEQ_INSERT_TAIL(container->node_type_list, nt_item);
     sys_mutex_unlock(container->lock);
 
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
     if (result < 0)
         return result;
     qd_log(container->log_source, QD_LOG_TRACE, "Node Type Registered - %s", nt->type_name);
@@ -678,13 +649,13 @@ qd_node_t *qd_container_create_node(qd_dispatch_t        *qd,
     node->life_policy    = life_policy;
 
     if (name) {
-        qd_field_iterator_t *iter = qd_field_iterator_string(name);
+        qd_iterator_t *iter = qd_iterator_string(name, ITER_VIEW_ALL);
         sys_mutex_lock(container->lock);
         result = qd_hash_insert(container->node_map, iter, node, 0);
         if (result >= 0)
             DEQ_INSERT_HEAD(container->nodes, node);
         sys_mutex_unlock(container->lock);
-        qd_field_iterator_free(iter);
+        qd_iterator_free(iter);
         if (result < 0) {
             free_qd_node_t(node);
             return 0;
@@ -706,12 +677,12 @@ void qd_container_destroy_node(qd_node_t *node)
     qd_container_t *container = node->container;
 
     if (node->name) {
-        qd_field_iterator_t *iter = qd_field_iterator_string(node->name);
+        qd_iterator_t *iter = qd_iterator_string(node->name, ITER_VIEW_ALL);
         sys_mutex_lock(container->lock);
         qd_hash_remove(container->node_map, iter);
         DEQ_REMOVE(container->nodes, node);
         sys_mutex_unlock(container->lock);
-        qd_field_iterator_free(iter);
+        qd_iterator_free(iter);
         free(node->name);
     }
 

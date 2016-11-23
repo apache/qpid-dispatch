@@ -23,15 +23,15 @@
 
 void qdra_config_link_route_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
 void qdra_config_link_route_get_next_CT(qdr_core_t *core, qdr_query_t *query);
-void qdra_config_link_route_create_CT(qdr_core_t *core, qd_field_iterator_t *name, qdr_query_t *query, qd_parsed_field_t *in_body);
+void qdra_config_link_route_create_CT(qdr_core_t *core, qd_iterator_t *name, qdr_query_t *query, qd_parsed_field_t *in_body);
 void qdra_config_link_route_update_CT(qdr_core_t *core, qdr_query_t *query, qd_parsed_field_t *in_body);
-void qdra_config_link_route_delete_CT(qdr_core_t *core, qdr_query_t *query, qd_field_iterator_t *name,
-                                qd_field_iterator_t *identity);
-void qdra_config_link_route_get_CT(qdr_core_t          *core,
-                                   qd_field_iterator_t *name,
-                                   qd_field_iterator_t *identity,
-                                   qdr_query_t         *query,
-                                   const char          *qdr_config_link_route_columns[]);
+void qdra_config_link_route_delete_CT(qdr_core_t *core, qdr_query_t *query, qd_iterator_t *name,
+                                qd_iterator_t *identity);
+void qdra_config_link_route_get_CT(qdr_core_t    *core,
+                                   qd_iterator_t *name,
+                                   qd_iterator_t *identity,
+                                   qdr_query_t   *query,
+                                   const char    *qdr_config_link_route_columns[]);
 
 #define QDR_CONFIG_LINK_ROUTE_COLUMN_COUNT 9
 

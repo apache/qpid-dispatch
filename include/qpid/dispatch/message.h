@@ -233,8 +233,8 @@ int qd_message_check(qd_message_t *msg, qd_message_depth_t depth);
  * @param field The field to be returned via iterator.
  * @return A field iterator that spans the requested field.
  */
-qd_field_iterator_t *qd_message_field_iterator_typed(qd_message_t *msg, qd_message_field_t field);
-qd_field_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_field_t field);
+qd_iterator_t *qd_message_field_iterator_typed(qd_message_t *msg, qd_message_field_t field);
+qd_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_field_t field);
 
 ssize_t qd_message_field_length(qd_message_t *msg, qd_message_field_t field);
 ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, void *buffer, size_t *hdr_length);

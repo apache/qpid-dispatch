@@ -104,9 +104,9 @@ static PyObject *parsed_to_py_string(qd_parsed_field_t *field)
 #define SHORT_BUF 1024
     uint8_t short_buf[SHORT_BUF];
     PyObject *result;
-    qd_field_iterator_t *raw = qd_parse_raw(field);
-    qd_field_iterator_reset(raw);
-    uint32_t length = qd_field_iterator_remaining(raw);
+    qd_iterator_t *raw = qd_parse_raw(field);
+    qd_iterator_reset(raw);
+    uint32_t length = qd_iterator_remaining(raw);
     uint8_t *buffer = short_buf;
     uint8_t *ptr;
     int alloc = 0;
@@ -117,8 +117,8 @@ static PyObject *parsed_to_py_string(qd_parsed_field_t *field)
     }
 
     ptr = buffer;
-    while (!qd_field_iterator_end(raw))
-        *(ptr++) = qd_field_iterator_octet(raw);
+    while (!qd_iterator_end(raw))
+        *(ptr++) = qd_iterator_octet(raw);
     result = PyString_FromStringAndSize((char*) buffer, ptr - buffer);
     if (alloc)
         free(buffer);
@@ -439,7 +439,7 @@ typedef struct {
 } IoAdapter;
 
 // Parse an iterator to a python object.
-static PyObject *py_iter_parse(qd_field_iterator_t *iter)
+static PyObject *py_iter_parse(qd_iterator_t *iter)
 {
     qd_parsed_field_t *parsed=0;
     if (iter && (parsed = qd_parse(iter))) {
@@ -458,24 +458,24 @@ static PyObject *py_iter_parse(qd_field_iterator_t *iter)
 }
 
 // Copy a string value from an iterator as a python object.
-static PyObject *py_iter_copy(qd_field_iterator_t *iter)
+static PyObject *py_iter_copy(qd_iterator_t *iter)
 {
     unsigned char *bytes = 0;
     PyObject *value = 0;
-    (void)(iter && (bytes = qd_field_iterator_copy(iter)) && (value = PyString_FromString((char*)bytes)));
+    (void)(iter && (bytes = qd_iterator_copy(iter)) && (value = PyString_FromString((char*)bytes)));
     if (bytes) free(bytes);
     return value;
 }
 
 // Copy a message field, using to_py to a python object attribute.
-static qd_error_t iter_to_py_attr(qd_field_iterator_t *iter,
-                                  PyObject* (*to_py)(qd_field_iterator_t *),
+static qd_error_t iter_to_py_attr(qd_iterator_t *iter,
+                                  PyObject* (*to_py)(qd_iterator_t *),
                                   PyObject *obj, const char *attr)
 {
     qd_error_clear();
     if (iter) {
         PyObject *value = to_py(iter);
-        qd_field_iterator_free(iter);
+        qd_iterator_free(iter);
         if (value) {
             PyObject_SetAttrString(obj, attr, value);
             Py_DECREF(value);

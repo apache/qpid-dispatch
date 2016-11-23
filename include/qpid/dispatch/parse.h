@@ -27,7 +27,7 @@
  *
  * @defgroup parse parse
  *
- * Parse data from qd_field_iterator_t into a tree structure represeniting
+ * Parse data from qd_iterator_t into a tree structure represeniting
  * an AMQP data type tree.
  *@{
  */
@@ -40,7 +40,7 @@ typedef struct qd_parsed_field_t qd_parsed_field_t;
  * @param iter Field iterator for the field being parsed
  * @return A pointer to the newly created field.
  */
-qd_parsed_field_t *qd_parse(qd_field_iterator_t *iter);
+qd_parsed_field_t *qd_parse(qd_iterator_t *iter);
 
 /**
  * Free the resources associated with a parsed field.
@@ -97,7 +97,7 @@ uint8_t qd_parse_tag(qd_parsed_field_t *field);
  * @param field The field pointer returned by qd_parse.
  * @return A field iterator that describes the field's raw content.
  */
-qd_field_iterator_t *qd_parse_raw(qd_parsed_field_t *field);
+qd_iterator_t *qd_parse_raw(qd_parsed_field_t *field);
 
 
 /**
@@ -109,7 +109,7 @@ qd_field_iterator_t *qd_parse_raw(qd_parsed_field_t *field);
  * @param field The field pointer returned by qd_parse.
  * @return A field iterator that describes the field's typed content.
  */
-qd_field_iterator_t *qd_parse_typed(qd_parsed_field_t *field);
+qd_iterator_t *qd_parse_typed(qd_parsed_field_t *field);
 
 /**
  * Return the raw content as an unsigned integer up to 32-bits.  This is

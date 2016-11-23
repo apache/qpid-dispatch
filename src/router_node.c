@@ -87,13 +87,13 @@ static int AMQP_writable_conn_handler(void *type_context, qd_connection_t *conn,
 }
 
 
-static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
-                                                    qd_parsed_field_t *in_ma,
-                                                    qd_message_t      *msg,
-                                                    qd_bitmask_t     **link_exclusions,
-                                                    bool               strip_inbound_annotations)
+static qd_iterator_t *router_annotate_message(qd_router_t       *router,
+                                              qd_parsed_field_t *in_ma,
+                                              qd_message_t      *msg,
+                                              qd_bitmask_t     **link_exclusions,
+                                              bool               strip_inbound_annotations)
 {
-    qd_field_iterator_t *ingress_iter = 0;
+    qd_iterator_t *ingress_iter = 0;
 
     qd_parsed_field_t *trace   = 0;
     qd_parsed_field_t *ingress = 0;
@@ -110,17 +110,17 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
             qd_parsed_field_t *sub  = qd_parse_sub_key(in_ma, idx);
             if (!sub)
                 continue;
-            qd_field_iterator_t *iter = qd_parse_raw(sub);
+            qd_iterator_t *iter = qd_parse_raw(sub);
             if (!iter)
                 continue;
 
-            if        (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_TRACE)) {
+            if        (qd_iterator_equal(iter, (unsigned char*) QD_MA_TRACE)) {
                 trace = qd_parse_sub_value(in_ma, idx);
-            } else if (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_INGRESS)) {
+            } else if (qd_iterator_equal(iter, (unsigned char*) QD_MA_INGRESS)) {
                 ingress = qd_parse_sub_value(in_ma, idx);
-            } else if (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_TO)) {
+            } else if (qd_iterator_equal(iter, (unsigned char*) QD_MA_TO)) {
                 to = qd_parse_sub_value(in_ma, idx);
-            } else if (qd_field_iterator_equal(iter, (unsigned char*) QD_MA_PHASE)) {
+            } else if (qd_iterator_equal(iter, (unsigned char*) QD_MA_PHASE)) {
                 phase = qd_parse_sub_value(in_ma, idx);
             }
             done = trace && ingress && to && phase;
@@ -149,8 +149,8 @@ static qd_field_iterator_t *router_annotate_message(qd_router_t       *router,
             uint32_t idx = 0;
             qd_parsed_field_t *trace_item = qd_parse_sub_value(trace, idx);
             while (trace_item) {
-                qd_field_iterator_t *iter = qd_parse_raw(trace_item);
-                qd_address_iterator_reset_view(iter, ITER_VIEW_ALL);
+                qd_iterator_t *iter = qd_parse_raw(trace_item);
+                qd_iterator_reset_view(iter, ITER_VIEW_ALL);
                 qd_compose_insert_string_iterator(trace_field, iter);
                 idx++;
                 trace_item = qd_parse_sub_value(trace, idx);
@@ -289,33 +289,33 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     if (valid_message) {
         if (check_user) {
             // This connection must not allow proxied user_id
-            qd_field_iterator_t *userid_iter  = qd_message_field_iterator(msg, QD_FIELD_USER_ID);
+            qd_iterator_t *userid_iter  = qd_message_field_iterator(msg, QD_FIELD_USER_ID);
             if (userid_iter) {
                 // The user_id property has been specified
-                if (qd_field_iterator_remaining(userid_iter) > 0) {
+                if (qd_iterator_remaining(userid_iter) > 0) {
                     // user_id property in message is not blank
-                    if (!qd_field_iterator_equal(userid_iter, (const unsigned char *)conn->user_id)) {
+                    if (!qd_iterator_equal(userid_iter, (const unsigned char *)conn->user_id)) {
                         // This message is rejected: attempted user proxy is disallowed
                         qd_log(router->log_source, QD_LOG_DEBUG, "Message rejected due to user_id proxy violation. User:%s", conn->user_id);
                         pn_link_flow(pn_link, 1);
                         pn_delivery_update(pnd, PN_REJECTED);
                         pn_delivery_settle(pnd);
                         qd_message_free(msg);
-                        qd_field_iterator_free(userid_iter);
+                        qd_iterator_free(userid_iter);
                         return;
                     }
                 }
-                qd_field_iterator_free(userid_iter);
+                qd_iterator_free(userid_iter);
             }
         }
 
         qd_parsed_field_t   *in_ma        = qd_message_message_annotations(msg);
         qd_bitmask_t        *link_exclusions;
         bool                 strip        = qdr_link_strip_annotations_in(rlink);
-        qd_field_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &link_exclusions, strip);
+        qd_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &link_exclusions, strip);
 
         if (anonymous_link) {
-            qd_field_iterator_t *addr_iter = 0;
+            qd_iterator_t *addr_iter = 0;
             int phase = 0;
             
             //
@@ -324,7 +324,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
             if (in_ma) {
                 qd_parsed_field_t *ma_to = qd_parse_value_by_key(in_ma, QD_MA_TO);
                 if (ma_to) {
-                    addr_iter = qd_field_iterator_dup(qd_parse_raw(ma_to));
+                    addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
                     phase = qd_message_get_phase_annotation(msg);
                 }
             }
@@ -336,9 +336,9 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
                 addr_iter = qd_message_field_iterator(msg, QD_FIELD_TO);
 
             if (addr_iter) {
-                qd_address_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
+                qd_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
                 if (phase > 0)
-                    qd_address_iterator_set_phase(addr_iter, '0' + (char) phase);
+                    qd_iterator_annotate_phase(addr_iter, '0' + (char) phase);
                 delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
                                                link_exclusions);
             }
@@ -695,7 +695,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     // Inform the field iterator module of this router's id and area.  The field iterator
     // uses this to offload some of the address-processing load from the router.
     //
-    qd_field_iterator_set_address(area, id);
+    qd_iterator_set_address(area, id);
 
     //
     // Seed the random number generator

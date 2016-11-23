@@ -37,7 +37,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 // Interface Functions
 //==================================================================================
 
-qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_iterator_t *ingress,
+qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterator_t *ingress,
                                  bool settled, qd_bitmask_t *link_exclusion)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
@@ -60,7 +60,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_i
 
 
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
-                                    qd_field_iterator_t *ingress, qd_field_iterator_t *addr,
+                                    qd_iterator_t *ingress, qd_iterator_t *addr,
                                     bool settled, qd_bitmask_t *link_exclusion)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
@@ -196,7 +196,7 @@ void qdr_link_check_credit(qdr_core_t *core, qdr_link_t *link)
 }
 
 
-void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_field_iterator_t *addr, bool exclude_inprocess, bool control)
+void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_iterator_t *addr, bool exclude_inprocess, bool control)
 {
     qdr_action_t *action = qdr_action(qdr_send_to_CT, "send_to");
     action->args.io.address           = qdr_field_from_iter(addr);
@@ -278,7 +278,7 @@ static void qdr_delivery_decref_internal(qdr_delivery_t *delivery, bool lock_hel
             qd_message_free(delivery->msg);
 
         if (delivery->to_addr)
-            qd_field_iterator_free(delivery->to_addr);
+            qd_iterator_free(delivery->to_addr);
 
         if (delivery->tracking_addr) {
             int link_bit = conn->mask_bit;
@@ -640,7 +640,7 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
     if (!discard) {
         qdr_address_t *addr = 0;
 
-        qd_address_iterator_reset_view(addr_field->iterator, ITER_VIEW_ADDRESS_HASH);
+        qd_iterator_reset_view(addr_field->iterator, ITER_VIEW_ADDRESS_HASH);
         qd_hash_retrieve(core->addr_hash, addr_field->iterator, (void**) &addr);
         if (addr) {
             //

@@ -29,8 +29,8 @@ struct qd_parsed_field_t {
     const qd_parsed_field_t *parent;
     qd_parsed_field_list_t   children;
     uint8_t                  tag;
-    qd_field_iterator_t     *raw_iter;
-    qd_field_iterator_t     *typed_iter;
+    qd_iterator_t           *raw_iter;
+    qd_iterator_t           *typed_iter;
     const char              *parse_error;
 };
 
@@ -41,12 +41,12 @@ ALLOC_DEFINE(qd_parsed_field_t);
  * size = the number of bytes following the tag
  * count = the number of elements. Applies only to compound structures
  */
-static char *get_type_info(qd_field_iterator_t *iter, uint8_t *tag, uint32_t *size, uint32_t *count, uint32_t *length_of_size, uint32_t *length_of_count)
+static char *get_type_info(qd_iterator_t *iter, uint8_t *tag, uint32_t *size, uint32_t *count, uint32_t *length_of_size, uint32_t *length_of_count)
 {
-    if (qd_field_iterator_end(iter))
+    if (qd_iterator_end(iter))
         return "Insufficient Data to Determine Tag";
 
-    *tag             = qd_field_iterator_octet(iter);
+    *tag             = qd_iterator_octet(iter);
     *count           = 0;
     *size            = 0;
     *length_of_count = 0;
@@ -75,18 +75,18 @@ static char *get_type_info(qd_field_iterator_t *iter, uint8_t *tag, uint32_t *si
     case 0xB0:
     case 0xD0:
     case 0xF0:
-        *size += ((unsigned int) qd_field_iterator_octet(iter)) << 24;
-        *size += ((unsigned int) qd_field_iterator_octet(iter)) << 16;
-        *size += ((unsigned int) qd_field_iterator_octet(iter)) << 8;
+        *size += ((unsigned int) qd_iterator_octet(iter)) << 24;
+        *size += ((unsigned int) qd_iterator_octet(iter)) << 16;
+        *size += ((unsigned int) qd_iterator_octet(iter)) << 8;
         *length_of_size = 3;
         // fall through to the next case
 
     case 0xA0:
     case 0xC0:
     case 0xE0:
-        if (qd_field_iterator_end(iter))
+        if (qd_iterator_end(iter))
             return "Insufficient Data to Determine Length";
-        *size += (unsigned int) qd_field_iterator_octet(iter);
+        *size += (unsigned int) qd_iterator_octet(iter);
         *length_of_size += 1;
         break;
 
@@ -97,17 +97,17 @@ static char *get_type_info(qd_field_iterator_t *iter, uint8_t *tag, uint32_t *si
     switch (*tag & 0xF0) {
     case 0xD0:
     case 0xF0:
-        *count += ((unsigned int) qd_field_iterator_octet(iter)) << 24;
-        *count += ((unsigned int) qd_field_iterator_octet(iter)) << 16;
-        *count += ((unsigned int) qd_field_iterator_octet(iter)) << 8;
+        *count += ((unsigned int) qd_iterator_octet(iter)) << 24;
+        *count += ((unsigned int) qd_iterator_octet(iter)) << 16;
+        *count += ((unsigned int) qd_iterator_octet(iter)) << 8;
         *length_of_count = 3;
         // fall through to the next case
 
     case 0xC0:
     case 0xE0:
-        if (qd_field_iterator_end(iter))
+        if (qd_iterator_end(iter))
             return "Insufficient Data to Determine Count";
-        *count += (unsigned int) qd_field_iterator_octet(iter);
+        *count += (unsigned int) qd_iterator_octet(iter);
         *length_of_count += 1;
         break;
     }
@@ -121,7 +121,7 @@ static char *get_type_info(qd_field_iterator_t *iter, uint8_t *tag, uint32_t *si
     return 0;
 }
 
-static qd_parsed_field_t *qd_parse_internal(qd_field_iterator_t *iter, qd_parsed_field_t *p)
+static qd_parsed_field_t *qd_parse_internal(qd_iterator_t *iter, qd_parsed_field_t *p)
 {
     qd_parsed_field_t *field = new_qd_parsed_field_t();
     if (!field)
@@ -131,7 +131,7 @@ static qd_parsed_field_t *qd_parse_internal(qd_field_iterator_t *iter, qd_parsed
     DEQ_INIT(field->children);
     field->parent   = p;
     field->raw_iter = 0;
-    field->typed_iter = qd_field_iterator_dup(iter);
+    field->typed_iter = qd_iterator_dup(iter);
 
     uint32_t size            = 0;
     uint32_t count           = 0;
@@ -141,11 +141,11 @@ static qd_parsed_field_t *qd_parse_internal(qd_field_iterator_t *iter, qd_parsed
     field->parse_error = get_type_info(iter, &field->tag, &size, &count, &length_of_size, &length_of_count);
 
     if (!field->parse_error) {
-        qd_field_iterator_trim(field->typed_iter, size + length_of_size + 1); // + 1 accounts for the tag length
+        qd_iterator_trim_view(field->typed_iter, size + length_of_size + 1); // + 1 accounts for the tag length
 
-        field->raw_iter = qd_field_iterator_sub(iter, size - length_of_count);
+        field->raw_iter = qd_iterator_sub(iter, size - length_of_count);
 
-        qd_field_iterator_advance(iter, size - length_of_count);
+        qd_iterator_advance(iter, size - length_of_count);
 
         for (uint32_t idx = 0; idx < count; idx++) {
             qd_parsed_field_t *child = qd_parse_internal(field->raw_iter, field);
@@ -161,7 +161,7 @@ static qd_parsed_field_t *qd_parse_internal(qd_field_iterator_t *iter, qd_parsed
 }
 
 
-qd_parsed_field_t *qd_parse(qd_field_iterator_t *iter)
+qd_parsed_field_t *qd_parse(qd_iterator_t *iter)
 {
     if (!iter)
         return 0;
@@ -176,10 +176,10 @@ void qd_parse_free(qd_parsed_field_t *field)
 
     assert(field->parent == 0);
     if (field->raw_iter)
-        qd_field_iterator_free(field->raw_iter);
+        qd_iterator_free(field->raw_iter);
 
     if (field->typed_iter)
-        qd_field_iterator_free(field->typed_iter);
+        qd_iterator_free(field->typed_iter);
 
     qd_parsed_field_t *sub_field = DEQ_HEAD(field->children);
     while (sub_field) {
@@ -204,8 +204,8 @@ static qd_parsed_field_t *qd_parse_dup_internal(const qd_parsed_field_t *field, 
     ZERO(dup);
     dup->parent      = parent;
     dup->tag         = field->tag;
-    dup->raw_iter    = qd_field_iterator_dup(field->raw_iter);
-    dup->typed_iter  = qd_field_iterator_dup(field->typed_iter);
+    dup->raw_iter    = qd_iterator_dup(field->raw_iter);
+    dup->typed_iter  = qd_iterator_dup(field->typed_iter);
     dup->parse_error = field->parse_error;
 
     qd_parsed_field_t *child = DEQ_HEAD(field->children);
@@ -243,13 +243,13 @@ uint8_t qd_parse_tag(qd_parsed_field_t *field)
 }
 
 
-qd_field_iterator_t *qd_parse_raw(qd_parsed_field_t *field)
+qd_iterator_t *qd_parse_raw(qd_parsed_field_t *field)
 {
     return field->raw_iter;
 }
 
 
-qd_field_iterator_t *qd_parse_typed(qd_parsed_field_t *field)
+qd_iterator_t *qd_parse_typed(qd_parsed_field_t *field)
 {
     return field->typed_iter;
 }
@@ -259,22 +259,22 @@ uint32_t qd_parse_as_uint(qd_parsed_field_t *field)
 {
     uint32_t result = 0;
 
-    qd_field_iterator_reset(field->raw_iter);
+    qd_iterator_reset(field->raw_iter);
 
     switch (field->tag) {
     case QD_AMQP_UINT:
-        result |= ((uint32_t) qd_field_iterator_octet(field->raw_iter)) << 24;
-        result |= ((uint32_t) qd_field_iterator_octet(field->raw_iter)) << 16;
+        result |= ((uint32_t) qd_iterator_octet(field->raw_iter)) << 24;
+        result |= ((uint32_t) qd_iterator_octet(field->raw_iter)) << 16;
         // fallthrough
 
     case QD_AMQP_USHORT:
-        result |= ((uint32_t) qd_field_iterator_octet(field->raw_iter)) << 8;
+        result |= ((uint32_t) qd_iterator_octet(field->raw_iter)) << 8;
         // Fall Through...
 
     case QD_AMQP_UBYTE:
     case QD_AMQP_SMALLUINT:
     case QD_AMQP_BOOLEAN:
-        result |= (uint32_t) qd_field_iterator_octet(field->raw_iter);
+        result |= (uint32_t) qd_iterator_octet(field->raw_iter);
         break;
 
     case QD_AMQP_TRUE:
@@ -290,22 +290,22 @@ uint64_t qd_parse_as_ulong(qd_parsed_field_t *field)
 {
     uint64_t result = 0;
 
-    qd_field_iterator_reset(field->raw_iter);
+    qd_iterator_reset(field->raw_iter);
 
     switch (field->tag) {
     case QD_AMQP_ULONG:
     case QD_AMQP_TIMESTAMP:
-        result |= ((uint64_t) qd_field_iterator_octet(field->raw_iter)) << 56;
-        result |= ((uint64_t) qd_field_iterator_octet(field->raw_iter)) << 48;
-        result |= ((uint64_t) qd_field_iterator_octet(field->raw_iter)) << 40;
-        result |= ((uint64_t) qd_field_iterator_octet(field->raw_iter)) << 32;
-        result |= ((uint64_t) qd_field_iterator_octet(field->raw_iter)) << 24;
-        result |= ((uint64_t) qd_field_iterator_octet(field->raw_iter)) << 16;
-        result |= ((uint64_t) qd_field_iterator_octet(field->raw_iter)) << 8;
+        result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 56;
+        result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 48;
+        result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 40;
+        result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 32;
+        result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 24;
+        result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 16;
+        result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 8;
         // Fall Through...
 
     case QD_AMQP_SMALLULONG:
-        result |= (uint64_t) qd_field_iterator_octet(field->raw_iter);
+        result |= (uint64_t) qd_iterator_octet(field->raw_iter);
         // Fall Through...
 
     case QD_AMQP_ULONG0:
@@ -320,25 +320,25 @@ int32_t qd_parse_as_int(qd_parsed_field_t *field)
 {
     int32_t result = 0;
 
-    qd_field_iterator_reset(field->raw_iter);
+    qd_iterator_reset(field->raw_iter);
 
     switch (field->tag) {
     case QD_AMQP_INT:
-        result |= ((int32_t) qd_field_iterator_octet(field->raw_iter)) << 24;
-        result |= ((int32_t) qd_field_iterator_octet(field->raw_iter)) << 16;
+        result |= ((int32_t) qd_iterator_octet(field->raw_iter)) << 24;
+        result |= ((int32_t) qd_iterator_octet(field->raw_iter)) << 16;
         // Fall Through...
 
     case QD_AMQP_SHORT:
-        result |= ((int32_t) qd_field_iterator_octet(field->raw_iter)) << 8;
+        result |= ((int32_t) qd_iterator_octet(field->raw_iter)) << 8;
         // Fall Through...
 
     case QD_AMQP_BYTE:
     case QD_AMQP_BOOLEAN:
-        result |= (int32_t) qd_field_iterator_octet(field->raw_iter);
+        result |= (int32_t) qd_iterator_octet(field->raw_iter);
         break;
 
     case QD_AMQP_SMALLINT:
-        result = (int8_t) qd_field_iterator_octet(field->raw_iter);
+        result = (int8_t) qd_iterator_octet(field->raw_iter);
         break;
 
     case QD_AMQP_TRUE:
@@ -354,22 +354,22 @@ int64_t qd_parse_as_long(qd_parsed_field_t *field)
 {
     int64_t result = 0;
 
-    qd_field_iterator_reset(field->raw_iter);
+    qd_iterator_reset(field->raw_iter);
 
     switch (field->tag) {
     case QD_AMQP_LONG:
-        result |= ((int64_t) qd_field_iterator_octet(field->raw_iter)) << 56;
-        result |= ((int64_t) qd_field_iterator_octet(field->raw_iter)) << 48;
-        result |= ((int64_t) qd_field_iterator_octet(field->raw_iter)) << 40;
-        result |= ((int64_t) qd_field_iterator_octet(field->raw_iter)) << 32;
-        result |= ((int64_t) qd_field_iterator_octet(field->raw_iter)) << 24;
-        result |= ((int64_t) qd_field_iterator_octet(field->raw_iter)) << 16;
-        result |= ((int64_t) qd_field_iterator_octet(field->raw_iter)) << 8;
-        result |= (uint64_t) qd_field_iterator_octet(field->raw_iter);
+        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 56;
+        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 48;
+        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 40;
+        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 32;
+        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 24;
+        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 16;
+        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 8;
+        result |= (uint64_t) qd_iterator_octet(field->raw_iter);
         break;
 
     case QD_AMQP_SMALLLONG:
-        result = (int8_t) qd_field_iterator_octet(field->raw_iter);
+        result = (int8_t) qd_iterator_octet(field->raw_iter);
         break;
     }
 
@@ -381,12 +381,12 @@ bool qd_parse_as_bool(qd_parsed_field_t *field)
 {
     bool result = false;
 
-    qd_field_iterator_reset(field->raw_iter);
+    qd_iterator_reset(field->raw_iter);
 
     switch (field->tag) {
     case QD_AMQP_BYTE:
     case QD_AMQP_BOOLEAN:
-        result = !!qd_field_iterator_octet(field->raw_iter);
+        result = !!qd_iterator_octet(field->raw_iter);
         break;
 
     case QD_AMQP_TRUE:
@@ -467,11 +467,11 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
         if (!sub)
             return 0;
 
-        qd_field_iterator_t *iter = qd_parse_raw(sub);
+        qd_iterator_t *iter = qd_parse_raw(sub);
         if (!iter)
             return 0;
 
-        if (qd_field_iterator_equal(iter, (const unsigned char*) key)) {
+        if (qd_iterator_equal(iter, (const unsigned char*) key)) {
             return qd_parse_sub_value(field, idx);
         }
     }

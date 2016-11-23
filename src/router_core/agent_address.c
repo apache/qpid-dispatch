@@ -207,11 +207,11 @@ static void qdr_manage_advance_address_CT(qdr_query_t *query, qdr_address_t *add
         query->more = false;
 }
 
-void qdra_address_get_CT(qdr_core_t          *core,
-                         qd_field_iterator_t *name,
-                         qd_field_iterator_t *identity,
-                         qdr_query_t         *query,
-                         const char          *qdr_address_columns[])
+void qdra_address_get_CT(qdr_core_t    *core,
+                         qd_iterator_t *name,
+                         qd_iterator_t *identity,
+                         qdr_query_t   *query,
+                         const char    *qdr_address_columns[])
 {
     qdr_address_t *addr = 0;
 

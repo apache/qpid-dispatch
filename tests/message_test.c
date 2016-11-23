@@ -101,12 +101,12 @@ static char* test_receive_from_messenger(void *context)
     int valid = qd_message_check(msg, QD_DEPTH_ALL);
     if (!valid) return "qd_message_check returns 'invalid'";
 
-    qd_field_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_TO);
+    qd_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_TO);
     if (iter == 0) return "Expected an iterator for the 'to' field";
 
-    if (!qd_field_iterator_equal(iter, (unsigned char*) "test_addr_1"))
+    if (!qd_iterator_equal(iter, (unsigned char*) "test_addr_1"))
         return "Mismatched 'to' field contents";
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
 
     ssize_t test_len = qd_message_field_length(msg, QD_FIELD_TO);
     if (test_len != 11) return "Incorrect field length";
@@ -152,29 +152,29 @@ static char* test_message_properties(void *context)
 
     set_content(content, size);
 
-    qd_field_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_CORRELATION_ID);
+    qd_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_CORRELATION_ID);
     if (!iter) return "Expected iterator for the 'correlation-id' field";
-    if (qd_field_iterator_length(iter) != 13) return "Bad length for correlation-id";
-    if (!qd_field_iterator_equal(iter, (const unsigned char *)"correlationId"))
+    if (qd_iterator_length(iter) != 13) return "Bad length for correlation-id";
+    if (!qd_iterator_equal(iter, (const unsigned char *)"correlationId"))
         return "Invalid correlation-id";
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
 
     iter = qd_message_field_iterator(msg, QD_FIELD_SUBJECT);
     if (!iter) return "Expected iterator for the 'subject' field";
-    if (!qd_field_iterator_equal(iter, (const unsigned char *)subject))
+    if (!qd_iterator_equal(iter, (const unsigned char *)subject))
         return "Bad value for subject";
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
 
     iter = qd_message_field_iterator(msg, QD_FIELD_MESSAGE_ID);
     if (!iter) return "Expected iterator for the 'message-id' field";
-    if (qd_field_iterator_length(iter) != 9) return "Bad length for message-id";
-    if (!qd_field_iterator_equal(iter, (const unsigned char *)"messageId"))
+    if (qd_iterator_length(iter) != 9) return "Bad length for message-id";
+    if (!qd_iterator_equal(iter, (const unsigned char *)"messageId"))
         return "Invalid message-id";
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
 
     iter = qd_message_field_iterator(msg, QD_FIELD_TO);
     if (iter) return "Expected no iterator for the 'to' field";
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
 
     qd_message_free(msg);
 

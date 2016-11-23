@@ -241,8 +241,8 @@ void qdra_config_link_route_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 static const char *qdra_link_route_treatment_CT(qd_parsed_field_t *field, qd_address_treatment_t *trt)
 {
     if (field) {
-        qd_field_iterator_t *iter = qd_parse_raw(field);
-        if (qd_field_iterator_equal(iter, (unsigned char*) "linkBalanced")) {
+        qd_iterator_t *iter = qd_parse_raw(field);
+        if (qd_iterator_equal(iter, (unsigned char*) "linkBalanced")) {
             *trt = QD_TREATMENT_LINK_BALANCED;
             return 0;
         }
@@ -257,11 +257,11 @@ static const char *qdra_link_route_treatment_CT(qd_parsed_field_t *field, qd_add
 static const char *qdra_link_route_direction_CT(qd_parsed_field_t *field, qd_direction_t *dir)
 {
     if (field) {
-        qd_field_iterator_t *iter = qd_parse_raw(field);
-        if (qd_field_iterator_equal(iter, (unsigned char*) "in")) {
+        qd_iterator_t *iter = qd_parse_raw(field);
+        if (qd_iterator_equal(iter, (unsigned char*) "in")) {
             *dir = QD_INCOMING;
             return 0;
-        } else if (qd_field_iterator_equal(iter, (unsigned char*) "out")) {
+        } else if (qd_iterator_equal(iter, (unsigned char*) "out")) {
             *dir = QD_OUTGOING;
             return 0;
         }
@@ -271,7 +271,7 @@ static const char *qdra_link_route_direction_CT(qd_parsed_field_t *field, qd_dir
 }
 
 
-static qdr_link_route_t *qdr_link_route_config_find_by_identity_CT(qdr_core_t *core, qd_field_iterator_t *identity)
+static qdr_link_route_t *qdr_link_route_config_find_by_identity_CT(qdr_core_t *core, qd_iterator_t *identity)
 {
     if (!identity)
         return 0;
@@ -281,7 +281,7 @@ static qdr_link_route_t *qdr_link_route_config_find_by_identity_CT(qdr_core_t *c
         // Convert the passed in identity to a char*
         char id[100];
         snprintf(id, 100, "%"PRId64, rc->identity);
-        if (qd_field_iterator_equal(identity, (const unsigned char*) id))
+        if (qd_iterator_equal(identity, (const unsigned char*) id))
             break;
         rc = DEQ_NEXT(rc);
     }
@@ -291,14 +291,14 @@ static qdr_link_route_t *qdr_link_route_config_find_by_identity_CT(qdr_core_t *c
 }
 
 
-static qdr_link_route_t *qdr_link_route_config_find_by_name_CT(qdr_core_t *core, qd_field_iterator_t *name)
+static qdr_link_route_t *qdr_link_route_config_find_by_name_CT(qdr_core_t *core, qd_iterator_t *name)
 {
     if (!name)
         return 0;
 
     qdr_link_route_t *rc = DEQ_HEAD(core->link_routes);
     while (rc) { // Sometimes the name can be null
-        if (rc->name && qd_field_iterator_equal(name, (const unsigned char*) rc->name))
+        if (rc->name && qd_iterator_equal(name, (const unsigned char*) rc->name))
             break;
         rc = DEQ_NEXT(rc);
     }
@@ -307,10 +307,10 @@ static qdr_link_route_t *qdr_link_route_config_find_by_name_CT(qdr_core_t *core,
 }
 
 
-void qdra_config_link_route_delete_CT(qdr_core_t          *core,
-                                      qdr_query_t         *query,
-                                      qd_field_iterator_t *name,
-                                      qd_field_iterator_t *identity)
+void qdra_config_link_route_delete_CT(qdr_core_t    *core,
+                                      qdr_query_t   *query,
+                                      qd_iterator_t *name,
+                                      qd_iterator_t *identity)
 {
     qdr_link_route_t *lr = 0;
 
@@ -338,10 +338,10 @@ void qdra_config_link_route_delete_CT(qdr_core_t          *core,
     qdr_agent_enqueue_response_CT(core, query);
 }
 
-void qdra_config_link_route_create_CT(qdr_core_t          *core,
-                                      qd_field_iterator_t *name,
-                                      qdr_query_t         *query,
-                                      qd_parsed_field_t   *in_body)
+void qdra_config_link_route_create_CT(qdr_core_t        *core,
+                                      qd_iterator_t     *name,
+                                      qdr_query_t       *query,
+                                      qd_parsed_field_t *in_body)
 {
     while (true) {
         //
@@ -349,7 +349,7 @@ void qdra_config_link_route_create_CT(qdr_core_t          *core,
         //
         qdr_link_route_t *lr = DEQ_HEAD(core->link_routes);
         while (lr) {
-            if (name && lr->name && qd_field_iterator_equal(name, (const unsigned char*) lr->name))
+            if (name && lr->name && qd_iterator_equal(name, (const unsigned char*) lr->name))
                 break;
             lr = DEQ_NEXT(lr);
         }
@@ -445,11 +445,11 @@ void qdra_config_link_route_create_CT(qdr_core_t          *core,
     }
 }
 
-void qdra_config_link_route_get_CT(qdr_core_t          *core,
-                                   qd_field_iterator_t *name,
-                                   qd_field_iterator_t *identity,
-                                   qdr_query_t         *query,
-                                   const char          *qdr_config_link_route_columns[])
+void qdra_config_link_route_get_CT(qdr_core_t    *core,
+                                   qd_iterator_t *name,
+                                   qd_iterator_t *identity,
+                                   qdr_query_t   *query,
+                                   const char    *qdr_config_link_route_columns[])
 {
     qdr_link_route_t *lr = 0;
 

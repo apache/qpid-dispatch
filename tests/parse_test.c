@@ -67,13 +67,13 @@ static char *test_parser_fixed_scalars(void *context)
     static char error[1024];
 
     while (fs_vectors[idx].data) {
-        qd_field_iterator_t *field  = qd_field_iterator_binary(fs_vectors[idx].data,
-                                                               fs_vectors[idx].length);
+        qd_iterator_t *field  = qd_iterator_binary(fs_vectors[idx].data,
+                                                   fs_vectors[idx].length, ITER_VIEW_ALL);
         qd_parsed_field_t *parsed = qd_parse(field);
 
-        qd_field_iterator_t *typed_iter = qd_parse_typed(parsed);
+        qd_iterator_t *typed_iter = qd_parse_typed(parsed);
 
-        int length = qd_field_iterator_length(typed_iter);
+        int length = qd_iterator_length(typed_iter);
 
         if (length != fs_vectors[idx].length)
             return "Length of typed iterator does not match actual length";
@@ -110,8 +110,84 @@ static char *test_parser_fixed_scalars(void *context)
         }
         idx++;
 
-        qd_field_iterator_free(field);
+        qd_iterator_free(field);
         qd_parse_free(parsed);
+    }
+
+    return 0;
+}
+
+
+static char *test_map(void *context)
+{
+    static char error[1000];
+    const char *data =
+        "\xd1\x00\x00\x00\x2d\x00\x00\x00\x06"    // map32, 6 items
+        "\xa3\x05\x66irst\xa1\x0evalue_of_first"  // (23) "first":"value_of_first"
+        "\xa3\x06second\x52\x20"                  // (10) "second":32
+        "\xa3\x05third\x41";                      // (8)  "third":true
+    int data_len = 50;
+
+    qd_iterator_t     *data_iter = qd_iterator_binary(data, data_len, ITER_VIEW_ALL);
+    qd_parsed_field_t *field     = qd_parse(data_iter);
+    if (!qd_parse_ok(field)) {
+        snprintf(error, 1000, "Parse failed: %s", qd_parse_error(field));
+        return error;
+    }
+
+    if (!qd_parse_is_map(field))
+        return "Expected field to be a map";
+
+    uint32_t count = qd_parse_sub_count(field);
+    if (count != 3) {
+        snprintf(error, 1000, "Expected sub-count==3, got %"PRIu32, count);
+        return error;
+    }
+
+    qd_parsed_field_t *key_field  = qd_parse_sub_key(field, 0);
+    qd_iterator_t     *key_iter   = qd_parse_raw(key_field);
+    qd_iterator_t     *typed_iter = qd_parse_typed(key_field);
+    if (!qd_iterator_equal(key_iter, (unsigned char*) "first")) {
+        snprintf(error, 1000, "First key: expected 'first', got '%s'", qd_iterator_copy(key_iter));
+        return error;
+    }
+    if (!qd_iterator_equal(typed_iter, (unsigned char*) "\xa3\x05\x66irst"))
+        return "Incorrect typed iterator on first-key";
+
+    qd_parsed_field_t *val_field = qd_parse_sub_value(field, 0);
+    qd_iterator_t     *val_iter  = qd_parse_raw(val_field);
+    typed_iter = qd_parse_typed(val_field);
+    if (!qd_iterator_equal(val_iter, (unsigned char*) "value_of_first")) {
+        snprintf(error, 1000, "First value: expected 'value_of_first', got '%s'", qd_iterator_copy(val_iter));
+        return error;
+    }
+    if (!qd_iterator_equal(typed_iter, (unsigned char*) "\xa1\x0evalue_of_first"))
+        return "Incorrect typed iterator on first-key";
+
+    key_field = qd_parse_sub_key(field, 1);
+    key_iter  = qd_parse_raw(key_field);
+    if (!qd_iterator_equal(key_iter, (unsigned char*) "second")) {
+        snprintf(error, 1000, "Second key: expected 'second', got '%s'", qd_iterator_copy(key_iter));
+        return error;
+    }
+
+    val_field = qd_parse_sub_value(field, 1);
+    if (qd_parse_as_uint(val_field) != 32) {
+        snprintf(error, 1000, "Second value: expected 32, got %"PRIu32, qd_parse_as_uint(val_field));
+        return error;
+    }
+
+    key_field = qd_parse_sub_key(field, 2);
+    key_iter  = qd_parse_raw(key_field);
+    if (!qd_iterator_equal(key_iter, (unsigned char*) "third")) {
+        snprintf(error, 1000, "Third key: expected 'third', got '%s'", qd_iterator_copy(key_iter));
+        return error;
+    }
+
+    val_field = qd_parse_sub_value(field, 2);
+    if (!qd_parse_as_bool(val_field)) {
+        snprintf(error, 1000, "Third value: expected true");
+        return error;
     }
 
     return 0;
@@ -142,8 +218,8 @@ static char *test_parser_errors(void *context)
     static char error[1024];
 
     while (err_vectors[idx].data) {
-        qd_field_iterator_t *field  = qd_field_iterator_binary(err_vectors[idx].data,
-                                                               err_vectors[idx].length);
+        qd_iterator_t *field  = qd_iterator_binary(err_vectors[idx].data,
+                                                   err_vectors[idx].length, ITER_VIEW_ALL);
         qd_parsed_field_t *parsed = qd_parse(field);
         if (qd_parse_ok(parsed)) {
             sprintf(error, "(%d) Unexpected Parse Success", idx);
@@ -155,7 +231,7 @@ static char *test_parser_errors(void *context)
             return error;
         }
         qd_parse_free(parsed);
-        qd_field_iterator_free(field);
+        qd_iterator_free(field);
         idx++;
     }
 
@@ -170,7 +246,7 @@ static char *test_tracemask(void *context)
     qd_buffer_list_t list;
     static char      error[1024];
 
-    qd_field_iterator_set_address("0", "ROUTER");
+    qd_iterator_set_address("0", "ROUTER");
 
     qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.A", 0);
     qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.B", 1);
@@ -200,8 +276,8 @@ static char *test_tracemask(void *context)
         buf = DEQ_NEXT(buf);
     }
 
-    qd_field_iterator_t *iter = qd_address_iterator_buffer(DEQ_HEAD(list), 0, length, ITER_VIEW_ALL);
-    qd_parsed_field_t   *pf   = qd_parse(iter);
+    qd_iterator_t     *iter = qd_iterator_buffer(DEQ_HEAD(list), 0, length, ITER_VIEW_ALL);
+    qd_parsed_field_t *pf   = qd_parse(iter);
 
     bm = qd_tracemask_create(tm, pf);
     if (qd_bitmask_cardinality(bm) != 3) {
@@ -247,6 +323,7 @@ int parse_tests()
     int result = 0;
 
     TEST_CASE(test_parser_fixed_scalars, 0);
+    TEST_CASE(test_map, 0);
     TEST_CASE(test_parser_errors, 0);
     TEST_CASE(test_tracemask, 0);
 

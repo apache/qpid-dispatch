@@ -245,10 +245,10 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     // candidate destination router.
     //
     int origin = -1;
-    qd_field_iterator_t *ingress_iter = in_delivery ? in_delivery->origin : 0;
+    qd_iterator_t *ingress_iter = in_delivery ? in_delivery->origin : 0;
 
     if (ingress_iter && !bypass_valid_origins) {
-        qd_address_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
+        qd_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
         qdr_address_t *origin_addr;
         qd_hash_retrieve(core->addr_hash, ingress_iter, (void*) &origin_addr);
         if (origin_addr && qd_bitmask_cardinality(origin_addr->rnodes) == 1)
@@ -517,10 +517,10 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         // candidate destination router.
         //
         int origin = 0;
-        qd_field_iterator_t *ingress_iter = in_delivery ? in_delivery->origin : 0;
+        qd_iterator_t *ingress_iter = in_delivery ? in_delivery->origin : 0;
 
         if (ingress_iter) {
-            qd_address_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
+            qd_iterator_reset_view(ingress_iter, ITER_VIEW_NODE_HASH);
             qdr_address_t *origin_addr;
             qd_hash_retrieve(core->addr_hash, ingress_iter, (void*) &origin_addr);
             if (origin_addr && qd_bitmask_cardinality(origin_addr->rnodes) == 1)

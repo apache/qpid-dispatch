@@ -73,7 +73,7 @@ struct qd_router_forwarder_t {
                     qd_message_t *msg,
                     qd_router_delivery_t *delivery,
                     qd_address_t *addr,
-                    qd_field_iterator_t *ingress_iterator,
+                    qd_iterator_t *ingress_iterator,
                     bool is_direct);
 
     /** release the descriptor
@@ -119,9 +119,9 @@ void qd_address_set_static_cc(qd_address_t *address, qd_address_t *cc);
 void qd_address_set_dynamic_cc(qd_address_t *address, qd_address_t *cc);
 
 /** Send msg to local links and next-hops for address */
-void qd_router_send(qd_dispatch_t       *qd,
-                    qd_field_iterator_t *address,
-                    qd_message_t        *msg);
+void qd_router_send(qd_dispatch_t *qd,
+                    qd_iterator_t *address,
+                    qd_message_t  *msg);
 
 /** Send msg to local links and next-hops for address */
 void qd_router_send2(qd_dispatch_t *qd,

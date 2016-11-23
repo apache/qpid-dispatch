@@ -81,13 +81,13 @@ void qdr_error_free(qdr_error_t *error)
 void qdr_error_copy(qdr_error_t *from, pn_condition_t *to)
 {
     if (from->name) {
-        unsigned char *name = qd_field_iterator_copy(from->name->iterator);
+        unsigned char *name = qd_iterator_copy(from->name->iterator);
         pn_condition_set_name(to, (char*) name);
         free(name);
     }
 
     if (from->description) {
-        unsigned char *desc = qd_field_iterator_copy(from->description->iterator);
+        unsigned char *desc = qd_iterator_copy(from->description->iterator);
         pn_condition_set_description(to, (char*) desc);
         free(desc);
     }
@@ -101,9 +101,9 @@ char *qdr_error_description(qdr_error_t *err)
 {
     if (!err || !err->description || !err->description->iterator)
         return 0;
-    int   length = qd_field_iterator_length(err->description->iterator);
+    int   length = qd_iterator_length(err->description->iterator);
     char *text   = (char*) malloc(length + 1);
-    qd_field_iterator_ncopy(err->description->iterator, (unsigned char*) text, length);
+    qd_iterator_ncopy(err->description->iterator, (unsigned char*) text, length);
     text[length] = '\0';
     return text;
 }

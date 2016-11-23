@@ -136,13 +136,13 @@ qdr_field_t *qdr_field(const char *text)
         DEQ_INSERT_TAIL(field->buffers, buf);
     }
 
-    field->iterator = qd_field_iterator_buffer(DEQ_HEAD(field->buffers), 0, ilength);
+    field->iterator = qd_iterator_buffer(DEQ_HEAD(field->buffers), 0, ilength, ITER_VIEW_ALL);
 
     return field;
 }
 
 
-qdr_field_t *qdr_field_from_iter(qd_field_iterator_t *iter)
+qdr_field_t *qdr_field_from_iter(qd_iterator_t *iter)
 {
     if (!iter)
         return 0;
@@ -153,24 +153,24 @@ qdr_field_t *qdr_field_from_iter(qd_field_iterator_t *iter)
     int          length;
 
     ZERO(field);
-    qd_field_iterator_reset(iter);
-    remaining = qd_field_iterator_remaining(iter);
+    qd_iterator_reset(iter);
+    remaining = qd_iterator_remaining(iter);
     length    = remaining;
     while (remaining) {
         buf = qd_buffer();
         size_t cap    = qd_buffer_capacity(buf);
-        int    copied = qd_field_iterator_ncopy(iter, qd_buffer_cursor(buf), cap);
+        int    copied = qd_iterator_ncopy(iter, qd_buffer_cursor(buf), cap);
         qd_buffer_insert(buf, copied);
         DEQ_INSERT_TAIL(field->buffers, buf);
-        remaining = qd_field_iterator_remaining(iter);
+        remaining = qd_iterator_remaining(iter);
     }
 
-    field->iterator = qd_field_iterator_buffer(DEQ_HEAD(field->buffers), 0, length);
+    field->iterator = qd_iterator_buffer(DEQ_HEAD(field->buffers), 0, length, ITER_VIEW_ALL);
 
     return field;
 }
 
-qd_field_iterator_t *qdr_field_iterator(qdr_field_t *field)
+qd_iterator_t *qdr_field_iterator(qdr_field_t *field)
 {
     if (!field)
         return 0;
@@ -182,7 +182,7 @@ qd_field_iterator_t *qdr_field_iterator(qdr_field_t *field)
 void qdr_field_free(qdr_field_t *field)
 {
     if (field) {
-        qd_field_iterator_free(field->iterator);
+        qd_iterator_free(field->iterator);
         qd_buffer_list_free_buffers(&field->buffers);
         free_qdr_field_t(field);
     }
@@ -194,7 +194,7 @@ char *qdr_field_copy(qdr_field_t *field)
     if (!field || !field->iterator)
         return 0;
 
-    return (char*) qd_field_iterator_copy(field->iterator);
+    return (char*) qd_iterator_copy(field->iterator);
 }
 
 
@@ -230,12 +230,12 @@ qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment
 
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *address, qd_address_treatment_t treatment)
 {
-    char                 addr_string[1000];
-    qdr_address_t       *addr = 0;
-    qd_field_iterator_t *iter = 0;
+    char           addr_string[1000];
+    qdr_address_t *addr = 0;
+    qd_iterator_t *iter = 0;
 
     snprintf(addr_string, sizeof(addr_string), "%c%s", aclass, address);
-    iter = qd_address_iterator_string(addr_string, ITER_VIEW_ALL);
+    iter = qd_iterator_string(addr_string, ITER_VIEW_ALL);
 
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr) {
@@ -246,7 +246,7 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
         addr->block_deletion = true;
         addr->local = (aclass == 'L');
     }
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
     return addr;
 }
 

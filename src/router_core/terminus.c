@@ -87,8 +87,8 @@ void qdr_terminus_copy(qdr_terminus_t *from, pn_terminus_t *to)
         return;
 
     if (from->address) {
-        qd_address_iterator_reset_view(from->address->iterator, ITER_VIEW_ALL);
-        unsigned char *addr = qd_field_iterator_copy(from->address->iterator);
+        qd_iterator_reset_view(from->address->iterator, ITER_VIEW_ALL);
+        unsigned char *addr = qd_iterator_copy(from->address->iterator);
         pn_terminus_set_address(to, (char*) addr);
         free(addr);
     }
@@ -146,7 +146,7 @@ void qdr_terminus_set_address(qdr_terminus_t *term, const char *addr)
 }
 
 
-qd_field_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term)
+qd_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term)
 {
     if (qdr_terminus_is_anonymous(term))
         return 0;
@@ -155,7 +155,7 @@ qd_field_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term)
 }
 
 
-qd_field_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term)
+qd_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term)
 {
     pn_data_t *props = term->properties;
 
@@ -169,7 +169,7 @@ qd_field_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term)
             if (pn_data_next(props)) {
                 pn_bytes_t val = pn_data_get_string(props);
                 if (val.start && *val.start != '\0')
-                    return qd_field_iterator_binary(val.start, val.size);
+                    return qd_iterator_binary(val.start, val.size, ITER_VIEW_ALL);
             }
         }
     }

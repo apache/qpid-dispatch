@@ -67,7 +67,7 @@ void qd_tracemask_free(qd_tracemask_t *tm)
 
 void qd_tracemask_add_router(qd_tracemask_t *tm, const char *address, int maskbit)
 {
-    qd_field_iterator_t *iter = qd_address_iterator_string(address, ITER_VIEW_ADDRESS_HASH);
+    qd_iterator_t *iter = qd_iterator_string(address, ITER_VIEW_ADDRESS_HASH);
     sys_rwlock_wrlock(tm->lock);
     assert(maskbit < qd_bitmask_width() && tm->router_by_mask_bit[maskbit] == 0);
     if (maskbit < qd_bitmask_width() && tm->router_by_mask_bit[maskbit] == 0) {
@@ -78,7 +78,7 @@ void qd_tracemask_add_router(qd_tracemask_t *tm, const char *address, int maskbi
         tm->router_by_mask_bit[maskbit] = router;
     }
     sys_rwlock_unlock(tm->lock);
-    qd_field_iterator_free(iter);
+    qd_iterator_free(iter);
 }
 
 
@@ -133,8 +133,8 @@ qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, qd_parsed_field_t *traceli
     qd_parsed_field_t *item   = qd_parse_sub_value(tracelist, idx);
     qdtm_router_t     *router = 0;
     while (item) {
-        qd_field_iterator_t *iter = qd_parse_raw(item);
-        qd_address_iterator_reset_view(iter, ITER_VIEW_NODE_HASH);
+        qd_iterator_t *iter = qd_parse_raw(item);
+        qd_iterator_reset_view(iter, ITER_VIEW_NODE_HASH);
         qd_hash_retrieve(tm->hash, iter, (void*) &router);
         if (router && router->link_maskbit >= 0)
             qd_bitmask_set_bit(bm, router->link_maskbit);

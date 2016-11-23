@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <string.h>
 
-//static const char *log_module = "FIELD";
 
 typedef enum {
     MODE_TO_END,
@@ -35,43 +34,46 @@ typedef enum {
 typedef enum {
     STATE_AT_PREFIX,
     STATE_AT_PHASE,
-    STATE_IN_ADDRESS
-} addr_state_t;
+    STATE_IN_SPACE,
+    STATE_IN_BODY
+} view_state_t;
 
 typedef struct {
     qd_buffer_t   *buffer;
     unsigned char *cursor;
-    int            length;
+    int            remaining;
 } pointer_t;
 
-typedef struct qd_hash_segment_t qd_hash_segment_t;
-
-struct qd_hash_segment_t {
-    DEQ_LINKS(qd_hash_segment_t); //Adds the *prev and *next links
-    uint32_t   hash; //The hash of the segment
-    uint32_t segment_length; //The length of each hash segment
-};
+typedef struct qd_hash_segment_t {
+    DEQ_LINKS(struct qd_hash_segment_t);
+    uint32_t hash;           //The hash of the segment
+    uint32_t segment_length; //The length of the segment
+} qd_hash_segment_t;
 
 DEQ_DECLARE(qd_hash_segment_t, qd_hash_segment_list_t);
 ALLOC_DECLARE(qd_hash_segment_t);
 ALLOC_DEFINE(qd_hash_segment_t);
 
-struct qd_field_iterator_t {
-    pointer_t               start_pointer;
-    pointer_t               view_start_pointer;
-    pointer_t               pointer;
+struct qd_iterator_t {
+    pointer_t               start_pointer;      // Pointer to the raw data
+    pointer_t               view_start_pointer; // Pointer to the start of the view
+    pointer_t               view_pointer;       // Pointer to the remaining view
     qd_iterator_view_t      view;
+    int                     annotation_length;
+    int                     annotation_remaining;
     qd_hash_segment_list_t  hash_segments;
     parse_mode_t            mode;
-    addr_state_t            state;
-    bool                    view_prefix;
+    view_state_t            state;
     unsigned char           prefix;
     unsigned char           prefix_override;
     unsigned char           phase;
+    const char             *space;
+    int                     space_length;
+    int                     space_cursor;
 };
 
-ALLOC_DECLARE(qd_field_iterator_t);
-ALLOC_DEFINE(qd_field_iterator_t);
+ALLOC_DECLARE(qd_iterator_t);
+ALLOC_DEFINE(qd_iterator_t);
 
 typedef enum {
     STATE_START,
@@ -84,114 +86,112 @@ typedef enum {
 } state_t;
 
 
-static char *my_area    = "";
-static char *my_router  = "";
+static char *my_area   = "";
+static char *my_router = "";
 
-const char *SEPARATORS  = "./";
+static const char    *SEPARATORS = "./";
+static const uint32_t HASH_INIT  = 5381;
 
-const uint32_t HASH_INIT = 5381;
 
-
-static void parse_address_view(qd_field_iterator_t *iter)
+static void parse_address_view(qd_iterator_t *iter)
 {
     //
     // This function starts with an iterator view that is identical to
-    // ITER_VIEW_NO_HOST.  We will now further refine the view in order
-    // to aid the router in looking up addresses.
+    // ITER_VIEW_ADDRESS_NO_HOST.  We will now further refine the view
+    // in order to aid the router in looking up addresses.
     //
 
-    if (iter->prefix_override == '\0' && qd_field_iterator_prefix(iter, "_")) {
-        if (qd_field_iterator_prefix(iter, "local/")) {
-            iter->prefix      = 'L';
-            iter->state       = STATE_AT_PREFIX;
-            iter->view_prefix = true;
+    iter->annotation_length = 1;
+
+    if (iter->prefix_override == '\0' && qd_iterator_prefix(iter, "_")) {
+        if (qd_iterator_prefix(iter, "local/")) {
+            iter->prefix = 'L';
+            iter->state  = STATE_AT_PREFIX;
             return;
         }
 
-        if (qd_field_iterator_prefix(iter, "topo/")) {
-            if (qd_field_iterator_prefix(iter, "all/") || qd_field_iterator_prefix(iter, my_area)) {
-                if (qd_field_iterator_prefix(iter, "all/")) {
-                    iter->prefix      = 'T';
-                    iter->state       = STATE_AT_PREFIX;
-                    iter->view_prefix = true;
+        if (qd_iterator_prefix(iter, "topo/")) {
+            if (qd_iterator_prefix(iter, "all/") || qd_iterator_prefix(iter, my_area)) {
+                if (qd_iterator_prefix(iter, "all/")) {
+                    iter->prefix = 'T';
+                    iter->state  = STATE_AT_PREFIX;
                     return;
-                } else if (qd_field_iterator_prefix(iter, my_router)) {
-                    iter->prefix      = 'L';
-                    iter->state       = STATE_AT_PREFIX;
-                    iter->view_prefix = true;
+                } else if (qd_iterator_prefix(iter, my_router)) {
+                    iter->prefix = 'L';
+                    iter->state  = STATE_AT_PREFIX;
                     return;
                 }
 
-                iter->prefix      = 'R';
-                iter->state       = STATE_AT_PREFIX;
-                iter->view_prefix = true;
-                iter->mode        = MODE_TO_SLASH;
+                iter->prefix = 'R';
+                iter->state  = STATE_AT_PREFIX;
+                iter->mode   = MODE_TO_SLASH;
                 return;
             }
 
-            iter->prefix      = 'A';
-            iter->state       = STATE_AT_PREFIX;
-            iter->view_prefix = true;
-            iter->mode        = MODE_TO_SLASH;
+            iter->prefix = 'A';
+            iter->state  = STATE_AT_PREFIX;
+            iter->mode   = MODE_TO_SLASH;
             return;
         }
     }
 
-    iter->prefix      = iter->prefix_override ? iter->prefix_override : 'M';
-    iter->state       = STATE_AT_PREFIX;
-    iter->view_prefix = true;
+    iter->prefix            = iter->prefix_override ? iter->prefix_override : 'M';
+    iter->state             = STATE_AT_PREFIX;
+    iter->annotation_length = iter->space_length + (iter->prefix == 'M' ? 2 : 1);
 }
 
 
-static void parse_node_view(qd_field_iterator_t *iter)
+static void parse_node_view(qd_iterator_t *iter)
 {
     //
     // This function starts with an iterator view that is identical to
-    // ITER_VIEW_NO_HOST.  We will now further refine the view in order
+    // ITER_VIEW_ADDRESS_NO_HOST.  We will now further refine the view in order
     // to aid the router in looking up nodes.
     //
 
-    if (qd_field_iterator_prefix(iter, my_area)) {
-        iter->prefix      = 'R';
-        iter->state       = STATE_AT_PREFIX;
-        iter->view_prefix = true;
-        iter->mode        = MODE_TO_END;
+    iter->annotation_length = 1;
+
+    if (qd_iterator_prefix(iter, my_area)) {
+        iter->prefix = 'R';
+        iter->state  = STATE_AT_PREFIX;
+        iter->mode   = MODE_TO_END;
         return;
     }
 
-    iter->prefix      = 'A';
-    iter->state       = STATE_AT_PREFIX;
-    iter->view_prefix = true;
-    iter->mode        = MODE_TO_SLASH;
+    iter->prefix = 'A';
+    iter->state  = STATE_AT_PREFIX;
+    iter->mode   = MODE_TO_SLASH;
 }
 
 
-static void qd_address_iterator_remove_trailing_separator(qd_field_iterator_t *iter)
+void qd_iterator_remove_trailing_separator(qd_iterator_t *iter)
 {
     // Save the iterator's pointer so we can apply it back before returning from this function.
-    pointer_t save_pointer = iter->pointer;
+    pointer_t save_pointer = iter->view_pointer;
 
     char current_octet = 0;
-    while (!qd_field_iterator_end(iter)) {
-        current_octet = qd_field_iterator_octet(iter);
+    while (!qd_iterator_end(iter)) {
+        current_octet = qd_iterator_octet(iter);
     }
 
     // We have the last octet in current_octet
-    iter->pointer = save_pointer;
+    iter->view_pointer = save_pointer;
     if (current_octet && strrchr(SEPARATORS, (int) current_octet))
-        iter->pointer.length--;
+        iter->view_pointer.remaining--;
 }
 
 
-static void view_initialize(qd_field_iterator_t *iter)
+static void view_initialize(qd_iterator_t *iter)
 {
     //
     // The default behavior is for the view to *not* have a prefix.
     // We'll add one if it's needed later.
     //
-    iter->state       = STATE_IN_ADDRESS;
-    iter->view_prefix = false;
-    iter->mode        = MODE_TO_END;
+    iter->state                = STATE_IN_BODY;
+    iter->prefix               = '\0';
+    iter->mode                 = MODE_TO_END;
+    iter->annotation_length    = 0;
+    iter->annotation_remaining = 0;
 
     if (iter->view == ITER_VIEW_ALL)
         return;
@@ -199,18 +199,18 @@ static void view_initialize(qd_field_iterator_t *iter)
     //
     // Advance to the node-id.
     //
-    state_t        state = STATE_START;
-    unsigned int   octet;
-    pointer_t      save_pointer = {0,0,0};
+    state_t      state = STATE_START;
+    unsigned int octet;
+    pointer_t    save_pointer = {0,0,0};
 
-    while (!qd_field_iterator_end(iter) && state != STATE_AT_NODE_ID) {
-        octet = qd_field_iterator_octet(iter);
+    while (!qd_iterator_end(iter) && state != STATE_AT_NODE_ID) {
+        octet = qd_iterator_octet(iter);
 
         switch (state) {
         case STATE_START :
             if (octet == '/') {
                 state = STATE_SLASH_LEFT;
-                save_pointer = iter->pointer;
+                save_pointer = iter->view_pointer;
             } else
                 state = STATE_SCANNING;
             break;
@@ -220,7 +220,7 @@ static void view_initialize(qd_field_iterator_t *iter)
                 state = STATE_SKIPPING_TO_NEXT_SLASH;
             else {
                 state = STATE_AT_NODE_ID;
-                iter->pointer = save_pointer;
+                iter->view_pointer = save_pointer;
             }
             break;
 
@@ -237,7 +237,7 @@ static void view_initialize(qd_field_iterator_t *iter)
         case STATE_COLON :
             if (octet == '/') {
                 state = STATE_COLON_SLASH;
-                save_pointer = iter->pointer;
+                save_pointer = iter->view_pointer;
             } else
                 state = STATE_SCANNING;
             break;
@@ -247,7 +247,7 @@ static void view_initialize(qd_field_iterator_t *iter)
                 state = STATE_SKIPPING_TO_NEXT_SLASH;
             else {
                 state = STATE_AT_NODE_ID;
-                iter->pointer = save_pointer;
+                iter->view_pointer = save_pointer;
             }
             break;
 
@@ -256,87 +256,78 @@ static void view_initialize(qd_field_iterator_t *iter)
         }
     }
 
-    if (state != STATE_AT_NODE_ID) {
+    if (state != STATE_AT_NODE_ID){
         //
         // The address string was relative, not absolute.  The node-id
         // is at the beginning of the string.
         //
-        iter->pointer = iter->start_pointer;
+        iter->view_pointer = iter->start_pointer;
     }
 
     //
     // Cursor is now on the first octet of the node-id
     //
-    if (iter->view == ITER_VIEW_NODE_ID) {
-        iter->mode = MODE_TO_SLASH;
+    if (iter->view == ITER_VIEW_ADDRESS_NO_HOST)
         return;
-    }
-
-    if (iter->view == ITER_VIEW_NO_HOST) {
-        iter->mode = MODE_TO_END;
-        return;
-    }
 
     if (iter->view == ITER_VIEW_ADDRESS_HASH) {
-        iter->mode = MODE_TO_END;
-        qd_address_iterator_remove_trailing_separator(iter);
+        qd_iterator_remove_trailing_separator(iter); // FIXME - need this?
         parse_address_view(iter);
         return;
     }
 
     if (iter->view == ITER_VIEW_NODE_HASH) {
-        iter->mode = MODE_TO_END;
         parse_node_view(iter);
-        return;
-    }
-
-    if (iter->view == ITER_VIEW_NODE_SPECIFIC) {
-        iter->mode = MODE_TO_END;
-        while (!qd_field_iterator_end(iter)) {
-            octet = qd_field_iterator_octet(iter);
-            if (octet == '/')
-                break;
-        }
         return;
     }
 }
 
 
-static inline void field_iterator_move_cursor(qd_field_iterator_t *iter, uint32_t length)
+static inline void field_iterator_move_cursor(qd_iterator_t *iter, uint32_t length)
 {
     // Only safe to call this help method if the cursor is parsing the data,
     // i.e. if iter is an address iterator, the cursor must be 'past' the
     // prefix
-    assert(iter->state == STATE_IN_ADDRESS);
-    uint32_t count = ((length > iter->pointer.length)
-                      ? iter->pointer.length
-                      : length);
+    assert(iter->state == STATE_IN_BODY);
+    uint32_t count = (length > iter->view_pointer.remaining) ? iter->view_pointer.remaining : length;
 
-    if (iter->pointer.buffer) {
+    if (iter->view_pointer.buffer) {
         while (count) {
-            uint32_t remaining = qd_buffer_cursor(iter->pointer.buffer) - iter->pointer.cursor;
+            uint32_t remaining = qd_buffer_cursor(iter->view_pointer.buffer) - iter->view_pointer.cursor;
             remaining = (remaining > count) ? count : remaining;
-            iter->pointer.cursor += remaining;
-            iter->pointer.length -= remaining;
+            iter->view_pointer.cursor += remaining;
+            iter->view_pointer.remaining -= remaining;
             count -= remaining;
-            if (iter->pointer.cursor == qd_buffer_cursor(iter->pointer.buffer)) {
-                iter->pointer.buffer = iter->pointer.buffer->next;
-                if (iter->pointer.buffer == 0) {
-                    iter->pointer.length = 0;
-                    iter->pointer.cursor = 0;
+            if (iter->view_pointer.cursor == qd_buffer_cursor(iter->view_pointer.buffer)) {
+                iter->view_pointer.buffer = iter->view_pointer.buffer->next;
+                if (iter->view_pointer.buffer == 0) {
+                    iter->view_pointer.remaining = 0;
+                    iter->view_pointer.cursor = 0;
                     break;
                 } else {
-                    iter->pointer.cursor = qd_buffer_base(iter->pointer.buffer);
+                    iter->view_pointer.cursor = qd_buffer_base(iter->view_pointer.buffer);
                 }
             }
         }
     } else {    // string/binary data
-        iter->pointer.cursor += count;
-        iter->pointer.length -= count;
+        iter->view_pointer.cursor    += count;
+        iter->view_pointer.remaining -= count;
     }
 }
 
-void qd_field_iterator_set_address(const char *area, const char *router)
+
+static void qd_iterator_free_hash_segments(qd_iterator_t *iter)
+{
+    qd_hash_segment_t *seg = DEQ_HEAD(iter->hash_segments);
+    while (seg) {
+        DEQ_REMOVE_HEAD(iter->hash_segments);
+        free_qd_hash_segment_t(seg);
+        seg = DEQ_HEAD(iter->hash_segments);
+    }
+}
+
+
+void qd_iterator_set_address(const char *area, const char *router)
 {
     my_area = (char*) malloc(strlen(area) + 2);
     strcpy(my_area, area);
@@ -348,283 +339,333 @@ void qd_field_iterator_set_address(const char *area, const char *router)
 }
 
 
-qd_field_iterator_t* qd_address_iterator_string(const char *text, qd_iterator_view_t view)
+qd_iterator_t* qd_iterator_string(const char *text, qd_iterator_view_t view)
 {
-    qd_field_iterator_t *iter = new_qd_field_iterator_t();
+    qd_iterator_t *iter = new_qd_iterator_t();
     if (!iter)
         return 0;
 
-    iter->start_pointer.buffer     = 0;
-    iter->start_pointer.cursor     = (unsigned char*) text;
-    iter->start_pointer.length     = strlen(text);
-    iter->phase                    = '0';
-    iter->prefix_override          = '\0';
+    ZERO(iter);
+    iter->start_pointer.cursor    = (unsigned char*) text;
+    iter->start_pointer.remaining = strlen(text);
+    iter->phase                   = '0';
 
-    DEQ_INIT(iter->hash_segments);
-
-    qd_address_iterator_reset_view(iter, view);
+    qd_iterator_reset_view(iter, view);
 
     return iter;
 }
 
 
-qd_field_iterator_t* qd_address_iterator_binary(const char *text, int length, qd_iterator_view_t view)
+qd_iterator_t* qd_iterator_binary(const char *text, int length, qd_iterator_view_t view)
 {
-    qd_field_iterator_t *iter = new_qd_field_iterator_t();
+    qd_iterator_t *iter = new_qd_iterator_t();
     if (!iter)
         return 0;
 
-    iter->start_pointer.buffer = 0;
-    iter->start_pointer.cursor = (unsigned char*) text;
-    iter->start_pointer.length = length;
-    iter->phase                = '0';
-    iter->prefix_override      = '\0';
+    ZERO(iter);
+    iter->start_pointer.cursor    = (unsigned char*) text;
+    iter->start_pointer.remaining = length;
+    iter->phase                   = '0';
 
-    DEQ_INIT(iter->hash_segments);
-
-    qd_address_iterator_reset_view(iter, view);
+    qd_iterator_reset_view(iter, view);
 
     return iter;
 }
 
 
-qd_field_iterator_t *qd_address_iterator_buffer(qd_buffer_t *buffer, int offset, int length, qd_iterator_view_t view)
+qd_iterator_t *qd_iterator_buffer(qd_buffer_t *buffer, int offset, int length, qd_iterator_view_t view)
 {
-    qd_field_iterator_t *iter = new_qd_field_iterator_t();
+    qd_iterator_t *iter = new_qd_iterator_t();
     if (!iter)
         return 0;
 
-    iter->start_pointer.buffer = buffer;
-    iter->start_pointer.cursor = qd_buffer_base(buffer) + offset;
-    iter->start_pointer.length = length;
-    iter->phase                = '0';
-    iter->prefix_override      = '\0';
+    ZERO(iter);
+    iter->start_pointer.buffer    = buffer;
+    iter->start_pointer.cursor    = qd_buffer_base(buffer) + offset;
+    iter->start_pointer.remaining = length;
+    iter->phase                   = '0';
 
-    DEQ_INIT(iter->hash_segments);
-
-    qd_address_iterator_reset_view(iter, view);
+    qd_iterator_reset_view(iter, view);
 
     return iter;
 }
 
 
-void qd_field_iterator_free(qd_field_iterator_t *iter)
+void qd_iterator_free(qd_iterator_t *iter)
 {
-    if (!iter) return;
-    free_qd_field_iterator_t(iter);
+    if (!iter)
+        return;
+
+    qd_iterator_free_hash_segments(iter);
+    free_qd_iterator_t(iter);
 }
 
 
-void qd_field_iterator_reset(qd_field_iterator_t *iter)
+void qd_iterator_reset(qd_iterator_t *iter)
 {
-    iter->pointer = iter->view_start_pointer;
-    iter->state   = iter->view_prefix ? STATE_AT_PREFIX : STATE_IN_ADDRESS;
-}
-
-
-void qd_address_iterator_reset_view(qd_field_iterator_t *iter, qd_iterator_view_t  view)
-{
-    iter->pointer = iter->start_pointer;
-    iter->view    = view;
-
-    view_initialize(iter);
-
-    iter->view_start_pointer = iter->pointer;
-}
-
-
-qd_iterator_view_t qd_address_iterator_get_view(const qd_field_iterator_t *iter)
-{
-    return iter->view;
-}
-
-
-void qd_address_iterator_set_phase(qd_field_iterator_t *iter, char phase)
-{
-    iter->phase = phase;
-}
-
-void qd_field_iterator_trim(qd_field_iterator_t *iter, int length)
-{
-    if (qd_field_iterator_length(iter) > length) {
-        iter->start_pointer        = iter->pointer;
-        iter->start_pointer.length = length;
-        iter->view_start_pointer   = iter->start_pointer;
-        iter->pointer              = iter->start_pointer;
+    if (iter) {
+        iter->view_pointer         = iter->view_start_pointer;
+        iter->state                = iter->prefix ? STATE_AT_PREFIX : STATE_IN_BODY;
+        iter->annotation_remaining = iter->annotation_length;
     }
 }
 
-void qd_address_iterator_override_prefix(qd_field_iterator_t *iter, char prefix)
+
+void qd_iterator_reset_view(qd_iterator_t *iter, qd_iterator_view_t view)
 {
-    iter->prefix_override = prefix;
-    qd_address_iterator_reset_view(iter, iter->view);
+    if (iter) {
+        iter->view_pointer = iter->start_pointer;
+        iter->view         = view;
+        view_initialize(iter);
+        iter->view_start_pointer   = iter->view_pointer;
+        iter->annotation_remaining = iter->annotation_length;
+    }
 }
 
 
-unsigned char qd_field_iterator_octet(qd_field_iterator_t *iter)
+qd_iterator_view_t qd_iterator_get_view(const qd_iterator_t *iter)
 {
+    return iter ? iter->view : ITER_VIEW_ALL;
+}
+
+
+void qd_iterator_annotate_phase(qd_iterator_t *iter, char phase)
+{
+    if (iter)
+        iter->phase = phase;
+}
+
+
+void qd_iterator_trim_view(qd_iterator_t *iter, int length)
+{
+    if (!iter)
+        return;
+
+    iter->view_start_pointer = iter->view_pointer;
+    int view_length = qd_iterator_length(iter);
+    if (view_length > length) {
+        if (iter->annotation_length > length) {
+            iter->annotation_length            = length;
+            iter->annotation_remaining         = length;
+            iter->view_start_pointer.remaining = 0;
+        } else
+            iter->view_start_pointer.remaining -= view_length - length;
+        iter->view_pointer = iter->view_start_pointer;
+    }
+}
+
+
+void qd_iterator_annotate_prefix(qd_iterator_t *iter, char prefix)
+{
+    if (iter) {
+        iter->prefix_override = prefix;
+        qd_iterator_reset_view(iter, iter->view);
+    }
+}
+
+
+void qd_iterator_annotate_space(qd_iterator_t *iter, const char* space, int space_length)
+{
+    if (iter) {
+        iter->space        = space;
+        iter->space_length = space_length;
+        if (iter->view == ITER_VIEW_ADDRESS_HASH)
+            iter->annotation_length = space_length + (iter->prefix == 'M' ? 2 : 1);
+    }
+}
+
+
+unsigned char qd_iterator_octet(qd_iterator_t *iter)
+{
+    if (!iter)
+        return 0;
+
     if (iter->state == STATE_AT_PREFIX) {
-        iter->state =  iter->prefix == 'M' ? STATE_AT_PHASE : STATE_IN_ADDRESS;
+        iter->state = iter->prefix == 'M' ? STATE_AT_PHASE : (iter->space ? STATE_IN_SPACE : STATE_IN_BODY);
+        iter->space_cursor = 0;
+        iter->annotation_remaining--;
         return iter->prefix;
     }
 
     if (iter->state == STATE_AT_PHASE) {
-        iter->state = STATE_IN_ADDRESS;
+        iter->state = iter->space ? STATE_IN_SPACE : STATE_IN_BODY;
+        iter->space_cursor = 0;
+        iter->annotation_remaining--;
         return iter->phase;
     }
 
-    if (iter->pointer.length == 0)
+    if (iter->state == STATE_IN_SPACE) {
+        if (iter->space_cursor == iter->space_length - 1) {
+            iter->state = STATE_IN_BODY;
+            assert(iter->annotation_remaining == 1);
+        }
+        iter->annotation_remaining--;
+        return iter->space[iter->space_cursor++];
+    }
+
+    if (iter->view_pointer.remaining == 0)
         return (unsigned char) 0;
 
-    unsigned char result = *(iter->pointer.cursor);
+    unsigned char result = *(iter->view_pointer.cursor);
 
     field_iterator_move_cursor(iter, 1);
-    if (iter->pointer.length && iter->mode == MODE_TO_SLASH && *(iter->pointer.cursor) == '/')
-        iter->pointer.length = 0;
+    if (iter->view_pointer.remaining && iter->mode == MODE_TO_SLASH && *(iter->view_pointer.cursor) == '/')
+        iter->view_pointer.remaining = 0;
 
     return result;
 }
 
 
-int qd_field_iterator_end(const qd_field_iterator_t *iter)
+bool qd_iterator_end(const qd_iterator_t *iter)
 {
-    return iter->pointer.length == 0;
+    return iter ? qd_iterator_remaining(iter) == 0 : true;
 }
 
 
-qd_field_iterator_t *qd_field_iterator_sub(const qd_field_iterator_t *iter, uint32_t length)
+qd_iterator_t *qd_iterator_sub(const qd_iterator_t *iter, uint32_t length)
 {
-    qd_field_iterator_t *sub = new_qd_field_iterator_t();
+    if (!iter)
+        return 0;
+
+    qd_iterator_t *sub = new_qd_iterator_t();
     if (!sub)
         return 0;
 
-    sub->start_pointer        = iter->pointer;
-    sub->start_pointer.length = length;
-    sub->view_start_pointer   = sub->start_pointer;
-    sub->pointer              = sub->start_pointer;
-    sub->view                 = iter->view;
-    sub->mode                 = iter->mode;
-    sub->state                = STATE_IN_ADDRESS;
-    sub->view_prefix          = false;
-    sub->prefix_override      = '\0';
-    sub->phase                = '0';
-
-    DEQ_INIT(sub->hash_segments);
+    ZERO(sub);
+    sub->start_pointer           = iter->view_pointer;
+    sub->start_pointer.remaining = length;
+    sub->view_start_pointer      = sub->start_pointer;
+    sub->view_pointer            = sub->start_pointer;
+    sub->view                    = iter->view;
+    sub->mode                    = iter->mode;
+    sub->state                   = STATE_IN_BODY;
+    sub->phase                   = '0';
 
     return sub;
 }
 
 
-void qd_field_iterator_advance(qd_field_iterator_t *iter, uint32_t length)
+void qd_iterator_advance(qd_iterator_t *iter, uint32_t length)
 {
-    while (length > 0 && !qd_field_iterator_end(iter)) {
-        if (iter->state == STATE_IN_ADDRESS) {
+    if (!iter)
+        return;
+
+    while (length > 0 && !qd_iterator_end(iter)) {
+        if (iter->state == STATE_IN_BODY) {
             field_iterator_move_cursor(iter, length);
             break;
         } else {
-            qd_field_iterator_octet(iter);
+            qd_iterator_octet(iter);
             length--;
         }
     }
 }
 
 
-uint32_t qd_field_iterator_remaining(const qd_field_iterator_t *iter)
+uint32_t qd_iterator_remaining(const qd_iterator_t *iter)
 {
-    return iter->pointer.length;
+    return iter ? iter->annotation_remaining + iter->view_pointer.remaining : 0;
 }
 
 
-int qd_field_iterator_equal(qd_field_iterator_t *iter, const unsigned char *string)
+bool qd_iterator_equal(qd_iterator_t *iter, const unsigned char *string)
 {
-    qd_field_iterator_reset(iter);
+    if (!iter)
+        return false;
 
-    while (!qd_field_iterator_end(iter) && *string) {
-        if (*string != qd_field_iterator_octet(iter))
+    qd_iterator_reset(iter);
+
+    while (!qd_iterator_end(iter) && *string) {
+        if (*string != qd_iterator_octet(iter))
             break;
         string++;
     }
 
-    int match = (qd_field_iterator_end(iter) && (*string == 0));
-    qd_field_iterator_reset(iter);
+    bool match = (qd_iterator_end(iter) && (*string == 0));
+    qd_iterator_reset(iter);
     return match;
 }
 
 
-int qd_field_iterator_prefix(qd_field_iterator_t *iter, const char *prefix)
+bool qd_iterator_prefix(qd_iterator_t *iter, const char *prefix)
 {
-    pointer_t      save_pointer = iter->pointer;
+    if (!iter)
+        return false;
+
+    pointer_t      save_pointer = iter->view_pointer;
     unsigned char *c            = (unsigned char*) prefix;
 
     while(*c) {
-        if (*c != qd_field_iterator_octet(iter))
+        if (*c != qd_iterator_octet(iter))
             break;
         c++;
     }
 
     if (*c) {
-        iter->pointer = save_pointer;
-        return 0;
+        iter->view_pointer = save_pointer;
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
 
-int qd_field_iterator_length(const qd_field_iterator_t *iter)
+int qd_iterator_length(const qd_iterator_t *iter)
 {
-    qd_field_iterator_t copy = *iter;
-    int length = 0;
-    qd_field_iterator_reset(&copy);
-    while (!qd_field_iterator_end(&copy)) {
-        qd_field_iterator_octet(&copy);
-        length++;
-    }
-    return length;
+    return iter ? iter->annotation_length + iter->view_start_pointer.remaining : 0;
 }
 
 
-int qd_field_iterator_ncopy(qd_field_iterator_t *iter, unsigned char* buffer, int n) {
-    qd_field_iterator_reset(iter);
+int qd_iterator_ncopy(qd_iterator_t *iter, unsigned char* buffer, int n)
+{
+    if (!iter)
+        return 0;
+
+    qd_iterator_reset(iter);
     int i = 0;
-    while (!qd_field_iterator_end(iter) && i < n)
-        buffer[i++] = qd_field_iterator_octet(iter);
+    while (!qd_iterator_end(iter) && i < n)
+        buffer[i++] = qd_iterator_octet(iter);
     return i;
 }
 
 
-char* qd_field_iterator_strncpy(qd_field_iterator_t *iter, char* buffer, int n) {
-    int i = qd_field_iterator_ncopy(iter, (unsigned char*)buffer, n-1);
+char* qd_iterator_strncpy(qd_iterator_t *iter, char* buffer, int n)
+{
+    int i = qd_iterator_ncopy(iter, (unsigned char*) buffer, n-1);
     buffer[i] = '\0';
     return buffer;
 }
 
 
-unsigned char *qd_field_iterator_copy(qd_field_iterator_t *iter)
+unsigned char *qd_iterator_copy(qd_iterator_t *iter)
 {
-    int length = qd_field_iterator_length(iter);
+    if (!iter)
+        return 0;
+
+    int length = qd_iterator_length(iter);
     unsigned char *copy = malloc(length+1);
-    int i = qd_field_iterator_ncopy(iter, copy, length+1);
+    int i = qd_iterator_ncopy(iter, copy, length+1);
     copy[i] = '\0';
     return copy;
 }
 
 
-qd_field_iterator_t *qd_field_iterator_dup(const qd_field_iterator_t *iter)
+qd_iterator_t *qd_iterator_dup(const qd_iterator_t *iter)
 {
-    if (iter == 0)
+    if (!iter)
         return 0;
 
-    qd_field_iterator_t *dup = new_qd_field_iterator_t();
+    qd_iterator_t *dup = new_qd_iterator_t();
     if (dup)
         *dup = *iter;
     return dup;
 }
 
 
-qd_iovec_t *qd_field_iterator_iovec(const qd_field_iterator_t *iter)
+qd_iovec_t *qd_iterator_iovec(const qd_iterator_t *iter)
 {
-    assert(!iter->view_prefix); // Not supported for views with a prefix
+    if (!iter)
+        return 0;
 
     //
     // Count the number of buffers this field straddles
@@ -633,7 +674,7 @@ qd_iovec_t *qd_field_iterator_iovec(const qd_field_iterator_t *iter)
     int          bufcnt    = 1;
     qd_buffer_t *buf       = pointer.buffer;
     size_t       bufsize   = qd_buffer_size(buf) - (pointer.cursor - qd_buffer_base(pointer.buffer));
-    ssize_t      remaining = pointer.length - bufsize;
+    ssize_t      remaining = pointer.remaining - bufsize;
 
     while (remaining > 0) {
         bufcnt++;
@@ -657,7 +698,7 @@ qd_iovec_t *qd_field_iterator_iovec(const qd_field_iterator_t *iter)
     buf        = pointer.buffer;
     bufsize    = qd_buffer_size(buf) - (pointer.cursor - qd_buffer_base(pointer.buffer));
     void *base = pointer.cursor;
-    remaining  = pointer.length;
+    remaining  = pointer.remaining;
 
     while (remaining > 0) {
         if (bufsize > remaining)
@@ -677,18 +718,6 @@ qd_iovec_t *qd_field_iterator_iovec(const qd_field_iterator_t *iter)
 }
 
 
-uint32_t qd_iterator_hash_function(qd_field_iterator_t *iter)
-{
-    uint32_t hash = HASH_INIT;
-
-    qd_field_iterator_reset(iter);
-    while (!qd_field_iterator_end(iter))
-        hash = ((hash << 5) + hash) + (int) qd_field_iterator_octet(iter); /* hash * 33 + c */
-
-    return hash;
-}
-
-
 /**
  * Creates and returns a new qd_hash_segment_t and initializes it.
  */
@@ -696,7 +725,7 @@ static qd_hash_segment_t *qd_iterator_hash_segment(void)
 {
     qd_hash_segment_t *hash_segment = new_qd_hash_segment_t();
     DEQ_ITEM_INIT(hash_segment);
-    hash_segment->hash       = 0;
+    hash_segment->hash           = 0;
     hash_segment->segment_length = 0;
     return hash_segment;
 }
@@ -705,7 +734,7 @@ static qd_hash_segment_t *qd_iterator_hash_segment(void)
 /**
  * Create a new hash segment and insert it at the end of the linked list
  */
-static void qd_insert_hash_segment(qd_field_iterator_t *iter, uint32_t *hash, int segment_length)
+static void qd_insert_hash_segment(qd_iterator_t *iter, uint32_t *hash, int segment_length)
 {
     qd_hash_segment_t *hash_segment = qd_iterator_hash_segment();
 
@@ -717,17 +746,34 @@ static void qd_insert_hash_segment(qd_field_iterator_t *iter, uint32_t *hash, in
 }
 
 
-void qd_iterator_hash_segments(qd_field_iterator_t *iter)
+uint32_t qd_iterator_hash_view(qd_iterator_t *iter)
 {
+    uint32_t hash = HASH_INIT;
+
+    qd_iterator_reset(iter);
+    while (!qd_iterator_end(iter))
+        hash = ((hash << 5) + hash) + (uint32_t) qd_iterator_octet(iter); /* hash * 33 + c */
+
+    return hash;
+}
+
+
+void qd_iterator_hash_view_segments(qd_iterator_t *iter)
+{
+    if (!iter)
+        return;
+    
     // Reset the pointers in the iterator
-    qd_field_iterator_reset(iter);
+    qd_iterator_reset(iter);
     uint32_t hash = HASH_INIT;
     char octet;
     int segment_length=0;
 
-    while (!qd_field_iterator_end(iter)) {
+    qd_iterator_free_hash_segments(iter);
+
+    while (!qd_iterator_end(iter)) {
         // Get the octet at which the iterator is currently pointing to.
-        octet = qd_field_iterator_octet(iter);
+        octet = qd_iterator_octet(iter);
         segment_length += 1;
 
         if (strrchr(SEPARATORS, (int) octet)) {
@@ -738,34 +784,24 @@ void qd_iterator_hash_segments(qd_field_iterator_t *iter)
     }
 
     // Segments should never end with a separator. see view_initialize which in turn calls
-    // qd_address_iterator_remove_trailing_separator
+    // qd_iterator_remove_trailing_separator
     // Insert the last segment which was not inserted in the previous while loop
     qd_insert_hash_segment(iter, &hash, segment_length);
 
     // Return the pointers in the iterator back to the original state before returning from this function.
-    qd_field_iterator_reset(iter);
+    qd_iterator_reset(iter);
 }
 
 
-bool qd_iterator_hash_and_reset(qd_field_iterator_t *iter, uint32_t *hash)
+bool qd_iterator_next_segment(qd_iterator_t *iter, uint32_t *hash)
 {
     qd_hash_segment_t *hash_segment = DEQ_TAIL(iter->hash_segments);
     if (!hash_segment)
         return false;
 
     *hash = hash_segment->hash;
+    qd_iterator_trim_view(iter, hash_segment->segment_length);
 
-    // Get the length of the hashed segment and set it on the iterator so that the iterator can only advance till that length
-    // Check for a non empty iter->prefix and reduce the segment length by 1
-    if (iter->view_prefix) {
-        if (iter->prefix == 'M')
-            iter->view_start_pointer.length = hash_segment->segment_length - 2;
-        else
-            iter->view_start_pointer.length = hash_segment->segment_length - 1;
-    } else
-        iter->view_start_pointer.length = hash_segment->segment_length;
-
-    // Remove the tail from the hash segments since we have already compared it.
     DEQ_REMOVE_TAIL(iter->hash_segments);
 
     free_qd_hash_segment_t(hash_segment);

@@ -115,7 +115,7 @@ void qdr_core_unsubscribe(qdr_subscription_t *sub);
  * @param exclude_inprocess If true, the message will not be sent to in-process subscribers.
  * @param control If true, this message is to be treated as control traffic and flow on a control link.
  */
-void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_field_iterator_t *addr,
+void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_iterator_t *addr,
                   bool exclude_inprocess, bool control);
 void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr,
                   bool exclude_inprocess, bool control);
@@ -323,7 +323,7 @@ void qdr_terminus_set_address(qdr_terminus_t *term, const char *addr);
  * @param term A qdr_terminus pointer returned by qdr_terminus()
  * @return A pointer to an iterator or 0 if the terminus is anonymous.
  */
-qd_field_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term);
+qd_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term);
 
 /**
  * qdr_terminus_dnp_address
@@ -334,7 +334,7 @@ qd_field_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term);
  * @param term A qdr_terminus pointer returned by qdr_terminus()
  * @return A pointer to an iterator or 0 if there is no such field.
  */
-qd_field_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term);
+qd_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term);
 
 
 /**
@@ -508,10 +508,10 @@ void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error);
  *                       it built on the trace header from a received message.
  * @return Pointer to the qdr_delivery that will track the lifecycle of this delivery on this link.
  */
-qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_field_iterator_t *ingress,
+qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterator_t *ingress,
                                  bool settled, qd_bitmask_t *link_exclusion);
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
-                                    qd_field_iterator_t *ingress, qd_field_iterator_t *addr,
+                                    qd_iterator_t *ingress, qd_iterator_t *addr,
                                     bool settled, qd_bitmask_t *link_exclusion);
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled,
                                                 const uint8_t *tag, int tag_length);
@@ -594,7 +594,7 @@ typedef struct qdr_query_t qdr_query_t;
  * @param out_body A composed field for the body of the response message
  */
 void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                       qd_field_iterator_t *name, qd_parsed_field_t *in_body, qd_composed_field_t *out_body);
+                       qd_iterator_t *name, qd_parsed_field_t *in_body, qd_composed_field_t *out_body);
 
 /**
  * qdr_manage_delete
@@ -608,7 +608,7 @@ void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t 
  * @param identity The identity supplied with the request (or 0 if the name was supplied)
  */
 void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                       qd_field_iterator_t *name, qd_field_iterator_t *identity);
+                       qd_iterator_t *name, qd_iterator_t *identity);
 
 /**
  * qdr_manage_read
@@ -623,7 +623,7 @@ void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t 
  * @param body A composed field for the body of the response message
  */
 void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                     qd_field_iterator_t *name, qd_field_iterator_t *identity, qd_composed_field_t *body);
+                     qd_iterator_t *name, qd_iterator_t *identity, qd_composed_field_t *body);
 
 
 /**
@@ -640,7 +640,7 @@ void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t ty
  * @param out_body A composed field for the body of the response message
  */
 void qdr_manage_update(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                       qd_field_iterator_t *name, qd_field_iterator_t *identity,
+                       qd_iterator_t *name, qd_iterator_t *identity,
                        qd_parsed_field_t *in_body, qd_composed_field_t *out_body);
 
 /**

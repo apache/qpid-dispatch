@@ -34,11 +34,11 @@ qd_hash_t *qd_hash(int bucket_exponent, int batch_size, int value_is_const);
 void qd_hash_free(qd_hash_t *h);
 
 size_t qd_hash_size(qd_hash_t *h);
-qd_error_t qd_hash_insert(qd_hash_t *h, qd_field_iterator_t *key, void *val, qd_hash_handle_t **handle);
-qd_error_t qd_hash_insert_const(qd_hash_t *h, qd_field_iterator_t *key, const void *val, qd_hash_handle_t **handle);
-qd_error_t qd_hash_retrieve(qd_hash_t *h, qd_field_iterator_t *key, void **val);
-qd_error_t qd_hash_retrieve_const(qd_hash_t *h, qd_field_iterator_t *key, const void **val);
-qd_error_t qd_hash_remove(qd_hash_t *h, qd_field_iterator_t *key);
+qd_error_t qd_hash_insert(qd_hash_t *h, qd_iterator_t *key, void *val, qd_hash_handle_t **handle);
+qd_error_t qd_hash_insert_const(qd_hash_t *h, qd_iterator_t *key, const void *val, qd_hash_handle_t **handle);
+qd_error_t qd_hash_retrieve(qd_hash_t *h, qd_iterator_t *key, void **val);
+qd_error_t qd_hash_retrieve_const(qd_hash_t *h, qd_iterator_t *key, const void **val);
+qd_error_t qd_hash_remove(qd_hash_t *h, qd_iterator_t *key);
 
 void qd_hash_handle_free(qd_hash_handle_t *handle);
 const unsigned char *qd_hash_key_by_handle(const qd_hash_handle_t *handle);
@@ -57,12 +57,12 @@ qd_error_t qd_hash_remove_by_handle2(qd_hash_t *h, qd_hash_handle_t *handle, uns
  * @param iter An iterator containing the address string to search on.
  * @param **val The qd_address_t value if there is a full or prefix match.
  */
-void qd_hash_retrieve_prefix(qd_hash_t *h, qd_field_iterator_t *iter, void **val);
+void qd_hash_retrieve_prefix(qd_hash_t *h, qd_iterator_t *iter, void **val);
 
 /**
  * Same as qd_hash_retrieve_prefix but returns the value as a constant which cannot be modified.
  * @see qd_hash_retrieve_prefix
  */
-void qd_hash_retrieve_prefix_const(qd_hash_t *h, qd_field_iterator_t *iter, const void **val);
+void qd_hash_retrieve_prefix_const(qd_hash_t *h, qd_iterator_t *iter, const void **val);
 
 #endif
