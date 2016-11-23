@@ -515,6 +515,14 @@ class ConnectionEntity(EntityAdapter):
         return super(ConnectionEntity, self).__str__().replace("Entity(", "ConnectionEntity(")
 
 
+class LogStatsEntity(EntityAdapter):
+    def _identifier(self):
+        return self.attributes.get('identity')
+
+    def __str__(self):
+        return super(LogStatsEntity, self).__str__().replace("Entity(", "LogStatsEntity(")
+
+
 class AllocatorEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('typeName')
