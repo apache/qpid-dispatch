@@ -39,7 +39,7 @@ servers.
 OPTIONS
 -------
 
-include::{generated}/qdrouterd_help.adoc[]
+include::{generated_man}/qdrouterd_help.adoc[]
 
 FILES
 -----

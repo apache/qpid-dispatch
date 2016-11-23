@@ -34,7 +34,7 @@ The Autostart checkbox, when checked, will automatically log in with the previou
 Overview page
 ~~~~~~~~~~~~~
 
-image:console_overview.png[image]
+image:book/console_overview.png[image]
 
 On the overview page, aggregate information about routers, addresses, and connections is displayed.
 

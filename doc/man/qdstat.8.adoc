@@ -37,7 +37,7 @@ connections, network nodes and links, and router stats such as memory use.
 OPTIONS
 -------
 
-include::{generated}/qdstat_help.adoc[]
+include::{generated_man}/qdstat_help.adoc[]
 
 OUTPUT COLUMNS
 --------------

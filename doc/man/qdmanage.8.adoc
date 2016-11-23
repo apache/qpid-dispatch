@@ -39,7 +39,7 @@ managed endpoint, not just with qdrouter.
 OPTIONS
 -------
 
-include::{generated}/qdmanage_help.adoc[]
+include::{generated_man}/qdmanage_help.adoc[]
 
 OPERATIONS
 ----------
