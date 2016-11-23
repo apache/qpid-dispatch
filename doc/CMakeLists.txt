@@ -137,7 +137,7 @@ if(BUILD_DOCS)
         get_filename_component(name ${source} NAME)
         get_filename_component(dir ${source} DIRECTORY)
         string(REGEX REPLACE ".*\\.([0-9])$" "\\1" section ${source}) # Man section number
-        set(output ${bin}/${dir}/${name})
+        set(output ${bin}/${name})
         add_custom_command(
           OUTPUT ${output}
           COMMAND ${A2X_EXE} ${A2X_FLAGS} -f manpage -D ${bin} ${source}.adoc
