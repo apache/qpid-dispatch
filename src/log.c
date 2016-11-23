@@ -21,6 +21,7 @@
 
 #include "log_private.h"
 #include "entity.h"
+#include "entity_cache.h"
 #include "aprintf.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/dispatch.h>
@@ -36,6 +37,8 @@
 #define TEXT_MAX QD_LOG_TEXT_MAX
 #define LOG_MAX (QD_LOG_TEXT_MAX+128)
 #define LIST_MAX 1000
+
+const char *QD_LOG_STATS_TYPE = "logStats";
 
 static qd_log_source_t      *default_log_source=0;
 static qd_log_source_t      *logging_log_source=0;
@@ -149,6 +152,12 @@ static log_sink_t* log_sink_lh(const char* name) {
 }
 
 
+typedef enum {DEFAULT, NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, N_LEVELS} level_index_t;
+#define MIN_VALID_LEVEL_INDEX TRACE
+#define MAX_VALID_LEVEL_INDEX CRITICAL
+#define N_LEVEL_INDICES (MAX_VALID_LEVEL_INDEX - MIN_VALID_LEVEL_INDEX + 1)
+#define LEVEL_INDEX(LEVEL) ((LEVEL) - TRACE)
+
 struct qd_log_source_t {
     DEQ_LINKS(qd_log_source_t);
     char *module;
@@ -157,6 +166,7 @@ struct qd_log_source_t {
     int source;                 /* boolean or -1 means not set */
     bool syslog;
     log_sink_t *sink;
+    uint64_t severity_histogram[N_LEVEL_INDICES];
 };
 
 DEQ_DECLARE(qd_log_source_t, qd_log_source_list_t);
@@ -165,7 +175,6 @@ static sys_mutex_t          *log_lock = 0;
 static sys_mutex_t          *log_source_lock = 0;
 static qd_log_source_list_t  source_list = {0};
 
-typedef enum {DEFAULT, NONE, TRACE, DEBUG, INFO, NOTICE, WARNING, ERROR, CRITICAL, N_LEVELS} level_index_t;
 
 typedef struct level_t {
     const char* name;
@@ -213,6 +222,22 @@ static const level_t* level_for_name(const char *name, int len) {
         return NULL;
     }
     return &levels[i];
+}
+
+/*
+  Return -1 and set qd_error if not a valid bit.
+  Translate so that the min valid level index is 0.
+*/
+static int level_index_for_bit(int bit) {
+    level_index_t i = MIN_VALID_LEVEL_INDEX;
+    while ( i <= MAX_VALID_LEVEL_INDEX ) {
+        if ( levels[i].bit == bit )
+            return (int) (i - MIN_VALID_LEVEL_INDEX);
+        ++ i;
+    }
+
+    qd_error(QD_ERROR_CONFIG, "'%d' is not a valid log level bit.", bit);
+    return -1;
 }
 
 /// Return the name of log level or 0 if not found.
@@ -304,6 +329,7 @@ static void qd_log_source_defaults(qd_log_source_t *log_source) {
     log_source->timestamp = -1;
     log_source->source = -1;
     log_source->sink = 0;
+    memset ( log_source->severity_histogram, 0, sizeof(uint64_t) * (N_LEVEL_INDICES) );
 }
 
 /// Caller must hold the log_source_lock
@@ -319,6 +345,7 @@ static qd_log_source_t *qd_log_source_lh(const char *module)
         strcpy(log_source->module, module);
         qd_log_source_defaults(log_source);
         DEQ_INSERT_TAIL(source_list, log_source);
+        qd_entity_cache_add(QD_LOG_STATS_TYPE, log_source);
     }
     return log_source;
 }
@@ -355,6 +382,18 @@ bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
 
 void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file, int line, const char *fmt, ...)
 {
+    /*-----------------------------------------------
+      Count this log-event in this log's histogram
+      whether or not this log is currently enabled.
+      We can always decide not to look at it later,
+      based on its used/unused status.
+    -----------------------------------------------*/
+    level_index_t level_index = level_index_for_bit(level);
+    if (level_index < 0)
+        qd_error_clear();
+    else
+        source->severity_histogram[level_index]++;
+
     if (!qd_log_enabled(source, level)) return;
 
     qd_log_entry_t *entry = new_qd_log_entry_t();
@@ -507,4 +546,24 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     sys_mutex_unlock(log_source_lock);
 
     return qd_error_code();
+}
+
+
+qd_error_t qd_entity_refresh_logStats(qd_entity_t* entity, void *impl)
+{
+    qd_log_source_t *log = (qd_log_source_t*)impl;
+    char identity_str[TEXT_MAX];
+    snprintf(identity_str, TEXT_MAX - 1,"logStats/%s", log->module);
+
+    qd_entity_set_long(entity,   "traceCount",    log->severity_histogram[LEVEL_INDEX(TRACE)]);
+    qd_entity_set_long(entity,   "debugCount",    log->severity_histogram[LEVEL_INDEX(DEBUG)]);
+    qd_entity_set_long(entity,   "infoCount",     log->severity_histogram[LEVEL_INDEX(INFO)]);
+    qd_entity_set_long(entity,   "noticeCount",   log->severity_histogram[LEVEL_INDEX(NOTICE)]);
+    qd_entity_set_long(entity,   "warningCount",  log->severity_histogram[LEVEL_INDEX(WARNING)]);
+    qd_entity_set_long(entity,   "errorCount",    log->severity_histogram[LEVEL_INDEX(ERROR)]);
+    qd_entity_set_long(entity,   "criticalCount", log->severity_histogram[LEVEL_INDEX(CRITICAL)]);
+    qd_entity_set_string(entity, "name",          log->module);
+    qd_entity_set_string(entity, "identity",      identity_str);
+
+    return QD_ERROR_NONE;
 }
