@@ -627,6 +627,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
     for (listener = qdpn_driver_listener(driver); listener; listener = qdpn_driver_listener(driver)) {
         bool policy_counted = false;
         cxtr = qdpn_listener_accept(listener, qd_server->qd->policy, &qd_policy_socket_accept, &policy_counted);
+
         if (!cxtr)
             continue;
 
@@ -685,6 +686,11 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         if (qd_log_enabled(qd_server->log_source, QD_LOG_TRACE)) {
             pn_transport_trace(tport, PN_TRACE_DRV | PN_TRACE_FRM | PN_TRACE_RAW);
             pn_transport_set_tracer(tport, qd_transport_tracer);
+        }
+
+        if (tport && ctx->pn_cxtr) {
+           if (qdpn_connector_trace(ctx->pn_cxtr) & (PN_TRACE_FRM | PN_TRACE_RAW | PN_TRACE_DRV))
+               fprintf(stderr, "Transport [%p] on %s\n", tport, qdpn_connector_name(ctx->pn_cxtr));
         }
 
         // Set up SSL if configured

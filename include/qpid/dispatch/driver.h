@@ -258,7 +258,9 @@ qdpn_connector_t *qdpn_connector_next(qdpn_connector_t *connector);
  * @param[in] connector the connector to trace
  * @param[in] trace the trace level to use.
  */
-void qdpn_connector_trace(qdpn_connector_t *connector, pn_trace_t trace);
+void qdpn_connector_set_trace(qdpn_connector_t *connector, pn_trace_t trace);
+
+pn_trace_t qdpn_connector_trace(qdpn_connector_t *ctor);
 
 /** Service the given connector.
  *
