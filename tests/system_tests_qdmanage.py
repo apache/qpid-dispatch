@@ -489,5 +489,15 @@ class QdmanageTestSsl(QdmanageTest):
         delete_command = 'DELETE --type=sslProfile --name=' + ssl_profile_name
         self.run_qdmanage(delete_command)
 
+    def test_zzz_router_query(self):
+        long_type = 'org.apache.qpid.dispatch.router'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(3, output[0]['connectionCount'])
+        self.assertEqual(1, output[0]['linkRouteCount'])
+        self.assertEqual(1, output[0]['autoLinkCount'])
+        self.assertEqual('interior', output[0]['mode'])
+        self.assertEqual('org.apache.qpid.dispatch.router', output[0]['type'])
+
 if __name__ == '__main__':
     unittest.main(main_module())

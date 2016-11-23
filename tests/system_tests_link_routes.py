@@ -252,8 +252,9 @@ class LinkRouteTest(TestCase):
 
         # Connect to the router acting like the broker (QDR.A) and check the deliveriesIngress and deliveriesEgress
         local_node = Node.connect(self.routers[0].addresses[0], timeout=TIMEOUT)
+
         self.assertEqual(u'QDR.A', local_node.query(type='org.apache.qpid.dispatch.router',
-                                                    attribute_names=['id']).results[0][0])
+                                                    attribute_names=[u'id']).results[0][0])
 
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
                                             name='M0org.apache.dev').deliveriesEgress)

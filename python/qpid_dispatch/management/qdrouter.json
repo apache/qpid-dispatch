@@ -438,6 +438,22 @@
                     "description":"Number of known peer router nodes.",
                     "graph": true
                 },
+                "linkRouteCount": {
+                    "type": "integer",
+                    "description":"Number of link routes attached to the router node.",
+                    "graph": true
+                },
+                "autoLinkCount": {
+                    "type": "integer",
+                    "description":"Number of auto links attached to the router node.",
+                    "graph": true
+                },
+                "connectionCount": {
+                    "type": "integer",
+                    "description":"Number of open connections to the router node.",
+                    "graph": true
+                },
+                                                                
                 "workerThreads": {
                     "type": "integer",
                     "default": 4,
