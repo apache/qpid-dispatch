@@ -1358,7 +1358,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->container_name   = container_name;
     qd_server->sasl_config_path = sasl_config_path;
     qd_server->sasl_config_name = sasl_config_name;
-    qd_server->driver           = qdpn_driver();
+    qd_server->driver           = qdpn_driver(qd_server->log_source);
     qd_server->start_handler    = 0;
     qd_server->conn_handler     = 0;
     qd_server->pn_event_handler = 0;
