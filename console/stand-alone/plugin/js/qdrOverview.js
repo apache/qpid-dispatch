@@ -99,11 +99,29 @@ var QDR = (function (QDR) {
       $("#overtree").dynatree("getTree").activateKey(nodeId);
     }
 
+    $scope.routerPagingOptions = {
+      pageSizes: [50, 100, 500],
+      pageSize: 50,
+      currentPage: 1
+    };
+    var getPagedData = function (pageSize, page) {
+      $scope.totalRouters = $scope.allRouterFields.length
+      $scope.allRouters.showFooter = $scope.totalRouters > 50
+      $scope.pagedRouterFields = $scope.allRouterFields.slice((page - 1) * pageSize, page * pageSize);
+    }
+    $scope.$watch('pagingOptions', function (newVal, oldVal) {
+      if (newVal !== oldVal && newVal.currentPage !== oldVal.currentPage) {
+        getPagedData($scope.routerPagingOptions.pageSize, $scope.routerPagingOptions.currentPage);
+      }
+    }, true);
+
+    $scope.totalRouters = 0;
     $scope.allRouterFields = [];
+    $scope.pagedRouterFields = [];
     $scope.allRouterSelections = [];
     $scope.allRouters = {
       saveKey: 'allRouters',
-      data: 'allRouterFields',
+      data: 'pagedRouterFields',
       columnDefs: [
         {
           field: 'id',
@@ -132,6 +150,10 @@ var QDR = (function (QDR) {
         }
       ],
       enableColumnResize: true,
+      enablePaging: true,
+      showFooter: $scope.totalRouters > 50,
+      totalServerItems: 'totalRouters',
+      pagingOptions: $scope.routerPagingOptions,
       multiSelect: false,
       selectedItems: $scope.allRouterSelections,
       plugins: [new ngGridFlexibleHeightPlugin()],
@@ -146,7 +168,7 @@ var QDR = (function (QDR) {
     };
 
     // get info for all routers
-    var allRouterInfo = function (qcallback) {
+    var allRouterInfo = function () {
       var nodes = {}
       // gets called each node/entity response
       var gotNode = function (nodeName, entity, response) {
@@ -175,12 +197,12 @@ var QDR = (function (QDR) {
           }
           $timeout(function () {
             $scope.allRouterFields = allRouterFields
+            getPagedData($scope.routerPagingOptions.pageSize, $scope.routerPagingOptions.currentPage);
             updateRouterTree(nodeIds)
+            scheduleNextUpdate()
             //if ($scope.router)
             //  routerInfo($scope.router)
           })
-          if (qcallback)
-            qcallback(null)
         }, gotNode)
       }, gotNode)
       loadColState($scope.allRouters)
@@ -207,7 +229,7 @@ var QDR = (function (QDR) {
 
     $scope.router = null;
     // get info for a single router
-    var routerInfo = function (node, qcallback) {
+    var routerInfo = function (node) {
       $scope.router = node
 
       var routerFields = [];
@@ -222,17 +244,34 @@ var QDR = (function (QDR) {
           return true
         }
       })
-      if (qcallback)
-        qcallback(null)
       $timeout(function () {$scope.routerFields = routerFields})
+      scheduleNextUpdate()
       loadColState($scope.routerGrid);
     }
 
+    $scope.addressPagingOptions = {
+      pageSizes: [50, 100, 500],
+      pageSize: 50,
+      currentPage: 1
+    };
+    var getAddressPagedData = function (pageSize, page) {
+      $scope.totalAddresses = $scope.addressesData.length
+      $scope.addressesGrid.showFooter = $scope.totalAddresses > 50
+      $scope.pagedAddressesData = $scope.addressesData.slice((page - 1) * pageSize, page * pageSize);
+    }
+    $scope.$watch('addressPagingOptions', function (newVal, oldVal) {
+      if (newVal !== oldVal && newVal.currentPage !== oldVal.currentPage) {
+        getAddressPagedData($scope.addressPagingOptions.pageSize, $scope.addressPagingOptions.currentPage);
+      }
+    }, true);
+
+    $scope.totalAddresses = 0;
+    $scope.pagedAddressesData = []
     $scope.addressesData = []
     $scope.selectedAddresses = []
     $scope.addressesGrid = {
       saveKey: 'addressesGrid',
-      data: 'addressesData',
+      data: 'pagedAddressesData',
       columnDefs: [
         {
           field: 'address',
@@ -273,6 +312,10 @@ var QDR = (function (QDR) {
           cellClass: 'grid-align-value'
         }
       ],
+      enablePaging: true,
+      showFooter: $scope.totalAddresses > 50,
+      totalServerItems: 'totalAddresses',
+      pagingOptions: $scope.addressPagingOptions,
       enableColumnResize: true,
       multiSelect: false,
       selectedItems: $scope.selectedAddresses,
@@ -287,7 +330,7 @@ var QDR = (function (QDR) {
     };
 
     // get info for all addresses
-    var allAddressInfo = function (qcallback) {
+    var allAddressInfo = function () {
       var nodes = {}
       // gets called each node/entity response
       var gotNode = function (nodeName, entity, response) {
@@ -410,13 +453,12 @@ var QDR = (function (QDR) {
           } else
             addressFields[i].title = addressFields[i].address
         }
-        if (qcallback)
-          qcallback(null)
-
         $timeout(function () {
           $scope.addressesData = addressFields
+          getAddressPagedData($scope.addressPagingOptions.pageSize, $scope.addressPagingOptions.currentPage);
           // repopulate the tree's child nodes
           updateAddressTree(addressFields)
+          scheduleNextUpdate()
         })
       }, gotNode)
       loadColState($scope.addressesGrid);
@@ -438,6 +480,7 @@ var QDR = (function (QDR) {
       })
       QDR.log.debug("setting linkFields in updateLinkGrid")
       $scope.linkFields = filteredLinks;
+      getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
       // if we have a selected link
       if ($scope.link) {
         // find the selected link in the array of all links
@@ -453,10 +496,28 @@ var QDR = (function (QDR) {
     }
 
     // get info for a all links
+    $scope.linkPagingOptions = {
+      pageSizes: [50, 100, 500],
+      pageSize: 50,
+      currentPage: 1
+    };
+    var getLinkPagedData = function (pageSize, page) {
+      $scope.totalLinks = $scope.linkFields.length
+      $scope.linksGrid.showFooter = $scope.totalLinks > 50
+      $scope.pagedLinkData = $scope.linkFields.slice((page - 1) * pageSize, page * pageSize);
+    }
+    $scope.$watch('linkPagingOptions', function (newVal, oldVal) {
+      if (newVal !== oldVal && newVal.currentPage !== oldVal.currentPage) {
+        getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
+      }
+    }, true);
+
+    $scope.totalLinks = 0;
+    $scope.pagedLinkData = []
     $scope.selectedLinks = []
     $scope.linksGrid = {
       saveKey: 'linksGrid',
-      data: 'linkFields',
+      data: 'pagedLinkData',
       columnDefs: [
         {
           field: 'link',
@@ -523,6 +584,10 @@ var QDR = (function (QDR) {
           width: '10%'
                 }*/
             ],
+      enablePaging: true,
+      showFooter: $scope.totalLinks > 50,
+      totalServerItems: 'totalLinks',
+      pagingOptions: $scope.linkPagingOptions,
       enableColumnResize: true,
       enableColumnReordering: true,
       showColumnMenu: true,
@@ -564,11 +629,7 @@ var QDR = (function (QDR) {
         })
       }
     }
-    var allLinkInfo = function (qcallback) {
-      var callbackHolder = function () {
-        if (qcallback)
-          qcallback(null)
-      }
+    var allLinkInfo = function () {
       var gridCallback = function (linkFields) {
         QDRService.ensureAllEntities({entity: ".connection", force: true}, function () {
           // only update the grid with these fields if the List tree node is selected
@@ -578,7 +639,7 @@ var QDR = (function (QDR) {
           updateLinkTree(linkFields)
         })
       }
-      getAllLinkFields([callbackHolder, gridCallback])
+      getAllLinkFields([gridCallback, scheduleNextUpdate])
       loadColState($scope.linksGrid);
     }
 
@@ -723,11 +784,29 @@ var QDR = (function (QDR) {
       })
     }
 
+    $scope.connectionPagingOptions = {
+      pageSizes: [50, 100, 500],
+      pageSize: 50,
+      currentPage: 1
+    };
+    var getConnectionPagedData = function (pageSize, page) {
+      $scope.totalConnections = $scope.allConnectionFields.length
+      $scope.allConnectionGrid.showFooter = $scope.totalConnections > 50
+      $scope.pagedConnectionsData = $scope.allConnectionFields.slice((page - 1) * pageSize, page * pageSize);
+    }
+    $scope.$watch('connectionPagingOptions', function (newVal, oldVal) {
+      if (newVal !== oldVal && newVal.currentPage !== oldVal.currentPage) {
+        getConnectionPagedData($scope.connectionPagingOptions.pageSize, $scope.connectionPagingOptions.currentPage);
+      }
+    }, true);
+
+    $scope.totalConnections = 0;
+    $scope.pagedConnectionsData = []
     $scope.allConnectionFields = []
     $scope.allConnectionSelections = [];
     $scope.allConnectionGrid = {
       saveKey: 'allConnGrid',
-      data: 'allConnectionFields',
+      data: 'pagedConnectionsData',
       columnDefs: [
       {
         field: 'host',
@@ -755,6 +834,10 @@ var QDR = (function (QDR) {
         displayName: 'authentication'
       },
       ],
+      enablePaging: true,
+      showFooter: $scope.totalConnections > 50,
+      totalServerItems: 'totalConnections',
+      pagingOptions: $scope.connectionPagingOptions,
       enableColumnResize: true,
       multiSelect: false,
       selectedItems: $scope.allConnectionSelections,
@@ -769,17 +852,14 @@ var QDR = (function (QDR) {
       }
         };
     // get info for a all connections
-    var allConnectionInfo = function (qcallback) {
-      var callbackHolder = function () {
-        if (qcallback)
-          qcallback(null)
-      }
-      getAllConnectionFields([callbackHolder, updateConnectionGrid, updateConnectionTree])
-          loadColState($scope.allConnectionGrid);
+    var allConnectionInfo = function () {
+      getAllConnectionFields([updateConnectionGrid, updateConnectionTree, scheduleNextUpdate])
+      loadColState($scope.allConnectionGrid);
     }
     // called after conection data is available
     var updateConnectionGrid = function (connectionFields) {
       $scope.allConnectionFields = connectionFields;
+      getConnectionPagedData($scope.connectionPagingOptions.pageSize, $scope.connectionPagingOptions.currentPage);
     }
 
     // get the connection data for all nodes
@@ -865,14 +945,13 @@ var QDR = (function (QDR) {
     }
 
     // get info for a single address
-    var addressInfo = function (address, qcallback) {
+    var addressInfo = function (address) {
       $scope.address = address
       var currentEntity = getCurrentLinksEntity();
       // we are viewing the addressLinks page
       if (currentEntity === 'Address' && entityModes[currentEntity].currentModeId === 'links') {
         updateModeLinks()
-        if (qcallback)
-          qcallback(null)
+        scheduleNextUpdate()
         return;
       }
 
@@ -882,9 +961,7 @@ var QDR = (function (QDR) {
         if (field != "title" && field != "uid")
           $scope.addressFields.push({attribute: field, value: address.data.fields[field]})
       })
-      if (qcallback)
-        qcallback(null)
-
+      scheduleNextUpdate()
       loadColState($scope.addressGrid);
     }
 
@@ -909,11 +986,9 @@ var QDR = (function (QDR) {
     }
 
     // display the grid detail info for a single link
-    var linkInfo = function (link, qcallback) {
+    var linkInfo = function (link) {
 QDR.log.debug("linkInfo called for " + link.data.key)
       if (!link) {
-        if (qcallback)
-          qcallback(null)
         return;
       }
       $scope.link = link
@@ -925,8 +1000,7 @@ QDR.log.debug("linkInfo called for " + link.data.key)
         if (excludeFields.indexOf(field) == -1)
           $scope.singleLinkFields.push({attribute: field, value: link.data.fields[field]})
       })
-      if (qcallback)
-        qcallback(null)
+      scheduleNextUpdate()
       loadColState($scope.linkGrid);
     }
 
@@ -976,6 +1050,7 @@ QDR.log.debug("linkInfo called for " + link.data.key)
       if (mode.id === 'links') {
 QDR.log.debug("setting linkFields to [] in selectMode")
         $scope.linkFields = [];
+        getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
         updateModeLinks();
       }
     }
@@ -987,19 +1062,19 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     }
 
     var updateEntityLinkGrid = function (linkFields) {
-      $timeout(function () {QDR.log.debug("setting linkFields in updateEntityLinkGrid");$scope.linkFields = linkFields})
+      $timeout(function () {
+        QDR.log.debug("setting linkFields in updateEntityLinkGrid");
+        $scope.linkFields = linkFields
+        getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
+      })
     }
     // based on which entity is selected, get and filter the links
-    var updateModeLinks = function (qcallback) {
+    var updateModeLinks = function () {
       var currentEntity = getCurrentLinksEntity()
       if (!currentEntity)
         return;
       var selectionCallback = entityModes[currentEntity].filter;
-      var callbackHolder = function () {
-        if (qcallback)
-          qcallback(null)
-      }
-      getAllLinkFields([callbackHolder, updateEntityLinkGrid], selectionCallback)
+      getAllLinkFields([updateEntityLinkGrid], selectionCallback)
     }
     var getCurrentLinksEntity = function () {
       var currentEntity;
@@ -1061,7 +1136,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       multiSelect: false
     }
 
-    var connectionInfo = function (connection, qcallback) {
+    var connectionInfo = function (connection) {
       if (!connection)
         return;
       $scope.connection = connection
@@ -1069,9 +1144,8 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       var currentEntity = getCurrentLinksEntity();
       // we are viewing the connectionLinks page
       if (currentEntity === 'Connection' && entityModes[currentEntity].currentModeId === 'links') {
-        updateModeLinks(qcallback)
-        if (qcallback)
-          qcallback(null)
+        updateModeLinks()
+        scheduleNextUpdate()
         return;
       }
 
@@ -1082,10 +1156,6 @@ QDR.log.debug("setting linkFields to [] in selectMode")
           $scope.connectionFields.push({attribute: field, value: connection.data.fields[field]})
       })
       // this is missing an argument?
-      //$scope.selectMode($scope.currentMode, qcallback)
-      if (qcallback)
-        qcallback(null)
-
       loadColState($scope.connectionGrid);
     }
 
@@ -1127,7 +1197,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     };
 
     var allLogEntries = []
-    var allLogInfo = function (qcallback) {
+    var allLogInfo = function () {
       var nodeIds = QDRService.nodeIdList()
       var haveLogFields = function () {
         // update the count of entries for each module
@@ -1171,9 +1241,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
                 }).length
               })
             }
-            if (qcallback)
-              qcallback(null)
-            $timeout(function () {allLogEntries = logResults})
+            $timeout(function () {allLogEntries = logResults; scheduleNextUpdate()})
           }
         })
       }
@@ -1196,15 +1264,14 @@ QDR.log.debug("setting linkFields to [] in selectMode")
 
     $scope.logFields = []
     // get info for a single log
-    var logInfo = function (node, qcallback) {
+    var logInfo = function (node) {
       $timeout(function () {
         $scope.log = node
         $scope.logFields = allLogEntries.filter( function (log) {
           return node.data.key === log.name
         })
+        scheduleNextUpdate()
       })
-      if (qcallback)
-        qcallback(null)
     }
 
     var getExpandedList = function () {
@@ -1525,42 +1592,33 @@ QDR.log.debug("newly created node needs to be activated")
     })
 
     var singleQ = null
-    var updateExpanded = function (scheduleNextUpdate) {
+    var updateExpanded = function () {
       if (!treeRoot)
         return;
-      if (singleQ) {
-        singleQ.abort("interrupted")
-      }
-      singleQ = QDR.queue(1)
       if (treeRoot.visit) {
         treeRoot.visit(function(node){
           if (node.isActive())
             setTemplate(node)
           if (node.isActive() || node.isExpanded()) {
             if (node.data.key === node.data.parent) {
-QDR.log.debug("updating expanded parent " + node.data.key)
-              singleQ.defer(node.data.info)
+              node.data.info()
             }
             else {
-QDR.log.debug("updating expanded leaf " + node.data.key)
-              singleQ.defer(node.data.info, node)
+              node.data.info(node)
             }
           }
-        })
-        singleQ.await(function (error) {
-          if (!error)
-            scheduleNextUpdate();
-          singleQ = null;
         })
       }
     }
 
     var tickTimer;
+    var scheduleNextUpdate = function () {
+      clearTimeout(tickTimer)
+      tickTimer = setTimeout(tick, refreshInterval)
+    }
     var tick = function () {
       clearTimeout(tickTimer)
-      updateExpanded(function () { // scheduleNextUpdate
-        tickTimer = setTimeout(tick, refreshInterval)
-      });
+      updateExpanded();
     }
     dataReady = true;
     initTreeAndGrid();
