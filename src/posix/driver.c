@@ -553,7 +553,7 @@ qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, int fd, void *context
     c->context = context;
     c->listener = NULL;
 
-    qdpn_connector_trace(c, driver->trace);
+    qdpn_connector_set_trace(c, driver->trace);
 
     qdpn_driver_add_connector(driver, c);
     return c;
@@ -586,11 +586,18 @@ qdpn_connector_t *qdpn_connector_next(qdpn_connector_t *connector)
     return next;
 }
 
-void qdpn_connector_trace(qdpn_connector_t *ctor, pn_trace_t trace)
+void qdpn_connector_set_trace(qdpn_connector_t *ctor, pn_trace_t trace)
 {
     if (!ctor) return;
     ctor->trace = trace;
     if (ctor->transport) pn_transport_trace(ctor->transport, trace);
+}
+
+pn_trace_t qdpn_connector_trace(qdpn_connector_t *ctor)
+{
+    if (!ctor) return 0;
+
+    return ctor->trace;
 }
 
 pn_transport_t *qdpn_connector_transport(qdpn_connector_t *ctor)
