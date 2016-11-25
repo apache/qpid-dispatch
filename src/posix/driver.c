@@ -137,6 +137,14 @@ ALLOC_DEFINE(qdpn_connector_t);
 
 /* Impls */
 
+static void qdpn_log_errno(qdpn_driver_t *d, const char *msg)
+{
+    char ebuf[ERROR_MAX];
+    strerror_r(errno, ebuf, ERROR_MAX);
+    qd_log(d->log, QD_LOG_ERROR, "%s: %s", msg, ebuf);
+}
+
+
 pn_timestamp_t pn_i_now(void)
 {
     struct timespec now;
@@ -146,7 +154,7 @@ pn_timestamp_t pn_i_now(void)
     int cid = CLOCK_MONOTONIC;
 #endif
     if (clock_gettime(cid, &now)) {
-        qd_error_errno(errno, "clock_gettime() failed");
+        qd_error_errno(errno, "clock_gettime");
         exit(1);
     }
     return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_nsec / 1000000);
@@ -161,14 +169,6 @@ static pn_timestamp_t pn_timestamp_min( pn_timestamp_t a, pn_timestamp_t b )
     if (a) return a;
     return b;
 }
-
-static void qdpn_log_errno(qdpn_driver_t *d, const char *msg)
-{
-    char ebuf[ERROR_MAX];
-    strerror_r(errno, ebuf, ERROR_MAX);
-    qd_log(d->log, QD_LOG_ERROR, "%s: %s", msg, ebuf);
-}
-
 
 // listener
 
@@ -602,7 +602,7 @@ void qdpn_connector_close(qdpn_connector_t *ctor)
 
     ctor->status = 0;
     if (close(ctor->fd) == -1)
-        perror("close");
+        qdpn_log_errno(ctor->driver, "close");
     if (!ctor->closed) {
         sys_mutex_lock(ctor->driver->lock);
         ctor->closed = true;
