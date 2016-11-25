@@ -87,6 +87,9 @@ if(BUILD_DOCS)
   
   install(FILES ${bin}/book/schema.adoc DESTINATION ${QD_DOC_INSTALL_DIR})
   install(FILES ${bin}/man/qdrouterd.conf.5.adoc DESTINATION ${QD_DOC_INSTALL_DIR})
+  
+  EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_directory ${src}/book/ ${bin}/book)
+  EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_directory ${src}/man/ ${bin}/man)  
 
   find_program(ASCIIDOC_EXE asciidoc DOC "Generate HTML documentation")
   if (ASCIIDOC_EXE)
@@ -95,8 +98,6 @@ if(BUILD_DOCS)
 
     # Copy the book dir images for HTML viewing in the build directory.
     # Don't use configure_file since it truncates .png files at 1st ^Z character
-    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_directory ${src}/book/ ${bin}/book)
-    EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E copy_directory ${src}/man/ ${bin}/man)
     
     # Copy the images. Don't use configure_file since it truncates .png files at 1st ^Z character
     file(GLOB_RECURSE PNG_SRC RELATIVE ${src} *.png)
