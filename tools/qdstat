@@ -25,7 +25,7 @@ import sys
 import locale
 import socket
 import re
-import time
+from time import ctime, strftime, gmtime
 import  qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
@@ -319,7 +319,7 @@ class BusManager(Node):
         if len(rows) > 0:
             title = "Routers in the Network"
             # Use gmtime to make times comparable across large networks.
-            topoLine = "\nLast Topology Change: " + time.strftime('%A %b %d %H:%M:%S %Y',time.gmtime(lastTopoChange)) + " GMT"
+            topoLine = "\nLast Topology Change: " + strftime('%A %b %d %H:%M:%S %Y',gmtime(lastTopoChange)) + " GMT"
             title += topoLine
             sort = Sorter(heads, rows, 'router-id')
             dispRows = sort.getSorted()
