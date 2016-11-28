@@ -60,7 +60,7 @@ class NodeTracker(object):
             "nextHop":  "(self)",
             "validOrigins": [],
             "address": Address.topological(self.my_id, area=self.container.area),
-            "lastTopoChange" : "%10d" % self.last_topology_change
+            "lastTopoChange" : self.last_topology_change
         })
 
 
@@ -124,7 +124,7 @@ class NodeTracker(object):
         ## Enter flux mode if things are changing
         ##
         if self.link_state_changed or self.recompute_topology:
-            self.last_topology_change = now
+            self.last_topology_change = int(round(now))
             if not self.flux_mode:
                 self.flux_mode = True
                 self.container.log(LOG_TRACE, "Entered Router Flux Mode")

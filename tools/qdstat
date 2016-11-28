@@ -318,7 +318,8 @@ class BusManager(Node):
             rows.append(row)
         if len(rows) > 0:
             title = "Routers in the Network"
-            topoLine = "\nLast Topology Change: " + time.strftime('%A %b %d %H:%M:%S %Y',time.gmtime(lastTopoChange))
+            # Use gmtime to make times comparable across large networks.
+            topoLine = "\nLast Topology Change: " + time.strftime('%A %b %d %H:%M:%S %Y',time.gmtime(lastTopoChange)) + " GMT"
             title += topoLine
             sort = Sorter(heads, rows, 'router-id')
             dispRows = sort.getSorted()
