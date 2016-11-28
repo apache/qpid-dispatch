@@ -60,7 +60,7 @@ class NodeTracker(object):
             "nextHop":  "(self)",
             "validOrigins": [],
             "address": Address.topological(self.my_id, area=self.container.area),
-            "lastTopoChange" : "%10.6f" % self.last_topology_change
+            "lastTopoChange" : "%10d" % self.last_topology_change
         })
 
 

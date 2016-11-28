@@ -1212,7 +1212,7 @@
                 },
                 "lastTopoChange": {
                      "description": "Timestamp showing the most recent change to this node's neighborhood.",
-                     "type": "string"
+                     "type": "integer"
                 }
 
             }
