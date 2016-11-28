@@ -25,7 +25,7 @@ import sys
 import locale
 import socket
 import re
-from time import ctime
+from time import ctime, strftime, gmtime
 import  qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
@@ -296,13 +296,19 @@ class BusManager(Node):
             heads.append(Header("valid-origins"))
         rows = []
 
-        cols = ('id', 'nextHop', 'routerLink')
+        cols = ('id', 'nextHop', 'routerLink', 'lastTopoChange')
         if self.opts.verbose:
             cols += ('cost', 'linkState', 'validOrigins')
         objects  = self.query('org.apache.qpid.dispatch.router.node', cols)
 
+        # Find the most recent topo change in this neighborhood.
+        lastTopoChange = 0.0
+
         for node in objects:
             row = []
+            if node.lastTopoChange:
+                if float(node.lastTopoChange) > lastTopoChange:
+                    lastTopoChange = float(node.lastTopoChange)
             row.append(node.id)
             if node.nextHop != None:
                 row.append(node.nextHop)
@@ -318,6 +324,10 @@ class BusManager(Node):
             rows.append(row)
         if len(rows) > 0:
             title = "Routers in the Network"
+            # Use gmtime to make times comparable across large networks.
+            if lastTopoChange > 1.0:
+                topoLine = "\nLast Topology Change: " + strftime('%A %b %d %H:%M:%S %Y',gmtime(lastTopoChange)) + " GMT"
+                title += topoLine
             sort = Sorter(heads, rows, 'router-id')
             dispRows = sort.getSorted()
             disp.formattedTable(title, heads, dispRows)
