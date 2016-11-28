@@ -1225,7 +1225,12 @@
                 "cost": {
                     "description": "Reachability cost",
                     "type": "integer"
+                },
+                "lastTopoChange": {
+                     "description": "Timestamp showing the most recent change to this node's neighborhood.",
+                     "type": "integer"
                 }
+
             }
         },
 
