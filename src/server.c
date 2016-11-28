@@ -631,7 +631,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
             continue;
 
         char logbuf[qd_log_max_len()];
-        
+
         ctx = qd_connection_allocate();
         ctx->server        = qd_server;
         ctx->owner_thread  = CONTEXT_UNSPECIFIED_OWNER;
@@ -1388,6 +1388,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->heartbeat_timer        = 0;
     qd_server->next_connection_id     = 1;
     qd_server->py_displayname_obj     = 0;
+    qd_server->http = qd_http(qd, qd_server->log_source);
 
     qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 
@@ -1398,6 +1399,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
+    qd_http_free(qd_server->http);
     for (int i = 0; i < qd_server->thread_count; i++)
         thread_free(qd_server->threads[i]);
     qd_timer_finalize();
@@ -1688,13 +1690,23 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
     li->server      = qd_server;
     li->config      = config;
     li->context     = context;
-    li->pn_listener = qdpn_listener(qd_server->driver, config->host, config->port, config->protocol_family, (void*) li);
+    qd_http_t *http = NULL;
+    if (config->http) {
+        http = qd->server->http;
+        if (!http) {
+            qd_log(qd_server->log_source, QD_LOG_CRITICAL, "HTTP support not available for %s:%s",
+                   config->host, config->port);
+        }
+    }
+    li->pn_listener = qdpn_listener(
+        qd_server->driver, config->host, config->port, config->protocol_family, http, li);
 
     if (!li->pn_listener) {
         free_qd_listener_t(li);
         return 0;
     }
-    qd_log(qd_server->log_source, QD_LOG_TRACE, "Listening on %s:%s", config->host, config->port);
+    qd_log(qd_server->log_source, QD_LOG_TRACE, "Listening on %s:%s%s", config->host, config->port,
+           config->http ? "(http)":"");
 
     return li;
 }

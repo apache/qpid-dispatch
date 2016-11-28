@@ -875,7 +875,9 @@ var QDR = (function(QDR) {
 			try {
 QDR.log.debug("trying to connect to ws://" + baseAddress)
                 connection = self.rhea.connect({
-                    connection_details:ws('ws://' + baseAddress, ["binary", "base64", "AMQWSB10"]),
+                    // FIXME aconway 2016-11-29: "binary" for wsproxy,
+                    // should also include "amqp" - waiting on libwebsocket fix.
+                    connection_details:ws('ws://' + baseAddress, ["binary"]),
                     reconnect:true,
                     properties: {console_identifier: 'Dispatch console'}
 	            });

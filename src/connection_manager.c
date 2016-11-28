@@ -193,6 +193,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->role                 = qd_entity_get_string(entity, "role");              CHECK();
     config->inter_router_cost    = qd_entity_opt_long(entity, "cost", 1);             CHECK();
     config->protocol_family      = qd_entity_opt_string(entity, "protocolFamily", 0); CHECK();
+    config->http                 = qd_entity_opt_bool(entity, "http", false);         CHECK();
     config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize");        CHECK();
     config->max_sessions         = qd_entity_get_long(entity, "maxSessions");         CHECK();
     uint64_t ssn_frames          = qd_entity_get_long(entity, "maxSessionFrames");    CHECK();
@@ -329,10 +330,11 @@ qd_config_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entit
     DEQ_ITEM_INIT(cl);
     DEQ_INSERT_TAIL(cm->config_listeners, cl);
 
-    qd_log(cm->log_source, QD_LOG_INFO, "Configured Listener: %s:%s proto=%s, role=%s%s%s",
+    qd_log(cm->log_source, QD_LOG_INFO, "Configured Listener: %s:%s proto=%s, role=%s%s%s%s",
            cl->configuration.host, cl->configuration.port,
            cl->configuration.protocol_family ? cl->configuration.protocol_family : "any",
            cl->configuration.role,
+           cl->configuration.http ? ", http" : "",
            cl->ssl_profile ? ", sslProfile=":"",
            cl->ssl_profile ? cl->ssl_profile->name:"");
 

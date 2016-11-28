@@ -27,6 +27,7 @@
 #include "config.h"
 #include "dispatch_private.h"
 #include "alloc.h"
+#include "http.h"
 #include "log_private.h"
 #include "router_private.h"
 #include "message_private.h"

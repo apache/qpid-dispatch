@@ -30,6 +30,8 @@
 #include <proton/types.h>
 
 typedef struct qd_log_source_t qd_log_source_t;
+typedef struct qd_http_t qd_http_t;
+typedef struct qd_http_connector_t qd_http_connector_t;
 
 /** @file
  * API for the Driver Layer.
@@ -138,6 +140,7 @@ void qdpn_driver_free(qdpn_driver_t *driver);
  * @param[in] host local host address to listen on
  * @param[in] port local port to listen on
  * @param[in] protocol family to use (IPv4 or IPv6 or 0). If 0 (zero) is passed in the protocol family will be automatically determined from the address
+ * @param[in] http points to qd_http_t if HTTP is enabled.
  * @param[in] context application-supplied, can be accessed via
  *                    qdpn_listener_context()
  * @return a new listener on the given host:port, NULL if error
@@ -146,7 +149,10 @@ qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
                                const char *host,
                                const char *port,
                                const char *protocol_family,
+                               qd_http_t  *http,
                                void* context);
+
+qd_http_t *qdpn_listener_http(qdpn_listener_t *l);
 
 /** Access the head listener for a driver.
  *
@@ -330,6 +336,19 @@ pn_transport_t *qdpn_connector_transport(qdpn_connector_t *connector);
  */
 void qdpn_connector_close(qdpn_connector_t *connector);
 
+/** Call when the socket is already closed, an the connector needs updating.
+ *
+ * @param[in] connector the connector whose socket will be closed
+ */
+void qdpn_connector_after_close(qdpn_connector_t *connector);
+
+
+/** Socket has been closed externally, mark it closed.
+ *
+ * @param[in] connector the connector whose socket will be closed
+ */
+void qdpn_connector_mark_closed(qdpn_connector_t *connector);
+
 /** Determine if the connector is closed.
  *
  * @return True if closed, otherwise false
@@ -382,11 +401,13 @@ bool qdpn_connector_activated(qdpn_connector_t *connector, qdpn_activate_criteri
  *
  * @param[in] driver driver that will 'own' this listener
  * @param[in] fd existing socket for listener to listen on
+ * @param[in] http if non-NULL enable as a HTTP listener
  * @param[in] context application-supplied, can be accessed via
  *                    qdpn_listener_context()
  * @return a new listener on the given host:port, NULL if error
  */
-qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, pn_socket_t fd, void *context);
+qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, pn_socket_t fd,
+                                  qd_http_t *http, void *context);
 
 pn_socket_t qdpn_listener_get_fd(qdpn_listener_t *listener);
 
@@ -400,7 +421,18 @@ pn_socket_t qdpn_listener_get_fd(qdpn_listener_t *listener);
  */
 qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, pn_socket_t fd, void *context);
 
-pn_socket_t qdpn_connector_get_fd(qdpn_connector_t *connector);
+/** Get the file descriptor for this connector */
+int qdpn_connector_get_fd(qdpn_connector_t *connector);
 
+/** Get the HTTP per-connector state for this connector, NULL if not enabled. */
+qd_http_connector_t *qdpn_connector_http(qdpn_connector_t* c);
+
+/** Set the wakeup time on the connector */
+void qdpn_connector_wakeup(qdpn_connector_t* c, pn_timestamp_t t);
+
+/** Current time according */
+pn_timestamp_t qdpn_now();
+
+/**@}*/
 
 #endif /* driver.h */

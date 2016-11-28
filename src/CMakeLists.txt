@@ -90,6 +90,12 @@ set(qpid_dispatch_SOURCES
   trace_mask.c
   )
 
+if(USE_LIBWEBSOCKETS)
+  set(qpid_dispatch_SOURCES ${qpid_dispatch_SOURCES} http-libwebsockets.c)
+else(USE_LIBWEBSOCKETS)
+  set(qpid_dispatch_SOURCES ${qpid_dispatch_SOURCES} http-none.c)
+endif(USE_LIBWEBSOCKETS)
+
 if(USE_MEMORY_POOL)
   list(APPEND qpid_dispatch_SOURCES alloc_pool.c)
 endif()
@@ -100,7 +106,7 @@ set_property(
   )
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
-target_link_libraries(qpid-dispatch ${Proton_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES})
+target_link_libraries(qpid-dispatch ${Proton_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES} ${LibWebSockets_LIBRARIES})
 set_target_properties(qpid-dispatch PROPERTIES
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )

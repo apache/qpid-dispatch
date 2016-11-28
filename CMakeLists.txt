@@ -26,6 +26,8 @@ endif (CMAKE_BUILD_TYPE MATCHES "Deb")
 
 project(qpid-dispatch C)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+
 # Build time switch to turn off memory pooling.
 option(USE_MEMORY_POOL "Use per-thread memory pools" ON)
 option(QD_MEMORY_STATS "Track memory pool usage statistics" ON)
@@ -81,6 +83,12 @@ endif()
 
 set(QPID_DISPATCH_CONFDIR ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
 
+if (NOT COMMAND add_compile_options)
+  macro (add_compile_options option)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${option}")
+  endmacro (add_compile_options)
+endif (NOT COMMAND add_compile_options)
+
 ##
 ## Find dependencies
 ##
@@ -88,6 +96,10 @@ find_library(pthread_lib pthread)
 find_library(dl_lib dl)
 find_library(rt_lib rt)
 find_package(Proton 0.13 REQUIRED)
+
+## Optional dependencies
+include(FindLibWebSockets)
+option(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ${LibWebSockets_FOUND})
 
 ##
 ## Find Valgrind
@@ -106,12 +118,6 @@ include_directories(
     ${Proton_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_PATH}
     )
-
-if (NOT COMMAND add_compile_options)
-  macro (add_compile_options option)
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${option}")
-  endmacro (add_compile_options)
-endif (NOT COMMAND add_compile_options)
 
 add_compile_options(-pthread)
 add_compile_options(-Wall)

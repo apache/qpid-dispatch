@@ -46,6 +46,7 @@
 #include <qpid/dispatch/error.h>
 #include <qpid/dispatch/threading.h>
 #include "alloc.h"
+#include "http.h"
 #include <proton/error.h>
 #include <proton/ssl.h>
 #include <proton/object.h>
@@ -69,6 +70,9 @@ const char *protocol_family_ipv6 = "IPv6";
 
 const char *AF_INET6_STR = "AF_INET6";
 const char *AF_INET_STR = "AF_INET";
+
+/* Connector processing function, direct or HTTP. */
+void (*process_fn)(qdpn_connector_t *c);
 
 static inline void ignore_result(int unused_result) {
     (void) unused_result;
@@ -101,10 +105,11 @@ struct qdpn_listener_t {
     DEQ_LINKS(qdpn_listener_t);
     qdpn_driver_t *driver;
     void *context;
+    qd_http_t *http;
     int idx;
     int fd;
-    bool pending;
-    bool closed;
+    bool pending:1;
+    bool closed:1;
 };
 
 #define PN_NAME_MAX (256)
@@ -119,14 +124,16 @@ struct qdpn_connector_t {
     pn_transport_t *transport;
     qdpn_listener_t *listener;
     void *context;
+    void (*process)(qdpn_connector_t *c);
+    qd_http_connector_t *http;
     int idx;
     int fd;
     int status;
-    bool pending_tick;
-    bool pending_read;
-    bool pending_write;
-    bool socket_error;
-    bool closed;
+    bool pending_tick:1;
+    bool pending_read:1;
+    bool pending_write:1;
+    bool socket_error:1;
+    bool closed:1;
 };
 
 ALLOC_DECLARE(qdpn_listener_t);
@@ -159,6 +166,8 @@ pn_timestamp_t pn_i_now(void)
     }
     return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_nsec / 1000000);
 }
+
+pn_timestamp_t qdpn_now() { return pn_i_now(); }
 
 #define pn_min(X,Y) ((X) > (Y) ? (Y) : (X))
 #define pn_max(X,Y) ((X) < (Y) ? (Y) : (X))
@@ -247,6 +256,7 @@ qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
                                const char *host,
                                const char *port,
                                const char *protocol_family,
+                               qd_http_t *http,
                                void* context)
 {
     if (!driver) return NULL;
@@ -292,11 +302,12 @@ qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
         return 0;
     }
 
-    qdpn_listener_t *l = qdpn_listener_fd(driver, sock, context);
+    qdpn_listener_t *l = qdpn_listener_fd(driver, sock, http, context);
     return l;
 }
 
-qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, int fd, void *context)
+qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, int fd,
+                                  qd_http_t *http, void *context)
 {
     if (!driver) return NULL;
 
@@ -309,6 +320,7 @@ qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, int fd, void *context)
     l->fd = fd;
     l->closed = false;
     l->context = context;
+    l->http = http;
 
     qdpn_driver_add_listener(driver, l);
     return l;
@@ -397,6 +409,10 @@ qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l,
     snprintf(c->name, PN_NAME_MAX, "%s", name);
     snprintf(c->hostip, PN_NAME_MAX, "%s", hostip);
     c->listener = l;
+    if (l->http) {
+        c->http = qd_http_connector(l->http, c);
+        c->process = qd_http_connector_process;
+    }
     return c;
 }
 
@@ -490,6 +506,9 @@ qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver,
     return c;
 }
 
+
+static void connector_process(qdpn_connector_t *c);
+
 qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, int fd, void *context)
 {
     if (!driver) return NULL;
@@ -512,6 +531,7 @@ qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, int fd, void *context
     c->transport = pn_transport();
     c->context = context;
     c->listener = NULL;
+    c->process = connector_process;
     qdpn_driver_add_connector(driver, c);
     return c;
 }
@@ -595,19 +615,25 @@ qdpn_listener_t *qdpn_connector_listener(qdpn_connector_t *ctor)
     return ctor ? ctor->listener : NULL;
 }
 
-void qdpn_connector_close(qdpn_connector_t *ctor)
+/* FD is already closed, update the connector state */
+void qdpn_connector_after_close(qdpn_connector_t *ctor)
 {
-    // XXX: should probably signal engine and callback here
     if (!ctor) return;
-
     ctor->status = 0;
-    if (close(ctor->fd) == -1)
-        qdpn_log_errno(ctor->driver, "close");
     if (!ctor->closed) {
         sys_mutex_lock(ctor->driver->lock);
         ctor->closed = true;
         ctor->driver->closed_count++;
         sys_mutex_unlock(ctor->driver->lock);
+    }
+}
+
+void qdpn_connector_close(qdpn_connector_t *ctor)
+{
+    if (ctor && !ctor->closed) {
+        if (close(ctor->fd) == -1)
+            qdpn_log_errno(ctor->driver, "close");
+        qdpn_connector_after_close(ctor);
     }
 }
 
@@ -690,8 +716,14 @@ static pn_timestamp_t qdpn_connector_tick(qdpn_connector_t *ctor, pn_timestamp_t
 void qdpn_connector_process(qdpn_connector_t *c)
 {
     if (!c || c->closed) return;
-    pn_transport_t *transport = c->transport;
+    c->process(c);
+}
 
+static void connector_process(qdpn_connector_t *c)
+{
+    if(c->closed) return;
+
+    pn_transport_t *transport = c->transport;
     ///
     /// Socket read
     ///
@@ -743,7 +775,7 @@ void qdpn_connector_process(qdpn_connector_t *c)
     }
 
     c->status = 0;
-    if (pn_transport_closed(transport)) {
+    if (pn_transport_closed(c->transport)) {
         qd_log(c->driver->log, QD_LOG_TRACE, "Closed %s", c->name);
         qdpn_connector_close(c);
     } else {
@@ -999,3 +1031,10 @@ qdpn_connector_t *qdpn_driver_connector(qdpn_driver_t *d)
     return NULL;
 }
 
+qd_http_connector_t *qdpn_connector_http(qdpn_connector_t* c) { return c->http; }
+
+void qdpn_connector_wakeup(qdpn_connector_t* c, pn_timestamp_t t) {
+    c->wakeup = t;
+}
+
+qd_http_t *qdpn_listener_http(qdpn_listener_t* l) { return l->http; }

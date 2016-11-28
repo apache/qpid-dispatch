@@ -271,10 +271,8 @@ class MaxFrameMaxSessionFramesTooBigTest(TestCase):
             begin_lines = [s for s in log_lines if "-> @begin" in s]
             # incoming-window is truncated
             self.assertTrue(" incoming-window=2147," in begin_lines[0])
-            warning_lines = [s for s in log_lines if "(warning)" in s]
+            warning_lines = [s for s in log_lines if "requested maxSessionFrames truncated from 5000000 to 2147" in s]
             self.assertTrue(len(warning_lines) == 1)
-            self.assertTrue("requested maxSessionFrames truncated from 5000000 to 2147" in warning_lines[0])
-
 
 class MaxFrameMaxSessionFramesZeroTest(TestCase):
     """

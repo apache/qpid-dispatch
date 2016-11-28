@@ -497,10 +497,10 @@
                     "deprecated": true,
                     "description": "(DEPRECATED) This value is no longer used in the router.",
                     "create": true
-                }                                
+                }
             }
         },
-        
+
         "sslProfile": {
             "description":"Attributes for setting TLS/SSL configuration for connections.",
             "referential": true,
@@ -548,7 +548,7 @@
                 }
             }
         },
-        
+
         "listener": {
             "description": "Listens for incoming connections to the router.",
             "extends": "configurationEntity",
@@ -573,6 +573,12 @@
                     "description": "['IPv4', 'IPv6'] IPv4: Internet Protocol version 4; IPv6: Internet Protocol version 6.  If not specified, the protocol family will be automatically determined from the address.",
                     "create": true
                 },
+                "http": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Accept HTTP connections that can upgrade to AMQP over WebSocket",
+                    "create": true
+                },
                 "role": {
                     "type": [
                         "normal",
@@ -590,13 +596,13 @@
                     "required": false,
                     "create": true,
                     "description": "For the 'inter-router' role only.  This value assigns a cost metric to the inter-router connection.  The default (and minimum) value is one.  Higher values represent higher costs.  The cost is used to influence the routing algorithm as it attempts to use the path with the lowest total cost from ingress to egress."
-                },                     
+                },
                 "sslProfile": {
                     "type": "string",
                     "required": false,
                     "description": "Name of the sslProfile.",
                     "create": true
-                },            
+                },
                 "saslMechanisms": {
                     "type": "string",
                     "required": false,
@@ -687,7 +693,7 @@
                     "create": true,
                     "deprecated": true,
                     "description": "(DEPRECATED) This attribute is now controlled by the requireEncryption attribute."
-                }                                               
+                }
             }
         },
 
@@ -715,7 +721,7 @@
                     "description": "['IPv4', 'IPv6'] IPv4: Internet Protocol version 4; IPv6: Internet Protocol version 6.  If not specified, the protocol family will be automatically determined from the address.",
                     "create": true
                 },
-                
+
                 "role": {
                     "type": [
                         "normal",
@@ -814,7 +820,7 @@
                     "type": "string",
                     "default": "127.0.0.1",
                     "create": true
-                }                
+                }
             }
         },
 
@@ -1321,12 +1327,12 @@
             "singleton": true,
             "attributes": {
                 "listener": {
-                    "type": "string", 
+                    "type": "string",
                     "description": "The name of the listener to send the proxied tcp traffic to."
                 },
                 "wsport": {
                     "type": "integer",
-                    "description": "port on which to listen for websocket traffic", 
+                    "description": "port on which to listen for websocket traffic",
                     "default": 5673
                 },
                 "proxy": {
@@ -1462,7 +1468,7 @@
                 "receiverDenied": {"type": "integer", "graph": true}
             }
         },
-        
+
         "container": {
             "description":"(DEPRECATED)Attributes related to the AMQP container. This entity has been deprecated. Use the router entity instead.",
             "extends": "configurationEntity",
@@ -1502,7 +1508,7 @@
                     "create": true
                 }
             }
-        },  
+        },
 
         "waypoint": {
             "description":"(DEPRECATED) A remote node that messages for an address pass through. This entity has been deprecated. Use autoLink instead",
@@ -1535,8 +1541,8 @@
                     "create": true
                 }
             }
-        },        
-        
+        },
+
         "fixedAddress": {
             "description":"(DEPRECATED) Establishes treatment for addresses starting with a prefix. This entity has been deprecated. Use address instead",
             "extends": "configurationEntity",
@@ -1573,8 +1579,8 @@
                     "create": true
                 }
             }
-        },         
-        
+        },
+
         "linkRoutePattern": {
             "description":"(DEPRECATED) An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node. This entity has been deprecated. Use linkRoute instead",
             "deprecated": true,
@@ -1602,7 +1608,7 @@
                     "create": true
                 }
             }
-        },             
+        },
 
         "dummy": {
             "description": "Dummy entity for test purposes.",

@@ -254,6 +254,11 @@ typedef struct qd_server_config_t {
     char *protocol_family;
 
     /**
+     * Accept HTTP connections, allow WebSocket "amqp" protocol upgrades.
+     */
+    bool http;
+
+    /**
      * Connection name, used as a reference from other parts of the configuration.
      */
     char *name;

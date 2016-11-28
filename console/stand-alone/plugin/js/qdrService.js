@@ -971,8 +971,10 @@ console.dump(e)
           QDR.log.debug("****** calling rhea.connect ********")
           var connection;
           try {
-            connection = self.rhea.connect({
-              connection_details: ws('ws://' + baseAddress, ["binary", "base64", "AMQWSB10"]),
+              connection = self.rhea.connect({
+                  // FIXME aconway 2016-11-29: "binary" for wsproxy,
+                  // should also include "amqp" - waiting on libwebsocket fix.
+              connection_details: ws('ws://' + baseAddress, ["binary"]),
               reconnect: true,
               properties: {
                 console_identifier: 'Dispatch console'
