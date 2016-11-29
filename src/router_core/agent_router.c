@@ -18,31 +18,34 @@
  */
 
 #include "agent_router.h"
+#include "config.h"
 #include <inttypes.h>
 #include <stdio.h>
+
 #define QDR_ROUTER_NAME                   0
 #define QDR_ROUTER_IDENTITY               1
 #define QDR_ROUTER_ID                     2
 #define QDR_ROUTER_TYPE                   3
 #define QDR_ROUTER_MODE                   4
 #define QDR_ROUTER_AREA                   5
-#define QDR_ROUTER_HELLO_INTERVAL         6
-#define QDR_ROUTER_HELLO_MAX_AGE          7
-#define QDR_ROUTER_RA_INTERVAL            8
-#define QDR_ROUTER_RA_INTERVAL_FLUX       9
-#define QDR_ROUTER_REMOTE_LS_MAX_AGE      10
-#define QDR_ROUTER_ADDR_COUNT             11
-#define QDR_ROUTER_LINK_COUNT             12
-#define QDR_ROUTER_NODE_COUNT             13
-#define QDR_ROUTER_LINK_ROUTE_COUNT       14
-#define QDR_ROUTER_AUTO_LINK_COUNT        15
-#define QDR_ROUTER_WORKER_THREADS         16
-#define QDR_ROUTER_DEBUG_DUMP             17
-#define QDR_ROUTER_SASL_CONFIG_PATH       18
-#define QDR_ROUTER_SASL_CONFIG_NAME       19
-#define QDR_ROUTER_ROUTER_ID              20
-#define QDR_ROUTER_MOBILE_ADDR_MAX_AGE    21
-#define QDR_ROUTER_CONNECTION_COUNT       22
+#define QDR_ROUTER_VERSION                6
+#define QDR_ROUTER_HELLO_INTERVAL         7
+#define QDR_ROUTER_HELLO_MAX_AGE          8
+#define QDR_ROUTER_RA_INTERVAL            9
+#define QDR_ROUTER_RA_INTERVAL_FLUX       10
+#define QDR_ROUTER_REMOTE_LS_MAX_AGE      11
+#define QDR_ROUTER_ADDR_COUNT             12
+#define QDR_ROUTER_LINK_COUNT             13
+#define QDR_ROUTER_NODE_COUNT             14
+#define QDR_ROUTER_LINK_ROUTE_COUNT       15
+#define QDR_ROUTER_AUTO_LINK_COUNT        16
+#define QDR_ROUTER_WORKER_THREADS         17
+#define QDR_ROUTER_DEBUG_DUMP             18
+#define QDR_ROUTER_SASL_CONFIG_PATH       19
+#define QDR_ROUTER_SASL_CONFIG_NAME       20
+#define QDR_ROUTER_ROUTER_ID              21
+#define QDR_ROUTER_MOBILE_ADDR_MAX_AGE    22
+#define QDR_ROUTER_CONNECTION_COUNT       23
 
 const char *qdr_router_columns[] =
     {"name",
@@ -51,6 +54,7 @@ const char *qdr_router_columns[] =
      "type",
      "mode",
      "area",
+     "version",
      "helloInterval",
      "helloMaxAge",
      "raInterval",
@@ -88,65 +92,69 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
 {
 
     switch(col) {
-        case QDR_ROUTER_IDENTITY:
-            // There is only one instance of router. Just give it an identity of 1
-            qd_compose_insert_string(body, "1");
-            break;
-        case QDR_ROUTER_TYPE:
-            qd_compose_insert_string(body, "org.apache.qpid.dispatch.router");
-            break;
+    case QDR_ROUTER_IDENTITY:
+        // There is only one instance of router. Just give it an identity of 1
+        qd_compose_insert_string(body, "1");
+        break;
+    case QDR_ROUTER_TYPE:
+        qd_compose_insert_string(body, "org.apache.qpid.dispatch.router");
+        break;
 
-        case QDR_ROUTER_MODE:
-            qd_compose_insert_string(body, router_mode(core->router_mode));
-            break;
+    case QDR_ROUTER_MODE:
+        qd_compose_insert_string(body, router_mode(core->router_mode));
+        break;
 
-        case QDR_ROUTER_AREA:
-            if (core->router_area)
-                qd_compose_insert_string(body, core->router_area);
-            else
-                qd_compose_insert_null(body);
-            break;
-
-        case QDR_ROUTER_HELLO_INTERVAL:
+    case QDR_ROUTER_AREA:
+        if (core->router_area)
+            qd_compose_insert_string(body, core->router_area);
+        else
             qd_compose_insert_null(body);
-            break;
+        break;
 
-        case QDR_ROUTER_ADDR_COUNT:
-            qd_compose_insert_ulong(body, DEQ_SIZE(core->addrs));
-            break;
+    case QDR_ROUTER_VERSION:
+        qd_compose_insert_string(body, QPID_DISPATCH_VERSION);
+        break;
 
-        case QDR_ROUTER_LINK_COUNT:
-            qd_compose_insert_ulong(body, DEQ_SIZE(core->open_links));
-            break;
+    case QDR_ROUTER_HELLO_INTERVAL:
+        qd_compose_insert_null(body);
+        break;
 
-        case QDR_ROUTER_NODE_COUNT:
-            qd_compose_insert_ulong(body, DEQ_SIZE(core->routers));
-            break;
+    case QDR_ROUTER_ADDR_COUNT:
+        qd_compose_insert_ulong(body, DEQ_SIZE(core->addrs));
+        break;
 
-        case QDR_ROUTER_CONNECTION_COUNT:
-            qd_compose_insert_ulong(body, DEQ_SIZE(core->open_connections));
-            break;
+    case QDR_ROUTER_LINK_COUNT:
+        qd_compose_insert_ulong(body, DEQ_SIZE(core->open_links));
+        break;
 
-        case QDR_ROUTER_LINK_ROUTE_COUNT:
-            qd_compose_insert_ulong(body, DEQ_SIZE(core->link_routes));
-            break;
+    case QDR_ROUTER_NODE_COUNT:
+        qd_compose_insert_ulong(body, DEQ_SIZE(core->routers));
+        break;
 
-        case QDR_ROUTER_AUTO_LINK_COUNT:
-            qd_compose_insert_ulong(body, DEQ_SIZE(core->auto_links));
-            break;
+    case QDR_ROUTER_CONNECTION_COUNT:
+        qd_compose_insert_ulong(body, DEQ_SIZE(core->open_connections));
+        break;
 
-        case QDR_ROUTER_ROUTER_ID:
-        case QDR_ROUTER_ID:
-        case QDR_ROUTER_NAME:
-            if (core->router_id)
-                qd_compose_insert_string(body, core->router_id);
-            else
-                qd_compose_insert_null(body);
-            break;
+    case QDR_ROUTER_LINK_ROUTE_COUNT:
+        qd_compose_insert_ulong(body, DEQ_SIZE(core->link_routes));
+        break;
 
-        default:
+    case QDR_ROUTER_AUTO_LINK_COUNT:
+        qd_compose_insert_ulong(body, DEQ_SIZE(core->auto_links));
+        break;
+
+    case QDR_ROUTER_ROUTER_ID:
+    case QDR_ROUTER_ID:
+    case QDR_ROUTER_NAME:
+        if (core->router_id)
+            qd_compose_insert_string(body, core->router_id);
+        else
             qd_compose_insert_null(body);
-            break;
+        break;
+
+    default:
+        qd_compose_insert_null(body);
+        break;
     }
 }
 

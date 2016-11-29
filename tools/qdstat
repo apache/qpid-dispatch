@@ -210,6 +210,7 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.router')
 
         router = objects[0]
+        rows.append(('Version',       router.version))
         rows.append(('Mode',          router.mode))
         rows.append(('Area',          router.area))
         rows.append(('Router Id',     router.routerId))

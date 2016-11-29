@@ -393,6 +393,10 @@
                     "description": "Unused placeholder.",
                     "default": 0
                 },
+                "version": {
+                    "type": "string",
+                    "description": "Software Version"
+                },
                 "helloInterval": {
                     "type": "integer",
                     "default": 1,
