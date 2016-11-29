@@ -683,7 +683,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         //
         pn_transport_set_context(tport, ctx);
         if (qd_log_enabled(qd_server->log_source, QD_LOG_TRACE)) {
-            pn_transport_trace(tport, PN_TRACE_DRV | PN_TRACE_FRM | PN_TRACE_RAW);
+            pn_transport_trace(tport, PN_TRACE_FRM);
             pn_transport_set_tracer(tport, qd_transport_tracer);
         }
 
@@ -1251,7 +1251,7 @@ static void cxtr_try_open(void *context)
     // If trace level logging is enabled on the router set PN_TRACE_DRV | PN_TRACE_FRM | PN_TRACE_RAW on the proton transport
     pn_transport_set_context(tport, ctx);
     if (qd_log_enabled(ct->server->log_source, QD_LOG_TRACE)) {
-        pn_transport_trace(tport, PN_TRACE_DRV | PN_TRACE_FRM | PN_TRACE_RAW);
+        pn_transport_trace(tport, PN_TRACE_FRM);
         pn_transport_set_tracer(tport, qd_transport_tracer);
     }
 
