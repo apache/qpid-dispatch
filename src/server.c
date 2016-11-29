@@ -631,9 +631,6 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
             continue;
 
         char logbuf[qd_log_max_len()];
-
-        qd_log(qd_server->log_source, QD_LOG_DEBUG, "Accepting %s",
-               log_incoming(logbuf, sizeof(logbuf), cxtr));
         
         ctx = qd_connection_allocate();
         ctx->server        = qd_server;
@@ -643,6 +640,9 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->context       = ctx->listener->context;
         ctx->connection_id = qd_server->next_connection_id++; // Increment the connection id so the next connection can use it
         ctx->policy_counted = policy_counted;
+
+        qd_log(qd_server->log_source, QD_LOG_TRACE, "Accepting %s with connection id [%"PRIu64"]",
+           log_incoming(logbuf, sizeof(logbuf), cxtr), ctx->connection_id);
 
         // Copy the role from the listener config
         int role_length    = strlen(ctx->listener->config->role) + 1;
