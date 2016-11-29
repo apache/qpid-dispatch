@@ -127,8 +127,6 @@ struct qdpn_connector_t {
     bool pending_write;
     bool socket_error;
     bool closed;
-    bool input_done;
-    bool output_done;
 };
 
 ALLOC_DECLARE(qdpn_listener_t);
@@ -512,8 +510,6 @@ qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, int fd, void *context
     c->wakeup = 0;
     c->connection = NULL;
     c->transport = pn_transport();
-    c->input_done = false;
-    c->output_done = false;
     c->context = context;
     c->listener = NULL;
     qdpn_driver_add_connector(driver, c);
@@ -693,95 +689,66 @@ static pn_timestamp_t qdpn_connector_tick(qdpn_connector_t *ctor, pn_timestamp_t
 
 void qdpn_connector_process(qdpn_connector_t *c)
 {
-    if (c) {
-        if (c->closed) return;
+    if (!c || c->closed) return;
+    pn_transport_t *transport = c->transport;
 
-        pn_transport_t *transport = c->transport;
-
-        ///
-        /// Socket read
-        ///
-        if (!c->input_done) {
-            ssize_t capacity = pn_transport_capacity(transport);
-            if (capacity > 0) {
-                c->status |= PN_SEL_RD;
-                if (c->pending_read) {
-                    c->pending_read = false;
-                    ssize_t n =  recv(c->fd, pn_transport_tail(transport), capacity, 0);
-                    if (n < 0) {
-                        if (errno != EAGAIN) {
-                            qdpn_log_errno(c->driver, "read");
-                            c->status &= ~PN_SEL_RD;
-                            c->input_done = true;
-                            pn_transport_close_tail( transport );
-                        }
-                    } else if (n == 0) {
-                        c->status &= ~PN_SEL_RD;
-                        c->input_done = true;
-                        pn_transport_close_tail( transport );
-                    } else {
-                        if (pn_transport_process(transport, (size_t) n) < 0) {
-                            c->status &= ~PN_SEL_RD;
-                            c->input_done = true;
-                        }
-                    }
+    ///
+    /// Socket read
+    ///
+    ssize_t capacity = pn_transport_capacity(transport);
+    if (capacity > 0) {
+        if (c->pending_read) {
+            c->pending_read = false;
+            ssize_t n =  recv(c->fd, pn_transport_tail(transport), capacity, 0);
+            if (n < 0) {
+                if (errno != EAGAIN) {
+                    qdpn_log_errno(c->driver, "read");
+                    pn_transport_close_tail( transport );
                 }
-            }
-
-            capacity = pn_transport_capacity(transport);
-
-            if (capacity < 0) {
-                c->status &= ~PN_SEL_RD;
-                c->input_done = true;
-            }
-        }
-
-        ///
-        /// Event wakeup
-        ///
-        c->wakeup = qdpn_connector_tick(c, pn_i_now());
-
-        ///
-        /// Socket write
-        ///
-        if (!c->output_done) {
-            ssize_t pending = pn_transport_pending(transport);
-            if (pending > 0) {
-                c->status |= PN_SEL_WR;
-                if (c->pending_write) {
-                    c->pending_write = false;
-                    #ifdef MSG_NOSIGNAL
-                    ssize_t n = send(c->fd, pn_transport_head(transport), pending, MSG_NOSIGNAL);
-                    #else
-                    ssize_t n = send(c->fd, pn_transport_head(transport), pending, 0);
-                    #endif
-                    if (n < 0) {
-                        // XXX
-                        if (errno != EAGAIN) {
-                            qdpn_log_errno(c->driver, "send");
-                            c->output_done = true;
-                            c->status &= ~PN_SEL_WR;
-                            pn_transport_close_head( transport );
-                        }
-                    } else if (n) {
-                        pn_transport_pop(transport, (size_t) n);
-                    }
-                }
-            } else if (pending == 0) {
-                c->status &= ~PN_SEL_WR;
+            } else if (n == 0) { /* HUP */
+                pn_transport_close_tail( transport );
             } else {
-                c->output_done = true;
-                c->status &= ~PN_SEL_WR;
+                pn_transport_process(transport, (size_t) n);
             }
-        } else
-            c->status &= ~PN_SEL_WR;
-
-        // Closed?
-
-        if (c->input_done && c->output_done) {
-            qd_log(c->driver->log, QD_LOG_TRACE, "Closed %s", c->name);
-            qdpn_connector_close(c);
         }
+    }
+
+    ///
+    /// Event wakeup
+    ///
+    c->wakeup = qdpn_connector_tick(c, pn_i_now());
+
+    ///
+    /// Socket write
+    ///
+    ssize_t pending = pn_transport_pending(transport);
+    if (pending > 0) {
+        if (c->pending_write) {
+            c->pending_write = false;
+#ifdef MSG_NOSIGNAL
+            ssize_t n = send(c->fd, pn_transport_head(transport), pending, MSG_NOSIGNAL);
+#else
+            ssize_t n = send(c->fd, pn_transport_head(transport), pending, 0);
+#endif
+            if (n < 0) {
+                // XXX
+                if (errno != EAGAIN) {
+                    qdpn_log_errno(c->driver, "send");
+                    pn_transport_close_head( transport );
+                }
+            } else if (n) {
+                pn_transport_pop(transport, (size_t) n);
+            }
+        }
+    }
+
+    c->status = 0;
+    if (pn_transport_closed(transport)) {
+        qd_log(c->driver->log, QD_LOG_TRACE, "Closed %s", c->name);
+        qdpn_connector_close(c);
+    } else {
+        if (pn_transport_capacity(transport) > 0) c->status |= PN_SEL_RD;
+        if (pn_transport_pending(transport) > 0) c->status |= PN_SEL_WR;
     }
 }
 
@@ -875,7 +842,7 @@ static void qdpn_driver_rebuild(qdpn_driver_t *d)
 
     qdpn_connector_t *c = DEQ_HEAD(d->connectors);
     while (c) {
-        if (!c->closed) {
+        if (!c->closed && !c->socket_error) {
             d->wakeup = pn_timestamp_min(d->wakeup, c->wakeup);
             d->fds[d->nfds].fd = c->fd;
             d->fds[d->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) | (c->status & PN_SEL_WR ? POLLOUT : 0);
@@ -937,9 +904,9 @@ int qdpn_driver_wait_3(qdpn_driver_t *d)
             c->pending_read = (idx && d->fds[idx].revents & POLLIN);
             c->pending_write = (idx && d->fds[idx].revents & POLLOUT);
             c->pending_tick = (c->wakeup &&  c->wakeup <= now);
-            if (idx && d->fds[idx].revents & POLLERR)
+            if (idx && d->fds[idx].revents & POLLERR) {
                 c->socket_error = true;
-            else if (idx && (d->fds[idx].revents & POLLHUP)) {
+            } else if (idx && (d->fds[idx].revents & POLLHUP)) {
                 qd_log(c->driver->log, QD_LOG_TRACE, "hangup on connector %s", c->name);
                 /* poll() is signalling POLLHUP. to see what happened we need
                  * to do an actual recv() to get the error code. But we might
@@ -951,7 +918,8 @@ int qdpn_driver_wait_3(qdpn_driver_t *d)
                     c->pending_write = true;
             } else if (idx && (d->fds[idx].revents & ~(POLLIN|POLLOUT|POLLERR|POLLHUP))) {
                 qd_log(c->driver->log, QD_LOG_ERROR, "Unexpected poll events: %04x on %s",
-                          d->fds[idx].revents, c->name);
+                       d->fds[idx].revents, c->name);
+                c->socket_error = true;
             }
         }
         c = DEQ_NEXT(c);
