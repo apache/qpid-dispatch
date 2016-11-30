@@ -1285,7 +1285,10 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     // For routed links, propagate the detach
     //
     if (link->connected_link) {
-        qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE, dt != QD_DETACHED);
+        if (dt != QD_LOST)
+            qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE, dt == QD_CLOSED);
+        else
+            qdr_link_outbound_detach_CT(core, link->connected_link, 0, QDR_CONDITION_ROUTED_LINK_LOST, true);
 
         //
         // If the link is completely detached, release its resources
