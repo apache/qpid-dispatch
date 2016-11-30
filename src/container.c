@@ -431,8 +431,8 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         }
         break;
 
-    case PN_LINK_REMOTE_CLOSE :
     case PN_LINK_REMOTE_DETACH :
+    case PN_LINK_REMOTE_CLOSE :
         if (!(pn_connection_state(conn) & PN_LOCAL_CLOSED)) {
             pn_link = pn_event_link(event);
             qd_link = (qd_link_t*) pn_link_get_context(pn_link);
@@ -461,10 +461,9 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                     }
                 }
 
-                if (pn_link_state(pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
-                    if (qd_link->close_sess_with_link && sess) {
+                if (pn_link_state(pn_link) & PN_LOCAL_CLOSED) {
+                    if (qd_link->close_sess_with_link && sess)
                         pn_session_close(sess);
-                    }
                     pn_link_free(pn_link);
                 }
             }
@@ -892,8 +891,10 @@ void qd_link_close(qd_link_t *link)
 
 void qd_link_detach(qd_link_t *link)
 {
-    if (link->pn_link)
+    if (link->pn_link) {
         pn_link_detach(link->pn_link);
+        pn_link_close(link->pn_link);
+    }
 
     if (link->close_sess_with_link && link->pn_sess &&
         pn_link_state(link->pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
