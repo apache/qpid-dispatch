@@ -451,6 +451,14 @@ ul.qdrTopoModes {
 	background:#e0e0ff;
 }
 
+.overview-cell .ngCell:hover {
+	background:#e0e0ff;
+}
+.overview-cell .ngCell.col0:hover, .overview-cell .ngCell.col1:hover {
+	background: initial;
+}
+
+
 .qdr-overview.pane.left, .qdr-attributes.pane.left {
 	top: 104px;
 }

@@ -48,6 +48,7 @@ var QDR = (function(QDR) {
        */
       sender: undefined,
       receiver: undefined,
+      version: undefined,
       sendable: false,
 
       schema: undefined,
@@ -131,6 +132,21 @@ console.dump(e)
 
       isConnected: function() {
         return self.connected;
+      },
+
+      versionCheck: function (minVer) {
+        var verparts = self.version.split('.')
+        var minparts = minVer.split('.')
+        try {
+          for (var i=0; i<minparts.length; ++i) {
+            if (parseInt(minVer[i] > parseInt(verparts[i])))
+              return false
+          }
+        } catch (e) {
+          QDR.log.debug("error doing version check between: " + self.version + " and " + minVer + " " + e.message)
+          return false
+        }
+        return true
       },
 
       correlator: {
@@ -430,9 +446,7 @@ console.dump(e)
       // optionally supply a resultCallBack that will be called as each result is avaialble
       // if a resultCallBack is supplied, the calling function is responsible for accumulating the responses
       //   otherwise the responses will be returned to the doneCallback as an object
-      // There is a 10 second limit between each response
       fetchAllEntities: function (entityAttribs, doneCallback, resultCallback) {
-//QDR.log.debug("fetchAllEntities")
         var q = QDR.queue(self.queueDepth())
         var results = {}
         if (!resultCallback) {
@@ -971,6 +985,7 @@ console.dump(e)
           }
           if (!self.connectionError) {
             connection.on('connection_open', function(context) {
+              self.version = context.connection.properties.version
               QDR.log.debug("connection_opened")
               okay.connection = true;
               okay.receiver = false;

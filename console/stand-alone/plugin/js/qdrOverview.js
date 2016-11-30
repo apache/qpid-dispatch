@@ -34,7 +34,7 @@ var QDR = (function (QDR) {
    *
    * Controller that handles the QDR overview page
    */
-  QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', '$timeout', function($scope, QDRService, $location, $timeout) {
+  QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', '$timeout', '$dialog', function($scope, QDRService, $location, $timeout, $dialog) {
 
     console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
     var COLUMNSTATEKEY = 'QDRColumnKey.';
@@ -87,7 +87,7 @@ var QDR = (function (QDR) {
       { name: 'Connections', url: 'connections.html'},
       { name: 'Connection', url: 'connection.html'},
       { name: 'Logs', url: 'logs.html'},
-      { name: 'Log', url: 'log.html'}
+      { name: 'Log', url: 'logModule.html'}
     ];
     var topLevelChildren = [];
 
@@ -850,7 +850,7 @@ var QDR = (function (QDR) {
           $("#overtree").dynatree("getTree").activateKey(nodeId);
         }
       }
-        };
+    };
     // get info for a all connections
     var allConnectionInfo = function () {
       getAllConnectionFields([updateConnectionGrid, updateConnectionTree, scheduleNextUpdate])
@@ -1159,6 +1159,132 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       loadColState($scope.connectionGrid);
     }
 
+
+    var logModuleCellTemplate = '<div ng-click="logInfoFor(row, col)" class="ngCellText" ng-class="col.colIndex()"><span ng-cell-text>{{COL_FIELD | pretty}}</span></div>'
+    $scope.logModule = {}
+    $scope.logModuleSelected = []
+    $scope.logModuleData = []
+    $scope.logModuleGrid = {
+      data: 'logModuleData',
+      columnDefs: [
+        {
+          field: 'nodeName',
+          displayName: 'Router',
+        },
+        {
+          field: 'enable',
+          displayName: 'Enable level',
+        },
+        {
+          field: 'noticeCount',
+          displayName: 'Notice',
+          cellTemplate: logModuleCellTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'infoCount',
+          displayName: 'Info',
+          cellTemplate: logModuleCellTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'traceCount',
+          displayName: 'Trace',
+          cellTemplate: logModuleCellTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'debugCount',
+          displayName: 'Debug',
+          cellTemplate: logModuleCellTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'warningCount',
+          displayName: 'Warning',
+          cellTemplate: logModuleCellTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'errorCount',
+          displayName: 'Error',
+          cellTemplate: logModuleCellTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'criticalCount',
+          displayName: 'Critical',
+          cellTemplate: logModuleCellTemplate,
+          cellClass: 'grid-align-value',
+        },
+      ],
+      enableColumnResize: true,
+      multiSelect: false,
+      selectedItems: $scope.logModuleSelected,
+      plugins: [new ngGridFlexibleHeightPlugin()],
+      afterSelectionChange: function(data) {
+        if (data.selected) {
+            var selItem = $scope.logModuleSelected[0]
+            var nodeId = selItem.nodeId
+
+        }
+      }
+    }
+
+    $scope.logInfoFor = function (row, col) {
+      var gotLogInfo = function (nodeId, entity, response, context) {
+        var statusCode = context.message.application_properties.statusCode;
+        if (statusCode < 200 || statusCode >= 300) {
+          Core.notification('error', context.message.application_properties.statusDescription);
+        } else {
+          var levelLogs = response.filter( function (result) {
+            if (result[1] == null)
+              result[1] = "error"
+            return result[1].toUpperCase() === col.displayName.toUpperCase() && result[0] === row.entity.name
+          })
+          var logFields = levelLogs.map( function (result) {
+            return {
+              nodeId: QDRService.nameFromId(nodeId),
+              name: result[0],
+              type: result[1],
+              message: result[2],
+              source: result[3],
+              line: result[4],
+              time: Date(result[5]).toString()
+            }
+          })
+          logDialog(row, col, logFields)
+        }
+      }
+      QDRService.sendMethod(row.entity.nodeId, undefined, {}, "GET-LOG", {module: row.entity.name}, gotLogInfo)
+    }
+
+    function logDialog(row, col, logs) {
+        var d = $dialog.dialog({
+          backdrop: false,
+          keyboard: true,
+          backdropClick: false,
+          templateUrl: 'viewLogs.html',
+          controller: "QDR.OverviewLogsController",
+          resolve: {
+            logs: function() {
+              return logs
+            },
+            nodeName: function () {
+              return row.entity.nodeName
+            },
+            module: function () {
+              return row.entity.name
+            },
+            level: function () {
+              return col.displayName
+            },
+          }
+        });
+        d.open().then(function(result) { console.log("d.open().then"); });
+    };
+
+    var numberTemplate = '<div class="ngCellText" ng-class="col.colIndex()"><span ng-cell-text>{{COL_FIELD | pretty}}</span></div>'
     $scope.allLogFields = []
     $scope.allLogSelections = [];
     $scope.allLogGrid = {
@@ -1166,7 +1292,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       data: 'allLogFields',
       columnDefs: [
         {
-          field: 'module',
+          field: 'name',
           saveKey: 'allLogGrid',
           displayName: 'Module'
         },
@@ -1177,32 +1303,103 @@ QDR.log.debug("setting linkFields to [] in selectMode")
 */
 
         {
-          field: 'count',
-          displayName: 'Count'
-        }
-
+          field: 'noticeCount',
+          displayName: 'Notice',
+          cellTemplate: numberTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'infoCount',
+          displayName: 'Info',
+          cellTemplate: numberTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'traceCount',
+          displayName: 'Trace',
+          cellTemplate: numberTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'debugCount',
+          displayName: 'Debug',
+          cellTemplate: numberTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'warningCount',
+          displayName: 'Warning',
+          cellTemplate: numberTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'errorCount',
+          displayName: 'Error',
+          cellTemplate: numberTemplate,
+          cellClass: 'grid-align-value',
+        },
+        {
+          field: 'criticalCount',
+          displayName: 'Critical',
+          cellTemplate: numberTemplate,
+          cellClass: 'grid-align-value',
+        },
       ],
+      //enableCellSelection: true,
       enableColumnResize: true,
       multiSelect: false,
       selectedItems: $scope.allLogSelections,
       plugins: [new ngGridFlexibleHeightPlugin()],
+
       afterSelectionChange: function(data) {
         if (data.selected) {
             var selItem = $scope.allLogSelections[0]
-            var nodeId = selItem.module
+            var nodeId = selItem.name
             // activate in the tree
             $("#overtree").dynatree("getTree").activateKey(nodeId);
         }
       }
+
     };
 
-    var allLogEntries = []
+    var allLogEntries = {}
     var allLogInfo = function () {
-      var nodeIds = QDRService.nodeIdList()
-      var haveLogFields = function () {
         // update the count of entries for each module
+        $scope.allLogFields = []
+        var logResults = {}
+        var logDetails = {}
+
+        var gotLogStats = function (node, entity, response) {
+          logDetails[node] = []
+          response.results.forEach( function (result) {
+            var oresult = QDRService.flatten(response.attributeNames, result)
+            // make a copy for the details grid since logResults has the same object reference
+            logDetails[node].push(angular.copy(oresult))
+            if (!(oresult.name in logResults)) {
+              logResults[oresult.name] = oresult
+            }
+            else {
+              response.attributeNames.forEach( function (attr, i) {
+                if (attr.substr(attr.length-5) === 'Count') {
+                  logResults[oresult.name][attr] += result[i]
+                }
+              })
+            }
+          })
+        }
+        var gotAllLogStats = function () {
+          var sortedModules = Object.keys(logResults)
+          sortedModules.sort(function (a,b) {return a<b?-1:a>b?1:0})
+          sortedModules.forEach( function (module) {
+            $scope.allLogFields.push(logResults[module])
+          })
+          allLogEntries = logDetails
+          updateLogTree($scope.allLogFields)
+        }
+        QDRService.fetchAllEntities({entity: 'logStats'}, gotAllLogStats, gotLogStats)
+/*
         var q = QDR.queue(1)
-        var logResults = []
+
         var queuedSendMethod = function (node, callback) {
           var gotLogInfo = function (nodeId, entity, response, context) {
             var statusCode = context.message.application_properties.statusCode;
@@ -1246,12 +1443,11 @@ QDR.log.debug("setting linkFields to [] in selectMode")
         })
       }
       if ($scope.allLogFields.length == 0) {
-        QDRService.fetchEntity(nodeIds[0], "log", ["module"], function (nodeName, entity, response) {
-          var moduleIndex = response.attributeNames.indexOf("module")
+        QDRService.fetchEntity(nodeIds[0], "logStats", [], function (nodeName, entity, response) {
+          var moduleIndex = response.attributeNames.indexOf("name")
           response.results.sort( function (a,b) {return a[moduleIndex] < b[moduleIndex] ? -1 : a[moduleIndex] > b[moduleIndex] ? 1 : 0})
           response.results.forEach( function (result) {
             var log = QDRService.flatten(response.attributeNames, result)
-            log.count = 0;
             $scope.allLogFields.push(log)
           })
           updateLogTree($scope.allLogFields)
@@ -1260,18 +1456,54 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       } else {
         haveLogFields()
       }
+        */
     }
 
     $scope.logFields = []
     // get info for a single log
     var logInfo = function (node) {
+
+        var gotLogInfo = function (responses) {
+          $timeout(function () {
+            $scope.logModuleData = []
+            $scope.logModule.module = node.data.key
+            for (var n in responses) {
+              var moduleIndex = responses[n]['log'].attributeNames.indexOf("module")
+              var result = responses[n]['log'].results.filter( function (r) {
+                return r[moduleIndex] === node.data.key
+              })[0]
+              var logInfo = QDRService.flatten(responses[n]['log'].attributeNames, result)
+              var entry = allLogEntries[n]
+              entry.forEach( function (module) {
+                if (module.name === node.data.key) {
+                  module.nodeName = QDRService.nameFromId(n)
+                  module.nodeId = n
+                  module.enable = logInfo.enable
+                  $scope.logModuleData.push(module)
+                }
+              })
+            }
+            $scope.logModuleData.sort ( function (a,b) { return a.nodeName < b.nodeName? -1 : a.nodeName> b.nodeName? 1 : 0})
+            scheduleNextUpdate()
+          })
+        }
+        QDRService.fetchAllEntities({entity: 'log', attrs: ['module', 'enable']}, gotLogInfo)
+/*
       $timeout(function () {
         $scope.log = node
-        $scope.logFields = allLogEntries.filter( function (log) {
-          return node.data.key === log.name
-        })
+        $scope.logFields = []
+        for (var n in allLogEntries) {
+          var entry = allLogEntries[n]
+          entry.forEach( function (module) {
+            if (module.name === node.data.key) {
+              module.nodeId = n
+              $scope.logFields.push(module)
+            }
+          })
+        }
         scheduleNextUpdate()
       })
+*/
     }
 
     var getExpandedList = function () {
@@ -1525,10 +1757,10 @@ QDR.log.debug("newly created node needs to be activated")
 
     var updateLogTree = function (logFields) {
       var worker = function (log) {
-        var l = new Folder(log.module)
+        var l = new Folder(log.name)
         l.type = "Log"
         l.info = logInfo
-        l.key = log.module
+        l.key = log.name
         l.parent = "Logs"
         l.activate = lastKey === l.key
         l.addClass = "log"
@@ -1547,7 +1779,8 @@ QDR.log.debug("newly created node needs to be activated")
     logs.clickFolderMode = 1
     logs.key = "Logs"
     logs.parent = "Logs"
-    topLevelChildren.push(logs)
+    if (QDRService.versionCheck('0.8.0'))
+      topLevelChildren.push(logs)
     var initTreeAndGrid = function () {
       if (!htmlReady || !dataReady)
         return;
