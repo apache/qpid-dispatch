@@ -774,7 +774,7 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
 }
 
 
-static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error, bool first)
+static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
@@ -788,7 +788,11 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
         pn_condition_t *cond = pn_link_condition(pn_link);
         qdr_error_copy(error, cond);
     }
-    qd_link_close(qlink);
+
+    if (close)
+        qd_link_close(qlink);
+    else
+        qd_link_detach(qlink);
 
     //
     // This is the last event for this link that we are going to send into Proton.

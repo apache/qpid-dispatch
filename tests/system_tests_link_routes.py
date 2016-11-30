@@ -509,6 +509,16 @@ class LinkRouteTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_detach_without_close(self):
+        test = DetachNoCloseTest(self.routers[1].addresses[0], self.routers[1].addresses[1])
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_detach_mixed_close(self):
+        test = DetachMixedCloseTest(self.routers[1].addresses[0], self.routers[1].addresses[1])
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -695,6 +705,133 @@ class DynamicSourceTest(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
+
+class DetachNoCloseTest(MessagingHandler):
+    ##
+    ## This test verifies that link-detach (not close) is propagated properly
+    ##
+    def __init__(self, normal_addr, route_addr):
+        super(DetachNoCloseTest, self).__init__(prefetch=0, auto_accept=False)
+        self.normal_addr = normal_addr
+        self.route_addr  = route_addr
+        self.dest = "pulp.task.DetachNoClose"
+        self.error = None
+
+    def timeout(self):
+        self.error = "Timeout Expired - Check for cores"
+        self.conn_normal.close()
+        self.conn_route.close()
+
+    def stop(self):
+        self.conn_normal.close()
+        self.conn_route.close()
+        self.timer.cancel()
+        
+    def on_start(self, event):
+        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.conn_route = event.container.connect(self.route_addr)
+
+    def on_connection_opened(self, event):
+        if event.connection == self.conn_route:
+            self.conn_normal = event.container.connect(self.normal_addr)
+        elif event.connection == self.conn_normal:
+            self.receiver = event.container.create_receiver(self.conn_normal, self.dest)
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.receiver.detach()
+
+    def on_link_remote_detach(self, event):
+        if event.sender == self.sender:
+            self.sender.detach()
+        if event.receiver == self.receiver:
+            ##
+            ## Test passed, we expected a detach on the propagated sender and back
+            ##
+            self.stop()
+
+    def on_link_closing(self, event):
+        if event.sender == self.sender:
+            self.error = 'Propagated link was closed.  Expected it to be detached'
+            self.stop()
+
+        if event.receiver == self.receiver:
+            self.error = 'Client link was closed.  Expected it to be detached'
+            self.stop()
+
+    def on_link_opening(self, event):
+        if event.sender:
+            self.sender = event.sender
+            self.sender.source.address = self.sender.remote_source.address
+            self.sender.open()
+
+    def run(self):
+        Container(self).run()
+
+
+class DetachMixedCloseTest(MessagingHandler):
+    ##
+    ## This test verifies that link-detach (not close) is propagated properly
+    ##
+    def __init__(self, normal_addr, route_addr):
+        super(DetachMixedCloseTest, self).__init__(prefetch=0, auto_accept=False)
+        self.normal_addr = normal_addr
+        self.route_addr  = route_addr
+        self.dest = "pulp.task.DetachMixedClose"
+        self.error = None
+
+    def timeout(self):
+        self.error = "Timeout Expired - Check for cores"
+        self.conn_normal.close()
+        self.conn_route.close()
+
+    def stop(self):
+        self.conn_normal.close()
+        self.conn_route.close()
+        self.timer.cancel()
+        
+    def on_start(self, event):
+        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.conn_route = event.container.connect(self.route_addr)
+
+    def on_connection_opened(self, event):
+        if event.connection == self.conn_route:
+            self.conn_normal = event.container.connect(self.normal_addr)
+        elif event.connection == self.conn_normal:
+            self.receiver = event.container.create_receiver(self.conn_normal, self.dest)
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.receiver.detach()
+
+    def on_link_remote_detach(self, event):
+        if event.sender == self.sender:
+            self.sender.close()
+        if event.receiver == self.receiver:
+            self.error = 'Client link was detached.  Expected it to be closed'
+            self.stop()
+
+    def on_link_closing(self, event):
+        if event.sender == self.sender:
+            self.error = 'Propagated link was closed.  Expected it to be detached'
+            self.stop()
+
+        if event.receiver == self.receiver:
+            ##
+            ## Test Passed
+            ##
+            self.stop()
+
+    def on_link_opening(self, event):
+        if event.sender:
+            self.sender = event.sender
+            self.sender.source.address = self.sender.remote_source.address
+            self.sender.open()
+
+    def run(self):
+        Container(self).run()
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

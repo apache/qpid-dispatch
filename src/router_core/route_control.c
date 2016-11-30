@@ -154,7 +154,7 @@ static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, q
     qdr_route_log_CT(core, "Auto Link Deactivated", al->name, al->identity, conn);
 
     if (al->link) {
-        qdr_link_outbound_detach_CT(core, al->link, 0, QDR_CONDITION_ROUTED_LINK_LOST);
+        qdr_link_outbound_detach_CT(core, al->link, 0, QDR_CONDITION_ROUTED_LINK_LOST, true);
         al->link->auto_link = 0;
         al->link            = 0;
     }

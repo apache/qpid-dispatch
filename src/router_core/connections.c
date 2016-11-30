@@ -138,13 +138,13 @@ int qdr_connection_process(qdr_connection_t *conn)
             break;
 
         case QDR_CONNECTION_WORK_FIRST_DETACH :
-            core->detach_handler(core->user_context, work->link, work->error, true);
+            core->detach_handler(core->user_context, work->link, work->error, true, work->close_link);
             if (work->error)
                 qdr_error_free(work->error);
             break;
 
         case QDR_CONNECTION_WORK_SECOND_DETACH :
-            core->detach_handler(core->user_context, work->link, work->error, false);
+            core->detach_handler(core->user_context, work->link, work->error, false, work->close_link);
             if (work->error)
                 qdr_error_free(work->error);
             free_qdr_link_t(work->link);
@@ -601,12 +601,13 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
 }
 
 
-void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t *error, qdr_condition_t condition)
+void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t *error, qdr_condition_t condition, bool close)
 {
     qdr_connection_work_t *work = new_qdr_connection_work_t();
     ZERO(work);
-    work->work_type = ++link->detach_count == 1 ? QDR_CONNECTION_WORK_FIRST_DETACH : QDR_CONNECTION_WORK_SECOND_DETACH;
-    work->link      = link;
+    work->work_type  = ++link->detach_count == 1 ? QDR_CONNECTION_WORK_FIRST_DETACH : QDR_CONNECTION_WORK_SECOND_DETACH;
+    work->link       = link;
+    work->close_link = close;
 
     if (error)
         work->error = error;
@@ -1023,7 +1024,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     // Reject any attaches of inter-router links that arrive on connections that are not inter-router.
     //
     if (((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)) {
-        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN);
+        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
         return;
@@ -1036,7 +1037,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     //
     if (conn->role == QDR_ROLE_INTER_ROUTER && link->link_type == QD_LINK_ENDPOINT &&
         core->control_links_by_mask_bit[conn->mask_bit] == 0) {
-        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_WRONG_ROLE);
+        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_WRONG_ROLE, true);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
         return;
@@ -1063,7 +1064,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     //
                     // No route to this destination, reject the link
                     //
-                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
                     qdr_terminus_free(source);
                     qdr_terminus_free(target);
                 }
@@ -1074,7 +1075,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     //
                     success = qdr_forward_attach_CT(core, addr, link, source, target);
                     if (!success) {
-                        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
                         qdr_terminus_free(source);
                         qdr_terminus_free(target);
                     }
@@ -1120,7 +1121,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 //
                 // No route to this destination, reject the link
                 //
-                qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
                 qdr_terminus_free(source);
                 qdr_terminus_free(target);
             }
@@ -1131,7 +1132,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 //
                 bool success = qdr_forward_attach_CT(core, addr, link, source, target);
                 if (!success) {
-                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION);
+                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
                     qdr_terminus_free(source);
                     qdr_terminus_free(target);
                 }
@@ -1284,7 +1285,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     // For routed links, propagate the detach
     //
     if (link->connected_link) {
-        qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE);
+        qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE, dt != QD_DETACHED);
 
         //
         // If the link is completely detached, release its resources
@@ -1361,7 +1362,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         // If the detach occurred via protocol, send a detach back.
         //
         if (dt != QD_LOST)
-            qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NONE);
+            qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NONE, dt == QD_CLOSED);
     } else {
         qdr_link_cleanup_CT(core, conn, link);
         free_qdr_link_t(link);

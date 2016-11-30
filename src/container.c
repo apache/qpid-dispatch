@@ -883,6 +883,17 @@ void qd_link_close(qd_link_t *link)
     if (link->pn_link)
         pn_link_close(link->pn_link);
 
+    if (link->close_sess_with_link && link->pn_sess &&
+        pn_link_state(link->pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
+        pn_session_close(link->pn_sess);
+    }
+}
+
+
+void qd_link_detach(qd_link_t *link)
+{
+    if (link->pn_link)
+        pn_link_detach(link->pn_link);
 
     if (link->close_sess_with_link && link->pn_sess &&
         pn_link_state(link->pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
