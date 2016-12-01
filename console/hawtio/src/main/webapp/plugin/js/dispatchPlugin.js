@@ -78,81 +78,89 @@ var QDR = (function(QDR) {
          * in place when a route doesn't match any routes that
          * routeProvider has been configured with.
          */
-		 $routeProvider
-			.when(QDR.pluginRoot, {
-				templateUrl: QDR.templatePath + 'qdrConnect.html'
-			})
-			.when(QDR.pluginRoot + '/', {
-				templateUrl: QDR.templatePath + 'qdrConnect.html'
-			})
-			.when(QDR.pluginRoot + '/connect', {
-				templateUrl: QDR.templatePath + 'qdrConnect.html'
-			})
-			.when(QDR.pluginRoot + '/overview', {
-				templateUrl: QDR.templatePath + 'qdrOverview.html'
-			})
-			.when(QDR.pluginRoot + '/topology', {
-				templateUrl: QDR.templatePath + 'qdrTopology.html'
-			})
-			.when(QDR.pluginRoot + '/list', {
-				templateUrl: QDR.templatePath + 'qdrList.html'
-			})
-			.when(QDR.pluginRoot + '/schema', {
-				templateUrl: QDR.templatePath + 'qdrSchema.html'
-			})
-			.when(QDR.pluginRoot + '/charts', {
-				templateUrl: QDR.templatePath + 'qdrCharts.html'
-			})
+     $routeProvider
+      .when(QDR.pluginRoot, {
+        templateUrl: QDR.templatePath + 'qdrConnect.html'
       })
-	  .config(function ($compileProvider) {
-			var cur = $compileProvider.urlSanitizationWhitelist();
-			$compileProvider.urlSanitizationWhitelist(/^\s*(https?|ftp|mailto|file|blob):/);
-			cur = $compileProvider.urlSanitizationWhitelist();
-	  })
-	  .config(function( $controllerProvider, $provide, $compileProvider ) {
+      .when(QDR.pluginRoot + '/', {
+        templateUrl: QDR.templatePath + 'qdrConnect.html'
+      })
+      .when(QDR.pluginRoot + '/connect', {
+        templateUrl: QDR.templatePath + 'qdrConnect.html'
+      })
+      .when(QDR.pluginRoot + '/overview', {
+        templateUrl: QDR.templatePath + 'qdrOverview.html'
+      })
+      .when(QDR.pluginRoot + '/topology', {
+        templateUrl: QDR.templatePath + 'qdrTopology.html'
+      })
+      .when(QDR.pluginRoot + '/list', {
+        templateUrl: QDR.templatePath + 'qdrList.html'
+      })
+      .when(QDR.pluginRoot + '/schema', {
+        templateUrl: QDR.templatePath + 'qdrSchema.html'
+      })
+      .when(QDR.pluginRoot + '/charts', {
+        templateUrl: QDR.templatePath + 'qdrCharts.html'
+      })
+      })
+    .config(function ($compileProvider) {
+      var cur = $compileProvider.urlSanitizationWhitelist();
+      $compileProvider.urlSanitizationWhitelist(/^\s*(https?|ftp|mailto|file|blob):/);
+      cur = $compileProvider.urlSanitizationWhitelist();
+    })
+    .config(function( $controllerProvider, $provide, $compileProvider ) {
 
-	  })
-	  .filter('to_trusted', function($sce){
-			return function(text) {
-			debugger;
-				return $sce.trustAsHtml(text);
-			};
+    })
+    .filter('to_trusted', function($sce){
+      return function(text) {
+      debugger;
+        return $sce.trustAsHtml(text);
+      };
       })
       .filter('humanify', function (QDRService) {
-			return function (input) {
-				return QDRService.humanify(input);
-			};
-	  })
-      .filter('shortName', function () {
-			return function (name) {
-				var nameParts = name.split('/')
-				return nameParts.length > 1 ? nameParts[nameParts.length-1] : name;
-			};
-	  })
-	  .filter('Pascalcase', function () {
-	        return function (str) {
-				if (!str)
-					return "";
-	            return str.replace(/(\w)(\w*)/g,
+      return function (input) {
+        return QDRService.humanify(input);
+      };
+    })
+    .filter('shortName', function () {
+      return function (name) {
+        var nameParts = name.split('/')
+        return nameParts.length > 1 ? nameParts[nameParts.length-1] : name;
+      };
+    })
+   .filter('pretty', function () {
+      return function (str) {
+        var formatComma = d3.format(",");
+        if (!isNaN(parseFloat(str)) && isFinite(str))
+          return formatComma(str);
+        return str;
+      };
+    })
+    .filter('Pascalcase', function () {
+          return function (str) {
+        if (!str)
+          return "";
+              return str.replace(/(\w)(\w*)/g,
                         function(g0,g1,g2){return g1.toUpperCase() + g2.toLowerCase();});
-	        }
-	  })
-	  .filter('safePlural', function () {
-	        return function (str) {
-				var es = ['x', 'ch', 'ss', 'sh']
-				for (var i=0; i<es.length; ++i) {
-					if (str.endsWith(es[i]))
-						return str + 'es'
-				}
-				if (str.endsWith('y'))
-					return str.substr(0, str.length-2) + 'ies'
-				if (str.endsWith('s'))
-					return str;
-				return str + 's'
-	        }
-	  })
+          }
+    })
+    .filter('safePlural', function () {
+          return function (str) {
+        var es = ['x', 'ch', 'ss', 'sh']
+        for (var i=0; i<es.length; ++i) {
+          if (str.endsWith(es[i]))
+            return str + 'es'
+        }
+        if (str.endsWith('y'))
+          return str.substr(0, str.length-2) + 'ies'
+        if (str.endsWith('s'))
+          return str;
+        return str + 's'
+          }
+    })
 /*
-	QDR.module.config(['$locationProvider', function($locationProvider) {
+  QDR.module.config(['$locationProvider', function($locationProvider) {
         $locationProvider.html5Mode(true);
     }]);
 */
@@ -170,94 +178,94 @@ var QDR = (function(QDR) {
    *     topLevelTabs array.
    */
   QDR.module.run(function(workspace, viewRegistry, layoutFull, $route, $rootScope, $location, localStorage, QDRService, QDRChartService) {
-		QDR.log.info("*************creating Dispatch Console************");
-		var curPath = $location.path()
-		QDR.log.info("curPath is " + curPath)
-		var lastLocation = localStorage[QDR.LAST_LOCATION] || "connect"
-		if (lastLocation.startsWith(QDR.pluginRoot)) {
-			lastLocation = lastLocation.substr(QDR.pluginRoot.length+1)
-			if (lastLocation === '')
-				lastLocation = "overview"
-		}
-		if (curPath.startsWith(QDR.pluginRoot)) {
-			$location.path(QDR.pluginRoot + "/connect");
-			var org = curPath.substr(QDR.pluginRoot.length + 1)
-			if (org === '') {
-				org = lastLocation
-			}
-			if (curPath === QDR.pluginRoot && (!org || org.length===0 || org !== 'connect')) {
-				org = lastLocation
-			}
-			if (org === 'connect')
-				$location.search('org', null);
-			else if (org && org.length > 0) {
-				$location.search('org', org)
-			}
-		}
+    QDR.log.info("*************creating Dispatch Console************");
+    var curPath = $location.path()
+    QDR.log.info("curPath is " + curPath)
+    var lastLocation = localStorage[QDR.LAST_LOCATION] || "connect"
+    if (lastLocation.startsWith(QDR.pluginRoot)) {
+      lastLocation = lastLocation.substr(QDR.pluginRoot.length+1)
+      if (lastLocation === '')
+        lastLocation = "overview"
+    }
+    if (curPath.startsWith(QDR.pluginRoot)) {
+      $location.path(QDR.pluginRoot + "/connect");
+      var org = curPath.substr(QDR.pluginRoot.length + 1)
+      if (org === '') {
+        org = lastLocation
+      }
+      if (curPath === QDR.pluginRoot && (!org || org.length===0 || org !== 'connect')) {
+        org = lastLocation
+      }
+      if (org === 'connect')
+        $location.search('org', null);
+      else if (org && org.length > 0) {
+        $location.search('org', org)
+      }
+    }
 
-		Core.addCSS(QDR.contextPath + "plugin/css/dispatch.css");
-		Core.addCSS(QDR.contextPath + "plugin/css/plugin.css");
-		//Core.addCSS("https://cdn.rawgit.com/mohsen1/json-formatter/master/dist/json-formatter.min.css");
-		Core.addCSS("https://cdnjs.cloudflare.com/ajax/libs/jquery.tipsy/1.0.2/jquery.tipsy.css");
-		Core.addCSS("https://code.jquery.com/ui/1.8.24/themes/base/jquery-ui.css");
-		Core.addCSS("https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css");
+    Core.addCSS(QDR.contextPath + "plugin/css/dispatch.css");
+    Core.addCSS(QDR.contextPath + "plugin/css/plugin.css");
+    //Core.addCSS("https://cdn.rawgit.com/mohsen1/json-formatter/master/dist/json-formatter.min.css");
+    Core.addCSS("https://cdnjs.cloudflare.com/ajax/libs/jquery.tipsy/1.0.2/jquery.tipsy.css");
+    Core.addCSS("https://code.jquery.com/ui/1.8.24/themes/base/jquery-ui.css");
+    Core.addCSS("https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css");
 
-		// tell hawtio that we have our own custom layout for
-		// our view
-		viewRegistry[QDR.pluginName] = QDR.templatePath + "qdrLayout.html";
+    // tell hawtio that we have our own custom layout for
+    // our view
+    viewRegistry[QDR.pluginName] = QDR.templatePath + "qdrLayout.html";
 
-		var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);
-		QDRService.addConnectAction(function() {
-			QDRChartService.init(); // initialize charting service after we are connected
-		});
-		if (settings && settings.autostart) {
-			QDRService.addDisconnectAction( function () {
-				$location.path(QDR.pluginRoot + "/connect");
-				$location.replace();
-				$rootScope.$apply();
-			})
-			QDRService.addConnectAction(function() {
-	            var searchObject = $location.search();
-				// the redirect will be handled by QDRService when connected
-	            if (searchObject.org) {
-					return;
-	            }
+    var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);
+    QDRService.addConnectAction(function() {
+      QDRChartService.init(); // initialize charting service after we are connected
+    });
+    if (settings && settings.autostart) {
+      QDRService.addDisconnectAction( function () {
+        $location.path(QDR.pluginRoot + "/connect");
+        $location.replace();
+        $rootScope.$apply();
+      })
+      QDRService.addConnectAction(function() {
+              var searchObject = $location.search();
+        // the redirect will be handled by QDRService when connected
+              if (searchObject.org) {
+          return;
+              }
 
-				if ($location.path().startsWith(QDR.pluginRoot)) {
-					var lastLocation = localStorage[QDR.LAST_LOCATION];
-					if (!angular.isDefined(lastLocation))
-						lastLocation = QDR.pluginRoot + "/overview";
-					$location.path(lastLocation);
-					$location.replace();
-					$rootScope.$apply();
-				}
-			});
-			QDRService.connect(settings);
+        if ($location.path().startsWith(QDR.pluginRoot)) {
+          var lastLocation = localStorage[QDR.LAST_LOCATION];
+          if (!angular.isDefined(lastLocation))
+            lastLocation = QDR.pluginRoot + "/overview";
+          $location.path(lastLocation);
+          $location.replace();
+          $rootScope.$apply();
+        }
+      });
+      QDRService.connect(settings);
         }
 
         $rootScope.$on('$routeChangeSuccess', function() {
             var path = $location.path();
-			if (path.startsWith(QDR.pluginRoot)) {
-				if (path !== QDR.pluginRoot && path !== (QDR.pluginRoot + "/") && path !== (QDR.pluginRoot + "/connect")) {
-		            localStorage[QDR.LAST_LOCATION] = path;
+      if (path.startsWith(QDR.pluginRoot)) {
+        if (path !== QDR.pluginRoot && path !== (QDR.pluginRoot + "/") && path !== (QDR.pluginRoot + "/connect")) {
+                localStorage[QDR.LAST_LOCATION] = path;
 QDR.log.info("saving page changed to " + path)
-				}
-			}
+        }
+      }
         });
 
-		$rootScope.$on( "$routeChangeStart", function(event, next, current) {
-			if (next && next.templateUrl == QDR.templatePath + "qdrConnect.html" && QDRService.connected) {
-				// clicked connect from another dispatch page
-				if (current && current.loadedTemplateUrl && current.loadedTemplateUrl.startsWith(QDR.contextPath)) {
-					return;
-				}
-				// clicked the Dispatch Router top level tab from a different plugin
-				var lastLocation = localStorage[QDR.LAST_LOCATION] || (QDR.pluginRoot + "/overview");
-				// show the last page visited
+    $rootScope.$on( "$routeChangeStart", function(event, next, current) {
+      if (next && next.templateUrl == QDR.templatePath + "qdrConnect.html" && QDRService.connected) {
+        // clicked connect from another dispatch page
+        if (current && current.loadedTemplateUrl && current.loadedTemplateUrl.startsWith(QDR.contextPath)) {
+          return;
+        }
+        // clicked the Dispatch Router top level tab from a different plugin
+        var lastLocation = localStorage[QDR.LAST_LOCATION] || (QDR.pluginRoot + "/overview");
+        // show the last page visited
 QDR.log.info("showing dispatch tab: going to page " + lastLocation)
-				$location.path(lastLocation)
-			}
-	    });
+        $location.path(lastLocation)
+      }
+      });
 
     workspace.topLevelTabs.push({
       id: "dispatch",
