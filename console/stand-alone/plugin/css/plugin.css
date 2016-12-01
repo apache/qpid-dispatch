@@ -262,8 +262,9 @@ div.chartContainer div.aChart {
 }
 
 #list-controller select {
-	height: auto;
-	float: left;
+  height: 25px;
+  float: left;
+  padding: 0;
 }
 
 

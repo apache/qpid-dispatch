@@ -653,6 +653,8 @@ div.topoGrid .ui-grid-viewport {
 
 @-moz-document url-prefix() {
     .btn {padding: 2px 12px 8px !important;}
+    #overview-controller .btn {padding: 4px 12px !important;}
+    #overview-controller .btn.filter-close {padding: 0 !important;}
 }
 
 .ui-fancytree.fancytree-container {
