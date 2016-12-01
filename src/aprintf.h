@@ -49,7 +49,7 @@ static int vaprintf(char **begin, char *end, const char *format, va_list ap_in) 
 /**
    Appending printf.
 
-   Print to buffer at *begin with null terminatr, do not go beyond end.
+   Print to buffer at *begin with null terminator, end points after end of buffer.
    Advance *begin to point to the null terminator.
 .  Return value:
    - 0 on success: advance *begin to the null terminator.

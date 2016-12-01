@@ -338,7 +338,7 @@ void qdpn_connector_close(qdpn_connector_t *connector);
 
 /** Call when the socket is already closed, an the connector needs updating.
  *
- * @param[in] connector the connector whose socket will be closed
+ * @param[in] connector the connector whose socket has been closed
  */
 void qdpn_connector_after_close(qdpn_connector_t *connector);
 

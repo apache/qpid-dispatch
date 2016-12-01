@@ -157,7 +157,7 @@ static int callback_amqpws(struct lws *wsi, enum lws_callback_reasons reason,
 
     case LWS_CALLBACK_CLOSED: {
         qd_log(h->log, QD_LOG_DEBUG, "AMQP/WebSocket from %s closed", name);
-        qdpn_connector_after_close(c);
+        qdpn_connector_mark_closed(c);
         break;
     }
 
@@ -179,7 +179,7 @@ static int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void
         break;
     }
     case LWS_CALLBACK_CLOSED: {
-        qdpn_connector_after_close(c);
+        qdpn_connector_mark_closed(c);
     }
     default:
         break;
