@@ -1,0 +1,1 @@
+../../../../../../stand-alone/plugin/js/qdrOverviewLogsController.js
