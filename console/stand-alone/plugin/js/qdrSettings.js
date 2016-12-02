@@ -113,6 +113,13 @@ QDR.log.debug(QDR.pluginRoot + "/" + goto)
       QDRService.connect($scope.formEntity);
     }
 
+    var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);
+    if (settings && settings.autostart && !QDRService.connected) {
+      $scope.connectionError = false;
+      $scope.connecting = true;
+      doConnect()
+    }
+
   }]);
 
 

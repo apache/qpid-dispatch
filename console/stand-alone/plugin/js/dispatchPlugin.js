@@ -179,50 +179,14 @@ var QDR = (function(QDR) {
     QDR.queue = d3.queue;
 
     QDRService.initProton();
-    var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);
     QDRService.addUpdatedAction("initChartService", function() {
       QDRService.delUpdatedAction("initChartService")
       QDRChartService.init(); // initialize charting service after we are connected
     });
-    if (settings && settings.autostart) {
-      QDRService.addDisconnectAction( function () {
-        $timeout(function () {
-          var lastLocation = localStorage[QDR.LAST_LOCATION] || "/overview";
-          org = lastLocation.substr(1)
-          $location.path("/connect");
-          $location.search('org', org)
-        })
-      })
-      QDRService.addConnectAction(function() {
-        QDRService.getSchema(function () {
-          QDR.log.debug("got schema after connection")
-          QDRService.addUpdatedAction("initialized", function () {
-            QDRService.delUpdatedAction("initialized")
-            QDR.log.debug("got initial topology")
-            $timeout(function() {
-              if ($location.path().startsWith(QDR.pluginRoot)) {
-                  var searchObject = $location.search();
-                  var goto = "overview";
-                  if (searchObject.org && searchObject.org !== "connect") {
-                    goto = searchObject.org;
-                  }
-                  $location.search('org', null)
-                  $location.path(QDR.pluginRoot + "/" + goto);
-              }
-            })
-          })
-          QDR.log.debug("requesting a topology")
-          QDRService.setUpdateEntities([])
-          QDRService.topology.get()
-        })
-      });
-      QDRService.connect(settings);
-    } else {
-      $timeout(function () {
-        $location.path('/connect')
-        $location.search('org', org)
-      })
-    }
+    $timeout(function () {
+      $location.path('/connect')
+      $location.search('org', org)
+    })
 
     $rootScope.$on('$routeChangeSuccess', function() {
       var path = $location.path();

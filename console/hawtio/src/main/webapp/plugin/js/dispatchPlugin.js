@@ -214,44 +214,20 @@ var QDR = (function(QDR) {
     // our view
     viewRegistry[QDR.pluginName] = QDR.templatePath + "qdrLayout.html";
 
-    var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);
-    QDRService.addConnectAction(function() {
+    QDRService.addUpdatedAction("initChartService", function() {
+      QDRService.delUpdatedAction("initChartService")
       QDRChartService.init(); // initialize charting service after we are connected
     });
-    if (settings && settings.autostart) {
-      QDRService.addDisconnectAction( function () {
-        $location.path(QDR.pluginRoot + "/connect");
-        $location.replace();
-        $rootScope.$apply();
-      })
-      QDRService.addConnectAction(function() {
-              var searchObject = $location.search();
-        // the redirect will be handled by QDRService when connected
-              if (searchObject.org) {
-          return;
-              }
 
-        if ($location.path().startsWith(QDR.pluginRoot)) {
-          var lastLocation = localStorage[QDR.LAST_LOCATION];
-          if (!angular.isDefined(lastLocation))
-            lastLocation = QDR.pluginRoot + "/overview";
-          $location.path(lastLocation);
-          $location.replace();
-          $rootScope.$apply();
-        }
-      });
-      QDRService.connect(settings);
-        }
-
-        $rootScope.$on('$routeChangeSuccess', function() {
-            var path = $location.path();
+    $rootScope.$on('$routeChangeSuccess', function() {
+      var path = $location.path();
       if (path.startsWith(QDR.pluginRoot)) {
         if (path !== QDR.pluginRoot && path !== (QDR.pluginRoot + "/") && path !== (QDR.pluginRoot + "/connect")) {
-                localStorage[QDR.LAST_LOCATION] = path;
+          localStorage[QDR.LAST_LOCATION] = path;
 QDR.log.info("saving page changed to " + path)
         }
       }
-        });
+    });
 
     $rootScope.$on( "$routeChangeStart", function(event, next, current) {
       if (next && next.templateUrl == QDR.templatePath + "qdrConnect.html" && QDRService.connected) {
