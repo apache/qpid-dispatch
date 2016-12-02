@@ -31,13 +31,13 @@
 
 #include "http.h"
 
-typedef struct qd_http_t {
+struct qd_http_t {
     sys_mutex_t *lock;
     qd_dispatch_t *dispatch;
     qd_log_source_t *log;
     struct lws_context *context;
     qd_timer_t *timer;
-} qd_http_t;
+};
 
 /* TODO aconway 2016-11-29: First cut serializes all access to libwebsockets.
  * LWS does have multi-thread facilities but it segregates file descriptors into

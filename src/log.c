@@ -388,7 +388,7 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, const char *fil
       We can always decide not to look at it later,
       based on its used/unused status.
     -----------------------------------------------*/
-    level_index_t level_index = level_index_for_bit(level);
+    int level_index = level_index_for_bit(level);
     if (level_index < 0)
         qd_error_clear();
     else

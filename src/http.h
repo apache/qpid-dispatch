@@ -20,8 +20,9 @@
  * under the License.
  */
 
+#include <qpid/dispatch/dispatch.h>
+
 typedef struct qd_http_t qd_http_t;
-typedef struct qd_dispatch_t qd_dispatch_t;
 typedef struct qd_http_connector_t qd_http_connector_t;
 
 qd_http_t *qd_http(qd_dispatch_t *d, qd_log_source_t *log);
