@@ -21,12 +21,42 @@ under the License.
  */
 var QDR = (function(QDR) {
 
-  QDR.module.controller('QDR.OverviewLogsController', function ($scope, dialog, logs, nodeName, module, level) {
+  QDR.module.controller('QDR.OverviewLogsController', function ($scope, dialog, QDRService, $timeout, nodeName, nodeId, module, level) {
 
+      var gotLogInfo = function (nodeId, entity, response, context) {
+        var statusCode = context.message.application_properties.statusCode;
+        if (statusCode < 200 || statusCode >= 300) {
+          Core.notification('error', context.message.application_properties.statusDescription);
+        } else {
+          var levelLogs = response.filter( function (result) {
+            if (result[1] == null)
+              result[1] = "error"
+            return result[1].toUpperCase() === level.toUpperCase() && result[0] === module
+          })
+          var logFields = levelLogs.map( function (result) {
+            return {
+              nodeId: QDRService.nameFromId(nodeId),
+              name: result[0],
+              type: result[1],
+              message: result[2],
+              source: result[3],
+              line: result[4],
+              time: Date(result[5]).toString()
+            }
+          })
+          $timeout(function () {
+            $scope.loading = false
+            $scope.logFields = logFields
+          })
+        }
+      }
+      QDRService.sendMethod(nodeId, undefined, {}, "GET-LOG", {module: module}, gotLogInfo)
+
+    $scope.loading = true
     $scope.module = module
     $scope.level = level
     $scope.nodeName = nodeName
-    $scope.logFields = logs
+    $scope.logFields = []
     $scope.ok = function () {
       dialog.close(true);
     };

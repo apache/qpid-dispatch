@@ -182,23 +182,28 @@ under the License.
         <h3 class="modal-title">Logs for {{nodeName}} {{module}}:{{level | humanify}}</h3>
     </div>
     <div class="modal-body">
-        <div class="log-details" ng-if="logFields.length > 0">
-            <table class="log-entry" ng-repeat="entry in logFields track by $index">
-                <tr>
-                    <td>Router</td><td>{{entry.nodeId}}</td>
-                </tr>
-                <tr>
-                    <td align="left" colspan="2">{{entry.time}}</td>
-                </tr>
-                <tr>
-                    <td>Source</td><td>{{entry.source}}:{{entry.line}}</td>
-                </tr>
-                <tr>
-                    <td valign="middle">Message</td><td valign="middle"><pre>{{entry.message}}</pre></td>
-                </tr>
-            </table>
+        <div ng-if="loading == false">
+            <div class="log-details" ng-if="logFields.length > 0">
+                <table class="log-entry" ng-repeat="entry in logFields track by $index">
+                    <tr>
+                        <td>Router</td><td>{{entry.nodeId}}</td>
+                    </tr>
+                    <tr>
+                        <td align="left" colspan="2">{{entry.time}}</td>
+                    </tr>
+                    <tr>
+                        <td>Source</td><td>{{entry.source}}:{{entry.line}}</td>
+                    </tr>
+                    <tr>
+                        <td valign="middle">Message</td><td valign="middle"><pre>{{entry.message}}</pre></td>
+                    </tr>
+                </table>
+            </div>
+            <div ng-if="logFields.length == 0">No log entries</div>
         </div>
-        <div ng-if="logFields.length == 0">No log entries</div>
+        <div ng-if="loading == true">
+            Loading...
+        </div>
     </div>
     <div class="modal-footer">
         <button class="btn btn-primary" type="button" ng-click="ok()">Close</button>

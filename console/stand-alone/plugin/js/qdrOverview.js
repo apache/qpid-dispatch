@@ -1232,34 +1232,10 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     }
 
     $scope.logInfoFor = function (row, col) {
-      var gotLogInfo = function (nodeId, entity, response, context) {
-        var statusCode = context.message.application_properties.statusCode;
-        if (statusCode < 200 || statusCode >= 300) {
-          Core.notification('error', context.message.application_properties.statusDescription);
-        } else {
-          var levelLogs = response.filter( function (result) {
-            if (result[1] == null)
-              result[1] = "error"
-            return result[1].toUpperCase() === col.displayName.toUpperCase() && result[0] === row.entity.name
-          })
-          var logFields = levelLogs.map( function (result) {
-            return {
-              nodeId: QDRService.nameFromId(nodeId),
-              name: result[0],
-              type: result[1],
-              message: result[2],
-              source: result[3],
-              line: result[4],
-              time: Date(result[5]).toString()
-            }
-          })
-          logDialog(row, col, logFields)
-        }
-      }
-      QDRService.sendMethod(row.entity.nodeId, undefined, {}, "GET-LOG", {module: row.entity.name}, gotLogInfo)
+      logDialog(row, col)
     }
 
-    function logDialog(row, col, logs) {
+    function logDialog(row, col) {
         var d = $dialog.dialog({
           backdrop: false,
           keyboard: true,
@@ -1267,9 +1243,6 @@ QDR.log.debug("setting linkFields to [] in selectMode")
           templateUrl: 'viewLogs.html',
           controller: "QDR.OverviewLogsController",
           resolve: {
-            logs: function() {
-              return logs
-            },
             nodeName: function () {
               return row.entity.nodeName
             },
@@ -1278,6 +1251,9 @@ QDR.log.debug("setting linkFields to [] in selectMode")
             },
             level: function () {
               return col.displayName
+            },
+            nodeId: function () {
+              return row.entity.nodeId
             },
           }
         });
