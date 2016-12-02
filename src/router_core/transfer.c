@@ -253,27 +253,17 @@ void *qdr_delivery_get_context(qdr_delivery_t *delivery)
 
 void qdr_delivery_incref(qdr_delivery_t *delivery)
 {
-    qdr_connection_t *conn = delivery->link ? delivery->link->conn : 0;
-
-    if (!!conn) {
-        sys_atomic_inc(&delivery->ref_count);
-    }
+    sys_atomic_inc(&delivery->ref_count);
 }
 
 
-static void qdr_delivery_decref_internal(qdr_delivery_t *delivery, bool lock_held)
+void qdr_delivery_decref(qdr_delivery_t *delivery)
 {
-    qdr_link_t       *link   = delivery->link;
-    qdr_connection_t *conn   = link ? link->conn : 0;
-    bool              delete = false;
-    
-    if (!!conn) {
-        uint32_t ref_count = sys_atomic_dec(&delivery->ref_count);
-        assert(ref_count > 0);
-        delete = (ref_count - 1) == 0;
-    }
+    qdr_link_t *link      = delivery->link;
+    uint32_t    ref_count = sys_atomic_dec(&delivery->ref_count);
+    assert(ref_count > 0);
 
-    if (delete) {
+    if (ref_count == 1) {
         if (delivery->msg)
             qd_message_free(delivery->msg);
 
@@ -281,8 +271,7 @@ static void qdr_delivery_decref_internal(qdr_delivery_t *delivery, bool lock_hel
             qd_iterator_free(delivery->to_addr);
 
         if (delivery->tracking_addr) {
-            int link_bit = conn->mask_bit;
-            delivery->tracking_addr->outstanding_deliveries[link_bit]--;
+            delivery->tracking_addr->outstanding_deliveries[delivery->tracking_addr_bit]--;
             delivery->tracking_addr->tracked_deliveries--;
             delivery->tracking_addr = 0;
         }
@@ -303,18 +292,6 @@ static void qdr_delivery_decref_internal(qdr_delivery_t *delivery, bool lock_hel
         qd_bitmask_free(delivery->link_exclusion);
         free_qdr_delivery_t(delivery);
     }
-}
-
-
-void qdr_delivery_decref(qdr_delivery_t *delivery)
-{
-    qdr_delivery_decref_internal(delivery, false);
-}
-
-
-void qdr_delivery_decref_LH(qdr_delivery_t *delivery)
-{
-    qdr_delivery_decref_internal(delivery, true);
 }
 
 
@@ -402,8 +379,7 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
         sys_mutex_unlock(conn->work_lock);
 
     if (dlv->tracking_addr) {
-        int link_bit = link->conn->mask_bit;
-        dlv->tracking_addr->outstanding_deliveries[link_bit]--;
+        dlv->tracking_addr->outstanding_deliveries[dlv->tracking_addr_bit]--;
         dlv->tracking_addr->tracked_deliveries--;
         dlv->tracking_addr = 0;
     }
@@ -829,7 +805,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 
     sys_mutex_lock(link->conn->work_lock);
     if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
-        sys_atomic_inc(&dlv->ref_count);
+        qdr_delivery_incref(dlv);
         qdr_add_delivery_ref(&link->updated_deliveries, dlv);
         qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
         activate = true;

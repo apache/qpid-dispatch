@@ -220,6 +220,7 @@ struct qdr_delivery_t {
     int                  tag_length;
     qd_bitmask_t        *link_exclusion;
     qdr_address_t       *tracking_addr;
+    int                  tracking_addr_bit;
 };
 
 ALLOC_DECLARE(qdr_delivery_t);
@@ -616,7 +617,6 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv);
 void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *delivery);
-void qdr_delivery_decref_LH(qdr_delivery_t *delivery);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
 void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash);

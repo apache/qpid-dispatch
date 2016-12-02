@@ -104,6 +104,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     uint64_t       *tag = (uint64_t*) dlv->tag;
 
     ZERO(dlv);
+    sys_atomic_init(&dlv->ref_count, 0);
     dlv->link       = link;
     dlv->msg        = qd_message_copy(msg);
     dlv->settled    = !in_dlv || in_dlv->settled;
@@ -119,7 +120,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
             dlv->peer = in_dlv;
             in_dlv->peer = dlv;
 
-            sys_atomic_init(&dlv->ref_count, 1);
+            qdr_delivery_incref(dlv);
             qdr_delivery_incref(in_dlv);
         }
     }
@@ -142,7 +143,7 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_link_t *link)
         if (dlv->settled) {
             DEQ_REMOVE(link->undelivered, dlv);
             dlv->where = QDR_DELIVERY_NOWHERE;
-            qdr_delivery_decref_LH(dlv);
+            qdr_delivery_decref(dlv);
         }
         dlv = next;
     }
@@ -163,7 +164,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
 
     DEQ_INSERT_TAIL(link->undelivered, dlv);
     dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
-    sys_atomic_inc(&dlv->ref_count);
+    qdr_delivery_incref(dlv);
 
     //
     // If the link isn't already on the links_with_deliveries list, put it there.
@@ -586,7 +587,8 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         //
         if (in_delivery && !in_delivery->settled && chosen_link_bit >= 0) {
             addr->outstanding_deliveries[chosen_link_bit]++;
-            out_delivery->tracking_addr = addr;
+            out_delivery->tracking_addr     = addr;
+            out_delivery->tracking_addr_bit = chosen_link_bit;
             addr->tracked_deliveries++;
         }
 

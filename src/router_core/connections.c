@@ -507,11 +507,24 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         DEQ_REMOVE_HEAD(undelivered);
         peer = dlv->peer;
         if (peer) {
+            dlv->peer  = 0;
             peer->peer = 0;
             qdr_delivery_release_CT(core, peer);
             qdr_delivery_decref(peer);
+            qdr_delivery_decref(dlv);
         }
+
+        //
+        // Account for the undelivered-list reference
+        //
         qdr_delivery_decref(dlv);
+
+        //
+        // Account for the lost reference from the Proton delivery
+        // for unsettled deliveries on incoming links
+        //
+        if (link->link_direction == QD_INCOMING && !dlv->settled)
+            qdr_delivery_decref(dlv);
         dlv = DEQ_HEAD(undelivered);
     }
 
@@ -523,20 +536,30 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         DEQ_REMOVE_HEAD(unsettled);
 
         if (dlv->tracking_addr) {
-            int link_bit = link->conn->mask_bit;
-            assert(link_bit >= 0);
-            dlv->tracking_addr->outstanding_deliveries[link_bit]--;
+            dlv->tracking_addr->outstanding_deliveries[dlv->tracking_addr_bit]--;
             dlv->tracking_addr->tracked_deliveries--;
             dlv->tracking_addr = 0;
         }
 
         peer = dlv->peer;
         if (peer) {
+            dlv->peer  = 0;
             peer->peer = 0;
             if (link->link_direction == QD_OUTGOING)
                 qdr_delivery_failed_CT(core, peer);
+
             qdr_delivery_decref(peer);
+            qdr_delivery_decref(dlv);
         }
+
+        //
+        // Account for the unsettled-list reference
+        //
+        qdr_delivery_decref(dlv);
+
+        //
+        // Account for the lost reference from the Proton delivery
+        //
         qdr_delivery_decref(dlv);
         dlv = DEQ_HEAD(unsettled);
     }
