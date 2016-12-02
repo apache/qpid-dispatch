@@ -199,7 +199,7 @@ static level_t levels[] = {
     LEVEL("critical", QD_LOG_CRITICAL, LOG_CRIT)
 };
 
-static const char level_names[TEXT_MAX]; /* Set up in qd_log_initialize */
+static char level_names[TEXT_MAX] = {0}; /* Set up in qd_log_initialize */
 
 /// Return NULL and set qd_error if not a valid bit.
 static const level_t* level_for_bit(int bit) {
@@ -465,8 +465,7 @@ void qd_log_initialize(void)
     DEQ_INIT(sink_list);
 
     // Set up level_names for use in error messages.
-    ZERO((char*)level_names);
-    char *begin = (char*)level_names, *end = (char*)level_names+sizeof(level_names);
+    char *begin = level_names, *end = level_names+sizeof(level_names);
     aprintf(&begin, end, "%s", levels[NONE].name);
     for (level_index_t i = NONE + 1; i < N_LEVELS; ++i)
         aprintf(&begin, end, ", %s", levels[i].name);
