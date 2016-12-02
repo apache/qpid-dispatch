@@ -477,6 +477,15 @@ typedef int (*qd_pn_event_handler_cb_t)(void *handler_context, void* conn_contex
 
 
 /**
+ * Post event process handler
+ * Invoke only after all proton events have been popped from the collector.
+ *
+ * @param conn The connection for which all proton events have been popped.
+ */
+typedef void (*qd_pn_event_complete_cb_t)(void *handler_context, qd_connection_t *conn);
+
+
+/**
  * Set the connection event handler callback.
  *
  * Set the connection handler callback for the server.  This callback is
@@ -487,7 +496,11 @@ typedef int (*qd_pn_event_handler_cb_t)(void *handler_context, void* conn_contex
  * @param pn_event_handler The handler for proton events.
  * @param handler_context Context data to associate with the handler.
  */
-void qd_server_set_conn_handler(qd_dispatch_t *qd, qd_conn_handler_cb_t conn_handler, qd_pn_event_handler_cb_t pn_event_handler, void *handler_context);
+void qd_server_set_conn_handler(qd_dispatch_t *qd,
+                                qd_conn_handler_cb_t conn_handler,
+                                qd_pn_event_handler_cb_t pn_event_handler,
+                                qd_pn_event_complete_cb_t pn_event_complete_handler,
+                                void *handler_context);
 
 
 /**
