@@ -17,9 +17,7 @@
 ## under the License.
 ##
 
-set(CONSOLE_BASE_INSTALL_DIR "share/qpid-dispatch/console")
 set(CONSOLE_BASE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/console/stand-alone/")
-set(CONSOLE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CONSOLE_BASE_INSTALL_DIR}")
 
 ##
 ## Add option to not install the stand-alone console
@@ -29,7 +27,8 @@ if(CONSOLE_INSTALL)
 
 	# Static console files
 	install(
-		DIRECTORY ${CONSOLE_BASE_SOURCE_DIR} DESTINATION ${CONSOLE_INSTALL_DIR}/stand-alone
+	  DIRECTORY ${CONSOLE_BASE_SOURCE_DIR}
+          DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}
     )
 
 endif(CONSOLE_INSTALL)

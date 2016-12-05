@@ -70,6 +70,11 @@ set(DOC_INSTALL_DIR ${SHARE_INSTALL_DIR}/doc CACHE PATH "Documentation directory
 set(QD_DOC_INSTALL_DIR ${SHARE_INSTALL_DIR}/doc/qpid-dispatch CACHE PATH "Qpid dispatch documentation directory")
 set(MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 set(QPID_DISPATCH_HOME_INSTALLED ${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME})
+
+set(CONSOLE_BASE_INSTALL_DIR "share/qpid-dispatch/console")
+set(CONSOLE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CONSOLE_BASE_INSTALL_DIR}")
+set(CONSOLE_STAND_ALONE_INSTALL_DIR "${CONSOLE_INSTALL_DIR}/stand-alone")
+
 set(RUN ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/run.py)
 
 # define the configuration directory based on whether or not the install prefix is defined

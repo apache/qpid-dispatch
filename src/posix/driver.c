@@ -134,6 +134,7 @@ struct qdpn_connector_t {
     bool pending_read:1;
     bool pending_write:1;
     bool socket_error:1;
+    bool hangup:1;
     bool closed:1;
 };
 
@@ -528,6 +529,7 @@ qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, int fd, void *context
     c->pending_read = false;
     c->pending_write = false;
     c->socket_error = false;
+    c->hangup = false;
     c->name[0] = '\0';
     c->idx = 0;
     c->fd = fd;
@@ -622,7 +624,9 @@ qdpn_listener_t *qdpn_connector_listener(qdpn_connector_t *ctor)
     return ctor ? ctor->listener : NULL;
 }
 
-/* FD is already closed, update the connector state */
+/* Mark the connector as closed, but don't close the FD (already closed or
+ * will be closed elsewhere)
+ */
 void qdpn_connector_mark_closed(qdpn_connector_t *ctor)
 {
     if (!ctor) return;
@@ -632,6 +636,7 @@ void qdpn_connector_mark_closed(qdpn_connector_t *ctor)
         qd_log(ctor->driver->log, QD_LOG_TRACE, "closed %s", ctor->name);
         ctor->closed = true;
         ctor->driver->closed_count++;
+        ctor->http = NULL;
     }
     sys_mutex_unlock(ctor->driver->lock);
 }
@@ -880,7 +885,7 @@ static void qdpn_driver_rebuild(qdpn_driver_t *d)
 
     qdpn_connector_t *c = DEQ_HEAD(d->connectors);
     while (c) {
-        if (!c->closed && !c->socket_error) {
+        if (!c->closed && !c->socket_error && !c->hangup) {
             d->wakeup = pn_timestamp_min(d->wakeup, c->wakeup);
             d->fds[d->nfds].fd = c->fd;
             d->fds[d->nfds].events = (c->status & PN_SEL_RD ? POLLIN : 0) | (c->status & PN_SEL_WR ? POLLOUT : 0);
@@ -946,9 +951,11 @@ int qdpn_driver_wait_3(qdpn_driver_t *d)
             if (revents & ~(POLLIN|POLLOUT|POLLERR|POLLHUP)) {
                 qd_log(c->driver->log, QD_LOG_ERROR, "unexpected poll events %04x on %s",
                        revents, c->name);
+                c->socket_error = true;
             }
             if (revents & POLLHUP) {
                 qd_log(c->driver->log, QD_LOG_TRACE, "hangup on %s", c->name);
+                c->hangup = true;
                 /* poll() is signalling POLLHUP. To see what happened we need
                  * to do an actual recv() to get the error code. But we might
                  * be in a state where we're not interested in input, in that

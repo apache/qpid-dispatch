@@ -573,7 +573,8 @@ static const char *log_incoming(char *buf, size_t size, qdpn_connector_t *cxtr)
     const char *cname = qdpn_connector_name(cxtr);
     const char *host = qd_listener->config->host;
     const char *port = qd_listener->config->port;
-    snprintf(buf, size, "incoming connection from %s to %s:%s", cname, host, port);
+    snprintf(buf, size, "incoming %s connection from %s to %s:%s",
+             qdpn_connector_http(cxtr) ? "HTTP" : "AMQP", cname, host, port);
     return buf;
 }
 
