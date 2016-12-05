@@ -366,6 +366,7 @@ qd_connection_t *qd_connection_allocate()
     DEQ_ITEM_INIT(ctx);
     DEQ_INIT(ctx->deferred_calls);
     ctx->deferred_call_lock = sys_mutex();
+    DEQ_INIT(ctx->free_link_session_list);
     return ctx;
 }
 
@@ -852,6 +853,11 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
 
                 event = ctx->event_stall ? 0 : pn_collector_peek(collector);
             }
+
+            //
+            // Free up any links and sessions that need to be freed since all the events have been popped from the collector.
+            //
+            qd_server->pn_event_complete_handler(qd_conn);
             events += qd_server->conn_handler(qd_server->conn_handler_context, ctx->context, QD_CONN_EVENT_WRITABLE, qd_conn);
         }
     } while (events > 0);
@@ -1415,11 +1421,13 @@ void qd_server_free(qd_server_t *qd_server)
 void qd_server_set_conn_handler(qd_dispatch_t            *qd,
                                 qd_conn_handler_cb_t      handler,
                                 qd_pn_event_handler_cb_t  pn_event_handler,
+                                qd_pn_event_complete_cb_t pn_event_complete_handler,
                                 void                     *handler_context)
 {
-    qd->server->conn_handler         = handler;
-    qd->server->pn_event_handler     = pn_event_handler;
-    qd->server->conn_handler_context = handler_context;
+    qd->server->conn_handler              = handler;
+    qd->server->pn_event_handler          = pn_event_handler;
+    qd->server->pn_event_complete_handler = pn_event_complete_handler;
+    qd->server->conn_handler_context      = handler_context;
 }
 
 

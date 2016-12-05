@@ -85,6 +85,14 @@ typedef struct qd_deferred_call_t {
 
 DEQ_DECLARE(qd_deferred_call_t, qd_deferred_call_list_t);
 
+typedef struct qd_pn_free_link_session_t {
+    DEQ_LINKS(struct qd_pn_free_link_session_t);
+    pn_session_t *pn_session;
+    pn_link_t    *pn_link;
+} qd_pn_free_link_session_t;
+
+DEQ_DECLARE(qd_pn_free_link_session_t, qd_pn_free_link_session_list_t);
+
 /**
  * Connection objects wrap Proton connection objects.
  */
@@ -118,6 +126,7 @@ struct qd_connection_t {
     bool                      event_stall;
     bool                      policy_counted;
     char                     *role;  //The specified role of the connection, e.g. "normal", "inter-router", "route-container" etc.
+    qd_pn_free_link_session_list_t  free_link_session_list;
 };
 
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
@@ -160,6 +169,7 @@ struct qd_server_t {
     qd_thread_start_cb_t      start_handler;
     qd_conn_handler_cb_t      conn_handler;
     qd_pn_event_handler_cb_t  pn_event_handler;
+    qd_pn_event_complete_cb_t pn_event_complete_handler;
     qd_user_fd_handler_cb_t   ufd_handler;
     void                     *start_context;
     void                     *conn_handler_context;
@@ -191,5 +201,7 @@ ALLOC_DECLARE(qd_deferred_call_t);
 ALLOC_DECLARE(qd_connector_t);
 ALLOC_DECLARE(qd_connection_t);
 ALLOC_DECLARE(qd_user_fd_t);
+ALLOC_DECLARE(qd_pn_free_link_session_t);
+
 
 #endif
