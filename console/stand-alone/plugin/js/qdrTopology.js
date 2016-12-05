@@ -680,7 +680,7 @@ var QDR = (function(QDR) {
               var connId = connection.container
               var target = getContainerIndex(connId, nodeInfo);
               if (target >= 0) {
-                getLink(source, target, dir, "", connection.name);
+                getLink(source, target, dir, "", source + "-" + target);
               }
             } else if (role == "normal" || role == "on-demand") {
               // not a router, but an external client
