@@ -23,6 +23,8 @@ from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SS
 from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
+import pdb
+
 
 # PROTON-828:
 try:
@@ -64,14 +66,11 @@ class RouterTest(TestCase):
         inter_router_port_1 = cls.tester.get_port()
         inter_router_port_2 = cls.tester.get_port()
         
-        print "MDEBUG: making router A"
         router('A', ('listener', {'role': 'inter-router', 'port': inter_router_port_1}) )
 
-        print "MDEBUG: making router B"
         router('B', ('listener', {'role': 'inter-router', 'port': inter_router_port_2}),
                     ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port_1, 'verifyHostName': 'no'}))
 
-        print "MDEBUG: making router C"
         router('C', ('connector', {'name': 'connectorToB', 'role': 'inter-router', 'port': inter_router_port_2, 'verifyHostName': 'no'}))
 
         cls.routers[0].wait_router_connected('QDR.C')
@@ -80,12 +79,12 @@ class RouterTest(TestCase):
 
 
 
-    def test_01_basic(self):
+    def test_01_targeted(self):
         """
         Message-route a series of deliveries where the receiver provides credit for a subset and
         once received, closes the link.  The remaining deliveries should be released back to the sender.
         """
-        test = BasicTest(self.routers[0].addresses[0], self.routers[2].addresses[0])
+        test = TargetedTest(self.routers[0].addresses[0], self.routers[2].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -98,12 +97,12 @@ class Timeout(object):
         self.parent.timeout()
 
 
-class BasicTest(MessagingHandler):
+class TargetedTest(MessagingHandler):
     def __init__(self, address1, address2):
-        super(BasicTest, self).__init__(prefetch=0)
+        super(TargetedTest, self).__init__(prefetch=0)
         self.address1 = address1
         self.address2 = address2
-        self.dest = "closest.BasciTest"
+        self.dest = "closest.TargetedTest"
         self.error      = None
         self.sender     = None
         self.receiver   = None
@@ -130,17 +129,13 @@ class BasicTest(MessagingHandler):
             msg = Message(body=self.n_sent)
             event.sender.send(msg)
             self.n_sent += 1
-            print "MDEBUG sent " , self.n_sent
 
     def on_accepted(self, event):
         self.n_accepted += 1
-        print "MDEBUG accepted " , self.n_accepted
 
     def on_message(self, event):
         self.n_received += 1
-        print "MDEBUG: message received: " , self.n_received
         if self.n_received == self.n_expected:
-            print "MDEBUG: closing sender."
             self.receiver.close()
             self.conn1.close()
             self.conn2.close()
@@ -149,7 +144,6 @@ class BasicTest(MessagingHandler):
 
     def run(self):
         Container(self).run()
-
 
 
 if __name__ == '__main__':
