@@ -119,9 +119,12 @@ class LinkRouteTest(TestCase):
         # bit more time for the routers to stabilize.
         sleep(2)
 
-    def run_qdstat_linkRoute(self, address):
+    def run_qdstat_linkRoute(self, address, args=None):
+        cmd = ['qdstat', '--bus', str(address), '--timeout', str(TIMEOUT) ] + ['--linkroute']
+        if args:
+            cmd = cmd + args
         p = self.popen(
-            ['qdstat', '--bus', str(address), '--timeout', str(TIMEOUT) ] + ['--linkroute'],
+            cmd,
             name='qdstat-'+self.id(), stdout=PIPE, expect=None)
 
         out = p.communicate()[0]
@@ -196,9 +199,6 @@ class LinkRouteTest(TestCase):
         out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
         self.assertTrue(identity in out)
 
-
-
-
     def test_bbb_qdstat_link_routes_routerB(self):
         """
         Runs qdstat on router B to make sure that router B has two link routes, one 'in' and one 'out'
@@ -208,6 +208,13 @@ class LinkRouteTest(TestCase):
         out_list = out.split()
         self.assertEqual(out_list.count('in'), 2)
         self.assertEqual(out_list.count('out'), 2)
+
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 8)
+
+        out = self.run_qdstat_linkRoute(self.routers[1].addresses[0], args=['--limit=1'])
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 5)
 
     def test_ccc_qdstat_link_routes_routerC(self):
         """
