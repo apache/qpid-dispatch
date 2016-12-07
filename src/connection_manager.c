@@ -99,6 +99,7 @@ static void qd_server_config_free(qd_server_config_t *cf)
     free(cf->host);
     free(cf->port);
     free(cf->role);
+    if (cf->http_root)       free(cf->http_root);
     if (cf->name)            free(cf->name);
     if (cf->protocol_family) free(cf->protocol_family);
     if (cf->sasl_username)   free(cf->sasl_username);
@@ -242,6 +243,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->inter_router_cost    = qd_entity_opt_long(entity, "cost", 1);             CHECK();
     config->protocol_family      = qd_entity_opt_string(entity, "protocolFamily", 0); CHECK();
     config->http                 = qd_entity_opt_bool(entity, "http", false);         CHECK();
+    config->http_root            = qd_entity_opt_string(entity, "httpRoot", false);   CHECK();
+    config->http = config->http || config->http_root; /* httpRoot implies http */
     config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize");        CHECK();
     config->max_sessions         = qd_entity_get_long(entity, "maxSessions");         CHECK();
     uint64_t ssn_frames          = qd_entity_get_long(entity, "maxSessionFrames");    CHECK();

@@ -573,8 +573,9 @@ static const char *log_incoming(char *buf, size_t size, qdpn_connector_t *cxtr)
     const char *cname = qdpn_connector_name(cxtr);
     const char *host = qd_listener->config->host;
     const char *port = qd_listener->config->port;
+    const char *protocol = qd_listener->config->http ? "HTTP" : "AMQP";
     snprintf(buf, size, "incoming %s connection from %s to %s:%s",
-             qdpn_connector_http(cxtr) ? "HTTP" : "AMQP", cname, host, port);
+             protocol, cname, host, port);
     return buf;
 }
 
@@ -627,6 +628,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
     qd_connection_t  *ctx;
 
     for (listener = qdpn_driver_listener(driver); listener; listener = qdpn_driver_listener(driver)) {
+        qd_listener_t *li = qdpn_listener_context(listener);
         bool policy_counted = false;
         cxtr = qdpn_listener_accept(listener, qd_server->qd->policy, &qd_policy_socket_accept, &policy_counted);
         if (!cxtr)
@@ -689,8 +691,14 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
             pn_transport_set_tracer(tport, qd_transport_tracer);
         }
 
-        // Set up SSL if configured
-        if (config->ssl_profile) {
+        if (li->http) {
+            // Set up HTTP if configured, HTTP provides its own SSL.
+            qd_log(qd_server->log_source, QD_LOG_TRACE, "Configuring HTTP%s on %s",
+                   config->ssl_profile ? "S" : "",
+                   log_incoming(logbuf, sizeof(logbuf), cxtr));
+            qd_http_listener_accept(li->http, cxtr);
+        } else if (config->ssl_profile)  {
+            // Set up SSL if configured and HTTP is not providing SSL.
             qd_log(qd_server->log_source, QD_LOG_TRACE, "Configuring SSL on %s",
                    log_incoming(logbuf, sizeof(logbuf), cxtr));
             if (listener_setup_ssl(ctx, config, tport) != QD_ERROR_NONE) {
@@ -1395,8 +1403,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->heartbeat_timer        = 0;
     qd_server->next_connection_id     = 1;
     qd_server->py_displayname_obj     = 0;
-    qd_server->http = qd_http(qd, qd_server->log_source);
-
+    qd_server->http                   = qd_http_server(qd, qd_server->log_source);
     qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 
     return qd_server;
@@ -1406,9 +1413,9 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
-    qd_http_free(qd_server->http);
     for (int i = 0; i < qd_server->thread_count; i++)
         thread_free(qd_server->threads[i]);
+    qd_http_server_free(qd_server->http);
     qd_timer_finalize();
     qdpn_driver_free(qd_server->driver);
     sys_mutex_free(qd_server->lock);
@@ -1699,23 +1706,27 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
     li->server      = qd_server;
     li->config      = config;
     li->context     = context;
-    qd_http_t *http = NULL;
+    li->http = NULL;
     if (config->http) {
-        http = qd->server->http;
-        if (!http) {
-            qd_log(qd_server->log_source, QD_LOG_CRITICAL, "HTTP support not available for %s:%s",
+        li->http = qd_http_listener(qd_server->http, config);
+        if (!li->http) {
+            free_qd_listener_t(li);
+            qd_log(qd_server->log_source, QD_LOG_ERROR, "Cannot start HTTP listener on %s:%s",
                    config->host, config->port);
+            return NULL;
         }
     }
     li->pn_listener = qdpn_listener(
-        qd_server->driver, config->host, config->port, config->protocol_family, http, li);
+        qd_server->driver, config->host, config->port, config->protocol_family, li);
 
     if (!li->pn_listener) {
         free_qd_listener_t(li);
-        return 0;
+        qd_log(qd_server->log_source, QD_LOG_ERROR, "Cannot start listener on %s:%s",
+               config->host, config->port);
+        return NULL;
     }
     qd_log(qd_server->log_source, QD_LOG_TRACE, "Listening on %s:%s%s", config->host, config->port,
-           config->http ? "(http)":"");
+           config->http ? (config->ssl_profile ? "(HTTPS)":"(HTTP)") : "");
 
     return li;
 }
@@ -1725,7 +1736,7 @@ void qd_server_listener_free(qd_listener_t* li)
 {
     if (!li)
         return;
-
+    if (li->http) qd_http_listener_free(li->http);
     qdpn_listener_free(li->pn_listener);
     free_qd_listener_t(li);
 }

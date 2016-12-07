@@ -51,7 +51,6 @@
 #include <qpid/dispatch/ctools.h>
 #include "alloc.h"
 #include "aprintf.h"
-#include "http.h"
 #include "log_private.h"
 
 /* Decls */
@@ -71,9 +70,6 @@ const char *protocol_family_ipv6 = "IPv6";
 
 const char *AF_INET6_STR = "AF_INET6";
 const char *AF_INET_STR = "AF_INET";
-
-/* Connector processing function, direct or HTTP. */
-void (*process_fn)(qdpn_connector_t *c);
 
 static inline void ignore_result(int unused_result) {
     (void) unused_result;
@@ -106,7 +102,6 @@ struct qdpn_listener_t {
     DEQ_LINKS(qdpn_listener_t);
     qdpn_driver_t *driver;
     void *context;
-    qd_http_t *http;
     int idx;
     int fd;
     bool pending:1;
@@ -125,8 +120,7 @@ struct qdpn_connector_t {
     pn_transport_t *transport;
     qdpn_listener_t *listener;
     void *context;
-    void (*process)(qdpn_connector_t *c);
-    qd_http_connector_t *http;
+    qdpn_connector_methods_t *methods;
     int idx;
     int fd;
     int status;
@@ -264,7 +258,6 @@ qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
                                const char *host,
                                const char *port,
                                const char *protocol_family,
-                               qd_http_t *http,
                                void* context)
 {
     if (!driver) return NULL;
@@ -310,12 +303,11 @@ qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
         return 0;
     }
 
-    qdpn_listener_t *l = qdpn_listener_fd(driver, sock, http, context);
+    qdpn_listener_t *l = qdpn_listener_fd(driver, sock, context);
     return l;
 }
 
-qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, int fd,
-                                  qd_http_t *http, void *context)
+qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, int fd, void *context)
 {
     if (!driver) return NULL;
 
@@ -328,7 +320,6 @@ qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, int fd,
     l->fd = fd;
     l->closed = false;
     l->context = context;
-    l->http = http;
 
     qdpn_driver_add_listener(driver, l);
     return l;
@@ -417,10 +408,6 @@ qdpn_connector_t *qdpn_listener_accept(qdpn_listener_t *l,
     snprintf(c->name, PN_NAME_MAX, "%s", name);
     snprintf(c->hostip, PN_NAME_MAX, "%s", hostip);
     c->listener = l;
-    if (l->http) {
-        c->http = qd_http_connector(l->http, c);
-        c->process = qd_http_connector_process;
-    }
     return c;
 }
 
@@ -437,7 +424,6 @@ void qdpn_listener_close(qdpn_listener_t *l)
 void qdpn_listener_free(qdpn_listener_t *l)
 {
     if (!l) return;
-
     if (l->driver) qdpn_driver_remove_listener(l->driver, l);
     free_qdpn_listener_t(l);
 }
@@ -516,6 +502,12 @@ qdpn_connector_t *qdpn_connector(qdpn_driver_t *driver,
 
 
 static void connector_process(qdpn_connector_t *c);
+static void connector_close(qdpn_connector_t *c);
+
+static qdpn_connector_methods_t connector_methods = {
+    connector_process,
+    connector_close
+};
 
 qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, int fd, void *context)
 {
@@ -540,7 +532,7 @@ qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, int fd, void *context
     c->transport = pn_transport();
     c->context = context;
     c->listener = NULL;
-    c->process = connector_process;
+    c->methods = &connector_methods;
     qdpn_driver_add_connector(driver, c);
     return c;
 }
@@ -629,25 +621,29 @@ qdpn_listener_t *qdpn_connector_listener(qdpn_connector_t *ctor)
  */
 void qdpn_connector_mark_closed(qdpn_connector_t *ctor)
 {
-    if (!ctor) return;
+    if (!ctor || !ctor->driver) return;
     sys_mutex_lock(ctor->driver->lock);
     ctor->status = 0;
     if (!ctor->closed) {
         qd_log(ctor->driver->log, QD_LOG_TRACE, "closed %s", ctor->name);
         ctor->closed = true;
         ctor->driver->closed_count++;
-        ctor->http = NULL;
     }
     sys_mutex_unlock(ctor->driver->lock);
 }
 
-void qdpn_connector_close(qdpn_connector_t *ctor)
+static void connector_close(qdpn_connector_t *ctor)
 {
     if (ctor && !ctor->closed) {
         qdpn_connector_mark_closed(ctor);
         if (close(ctor->fd) == -1)
             qdpn_log_errno(ctor->driver, "close %s", ctor->name);
     }
+}
+
+void qdpn_connector_close(qdpn_connector_t *c)
+{
+    if (c && !c->closed) c->methods->close(c);
 }
 
 bool qdpn_connector_closed(qdpn_connector_t *ctor)
@@ -698,6 +694,9 @@ void qdpn_activate_all(qdpn_driver_t *d)
     sys_mutex_unlock(d->lock);
 }
 
+bool qdpn_connector_hangup(qdpn_connector_t *ctor) {
+    return ctor->hangup;
+}
 
 bool qdpn_connector_activated(qdpn_connector_t *ctor, qdpn_activate_criteria_t crit)
 {
@@ -728,8 +727,7 @@ static pn_timestamp_t qdpn_connector_tick(qdpn_connector_t *ctor, pn_timestamp_t
 
 void qdpn_connector_process(qdpn_connector_t *c)
 {
-    if (!c || c->closed) return;
-    c->process(c);
+    if (c && !c->closed) c->methods->process(c);
 }
 
 static void connector_process(qdpn_connector_t *c)
@@ -954,7 +952,6 @@ int qdpn_driver_wait_3(qdpn_driver_t *d)
                 c->socket_error = true;
             }
             if (revents & POLLHUP) {
-                qd_log(c->driver->log, QD_LOG_TRACE, "hangup on %s", c->name);
                 c->hangup = true;
                 /* poll() is signalling POLLHUP. To see what happened we need
                  * to do an actual recv() to get the error code. But we might
@@ -1042,10 +1039,10 @@ qdpn_connector_t *qdpn_driver_connector(qdpn_driver_t *d)
     return NULL;
 }
 
-qd_http_connector_t *qdpn_connector_http(qdpn_connector_t* c) { return c->http; }
-
-void qdpn_connector_wakeup(qdpn_connector_t* c, pn_timestamp_t t) {
+void qdpn_connector_wakeup(qdpn_connector_t *c, pn_timestamp_t t) {
     c->wakeup = t;
 }
 
-qd_http_t *qdpn_listener_http(qdpn_listener_t* l) { return l->http; }
+void qdpn_connector_set_methods(qdpn_connector_t *c, qdpn_connector_methods_t *m) {
+    c->methods = m;
+}

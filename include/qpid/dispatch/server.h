@@ -259,6 +259,11 @@ typedef struct qd_server_config_t {
     bool http;
 
     /**
+     * Directory for HTTP content
+     */
+    char *http_root;
+
+    /**
      * Connection name, used as a reference from other parts of the configuration.
      */
     char *name;

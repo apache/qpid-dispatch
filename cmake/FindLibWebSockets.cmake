@@ -43,7 +43,20 @@ find_path(LibWebSockets_INCLUDE_DIRS
   )
 
 include(FindPackageHandleStandardArgs)
+
 find_package_handle_standard_args(LibWebSockets DEFAULT_MSG LibWebSockets_LIBRARIES LibWebSockets_INCLUDE_DIRS)
+
+if(LibWebSockets_FOUND)
+  # For the moment we need a patched version of LibWebSockets:
+  # https://github.com/alanconway/libwebsockets/tree/v2.1-stable-aconway-adopt-ssl
+  # This function check verifies we have it.
+  set(CMAKE_REQUIRED_INCLUDES ${LibWebSockets_INCLUDE_DIRS})
+  set(CMAKE_REQUIRED_LIBRARIES ${LibWebSockets_LIBRARIES})
+  check_function_exists(lws_adopt_socket_vhost LWS_ADOPT_SOCKET_VHOST_FOUND)
+  if (NOT LWS_ADOPT_SOCKET_VHOST_FOUND)
+    unset(LibWebSockets_FOUND)
+  endif()
+endif()
 
 if(NOT LibWebSockets_FOUND)
   set(LibWebSockets_LIBRARIES "")

@@ -543,7 +543,7 @@
                 },
                 "displayNameFile": {
                     "type": "string",
-                    "description": "The absolute path to the file containing the unique id to dispay name mapping",
+                    "description": "The absolute path to the file containing the unique id to display name mapping",
                     "create": true
                 }
             }
@@ -571,12 +571,6 @@
                     "type": ["IPv4", "IPv6"],
                     "required": false,
                     "description": "['IPv4', 'IPv6'] IPv4: Internet Protocol version 4; IPv6: Internet Protocol version 6.  If not specified, the protocol family will be automatically determined from the address.",
-                    "create": true
-                },
-                "http": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Accept HTTP connections that can upgrade to AMQP over WebSocket",
                     "create": true
                 },
                 "role": {
@@ -700,6 +694,17 @@
                     "create": true,
                     "deprecated": true,
                     "description": "(DEPRECATED) This attribute is now controlled by the requireEncryption attribute."
+                },
+                "http": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Accept HTTP connections that can upgrade to AMQP over WebSocket",
+                    "create": true
+                },
+                "httpRoot": {
+                    "type": "path",
+                    "description": "Serve HTTP files from this directory, defaults to the installed stand-alone console directory",
+                    "create": true
                 }
             }
         },
@@ -849,6 +854,7 @@
                         "CONTAINER",
                         "ERROR",
                         "POLICY",
+                        "HTTP",
                         "DEFAULT"
                     ],
                     "required": true,

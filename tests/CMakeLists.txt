@@ -68,6 +68,10 @@ add_test(router_engine_test    ${TEST_WRAP} -m unittest -v router_engine_test)
 add_test(management_test       ${TEST_WRAP} -m unittest -v management)
 add_test(router_policy_test    ${TEST_WRAP} -m unittest -v router_policy_test)
 
+if(USE_LIBWEBSOCKETS)
+  set(SYSTEM_TESTS_HTTP system_tests_http)
+endif()
+
 # System test python modules
 foreach(py_test_module
 #   system_tests_broker
@@ -87,7 +91,9 @@ foreach(py_test_module
     system_tests_deprecated
     system_tests_two_routers
     system_tests_three_routers
-    system_tests_multi_tenancy)
+    system_tests_multi_tenancy
+    ${SYSTEM_TESTS_HTTP}
+    )
 
   add_test(${py_test_module} ${TEST_WRAP} -m unittest -v ${py_test_module})
   list(APPEND SYSTEM_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/${py_test_module}.py)

@@ -60,6 +60,7 @@ struct qd_listener_t {
     const qd_server_config_t *config;
     void                     *context;
     qdpn_listener_t          *pn_listener;
+    qd_http_listener_t       *http;
 };
 
 
@@ -192,7 +193,7 @@ struct qd_server_t {
     qd_timer_t               *heartbeat_timer;
     uint64_t                 next_connection_id;
     void                     *py_displayname_obj;
-    qd_http_t                *http;
+    qd_http_server_t         *http;
 };
 
 ALLOC_DECLARE(qd_work_item_t);

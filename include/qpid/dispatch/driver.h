@@ -31,9 +31,6 @@
 #include <proton/transport.h>
 #include <proton/types.h>
 
-struct qd_http_t;
-struct qd_http_connector_t;
-
 /** @file
  * API for the Driver Layer.
  *
@@ -141,19 +138,17 @@ void qdpn_driver_free(qdpn_driver_t *driver);
  * @param[in] host local host address to listen on
  * @param[in] port local port to listen on
  * @param[in] protocol family to use (IPv4 or IPv6 or 0). If 0 (zero) is passed in the protocol family will be automatically determined from the address
- * @param[in] http points to qd_http_t if HTTP is enabled.
  * @param[in] context application-supplied, can be accessed via
  *                    qdpn_listener_context()
+ * @param[in] methods to apply to new connectors.
  * @return a new listener on the given host:port, NULL if error
  */
 qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
                                const char *host,
                                const char *port,
                                const char *protocol_family,
-                               struct qd_http_t  *http,
-                               void* context);
-
-struct qd_http_t *qdpn_listener_http(qdpn_listener_t *l);
+                               void* context
+                              );
 
 /** Access the head listener for a driver.
  *
@@ -398,17 +393,18 @@ void qdpn_activate_all(qdpn_driver_t *driver);
  */
 bool qdpn_connector_activated(qdpn_connector_t *connector, qdpn_activate_criteria_t criteria);
 
+/** True if the connector has received a hangup */
+bool qdpn_connector_hangup(qdpn_connector_t *connector);
+
 /** Create a listener using the existing file descriptor.
  *
  * @param[in] driver driver that will 'own' this listener
  * @param[in] fd existing socket for listener to listen on
- * @param[in] http if non-NULL enable as a HTTP listener
  * @param[in] context application-supplied, can be accessed via
  *                    qdpn_listener_context()
  * @return a new listener on the given host:port, NULL if error
  */
-qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, pn_socket_t fd,
-                                  struct qd_http_t *http, void *context);
+qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, pn_socket_t fd, void *context);
 
 pn_socket_t qdpn_listener_get_fd(qdpn_listener_t *listener);
 
@@ -425,14 +421,20 @@ qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, pn_socket_t fd, void 
 /** Get the file descriptor for this connector */
 int qdpn_connector_get_fd(qdpn_connector_t *connector);
 
-/** Get the HTTP per-connector state for this connector, NULL if not enabled. */
-struct qd_http_connector_t *qdpn_connector_http(qdpn_connector_t* c);
-
 /** Set the wakeup time on the connector */
 void qdpn_connector_wakeup(qdpn_connector_t* c, pn_timestamp_t t);
 
 /** Current time according */
 pn_timestamp_t qdpn_now();
+
+/** Implementation of connector methods (e.g. these are different for HTTP connectors */
+typedef struct qdpn_connector_methods_t {
+    void (*process)(qdpn_connector_t *c);
+    void (*close)(qdpn_connector_t *c);
+} qdpn_connector_methods_t;
+
+/** Set new methods for a connector (e.g. because it is a HTTP connector) */
+void qdpn_connector_set_methods(qdpn_connector_t *c, qdpn_connector_methods_t *methods);
 
 /**@}*/
 

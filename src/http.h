@@ -20,14 +20,19 @@
  * under the License.
  */
 
-#include <qpid/dispatch/dispatch.h>
+typedef struct qd_http_listener_t qd_http_listener_t;
+typedef struct  qd_http_server_t qd_http_server_t;
+struct qd_dispatch_t;
+struct qd_log_source_t;
+struct qd_server_config_t;
+struct qdpn_connector_t;
 
-typedef struct qd_http_t qd_http_t;
-typedef struct qd_http_connector_t qd_http_connector_t;
-
-qd_http_t *qd_http(qd_dispatch_t *d, qd_log_source_t *log);
-void qd_http_free(qd_http_t *http);
-qd_http_connector_t *qd_http_connector(qd_http_t *h, qdpn_connector_t *c);
-void qd_http_connector_process(qdpn_connector_t *c);
+qd_http_server_t *qd_http_server(struct qd_dispatch_t *dispatch, struct qd_log_source_t *log);
+void qd_http_server_free(qd_http_server_t*);
+qd_http_listener_t *qd_http_listener(struct qd_http_server_t *s,
+                                     const struct qd_server_config_t *config);
+void qd_http_listener_free(qd_http_listener_t *hl);
+/* On error, qdpn_connector_closed(c) is true. */
+void qd_http_listener_accept(qd_http_listener_t *hl, struct qdpn_connector_t *c);
 
 #endif // QD_HTTP_H

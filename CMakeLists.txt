@@ -100,7 +100,7 @@ endif (NOT COMMAND add_compile_options)
 find_library(pthread_lib pthread)
 find_library(dl_lib dl)
 find_library(rt_lib rt)
-find_package(Proton 0.13 REQUIRED)
+find_package(Proton 0.15 REQUIRED)
 
 ## Optional dependencies
 include(FindLibWebSockets)
