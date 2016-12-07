@@ -20,7 +20,6 @@
 #include <qpid/dispatch/atomic.h>
 #include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/driver.h>
-#include <qpid/dispatch/log.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/timer.h>
 
@@ -32,49 +31,60 @@
 #include "http.h"
 #include "config.h"
 
-/* Shared context for all HTTP connections.  */
-struct qd_http_t {
+typedef struct fd_data_t {
+    qdpn_connector_t *connector;
+    struct lws *wsi;
+} fd_data_t;
+
+struct qd_http_listener_t {
     sys_mutex_t *lock;
     qd_dispatch_t *dispatch;
-    qd_log_source_t *log;
     struct lws_context *context;
     qd_timer_t *timer;
-    qdpn_connector_t **connectors; /* Indexed by file descriptor */
-    size_t connectors_len;
+    fd_data_t *fd;             /* indexed by file descriptor */
+    size_t fd_len;
 };
 
-static inline qdpn_connector_t *fd_connector(qd_http_t *h, int fd) {
-    return (fd < h->connectors_len) ? h->connectors[fd] : NULL;
+static inline fd_data_t *fd_data(qd_http_listener_t *hl, int fd) {
+    fd_data_t *d = (fd < hl->fd_len) ? &hl->fd[fd] : NULL;
+    return (d && d->connector && d->wsi) ? d : NULL;
 }
 
-static inline qd_http_t *wsi_http(struct lws *wsi) {
-    return (qd_http_t *)lws_context_user(lws_get_context(wsi));
+static inline qdpn_connector_t *fd_connector(qd_http_listener_t *hl, int fd) {
+    fd_data_t *d = fd_data(hl, fd);
+    return d ? d->connector : NULL;
+}
+
+static inline qd_http_listener_t *wsi_http_listener(struct lws *wsi) {
+    return (qd_http_listener_t*)lws_context_user(lws_get_context(wsi));
 }
 
 static inline qdpn_connector_t *wsi_connector(struct lws *wsi) {
-    return fd_connector(wsi_http(wsi), lws_get_socket_fd(wsi));
+    qd_http_listener_t *hl = wsi_http_listener(wsi);
+    return fd_connector(hl, lws_get_socket_fd(wsi));
 }
 
-static inline int set_fd(qd_http_t *h, int fd, qdpn_connector_t *c) {
-    if (fd >= h->connectors_len) {
-        size_t len = h->connectors_len;
-        h->connectors_len = (fd+1)*2;
-        h->connectors = realloc(h->connectors, h->connectors_len*sizeof(qdpn_connector_t*));
-        if (!h->connectors) return -1;
-        memset(h->connectors + len, 0, h->connectors_len - len);
+static inline fd_data_t *set_fd(qd_http_listener_t *hl, int fd, qdpn_connector_t *c, struct lws *wsi) {
+    if (fd >= hl->fd_len) {
+        size_t len = hl->fd_len;
+        hl->fd_len = (fd+1)*2;
+        hl->fd = realloc(hl->fd, hl->fd_len*sizeof(*hl->fd));
+        if (!hl->fd) return NULL;
+        memset(hl->fd + len, 0, sizeof(*hl->fd)*(hl->fd_len - len));
     }
-    h->connectors[fd] = c;
-    return 0;
+    fd_data_t *d = &hl->fd[fd];
+    d->connector = c;
+    d->wsi = wsi;
+    return d;
 }
 
 /* Mark the qd connector closed, but leave the FD for LWS to clean up */
 int mark_closed(struct lws *wsi) {
-    qd_http_t *h = wsi_http(wsi);
-    int fd = lws_get_socket_fd(wsi);
-    qdpn_connector_t *c = fd_connector(h, fd);
-    if (c) {
-        qdpn_connector_mark_closed(c);
-        return set_fd(h, fd, NULL);
+    qd_http_listener_t *hl = wsi_http_listener(wsi);
+    fd_data_t *d = fd_data(hl, lws_get_socket_fd(wsi));
+    if (d) {
+        qdpn_connector_mark_closed(d->connector);
+        memset(d, 0, sizeof(*d));
     }
     return 0;
 }
@@ -97,12 +107,12 @@ static int transport_push(pn_transport_t *t, pn_bytes_t buf) {
     return buf.size;
 }
 
-static int normal_close(struct lws *wsi, qdpn_connector_t *c, const char *msg) {
+static inline int normal_close(struct lws *wsi, const char *msg) {
     lws_close_reason(wsi, LWS_CLOSE_STATUS_NORMAL, (unsigned char*)msg, strlen(msg));
     return -1;
 }
 
-static int unexpected_close(struct lws *wsi, qdpn_connector_t *c, const char *msg) {
+static inline int unexpected_close(struct lws *wsi, const char *msg) {
     lws_close_reason(wsi, LWS_CLOSE_STATUS_UNEXPECTED_CONDITION, (unsigned char*)msg, strlen(msg));
     return -1;
 }
@@ -161,23 +171,20 @@ typedef struct buffer_t { void *start; size_t size; size_t cap; } buffer_t;
 static int callback_amqpws(struct lws *wsi, enum lws_callback_reasons reason,
                            void *user, void *in, size_t len)
 {
-    qd_http_t *h = wsi_http(wsi);
     qdpn_connector_t *c = wsi_connector(wsi);
     pn_transport_t *t = c ? qdpn_connector_transport(c) : NULL;
-    const char *name = c ? qdpn_connector_name(c) : "<unknown>";
 
     switch (reason) {
 
     case LWS_CALLBACK_ESTABLISHED: {
         memset(user, 0, sizeof(buffer_t));
-        qd_log(h->log, QD_LOG_TRACE, "HTTP from %s upgraded to AMQP/WebSocket", name);
         break;
     }
 
     case LWS_CALLBACK_SERVER_WRITEABLE: {
         ssize_t size;
         if (!t || (size = pn_transport_pending(t)) < 0) {
-            return normal_close(wsi, c, "write-closed");
+            return normal_close(wsi, "write-closed");
         }
         if (size > 0) {
             const void *start = pn_transport_head(t);
@@ -189,14 +196,14 @@ static int callback_amqpws(struct lws *wsi, enum lws_callback_reasons reason,
                 wtmp->size = wtmp->cap = tmpsize;
             }
             if (wtmp->start == NULL) {
-                return unexpected_close(wsi, c, "out-of-memory");
+                return unexpected_close(wsi, "out-of-memory");
             }
             void *tmpstart = wtmp->start + LWS_PRE;
             memcpy(tmpstart, start, size);
             ssize_t wrote = lws_write(wsi, tmpstart, size, LWS_WRITE_BINARY);
             if (wrote < 0) {
                 pn_transport_close_head(t);
-                return normal_close(wsi, c, "write-error");
+                return normal_close(wsi, "write-error");
             } else {
                 pn_transport_pop(t, (size_t)wrote);
             }
@@ -206,10 +213,10 @@ static int callback_amqpws(struct lws *wsi, enum lws_callback_reasons reason,
 
     case LWS_CALLBACK_RECEIVE: {
         if (!t || pn_transport_capacity(t) < 0) {
-            return normal_close(wsi, c, "read-closed");
+            return normal_close(wsi, "read-closed");
         }
         if (transport_push(t, pn_bytes(len, in))) {
-            return unexpected_close(wsi, c, "read-overflow");
+            return unexpected_close(wsi, "read-overflow");
         }
         break;
     }
@@ -250,59 +257,64 @@ static const struct lws_http_mount console_mount = {
     1,                  /* strlen("/"), ie length of the mountpoint */
 };
 
-static void check_timer(void *void_http) {
-    qd_http_t *h = (qd_http_t*)void_http;
-    sys_mutex_lock(h->lock);
+static void check_timer(void *void_http_listener) {
+    qd_http_listener_t *hl = (qd_http_listener_t*)void_http_listener;
+    sys_mutex_lock(hl->lock);
     /* Run LWS global timer and forced-service checks. */
-    lws_service_fd(h->context, NULL);
-    while (!lws_service_adjust_timeout(h->context, 1, 0)) {
+    lws_service_fd(hl->context, NULL);
+    while (!lws_service_adjust_timeout(hl->context, 1, 0)) {
         /* -1 timeout means just do forced service */
-        lws_plat_service_tsi(h->context, -1, 0);
+        lws_plat_service_tsi(hl->context, -1, 0);
     }
-    if (!h->timer) {
-        h->timer = qd_timer(h->dispatch, check_timer, h);
+    if (!hl->timer) {
+        hl->timer = qd_timer(hl->dispatch, check_timer, hl);
     }
-    qd_timer_cancel(h->timer);
-    qd_timer_schedule(h->timer, 1000); /* LWS wants per-second wakeups */
-    sys_mutex_unlock(h->lock);
+    qd_timer_cancel(hl->timer);
+    qd_timer_schedule(hl->timer, 1000); /* LWS wants per-second wakeups */
+    sys_mutex_unlock(hl->lock);
 }
 
 void qd_http_connector_process(qdpn_connector_t *c) {
-    qd_http_t * h = qdpn_listener_http(qdpn_connector_listener(c));
-    sys_mutex_lock(h->lock);
+    qd_http_listener_t * hl = qdpn_listener_http(qdpn_connector_listener(c));
+    sys_mutex_lock(hl->lock);
     int fd = qdpn_connector_get_fd(c);
-    struct lws *wsi = (struct lws*)qdpn_connector_http(c);
+    fd_data_t *d = fd_data(hl, fd);
     /* Make sure we are still tracking this fd, could have been closed by timer */
-    if (wsi) {
+    if (d) {
         pn_transport_t *t = qdpn_connector_transport(c);
         int flags =
             (qdpn_connector_activated(c, QDPN_CONNECTOR_READABLE) ? POLLIN : 0) |
             (qdpn_connector_activated(c, QDPN_CONNECTOR_WRITABLE) ? POLLOUT : 0);
         struct lws_pollfd pfd = { fd, flags, flags };
         if (pn_transport_pending(t) > 0) {
-            lws_callback_on_writable(wsi);
+            lws_callback_on_writable(d->wsi);
         }
-        lws_service_fd(h->context, &pfd);
+        lws_service_fd(hl->context, &pfd);
+        d = fd_data(hl, fd);    /* We may have stopped tracking during service */
         if (pn_transport_closed(t)) {
-            mark_closed(wsi);   /* Don't let the server close the FD. */
+            if (d) mark_closed(d->wsi);   /* Don't let the server close the FD. */
         } else {
             if (pn_transport_capacity(t) > 0)
                 qdpn_connector_activate(c, QDPN_CONNECTOR_READABLE);
-            if (pn_transport_pending(t) > 0 || lws_partial_buffered(wsi))
+            if (pn_transport_pending(t) > 0 || (d && lws_partial_buffered(d->wsi)))
                 qdpn_connector_activate(c, QDPN_CONNECTOR_WRITABLE);
             qdpn_connector_wakeup(c, pn_transport_tick(t, qdpn_now(NULL)));
         }
     }
-    sys_mutex_unlock(h->lock);
-    check_timer(h);             /* Make sure the timer is running */
+    sys_mutex_unlock(hl->lock);
+    check_timer(hl);             /* Make sure the timer is running */
 }
 
-qd_http_connector_t *qd_http_connector(qd_http_t *h, qdpn_connector_t *c) {
-    if (set_fd(h, qdpn_connector_get_fd(c), c)) {
-        return NULL;
+void qd_http_listener_accept(qd_http_listener_t *hl, qdpn_connector_t *c) {
+    struct lws* wsi = lws_adopt_socket(hl->context, qdpn_connector_get_fd(c));
+    if (!wsi || !set_fd(hl, qdpn_connector_get_fd(c), c, wsi)) {
+        pn_transport_t *t = qdpn_connector_transport(c);
+        pn_condition_t *cond = pn_transport_condition(t);
+        pn_condition_format(cond, "qpid-dispatch-router",
+                           "Cannot enable HTTP support for %s", qdpn_connector_name(c));
+        pn_transport_close_tail(t);
+        pn_transport_close_head(t);
     }
-    struct lws* wsi = lws_adopt_socket(h->context, qdpn_connector_get_fd(c));
-    return (qd_http_connector_t*)wsi;
 }
 
 static struct lws_protocols protocols[] = {
@@ -328,29 +340,31 @@ static struct lws_protocols protocols[] = {
     },
 };
 
-qd_http_t *qd_http(qd_dispatch_t *d, qd_log_source_t *log) {
-    qd_http_t *h = calloc(1, sizeof(qd_http_t));
-    if (!h) return NULL;
-    h->lock = sys_mutex();
-    h->dispatch = d;
-    h->log = log;
+/* FIXME aconway 2016-12-07: LWS context per listener, could reduce to per-ssl-profile */
+qd_http_listener_t *qd_http_listener(qd_dispatch_t *d, const qd_server_config_t *config) {
+    qd_http_listener_t *hl = calloc(1, sizeof(*hl));
+    if (!hl) return NULL;
+    hl->lock = sys_mutex();
+    hl->dispatch = d;
     lws_set_log_level(0, NULL);
 
     struct lws_context_creation_info info = {0};
     info.port = CONTEXT_PORT_NO_LISTEN;
     info.protocols = protocols;
     info.gid = info.uid = -1;
-    info.user = h;
+    info.user = hl;
     info.mounts = &console_mount; /* Serve the console files */
     info.server_string = QD_CONNECTION_PROPERTY_PRODUCT_VALUE;
-    h->context = lws_create_context(&info);
-    h->timer = NULL;            /* Can't init timer here, server not initialized. */
-    return h;
+    hl->context = lws_create_context(&info);
+
+    /* FIXME aconway 2016-12-07: could use a single timer for all. */
+    hl->timer = NULL;            /* Can't init timer here, server not initialized. */
+    return hl;
 }
 
-void qd_http_free(qd_http_t *h) {
-    sys_mutex_free(h->lock);
-    if (h->timer) qd_timer_free(h->timer);
-    lws_context_destroy(h->context);
-    free(h);
+void qd_http_listener_free(qd_http_listener_t *hl) {
+    sys_mutex_free(hl->lock);
+    if (hl->timer) qd_timer_free(hl->timer);
+    lws_context_destroy(hl->context);
+    free(hl);
 }
