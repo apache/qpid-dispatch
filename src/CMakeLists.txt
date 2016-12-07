@@ -39,6 +39,7 @@ add_custom_command (
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}
+  ${LibWebSockets_INCLUDE_DIRS}
   )
 
 # Build the qpid-dispatch library.
