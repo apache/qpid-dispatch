@@ -62,13 +62,27 @@ class QdstatTest(system_test.TestCase):
         self.run_qdstat(['--connections'], r'host.*container.*role')
 
     def test_links(self):
-        self.run_qdstat(['--links'], r'endpoint.*out.*local.*temp.')
+        out = self.run_qdstat(['--links'], r'endpoint.*out.*local.*temp.')
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 6)
+
+    def test_links_with_limit(self):
+        out = self.run_qdstat(['--links', '--limit=1'])
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 5)
 
     def test_nodes(self):
         self.run_qdstat(['--nodes'], r'No Router List')
 
     def test_address(self):
-        self.run_qdstat(['--address'], r'\$management')
+        out = self.run_qdstat(['--address'], r'\$management')
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 8)
+
+    def test_address_with_limit(self):
+        out = self.run_qdstat(['--address', '--limit=1'])
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 5)
 
     def test_memory(self):
         out = self.run_qdstat(['--memory'])
