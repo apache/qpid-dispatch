@@ -573,9 +573,8 @@ static const char *log_incoming(char *buf, size_t size, qdpn_connector_t *cxtr)
     const char *cname = qdpn_connector_name(cxtr);
     const char *host = qd_listener->config->host;
     const char *port = qd_listener->config->port;
-    const char *protocol = qd_listener->config->http ? "HTTP" : "AMQP";
     snprintf(buf, size, "incoming %s connection from %s to %s:%s",
-             protocol, cname, host, port);
+             qdpn_connector_http(cxtr) ? "HTTP" : "AMQP", cname, host, port);
     return buf;
 }
 
@@ -1396,6 +1395,8 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->heartbeat_timer        = 0;
     qd_server->next_connection_id     = 1;
     qd_server->py_displayname_obj     = 0;
+    qd_server->http = qd_http(qd, qd_server->log_source);
+
     qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 
     return qd_server;
@@ -1405,6 +1406,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
+    qd_http_free(qd_server->http);
     for (int i = 0; i < qd_server->thread_count; i++)
         thread_free(qd_server->threads[i]);
     qd_timer_finalize();
@@ -1697,10 +1699,16 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
     li->server      = qd_server;
     li->config      = config;
     li->context     = context;
-    /* FIXME aconway 2016-12-07: free after. */
-    qd_http_listener_t *hl = qd_http_listener(qd, config);
+    qd_http_t *http = NULL;
+    if (config->http) {
+        http = qd->server->http;
+        if (!http) {
+            qd_log(qd_server->log_source, QD_LOG_CRITICAL, "HTTP support not available for %s:%s",
+                   config->host, config->port);
+        }
+    }
     li->pn_listener = qdpn_listener(
-        qd_server->driver, config->host, config->port, config->protocol_family, hl, li);
+        qd_server->driver, config->host, config->port, config->protocol_family, http, li);
 
     if (!li->pn_listener) {
         free_qd_listener_t(li);
@@ -1717,6 +1725,7 @@ void qd_server_listener_free(qd_listener_t* li)
 {
     if (!li)
         return;
+
     qdpn_listener_free(li->pn_listener);
     free_qd_listener_t(li);
 }

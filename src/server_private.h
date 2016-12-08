@@ -192,6 +192,7 @@ struct qd_server_t {
     qd_timer_t               *heartbeat_timer;
     uint64_t                 next_connection_id;
     void                     *py_displayname_obj;
+    qd_http_t                *http;
 };
 
 ALLOC_DECLARE(qd_work_item_t);

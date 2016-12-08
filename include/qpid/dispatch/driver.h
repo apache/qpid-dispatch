@@ -31,7 +31,8 @@
 #include <proton/transport.h>
 #include <proton/types.h>
 
-struct qd_http_listener_t;
+struct qd_http_t;
+struct qd_http_connector_t;
 
 /** @file
  * API for the Driver Layer.
@@ -149,10 +150,10 @@ qdpn_listener_t *qdpn_listener(qdpn_driver_t *driver,
                                const char *host,
                                const char *port,
                                const char *protocol_family,
-                               struct qd_http_listener_t *http,
+                               struct qd_http_t  *http,
                                void* context);
 
-struct qd_http_listener_t *qdpn_listener_http(qdpn_listener_t *l);
+struct qd_http_t *qdpn_listener_http(qdpn_listener_t *l);
 
 /** Access the head listener for a driver.
  *
@@ -407,7 +408,7 @@ bool qdpn_connector_activated(qdpn_connector_t *connector, qdpn_activate_criteri
  * @return a new listener on the given host:port, NULL if error
  */
 qdpn_listener_t *qdpn_listener_fd(qdpn_driver_t *driver, pn_socket_t fd,
-                                  struct qd_http_listener_t *http, void *context);
+                                  struct qd_http_t *http, void *context);
 
 pn_socket_t qdpn_listener_get_fd(qdpn_listener_t *listener);
 
@@ -423,6 +424,9 @@ qdpn_connector_t *qdpn_connector_fd(qdpn_driver_t *driver, pn_socket_t fd, void 
 
 /** Get the file descriptor for this connector */
 int qdpn_connector_get_fd(qdpn_connector_t *connector);
+
+/** Get the HTTP per-connector state for this connector, NULL if not enabled. */
+struct qd_http_connector_t *qdpn_connector_http(qdpn_connector_t* c);
 
 /** Set the wakeup time on the connector */
 void qdpn_connector_wakeup(qdpn_connector_t* c, pn_timestamp_t t);
