@@ -110,7 +110,7 @@ if(BUILD_DOCS)
     file(GLOB_RECURSE ADOC_SRC *.adoc)
     foreach(source index book/book man/qdmanage.8 man/qdrouterd.8 man/qdstat.8 man/qdrouterd.conf.5)
       get_filename_component(name ${source} NAME)
-      get_filename_component(dir ${source} DIRECTORY)
+      get_filename_component(dir ${source} PATH)
       string(FIND ${name} "." dot)
       if(dot GREATER 0)
         string(LENGTH ${name} length)
@@ -136,7 +136,7 @@ if(BUILD_DOCS)
       # Generate man pages.
       foreach(source ${bin}/man/qdmanage.8 ${bin}/man/qdrouterd.8 ${bin}/man/qdstat.8 ${bin}/man/qdrouterd.conf.5)
         get_filename_component(name ${source} NAME)
-        get_filename_component(dir ${source} DIRECTORY)
+        get_filename_component(dir ${source} PATH)
         string(REGEX REPLACE ".*\\.([0-9])$" "\\1" section ${source}) # Man section number
         set(output ${bin}/${name})
         add_custom_command(
