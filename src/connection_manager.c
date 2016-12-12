@@ -176,6 +176,54 @@ static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
     assert(config->host);
 }
 
+
+static void qd_config_ssl_profile_process_password(qd_config_ssl_profile_t* ssl_profile)
+{
+    char *pw = ssl_profile->ssl_password;
+    if (!pw)
+        return;
+
+    //
+    // If the "password" starts with "env:" then the remaining
+    // text is the environment variable that contains the password
+    //
+    if (strncmp(pw, "env:", 4) == 0) {
+        char *env = pw + 4;
+        // skip the leading whitespace if it is there
+        while (*env == ' ') ++env;
+
+        const char* passwd = getenv(env);
+        if (passwd) {
+            //
+            // Replace the allocated directive with the looked-up password
+            //
+            free(ssl_profile->ssl_password);
+            ssl_profile->ssl_password = strdup(passwd);
+        } else {
+            qd_error(QD_ERROR_NOT_FOUND, "Failed to find a password in the environment variable");
+        }
+    }
+
+    //
+    // If the "password" starts with "literal:" then
+    // the remaining text is the password and the heading should be
+    // stripped off
+    //
+    else if (strncmp(pw, "literal:", 8) == 0) {
+        // skip the "literal:" header
+        pw += 8;
+
+        // skip the whitespace if it is there
+        while (*pw == ' ') ++pw;
+
+        // Replace the password with a copy of the string after "literal:"
+        char *copy = strdup(pw);
+        free(ssl_profile->ssl_password);
+        ssl_profile->ssl_password = copy;
+    }
+}
+
+
 static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, qd_entity_t* entity, qd_config_ssl_profile_t **ssl_profile)
 {
     qd_error_clear();
@@ -299,6 +347,11 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     ssl_profile->ssl_trusted_certificates   = qd_entity_opt_string(entity, "trustedCerts", 0); CHECK();
     ssl_profile->ssl_uid_format             = qd_entity_opt_string(entity, "uidFormat", 0); CHECK();
     ssl_profile->ssl_display_name_file      = qd_entity_opt_string(entity, "displayNameFile", 0); CHECK();
+
+    //
+    // Process the password to handle any modifications or lookups needed
+    //
+    qd_config_ssl_profile_process_password(ssl_profile); CHECK();
 
     sys_atomic_init(&ssl_profile->ref_count, 0);
     qd_log(cm->log_source, QD_LOG_INFO, "Created SSL Profile with name %s ", ssl_profile->name);
