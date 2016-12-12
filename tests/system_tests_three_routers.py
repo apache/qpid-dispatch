@@ -83,6 +83,11 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_02_anonymous_sender(self):
+        test = AnonymousSenderTest(self.routers[0].addresses[0], self.routers[2].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -136,6 +141,55 @@ class TargetedSenderTest(MessagingHandler):
             self.conn2.close()
             self.timer.cancel()
 
+    def run(self):
+        Container(self).run()
+
+
+class AnonymousSenderTest(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(AnonymousSenderTest, self).__init__(prefetch=0)
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "closest.Targeted"
+        self.error      = None
+        self.sender     = None
+        self.receiver   = None
+        self.n_expected = 10
+        self.n_sent     = 0
+        self.n_received = 0
+        self.n_accepted = 0
+
+    def timeout(self):
+        self.error = "Timeout Expired"
+        self.conn1.close()
+        self.conn2.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(10, Timeout(self))
+        self.conn1 = event.container.connect(self.address1)
+        self.conn2 = event.container.connect(self.address2)
+        # This sender has no destination addr...
+        self.sender   = event.container.create_sender(self.conn1, None)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+        self.receiver.flow(self.n_expected)
+
+    def on_sendable(self, event):
+        if self.n_sent < self.n_expected:
+            # ...so we add the destination to the messages.
+            msg = Message(body=self.n_sent, address=self.dest)
+            event.sender.send(msg)
+            self.n_sent += 1
+
+    def on_accepted(self, event):
+        self.n_accepted += 1
+
+    def on_message(self, event):
+        self.n_received += 1
+        if self.n_received == self.n_expected:
+            self.receiver.close()
+            self.conn1.close()
+            self.conn2.close()
+            self.timer.cancel()
 
     def run(self):
         Container(self).run()
