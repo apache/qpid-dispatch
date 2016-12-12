@@ -176,6 +176,46 @@ static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
     assert(config->host);
 }
 
+static char* qd_config_ssl_profile_get_password(qd_config_ssl_profile_t* ssl_profile)
+{
+    char *pw = ssl_profile->ssl_password;
+    if (!pw) return pw;
+
+    /* if the "password" starts with "env:" or "env: " then the remaining
+     * text is the environment variable that contains the password
+     */
+    if (strncmp(pw, "env:", 4) == 0) {
+        char *env = pw + 4;
+        /* skip the space if it is there */
+        if (*env == ' ') ++env;
+
+        const char* passwd = getenv(env);
+        if (passwd) {
+            free(ssl_profile->ssl_password);
+            pw = ssl_profile->ssl_password = strdup(passwd);
+        } else {
+            qd_error(QD_ERROR_NOT_FOUND, "Failed to find a password in the environment variable '%s'", env);
+        }
+        return pw;
+    }
+
+    /* if the "password" starts with "literal:" or "literal: " then
+     * the remaining text is the password and the heading should be
+     * stripped off
+     */
+    if (strncmp(pw, "literal:", 8) == 0) {
+        /* skip the "literal:" header */
+        pw += 8;
+        /* skip the space if it is there */
+        if (*pw == ' ') ++pw;
+        /* return a pointer into the middle of the string where the literal password starts */
+        return pw;
+    }
+
+    /* default case: return the value we found in the config as-is */
+    return pw;
+}
+
 static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, qd_entity_t* entity, qd_config_ssl_profile_t **ssl_profile)
 {
     qd_error_clear();
@@ -266,13 +306,14 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
         if (*ssl_profile) {
             config->ssl_certificate_file = (*ssl_profile)->ssl_certificate_file;
             config->ssl_private_key_file = (*ssl_profile)->ssl_private_key_file;
-            config->ssl_password = (*ssl_profile)->ssl_password;
+            config->ssl_password = qd_config_ssl_profile_get_password(*ssl_profile);
             config->ssl_trusted_certificate_db = (*ssl_profile)->ssl_trusted_certificate_db;
             config->ssl_trusted_certificates = (*ssl_profile)->ssl_trusted_certificates;
             config->ssl_uid_format = (*ssl_profile)->ssl_uid_format;
             config->ssl_display_name_file = (*ssl_profile)->ssl_display_name_file;
         }
         sys_atomic_inc(&(*ssl_profile)->ref_count);
+        CHECK();
     }
 
     return QD_ERROR_NONE;
