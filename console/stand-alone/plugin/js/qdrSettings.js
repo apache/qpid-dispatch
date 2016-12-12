@@ -71,27 +71,25 @@ var QDR = (function(QDR) {
       }
     }
 
-    var doConnect = function() {
+    var doConnect = function(opts) {
       if (!$scope.formEntity.address)
         $scope.formEntity.address = "localhost"
 
-      console.log("attempting to connect to " + $scope.formEntity.address + ':' + $scope.formEntity.port);
-      QDRService.addDisconnectAction(function() {
-        $timeout(function() {
-          QDR.log.debug("disconnect action called");
-          $scope.connecting = false;
-          $scope.connectionErrorText = QDRService.errorText;
-          $scope.connectionError = true;
-        })
-      });
       QDRService.addConnectAction(function() {
+        QDRService.addDisconnectAction(function() {
+          $timeout(function() {
+            QDR.log.debug("disconnect action called");
+            $scope.connecting = false;
+            $scope.connectionErrorText = QDRService.errorText;
+            $scope.connectionError = true;
+          })
+        });
         QDRService.getSchema(function () {
           QDR.log.debug("got schema after connection")
           QDRService.addUpdatedAction("initialized", function () {
             QDRService.delUpdatedAction("initialized")
             QDR.log.debug("got initial topology")
             $timeout(function() {
-QDR.log.debug("changing location to ")
               $scope.connecting = false;
               if ($location.path().startsWith(QDR.pluginRoot)) {
                   var searchObject = $location.search();
@@ -101,7 +99,6 @@ QDR.log.debug("changing location to ")
                   }
                   $location.search('org', null)
                   $location.path(QDR.pluginRoot + "/" + goto);
-QDR.log.debug(QDR.pluginRoot + "/" + goto)
               }
             })
           })
@@ -110,16 +107,14 @@ QDR.log.debug(QDR.pluginRoot + "/" + goto)
           QDRService.topology.get()
         })
       });
-      QDRService.connect($scope.formEntity);
+      var options = {address: $scope.formEntity.address, port: $scope.formEntity.port}
+      // if we have already successfully connected (the test connections succeeded)
+      if (opts && opts.connection) {
+        options.connection = opts.connection
+        options.context = opts.context
+      }
+      QDRService.connect(options);
     }
-
-    var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);
-    if (settings && settings.autostart && !QDRService.connected) {
-      $scope.connectionError = false;
-      $scope.connecting = true;
-      doConnect()
-    }
-
   }]);
 
 

@@ -43,45 +43,50 @@ var QDR = (function(QDR) {
     $scope.selectedRecordName = localStorage['QDRSelectedRecordName'];
     $scope.nodes = []
     $scope.currentNode = undefined;
-    $scope.modes = [{
-          content: '<a><i class="icon-list"></i> Attributes</a>',
-      id: 'attributes',
-      op: 'READ',
-      title: "View router attributes",
-          isValid: function () { return true; }
+    $scope.modes = [
+      {
+        content: '<a><i class="icon-list"></i> Attributes</a>',
+        id: 'attributes',
+        op: 'READ',
+        title: "View router attributes",
+        isValid: function () { return true; }
       },
       {
-          content: '<a><i class="icon-edit"></i> Update</a>',
-          id: 'operations',
-          op: 'UPDATE',
-          title: "Update this attribute",
-          isValid: function () { return $scope.operations.indexOf(this.op) > -1 }
+        content: '<a><i class="icon-edit"></i> Update</a>',
+        id: 'operations',
+        op: 'UPDATE',
+        title: "Update this attribute",
+        isValid: function () {
+          QDR.log.debug("isValid UPDAATE? " + this.op)
+          console.dump($scope.operations)
+          return $scope.operations.indexOf(this.op) > -1
+        }
       },
       {
-          content: '<a><i class="icon-plus"></i> Create</a>',
-          id: 'operations',
-          op: 'CREATE',
-          title: "Create a new attribute",
-          isValid: function () { return $scope.operations.indexOf(this.op) > -1 }
+        content: '<a><i class="icon-plus"></i> Create</a>',
+        id: 'operations',
+        op: 'CREATE',
+        title: "Create a new attribute",
+        isValid: function () { return $scope.operations.indexOf(this.op) > -1 }
       },
       {
-          content: '<a><i class="icon-remove"></i> Delete</a>',
-          id: 'delete',
-          op: 'DELETE',
-          title: "Delete",
-          isValid: function () { return $scope.operations.indexOf(this.op) > -1 }
+        content: '<a><i class="icon-remove"></i> Delete</a>',
+        id: 'delete',
+        op: 'DELETE',
+        title: "Delete",
+        isValid: function () { return $scope.operations.indexOf(this.op) > -1 }
       },
       {
-          content: '<a><i class="icon-eye-open"></i> Fetch</a>',
-          id: 'log',
-          op: 'GET-LOG',
-          title: "Fetch recent log entries",
-          isValid: function () { return ($scope.selectedEntity === 'log') }
+        content: '<a><i class="icon-eye-open"></i> Fetch</a>',
+        id: 'log',
+        op: 'GET-LOG',
+        title: "Fetch recent log entries",
+        isValid: function () { return ($scope.selectedEntity === 'log') }
       }
-      ];
+    ];
     $scope.operations = []
-        $scope.currentMode = $scope.modes[0];
-    $scope.isModeSelected = function (mode) {
+      $scope.currentMode = $scope.modes[0];
+      $scope.isModeSelected = function (mode) {
       return mode === $scope.currentMode;
     }
     $scope.fetchingLog = false;

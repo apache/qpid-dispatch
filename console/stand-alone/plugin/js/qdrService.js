@@ -34,12 +34,6 @@ var QDR = (function(QDR) {
       updatedActions: {},
       updating: false,        // are we updating the node list in the background
       maxCorrelatorDepth: 10, // max number of outstanding requests to allow
-      /**
-       * @property options
-       * Holds a reference to the connection options when
-       * a connection is started
-       */
-      options: undefined,
 
       /*
        * @property message
@@ -53,7 +47,6 @@ var QDR = (function(QDR) {
 
       schema: undefined,
 
-      toAddress: undefined,
       connected: false,
       gotTopology: false,
       errorText: undefined,
@@ -113,7 +106,7 @@ console.dump(e)
         }
       },
       redirectWhenConnected: function(org) {
-        $location.path("/" + QDR.pluginName + "/connect")
+        $location.path("/connect")
         $location.search('org', org);
       },
 
@@ -810,7 +803,6 @@ console.dump(e)
           self.topology.error(Error("unexpected format for router address: " + toAddr));
           return;
         }
-        //var fullAddr =  self.toAddress + "/" + toAddrParts.join('/');
         var fullAddr = toAddrParts.join('/');
         return fullAddr;
       },
@@ -924,8 +916,39 @@ console.dump(e)
         self.errorText = "Disconnected."
       },
 
+      connectionTimer: null,
+
+      testConnect: function (options, timeout, callback) {
+        clearTimeout(self.connectionTimer)
+        var connection;
+        var reconnect = angular.isDefined(options.reconnect) ? options.reconnect : true
+        QDR.log.debug("testConnect called with reconnect " + reconnect)
+        var baseAddress = options.address + ':' + options.port;
+        try {
+            var ws = self.rhea.websocket_connect(WebSocket);
+            connection = self.rhea.connect({
+            connection_details: ws('ws://' + baseAddress, ["binary"]),
+            reconnect: reconnect,
+            properties: {
+              console_identifier: 'Dispatch console'
+            }
+          });
+        } catch (e) {
+          QDR.log.debug("exception caught on test connect")
+          self.errorText = "Connection failed"
+          callback({error: e})
+        }
+        self.connectionTimer = setTimeout(function () {
+          callback({error: "timedout"})
+        }, timeout)
+        connection.on("connection_open", function (context) {
+          clearTimeout(self.connectionTimer)
+          callback({connection: connection, context: context})
+        })
+      },
+
       connect: function(options) {
-        self.options = options;
+        clearTimeout(self.connectionTimer)
         self.topologyInitialized = false;
         if (!self.connected) {
           var okay = {
@@ -933,10 +956,7 @@ console.dump(e)
             sender: false,
             receiver: false
           }
-          var port = options.port || 5673;
-          var baseAddress = options.address + ':' + port;
-          var ws = self.rhea.websocket_connect(WebSocket);
-          self.toAddress = "amqp://" + baseAddress;
+          var sender, receiver
           self.connectionError = undefined;
 
           var stop = function(context) {
@@ -968,67 +988,63 @@ console.dump(e)
             self.executeDisconnectActions();
           }
 
-          QDR.log.debug("****** calling rhea.connect ********")
-          var connection;
-          try {
-              connection = self.rhea.connect({
-                  // FIXME aconway 2016-11-29: "binary" for wsproxy,
-                  // should also include "amqp" - waiting on libwebsocket fix.
-              connection_details: ws('ws://' + baseAddress, ["binary"]),
-              reconnect: true,
-              properties: {
-                console_identifier: 'Dispatch console'
-              }
-            });
-          } catch (e) {
-            QDR.log.debug("exception caught on connect")
-            self.errorText = "Connection failed"
-            onDisconnect();
-          }
-          if (!self.connectionError) {
-            connection.on('connection_open', function(context) {
-              self.version = context.connection.properties.version
+          // called after connection.open event is fired or connection error has happened
+          var connectionCallback = function (options) {
+            if (!options.error) {
+              connection = options.connection
+              self.version = options.context.connection.properties.version
               QDR.log.debug("connection_opened")
               okay.connection = true;
               okay.receiver = false;
               okay.sender = false;
-            })
-            connection.on('disconnected', function(context) {
-              QDR.log.debug("connection disconnected")
-              self.errorText = "Unable to connect"
-              onDisconnect();
-            })
-            connection.on('connection_close', function(context) {
-              QDR.log.debug("connection closed")
-              self.errorText = "Disconnected"
-              onDisconnect();
-            })
 
-            var sender = connection.open_sender();
-            sender.on('sender_open', function(context) {
-              QDR.log.debug("sender_opened")
-              okay.sender = true
-              maybeStart()
-            })
-            sender.on('sendable', function(context) {
-              //QDR.log.debug("sendable")
-              self.sendable = true;
-              maybeStart();
-            })
+              connection.on('disconnected', function(context) {
+                QDR.log.debug("connection disconnected")
+                self.errorText = "Unable to connect"
+                onDisconnect();
+              })
+              connection.on('connection_close', function(context) {
+                QDR.log.debug("connection closed")
+                self.errorText = "Disconnected"
+                onDisconnect();
+              })
 
-            var receiver = connection.open_receiver({
-              source: {
-                dynamic: true
-              }
-            });
-            receiver.on('receiver_open', function(context) {
-              QDR.log.debug("receiver_opened")
-              okay.receiver = true;
-              maybeStart()
-            })
-            receiver.on("message", function(context) {
-              self.correlator.resolve(context);
-            });
+              sender = connection.open_sender();
+              sender.on('sender_open', function(context) {
+                QDR.log.debug("sender_opened")
+                okay.sender = true
+                maybeStart()
+              })
+              sender.on('sendable', function(context) {
+                //QDR.log.debug("sendable")
+                self.sendable = true;
+                maybeStart();
+              })
+
+              receiver = connection.open_receiver({
+                source: {
+                  dynamic: true
+                }
+              });
+              receiver.on('receiver_open', function(context) {
+                QDR.log.debug("receiver_opened")
+                okay.receiver = true;
+                maybeStart()
+              })
+              receiver.on("message", function(context) {
+                self.correlator.resolve(context);
+              });
+            }
+          }
+
+          QDR.log.debug("****** calling rhea.connect ********")
+          var connection;
+          if (!options.connection) {
+            QDR.log.debug("rhea.connect was not passed an existing connection")
+            self.testConnect(options, 10000, connectionCallback)
+          } else {
+            QDR.log.debug("rhea.connect WAS passed an existing connection")
+            connectionCallback(options)
           }
         }
       }
@@ -1041,11 +1057,11 @@ console.dump(e)
 }(QDR || {}));
 
 (function() {
-  console.dump = function(object) {
+  console.dump = function(o) {
     if (window.JSON && window.JSON.stringify)
-      QDR.log.info(JSON.stringify(object, undefined, 2));
+      QDR.log.info(JSON.stringify(o, undefined, 2));
     else
-      console.log(object);
+      console.log(o);
   };
 })();
 

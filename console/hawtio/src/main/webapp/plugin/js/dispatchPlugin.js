@@ -114,7 +114,6 @@ var QDR = (function(QDR) {
     })
     .filter('to_trusted', function($sce){
       return function(text) {
-      debugger;
         return $sce.trustAsHtml(text);
       };
       })
@@ -177,7 +176,7 @@ var QDR = (function(QDR) {
    *     plugin.  This is just a matter of adding to the workspace's
    *     topLevelTabs array.
    */
-  QDR.module.run(function(workspace, viewRegistry, layoutFull, $route, $rootScope, $location, localStorage, QDRService, QDRChartService) {
+  QDR.module.run(function(workspace, viewRegistry, layoutFull, $route, $rootScope, $location, $timeout, localStorage, QDRService, QDRChartService) {
     QDR.log.info("*************creating Dispatch Console************");
     var curPath = $location.path()
     QDR.log.info("curPath is " + curPath)
@@ -219,6 +218,36 @@ var QDR = (function(QDR) {
       QDRChartService.init(); // initialize charting service after we are connected
     });
 
+    var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]);
+    if (settings && settings.autostart) {
+      QDRService.addConnectAction(function() {
+        QDRService.addDisconnectAction( function () {
+          $location.path(QDR.pluginRoot + "/connect");
+          $location.replace();
+          $rootScope.$apply();
+        })
+        QDRService.getSchema(function () {
+          QDR.log.debug("got schema after connection")
+          QDRService.addUpdatedAction("initialized", function () {
+            QDRService.delUpdatedAction("initialized")
+            QDR.log.debug("got initial topology")
+            $timeout(function() {
+              if ($location.path().startsWith(QDR.pluginRoot)) {
+                var lastLocation = localStorage[QDR.LAST_LOCATION] || "/overview"
+                $location.search('org', null)
+                $location.path(lastLocation);
+                $location.replace();
+                $rootScope.$apply();
+              }
+            })
+          })
+          QDR.log.debug("requesting a topology")
+          QDRService.setUpdateEntities([])
+          QDRService.topology.get()
+        })
+      });
+      QDRService.connect(settings);
+    }
     $rootScope.$on('$routeChangeSuccess', function() {
       var path = $location.path();
       if (path.startsWith(QDR.pluginRoot)) {

@@ -78,19 +78,34 @@ var QDR = (function(QDR) {
   QDR.module.config(function($routeProvider) {
     $routeProvider
       .when('/', {
-        templateUrl: QDR.templatePath + 'qdrConnect.html'
+        templateUrl: QDR.templatePath + 'qdrOverview.html'
+        })
+      .when('/QDR/overview', {
+        templateUrl: QDR.templatePath + 'qdrOverview.html'
         })
       .when('/overview', {
           templateUrl: QDR.templatePath + 'qdrOverview.html'
         })
+      .when('/QDR/topology', {
+          templateUrl: QDR.templatePath + 'qdrTopology.html'
+        })
       .when('/topology', {
           templateUrl: QDR.templatePath + 'qdrTopology.html'
+        })
+      .when('/QDR/list', {
+          templateUrl: QDR.templatePath + 'qdrList.html'
         })
       .when('/list', {
           templateUrl: QDR.templatePath + 'qdrList.html'
         })
+      .when('/QDR/schema', {
+          templateUrl: QDR.templatePath + 'qdrSchema.html'
+        })
       .when('/schema', {
           templateUrl: QDR.templatePath + 'qdrSchema.html'
+        })
+      .when('/QDR/charts', {
+          templateUrl: QDR.templatePath + 'qdrCharts.html'
         })
       .when('/charts', {
           templateUrl: QDR.templatePath + 'qdrCharts.html'
@@ -183,10 +198,53 @@ var QDR = (function(QDR) {
       QDRService.delUpdatedAction("initChartService")
       QDRChartService.init(); // initialize charting service after we are connected
     });
-    $timeout(function () {
-      $location.path('/connect')
-      $location.search('org', org)
-    })
+
+    var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]) || {autostart: false, address: 'localhost', port: 5673}
+    if (!QDRService.connected) {
+      // attempt to connect to the host:port that served this page
+      var protocol = $location.protocol()
+      var host = $location.host()
+      var port = $location.port()
+      var search = $location.search()
+      if (search.org) {
+        if (search.org === 'connect')
+          $location.search("org", "overview")
+      }
+
+      QDRService.testConnect({address: host, port: port, reconnect: true}, 10000, function (e) {
+        if (e.error) {
+          QDR.log.debug("failed to auto-connect to " + host + ":" + port)
+          // the connect page should rneder
+          $timeout(function () {
+            $location.path('/connect')
+            $location.search('org', org)
+          })
+        } else {
+          QDRService.addConnectAction(function() {
+            QDRService.getSchema(function () {
+              QDR.log.debug("got schema after connection")
+              QDRService.addUpdatedAction("initialized", function () {
+                QDRService.delUpdatedAction("initialized")
+                QDR.log.debug("got initial topology")
+                $timeout(function() {
+                  if (org === '' || org === 'connect') {
+                    org = localStorage[QDR.LAST_LOCATION] || "/overview"
+                  }
+                  QDR.log.debug("after initialization going to " + org)
+                  $location.path(org)
+                  $location.search('org', null)
+                  $location.replace()
+                })
+              })
+              QDR.log.debug("requesting a topology")
+              QDRService.setUpdateEntities([])
+              QDRService.topology.get()
+            })
+          });
+          QDRService.connect(e)
+        }
+      })
+    }
 
     $rootScope.$on('$routeChangeSuccess', function() {
       var path = $location.path();
