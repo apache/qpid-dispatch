@@ -341,7 +341,6 @@ class Qdrouterd(Process):
         if wait:
             self.wait_ready()
 
-
     @property
     def management(self):
         """Return a management agent proxy for this router"""
@@ -414,11 +413,10 @@ class Qdrouterd(Process):
         try:
             ret_val = False
             response = self.management.query(type="org.apache.qpid.dispatch.connection")
-            index_name = response.attribute_names.index('name')
-            index_identity = response.attribute_names.index('identity')
+            index_host = response.attribute_names.index('host')
             for result in response.results:
-                outs = 'connection/%s:%s:%s' % (host, port, str(result[index_identity]))
-                if result[index_name] == outs:
+                outs = '%s:%s' % (host, port)
+                if result[index_host] == outs:
                     ret_val = True
             return ret_val
         except:

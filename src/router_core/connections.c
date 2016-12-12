@@ -17,10 +17,11 @@
  * under the License.
  */
 
-#include "router_core_private.h"
+#include <qpid/dispatch/router_core.h>
 #include "route_control.h"
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
+#include "router_core_private.h"
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -65,12 +66,15 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out,
                                         int                    link_capacity,
-                                        const char            *vhost)
+                                        const char            *vhost,
+                                        qdr_connection_info_t *connection_info)
 {
     qdr_action_t     *action = qdr_action(qdr_connection_opened_CT, "connection_opened");
     qdr_connection_t *conn   = new_qdr_connection_t();
 
     ZERO(conn);
+    conn->identity              = qdr_identifier(core);
+    conn->connection_info       = connection_info;
     conn->core                  = core;
     conn->user_context          = 0;
     conn->incoming              = incoming;
@@ -83,6 +87,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     conn->mask_bit              = -1;
     DEQ_INIT(conn->links);
     DEQ_INIT(conn->work_list);
+    conn->connection_info->role = conn->role;
     conn->work_lock = sys_mutex();
 
     if (vhost) {
@@ -113,6 +118,61 @@ void qdr_connection_set_context(qdr_connection_t *conn, void *context)
 {
     if (conn)
         conn->user_context = context;
+}
+
+qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
+                                           bool             is_authenticated,
+                                           bool             opened,
+                                           char            *sasl_mechanisms,
+                                           qd_direction_t   dir,
+                                           char            *host,
+                                           char            *ssl_proto,
+                                           char            *ssl_cipher,
+                                           char            *user,
+                                           const char      *container,
+                                           pn_data_t       *connection_properties,
+                                           int              ssl_ssf)
+{
+    qdr_connection_info_t *connection_info = new_qdr_connection_info_t();
+    connection_info->is_encrypted          = is_encrypted;
+    connection_info->is_authenticated      = is_authenticated;
+    connection_info->opened                = opened;
+    connection_info->container             = container;
+
+    if (sasl_mechanisms)
+        connection_info->sasl_mechanisms      = strdup(sasl_mechanisms);
+    else
+        connection_info->sasl_mechanisms = 0;
+
+    connection_info->dir = dir;
+
+    if (host)
+        connection_info->host = strdup(host);
+    else
+        connection_info->host = 0;
+
+    if (ssl_proto)
+        connection_info->ssl_proto = strdup(ssl_proto);
+    else
+        connection_info->ssl_proto = 0;
+
+    if (ssl_cipher)
+        connection_info->ssl_cipher = strdup(ssl_cipher);
+    else
+        connection_info->ssl_cipher = 0;
+
+    if (user)
+        connection_info->user = strdup(user);
+    else
+        connection_info->user = 0;
+
+    pn_data_t *qdr_conn_properties = pn_data(0);
+    pn_data_copy(qdr_conn_properties, connection_properties);
+
+    connection_info->connection_properties = qdr_conn_properties;
+    connection_info->ssl_ssf = ssl_ssf;
+
+    return connection_info;
 }
 
 
@@ -1012,6 +1072,23 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
     qdr_field_free(action->args.connection.container_id);
 }
 
+static void qdr_connection_free(qdr_connection_t *conn)
+{
+    if (conn->connection_info) {
+        free(conn->connection_info->sasl_mechanisms);
+        free(conn->connection_info->host);
+        free(conn->connection_info->ssl_proto);
+        free(conn->connection_info->ssl_cipher);
+        free(conn->connection_info->user);
+        pn_data_free(conn->connection_info->connection_properties);
+    }
+
+    free(conn->tenant_space);
+
+    free_qdr_connection_info_t(conn->connection_info);
+    free_qdr_connection_t(conn);
+}
+
 
 static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
@@ -1071,8 +1148,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 
     DEQ_REMOVE(core->open_connections, conn);
     sys_mutex_free(conn->work_lock);
-    free(conn->tenant_space);
-    free_qdr_connection_t(conn);
+    qdr_connection_free(conn);
 }
 
 
