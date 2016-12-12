@@ -325,7 +325,7 @@ class ManagementTest(system_test.TestCase):
 
     def test_connection(self):
         """Verify there is at least one connection"""
-        response = self.node.query(type='connection')
+        response = self.node.query(type='org.apache.qpid.dispatch.connection')
         self.assertTrue(response.results)
 
     def test_router(self):

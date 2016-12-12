@@ -32,13 +32,14 @@
  * exclusive access to that connection.
  */
 
-typedef struct qdr_core_t         qdr_core_t;
-typedef struct qdr_subscription_t qdr_subscription_t;
-typedef struct qdr_connection_t   qdr_connection_t;
-typedef struct qdr_link_t         qdr_link_t;
-typedef struct qdr_delivery_t     qdr_delivery_t;
-typedef struct qdr_terminus_t     qdr_terminus_t;
-typedef struct qdr_error_t        qdr_error_t;
+typedef struct qdr_core_t            qdr_core_t;
+typedef struct qdr_subscription_t    qdr_subscription_t;
+typedef struct qdr_connection_t      qdr_connection_t;
+typedef struct qdr_link_t            qdr_link_t;
+typedef struct qdr_delivery_t        qdr_delivery_t;
+typedef struct qdr_terminus_t        qdr_terminus_t;
+typedef struct qdr_error_t           qdr_error_t;
+typedef struct qdr_connection_info_t qdr_connection_info_t;
 
 typedef enum {
     QD_ROUTER_MODE_STANDALONE,  ///< Standalone router.  No routing protocol participation
@@ -140,7 +141,6 @@ typedef enum {
     QDR_ROLE_ON_DEMAND
 } qdr_connection_role_t;
 
-
 /**
  * qdr_connection_opened
  *
@@ -170,7 +170,8 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out,
                                         int                    link_capacity,
-                                        const char            *vhost);
+                                        const char            *vhost,
+                                        qdr_connection_info_t *connection_info);
 
 /**
  * qdr_connection_closed
@@ -693,5 +694,18 @@ void qdr_query_free(qdr_query_t *query);
 
 typedef void (*qdr_manage_response_t) (void *context, const qd_amqp_error_t *status, bool more);
 void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler);
+
+qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
+                                           bool             is_authenticated,
+                                           bool             opened,
+                                           char            *sasl_mechanisms,
+                                           qd_direction_t   dir,
+                                           char            *host,
+                                           char            *ssl_proto,
+                                           char            *ssl_cipher,
+                                           char            *user,
+                                           const char      *container,
+                                           pn_data_t       *connection_properties,
+                                           int ssl_ssf);
 
 #endif
