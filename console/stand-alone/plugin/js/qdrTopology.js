@@ -24,8 +24,8 @@ var QDR = (function(QDR) {
   QDR.module.controller('QDR.TopologyFormController', function($scope, QDRService) {
 
     $scope.attributes = []
-    var nameTemplate = '<div title="{{row.entity.description}}" class="ngCellText"><span>{{row.entity.attributeName}}</span></div>';
-    var valueTemplate = '<div title="{{row.entity.attributeValue}}" class="ngCellText"><span>{{row.entity.attributeValue}}</span></div>';
+    var nameTemplate = '<div title="{{row.entity.description}}" class="ngCellText {{row.entity.cls}}"><span>{{row.entity.attributeName}}</span></div>';
+    var valueTemplate = '<div title="{{row.entity.attributeValue}}" class="ngCellText {{row.entity.cls}}"><span>{{row.entity.attributeValue}}</span></div>';
     $scope.topoGridOptions = {
       data: 'attributes',
       enableColumnResize: false,
@@ -45,8 +45,13 @@ var QDR = (function(QDR) {
       var attributes = args.attributes;
       var entityTypes = QDRService.schema.entityTypes[args.entity].attributes;
       attributes.forEach(function(attr) {
-        if (entityTypes[attr.attributeName] && entityTypes[attr.attributeName].description)
+        attr.cls = ''
+QDR.log.debug("attr.description " + attr.description)
+        if (attr.attributeName === 'Listening on')
+          attr.cls = 'listening-on'
+        if (entityTypes[attr.attributeName] && entityTypes[attr.attributeName].description) {
           attr.description = entityTypes[attr.attributeName].description
+        }
       })
       $scope.attributes = attributes;
       $scope.form = args.entity;

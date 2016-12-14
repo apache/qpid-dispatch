@@ -930,3 +930,7 @@ div#durationSlider, div#rateSlider {
 div#list-controller {
     padding-left: 300px;
 }
+
+.listening-on {
+    background-color: #CCFFCC;
+}
