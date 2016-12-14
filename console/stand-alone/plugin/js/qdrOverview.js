@@ -1747,6 +1747,7 @@ QDR.log.debug("newly created node needs to be activated")
 
     var htmlReady = false;
     var dataReady = false;
+    $scope.largeNetwork = QDRService.isLargeNetwork()
     var logs = new Folder("Logs")
     logs.type = "Logs"
     logs.info = allLogInfo
@@ -1768,9 +1769,10 @@ QDR.log.debug("newly created node needs to be activated")
       $('#overtree').dynatree({
         onActivate: activated,
         onExpand: treeNodeExpanded,
+        autoCollapse: $scope.largeNetwork,
+        activeVisible: !$scope.largeNetwork,
         selectMode: 1,
         debugLevel: 0,
-        activeVisible: false,
         children: topLevelChildren
       })
       treeRoot = $("#overtree").dynatree("getRoot");

@@ -706,6 +706,7 @@ var QDR = (function(QDR) {
 
     var treeReady = false;
     var serviceReady = false;
+    $scope.largeNetwork = QDRService.isLargeNetwork()
     // called after we know for sure the schema is fetched and the routers are all ready
     QDRService.addUpdatedAction("initList", function () {
       QDRService.stopUpdating();
@@ -765,7 +766,8 @@ var QDR = (function(QDR) {
         onActivate: onTreeSelected,
         onExpand: onTreeNodeExpanded,
         selectMode: 1,
-        activeVisible: false,
+        autoCollapse: $scope.largeNetwork,
+        activeVisible: !$scope.largeNetwork,
         debugLevel: 0,
         children: entityTreeChildren
       })

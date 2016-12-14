@@ -266,6 +266,10 @@ console.dump(e)
         return nl;
       },
 
+      isLargeNetwork: function () {
+        return Object.keys(self.topology._nodeInfo).length >= 12
+      },
+
       // given an attribute name array, find the value at the same index in the values array
       valFor: function(aAr, vAr, key) {
         var idx = aAr.indexOf(key);
