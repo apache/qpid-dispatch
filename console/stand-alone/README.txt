@@ -2,20 +2,20 @@
 The stand-alone qpid dispatch console is an html web site that monitors and controls a qpid dispatch router
 
 To install the console:
-- install and setup a web server (such as apache tomcat)
-- under the web servers's webapps dir, create a dispatch dir
-- copy the contents of this directory to the web server's dispatch dir
+- The console files are normally installed under /usr/share/qpid-dispatch/console/stand-alone
 
 To run the web console:
-- start the web server
-- in a browser, navigate to http://localhost:<htmlport>/dispatch/
+- Ensure one of the routers in your network is configured with a normal listener with http: true
+listener {
+    role: normal
+    host: 0.0.0.0
+    port: 5673
+    http: true
+    saslMechanisms: ANONYMOUS
+}
+- start the router
+- in a browser, navigate to http://localhost:5673/
 
-To connect to a qpid dispatch router from the console, you'll need to setup a websockets to tcp proxy.
-
-To setup and run a websockets proxy:
-- dnf install websockify
-- websockify 0.0.0.0:5673 0.0.0.0:<router's listener port>
-
-On the console's connect page you can then use the address of your web server and port 5673 to connect.
-
+The router will serve the console's html/js/css from the install directory.
+The cosole will automatically connect to the router at localhost:5673
 
