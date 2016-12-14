@@ -100,13 +100,13 @@ class RouterTestDeprecated(RouterTestPlainSaslCommon):
         # ContainerEntity has been deprecated.
 
         # role should be inter-router
-        self.assertEqual(u'inter-router', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][9])
+        self.assertEqual(u'inter-router', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][2])
 
         # sasl must be plain
-        self.assertEqual(u'PLAIN', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][12])
+        self.assertEqual(u'PLAIN', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][5])
 
         # user must be test@domain.com
-        self.assertEqual(u'test@domain.com', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][16])
+        self.assertEqual(u'test@domain.com', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][7])
 
         # Make sure that the deprecated linkRoutePattern is set up correctly
         query_response = local_node.query(type='org.apache.qpid.dispatch.router.config.linkRoute')
