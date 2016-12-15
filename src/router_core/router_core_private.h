@@ -117,6 +117,7 @@ struct qdr_action_t {
             qdr_delivery_t *delivery;
             uint64_t        disposition;
             bool            settled;
+            qdr_error_t    *error;
         } delivery;
 
         //
@@ -213,6 +214,7 @@ struct qdr_delivery_t {
     qd_iterator_t       *to_addr;
     qd_iterator_t       *origin;
     uint64_t             disposition;
+    qdr_error_t         *error;
     bool                 settled;
     bool                 presettled;
     qdr_delivery_where_t where;
