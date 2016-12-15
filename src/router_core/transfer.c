@@ -52,6 +52,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
     dlv->settled        = settled;
     dlv->presettled     = settled;
     dlv->link_exclusion = link_exclusion;
+    dlv->error          = 0;
 
     action->args.connection.delivery = dlv;
     qdr_action_enqueue(link->core, action);
@@ -75,6 +76,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     dlv->settled        = settled;
     dlv->presettled     = settled;
     dlv->link_exclusion = link_exclusion;
+    dlv->error          = 0;
 
     action->args.connection.delivery = dlv;
     qdr_action_enqueue(link->core, action);
@@ -97,6 +99,7 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     dlv->msg        = msg;
     dlv->settled    = settled;
     dlv->presettled = settled;
+    dlv->error      = 0;
 
     action->args.connection.delivery = dlv;
     action->args.connection.tag_length = tag_length;
@@ -221,12 +224,13 @@ void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr, bool ex
 
 
 void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition,
-                                     bool settled, bool ref_given)
+                                     bool settled, qdr_error_t *error, bool ref_given)
 {
     qdr_action_t *action = qdr_action(qdr_update_delivery_CT, "update_delivery");
     action->args.delivery.delivery    = delivery;
     action->args.delivery.disposition = disposition;
     action->args.delivery.settled     = settled;
+    action->args.delivery.error       = error;
 
     //
     // The delivery's ref_count must be incremented to protect its travels into the
@@ -305,6 +309,11 @@ void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *len
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery)
 {
     return delivery->msg;
+}
+
+qdr_error_t *qdr_delivery_error(const qdr_delivery_t *delivery)
+{
+    return delivery->error;
 }
 
 
@@ -643,6 +652,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
     bool            dlv_moved  = false;
     uint64_t        disp       = action->args.delivery.disposition;
     bool            settled    = action->args.delivery.settled;
+    qdr_error_t    *error      = action->args.delivery.error;
 
     //
     // Logic:
@@ -659,6 +669,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         dlv->disposition = disp;
         if (peer) {
             peer->disposition = disp;
+            peer->error       = error;
             push = true;
         }
     }

@@ -111,6 +111,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     dlv->presettled = dlv->settled;
     *tag            = core->next_tag++;
     dlv->tag_length = 8;
+    dlv->error      = 0;
 
     //
     // Create peer linkage only if the delivery is not settled

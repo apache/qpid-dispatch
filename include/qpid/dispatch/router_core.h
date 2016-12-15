@@ -348,6 +348,8 @@ qdr_error_t *qdr_error(const char *name, const char *description);
 void qdr_error_free(qdr_error_t *error);
 void qdr_error_copy(qdr_error_t *from, pn_condition_t *to);
 char *qdr_error_description(qdr_error_t *err);
+char *qdr_error_name(qdr_error_t *err);
+pn_data_t *qdr_error_info(qdr_error_t *err);
 
 /**
  ******************************************************************************
@@ -553,7 +555,7 @@ void qdr_connection_handlers(qdr_core_t                *core,
  ******************************************************************************
  */
 void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disp,
-                                     bool settled, bool ref_given);
+                                     bool settled, qdr_error_t *error, bool ref_given);
 
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
 void *qdr_delivery_get_context(qdr_delivery_t *delivery);
@@ -561,6 +563,7 @@ void qdr_delivery_incref(qdr_delivery_t *delivery);
 void qdr_delivery_decref(qdr_delivery_t *delivery);
 void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *length);
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
+qdr_error_t *qdr_delivery_error(const qdr_delivery_t *delivery);
 
 /**
  ******************************************************************************
