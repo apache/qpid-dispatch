@@ -437,6 +437,10 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
 {
     qd_router_t    *router   = (qd_router_t*) context;
     qdr_delivery_t *delivery = (qdr_delivery_t*) pn_delivery_get_context(pnd);
+    pn_disposition_t *disp   = pn_delivery_remote(pnd);
+    pn_condition_t *cond     = pn_disposition_condition(disp);
+    qdr_error_t    *error    = qdr_error_from_pn(cond);
+
     bool            give_reference = false;
 
     //
@@ -464,7 +468,9 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
     // Update the disposition of the delivery
     //
     qdr_delivery_update_disposition(router->router_core, delivery,
-                                    pn_delivery_remote_state(pnd), pn_delivery_settled(pnd),
+                                    pn_delivery_remote_state(pnd),
+                                    pn_delivery_settled(pnd),
+                                    error,
                                     give_reference);
 
     //
@@ -947,7 +953,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 
     if (!settled && remote_snd_settled)
         // Tell the core that the delivery has been accepted and settled, since we are settling on behalf of the receiver
-        qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true, false);
+        qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true, 0, false);
 
     if (settled || remote_snd_settled)
         pn_delivery_settle(pdlv);
@@ -962,6 +968,17 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
 
     if (!pnd)
         return;
+
+    qdr_error_t *error = qdr_delivery_error(dlv);
+
+    if (error) {
+        pn_condition_t *condition = pn_disposition_condition(pn_delivery_local(pnd));
+        const char *name = (const char *)qdr_error_name(error);
+        const char *description = (const char *)qdr_error_description(error);
+        pn_condition_set_name(condition, name);
+        pn_condition_set_description(condition, description);
+        pn_data_copy(pn_condition_info(condition), qdr_error_info(error));
+    }
 
     //
     // If the disposition has changed, update the proton delivery.
