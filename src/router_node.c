@@ -26,6 +26,7 @@
 #include "dispatch_private.h"
 #include "entity_cache.h"
 #include "router_private.h"
+#include <qpid/dispatch/router_core.h>
 
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
@@ -560,14 +561,52 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     uint64_t               connection_id = qd_connection_connection_id(conn);
     pn_connection_t       *pn_conn = qd_connection_pn(conn);
 
+
+
+    pn_transport_t *tport = 0;
+    pn_sasl_t      *sasl  = 0;
+    pn_ssl_t       *ssl   = 0;
+    const char     *mech  = 0;
+    const char     *user  = 0;
+    const char *container = conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0;
+    if (conn->pn_conn) {
+        tport = pn_connection_transport(conn->pn_conn);
+        ssl   = conn->ssl;
+    }
+    if (tport) {
+        sasl = pn_sasl(tport);
+        if(conn->user_id)
+            user = conn->user_id;
+        else
+            user = pn_transport_get_user(tport);
+    }
+
+    if (sasl)
+        mech = pn_sasl_get_mech(sasl);
+
+    char *host = 0;
+
+    const qd_server_config_t *config;
+    if (conn->connector) {
+        char host_local[255];
+        config = conn->connector->config;
+        snprintf(host_local, strlen(config->host)+strlen(config->port)+2, "%s:%s", config->host, config->port);
+        host = &host_local[0];
+    }
+    else
+        host = (char *)qdpn_connector_name(conn->pn_cxtr);
+
+
     qd_router_connection_get_config(conn, &role, &cost, &name,
                                     &strip_annotations_in, &strip_annotations_out, &link_capacity);
+
+    pn_data_t *props = pn_conn ? pn_connection_remote_properties(pn_conn) : 0;
 
     if (role == QDR_ROLE_INTER_ROUTER) {
         //
         // Check the remote properties for an inter-router cost value.
         //
-        pn_data_t *props = pn_conn ? pn_connection_remote_properties(pn_conn) : 0;
+
         if (props) {
             pn_data_rewind(props);
             pn_data_next(props);
@@ -595,9 +634,39 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
             cost = remote_cost;
     }
 
+    char proto[50];
+    memset(proto, 0, 50);
+    char cipher[50];
+    memset(cipher, 0, 50);
+
+    int ssl_ssf = 0;
+
+    if (ssl) {
+        pn_ssl_get_protocol_name(ssl, proto, 50);
+        pn_ssl_get_cipher_name(ssl, cipher, 50);
+        ssl_ssf = pn_ssl_get_ssf(ssl);
+    }
+
+
+    qdr_connection_info_t *connection_info = qdr_connection_info(tport && pn_transport_is_encrypted(tport),
+                                                                 tport && pn_transport_is_authenticated(tport),
+                                                                 conn->opened,
+                                                                 (char *)mech,
+                                                                 conn->connector ? QD_OUTGOING : QD_INCOMING,
+                                                                 host,
+                                                                 proto,
+                                                                 cipher,
+                                                                 (char *)user,
+                                                                 container,
+                                                                 props,
+                                                                 ssl_ssf);
+
     qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, cost, connection_id, name,
                                                    pn_connection_remote_container(pn_conn),
-                                                   strip_annotations_in, strip_annotations_out, link_capacity);
+                                                   strip_annotations_in,
+                                                   strip_annotations_out,
+                                                   link_capacity,
+                                                   connection_info);
 
     qd_connection_set_context(conn, qdrc);
     qdr_connection_set_context(qdrc, conn);

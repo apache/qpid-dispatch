@@ -240,73 +240,73 @@ class QdSSLUseridTest(TestCase):
         addr = self.address(0).replace("amqp", "amqps")
 
         node = Node.connect(addr, ssl_domain=domain)
-        user_id = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[0][0]
+        user_id = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[0][0]
         self.assertEqual("60f5dbd7ed14a5ea243785e81745ac8463494298",
                          user_id)
 
         addr = self.address(1).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("7c87f0c974f9e1aa5cb98f13fae9675625f240c98034b888753140da28094879",
-                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[1][0])
+                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[1][0])
 
         addr = self.address(2).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("82244216b6d02ffdfb886c8da3c803e0f7a7b330a7b665dccabd30bd25d0f35e2a4fff5f0a2a01d56eb7dbae085c108e71a32b84bab16c9ec243a1f6d014900d",
-                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[2][0])
+                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[2][0])
 
         addr = self.address(3).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("7c87f0c974f9e1aa5cb98f13fae9675625f240c98034b888753140da28094879;127.0.0.1;Client;Dev;US;NC",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[3][0])
+        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[3][0])
 
         addr = self.address(4).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("60f5dbd7ed14a5ea243785e81745ac8463494298;US;NC",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[4][0])
+        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[4][0])
 
         addr = self.address(5).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("US;NC;82244216b6d02ffdfb886c8da3c803e0f7a7b330a7b665dccabd30bd25d0f35e2a4fff5f0a2a01d56eb7dbae085c108e71a32b84bab16c9ec243a1f6d014900d",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[5][0])
+        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[5][0])
 
         addr = self.address(6).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("127.0.0.1;NC;Dev;US;Client",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[6][0])
+        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[6][0])
 
         addr = self.address(7).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("NC;US;Client;Dev;127.0.0.1;Raleigh",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[7][0])
+        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[7][0])
 
         addr = self.address(8).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("C=US,ST=NC,L=Raleigh,OU=Dev,O=Client,CN=127.0.0.1",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[8][0])
+        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[8][0])
 
         addr = self.address(9).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
         self.assertEqual("C=US,ST=NC,L=Raleigh,OU=Dev,O=Client,CN=127.0.0.1",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[9][0])
+        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[9][0])
 
         addr = self.address(10).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
-        user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[10][0]
+        user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[10][0]
         self.assertEqual("C=US,ST=NC,L=Raleigh,OU=Dev,O=Client,CN=127.0.0.1", str(user))
 
         addr = self.address(11).replace("amqp", "amqps")
         node = Node.connect(addr)
-        user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[11][0]
+        user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[11][0]
         self.assertEqual("anonymous", user)
 
         addr = self.address(12).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
-        user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[12][0]
+        user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[12][0]
         self.assertEqual("user12", str(user))
 
         addr = self.address(13).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
-        user_id = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[13][0]
+        user_id = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[13][0]
         self.assertEqual("user13", user_id)
 
         node.close()
