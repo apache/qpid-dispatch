@@ -130,7 +130,7 @@ static log_sink_t* log_sink_lh(const char* name) {
             syslog = true;
         }
         else {
-            file = fopen(name, "w");
+            file = fopen(name, "a");
         }
 
         //If file is not there, log an error and return 0.
