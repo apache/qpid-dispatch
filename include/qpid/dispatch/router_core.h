@@ -157,6 +157,7 @@ typedef enum {
  * @param strip_annotations_in True if configured to remove annotations on inbound messages.
  * @param strip_annotations_out True if configured to remove annotations on outbound messages.
  * @param link_capacity The capacity, in deliveries, for links in this connection.
+ * @param vhost If non-null, this is the vhost of the connection to be used for multi-tenancy.
  * @return Pointer to a connection object that can be used to refer to this connection over its lifetime.
  */
 qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
@@ -168,7 +169,8 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         const char            *remote_container_id,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out,
-                                        int                    link_capacity);
+                                        int                    link_capacity,
+                                        const char            *vhost);
 
 /**
  * qdr_connection_closed
@@ -194,6 +196,14 @@ void qdr_connection_set_context(qdr_connection_t *conn, void *context);
  * Retrieve the stored void pointer from the connection object.
  */
 void *qdr_connection_get_context(const qdr_connection_t *conn);
+
+/**
+ * qdr_connection_get_tenant_space
+ *
+ * Retrieve the multi-tenant space for a connection.  Returns 0 if there is
+ * no multi-tenancy on this connection.
+ */
+const char *qdr_connection_get_tenant_space(const qdr_connection_t *conn, int *len);
 
 /**
  * qdr_connection_process
@@ -313,6 +323,7 @@ bool qdr_terminus_is_dynamic(qdr_terminus_t *term);
  * @param addr An AMQP address (null-terminated string)
  */
 void qdr_terminus_set_address(qdr_terminus_t *term, const char *addr);
+void qdr_terminus_set_address_iterator(qdr_terminus_t *term, qd_iterator_t *addr);
 
 /**
  * qdr_terminus_get_address
@@ -335,6 +346,16 @@ qd_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term);
  * @return A pointer to an iterator or 0 if there is no such field.
  */
 qd_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term);
+
+/**
+ * qdr_terminus_set_dnp_address_iterator
+ *
+ * Overwrite the dynamic-node-properties.address in the terminus
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @param iter An iterator whos view shall be placed in the dnp.address
+ */
+void qdr_terminus_set_dnp_address_iterator(qdr_terminus_t *term, qd_iterator_t *iter);
 
 
 /**

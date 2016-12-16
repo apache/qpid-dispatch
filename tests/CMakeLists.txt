@@ -86,7 +86,8 @@ foreach(py_test_module
     system_tests_user_id_proxy
     system_tests_deprecated
     system_tests_two_routers
-    system_tests_three_routers)
+    system_tests_three_routers
+    system_tests_multi_tenancy)
 
   add_test(${py_test_module} ${TEST_WRAP} -m unittest -v ${py_test_module})
   list(APPEND SYSTEM_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/${py_test_module}.py)

@@ -405,6 +405,12 @@ typedef struct qd_server_config_t {
     bool allow_redirect;
 
     /**
+     * MultiTenancy support.  If true, the vhost is used to define the address space of
+     * addresses used over this connection.
+     */
+    bool multi_tenant;
+
+    /**
      * The specified role of the connection.  This can be used to control the behavior and
      * capabilities of the connections.
      */

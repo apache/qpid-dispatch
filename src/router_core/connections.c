@@ -64,7 +64,8 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         const char            *remote_container_id,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out,
-                                        int                    link_capacity)
+                                        int                    link_capacity,
+                                        const char            *vhost)
 {
     qdr_action_t     *action = qdr_action(qdr_connection_opened_CT, "connection_opened");
     qdr_connection_t *conn   = new_qdr_connection_t();
@@ -83,6 +84,13 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     DEQ_INIT(conn->links);
     DEQ_INIT(conn->work_list);
     conn->work_lock = sys_mutex();
+
+    if (vhost) {
+        conn->tenant_space_len = strlen(vhost) + 1;
+        conn->tenant_space = (char*) malloc(conn->tenant_space_len + 1);
+        strcpy(conn->tenant_space, vhost);
+        strcat(conn->tenant_space, "/");
+    }
 
     action->args.connection.conn             = conn;
     action->args.connection.connection_label = qdr_field(label);
@@ -111,6 +119,13 @@ void qdr_connection_set_context(qdr_connection_t *conn, void *context)
 void *qdr_connection_get_context(const qdr_connection_t *conn)
 {
     return conn ? conn->user_context : 0;
+}
+
+
+const char *qdr_connection_get_tenant_space(const qdr_connection_t *conn, int *len)
+{
+    *len = conn ? conn->tenant_space_len : 0;
+    return conn ? conn->tenant_space : 0;
 }
 
 
@@ -692,7 +707,7 @@ static char qdr_prefix_for_dir(qd_direction_t dir)
 }
 
 
-qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_iterator_t *iter, int *in_phase, int *out_phase)
+qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter, int *in_phase, int *out_phase)
 {
     qdr_address_config_t *addr = 0;
 
@@ -701,6 +716,8 @@ qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qd_iterato
     // specific match
     //
     qd_iterator_annotate_prefix(iter, 'Z');
+    if (conn && conn->tenant_space)
+        qd_iterator_annotate_space(iter, conn->tenant_space, conn->tenant_space_len);
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
     qd_iterator_annotate_prefix(iter, '\0');
     if (in_phase)  *in_phase  = addr ? addr->in_phase  : 0;
@@ -795,18 +812,20 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
  *
  * @param core Pointer to the core object
  * @param dir Direction of the link for the terminus
+ * @param conn The connection over which the terminus was attached
  * @param terminus The terminus containing the addressing information to be looked up
  * @param create_if_not_found Iff true, return a pointer to a newly created address record
  * @param accept_dynamic Iff true, honor the dynamic flag by creating a dynamic address
  * @param [out] link_route True iff the lookup indicates that an attach should be routed
  * @return Pointer to an address record or 0 if none is found
  */
-static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
-                                                     qd_direction_t  dir,
-                                                     qdr_terminus_t *terminus,
-                                                     bool            create_if_not_found,
-                                                     bool            accept_dynamic,
-                                                     bool           *link_route)
+static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
+                                                     qd_direction_t    dir,
+                                                     qdr_connection_t *conn,
+                                                     qdr_terminus_t   *terminus,
+                                                     bool              create_if_not_found,
+                                                     bool              accept_dynamic,
+                                                     bool             *link_route)
 {
     qdr_address_t *addr = 0;
 
@@ -825,7 +844,19 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
         if (dnp_address) {
             qd_iterator_reset_view(dnp_address, ITER_VIEW_ADDRESS_HASH);
             qd_iterator_annotate_prefix(dnp_address, qdr_prefix_for_dir(dir));
+            if (conn->tenant_space)
+                qd_iterator_annotate_space(dnp_address, conn->tenant_space, conn->tenant_space_len);
             qd_hash_retrieve_prefix(core->addr_hash, dnp_address, (void**) &addr);
+
+            if (addr && conn->tenant_space) {
+                //
+                // If this link is in a tenant space, translate the dnp address to
+                // the fully-qualified view
+                //
+                qd_iterator_reset_view(dnp_address, ITER_VIEW_ADDRESS_WITH_SPACE);
+                qdr_terminus_set_dnp_address_iterator(terminus, dnp_address);
+            }
+
             qd_iterator_free(dnp_address);
             *link_route = true;
             return addr;
@@ -875,9 +906,20 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
     qd_iterator_t *iter = qdr_terminus_get_address(terminus);
     qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
     qd_iterator_annotate_prefix(iter, qdr_prefix_for_dir(dir));
+    if (conn->tenant_space)
+        qd_iterator_annotate_space(iter, conn->tenant_space, conn->tenant_space_len);
     qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
     if (addr) {
         *link_route = true;
+
+        //
+        // If this link is in a tenant space, translate the terminus address to
+        // the fully-qualified view
+        //
+        if (conn->tenant_space) {
+            qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_WITH_SPACE);
+            qdr_terminus_set_address_iterator(terminus, iter);
+        }
         return addr;
     }
 
@@ -887,7 +929,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t     *core,
     int in_phase;
     int out_phase;
     int addr_phase;
-    qd_address_treatment_t treat = qdr_treatment_for_address_CT(core, iter, &in_phase, &out_phase);
+    qd_address_treatment_t treat = qdr_treatment_for_address_CT(core, conn, iter, &in_phase, &out_phase);
 
     qd_iterator_annotate_prefix(iter, '\0'); // Cancel previous override
     addr_phase = dir == QD_INCOMING ? in_phase : out_phase;
@@ -1027,6 +1069,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 
     DEQ_REMOVE(core->open_connections, conn);
     sys_mutex_free(conn->work_lock);
+    free(conn->tenant_space);
     free_qdr_connection_t(conn);
 }
 
@@ -1088,7 +1131,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 // This link has a target address
                 //
                 bool           link_route;
-                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, target, true, false, &link_route);
+                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, false, &link_route);
                 if (!addr) {
                     //
                     // No route to this destination, reject the link
@@ -1145,7 +1188,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         switch (link->link_type) {
         case QD_LINK_ENDPOINT: {
             bool           link_route;
-            qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, source, true, true, &link_route);
+            qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, source, true, true, &link_route);
             if (!addr) {
                 //
                 // No route to this destination, reject the link

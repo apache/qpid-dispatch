@@ -281,6 +281,71 @@ static char* test_view_address_hash(void *context)
 }
 
 
+static char* test_view_address_with_space(void *context)
+{
+    struct {const char *addr; const char *view;} cases[] = {
+    {"amqp:/_local/my-addr/sub",                "_local/my-addr/sub"},
+    {"amqp:/_local/my-addr",                    "_local/my-addr"},
+    {"amqp:/_topo/area/router/local/sub",       "_topo/area/router/local/sub"},
+    {"amqp:/_topo/my-area/router/local/sub",    "_topo/my-area/router/local/sub"},
+    {"amqp:/_topo/my-area/my-router/local/sub", "_topo/my-area/my-router/local/sub"},
+    {"amqp:/_topo/area/all/local/sub",          "_topo/area/all/local/sub"},
+    {"amqp:/_topo/my-area/all/local/sub",       "_topo/my-area/all/local/sub"},
+    {"amqp:/_topo/all/all/local/sub",           "_topo/all/all/local/sub"},
+    {"amqp://host:port/_local/my-addr",         "_local/my-addr"},
+    {"_topo/area/router/my-addr",               "_topo/area/router/my-addr"},
+    {"_topo/my-area/router/my-addr",            "_topo/my-area/router/my-addr"},
+    {"_topo/my-area/my-router/my-addr",         "_topo/my-area/my-router/my-addr"},
+    {"_topo/my-area/router",                    "_topo/my-area/router"},
+    {"amqp:/mobile",                            "space/mobile"},
+    {"mobile",                                  "space/mobile"},
+    {"/mobile",                                 "space/mobile"},
+
+    // Re-run the above tests to make sure trailing dots are ignored.
+    {"amqp:/_local/my-addr/sub.",                "_local/my-addr/sub"},
+    {"amqp:/_local/my-addr.",                    "_local/my-addr"},
+    {"amqp:/_topo/area/router/local/sub.",       "_topo/area/router/local/sub"},
+    {"amqp:/_topo/my-area/router/local/sub.",    "_topo/my-area/router/local/sub"},
+    {"amqp:/_topo/my-area/my-router/local/sub.", "_topo/my-area/my-router/local/sub"},
+    {"amqp:/_topo/area/all/local/sub.",          "_topo/area/all/local/sub"},
+    {"amqp:/_topo/my-area/all/local/sub.",       "_topo/my-area/all/local/sub"},
+    {"amqp:/_topo/all/all/local/sub.",           "_topo/all/all/local/sub"},
+    {"amqp://host:port/_local/my-addr.",         "_local/my-addr"},
+    {"_topo/area/router/my-addr.",               "_topo/area/router/my-addr"},
+    {"_topo/my-area/router/my-addr.",            "_topo/my-area/router/my-addr"},
+    {"_topo/my-area/my-router/my-addr.",         "_topo/my-area/my-router/my-addr"},
+    {"_topo/my-area/router.",                    "_topo/my-area/router"},
+    {"_topo/my-area/router:",                    "_topo/my-area/router:"},
+
+    {0, 0}
+    };
+    int idx;
+
+    for (idx = 0; cases[idx].addr; idx++) {
+        qd_iterator_t *iter = qd_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_WITH_SPACE);
+        qd_iterator_annotate_space(iter, "space/", 6);
+        char *ret = view_address_hash(context, iter, cases[idx].addr, cases[idx].view);
+        qd_iterator_free(iter);
+        if (ret) return ret;
+    }
+
+    for (idx = 0; cases[idx].addr; idx++) {
+        qd_buffer_list_t chain;
+        DEQ_INIT(chain);
+        build_buffer_chain(&chain, cases[idx].addr, 3);
+        qd_iterator_t *iter = qd_iterator_buffer(DEQ_HEAD(chain), 0,
+                                                 strlen(cases[idx].addr),
+                                                 ITER_VIEW_ADDRESS_WITH_SPACE);
+        qd_iterator_annotate_space(iter, "space/", 6);
+        char *ret = view_address_hash(context, iter, cases[idx].addr, cases[idx].view);
+        release_buffer_chain(&chain);
+        if (ret) return ret;
+    }
+
+    return 0;
+}
+
+
 static char* test_view_address_hash_override(void *context)
 {
     struct {const char *addr; const char *view;} cases[] = {
@@ -308,13 +373,15 @@ static char* test_view_address_hash_override(void *context)
 }
 
 
-static char* test_view_address_with_space(void *context)
+static char* test_view_address_hash_with_space(void *context)
 {
     struct {const char *addr; const char *view;} cases[] = {
     {"amqp:/link-target",                    "M0test.vhost.link-target"},
     {"amqp:/domain/link-target",             "M0test.vhost.domain/link-target"},
     {"domain/link-target",                   "M0test.vhost.domain/link-target"},
     {"bbc79fb3-e1fd-4a08-92b2-9a2de232b558", "M0test.vhost.bbc79fb3-e1fd-4a08-92b2-9a2de232b558"},
+    {"_topo/my-area/router/address",         "Rrouter"},
+    {"_topo/my-area/my-router/address",      "Laddress"},
     {0, 0}
     };
     int idx;
@@ -324,13 +391,9 @@ static char* test_view_address_with_space(void *context)
         qd_iterator_annotate_space(iter, "test.vhost.", 11);
         if (!qd_iterator_equal(iter, (unsigned char*) cases[idx].view)) {
             char *got = (char*) qd_iterator_copy(iter);
-            snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
-                     cases[idx].addr, cases[idx].view, got);
-            return fail_text;
-        }
-        if (qd_iterator_length(iter) != strlen(cases[idx].view)) {
-            snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Length %d, iter_length returned %d",
-                     cases[idx].addr, (int) strlen(cases[idx].view), (int) qd_iterator_length(iter));
+            snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s' (len: %d)",
+                     cases[idx].addr, cases[idx].view, got, qd_iterator_length(iter));
+            free(got);
             return fail_text;
         }
         qd_iterator_free(iter);
@@ -873,8 +936,9 @@ int field_tests(void)
     TEST_CASE(test_trim, 0);
     TEST_CASE(test_sub_iterator, 0);
     TEST_CASE(test_view_address_hash, 0);
-    TEST_CASE(test_view_address_hash_override, 0);
     TEST_CASE(test_view_address_with_space, 0);
+    TEST_CASE(test_view_address_hash_override, 0);
+    TEST_CASE(test_view_address_hash_with_space, 0);
     TEST_CASE(test_view_node_hash, 0);
     TEST_CASE(test_field_advance_string, 0);
     TEST_CASE(test_field_advance_buffer, 0);

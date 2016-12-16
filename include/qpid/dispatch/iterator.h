@@ -90,12 +90,19 @@ typedef struct qd_iterator_t qd_iterator_t;
  *      <my_area>/<router>
  *               R^^^^^^^^
  *
+ * ITER_VIEW_ADDRESS_WITH_SPACE
+ *    Same as ADDRESS_HASH but:
+ *      - Does not show the prefix/phase
+ *      - Does not hash-ize local and topological addresses
+ *      - Does not show namespace on local and topological addresses
+ *
  */
 typedef enum {
     ITER_VIEW_ALL,
     ITER_VIEW_ADDRESS_NO_HOST,
     ITER_VIEW_ADDRESS_HASH,
-    ITER_VIEW_NODE_HASH
+    ITER_VIEW_NODE_HASH,
+    ITER_VIEW_ADDRESS_WITH_SPACE
 } qd_iterator_view_t;
 
 /** @} */
