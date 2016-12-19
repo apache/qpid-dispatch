@@ -134,11 +134,32 @@ int qdr_connection_process(qdr_connection_t *conn)
     qdr_connection_work_list_t  work_list;
     qdr_core_t                 *core = conn->core;
 
+    qdr_link_ref_t *ref;
+    qdr_link_t     *link;
+
+    int event_count = 0;
+
+    do {
+        sys_mutex_lock(conn->work_lock);
+        ref = DEQ_HEAD(conn->links_with_deliveries);
+        if (ref) {
+            link = ref->link;
+            qdr_del_link_ref(&conn->links_with_deliveries, ref->link, QDR_LINK_LIST_CLASS_DELIVERY);
+        } else
+            link = 0;
+        sys_mutex_unlock(conn->work_lock);
+
+        if (link) {
+            core->push_handler(core->user_context, link);
+            event_count++;
+        }
+    } while (link);
+
     sys_mutex_lock(conn->work_lock);
     DEQ_MOVE(conn->work_list, work_list);
     sys_mutex_unlock(conn->work_lock);
 
-    int event_count = DEQ_SIZE(work_list);
+    event_count += DEQ_SIZE(work_list);
     qdr_connection_work_t *work = DEQ_HEAD(work_list);
     while (work) {
         DEQ_REMOVE_HEAD(work_list);
@@ -172,25 +193,6 @@ int qdr_connection_process(qdr_connection_t *conn)
 
         work = DEQ_HEAD(work_list);
     }
-
-    qdr_link_ref_t *ref;
-    qdr_link_t     *link;
-
-    do {
-        sys_mutex_lock(conn->work_lock);
-        ref = DEQ_HEAD(conn->links_with_deliveries);
-        if (ref) {
-            link = ref->link;
-            qdr_del_link_ref(&conn->links_with_deliveries, ref->link, QDR_LINK_LIST_CLASS_DELIVERY);
-        } else
-            link = 0;
-        sys_mutex_unlock(conn->work_lock);
-
-        if (link) {
-            core->push_handler(core->user_context, link);
-            event_count++;
-        }
-    } while (link);
 
     do {
         sys_mutex_lock(conn->work_lock);
