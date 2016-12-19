@@ -241,32 +241,31 @@ class QdSSLUseridTest(TestCase):
 
         node = Node.connect(addr, ssl_domain=domain)
         user_id = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[0][0]
-        self.assertEqual("60f5dbd7ed14a5ea243785e81745ac8463494298",
-                         user_id)
+        self.assertEqual("3eccbf1a2f3e46da823c63a9da9158983cb495a3", user_id)
 
         addr = self.address(1).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
-        self.assertEqual("7c87f0c974f9e1aa5cb98f13fae9675625f240c98034b888753140da28094879",
+        self.assertEqual("72d543690cb0a8fc2d0f4c704c65411b9ee8ad53839fced4c720d73e58e4f0d7",
                          node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[1][0])
 
         addr = self.address(2).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
-        self.assertEqual("82244216b6d02ffdfb886c8da3c803e0f7a7b330a7b665dccabd30bd25d0f35e2a4fff5f0a2a01d56eb7dbae085c108e71a32b84bab16c9ec243a1f6d014900d",
+        self.assertEqual("c6de3a340014b0f8a1d2b41d22e414fc5756494ffa3c8760bbff56f3aa9f179a5a6eae09413fd7a6afbf36b5fb4bad8795c2836774acfe00a701797cc2a3a9ab",
                          node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[2][0])
 
         addr = self.address(3).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
-        self.assertEqual("7c87f0c974f9e1aa5cb98f13fae9675625f240c98034b888753140da28094879;127.0.0.1;Client;Dev;US;NC",
-        node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[3][0])
+        self.assertEqual("72d543690cb0a8fc2d0f4c704c65411b9ee8ad53839fced4c720d73e58e4f0d7;127.0.0.1;Client;Dev;US;NC",
+                         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[3][0])
 
         addr = self.address(4).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
-        self.assertEqual("60f5dbd7ed14a5ea243785e81745ac8463494298;US;NC",
+        self.assertEqual("3eccbf1a2f3e46da823c63a9da9158983cb495a3;US;NC",
         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[4][0])
 
         addr = self.address(5).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
-        self.assertEqual("US;NC;82244216b6d02ffdfb886c8da3c803e0f7a7b330a7b665dccabd30bd25d0f35e2a4fff5f0a2a01d56eb7dbae085c108e71a32b84bab16c9ec243a1f6d014900d",
+        self.assertEqual("US;NC;c6de3a340014b0f8a1d2b41d22e414fc5756494ffa3c8760bbff56f3aa9f179a5a6eae09413fd7a6afbf36b5fb4bad8795c2836774acfe00a701797cc2a3a9ab",
         node.query(type='org.apache.qpid.dispatch.connection', attribute_names=['user']).results[5][0])
 
         addr = self.address(6).replace("amqp", "amqps")
