@@ -18,7 +18,7 @@
 #
 
 import unittest
-from proton import Message, Delivery, PENDING, ACCEPTED, REJECTED
+from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED
 from system_test import TestCase, Qdrouterd, main_module
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
@@ -1115,6 +1115,11 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_reject_disposition(self):
+        test = RejectDispositionTest(self.address)
+        test.run()
+        self.assertTrue(test.received_error)
+
     def test_connection_properties(self):
         connection = BlockingConnection(self.router.addresses[0],
                                         timeout=60,
@@ -1529,6 +1534,40 @@ class PresettledOverflowTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+
+class RejectDispositionTest(MessagingHandler):
+    def __init__(self, address):
+        super(RejectDispositionTest, self).__init__(auto_accept=False)
+        self.address = address
+        self.sent = False
+        self.received_error = False
+        self.dest = "rejectDispositionTest"
+        self.error_description = 'you were out of luck this time!'
+        self.error_name = u'amqp:internal-error'
+
+
+    def on_start(self, event):
+        conn = event.container.connect(self.address)
+        event.container.create_sender(conn, self.dest)
+        event.container.create_receiver(conn, self.dest)
+
+    def on_sendable(self, event):
+        if not self.sent:
+            event.sender.send(Message(body=u"Hello World!"))
+            self.sent = True
+
+    def on_rejected(self, event):
+        if event.delivery.remote.condition.description == self.error_description \
+                and event.delivery.remote.condition.name == self.error_name:
+            self.received_error = True
+        event.connection.close()
+
+    def on_message(self, event):
+        event.delivery.local.condition = Condition(self.error_name, self.error_description)
+        self.reject(event.delivery)
+
+    def run(self):
+        Container(self).run()
 
 if __name__ == '__main__':
     unittest.main(main_module())

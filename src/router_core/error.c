@@ -108,3 +108,20 @@ char *qdr_error_description(qdr_error_t *err)
     return text;
 }
 
+char *qdr_error_name(qdr_error_t *err)
+{
+    if (!err || !err->name || !err->name->iterator)
+        return 0;
+    int   length = qd_iterator_length(err->name->iterator);
+    char *text   = (char*) malloc(length + 1);
+    qd_iterator_ncopy(err->name->iterator, (unsigned char*) text, length);
+    text[length] = '\0';
+    return text;
+}
+
+
+pn_data_t *qdr_error_info(qdr_error_t *err)
+{
+    return err->info;
+}
+
