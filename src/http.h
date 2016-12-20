@@ -21,8 +21,8 @@
  */
 
 typedef struct qd_http_listener_t qd_http_listener_t;
-typedef struct  qd_http_server_t qd_http_server_t;
-struct qd_dispatch_t;
+typedef struct qd_http_server_t qd_http_server_t;
+typedef struct qd_dispatch_t qd_dispatch_t;
 struct qd_log_source_t;
 struct qd_server_config_t;
 struct qdpn_connector_t;

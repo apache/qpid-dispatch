@@ -23,19 +23,27 @@
 
 /* No HTTP implementation available. */
 
-static qd_log_source_t *log = NULL;
-
-void qd_http_connector_process(qdpn_connector_t *c) {}
-
-qd_http_connector_t *qd_http_connector(qd_http_t *h, qdpn_connector_t *c) {
-
-    return NULL;
-}
-
-qd_http_t *qd_http(qd_dispatch_t *d, qd_log_source_t *l) {
-    log = l;
+qd_http_server_t *qd_http_server(qd_dispatch_t *d, qd_log_source_t *log)
+{
     qd_log(log, QD_LOG_WARNING, "HTTP support is not available");
-    return NULL;
+    return 0;
 }
 
-void qd_http_free(qd_http_t *h) {}
+void qd_http_server_free(qd_http_server_t *h)
+{
+}
+
+qd_http_listener_t *qd_http_listener(struct qd_http_server_t *s,
+                                     const struct qd_server_config_t *config)
+{
+    return 0;
+}
+
+void qd_http_listener_free(qd_http_listener_t *hl)
+{
+}
+
+void qd_http_listener_accept(qd_http_listener_t *hl, struct qdpn_connector_t *c)
+{
+}
+
