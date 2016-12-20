@@ -735,11 +735,14 @@ static void connector_process(qdpn_connector_t *c)
     if(c->closed) return;
 
     pn_transport_t *transport = c->transport;
+    c->status = 0;
+
     ///
     /// Socket read
     ///
     ssize_t capacity = pn_transport_capacity(transport);
     if (capacity > 0) {
+        c->status |= PN_SEL_RD;
         if (c->pending_read) {
             c->pending_read = false;
             ssize_t n =  recv(c->fd, pn_transport_tail(transport), capacity, 0);
@@ -766,6 +769,7 @@ static void connector_process(qdpn_connector_t *c)
     ///
     ssize_t pending = pn_transport_pending(transport);
     if (pending > 0) {
+        c->status |= PN_SEL_WR;
         if (c->pending_write) {
             c->pending_write = false;
 #ifdef MSG_NOSIGNAL
@@ -784,12 +788,8 @@ static void connector_process(qdpn_connector_t *c)
         }
     }
 
-    c->status = 0;
     if (pn_transport_closed(c->transport)) {
         qdpn_connector_close(c);
-    } else {
-        if (pn_transport_capacity(transport) > 0) c->status |= PN_SEL_RD;
-        if (pn_transport_pending(transport) > 0) c->status |= PN_SEL_WR;
     }
 }
 
