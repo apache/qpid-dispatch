@@ -435,6 +435,14 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         break;
     case PN_SESSION_LOCAL_CLOSE :
         ssn = pn_event_session(event);
+
+        pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+        while (pn_link) {
+                qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
+                qd_link->pn_link = 0;
+                pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+        }
+
         if (pn_session_state(ssn) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
             add_session_to_free_list(&qd_conn->free_link_session_list,ssn);
         }
