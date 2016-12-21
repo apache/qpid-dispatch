@@ -30,6 +30,7 @@ ALLOC_DEFINE(qdr_router_ref_t);
 ALLOC_DEFINE(qdr_link_ref_t);
 ALLOC_DEFINE(qdr_general_work_t);
 ALLOC_DEFINE(qdr_connection_ref_t);
+ALLOC_DEFINE(qdr_connection_info_t);
 
 static void qdr_general_handler(void *context);
 

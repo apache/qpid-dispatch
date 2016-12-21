@@ -32,6 +32,7 @@
 #include <qpid/dispatch/iterator.h>
 #include <stdbool.h>
 
+typedef struct qdr_core_t   qdr_core_t;
 typedef struct qd_router_t  qd_router_t;
 typedef struct qd_address_t qd_address_t;
 typedef struct qd_router_delivery_t qd_router_delivery_t;

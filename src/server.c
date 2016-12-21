@@ -121,19 +121,6 @@ static void qd_transport_tracer(pn_transport_t *transport, const char *message)
         qd_log(ctx->server->log_source, QD_LOG_TRACE, "[%"PRIu64"]:%s", ctx->connection_id, message);
 }
 
-static qd_error_t connection_entity_update_host(qd_entity_t* entity, qd_connection_t *conn)
-{
-    const qd_server_config_t *config;
-    if (conn->connector) {
-        config = conn->connector->config;
-        char host[strlen(config->host)+strlen(config->port)+2];
-        snprintf(host, sizeof(host), "%s:%s", config->host, config->port);
-        return qd_entity_set_string(entity, "host", host);
-    }
-    else
-        return qd_entity_set_string(entity, "host", qdpn_connector_name(conn->pn_cxtr));
-}
-
 
 /**
  * Save displayNameService object instance and ImportModule address
@@ -390,130 +377,11 @@ void qd_connection_set_user(qd_connection_t *conn)
 }
 
 
-static void qd_get_next_pn_data(pn_data_t *data, const char **d, int *d1)
-{
-    if (pn_data_next(data)) {
-        switch (pn_data_type(data)) {
-            case PN_STRING:
-                *d = pn_data_get_string(data).start;
-                break;
-            case PN_SYMBOL:
-                *d = pn_data_get_symbol(data).start;
-                break;
-            case PN_INT:
-                *d1 = pn_data_get_int(data);
-                break;
-            default:
-                break;
-        }
-    }
-}
-
-
-/**
- * Obtains the remote connection properties and sets it as a map on the passed in entity.
- * @param
- */
-static qd_error_t qd_set_connection_properties(qd_entity_t* entity, qd_connection_t *conn)
-{
-    // Get the connection properties and stick it into the entity as a map
-    pn_data_t *data = pn_connection_remote_properties(conn->pn_conn);
-    const char *props = "properties";
-    if (data) {
-        size_t count = pn_data_get_map(data);
-        pn_data_enter(data);
-
-        // Create a new map.
-        qd_error_t error_t = qd_entity_set_map(entity, props);
-
-        if (error_t != QD_ERROR_NONE)
-            return error_t;
-
-        for (size_t i = 0; i < count/2; i++) {
-            const char *key   = 0;
-            // We are assuming for now that all keys are strings
-            qd_get_next_pn_data(data, &key, 0);
-            const char *value_string = 0;
-            int value_int = 0;
-            // We are assuming for now that all values are either strings or integers
-            qd_get_next_pn_data(data, &value_string, &value_int);
-
-            if (value_string)
-                error_t = qd_entity_set_map_key_value_string(entity, props, key, value_string);
-            else if (value_int)
-                error_t = qd_entity_set_map_key_value_int(entity, props, key, value_int);
-
-            if (error_t != QD_ERROR_NONE)
-                return error_t;
-        }
-        pn_data_exit(data);
-    }
-
-    return QD_ERROR_NONE;
-}
-
-
 qd_error_t qd_entity_refresh_sslProfile(qd_entity_t* entity, void *impl)
 {
     return QD_ERROR_NONE;
 }
 
-
-qd_error_t qd_entity_refresh_connection(qd_entity_t* entity, void *impl)
-{
-    qd_connection_t *conn = (qd_connection_t*)impl;
-    pn_transport_t *tport = 0;
-    pn_sasl_t      *sasl  = 0;
-    pn_ssl_t       *ssl   = 0;
-    const char     *mech  = 0;
-    const char     *user  = 0;
-
-    if (conn->pn_conn) {
-        tport = pn_connection_transport(conn->pn_conn);
-        ssl   = conn->ssl;
-    }
-    if (tport) {
-        sasl = pn_sasl(tport);
-        if(conn->user_id)
-            user = conn->user_id;
-        else
-            user = pn_transport_get_user(tport);
-    }
-    if (sasl)
-        mech = pn_sasl_get_mech(sasl);
-
-    if (qd_entity_set_bool(entity, "opened", conn->opened) == 0 &&
-        qd_entity_set_string(entity, "container",
-                             conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0) == 0 &&
-        connection_entity_update_host(entity, conn) == 0 &&
-        qd_entity_set_string(entity, "sasl", mech) == 0 &&
-        qd_entity_set_string(entity, "role", conn->role) == 0 &&
-        qd_entity_set_string(entity, "dir", conn->connector ? "out" : "in") == 0 &&
-        qd_entity_set_string(entity, "user", user) == 0 &&
-        qd_set_connection_properties(entity, conn) == 0 &&
-        qd_entity_set_long(entity, "identity", conn->connection_id) == 0 &&
-        qd_entity_set_bool(entity, "isAuthenticated", tport && pn_transport_is_authenticated(tport)) == 0 &&
-        qd_entity_set_bool(entity, "isEncrypted", tport && pn_transport_is_encrypted(tport)) == 0 &&
-        qd_entity_set_bool(entity, "ssl", ssl != 0) == 0) {
-
-        if (ssl) {
-            #define SSL_ATTR_SIZE 50
-            char proto[SSL_ATTR_SIZE];
-            char cipher[SSL_ATTR_SIZE];
-            pn_ssl_get_protocol_name(ssl, proto, SSL_ATTR_SIZE);
-            pn_ssl_get_cipher_name(ssl, cipher, SSL_ATTR_SIZE);
-            if (qd_entity_set_string(entity, "sslProto", proto)   == 0 &&
-                qd_entity_set_string(entity, "sslCipher", cipher) == 0 &&
-                qd_entity_set_long(entity, "sslSsf", pn_ssl_get_ssf(ssl)) == 0) {
-                    return QD_ERROR_NONE;
-            }
-        }
-        else
-            return QD_ERROR_NONE;
-    }
-
-    return qd_error_code();
-}
 
 static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_config_t *config, pn_transport_t *tport)
 {
@@ -662,7 +530,6 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
 
         // qd_server->lock is already locked
         DEQ_INSERT_TAIL(qd_server->connections, ctx);
-        qd_entity_cache_add(QD_CONNECTION_TYPE, ctx);
 
         qd_log(qd_server->log_source, QD_LOG_TRACE, "Accepting %s with connection id [%"PRIu64"]",
            log_incoming(logbuf, sizeof(logbuf), cxtr), ctx->connection_id);
@@ -1214,7 +1081,6 @@ static void cxtr_try_open(void *context)
     ctx->pn_cxtr = qdpn_connector(ct->server->driver, ct->config->host, ct->config->port, ct->config->protocol_family, (void*) ctx);
     if (ctx->pn_cxtr) {
         DEQ_INSERT_TAIL(ct->server->connections, ctx);
-        qd_entity_cache_add(QD_CONNECTION_TYPE, ctx);
     }
     sys_mutex_unlock(ct->server->lock);
 

@@ -441,10 +441,28 @@ typedef struct qdr_connection_work_t {
 ALLOC_DECLARE(qdr_connection_work_t);
 DEQ_DECLARE(qdr_connection_work_t, qdr_connection_work_list_t);
 
+struct qdr_connection_info_t {
+    const  char                *container;
+    char                       *sasl_mechanisms;
+    char                       *host;
+    bool                        is_encrypted;
+    char                       *ssl_proto;
+    char                       *ssl_cipher;
+    char                       *user;
+    bool                        is_authenticated;
+    bool                        opened;
+    qd_direction_t              dir;
+    qdr_connection_role_t       role;
+    pn_data_t                  *connection_properties;
+    int                         ssl_ssf; //ssl strength factor
+};
+
+ALLOC_DECLARE(qdr_connection_info_t);
 
 struct qdr_connection_t {
     DEQ_LINKS(qdr_connection_t);
     DEQ_LINKS_N(ACTIVATE, qdr_connection_t);
+    uint64_t                    identity;
     qdr_core_t                 *core;
     void                       *user_context;
     bool                        incoming;
@@ -464,6 +482,7 @@ struct qdr_connection_t {
     qdr_link_ref_list_t         links_with_credit;
     char                       *tenant_space;
     int                         tenant_space_len;
+    qdr_connection_info_t      *connection_info;
 };
 
 ALLOC_DECLARE(qdr_connection_t);
