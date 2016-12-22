@@ -22,19 +22,21 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#define QDR_CONNECTION_IDENTITY         0
-#define QDR_CONNECTION_HOST             1
-#define QDR_CONNECTION_ROLE             2
-#define QDR_CONNECTION_DIR              3
-#define QDR_CONNECTION_CONTAINER_ID     4
-#define QDR_CONNECTION_SASL_MECHANISMS  5
-#define QDR_CONNECTION_IS_AUTHENTICATED 6
-#define QDR_CONNECTION_USER             7
-#define QDR_CONNECTION_IS_ENCRYPTED     8
-#define QDR_CONNECTION_SSLPROTO         9
-#define QDR_CONNECTION_SSLCIPHER        10
-#define QDR_CONNECTION_PROPERTIES       11
-#define QDR_CONNECTION_SSLSSF           12
+#define QDR_CONNECTION_NAME             0
+#define QDR_CONNECTION_IDENTITY         1
+#define QDR_CONNECTION_HOST             2
+#define QDR_CONNECTION_ROLE             3
+#define QDR_CONNECTION_DIR              4
+#define QDR_CONNECTION_CONTAINER_ID     5
+#define QDR_CONNECTION_SASL_MECHANISMS  6
+#define QDR_CONNECTION_IS_AUTHENTICATED 7
+#define QDR_CONNECTION_USER             8
+#define QDR_CONNECTION_IS_ENCRYPTED     9
+#define QDR_CONNECTION_SSLPROTO         10
+#define QDR_CONNECTION_SSLCIPHER        11
+#define QDR_CONNECTION_PROPERTIES       12
+#define QDR_CONNECTION_SSLSSF           13
+#define QDR_CONNECTION_TENANT           14
 
 const char * const QDR_CONNECTION_DIR_IN  = "in";
 const char * const QDR_CONNECTION_DIR_OUT = "out";
@@ -47,7 +49,8 @@ const char *qdr_connection_roles[] =
      0};
 
 const char *qdr_connection_columns[] =
-    {"identity",
+    {"name",
+     "identity",
      "host",
      "role",
      "dir",
@@ -60,6 +63,7 @@ const char *qdr_connection_columns[] =
      "sslCipher",
      "properties",
      "sslSsf",
+     "tenant",
      0};
 
 const char *CONFIG_CONNECTION_TYPE = "org.apache.qpid.dispatch.connection";
@@ -92,6 +96,10 @@ static void qdr_connection_insert_column_CT(qdr_connection_t *conn, int col, qd_
         qd_compose_insert_string(body, qdr_connection_columns[col]);
 
     switch(col) {
+    case QDR_CONNECTION_NAME:
+        qd_compose_insert_string2(body, "connection/", conn->connection_info->host);
+        break;
+
     case QDR_CONNECTION_IDENTITY: {
         snprintf(id_str, 100, "%"PRId64, conn->identity);
         qd_compose_insert_string(body, id_str);
@@ -152,9 +160,18 @@ static void qdr_connection_insert_column_CT(qdr_connection_t *conn, int col, qd_
         else
             qd_compose_insert_null(body);
         break;
+
     case QDR_CONNECTION_SSLSSF:
         qd_compose_insert_long(body, conn->connection_info->ssl_ssf);
         break;
+
+    case QDR_CONNECTION_TENANT:
+        if (conn->tenant_space)
+            qd_compose_insert_string(body, conn->tenant_space);
+        else
+            qd_compose_insert_null(body);
+        break;
+
     case QDR_CONNECTION_PROPERTIES: {
         pn_data_t *data = conn->connection_info->connection_properties;
         qd_compose_start_map(body);

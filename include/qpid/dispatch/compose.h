@@ -182,6 +182,7 @@ void qd_compose_insert_binary_buffers(qd_composed_field_t *field, qd_buffer_list
  * @param value A pointer to a null-terminated string.
  */
 void qd_compose_insert_string(qd_composed_field_t *field, const char *value);
+void qd_compose_insert_string2(qd_composed_field_t *field, const char *value1, const char *value2);
 
 /**
  * Insert a utf8-encoded string into the field from an iterator

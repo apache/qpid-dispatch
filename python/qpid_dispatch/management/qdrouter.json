@@ -1310,6 +1310,10 @@
                     "description": "SSL strength factor in effect",
                     "type": "integer"
                 },
+                "tenant": {
+                    "description": "If multi-tenancy is on for this connection, the tenant space in effect",
+                    "type": "string"
+                },
                 "properties": {
                     "description": "Connection properties supplied by the peer.",
                     "type": "map"
