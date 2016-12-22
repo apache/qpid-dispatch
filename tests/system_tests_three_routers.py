@@ -242,31 +242,27 @@ class DynamicRequestResponseTest(MessagingHandler):
  
     def timeout(self):
         self.error = "Timeout Expired %d messages received." % self.n_received
-        self.conn1.close()
-        self.conn2.close()
+        self.client_connection.close()
+        self.server_connection.close()
  
     def on_released(self, event):
         self.n_sent -= 1
         time.sleep(0.1)
 
-    def on_link_opened(self, event):
-        if event.receiver:
-            self.sender = event.container.create_sender(self.conn1, None)
-
     def on_start(self, event):
         self.timer = event.reactor.schedule(5, Timeout(self))
-        self.conn1 = event.container.connect(self.address1)
-        self.conn2 = event.container.connect(self.address2)
-        self.server_receiver = event.container.create_receiver(self.conn2, self.dest)
-        self.client_receiver = event.container.create_receiver(self.conn2, None, dynamic=True)
+        self.client_connection = event.container.connect(self.address1)
+        self.server_connection = event.container.connect(self.address2)
+        self.server_receiver = event.container.create_receiver(self.server_connection, self.dest)
+        self.client_receiver = event.container.create_receiver(self.client_connection, None, dynamic=True)
         self.server_receiver.flow(self.n_expected)
         self.client_receiver.flow(self.n_expected)
+        self.sender = event.container.create_sender(self.client_connection, None)
  
     def on_sendable(self, event):
         if self.n_sent < self.n_expected:
-            # We send to server_receiver, but ask for a reply to client_receiver
+            # We send to server, and ask it to reply to client.
             request = Message(body=self.n_sent, address=self.dest, reply_to=self.client_receiver.remote_source.address)
-            #msg = Message(body=self.n_sent, address=self.dest)
             event.sender.send(request)
             self.n_sent += 1
  
@@ -274,16 +270,19 @@ class DynamicRequestResponseTest(MessagingHandler):
         self.n_accepted += 1
  
     def on_message(self, event):
+
+        # Receiver gets a message and replies to client.
         if event.receiver == self.server_receiver :
-            # The server replies to the client.
-            self.sender.send ( Message(address=event.message.reply_to, body="request denied") )
+            self.sender.send ( Message(address=event.message.reply_to, body="Reply hazy, try again later.") )
+
+        # Client gets a message and counts it.
         elif event.receiver == self.client_receiver :
             self.n_received += 1
             if self.n_received == self.n_expected:
                 self.server_receiver.close()
                 self.client_receiver.close()
-                self.conn1.close()
-                self.conn2.close()
+                self.client_connection.close()
+                self.server_connection.close()
                 self.timer.cancel()
 
     def run(self):
