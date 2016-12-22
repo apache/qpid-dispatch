@@ -230,7 +230,7 @@ class DynamicRequestResponseTest(MessagingHandler):
         super(DynamicRequestResponseTest, self).__init__(prefetch=0)
         self.address1   = address1
         self.address2   = address2
-        self.dest       = "closest.whatever"
+        self.dest       = "closest.dynamicRequestResponse"
         self.error      = None
         self.sender     = None
         self.server_receiver = None
