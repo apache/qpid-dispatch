@@ -928,10 +928,11 @@ console.dump(e)
         var reconnect = angular.isDefined(options.reconnect) ? options.reconnect : true
         QDR.log.debug("testConnect called with reconnect " + reconnect)
         var baseAddress = options.address + ':' + options.port;
+        var protocol = $location.protocol() + "://"
         try {
             var ws = self.rhea.websocket_connect(WebSocket);
             connection = self.rhea.connect({
-            connection_details: ws('ws://' + baseAddress, ["binary"]),
+            connection_details: ws(protocol + baseAddress, ["binary"]),
             reconnect: reconnect,
             properties: {
               console_identifier: 'Dispatch console'
