@@ -1060,6 +1060,61 @@
             }
         },
 
+        "router.config.exchange": {
+            "description":"Defines an AMQP 0-10 message exchange.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "alternate": {
+                    "description": "The address to forward the message to if no bindings are matched.",
+                    "type": "string",
+                    "required": false
+                },
+                "bindingCount": {
+                    "description": "The number of bindings associated with this exchange.",
+                    "type": "integer"
+                },
+                "msgReceived": {
+                    "description": "The total number of messages sent to this exchange.",
+                    "type": "integer"
+                },
+                "msgDropped": {
+                    "description": "The total number of messages dropped due to the lack of an outgoing subscription.",
+                    "type": "integer"
+                },
+                "msgForwarded": {
+                    "description": "The total number of messages forwarded via matched bindings.",
+                    "type": "integer"
+                }
+            }
+        },
+
+        "router.config.binding": {
+            "description":"Defines an AMQP 0-10 exchange binding.",
+            "extends": "configurationEntity",
+            "attributes": {
+                "exchange": {
+                    "description": "The exchange to bind.",
+                    "type": "string",
+                    "required": true
+                },
+                "key": {
+                    "description": "Pattern to compare against the message's 'subject' property. The format of the key is a string of zero or more tokens with each token delimited by the '.' char.  The key allows for wild-card tokens: '*' matches a single token and '#' matches zero or more tokens.",
+                    "type": "string",
+                    "required": true
+                },
+                "nextHop": {
+                    "description": "The target address to forward the message to when the message's 'subject' property matches the binding key pattern.",
+                    "type": "string",
+                    "required": true
+                },
+                "msgMatched": {
+                    "description": "Total number of messages that matched this binding",
+                    "type": "integer"
+                }
+            }
+        },
+
         "router.link": {
             "description": "Link to another AMQP endpoint: router node, client or other AMQP process.",
             "extends": "operationalEntity",

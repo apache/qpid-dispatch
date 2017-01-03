@@ -85,6 +85,7 @@ static void qdr_config_address_insert_column_CT(qdr_address_config_t *addr, int 
         case QD_TREATMENT_MULTICAST_ONCE:   text = "multicast"; break;
         case QD_TREATMENT_ANYCAST_CLOSEST:  text = "closest";   break;
         case QD_TREATMENT_ANYCAST_BALANCED: text = "balanced";  break;
+        case QD_TREATMENT_EXCHANGE:         text = "binding";   break;
         default:
             text = 0;
         }
@@ -212,6 +213,7 @@ static qd_address_treatment_t qdra_address_treatment_CT(qd_parsed_field_t *field
         if (qd_iterator_equal(iter, (unsigned char*) "multicast"))    return QD_TREATMENT_MULTICAST_ONCE;
         if (qd_iterator_equal(iter, (unsigned char*) "closest"))      return QD_TREATMENT_ANYCAST_CLOSEST;
         if (qd_iterator_equal(iter, (unsigned char*) "balanced"))     return QD_TREATMENT_ANYCAST_BALANCED;
+        if (qd_iterator_equal(iter, (unsigned char*) "binding"))      return QD_TREATMENT_EXCHANGE;
     }
     return QD_TREATMENT_ANYCAST_BALANCED;
 }

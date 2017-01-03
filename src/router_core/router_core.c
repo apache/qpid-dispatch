@@ -111,7 +111,7 @@ void qdr_core_free(qdr_core_t *core)
     free(core->agent_subscription_mobile);
     free(core->agent_subscription_local);
 
-    for (int i = 0; i <= QD_TREATMENT_LINK_BALANCED; ++i) {
+    for (int i = 0; i <= QD_TREATMENT_LAST; ++i) {
         if (core->forwarders[i]) {
             free(core->forwarders[i]);
         }
