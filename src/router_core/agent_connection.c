@@ -340,11 +340,11 @@ static qdr_connection_t *qdr_connection_find_by_identity_CT(qdr_core_t *core, qd
 }
 
 
-void qdra_connection_get_CT(qdr_core_t          *core,
+void qdra_connection_get_CT(qdr_core_t    *core,
                             qd_iterator_t *name,
                             qd_iterator_t *identity,
-                            qdr_query_t         *query,
-                            const char          *qdr_connection_columns[])
+                            qdr_query_t   *query,
+                            const char    *qdr_connection_columns[])
 {
     qdr_connection_t *conn = 0;
 

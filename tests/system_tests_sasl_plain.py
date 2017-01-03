@@ -283,16 +283,16 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         local_node = Node.connect(self.routers[0].addresses[1], timeout=TIMEOUT)
 
         # sslProto should be TLSv1/SSLv3
-        self.assertEqual(u'TLSv1/SSLv3', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][9])
+        self.assertEqual(u'TLSv1/SSLv3', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][10])
 
         # role should be inter-router
-        self.assertEqual(u'inter-router', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][2])
+        self.assertEqual(u'inter-router', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][3])
 
         # sasl must be plain
-        self.assertEqual(u'PLAIN', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][5])
+        self.assertEqual(u'PLAIN', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][6])
 
         # user must be test@domain.com
-        self.assertEqual(u'test@domain.com', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][7])
+        self.assertEqual(u'test@domain.com', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][8])
 
 
 class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
@@ -373,11 +373,11 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
         # There should be only two connections.
         # There will be no inter-router connection
         self.assertEqual(2, len(local_node.query(type='org.apache.qpid.dispatch.connection').results))
-        self.assertEqual('in', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][3])
-        self.assertEqual('normal', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][2])
-        self.assertEqual('anonymous', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][7])
-        self.assertEqual('normal', local_node.query(type='org.apache.qpid.dispatch.connection').results[1][2])
-        self.assertEqual('anonymous', local_node.query(type='org.apache.qpid.dispatch.connection').results[1][7])
+        self.assertEqual('in', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][4])
+        self.assertEqual('normal', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][3])
+        self.assertEqual('anonymous', local_node.query(type='org.apache.qpid.dispatch.connection').results[0][8])
+        self.assertEqual('normal', local_node.query(type='org.apache.qpid.dispatch.connection').results[1][3])
+        self.assertEqual('anonymous', local_node.query(type='org.apache.qpid.dispatch.connection').results[1][8])
 
 class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
@@ -470,23 +470,23 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         found = False
 
         for N in range(0, len(results)):
-            if results[N][4] == search:
+            if results[N][5] == search:
                 found = True
                 break
 
         self.assertTrue(found, "Connection to %s not found" % search)
 
         # sslProto should be TLSv1/SSLv3
-        self.assertEqual(u'TLSv1/SSLv3', results[N][9])
+        self.assertEqual(u'TLSv1/SSLv3', results[N][10])
 
         # role should be inter-router
-        self.assertEqual(u'inter-router', results[N][2])
+        self.assertEqual(u'inter-router', results[N][3])
 
         # sasl must be plain
-        self.assertEqual(u'PLAIN', results[N][5])
+        self.assertEqual(u'PLAIN', results[N][6])
 
         # user must be test@domain.com
-        self.assertEqual(u'test@domain.com', results[N][7])
+        self.assertEqual(u'test@domain.com', results[N][8])
 
     def test_inter_router_plain_over_ssl_exists(self):
         """
