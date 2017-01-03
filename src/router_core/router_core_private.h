@@ -454,6 +454,7 @@ struct qdr_connection_info_t {
     qd_direction_t              dir;
     qdr_connection_role_t       role;
     pn_data_t                  *connection_properties;
+    bool                        ssl;
     int                         ssl_ssf; //ssl strength factor
 };
 

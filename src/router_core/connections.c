@@ -131,7 +131,8 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            char            *user,
                                            const char      *container,
                                            pn_data_t       *connection_properties,
-                                           int              ssl_ssf)
+                                           int              ssl_ssf,
+                                           bool             ssl)
 {
     qdr_connection_info_t *connection_info = new_qdr_connection_info_t();
     connection_info->is_encrypted          = is_encrypted;
@@ -171,6 +172,7 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
 
     connection_info->connection_properties = qdr_conn_properties;
     connection_info->ssl_ssf = ssl_ssf;
+    connection_info->ssl     = ssl;
 
     return connection_info;
 }

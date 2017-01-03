@@ -37,6 +37,9 @@
 #define QDR_CONNECTION_PROPERTIES       12
 #define QDR_CONNECTION_SSLSSF           13
 #define QDR_CONNECTION_TENANT           14
+#define QDR_CONNECTION_TYPE             15
+#define QDR_CONNECTION_SSL              16
+#define QDR_CONNECTION_OPENED           17
 
 const char * const QDR_CONNECTION_DIR_IN  = "in";
 const char * const QDR_CONNECTION_DIR_OUT = "out";
@@ -64,9 +67,12 @@ const char *qdr_connection_columns[] =
      "properties",
      "sslSsf",
      "tenant",
+     "type",
+     "ssl",
+     "opened",
      0};
 
-const char *CONFIG_CONNECTION_TYPE = "org.apache.qpid.dispatch.connection";
+const char *CONNECTION_TYPE = "org.apache.qpid.dispatch.connection";
 
 static void qd_get_next_pn_data(pn_data_t **data, const char **d, int *d1)
 {
@@ -170,6 +176,18 @@ static void qdr_connection_insert_column_CT(qdr_connection_t *conn, int col, qd_
             qd_compose_insert_string(body, conn->tenant_space);
         else
             qd_compose_insert_null(body);
+        break;
+
+    case QDR_CONNECTION_TYPE:
+        qd_compose_insert_string(body, CONNECTION_TYPE);
+        break;
+
+    case QDR_CONNECTION_SSL:
+        qd_compose_insert_bool(body, conn->connection_info->ssl);
+        break;
+
+    case QDR_CONNECTION_OPENED:
+        qd_compose_insert_bool(body, conn->connection_info->opened);
         break;
 
     case QDR_CONNECTION_PROPERTIES: {
@@ -351,7 +369,7 @@ void qdra_connection_get_CT(qdr_core_t    *core,
     if (!identity) {
         query->status = QD_AMQP_BAD_REQUEST;
         query->status.description = "Name not supported. Identity required";
-        qd_log(core->agent_log, QD_LOG_ERROR, "Error performing READ of %s: %s", CONFIG_CONNECTION_TYPE, query->status.description);
+        qd_log(core->agent_log, QD_LOG_ERROR, "Error performing READ of %s: %s", CONNECTION_TYPE, query->status.description);
     }
     else {
         conn = qdr_connection_find_by_identity_CT(core, identity);

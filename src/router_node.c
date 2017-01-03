@@ -676,11 +676,13 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     memset(cipher, 0, 50);
 
     int ssl_ssf = 0;
+    bool is_ssl = false;
 
     if (ssl) {
         pn_ssl_get_protocol_name(ssl, proto, 50);
         pn_ssl_get_cipher_name(ssl, cipher, 50);
         ssl_ssf = pn_ssl_get_ssf(ssl);
+        is_ssl = true;
     }
 
 
@@ -695,7 +697,8 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                                                                  (char *)user,
                                                                  container,
                                                                  props,
-                                                                 ssl_ssf);
+                                                                 ssl_ssf,
+                                                                 is_ssl);
 
     qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, cost, connection_id, name,
                                                    pn_connection_remote_container(pn_conn),

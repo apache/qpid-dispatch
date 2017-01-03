@@ -706,6 +706,7 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            char            *user,
                                            const char      *container,
                                            pn_data_t       *connection_properties,
-                                           int ssl_ssf);
+                                           int              ssl_ssf,
+                                           bool             ssl);
 
 #endif

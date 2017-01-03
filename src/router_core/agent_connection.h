@@ -30,7 +30,7 @@ void qdra_connection_get_CT(qdr_core_t          *core,
                             const char          *qdr_connection_columns[]);
 
 
-#define QDR_CONNECTION_COLUMN_COUNT 15
+#define QDR_CONNECTION_COLUMN_COUNT 18
 const char *qdr_connection_columns[QDR_CONNECTION_COLUMN_COUNT + 1];
 
 #endif
