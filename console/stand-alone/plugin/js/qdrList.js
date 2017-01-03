@@ -57,8 +57,8 @@ var QDR = (function(QDR) {
         op: 'UPDATE',
         title: "Update this attribute",
         isValid: function () {
-          QDR.log.debug("isValid UPDAATE? " + this.op)
-          console.dump($scope.operations)
+          //QDR.log.debug("isValid UPDAATE? " + this.op)
+          //console.dump($scope.operations)
           return $scope.operations.indexOf(this.op) > -1
         }
       },

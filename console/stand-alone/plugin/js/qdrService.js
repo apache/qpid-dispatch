@@ -925,23 +925,26 @@ console.dump(e)
       testConnect: function (options, timeout, callback) {
         clearTimeout(self.connectionTimer)
         var connection;
-        var reconnect = angular.isDefined(options.reconnect) ? options.reconnect : true
-        QDR.log.debug("testConnect called with reconnect " + reconnect)
+        var reconnect = angular.isDefined(options.reconnect) ? options.reconnect : false
         var baseAddress = options.address + ':' + options.port;
-        var protocol = $location.protocol() + "://"
+        var protocol = "ws"
+        if ($location.protocol() === "https")
+          protocol = "wss"
+        QDR.log.debug("testConnect called with reconnect " + reconnect + " using " + protocol + " protocol")
         try {
             var ws = self.rhea.websocket_connect(WebSocket);
             connection = self.rhea.connect({
-            connection_details: ws(protocol + baseAddress, ["binary"]),
+            connection_details: ws(protocol + "://" + baseAddress, ["binary"]),
             reconnect: reconnect,
             properties: {
               console_identifier: 'Dispatch console'
             }
           });
         } catch (e) {
-          QDR.log.debug("exception caught on test connect")
-          self.errorText = "Connection failed"
+          QDR.log.debug("exception caught on test connect " + e)
+          self.errorText = "Connection failed "
           callback({error: e})
+          return
         }
         self.connectionTimer = setTimeout(function () {
           callback({error: "timedout"})
@@ -1046,6 +1049,7 @@ console.dump(e)
           var connection;
           if (!options.connection) {
             QDR.log.debug("rhea.connect was not passed an existing connection")
+            options.reconnect = true
             self.testConnect(options, 10000, connectionCallback)
           } else {
             QDR.log.debug("rhea.connect WAS passed an existing connection")

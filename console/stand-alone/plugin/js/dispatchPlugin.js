@@ -211,7 +211,7 @@ var QDR = (function(QDR) {
           $location.search("org", "overview")
       }
 
-      QDRService.testConnect({address: host, port: port, reconnect: true}, 10000, function (e) {
+      QDRService.testConnect({address: host, port: port}, 10000, function (e) {
         if (e.error) {
           QDR.log.debug("failed to auto-connect to " + host + ":" + port)
           // the connect page should rneder
