@@ -222,6 +222,18 @@ qd_error_t qd_dispatch_configure_auto_link(qd_dispatch_t *qd, qd_entity_t *entit
     return qd_error_code();
 }
 
+qd_error_t qd_dispatch_configure_exchange(qd_dispatch_t *qd, qd_entity_t *entity) {
+    if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
+    qd_router_configure_exchange(qd->router, entity);
+    return qd_error_code();
+}
+
+qd_error_t qd_dispatch_configure_binding(qd_dispatch_t *qd, qd_entity_t *entity) {
+    if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
+    qd_router_configure_binding(qd->router, entity);
+    return qd_error_code();
+}
+
 qd_error_t qd_dispatch_configure_policy(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_error_t err;

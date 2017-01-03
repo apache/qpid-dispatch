@@ -695,15 +695,15 @@ bool qd_parse_tree_walk(qd_parse_tree_t *node, qd_parse_tree_visit_t *callback, 
 }
 
 
-bool qd_parse_tree_validate_pattern(qd_parse_tree_type_t type,
+bool qd_parse_tree_validate_pattern(const qd_parse_tree_t *tree,
                                     const qd_iterator_t *pattern)
 {
-    switch (type) {
+    switch (tree->type) {
     case QD_PARSE_TREE_MQTT: {
         // simply ensure that if a '#' is present it is the last token in the
         // pattern
         token_iterator_t ti;
-        bool valid = false;
+        bool valid = true;
         qd_iterator_t *dup = qd_iterator_dup(pattern);
         char *str = (char *)qd_iterator_copy(dup);
         qd_iterator_free(dup);
@@ -726,6 +726,12 @@ bool qd_parse_tree_validate_pattern(qd_parse_tree_type_t type,
         // never validated these before...
         return true;
     }
+}
+
+
+qd_parse_tree_type_t qd_parse_tree_type(const qd_parse_tree_t *tree)
+{
+    return tree->type;
 }
 
 

@@ -107,6 +107,7 @@ foreach(py_test_module
     system_tests_topology_disposition
     system_tests_topology_addition
     system_tests_disallow_link_resumable_link_route
+    system_tests_exchange_bindings
     ${SYSTEM_TESTS_HTTP}
     )
 

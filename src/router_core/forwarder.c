@@ -21,29 +21,8 @@
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
 #include <strings.h>
+#include "forwarder.h"
 
-//
-// NOTE: If the in_delivery argument is NULL, the resulting out deliveries
-//       shall be pre-settled.
-//
-typedef int (*qdr_forward_message_t) (qdr_core_t      *core,
-                                      qdr_address_t   *addr,
-                                      qd_message_t    *msg,
-                                      qdr_delivery_t  *in_delivery,
-                                      bool             exclude_inprocess,
-                                      bool             control);
-
-typedef bool (*qdr_forward_attach_t) (qdr_core_t     *core,
-                                      qdr_address_t  *addr,
-                                      qdr_link_t     *link,
-                                      qdr_terminus_t *source,
-                                      qdr_terminus_t *target);
-
-struct qdr_forwarder_t {
-    qdr_forward_message_t forward_message;
-    qdr_forward_attach_t  forward_attach;
-    bool                  bypass_valid_origins;
-};
 
 //==================================================================================
 // Built-in Forwarders
@@ -850,11 +829,12 @@ qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treat
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
                            bool exclude_inprocess, bool control)
 {
+    int fanout = 0;
     if (addr->forwarder)
-        return addr->forwarder->forward_message(core, addr, msg, in_delivery, exclude_inprocess, control);
+        fanout = addr->forwarder->forward_message(core, addr, msg, in_delivery, exclude_inprocess, control);
 
     // TODO - Deal with this delivery's disposition
-    return 0;
+    return fanout;
 }
 
 

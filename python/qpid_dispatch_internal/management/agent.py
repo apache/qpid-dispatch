@@ -487,6 +487,20 @@ class AllocatorEntity(EntityAdapter):
     def __str__(self):
         return super(AllocatorEntity, self).__str__().replace("Entity(", "AllocatorEntity(")
 
+class ExchangeEntity(EntityAdapter):
+    def create(self):
+        self._qd.qd_dispatch_configure_exchange(self._dispatch, self)
+
+    def __str__(self):
+        return super(ExchangeEntity, self).__str__().replace("Entity(", "ExchangeEntity(")
+
+class BindingEntity(EntityAdapter):
+    def create(self):
+        self._qd.qd_dispatch_configure_binding(self._dispatch, self)
+
+    def __str__(self):
+        return super(BindingEntity, self).__str__().replace("Entity(", "BindingEntity(")
+
 
 class EntityCache(object):
     """

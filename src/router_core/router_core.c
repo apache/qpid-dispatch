@@ -19,6 +19,7 @@
 
 #include "router_core_private.h"
 #include "route_control.h"
+#include "exchange_bindings.h"
 #include <stdio.h>
 #include <strings.h>
 
@@ -46,6 +47,7 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     core->router_mode = mode;
     core->router_area = area;
     core->router_id   = id;
+    DEQ_INIT(core->exchanges);
 
     //
     // Set up the logging sources for the router core
@@ -134,6 +136,8 @@ void qdr_core_free(qdr_core_t *core)
     while ( (link_route = DEQ_HEAD(core->link_routes))) {
         qdr_core_delete_link_route(core, link_route);
     }
+
+    qdr_exchange_free_all(core);
 
     qdr_address_t *addr = 0;
     while ( (addr = DEQ_HEAD(core->addrs)) ) {
