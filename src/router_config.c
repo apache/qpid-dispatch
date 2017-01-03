@@ -301,6 +301,109 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
 }
 
 
+qd_error_t qd_router_configure_exchange(qd_router_t *router, qd_entity_t *entity)
+{
+
+    char *name      = 0;
+    char *address   = 0;
+    char *alternate = 0;
+    char *method    = 0;
+
+    do {
+        long phase   = qd_entity_opt_long(entity, "phase", 0);          QD_ERROR_BREAK();
+        long alt_phase = qd_entity_opt_long(entity, "alternatePhase", 0); QD_ERROR_BREAK();
+        name         = qd_entity_get_string(entity, "name");              QD_ERROR_BREAK();
+        address      = qd_entity_get_string(entity, "address");           QD_ERROR_BREAK();
+        alternate    = qd_entity_opt_string(entity, "alternate", 0);      QD_ERROR_BREAK();
+        method       = qd_entity_opt_string(entity, "matchMethod", 0);    QD_ERROR_BREAK();
+
+        qd_composed_field_t *body = qd_compose_subfield(0);
+        qd_compose_start_map(body);
+
+        qd_compose_insert_string(body, "name");
+        qd_compose_insert_string(body, name);
+
+        qd_compose_insert_string(body, "address");
+        qd_compose_insert_string(body, address);
+
+        qd_compose_insert_string(body, "phase");
+        qd_compose_insert_int(body, phase);
+
+        if (alternate) {
+            qd_compose_insert_string(body, "alternate");
+            qd_compose_insert_string(body, alternate);
+            qd_compose_insert_string(body, "alternatePhase");
+            qd_compose_insert_int(body, alt_phase);
+        }
+
+        qd_compose_insert_string(body, "matchMethod");
+        if (method)
+            qd_compose_insert_string(body, method);
+        else
+            qd_compose_insert_string(body, "0-10");
+
+        qd_compose_end_map(body);
+
+        qdi_router_configure_body(router->router_core, body, QD_ROUTER_EXCHANGE, name);
+        qd_compose_free(body);
+    } while(0);
+
+    free(name);
+    free(address);
+    free(alternate);
+    free(method);
+
+    return qd_error_code();
+}
+
+
+qd_error_t qd_router_configure_binding(qd_router_t *router, qd_entity_t *entity)
+{
+    char *name     = 0;
+    char *exchange = 0;
+    char *key      = 0;
+    char *next_hop = 0;
+
+    do {
+        long phase = qd_entity_opt_long(entity, "phase", 0);   QD_ERROR_BREAK();
+        name       = qd_entity_opt_string(entity, "name", 0);  QD_ERROR_BREAK();
+        exchange   = qd_entity_get_string(entity, "exchange"); QD_ERROR_BREAK();
+        key        = qd_entity_get_string(entity, "key");      QD_ERROR_BREAK();
+        next_hop   = qd_entity_get_string(entity, "nextHop");  QD_ERROR_BREAK();
+
+        qd_composed_field_t *body = qd_compose_subfield(0);
+        qd_compose_start_map(body);
+
+        qd_compose_insert_string(body, "name");
+        qd_compose_insert_string(body, name);
+
+        qd_compose_insert_string(body, "exchange");
+        qd_compose_insert_string(body, exchange);
+
+        qd_compose_insert_string(body, "key");
+        qd_compose_insert_string(body, key);
+
+        qd_compose_insert_string(body, "nextHop");
+        qd_compose_insert_string(body, next_hop);
+
+        qd_compose_insert_string(body, "phase");
+        qd_compose_insert_int(body, phase);
+
+        qd_compose_end_map(body);
+
+        qdi_router_configure_body(router->router_core, body, QD_ROUTER_BINDING, name);
+        qd_compose_free(body);
+    } while(0);
+
+    free(name);
+    free(exchange);
+    free(key);
+    free(next_hop);
+
+    return qd_error_code();
+}
+
+
 void qd_router_configure_free(qd_router_t *router)
 {
     if (!router) return;

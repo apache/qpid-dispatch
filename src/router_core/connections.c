@@ -1429,12 +1429,17 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     qdr_link_outbound_second_attach_CT(core, link, source, target);
 
                     //
-                    // Issue the initial credit only if there are destinations for the address or if the address treatment is multicast.
+                    // Issue the initial credit only if one of the following
+                    // holds:
+                    // - there are destinations for the address
+                    // - if the address treatment is multicast
+                    // - the address is that of an exchange (no subscribers allowed)
                     //
                     if (DEQ_SIZE(addr->subscriptions)
                             || DEQ_SIZE(addr->rlinks)
                             || qd_bitmask_cardinality(addr->rnodes)
-                            || qdr_is_addr_treatment_multicast(addr)) {
+                            || qdr_is_addr_treatment_multicast(addr)
+                            || !!addr->exchange) {
                         qdr_link_issue_credit_CT(core, link, link->capacity, false);
                     }
                 }

@@ -559,24 +559,37 @@ static char *test_multiple_matches(void *context)
 static char *test_validation(void *context)
 {
     qd_iterator_t *iter = qd_iterator_string("sam.*.am.#", ITER_VIEW_ALL);
-    if (!qd_parse_tree_validate_pattern(QD_PARSE_TREE_ADDRESS, iter) ||
-        !qd_parse_tree_validate_pattern(QD_PARSE_TREE_AMQP_0_10, iter)) {
+    qd_parse_tree_t *mqtt_tree = qd_parse_tree_new(QD_PARSE_TREE_MQTT);
+    qd_parse_tree_t *addr_tree = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    qd_parse_tree_t *amqp_tree = qd_parse_tree_new(QD_PARSE_TREE_AMQP_0_10);
+
+    if (!qd_parse_tree_validate_pattern(addr_tree, iter) ||
+        !qd_parse_tree_validate_pattern(amqp_tree, iter)) {
         return "expected to skip validation";
     }
     qd_iterator_free(iter);
 
     qd_iterator_t *iter_good = qd_iterator_string("sam/+/a.#.m/#", ITER_VIEW_ALL);
-    if (!qd_parse_tree_validate_pattern(QD_PARSE_TREE_MQTT, iter_good)) {
+    if (!qd_parse_tree_validate_pattern(mqtt_tree, iter_good)) {
         return "expected to pass mqtt validation";
     }
     qd_iterator_free(iter_good);
 
     qd_iterator_t *iter_bad = qd_iterator_string("sam/#/am/+", ITER_VIEW_ALL);
-    if (qd_parse_tree_validate_pattern(QD_PARSE_TREE_MQTT, iter_bad)) {
+    if (qd_parse_tree_validate_pattern(mqtt_tree, iter_bad)) {
         return "expected to fail mqtt validation";
     }
     qd_iterator_free(iter_bad);
 
+    qd_iterator_t *iter_const = qd_iterator_string("sam/I/am", ITER_VIEW_ALL);
+    if (!qd_parse_tree_validate_pattern(mqtt_tree, iter_const)) {
+        return "expected to pass mqtt constant string validation";
+    }
+    qd_iterator_free(iter_const);
+
+    qd_parse_tree_free(mqtt_tree);
+    qd_parse_tree_free(addr_tree);
+    qd_parse_tree_free(amqp_tree);
     return NULL;
 }
 

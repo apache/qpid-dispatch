@@ -21,6 +21,7 @@
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
 #include <strings.h>
+#include "exchange_bindings.h"
 
 //
 // NOTE: If the in_delivery argument is NULL, the resulting out deliveries
@@ -828,11 +829,14 @@ qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treat
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
                            bool exclude_inprocess, bool control)
 {
+    int fanout = 0;
     if (addr->forwarder)
-        return addr->forwarder->forward_message(core, addr, msg, in_delivery, exclude_inprocess, control);
+        fanout = addr->forwarder->forward_message(core, addr, msg, in_delivery, exclude_inprocess, control);
+    if (addr->exchange)
+        fanout += qdr_forward_exchange_CT(addr->exchange, msg, in_delivery, exclude_inprocess, control);
 
     // TODO - Deal with this delivery's disposition
-    return 0;
+    return fanout;
 }
 
 

@@ -1126,6 +1126,106 @@
             }
         },
 
+        "router.config.exchange": {
+            "description":"[EXPERIMENTAL] Defines a topic exchange.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "address": {
+                    "description": "The address of the exchange.",
+                    "type": "string",
+                    "create": true,
+                    "required": true
+                },
+                "phase": {
+                    "type": "integer",
+                    "description": "The address phase for the exchange.  Defaults to '0'.",
+                    "create": true,
+                    "required": false
+                },
+                "alternate": {
+                    "description": "The address to forward the message to if no bindings are matched.",
+                    "type": "string",
+                    "create": true,
+                    "required": false
+                },
+                "alternatePhase": {
+                    "type": "integer",
+                    "description": "The address phase for the alternate address.  Defaults to '0'.",
+                    "create": true,
+                    "required": false
+                },
+                "matchMethod": {
+                    "description": "Key matching algorithm used. '0-10' uses the legacy AMQP topic exchange wildcard match method as described in the 0-10 draft. 'mqtt' uses the MQTT topic filter wildcard match method.",
+                    "type": ["0-10", "mqtt"],
+                    "default": "0-10",
+                    "required": false,
+                    "create": true
+                },
+                "bindingCount": {
+                    "description": "The number of bindings associated with this exchange.",
+                    "type": "integer",
+                    "create": false
+                },
+                "deliveriesReceived": {
+                    "description": "The total number of deliveries received by this exchange.",
+                    "type": "integer",
+                    "create": false
+                },
+                "deliveriesDropped": {
+                    "description": "The total number of deliveries dropped due to the lack of an outgoing subscription.",
+                    "type": "integer",
+                    "create": false
+                },
+                "deliveriesForwarded": {
+                    "description": "The total number of deliveries forwarded via matched bindings.",
+                    "type": "integer",
+                    "create": false
+                },
+                "deliveriesAlternate": {
+                    "description": "The total number of deliveries forwarded to the alternate exchange.",
+                    "type": "integer",
+                    "create": false
+                }
+            }
+        },
+
+        "router.config.binding": {
+            "description":"[EXPERIMENTAL] Defines a keyed next hop binding for an exchange.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "exchange": {
+                    "description": "The name of the exchange to bind.",
+                    "type": "string",
+                    "create": true,
+                    "required": true
+                },
+                "key": {
+                    "description": "Pattern to compare against incoming message's topic.  The key is a string of zero or more tokens and wildcards. The format depends on the matchMethod configured for the exchange. For 0-10 each token is delimited by the '.' character and wild-card token '*' matches a single token and '#' matches zero or more tokens. For MQTT each token is delimited by the '/' character and wildcard token '+' matches a single token and '#' matches zero or more tokens at the end of the topic.",
+                    "type": "string",
+                    "create": true,
+                    "required": true
+                },
+                "nextHop": {
+                    "description": "The address to forward the message to when the message's topic string matches the binding key pattern.",
+                    "type": "string",
+                    "create": true,
+                    "required": true
+                },
+                "phase": {
+                    "type": "integer",
+                    "description": "The address phase used when forwarding messages that match this binding.",
+                    "create": true,
+                    "required": false
+                },
+                "deliveriesMatched": {
+                    "description": "Total number of deliveries that matched this binding",
+                    "type": "integer"
+                }
+            }
+        },
+
         "router.link": {
             "description": "Link to another AMQP endpoint: router node, client or other AMQP process.",
             "extends": "operationalEntity",
