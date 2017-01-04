@@ -1456,7 +1456,7 @@ class BatchedSettlementTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(20, Timeout(self))
+        self.timer    = event.reactor.schedule(120, Timeout(self)) # Long timeout for Valgrind
         self.conn     = event.container.connect(self.address)
         self.sender   = event.container.create_sender(self.conn, self.dest)
         self.receiver = event.container.create_receiver(self.conn, self.dest)

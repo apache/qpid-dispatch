@@ -19,6 +19,7 @@
 
 import unittest, os, json, threading, sys, ssl, urllib2
 import ssl
+import run
 from subprocess import PIPE, Popen, STDOUT
 from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
 from qpid_dispatch.management.client import Node
@@ -82,6 +83,8 @@ class RouterTestHttp(TestCase):
         self.assertRaises(urllib2.URLError, urllib2.urlopen, "https://localhost:%d/nosuch" % r.ports[0])
 
     def test_https_get(self):
+        if run.use_valgrind(): self.skipTest("too slow for valgrind")
+
         def listener(**kwargs):
             args = dict(kwargs)
             args.update({'port': self.get_port(), 'httpRoot': os.path.dirname(__file__)})
