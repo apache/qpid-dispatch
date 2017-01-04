@@ -187,26 +187,29 @@ qd_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term)
 
 void qdr_terminus_set_dnp_address_iterator(qdr_terminus_t *term, qd_iterator_t *iter)
 {
-    char       buffer[1000];
+    char       buffer[1001];
     char      *text    = buffer;
     bool       on_heap = false;
     pn_data_t *old     = term->properties;
+    size_t     len;
 
     if (!old)
         return;
 
-    if (qd_iterator_length(iter) < 1000)
-        qd_iterator_ncopy(iter, (unsigned char*) text, 1000);
-    else {
+    if (qd_iterator_length(iter) < 1000) {
+        len = qd_iterator_ncopy(iter, (unsigned char*) text, 1000);
+        text[len] = '\0';
+    } else {
         text    = (char*) qd_iterator_copy(iter);
         on_heap = true;
+        len = strlen(text);
     }
 
     pn_data_t *new = pn_data(pn_data_size(old));
     pn_data_put_map(new);
     pn_data_enter(new);
     pn_data_put_symbol(new, pn_bytes(strlen(QD_DYNAMIC_NODE_PROPERTY_ADDRESS), QD_DYNAMIC_NODE_PROPERTY_ADDRESS));
-    pn_data_put_string(new, pn_bytes(strlen(text), text));
+    pn_data_put_string(new, pn_bytes(len, text));
     pn_data_exit(new);
 
     term->properties = new;
