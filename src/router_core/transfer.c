@@ -658,6 +658,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
     uint64_t        disp       = action->args.delivery.disposition;
     bool            settled    = action->args.delivery.settled;
     qdr_error_t    *error      = action->args.delivery.error;
+    bool error_unassigned      = true;
 
     //
     // Logic:
@@ -676,6 +677,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             peer->disposition = disp;
             peer->error       = error;
             push = true;
+            error_unassigned = false;
         }
     }
 
@@ -714,6 +716,8 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         qdr_delivery_decref(dlv);
     if (peer_moved)
         qdr_delivery_decref(peer);
+    if (error_unassigned)
+        qdr_error_free(error);
 }
 
 
