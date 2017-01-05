@@ -134,7 +134,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
 // Drop all pre-settled deliveries pending on the link's
 // undelivered list.
 //
-static void qdr_forward_drop_presettled_CT_LH(qdr_link_t *link)
+static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link)
 {
     qdr_delivery_t *dlv = DEQ_HEAD(link->undelivered);
     qdr_delivery_t *next;
@@ -144,7 +144,7 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_link_t *link)
         if (dlv->settled) {
             DEQ_REMOVE(link->undelivered, dlv);
             dlv->where = QDR_DELIVERY_NOWHERE;
-            qdr_delivery_decref(dlv);
+            qdr_delivery_decref_CT(core, dlv);
         }
         dlv = next;
     }
@@ -161,7 +161,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
     // the new delivery.
     //
     if (dlv->settled && link->capacity > 0 && DEQ_SIZE(link->undelivered) >= link->capacity)
-        qdr_forward_drop_presettled_CT_LH(link);
+        qdr_forward_drop_presettled_CT_LH(core, link);
 
     DEQ_INSERT_TAIL(link->undelivered, dlv);
     dlv->where = QDR_DELIVERY_IN_UNDELIVERED;

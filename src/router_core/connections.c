@@ -570,12 +570,12 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     //
     qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
     while (ref) {
-        qdr_delivery_decref(ref->dlv);
+        qdr_delivery_decref_CT(core, ref->dlv);
 
         //
         // Account for the lost reference from the Proton delivery
         //
-        qdr_delivery_decref(ref->dlv);
+        qdr_delivery_decref_CT(core, ref->dlv);
 
         qdr_del_delivery_ref(&updated_deliveries, ref);
         ref = DEQ_HEAD(updated_deliveries);
@@ -595,21 +595,21 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
             dlv->peer  = 0;
             peer->peer = 0;
             qdr_delivery_release_CT(core, peer);
-            qdr_delivery_decref(peer);
-            qdr_delivery_decref(dlv);
+            qdr_delivery_decref_CT(core, peer);
+            qdr_delivery_decref_CT(core, dlv);
         }
 
         //
         // Account for the undelivered-list reference
         //
-        qdr_delivery_decref(dlv);
+        qdr_delivery_decref_CT(core, dlv);
 
         //
         // Account for the lost reference from the Proton delivery
         // for unsettled deliveries on incoming links
         //
         if (link->link_direction == QD_INCOMING && !dlv->settled)
-            qdr_delivery_decref(dlv);
+            qdr_delivery_decref_CT(core, dlv);
         dlv = DEQ_HEAD(undelivered);
     }
 
@@ -623,6 +623,10 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         if (dlv->tracking_addr) {
             dlv->tracking_addr->outstanding_deliveries[dlv->tracking_addr_bit]--;
             dlv->tracking_addr->tracked_deliveries--;
+
+            if (dlv->tracking_addr->tracked_deliveries == 0)
+                qdr_check_addr_CT(core, dlv->tracking_addr, false);
+
             dlv->tracking_addr = 0;
         }
 
@@ -633,19 +637,19 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
             if (link->link_direction == QD_OUTGOING)
                 qdr_delivery_failed_CT(core, peer);
 
-            qdr_delivery_decref(peer);
-            qdr_delivery_decref(dlv);
+            qdr_delivery_decref_CT(core, peer);
+            qdr_delivery_decref_CT(core, dlv);
         }
 
         //
         // Account for the unsettled-list reference
         //
-        qdr_delivery_decref(dlv);
+        qdr_delivery_decref_CT(core, dlv);
 
         //
         // Account for the lost reference from the Proton delivery
         //
-        qdr_delivery_decref(dlv);
+        qdr_delivery_decref_CT(core, dlv);
         dlv = DEQ_HEAD(unsettled);
     }
 

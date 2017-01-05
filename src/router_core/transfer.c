@@ -27,6 +27,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
 static void qdr_link_check_credit_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 //==================================================================================
 // Internal Functions
@@ -141,7 +142,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                 link->credit_to_core--;
                 core->deliver_handler(core->user_context, link, dlv, settled);
                 if (settled)
-                    qdr_delivery_decref(dlv);
+                    qdr_delivery_decref(core, dlv);
             }
         }
 
@@ -162,7 +163,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
     qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
     while (ref) {
         core->delivery_update_handler(core->user_context, ref->dlv, ref->dlv->disposition, ref->dlv->settled);
-        qdr_delivery_decref(ref->dlv);
+        qdr_delivery_decref(core, ref->dlv);
         qdr_del_delivery_ref(&updated_deliveries, ref);
         ref = DEQ_HEAD(updated_deliveries);
     }
@@ -261,41 +262,19 @@ void qdr_delivery_incref(qdr_delivery_t *delivery)
 }
 
 
-void qdr_delivery_decref(qdr_delivery_t *delivery)
+void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery)
 {
-    qdr_link_t *link      = delivery->link;
-    uint32_t    ref_count = sys_atomic_dec(&delivery->ref_count);
+    uint32_t ref_count = sys_atomic_dec(&delivery->ref_count);
     assert(ref_count > 0);
 
     if (ref_count == 1) {
-        if (delivery->msg)
-            qd_message_free(delivery->msg);
-
-        if (delivery->to_addr)
-            qd_iterator_free(delivery->to_addr);
-
-        if (delivery->tracking_addr) {
-            delivery->tracking_addr->outstanding_deliveries[delivery->tracking_addr_bit]--;
-            delivery->tracking_addr->tracked_deliveries--;
-            delivery->tracking_addr = 0;
-        }
-
-        if (link) {
-            if (delivery->presettled)
-                link->presettled_deliveries++;
-            else if (delivery->disposition == PN_ACCEPTED)
-                link->accepted_deliveries++;
-            else if (delivery->disposition == PN_REJECTED)
-                link->rejected_deliveries++;
-            else if (delivery->disposition == PN_RELEASED)
-                link->released_deliveries++;
-            else if (delivery->disposition == PN_MODIFIED)
-                link->modified_deliveries++;
-        }
-
-        qd_bitmask_free(delivery->link_exclusion);
-        qdr_error_free(delivery->error);
-        free_qdr_delivery_t(delivery);
+        //
+        // The delivery deletion must occur inside the core thread.
+        // Queue up an action to do the work.
+        //
+        qdr_action_t *action = qdr_action(qdr_delete_delivery_CT, "delete_delivery");
+        action->args.delivery.delivery = delivery;
+        qdr_action_enqueue(core, action);
     }
 }
 
@@ -337,7 +316,7 @@ void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     // Remove the unsettled reference
     //
     if (moved)
-        qdr_delivery_decref(dlv);
+        qdr_delivery_decref_CT(core, dlv);
 }
 
 
@@ -356,7 +335,7 @@ void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     // Remove the unsettled reference
     //
     if (moved)
-        qdr_delivery_decref(dlv);
+        qdr_delivery_decref_CT(core, dlv);
 }
 
 
@@ -391,6 +370,10 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     if (dlv->tracking_addr) {
         dlv->tracking_addr->outstanding_deliveries[dlv->tracking_addr_bit]--;
         dlv->tracking_addr->tracked_deliveries--;
+
+        if (dlv->tracking_addr->tracked_deliveries == 0)
+            qdr_check_addr_CT(core, dlv->tracking_addr, false);
+
         dlv->tracking_addr = 0;
     }
 
@@ -404,6 +387,55 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
         qdr_link_issue_credit_CT(core, link, 1, false);
 
     return moved;
+}
+
+
+static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery)
+{
+    qdr_link_t *link = delivery->link;
+
+    if (delivery->msg)
+        qd_message_free(delivery->msg);
+
+    if (delivery->to_addr)
+        qd_iterator_free(delivery->to_addr);
+
+    if (delivery->tracking_addr) {
+        delivery->tracking_addr->outstanding_deliveries[delivery->tracking_addr_bit]--;
+        delivery->tracking_addr->tracked_deliveries--;
+
+        if (delivery->tracking_addr->tracked_deliveries == 0)
+            qdr_check_addr_CT(core, delivery->tracking_addr, false);
+
+        delivery->tracking_addr = 0;
+    }
+
+    if (link) {
+        if (delivery->presettled)
+            link->presettled_deliveries++;
+        else if (delivery->disposition == PN_ACCEPTED)
+            link->accepted_deliveries++;
+        else if (delivery->disposition == PN_REJECTED)
+            link->rejected_deliveries++;
+        else if (delivery->disposition == PN_RELEASED)
+            link->released_deliveries++;
+        else if (delivery->disposition == PN_MODIFIED)
+            link->modified_deliveries++;
+    }
+
+    qd_bitmask_free(delivery->link_exclusion);
+    qdr_error_free(delivery->error);
+    free_qdr_delivery_t(delivery);
+}
+
+
+void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv)
+{
+    uint32_t ref_count = sys_atomic_dec(&dlv->ref_count);
+    assert(ref_count > 0);
+
+    if (ref_count == 1)
+        qdr_delete_delivery_internal_CT(core, dlv);
 }
 
 
@@ -516,7 +548,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         //
         if (!dlv->settled)
             qdr_delivery_release_CT(core, dlv);
-        qdr_delivery_decref(dlv);
+        qdr_delivery_decref_CT(core, dlv);
         qdr_link_issue_credit_CT(core, link, 1, false);
     } else if (fanout > 0) {
         if (dlv->settled) {
@@ -530,7 +562,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             // If the delivery has no more references, free it now.
             //
             assert(!dlv->peer);
-            qdr_delivery_decref(dlv);
+            qdr_delivery_decref_CT(core, dlv);
         } else {
             //
             // Again, don't bother decrementing then incrementing the ref_count
@@ -588,7 +620,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             // If the delivery is settled, decrement the ref_count on the delivery.
             // This count was the owned-by-action count.
             //
-            qdr_delivery_decref(dlv);
+            qdr_delivery_decref_CT(core, dlv);
         }
         return;
     }
@@ -687,8 +719,8 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             peer->peer = 0;
             dlv->peer  = 0;
 
-            qdr_delivery_decref(dlv);
-            qdr_delivery_decref(peer);
+            qdr_delivery_decref_CT(core, dlv);
+            qdr_delivery_decref_CT(core, peer);
 
             if (peer->link) {
                 peer_moved = qdr_delivery_settled_CT(core, peer);
@@ -707,17 +739,24 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
     //
     // Release the action reference, possibly freeing the delivery
     //
-    qdr_delivery_decref(dlv);
+    qdr_delivery_decref_CT(core, dlv);
 
     //
     // Release the unsettled references if the deliveries were moved
     //
     if (dlv_moved)
-        qdr_delivery_decref(dlv);
+        qdr_delivery_decref_CT(core, dlv);
     if (peer_moved)
-        qdr_delivery_decref(peer);
+        qdr_delivery_decref_CT(core, peer);
     if (error_unassigned)
         qdr_error_free(error);
+}
+
+
+static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    if (!discard)
+        qdr_delete_delivery_internal_CT(core, action->args.delivery.delivery);
 }
 
 

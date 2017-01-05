@@ -1033,7 +1033,8 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 
 static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled)
 {
-    pn_delivery_t *pnd = (pn_delivery_t*) qdr_delivery_get_context(dlv);
+    qd_router_t   *router = (qd_router_t*) context;
+    pn_delivery_t *pnd    = (pn_delivery_t*) qdr_delivery_get_context(dlv);
 
     if (!pnd)
         return;
@@ -1068,7 +1069,7 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         qdr_delivery_set_context(dlv, 0);
         pn_delivery_set_context(pnd, 0);
         pn_delivery_settle(pnd);
-        qdr_delivery_decref(dlv);
+        qdr_delivery_decref(router->router_core, dlv);
     }
 }
 
