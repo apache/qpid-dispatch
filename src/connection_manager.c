@@ -487,6 +487,7 @@ void qd_connection_manager_free(qd_connection_manager_t *cm)
 
 void qd_connection_manager_start(qd_dispatch_t *qd)
 {
+    static bool first_start = true;
     qd_config_listener_t  *cl = DEQ_HEAD(qd->connection_manager->config_listeners);
     qd_config_connector_t *cc = DEQ_HEAD(qd->connection_manager->config_connectors);
 
@@ -496,8 +497,14 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
                 cl->listener = qd_server_listen(qd, &cl->configuration, cl);
                 if (cl->listener && cl->listener->pn_listener)
                     cl->state = QD_BIND_SUCCESSFUL;
-                else
+                else {
                     cl->state = QD_BIND_FAILED;
+                    if (first_start) {
+                        qd_log(qd->connection_manager->log_source, QD_LOG_CRITICAL,
+                               "Socket bind failed during initial configuration - process exiting");
+                        exit(1);
+                    }
+                }
             }
         cl = DEQ_NEXT(cl);
     }
@@ -507,6 +514,8 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
             cc->connector = qd_server_connect(qd, &cc->configuration, cc);
         cc = DEQ_NEXT(cc);
     }
+
+    first_start = false;
 }
 
 
