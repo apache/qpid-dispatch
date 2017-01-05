@@ -23,7 +23,7 @@
 
 /* No HTTP implementation available. */
 
-qd_http_server_t *qd_http_server(qd_dispatch_t *d, qd_log_source_t *log)
+qd_http_server_t *qd_http_server(struct qd_dispatch_t *d, qd_log_source_t *log)
 {
     qd_log(log, QD_LOG_WARNING, "HTTP support is not available");
     return 0;

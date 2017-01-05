@@ -32,7 +32,6 @@
  * exclusive access to that connection.
  */
 
-typedef struct qdr_core_t            qdr_core_t;
 typedef struct qdr_subscription_t    qdr_subscription_t;
 typedef struct qdr_connection_t      qdr_connection_t;
 typedef struct qdr_link_t            qdr_link_t;
