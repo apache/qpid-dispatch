@@ -118,6 +118,13 @@ class BusManager(Node):
             return "Kerberos"
         return "%s(%s)" % (conn.sslProto, conn.sslCipher)
 
+    def noTrailingSlash(self, text):
+        if text == None:
+            return ""
+        if text[-1:] == '/':
+            return text[:-1]
+        return text
+
     def displayConnections(self):
         disp = Display(prefix="  ")
         heads = []
@@ -128,10 +135,13 @@ class BusManager(Node):
         heads.append(Header("dir"))
         heads.append(Header("security"))
         heads.append(Header("authentication"))
+        heads.append(Header("tenant"))
 
         rows = []
+        cols = ('identity', 'host', 'container', 'role', 'dir', 'isAuthenticated', 'sasl',
+                'user', 'isEncrypted', 'sslProto', 'sslCipher', 'tenant')
 
-        objects = self.query('org.apache.qpid.dispatch.connection', limit=self.opts.limit)
+        objects = self.query('org.apache.qpid.dispatch.connection', cols, limit=self.opts.limit)
 
         for conn in objects:
             row = []
@@ -142,6 +152,7 @@ class BusManager(Node):
             row.append(conn.dir)
             row.append(self.connSecurity(conn))
             row.append(self.connAuth(conn))
+            row.append(self.noTrailingSlash(conn.tenant))
             rows.append(row)
         title = "Connections"
         dispRows = rows
@@ -254,7 +265,6 @@ class BusManager(Node):
         if self.opts.verbose:
             heads.append(Header("name"))
         rows = []
-
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
                 'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
                 'presettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
@@ -301,7 +311,6 @@ class BusManager(Node):
             heads.append(Header("neighbors"))
             heads.append(Header("valid-origins"))
         rows = []
-
         cols = ('id', 'nextHop', 'routerLink', 'lastTopoChange')
         if self.opts.verbose:
             cols += ('cost', 'linkState', 'validOrigins')
@@ -357,7 +366,6 @@ class BusManager(Node):
         heads.append(Header("to-proc", Header.COMMAS))
         heads.append(Header("from-proc", Header.COMMAS))
         rows = []
-
         cols = ('distribution', 'inProcess', 'subscriberCount', 'remoteCount',
                 'containerCount', 'deliveriesIngress', 'deliveriesEgress',
                 'deliveriesTransit', 'deliveriesToContainer', 'deliveriesFromContainer')
@@ -396,7 +404,6 @@ class BusManager(Node):
         heads.append(Header("status"))
         heads.append(Header("lastErr"))
         rows = []
-
         cols = ('addr', 'dir', 'phase', 'externalAddr', 'linkRef', 'operStatus', 'lastError')
 
         objects = self.query('org.apache.qpid.dispatch.router.config.autoLink', cols, limit=self.opts.limit)
@@ -424,7 +431,6 @@ class BusManager(Node):
         heads.append(Header("distrib"))
         heads.append(Header("status"))
         rows = []
-
         cols = ('prefix', 'dir', 'distribution', 'operStatus')
 
         link_routes = self.query('org.apache.qpid.dispatch.router.config.linkRoute', cols, limit=self.opts.limit)
@@ -453,7 +459,6 @@ class BusManager(Node):
         heads.append(Header("rebal-in", Header.COMMAS))
         heads.append(Header("rebal-out", Header.COMMAS))
         rows = []
-
         cols = ('identity', 'typeSize', 'transferBatchSize', 'localFreeListMax',
                 'totalAllocFromHeap', 'heldByThreads', 'batchesRebalancedToThreads',
                 'batchesRebalancedToGlobal')
