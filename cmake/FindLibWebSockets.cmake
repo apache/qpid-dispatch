@@ -21,9 +21,9 @@
 #
 # Sets the following variables:
 #
-#   LibWebSockets_FOUND            - True if headers and requested libraries were found
-#   LibWebSockets_INCLUDE_DIRS     - LibWebSockets include directories
-#   LibWebSockets_LIBRARIES        - Link these to use libwebsockets.
+#   LIBWEBSOCKETS_FOUND            - True if headers and requested libraries were found
+#   LIBWEBSOCKETS_INCLUDE_DIRS     - LibWebSockets include directories
+#   LIBWEBSOCKETS_LIBRARIES        - Link these to use libwebsockets.
 #
 # This module reads hints about search locations from variables::
 #   LIBWEBSOCKETS_LIBRARYDIR       - Preferred library directory e.g. <prefix>/lib
@@ -31,12 +31,12 @@
 #   CMAKE_INSTALL_PREFIX           - Install location for the current project.
 #   LIBWEBSOCKETS_INCLUDEDIR       - Preferred include directory e.g. <prefix>/include
 
-find_library(LibWebSockets_LIBRARIES
+find_library(LIBWEBSOCKETS_LIBRARIES
   NAMES websockets libwebsockets
   HINTS ${LIBWEBSOCKETS_LIBRARYDIR} ${LIBWEBSOCKETS_ROOT}  ${CMAKE_INSTALL_PREFIX}
   )
 
-find_path(LibWebSockets_INCLUDE_DIRS
+find_path(LIBWEBSOCKETS_INCLUDE_DIRS
   NAMES libwebsockets.h
   HINTS ${LIBWEBSOCKETS_INCLUDEDIR} ${LIBWEBSOCKETS_ROOT}/include ${CMAKE_INSTALL_PREFIX}/include
   PATHS /usr/include
@@ -44,21 +44,22 @@ find_path(LibWebSockets_INCLUDE_DIRS
 
 include(FindPackageHandleStandardArgs)
 
-find_package_handle_standard_args(LibWebSockets DEFAULT_MSG LibWebSockets_LIBRARIES LibWebSockets_INCLUDE_DIRS)
+find_package_handle_standard_args(LIBWEBSOCKETS DEFAULT_MSG LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS)
 
-if(LibWebSockets_FOUND)
+if(LIBWEBSOCKETS_FOUND)
   # For the moment we need a patched version of LibWebSockets:
   # https://github.com/alanconway/libwebsockets/tree/v2.1-stable-aconway-adopt-ssl
   # This function check verifies we have it.
-  set(CMAKE_REQUIRED_INCLUDES ${LibWebSockets_INCLUDE_DIRS})
-  set(CMAKE_REQUIRED_LIBRARIES ${LibWebSockets_LIBRARIES})
+  set(CMAKE_REQUIRED_INCLUDES ${LIBWEBSOCKETS_INCLUDE_DIRS})
+  set(CMAKE_REQUIRED_LIBRARIES ${LIBWEBSOCKETS_LIBRARIES})
   check_function_exists(lws_adopt_socket_vhost LWS_ADOPT_SOCKET_VHOST_FOUND)
   if (NOT LWS_ADOPT_SOCKET_VHOST_FOUND)
-    unset(LibWebSockets_FOUND)
+    message("Cannot use LibWebSockets, no function lws_adopt_socket_vhost")
+    unset(LIBWEBSOCKETS_FOUND)
   endif()
 endif()
 
-if(NOT LibWebSockets_FOUND)
-  set(LibWebSockets_LIBRARIES "")
-  set(LibWebSockets_INCLUDE_DIRS "")
+if(NOT LIBWEBSOCKETS_FOUND)
+  set(LIBWEBSOCKETS_LIBRARIES "")
+  set(LIBWEBSOCKETS_INCLUDE_DIRS "")
 endif()

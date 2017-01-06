@@ -104,7 +104,7 @@ find_package(Proton 0.15 REQUIRED)
 
 ## Optional dependencies
 include(FindLibWebSockets)
-option(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ${LibWebSockets_FOUND})
+option(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ${LIBWEBSOCKETS_FOUND})
 
 ##
 ## Find Valgrind
