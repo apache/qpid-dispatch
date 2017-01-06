@@ -128,7 +128,7 @@ class BusManager(Node):
     def displayConnections(self):
         disp = Display(prefix="  ")
         heads = []
-        heads.append(Header("Id"))
+        heads.append(Header("id"))
         heads.append(Header("host"))
         heads.append(Header("container"))
         heads.append(Header("role"))

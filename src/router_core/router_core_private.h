@@ -475,7 +475,6 @@ struct qdr_connection_t {
     bool                        strip_annotations_out;
     int                         link_capacity;
     int                         mask_bit;
-    uint64_t                    management_id; // A unique identifier for the qdr_connection_t copied over from qd_connection_t.
     qdr_connection_work_list_t  work_list;
     sys_mutex_t                *work_lock;
     qdr_link_ref_list_t         links;

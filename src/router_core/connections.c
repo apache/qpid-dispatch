@@ -73,7 +73,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     qdr_connection_t *conn   = new_qdr_connection_t();
 
     ZERO(conn);
-    conn->identity              = qdr_identifier(core);
+    conn->identity              = management_id;
     conn->connection_info       = connection_info;
     conn->core                  = core;
     conn->user_context          = 0;
@@ -83,7 +83,6 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     conn->strip_annotations_in  = strip_annotations_in;
     conn->strip_annotations_out = strip_annotations_out;
     conn->link_capacity         = link_capacity;
-    conn->management_id         = management_id;
     conn->mask_bit              = -1;
     DEQ_INIT(conn->links);
     DEQ_INIT(conn->work_list);

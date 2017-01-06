@@ -150,9 +150,12 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
         qd_compose_insert_ulong(body, link->total_deliveries);
         break;
 
-    case QDR_LINK_CONNECTION_ID:
-        qd_compose_insert_ulong(body, link->conn->management_id);
+    case QDR_LINK_CONNECTION_ID: {
+        char id[100];
+        snprintf(id, 100, "%"PRId64, link->conn->identity);
+        qd_compose_insert_string(body, id);
         break;
+    }
 
     case QDR_LINK_ADMIN_STATE:
         text = link->admin_enabled ? "enabled" : "disabled";
