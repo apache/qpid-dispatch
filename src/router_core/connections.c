@@ -237,20 +237,17 @@ int qdr_connection_process(qdr_connection_t *conn)
 
         case QDR_CONNECTION_WORK_FIRST_DETACH :
             core->detach_handler(core->user_context, work->link, work->error, true, work->close_link);
-            if (work->error)
-                qdr_error_free(work->error);
             break;
 
         case QDR_CONNECTION_WORK_SECOND_DETACH :
             core->detach_handler(core->user_context, work->link, work->error, false, work->close_link);
-            if (work->error)
-                qdr_error_free(work->error);
             free_qdr_link_t(work->link);
             break;
         }
 
         qdr_terminus_free(work->source);
         qdr_terminus_free(work->target);
+        qdr_error_free(work->error);
         free_qdr_connection_work_t(work);
 
         work = DEQ_HEAD(work_list);
@@ -707,6 +704,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     work->link      = link;
     work->source    = source;
     work->target    = target;
+    work->error     = 0;
 
     qdr_connection_enqueue_work_CT(core, conn, work);
     return link;
@@ -720,6 +718,7 @@ void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t
     work->work_type  = ++link->detach_count == 1 ? QDR_CONNECTION_WORK_FIRST_DETACH : QDR_CONNECTION_WORK_SECOND_DETACH;
     work->link       = link;
     work->close_link = close;
+    work->error      = 0;
 
     if (error)
         work->error = error;
@@ -762,6 +761,7 @@ static void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *lin
     work->link      = link;
     work->source    = source;
     work->target    = target;
+    work->error     = 0;
 
     link->oper_status = QDR_LINK_OPER_UP;
 
@@ -1443,8 +1443,10 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     if (link->connected_link) {
         if (dt != QD_LOST)
             qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE, dt == QD_CLOSED);
-        else
+        else {
             qdr_link_outbound_detach_CT(core, link->connected_link, 0, QDR_CONDITION_ROUTED_LINK_LOST, false);
+            qdr_error_free(error);
+        }
 
         //
         // If the link is completely detached, release its resources

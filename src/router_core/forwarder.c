@@ -694,6 +694,7 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
         work->link      = out_link;
         work->source    = source;
         work->target    = target;
+        work->error     = 0;
 
         qdr_connection_enqueue_work_CT(core, conn, work);
 
