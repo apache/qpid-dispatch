@@ -234,45 +234,8 @@ class MaxSessionFramesDefaultTest(TestCase):
             self.assertTrue(" max-frame-size=16384" in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
             # incoming-window is from the config
-            self.assertTrue(" incoming-window=100," in begin_lines[0])
+            self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
 
-
-class MaxFrameMaxSessionFramesTooBigTest(TestCase):
-    """
-    System tests setting proton negotiated size max-frame-size and incoming-window
-    when the product of the two is > 2^31-1. There must be a warning and the incoming
-    window will be reduced to 2^31-1 / max-frame-size
-    """
-    @classmethod
-    def setUpClass(cls):
-        '''Start a router'''
-        super(MaxFrameMaxSessionFramesTooBigTest, cls).setUpClass()
-        name = "MaxFrameMaxSessionFramesTooBig"
-        config = Qdrouterd.Config([
-            ('router', {'mode': 'standalone', 'id': 'QDR'}),
-
-            ('listener', {'host': '0.0.0.0', 'port': cls.tester.get_port(), 'maxFrameSize': '1000000', 'maxSessionFrames': '5000000'}),
-        ])
-        cls.router = cls.tester.qdrouterd(name, config)
-        cls.router.wait_ready()
-        cls.address = cls.router.addresses[0]
-
-    def test_max_frame_max_session_too_big(self):
-        # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        bc = BlockingConnection(self.router.addresses[0])
-        bc.create_receiver("xxx")
-        bc.close()
-
-        with  open('../setUpClass/MaxFrameMaxSessionFramesTooBig.log', 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            open_lines = [s for s in log_lines if "-> @open" in s]
-            # max-frame is from the config
-            self.assertTrue(' max-frame-size=1000000,' in open_lines[0])
-            begin_lines = [s for s in log_lines if "-> @begin" in s]
-            # incoming-window is truncated
-            self.assertTrue(" incoming-window=2147," in begin_lines[0])
-            warning_lines = [s for s in log_lines if "requested maxSessionFrames truncated from 5000000 to 2147" in s]
-            self.assertTrue(len(warning_lines) == 1)
 
 class MaxFrameMaxSessionFramesZeroTest(TestCase):
     """
@@ -306,8 +269,8 @@ class MaxFrameMaxSessionFramesZeroTest(TestCase):
             # max-frame gets set to protocol min
             self.assertTrue(' max-frame-size=512,' in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
-            # incoming-window is promoted to 1
-            self.assertTrue(" incoming-window=1," in begin_lines[0])
+            # incoming-window is defaulted to 2^31-1
+            self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
 
 
 class ConnectorSettingsDefaultTest(TestCase):
@@ -361,7 +324,7 @@ class ConnectorSettingsDefaultTest(TestCase):
             self.assertTrue(' channel-max=32767,' in open_lines[0])
             begin_lines = [s for s in log_lines if "<- @begin" in s]
             # defaults
-            self.assertTrue(" incoming-window=100," in begin_lines[0])
+            self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
 
 
 class ConnectorSettingsNondefaultTest(TestCase):

@@ -444,7 +444,7 @@ typedef struct qd_server_config_t {
      * to equal the specified sessionMaxFrames value measured in units of transfer frames.
      * This calculation is done to satisfy proton pn_session_set_incoming_capacity().
      */
-    uint32_t incoming_capacity;
+    size_t incoming_capacity;
 
     /**
      * The idle timeout, in seconds.  If the peer sends no data frames in this many seconds, the
