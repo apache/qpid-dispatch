@@ -414,8 +414,22 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         break;
 
     case PN_CONNECTION_REMOTE_CLOSE :
-        if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED))
-            pn_connection_close(conn);
+        if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
+            pn_link = pn_link_head(conn, PN_REMOTE_ACTIVE);
+                while (pn_link) {
+                    qd_link_t *qd_link = (qd_link_t *)pn_link_get_context(pn_link);
+                    if (qd_link && qd_link->node) {
+                        qd_log(container->log_source, QD_LOG_NOTICE,
+                               "Aborting link '%s' due to parent connection end",
+                               pn_link_name(pn_link));
+                        qd_link->node->ntype->link_detach_handler(qd_link->node->context,
+                                                                  qd_link, QD_LOST); // assume
+                                                                               // closed?
+                    }
+                    pn_link = pn_link_next(pn_link, PN_REMOTE_ACTIVE);
+                }
+                pn_connection_close(conn);
+            }
         break;
 
     case PN_SESSION_REMOTE_OPEN :
