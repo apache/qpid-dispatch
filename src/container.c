@@ -797,7 +797,13 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     const qd_server_config_t * cf = qd_connection_config(conn);
 
     link->pn_sess = pn_session(qd_connection_pn(conn));
-    pn_session_set_incoming_capacity(link->pn_sess, cf->incoming_capacity);
+
+    if (cf->incoming_capacity > 0)
+        pn_session_set_incoming_capacity(link->pn_sess, cf->incoming_capacity);
+    else {
+        size_t capacity = (sizeof(size_t) < 8) ? 0x7FFFFFFFLL : 0x7FFFFFFFLL * cf->max_frame_size;
+        pn_session_set_incoming_capacity(link->pn_sess, capacity);
+    }
 
     if (dir == QD_OUTGOING)
         link->pn_link = pn_sender(link->pn_sess, name);

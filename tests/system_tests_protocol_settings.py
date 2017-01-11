@@ -234,7 +234,7 @@ class MaxSessionFramesDefaultTest(TestCase):
             self.assertTrue(" max-frame-size=16384" in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
             # incoming-window is from the config
-            self.assertTrue(" incoming-window=100," in begin_lines[0])
+            self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
 
 
 class MaxFrameMaxSessionFramesTooBigTest(TestCase):
@@ -306,8 +306,8 @@ class MaxFrameMaxSessionFramesZeroTest(TestCase):
             # max-frame gets set to protocol min
             self.assertTrue(' max-frame-size=512,' in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
-            # incoming-window is promoted to 1
-            self.assertTrue(" incoming-window=1," in begin_lines[0])
+            # incoming-window is defaulted to 2^31-1
+            self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
 
 
 class ConnectorSettingsDefaultTest(TestCase):
@@ -361,7 +361,7 @@ class ConnectorSettingsDefaultTest(TestCase):
             self.assertTrue(' channel-max=32767,' in open_lines[0])
             begin_lines = [s for s in log_lines if "<- @begin" in s]
             # defaults
-            self.assertTrue(" incoming-window=100," in begin_lines[0])
+            self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
 
 
 class ConnectorSettingsNondefaultTest(TestCase):

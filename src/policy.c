@@ -424,13 +424,21 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_conn)
 {
     size_t capacity;
+    const qd_server_config_t *cf = qd_connection_config(qd_conn);
+
     if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow) {
         capacity = qd_conn->policy_settings->maxSessionWindow;
     } else {
-        const qd_server_config_t * cf = qd_connection_config(qd_conn);
         capacity = cf->incoming_capacity;
     }
-    pn_session_set_incoming_capacity(ssn, capacity);
+
+    printf("INCOMING_CAPACITY: %ld\n", capacity);
+    if (capacity > 0)
+        pn_session_set_incoming_capacity(ssn, capacity);
+    else {
+        capacity = (sizeof(size_t) < 8) ? 0x7FFFFFFFLL : 0x7FFFFFFFLL * cf->max_frame_size;
+        pn_session_set_incoming_capacity(ssn, capacity);
+    }
 }
 
 //

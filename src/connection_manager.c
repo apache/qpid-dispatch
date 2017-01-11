@@ -29,6 +29,7 @@
 #include "schema_enum.h"
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 static char* HOST_ADDR_DEFAULT = "127.0.0.1";
 
@@ -247,7 +248,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->http = config->http || config->http_root; /* httpRoot implies http */
     config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize");        CHECK();
     config->max_sessions         = qd_entity_get_long(entity, "maxSessions");         CHECK();
-    uint64_t ssn_frames          = qd_entity_get_long(entity, "maxSessionFrames");    CHECK();
+    uint64_t ssn_frames          = qd_entity_opt_long(entity, "maxSessionFrames", 0); CHECK();
     config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds");  CHECK();
     config->sasl_username        = qd_entity_opt_string(entity, "saslUsername", 0);   CHECK();
     config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0);   CHECK();
@@ -276,21 +277,25 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     //
     // Given session frame count and max frame size compute session incoming_capacity
     // Limit total capacity to 2^31-1.
-    // 
-    uint64_t mfs      = (uint64_t)config->max_frame_size;
-    uint64_t trial_ic = ssn_frames * mfs;
-    uint64_t limit    = (1ll << 31) - 1;
-    if (trial_ic < limit) {
-        // Silently promote incoming capacity of zero to one
-        config->incoming_capacity = 
-            (trial_ic < QD_AMQP_MIN_MAX_FRAME_SIZE ? QD_AMQP_MIN_MAX_FRAME_SIZE : trial_ic);
-    } else {
-        config->incoming_capacity = limit;
-        uint64_t computed_ssn_frames = limit / mfs;
-        qd_log(qd->connection_manager->log_source, QD_LOG_WARNING,
-               "Server configuation for I/O adapter entity name:'%s', host:'%s', port:'%s', "
-               "requested maxSessionFrames truncated from %llu to %llu",
-               config->name, config->host, config->port, ssn_frames, computed_ssn_frames);
+    //
+    if (ssn_frames == 0)
+        config->incoming_capacity = 0;
+    else {
+        uint64_t mfs      = (uint64_t) config->max_frame_size;
+        uint64_t trial_ic = ssn_frames * mfs;
+        uint64_t limit    = (1ll << 31) - 1;
+        if (trial_ic < limit) {
+            // Silently promote incoming capacity of zero to one
+            config->incoming_capacity = 
+                (trial_ic < QD_AMQP_MIN_MAX_FRAME_SIZE ? QD_AMQP_MIN_MAX_FRAME_SIZE : trial_ic);
+        } else {
+            config->incoming_capacity = limit;
+            uint64_t computed_ssn_frames = limit / mfs;
+            qd_log(qd->connection_manager->log_source, QD_LOG_WARNING,
+                   "Server configuation for I/O adapter entity name:'%s', host:'%s', port:'%s', "
+                   "requested maxSessionFrames truncated from %"PRId64" to %"PRId64,
+                   config->name, config->host, config->port, ssn_frames, computed_ssn_frames);
+        }
     }
 
     //
