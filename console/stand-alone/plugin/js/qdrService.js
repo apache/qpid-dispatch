@@ -536,6 +536,14 @@ console.dump(e)
                 }
               }
               // add any new nodes
+              // if there is only one node, it will not be returned
+              if (response.length === 0) {
+                var parts = self.receiver.remote.attach.source.address.split('/')
+                parts[4] = '$management'
+                response.push(parts.join('/'))
+                QDR.log.debug("GET-MGMT-NODES returned an empty list. Using ")
+                console.dump(response)
+              }
               for (var i=0; i<response.length; ++i) {
                 if (!angular.isDefined(self.topology._nodeInfo[response[i]])) {
                   self.topology._nodeInfo[angular.copy(response[i])] = {};
