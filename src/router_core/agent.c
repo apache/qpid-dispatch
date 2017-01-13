@@ -304,7 +304,7 @@ static void qdr_agent_set_columns(qdr_query_t *query,
         }
     }
 
-    if (count == 1 && idx == 1)
+    if ((count == 1 && idx == 1) || idx==count)
         query->columns[idx] = -1;
     else
         query->columns[idx+1] = -1;

@@ -368,7 +368,7 @@ class BusManager(Node):
         rows = []
         cols = ('distribution', 'inProcess', 'subscriberCount', 'remoteCount',
                 'containerCount', 'deliveriesIngress', 'deliveriesEgress',
-                'deliveriesTransit', 'deliveriesToContainer', 'deliveriesFromContainer')
+                'deliveriesTransit', 'deliveriesToContainer', 'deliveriesFromContainer', 'name')
 
         objects = self.query('org.apache.qpid.dispatch.router.address', cols, limit=self.opts.limit)
 
