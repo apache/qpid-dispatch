@@ -303,8 +303,12 @@ div#main.qdr div.qdrList div.selected {
   background-color: #e0e0ff !important;
 }
 
-#dialogChart {
+#dialogChart, #dialogEditChart {
     height: 200px;
+}
+
+.chartOptions .modal-body {
+  overflow-y: initial;
 }
 
 div.qdrCharts p.chartLabels button {

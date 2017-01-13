@@ -570,7 +570,7 @@ var QDR = (function(QDR) {
          name:   $scope.selectedRecordName,
          attr:    rowEntity.name,
          forceCreate: true});
-      doDialog(chart);
+      doDialog('tmplListChart.html', chart);
     }
 
     $scope.addAllToGraph = function(rowEntity) {
@@ -584,7 +584,7 @@ var QDR = (function(QDR) {
         visibleDuration: 1,
         forceCreate: true,
         aggregate:   true});
-      doDialog(chart);
+      doDialog('tmplListChart.html', chart);
     }
 
     $scope.detailCols = [];
@@ -674,12 +674,12 @@ var QDR = (function(QDR) {
       QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, undefined, gotMethodResponse)
     }
 
-    function doDialog(chart) {
+    function doDialog(tmpl, chart) {
         var d = $dialog.dialog({
           backdrop: true,
           keyboard: true,
           backdropClick: true,
-          templateUrl: QDR.templatePath + 'tmplListChart.html',
+          templateUrl: QDR.templatePath + tmpl,
           controller: "QDR.ListChartController",
           resolve: {
                  chart: function() {

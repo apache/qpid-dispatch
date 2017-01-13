@@ -703,3 +703,7 @@ div.topoGrid .ui-grid-viewport {
   left: 0.5em;
   border: 0;
 }
+
+.newChart {
+  float: right;
+}

@@ -5,6 +5,9 @@
     <h3 class="modal-title">Chart {{chart.attr() | humanify}}</h3>
 </div>
 <div class="modal-body">
+    <p class="newChart">
+        <button ng-click="editChart()" title="Configure"><i class="icon-edit"></i></button>
+    </p><div style="clear:both"></div>
     <div id="{{svgDivId}}" class="d3Chart"></div>
 </div>
 <div class="modal-footer">
