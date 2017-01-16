@@ -500,6 +500,7 @@ class MessageTransferTest(MessagingHandler):
         while self.sender.credit > 0 and self.n_sent < self.count:
             self.n_sent += 1
             m = Message(body="Message %d of %d" % (self.n_sent, self.count))
+
             if self.anonymous:
                 m.address = self.sender_address
             self.sender.send(m)
@@ -699,7 +700,7 @@ class WaypointTest(MessagingHandler):
             self.waypoint_sender.send(m)
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(5, Timeout(self))
+        self.timer       = event.reactor.schedule(10, Timeout(self))
         self.first_conn  = event.container.connect(self.first_host)
         self.second_conn = event.container.connect(self.second_host)
 
