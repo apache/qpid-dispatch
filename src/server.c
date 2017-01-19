@@ -92,6 +92,33 @@ struct qd_server_t {
     qd_http_server_t         *http;
 };
 
+/**
+ * Listener objects represent the desire to accept incoming transport connections.
+ */
+struct qd_listener_t {
+    qd_server_t              *server;
+    const qd_server_config_t *config;
+    void                     *context;
+    qdpn_listener_t          *pn_listener;
+    qd_http_listener_t       *http;
+};
+
+
+/**
+ * Connector objects represent the desire to create and maintain an outgoing transport connection.
+ */
+struct qd_connector_t {
+    qd_server_t              *server;
+    cxtr_state_t              state;
+    const qd_server_config_t *config;
+    void                     *context;
+    qd_connection_t          *ctx;
+    qd_timer_t               *timer;
+    long                      delay;
+};
+
+
+
 static __thread qd_server_t *thread_server = 0;
 
 #define HEARTBEAT_INTERVAL 1000
@@ -1708,4 +1735,16 @@ const char* qd_connection_name(const qd_connection_t *c) {
 
 const char* qd_connection_hostip(const qd_connection_t *c) {
     return qdpn_connector_hostip(c->pn_cxtr);
+}
+
+qd_connector_t* qd_connection_connector(const qd_connection_t *c) {
+    return c->connector;
+}
+
+const qd_server_config_t *qd_connector_config(const qd_connector_t *c) {
+    return c->config;
+}
+
+qd_http_listener_t *qd_listener_http(qd_listener_t *l) {
+    return l->http;
 }

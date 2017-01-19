@@ -34,9 +34,18 @@
 
 void qd_server_timer_pending_LH(qd_timer_t *timer);
 void qd_server_timer_cancel_LH(qd_timer_t *timer);
+
+/* FIXME aconway 2017-01-19: to include/server.h? */
+
 struct qd_dispatch_t* qd_server_dispatch(qd_server_t *server);
+
 const char* qd_connection_name(const qd_connection_t *c);
 const char* qd_connection_hostip(const qd_connection_t *c);
+qd_connector_t* qd_connection_connector(const qd_connection_t *c);
+
+const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
+
+qd_http_listener_t *qd_listener_http(qd_listener_t *l);
 
 #define CONTEXT_NO_OWNER -1
 #define CONTEXT_UNSPECIFIED_OWNER -2
@@ -54,30 +63,6 @@ typedef enum {
 } cxtr_state_t;
 
 
-/**
- * Listener objects represent the desire to accept incoming transport connections.
- */
-struct qd_listener_t {
-    qd_server_t              *server;
-    const qd_server_config_t *config;
-    void                     *context;
-    qdpn_listener_t          *pn_listener;
-    qd_http_listener_t       *http;
-};
-
-
-/**
- * Connector objects represent the desire to create and maintain an outgoing transport connection.
- */
-struct qd_connector_t {
-    qd_server_t              *server;
-    cxtr_state_t              state;
-    const qd_server_config_t *config;
-    void                     *context;
-    qd_connection_t          *ctx;
-    qd_timer_t               *timer;
-    long                      delay;
-};
 
 
 typedef struct qd_deferred_call_t {

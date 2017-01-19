@@ -622,9 +622,9 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     const char *host = 0;
 
     const qd_server_config_t *config;
-    if (conn->connector) {
+    if (qd_connection_connector(conn)) {
         char host_local[255];
-        config = conn->connector->config;
+        config = qd_connector_config(qd_connection_connector(conn));
         snprintf(host_local, strlen(config->host)+strlen(config->port)+2, "%s:%s", config->host, config->port);
         host = &host_local[0];
     }

@@ -265,7 +265,7 @@ static void check_timer(void *void_http_server) {
 
 static qd_http_listener_t * qdpn_connector_http_listener(qdpn_connector_t* c) {
     qd_listener_t* ql = (qd_listener_t*)qdpn_listener_context(qdpn_connector_listener(c));
-    return ql->http;
+    return qd_listener_http(ql);
 }
 
 static void http_connector_process(qdpn_connector_t *c) {
