@@ -38,6 +38,60 @@
 #include <errno.h>
 #include <inttypes.h>
 
+typedef struct qd_thread_t {
+    qd_server_t  *qd_server;
+    int           thread_id;
+    volatile int  running;
+    volatile int  canceled;
+    int           using_thread;
+    sys_thread_t *thread;
+} qd_thread_t;
+
+
+typedef struct qd_work_item_t {
+    DEQ_LINKS(struct qd_work_item_t);
+    qdpn_connector_t *cxtr;
+} qd_work_item_t;
+
+DEQ_DECLARE(qd_work_item_t, qd_work_list_t);
+
+
+struct qd_server_t {
+    qd_dispatch_t            *qd;
+    int                       thread_count;
+    const char               *container_name;
+    const char               *sasl_config_path;
+    const char               *sasl_config_name;
+    qdpn_driver_t            *driver;
+    qd_log_source_t          *log_source;
+    qd_thread_start_cb_t      start_handler;
+    qd_conn_handler_cb_t      conn_handler;
+    qd_pn_event_handler_cb_t  pn_event_handler;
+    qd_pn_event_complete_cb_t pn_event_complete_handler;
+    void                     *start_context;
+    void                     *conn_handler_context;
+    sys_cond_t               *cond;
+    sys_mutex_t              *lock;
+    qd_thread_t             **threads;
+    qd_work_list_t            work_queue;
+    qd_timer_list_t           pending_timers;
+    bool                      a_thread_is_waiting;
+    int                       threads_active;
+    int                       pause_requests;
+    int                       threads_paused;
+    int                       pause_next_sequence;
+    int                       pause_now_serving;
+    qd_signal_handler_cb_t    signal_handler;
+    bool                      signal_handler_running;
+    void                     *signal_context;
+    int                       pending_signal;
+    qd_connection_list_t      connections;
+    qd_timer_t               *heartbeat_timer;
+    uint64_t                 next_connection_id;
+    void                     *py_displayname_obj;
+    qd_http_server_t         *http;
+};
+
 static __thread qd_server_t *thread_server = 0;
 
 #define HEARTBEAT_INTERVAL 1000
@@ -1644,4 +1698,14 @@ void qd_server_timer_pending_LH(qd_timer_t *timer)
 void qd_server_timer_cancel_LH(qd_timer_t *timer)
 {
     DEQ_REMOVE(timer->server->pending_timers, timer);
+}
+
+qd_dispatch_t* qd_server_dispatch(qd_server_t *server) { return server->qd; }
+
+const char* qd_connection_name(const qd_connection_t *c) {
+    return qdpn_connector_name(c->pn_cxtr);
+}
+
+const char* qd_connection_hostip(const qd_connection_t *c) {
+    return qdpn_connector_hostip(c->pn_cxtr);
 }
