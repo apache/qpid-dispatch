@@ -26,7 +26,6 @@
 int tool_tests(void);
 int timer_tests(void);
 int alloc_tests(void);
-int server_tests(qd_dispatch_t *qd);
 int compose_tests(void);
 int policy_tests(void);
 
@@ -53,7 +52,6 @@ int main(int argc, char** argv)
         return 1;
     }
     result += timer_tests();
-    result += server_tests(qd);
     result += tool_tests();
     result += compose_tests();
 #if USE_MEMORY_POOL

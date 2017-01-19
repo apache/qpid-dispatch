@@ -53,7 +53,6 @@
 #include <qpid/dispatch/compose.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/timer.h>
-#include <qpid/dispatch/user_fd.h>
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/message.h>
 #include <qpid/dispatch/container.h>

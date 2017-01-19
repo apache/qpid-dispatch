@@ -21,7 +21,6 @@
 
 #include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/server.h>
-#include <qpid/dispatch/user_fd.h>
 #include "alloc.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
@@ -113,7 +112,6 @@ struct qd_connection_t {
     void                     *context; // Copy of context from listener or connector
     void                     *user_context;
     void                     *link_context; // Context shared by this connection's links
-    qd_user_fd_t             *ufd;
     uint64_t                  connection_id; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
     const char               *user_id; // A unique identifier for the user on the connection. This is currently populated  from the client ssl cert. See ssl_uid_format in server.h for more info
     bool                      free_user_id;
@@ -139,15 +137,6 @@ static inline const char* qd_connection_hostip(const qd_connection_t *c) {
 }
 
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
-
-
-struct qd_user_fd_t {
-    qd_server_t      *server;
-    void             *context;
-    int               fd;
-    qdpn_connector_t *pn_conn;
-};
-
 
 typedef struct qd_thread_t {
     qd_server_t  *qd_server;
@@ -179,7 +168,6 @@ struct qd_server_t {
     qd_conn_handler_cb_t      conn_handler;
     qd_pn_event_handler_cb_t  pn_event_handler;
     qd_pn_event_complete_cb_t pn_event_complete_handler;
-    qd_user_fd_handler_cb_t   ufd_handler;
     void                     *start_context;
     void                     *conn_handler_context;
     sys_cond_t               *cond;
@@ -209,7 +197,6 @@ ALLOC_DECLARE(qd_listener_t);
 ALLOC_DECLARE(qd_deferred_call_t);
 ALLOC_DECLARE(qd_connector_t);
 ALLOC_DECLARE(qd_connection_t);
-ALLOC_DECLARE(qd_user_fd_t);
 ALLOC_DECLARE(qd_pn_free_link_session_t);
 
 
