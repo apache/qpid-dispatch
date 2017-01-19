@@ -499,7 +499,7 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
         if (cl->listener == 0 )
             if (cl->state == QD_BIND_NONE) { //Try to start listening only if we have never tried to listen on that port before
                 cl->listener = qd_server_listen(qd, &cl->configuration, cl);
-                if (cl->listener && cl->listener->pn_listener)
+                if (cl->listener)
                     cl->state = QD_BIND_SUCCESSFUL;
                 else {
                     cl->state = QD_BIND_FAILED;

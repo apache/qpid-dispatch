@@ -239,7 +239,7 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
         }
         qd_python_unlock(lock_state);
     }
-    const char *hostname = qdpn_connector_name(conn->pn_cxtr);
+    const char *hostname = qd_connection_name(conn);
     qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d. nConnections= %d.",
             hostname, conn->n_sessions, conn->n_senders, conn->n_receivers, n_connections);
 }
@@ -400,9 +400,9 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
         }
     }
     pn_connection_t *conn = qd_connection_pn(qd_conn);
-    qd_dispatch_t *qd = qd_conn->server->qd;
+    qd_dispatch_t *qd = qd_server_dispatch(qd_conn->server);
     qd_policy_t *policy = qd->policy;
-    const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+    const char *hostip = qd_connection_hostip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(conn);
     if (result) {
         qd_log(policy->log_source,
@@ -574,13 +574,13 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
 //
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
-    const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+    const char *hostip = qd_connection_hostip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(qd_connection_pn(qd_conn));
 
     if (qd_conn->policy_settings->maxSenders) {
         if (qd_conn->n_senders == qd_conn->policy_settings->maxSenders) {
             // Max sender limit specified and violated.
-            qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_INFO,
+            qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
                 "DENY AMQP Attach sender for user '%s', rhost '%s', vhost '%s' based on maxSenders limit",
                 qd_conn->user_id, hostip, vhost);
             _qd_policy_deny_amqp_sender_link(pn_link, qd_conn);
@@ -598,7 +598,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
         // a target is specified
         lookup = _qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings->targets, target);
 
-        qd_log(qd_conn->server->qd->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
+        qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
             "%s AMQP Attach sender link '%s' for user '%s', rhost '%s', vhost '%s' based on link target name",
             (lookup ? "ALLOW" : "DENY"), target, qd_conn->user_id, hostip, vhost);
 
@@ -610,7 +610,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
         // A sender with no remote target.
         // This happens all the time with anonymous relay
         lookup = qd_conn->policy_settings->allowAnonymousSender;
-        qd_log(qd_conn->server->qd->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
+        qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
             "%s AMQP Attach anonymous sender for user '%s', rhost '%s', vhost '%s'",
             (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
         if (!lookup) {
@@ -625,13 +625,13 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
 
 bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
-    const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+    const char *hostip = qd_connection_hostip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(qd_connection_pn(qd_conn));
 
     if (qd_conn->policy_settings->maxReceivers) {
         if (qd_conn->n_receivers == qd_conn->policy_settings->maxReceivers) {
             // Max sender limit specified and violated.
-            qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_INFO,
+            qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
                 "DENY AMQP Attach receiver for user '%s', rhost '%s', vhost '%s' based on maxReceivers limit",
                 qd_conn->user_id, hostip, vhost);
             _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
@@ -646,7 +646,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     bool dynamic_src = pn_terminus_is_dynamic(pn_link_remote_source(pn_link));
     if (dynamic_src) {
         bool lookup = qd_conn->policy_settings->allowDynamicSource;
-        qd_log(qd_conn->server->qd->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
+        qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
             "%s AMQP Attach receiver dynamic source for user '%s', rhost '%s', vhost '%s',",
             (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
         // Dynamic source policy rendered the decision
@@ -660,7 +660,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
         // a source is specified
         bool lookup = _qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings->sources, source);
 
-        qd_log(qd_conn->server->qd->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
+        qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
             "%s AMQP Attach receiver link '%s' for user '%s', rhost '%s', vhost '%s' based on link source name",
             (lookup ? "ALLOW" : "DENY"), source, qd_conn->user_id, hostip, vhost);
 
@@ -670,7 +670,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
         }
     } else {
         // A receiver with no remote source.
-        qd_log(qd_conn->server->qd->policy->log_source, QD_LOG_TRACE,
+        qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_TRACE,
                "DENY AMQP Attach receiver link '' for user '%s', rhost '%s', vhost '%s'",
                qd_conn->user_id, hostip, vhost);
         _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
@@ -688,17 +688,17 @@ void qd_policy_amqp_open(void *context, bool discard)
     qd_connection_t *qd_conn = (qd_connection_t *)context;
     if (!discard) {
         pn_connection_t *conn = qd_connection_pn(qd_conn);
-        qd_dispatch_t *qd = qd_conn->server->qd;
+        qd_dispatch_t *qd = qd_server_dispatch(qd_conn->server);
         qd_policy_t *policy = qd->policy;
         bool connection_allowed = true;
 
         if (policy->enableVhostPolicy) {
             // Open connection or not based on policy.
             pn_transport_t *pn_trans = pn_connection_transport(conn);
-            const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+            const char *hostip = qd_connection_hostip(qd_conn);
             const char *pcrh = pn_connection_remote_hostname(conn);
             const char *vhost = (pcrh ? pcrh : "");
-            const char *conn_name = qdpn_connector_name(qd_conn->pn_cxtr);
+            const char *conn_name = qd_connection_name(qd_conn);
 #define SETTINGS_NAME_SIZE 256
             char settings_name[SETTINGS_NAME_SIZE];
             uint32_t conn_id = qd_conn->connection_id;

@@ -684,7 +684,7 @@ void qdr_manage_update(qdr_core_t *core, void *context, qd_router_entity_type_t 
  *    b) if more is false or count is exceeded, call qdr_query_free, close the outer list, close the map
  */
 
-qdr_query_t *qdr_manage_query(qdr_core_t *core, void *context, qd_router_entity_type_t type, 
+qdr_query_t *qdr_manage_query(qdr_core_t *core, void *context, qd_router_entity_type_t type,
                               qd_parsed_field_t *attribute_names, qd_composed_field_t *body);
 void qdr_query_add_attribute_names(qdr_query_t *query);
 void qdr_query_get_first(qdr_query_t *query, int offset);
@@ -699,10 +699,10 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            bool             opened,
                                            char            *sasl_mechanisms,
                                            qd_direction_t   dir,
-                                           char            *host,
-                                           char            *ssl_proto,
-                                           char            *ssl_cipher,
-                                           char            *user,
+                                           const char      *host,
+                                           const char      *ssl_proto,
+                                           const char      *ssl_cipher,
+                                           const char      *user,
                                            const char      *container,
                                            pn_data_t       *connection_properties,
                                            int              ssl_ssf,

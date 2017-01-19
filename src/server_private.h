@@ -21,7 +21,6 @@
 
 #include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/server.h>
-#include <qpid/dispatch/user_fd.h>
 #include "alloc.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
@@ -35,6 +34,18 @@
 
 void qd_server_timer_pending_LH(qd_timer_t *timer);
 void qd_server_timer_cancel_LH(qd_timer_t *timer);
+
+/* FIXME aconway 2017-01-19: to include/server.h? */
+
+struct qd_dispatch_t* qd_server_dispatch(qd_server_t *server);
+
+const char* qd_connection_name(const qd_connection_t *c);
+const char* qd_connection_hostip(const qd_connection_t *c);
+qd_connector_t* qd_connection_connector(const qd_connection_t *c);
+
+const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
+
+qd_http_listener_t *qd_listener_http(qd_listener_t *l);
 
 #define CONTEXT_NO_OWNER -1
 #define CONTEXT_UNSPECIFIED_OWNER -2
@@ -52,30 +63,6 @@ typedef enum {
 } cxtr_state_t;
 
 
-/**
- * Listener objects represent the desire to accept incoming transport connections.
- */
-struct qd_listener_t {
-    qd_server_t              *server;
-    const qd_server_config_t *config;
-    void                     *context;
-    qdpn_listener_t          *pn_listener;
-    qd_http_listener_t       *http;
-};
-
-
-/**
- * Connector objects represent the desire to create and maintain an outgoing transport connection.
- */
-struct qd_connector_t {
-    qd_server_t              *server;
-    cxtr_state_t              state;
-    const qd_server_config_t *config;
-    void                     *context;
-    qd_connection_t          *ctx;
-    qd_timer_t               *timer;
-    long                      delay;
-};
 
 
 typedef struct qd_deferred_call_t {
@@ -113,7 +100,6 @@ struct qd_connection_t {
     void                     *context; // Copy of context from listener or connector
     void                     *user_context;
     void                     *link_context; // Context shared by this connection's links
-    qd_user_fd_t             *ufd;
     uint64_t                  connection_id; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
     const char               *user_id; // A unique identifier for the user on the connection. This is currently populated  from the client ssl cert. See ssl_uid_format in server.h for more info
     bool                      free_user_id;
@@ -132,76 +118,10 @@ struct qd_connection_t {
 
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
 
-
-struct qd_user_fd_t {
-    qd_server_t      *server;
-    void             *context;
-    int               fd;
-    qdpn_connector_t *pn_conn;
-};
-
-
-typedef struct qd_thread_t {
-    qd_server_t  *qd_server;
-    int           thread_id;
-    volatile int  running;
-    volatile int  canceled;
-    int           using_thread;
-    sys_thread_t *thread;
-} qd_thread_t;
-
-
-typedef struct qd_work_item_t {
-    DEQ_LINKS(struct qd_work_item_t);
-    qdpn_connector_t *cxtr;
-} qd_work_item_t;
-
-DEQ_DECLARE(qd_work_item_t, qd_work_list_t);
-
-
-struct qd_server_t {
-    qd_dispatch_t            *qd;
-    int                       thread_count;
-    const char               *container_name;
-    const char               *sasl_config_path;
-    const char               *sasl_config_name;
-    qdpn_driver_t            *driver;
-    qd_log_source_t          *log_source;
-    qd_thread_start_cb_t      start_handler;
-    qd_conn_handler_cb_t      conn_handler;
-    qd_pn_event_handler_cb_t  pn_event_handler;
-    qd_pn_event_complete_cb_t pn_event_complete_handler;
-    qd_user_fd_handler_cb_t   ufd_handler;
-    void                     *start_context;
-    void                     *conn_handler_context;
-    sys_cond_t               *cond;
-    sys_mutex_t              *lock;
-    qd_thread_t             **threads;
-    qd_work_list_t            work_queue;
-    qd_timer_list_t           pending_timers;
-    bool                      a_thread_is_waiting;
-    int                       threads_active;
-    int                       pause_requests;
-    int                       threads_paused;
-    int                       pause_next_sequence;
-    int                       pause_now_serving;
-    qd_signal_handler_cb_t    signal_handler;
-    bool                      signal_handler_running;
-    void                     *signal_context;
-    int                       pending_signal;
-    qd_connection_list_t      connections;
-    qd_timer_t               *heartbeat_timer;
-    uint64_t                 next_connection_id;
-    void                     *py_displayname_obj;
-    qd_http_server_t         *http;
-};
-
-ALLOC_DECLARE(qd_work_item_t);
 ALLOC_DECLARE(qd_listener_t);
 ALLOC_DECLARE(qd_deferred_call_t);
 ALLOC_DECLARE(qd_connector_t);
 ALLOC_DECLARE(qd_connection_t);
-ALLOC_DECLARE(qd_user_fd_t);
 ALLOC_DECLARE(qd_pn_free_link_session_t);
 
 
