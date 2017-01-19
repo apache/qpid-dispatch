@@ -619,7 +619,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     if (sasl)
         mech = pn_sasl_get_mech(sasl);
 
-    char *host = 0;
+    const char *host = 0;
 
     const qd_server_config_t *config;
     if (conn->connector) {
@@ -629,7 +629,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
         host = &host_local[0];
     }
     else
-        host = (char *)qdpn_connector_name(conn->pn_cxtr);
+        host = qd_connection_name(conn);
 
 
     qd_router_connection_get_config(conn, &role, &cost, &name, &multi_tenant,

@@ -239,7 +239,7 @@ void qd_policy_socket_close(void *context, const qd_connection_t *conn)
         }
         qd_python_unlock(lock_state);
     }
-    const char *hostname = qdpn_connector_name(conn->pn_cxtr);
+    const char *hostname = qd_connection_name(conn);
     qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d. nConnections= %d.",
             hostname, conn->n_sessions, conn->n_senders, conn->n_receivers, n_connections);
 }
@@ -402,7 +402,7 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
     pn_connection_t *conn = qd_connection_pn(qd_conn);
     qd_dispatch_t *qd = qd_conn->server->qd;
     qd_policy_t *policy = qd->policy;
-    const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+    const char *hostip = qd_connection_hostip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(conn);
     if (result) {
         qd_log(policy->log_source,
@@ -574,7 +574,7 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
 //
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
-    const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+    const char *hostip = qd_connection_hostip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(qd_connection_pn(qd_conn));
 
     if (qd_conn->policy_settings->maxSenders) {
@@ -625,7 +625,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
 
 bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
-    const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+    const char *hostip = qd_connection_hostip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(qd_connection_pn(qd_conn));
 
     if (qd_conn->policy_settings->maxReceivers) {
@@ -695,10 +695,10 @@ void qd_policy_amqp_open(void *context, bool discard)
         if (policy->enableVhostPolicy) {
             // Open connection or not based on policy.
             pn_transport_t *pn_trans = pn_connection_transport(conn);
-            const char *hostip = qdpn_connector_hostip(qd_conn->pn_cxtr);
+            const char *hostip = qd_connection_hostip(qd_conn);
             const char *pcrh = pn_connection_remote_hostname(conn);
             const char *vhost = (pcrh ? pcrh : "");
-            const char *conn_name = qdpn_connector_name(qd_conn->pn_cxtr);
+            const char *conn_name = qd_connection_name(qd_conn);
 #define SETTINGS_NAME_SIZE 256
             char settings_name[SETTINGS_NAME_SIZE];
             uint32_t conn_id = qd_conn->connection_id;

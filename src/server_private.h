@@ -130,6 +130,14 @@ struct qd_connection_t {
     qd_pn_free_link_session_list_t  free_link_session_list;
 };
 
+static inline const char* qd_connection_name(const qd_connection_t *c) {
+    return qdpn_connector_name(c->pn_cxtr);
+}
+
+static inline const char* qd_connection_hostip(const qd_connection_t *c) {
+    return qdpn_connector_hostip(c->pn_cxtr);
+}
+
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
 
 
