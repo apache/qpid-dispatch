@@ -103,8 +103,11 @@ find_library(rt_lib rt)
 find_package(Proton 0.15 REQUIRED)
 
 ## Optional dependencies
+
 include(FindLibWebSockets)
-option(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ${LIBWEBSOCKETS_FOUND})
+# FIXME aconway 2017-01-19: websockets disbled for temporary proactor work.
+# option(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ${LIBWEBSOCKETS_FOUND})
+set(USE_LIBWEBSOCKETS OFF)
 
 ##
 ## Find Valgrind

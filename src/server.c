@@ -1564,7 +1564,6 @@ void qd_connection_set_context(qd_connection_t *conn, void *context)
 
 void *qd_connection_get_context(qd_connection_t *conn)
 {
-    /* FIXME aconway 2017-04-20: needs to be thread safe with respect to deletion */
     return conn->user_context;
 }
 
