@@ -774,16 +774,10 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
                 //
                 if (!ctx->opened && pn_event_type(event) == PN_CONNECTION_REMOTE_OPEN) {
                     ctx->opened = true;
-                    qd_conn_event_t ce = QD_CONN_EVENT_LISTENER_OPEN;
-
                     if (ctx->connector) {
-                        ce = QD_CONN_EVENT_CONNECTOR_OPEN;
                         ctx->connector->delay = 2000;  // Delay on re-connect in case there is a recurring error
                     } else
                         assert(ctx->listener);
-
-                    qd_server->conn_handler(qd_server->conn_handler_context,
-                                            ctx->context, ce, (qd_connection_t*) qdpn_connector_context(cxtr));
                     events = 1;
                 } else if (pn_event_type(event) == PN_TRANSPORT_ERROR) {
                     if (ctx->connector) {

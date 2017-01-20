@@ -187,15 +187,6 @@ typedef struct qd_connection_t qd_connection_t;
  * Event type for the connection callback.
  */
 typedef enum {
-    /// The connection just opened via a listener (inbound).
-    /// This event occurs when the AMQP OPEN is received from the client.
-    /// The AMQP connection still needs to be locally opened
-    QD_CONN_EVENT_LISTENER_OPEN,
-
-    /// The connection just opened via a connector (outbound).
-    /// The AMQP connection has been locally and remotely opened.
-    QD_CONN_EVENT_CONNECTOR_OPEN,
-
     /// The connection was closed at the transport level (not cleanly).
     QD_CONN_EVENT_CLOSE,
 

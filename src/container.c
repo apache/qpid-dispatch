@@ -245,6 +245,8 @@ static void notify_closed(qd_container_t *container, qd_connection_t *conn, void
     // this particular list is only ever appended to and never has items inserted or deleted,
     // this usage is safe in this case.
     //
+    // This assumes that pointer assignment is atomic, which it is on most platforms.
+    //
     sys_mutex_lock(container->lock);
     qdc_node_type_t *nt_item = DEQ_HEAD(container->node_type_list);
     sys_mutex_unlock(container->lock);
@@ -603,24 +605,12 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
 }
 
 
-static void open_handler(qd_container_t *container, qd_connection_t *conn, qd_direction_t dir, void *context)
-{
-}
-
-
 static int handler(void *handler_context, void *conn_context, qd_conn_event_t event, qd_connection_t *qd_conn)
 {
     qd_container_t  *container = (qd_container_t*) handler_context;
     pn_connection_t *conn      = qd_connection_pn(qd_conn);
 
     switch (event) {
-    case QD_CONN_EVENT_LISTENER_OPEN:
-        open_handler(container, qd_conn, QD_INCOMING, conn_context);
-        return 1;
-
-    case QD_CONN_EVENT_CONNECTOR_OPEN:
-        open_handler(container, qd_conn, QD_OUTGOING, conn_context);
-        return 1;
 
     case QD_CONN_EVENT_CLOSE:
         return close_handler(container, conn_context, conn, qd_conn);
