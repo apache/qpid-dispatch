@@ -23,7 +23,6 @@ from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SS
 from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
-import time
 
 # PROTON-828:
 try:
@@ -163,97 +162,89 @@ class RouterTest(TestCase):
 
 
     def test_09_one_router_anonymous_sender_no_tenant(self):
-        test = MessageTransferTest(self.routers[0].addresses[0],
-                                   self.routers[0].addresses[0],
-                                   "anything/addr_09",
-                                   "anything/addr_09",
-                                   self.routers[0].addresses[0],
-                                   "M0anything/addr_09",
-                                   True)
+        test = MessageTransferAnonTest(self.routers[0].addresses[0],
+                                       self.routers[0].addresses[0],
+                                       "anything/addr_09",
+                                       "anything/addr_09",
+                                       self.routers[0].addresses[0],
+                                       "M0anything/addr_09")
         test.run()
         self.assertEqual(None, test.error)
 
 
     def test_10_one_router_anonymous_sender_tenant_on_sender(self):
-        test = MessageTransferTest(self.routers[0].addresses[1],
-                                   self.routers[0].addresses[0],
-                                   "addr_10",
-                                   "0.0.0.0/addr_10",
-                                   self.routers[0].addresses[0],
-                                   "M00.0.0.0/addr_10",
-                                   True)
+        test = MessageTransferAnonTest(self.routers[0].addresses[1],
+                                       self.routers[0].addresses[0],
+                                       "addr_10",
+                                       "0.0.0.0/addr_10",
+                                       self.routers[0].addresses[0],
+                                       "M00.0.0.0/addr_10")
         test.run()
         self.assertEqual(None, test.error)
 
 
     def test_11_one_router_anonymous_sender_tenant_on_receiver(self):
-        test = MessageTransferTest(self.routers[0].addresses[0],
-                                   self.routers[0].addresses[1],
-                                   "0.0.0.0/addr_11",
-                                   "addr_11",
-                                   self.routers[0].addresses[0],
-                                   "M00.0.0.0/addr_11",
-                                   True)
+        test = MessageTransferAnonTest(self.routers[0].addresses[0],
+                                       self.routers[0].addresses[1],
+                                       "0.0.0.0/addr_11",
+                                       "addr_11",
+                                       self.routers[0].addresses[0],
+                                       "M00.0.0.0/addr_11")
         test.run()
         self.assertEqual(None, test.error)
 
 
     def test_12_one_router_anonymous_sender_tenant_on_both(self):
-        test = MessageTransferTest(self.routers[0].addresses[1],
-                                   self.routers[0].addresses[1],
-                                   "addr_12",
-                                   "addr_12",
-                                   self.routers[0].addresses[0],
-                                   "M00.0.0.0/addr_12",
-                                   True)
+        test = MessageTransferAnonTest(self.routers[0].addresses[1],
+                                       self.routers[0].addresses[1],
+                                       "addr_12",
+                                       "addr_12",
+                                       self.routers[0].addresses[0],
+                                       "M00.0.0.0/addr_12")
         test.run()
         self.assertEqual(None, test.error)
 
 
     def test_13_two_router_anonymous_sender_no_tenant(self):
-        test = MessageTransferTest(self.routers[0].addresses[0],
-                                   self.routers[1].addresses[0],
-                                   "anything/addr_13",
-                                   "anything/addr_13",
-                                   self.routers[0].addresses[0],
-                                   "M0anything/addr_13",
-                                   True)
+        test = MessageTransferAnonTest(self.routers[0].addresses[0],
+                                       self.routers[1].addresses[0],
+                                       "anything/addr_13",
+                                       "anything/addr_13",
+                                       self.routers[0].addresses[0],
+                                       "M0anything/addr_13")
         test.run()
         self.assertEqual(None, test.error)
 
 
     def test_14_two_router_anonymous_sender_tenant_on_sender(self):
-        test = MessageTransferTest(self.routers[0].addresses[1],
-                                   self.routers[1].addresses[0],
-                                   "addr_14",
-                                   "0.0.0.0/addr_14",
-                                   self.routers[0].addresses[0],
-                                   "M00.0.0.0/addr_14",
-                                   True)
+        test = MessageTransferAnonTest(self.routers[0].addresses[1],
+                                       self.routers[1].addresses[0],
+                                       "addr_14",
+                                       "0.0.0.0/addr_14",
+                                       self.routers[0].addresses[0],
+                                       "M00.0.0.0/addr_14")
         test.run()
         self.assertEqual(None, test.error)
 
 
     def test_15_two_router_anonymous_sender_tenant_on_receiver(self):
-        test = MessageTransferTest(self.routers[0].addresses[0],
-                                   self.routers[1].addresses[1],
-                                   "0.0.0.0/addr_15",
-                                   "addr_15",
-                                   self.routers[0].addresses[0],
-                                   "M00.0.0.0/addr_15",
-                                   True)
+        test = MessageTransferAnonTest(self.routers[0].addresses[0],
+                                       self.routers[1].addresses[1],
+                                       "0.0.0.0/addr_15",
+                                       "addr_15",
+                                       self.routers[0].addresses[0],
+                                       "M00.0.0.0/addr_15")
         test.run()
         self.assertEqual(None, test.error)
 
 
     def test_16_two_router_anonymous_sender_tenant_on_both(self):
-        test = MessageTransferTest(self.routers[0].addresses[1],
-                                   self.routers[1].addresses[1],
-                                   "addr_16",
-                                   "addr_16",
-                                   self.routers[0].addresses[0],
-                                   "M00.0.0.0/addr_16",
-                                   True)
+        test = MessageTransferAnonTest(self.routers[0].addresses[1],
+                                       self.routers[1].addresses[1],
+                                       "addr_16",
+                                       "addr_16",
+                                       self.routers[0].addresses[0],
+                                       "M00.0.0.0/addr_16")
         test.run()
         self.assertEqual(None, test.error)
 
@@ -263,7 +254,8 @@ class RouterTest(TestCase):
                              self.routers[0].addresses[2],
                              "link.addr_17",
                              "0.0.0.0/link.addr_17",
-                             False)
+                             False,
+                             self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -273,7 +265,8 @@ class RouterTest(TestCase):
                              self.routers[0].addresses[2],
                              "0.0.0.0/link.addr_18",
                              "0.0.0.0/link.addr_18",
-                             False)
+                             False,
+                             self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -283,7 +276,8 @@ class RouterTest(TestCase):
                              self.routers[0].addresses[2],
                              "link.addr_19",
                              "0.0.0.0/link.addr_19",
-                             True)
+                             True,
+                             self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -293,7 +287,8 @@ class RouterTest(TestCase):
                              self.routers[0].addresses[2],
                              "0.0.0.0/link.addr_20",
                              "0.0.0.0/link.addr_20",
-                             True)
+                             True,
+                             self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -303,7 +298,8 @@ class RouterTest(TestCase):
                              self.routers[1].addresses[2],
                              "link.addr_21",
                              "0.0.0.0/link.addr_21",
-                             False)
+                             False,
+                             self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -313,7 +309,8 @@ class RouterTest(TestCase):
                              self.routers[1].addresses[2],
                              "0.0.0.0/link.addr_22",
                              "0.0.0.0/link.addr_22",
-                             False)
+                             False,
+                             self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -323,7 +320,8 @@ class RouterTest(TestCase):
                              self.routers[1].addresses[2],
                              "link.addr_23",
                              "0.0.0.0/link.addr_23",
-                             True)
+                             True,
+                             self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -333,19 +331,19 @@ class RouterTest(TestCase):
                              self.routers[1].addresses[2],
                              "0.0.0.0/link.addr_24",
                              "0.0.0.0/link.addr_24",
-                             True)
+                             True,
+                             self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
 
     def test_25_one_router_anonymous_sender_non_mobile(self):
-        test = MessageTransferTest(self.routers[0].addresses[1],
-                                   self.routers[0].addresses[0],
-                                   "_local/addr_25",
-                                   "_local/addr_25",
-                                   self.routers[0].addresses[0],
-                                   "Laddr_25",
-                                   True)
+        test = MessageTransferAnonTest(self.routers[0].addresses[1],
+                                       self.routers[0].addresses[0],
+                                       "_local/addr_25",
+                                       "_local/addr_25",
+                                       self.routers[0].addresses[0],
+                                       "Laddr_25")
         test.run()
         self.assertEqual(None, test.error)
 
@@ -356,20 +354,18 @@ class RouterTest(TestCase):
                                    "_local/addr_26",
                                    "_local/addr_26",
                                    self.routers[0].addresses[0],
-                                   "Laddr_26",
-                                   False)
+                                   "Laddr_26")
         test.run()
         self.assertEqual(None, test.error)
 
 
     def test_27_two_router_anonymous_sender_non_mobile(self):
-        test = MessageTransferTest(self.routers[0].addresses[1],
-                                   self.routers[1].addresses[0],
-                                   "_topo/0/B/addr_27",
-                                   "_local/addr_27",
-                                   self.routers[1].addresses[0],
-                                   "Laddr_27",
-                                   True)
+        test = MessageTransferAnonTest(self.routers[0].addresses[1],
+                                       self.routers[1].addresses[0],
+                                       "_topo/0/B/addr_27",
+                                       "_local/addr_27",
+                                       self.routers[1].addresses[0],
+                                       "Laddr_27")
         test.run()
         self.assertEqual(None, test.error)
 
@@ -380,8 +376,7 @@ class RouterTest(TestCase):
                                    "_topo/0/B/addr_28",
                                    "_local/addr_28",
                                    self.routers[1].addresses[0],
-                                   "Laddr_28",
-                                   False)
+                                   "Laddr_28")
         test.run()
         self.assertEqual(None, test.error)
 
@@ -457,8 +452,16 @@ class Timeout(object):
         self.parent.timeout()
 
 
+class PollTimeout(object):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.poll_timeout()
+
+
 class MessageTransferTest(MessagingHandler):
-    def __init__(self, sender_host, receiver_host, sender_address, receiver_address, lookup_host, lookup_address, anonymous=False):
+    def __init__(self, sender_host, receiver_host, sender_address, receiver_address, lookup_host, lookup_address):
         super(MessageTransferTest, self).__init__()
         self.sender_host      = sender_host
         self.receiver_host    = receiver_host
@@ -466,7 +469,6 @@ class MessageTransferTest(MessagingHandler):
         self.receiver_address = receiver_address
         self.lookup_host      = lookup_host
         self.lookup_address   = lookup_address
-        self.anonymous        = anonymous
 
         self.sender_conn   = None
         self.receiver_conn = None
@@ -480,10 +482,13 @@ class MessageTransferTest(MessagingHandler):
         self.n_sent     = 0
         self.n_rcvd     = 0
         self.n_accepted = 0
-        self.n_released = 0
+
+        self.n_receiver_opened = 0
+        self.n_sender_opened   = 0
 
     def timeout(self):
-        self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_accepted=%d n_released=%d" % (self.n_sent, self.n_rcvd, self.n_accepted, self.n_released)
+        self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_accepted=%d n_receiver_opened=%d n_sender_opened=%d" %\
+        (self.n_sent, self.n_rcvd, self.n_accepted, self.n_receiver_opened, self.n_sender_opened)
         self.sender_conn.close()
         self.receiver_conn.close()
         self.lookup_conn.close()
@@ -500,24 +505,20 @@ class MessageTransferTest(MessagingHandler):
         while self.sender.credit > 0 and self.n_sent < self.count:
             self.n_sent += 1
             m = Message(body="Message %d of %d" % (self.n_sent, self.count))
-
-            if self.anonymous:
-                m.address = self.sender_address
             self.sender.send(m)
 
-    def on_released(self, event):
-        self.n_sent     -= 1
-        self.n_released += 1
-
     def on_link_opened(self, event):
+        if event.receiver:
+            self.n_receiver_opened += 1
+        else:
+            self.n_sender_opened += 1
+
         if event.receiver == self.reply_receiver:
             self.proxy    = RouterProxy(self.reply_receiver.remote_source.address)
-            self.sender   = event.container.create_sender(self.sender_conn, None if self.anonymous else self.sender_address)
+            self.sender   = event.container.create_sender(self.sender_conn, self.sender_address)
             self.receiver = event.container.create_receiver(self.receiver_conn, self.receiver_address)
 
     def on_sendable(self, event):
-        if self.n_sent == 0 and self.anonymous:
-            time.sleep(0.3)
         if event.sender == self.sender:
             self.send()
 
@@ -546,14 +547,117 @@ class MessageTransferTest(MessagingHandler):
         Container(self).run()
 
 
+class MessageTransferAnonTest(MessagingHandler):
+    def __init__(self, sender_host, receiver_host, sender_address, receiver_address, lookup_host, lookup_address):
+        super(MessageTransferAnonTest, self).__init__()
+        self.sender_host      = sender_host
+        self.receiver_host    = receiver_host
+        self.sender_address   = sender_address
+        self.receiver_address = receiver_address
+        self.lookup_host      = lookup_host
+        self.lookup_address   = lookup_address
+
+        self.sender_conn   = None
+        self.receiver_conn = None
+        self.lookup_conn   = None
+        self.error         = None
+        self.sender        = None
+        self.receiver      = None
+        self.proxy         = None
+
+        self.count      = 10
+        self.n_sent     = 0
+        self.n_rcvd     = 0
+        self.n_accepted = 0
+
+        self.n_agent_reads     = 0
+        self.n_receiver_opened = 0
+        self.n_sender_opened   = 0
+
+    def timeout(self):
+        self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_accepted=%d n_agent_reads=%d n_receiver_opened=%d n_sender_opened=%d" %\
+        (self.n_sent, self.n_rcvd, self.n_accepted, self.n_agent_reads, self.n_receiver_opened, self.n_sender_opened)
+        self.sender_conn.close()
+        self.receiver_conn.close()
+        self.lookup_conn.close()
+        if self.poll_timer:
+            self.poll_timer.cancel()
+
+    def poll_timeout(self):
+        self.poll()
+
+    def on_start(self, event):
+        self.timer          = event.reactor.schedule(5, Timeout(self))
+        self.poll_timer     = None
+        self.sender_conn    = event.container.connect(self.sender_host)
+        self.receiver_conn  = event.container.connect(self.receiver_host)
+        self.lookup_conn    = event.container.connect(self.lookup_host)
+        self.reply_receiver = event.container.create_receiver(self.lookup_conn, dynamic=True)
+        self.agent_sender   = event.container.create_sender(self.lookup_conn, "$management")
+        self.receiver       = event.container.create_receiver(self.receiver_conn, self.receiver_address)
+
+    def send(self):
+        while self.sender.credit > 0 and self.n_sent < self.count:
+            self.n_sent += 1
+            m = Message(body="Message %d of %d" % (self.n_sent, self.count))
+            m.address = self.sender_address
+            self.sender.send(m)
+
+    def poll(self):
+        request = self.proxy.read_address(self.lookup_address)
+        self.agent_sender.send(request)
+        self.n_agent_reads += 1
+
+    def on_link_opened(self, event):
+        if event.receiver:
+            self.n_receiver_opened += 1
+        else:
+            self.n_sender_opened += 1
+
+        if event.receiver == self.reply_receiver:
+            self.proxy = RouterProxy(self.reply_receiver.remote_source.address)
+            self.poll()
+
+    def on_sendable(self, event):
+        if event.sender == self.sender:
+            self.send()
+
+    def on_message(self, event):
+        if event.receiver == self.receiver:
+            self.n_rcvd += 1
+
+        if event.receiver == self.reply_receiver:
+            response = self.proxy.response(event.message)
+            if response.status_code == 200 and (response.remoteCount + response.subscriberCount) > 0:
+                self.sender = event.container.create_sender(self.sender_conn, None)
+                if self.poll_timer:
+                    self.poll_timer.cancel()
+                    self.poll_timer = None
+            else:
+                self.poll_timer = event.reactor.schedule(0.25, PollTimeout(self))
+
+    def on_accepted(self, event):
+        if event.sender == self.sender:
+            self.n_accepted += 1
+            if self.n_accepted == self.count:
+                self.sender_conn.close()
+                self.receiver_conn.close()
+                self.lookup_conn.close()
+                self.timer.cancel()
+
+    def run(self):
+        Container(self).run()
+
+
 class LinkRouteTest(MessagingHandler):
-    def __init__(self, first_host, second_host, first_address, second_address, dynamic):
+    def __init__(self, first_host, second_host, first_address, second_address, dynamic, lookup_host):
         super(LinkRouteTest, self).__init__(prefetch=0)
         self.first_host     = first_host
         self.second_host    = second_host
         self.first_address  = first_address
         self.second_address = second_address
         self.dynamic        = dynamic
+        self.lookup_host    = lookup_host
 
         self.first_conn      = None
         self.second_conn     = None
@@ -562,6 +666,7 @@ class LinkRouteTest(MessagingHandler):
         self.first_receiver  = None
         self.second_sender   = None
         self.second_receiver = None
+        self.poll_timer      = None
 
         self.count     = 10
         self.n_sent    = 0
@@ -572,12 +677,21 @@ class LinkRouteTest(MessagingHandler):
         self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_settled=%d" % (self.n_sent, self.n_rcvd, self.n_settled)
         self.first_conn.close()
         self.second_conn.close()
+        self.lookup_conn.close()
+        if self.poll_timer:
+            self.poll_timer.cancel()
+
+    def poll_timeout(self):
+        self.poll()
 
     def fail(self, text):
         self.error = text
         self.second_conn.close()
         self.first_conn.close()
         self.timer.cancel()
+        self.lookup_conn.close()
+        if self.poll_timer:
+            self.poll_timer.cancel()
 
     def send(self):
         while self.first_sender.credit > 0 and self.n_sent < self.count:
@@ -585,23 +699,28 @@ class LinkRouteTest(MessagingHandler):
             m = Message(body="Message %d of %d" % (self.n_sent, self.count))
             self.first_sender.send(m)
 
+    def poll(self):
+        request = self.proxy.read_address("D0.0.0.0/link")
+        self.agent_sender.send(request)
+
+    def setup_first_links(self, event):
+        self.first_sender = event.container.create_sender(self.first_conn, self.first_address)
+        if self.dynamic:
+            self.first_receiver = event.container.create_receiver(self.first_conn,
+                                                                  dynamic=True,
+                                                                  options=DynamicNodeProperties({"x-opt-qd.address": unicode(self.first_address)}))
+        else:
+            self.first_receiver = event.container.create_receiver(self.first_conn, self.first_address)
+
+
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(5, Timeout(self))
-        self.second_conn = event.container.connect(self.second_host)
+        self.timer          = event.reactor.schedule(5, Timeout(self))
+        self.first_conn     = event.container.connect(self.first_host)
+        self.second_conn    = event.container.connect(self.second_host)
+        self.lookup_conn    = event.container.connect(self.lookup_host)
+        self.reply_receiver = event.container.create_receiver(self.lookup_conn, dynamic=True)
+        self.agent_sender   = event.container.create_sender(self.lookup_conn, "$management")
 
-    def on_connection_opened(self, event):
-        if event.connection == self.first_conn:
-            self.first_sender = event.container.create_sender(self.first_conn, self.first_address)
-            if self.dynamic:
-                self.first_receiver = event.container.create_receiver(self.first_conn,
-                                                                      dynamic=True,
-                                                                      options=DynamicNodeProperties({"x-opt-qd.address": unicode(self.first_address)}))
-            else:
-                self.first_receiver = event.container.create_receiver(self.first_conn, self.first_address)
-
-        if event.connection == self.second_conn:
-            time.sleep(1)
-            self.first_conn = event.container.connect(self.first_host)
 
     def on_link_opening(self, event):
         if event.sender:
@@ -634,6 +753,10 @@ class LinkRouteTest(MessagingHandler):
         if event.receiver:
             event.receiver.flow(self.count)
 
+        if event.receiver == self.reply_receiver:
+            self.proxy = RouterProxy(self.reply_receiver.remote_source.address)
+            self.poll()
+
     def on_sendable(self, event):
         if event.sender == self.first_sender:
             self.send()
@@ -641,7 +764,17 @@ class LinkRouteTest(MessagingHandler):
     def on_message(self, event):
         if event.receiver == self.first_receiver:
             self.n_rcvd += 1
-            
+
+        if event.receiver == self.reply_receiver:
+            response = self.proxy.response(event.message)
+            if response.status_code == 200 and (response.remoteCount + response.containerCount) > 0:
+                if self.poll_timer:
+                    self.poll_timer.cancel()
+                    self.poll_timer = None
+                self.setup_first_links(event)
+            else:
+                self.poll_timer = event.reactor.schedule(0.25, PollTimeout(self))
+
     def on_settled(self, event):
         if event.sender == self.first_sender:
             self.n_settled += 1
