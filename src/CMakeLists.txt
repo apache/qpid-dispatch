@@ -62,7 +62,6 @@ set(qpid_dispatch_SOURCES
   message.c
   parse.c
   policy.c
-  posix/driver.c
   posix/threading.c
   python_embedded.c
   router_agent.c
@@ -112,7 +111,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 endif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
-target_link_libraries(qpid-dispatch ${Proton_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES})
+target_link_libraries(qpid-dispatch ${ProtonCore_LIBRARIES} ${ProtonProactor_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES})
 set_target_properties(qpid-dispatch PROPERTIES
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )

@@ -22,6 +22,7 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/atomic.h>
 #include <qpid/dispatch/failoverlist.h>
+#include <proton/listener.h>
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
 #include "server_private.h"
@@ -47,29 +48,13 @@ struct qd_config_ssl_profile_t {
     char        *ssl_private_key_file;
 };
 
-struct qd_config_listener_t {
-    qd_listener_t           *listener;
-    qd_server_config_t       configuration;
-    DEQ_LINKS(qd_config_listener_t);
-};
-
-DEQ_DECLARE(qd_config_listener_t, qd_config_listener_list_t);
 DEQ_DECLARE(qd_config_ssl_profile_t, qd_config_ssl_profile_list_t);
-
-
-struct qd_config_connector_t {
-    DEQ_LINKS(qd_config_connector_t);
-    qd_connector_t          *connector;
-    qd_server_config_t       configuration;
-};
-
-DEQ_DECLARE(qd_config_connector_t, qd_config_connector_list_t);
 
 struct qd_connection_manager_t {
     qd_log_source_t              *log_source;
     qd_server_t                  *server;
-    qd_config_listener_list_t     config_listeners;
-    qd_config_connector_list_t    config_connectors;
+    qd_listener_list_t            listeners;
+    qd_connector_list_t           connectors;
     qd_config_ssl_profile_list_t  config_ssl_profiles;
 };
 
@@ -108,11 +93,12 @@ static qd_config_ssl_profile_t *qd_find_ssl_profile(qd_connection_manager_t *cm,
     return 0;
 }
 
-static void qd_server_config_free(qd_server_config_t *cf)
+void qd_server_config_free(qd_server_config_t *cf)
 {
     if (!cf) return;
     free(cf->host);
     free(cf->port);
+    free(cf->host_port);
     free(cf->role);
     if (cf->http_root)       free(cf->http_root);
     if (cf->name)            free(cf->name);
@@ -199,6 +185,10 @@ static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
     }
 
     assert(config->host);
+
+    int hplen = strlen(config->host) + strlen(config->port) + 2;
+    config->host_port = malloc(hplen);
+    snprintf(config->host_port, hplen, "%s:%s", config->host, config->port);
 }
 
 
@@ -402,6 +392,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     return qd_error_code();
 }
 
+
 bool is_log_component_enabled(qd_log_bits log_message, char *component_name) {
 
     for(int i=0;;i++) {
@@ -507,45 +498,32 @@ static void log_config(qd_log_source_t *log, qd_server_config_t *c, const char *
 }
 
 
-static void config_listener_free(qd_connection_manager_t *cm, qd_config_listener_t *cl)
-{
-    if (cl->listener) {
-        qd_server_listener_close(cl->listener);
-        qd_server_listener_free(cl->listener);
-        cl->listener = 0;
-    }
-    qd_server_config_free(&cl->configuration);
-    free(cl);
-}
-
-
-qd_config_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
+qd_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_connection_manager_t *cm = qd->connection_manager;
-    qd_config_listener_t *cl = NEW(qd_config_listener_t);
-    cl->listener = 0;
-
-    if (load_server_config(qd, &cl->configuration, entity) != QD_ERROR_NONE) {
-        qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create config listener: %s", qd_error_message());
-        config_listener_free(qd->connection_manager, cl);
+    qd_listener_t *li = qd_server_listener(qd->server);
+    if (!li || load_server_config(qd, &li->config, entity) != QD_ERROR_NONE) {
+        qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create listener: %s", qd_error_message());
+        qd_listener_decref(li);
         return 0;
     }
     char *fol = qd_entity_opt_string(entity, "failoverList", 0);
     if (fol) {
-        cl->configuration.failover_list = qd_failover_list(fol);
+        li->config.failover_list = qd_failover_list(fol);
         free(fol);
-        if (cl->configuration.failover_list == 0) {
-            qd_log(cm->log_source, QD_LOG_ERROR, "Error parsing failover list: %s", qd_error_message());
-            config_listener_free(qd->connection_manager, cl);
+        if (li->config.failover_list == 0) {
+            qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create listener, bad failover list: %s",
+                   qd_error_message());
+            qd_listener_decref(li);
             return 0;
         }
     } else {
-        cl->configuration.failover_list = 0;
+        li->config.failover_list = 0;
     }
-    DEQ_ITEM_INIT(cl);
-    DEQ_INSERT_TAIL(cm->config_listeners, cl);
-    log_config(cm->log_source, &cl->configuration, "Listener");
-    return cl;
+    DEQ_ITEM_INIT(li);
+    DEQ_INSERT_TAIL(cm->listeners, li);
+    log_config(cm->log_source, &li->config, "Listener");
+    return li;
 }
 
 
@@ -561,32 +539,19 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
 }
 
 
-static void config_connector_free(qd_connection_manager_t *cm, qd_config_connector_t *cc)
+qd_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entity)
 {
-    if (cc->connector) {
-        qd_server_connector_free(cc->connector);
-        qd_server_config_free(&cc->configuration);
-    }
-    free(cc);
-}
-
-
-qd_config_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *entity)
-{
-    qd_error_clear();
     qd_connection_manager_t *cm = qd->connection_manager;
-    qd_config_connector_t *cc = NEW(qd_config_connector_t);
-    ZERO(cc);
-
-    if (load_server_config(qd, &cc->configuration, entity) != QD_ERROR_NONE) {
-        qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create config connector: %s", qd_error_message());
-        config_connector_free(qd->connection_manager, cc);
-        return 0;
+    qd_connector_t *ct = qd_server_connector(qd->server);
+    if (ct && load_server_config(qd, &ct->config, entity) == QD_ERROR_NONE) {
+        DEQ_ITEM_INIT(ct);
+        DEQ_INSERT_TAIL(cm->connectors, ct);
+        log_config(cm->log_source, &ct->config, "Connector");
+        return ct;
     }
-    DEQ_ITEM_INIT(cc);
-    DEQ_INSERT_TAIL(cm->config_connectors, cc);
-    log_config(cm->log_source, &cc->configuration, "Connector");
-    return cc;
+    qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create connector: %s", qd_error_message());
+    qd_connector_decref(ct);
+    return 0;
 }
 
 
@@ -598,8 +563,8 @@ qd_connection_manager_t *qd_connection_manager(qd_dispatch_t *qd)
 
     cm->log_source = qd_log_source("CONN_MGR");
     cm->server     = qd->server;
-    DEQ_INIT(cm->config_listeners);
-    DEQ_INIT(cm->config_connectors);
+    DEQ_INIT(cm->listeners);
+    DEQ_INIT(cm->connectors);
     DEQ_INIT(cm->config_ssl_profiles);
 
     return cm;
@@ -609,18 +574,18 @@ qd_connection_manager_t *qd_connection_manager(qd_dispatch_t *qd)
 void qd_connection_manager_free(qd_connection_manager_t *cm)
 {
     if (!cm) return;
-    qd_config_listener_t *cl = DEQ_HEAD(cm->config_listeners);
-    while (cl) {
-        DEQ_REMOVE_HEAD(cm->config_listeners);
-        config_listener_free(cm, cl);
-        cl = DEQ_HEAD(cm->config_listeners);
+    qd_listener_t *li = DEQ_HEAD(cm->listeners);
+    while (li) {
+        DEQ_REMOVE_HEAD(cm->listeners);
+        qd_listener_decref(li);
+        li = DEQ_HEAD(cm->listeners);
     }
 
-    qd_config_connector_t *cc = DEQ_HEAD(cm->config_connectors);
-    while (cc) {
-        DEQ_REMOVE_HEAD(cm->config_connectors);
-        config_connector_free(cm, cc);
-        cc = DEQ_HEAD(cm->config_connectors);
+    qd_connector_t *c = DEQ_HEAD(cm->connectors);
+    while (c) {
+        DEQ_REMOVE_HEAD(cm->connectors);
+        qd_connector_decref(c);
+        c = DEQ_HEAD(cm->connectors);
     }
 
     qd_config_ssl_profile_t *sslp = DEQ_HEAD(cm->config_ssl_profiles);
@@ -637,25 +602,26 @@ void qd_connection_manager_free(qd_connection_manager_t *cm)
 void qd_connection_manager_start(qd_dispatch_t *qd)
 {
     static bool first_start = true;
-    qd_config_listener_t  *cl = DEQ_HEAD(qd->connection_manager->config_listeners);
-    qd_config_connector_t *cc = DEQ_HEAD(qd->connection_manager->config_connectors);
+    qd_listener_t  *li = DEQ_HEAD(qd->connection_manager->listeners);
+    qd_connector_t *ct = DEQ_HEAD(qd->connection_manager->connectors);
 
-    while (cl) {
-        if (cl->listener == 0 ) {
-            cl->listener = qd_server_listen(qd, &cl->configuration, cl);
-            if (!cl->listener &&  first_start) {
+    while (li) {
+        if (!li->pn_listener) {
+            qd_listener_listen(li);
+            if (!li->pn_listener && first_start) {
                 qd_log(qd->connection_manager->log_source, QD_LOG_CRITICAL,
-                       "Socket bind failed during initial configuration");
+                       "Listen on %s failed during initial config", li->config.host_port);
                 exit(1);
+            } else {
+                li->exit_on_error = first_start;
             }
         }
-        cl = DEQ_NEXT(cl);
+        li = DEQ_NEXT(li);
     }
 
-    while (cc) {
-        if (cc->connector == 0)
-            cc->connector = qd_server_connect(qd, &cc->configuration, cc);
-        cc = DEQ_NEXT(cc);
+    while (ct) {
+        qd_connector_connect(ct);
+        ct = DEQ_NEXT(ct);
     }
 
     first_start = false;
@@ -664,12 +630,13 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
 
 void qd_connection_manager_delete_listener(qd_dispatch_t *qd, void *impl)
 {
-    qd_config_listener_t *cl = (qd_config_listener_t*) impl;
-
-    if (cl) {
-        qd_server_listener_close(cl->listener);
-        DEQ_REMOVE(qd->connection_manager->config_listeners, cl);
-        config_listener_free(qd->connection_manager, cl);
+    qd_listener_t *li = (qd_listener_t*) impl;
+    if (li) {
+        if (li->pn_listener) {
+            pn_listener_close(li->pn_listener);
+        }
+        DEQ_REMOVE(qd->connection_manager->listeners, li);
+        qd_listener_decref(li);
     }
 }
 
@@ -681,19 +648,30 @@ void qd_connection_manager_delete_ssl_profile(qd_dispatch_t *qd, void *impl)
 }
 
 
-void qd_connection_manager_delete_connector(qd_dispatch_t *qd, void *impl)
-{
-    qd_config_connector_t *cc = (qd_config_connector_t*) impl;
-
-    if (cc) {
-        DEQ_REMOVE(qd->connection_manager->config_connectors, cc);
-        config_connector_free(qd->connection_manager, cc);
+static void deferred_close(void *context, bool discard) {
+    if (!discard) {
+        pn_connection_close((pn_connection_t*)context);
     }
 }
 
 
-const char *qd_config_connector_name(qd_config_connector_t *cc)
+void qd_connection_manager_delete_connector(qd_dispatch_t *qd, void *impl)
 {
-    return cc ? cc->configuration.name : 0;
+    qd_connector_t *ct = (qd_connector_t*) impl;
+    if (ct) {
+        sys_mutex_lock(ct->lock);
+        if (ct->ctx && ct->ctx->pn_conn) {
+            qd_connection_invoke_deferred(ct->ctx, deferred_close, ct->ctx->pn_conn);
+        }
+        sys_mutex_unlock(ct->lock);
+        DEQ_REMOVE(qd->connection_manager->connectors, ct);
+        qd_connector_decref(ct);
+    }
+}
+
+
+const char *qd_connector_name(qd_connector_t *ct)
+{
+    return ct ? ct->config.name : 0;
 }
 

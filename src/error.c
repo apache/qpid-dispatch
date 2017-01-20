@@ -64,7 +64,7 @@ void qd_error_initialize() {
     log_source = qd_log_source("ERROR");
 }
 
-qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char *fmt, ...) {
+qd_error_t qd_error_vimpl(qd_error_t code, const char *file, int line, const char *fmt, va_list ap) {
     ts.error_code = code;
     if (code) {
         char *begin = ts.error_message;
@@ -75,10 +75,7 @@ qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char
             aprintf(&begin, end, "%s: ", name);
         else
             aprintf(&begin, end, "%d: ", code);
-        va_list arglist;
-        va_start(arglist, fmt);
-        vaprintf(&begin, end, fmt, arglist);
-        va_end(arglist);
+        vaprintf(&begin, end, fmt, ap);
         // NOTE: Use the file/line from the qd_error macro, not this line in error.c
         qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", qd_error_message());
         return code;
@@ -86,6 +83,14 @@ qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char
     else
         qd_error_clear();
     return 0;
+}
+
+qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    qd_error_t err = qd_error_vimpl(code, file, line, fmt, ap);
+    va_end(ap);
+    return err;
 }
 
 qd_error_t qd_error_clear() {

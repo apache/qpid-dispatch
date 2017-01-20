@@ -169,7 +169,7 @@ class ManagementTest(system_test.TestCase):
         attributes = {'name':'foo', 'port':str(port), 'role':'normal', 'saslMechanisms': 'ANONYMOUS', 'authenticatePeer': False}
         entity = self.assert_create_ok(LISTENER, 'foo', attributes)
         self.assertEqual(entity['name'], 'foo')
-        self.assertEqual(entity['host'], '127.0.0.1')
+        self.assertEqual(entity['host'], '')
 
         # Connect via the new listener
         node3 = self.cleanup(Node.connect(Url(port=port)))

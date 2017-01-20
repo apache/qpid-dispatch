@@ -23,30 +23,20 @@
 #include <qpid/dispatch/timer.h>
 #include <qpid/dispatch/threading.h>
 
-typedef enum {
-    TIMER_FREE,
-    TIMER_IDLE,
-    TIMER_SCHEDULED,
-    TIMER_PENDING
-} qd_timer_state_t;
-
-
 struct qd_timer_t {
     DEQ_LINKS(qd_timer_t);
     qd_server_t      *server;
     qd_timer_cb_t     handler;
     void             *context;
     qd_timestamp_t    delta_time;
-    qd_timer_state_t  state;
+    bool              scheduled; /* true means on scheduled list, false on idle list */
 };
 
 DEQ_DECLARE(qd_timer_t, qd_timer_list_t);
 
 void qd_timer_initialize(sys_mutex_t *server_lock);
 void qd_timer_finalize(void);
-qd_timestamp_t qd_timer_next_duration_LH(void);
-void qd_timer_visit_LH(qd_timestamp_t current_time);
-void qd_timer_idle_LH(qd_timer_t *timer);
+void qd_timer_visit();
 
 /// For tests only
 sys_mutex_t* qd_timer_lock();

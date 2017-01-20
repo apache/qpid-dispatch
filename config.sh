@@ -1,33 +1,8 @@
-#
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
-#
-
-if [[ ! -f config.sh ]]; then
-    echo "You must source config.sh from within its own directory"
-    return
-fi
-
-export SOURCE_DIR=$(pwd)
-export BUILD_DIR=$SOURCE_DIR/${1:-build}
-export INSTALL_DIR=$SOURCE_DIR/${2:-install}
-
-PYTHON_LIB=$(python -c "from distutils.sysconfig import get_python_lib; print get_python_lib(prefix='$INSTALL_DIR')")
-
-export LD_LIBRARY_PATH=$INSTALL_DIR/lib64:$INSTALL_DIR/lib:$LD_LIBRARY_PATH
-export PYTHONPATH=$PYTHON_LIB:$PYTHONPATH
-export PATH=$INSTALL_DIR/sbin:$INSTALL_DIR/bin:$SOURCE_DIR/bin:$PATH
+PYTHONPATH=/home/aconway/dispatch/python:/home/aconway/dispatch/tests:/home/aconway/dispatch:/usr/local/lib/proton/bindings/python:/usr/local/lib64/proton/bindings/python:/usr/local/lib/python2.7/site-packages:/usr/local/lib64/python2.7/site-packages:/usr/lib/python27.zip:/usr/lib64/python2.7:/usr/lib64/python2.7/plat-linux2:/usr/lib64/python2.7/lib-tk:/usr/lib64/python2.7/lib-old:/usr/lib64/python2.7/lib-dynload:/usr/lib64/python2.7/site-packages:/usr/lib/python2.7/site-packages
+BUILD_DIR=/home/aconway/dispatch
+QPID_DISPATCH_HOME=/home/aconway/dispatch
+QPID_DISPATCH_LIB=/home/aconway/dispatch/src/
+MANPATH=/home/aconway/dispatch/doc/man:/usr/local/share/man:/usr/share/man
+PATH=/home/aconway/dispatch:/home/aconway/dispatch/tests:/home/aconway/dispatch/router:/home/aconway/dispatch/tools:/home/aconway/dispatch/bin:/home/aconway/bin:/home/aconway/ha/bin:/usr/local/bin:/usr/local/sbin:/usr/lib64/qt-3.3/bin:/usr/lib64/ccache:/usr/bin:/usr/sbin:/home/aconway/go/bin:/home/aconway/proton/proton-c/bindings/go/bin
+SOURCE_DIR=/home/aconway/dispatch
+export PYTHONPATH BUILD_DIR QPID_DISPATCH_HOME QPID_DISPATCH_LIB MANPATH PATH SOURCE_DIR

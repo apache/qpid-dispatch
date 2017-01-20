@@ -33,7 +33,10 @@
  */
 
 typedef struct qd_timer_t qd_timer_t;
+/** Absolute time stamp, milliseconds since epoch */
 typedef int64_t qd_timestamp_t;
+/** Relative duration in milliseconds */
+typedef int64_t qd_duration_t;
 
 /**
  * Timer Callback
@@ -77,7 +80,7 @@ void qd_timer_free(qd_timer_t *timer);
  * @param msec The minimum number of milliseconds of delay until the timer fires.
  *             If 0 is supplied, the timer will be scheduled to fire immediately.
  */
-void qd_timer_schedule(qd_timer_t *timer, qd_timestamp_t msec);
+void qd_timer_schedule(qd_timer_t *timer, qd_duration_t msec);
 
 
 /**
@@ -88,6 +91,11 @@ void qd_timer_schedule(qd_timer_t *timer, qd_timestamp_t msec);
  * @param timer Pointer to the timer object returned by qd_timer.
  */
 void qd_timer_cancel(qd_timer_t *timer);
+
+/**
+ * The current time.
+ */
+qd_timestamp_t qd_timer_now() ;
 
 /**
  * @}

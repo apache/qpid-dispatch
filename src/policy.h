@@ -99,7 +99,7 @@ qd_error_t qd_policy_c_counts_refresh(long ccounts, qd_entity_t*entity);
  * @param[in] name the connector name
  * @return the connection is allowed or not
  **/
-bool qd_policy_socket_accept(void *context, const char *hostname);
+bool qd_policy_socket_accept(qd_policy_t *context, const char *hostname);
 
 
 /** Record a closing connection.
@@ -109,7 +109,7 @@ bool qd_policy_socket_accept(void *context, const char *hostname);
  * @param[in] context the current policy
  * @param[in] conn qd_connection
  **/
-void qd_policy_socket_close(void *context, const qd_connection_t *conn);
+void qd_policy_socket_close(qd_policy_t *context, const qd_connection_t *conn);
 
 
 /** Approve a new session based on connection's policy.
@@ -153,10 +153,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
  *  allowed to make this connection.
  * Denied pn_connections are closed with a condition.
  * Allowed connections are signaled through qd_connection_manager.
- * This function is called from the deferred queue.
- * @param[in] context a qd_connection_t object
- * @param[in] discard callback switch
  **/
-void qd_policy_amqp_open(void *context, bool discard);
+void qd_policy_amqp_open(qd_connection_t *conn);
 
 #endif

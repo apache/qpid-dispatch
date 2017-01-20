@@ -18,7 +18,6 @@
  */
 
 #include <qpid/dispatch/log.h>
-#include <qpid/dispatch/driver.h>
 #include "http.h"
 
 /* No HTTP implementation available. */

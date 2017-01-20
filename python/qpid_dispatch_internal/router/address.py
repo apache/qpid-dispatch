@@ -27,11 +27,6 @@ class Address(str):
     Provides a central place for logic to construct addresses of various types.
     """
 
-    # FIXME aconway 2015-02-06: not finished:
-    # - Move to C, make accessible in C code also - provide python wrapper.
-    # - Provide access to parts of address using C field iterator, avoid duplicating that logic
-    # - (Maybe) separate address logic out of general field iterator logic for clarity.
-
     AMQP="amqp:"
     TOPO="_topo"
 

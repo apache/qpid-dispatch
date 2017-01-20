@@ -19,42 +19,45 @@
  * under the License.
  */
 
+#include <qpid/dispatch/atomic.h>
 #include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/server.h>
+#include <qpid/dispatch/threading.h>
 #include "alloc.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
-#include <qpid/dispatch/driver.h>
 #include <proton/engine.h>
 #include <proton/event.h>
+#include <proton/ssl.h>
 
 #include "dispatch_private.h"
 #include "timer_private.h"
 #include "http.h"
 
-void qd_server_timer_pending_LH(qd_timer_t *timer);
-void qd_server_timer_cancel_LH(qd_timer_t *timer);
+#include <netdb.h>              /* For NI_MAXHOST/NI_MAXSERV */
 
-struct qd_dispatch_t* qd_server_dispatch(qd_server_t *server);
+qd_dispatch_t* qd_server_dispatch(qd_server_t *server);
+void qd_server_timeout(qd_server_t *server, qd_duration_t delay);
 
 const char* qd_connection_name(const qd_connection_t *c);
-const char* qd_connection_hostip(const qd_connection_t *c);
 qd_connector_t* qd_connection_connector(const qd_connection_t *c);
+const char* qd_connection_hostip(const qd_connection_t *c);
 
 const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
 
 qd_http_listener_t *qd_listener_http(qd_listener_t *l);
 
-#define CONTEXT_NO_OWNER -1
-#define CONTEXT_UNSPECIFIED_OWNER -2
+qd_listener_t *qd_server_listener(qd_server_t *server);
+qd_connector_t *qd_server_connector(qd_server_t *server);
+void qd_connector_decref(qd_connector_t* ct);
+void qd_listener_decref(qd_listener_t* ct);
+void qd_server_config_free(qd_server_config_t *cf);
 
 typedef enum {
     CXTR_STATE_CONNECTING = 0,
     CXTR_STATE_OPEN,
     CXTR_STATE_FAILED
 } cxtr_state_t;
-
-
 
 
 typedef struct qd_deferred_call_t {
@@ -73,19 +76,63 @@ typedef struct qd_pn_free_link_session_t {
 
 DEQ_DECLARE(qd_pn_free_link_session_t, qd_pn_free_link_session_list_t);
 
+#ifndef NI_MAXHOST
+# define NI_MAXHOST 1025
+#endif
+
+#ifndef NI_MAXSERV
+# define NI_MAXSERV 32
+#endif
+
+/**
+ * Listener objects represent the desire to accept incoming transport connections.
+ */
+struct qd_listener_t {
+    /* May be referenced by connection_manager and pn_listener_t */
+    sys_atomic_t              ref_count;
+    qd_server_t              *server;
+    qd_server_config_t        config;
+    pn_listener_t            *pn_listener;
+    qd_http_listener_t       *http;
+    DEQ_LINKS(qd_listener_t);
+    bool                      exit_on_error;
+};
+
+DEQ_DECLARE(qd_listener_t, qd_listener_list_t);
+
+
+/**
+ * Connector objects represent the desire to create and maintain an outgoing transport connection.
+ */
+struct qd_connector_t {
+    /* May be referenced by connection_manager, timer and pn_connection_t */
+    sys_atomic_t              ref_count;
+    qd_server_t              *server;
+    qd_server_config_t        config;
+    qd_timer_t               *timer;
+    long                      delay;
+
+    /* Connector state and ctx can be modified in proactor or management threads. */
+    sys_mutex_t              *lock;
+    cxtr_state_t              state;
+    qd_connection_t          *ctx;
+    DEQ_LINKS(qd_connector_t);
+};
+
+DEQ_DECLARE(qd_connector_t, qd_connector_list_t);
+
+
 /**
  * Connection objects wrap Proton connection objects.
  */
 struct qd_connection_t {
     DEQ_LINKS(qd_connection_t);
+    char                     *name;
     qd_server_t              *server;
     bool                      opened; // An open callback was invoked for this connection
     bool                      closed;
-    int                       owner_thread;
     int                       enqueued;
-    qdpn_connector_t         *pn_cxtr;
     pn_connection_t          *pn_conn;
-    pn_collector_t           *collector;
     pn_ssl_t                 *ssl;
     qd_listener_t            *listener;
     qd_connector_t           *connector;
@@ -102,10 +149,11 @@ struct qd_connection_t {
     void                     *open_container;
     qd_deferred_call_list_t   deferred_calls;
     sys_mutex_t              *deferred_call_lock;
-    bool                      event_stall;
     bool                      policy_counted;
     char                     *role;  //The specified role of the connection, e.g. "normal", "inter-router", "route-container" etc.
     qd_pn_free_link_session_list_t  free_link_session_list;
+    char rhost[NI_MAXHOST];     /* Remote host numeric IP for incoming connections */
+    char rhost_port[NI_MAXHOST+NI_MAXSERV]; /* Remote host:port for incoming connections */
 };
 
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);

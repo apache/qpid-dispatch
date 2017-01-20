@@ -165,6 +165,4 @@ extern const char * const QD_AMQP_COND_ILLEGAL_STATE;
 extern const char * const QD_AMQP_COND_FRAME_SIZE_TOO_SMALL;
 /// @};
 
-/// Name for AMQP conditions from the router that don't have a more specific name.
-extern const char * const QD_COND;
 #endif

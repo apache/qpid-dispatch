@@ -20,6 +20,7 @@
  */
 
 #include <qpid/dispatch/enum.h>
+#include <stdarg.h>
 
 /** @file
  * Thread-safe error handling mechansim for dispatch.
@@ -59,7 +60,13 @@ ENUM_DECLARE(qd_error);
  */
 #define qd_error(code, ...) qd_error_impl(code, __FILE__, __LINE__, __VA_ARGS__)
 
+/**
+ * Like qd_error but takes a va_list of format arguments
+ */
+#define qd_verror(code, fmt, ap) qd_error_vimpl(code, __FILE__, __LINE__, fmt, ap)
+
 qd_error_t qd_error_impl(qd_error_t code, const char *file, int line, const char *fmt, ...);
+qd_error_t qd_error_vimpl(qd_error_t code, const char *file, int line, const char *fmt, va_list ap);
 
 /**
  * Clear thread-local error code and message.

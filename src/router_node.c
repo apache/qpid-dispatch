@@ -27,6 +27,7 @@
 #include "entity_cache.h"
 #include "router_private.h"
 #include <qpid/dispatch/router_core.h>
+#include <proton/sasl.h>
 
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
@@ -58,7 +59,7 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
         *strip_annotations_out = cf ? cf->strip_outbound_annotations : false;
         *link_capacity         = cf ? cf->link_capacity : 1;
 
-        if        (cf && strcmp(cf->role, router_role) == 0) {
+        if (cf && strcmp(cf->role, router_role) == 0) {
             *strip_annotations_in  = false;
             *strip_annotations_out = false;
             *role = QDR_ROLE_INTER_ROUTER;
@@ -296,7 +297,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     qdr_connection_t *qdr_conn     = (qdr_connection_t*) qd_connection_get_context(conn);
     int               tenant_space_len;
     const char       *tenant_space = qdr_connection_get_tenant_space(qdr_conn, &tenant_space_len);
-    if (conn->policy_settings) 
+    if (conn->policy_settings)
         check_user = !conn->policy_settings->allowUserIdProxy;
 
     //
@@ -650,7 +651,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     const qd_server_config_t *config;
     if (qd_connection_connector(conn)) {
         config = qd_connector_config(qd_connection_connector(conn));
-        snprintf(host_local, 254, "%s:%s", config->host, config->port);
+        snprintf(host_local, 254, "%s", config->host_port);
         host = &host_local[0];
     }
     else
@@ -851,14 +852,13 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 }
 
 
-static void CORE_connection_activate(void *context, qdr_connection_t *conn, bool awaken)
+static void CORE_connection_activate(void *context, qdr_connection_t *conn)
 {
     //
     // IMPORTANT:  This is the only core callback that is invoked on the core
-    //             thread itself.  It is imperative that this function do nothing
-    //             apart from setting the activation in the server for the connection.
+    //             thread itself. It must not take locks that could deadlock the core.
     //
-    qd_server_activate((qd_connection_t*) qdr_connection_get_context(conn), awaken);
+    qd_server_activate((qd_connection_t*) qdr_connection_get_context(conn));
 }
 
 
@@ -952,7 +952,7 @@ static void CORE_link_flow(void *context, qdr_link_t *link, int credit)
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
         return;
-    
+
     pn_link_t *plink = qd_link_pn(qlink);
 
     if (plink)

@@ -220,18 +220,17 @@ int qdr_connection_process(qdr_connection_t *conn);
 /**
  * qdr_connection_activate_t callback
  *
- * Activate a connection for transmission (socket write).  This is called whenever
- * the core has deliveries on links, disposition updates on deliveries, or flow updates
- * to be sent across the connection.
+ * Activate a connection with pending work from the core to ensure it will be processed by
+ * the proactor: the core has deliveries on links, disposition updates on deliveries, or
+ * flow updates to be sent across the connection.
  *
  * IMPORTANT: This function will be invoked on the core thread.  It must never block,
  * delay, or do any lenghty computation.
  *
  * @param context The context supplied when the callback was registered
  * @param conn The connection object to be activated
- * @param awaken Iff true, awaken the driver poll loop after the activation
  */
-typedef void (*qdr_connection_activate_t) (void *context, qdr_connection_t *conn, bool awaken);
+typedef void (*qdr_connection_activate_t) (void *context, qdr_connection_t *conn);
 
 /**
  ******************************************************************************
@@ -560,7 +559,7 @@ typedef int  (*qdr_link_push_t)          (void *context, qdr_link_t *link, int l
 typedef void (*qdr_link_deliver_t)       (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
 typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
 
-void qdr_connection_handlers(qdr_core_t                *core,
+void qdr_connection_handlers(qdr_core_t             *core,
                              void                      *context,
                              qdr_connection_activate_t  activate,
                              qdr_link_first_attach_t    first_attach,

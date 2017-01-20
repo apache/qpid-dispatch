@@ -27,8 +27,6 @@
 #include <qpid/dispatch/server.h>
 
 typedef struct qd_connection_manager_t qd_connection_manager_t;
-typedef struct qd_config_connector_t qd_config_connector_t;
-typedef struct qd_config_listener_t qd_config_listener_t;
 typedef struct qd_config_ssl_profile_t qd_config_ssl_profile_t;
 
 typedef void (*qd_connection_manager_handler_t) (void *context, qd_connection_t *conn);
@@ -49,16 +47,6 @@ qd_connection_manager_t *qd_connection_manager(qd_dispatch_t *qd);
 void qd_connection_manager_free(qd_connection_manager_t *cm);
 
 /**
- * Free all the resources associated with a config listener
- */
-void qd_config_listener_free(qd_connection_manager_t *cm, qd_config_listener_t *cl);
-
-/**
- * Free all the resources associated with a config connector
- */
-void qd_config_connector_free(qd_connection_manager_t *cm, qd_config_connector_t *cl);
-
-/**
  * Start the configured Listeners and Connectors
  *
  * Note that on-demand connectors are not started by this function.
@@ -66,14 +54,5 @@ void qd_config_connector_free(qd_connection_manager_t *cm, qd_config_connector_t
  * @param qd The dispatch handle returned by qd_dispatch.
  */
 void qd_connection_manager_start(qd_dispatch_t *qd);
-
-
-/**
- * Get the connector's name.
- *
- * @param cc Connector handle
- * @return The name of the connector
- */
-const char *qd_config_connector_name(qd_config_connector_t *cc);
 
 #endif

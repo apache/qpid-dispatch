@@ -106,7 +106,6 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
         pn_link_close(pn_link);
         return;
     }
-
     link->pn_sess    = pn_link_session(pn_link);
     link->pn_link    = pn_link;
     link->direction  = QD_OUTGOING;
@@ -234,7 +233,7 @@ static void notify_opened(qd_container_t *container, qd_connection_t *conn, void
 
 void policy_notify_opened(void *container, qd_connection_t *conn, void *context)
 {
-	notify_opened((qd_container_t *)container, (qd_connection_t *)conn, context);
+    notify_opened((qd_container_t *)container, (qd_connection_t *)conn, context);
 }
 
 static void notify_closed(qd_container_t *container, qd_connection_t *conn, void *context)
@@ -287,27 +286,21 @@ static void close_links(qd_container_t *container, pn_connection_t *conn, bool p
 }
 
 
-static int close_handler(qd_container_t *container, void* conn_context, pn_connection_t *conn, qd_connection_t* qd_conn)
+static int close_handler(qd_container_t *container, pn_connection_t *conn, qd_connection_t* qd_conn)
 {
     //
     // Close all links, passing QD_LOST as the reason.  These links are not
     // being properly 'detached'.  They are being orphaned.
     //
     close_links(container, conn, true);
-
-    // close the connection
-    pn_connection_close(conn);
-
-    notify_closed(container, qd_conn, conn_context);
+    notify_closed(container, qd_conn, qd_connection_get_context(qd_conn));
     return 0;
 }
 
 
-static int writable_handler(qd_container_t *container, pn_connection_t *conn, qd_connection_t* qd_conn)
+static void writable_handler(qd_container_t *container, pn_connection_t *conn, qd_connection_t* qd_conn)
 {
     const qd_node_type_t *nt;
-    int                   event_count = 0;
-
     //
     // Note the locking structure in this function.  Generally this would be unsafe, but since
     // this particular list is only ever appended to and never has items inserted or deleted,
@@ -320,14 +313,12 @@ static int writable_handler(qd_container_t *container, pn_connection_t *conn, qd
     while (nt_item) {
         nt = nt_item->ntype;
         if (nt->writable_handler)
-            event_count += nt->writable_handler(nt->type_context, qd_conn, 0);
+            nt->writable_handler(nt->type_context, qd_conn, 0);
 
         sys_mutex_lock(container->lock);
         nt_item = DEQ_NEXT(nt_item);
         sys_mutex_unlock(container->lock);
     }
-
-    return event_count;
 }
 
 /**
@@ -382,7 +373,18 @@ static void add_link_to_free_list(qd_pn_free_link_session_list_t  *free_link_ses
 
 }
 
-void pn_event_complete_handler(void *handler_context, qd_connection_t *qd_conn)
+
+/*
+ * FIXME aconway 2017-04-12: IMO this should not be necessary, we should
+ * be able to pn_*_free links and sessions directly the handler function.
+ * They will not actually be freed from memory till the event, connection,
+ * proactor etc. have all released their references.
+ *
+ * The need for these lists may indicate a router bug, where the router is
+ * using links/sessions after they are freed. Investigate and simplify if
+ * possible.
+ */
+static void conn_event_complete(qd_connection_t *qd_conn)
 {
     qd_pn_free_link_session_t *to_free_link = DEQ_HEAD(qd_conn->free_link_session_list);
     qd_pn_free_link_session_t *to_free_session = DEQ_HEAD(qd_conn->free_link_session_list);
@@ -405,27 +407,38 @@ void pn_event_complete_handler(void *handler_context, qd_connection_t *qd_conn)
     }
 }
 
-int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *event, qd_connection_t *qd_conn)
+
+void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
 {
-    qd_container_t  *container = (qd_container_t*) handler_context;
-    pn_connection_t *conn      = qd_connection_pn(qd_conn);
-    pn_session_t    *ssn;
-    pn_link_t       *pn_link;
-    qd_link_t       *qd_link;
-    pn_delivery_t   *delivery;
+    pn_connection_t *conn = pn_event_connection(event);
+    qd_connection_t *qd_conn = conn ? pn_connection_get_context(conn) : NULL;
+    pn_session_t    *ssn = NULL;
+    pn_link_t       *pn_link = NULL;
+    qd_link_t       *qd_link = NULL;
+    pn_delivery_t   *delivery = NULL;
 
     switch (pn_event_type(event)) {
+
     case PN_CONNECTION_REMOTE_OPEN :
         qd_connection_set_user(qd_conn);
         if (pn_connection_state(conn) & PN_LOCAL_UNINIT) {
             // This Open is an externally initiated connection
             // Let policy engine decide
-            qd_connection_set_event_stall(qd_conn, true);
+            /* TODO aconway 2017-04-11: presently the policy test is run
+             * in the current thread.
+             *
+             * If/when the policy test can run in another thread, the connection
+             * can be stalled by saving the current pn_event_batch and passing it
+             * to pn_proactor_done() when the policy check is complete. Note we
+             * can't run the policy check as a deferred function on the current
+             * connection since by stalling the current connection it will never be
+             * run, so we need some other thread context to run it in.
+             */
             qd_conn->open_container = (void *)container;
-            qd_connection_invoke_deferred(qd_conn, qd_policy_amqp_open, qd_conn);
+            qd_policy_amqp_open(qd_conn);
         } else {
             // This Open is in response to an internally initiated connection
-            notify_opened(container, qd_conn, conn_context);
+            notify_opened(container, qd_conn, qd_connection_get_context(qd_conn));
         }
         break;
 
@@ -451,20 +464,21 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
             }
         }
         break;
+
     case PN_SESSION_LOCAL_CLOSE :
         ssn = pn_event_session(event);
-
         pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
         while (pn_link) {
-                qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
-                qd_link->pn_link = 0;
-                pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+            qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
+            qd_link->pn_link = 0;
+            pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
         }
 
         if (pn_session_state(ssn) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
             add_session_to_free_list(&qd_conn->free_link_session_list,ssn);
         }
         break;
+
     case PN_SESSION_REMOTE_CLOSE :
         if (!(pn_connection_state(conn) & PN_LOCAL_CLOSED)) {
             ssn = pn_event_session(event);
@@ -600,28 +614,20 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
         }
         break;
 
-     default:
-      break;
+    case PN_CONNECTION_WAKE:
+        writable_handler(container, conn, qd_conn);
+        break;
+
+    case PN_TRANSPORT_CLOSED:
+        close_handler(container, conn, qd_conn);
+        break;
+
+    default:
+        break;
     }
-    return 1;
-}
-
-
-static int handler(void *handler_context, void *conn_context, qd_conn_event_t event, qd_connection_t *qd_conn)
-{
-    qd_container_t  *container = (qd_container_t*) handler_context;
-    pn_connection_t *conn      = qd_connection_pn(qd_conn);
-
-    switch (event) {
-
-    case QD_CONN_EVENT_CLOSE:
-        return close_handler(container, conn_context, conn, qd_conn);
-
-    case QD_CONN_EVENT_WRITABLE:
-        return writable_handler(container, conn, qd_conn);
+    if (qd_conn) {
+        conn_event_complete(qd_conn);
     }
-
-    return 0;
 }
 
 
@@ -639,8 +645,7 @@ qd_container_t *qd_container(qd_dispatch_t *qd)
     DEQ_INIT(container->nodes);
     DEQ_INIT(container->node_type_list);
 
-    qd_server_set_conn_handler(qd, handler, pn_event_handler, pn_event_complete_handler, container);
-
+    qd_server_set_container(qd, container);
     qd_log(container->log_source, QD_LOG_TRACE, "Container Initialized");
     return container;
 }
@@ -801,6 +806,9 @@ qd_lifetime_policy_t qd_container_node_get_life_policy(const qd_node_t *node)
 qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char* name)
 {
     qd_link_t *link = new_qd_link_t();
+    if (!link) {
+        return NULL;
+    }
     const qd_server_config_t * cf = qd_connection_config(conn);
 
     link->pn_sess = pn_session(qd_connection_pn(conn));
@@ -932,7 +940,7 @@ void qd_link_activate(qd_link_t *link)
     if (!ctx)
         return;
 
-    qd_server_activate(ctx, true);
+    qd_server_activate(ctx);
 }
 
 

@@ -24,7 +24,7 @@
 #include <stdio.h>
 
 int tool_tests(void);
-int timer_tests(void);
+int timer_tests(qd_dispatch_t*);
 int alloc_tests(void);
 int compose_tests(void);
 int policy_tests(void);
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
         printf("Config failed: %s\n", qd_error_message());
         return 1;
     }
-    result += timer_tests();
+    result += timer_tests(qd);
     result += tool_tests();
     result += compose_tests();
 #if USE_MEMORY_POOL

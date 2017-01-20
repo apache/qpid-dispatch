@@ -35,6 +35,6 @@ set(router_SOURCES
 SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME}")
 
 add_executable(qdrouterd ${router_SOURCES})
-target_link_libraries(qdrouterd qpid-dispatch ${proton_lib})
+target_link_libraries(qdrouterd qpid-dispatch)
 
 install(TARGETS qdrouterd RUNTIME DESTINATION sbin)

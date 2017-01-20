@@ -275,66 +275,29 @@ class SenderReceiverLimits(TestCase):
     def test_verify_n_receivers(self):
         n = 4
         addr = self.address()
-
-        # connection should be ok
-        denied = False
-        try:
-            br1 = BlockingConnection(addr)
-        except ConnectionException:
-            denied = True
-
-        self.assertFalse(denied) # assert if connections that should open did not open
+        br1 = BlockingConnection(addr)
 
         # n receivers OK
-        try:
-            r1 = br1.create_receiver(address="****YES_1of4***")
-            r2 = br1.create_receiver(address="****YES_20f4****")
-            r3 = br1.create_receiver(address="****YES_3of4****")
-            r4 = br1.create_receiver(address="****YES_4of4****")
-        except Exception:
-            denied = True
-
-        self.assertFalse(denied) # n receivers should have worked
+        br1.create_receiver(address="****YES_1of4***")
+        br1.create_receiver(address="****YES_20f4****")
+        br1.create_receiver(address="****YES_3of4****")
+        br1.create_receiver(address="****YES_4of4****")
 
         # receiver n+1 should be denied
-        try:
-            r5 = br1.create_receiver("****NO****")
-        except Exception:
-            denied = True
-
-        self.assertTrue(denied) # receiver n+1 should have failed
+        self.assertRaises(LinkDetached, br1.create_receiver, "****NO****")
 
         br1.close()
 
     def test_verify_n_senders(self):
         n = 2
         addr = self.address()
-
-        # connection should be ok
-        denied = False
-        try:
-            bs1 = BlockingConnection(addr)
-        except ConnectionException:
-            denied = True
-
-        self.assertFalse(denied) # assert if connections that should open did not open
+        bs1 = BlockingConnection(addr)
 
         # n senders OK
-        try:
-            s1 = bs1.create_sender(address="****YES_1of2****")
-            s2 = bs1.create_sender(address="****YES_2of2****")
-        except Exception:
-            denied = True
-
-        self.assertFalse(denied) # n senders should have worked
-
-        # receiver n+1 should be denied
-        try:
-            s3 = bs1.create_sender("****NO****")
-        except Exception:
-            denied = True
-
-        self.assertTrue(denied) # sender n+1 should have failed
+        bs1.create_sender(address="****YES_1of2****")
+        bs1.create_sender(address="****YES_2of2****")
+        # sender n+1 should be denied
+        self.assertRaises(LinkDetached, bs1.create_sender, "****NO****")
 
         bs1.close()
 

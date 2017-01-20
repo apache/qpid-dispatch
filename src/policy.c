@@ -184,9 +184,8 @@ qd_error_t qd_entity_refresh_policy(qd_entity_t* entity, void *unused) {
 // error conditions.
 //
 
-bool qd_policy_socket_accept(void *context, const char *hostname)
+bool qd_policy_socket_accept(qd_policy_t *policy, const char *hostname)
 {
-    qd_policy_t *policy = (qd_policy_t *)context;
     bool result = true;
     if (n_connections < policy->max_connection_limit) {
         // connection counted and allowed
@@ -205,10 +204,8 @@ bool qd_policy_socket_accept(void *context, const char *hostname)
 
 //
 //
-void qd_policy_socket_close(void *context, const qd_connection_t *conn)
+void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
 {
-    qd_policy_t *policy = (qd_policy_t *)context;
-
     n_connections -= 1;
     assert (n_connections >= 0);
     if (policy->enableVhostPolicy) {
@@ -567,8 +564,7 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
     return result;
 }
 
-//
-//
+
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
     const char *hostip = qd_connection_hostip(qd_conn);
@@ -678,55 +674,48 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
 }
 
 
-//
-//
-void qd_policy_amqp_open(void *context, bool discard)
-{
-    qd_connection_t *qd_conn = (qd_connection_t *)context;
-    if (!discard) {
-        pn_connection_t *conn = qd_connection_pn(qd_conn);
-        qd_dispatch_t *qd = qd_server_dispatch(qd_conn->server);
-        qd_policy_t *policy = qd->policy;
-        bool connection_allowed = true;
+void qd_policy_amqp_open(qd_connection_t *qd_conn) {
+    pn_connection_t *conn = qd_connection_pn(qd_conn);
+    qd_dispatch_t *qd = qd_server_dispatch(qd_conn->server);
+    qd_policy_t *policy = qd->policy;
+    bool connection_allowed = true;
 
-        if (policy->enableVhostPolicy) {
-            // Open connection or not based on policy.
-            pn_transport_t *pn_trans = pn_connection_transport(conn);
-            const char *hostip = qd_connection_hostip(qd_conn);
-            const char *pcrh = pn_connection_remote_hostname(conn);
-            const char *vhost = (pcrh ? pcrh : "");
-            const char *conn_name = qd_connection_name(qd_conn);
+    if (policy->enableVhostPolicy) {
+        // Open connection or not based on policy.
+        pn_transport_t *pn_trans = pn_connection_transport(conn);
+        const char *hostip = qd_connection_hostip(qd_conn);
+        const char *pcrh = pn_connection_remote_hostname(conn);
+        const char *vhost = (pcrh ? pcrh : "");
+        const char *conn_name = qd_connection_name(qd_conn);
 #define SETTINGS_NAME_SIZE 256
-            char settings_name[SETTINGS_NAME_SIZE];
-            uint32_t conn_id = qd_conn->connection_id;
-            qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
-            memset(qd_conn->policy_settings, 0, sizeof(qd_policy_settings_t));
+        char settings_name[SETTINGS_NAME_SIZE];
+        uint32_t conn_id = qd_conn->connection_id;
+        qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
+        memset(qd_conn->policy_settings, 0, sizeof(qd_policy_settings_t));
 
-            if (qd_policy_open_lookup_user(policy, qd_conn->user_id, hostip, vhost, conn_name,
-                                           settings_name, SETTINGS_NAME_SIZE, conn_id,
-                                           qd_conn->policy_settings) &&
-                settings_name[0]) {
-                // This connection is allowed by policy.
-                // Apply transport policy settings
-                if (qd_conn->policy_settings->maxFrameSize > 0)
-                    pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
-                if (qd_conn->policy_settings->maxSessions > 0)
-                    pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
-            } else {
-                // This connection is denied by policy.
-                connection_allowed = false;
-            }
+        if (qd_policy_open_lookup_user(policy, qd_conn->user_id, hostip, vhost, conn_name,
+                                       settings_name, SETTINGS_NAME_SIZE, conn_id,
+                                       qd_conn->policy_settings) &&
+            settings_name[0]) {
+            // This connection is allowed by policy.
+            // Apply transport policy settings
+            if (qd_conn->policy_settings->maxFrameSize > 0)
+                pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
+            if (qd_conn->policy_settings->maxSessions > 0)
+                pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
         } else {
-            // No policy implies automatic policy allow
-            // Note that connections not governed by policy have no policy_settings.
+            // This connection is denied by policy.
+            connection_allowed = false;
         }
-        if (connection_allowed) {
-            if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
-                pn_connection_open(conn);
-            policy_notify_opened(qd_conn->open_container, qd_conn, qd_conn->context);
-        } else {
-            qd_policy_private_deny_amqp_connection(conn, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);
-        }
+    } else {
+        // No policy implies automatic policy allow
+        // Note that connections not governed by policy have no policy_settings.
     }
-    qd_connection_set_event_stall(qd_conn, false);
+    if (connection_allowed) {
+        if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
+            pn_connection_open(conn);
+        policy_notify_opened(qd_conn->open_container, qd_conn, qd_conn->context);
+    } else {
+        qd_policy_private_deny_amqp_connection(conn, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);
+    }
 }
