@@ -217,6 +217,7 @@ struct qdr_delivery_t {
     qdr_error_t         *error;
     bool                 settled;
     bool                 presettled;
+    bool                 cleared_proton_ref;
     qdr_delivery_where_t where;
     uint8_t              tag[32];
     int                  tag_length;
