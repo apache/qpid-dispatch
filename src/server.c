@@ -64,7 +64,6 @@ struct qd_server_t {
     const char               *sasl_config_name;
     qdpn_driver_t            *driver;
     qd_log_source_t          *log_source;
-    qd_thread_start_cb_t      start_handler;
     qd_conn_handler_cb_t      conn_handler;
     qd_pn_event_handler_cb_t  pn_event_handler;
     qd_pn_event_complete_cb_t pn_event_complete_handler;
@@ -841,13 +840,6 @@ static void *thread_run(void *arg)
         return 0;
 
     //
-    // Invoke the start handler if the application supplied one.
-    // This handler can be used to set NUMA or processor affinnity for the thread.
-    //
-    if (qd_server->start_handler)
-        qd_server->start_handler(qd_server->start_context, thread->thread_id);
-
-    //
     // Main Loop
     //
     while (thread->running) {
@@ -1309,7 +1301,6 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->sasl_config_path = sasl_config_path;
     qd_server->sasl_config_name = sasl_config_name;
     qd_server->driver           = qdpn_driver(qd_server->log_source);
-    qd_server->start_handler    = 0;
     qd_server->conn_handler     = 0;
     qd_server->pn_event_handler = 0;
     qd_server->signal_handler   = 0;
@@ -1377,13 +1368,6 @@ void qd_server_set_signal_handler(qd_dispatch_t *qd, qd_signal_handler_cb_t hand
 {
     qd->server->signal_handler = handler;
     qd->server->signal_context = context;
-}
-
-
-void qd_server_set_start_handler(qd_dispatch_t *qd, qd_thread_start_cb_t handler, void *context)
-{
-    qd->server->start_handler = handler;
-    qd->server->start_context = context;
 }
 
 

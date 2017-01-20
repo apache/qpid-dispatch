@@ -35,21 +35,6 @@
  */
 
 /**
- * Thread Start Handler
- *
- * Callback invoked when a new server thread is started.  The callback is
- * invoked on the newly created thread.
- *
- * This handler can be used to set processor affinity or other thread-specific
- * tuning values.
- *
- * @param context The handler context supplied in qd_server_initialize.
- * @param thread_id The integer thread identifier that uniquely identifies this thread.
- */
-typedef void (*qd_thread_start_cb_t)(void* context, int thread_id);
-
-
-/**
  * Deferred callback
  *
  * This type is for calls that are deferred until they can be invoked on
@@ -60,20 +45,6 @@ typedef void (*qd_thread_start_cb_t)(void* context, int thread_id);
  *        was pending on was deleted.
  */
 typedef void (*qd_deferred_t)(void *context, bool discard);
-
-
-/**
- * Set the optional thread-start handler.
- *
- * This handler is called once on each worker thread at the time the thread is
- * started.  This may be used to set tuning settings like processor affinity,
- * etc.
- *
- * @param qd The dispatch handle returned by qd_dispatch.
- * @param start_handler The thread-start handler invoked per thread on thread startup.
- * @param context Opaque context to be passed back in the callback function.
- */
-void qd_server_set_start_handler(qd_dispatch_t *qd, qd_thread_start_cb_t start_handler, void *context);
 
 
 /**

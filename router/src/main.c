@@ -35,13 +35,6 @@ static qd_dispatch_t *dispatch = 0;
 static qd_log_source_t *log_source = 0;
 static const char* argv0 = 0;
 
-/**
- * The thread_start_handler is invoked once for each server thread at thread startup.
- */
-static void thread_start_handler(void* context, int thread_id)
-{
-}
-
 
 /**
  * This is the OS signal handler, invoked on an undetermined thread at a completely
@@ -116,9 +109,8 @@ static void main_process(const char *config_path, const char *python_pkgdir, int
     qd_dispatch_load_config(dispatch, config_path);
     check(fd);
 
-    (void)server_signal_handler; (void)thread_start_handler;(void)signal_handler;
+    (void)server_signal_handler; (void)signal_handler;
     qd_server_set_signal_handler(dispatch, server_signal_handler, 0);
-    qd_server_set_start_handler(dispatch, thread_start_handler, 0);
 
     signal(SIGHUP,  signal_handler);
     signal(SIGQUIT, signal_handler);
