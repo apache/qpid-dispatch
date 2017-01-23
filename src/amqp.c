@@ -44,3 +44,19 @@ const qd_amqp_error_t QD_AMQP_BAD_REQUEST = { 400, "Bad Request" };
 const qd_amqp_error_t QD_AMQP_FORBIDDEN = { 403, "Forbidden" };
 const qd_amqp_error_t QD_AMQP_NOT_FOUND = { 404, "Not Found" };
 const qd_amqp_error_t QD_AMQP_NOT_IMPLEMENTED = { 501, "Not Implemented"};
+
+const char * const QD_AMQP_COND_INTERNAL_ERROR = "amqp:internal-error";
+const char * const QD_AMQP_COND_NOT_FOUND = "amqp:not-found";
+const char * const QD_AMQP_COND_UNAUTHORIZED_ACCESS = "amqp:unauthorized-access";
+const char * const QD_AMQP_COND_DECODE_ERROR = "amqp:decode-error";
+const char * const QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED = "amqp:resource-limit-exceeded";
+const char * const QD_AMQP_COND_NOT_ALLOWED = "amqp:not-allowed";
+const char * const QD_AMQP_COND_INVALID_FIELD = "amqp:invalid-field";
+const char * const QD_AMQP_COND_NOT_IMPLEMENTED = "amqp:not-implemented";
+const char * const QD_AMQP_COND_RESOURCE_LOCKED = "amqp:resource-locked";
+const char * const QD_AMQP_COND_PRECONDITION_FAILED = "amqp:precondition-failed";
+const char * const QD_AMQP_COND_RESOURCE_DELETED = "amqp:resource-deleted";
+const char * const QD_AMQP_COND_ILLEGAL_STATE = "amqp:illegal-state";
+const char * const QD_AMQP_COND_FRAME_SIZE_TOO_SMALL = "amqp:frame-size-too-small";
+
+const char * const QD_COND_NAME = "router:error";
