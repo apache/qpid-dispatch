@@ -62,6 +62,17 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_error_initialize();
     if (qd_error_code()) { qd_dispatch_free(qd); return 0; }
 
+    if (python_pkgdir) {
+        struct stat st;
+        if (stat(python_pkgdir, &st)) {
+            qd_error_errno(errno, "Cannot find Python library path '%s'", python_pkgdir);
+            return NULL;
+        } else if (!S_ISDIR(st.st_mode)) {
+            qd_error(QD_ERROR_RUNTIME, "Python library path '%s' not a directory", python_pkgdir);
+            return NULL;
+        }
+    }
+
     qd_dispatch_set_router_area(qd, strdup("0"));
     qd_dispatch_set_router_id(qd, strdup("0"));
     qd->router_mode = QD_ROUTER_MODE_ENDPOINT;

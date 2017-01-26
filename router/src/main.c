@@ -108,15 +108,6 @@ static void check(int fd) {
 
 static void main_process(const char *config_path, const char *python_pkgdir, int fd)
 {
-    qd_error_clear();
-    struct stat st;
-    if (stat(python_pkgdir, &st))
-        fail(fd, "Cannot find python library path '%s'", python_pkgdir);
-    if (!S_ISDIR(st.st_mode)) {
-        qd_error(QD_ERROR_RUNTIME, "Python library path '%s' not a directory", python_pkgdir);
-        check(fd);
-    }
-
     dispatch = qd_dispatch(python_pkgdir);
     check(fd);
     log_source = qd_log_source("MAIN"); /* Logging is initialized by qd_dispatch. */

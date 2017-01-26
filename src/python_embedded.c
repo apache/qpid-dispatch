@@ -712,7 +712,7 @@ static void qd_python_setup(void)
         if (!m) {
             qd_error_py();
             qd_log(log_source, QD_LOG_CRITICAL, "Cannot load dispatch extension module '%s'", DISPATCH_MODULE);
-            abort();
+            exit(1);
         }
 
         //

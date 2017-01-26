@@ -17,6 +17,12 @@
  * under the License.
  */
 
+
+/* Make sure we get the XSI compliant strerror_r from string.h not the GNU one. */
+#define _POSIX_C_SOURCE 200112L
+#undef _GNU_SOURCE
+#include <string.h>
+
 #include <Python.h>
 #include <qpid/dispatch/error.h>
 #include <qpid/dispatch/enum.h>
@@ -175,22 +181,18 @@ qd_error_t qd_error_py_impl(const char *file, int line) {
     return qd_error_code();
 }
 
-static inline void ignore_result(char* ignored) {}
-
 qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const char *fmt, ...) {
     if (errnum) {
         ts.error_code = QD_ERROR_SYSTEM;
-        char buf[ERROR_MAX];
-		ignore_result(strerror_r(errno, buf, sizeof(buf)));
-
         char *begin = ts.error_message;
-        char *end = begin + ERROR_MAX;
+        char *end = begin + sizeof(ts.error_message);
         va_list arglist;
         va_start(arglist, fmt);
         vaprintf(&begin, end, fmt, arglist);
         va_end(arglist);
-        aprintf(&begin, end, ": %s", buf);
-        qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", qd_error_message());
+        aprintf(&begin, end, ": ", errnum);
+        (void)strerror_r(errnum, begin, end - begin);
+        qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", ts.error_message);
         return qd_error_code();
     }
     else
