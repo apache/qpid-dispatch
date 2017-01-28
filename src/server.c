@@ -84,7 +84,6 @@ struct qd_server_t {
     bool                      signal_handler_running;
     void                     *signal_context;
     int                       pending_signal;
-    qd_connection_list_t      connections;
     qd_timer_t               *heartbeat_timer;
     uint64_t                 next_connection_id;
     void                     *py_displayname_obj;
@@ -605,9 +604,6 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->owner_thread = CONTEXT_NO_OWNER;
         qdpn_connector_set_context(cxtr, ctx);
 
-        // qd_server->lock is already locked
-        DEQ_INSERT_TAIL(qd_server->connections, ctx);
-
         qd_log(qd_server->log_source, QD_LOG_TRACE, "Accepting %s with connection id [%"PRIu64"]",
            log_incoming(logbuf, sizeof(logbuf), cxtr), ctx->connection_id);
 
@@ -1027,7 +1023,6 @@ static void *thread_run(void *arg)
                 }
 
                 sys_mutex_lock(qd_server->lock);
-                DEQ_REMOVE(qd_server->connections, ctx);
 
                 if (ctx->policy_counted) {
                     qd_policy_socket_close(qd_server->qd->policy, ctx);
@@ -1134,9 +1129,6 @@ static void cxtr_try_open(void *context)
     // Increment the connection id so the next connection can use it
     ctx->connection_id = ct->server->next_connection_id++;
     ctx->pn_cxtr = qdpn_connector(ct->server->driver, ct->config->host, ct->config->port, ct->config->protocol_family, (void*) ctx);
-    if (ctx->pn_cxtr) {
-        DEQ_INSERT_TAIL(ct->server->connections, ctx);
-    }
     sys_mutex_unlock(ct->server->lock);
 
     const qd_server_config_t *config = ct->config;
@@ -1287,7 +1279,6 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     if (qd_server == 0)
         return 0;
 
-    DEQ_INIT(qd_server->connections);
     qd_server->qd               = qd;
     qd_server->log_source       = qd_log_source("SERVER");
     qd_server->thread_count     = thread_count;
