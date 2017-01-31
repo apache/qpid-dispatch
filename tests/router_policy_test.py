@@ -24,7 +24,7 @@ from qpid_dispatch_internal.policy.policy_util import HostStruct
 from qpid_dispatch_internal.policy.policy_util import PolicyError
 from qpid_dispatch_internal.policy.policy_util import PolicyAppConnectionMgr
 from qpid_dispatch_internal.policy.policy_local import PolicyLocal
-from system_test import TestCase, main_module
+from system_test import TestCase, main_module, is_ipv6_enabled
 
 class PolicyHostAddrTest(TestCase):
 
@@ -61,7 +61,7 @@ class PolicyHostAddrTest(TestCase):
         self.check_hostaddr_match(bbb, "1.1.2.0", False)
 
     def test_policy_hostaddr_ipv6(self):
-        if not HostAddr.has_ipv6:
+        if not is_ipv6_enabled():
             self.skipTest("System IPv6 support is not available")
         # Create simple host and range
         aaa = HostAddr("::1")
@@ -88,7 +88,7 @@ class PolicyHostAddrTest(TestCase):
 
 
     def test_policy_hostaddr_ipv6_wildcard(self):
-        if not HostAddr.has_ipv6:
+        if not is_ipv6_enabled():
             self.skipTest("System IPv6 support is not available")
         aaa = HostAddr("*")
         self.check_hostaddr_match(aaa,"::0")
@@ -101,7 +101,7 @@ class PolicyHostAddrTest(TestCase):
         self.expect_deny( "9.9.9.9,8.8.8.8", "a > b")
 
     def test_policy_malformed_hostaddr_ipv6(self):
-        if not HostAddr.has_ipv6:
+        if not is_ipv6_enabled():
             self.skipTest("System IPv6 support is not available")
         self.expect_deny( "1::2::3", "Name or service not known")
         self.expect_deny( "::1,::2,::3", "arg count")

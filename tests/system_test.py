@@ -143,6 +143,20 @@ def get_local_host_socket(protocol_family='IPv4'):
 
     return s, host
 
+def is_ipv6_enabled():
+    """
+    Returns true if IPV6 is enabled, false otherwise
+    """
+    sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    ipv6_enabled = True
+    try:
+        sock.bind(('::1', 0))
+    except Exception as e:
+        if "socket.error" in str(type(e)):
+            ipv6_enabled = False
+
+    return ipv6_enabled
+
 def port_available(port, protocol_family='IPv4'):
     """Return true if connecting to host:port gives 'connection refused'."""
     s, host = get_local_host_socket(protocol_family)
