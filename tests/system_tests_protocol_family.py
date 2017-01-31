@@ -20,7 +20,7 @@
 import unittest
 from time import sleep
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module
+from system_test import TestCase, Qdrouterd, main_module, is_ipv6_enabled
 
 try:
     from proton import MODIFIED
@@ -31,6 +31,7 @@ except ImportError:
 class ProtocolFamilyTest(TestCase):
     @classmethod
     def setUpClass(cls):
+
         """
         Starts three routers with various listeners and connectors.
         There is a call to wait_router_connected to make sure that the routers are able to communicate with each
@@ -71,6 +72,9 @@ class ProtocolFamilyTest(TestCase):
             # and tests each connector
             cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
 
+        if not is_ipv6_enabled():
+            return
+
         cls.routers = []
 
         inter_router_port = cls.tester.get_port(protocol_family='IPv6')
@@ -105,6 +109,10 @@ class ProtocolFamilyTest(TestCase):
     # If this test has started executing, it means that the setUpClass() has successfully executed which means that
     # the routers were able to communicate with each other successfully using the specified protocol family.
     def test_simple_pre_settled(self):
+
+        if not is_ipv6_enabled():
+            return self.skipTest("Skipping test..IPV6 not enabled")
+
         addr = self.routers[0].addresses[4]+"/test/1"
         M1 = self.messenger()
         M2 = self.messenger()
