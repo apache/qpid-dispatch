@@ -53,7 +53,7 @@ static void qdr_route_check_id_for_deletion_CT(qdr_core_t *core, qdr_conn_identi
     // If this connection identifier has no open connection and no referencing routes,
     // it can safely be deleted and removed from the hash index.
     //
-    if (cid->open_connection == 0 && DEQ_IS_EMPTY(cid->link_route_refs) && DEQ_IS_EMPTY(cid->auto_link_refs)) {
+    if (DEQ_IS_EMPTY(cid->connection_refs) && DEQ_IS_EMPTY(cid->link_route_refs) && DEQ_IS_EMPTY(cid->auto_link_refs)) {
         qd_hash_remove_by_handle(core->conn_id_hash, cid->hash_handle);
         free_qdr_conn_identifier_t(cid);
     }
@@ -204,8 +204,11 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
     if (conn_id) {
         lr->conn_id = qdr_route_declare_id_CT(core, qd_parse_raw(conn_id), is_container);
         DEQ_INSERT_TAIL_N(REF, lr->conn_id->link_route_refs, lr);
-        if (lr->conn_id->open_connection)
-            qdr_link_route_activate_CT(core, lr, lr->conn_id->open_connection);
+        qdr_connection_ref_t * cref = DEQ_HEAD(lr->conn_id->connection_refs);
+        while (cref) {
+            qdr_link_route_activate_CT(core, lr, cref->conn);
+            cref = DEQ_NEXT(cref);
+        }
     }
 
     //
@@ -225,8 +228,11 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
     //
     qdr_conn_identifier_t *cid = lr->conn_id;
     if (cid) {
-        if (!!cid->open_connection)
-            qdr_link_route_deactivate_CT(core, lr, cid->open_connection);
+        qdr_connection_ref_t * cref = DEQ_HEAD(cid->connection_refs);
+        while (cref) {
+            qdr_link_route_deactivate_CT(core, lr, cref->conn);
+            cref = DEQ_NEXT(cref);
+        }
         DEQ_REMOVE_N(REF, cid->link_route_refs, lr);
         qdr_route_check_id_for_deletion_CT(core, cid);
     }
@@ -292,8 +298,11 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
     if (conn_id) {
         al->conn_id = qdr_route_declare_id_CT(core, qd_parse_raw(conn_id), is_container);
         DEQ_INSERT_TAIL_N(REF, al->conn_id->auto_link_refs, al);
-        if (al->conn_id->open_connection)
-            qdr_auto_link_activate_CT(core, al, al->conn_id->open_connection);
+        qdr_connection_ref_t * cref = DEQ_HEAD(al->conn_id->connection_refs);
+        while (cref) {
+            qdr_auto_link_activate_CT(core, al, cref->conn);
+            cref = DEQ_NEXT(cref);
+        }
     }
 
     //
@@ -313,8 +322,11 @@ void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *al)
     //
     qdr_conn_identifier_t *cid = al->conn_id;
     if (cid) {
-        if (!!cid->open_connection)
-            qdr_auto_link_deactivate_CT(core, al, cid->open_connection);
+        qdr_connection_ref_t * cref = DEQ_HEAD(cid->connection_refs);
+        while (cref) {
+            qdr_auto_link_deactivate_CT(core, al, cref->conn);
+            cref = DEQ_NEXT(cref);
+        }
         DEQ_REMOVE_N(REF, cid->auto_link_refs, al);
         qdr_route_check_id_for_deletion_CT(core, cid);
     }
@@ -347,8 +359,8 @@ void qdr_route_connection_opened_CT(qdr_core_t       *core,
 
     qdr_conn_identifier_t *cid = qdr_route_declare_id_CT(core, field->iterator, is_container);
 
-    assert(!cid->open_connection);
-    cid->open_connection = conn;
+    qdr_add_connection_ref(&cid->connection_refs, conn);
+
     conn->conn_id        = cid;
 
     //
@@ -396,7 +408,11 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
             al = DEQ_NEXT_N(REF, al);
         }
 
-        cid->open_connection = 0;
+        //
+        // Remove our own entry in the connection list
+        //
+        qdr_del_connection_ref(&cid->connection_refs, conn);
+
         conn->conn_id        = 0;
 
         qdr_route_check_id_for_deletion_CT(core, cid);

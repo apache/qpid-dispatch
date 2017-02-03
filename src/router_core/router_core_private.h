@@ -535,10 +535,10 @@ DEQ_DECLARE(qdr_auto_link_t, qdr_auto_link_list_t);
 
 
 struct qdr_conn_identifier_t {
-    qd_hash_handle_t      *hash_handle;
-    qdr_connection_t      *open_connection;
-    qdr_link_route_list_t  link_route_refs;
-    qdr_auto_link_list_t   auto_link_refs;
+    qd_hash_handle_t          *hash_handle;
+    qdr_connection_ref_list_t  connection_refs;
+    qdr_link_route_list_t      link_route_refs;
+    qdr_auto_link_list_t       auto_link_refs;
 };
 
 ALLOC_DECLARE(qdr_conn_identifier_t);
