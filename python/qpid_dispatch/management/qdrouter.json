@@ -1219,6 +1219,10 @@
                     "description": "Remote node identifier.",
                     "type": "string"
                 },
+                "protocolVersion": {
+                    "description": "Router-protocol version supported by the node.",
+                    "type": "integer"
+                },
                 "instance": {
                     "description": "Remote node boot number.",
                     "type": "integer"

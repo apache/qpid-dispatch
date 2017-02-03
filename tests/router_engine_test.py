@@ -25,7 +25,7 @@ import mock                     # Mock definitions for tests.
 sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))
 
 from qpid_dispatch_internal.router.engine import HelloProtocol, PathEngine, NodeTracker
-from qpid_dispatch_internal.router.data import LinkState, MessageHELLO
+from qpid_dispatch_internal.router.data import LinkState, MessageHELLO, ProtocolVersion
 from qpid_dispatch.management.entity import EntityBase
 from system_test import main_module
 
@@ -141,7 +141,7 @@ class NeighborTest(unittest.TestCase):
     def send(self, dest, msg):
         self.sent.append((dest, msg))
 
-    def neighbor_refresh(self, node_id, instance, link_id, cost, now):
+    def neighbor_refresh(self, node_id, ProtocolVersion, instance, link_id, cost, now):
         self.neighbors[node_id] = (instance, link_id, cost, now)
 
     def setUp(self):

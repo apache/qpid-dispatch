@@ -54,7 +54,7 @@ class HelloProtocol(object):
             return
         self.hellos[msg.id] = now
         if msg.is_seen(self.id):
-            self.node_tracker.neighbor_refresh(msg.id, msg.instance, link_id, cost, now)
+            self.node_tracker.neighbor_refresh(msg.id, msg.version, msg.instance, link_id, cost, now)
 
 
     def _expire_hellos(self, now):

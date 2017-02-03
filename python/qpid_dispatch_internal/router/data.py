@@ -17,6 +17,12 @@
 # under the License.
 #
 
+##
+## Define the current protocol version.  Any messages that do not contain version
+## information shall be considered to be coming from routers using version 0.
+##
+ProtocolVersion = 1L
+
 def getMandatory(data, key, cls=None):
     """
     Get the value mapped to the requested key.    If it's not present, raise an exception.
@@ -107,20 +113,23 @@ class MessageHELLO(object):
             self.area = '0'
             self.seen_peers = getMandatory(body, 'seen', list)
             self.instance = getOptional(body, 'instance', 0, long)
+            self.version  = getOptional(body, 'pv', 0, long)
         else:
             self.id   = _id
             self.area = '0'
             self.seen_peers = _seen_peers
             self.instance = _instance
+            self.version  = ProtocolVersion
 
     def __repr__(self):
-        return "HELLO(id=%s area=%s inst=%d seen=%r)" % (self.id, self.area, self.instance, self.seen_peers)
+        return "HELLO(id=%s pv=%d area=%s inst=%d seen=%r)" % (self.id, self.version, self.area, self.instance, self.seen_peers)
 
     def get_opcode(self):
         return 'HELLO'
 
     def to_dict(self):
         return {'id'       : self.id,
+                'pv'       : self.version,
                 'area'     : self.area,
                 'instance' : self.instance,
                 'seen'     : self.seen_peers}
@@ -143,22 +152,25 @@ class MessageRA(object):
             self.ls_seq = getMandatory(body, 'ls_seq', long)
             self.mobile_seq = getMandatory(body, 'mobile_seq', long)
             self.instance = getOptional(body, 'instance', 0, long)
+            self.version  = getOptional(body, 'pv', 0, long)
         else:
             self.id = _id
             self.area = '0'
             self.ls_seq = long(_ls_seq)
             self.mobile_seq = long(_mobile_seq)
             self.instance = _instance
+            self.version  = ProtocolVersion
 
     def get_opcode(self):
         return 'RA'
 
     def __repr__(self):
-        return "RA(id=%s area=%s inst=%d ls_seq=%d mobile_seq=%d)" % \
-                (self.id, self.area, self.instance, self.ls_seq, self.mobile_seq)
+        return "RA(id=%s pv=%d area=%s inst=%d ls_seq=%d mobile_seq=%d)" % \
+                (self.id, self.version, self.area, self.instance, self.ls_seq, self.mobile_seq)
 
     def to_dict(self):
         return {'id'         : self.id,
+                'pv'         : self.version,
                 'area'       : self.area,
                 'instance'   : self.instance,
                 'ls_seq'     : self.ls_seq,
@@ -175,22 +187,25 @@ class MessageLSU(object):
             self.ls_seq = getMandatory(body, 'ls_seq', long)
             self.ls = LinkState(getMandatory(body, 'ls', dict))
             self.instance = getOptional(body, 'instance', 0, long)
+            self.version  = getOptional(body, 'pv', 0, long)
         else:
             self.id = _id
             self.area = '0'
             self.ls_seq = long(_ls_seq)
             self.ls = _ls
             self.instance = _instance
+            self.version  = ProtocolVersion
 
     def get_opcode(self):
         return 'LSU'
 
     def __repr__(self):
-        return "LSU(id=%s area=%s inst=%d ls_seq=%d ls=%r)" % \
-                (self.id, self.area, self.instance, self.ls_seq, self.ls)
+        return "LSU(id=%s pv=%d area=%s inst=%d ls_seq=%d ls=%r)" % \
+                (self.id, self.version, self.area, self.instance, self.ls_seq, self.ls)
 
     def to_dict(self):
         return {'id'       : self.id,
+                'pv'       : self.version,
                 'area'     : self.area,
                 'instance' : self.instance,
                 'ls_seq'   : self.ls_seq,
@@ -203,20 +218,23 @@ class MessageLSR(object):
     def __init__(self, body, _id=None):
         if body:
             self.id = getMandatory(body, 'id', str)
+            self.version = getOptional(body, 'pv', 0, long)
             self.area = '0'
         else:
             self.id = _id
+            self.version = ProtocolVersion
             self.area = '0'
 
     def get_opcode(self):
         return 'LSR'
 
     def __repr__(self):
-        return "LSR(id=%s area=%s)" % (self.id, self.area)
+        return "LSR(id=%s pv=%d area=%s)" % (self.id, self.version, self.area)
 
     def to_dict(self):
-        return {'id'     : self.id,
-                'area'   : self.area}
+        return {'id'      : self.id,
+                'pv'      : self.version,
+                'area'    : self.area}
 
 
 class MessageMAU(object):
@@ -225,6 +243,7 @@ class MessageMAU(object):
     def __init__(self, body, _id=None, _seq=None, _add_list=None, _del_list=None, _exist_list=None):
         if body:
             self.id = getMandatory(body, 'id', str)
+            self.version = getOptional(body, 'pv', 0, long)
             self.area = '0'
             self.mobile_seq = getMandatory(body, 'mobile_seq', long)
             self.add_list = getOptional(body, 'add', None, list)
@@ -232,6 +251,7 @@ class MessageMAU(object):
             self.exist_list = getOptional(body, 'exist', None, list)
         else:
             self.id = _id
+            self.version = ProtocolVersion
             self.area = '0'
             self.mobile_seq = long(_seq)
             self.add_list = _add_list
@@ -248,13 +268,14 @@ class MessageMAU(object):
         if self.add_list != None:   _add   = ' add=%r'   % self.add_list
         if self.del_list != None:   _del   = ' del=%r'   % self.del_list
         if self.exist_list != None: _exist = ' exist=%r' % self.exist_list
-        return "MAU(id=%s area=%s mobile_seq=%d%s%s%s)" % \
-                (self.id, self.area, self.mobile_seq, _add, _del, _exist)
+        return "MAU(id=%s pv=%d area=%s mobile_seq=%d%s%s%s)" % \
+                (self.id, self.version, self.area, self.mobile_seq, _add, _del, _exist)
 
     def to_dict(self):
-        body = { 'id'         : self.id,
-                 'area'       : self.area,
-                 'mobile_seq' : self.mobile_seq }
+        body = {'id'         : self.id,
+                'pv'         : self.version,
+                'area'       : self.area,
+                'mobile_seq' : self.mobile_seq }
         if self.add_list != None:   body['add']   = self.add_list
         if self.del_list != None:   body['del']   = self.del_list
         if self.exist_list != None: body['exist'] = self.exist_list
@@ -267,10 +288,12 @@ class MessageMAR(object):
     def __init__(self, body, _id=None, _have_seq=None):
         if body:
             self.id = getMandatory(body, 'id', str)
+            self.version = getOptional(body, 'pv', 0, long)
             self.area = '0'
             self.have_seq = getMandatory(body, 'have_seq', long)
         else:
             self.id = _id
+            self.version = ProtocolVersion
             self.area = '0'
             self.have_seq = long(_have_seq)
 
@@ -278,9 +301,10 @@ class MessageMAR(object):
         return 'MAR'
 
     def __repr__(self):
-        return "MAR(id=%s area=%s have_seq=%d)" % (self.id, self.area, self.have_seq)
+        return "MAR(id=%s pv=%d area=%s have_seq=%d)" % (self.id, self.version, self.area, self.have_seq)
 
     def to_dict(self):
         return {'id'       : self.id,
+                'pv'       : self.version,
                 'area'     : self.area,
                 'have_seq' : self.have_seq}

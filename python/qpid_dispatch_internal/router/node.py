@@ -18,7 +18,7 @@
 #
 
 from ..dispatch import LOG_INFO, LOG_TRACE, LOG_DEBUG
-from data import LinkState
+from data import LinkState, ProtocolVersion
 from .address import Address
 
 class NodeTracker(object):
@@ -55,6 +55,7 @@ class NodeTracker(object):
         """Refresh management attributes"""
         attributes.update({
             "id": self.my_id,
+            "protocolVersion": ProtocolVersion,
             "instance": self.container.instance, # Boot number, integer
             "linkState": [ls for ls in self.link_state.peers], # List of neighbour nodes
             "nextHop":  "(self)",
@@ -188,7 +189,7 @@ class NodeTracker(object):
             self.container.link_state_engine.send_ra(now)
 
 
-    def neighbor_refresh(self, node_id, instance, link_id, cost, now):
+    def neighbor_refresh(self, node_id, version, instance, link_id, cost, now):
         """
         Invoked when the hello protocol has received positive confirmation
         of continued bi-directional connectivity with a neighbor router.
@@ -198,8 +199,14 @@ class NodeTracker(object):
         ## If the node id is not known, create a new RouterNode to track it.
         ##
         if node_id not in self.nodes:
-            self.nodes[node_id] = RouterNode(self, node_id, instance)
+            self.nodes[node_id] = RouterNode(self, node_id, version, instance)
         node = self.nodes[node_id]
+
+        ##
+        ## Add the version if we haven't already done so.
+        ##
+        if node.version == None:
+            node.version = version
 
         ##
         ## Set the link_id to indicate this is a neighbor router.  If the link_id
@@ -220,7 +227,7 @@ class NodeTracker(object):
         ## If the instance was updated (i.e. the neighbor restarted suddenly),
         ## schedule a topology recompute and a link-state-request to that router.
         ##
-        if node.update_instance(instance):
+        if node.update_instance(instance, version):
             self.recompute_topology = True
             node.request_link_state()
 
@@ -247,7 +254,7 @@ class NodeTracker(object):
         return result
 
 
-    def ra_received(self, node_id, ls_seq, mobile_seq, instance, now):
+    def ra_received(self, node_id, version, ls_seq, mobile_seq, instance, now):
         """
         Invoked when a router advertisement is received from another router.
         """
@@ -255,14 +262,20 @@ class NodeTracker(object):
         ## If the node id is not known, create a new RouterNode to track it.
         ##
         if node_id not in self.nodes:
-            self.nodes[node_id] = RouterNode(self, node_id, instance)
+            self.nodes[node_id] = RouterNode(self, node_id, version, instance)
         node = self.nodes[node_id]
+
+        ##
+        ## Add the version if we haven't already done so.
+        ##
+        if node.version == None:
+            node.version = version
 
         ##
         ## If the instance was updated (i.e. the router restarted suddenly),
         ## schedule a topology recompute and a link-state-request to that router.
         ##
-        if node.update_instance(instance):
+        if node.update_instance(instance, version):
             self.recompute_topology = True
             node.request_link_state()
 
@@ -286,15 +299,15 @@ class NodeTracker(object):
             node.mobile_address_request()
 
 
-    def router_learned(self, node_id):
+    def router_learned(self, node_id, version):
         """
         Invoked when we learn about another router by any means
         """
         if node_id not in self.nodes and node_id != self.my_id:
-            self.nodes[node_id] = RouterNode(self, node_id, None)
+            self.nodes[node_id] = RouterNode(self, node_id, version, None)
 
 
-    def link_state_received(self, node_id, link_state, instance, now):
+    def link_state_received(self, node_id, version, link_state, instance, now):
         """
         Invoked when a link state update is received from another router.
         """
@@ -302,8 +315,14 @@ class NodeTracker(object):
         ## If the node id is not known, create a new RouterNode to track it.
         ##
         if node_id not in self.nodes:
-            self.nodes[node_id] = RouterNode(self, node_id, instance)
+            self.nodes[node_id] = RouterNode(self, node_id, version, instance)
         node = self.nodes[node_id]
+
+        ##
+        ## Add the version if we haven't already done so.
+        ##
+        if node.version == None:
+            node.version = version
 
         ##
         ## If the new link state is more up-to-date than the stored link state,
@@ -321,7 +340,7 @@ class NodeTracker(object):
             ##
             for peer in node.link_state.peers:
                 if peer not in self.nodes:
-                    self.router_learned(peer)
+                    self.router_learned(peer, None)
 
 
     def router_node(self, node_id):
@@ -359,11 +378,12 @@ class RouterNode(object):
     RouterNode is used to track remote routers in the router network.
     """
 
-    def __init__(self, parent, node_id, instance):
+    def __init__(self, parent, node_id, version, instance):
         self.parent                  = parent
         self.adapter                 = parent.container.router_adapter
         self.log                     = parent.container.log
         self.id                      = node_id
+        self.version                 = version
         self.instance                = instance
         self.maskbit                 = self.parent._allocate_maskbit()
         self.neighbor_refresh_time   = 0.0
@@ -385,6 +405,7 @@ class RouterNode(object):
         """Refresh management attributes"""
         attributes.update({
             "id": self.id,
+            "protocolVersion": self.version,
             "instance": self.instance, # Boot number, integer
             "linkState": [ls for ls in self.link_state.peers], # List of neighbour nodes
             "nextHop":  self.next_hop_router and self.next_hop_router.id,
@@ -531,7 +552,7 @@ class RouterNode(object):
             self.unmap_address(a)
 
 
-    def update_instance(self, instance):
+    def update_instance(self, instance, version):
         if instance == None:
             return False
         if self.instance == None:
@@ -541,6 +562,7 @@ class RouterNode(object):
             return False
 
         self.instance = instance
+        self.version  = version
         self.link_state.del_all_peers()
         self.unmap_all_addresses()
         self.log(LOG_INFO, "Detected Restart of Router Node %s" % self.id)

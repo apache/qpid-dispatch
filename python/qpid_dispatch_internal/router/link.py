@@ -49,19 +49,19 @@ class LinkStateEngine(object):
     def handle_ra(self, msg, now):
         if msg.id == self.id:
             return
-        self.node_tracker.ra_received(msg.id, msg.ls_seq, msg.mobile_seq, msg.instance, now)
+        self.node_tracker.ra_received(msg.id, msg.version, msg.ls_seq, msg.mobile_seq, msg.instance, now)
 
 
     def handle_lsu(self, msg, now):
         if msg.id == self.id:
             return
-        self.node_tracker.link_state_received(msg.id, msg.ls, msg.instance, now)
+        self.node_tracker.link_state_received(msg.id, msg.version, msg.ls, msg.instance, now)
 
 
     def handle_lsr(self, msg, now):
         if msg.id == self.id:
             return
-        self.node_tracker.router_learned(msg.id)
+        self.node_tracker.router_learned(msg.id, msg.version)
         my_ls = self.node_tracker.link_state
         smsg = MessageLSU(None, self.id, my_ls.ls_seq, my_ls, self.container.instance)
         self.container.send('amqp:/_topo/%s/%s/qdrouter' % (msg.area, msg.id), smsg)

@@ -66,6 +66,12 @@ def parse_args(argv):
     return opts, args
 
 
+def get(obj, attr):
+    if attr in obj.__dict__:
+        return obj.__dict__[attr]
+    return None
+
+
 class BusManager(Node):
 
     schema = QdSchema()
@@ -138,10 +144,7 @@ class BusManager(Node):
         heads.append(Header("tenant"))
 
         rows = []
-        cols = ('identity', 'host', 'container', 'role', 'dir', 'isAuthenticated', 'sasl',
-                'user', 'isEncrypted', 'sslProto', 'sslCipher', 'tenant')
-
-        objects = self.query('org.apache.qpid.dispatch.connection', cols, limit=self.opts.limit)
+        objects = self.query('org.apache.qpid.dispatch.connection', limit=self.opts.limit)
 
         for conn in objects:
             row = []
@@ -152,7 +155,7 @@ class BusManager(Node):
             row.append(conn.dir)
             row.append(self.connSecurity(conn))
             row.append(self.connAuth(conn))
-            row.append(self.noTrailingSlash(conn.tenant))
+            row.append(self.noTrailingSlash(get(conn, 'tenant')))
             rows.append(row)
         title = "Connections"
         dispRows = rows
@@ -307,14 +310,12 @@ class BusManager(Node):
         heads.append(Header("next-hop"))
         heads.append(Header("link"))
         if self.opts.verbose:
+            heads.append(Header("ver"))
             heads.append(Header("cost"))
             heads.append(Header("neighbors"))
             heads.append(Header("valid-origins"))
         rows = []
-        cols = ('id', 'nextHop', 'routerLink', 'lastTopoChange')
-        if self.opts.verbose:
-            cols += ('cost', 'linkState', 'validOrigins')
-        objects  = self.query('org.apache.qpid.dispatch.router.node', cols, limit=self.opts.limit)
+        objects = self.query('org.apache.qpid.dispatch.router.node', limit=self.opts.limit)
 
         # Find the most recent topo change in this neighborhood.
         lastTopoChange = 0.0
@@ -333,7 +334,8 @@ class BusManager(Node):
                 row.append(node.routerLink)
 
             if self.opts.verbose:
-                row.append(node.cost)
+                row.append(get(node, 'protocolVersion'))
+                row.append(get(node, 'cost'))
                 row.append('%r' % self._list_clean(node.linkState))
                 row.append('%r' % self._list_clean(node.validOrigins))
             rows.append(row)
