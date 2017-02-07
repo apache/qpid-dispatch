@@ -1,0 +1,55 @@
+os:
+- linux
+sudo: required
+language:
+- python
+python:
+- 2.7
+addons:
+  apt:
+    packages:
+    - cmake
+    - cmake-curses-gui
+    - uuid-dev
+    - libssl-dev
+    - sasl2-bin
+    - libsasl2-2
+    - libsasl2-dev
+    - sasl2-bin
+    - swig
+    - python-dev
+    - ruby-dev
+    - libperl-dev
+    - git
+    - make
+    - valgrind
+
+before_install:
+- git submodule add https://github.com/apache/qpid-proton.git
+- git submodule init
+- git submodule update
+before_script:
+- cd qpid-proton
+- mkdir build
+- cd build
+- cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+# This builds and installs qpid-proton
+- sudo make install
+- pushd proton-c/bindings/python/dist
+- sudo python ./setup.py build install
+- popd
+- PYTHON_VER=`python -c "import sys; print ('python%s.%s' % (sys.version_info[0], sys.version_info[1]))"`
+- export PYTHONPATH=$PYTHONPATH:/usr/local/lib/$PYTHON_VER/dist-packages
+- cd ../..
+- mkdir build
+- cd build
+- PREFIX=`python -c "import sys; print(sys.prefix)"`
+- PYEXE=`python -c "import sys; print(sys.executable)"`
+- echo PYTHON_EXECUTABLE:FILEPATH=$PYEXE
+- echo PYTHON_INCLUDE_DIR:PATH=$PREFIX/include/$PYTHON_VER
+- cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DPYTHON_EXECUTABLE:FILEPATH=$PYEXE -DPYTHON_INCLUDE_DIR:PATH=$PREFIX/include/$PYTHON_VER -DPYTHON_LIBRARY:FILEPATH=/opt/python/2.7.12/lib/libpython2.7.so
+# This build qpid-dispatch
+- sudo make install
+script:
+# Now run the unit tests
+- ctest -VV
