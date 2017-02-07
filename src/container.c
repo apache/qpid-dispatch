@@ -846,41 +846,6 @@ void *qd_link_get_context(qd_link_t *link)
     return link->context;
 }
 
-
-void qd_link_set_conn_context(qd_link_t *link, void *context)
-{
-    if (!link || !link->pn_link)
-        return;
-    pn_session_t *pn_sess = pn_link_session(link->pn_link);
-    if (!pn_sess)
-        return;
-    pn_connection_t *pn_conn = pn_session_connection(pn_sess);
-    if (!pn_conn)
-        return;
-    qd_connection_t *conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
-    if (!conn)
-        return;
-    qd_connection_set_link_context(conn, context);
-}
-
-
-void *qd_link_get_conn_context(qd_link_t *link)
-{
-    if (!link || !link->pn_link)
-        return 0;
-    pn_session_t *pn_sess = pn_link_session(link->pn_link);
-    if (!pn_sess)
-        return 0;
-    pn_connection_t *pn_conn = pn_session_connection(pn_sess);
-    if (!pn_conn)
-        return 0;
-    qd_connection_t *conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
-    if (!conn)
-        return 0;
-    return qd_connection_get_link_context(conn);
-}
-
-
 pn_link_t *qd_link_pn(qd_link_t *link)
 {
     return link->pn_link;
