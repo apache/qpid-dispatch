@@ -21,7 +21,6 @@
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
 
-
 static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_check_credit_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -32,6 +31,9 @@ static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 //==================================================================================
 // Internal Functions
 //==================================================================================
+
+void qdr_delivery_read_extension_state(qdr_delivery_t *dlv, uint64_t disposition, pn_data_t* disposition_date, bool update_disposition);
+void qdr_delivery_copy_extension_state(qdr_delivery_t *src, qdr_delivery_t *dest, bool update_disposition);
 
 
 //==================================================================================
@@ -86,7 +88,8 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
 
 
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled,
-                                                const uint8_t *tag, int tag_length)
+                                                const uint8_t *tag, int tag_length,
+                                                uint64_t disposition, pn_data_t* disposition_data)
 {
     if (tag_length > 32)
         return 0;
@@ -101,6 +104,8 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     dlv->settled    = settled;
     dlv->presettled = settled;
     dlv->error      = 0;
+
+    qdr_delivery_read_extension_state(dlv, disposition, disposition_data, true);
 
     action->args.connection.delivery = dlv;
     action->args.connection.tag_length = tag_length;
@@ -225,13 +230,16 @@ void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr, bool ex
 
 
 void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition,
-                                     bool settled, qdr_error_t *error, bool ref_given)
+                                     bool settled, qdr_error_t *error, pn_data_t *ext_state, bool ref_given)
 {
     qdr_action_t *action = qdr_action(qdr_update_delivery_CT, "update_delivery");
     action->args.delivery.delivery    = delivery;
     action->args.delivery.disposition = disposition;
     action->args.delivery.settled     = settled;
     action->args.delivery.error       = error;
+
+    // handle delivery-state extensions e.g. declared, transactional-state
+    qdr_delivery_read_extension_state(delivery, disposition, ext_state, false);
 
     //
     // The delivery's ref_count must be incremented to protect its travels into the
@@ -597,6 +605,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     if (link->connected_link) {
         qdr_delivery_t *peer = qdr_forward_new_delivery_CT(core, dlv, link->connected_link, dlv->msg);
 
+        qdr_delivery_copy_extension_state(dlv, peer, true);
         //
         // Copy the delivery tag.  For link-routing, the delivery tag must be preserved.
         //
@@ -710,6 +719,7 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             peer->error       = error;
             push = true;
             error_unassigned = false;
+            qdr_delivery_copy_extension_state(dlv, peer, false);
         }
     }
 
@@ -876,4 +886,58 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     //
     if (activate)
         qdr_connection_activate_CT(core, link->conn);
+}
+
+pn_data_t* qdr_delivery_extension_state(qdr_delivery_t *delivery)
+{
+    if (!delivery->extension_state) {
+        delivery->extension_state = pn_data(0);
+    }
+    pn_data_rewind(delivery->extension_state);
+    return delivery->extension_state;
+}
+
+void qdr_delivery_free_extension_state(qdr_delivery_t *delivery)
+{
+    if (delivery->extension_state) {
+        pn_data_free(delivery->extension_state);
+        delivery->extension_state = 0;
+    }
+}
+
+void qdr_delivery_write_extension_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv, bool update_disposition)
+{
+    if (dlv->disposition > PN_MODIFIED) {
+        pn_data_copy(pn_disposition_data(pn_delivery_local(pdlv)), qdr_delivery_extension_state(dlv));
+        if (update_disposition) pn_delivery_update(pdlv, dlv->disposition);
+        qdr_delivery_free_extension_state(dlv);
+    }
+}
+
+void qdr_delivery_export_transfer_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv)
+{
+    qdr_delivery_write_extension_state(dlv, pdlv, true);
+}
+
+void qdr_delivery_export_disposition_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv)
+{
+    qdr_delivery_write_extension_state(dlv, pdlv, false);
+}
+
+void qdr_delivery_copy_extension_state(qdr_delivery_t *src, qdr_delivery_t *dest, bool update_diposition)
+{
+    if (src->disposition > PN_MODIFIED) {
+        pn_data_copy(qdr_delivery_extension_state(dest), qdr_delivery_extension_state(src));
+        if (update_diposition) dest->disposition = src->disposition;
+        qdr_delivery_free_extension_state(src);
+    }
+}
+
+void qdr_delivery_read_extension_state(qdr_delivery_t *dlv, uint64_t disposition, pn_data_t* disposition_data, bool update_disposition)
+{
+    if (disposition > PN_MODIFIED) {
+        pn_data_rewind(disposition_data);
+        pn_data_copy(qdr_delivery_extension_state(dlv), disposition_data);
+        if (update_disposition) dlv->disposition = disposition;
+    }
 }

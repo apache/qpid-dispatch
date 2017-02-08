@@ -25,6 +25,7 @@ struct qdr_terminus_t {
     pn_expiry_policy_t      expiry_policy;
     pn_seconds_t            timeout;
     bool                    dynamic;
+    bool                    coordinator;
     pn_distribution_mode_t  distribution_mode;
     pn_data_t              *properties;
     pn_data_t              *filter;
@@ -35,11 +36,14 @@ struct qdr_terminus_t {
 ALLOC_DECLARE(qdr_terminus_t);
 ALLOC_DEFINE(qdr_terminus_t);
 
+const char* QDR_COORDINATOR_ADDRESS = "$coordinator";
+
 qdr_terminus_t *qdr_terminus(pn_terminus_t *pn)
 {
     qdr_terminus_t *term = new_qdr_terminus_t();
     ZERO(term);
 
+    term->coordinator = false;
     term->properties   = pn_data(0);
     term->filter       = pn_data(0);
     term->outcomes     = pn_data(0);
@@ -47,6 +51,10 @@ qdr_terminus_t *qdr_terminus(pn_terminus_t *pn)
 
     if (pn) {
         const char *addr = pn_terminus_get_address(pn);
+        if (pn_terminus_get_type(pn) == PN_COORDINATOR) {
+            addr = QDR_COORDINATOR_ADDRESS;
+            term->coordinator = true;
+        }
         if (addr && *addr)
             term->address = qdr_field(addr);
 
@@ -85,24 +93,28 @@ void qdr_terminus_copy(qdr_terminus_t *from, pn_terminus_t *to)
 {
     if (!from)
         return;
+    if (from->coordinator) {
+        pn_terminus_set_type(to, PN_COORDINATOR);
+        pn_data_copy(pn_terminus_capabilities(to), from->capabilities);
+    } else {
+        if (from->address) {
+            qd_iterator_reset_view(from->address->iterator, ITER_VIEW_ALL);
+            unsigned char *addr = qd_iterator_copy(from->address->iterator);
+            pn_terminus_set_address(to, (char*) addr);
+            free(addr);
+        }
 
-    if (from->address) {
-        qd_iterator_reset_view(from->address->iterator, ITER_VIEW_ALL);
-        unsigned char *addr = qd_iterator_copy(from->address->iterator);
-        pn_terminus_set_address(to, (char*) addr);
-        free(addr);
+        pn_terminus_set_durability(to,        from->durability);
+        pn_terminus_set_expiry_policy(to,     from->expiry_policy);
+        pn_terminus_set_timeout(to,           from->timeout);
+        pn_terminus_set_dynamic(to,           from->dynamic);
+        pn_terminus_set_distribution_mode(to, from->distribution_mode);
+
+        pn_data_copy(pn_terminus_properties(to),   from->properties);
+        pn_data_copy(pn_terminus_filter(to),       from->filter);
+        pn_data_copy(pn_terminus_outcomes(to),     from->outcomes);
+        pn_data_copy(pn_terminus_capabilities(to), from->capabilities);
     }
-
-    pn_terminus_set_durability(to,        from->durability);
-    pn_terminus_set_expiry_policy(to,     from->expiry_policy);
-    pn_terminus_set_timeout(to,           from->timeout);
-    pn_terminus_set_dynamic(to,           from->dynamic);
-    pn_terminus_set_distribution_mode(to, from->distribution_mode);
-
-    pn_data_copy(pn_terminus_properties(to),   from->properties);
-    pn_data_copy(pn_terminus_filter(to),       from->filter);
-    pn_data_copy(pn_terminus_outcomes(to),     from->outcomes);
-    pn_data_copy(pn_terminus_capabilities(to), from->capabilities);
 }
 
 

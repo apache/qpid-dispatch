@@ -248,7 +248,9 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     //
     if (qdr_link_is_routed(rlink)) {
         pn_delivery_tag_t dtag = pn_delivery_tag(pnd);
-        delivery = qdr_link_deliver_to_routed_link(rlink, msg, pn_delivery_settled(pnd), (uint8_t*) dtag.start, dtag.size);
+        delivery = qdr_link_deliver_to_routed_link(rlink, msg, pn_delivery_settled(pnd), (uint8_t*) dtag.start, dtag.size,
+                                                   pn_disposition_type(pn_delivery_remote(pnd)), pn_disposition_data(pn_delivery_remote(pnd)));
+
         if (delivery) {
             if (pn_delivery_settled(pnd))
                 pn_delivery_settle(pnd);
@@ -474,6 +476,7 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
                                     pn_delivery_remote_state(pnd),
                                     pn_delivery_settled(pnd),
                                     error,
+                                    pn_disposition_data(disp),
                                     give_reference);
 
     //
@@ -1009,6 +1012,8 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
     pn_delivery(plink, pn_dtag(tag, tag_length));
     pn_delivery_t *pdlv = pn_link_current(plink);
 
+    // handle any delivery-state on the transfer e.g. transactional-state
+    qdr_delivery_write_extension_state(dlv, pdlv, true);
     //
     // If the remote send settle mode is set to 'settled', we should settle the delivery on behalf of the receiver.
     //
@@ -1024,7 +1029,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 
     if (!settled && remote_snd_settled)
         // Tell the core that the delivery has been accepted and settled, since we are settling on behalf of the receiver
-        qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true, 0, false);
+        qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true, 0, 0, false);
 
     if (settled || remote_snd_settled)
         pn_delivery_settle(pdlv);
@@ -1061,6 +1066,8 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     if (disp != pn_delivery_remote_state(pnd)) {
         if (disp == PN_MODIFIED)
             pn_disposition_set_failed(pn_delivery_local(pnd), true);
+
+        qdr_delivery_write_extension_state(dlv, pnd, false);
         pn_delivery_update(pnd, disp);
     }
 
