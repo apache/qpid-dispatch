@@ -214,6 +214,8 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     qd_router_t    *router   = (qd_router_t*) context;
     pn_link_t      *pn_link  = qd_link_pn(link);
     qdr_link_t     *rlink    = (qdr_link_t*) qd_link_get_context(link);
+    qd_connection_t  *conn   = qd_link_connection(link);
+    const qd_server_config_t *cf = qd_connection_config(conn);
     qdr_delivery_t *delivery = 0;
     qd_message_t   *msg;
 
@@ -226,8 +228,22 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     //        send it.
     //
     msg = qd_message_receive(pnd);
+
     if (!msg)
         return;
+
+    if (cf->log_message) {
+        char repr[qd_message_repr_len()];
+        char* message_repr = qd_message_repr((qd_message_t*)msg,
+                                             repr,
+                                             sizeof(repr),
+                                             cf->log_bits);
+        if (message_repr) {
+            qd_log(qd_message_log_source(), QD_LOG_TRACE, "Link %s received %s",
+                   pn_link_name(pn_link),
+                   message_repr);
+        }
+    }
 
     //
     // Consume the delivery.
@@ -277,7 +293,6 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     // must be blank or it must be equal to the connection user name.
     //
     bool              check_user   = false;
-    qd_connection_t  *conn         = qd_link_connection(link);
     qdr_connection_t *qdr_conn     = (qdr_connection_t*) qd_connection_get_context(conn);
     int               tenant_space_len;
     const char       *tenant_space = qdr_connection_get_tenant_space(qdr_conn, &tenant_space_len);

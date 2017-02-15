@@ -1591,7 +1591,6 @@ void qd_connection_set_event_stall(qd_connection_t *conn, bool stall)
          qd_server_activate(conn, true);
 }
 
-
 qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *config, void *context)
 {
     qd_server_t   *qd_server = qd->server;
@@ -1604,6 +1603,7 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
     li->config      = config;
     li->context     = context;
     li->http = NULL;
+
     if (config->http) {
         li->http = qd_http_listener(qd_server->http, config);
         if (!li->http) {
@@ -1613,6 +1613,7 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
             return NULL;
         }
     }
+
     li->pn_listener = qdpn_listener(
         qd_server->driver, config->host, config->port, config->protocol_family, li);
 
