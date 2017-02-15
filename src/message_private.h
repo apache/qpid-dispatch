@@ -81,6 +81,14 @@ typedef struct {
     qd_field_location_t  field_subject;                   // The string value of the subject field
     qd_field_location_t  field_reply_to;                  // The string value of the reply_to field
     qd_field_location_t  field_correlation_id;            // The string value of the correlation_id field
+    qd_field_location_t  field_content_type;
+    qd_field_location_t  field_content_encoding;
+    qd_field_location_t  field_absolute_expiry_time;
+    qd_field_location_t  field_creation_time;
+    qd_field_location_t  field_group_id;
+    qd_field_location_t  field_group_sequence;
+    qd_field_location_t  field_reply_to_group_id;
+
     qd_field_location_t  body;                            // The body of the message
     qd_buffer_t         *parse_buffer;
     unsigned char       *parse_cursor;

@@ -79,6 +79,26 @@ struct qd_connection_manager_t {
     sys_mutex_t                  *ssl_profile_lock;
 };
 
+const char *qd_log_message_components[] =
+    {"message-id",
+     "user-id",
+     "to",
+     "subject",
+     "reply-to",
+     "correlation-id",
+     "content-type",
+     "content-encoding",
+     "absolute-expiry-time",
+     "creation-time",
+     "group-id",
+     "group-sequence",
+     "reply-to-group-id",
+     "app-properties",
+     0};
+
+const char *ALL = "all";
+const char *NONE = "none";
+
 /**
  * Search the list of config_ssl_profiles for an ssl-profile that matches the passed in name
  */
@@ -225,6 +245,44 @@ static void qd_config_ssl_profile_process_password(qd_config_ssl_profile_t* ssl_
     }
 }
 
+static qd_log_bits populate_log_message(const qd_server_config_t *config)
+{
+    //May have to copy this string since strtok modifies original string.
+    char *log_message = config->log_message;
+
+    int32_t ret_val = 0;
+
+    if (!log_message || strcmp(log_message, NONE) == 0)
+        return ret_val;
+
+    //If log_message is set to 'all', turn on all bits.
+    if (strcmp(log_message, ALL) == 0)
+        return INT32_MAX;
+
+    char *delim = ",";
+
+    /* get the first token */
+    char *token = strtok(log_message, delim);
+
+    const char *component = 0;
+
+    /* walk through other tokens */
+    while( token != NULL ) {
+       for (int i=0;; i++) {
+           component = qd_log_message_components[i];
+           if (component == 0)
+               break;
+
+           if (strcmp(component, token) == 0) {
+                   ret_val |= 1 << i;
+           }
+       }
+       token = strtok(NULL, delim);
+    }
+
+    return ret_val;
+}
+
 
 static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, qd_entity_t* entity, qd_config_ssl_profile_t **ssl_profile)
 {
@@ -238,6 +296,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     bool depAllowUnsecured  = qd_entity_opt_bool(entity, "allowUnsecured", !requireSsl); CHECK();
 
     memset(config, 0, sizeof(*config));
+    config->log_message          = qd_entity_opt_string(entity, "logMessage", 0);     CHECK();
+    config->log_bits             = populate_log_message(config);
     config->port                 = qd_entity_get_string(entity, "port");              CHECK();
     config->name                 = qd_entity_opt_string(entity, "name", 0);           CHECK();
     config->role                 = qd_entity_get_string(entity, "role");              CHECK();
@@ -336,6 +396,19 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
   error:
     qd_server_config_free(config);
     return qd_error_code();
+}
+
+bool is_log_component_enabled(qd_log_bits log_message, char *component_name) {
+
+    for(int i=0;;i++) {
+        const char *component = qd_log_message_components[i];
+        if (component == 0)
+            break;
+        if (strcmp(component_name, component) == 0)
+            return (log_message >> i) & 1;
+    }
+
+    return 0;
 }
 
 
