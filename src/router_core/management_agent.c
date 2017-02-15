@@ -143,8 +143,11 @@ static void qd_set_properties(qd_message_t         *msg,
     qd_compose_insert_null(*fld);                           // user-id
     qd_compose_insert_string_iterator(*fld, *reply_to);     // to
     qd_compose_insert_null(*fld);                           // subject
-    qd_compose_insert_null(*fld);
-    qd_compose_insert_typed_iterator(*fld, correlation_id);
+    qd_compose_insert_null(*fld);                           // reply-to
+    if (correlation_id)
+        qd_compose_insert_typed_iterator(*fld, correlation_id); // correlation-id
+    else
+        qd_compose_insert_null(*fld);
     qd_compose_end_list(*fld);
     qd_iterator_free(correlation_id);
 }

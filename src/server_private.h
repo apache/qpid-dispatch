@@ -113,6 +113,7 @@ struct qd_connection_t {
     bool                      event_stall;
     bool                      policy_counted;
     char                     *role;  //The specified role of the connection, e.g. "normal", "inter-router", "route-container" etc.
+    qd_log_bits               log_message;
     qd_pn_free_link_session_list_t  free_link_session_list;
 };
 

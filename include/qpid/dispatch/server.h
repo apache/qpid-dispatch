@@ -232,6 +232,7 @@ typedef enum {
     QD_CONN_EVENT_WRITABLE
 } qd_conn_event_t;
 
+typedef uint32_t qd_log_bits;
 
 /**
  * Configuration block for a connector or a listener.
@@ -451,6 +452,28 @@ typedef struct qd_server_config_t {
      * connection will be automatically closed.
      */
     int idle_timeout_seconds;
+
+    /**
+     *  Holds comma separated list that indicates which components of the message should be logged.
+     *  Defaults to 'none' (log nothing). If you want all properties and application properties of the message logged use 'all'.
+     *  Specific components of the message can be logged by indicating the components via a comma separated list.
+     *  The components are
+     *  message-id
+     *   user-id
+     *   to
+     *   subject
+     *   reply-to
+     *   correlation-id
+     *   content-type
+     *   content-encoding
+     *   absolute-expiry-time
+     *   creation-time
+     *   group-id
+     *   group-sequence
+     *   reply-to-group-id
+     *   app-properties.
+     */
+    char *log_message;
 } qd_server_config_t;
 
 
@@ -716,5 +739,7 @@ qd_error_t qd_register_display_name_service(qd_dispatch_t *qd, void *display_nam
 /**
  * @}
  */
+
+bool is_log_component_enabled(qd_log_bits log_message, char *component_name);
 
 #endif

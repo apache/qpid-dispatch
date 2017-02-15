@@ -101,6 +101,7 @@ struct qd_listener_t {
     void                     *context;
     qdpn_listener_t          *pn_listener;
     qd_http_listener_t       *http;
+    qd_log_bits               log_message;
 };
 
 
@@ -115,6 +116,7 @@ struct qd_connector_t {
     qd_connection_t          *ctx;
     qd_timer_t               *timer;
     long                      delay;
+    qd_log_bits               log_message;
 };
 
 
@@ -145,6 +147,26 @@ const char CERT_FINGERPRINT_SHA512 = '5';
 char *COMPONENT_SEPARATOR = ";";
 
 const char *DEFAULT_USER_ID = "anonymous";
+
+const char *qd_log_message_components[] =
+    {"message-id",
+     "user-id",
+     "to",
+     "subject",
+     "reply-to",
+     "correlation-id",
+     "content-type",
+     "content-encoding",
+     "absolute-expiry-time",
+     "creation-time",
+     "group-id",
+     "group-sequence",
+     "reply-to-group-id",
+     "app-properties",
+     0};
+
+const char *ALL = "all";
+const char *NONE = "none";
 
 static qd_thread_t *thread(qd_server_t *qd_server, int id)
 {
@@ -590,6 +612,8 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->context       = ctx->listener->context;
         ctx->connection_id = qd_server->next_connection_id++; // Increment the connection id so the next connection can use it
         ctx->policy_counted = policy_counted;
+        if (ctx->listener)
+            ctx->log_message   = ctx->listener->log_message;
 
         // Copy the role from the listener config
         int role_length    = strlen(ctx->listener->config->role) + 1;
@@ -1130,6 +1154,8 @@ static void cxtr_try_open(void *context)
     ctx->collector    = pn_collector();
     ctx->connector    = ct;
     ctx->context      = ct->context;
+    if (ctx->connector)
+        ctx->log_message =  ctx->connector->log_message;
 
     // Copy the role from the connector config
     int role_length    = strlen(ctx->connector->config->role) + 1;
@@ -1622,6 +1648,56 @@ void qd_connection_set_event_stall(qd_connection_t *conn, bool stall)
          qd_server_activate(conn, true);
 }
 
+bool is_log_component_enabled(qd_log_bits log_message, char *component_name) {
+
+    for(int i=0;;i++) {
+        const char *component = qd_log_message_components[i];
+        if (component == 0)
+            break;
+        if (strcmp(component_name, component) == 0)
+            return (log_message >> i) & 1;
+    }
+
+    return 0;
+}
+
+static qd_log_bits populate_log_message(const qd_server_config_t *config)
+{
+    //May have to copy this string since strtok modifies original string.
+    char *log_message = config->log_message;
+
+    int32_t ret_val = 0;
+
+    if (!log_message || strcmp(log_message, NONE) == 0)
+        return ret_val;
+
+    //If log_message is set to 'all', turn on all bits.
+    if (strcmp(log_message, ALL) == 0)
+        return INT32_MAX;
+
+    char *delim = ",";
+
+    /* get the first token */
+    char *token = strtok(log_message, delim);
+
+    const char *component = 0;
+
+    /* walk through other tokens */
+    while( token != NULL ) {
+       for (int i=0;; i++) {
+           component = qd_log_message_components[i];
+           if (component == 0)
+               break;
+
+           if (strcmp(component, token) == 0) {
+                   ret_val |= 1 << i;
+           }
+       }
+       token = strtok(NULL, delim);
+    }
+
+    return ret_val;
+}
 
 qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *config, void *context)
 {
@@ -1634,7 +1710,9 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
     li->server      = qd_server;
     li->config      = config;
     li->context     = context;
+    li->log_message = populate_log_message(config);
     li->http = NULL;
+
     if (config->http) {
         li->http = qd_http_listener(qd_server->http, config);
         if (!li->http) {
@@ -1644,6 +1722,7 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
             return NULL;
         }
     }
+
     li->pn_listener = qdpn_listener(
         qd_server->driver, config->host, config->port, config->protocol_family, li);
 
@@ -1692,6 +1771,7 @@ qd_connector_t *qd_server_connect(qd_dispatch_t *qd, const qd_server_config_t *c
     ct->ctx     = 0;
     ct->timer   = qd_timer(qd, cxtr_try_open, (void*) ct);
     ct->delay   = 0;
+    ct->log_message = populate_log_message(config);
 
     qd_timer_schedule(ct->timer, ct->delay);
     return ct;

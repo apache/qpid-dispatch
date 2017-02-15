@@ -53,6 +53,7 @@ ALLOC_DEFINE(qd_node_t);
 struct qd_link_t {
     pn_session_t               *pn_sess;
     pn_link_t                  *pn_link;
+    qd_connection_t            *conn;
     qd_direction_t              direction;
     void                       *context;
     qd_node_t                  *node;
@@ -814,6 +815,7 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     link->direction  = dir;
     link->context    = node->context;
     link->node       = node;
+    link->conn       = conn;
     link->drain_mode = pn_link_get_drain(link->pn_link);
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(link->pn_link);
     link->close_sess_with_link = true;
@@ -831,6 +833,7 @@ void qd_link_free(qd_link_t *link)
     if (!link) return;
     link->pn_link = 0;
     link->pn_sess = 0;
+    link->conn    = 0;
     free_qd_link_t(link);
 }
 
