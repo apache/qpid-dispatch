@@ -623,12 +623,11 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
         mech = pn_sasl_get_mech(sasl);
 
     const char *host = 0;
-
+    char host_local[255];
     const qd_server_config_t *config;
     if (qd_connection_connector(conn)) {
-        char host_local[255];
         config = qd_connector_config(qd_connection_connector(conn));
-        snprintf(host_local, strlen(config->host)+strlen(config->port)+2, "%s:%s", config->host, config->port);
+        snprintf(host_local, 254, "%s:%s", config->host, config->port);
         host = &host_local[0];
     }
     else
