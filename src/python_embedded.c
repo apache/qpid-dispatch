@@ -138,7 +138,8 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
         qd_compose_insert_bool(field, PyInt_AS_LONG(value) ? 1 : 0);
     }
     else if (PyInt_Check(value)) {
-        qd_compose_insert_long(field, (int64_t) PyInt_AS_LONG(value));
+        // We are now sure that the value is an int
+        qd_compose_insert_int(field, (int32_t) PyInt_AS_LONG(value));
     }
     else if (PyLong_Check(value)) {
         qd_compose_insert_long(field, (int64_t) PyLong_AsLongLong(value));

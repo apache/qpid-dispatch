@@ -125,7 +125,7 @@ static void qd_set_response_status(const qd_amqp_error_t *error, qd_composed_fie
     qd_compose_insert_string(*field, status_description);
     qd_compose_insert_string(*field, error->description);
     qd_compose_insert_string(*field, status_code);
-    qd_compose_insert_uint(*field, error->status);
+    qd_compose_insert_int(*field, error->status);
     qd_compose_end_map(*field);
 }
 
