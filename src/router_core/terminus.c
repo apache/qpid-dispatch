@@ -141,7 +141,7 @@ bool qdr_terminus_has_capability(qdr_terminus_t *term, const char *capability)
 
 bool qdr_terminus_is_anonymous(qdr_terminus_t *term)
 {
-    return term == 0 || term->address == 0;
+    return term == 0 || (term->address == 0 && !term->dynamic);
 }
 
 

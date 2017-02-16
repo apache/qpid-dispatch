@@ -91,6 +91,7 @@ foreach(py_test_module
     system_tests_two_routers
     system_tests_three_routers
     system_tests_multi_tenancy
+    system_tests_dynamic_terminus
     ${SYSTEM_TESTS_HTTP}
     )
 

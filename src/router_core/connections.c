@@ -501,6 +501,18 @@ static void qdr_generate_temp_addr(qdr_core_t *core, char *buffer, size_t length
 
 
 /**
+ * Generate a temporary mobile address for a producer connected to this
+ * router node.
+ */
+static void qdr_generate_mobile_addr(qdr_core_t *core, char *buffer, size_t length)
+{
+    char discriminator[QDR_DISCRIMINATOR_SIZE];
+    qdr_generate_discriminator(discriminator);
+    snprintf(buffer, length, "amqp:/_$temp.%s", discriminator);
+}
+
+
+/**
  * Generate a link name
  */
 static void qdr_generate_link_name(const char *label, char *buffer, size_t length)
@@ -953,11 +965,15 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
             // address collides with a previously generated address (this should be _highly_
             // unlikely).
             //
-            qdr_generate_temp_addr(core, temp_addr, 200);
+            if (dir == QD_OUTGOING)
+                qdr_generate_temp_addr(core, temp_addr, 200);
+            else
+                qdr_generate_mobile_addr(core, temp_addr, 200);
+
             qd_iterator_t *temp_iter = qd_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
             qd_hash_retrieve(core->addr_hash, temp_iter, (void**) &addr);
             if (!addr) {
-                addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_CLOSEST);
+                addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_BALANCED);
                 qd_hash_insert(core->addr_hash, temp_iter, addr, &addr->hash_handle);
                 DEQ_INSERT_TAIL(core->addrs, addr);
                 qdr_terminus_set_address(terminus, temp_addr);
@@ -1222,7 +1238,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 // This link has a target address
                 //
                 bool           link_route;
-                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, false, &link_route);
+                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, true, &link_route);
                 if (!addr) {
                     //
                     // No route to this destination, reject the link
