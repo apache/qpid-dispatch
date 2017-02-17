@@ -85,10 +85,10 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_02_anonymous_sender(self):
-        test = AnonymousSenderTest(self.routers[0].addresses[0], self.routers[2].addresses[0])
-        test.run()
-        self.assertEqual(None, test.error)
+#    def test_02_anonymous_sender(self):
+#        test = AnonymousSenderTest(self.routers[0].addresses[0], self.routers[2].addresses[0])
+#        test.run()
+#        self.assertEqual(None, test.error)
 
 
 class Timeout(object):
