@@ -16,6 +16,9 @@ packages installed:
 - make
 - gcc
 - python-devel
+- cyrus-sasl-plain
+- cyrus-sasl-devel
+- asciidoc (for building docs)
 
 Dispatch will not build on Windows.
 
