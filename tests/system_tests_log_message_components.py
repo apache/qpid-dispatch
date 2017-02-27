@@ -75,7 +75,6 @@ class RouterMessageLogTestAll(RouterMessageLogTestBase):
         for log in logs:
             if log[0] == u'MESSAGE':
                 if "message-id='123455'" in log[2]:
-                    print log[2]
                     self.assertTrue("user-id='testuser'" in log[2])
                     self.assertTrue("subject='test-subject'" in log[2])
                     self.assertTrue("reply-to='hello_world'" in log[2])
@@ -84,7 +83,8 @@ class RouterMessageLogTestAll(RouterMessageLogTestBase):
                     self.assertTrue("content-encoding='gzip, deflate'" in log[2])
                     self.assertTrue("group-id='group1', group-sequence='0', reply-to-group-id='group0'" in log[2])
                     self.assertTrue("application properties={app-property=[10, 20, 30], some-other=O_one}" in log[2])
-                    self.assertTrue("creation-time='2017-02-22 09:10:23.883 -0500'" in log[2])
+                    self.assertTrue("creation-time=2017-02-22" in log[2])
+                    self.assertTrue("10:23.883" in log[2])
 
                     everything_ok = True
 
