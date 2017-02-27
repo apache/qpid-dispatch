@@ -1093,7 +1093,7 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             qdr_field_t *cid = action->args.connection.connection_label ?
                 action->args.connection.connection_label : action->args.connection.container_id;
             if (cid)
-                qdr_route_connection_opened_CT(core, conn, cid, action->args.connection.connection_label == 0);
+                qdr_route_connection_opened_CT(core, conn, action->args.connection.container_id, action->args.connection.connection_label);
         }
     }
 

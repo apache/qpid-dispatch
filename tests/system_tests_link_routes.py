@@ -89,8 +89,9 @@ class LinkRouteTest(TestCase):
                    # a connection from the router B's ephemeral port to c_listener_port
                    ('connector', {'name': 'routerC', 'role': 'inter-router', 'host': '0.0.0.0', 'port': c_listener_port}),
 
-                   ('linkRoute', {'prefix': 'org.apache', 'connection': 'broker', 'dir': 'in'}),
-                   ('linkRoute', {'prefix': 'org.apache', 'connection': 'broker', 'dir': 'out'}),
+                   #('linkRoute', {'prefix': 'org.apache', 'connection': 'broker', 'dir': 'in'}),
+                   ('linkRoute', {'prefix': 'org.apache', 'containerId': 'QDR.A', 'dir': 'in'}),
+                   ('linkRoute', {'prefix': 'org.apache', 'containerId': 'QDR.A', 'dir': 'out'}),
 
                    ('linkRoute', {'prefix': 'pulp.task', 'connection': 'test-tag', 'dir': 'in'}),
                    ('linkRoute', {'prefix': 'pulp.task', 'connection': 'test-tag', 'dir': 'out'})
@@ -153,7 +154,7 @@ class LinkRouteTest(TestCase):
         # Make sure there is a dir of in and out.
         self.assertTrue('"dir": "in"' in out)
         self.assertTrue('"dir": "out"' in out)
-        self.assertTrue('"connection": "broker"' in out)
+        self.assertTrue('"containerId": "QDR.A"' in out)
 
         # Use the long type and make sure that qdmanage does not mess up the long type
         cmd = 'QUERY --type=org.apache.qpid.dispatch.router.config.linkRoute'
@@ -162,7 +163,7 @@ class LinkRouteTest(TestCase):
         # Make sure there is a dir of in and out.
         self.assertTrue('"dir": "in"' in out)
         self.assertTrue('"dir": "out"' in out)
-        self.assertTrue('"connection": "broker"' in out)
+        self.assertTrue('"containerId": "QDR.A"' in out)
 
         identity = out[out.find("identity") + 12: out.find("identity") + 13]
         cmd = 'READ --type=linkRoute --identity=' + identity
