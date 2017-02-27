@@ -101,7 +101,10 @@ static void qdr_config_link_route_insert_column_CT(qdr_link_route_t *lr, int col
     case QDR_CONFIG_LINK_ROUTE_CONNECTION:
     case QDR_CONFIG_LINK_ROUTE_CONTAINER_ID:
         if (lr->conn_id) {
-            key = (const char*) qd_hash_key_by_handle(lr->conn_id->hash_handle);
+            key = (const char*) qd_hash_key_by_handle(lr->conn_id->connection_hash_handle);
+            if (!key)
+                key = (const char*) qd_hash_key_by_handle(lr->conn_id->container_hash_handle);
+
             if (key && key[0] == 'L' && col == QDR_CONFIG_LINK_ROUTE_CONNECTION) {
                 qd_compose_insert_string(body, &key[1]);
                 break;
@@ -378,6 +381,17 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         qd_parsed_field_t *dir_field        = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_DIR]);
 
         //
+        // Both connection and containerId cannot be specified because both can represent different connections. Only one those
+        // can be specified.
+        //
+        if (connection_field && container_field) {
+            query->status = QD_AMQP_BAD_REQUEST;
+            query->status.description = "Both connection and containerId cannot be specified. Specify only one";
+            qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_LINKROUTE_TYPE, query->status.description);
+            break;
+        }
+
+        //
         // Prefix and dir fields are mandatory.  Fail if they're not both here.
         //
         if (!prefix_field || !dir_field) {
@@ -408,10 +422,7 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         //
         // The request is good.  Create the entity.
         //
-        bool               is_container = !!container_field;
-        qd_parsed_field_t *in_use_conn  = is_container ? container_field : connection_field;
-
-        lr = qdr_route_add_link_route_CT(core, name, prefix_field, in_use_conn, is_container, trt, dir);
+        lr = qdr_route_add_link_route_CT(core, name, prefix_field, container_field, connection_field, trt, dir);
 
         //
         // Compose the result map for the response.

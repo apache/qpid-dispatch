@@ -245,6 +245,9 @@ uint8_t qd_parse_tag(qd_parsed_field_t *field)
 
 qd_iterator_t *qd_parse_raw(qd_parsed_field_t *field)
 {
+    if (!field)
+        return 0;
+
     return field->raw_iter;
 }
 
