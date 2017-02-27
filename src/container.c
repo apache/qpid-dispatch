@@ -260,16 +260,23 @@ static void notify_closed(qd_container_t *container, qd_connection_t *conn, void
     }
 }
 
-static void close_links(qd_container_t *container, pn_connection_t *conn)
+static void close_links(qd_container_t *container, pn_connection_t *conn, bool print_log)
 {
     pn_link_t *pn_link = pn_link_head(conn, 0);
     while (pn_link) {
         qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
+
+        if (qd_link && qd_link_get_context(qd_link) == 0) {
+            pn_link = pn_link_next(pn_link, 0);
+            continue;
+        }
+
         if (qd_link && qd_link->node) {
             qd_node_t *node = qd_link->node;
-            qd_log(container->log_source, QD_LOG_NOTICE,
-                   "Aborting link '%s' due to parent connection end",
-                   pn_link_name(pn_link));
+            if (print_log)
+                qd_log(container->log_source, QD_LOG_NOTICE,
+                       "Aborting link '%s' due to parent connection end",
+                       pn_link_name(pn_link));
             node->ntype->link_detach_handler(node->context, qd_link, QD_LOST);
         }
         pn_link = pn_link_next(pn_link, 0);
@@ -283,10 +290,11 @@ static int close_handler(qd_container_t *container, void* conn_context, pn_conne
     // Close all links, passing QD_LOST as the reason.  These links are not
     // being properly 'detached'.  They are being orphaned.
     //
-    close_links(container, conn);
+    close_links(container, conn, true);
 
     // close the connection
     pn_connection_close(conn);
+
     notify_closed(container, qd_conn, conn_context);
     return 0;
 }
@@ -420,7 +428,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
 
     case PN_CONNECTION_REMOTE_CLOSE :
         if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
-            close_links(container, conn);
+            close_links(container, conn, false);
             pn_connection_close(conn);
         }
         break;
