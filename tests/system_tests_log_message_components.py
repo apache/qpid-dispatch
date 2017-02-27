@@ -75,6 +75,7 @@ class RouterMessageLogTestAll(RouterMessageLogTestBase):
         for log in logs:
             if log[0] == u'MESSAGE':
                 if "message-id='123455'" in log[2]:
+                    print log[2]
                     self.assertTrue("user-id='testuser'" in log[2])
                     self.assertTrue("subject='test-subject'" in log[2])
                     self.assertTrue("reply-to='hello_world'" in log[2])
