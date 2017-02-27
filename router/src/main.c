@@ -127,8 +127,8 @@ static void main_process(const char *config_path, const char *python_pkgdir, int
 
     if (fd > 2) {               /* Daemon mode, fd is one end of a pipe not stdout or stderr */
         #ifdef __sun
-        FILE *file = fdopen(fd, "a+");
-        fprintf(file, "ok");
+        const char * okResult = "ok";
+        write(fd, okResult, (strlen(okResult)+1));
         #else
         dprintf(fd, "ok"); // Success signal
         #endif
