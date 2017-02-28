@@ -970,13 +970,13 @@
                 },
                 "containerId": {
                     "type": "string",
-                    "description": "ContainerID for the target container",
+                    "description": "ContainerID for the target container. Only one of containerId or connection should be specified for a linkRoute. Specifying both will result in the linkRoute not being created.",
                     "create": true,
                     "required": false
                 },
                 "connection": {
                     "type": "string",
-                    "description": "The name from a connector or listener",
+                    "description": "The name from a connector or listener. Only one of containerId or connection should be specified for a linkRoute. Specifying both will result in the linkRoute not being created.",
                     "create": true,
                     "required": false
                 },
@@ -1026,13 +1026,13 @@
                 },
                 "containerId": {
                     "type": "string",
-                    "description": "ContainerID for the target container",
+                    "description": "ContainerID for the target container. Only one of containerId or connection should be specified for an autoLink. Specifying both will result in the autoLink not being created",
                     "create": true,
                     "required": false
                 },
                 "connection": {
                     "type": "string",
-                    "description": "The name from a connector or listener",
+                    "description": "The name from a connector or listener. Only one of containerId or connection should be specified for an autoLink. Specifying both will result in the autoLink not being created",
                     "create": true,
                     "required": false
                 },
