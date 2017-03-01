@@ -419,8 +419,8 @@ static char* test_view_node_hash(void *context)
             char *got = (char*) qd_iterator_copy(iter);
             snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
                      cases[idx].addr, cases[idx].view, got);
-            return fail_text;
             qd_iterator_free(iter);
+            return fail_text;
         }
         qd_iterator_free(iter);
     }
