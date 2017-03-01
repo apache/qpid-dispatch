@@ -261,6 +261,19 @@ class QdmanageTest(TestCase):
         self.assertEqual(output[0]['dir'], "in")
         self.assertEqual(output[0]['prefix'], "xyz")
 
+    def test_specify_container_id_connection_link_route(self):
+        long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
+        create_command = 'CREATE --type=' + long_type + ' prefix=abc containerId=id1 connection=conn1 dir=out'
+        bad_create = False
+        try:
+            output = json.loads(self.run_qdmanage(create_command))
+            print output
+        except Exception as e:
+            bad_create = True
+            self.assertTrue("Both connection and containerId cannot be specified. Specify only one" in e.message)
+
+        self.assertTrue(bad_create)
+
     def test_check_auto_link_name(self):
         long_type = 'org.apache.qpid.dispatch.router.config.autoLink'
         query_command = 'QUERY --type=' + long_type
@@ -268,6 +281,19 @@ class QdmanageTest(TestCase):
         self.assertEqual(output[0]['name'], "test-auto-link")
         self.assertEqual(output[0]['dir'], "out")
         self.assertEqual(output[0]['addr'], "mnop")
+
+    def test_specify_container_id_connection_auto_link(self):
+        long_type = 'org.apache.qpid.dispatch.router.config.autoLink'
+        create_command = 'CREATE --type=' + long_type + ' addr=abc containerId=id1 connection=conn1 dir=out'
+        bad_create = False
+        try:
+            output = json.loads(self.run_qdmanage(create_command))
+            print output
+        except Exception as e:
+            bad_create = True
+            self.assertTrue("Both connection and containerId cannot be specified. Specify only one" in e.message)
+
+        self.assertTrue(bad_create)
 
     def test_create_delete_connector(self):
         long_type = 'org.apache.qpid.dispatch.connector'
