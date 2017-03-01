@@ -507,7 +507,8 @@ QDR.log.debug("attr.description " + attr.description)
       var radii = {
         'inter-router': 25,
         'normal': 15,
-        'on-demand': 15
+        'on-demand': 15,
+        'route-container': 15,
       };
       var radius = 25;
       var radiusNormal = 15;
@@ -687,7 +688,7 @@ QDR.log.debug("attr.description " + attr.description)
               if (target >= 0) {
                 getLink(source, target, dir, "", source + "-" + target);
               }
-            } else if (role == "normal" || role == "on-demand") {
+            } else if (role == "normal" || role == "on-demand" || role === "route-container") {
               // not a router, but an external client
               var name = QDRService.nameFromId(id) + "." + connection.identity;
 
@@ -1642,8 +1643,12 @@ QDR.log.debug("attr.description " + attr.description)
             clearPopups();
             if (!d.normals) {
               // circle was a router or a broker
-              if (QDRService.isArtemis(d) && Core.ConnectionName === 'Artemis') {
-                $location.path('/jmx/attributes?tab=artemis&con=Artemis')
+              if (QDRService.isArtemis(d)) {
+                var artemisPath = '/jmx/attributes?tab=artemis&con=Artemis'
+                if (QDR.isStandalone)
+                  window.location = $location.protocol() + '://localhost:8161/hawtio' + artemisPath
+                else
+                  $location.path(artemisPath)
               }
               return;
             }
@@ -1781,7 +1786,7 @@ QDR.log.debug("attr.description " + attr.description)
           }))
         }
         if (!svg.selectAll('circle.artemis').empty()) {
-          legendNodes.push(aNode("Artemis broker", "", "on-demand", undefined, 6, 0, 0, 0, false, {}))
+          legendNodes.push(aNode("Artemis broker", "", "route-container", undefined, 6, 0, 0, 0, false, {product: 'apache-activemq-artemis'}))
         }
         lsvg = lsvg.data(legendNodes, function(d) {
           return d.key;

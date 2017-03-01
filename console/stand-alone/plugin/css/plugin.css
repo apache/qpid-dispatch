@@ -867,6 +867,9 @@ table.log-entry pre {
 circle.node.normal.console {
     fill: lightcyan;
 }
+circle.node.artemis {
+    fill: lightgreen;
+}
 
 text.console, text.on-demand, text.normal {
 	font-family: FontAwesome;
@@ -879,13 +882,13 @@ text.console, text.on-demand, text.normal {
     src: url("brokers.ttf") /* TTF file for CSS3 browsers */
 }
 
-text.artemis.on-demand {
+text.artemis {
     font-family: Brokers;
     font-size: 20px;
     font-weight: bold;
 }
 
-text.qpid-cpp.on-demand {
+text.qpid-cpp {
     font-family: Brokers;
     font-size: 18px;
     font-weight: bold;

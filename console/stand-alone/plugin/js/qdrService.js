@@ -280,7 +280,7 @@ console.dump(e)
       },
 
       isArtemis: function(d) {
-        return d.nodeType === 'on-demand' && !d.properties.product;
+        return d.nodeType === 'route-container' && d.properties.product === 'apache-activemq-artemis';
       },
 
       isQpid: function(d) {
