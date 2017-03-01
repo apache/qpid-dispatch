@@ -102,10 +102,13 @@ if(USE_MEMORY_POOL)
   list(APPEND qpid_dispatch_SOURCES alloc_pool.c)
 endif()
 
-set_property(
-  SOURCE python_embedded.c router_pynode.c
-  PROPERTY COMPILE_FLAGS -Wno-strict-aliasing
-  )
+# strict aliasing optimization is only available in GCC
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    set_property(
+      SOURCE python_embedded.c router_pynode.c
+      PROPERTY COMPILE_FLAGS -Wno-strict-aliasing
+    )
+endif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
 target_link_libraries(qpid-dispatch ${Proton_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES})
