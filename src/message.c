@@ -31,6 +31,12 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <limits.h>
+#include <time.h>
+#include <inttypes.h>
+
+const char *STR_AMQP_NULL = "null";
+const char *STR_AMQP_TRUE = "T";
+const char *STR_AMQP_FALSE = "F";
 
 static const unsigned char * const MSG_HDR_LONG                 = (unsigned char*) "\x00\x80\x00\x00\x00\x00\x00\x00\x00\x70";
 static const unsigned char * const MSG_HDR_SHORT                = (unsigned char*) "\x00\x53\x70";
@@ -64,7 +70,17 @@ ALLOC_DEFINE(qd_message_content_t);
 
 typedef void (*buffer_process_t) (void *context, const unsigned char *base, int length);
 
-static qd_log_source_t* log_source = 0;
+qd_log_source_t* log_source = 0;
+
+qd_log_source_t* qd_message_log_source()
+{
+    if(log_source)
+        return log_source;
+    else {
+        qd_message_initialize();
+        return log_source;
+    }
+}
 
 void qd_message_initialize() {
     log_source = qd_log_source("MESSAGE");
@@ -72,7 +88,9 @@ void qd_message_initialize() {
 
 int qd_message_repr_len() { return qd_log_max_len(); }
 
-// Quote non-printable characters suitable for log messages. Output in buffer.
+/**
+ * Quote non-printable characters suitable for log messages. Output in buffer.
+ */
 static void quote(char* bytes, int n, char **begin, char *end) {
     for (char* p = bytes; p < bytes+n; ++p) {
         if (isprint(*p) || isspace(*p))
@@ -82,34 +100,281 @@ static void quote(char* bytes, int n, char **begin, char *end) {
     }
 }
 
-/** Copy a message field for use in log messages. Output in buffer. */
-static void copy_field(qd_message_t *msg,  int field, int max, char *pre, char *post,
+/**
+ * Populates the buffer with formatted epoch_time
+ */
+//static void format_time(pn_timestamp_t  epoch_time, char *format, char *buffer, size_t len)
+static void format_time(pn_timestamp_t epoch_time, char *format, char *buffer, size_t len)
+{
+    struct timeval local_timeval;
+    local_timeval.tv_sec = epoch_time/1000;
+    local_timeval.tv_usec = (epoch_time%1000) * 1000;
+
+    time_t local_time_t;
+    local_time_t = local_timeval.tv_sec;
+
+    struct tm *local_tm;
+    char fmt[100];
+    local_tm = localtime(&local_time_t);
+
+    if (local_tm != NULL) {
+        strftime(fmt, sizeof fmt, format, local_tm);
+        snprintf(buffer, len, fmt, local_timeval.tv_usec / 1000);
+    }
+}
+
+/**
+ * Tries to print the string representation of the parsed field content based on the tag of the parsed field.
+ * Some tag types have not been dealt with. Add code as and when required.
+ */
+static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, char *end, int max)
+{
+   uint8_t   tag    = qd_parse_tag(parsed_field);
+   switch (tag) {
+       case QD_AMQP_NULL:
+           aprintf(begin, end, "%s", STR_AMQP_NULL);
+           break;
+
+       case QD_AMQP_BOOLEAN:
+       case QD_AMQP_TRUE:
+       case QD_AMQP_FALSE:
+           aprintf(begin, end, "%s", qd_parse_as_uint(parsed_field) ? STR_AMQP_TRUE: STR_AMQP_FALSE);
+           break;
+
+       case QD_AMQP_BYTE:
+       case QD_AMQP_SHORT:
+       case QD_AMQP_INT:
+       case QD_AMQP_SMALLINT: {
+         char str[11];
+         int32_t int32_val = qd_parse_as_int(parsed_field);
+         snprintf(str, 10, "%"PRId32"", int32_val);
+         aprintf(begin, end, "%s", str);
+         break;
+       }
+
+       case QD_AMQP_UBYTE:
+       case QD_AMQP_USHORT:
+       case QD_AMQP_UINT:
+       case QD_AMQP_SMALLUINT:
+       case QD_AMQP_UINT0: {
+           char str[11];
+           uint32_t uint32_val = qd_parse_as_uint(parsed_field);
+           snprintf(str, 11, "%"PRIu32"", uint32_val);
+           aprintf(begin, end, "%s", str);
+           break;
+       }
+       case QD_AMQP_ULONG:
+       case QD_AMQP_SMALLULONG:
+       case QD_AMQP_ULONG0: {
+           char str[21];
+           uint64_t uint64_val = qd_parse_as_ulong(parsed_field);
+           snprintf(str, 20, "%"PRIu64"", uint64_val);
+           aprintf(begin, end, "%s", str);
+           break;
+       }
+       case QD_AMQP_TIMESTAMP: {
+           char timestamp_bytes[8];
+           char creation_time[100]; //string representation of creation time.
+           // 64-bit two’s-complement integer representing milliseconds since the unix epoch
+           int timestamp_length = 8;
+           pn_timestamp_t creation_timestamp = 0;
+
+           //qd_iterator_t* iter = qd_message_field_iterator(msg, field);
+           qd_iterator_t *iter = qd_parse_raw(parsed_field);
+           for (int j = 0; !qd_iterator_end(iter) && j < max; ++j) {
+                char byte = qd_iterator_octet(iter);
+                if (timestamp_length > 0) {
+                    // Gather the timestamp bytes into the timestamp_bytes array, so we process them later into time.
+                    timestamp_bytes[--timestamp_length] = byte;
+                }
+           }
+
+           memcpy(&creation_timestamp, timestamp_bytes, 8);
+           if (creation_timestamp > 0) {
+               format_time(creation_timestamp, "%Y-%m-%d %H:%M:%S.%%03lu %z", creation_time, 100);
+               aprintf(begin, end, "%s", creation_time);
+           }
+           break;
+       }
+       case QD_AMQP_LONG:
+       case QD_AMQP_SMALLLONG: {
+           char str[21];
+           int64_t int64_val = qd_parse_as_long(parsed_field);
+           snprintf(str, 20, "%"PRId64"", int64_val);
+           aprintf(begin, end, "%s", str);
+           break;
+       }
+       case QD_AMQP_FLOAT:
+       case QD_AMQP_DOUBLE:
+       case QD_AMQP_DECIMAL32:
+       case QD_AMQP_DECIMAL64:
+       case QD_AMQP_DECIMAL128:
+       case QD_AMQP_UTF32:
+       case QD_AMQP_UUID:
+           break; //TODO
+
+       case QD_AMQP_VBIN8:
+       case QD_AMQP_VBIN32:
+       case QD_AMQP_STR8_UTF8:
+       case QD_AMQP_STR32_UTF8:
+       case QD_AMQP_SYM8:
+       case QD_AMQP_SYM32: {
+           qd_iterator_t *raw_iter = qd_parse_raw(parsed_field);
+           if (raw_iter) {
+               int len = qd_iterator_length(raw_iter);
+               char str_val[len];
+               int i=0;
+
+               while (!qd_iterator_end(raw_iter)) {
+                   str_val[i] = qd_iterator_octet(raw_iter);
+                   i++;
+               }
+               quote(str_val, len, begin, end);
+           }
+           break;
+       }
+       case QD_AMQP_MAP8:
+       case QD_AMQP_MAP32: {
+           uint32_t count = qd_parse_sub_count(parsed_field);
+           if (count > 0) {
+               aprintf(begin, end, "%s", "{");
+           }
+           for (uint32_t idx = 0; idx < count; idx++) {
+               qd_parsed_field_t *sub_key  = qd_parse_sub_key(parsed_field, idx);
+               // The keys of this map are restricted to be of type string (which excludes the possibility of a null key)
+               print_parsed_field(sub_key, begin, end, max);
+
+               aprintf(begin, end, "%s", "=");
+
+               qd_parsed_field_t *sub_value = qd_parse_sub_value(parsed_field, idx);
+
+               print_parsed_field(sub_value, begin, end, max);
+
+               if ((idx + 1) < count)
+                   aprintf(begin, end, "%s", ", ");
+           }
+           if (count > 0) {
+               aprintf(begin, end, "%s", "}");
+           }
+           break;
+       }
+       case QD_AMQP_LIST0:
+       case QD_AMQP_LIST8:
+       case QD_AMQP_LIST32: {
+           uint32_t count = qd_parse_sub_count(parsed_field);
+           if (count > 0) {
+               aprintf(begin, end, "%s", "[");
+           }
+           for (uint32_t idx = 0; idx < count; idx++) {
+               qd_parsed_field_t *sub_value = qd_parse_sub_value(parsed_field, idx);
+               print_parsed_field(sub_value, begin, end, max);
+               if ((idx + 1) < count)
+                  aprintf(begin, end, "%s", ", ");
+           }
+
+           if (count > 0) {
+               aprintf(begin, end, "%s", "]");
+           }
+
+           break;
+       }
+       default:
+           break;
+   }
+}
+
+static void print_field(qd_message_t *msg,  int field, int max, char *pre, char *post,
                        char **begin, char *end)
 {
-    qd_iterator_t* iter = qd_message_field_iterator(msg, field);
-    if (iter) {
-        aprintf(begin, end, "%s", pre);
-        qd_iterator_reset(iter);
-        for (int j = 0; !qd_iterator_end(iter) && j < max; ++j) {
-            char byte = qd_iterator_octet(iter);
-            quote(&byte, 1, begin, end);
-        }
-        aprintf(begin, end, "%s", post);
-        qd_iterator_free(iter);
+    qd_iterator_t* iter = 0;
+
+
+    // TODO - Need to discuss this. I have a question.
+    if (field == QD_FIELD_APPLICATION_PROPERTIES) {
+        iter = qd_message_field_iterator(msg, field);
     }
+    else {
+        iter = qd_message_field_iterator_typed(msg, field);
+    }
+
+    aprintf(begin, end, "%s", pre);
+
+    if (!iter) {
+        aprintf(begin, end, "%s", post);
+        return;
+    }
+
+
+
+    qd_parsed_field_t *parsed_field = qd_parse(iter);
+
+    // If there is a problem with parsing a field, just return
+    if (!qd_parse_ok(parsed_field)) {
+        aprintf(begin, end, "%s", post);
+        return;
+    }
+
+    print_parsed_field(parsed_field, begin, end, max);
+
+    aprintf(begin, end, "%s", post);
+    qd_iterator_free(iter);
+    qd_parse_free(parsed_field);
 }
 
 static const char REPR_END[] = "}\0";
 
-/* TODO aconway 2014-05-13: more detailed message representation. */
-char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len) {
+char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len, qd_log_bits log_message) {
+    if (log_message == 0)
+        return 0;
+
     if (qd_message_check(msg, QD_DEPTH_BODY)) {
         char *begin = buffer;
         char *end = buffer + len - sizeof(REPR_END); /* Save space for ending */
+
         aprintf(&begin, end, "Message{", msg);
-        copy_field(msg, QD_FIELD_TO, INT_MAX, "to='", "'", &begin, end);
-        copy_field(msg, QD_FIELD_REPLY_TO, INT_MAX, " reply-to='", "'", &begin, end);
-        copy_field(msg, QD_FIELD_BODY, 16, " body='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "message-id"))
+            print_field(msg, QD_FIELD_MESSAGE_ID, INT_MAX, "message-id='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "user-id"))
+            print_field(msg, QD_FIELD_USER_ID, INT_MAX, ", user-id='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "to"))
+            print_field(msg, QD_FIELD_TO, INT_MAX, ", to='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "subject"))
+            print_field(msg, QD_FIELD_SUBJECT, INT_MAX, ", subject='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "reply-to"))
+            print_field(msg, QD_FIELD_REPLY_TO, INT_MAX, ", reply-to='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "correlation-id"))
+            print_field(msg, QD_FIELD_CORRELATION_ID, INT_MAX, ", correlation-id='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "content-type"))
+            print_field(msg, QD_FIELD_CONTENT_TYPE, INT_MAX, ", content-type='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "content-encoding"))
+            print_field(msg, QD_FIELD_CONTENT_ENCODING, INT_MAX, ", content-encoding='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "absolute-expiry-time"))
+            print_field(msg, QD_FIELD_ABSOLUTE_EXPIRY_TIME, INT_MAX, ", absolute-expiry-time='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "creation-time"))
+            print_field(msg, QD_FIELD_CREATION_TIME, INT_MAX, ", creation-time='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "group-id"))
+            print_field(msg, QD_FIELD_GROUP_ID, INT_MAX, ", group-id='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "group-sequence"))
+            print_field(msg, QD_FIELD_GROUP_SEQUENCE, INT_MAX, ", group-sequence='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "reply-to-group-id"))
+            print_field(msg, QD_FIELD_REPLY_TO_GROUP_ID, INT_MAX, ", reply-to-group-id='", "'", &begin, end);
+
+        if (is_log_component_enabled(log_message, "app-properties"))
+            print_field(msg, QD_FIELD_APPLICATION_PROPERTIES, INT_MAX, ", application properties=", "", &begin, end);
+
         aprintf(&begin, end, "%s", REPR_END);   /* We saved space at the beginning. */
     }
     return buffer;
@@ -166,12 +431,24 @@ static int traverse_field(unsigned char **cursor, qd_buffer_t **buffer, qd_field
     size_t hdr_length = 1;
 
     switch (tag & 0xF0) {
-    case 0x40 : consume = 0;  break;
-    case 0x50 : consume = 1;  break;
-    case 0x60 : consume = 2;  break;
-    case 0x70 : consume = 4;  break;
-    case 0x80 : consume = 8;  break;
-    case 0x90 : consume = 16; break;
+    case 0x40 :
+        consume = 0;
+        break;
+    case 0x50 :
+        consume = 1;
+        break;
+    case 0x60 :
+        consume = 2;
+        break;
+    case 0x70 :
+        consume = 4;
+        break;
+    case 0x80 :
+        consume = 8;
+        break;
+    case 0x90 :
+        consume = 16;
+        break;
 
     case 0xB0 :
     case 0xD0 :
@@ -421,17 +698,25 @@ static qd_field_location_t *qd_message_properties_field(qd_message_t *msg, qd_me
         (intptr_t) &((qd_message_content_t *)0)->field_to,
         (intptr_t) &((qd_message_content_t *)0)->field_subject,
         (intptr_t) &((qd_message_content_t *)0)->field_reply_to,
-        (intptr_t) &((qd_message_content_t *)0)->field_correlation_id
+        (intptr_t) &((qd_message_content_t *)0)->field_correlation_id,
+        (intptr_t) &((qd_message_content_t *)0)->field_content_type,
+        (intptr_t) &((qd_message_content_t *)0)->field_content_encoding,
+        (intptr_t) &((qd_message_content_t *)0)->field_absolute_expiry_time,
+        (intptr_t) &((qd_message_content_t *)0)->field_creation_time,
+        (intptr_t) &((qd_message_content_t *)0)->field_group_id,
+        (intptr_t) &((qd_message_content_t *)0)->field_group_sequence,
+        (intptr_t) &((qd_message_content_t *)0)->field_reply_to_group_id
     };
     // update table above if new fields need to be accessed:
-    assert(QD_FIELD_MESSAGE_ID <= field && field <= QD_FIELD_CORRELATION_ID);
+    assert(QD_FIELD_MESSAGE_ID <= field && field <= QD_FIELD_REPLY_TO_GROUP_ID);
 
     qd_message_content_t *content = MSG_CONTENT(msg);
     if (!content->section_message_properties.parsed) {
         if (!qd_message_check(msg, QD_DEPTH_PROPERTIES) || !content->section_message_properties.parsed)
             return 0;
     }
-    if (field == QD_FIELD_PROPERTIES) return &content->section_message_properties;
+    if (field == QD_FIELD_PROPERTIES)
+        return &content->section_message_properties;
 
     const int index = field - QD_FIELD_MESSAGE_ID;
     qd_field_location_t *const location = (qd_field_location_t *)((char *)content + offsets[index]);
@@ -626,7 +911,6 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     return (qd_message_t*) copy;
 }
 
-
 qd_parsed_field_t *qd_message_message_annotations(qd_message_t *in_msg)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
@@ -746,11 +1030,6 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
                 DEQ_REMOVE_TAIL(msg->content->buffers);
                 qd_buffer_free(buf);
             }
-
-            char repr[qd_message_repr_len()];
-            qd_log(log_source, QD_LOG_TRACE, "Received %s on link %s",
-                   qd_message_repr((qd_message_t*)msg, repr, sizeof(repr)),
-                   pn_link_name(link));
 
             return (qd_message_t*) msg;
         }
@@ -874,11 +1153,6 @@ void qd_message_send(qd_message_t *in_msg,
     qd_buffer_t          *buf     = DEQ_HEAD(content->buffers);
     unsigned char        *cursor;
     pn_link_t            *pnl     = qd_link_pn(link);
-
-    char repr[qd_message_repr_len()];
-    qd_log(log_source, QD_LOG_TRACE, "Sending %s on link %s",
-           qd_message_repr(in_msg, repr, sizeof(repr)),
-           pn_link_name(pnl));
 
     qd_buffer_list_t new_ma;
     DEQ_INIT(new_ma);
@@ -1104,7 +1378,11 @@ int qd_message_check(qd_message_t *in_msg, qd_message_depth_t depth)
 qd_iterator_t *qd_message_field_iterator_typed(qd_message_t *msg, qd_message_field_t field)
 {
     qd_field_location_t *loc = qd_message_field_location(msg, field);
+
     if (!loc)
+        return 0;
+
+    if (loc->tag == QD_AMQP_NULL)
         return 0;
 
     return qd_iterator_buffer(loc->buffer, loc->offset, loc->length + loc->hdr_length, ITER_VIEW_ALL);
@@ -1114,6 +1392,7 @@ qd_iterator_t *qd_message_field_iterator_typed(qd_message_t *msg, qd_message_fie
 qd_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_field_t field)
 {
     qd_field_location_t *loc = qd_message_field_location(msg, field);
+
     if (!loc)
         return 0;
 

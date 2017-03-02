@@ -238,6 +238,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     bool depAllowUnsecured  = qd_entity_opt_bool(entity, "allowUnsecured", !requireSsl); CHECK();
 
     memset(config, 0, sizeof(*config));
+    config->log_message          = qd_entity_opt_string(entity, "logMessage", 0);     CHECK();
     config->port                 = qd_entity_get_string(entity, "port");              CHECK();
     config->name                 = qd_entity_opt_string(entity, "name", 0);           CHECK();
     config->role                 = qd_entity_get_string(entity, "role");              CHECK();
