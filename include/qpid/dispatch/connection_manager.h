@@ -54,17 +54,9 @@ void qd_connection_manager_free(qd_connection_manager_t *cm);
 void qd_config_listener_free(qd_connection_manager_t *cm, qd_config_listener_t *cl);
 
 /**
- * Free the SSL Profile. Only SSL Profiles that are not referenced from other connectors/listeners can be freed.
- * @return true if the ssl_profile has been freed, false if it is being referenced and cannot be freed
- */
-bool qd_config_ssl_profile_free(qd_connection_manager_t *cm, qd_config_ssl_profile_t *ssl_profile);
-
-
-/**
  * Free all the resources associated with a config connector
  */
 void qd_config_connector_free(qd_connection_manager_t *cm, qd_config_connector_t *cl);
-
 
 /**
  * Start the configured Listeners and Connectors

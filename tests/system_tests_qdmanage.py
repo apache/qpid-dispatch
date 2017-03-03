@@ -21,7 +21,7 @@ import json, unittest, os
 
 from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR, wait_port
 from subprocess import PIPE, STDOUT
-from qpid_dispatch_internal.compat import OrderedDict, dictify
+from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 
 DUMMY = "org.apache.qpid.dispatch.dummy"
@@ -214,7 +214,6 @@ class QdmanageTest(TestCase):
                 good_logs += 1
 
         self.assertEquals ( good_logs, len(logs) )
-
 
     def test_update(self):
         exception = False

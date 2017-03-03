@@ -447,6 +447,26 @@ typedef struct qd_server_config_t {
      * Configured failover list
      */
     qd_failover_list_t *failover_list;
+
+    /**
+     * @name These fields are not primary configuration, they are computed.
+     * @{
+     */
+
+    /**
+     * Concatenated connect/listen address "host:port"
+     */
+    char *host_port;
+
+    /**
+     * Set for listeners that are part of the initial router configuration.
+     * An error in setting up initial listeners must shut down the router.
+     */
+    bool exit_on_error;
+
+    /**
+     * @}
+     */
 } qd_server_config_t;
 
 

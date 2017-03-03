@@ -49,12 +49,6 @@ qd_http_listener_t *qd_listener_http(qd_listener_t *l);
 #define CONTEXT_UNSPECIFIED_OWNER -2
 
 typedef enum {
-    QD_BIND_SUCCESSFUL, // Bind to socket was attempted and the bind succeeded
-    QD_BIND_FAILED,     // Bind to socket was attempted and bind failed
-    QD_BIND_NONE,    // Bind to socket not attempted yet
-} qd_bind_state_t;
-
-typedef enum {
     CXTR_STATE_CONNECTING = 0,
     CXTR_STATE_OPEN,
     CXTR_STATE_FAILED

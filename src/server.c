@@ -76,7 +76,6 @@ struct qd_server_t {
     qd_work_list_t            work_queue;
     qd_timer_list_t           pending_timers;
     bool                      a_thread_is_waiting;
-    int                       threads_active;
     int                       pause_requests;
     int                       threads_paused;
     int                       pause_next_sequence;
@@ -1021,7 +1020,6 @@ static void *thread_run(void *arg)
             if (ctx->owner_thread == CONTEXT_NO_OWNER) {
                 ctx->owner_thread = thread->thread_id;
                 ctx->enqueued = 0;
-                qd_server->threads_active++;
                 cxtr = work->cxtr;
                 free_qd_work_item_t(work);
             } else {
@@ -1073,7 +1071,6 @@ static void *thread_run(void *arg)
                 sys_mutex_free(ctx->deferred_call_lock);
                 qdpn_connector_free(cxtr);
                 free_qd_connection(ctx);
-                qd_server->threads_active--;
                 sys_mutex_unlock(qd_server->lock);
             } else {
                 //
@@ -1081,7 +1078,6 @@ static void *thread_run(void *arg)
                 //
                 sys_mutex_lock(qd_server->lock);
                 ctx->owner_thread = CONTEXT_NO_OWNER;
-                qd_server->threads_active--;
                 sys_mutex_unlock(qd_server->lock);
             }
 
@@ -1344,7 +1340,6 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     DEQ_INIT(qd_server->work_queue);
     DEQ_INIT(qd_server->pending_timers);
     qd_server->a_thread_is_waiting    = false;
-    qd_server->threads_active         = 0;
     qd_server->pause_requests         = 0;
     qd_server->threads_paused         = 0;
     qd_server->pause_next_sequence    = 0;

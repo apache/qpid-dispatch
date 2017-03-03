@@ -20,13 +20,11 @@
 """System tests for management of qdrouter"""
 
 import unittest, system_test, re, os, json, sys
-from qpid_dispatch.management.client import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus, ForbiddenStatus
+from qpid_dispatch.management.client import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch_internal.management.qdrouter import QdSchema
-from qpid_dispatch_internal.compat import OrderedDict, dictify
-from system_test import Qdrouterd, message, retry, retry_exception, wait_ports, Process
-from proton import ConnectionException
+from qpid_dispatch_internal.compat import dictify
+from system_test import Qdrouterd, message, Process
 from itertools import chain
-from time import sleep
 
 PREFIX = u'org.apache.qpid.dispatch.'
 MANAGEMENT = PREFIX + 'management'
@@ -305,7 +303,7 @@ class ManagementTest(system_test.TestCase):
                 self.assertEqual(
                     {u'operation': u'callme', u'type': DUMMY, u'identity': identity, u'data': data},
                     dummy.call('callme', data=data))
-            except TypeError, e:
+            except TypeError:
                 extype, value, trace = sys.exc_info()
                 raise extype, "data=%r: %s" % (data, value), trace
 
@@ -373,16 +371,6 @@ class ManagementTest(system_test.TestCase):
         """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""
         nodes = [self.cleanup(Node.connect(Url(r.addresses[0]))) for r in self.routers]
         remotes = sum([n.get_mgmt_nodes() for n in nodes], [])
-        self.assertEqual([u'amqp:/_topo/0/router2/$management', u'amqp:/_topo/0/router1/$management'], remotes)
-        # Query router2 indirectly via router1
-        remote_url = Url(self.routers[0].addresses[0], path=Url(remotes[0]).path)
-        remote = self.cleanup(Node.connect(remote_url))
-        self.assertEqual(["router2"], [r.id for r in remote.query(type=ROUTER).get_entities()])
-
-    def test_remote_node(self):
-        """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""
-        nodes = [self.cleanup(Node.connect(Url(r.addresses[0]))) for r in self.routers]
-        remotes = sum([n.get_mgmt_nodes() for n in nodes], [])
         self.assertEqual(set([u'amqp:/_topo/0/router%s/$management' % i for i in [0, 1, 2]]),
                          set(remotes))
         self.assertEqual(9, len(remotes))
@@ -397,10 +385,6 @@ class ManagementTest(system_test.TestCase):
         types = self.node.get_types()
         self.assertIn(CONFIGURATION, types[LISTENER])
         self.assertIn(OPERATIONAL, types[LINK])
-
-    def test_get_attributes(self):
-        types = self.node.get_attributes()
-        self.assertIn(SSL_PROFILE, types[CONNECTOR])
 
     def test_get_operations(self):
         result = self.node.get_operations(type=DUMMY)
