@@ -39,7 +39,7 @@ bool qd_entity_has(qd_entity_t* entity, const char *attribute) {
     PyObject *value = qd_entity_get_py(entity, attribute);
     Py_XDECREF(value);
     PyErr_Clear();              /* Ignore errors */
-    return value;
+    return value != NULL;
 }
 
 char *qd_entity_get_string(qd_entity_t *entity, const char* attribute) {
