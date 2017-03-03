@@ -20,6 +20,7 @@
 #include "router_core_private.h"
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
+#include <strings.h>
 
 //
 // NOTE: If the in_delivery argument is NULL, the resulting out deliveries

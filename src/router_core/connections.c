@@ -21,6 +21,7 @@
 #include "route_control.h"
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
+#include <strings.h>
 #include "router_core_private.h"
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard);

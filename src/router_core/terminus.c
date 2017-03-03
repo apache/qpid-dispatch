@@ -18,6 +18,7 @@
  */
 
 #include "router_core_private.h"
+#include <strings.h>
 
 struct qdr_terminus_t {
     qdr_field_t            *address;

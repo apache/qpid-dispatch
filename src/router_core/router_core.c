@@ -19,6 +19,7 @@
 
 #include "router_core_private.h"
 #include <stdio.h>
+#include <strings.h>
 
 ALLOC_DEFINE(qdr_address_t);
 ALLOC_DEFINE(qdr_address_config_t);
