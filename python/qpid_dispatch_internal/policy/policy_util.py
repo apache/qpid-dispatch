@@ -52,7 +52,7 @@ class HostStruct(object):
         @param[in] hostname host IP address to parse
         """
         try:
-            res = socket.getaddrinfo(hostname, 0)
+            res = socket.getaddrinfo(hostname, 0, socket.AF_UNSPEC, socket.SOCK_STREAM)
             if len(res) == 0:
                 raise PolicyError("HostStruct: '%s' did not resolve to an IP address" % hostname)
             foundFirst = False
