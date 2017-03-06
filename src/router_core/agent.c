@@ -34,7 +34,7 @@ static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool di
 static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 ALLOC_DECLARE(qdr_query_t);
-ALLOC_DEFINE(qdr_query_t);
+ALLOC_DEFINE(qdr_query_t)
 
 //==================================================================================
 // Internal Functions

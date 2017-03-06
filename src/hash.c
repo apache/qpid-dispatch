@@ -35,7 +35,7 @@ typedef struct qd_hash_item_t {
 } qd_hash_item_t;
 
 ALLOC_DECLARE(qd_hash_item_t);
-ALLOC_DEFINE(qd_hash_item_t);
+ALLOC_DEFINE(qd_hash_item_t)
 DEQ_DECLARE(qd_hash_item_t, items_t);
 
 
@@ -60,7 +60,7 @@ struct qd_hash_handle_t {
 };
 
 ALLOC_DECLARE(qd_hash_handle_t);
-ALLOC_DEFINE(qd_hash_handle_t);
+ALLOC_DEFINE(qd_hash_handle_t)
 
 
 qd_hash_t *qd_hash(int bucket_exponent, int batch_size, int value_is_const)

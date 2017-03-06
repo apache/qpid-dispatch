@@ -22,9 +22,9 @@
 #include <stdio.h>
 #include <qpid/dispatch/iterator.h>
 
-ALLOC_DEFINE(qdr_link_route_t);
-ALLOC_DEFINE(qdr_auto_link_t);
-ALLOC_DEFINE(qdr_conn_identifier_t);
+ALLOC_DEFINE(qdr_link_route_t)
+ALLOC_DEFINE(qdr_auto_link_t)
+ALLOC_DEFINE(qdr_conn_identifier_t)
 
 const char CONTAINER_PREFIX = 'C';
 const char CONNECTION_PREFIX = 'L';

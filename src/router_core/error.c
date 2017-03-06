@@ -27,7 +27,7 @@ struct qdr_error_t {
 };
 
 ALLOC_DECLARE(qdr_error_t);
-ALLOC_DEFINE(qdr_error_t);
+ALLOC_DEFINE(qdr_error_t)
 
 qdr_error_t *qdr_error_from_pn(pn_condition_t *pn)
 {

@@ -58,7 +58,7 @@ struct qd_log_entry_t {
 };
 
 ALLOC_DECLARE(qd_log_entry_t);
-ALLOC_DEFINE(qd_log_entry_t);
+ALLOC_DEFINE(qd_log_entry_t)
 
 DEQ_DECLARE(qd_log_entry_t, qd_log_list_t);
 static qd_log_list_t         entries = {0};

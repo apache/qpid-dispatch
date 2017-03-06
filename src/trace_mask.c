@@ -30,7 +30,7 @@ typedef struct {
 } qdtm_router_t;
 
 ALLOC_DECLARE(qdtm_router_t);
-ALLOC_DEFINE(qdtm_router_t);
+ALLOC_DEFINE(qdtm_router_t)
 
 struct qd_tracemask_t {
     sys_rwlock_t   *lock;

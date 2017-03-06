@@ -21,17 +21,17 @@
 #include <stdio.h>
 #include <strings.h>
 
-ALLOC_DEFINE(qdr_address_t);
-ALLOC_DEFINE(qdr_address_config_t);
-ALLOC_DEFINE(qdr_node_t);
-ALLOC_DEFINE(qdr_delivery_t);
-ALLOC_DEFINE(qdr_delivery_ref_t);
-ALLOC_DEFINE(qdr_link_t);
-ALLOC_DEFINE(qdr_router_ref_t);
-ALLOC_DEFINE(qdr_link_ref_t);
-ALLOC_DEFINE(qdr_general_work_t);
-ALLOC_DEFINE(qdr_connection_ref_t);
-ALLOC_DEFINE(qdr_connection_info_t);
+ALLOC_DEFINE(qdr_address_t)
+ALLOC_DEFINE(qdr_address_config_t)
+ALLOC_DEFINE(qdr_node_t)
+ALLOC_DEFINE(qdr_delivery_t)
+ALLOC_DEFINE(qdr_delivery_ref_t)
+ALLOC_DEFINE(qdr_link_t)
+ALLOC_DEFINE(qdr_router_ref_t)
+ALLOC_DEFINE(qdr_link_ref_t)
+ALLOC_DEFINE(qdr_general_work_t)
+ALLOC_DEFINE(qdr_connection_ref_t)
+ALLOC_DEFINE(qdr_connection_info_t)
 
 static void qdr_general_handler(void *context);
 
@@ -155,7 +155,7 @@ void qdr_router_node_free(qdr_core_t *core, qdr_node_t *rnode)
 }
 
 ALLOC_DECLARE(qdr_field_t);
-ALLOC_DEFINE(qdr_field_t);
+ALLOC_DEFINE(qdr_field_t)
 
 qdr_field_t *qdr_field(const char *text)
 {

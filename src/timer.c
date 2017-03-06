@@ -32,7 +32,7 @@ static qd_timer_list_t  scheduled_timers;
 static qd_timestamp_t   time_base;
 
 ALLOC_DECLARE(qd_timer_t);
-ALLOC_DEFINE(qd_timer_t);
+ALLOC_DEFINE(qd_timer_t)
 
 /// For tests only
 sys_mutex_t* qd_timer_lock() { return lock; }

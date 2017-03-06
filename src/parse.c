@@ -35,7 +35,7 @@ struct qd_parsed_field_t {
 };
 
 ALLOC_DECLARE(qd_parsed_field_t);
-ALLOC_DEFINE(qd_parsed_field_t);
+ALLOC_DEFINE(qd_parsed_field_t)
 
 /**
  * size = the number of bytes following the tag
