@@ -369,7 +369,7 @@
         },
 
         "router": {
-            "description":"Tracks peer routers and computes routes to destinations.",
+            "description":"Tracks peer routers and computes routes to destinations. This entity is mandatory. The router will not start without this entity.",
             "extends": "configurationEntity",
             "singleton": true,
             "attributes": {

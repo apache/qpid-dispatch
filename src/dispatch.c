@@ -170,7 +170,12 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
     if (! qd->router_id) {
         qd_dispatch_set_router_id(qd, qd_entity_opt_string(entity, "id", 0)); QD_ERROR_RET();
     }
-    assert(qd->router_id);
+    if (!qd->router_id) {
+        qd_log_source_t *router_log = qd_log_source("ROUTER");
+        qd_log(router_log, QD_LOG_CRITICAL, "Router Id not specified - process exiting");
+        exit(1);
+    }
+
     qd->router_mode = qd_entity_get_long(entity, "mode"); QD_ERROR_RET();
     qd->thread_count = qd_entity_opt_long(entity, "workerThreads", 4); QD_ERROR_RET();
 
