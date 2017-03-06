@@ -133,10 +133,10 @@ struct qdpn_connector_t {
 };
 
 ALLOC_DECLARE(qdpn_listener_t);
-ALLOC_DEFINE(qdpn_listener_t);
+ALLOC_DEFINE(qdpn_listener_t)
 
 ALLOC_DECLARE(qdpn_connector_t);
-ALLOC_DEFINE(qdpn_connector_t);
+ALLOC_DEFINE(qdpn_connector_t)
 
 /* Impls */
 

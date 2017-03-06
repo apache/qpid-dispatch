@@ -30,8 +30,8 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
 static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
-ALLOC_DEFINE(qdr_connection_t);
-ALLOC_DEFINE(qdr_connection_work_t);
+ALLOC_DEFINE(qdr_connection_t)
+ALLOC_DEFINE(qdr_connection_work_t)
 
 //==================================================================================
 // Internal Functions

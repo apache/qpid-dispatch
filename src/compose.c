@@ -25,8 +25,8 @@
 #include <memory.h>
 #include <string.h>
 
-ALLOC_DEFINE(qd_composite_t);
-ALLOC_DEFINE(qd_composed_field_t);
+ALLOC_DEFINE(qd_composite_t)
+ALLOC_DEFINE(qd_composed_field_t)
 
 
 static void bump_count(qd_composed_field_t *field)

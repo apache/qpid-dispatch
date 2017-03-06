@@ -32,7 +32,7 @@ struct qd_iovec_t {
 
 
 ALLOC_DECLARE(qd_iovec_t);
-ALLOC_DEFINE(qd_iovec_t);
+ALLOC_DEFINE(qd_iovec_t)
 
 
 qd_iovec_t *qd_iovec(int vector_count)

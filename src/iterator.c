@@ -52,7 +52,7 @@ typedef struct qd_hash_segment_t {
 
 DEQ_DECLARE(qd_hash_segment_t, qd_hash_segment_list_t);
 ALLOC_DECLARE(qd_hash_segment_t);
-ALLOC_DEFINE(qd_hash_segment_t);
+ALLOC_DEFINE(qd_hash_segment_t)
 
 struct qd_iterator_t {
     pointer_t               start_pointer;      // Pointer to the raw data
@@ -74,7 +74,7 @@ struct qd_iterator_t {
 };
 
 ALLOC_DECLARE(qd_iterator_t);
-ALLOC_DEFINE(qd_iterator_t);
+ALLOC_DEFINE(qd_iterator_t)
 
 typedef enum {
     STATE_START,

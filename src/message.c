@@ -65,8 +65,8 @@ static const unsigned char * const TAGS_ANY                     = (unsigned char
 
 PN_HANDLE(PN_DELIVERY_CTX);
 
-ALLOC_DEFINE_CONFIG(qd_message_t, sizeof(qd_message_pvt_t), 0, 0);
-ALLOC_DEFINE(qd_message_content_t);
+ALLOC_DEFINE_CONFIG(qd_message_t, sizeof(qd_message_pvt_t), 0, 0)
+ALLOC_DEFINE(qd_message_content_t)
 
 typedef void (*buffer_process_t) (void *context, const unsigned char *base, int length);
 

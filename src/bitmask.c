@@ -34,7 +34,7 @@ struct qd_bitmask_t {
 };
 
 ALLOC_DECLARE(qd_bitmask_t);
-ALLOC_DEFINE(qd_bitmask_t);
+ALLOC_DEFINE(qd_bitmask_t)
 
 #define MASK_INDEX(num)  (num / 64)
 #define MASK_ONEHOT(num) (((uint64_t) 1) << (num % 64))

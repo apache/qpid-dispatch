@@ -35,7 +35,7 @@ struct qdr_terminus_t {
 };
 
 ALLOC_DECLARE(qdr_terminus_t);
-ALLOC_DEFINE(qdr_terminus_t);
+ALLOC_DEFINE(qdr_terminus_t)
 
 const char* QDR_COORDINATOR_ADDRESS = "$coordinator";
 

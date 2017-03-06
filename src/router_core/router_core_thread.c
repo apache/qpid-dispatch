@@ -27,7 +27,7 @@
  * This module owns, manages, and uses the router-link list and the address hash table
  */
 
-ALLOC_DEFINE(qdr_action_t);
+ALLOC_DEFINE(qdr_action_t)
 
 
 static void qdr_activate_connections_CT(qdr_core_t *core)

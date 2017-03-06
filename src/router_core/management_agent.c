@@ -85,7 +85,7 @@ typedef struct qd_management_context_t {
 } qd_management_context_t ;
 
 ALLOC_DECLARE(qd_management_context_t);
-ALLOC_DEFINE(qd_management_context_t);
+ALLOC_DEFINE(qd_management_context_t)
 
 /**
  * Convenience function to create and initialize context (qd_management_context_t)

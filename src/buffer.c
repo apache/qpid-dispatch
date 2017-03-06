@@ -28,7 +28,7 @@ static size_t buffer_size = 512;
 static int    size_locked = 0;
 
 ALLOC_DECLARE(qd_buffer_t);
-ALLOC_DEFINE_CONFIG(qd_buffer_t, sizeof(qd_buffer_t), &buffer_size, 0);
+ALLOC_DEFINE_CONFIG(qd_buffer_t, sizeof(qd_buffer_t), &buffer_size, 0)
 
 
 void qd_buffer_set_size(size_t size)

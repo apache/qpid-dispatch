@@ -47,7 +47,7 @@ struct qd_node_t {
 
 DEQ_DECLARE(qd_node_t, qd_node_list_t);
 ALLOC_DECLARE(qd_node_t);
-ALLOC_DEFINE(qd_node_t);
+ALLOC_DEFINE(qd_node_t)
 
 /** Encapsulates a proton link for sending and receiving messages */
 struct qd_link_t {
@@ -62,7 +62,7 @@ struct qd_link_t {
 };
 
 ALLOC_DECLARE(qd_link_t);
-ALLOC_DEFINE(qd_link_t);
+ALLOC_DEFINE(qd_link_t)
 
 
 typedef struct qdc_node_type_t {

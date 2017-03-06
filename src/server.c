@@ -121,11 +121,11 @@ static __thread qd_server_t *thread_server = 0;
 
 #define HEARTBEAT_INTERVAL 1000
 
-ALLOC_DEFINE(qd_work_item_t);
-ALLOC_DEFINE(qd_listener_t);
-ALLOC_DEFINE(qd_connector_t);
-ALLOC_DEFINE(qd_deferred_call_t);
-ALLOC_DEFINE(qd_connection_t);
+ALLOC_DEFINE(qd_work_item_t)
+ALLOC_DEFINE(qd_listener_t)
+ALLOC_DEFINE(qd_connector_t)
+ALLOC_DEFINE(qd_deferred_call_t)
+ALLOC_DEFINE(qd_connection_t)
 
 const char *QD_CONNECTION_TYPE = "connection";
 const char *MECH_EXTERNAL = "EXTERNAL";
