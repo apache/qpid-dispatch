@@ -53,7 +53,7 @@ struct qd_log_entry_t {
     int             level;
     char           *file;
     int             line;
-    time_t          time;
+    struct timeval  time;
     char            text[TEXT_MAX];
 };
 
@@ -81,6 +81,8 @@ typedef struct log_sink_t {
 DEQ_DECLARE(log_sink_t, log_sink_list_t);
 
 static log_sink_list_t sink_list = {0};
+
+const char *format = "%Y-%m-%d %H:%M:%S.%%03lu %z";
 
 static const char* SINK_STDOUT = "stdout";
 static const char* SINK_STDERR = "stderr";
@@ -298,8 +300,13 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
     if (default_bool(log_source->timestamp, default_log_source->timestamp)) {
         char buf[100];
         buf[0] = '\0';
-        ctime_r(&entry->time, buf);
-        buf[strlen(buf)-1] = '\0'; /* Get rid of trailng \n */
+
+        time_t sec = entry->time.tv_sec;
+        struct tm *local_tm = localtime(&sec);
+        char fmt[100];
+        strftime(fmt, sizeof fmt, format, local_tm);
+        snprintf(buf, 100, fmt, entry->time.tv_usec);
+
         aprintf(&begin, end, "%s ", buf);
     }
     aprintf(&begin, end, "%s (%s) %s", entry->module, level->name, entry->text);
@@ -402,7 +409,7 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, const char *fil
     entry->level  = level;
     entry->file   = file ? strdup(file) : 0;
     entry->line   = line;
-    time(&entry->time);
+    gettimeofday(&entry->time, NULL);
     vsnprintf(entry->text, TEXT_MAX, fmt, ap);
     write_log(source, entry);
 
@@ -443,7 +450,7 @@ PyObject *qd_log_recent_py(long limit) {
         PyList_SetItem(py_entry, i++, PyString_FromString(entry->text));
         PyList_SetItem(py_entry, i++, entry->file ? PyString_FromString(entry->file) : inc_none());
         PyList_SetItem(py_entry, i++, entry->file ? PyLong_FromLong(entry->line) : inc_none());
-        PyList_SetItem(py_entry, i++, PyLong_FromLongLong((PY_LONG_LONG)entry->time));
+        PyList_SetItem(py_entry, i++, PyLong_FromLongLong((PY_LONG_LONG)entry->time.tv_sec));
         assert(i == ENTRY_SIZE);
         if (PyErr_Occurred()) goto error;
         PyList_Insert(list, 0, py_entry);
