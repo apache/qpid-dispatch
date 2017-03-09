@@ -132,15 +132,22 @@ static char *test_map(void *context)
     qd_parsed_field_t *field     = qd_parse(data_iter);
     if (!qd_parse_ok(field)) {
         snprintf(error, 1000, "Parse failed: %s", qd_parse_error(field));
+        qd_iterator_free(data_iter);
+        qd_parse_free(field);
         return error;
     }
 
-    if (!qd_parse_is_map(field))
+    if (!qd_parse_is_map(field)) {
+        qd_iterator_free(data_iter);
+        qd_parse_free(field);
         return "Expected field to be a map";
+    }
 
     uint32_t count = qd_parse_sub_count(field);
     if (count != 3) {
         snprintf(error, 1000, "Expected sub-count==3, got %"PRIu32, count);
+        qd_iterator_free(data_iter);
+        qd_parse_free(field);
         return error;
     }
 
@@ -148,9 +155,12 @@ static char *test_map(void *context)
     qd_iterator_t     *key_iter   = qd_parse_raw(key_field);
     qd_iterator_t     *typed_iter = qd_parse_typed(key_field);
     if (!qd_iterator_equal(key_iter, (unsigned char*) "first")) {
-        snprintf(error, 1000, "First key: expected 'first', got '%s'", qd_iterator_copy(key_iter));
+        unsigned char     *result   = qd_iterator_copy(key_iter);
+        snprintf(error, 1000, "First key: expected 'first', got '%s'", result);
+        free (result);
         return error;
     }
+
     if (!qd_iterator_equal(typed_iter, (unsigned char*) "\xa3\x05\x66irst"))
         return "Incorrect typed iterator on first-key";
 
@@ -158,16 +168,21 @@ static char *test_map(void *context)
     qd_iterator_t     *val_iter  = qd_parse_raw(val_field);
     typed_iter = qd_parse_typed(val_field);
     if (!qd_iterator_equal(val_iter, (unsigned char*) "value_of_first")) {
-        snprintf(error, 1000, "First value: expected 'value_of_first', got '%s'", qd_iterator_copy(val_iter));
+        unsigned char     *result   = qd_iterator_copy(val_iter);
+        snprintf(error, 1000, "First value: expected 'value_of_first', got '%s'", result);
+        free (result);
         return error;
     }
+
     if (!qd_iterator_equal(typed_iter, (unsigned char*) "\xa1\x0evalue_of_first"))
         return "Incorrect typed iterator on first-key";
 
     key_field = qd_parse_sub_key(field, 1);
     key_iter  = qd_parse_raw(key_field);
     if (!qd_iterator_equal(key_iter, (unsigned char*) "second")) {
-        snprintf(error, 1000, "Second key: expected 'second', got '%s'", qd_iterator_copy(key_iter));
+        unsigned char     *result   = qd_iterator_copy(key_iter);
+        snprintf(error, 1000, "Second key: expected 'second', got '%s'", result);
+        free (result);
         return error;
     }
 
@@ -180,7 +195,9 @@ static char *test_map(void *context)
     key_field = qd_parse_sub_key(field, 2);
     key_iter  = qd_parse_raw(key_field);
     if (!qd_iterator_equal(key_iter, (unsigned char*) "third")) {
-        snprintf(error, 1000, "Third key: expected 'third', got '%s'", qd_iterator_copy(key_iter));
+        unsigned char     *result   = qd_iterator_copy(key_iter);
+        snprintf(error, 1000, "Third key: expected 'third', got '%s'", result);
+        free (result);
         return error;
     }
 

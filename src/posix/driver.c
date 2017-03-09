@@ -832,10 +832,23 @@ void qdpn_driver_free(qdpn_driver_t *d)
     if (!d) return;
 
     close(d->efd);
-    while (DEQ_HEAD(d->connectors))
-        qdpn_connector_free(DEQ_HEAD(d->connectors));
-    while (DEQ_HEAD(d->listeners))
-        qdpn_listener_free(DEQ_HEAD(d->listeners));
+
+    qdpn_connector_t *conn = DEQ_HEAD(d->connectors);
+
+    while (conn) {
+        DEQ_REMOVE_HEAD(d->connectors);
+        qdpn_connector_free(conn);
+        conn = DEQ_HEAD(d->connectors);
+    }
+
+    qdpn_listener_t *listener = DEQ_HEAD(d->listeners);
+
+    while (listener) {
+        DEQ_REMOVE_HEAD(d->listeners);
+        qdpn_listener_free(listener);
+        listener = DEQ_HEAD(d->listeners);
+    }
+
     free(d->fds);
     sys_mutex_free(d->lock);
     free(d);

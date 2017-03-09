@@ -174,6 +174,7 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
        }
        case QD_AMQP_TIMESTAMP: {
            char timestamp_bytes[8];
+           memset(timestamp_bytes, 0, sizeof(timestamp_bytes));
            char creation_time[100]; //string representation of creation time.
            // 64-bit two’s-complement integer representing milliseconds since the unix epoch
            int timestamp_length = 8;
@@ -304,13 +305,13 @@ static void print_field(qd_message_t *msg,  int field, int max, char *pre, char 
         return;
     }
 
-
-
     qd_parsed_field_t *parsed_field = qd_parse(iter);
 
     // If there is a problem with parsing a field, just return
     if (!qd_parse_ok(parsed_field)) {
         aprintf(begin, end, "%s", post);
+        qd_iterator_free(iter);
+        qd_parse_free(parsed_field);
         return;
     }
 

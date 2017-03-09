@@ -138,43 +138,61 @@ static char *test_trim(void *context)
     qd_iterator_t *iter = qd_iterator_string("testing.trim", ITER_VIEW_ALL);
 
     qd_iterator_trim_view(iter, 7);
-    if (!qd_iterator_equal(iter, (unsigned char*) "testing"))
+    if (!qd_iterator_equal(iter, (unsigned char*) "testing")) {
+        qd_iterator_free(iter);
         return "Trim on ITER_VIEW_ALL failed (1)";
+    }
 
     qd_iterator_reset_view(iter, ITER_VIEW_ALL);
-    if (!qd_iterator_equal(iter, (unsigned char*) "testing.trim"))
+    if (!qd_iterator_equal(iter, (unsigned char*) "testing.trim")) {
+        qd_iterator_free(iter);
         return "Trim on ITER_VIEW_ALL failed (2)";
+    }
 
     qd_iterator_advance(iter, 4);
     qd_iterator_trim_view(iter, 5);
-    if (!qd_iterator_equal(iter, (unsigned char*) "ing.t"))
+
+    if (!qd_iterator_equal(iter, (unsigned char*) "ing.t")) {
+        qd_iterator_free(iter);
         return "Trim on ITER_VIEW_ALL failed (3)";
+    }
 
     qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
     qd_iterator_trim_view(iter, 9);
-    if (!qd_iterator_equal(iter, (unsigned char*) "M0testing"))
+    if (!qd_iterator_equal(iter, (unsigned char*) "M0testing")) {
+        qd_iterator_free(iter);
         return "Trim on ITER_VIEW_ADDRESS_HASH failed";
+    }
 
     qd_iterator_reset(iter);
     qd_iterator_annotate_space(iter, "my_space.", 9);
     qd_iterator_trim_view(iter, 18);
-    if (!qd_iterator_equal(iter, (unsigned char*) "M0my_space.testing"))
+
+    if (!qd_iterator_equal(iter, (unsigned char*) "M0my_space.testing")) {
+        qd_iterator_free(iter);
         return "Trim on ITER_VIEW_ADDRESS_HASH (with space 1) failed";
+    }
 
     qd_iterator_reset(iter);
     qd_iterator_trim_view(iter, 10);
-    if (!qd_iterator_equal(iter, (unsigned char*) "M0my_space"))
+    if (!qd_iterator_equal(iter, (unsigned char*) "M0my_space")) {
+        qd_iterator_free(iter);
         return "Trim on ITER_VIEW_ADDRESS_HASH (in space 1) failed";
+    }
 
     qd_iterator_reset(iter);
     qd_iterator_trim_view(iter, 2);
-    if (!qd_iterator_equal(iter, (unsigned char*) "M0"))
+    if (!qd_iterator_equal(iter, (unsigned char*) "M0")) {
+        qd_iterator_free(iter);
         return "Trim on ITER_VIEW_ADDRESS_HASH (in annotation 1) failed";
+    }
 
     qd_iterator_reset(iter);
     qd_iterator_trim_view(iter, 1);
-    if (!qd_iterator_equal(iter, (unsigned char*) "M"))
+    if (!qd_iterator_equal(iter, (unsigned char*) "M")) {
+        qd_iterator_free(iter);
         return "Trim on ITER_VIEW_ADDRESS_HASH (in annotation 2) failed";
+    }
 
     qd_iterator_free(iter);
     return 0;
@@ -189,12 +207,29 @@ static char *test_sub_iterator(void *context)
     qd_iterator_t *sub2 = qd_iterator_sub(iter, qd_iterator_remaining(iter));
     qd_iterator_t *sub3 = qd_iterator_sub(iter, 3);
 
-    if (!qd_iterator_equal(sub1, (unsigned char*) "test_sub_iterator"))
+    if (!qd_iterator_equal(sub1, (unsigned char*) "test_sub_iterator")) {
+        qd_iterator_free(iter);
+        qd_iterator_free(sub1);
+        qd_iterator_free(sub2);
+        qd_iterator_free(sub3);
         return "Sub Iterator failed - 1";
-    if (!qd_iterator_equal(sub2, (unsigned char*) "sub_iterator"))
+    }
+
+    if (!qd_iterator_equal(sub2, (unsigned char*) "sub_iterator")) {
+        qd_iterator_free(iter);
+        qd_iterator_free(sub1);
+        qd_iterator_free(sub2);
+        qd_iterator_free(sub3);
         return "Sub Iterator failed - 2";
-    if (!qd_iterator_equal(sub3, (unsigned char*) "sub"))
+    }
+
+    if (!qd_iterator_equal(sub3, (unsigned char*) "sub")) {
+        qd_iterator_free(iter);
+        qd_iterator_free(sub1);
+        qd_iterator_free(sub2);
+        qd_iterator_free(sub3);
         return "Sub Iterator failed - 3";
+    }
 
     qd_iterator_free(iter);
     qd_iterator_free(sub1);
@@ -274,6 +309,7 @@ static char* test_view_address_hash(void *context)
                                                  ITER_VIEW_ADDRESS_HASH);
         char *ret = view_address_hash(context, iter, cases[idx].addr, cases[idx].view);
         release_buffer_chain(&chain);
+        qd_iterator_free(iter);
         if (ret) return ret;
     }
 
@@ -394,6 +430,7 @@ static char* test_view_address_hash_with_space(void *context)
             snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s' (len: %d)",
                      cases[idx].addr, cases[idx].view, got, qd_iterator_length(iter));
             free(got);
+            qd_iterator_free(iter);
             return fail_text;
         }
         qd_iterator_free(iter);
@@ -843,6 +880,7 @@ static char *test_prefix_hash(void *context)
         if (position != patterns[idx].entry) {
             snprintf(error, 200, "Pattern: '%s', expected %d, got %d",
                      patterns[idx].pattern, patterns[idx].entry, position);
+            qd_iterator_free(iter);
             return error;
         }
         idx++;
@@ -914,6 +952,7 @@ static char *test_prefix_hash_with_space(void *context)
         if (position != patterns[idx].entry) {
             snprintf(error, 200, "Pattern: '%s', expected %d, got %d",
                      patterns[idx].pattern, patterns[idx].entry, position);
+            qd_iterator_free(iter);
             return error;
         }
         idx++;
