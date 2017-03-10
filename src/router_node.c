@@ -991,19 +991,24 @@ static void CORE_link_drain(void *context, qdr_link_t *link, bool mode)
 }
 
 
-static void CORE_link_push(void *context, qdr_link_t *link)
+static int CORE_link_push(void *context, qdr_link_t *link, int limit)
 {
     qd_router_t *router = (qd_router_t*) context;
     qd_link_t   *qlink  = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
-        return;
+        return 0;
     
     pn_link_t *plink = qd_link_pn(qlink);
 
     if (plink) {
         int link_credit = pn_link_credit(plink);
+        if (link_credit > limit)
+            link_credit = limit;
         qdr_link_process_deliveries(router->router_core, link, link_credit);
+        return link_credit;
     }
+
+    return 0;
 }
 
 

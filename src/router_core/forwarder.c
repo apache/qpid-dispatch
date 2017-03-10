@@ -145,6 +145,19 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
         if (dlv->settled) {
             DEQ_REMOVE(link->undelivered, dlv);
             dlv->where = QDR_DELIVERY_NOWHERE;
+
+            //
+            // The link-work item representing this pending delivery must be
+            // updated to reflect the removal of the delivery.  If the item
+            // has no other deliveries associated with it, it can be removed
+            // from the work list.
+            //
+            assert(dlv->link_work);
+            if (dlv->link_work && (--dlv->link_work->value == 0)) {
+                DEQ_REMOVE(link->work_list, dlv->link_work);
+                free_qdr_link_work_t(dlv->link_work);
+                dlv->link_work = 0;
+            }
             qdr_delivery_decref_CT(core, dlv);
         }
         dlv = next;
@@ -169,9 +182,22 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
     qdr_delivery_incref(dlv);
 
     //
-    // If the link isn't already on the links_with_deliveries list, put it there.
+    // We must put a work item on the link's work list to represent this pending delivery.
+    // If there's already a delivery item on the tail of the work list, simply join that item
+    // by incrementing the value.
     //
-    qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+    qdr_link_work_t *work = DEQ_TAIL(link->work_list);
+    if (work && work->work_type == QDR_LINK_WORK_DELIVERY) {
+        work->value++;
+    } else {
+        work = new_qdr_link_work_t();
+        ZERO(work);
+        work->work_type = QDR_LINK_WORK_DELIVERY;
+        work->value     = 1;
+        DEQ_INSERT_TAIL(link->work_list, work);
+        qdr_add_link_ref(&link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+    }
+    dlv->link_work = work;
     sys_mutex_unlock(link->conn->work_lock);
 
     //

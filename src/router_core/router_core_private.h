@@ -221,29 +221,33 @@ DEQ_DECLARE(qdr_connection_work_t, qdr_connection_work_list_t);
 //                 available credit for.  If the full number of deliveries (_value_)
 //                 cannot be pushed, don't consume this work item from the list.
 //                 This link will be blocked until further credit is received.
-// UPDATE        - Push all of the disposition updates in the updated list.
-// FLOW          - Push a flow update using _drain_mode_, _drain_mode_changed_, and
-//                 _value_ for the number of incremental credits.
+// FLOW          - Push a flow update using _drain_action_ and _value_ for the
+//                 number of incremental credits.
 // FIRST_DETACH  - Issue a first detach on this link, using _error_ if there is an
 //                 error condition.
 // SECOND_DETACH - Issue a second detach on this link.
 //
 typedef enum {
     QDR_LINK_WORK_DELIVERY,
-    QDR_LINK_WORK_UPDATE,
     QDR_LINK_WORK_FLOW,
     QDR_LINK_WORK_FIRST_DETACH,
     QDR_LINK_WORK_SECOND_DETACH
 } qdr_link_work_type_t;
 
+typedef enum {
+    QDR_LINK_WORK_DRAIN_ACTION_NONE = 0,
+    QDR_LINK_WORK_DRAIN_ACTION_SET,
+    QDR_LINK_WORK_DRAIN_ACTION_CLEAR,
+    QDR_LINK_WORK_DRAIN_ACTION_DRAINED
+} qdr_link_work_drain_action_t;
+
 typedef struct qdr_link_work_t {
     DEQ_LINKS(struct qdr_link_work_t);
-    qdr_link_work_type_t  work_type;
-    qdr_error_t          *error;
-    uint32_t              value;
-    bool                  close_link;
-    bool                  drain_mode;
-    bool                  drain_mode_changed;
+    qdr_link_work_type_t          work_type;
+    qdr_error_t                  *error;
+    int                           value;
+    bool                          close_link;
+    qdr_link_work_drain_action_t  drain_action;
 } qdr_link_work_t;
 
 ALLOC_DECLARE(qdr_link_work_t);
@@ -323,6 +327,7 @@ struct qdr_delivery_t {
     qd_bitmask_t        *link_exclusion;
     qdr_address_t       *tracking_addr;
     int                  tracking_addr_bit;
+    qdr_link_work_t     *link_work;         ///< Delivery work item for this delivery
 };
 
 ALLOC_DECLARE(qdr_delivery_t);
@@ -341,7 +346,7 @@ void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref
 
 #define QDR_LINK_LIST_CLASS_ADDRESS    0
 #define QDR_LINK_LIST_CLASS_DELIVERY   1
-#define QDR_LINK_LIST_CLASS_FLOW       2
+#define QDR_LINK_LIST_CLASS_WORK       2
 #define QDR_LINK_LIST_CLASS_CONNECTION 3
 #define QDR_LINK_LIST_CLASSES          4
 
@@ -375,10 +380,8 @@ struct qdr_link_t {
     bool                     strip_annotations_in;
     bool                     strip_annotations_out;
     int                      capacity;
-    int                      incremental_credit_CT;  // TODO - deprecate
-    int                      incremental_credit;     // TODO - deprecate
     bool                     flow_started;   ///< for incoming, true iff initial credit has been granted
-    bool                     drain_mode;             // TODO - deprecate
+    bool                     drain_mode;
     bool                     drain_mode_changed;     // TODO - deprecate
     int                      credit_to_core; ///< Number of the available credits incrementally given to the core
 
@@ -532,7 +535,7 @@ struct qdr_connection_t {
     sys_mutex_t                *work_lock;
     qdr_link_ref_list_t         links;
     qdr_link_ref_list_t         links_with_deliveries;
-    qdr_link_ref_list_t         links_with_credit;
+    qdr_link_ref_list_t         links_with_work;
     char                       *tenant_space;
     int                         tenant_space_len;
     qdr_connection_info_t      *connection_info;
@@ -727,11 +730,5 @@ qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,
                        qd_composed_field_t     *body);
-
-//
-// Cause the core to check credit on an incoming link that might have CT credit but
-// no IO/Proton credit.
-//
-void qdr_link_check_credit(qdr_core_t *core, qdr_link_t *link);
 
 #endif
