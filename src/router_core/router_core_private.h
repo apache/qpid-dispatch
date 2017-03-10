@@ -152,6 +152,104 @@ struct qdr_action_t {
 ALLOC_DECLARE(qdr_action_t);
 DEQ_DECLARE(qdr_action_t, qdr_action_list_t);
 
+//
+// General Work
+//
+// The following types are used to post work to the IO threads for
+// non-connection-specific action.  These actions are serialized through
+// a zero-delay timer and are processed by one thread at a time.  General
+// actions occur in-order and are not run concurrently.
+//
+typedef struct qdr_general_work_t qdr_general_work_t;
+typedef void (*qdr_general_work_handler_t) (qdr_core_t *core, qdr_general_work_t *work);
+
+struct qdr_general_work_t {
+    DEQ_LINKS(qdr_general_work_t);
+    qdr_general_work_handler_t  handler;
+    qdr_field_t                *field;
+    int                         maskbit;
+    int                         inter_router_cost;
+    qdr_receive_t               on_message;
+    void                       *on_message_context;
+    qd_message_t               *msg;
+};
+
+ALLOC_DECLARE(qdr_general_work_t);
+DEQ_DECLARE(qdr_general_work_t, qdr_general_work_list_t);
+
+qdr_general_work_t *qdr_general_work(qdr_general_work_handler_t handler);
+
+
+//
+// Connection Work
+//
+// The following types are used to post work to the IO threads for
+// connection-specific action.  The actions for a particular connection
+// are run in-order and are not concurrent.  Actions for different connections
+// will run concurrently.
+//
+typedef enum {
+    QDR_CONNECTION_WORK_FIRST_ATTACH,
+    QDR_CONNECTION_WORK_SECOND_ATTACH
+} qdr_connection_work_type_t;
+
+typedef struct qdr_connection_work_t {
+    DEQ_LINKS(struct qdr_connection_work_t);
+    qdr_connection_work_type_t  work_type;
+    qdr_link_t                 *link;
+    qdr_terminus_t             *source;
+    qdr_terminus_t             *target;
+} qdr_connection_work_t;
+
+ALLOC_DECLARE(qdr_connection_work_t);
+DEQ_DECLARE(qdr_connection_work_t, qdr_connection_work_list_t);
+
+
+//
+// Link Work
+//
+// The following type is used to post link-specific work to the IO threads.
+// This ensures that work related to a particular link (deliveries, disposition
+// updates, flow updates, and detaches) are processed in-order.
+//
+// DELIVERY      - Push up to _value_ deliveries from the undelivered list to the
+//                 link (outgoing links only).  Don't push more than there is
+//                 available credit for.  If the full number of deliveries (_value_)
+//                 cannot be pushed, don't consume this work item from the list.
+//                 This link will be blocked until further credit is received.
+// FLOW          - Push a flow update using _drain_action_ and _value_ for the
+//                 number of incremental credits.
+// FIRST_DETACH  - Issue a first detach on this link, using _error_ if there is an
+//                 error condition.
+// SECOND_DETACH - Issue a second detach on this link.
+//
+typedef enum {
+    QDR_LINK_WORK_DELIVERY,
+    QDR_LINK_WORK_FLOW,
+    QDR_LINK_WORK_FIRST_DETACH,
+    QDR_LINK_WORK_SECOND_DETACH
+} qdr_link_work_type_t;
+
+typedef enum {
+    QDR_LINK_WORK_DRAIN_ACTION_NONE = 0,
+    QDR_LINK_WORK_DRAIN_ACTION_SET,
+    QDR_LINK_WORK_DRAIN_ACTION_CLEAR,
+    QDR_LINK_WORK_DRAIN_ACTION_DRAINED
+} qdr_link_work_drain_action_t;
+
+typedef struct qdr_link_work_t {
+    DEQ_LINKS(struct qdr_link_work_t);
+    qdr_link_work_type_t          work_type;
+    qdr_error_t                  *error;
+    int                           value;
+    bool                          close_link;
+    qdr_link_work_drain_action_t  drain_action;
+} qdr_link_work_t;
+
+ALLOC_DECLARE(qdr_link_work_t);
+DEQ_DECLARE(qdr_link_work_t, qdr_link_work_list_t);
+
+
 #define QDR_AGENT_MAX_COLUMNS 64
 #define QDR_AGENT_COLUMN_NULL (QDR_AGENT_MAX_COLUMNS + 1)
 
@@ -225,6 +323,7 @@ struct qdr_delivery_t {
     qd_bitmask_t        *link_exclusion;
     qdr_address_t       *tracking_addr;
     int                  tracking_addr_bit;
+    qdr_link_work_t     *link_work;         ///< Delivery work item for this delivery
 };
 
 ALLOC_DECLARE(qdr_delivery_t);
@@ -242,10 +341,9 @@ void qdr_add_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_t *dlv);
 void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref);
 
 #define QDR_LINK_LIST_CLASS_ADDRESS    0
-#define QDR_LINK_LIST_CLASS_DELIVERY   1
-#define QDR_LINK_LIST_CLASS_FLOW       2
-#define QDR_LINK_LIST_CLASS_CONNECTION 3
-#define QDR_LINK_LIST_CLASSES          4
+#define QDR_LINK_LIST_CLASS_WORK       1
+#define QDR_LINK_LIST_CLASS_CONNECTION 2
+#define QDR_LINK_LIST_CLASSES          3
 
 typedef enum {
     QDR_LINK_OPER_UP,
@@ -262,6 +360,7 @@ struct qdr_link_t {
     qdr_connection_t        *conn;               ///< [ref] Connection that owns this link
     qd_link_type_t           link_type;
     qd_direction_t           link_direction;
+    qdr_link_work_list_t     work_list;
     char                    *name;
     int                      detach_count;       ///< 0, 1, or 2 depending on the state of the lifecycle
     qdr_address_t           *owning_addr;        ///< [ref] Address record that owns this link
@@ -276,11 +375,8 @@ struct qdr_link_t {
     bool                     strip_annotations_in;
     bool                     strip_annotations_out;
     int                      capacity;
-    int                      incremental_credit_CT;
-    int                      incremental_credit;
     bool                     flow_started;   ///< for incoming, true iff initial credit has been granted
     bool                     drain_mode;
-    bool                     drain_mode_changed;
     int                      credit_to_core; ///< Number of the available credits incrementally given to the core
 
     uint64_t total_deliveries;
@@ -389,59 +485,11 @@ void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr
 
 
 //
-// General Work
+// Connection Information
 //
-// The following types are used to post work to the IO threads for
-// non-connection-specific action.  These actions are serialized through
-// a zero-delay timer and are processed by one thread at a time.  General
-// actions occur in-order and are not run concurrently.
+// This record is used to give the core thread access to the details
+// of a connection's configuration.
 //
-typedef struct qdr_general_work_t qdr_general_work_t;
-typedef void (*qdr_general_work_handler_t) (qdr_core_t *core, qdr_general_work_t *work);
-
-struct qdr_general_work_t {
-    DEQ_LINKS(qdr_general_work_t);
-    qdr_general_work_handler_t  handler;
-    qdr_field_t                *field;
-    int                         maskbit;
-    int                         inter_router_cost;
-    qdr_receive_t               on_message;
-    void                       *on_message_context;
-    qd_message_t               *msg;
-};
-
-ALLOC_DECLARE(qdr_general_work_t);
-DEQ_DECLARE(qdr_general_work_t, qdr_general_work_list_t);
-
-qdr_general_work_t *qdr_general_work(qdr_general_work_handler_t handler);
-
-//
-// Connection Work
-//
-// The following types are used to post work to the IO threads for
-// connection-specific action.  The actions for a particular connection
-// are run in-order and are not concurrent.  Actions for different connections
-// will run concurrently.
-//
-typedef enum {
-    QDR_CONNECTION_WORK_FIRST_ATTACH,
-    QDR_CONNECTION_WORK_SECOND_ATTACH,
-    QDR_CONNECTION_WORK_FIRST_DETACH,
-    QDR_CONNECTION_WORK_SECOND_DETACH
-} qdr_connection_work_type_t;
-
-typedef struct qdr_connection_work_t {
-    DEQ_LINKS(struct qdr_connection_work_t);
-    qdr_connection_work_type_t  work_type;
-    qdr_link_t                 *link;
-    qdr_terminus_t             *source;
-    qdr_terminus_t             *target;
-    qdr_error_t                *error;
-    bool                        close_link;
-} qdr_connection_work_t;
-
-ALLOC_DECLARE(qdr_connection_work_t);
-DEQ_DECLARE(qdr_connection_work_t, qdr_connection_work_list_t);
 
 struct qdr_connection_info_t {
     const  char                *container;
@@ -481,7 +529,7 @@ struct qdr_connection_t {
     sys_mutex_t                *work_lock;
     qdr_link_ref_list_t         links;
     qdr_link_ref_list_t         links_with_deliveries;
-    qdr_link_ref_list_t         links_with_credit;
+    qdr_link_ref_list_t         links_with_work;
     char                       *tenant_space;
     int                         tenant_space_len;
     qdr_connection_info_t      *connection_info;
@@ -662,6 +710,9 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_it
 void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
                                     qdr_connection_t      *conn,
                                     qdr_connection_work_t *work);
+void qdr_link_enqueue_work_CT(qdr_core_t      *core,
+                              qdr_link_t      *conn,
+                              qdr_link_work_t *work);
 
 qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
                                qdr_connection_t *conn,
@@ -676,11 +727,5 @@ qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,
                        qd_composed_field_t     *body);
-
-//
-// Cause the core to check credit on an incoming link that might have CT credit but
-// no IO/Proton credit.
-//
-void qdr_link_check_credit(qdr_core_t *core, qdr_link_t *link);
 
 #endif

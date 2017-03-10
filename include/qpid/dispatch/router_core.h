@@ -553,7 +553,7 @@ typedef void (*qdr_link_flow_t)          (void *context, qdr_link_t *link, int c
 typedef void (*qdr_link_offer_t)         (void *context, qdr_link_t *link, int delivery_count);
 typedef void (*qdr_link_drained_t)       (void *context, qdr_link_t *link);
 typedef void (*qdr_link_drain_t)         (void *context, qdr_link_t *link, bool mode);
-typedef void (*qdr_link_push_t)          (void *context, qdr_link_t *link);
+typedef int  (*qdr_link_push_t)          (void *context, qdr_link_t *link, int limit);
 typedef void (*qdr_link_deliver_t)       (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
 typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
 

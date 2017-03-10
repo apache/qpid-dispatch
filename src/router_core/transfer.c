@@ -23,7 +23,6 @@
 
 static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_link_check_credit_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -129,6 +128,7 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
             dlv = DEQ_HEAD(link->undelivered);
             if (dlv) {
                 DEQ_REMOVE_HEAD(link->undelivered);
+                dlv->link_work = 0;
                 settled = dlv->settled;
                 if (!settled) {
                     DEQ_INSERT_TAIL(link->unsettled, dlv);
@@ -156,22 +156,6 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
         else if (offer != -1)
             core->offer_handler(core->user_context, link, offer);
     }
-
-    //
-    // Handle disposition/settlement updates
-    //
-    qdr_delivery_ref_list_t updated_deliveries;
-    sys_mutex_lock(conn->work_lock);
-    DEQ_MOVE(link->updated_deliveries, updated_deliveries);
-    sys_mutex_unlock(conn->work_lock);
-
-    qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
-    while (ref) {
-        core->delivery_update_handler(core->user_context, ref->dlv, ref->dlv->disposition, ref->dlv->settled);
-        qdr_delivery_decref(core, ref->dlv);
-        qdr_del_delivery_ref(&updated_deliveries, ref);
-        ref = DEQ_HEAD(updated_deliveries);
-    }
 }
 
 
@@ -193,14 +177,6 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
     action->args.connection.credit = credit;
     action->args.connection.drain  = drain_mode;
 
-    qdr_action_enqueue(core, action);
-}
-
-
-void qdr_link_check_credit(qdr_core_t *core, qdr_link_t *link)
-{
-    qdr_action_t *action = qdr_action(qdr_link_check_credit_CT, "link_check_credit");
-    action->args.connection.link = link;
     qdr_action_enqueue(core, action);
 }
 
@@ -452,12 +428,13 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     if (discard)
         return;
 
-    qdr_link_t *link   = action->args.connection.link;
-    int  credit        = action->args.connection.credit;
-    bool drain         = action->args.connection.drain;
-    bool activate      = false;
-    bool drain_was_set = !link->drain_mode && drain;
-
+    qdr_link_t *link      = action->args.connection.link;
+    int  credit           = action->args.connection.credit;
+    bool drain            = action->args.connection.drain;
+    bool activate         = false;
+    bool drain_was_set    = !link->drain_mode && drain;
+    qdr_link_work_t *work = 0;
+    
     link->drain_mode = drain;
 
     //
@@ -470,10 +447,13 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         if (clink->link_direction == QD_INCOMING)
             qdr_link_issue_credit_CT(core, link->connected_link, credit, drain);
         else {
-            sys_mutex_lock(clink->conn->work_lock);
-            qdr_add_link_ref(&clink->conn->links_with_deliveries, clink, QDR_LINK_LIST_CLASS_DELIVERY);
-            sys_mutex_unlock(clink->conn->work_lock);
-            qdr_connection_activate_CT(core, clink->conn);
+            work = new_qdr_link_work_t();
+            ZERO(work);
+            work->work_type = QDR_LINK_WORK_FLOW;
+            work->value     = credit;
+            if (drain)
+                work->drain_action = QDR_LINK_WORK_DRAIN_ACTION_DRAINED;
+            qdr_link_enqueue_work_CT(core, clink, work);
         }
 
         return;
@@ -483,9 +463,18 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     // Handle the replenishing of credit outbound
     //
     if (link->link_direction == QD_OUTGOING && (credit > 0 || drain_was_set)) {
+        if (drain_was_set) {
+            work = new_qdr_link_work_t();
+            ZERO(work);
+            work->work_type    = QDR_LINK_WORK_FLOW;
+            work->drain_action = QDR_LINK_WORK_DRAIN_ACTION_DRAINED;
+        }
+
         sys_mutex_lock(link->conn->work_lock);
+        if (work)
+            DEQ_INSERT_TAIL(link->work_list, work);
         if (DEQ_SIZE(link->undelivered) > 0 || drain_was_set) {
-            qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+            qdr_add_link_ref(&link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
             activate = true;
         }
         sys_mutex_unlock(link->conn->work_lock);
@@ -496,16 +485,6 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     //
     if (activate)
         qdr_connection_activate_CT(core, link->conn);
-}
-
-
-static void qdr_link_check_credit_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
-{
-    if (discard)
-        return;
-
-    qdr_link_t *link = action->args.connection.link;
-    qdr_link_issue_credit_CT(core, link, 0, false);
 }
 
 
@@ -771,42 +750,31 @@ static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 
 
 /**
- * Check the link's accumulated credit.  If the credit given to the connection thread
- * has been issued to Proton, provide the next batch of credit to the connection thread.
+ * Add link-work to provide credit to the link in an IO thread
  */
 void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain)
 {
+    assert(link->link_direction == QD_INCOMING);
+
     bool drain_changed = link->drain_mode |= drain;
-    bool activate      = drain_changed;
+    link->drain_mode   = drain;
 
-    link->drain_mode = drain;
-    link->drain_mode_changed = drain_changed;
+    if (!drain_changed && credit == 0)
+        return;
 
-    link->incremental_credit_CT += credit;
-    link->flow_started = true;
+    if (credit > 0)
+        link->flow_started = true;
 
-    if (link->incremental_credit_CT && link->incremental_credit == 0) {
-        //
-        // Move the credit from the core-thread value to the connection-thread value.
-        //
-        link->incremental_credit    = link->incremental_credit_CT;
-        link->incremental_credit_CT = 0;
-        activate = true;
-    }
+    qdr_link_work_t *work = new_qdr_link_work_t();
+    ZERO(work);
 
-    if (activate) {
-        //
-        // Put this link on the connection's has-credit list.
-        //
-        sys_mutex_lock(link->conn->work_lock);
-        qdr_add_link_ref(&link->conn->links_with_credit, link, QDR_LINK_LIST_CLASS_FLOW);
-        sys_mutex_unlock(link->conn->work_lock);
+    work->work_type = QDR_LINK_WORK_FLOW;
+    work->value     = credit;
 
-        //
-        // Activate the connection
-        //
-        qdr_connection_activate_CT(core, link->conn);
-    }
+    if (drain_changed)
+        work->drain_action = drain ? QDR_LINK_WORK_DRAIN_ACTION_SET : QDR_LINK_WORK_DRAIN_ACTION_CLEAR;
+
+    qdr_link_enqueue_work_CT(core, link, work);
 }
 
 
@@ -876,7 +844,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
         qdr_delivery_incref(dlv);
         qdr_add_delivery_ref(&link->updated_deliveries, dlv);
-        qdr_add_link_ref(&link->conn->links_with_deliveries, link, QDR_LINK_LIST_CLASS_DELIVERY);
+        qdr_add_link_ref(&link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
         activate = true;
     }
     sys_mutex_unlock(link->conn->work_lock);
