@@ -19,7 +19,7 @@
 
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
-from proton import Message
+from proton import Message, Endpoint
 
 class Timeout(object):
     def __init__(self, parent):
@@ -54,6 +54,22 @@ class DrainMessagesHandler(MessagingHandler):
         self.sender = event.container.create_sender(self.conn, "org.apache.dev")
         self.receiver.flow(1)
 
+    def on_link_flow(self, event):
+        if event.link.is_sender and event.link.credit \
+           and event.link.state & Endpoint.LOCAL_ACTIVE \
+           and event.link.state & Endpoint.REMOTE_ACTIVE :
+            self.on_sendable(event)
+
+        # The fact that the event.link.credit is 0 means that the receiver will not be receiving any more
+        # messages. That along with 10 messages received indicates that the drain worked and we can
+        # declare that the test is successful
+        if self.received_count == 10 and event.link.credit == 0:
+            self.error = None
+            self.timer.cancel()
+            self.receiver.close()
+            self.sender.close()
+            self.conn.close()
+
     def on_sendable(self, event):
         if self.sent_count < 10:
             msg = Message(body="Hello World", properties={'seq': self.sent_count})
@@ -74,16 +90,6 @@ class DrainMessagesHandler(MessagingHandler):
                 # drain=True but I don't have any way of making sure that the response frame reached the
                 # receiver
                 event.receiver.drain(20)
-
-            # The fact that the event.link.credit is 0 means that the receiver will not be receiving any more
-            # messages. That along with 10 messages received indicates that the drain worked and we can
-            # declare that the test is successful
-            if self.received_count == 10 and event.link.credit == 0:
-                self.error = None
-                self.timer.cancel()
-                self.receiver.close()
-                self.sender.close()
-                self.conn.close()
 
     def run(self):
         Container(self).run()
