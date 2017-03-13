@@ -22,7 +22,7 @@ import re
 import system_test
 import unittest
 from subprocess import PIPE
-from proton import Url, SSLDomain, SSLUnavailable
+from proton import Url, SSLDomain, SSLUnavailable, SASL
 
 class QdstatTest(system_test.TestCase):
     """Test qdstat tool output"""
@@ -342,6 +342,8 @@ try:
             self.assertRaises(AssertionError, self.ssl_test, url_name, arg_names)
 
         def test_ssl_cert_to_auth_fail_no_sasl_external(self):
+            if not SASL.extended():
+                self.skipTest("Cyrus library not available. skipping test")
             self.ssl_test_bad('auth_s', ['client_cert_all'])
 
         def test_ssl_trustfile_cert_to_auth_fail_no_sasl_external(self):

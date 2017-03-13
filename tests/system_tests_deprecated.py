@@ -21,6 +21,7 @@ import unittest, os
 from system_test import TestCase, Qdrouterd, TIMEOUT
 from system_tests_sasl_plain import RouterTestPlainSaslCommon
 from qpid_dispatch.management.client import Node
+from proton import SASL
 
 class RouterTestDeprecated(RouterTestPlainSaslCommon):
 
@@ -32,6 +33,9 @@ class RouterTestDeprecated(RouterTestPlainSaslCommon):
 
         """
         super(RouterTestDeprecated, cls).setUpClass()
+
+        if not SASL.extended():
+            return
 
         super(RouterTestDeprecated, cls).createSaslFiles()
 
@@ -93,6 +97,9 @@ class RouterTestDeprecated(RouterTestPlainSaslCommon):
         Also makes sure that TLSv1/SSLv3 was used as sslProto
 
         """
+        if not SASL.extended():
+            self.skipTest("Cyrus library not available. skipping test")
+            
         local_node = Node.connect(self.routers[0].addresses[1], timeout=TIMEOUT)
 
         # saslConfigName and saslConfigPath were set in the ContainerEntity. This tests makes sure that the
