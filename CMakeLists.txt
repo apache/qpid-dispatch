@@ -124,15 +124,15 @@ include_directories(
     ${PYTHON_INCLUDE_PATH}
     )
 
-add_compile_options(-pthread)
-
 if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
  add_compile_options(-Werror)
  add_compile_options(-Wall)
  add_compile_options(-std=gnu99)
+ add_compile_options(-pthread)
 else (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
  add_compile_options(-xc99)
  add_compile_options(-errwarn=%all)
+ add_compile_options(-lpthread)
 endif (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
 
 set(CATCH_UNDEFINED "-Wl,-z,defs")
