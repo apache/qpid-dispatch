@@ -1,0 +1,144 @@
+/* The following are for matching Patternfly styles */
+span.logo {
+  letter-spacing: 4px;
+}
+
+.navbar-pf .navbar-brand {
+  padding: 2px 0 2px;
+}
+/* using dynatree instead of treeview */
+#overtree ul.dynatree-container,
+#entityTree ul.dynatree-container,
+#schema ul.dynatree-container {
+    background-color: transparent;
+    border: 0px;
+}
+
+span.dynatree-folder a {
+    font-weight: normal;
+    font-size: 12px;
+}
+
+ul.dynatree-container li,
+span.dynatree-icon {
+  background-image: none;
+}
+
+.dynatree-exp-c span.fa-angle, .dynatree-exp-e span.fa-angle,
+.dynatree-exp-cl span.fa-angle, .dynatree-exp-el span.fa-angle {
+  margin-right: 5px;
+}
+.dynatree-exp-c span.fa-angle:before, .dynatree-exp-cl span.fa-angle:before {
+  content: "\f105";
+}
+.dynatree-exp-e span.fa-angle:before, .dynatree-exp-el span.fa-angle:before {
+  content: "\f107";
+}
+
+.dynatree-ico-ef span.dynatree-icon, .dynatree-ico-cf span.dynatree-icon {
+  background-image: initial;
+  font-family: FontAwsome;
+}
+
+.dynatree-ico-cf span.dynatree-icon:before {
+  content: "\f07b";
+}
+.dynatree-ico-ef span.dynatree-icon:before {
+  content: "\f07c";
+}
+
+ul.dynatree-container a {
+    color: #363636;
+}
+
+/* override left and right pane styles */
+#overview-controller .col-sm-3,
+#list-controller .col-sm-3,
+#schema .col-sm-3,
+.qdr-topology-form.col-sm-3 {
+  padding-left: 0px;
+}
+
+.qdr-topology-form.col-sm-3 {
+  padding-right: 0px;
+}
+
+#overview-controller .ngViewport {
+  height: auto !important;
+}
+
+.pane-wrapper {
+  padding-top: 0.5em;
+}
+
+div#list-controller {
+  padding-left: 0px;
+}
+
+.pane-viewport {
+    position: relative;
+}
+
+#list-controller select,
+#list-controller .tree-header {
+    width: 100%;
+}
+
+[class^="icon-"],
+[class*=" icon-"] {
+  display: inline;
+  width: auto;
+  height: auto;
+  line-height: normal;
+  vertical-align: baseline;
+  background-image: none;
+  background-position: 0% 0%;
+  background-repeat: repeat;
+  margin-top: 0;
+}
+[class^="icon-"],
+[class*=" icon-"] {
+  font-family: FontAwesome;
+  font-weight: normal;
+  font-style: normal;
+  text-decoration: inherit;
+  -webkit-font-smoothing: antialiased;
+  *margin-right: .3em;
+}
+
+[class^="icon-"]:before,
+[class*=" icon-"]:before {
+  text-decoration: inherit;
+  display: inline-block;
+  speak: none;
+}
+
+.icon-bar-chart:before {
+    content: "\f080";
+}
+
+.icon-step-forward:before {
+  content: "\f051";
+}
+.icon-step-backward:before {
+  content: "\f048";
+}
+
+[class^="icon-"]:before, [class*=" icon-"]:before {
+    text-decoration: inherit;
+    display: inline-block;
+    speak: none;
+}
+
+#svg_legend {
+  top: 10px;
+}
+
+#topologyForm > div {
+  width: auto;
+}
+
+div.chartContainer {
+  width: auto;
+  margin-top: 1em;
+}
