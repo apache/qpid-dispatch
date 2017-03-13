@@ -125,11 +125,16 @@ include_directories(
     )
 
 add_compile_options(-pthread)
-add_compile_options(-Wall)
+
 if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
-add_compile_options(-Werror)
+ add_compile_options(-Werror)
+ add_compile_options(-Wall)
+ add_compile_options(-std=gnu99)
+else (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
+ add_compile_options(-xc99)
+ add_compile_options(-errwarn=%all)
 endif (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
-add_compile_options(-std=gnu99)
+
 set(CATCH_UNDEFINED "-Wl,-z,defs")
 
 ##
