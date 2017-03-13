@@ -34,7 +34,7 @@ var QDR = (function (QDR) {
    *
    * Controller that handles the QDR overview page
    */
-  QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', '$timeout', '$dialog', function($scope, QDRService, $location, $timeout, $dialog) {
+  QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', '$timeout', '$uibModal', function($scope, QDRService, $location, $timeout, $uibModal) {
 
     console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
     var COLUMNSTATEKEY = 'QDRColumnKey.';
@@ -515,6 +515,16 @@ var QDR = (function (QDR) {
     $scope.totalLinks = 0;
     $scope.pagedLinkData = []
     $scope.selectedLinks = []
+
+    var linkRowTmpl = `
+      <div ng-class="{linkDirIn: row.getProperty('linkDir') == 'in', linkDirOut: row.getProperty('linkDir') == 'out'}">
+        <div ng-style="{ 'cursor': row.cursor }" ng-repeat="col in renderedColumns" ng-class="col.colIndex()" class="ngCell {{col.cellClass}}">
+          <div class="ngVerticalBar" ng-style="{height: rowHeight}" ng-class="{ ngVerticalBarVisible: !$last }">&nbsp;</div>
+          <div ng-cell></div>
+        </div>
+      </div>
+    `;
+
     $scope.linksGrid = {
       saveKey: 'linksGrid',
       data: 'pagedLinkData',
@@ -591,8 +601,7 @@ var QDR = (function (QDR) {
       enableColumnResize: true,
       enableColumnReordering: true,
       showColumnMenu: true,
-      rowTemplate: 'linkRowTemplate.html',
-      // aggregateTemplate: "linkAggTemplate.html",
+      rowTemplate: linkRowTmpl,
       multiSelect: false,
       selectedItems: $scope.selectedLinks,
       plugins: [new ngGridFlexibleHeightPlugin()],
@@ -616,6 +625,7 @@ var QDR = (function (QDR) {
         })
 
     var loadColState = function (grid) {
+return;
       if (!grid)
         return;
       var columns = localStorage.getItem(COLUMNSTATEKEY+grid.saveKey);
@@ -1236,29 +1246,32 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     }
 
     function logDialog(row, col) {
-        var d = $dialog.dialog({
-          backdrop: false,
-          keyboard: true,
-          backdropClick: false,
-          templateUrl: 'viewLogs.html',
-          controller: "QDR.OverviewLogsController",
-          resolve: {
-            nodeName: function () {
-              return row.entity.nodeName
-            },
-            module: function () {
-              return row.entity.name
-            },
-            level: function () {
-              return col.displayName
-            },
-            nodeId: function () {
-              return row.entity.nodeId
-            },
-          }
-        });
-        d.open().then(function(result) { console.log("d.open().then"); });
-    };
+      var d = $uibModal.open({
+      animation: true,
+      templateUrl: 'viewLogs.html',
+      controller: 'QDR.OverviewLogsController',
+      resolve: {
+        nodeName: function () {
+          return row.entity.nodeName
+        },
+        module: function () {
+          return row.entity.name
+        },
+        level: function () {
+          return col.displayName
+        },
+        nodeId: function () {
+          return row.entity.nodeId
+        },
+      }
+    });
+
+    d.result.then(function (result) {
+      console.log("d.open().then");
+    }, function () {
+      console.log('Modal dismissed at: ' + new Date());
+    });
+  };
 
     var numberTemplate = '<div class="ngCellText" ng-class="col.colIndex()"><span ng-cell-text>{{COL_FIELD | pretty}}</span></div>'
     $scope.allLogFields = []
@@ -1524,6 +1537,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       })
       $scope.template = template[0];
     }
+    $scope.template = $scope.templates[0]
     // activated is called each time a tree node is clicked
     // based on which node is clicked, load the correct data grid template and start getting the data
     var activated = function (node) {
@@ -1608,6 +1622,7 @@ QDR.log.debug("newly created node needs to be activated")
     routers.key = "Routers"
     routers.parent = "Routers"
     routers.addClass = "routers"
+    routers.isFolder = true
     topLevelChildren.push(routers)
     // called when the list of routers changes
     var updateRouterTree = function (nodes) {
@@ -1636,6 +1651,7 @@ QDR.log.debug("newly created node needs to be activated")
     addresses.key = "Addresses"
     addresses.parent = "Addresses"
     addresses.addClass = "addresses"
+    addresses.isFolder = true
     topLevelChildren.push(addresses)
     var updateAddressTree = function (addressFields) {
       var worker = function (address) {
@@ -1677,6 +1693,7 @@ QDR.log.debug("newly created node needs to be activated")
     links.key = "Links"
     links.parent = "Links"
     links.addClass = "links"
+    links.isFolder = true
     topLevelChildren.push(links)
 
     // called both before the tree is created and whenever a background update is done
@@ -1709,6 +1726,7 @@ QDR.log.debug("newly created node needs to be activated")
     connections.key = "Connections"
     connections.parent = "Connections"
     connections.addClass = "connections"
+    connections.isFolder = true
     topLevelChildren.push(connections)
 
     updateConnectionTree = function (connectionFields) {
@@ -1756,6 +1774,7 @@ QDR.log.debug("newly created node needs to be activated")
     logs.clickFolderMode = 1
     logs.key = "Logs"
     logs.parent = "Logs"
+    logs.isFolder = true
     if (QDRService.versionCheck('0.8.0'))
       topLevelChildren.push(logs)
     var initTreeAndGrid = function () {
@@ -1773,6 +1792,10 @@ QDR.log.debug("newly created node needs to be activated")
         activeVisible: !$scope.largeNetwork,
         selectMode: 1,
         debugLevel: 0,
+        classNames: {
+          expander: 'fa-angle',
+          connector: 'dynatree-no-connector'
+          },
         children: topLevelChildren
       })
       treeRoot = $("#overtree").dynatree("getRoot");

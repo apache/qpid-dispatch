@@ -52,6 +52,7 @@ var QDR = (function (QDR) {
 		var tree = []
 		for (var key in QDRService.schema) {
 			var kid = {title: key}
+      kid.isFolder = true
 			var val = QDRService.schema[key]
 			if (val === Object(val))
 				keys2kids(kid, val)
@@ -62,7 +63,11 @@ var QDR = (function (QDR) {
 		}
         $('#schema').dynatree({
 			minExpandLevel: 2,
-            children: tree
+      classNames: {
+        expander: 'fa-angle',
+        connector: 'dynatree-no-connector'
+        },
+      children: tree
         })
 
 
