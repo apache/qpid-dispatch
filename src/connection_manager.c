@@ -21,6 +21,7 @@
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/atomic.h>
+#include <qpid/dispatch/failoverlist.h>
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
 #include "server_private.h"
@@ -127,6 +128,7 @@ static void qd_server_config_free(qd_server_config_t *cf)
     if (cf->sasl_password)   free(cf->sasl_password);
     if (cf->sasl_mechanisms) free(cf->sasl_mechanisms);
     if (cf->ssl_profile)     free(cf->ssl_profile);
+    if (cf->failover_list)   qd_failover_list_free(cf->failover_list);
 
     memset(cf, 0, sizeof(*cf));
 }
@@ -461,6 +463,18 @@ qd_config_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entit
         return 0;
     }
     cl->ssl_profile = ssl_profile;
+    char *fol = qd_entity_opt_string(entity, "failoverList", 0);
+    if (fol) {
+        const char *fol_error = 0;
+        cl->configuration.failover_list = qd_failover_list(fol, &fol_error);
+        free(fol);
+        if (cl->configuration.failover_list == 0) {
+            qd_log(cm->log_source, QD_LOG_ERROR, "Error parsing failover list: %s", fol_error);
+            qd_config_listener_free(qd->connection_manager, cl);
+            return 0;
+        }
+    } else
+        cl->configuration.failover_list = 0;
     DEQ_ITEM_INIT(cl);
     DEQ_INSERT_TAIL(cm->config_listeners, cl);
 

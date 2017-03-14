@@ -20,6 +20,7 @@
  */
 
 #include <qpid/dispatch/dispatch.h>
+#include <qpid/dispatch/failoverlist.h>
 #include <proton/engine.h>
 #include <proton/event.h>
 
@@ -442,7 +443,10 @@ typedef struct qd_server_config_t {
      */
     qd_log_bits log_bits;
 
-
+    /**
+     * Configured failover list
+     */
+    qd_failover_list_t *failover_list;
 } qd_server_config_t;
 
 

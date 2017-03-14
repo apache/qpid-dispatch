@@ -23,6 +23,7 @@
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/server.h>
+#include <qpid/dispatch/failoverlist.h>
 #include "qpid/dispatch/python_embedded.h"
 #include "entity.h"
 #include "entity_cache.h"
@@ -558,6 +559,44 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
         pn_data_put_symbol(pn_connection_properties(conn),
                            pn_bytes(strlen(QD_CONNECTION_PROPERTY_COST_KEY), QD_CONNECTION_PROPERTY_COST_KEY));
         pn_data_put_int(pn_connection_properties(conn), config->inter_router_cost);
+    }
+
+    qd_failover_list_t *fol = config->failover_list;
+    if (fol) {
+        pn_data_put_symbol(pn_connection_properties(conn),
+                           pn_bytes(strlen(QD_CONNECTION_PROPERTY_FAILOVER_LIST_KEY), QD_CONNECTION_PROPERTY_FAILOVER_LIST_KEY));
+        pn_data_put_list(pn_connection_properties(conn));
+        pn_data_enter(pn_connection_properties(conn));
+        int fol_count = qd_failover_list_size(fol);
+        for (int i = 0; i < fol_count; i++) {
+            pn_data_put_map(pn_connection_properties(conn));
+            pn_data_enter(pn_connection_properties(conn));
+            pn_data_put_symbol(pn_connection_properties(conn),
+                               pn_bytes(strlen(QD_CONNECTION_PROPERTY_FAILOVER_NETHOST_KEY), QD_CONNECTION_PROPERTY_FAILOVER_NETHOST_KEY));
+            pn_data_put_string(pn_connection_properties(conn),
+                               pn_bytes(strlen(qd_failover_list_host(fol, i)), qd_failover_list_host(fol, i)));
+
+            pn_data_put_symbol(pn_connection_properties(conn),
+                               pn_bytes(strlen(QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY), QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY));
+            pn_data_put_string(pn_connection_properties(conn),
+                               pn_bytes(strlen(qd_failover_list_port(fol, i)), qd_failover_list_port(fol, i)));
+
+            if (qd_failover_list_scheme(fol, i)) {
+                pn_data_put_symbol(pn_connection_properties(conn),
+                                   pn_bytes(strlen(QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY), QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY));
+                pn_data_put_string(pn_connection_properties(conn),
+                                   pn_bytes(strlen(qd_failover_list_scheme(fol, i)), qd_failover_list_scheme(fol, i)));
+            }
+
+            if (qd_failover_list_hostname(fol, i)) {
+                pn_data_put_symbol(pn_connection_properties(conn),
+                                   pn_bytes(strlen(QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY), QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY));
+                pn_data_put_string(pn_connection_properties(conn),
+                                   pn_bytes(strlen(qd_failover_list_hostname(fol, i)), qd_failover_list_hostname(fol, i)));
+            }
+            pn_data_exit(pn_connection_properties(conn));
+        }
+        pn_data_exit(pn_connection_properties(conn));
     }
 
     pn_data_exit(pn_connection_properties(conn));

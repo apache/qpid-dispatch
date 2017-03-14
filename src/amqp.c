@@ -32,10 +32,15 @@ const char * const QD_CAPABILITY_ANONYMOUS_RELAY = "ANONYMOUS-RELAY";
 
 const char * const QD_DYNAMIC_NODE_PROPERTY_ADDRESS = "x-opt-qd.address";
 
-const char * const QD_CONNECTION_PROPERTY_PRODUCT_KEY   = "product";
-const char * const QD_CONNECTION_PROPERTY_PRODUCT_VALUE = "qpid-dispatch-router";
-const char * const QD_CONNECTION_PROPERTY_VERSION_KEY   = "version";
-const char * const QD_CONNECTION_PROPERTY_COST_KEY      = "qd.inter-router-cost";
+const char * const QD_CONNECTION_PROPERTY_PRODUCT_KEY           = "product";
+const char * const QD_CONNECTION_PROPERTY_PRODUCT_VALUE         = "qpid-dispatch-router";
+const char * const QD_CONNECTION_PROPERTY_VERSION_KEY           = "version";
+const char * const QD_CONNECTION_PROPERTY_COST_KEY              = "qd.inter-router-cost";
+const char * const QD_CONNECTION_PROPERTY_FAILOVER_LIST_KEY     = "failover-server-list";
+const char * const QD_CONNECTION_PROPERTY_FAILOVER_NETHOST_KEY  = "network-host";
+const char * const QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY     = "port";
+const char * const QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY   = "scheme";
+const char * const QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY = "hostname";
 
 const qd_amqp_error_t QD_AMQP_OK = { 200, "OK" };
 const qd_amqp_error_t QD_AMQP_CREATED = { 201, "Created" };

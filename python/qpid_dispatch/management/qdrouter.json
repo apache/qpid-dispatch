@@ -669,6 +669,12 @@
                     "default": false,
                     "description": "If true, apply multi-tenancy to endpoints connected at this listener.  The address space is defined by the virtual host (hostname field in the Open)."
                 },
+                "failoverList": {
+                    "type": "string",
+                    "create": true,
+                    "required": false,
+                    "description": "A comma-separated list of failover urls to be supplied to connected clients.  Form: [(amqp|amqps|ws|wss)://]host_or_ip[:port]"
+                },
                 "addr": {
                     "description":"(DEPRECATED)IP address: ipv4 or ipv6 literal or a host name. This attribute has been deprecated. Use host instead",
                     "deprecated": true,
