@@ -28,6 +28,7 @@ int timer_tests(void);
 int alloc_tests(void);
 int compose_tests(void);
 int policy_tests(void);
+int failoverlist_tests(void);
 
 int main(int argc, char** argv)
 {
@@ -58,6 +59,7 @@ int main(int argc, char** argv)
     result += alloc_tests();
 #endif
     result += policy_tests();
+    result += failoverlist_tests();
     qd_dispatch_free(qd);       // dispatch_free last.
 
     return result;
