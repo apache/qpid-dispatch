@@ -26,7 +26,7 @@ var QDR = (function (QDR) {
    *
    * Controller that handles the QDR charts page
    */
-  QDR.module.controller("QDR.ChartsController", function($scope, QDRService, QDRChartService, $dialog, $location, $routeParams) {
+  QDR.module.controller("QDR.ChartsController", function($scope, QDRService, QDRChartService, $uibModal, $location, $routeParams) {
 
 	var updateTimer = null;
 
@@ -117,7 +117,7 @@ var QDR = (function (QDR) {
 
     function doDialog(template, chart) {
 
-      $dialog.dialog({
+      $uibModal.open({
       backdrop: true,
       keyboard: true,
       backdropClick: true,
@@ -137,7 +137,7 @@ var QDR = (function (QDR) {
           return false
         }
       }
-      }).open()
+      })
     };
 
   });

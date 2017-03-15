@@ -18,9 +18,18 @@ under the License.
 -->
 <ul class="nav nav-tabs connected dispatch-view" ng-controller="QDR.NavBarController">
   <li ng-repeat="link in breadcrumbs" title="{{link.title}}" ng-show="isValid(link)" ng-class='{active : isActive(link.href), "pull-right" : isRight(link), haschart: hasChart(link)}'>
-    <a ng-href="{{link.href}}{{hash}}" ng-bind-html-unsafe="link.content"></a>
+    <a ng-href="{{link.href}}{{hash}}" ng-bind-html="link.content"></a>
   </li>
 </ul>
-<div class="row-fluid dispatch-router">
-  <div ng-view></div>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-12">
+      <ol class="breadcrumb">
+        <li><a href="#">Home</a></li>
+        <li>Typography</li>
+      </ol>
+      <h1>Application Heading h1</h1>
+      <div ng-view></div>
+    </div>
+  </div>
 </div>

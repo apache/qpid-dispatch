@@ -184,9 +184,9 @@ text.label {
 }
 
 div#topologyForm .ngViewport, div#topologyForm .gridStyle {
-    height: inherit !important;
-	min-height: initial !important;
-	overflow: initial;
+  height: auto !important;
+  min-height: initial !important;
+  overflow: initial;
 }
 
 div#multiple_details, div#link_details {

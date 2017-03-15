@@ -17,11 +17,9 @@ specific language governing permissions and limitations
 under the License.
 -->
 <div id="overview-controller" ng-controller="QDR.OverviewController" ng-include="tmplOverviewTree"></div>
-
 <script type="text/ng-template" id="overviewGrid.html">
     <div class="gridDetails" ng-include="template.url"></div>
 </script>
-
 
 <!-- the following scripts are content that gets loaded into the above div that has the temple.url -->
 <script type="text/ng-template" id="routers.html">
@@ -50,7 +48,7 @@ under the License.
 <script type="text/ng-template" id="address.html">
     <div class="row-fluid">
         <ul class="nav nav-tabs">
-            <li ng-repeat="mode in gridModes" ng-click="selectMode(mode,'Address')" ng-class="{active : isModeSelected(mode,'Address')}" title="{{mode.title}}" ng-bind-html-unsafe="mode.content"> </li>
+            <li ng-repeat="mode in gridModes" ng-click="selectMode(mode,'Address')" ng-class="{active : isModeSelected(mode,'Address')}" title="{{mode.title}}" ng-bind-html="mode.content"> </li>
         </ul>
         <div ng-if="isModeVisible('Address','attributes')" class="selectedItems">
             <h3>Address {{address.data.title}}</h3>
@@ -96,7 +94,7 @@ under the License.
 <script type="text/ng-template" id="connection.html">
     <div class="row-fluid">
         <ul class="nav nav-tabs">
-            <li ng-repeat="mode in gridModes" ng-click="selectMode(mode,'Connection')" ng-class="{active : isModeSelected(mode,'Connection')}" title="{{mode.title}}" ng-bind-html-unsafe="mode.content"> </li>
+            <li ng-repeat="mode in gridModes" ng-click="selectMode(mode,'Connection')" ng-class="{active : isModeSelected(mode,'Connection')}" title="{{mode.title}}" ng-bind-html="mode.content"> </li>
         </ul>
         <div ng-if="isModeVisible('Connection','attributes')" class="selectedItems">
             <h3>Connection {{connection.data.title}}</h3>

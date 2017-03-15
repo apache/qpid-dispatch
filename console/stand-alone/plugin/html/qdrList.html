@@ -22,7 +22,7 @@ under the License.
 <script type="text/ng-template" id="listGrid.html">
     <div class="row-fluid qdrListActions">
         <ul class="nav nav-tabs">
-            <li ng-repeat="mode in modes" ng-show="isValid(mode)" ng-click="selectMode(mode)" ng-class="{active : isModeSelected(mode)}" title="{{mode.title}}" ng-bind-html-unsafe="mode.content"> </li>
+            <li ng-repeat="mode in modes" ng-show="isValid(mode)" ng-click="selectMode(mode)" ng-class="{active : isModeSelected(mode)}" title="{{mode.title}}" ng-bind-html="mode.content"> </li>
         </ul>
         <h4>{{selectedRecordName}}</h4>
         <div ng-show="currentMode.id === 'attributes'" class="selectedItems">

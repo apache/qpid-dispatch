@@ -66,7 +66,8 @@ var QDR = (function(QDR) {
    *
    * This plugin's angularjs module instance
    */
-  QDR.module = angular.module(QDR.pluginName, ['ngResource', 'ngGrid', 'ui.bootstrap', 'ui.slider'/*, 'minicolors' */]);
+  QDR.module = angular.module(QDR.pluginName, ['ngRoute', 'ngSanitize', 'ngResource', 'ui.bootstrap', 'ngGrid', 'ui.slider', 'patternfly.card']);
+//  QDR.module = angular.module(QDR.pluginName, ['ngResource', 'ngGrid', 'ui.bootstrap', 'ui.slider'/*, 'minicolors' */]);
 
   Core = {
     notification: function (severity, msg) {
@@ -98,6 +99,12 @@ var QDR = (function(QDR) {
       .when('/list', {
           templateUrl: QDR.templatePath + 'qdrList.html'
         })
+      .when('#/list', {
+          templateUrl: QDR.templatePath + 'qdrList.html'
+        })
+      .when('/#/list', {
+          templateUrl: QDR.templatePath + 'qdrList.html'
+        })
       .when('/QDR/schema', {
           templateUrl: QDR.templatePath + 'qdrSchema.html'
         })
@@ -119,9 +126,12 @@ var QDR = (function(QDR) {
   });
 
   QDR.module.config(function ($compileProvider) {
-    var cur = $compileProvider.urlSanitizationWhitelist();
+    $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|ftp|mailto|chrome-extension|file|blob):/);
+    $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|ftp|mailto|chrome-extension):/);
+/*    var cur = $compileProvider.urlSanitizationWhitelist();
     $compileProvider.urlSanitizationWhitelist(/^\s*(https?|ftp|mailto|file|blob):/);
     cur = $compileProvider.urlSanitizationWhitelist();
+*/
   })
 
   QDR.module.filter('to_trusted', ['$sce', function($sce){
@@ -185,10 +195,13 @@ var QDR = (function(QDR) {
     QDR.log = new QDR.logger($log);
     QDR.log.info("*************creating Dispatch Console************");
     var curPath = $location.path()
+QDR.log.info("curPath = " + curPath)
     var org = curPath.substr(1)
     if (org && org.length > 0 && org !== "connect") {
+QDR.log.info("setting location.search to org=" + org)
       $location.search('org', org)
     } else {
+QDR.log.info("setting location.search to org=null")
       $location.search('org', null)
     }
     QDR.queue = d3.queue;
@@ -208,6 +221,7 @@ var QDR = (function(QDR) {
       var search = $location.search()
       if (search.org) {
         if (search.org === 'connect')
+QDR.log.info("was not connected. setting org to overview")
           $location.search("org", "overview")
       }
 
@@ -227,10 +241,14 @@ var QDR = (function(QDR) {
                 QDRService.delUpdatedAction("initialized")
                 QDR.log.debug("got initial topology")
                 $timeout(function() {
+QDR.log.info("after initialization org was " + org + " and location.path() was " + $location.path())
                   if (org === '' || org === 'connect') {
                     org = localStorage[QDR.LAST_LOCATION] || "/overview"
+                    if (org === '/')
+                      org = "/overview"
+QDR.log.info("after initialization org was loaded from localStorage and is now " + org)
                   }
-                  QDR.log.debug("after initialization going to " + org)
+QDR.log.info("after initialization going to " + org)
                   $location.path(org)
                   $location.search('org', null)
                   $location.replace()
@@ -246,13 +264,13 @@ var QDR = (function(QDR) {
       })
     }
 
-    $rootScope.$on('$routeChangeSuccess', function() {
+    $rootScope.$on('$routeChangeSuccess', function(event, next, current) {
       var path = $location.path();
+QDR.log.info("routeChangeSuccess: path is now " + path)
       if (path !== "/connect") {
         localStorage[QDR.LAST_LOCATION] = path;
       }
     });
-
   }]);
 
   QDR.module.controller ("QDR.MainController", ['$scope', '$location', function ($scope, $location) {
@@ -271,9 +289,13 @@ var QDR = (function(QDR) {
 
   QDR.module.controller ("QDR.Core", function ($scope, $rootScope) {
     $scope.alerts = [];
+    $scope.breadcrumb = {};
     $scope.closeAlert = function(index) {
             $scope.alerts.splice(index, 1);
         };
+    $scope.$on('setCrumb', function(event, data) {
+      $scope.breadcrumb = data
+    })
     $scope.$on('newAlert', function(event, data) {
       $scope.alerts.push(data);
       $scope.$apply();
