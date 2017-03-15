@@ -32,6 +32,7 @@ under the License.
 
                 </div>
             </div>
+            <p style="clear:left;"></p>
             <div class="connect-form">
                 <form class="form-horizontal no-bottom-margin" novalidate ng-submit="connect()" name="settings">
                         <div class="form-group">
@@ -54,8 +55,11 @@ under the License.
                         </div>
                         <input tabindex="-1" type="submit" style="position: absolute; left: -9999px; width: 1px; height: 1px;">
                         <p></p>
-                        <div class="col-md-10 col-md-offset-2">
-                            <button type="submit" tabindex="4" class="btn btn-primary pull-right" ng-disabled="settings.$invalid">{{buttonText()}}</button>
+                        <div class="form-group">
+                            <label tabindex="-1" class="col-md-2 control-label" title="button"></label>
+                            <div class="col-md-6">
+                                <button type="submit" tabindex="4" class="btn btn-primary pull-left" ng-disabled="settings.$invalid">{{buttonText()}}</button>
+                            </div>
                         </div>
                 </form>
 

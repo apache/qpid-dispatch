@@ -142,3 +142,11 @@ div.chartContainer {
   width: auto;
   margin-top: 1em;
 }
+
+#dispatch-login-container {
+  width: 90em;
+}
+
+#dispatch-login-container .alert {
+  padding-right: 47px;
+}
