@@ -138,13 +138,15 @@ class QdSSLUseridTest(TestCase):
                              'password': 'server-password'}),
 
             # should translate a display name
+            # specifying both passwordFile and password, password takes precedence.
             ('sslProfile', {'name': 'server-ssl13',
                             'certDb': cls.ssl_file('ca-certificate.pem'),
                             'certFile': cls.ssl_file('server-certificate.pem'),
                             'keyFile': cls.ssl_file('server-private-key.pem'),
                             'uidFormat': '2',
                             'displayNameFile': ssl_profile2_json,
-                            'password': 'server-password'}),
+                            'password': 'server-password',
+                            'passwordFile': cls.ssl_file('server-password-file-bad.txt')}),
 
             ('sslProfile', {'name': 'server-ssl14',
                             'certDb': cls.ssl_file('ca-certificate.pem'),
@@ -152,7 +154,7 @@ class QdSSLUseridTest(TestCase):
                             'keyFile': cls.ssl_file('server-private-key.pem'),
                             'uidFormat': '1',
                             'displayNameFile': ssl_profile1_json,
-                            'password': 'server-password'}),
+                            'passwordFile': cls.ssl_file('server-password-file.txt')}),
 
             ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl1', 'authenticatePeer': 'yes',
                           'requireSsl': 'yes', 'saslMechanisms': 'EXTERNAL'}),

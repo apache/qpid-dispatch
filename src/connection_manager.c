@@ -426,6 +426,38 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     ssl_profile->ssl_certificate_file       = qd_entity_opt_string(entity, "certFile", 0); CHECK();
     ssl_profile->ssl_private_key_file       = qd_entity_opt_string(entity, "keyFile", 0); CHECK();
     ssl_profile->ssl_password               = qd_entity_opt_string(entity, "password", 0); CHECK();
+
+    if (!ssl_profile->ssl_password) {
+        // SSL password not provided. Check if passwordFile property is specified.
+        char *password_file = qd_entity_opt_string(entity, "passwordFile", 0); CHECK();
+
+        if (password_file) {
+            FILE *file = fopen(password_file, "r");
+
+            if (file) {
+                char buffer[200];
+
+                char c;
+                int i=0;
+
+                while(true) {
+                    c = fgetc(file);
+                    if(c == EOF || c == '\n')
+                        break;
+                    buffer[i++] = c;
+                }
+
+                if (i != 0) {
+                    buffer[++i] = '\0';
+                    free(ssl_profile->ssl_password);
+                    ssl_profile->ssl_password = strdup(buffer);
+                }
+                fclose(file);
+            }
+        }
+        free(password_file);
+    }
+
     ssl_profile->ssl_trusted_certificate_db = qd_entity_opt_string(entity, "certDb", 0); CHECK();
     ssl_profile->ssl_trusted_certificates   = qd_entity_opt_string(entity, "trustedCerts", 0); CHECK();
     ssl_profile->ssl_uid_format             = qd_entity_opt_string(entity, "uidFormat", 0); CHECK();

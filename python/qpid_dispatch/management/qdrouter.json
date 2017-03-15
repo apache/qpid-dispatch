@@ -532,7 +532,7 @@
                 },
                 "password": {
                     "type": "string",
-                    "description": "An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This option can be used by supplying the password in the 'password' option.  Don't use both password and passwordFile in the same profile.",
+                    "description": "An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This takes precedence over the passwordFile if both are specified.",
                     "create": true
 
                 },
