@@ -99,8 +99,10 @@ qd_failover_list_t *qd_failover_list(const char *text, const char **error)
     do {
         next = qd_fol_next(cursor, ",");
         qd_failover_item_t *item = qd_fol_item(cursor, error);
-        if (item == 0)
+        if (item == 0) {
+            qd_failover_list_free(list);
             return 0;
+        }
         DEQ_INSERT_TAIL(list->item_list, item);
         cursor = next;
     } while (cursor && *cursor);

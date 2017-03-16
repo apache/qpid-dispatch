@@ -437,7 +437,7 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
             if (file) {
                 char buffer[200];
 
-                char c;
+                int c;
                 int i=0;
 
                 while(true) {
