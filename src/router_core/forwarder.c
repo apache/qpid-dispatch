@@ -704,6 +704,16 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
         out_link->link_type      = QD_LINK_ENDPOINT;
         out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
         out_link->admin_enabled  = true;
+        if (in_link->terminus_addr) {
+            char *term_addr = malloc((strlen(in_link->terminus_addr) + 1) * sizeof(char));
+            term_addr[0] = '\0';
+            strcat(term_addr, in_link->terminus_addr);
+            out_link->terminus_addr = term_addr;
+        }
+        else {
+            out_link->terminus_addr  = 0;
+        }
+
         out_link->oper_status    = QDR_LINK_OPER_DOWN;
 
         out_link->name = (char*) malloc(strlen(in_link->name) + 1);

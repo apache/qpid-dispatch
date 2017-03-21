@@ -481,13 +481,16 @@ const char *qdr_link_name(const qdr_link_t *link);
  * @param dir Direction of the new link, incoming or outgoing
  * @param source Source terminus of the attach
  * @param target Target terminus of the attach
+ * @param name - name of the link
+ * @param terminus_addr - terminus address if any
  * @return A pointer to a new qdr_link_t object to track the link
  */
 qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
                                   qd_direction_t    dir,
                                   qdr_terminus_t   *source,
                                   qdr_terminus_t   *target,
-                                  const char       *name);
+                                  const char       *name,
+                                  const char       *terminus_addr);
 
 /**
  * qdr_link_second_attach
