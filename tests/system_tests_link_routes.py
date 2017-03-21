@@ -547,6 +547,24 @@ class LinkRouteTest(TestCase):
         drain_support.run()
         self.assertEqual(None, drain_support.error)
 
+    def test_link_route_terminus_address(self):
+        # The receiver is attaching to router B to a listener that has link route for address 'pulp.task' setup.
+        listening_address = self.routers[1].addresses[1]
+        # Run the query on a normal port
+        query_address_listening = self.routers[1].addresses[0]
+
+        # Sender is attaching to router C
+        sender_address = self.routers[2].addresses[0]
+        query_address_sending = self.routers[2].addresses[0]
+
+        test = TerminusAddrTest(sender_address, listening_address, query_address_sending, query_address_listening)
+        test.run()
+
+        self.assertTrue(test.in_receiver_found)
+        self.assertTrue(test.out_receiver_found)
+        self.assertTrue(test.in_sender_found)
+        self.assertTrue(test.out_sender_found)
+
     def test_dynamic_source(self):
         test = DynamicSourceTest(self.routers[1].addresses[0], self.routers[1].addresses[1])
         test.run()
@@ -933,6 +951,117 @@ class DetachMixedCloseTest(MessagingHandler):
             self.sender = event.sender
             self.sender.source.address = self.sender.remote_source.address
             self.sender.open()
+
+    def run(self):
+        Container(self).run()
+
+class TerminusAddrTest(MessagingHandler):
+    """
+    This tests makes sure that the link route address is visible in the output of qdstat -l command.
+
+    Sets up a sender on address pulp.task.terminusTestSender and a receiver on pulp.task.terminusTestReceiver.
+    Connects to the router to which the sender is attached and makes sure that the pulp.task.terminusTestSender address
+    shows up with an 'in' and 'out'
+    Similarly connects to the router to which the receiver is attached and makes sure that the
+    pulp.task.terminusTestReceiver address shows up with an 'in' and 'out'
+
+    """
+    def __init__(self, sender_address, listening_address, query_address_sending, query_address_listening):
+        super(TerminusAddrTest, self).__init__()
+        self.sender_address = sender_address
+        self.listening_address = listening_address
+        self.sender = None
+        self.receiver = None
+        self.message_received = False
+        self.receiver_connection = None
+        self.sender_connection = None
+        # We will run a query on the same router where the sender is attached
+        self.query_address_sending = query_address_sending
+
+        # We will run a query on the same router where the receiver is attached
+        self.query_address_listening = query_address_listening
+        self.count = 0
+
+        self.in_receiver_found = False
+        self.out_receiver_found = False
+        self.in_sender_found = False
+        self.out_sender_found = False
+
+        self.receiver_link_opened = False
+        self.sender_link_opened = False
+
+    def on_start(self, event):
+        self.receiver_connection = event.container.connect(self.listening_address)
+
+    def on_connection_remote_open(self, event):
+        if event.connection == self.receiver_connection:
+            continue_loop = True
+            # The following loops introduces a wait. It gives time to the
+            # router so that the address Dpulp.task can show up on the remoteCount
+            i = 0
+            while continue_loop:
+                if i > 100: # If we have run the read command for more than hundred times and we still do not have
+                    # the remoteCount set to 1, there is a problem, just exit out of the function instead
+                    # of looping to infinity.
+                    self.receiver_connection.close()
+                    return
+                local_node = Node.connect(self.query_address_sending, timeout=TIMEOUT)
+                out = local_node.read(type='org.apache.qpid.dispatch.router.address', name='Dpulp.task').remoteCount
+                if out == 1:
+                    continue_loop = False
+                i += 1
+                sleep(0.25)
+
+            self.sender_connection = event.container.connect(self.sender_address)
+
+            # Notice here that the receiver and sender are listening on different addresses. Receiver on
+            # pulp.task.terminusTestReceiver and the sender on pulp.task.terminusTestSender
+            self.receiver = event.container.create_receiver(self.receiver_connection, "pulp.task.terminusTestReceiver")
+            self.sender = event.container.create_sender(self.sender_connection, "pulp.task.terminusTestSender", options=AtMostOnce())
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.receiver_link_opened = True
+
+            local_node = Node.connect(self.query_address_listening, timeout=TIMEOUT)
+            out = local_node.query(type='org.apache.qpid.dispatch.router.link')
+
+            link_dir_index = out.attribute_names.index("linkDir")
+            owning_addr_index = out.attribute_names.index("owningAddr")
+
+            # Make sure that the owningAddr M0pulp.task.terminusTestReceiver shows up on both in and out.
+            # The 'out' link is on address M0pulp.task.terminusTestReceiver outgoing from the router B to the receiver
+            # The 'in' link is on address M0pulp.task.terminusTestReceiver incoming from router C to router B
+            for result in out.results:
+                if result[link_dir_index] == 'in' and result[owning_addr_index] == 'M0pulp.task.terminusTestReceiver':
+                    self.in_receiver_found = True
+                if result[link_dir_index] == 'out' and result[owning_addr_index] == 'M0pulp.task.terminusTestReceiver':
+                    self.out_receiver_found = True
+
+        if event.sender == self.sender:
+            self.sender_link_opened = True
+
+            local_node = Node.connect(self.query_address_sending, timeout=TIMEOUT)
+            out = local_node.query(type='org.apache.qpid.dispatch.router.link')
+
+            link_dir_index = out.attribute_names.index("linkDir")
+            owning_addr_index = out.attribute_names.index("owningAddr")
+
+            # Make sure that the owningAddr M0pulp.task.terminusTestSender shows up on both in and out.
+            # The 'in' link is on address M0pulp.task.terminusTestSender incoming from sender to router
+            # The 'out' link is on address M0pulp.task.terminusTestSender outgoing from router C to router B
+            for result in out.results:
+                if result[link_dir_index] == 'in' and result[owning_addr_index] == 'M0pulp.task.terminusTestSender':
+                    self.in_sender_found = True
+                if result[link_dir_index] == 'out' and result[owning_addr_index] == 'M0pulp.task.terminusTestSender':
+                    self.out_sender_found = True
+
+        # Shutdown the connections only if the on_link_opened has been called for sender and receiver links.
+        if self.sender_link_opened and self.receiver_link_opened:
+            self.sender.close()
+            self.receiver.close()
+            self.sender_connection.close()
+            self.receiver_connection.close()
 
     def run(self):
         Container(self).run()

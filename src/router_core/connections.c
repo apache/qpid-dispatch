@@ -377,7 +377,8 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
                                   qd_direction_t    dir,
                                   qdr_terminus_t   *source,
                                   qdr_terminus_t   *target,
-                                  const char       *name)
+                                  const char       *name,
+                                  const char       *terminus_addr)
 {
     qdr_action_t   *action         = qdr_action(qdr_link_inbound_first_attach_CT, "link_first_attach");
     qdr_link_t     *link           = new_qdr_link_t();
@@ -388,6 +389,15 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->identity = qdr_identifier(conn->core);
     link->conn = conn;
     link->name = (char*) malloc(strlen(name) + 1);
+
+    if (terminus_addr) {
+         char *term_addr = malloc((strlen(terminus_addr) + 3) * sizeof(char));
+         term_addr[0] = '\0';
+         strcat(term_addr, "M0");
+         strcat(term_addr, terminus_addr);
+         link->terminus_addr = term_addr;
+    }
+
     strcpy(link->name, name);
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
@@ -729,9 +739,10 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     sys_mutex_unlock(conn->work_lock);
 
     //
-    // Free the link's name
+    // Free the link's name and terminus_addr
     //
     free(link->name);
+    free(link->terminus_addr);
     link->name = 0;
 }
 
@@ -757,6 +768,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
     link->name           = (char*) malloc(QDR_DISCRIMINATOR_SIZE + 8);
+    link->terminus_addr  = 0;
     qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;

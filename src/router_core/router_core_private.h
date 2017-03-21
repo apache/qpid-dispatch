@@ -362,6 +362,7 @@ struct qdr_link_t {
     qd_direction_t           link_direction;
     qdr_link_work_list_t     work_list;
     char                    *name;
+    char                    *terminus_addr;
     int                      detach_count;       ///< 0, 1, or 2 depending on the state of the lifecycle
     qdr_address_t           *owning_addr;        ///< [ref] Address record that owns this link
     qdr_link_t              *connected_link;     ///< [ref] If this is a link-route, reference the connected link
