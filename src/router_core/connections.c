@@ -388,6 +388,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->identity = qdr_identifier(conn->core);
     link->conn = conn;
     link->name = (char*) malloc(strlen(name) + 1);
+    link->terminus_addr = 0;
     strcpy(link->name, name);
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
@@ -729,9 +730,10 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     sys_mutex_unlock(conn->work_lock);
 
     //
-    // Free the link's name
+    // Free the link's name and terminus_addr
     //
     free(link->name);
+    free(link->terminus_addr);
     link->name = 0;
 }
 
@@ -757,6 +759,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
     link->name           = (char*) malloc(QDR_DISCRIMINATOR_SIZE + 8);
+    link->terminus_addr  = 0;
     qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
@@ -1225,6 +1228,26 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     qdr_connection_free(conn);
 }
 
+static void set_terminus_address(qdr_link_t *link, qd_direction_t dir)
+{
+    qd_link_t *qd_link = (qd_link_t *) qdr_link_get_context(link);
+    char *terminus_addr = 0;
+    if (dir == QD_INCOMING) {
+        terminus_addr = (char*)pn_terminus_get_address(pn_link_remote_target((pn_link_t  *)qd_link_pn(qd_link)));
+    }
+    else {
+        terminus_addr = (char*)pn_terminus_get_address(pn_link_remote_source((pn_link_t  *)qd_link_pn(qd_link)));
+    }
+
+    if (terminus_addr) {
+         char *term_addr = malloc((strlen(terminus_addr) + 3) * sizeof(char));
+         term_addr[0] = '\0';
+         strcat(term_addr, "M0");
+         strcat(term_addr, terminus_addr);
+         link->terminus_addr = term_addr;
+    }
+}
+
 
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
@@ -1297,6 +1320,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     //
                     // This is a link-routed destination, forward the attach to the next hop
                     //
+                    set_terminus_address(link, dir);
                     success = qdr_forward_attach_CT(core, addr, link, source, target);
                     if (!success) {
                         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
@@ -1354,6 +1378,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 //
                 // This is a link-routed destination, forward the attach to the next hop
                 //
+                set_terminus_address(link, dir);
                 bool success = qdr_forward_attach_CT(core, addr, link, source, target);
                 if (!success) {
                     qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
