@@ -41,7 +41,6 @@
 const char *QD_LOG_STATS_TYPE = "logStats";
 
 static qd_log_source_t      *default_log_source=0;
-static qd_log_source_t      *logging_log_source=0;
 
 int qd_log_max_len() { return TEXT_MAX; }
 
@@ -88,7 +87,6 @@ static const char* SINK_STDOUT = "stdout";
 static const char* SINK_STDERR = "stderr";
 static const char* SINK_SYSLOG = "syslog";
 static const char* SOURCE_DEFAULT = "DEFAULT";
-static const char* SOURCE_LOGGING = "LOGGING";
 
 static log_sink_t* find_log_sink_lh(const char* name) {
     log_sink_t* sink = DEQ_HEAD(sink_list);
@@ -485,7 +483,6 @@ void qd_log_initialize(void)
     default_log_source->timestamp = true;
     default_log_source->source = 0;
     default_log_source->sink = log_sink_lh(SINK_STDERR);
-    logging_log_source = qd_log_source(SOURCE_LOGGING);
 }
 
 

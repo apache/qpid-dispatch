@@ -871,6 +871,8 @@
                         "ERROR",
                         "POLICY",
                         "HTTP",
+                        "CONN_MGR",
+                        "PYTHON",
                         "DEFAULT"
                     ],
                     "required": true,
