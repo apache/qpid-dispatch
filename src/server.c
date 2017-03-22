@@ -645,7 +645,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         ctx->owner_thread = CONTEXT_NO_OWNER;
         qdpn_connector_set_context(cxtr, ctx);
 
-        qd_log(qd_server->log_source, QD_LOG_TRACE, "Accepting %s with connection id [%"PRIu64"]",
+        qd_log(qd_server->log_source, QD_LOG_INFO, "Accepting %s with connection id [%"PRIu64"]",
            log_incoming(logbuf, sizeof(logbuf), cxtr), ctx->connection_id);
 
         //
@@ -1158,7 +1158,7 @@ static void cxtr_try_open(void *context)
     ctx->role          = (char*) malloc(role_length);
     strcpy(ctx->role, ctx->connector->config->role);
 
-    qd_log(ct->server->log_source, QD_LOG_TRACE, "Connecting to %s:%s", ct->config->host, ct->config->port);
+    qd_log(ct->server->log_source, QD_LOG_INFO, "Connecting to %s:%s", ct->config->host, ct->config->port);
 
     pn_connection_collect(ctx->pn_conn, ctx->collector);
     decorate_connection(ctx->server, ctx->pn_conn, ct->config);
