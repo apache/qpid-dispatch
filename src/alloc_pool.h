@@ -72,7 +72,7 @@ typedef struct {
 /** Allocate in a thread pool. Use via ALLOC_DECLARE */
 void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool);
 /** De-allocate from a thread pool. Use via ALLOC_DECLARE */
-void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p);
+void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p);
 
 /**
  * Declare functions new_T and alloc_T
@@ -90,8 +90,9 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p);
     qd_alloc_type_desc_t __desc_##T  __attribute__((aligned(64))) = {0, #T, S, A, 0, C, 0, 0, 0, {0,0}, 0}; \
     __thread qd_alloc_pool_t *__local_pool_##T = 0;                     \
     T *new_##T(void) { return (T*) qd_alloc(&__desc_##T, &__local_pool_##T); }  \
-    void free_##T(T *p) { qd_dealloc(&__desc_##T, &__local_pool_##T, (void*) p); } \
-    qd_alloc_stats_t *alloc_stats_##T(void) { return __desc_##T.stats; }
+    void free_##T(T *p) { qd_dealloc(&__desc_##T, &__local_pool_##T, (char*) p); } \
+    qd_alloc_stats_t *alloc_stats_##T(void) { return __desc_##T.stats; } \
+    void *unused##T
 
 /**
  * Define functions new_T and alloc_T

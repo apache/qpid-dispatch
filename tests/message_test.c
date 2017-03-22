@@ -305,6 +305,8 @@ static char* test_send_message_annotations(void *context)
 int message_tests(void)
 {
     int result = 0;
+    char *test_group = "message_tests";
+
     TEST_CASE(test_send_to_messenger, 0);
     TEST_CASE(test_receive_from_messenger, 0);
     TEST_CASE(test_message_properties, 0);

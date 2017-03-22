@@ -169,7 +169,7 @@ static int callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 }
 
 /* Buffer to allocate extra header space required by LWS.  */
-typedef struct buffer_t { void *start; size_t size; size_t cap; } buffer_t;
+typedef struct buffer_t { char *start; size_t size; size_t cap; } buffer_t;
 
 /* Callbacks for promoted AMQP over WS connections.
  * Called with http lock held.

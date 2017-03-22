@@ -309,6 +309,7 @@ static char* test_bitmask(void *context)
 int tool_tests(void)
 {
     int result = 0;
+    char *test_group = "tool_tests";
 
     TEST_CASE(test_deq_basic, 0);
     TEST_CASE(test_deq_basic2, 0);

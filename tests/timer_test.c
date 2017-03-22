@@ -367,6 +367,7 @@ static char* test_big(void *context)
 int timer_tests(void)
 {
     int result = 0;
+    char *test_group = "timer_tests";
 
     fire_mask = 0;
     DEQ_INIT(pending_timers);

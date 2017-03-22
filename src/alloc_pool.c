@@ -146,7 +146,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
 #ifdef QD_MEMORY_DEBUG
         item->desc   = desc;
         item->header = PATTERN_FRONT;
-        *((uint32_t*) ((void*) &item[1] + desc->total_size))= PATTERN_BACK;
+        *((uint32_t*) ((char*) &item[1] + desc->total_size))= PATTERN_BACK;
 #endif
         return &item[1];
     }
@@ -198,7 +198,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
 #ifdef QD_MEMORY_DEBUG
         item->desc = desc;
         item->header = PATTERN_FRONT;
-        *((uint32_t*) ((void*) &item[1] + desc->total_size))= PATTERN_BACK;
+        *((uint32_t*) ((char*) &item[1] + desc->total_size))= PATTERN_BACK;
 #endif
         return &item[1];
     }
@@ -208,7 +208,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
 
 
 /* coverity[+free : arg-2] */
-void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, void *p)
+void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
 {
     if (!p) return;
     qd_alloc_item_t *item = ((qd_alloc_item_t*) p) - 1;

@@ -161,6 +161,7 @@ static char *test_failover_list_multiple(void *unused)
 int failoverlist_tests()
 {
     int result = 0;
+    char *test_group = "failover_tests";
 
     TEST_CASE(test_failover_list_empty, 0);
     TEST_CASE(test_failover_list_single, 0);

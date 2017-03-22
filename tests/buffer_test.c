@@ -88,6 +88,7 @@ static char *test_buffer_list_clone(void *context)
 int buffer_tests()
 {
     int result = 0;
+    char *test_group = "buffer_tests";
 
     TEST_CASE(test_buffer_list_clone, 0);
 

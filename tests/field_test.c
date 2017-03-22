@@ -965,6 +965,7 @@ static char *test_prefix_hash_with_space(void *context)
 int field_tests(void)
 {
     int result = 0;
+    char *test_group = "field_tests";
 
     qd_iterator_set_address("my-area", "my-router");
 

@@ -63,7 +63,7 @@ static const unsigned char * const TAGS_ANY                     = (unsigned char
     "\xa1\xb1\xa3\xb3\xe0\xf0"
     "\x40\x56\x41\x42\x50\x60\x70\x52\x43\x80\x53\x44\x51\x61\x71\x54\x81\x55\x72\x82\x74\x84\x94\x73\x83\x98";
 
-PN_HANDLE(PN_DELIVERY_CTX);
+PN_HANDLE(PN_DELIVERY_CTX)
 
 ALLOC_DEFINE_CONFIG(qd_message_t, sizeof(qd_message_pvt_t), 0, 0);
 ALLOC_DEFINE(qd_message_content_t);
@@ -1418,7 +1418,7 @@ ssize_t qd_message_field_length(qd_message_t *msg, qd_message_field_t field)
 }
 
 
-ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, void *buffer, size_t *hdr_length)
+ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, char *buffer, size_t *hdr_length)
 {
     qd_field_location_t *loc = qd_message_field_location(msg, field);
     if (!loc)

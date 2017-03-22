@@ -338,6 +338,7 @@ static char *test_tracemask(void *context)
 int parse_tests()
 {
     int result = 0;
+    char *test_group = "parse_tests";
 
     TEST_CASE(test_parser_fixed_scalars, 0);
     TEST_CASE(test_map, 0);

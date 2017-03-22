@@ -75,6 +75,7 @@ static char* test_alloc_basic(void *context)
 int alloc_tests(void)
 {
     int result = 0;
+    char *test_group = "alloc_tests";
 
     TEST_CASE(test_alloc_basic, 0);
 

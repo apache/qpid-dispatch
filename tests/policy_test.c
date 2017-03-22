@@ -81,6 +81,7 @@ static char *test_link_name_lookup(void *context)
 int policy_tests(void)
 {
     int result = 0;
+    char *test_group = "policy_tests";
 
     TEST_CASE(test_link_name_lookup, 0);
 

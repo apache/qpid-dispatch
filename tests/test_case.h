@@ -23,7 +23,7 @@ typedef char* (*testcase_t)(void *context);
 
 #define TEST_CASE(T,C) do {                        \
     char *r = T(C);                                \
-    printf("Test Case %s.%s: ", __FUNCTION__, #T); \
+    printf("Test Case %s.%s: ", test_group, #T); \
     if (r) {                                       \
         printf("FAIL: %s\n", r);                   \
         result++;                                  \

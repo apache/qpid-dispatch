@@ -342,6 +342,7 @@ static char *test_compose_subfields(void *context)
 int compose_tests()
 {
     int result = 0;
+    char *test_group = "compose_tests";
 
     TEST_CASE(test_compose_list_of_maps, 0);
     TEST_CASE(test_compose_nested_composites, 0);

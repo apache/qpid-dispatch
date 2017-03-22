@@ -127,6 +127,7 @@ include_directories(
 if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
  add_compile_options(-Werror)
  add_compile_options(-Wall)
+ add_compile_options(-Wpedantic)
  add_compile_options(-std=gnu99)
  add_compile_options(-pthread)
 else (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)

@@ -238,7 +238,7 @@ qd_iterator_t *qd_message_field_iterator_typed(qd_message_t *msg, qd_message_fie
 qd_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_field_t field);
 
 ssize_t qd_message_field_length(qd_message_t *msg, qd_message_field_t field);
-ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, void *buffer, size_t *hdr_length);
+ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, char *buffer, size_t *hdr_length);
 
 //
 // Functions for composed messages
