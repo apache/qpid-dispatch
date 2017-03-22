@@ -198,6 +198,7 @@ int qdr_connection_process(qdr_connection_t *conn)
 
     qdr_link_ref_t *ref;
     qdr_link_t     *link;
+    bool            free_link;
 
     int event_count = 0;
 
@@ -229,6 +230,7 @@ int qdr_connection_process(qdr_connection_t *conn)
 
     do {
         qdr_link_work_t *link_work;
+        free_link = false;
 
         sys_mutex_lock(conn->work_lock);
         ref = DEQ_HEAD(conn->links_with_work);
@@ -270,7 +272,7 @@ int qdr_connection_process(qdr_connection_t *conn)
 
                 case QDR_LINK_WORK_SECOND_DETACH :
                     core->detach_handler(core->user_context, link, link_work->error, false, link_work->close_link);
-                    free_qdr_link_t(link);
+                    free_link = true;
                     break;
                 }
 
@@ -305,8 +307,11 @@ int qdr_connection_process(qdr_connection_t *conn)
                 dref = DEQ_HEAD(updated_deliveries);
                 event_count++;
             }
+
+            if (free_link)
+                free_qdr_link_t(link);
         }
-    } while (link);
+    } while (free_link || link);
 
     return event_count;
 }

@@ -272,8 +272,8 @@ static void qdr_agent_set_columns(qdr_query_t *query,
         // Either the attribute_names field is absent, it's not a list, or it's an empty list.
         // In this case, we will include all available attributes.
         //
-        if (column_count > QDR_AGENT_MAX_COLUMNS)
-            column_count = QDR_AGENT_MAX_COLUMNS;
+        if (column_count >= QDR_AGENT_MAX_COLUMNS)
+            column_count = QDR_AGENT_MAX_COLUMNS - 1;
         int i;
         for (i = 0; i < column_count; i++)
             query->columns[i] = i;

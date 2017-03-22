@@ -708,14 +708,14 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             peer->peer = 0;
             dlv->peer  = 0;
 
-            qdr_delivery_decref_CT(core, dlv);
-            qdr_delivery_decref_CT(core, peer);
-
             if (peer->link) {
                 peer_moved = qdr_delivery_settled_CT(core, peer);
                 if (peer_moved)
                     push = true;
             }
+
+            qdr_delivery_decref_CT(core, dlv);
+            qdr_delivery_decref_CT(core, peer);
         }
 
         if (dlv->link)
