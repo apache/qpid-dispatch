@@ -440,15 +440,15 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
                 int c;
                 int i=0;
 
-                while(true) {
+                while (i < 200 - 1) {
                     c = fgetc(file);
-                    if(c == EOF || c == '\n')
+                    if (c == EOF || c == '\n')
                         break;
                     buffer[i++] = c;
                 }
 
                 if (i != 0) {
-                    buffer[++i] = '\0';
+                    buffer[i] = '\0';
                     free(ssl_profile->ssl_password);
                     ssl_profile->ssl_password = strdup(buffer);
                 }
