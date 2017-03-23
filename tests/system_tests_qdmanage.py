@@ -346,10 +346,6 @@ class QdmanageTest(TestCase):
         output = json.loads(self.run_qdmanage(ssl_create_command))
         self.assertEqual(output['name'], ssl_profile_name)
         self.run_qdmanage('DELETE --type=sslProfile --name=' + ssl_profile_name)
-        # Try to delete the server-ssl profile which is in use.
-        output = self.run_qdmanage('DELETE --type=sslProfile --name=server-ssl',
-                                   expect=Process.EXIT_FAIL)
-        self.assertIn("ForbiddenStatus", output)
 
 if __name__ == '__main__':
     unittest.main(main_module())

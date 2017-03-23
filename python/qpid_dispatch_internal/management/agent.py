@@ -352,12 +352,7 @@ class SslProfileEntity(EntityAdapter):
         return self._qd.qd_dispatch_configure_ssl_profile(self._dispatch, self)
 
     def _delete(self):
-        deleted = self._qd.qd_connection_manager_delete_ssl_profile(self._dispatch, self._implementations[0].key)
-        # SSL Profiles cannot be deleted if they are referenced by a connector/listener.
-        if not deleted:
-            raise ForbiddenStatus("SSL Profile is referenced by other listeners/connectors. Delete the associated "
-                                  "listeners/connectors before deleting the SSL Profile")
-
+        self._qd.qd_connection_manager_delete_ssl_profile(self._dispatch, self._implementations[0].key)
     def _identifier(self):
         return self.name
 
