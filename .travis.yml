@@ -29,6 +29,7 @@ before_install:
 - git submodule init
 - git submodule update
 before_script:
+- lsb_release -a
 - cd qpid-proton
 - mkdir build
 - cd build
