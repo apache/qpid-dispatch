@@ -29,8 +29,7 @@
 
 static char *test_failover_list_empty(void *unused)
 {
-    static char *error;
-    qd_failover_list_t *list = qd_failover_list("", (const char**) &error);
+    qd_failover_list_t *list = qd_failover_list("");
     if (list != 0) {
         qd_failover_list_free(list);
         return "Expected parse failure";
@@ -41,10 +40,9 @@ static char *test_failover_list_empty(void *unused)
 
 static char *test_failover_list_single(void *unused)
 {
-    char *error;
     char *fail = 0;
-    
-    qd_failover_list_t *list = qd_failover_list("host1", (const char**) &error);
+
+    qd_failover_list_t *list = qd_failover_list("host1");
     if (qd_failover_list_size(list) != 1) {
         fail = "1:Expected list size of 1";
     } else if (qd_failover_list_scheme(list, 0) != 0) {
@@ -60,7 +58,7 @@ static char *test_failover_list_single(void *unused)
     if (fail)
         return fail;
 
-    list = qd_failover_list("amqps://host2", (const char**) &error);
+    list = qd_failover_list("amqps://host2");
     if (qd_failover_list_size(list) != 1) {
         fail = "2:Expected list size of 1";
     } else if (strcmp(qd_failover_list_scheme(list, 0), "amqps")) {
@@ -76,7 +74,7 @@ static char *test_failover_list_single(void *unused)
     if (fail)
         return fail;
 
-    list = qd_failover_list("host3:10000", (const char**) &error);
+    list = qd_failover_list("host3:10000");
     if (qd_failover_list_size(list) != 1) {
         fail = "3:Expected list size of 1";
     } else if (qd_failover_list_scheme(list, 0) != 0) {
@@ -92,7 +90,7 @@ static char *test_failover_list_single(void *unused)
     if (fail)
         return fail;
 
-    list = qd_failover_list("amqp://host4:15000", (const char**) &error);
+    list = qd_failover_list("amqp://host4:15000");
     if (qd_failover_list_size(list) != 1) {
         fail = "4:Expected list size of 1";
     } else if (strcmp(qd_failover_list_scheme(list, 0), "amqp")) {
@@ -111,10 +109,8 @@ static char *test_failover_list_single(void *unused)
 
 static char *test_failover_list_multiple(void *unused)
 {
-    char *error;
     char *fail = 0;
-    
-    qd_failover_list_t *list = qd_failover_list("host1,amqps://host2 , host3:10000, amqp://host4:15000", (const char**) &error);
+    qd_failover_list_t *list = qd_failover_list("host1,amqps://host2 , host3:10000, amqp://host4:15000");
     if (qd_failover_list_size(list) != 4) {
         fail = "1:Expected list size of 4";
     } else if (qd_failover_list_scheme(list, 0) != 0) {

@@ -19,6 +19,7 @@
 
 #include <qpid/dispatch/failoverlist.h>
 #include <qpid/dispatch/ctools.h>
+#include <qpid/dispatch/error.h>
 #include <ctype.h>
 #include <string.h>
 
@@ -62,15 +63,17 @@ static char *qd_fol_next(char *text, const char *separator)
 }
 
 
-static qd_failover_item_t *qd_fol_item(char *text, const char **error)
+/* Sets qd_error if there is an error */
+static qd_failover_item_t *qd_fol_item(char *text)
 {
+    qd_error_clear();
     char *after_scheme = qd_fol_next(text, "://");
     char *scheme       = after_scheme ? text : 0;
     char *host         = after_scheme ? after_scheme : text;
     char *port         = qd_fol_next(host, ":");
 
     if (strlen(host) == 0) {
-        *error = "No network host in failover item";
+        qd_error(QD_ERROR_VALUE, "No network host in failover item");
         return 0;
     }
 
@@ -84,12 +87,12 @@ static qd_failover_item_t *qd_fol_item(char *text, const char **error)
 }
 
 
-qd_failover_list_t *qd_failover_list(const char *text, const char **error)
+qd_failover_list_t *qd_failover_list(const char *text)
 {
     qd_failover_list_t *list = NEW(qd_failover_list_t);
     ZERO(list);
 
-    *error = 0;
+    qd_error_clear();
     list->text = (char*) malloc(strlen(text) + 1);
     strcpy(list->text, text);
 
@@ -98,7 +101,7 @@ qd_failover_list_t *qd_failover_list(const char *text, const char **error)
     char *next;
     do {
         next = qd_fol_next(cursor, ",");
-        qd_failover_item_t *item = qd_fol_item(cursor, error);
+        qd_failover_item_t *item = qd_fol_item(cursor);
         if (item == 0) {
             qd_failover_list_free(list);
             return 0;

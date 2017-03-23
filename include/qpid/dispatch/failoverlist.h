@@ -38,8 +38,10 @@ typedef struct qd_failover_list_t qd_failover_list_t;
  *
  * If scheme is not supplied, it defaults to _not present_.
  * If port is not specified, it defaults to "5672".
+ *
+ * Sets qd_error() if text cannot be parsed.
  */
-qd_failover_list_t *qd_failover_list(const char *text, const char **error);
+qd_failover_list_t *qd_failover_list(const char *text);
 
 /**
  * qd_failover_list_free

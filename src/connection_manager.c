@@ -521,7 +521,6 @@ static void config_listener_free(qd_connection_manager_t *cm, qd_config_listener
 
 qd_config_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *entity)
 {
-    qd_error_clear();
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_config_listener_t *cl = NEW(qd_config_listener_t);
     cl->listener = 0;
@@ -533,16 +532,16 @@ qd_config_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entit
     }
     char *fol = qd_entity_opt_string(entity, "failoverList", 0);
     if (fol) {
-        const char *fol_error = 0;
-        cl->configuration.failover_list = qd_failover_list(fol, &fol_error);
+        cl->configuration.failover_list = qd_failover_list(fol);
         free(fol);
         if (cl->configuration.failover_list == 0) {
-            qd_log(cm->log_source, QD_LOG_ERROR, "Error parsing failover list: %s", fol_error);
+            qd_log(cm->log_source, QD_LOG_ERROR, "Error parsing failover list: %s", qd_error_message());
             config_listener_free(qd->connection_manager, cl);
             return 0;
         }
-    } else
+    } else {
         cl->configuration.failover_list = 0;
+    }
     DEQ_ITEM_INIT(cl);
     DEQ_INSERT_TAIL(cm->config_listeners, cl);
     log_config(cm->log_source, &cl->configuration, "Listener");
