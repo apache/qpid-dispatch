@@ -1438,8 +1438,8 @@ class BatchedSettlementTest(MessagingHandler):
         self.address = address
         self.dest = "balanced.BatchedSettlement"
         self.error = None
-        self.count       = 20000
-        self.batch_count = 200
+        self.count       = 200
+        self.batch_count = 20
         self.n_sent      = 0
         self.n_received  = 0
         self.n_settled   = 0
@@ -1456,21 +1456,19 @@ class BatchedSettlementTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(120, Timeout(self)) # Long timeout for Valgrind
+        self.timer    = event.reactor.schedule(10, Timeout(self))
         self.conn     = event.container.connect(self.address)
         self.sender   = event.container.create_sender(self.conn, self.dest)
         self.receiver = event.container.create_receiver(self.conn, self.dest)
 
     def send(self):
-        if self.n_sent < self.count:
-            while self.sender.credit > 0:
-                msg = Message(body="Batch-Test")
-                self.sender.send(msg)
-                self.n_sent += 1
+        while self.n_sent < self.count and self.sender.credit > 0:
+            msg = Message(body="Batch-Test")
+            self.sender.send(msg)
+            self.n_sent += 1
 
     def on_sendable(self, event):
-        if self.n_sent < self.count:
-            self.send()
+        self.send()
 
     def on_message(self, event):
         self.n_received += 1
