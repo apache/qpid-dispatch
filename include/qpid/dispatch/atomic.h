@@ -55,6 +55,7 @@ static inline uint32_t sys_atomic_get(sys_atomic_t *ref)
 
 static inline void sys_atomic_destroy(sys_atomic_t *ref) {}
 
+
 #elif defined(__GNUC__) || defined(__clang__)
 
 /******************************************************************************
@@ -76,6 +77,42 @@ static inline uint32_t sys_atomic_add(sys_atomic_t *ref, uint32_t value)
 static inline uint32_t sys_atomic_sub(sys_atomic_t *ref, uint32_t value)
 {
     return __sync_fetch_and_sub(ref, value);
+}
+
+static inline uint32_t sys_atomic_get(sys_atomic_t *ref)
+{
+    return *ref;
+}
+
+static inline void sys_atomic_destroy(sys_atomic_t *ref) {}
+
+
+#elif defined(__sun)
+
+/******************************************************************************
+ * Solaris specific atomics                                                   *
+ ******************************************************************************/
+#include <atomic.h>
+
+typedef volatile uint32_t sys_atomic_t;
+
+static inline void sys_atomic_init(sys_atomic_t *ref, uint32_t value)
+{
+    *ref = value;
+}
+
+static inline uint32_t sys_atomic_add(sys_atomic_t *ref, uint32_t value)
+{
+    uint32_t oldValue = *ref;
+    atomic_add_32(ref, value);
+    return oldValue;
+}
+
+static inline uint32_t sys_atomic_sub(sys_atomic_t *ref, uint32_t value)
+{
+    uint32_t oldValue = *ref;
+    atomic_add_32(ref, -value);
+    return oldValue;
 }
 
 static inline uint32_t sys_atomic_get(sys_atomic_t *ref)
