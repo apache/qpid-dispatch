@@ -175,7 +175,10 @@ static inline void sys_atomic_destroy(sys_atomic_t *ref)
 
 #endif
 
-#define sys_atomic_inc(ref) sys_atomic_add((ref), 1)
-#define sys_atomic_dec(ref) sys_atomic_sub((ref), 1)
+/** Atomic increase: NOTE returns value *before* increase, like i++ */
+static inline uint32_t sys_atomic_inc(sys_atomic_t *ref) { return sys_atomic_add((ref), 1); }
+
+/** Atomic decrease: NOTE returns value *before* decrease, like i-- */
+static inline uint32_t sys_atomic_dec(sys_atomic_t *ref) { return sys_atomic_sub((ref), 1); }
 
 #endif
