@@ -123,18 +123,54 @@ include_directories(
     ${Proton_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_PATH}
     )
-
-if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
- add_compile_options(-Werror)
- add_compile_options(-Wall)
- add_compile_options(-Wpedantic)
- add_compile_options(-std=gnu99)
- add_compile_options(-pthread)
-else (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
- add_compile_options(-xc99)
- add_compile_options(-errwarn=%all)
- add_compile_options(-lpthread)
-endif (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
+    
+if (CMAKE_SYSTEM_NAME STREQUAL SunOS)
+  add_compile_options(-xc99)
+  add_compile_options(-errwarn=%all)
+  add_compile_options(-lpthread)
+else (CMAKE_SYSTEM_NAME STREQUAL SunOS)
+  add_compile_options(-Werror)
+  add_compile_options(-Wall)
+  add_compile_options(-std=gnu99)
+  add_compile_options(-pthread)
+  
+  ## ******************* FOR TRAVIS *********************************************
+  # The following change is so that the build will run on Travis which runs on Ubuntu LTS 12.04.
+  # Travis uses an old Ubuntu LTS 12.04 version on which the "pedantic" compile flag is not supported
+  # "pedantic" compile flag is supported by Ubuntu on post 12 versions
+  # Find the program lsb_release 
+  # lsb_release command is found in Fedora and Ubuntu but not in Rhel or CentOS
+  find_program(LSB_RELEASE lsb_release)
+  if (NOT LSB_RELEASE)
+    ## The lsb_release command is not found, this could be CentOS or RHEL, so just add the pedantic flag
+    add_compile_options(-Wpedantic)
+  else (NOT LSB_RELEASE)
+    ## lsb_release command is found
+    execute_process (
+        COMMAND bash -c "lsb_release -d"
+        OUTPUT_VARIABLE os_distribution
+    )
+    STRING( FIND ${os_distribution} "Ubuntu" APOSITION )
+    if (APOSITION GREATER 0)
+        # This is Ubuntu OS, Now make sure that the version is beyond 12
+        execute_process (
+            COMMAND bash -c "lsb_release -r"
+            OUTPUT_VARIABLE release_version
+        )
+        STRING( FIND ${release_version} "12" RPOSITION )
+        if (RPOSITION GREATER 0)
+           # This is a 12.x version of Ubuntu, hence don't add the pedantic flag
+        else (RPOSITION GREATER 0)
+            add_compile_options(-Wpedantic)
+        endif (RPOSITION GREATER 0)   
+    else (APOSITION GREATER 0)
+        ## This is a non-Ubuntu OS, so add the pedantic flag
+        add_compile_options(-Wpedantic)
+    endif (APOSITION GREATER 0)
+  endif(NOT LSB_RELEASE)
+  ## ******************* END FOR TRAVIS *********************************************
+  
+endif (CMAKE_SYSTEM_NAME STREQUAL SunOS)
 
 set(CATCH_UNDEFINED "-Wl,-z,defs")
 
