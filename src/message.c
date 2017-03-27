@@ -716,8 +716,6 @@ static qd_field_location_t *qd_message_properties_field(qd_message_t *msg, qd_me
         if (!qd_message_check(msg, QD_DEPTH_PROPERTIES) || !content->section_message_properties.parsed)
             return 0;
     }
-    if (field == QD_FIELD_PROPERTIES)
-        return &content->section_message_properties;
 
     const int index = field - QD_FIELD_MESSAGE_ID;
     qd_field_location_t *const location = (qd_field_location_t *)((char *)content + offsets[index]);
