@@ -58,6 +58,7 @@ class QdmanageTest(TestCase):
         ])
         cls.router_2 = cls.tester.qdrouterd('test_router_2', config_2, wait=True)
         cls.router_1 = cls.tester.qdrouterd('test_router_1', config_1, wait=True)
+        cls.router_1.wait_router_connected('R2')
 
     def address(self):
         return self.router_1.addresses[0]
@@ -149,9 +150,7 @@ class QdmanageTest(TestCase):
         self.assertEqual([long_type('listener')]*2, [e['type'] for e in qlistener])
         self.assertEqual(self.router_1.ports[0], int(qlistener[0]['port']))
 
-        qattr = json.loads(
-            self.run_qdmanage('query type name'))
-
+        qattr = json.loads(self.run_qdmanage('query type name'))
         for e in qattr:
             self.assertEqual(2, len(e))
 
