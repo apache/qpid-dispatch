@@ -165,7 +165,7 @@ class SchemaTest(unittest.TestCase):
 
         # This will make sure that deprecated flag defaults to false for entities
         self.assertFalse(s.entity_types['org.example.connector'].deprecated)
-        
+
         # This will make sure that deprecated flag defaults to false for attributes of entities
         self.assertFalse(s.entity_types['org.example.listener'].attributes['host'].deprecated)
 

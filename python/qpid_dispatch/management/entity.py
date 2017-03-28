@@ -62,6 +62,9 @@ class EntityBase(object):
     def __getattr__(self, name):
         return self.attributes[name]
 
+    def __contains__(self, name):
+        return name in self.attributes
+
     @staticmethod
     def _pyname(name): return name.replace('-', '_')
 

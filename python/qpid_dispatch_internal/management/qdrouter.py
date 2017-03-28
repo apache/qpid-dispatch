@@ -44,24 +44,20 @@ class QdSchema(schema.Schema):
         self.configuration_entity = self.entity_type(self.CONFIGURATION_ENTITY)
         self.operational_entity = self.entity_type(self.OPERATIONAL_ENTITY)
 
-    def validate_full(self, entities, **kwargs):
+    def validate_add(self, attributes, entities):
         """
-        In addition to L{schema.Schema.validate}, check the following:
-
-        listeners and connectors can only have role=inter-router if the
-        router has mode=interior.
-
-
-        @param entities: List of attribute name:value maps.
-        @param kwargs: See L{schema.Schema.validate}
+        Check that listeners and connectors can only have role=inter-router if the router has
+        mode=interior.
         """
-        entities = list(entities) # Need to traverse twice
-        super(QdSchema, self).validate_all(entities, **kwargs)
+        entities = list(entities) # Iterate twice
+        super(QdSchema, self).validate_add(attributes, entities)
+        entities.append(attributes)
         inter_router = not_interior = None
         for e in entities:
-            if self.short_name(e.type) == "router" and e.mode != "interior":
-                not_interior = e.mode
-            if self.short_name(e.type) in ["listener", "connector"] and e.role == "inter-router":
+            short_type = self.short_name(e['type'])
+            if short_type == "router" and e['mode'] != "interior":
+                not_interior = e['mode']
+            if short_type in ["listener", "connector"] and e['role'] == "inter-router":
                 inter_router = e
             if not_interior and inter_router:
                 raise schema.ValidationError(

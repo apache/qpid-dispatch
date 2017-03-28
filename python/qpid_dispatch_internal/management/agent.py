@@ -52,7 +52,6 @@ getting current information from the implementation object.
 
 ## Threading:
 
-
 The agent is locked to be thread safe, called in the following threads:
 - Reading configuration file in initialization thread (no contention).
 - Management requests arriving in multiple, concurrent connection threads.
@@ -61,9 +60,6 @@ The agent is locked to be thread safe, called in the following threads:
 When refreshing attributes, the agent must also read C implementation object
 data that may be updated in other threads.
 
-# FIXME aconway 2015-02-09:
-Temporary solution is to lock the entire dispatch router lock during full refresh.
-Better solution coming soon...
 """
 
 import traceback, json, pstats
@@ -208,7 +204,7 @@ class EntityAdapter(SchemaEntity):
         """Handle update request with new attributes from management client"""
         self.entity_type.update_check(request.body, self.attributes)
         newattrs = dict(self.attributes, **request.body)
-        self.entity_type.validate(newattrs, update=True)
+        self.entity_type.validate(newattrs)
         self.attributes = newattrs
         self._update()
         return (OK, self.attributes)
@@ -561,7 +557,7 @@ class EntityCache(object):
         self.log(LOG_DEBUG, "Add entity: %s" % entity)
         entity.validate()       # Fill in defaults etc.
         # Validate in the context of the existing entities for uniqueness
-        self.schema.validate_full(chain(iter([entity]), iter(self.entities)))
+        self.schema.validate_add(entity, self.entities)
         self.entities.append(entity)
 
     def _add_implementation(self, implementation, adapter=None):

@@ -111,8 +111,12 @@ class QdDll(ctypes.PyDLL):
         return self._prototype(getattr(self, fname), restype, argtypes, check)
 
 
-# Prevent accidental loading of the proton module.
-
+# Prevent accidental loading of the proton python module inside dispatch.
+# The proton-C library is linked with the dispatch C library, loading the proton
+# python module loads a second copy of the library and mayhem ensues.
+#
+# Note the FORBIDDEN list is over-written to disable this tests in mock python
+# testing code.
 FORBIDDEN = ["proton"]
 
 def check_forbidden():
@@ -122,7 +126,7 @@ def check_forbidden():
 
 def import_check(name, *args, **kw):
     if name in FORBIDDEN:
-        raise ImportError("Attempted to load forbidden module '%s'." % name)
+        raise ImportError("Python code running inside a dispatch router cannot import '%s', use the 'dispatch' module for internal messaging" % name)
     return builtin_import(name, *args, **kw)
 
 check_forbidden()

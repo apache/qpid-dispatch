@@ -21,8 +21,6 @@
 
 from collections import namedtuple
 import sys
-from .schema import quotestr
-
 
 class SchemaWriter(object):
     """Write the schema as an asciidoc document"""
@@ -57,7 +55,7 @@ class SchemaWriter(object):
             default = None  # Don't show defaults that are references, confusing.
         return ' (%s)' % (', '.join(
             filter(None, [str(attr.atype),
-                          default and "default=%s" % quotestr(default),
+                          default and "default='%s'" % default,
                           attr.required and "required",
                           attr.unique and "unique",
                           show_create and attr.create and "`CREATE`",
