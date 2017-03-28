@@ -35,8 +35,6 @@
 void qd_server_timer_pending_LH(qd_timer_t *timer);
 void qd_server_timer_cancel_LH(qd_timer_t *timer);
 
-/* FIXME aconway 2017-01-19: to include/server.h? */
-
 struct qd_dispatch_t* qd_server_dispatch(qd_server_t *server);
 
 const char* qd_connection_name(const qd_connection_t *c);

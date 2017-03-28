@@ -611,7 +611,6 @@ class EntityCache(object):
             for i in sorted(redundant, reverse=True):
                 events.pop(i)
 
-        # FIXME aconway 2014-10-23: locking is ugly, push it down into C code.
         self.qd.qd_dispatch_router_lock(self.agent.dispatch)
         try:
             events = []
