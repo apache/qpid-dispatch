@@ -494,7 +494,7 @@ class MessageTransferTest(MessagingHandler):
         self.lookup_conn.close()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(5, Timeout(self))
+        self.timer          = event.reactor.schedule(10, Timeout(self))
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
         self.lookup_conn    = event.container.connect(self.lookup_host)
@@ -587,7 +587,7 @@ class MessageTransferAnonTest(MessagingHandler):
         self.poll()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(5, Timeout(self))
+        self.timer          = event.reactor.schedule(10, Timeout(self))
         self.poll_timer     = None
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
@@ -714,7 +714,7 @@ class LinkRouteTest(MessagingHandler):
 
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(5, Timeout(self))
+        self.timer          = event.reactor.schedule(10, Timeout(self))
         self.first_conn     = event.container.connect(self.first_host)
         self.second_conn    = event.container.connect(self.second_host)
         self.lookup_conn    = event.container.connect(self.lookup_host)
