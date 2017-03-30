@@ -28,6 +28,7 @@
 #include <proton/message.h>
 #include <proton/connection.h>
 #include <proton/event.h>
+#include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/hash.h>
 #include <qpid/dispatch/threading.h>
@@ -91,7 +92,7 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
 
     if (node == 0) {
         pn_condition_t *cond = pn_link_condition(pn_link);
-        pn_condition_set_name(cond, "amqp:not-found");
+        pn_condition_set_name(cond, QD_AMQP_COND_NOT_FOUND);
         pn_condition_set_description(cond, "Source node does not exist");
         pn_link_close(pn_link);
         return;
@@ -100,7 +101,7 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
     qd_link_t *link = new_qd_link_t();
     if (!link) {
         pn_condition_t *cond = pn_link_condition(pn_link);
-        pn_condition_set_name(cond, "amqp:internal-error");
+        pn_condition_set_name(cond, QD_AMQP_COND_INTERNAL_ERROR);
         pn_condition_set_description(cond, "Insufficient memory");
         pn_link_close(pn_link);
         return;
@@ -127,7 +128,7 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
 
     if (node == 0) {
         pn_condition_t *cond = pn_link_condition(pn_link);
-        pn_condition_set_name(cond, "amqp:not-found");
+        pn_condition_set_name(cond, QD_AMQP_COND_NOT_FOUND);
         pn_condition_set_description(cond, "Target node does not exist");
         pn_link_close(pn_link);
         return;
@@ -136,7 +137,7 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
     qd_link_t *link = new_qd_link_t();
     if (!link) {
         pn_condition_t *cond = pn_link_condition(pn_link);
-        pn_condition_set_name(cond, "amqp:internal-error");
+        pn_condition_set_name(cond, QD_AMQP_COND_INTERNAL_ERROR);
         pn_condition_set_description(cond, "Insufficient memory");
         pn_link_close(pn_link);
         return;

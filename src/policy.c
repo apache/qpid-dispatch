@@ -45,9 +45,6 @@ static int n_processed = 0;
 //
 // error conditions signaled to effect denial
 //
-static char* RESOURCE_LIMIT_EXCEEDED     = "amqp:resource-limit-exceeded";
-//static char* UNAUTHORIZED_ACCESS         = "amqp:unauthorized-access";
-//static char* CONNECTION_FORCED           = "amqp:connection:forced";
 
 //
 // error descriptions signaled to effect denial
@@ -379,7 +376,7 @@ void qd_policy_private_deny_amqp_connection(pn_connection_t *conn, const char *c
 void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 {
     pn_condition_t * cond = pn_session_condition(ssn);
-    (void) pn_condition_set_name(       cond, RESOURCE_LIMIT_EXCEEDED);
+    (void) pn_condition_set_name(       cond, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED);
     (void) pn_condition_set_description(cond, SESSION_DISALLOWED);
     pn_session_close(ssn);
     qd_conn->policy_settings->denialCounts->sessionDenied++;
@@ -438,7 +435,7 @@ void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_con
 void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn)
 {
     pn_condition_t * cond = pn_link_condition(link);
-    (void) pn_condition_set_name(       cond, RESOURCE_LIMIT_EXCEEDED);
+    (void) pn_condition_set_name(       cond, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED);
     (void) pn_condition_set_description(cond, LINK_DISALLOWED);
     pn_link_close(link);
 }
@@ -728,7 +725,7 @@ void qd_policy_amqp_open(void *context, bool discard)
                 pn_connection_open(conn);
             policy_notify_opened(qd_conn->open_container, qd_conn, qd_conn->context);
         } else {
-            qd_policy_private_deny_amqp_connection(conn, RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);
+            qd_policy_private_deny_amqp_connection(conn, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);
         }
     }
     qd_connection_set_event_stall(qd_conn, false);
