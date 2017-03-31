@@ -39,16 +39,16 @@ qd_metric(const char *name, const char *description, qd_metric_type_t type)
 }
 
 void
-qd_metric_inc(qd_metric_t *metric, double increment, qd_metric_label_t labels[], unsigned int num_labels)
+qd_metric_inc(qd_metric_t *metric, double increment, const qd_metric_label_t labels[], unsigned int num_labels)
 {
 }
 
 void
-qd_metric_dec(qd_metric_t *metric, double decrement, qd_metric_label_t labels[], unsigned int num_labels)
+qd_metric_dec(qd_metric_t *metric, double decrement, const qd_metric_label_t labels[], unsigned int num_labels)
 {
 }
 
 void
-qd_metric_set(qd_metric_t *metric, double value, qd_metric_label_t labels[], unsigned int num_labels)
+qd_metric_set(qd_metric_t *metric, double value, const qd_metric_label_t labels[], unsigned int num_labels)
 {
 }

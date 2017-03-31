@@ -96,7 +96,13 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
         strcat(conn->tenant_space, "/");
     }
 
-    QD_METRIC_INC(core->metrics.num_connections);
+    qd_metric_label_t labels[] = {
+        {
+            .key = "container",
+            .value = connection_info->container
+        }
+    };
+    qd_metric_inc(core->metrics.num_connections, 1, labels, 1);
 
     action->args.connection.conn             = conn;
     action->args.connection.connection_label = qdr_field(label);

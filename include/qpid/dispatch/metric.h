@@ -42,9 +42,9 @@ struct qd_metric_label_t {
 };
 
 qd_metric_t * qd_metric(const char *name, const char *description, qd_metric_type_t type);
-void          qd_metric_inc(qd_metric_t *metric, double increment, qd_metric_label_t labels[], unsigned int num_labels);
-void          qd_metric_dec(qd_metric_t *metric, double value, qd_metric_label_t labels[], unsigned int num_labels);
-void          qd_metric_set(qd_metric_t *metric, double decrement, qd_metric_label_t labels[], unsigned int num_labels);
+void          qd_metric_inc(qd_metric_t *metric, double increment, const qd_metric_label_t labels[], unsigned int num_labels);
+void          qd_metric_dec(qd_metric_t *metric, double value, const qd_metric_label_t labels[], unsigned int num_labels);
+void          qd_metric_set(qd_metric_t *metric, double decrement, const qd_metric_label_t labels[], unsigned int num_labels);
 
 #define QD_METRIC_INC(m)      qd_metric_inc((m), 1, NULL, 0)
 #define QD_METRIC_INC_N(m, n) qd_metric_inc((m), (n), NULL, 0)
