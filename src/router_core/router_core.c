@@ -50,6 +50,10 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     core->log       = qd_log_source("ROUTER_CORE");
     core->agent_log = qd_log_source("AGENT");
 
+
+    // Set up metrics
+    QD_METRIC_INIT(&core->metrics, num_connections, "Number of open connections", QD_METRIC_TYPE_GAUGE);
+
     //
     // Set up the threading support
     //
