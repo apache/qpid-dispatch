@@ -28,24 +28,29 @@
  * @{
  */
 
-typedef struct qd_metric_t            qd_metric_t;
-typedef struct qd_metric_labelset_t   qd_metric_labelset_t;
+typedef struct qd_metric_t         qd_metric_t;
+typedef struct qd_metric_label_t   qd_metric_label_t;
 
 typedef enum {
     QD_METRIC_TYPE_GAUGE = 1,
     QD_METRIC_TYPE_COUNTER
 } qd_metric_type_t;
 
-qd_metric_t * qd_metric(const char * name, const char * description, qd_metric_type_t type);
-void          qd_metric_inc(qd_metric_t *, qd_metric_labelset_t * labels, double increment);
-void          qd_metric_dec(qd_metric_t *, qd_metric_labelset_t * labels, double decrement);
-void          qd_metric_set(qd_metric_t *, qd_metric_labelset_t * labels, double value);
+struct qd_metric_label_t {
+    const char * key;
+    const char * value;
+};
 
-#define QD_METRIC_INC(m)      qd_metric_inc((m), NULL, 1)
-#define QD_METRIC_INC_N(m, n) qd_metric_inc((m), NULL, (n))
-#define QD_METRIC_DEC(m)      qd_metric_dec((m), NULL, 1)
-#define QD_METRIC_DEC_N(m, n) qd_metric_dec((m), NULL, (n))
-#define QD_METRIC_SET(m, n)   qd_metric_set((m), NULL, (n))
+qd_metric_t * qd_metric(const char *name, const char *description, qd_metric_type_t type);
+void          qd_metric_inc(qd_metric_t *metric, double increment, qd_metric_label_t labels[], unsigned int num_labels);
+void          qd_metric_dec(qd_metric_t *metric, double value, qd_metric_label_t labels[], unsigned int num_labels);
+void          qd_metric_set(qd_metric_t *metric, double decrement, qd_metric_label_t labels[], unsigned int num_labels);
+
+#define QD_METRIC_INC(m)      qd_metric_inc((m), 1, NULL, 0)
+#define QD_METRIC_INC_N(m, n) qd_metric_inc((m), (n), NULL, 0)
+#define QD_METRIC_DEC(m)      qd_metric_dec((m), 1, NULL, 0)
+#define QD_METRIC_DEC_N(m, n) qd_metric_dec((m), (n), NULL, 0)
+#define QD_METRIC_SET(m, n)   qd_metric_set((m), (n), NULL, 0)
 
 /**
  * @}

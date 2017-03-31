@@ -23,20 +23,11 @@
 #include <qpid/dispatch/ctools.h>
 
 typedef struct qd_metric_value_t qd_metric_value_t;
-typedef struct qd_metric_label_t qd_metric_label_t;
-
-struct qd_metric_label_t {
-    DEQ_LINKS(qd_metric_label_t);
-    char * key;
-    char * value;
-};
-
-DEQ_DECLARE(qd_metric_label_t, qd_metric_labelset_internal_t);
 
 // TODO: Hash labels for quick lookup
 struct qd_metric_value_t {
     DEQ_LINKS(qd_metric_value_t);
-    qd_metric_labelset_internal_t labels;
+    qd_metric_label_t *labels;
     double value;
 };
 
