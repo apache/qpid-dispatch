@@ -19,8 +19,6 @@
  * under the License.
  */
 
-#include <stdint.h>
-
 /**@file
  * Server Metric Functions
  * 
@@ -30,34 +28,24 @@
  * @{
  */
 
-typedef struct qd_metric_t           qd_metric_t;
-typedef struct qd_metric_counter_t   qd_metric_counter_t;
-typedef struct qd_metric_gauge_t     qd_metric_gauge_t;
+typedef struct qd_metric_t            qd_metric_t;
+typedef struct qd_metric_labelset_t   qd_metric_labelset_t;
 
 typedef enum {
     QD_METRIC_TYPE_GAUGE = 1,
     QD_METRIC_TYPE_COUNTER
 } qd_metric_type_t;
 
-struct qd_metric_t {
-    const char * name;
-    const char * description;
-    qd_metric_type_t type;
-    double value;
-};
+qd_metric_t * qd_metric(const char * name, const char * description, qd_metric_type_t type);
+void          qd_metric_inc(qd_metric_t *, qd_metric_labelset_t * labels, double increment);
+void          qd_metric_dec(qd_metric_t *, qd_metric_labelset_t * labels, double decrement);
+void          qd_metric_set(qd_metric_t *, qd_metric_labelset_t * labels, double value);
 
-#define QD_METRIC_INIT(parent, n, d, t) do { \
-    (parent)->n.name = #n;                   \
-    (parent)->n.description = (d);           \
-    (parent)->n.type = (t);                  \
-    (parent)->n.value = 0;                   \
-} while (0)
-
-#define QD_METRIC_INC(m)      (m)->value++
-#define QD_METRIC_INC_N(m, n) (m)->value += (n)
-#define QD_METRIC_DEC(m)      (m)->value--
-#define QD_METRIC_DEC_N(m, n)   (m)->value -= (n)
-#define QD_METRIC_SET(m, n)   (m)->value = (n)
+#define QD_METRIC_INC(m)      qd_metric_inc((m), NULL, 1)
+#define QD_METRIC_INC_N(m, n) qd_metric_inc((m), NULL, (n))
+#define QD_METRIC_DEC(m)      qd_metric_dec((m), NULL, 1)
+#define QD_METRIC_DEC_N(m, n) qd_metric_dec((m), NULL, (n))
+#define QD_METRIC_SET(m, n)   qd_metric_set((m), NULL, (n))
 
 /**
  * @}

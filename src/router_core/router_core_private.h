@@ -547,7 +547,7 @@ ALLOC_DECLARE(qdr_conn_identifier_t);
 
 typedef struct qd_core_metrics_t qd_core_metrics_t;
 struct qd_core_metrics_t {
-    qd_metric_t num_connections;
+    qd_metric_t * num_connections;
 };
 
 struct qdr_core_t {
