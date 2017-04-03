@@ -16,12 +16,11 @@
 ## specific language governing permissions and limitations
 ## under the License
 ##
-
 [
-    # The boardwalk policy ruleset
+    # The safari policy ruleset
     ["vhost",
         {
-            "id": "boardwalk",
+            "id": "safari",
             "maxConnections": 10,
             "maxConnectionsPerUser": 2,
             "maxConnectionsPerHost": 5,
@@ -29,7 +28,7 @@
             "groups": {
                 "anonymous": {
                     "users": "anonymous",
-                    "remoteHosts": "10.18.0.0-10.18.255.255, 10.48.0.0-10.48.255.255, 192.168.0.0-192.168.255.255",
+                    "remoteHosts": "*",
                     "maxFrameSize": 111111,
                     "maxMessageSize": 111111,
                     "maxSessionWindow": 111111,
@@ -41,9 +40,9 @@
                     "sources": "public",
                     "targets": ""
                 },
-                "users": {
-                    "users": "u1, u2, u3",
-                    "remoteHosts": "*",
+                "clients": {
+                    "users": "moja, mbili",
+                    "remoteHosts": "72.135.2.9",
                     "maxFrameSize": 222222,
                     "maxMessageSize": 222222,
                     "maxSessionWindow": 222222,
@@ -55,9 +54,9 @@
                     "sources": "public, private",
                     "targets": "public"
                 },
-                "superuser": {
-                    "users": "ellen",
-                    "remoteHosts": "127.0.0.1, 72.135.2.9, ::1",
+                "guides": {
+                    "users": "kata, hapa",
+                    "remoteHosts": "72.135.2.9, 10.48.0.0-10.48.255.255, 192.168.0.0-192.168.255.255, 127.0.0.1{IPV6_LOOPBACK}",
                     "maxFrameSize": 666666,
                     "maxMessageSize": 666666,
                     "maxSessionWindow": 666666,

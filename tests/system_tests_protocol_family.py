@@ -20,7 +20,8 @@
 import unittest
 from time import sleep
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, is_ipv6_enabled
+from system_test import TestCase, Qdrouterd, main_module
+from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 
 try:
     from proton import MODIFIED

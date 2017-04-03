@@ -57,7 +57,7 @@
                 },
                 "superuser": {
                     "users": "ellen",
-                    "remoteHosts": "127.0.0.1, 72.135.2.9, ::1",
+                    "remoteHosts": "127.0.0.1, 72.135.2.9{IPV6_LOOPBACK}",
                     "maxFrameSize": 666666,
                     "maxMessageSize": 666666,
                     "maxSessionWindow": 666666,
