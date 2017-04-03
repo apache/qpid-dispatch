@@ -17,10 +17,8 @@
 # under the License
 #
 
-import sys, os
 import socket
 import binascii
-
 
 #
 #
@@ -30,8 +28,19 @@ class PolicyError(Exception):
     def __str__(self):
         return repr(self.value)
 
-#
-#
+def is_ipv6_enabled():
+    """
+    Returns true if IPV6 is enabled, false otherwise
+    """
+    ipv6_enabled = True
+    try:
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        sock.bind(('::1', 0))
+    except Exception as e:
+        ipv6_enabled = False
+
+    return ipv6_enabled
+
 class HostStruct(object):
     """
     HostStruct represents a single, binary socket address from getaddrinfo
@@ -42,9 +51,10 @@ class HostStruct(object):
     """
     families = [socket.AF_INET]
     famnames = ["IPv4"]
-    if socket.has_ipv6:
+    if is_ipv6_enabled():
         families.append(socket.AF_INET6)
         famnames.append("IPv6")
+
 
     def __init__(self, hostname):
         """
@@ -70,7 +80,6 @@ class HostStruct(object):
                         if not saddr == sockaddr[0] or not sfamily == family:
                             raise PolicyError("HostStruct: '%s' resolves to multiple IP addresses" %
                                               hostname)
-
             if not foundFirst:
                 raise PolicyError("HostStruct: '%s' did not resolve to one of the supported address family" %
                         hostname)
@@ -115,9 +124,6 @@ class HostAddr(object):
     IPv6 support is conditional based on underlying OS network options.
     Raises a PolicyError on validation error in constructor.
     """
-
-    def has_ipv6(self):
-        return socket.has_ipv6
 
     def __init__(self, hostspec, separator=","):
         """

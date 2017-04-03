@@ -23,6 +23,7 @@ from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
 from proton import ConnectionException
 from proton.utils import BlockingConnection, LinkDetached
+from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
@@ -78,7 +79,22 @@ class LoadPolicyFromFolder(TestCase):
     def setUpClass(cls):
         """Start the router"""
         super(LoadPolicyFromFolder, cls).setUpClass()
+
+        ipv6_enabled = is_ipv6_enabled()
+
         policy_config_path = os.path.join(DIR, 'policy-1')
+        replacements = {'{IPV6_LOOPBACK}':', ::1'}
+        for f in os.listdir(policy_config_path):
+            if f.endswith(".json.in"):
+                with open(policy_config_path + "/" + f) as infile, open(policy_config_path+"/"+f[:-3], 'w') as outfile:
+                    for line in infile:
+                        for src, target in replacements.iteritems():
+                            if ipv6_enabled:
+                                line = line.replace(src, target)
+                            else:
+                                line = line.replace(src, '')
+                        outfile.write(line)
+
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
