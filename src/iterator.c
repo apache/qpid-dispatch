@@ -20,7 +20,6 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/ctools.h>
 #include "alloc.h"
-#include <qpid/dispatch/log.h>
 #include "message_private.h"
 #include <stdio.h>
 #include <string.h>
@@ -357,13 +356,19 @@ static void qd_iterator_free_hash_segments(qd_iterator_t *iter)
 
 void qd_iterator_set_address(const char *area, const char *router)
 {
-    my_area = (char*) malloc(strlen(area) + 2);
-    strcpy(my_area, area);
-    strcat(my_area, "/");
-
-    my_router = (char*) malloc(strlen(router) + 2);
-    strcpy(my_router, router);
-    strcat(my_router, "/");
+    static char buf[2048];     /* Static buffer, should usually be Big Enough */
+    static char *ptr = buf;
+#define FMT "%s/%c%s/", area, '\0', router /* "area/\0router/\0" */
+    size_t size = snprintf(buf, sizeof(buf), FMT);
+    if (size < sizeof(buf)) {
+        ptr = buf;
+    } else {
+        if (ptr && ptr != buf) free(ptr);
+        ptr = malloc(size + 1);
+        snprintf(buf, sizeof(buf), FMT);
+    }
+    my_area = ptr;
+    my_router = ptr + strlen(my_area) + 1;
 }
 
 

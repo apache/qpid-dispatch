@@ -339,6 +339,10 @@ static char *test_tracemask(void *context)
 
     qd_tracemask_free(tm);
     qd_bitmask_free(bm);
+    for (qd_buffer_t *buf = DEQ_HEAD(list); buf; buf = DEQ_HEAD(list)) {
+        DEQ_REMOVE_HEAD(list);
+        qd_buffer_free(buf);
+    }
     return 0;
 }
 
