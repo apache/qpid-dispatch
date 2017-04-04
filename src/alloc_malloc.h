@@ -28,11 +28,12 @@
 
 #define ALLOC_DECLARE(T)                        \
     T *new_##T(void);                           \
-    void free_##T(T *p);
+    void free_##T(T *p)
 
 #define ALLOC_DEFINE_CONFIG(T,S,A,C)                                    \
     T *new_##T(void) { size_t *a = (A); return (T*) malloc((S)+ (a ? *a : 0)); } \
     void free_##T(T *p) { free(p); } \
+    void *unused##T
 
 #define ALLOC_DEFINE(T) ALLOC_DEFINE_CONFIG(T, sizeof(T), 0, 0)
 
