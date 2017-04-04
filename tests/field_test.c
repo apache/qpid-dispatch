@@ -248,6 +248,7 @@ static char* view_address_hash(void *context, qd_iterator_t *iter,
         char *got = (char*) qd_iterator_copy(iter);
         snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
                  addr, view, got);
+        free(got);
         return fail_text;
     }
     return 0;
@@ -297,7 +298,9 @@ static char* test_view_address_hash(void *context)
         qd_iterator_t *iter = qd_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_HASH);
         char *ret = view_address_hash(context, iter, cases[idx].addr, cases[idx].view);
         qd_iterator_free(iter);
-        if (ret) return ret;
+        if (ret) {
+            return strncpy(fail_text, ret, FAIL_TEXT_SIZE);
+        }
     }
 
     for (idx = 0; cases[idx].addr; idx++) {
@@ -375,6 +378,7 @@ static char* test_view_address_with_space(void *context)
         qd_iterator_annotate_space(iter, "space/", 6);
         char *ret = view_address_hash(context, iter, cases[idx].addr, cases[idx].view);
         release_buffer_chain(&chain);
+        qd_iterator_free(iter);
         if (ret) return ret;
     }
 
@@ -400,6 +404,7 @@ static char* test_view_address_hash_override(void *context)
             char *got = (char*) qd_iterator_copy(iter);
             snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
                      cases[idx].addr, cases[idx].view, got);
+            qd_iterator_free(iter);
             return fail_text;
         }
         qd_iterator_free(iter);
@@ -550,6 +555,7 @@ static char *test_qd_hash_retrieve_prefix_separator(void *context)
 
     qd_iterator_free(iter);
     qd_iterator_free(address_iter);
+    qd_hash_free(hash);
 
     if(addr)
         return 0;
@@ -583,6 +589,7 @@ static char *test_qd_hash_retrieve_prefix(void *context)
 
     qd_iterator_free(iter);
     qd_iterator_free(address_iter);
+    qd_hash_free(hash);
 
     if(addr)
         return 0;
@@ -617,6 +624,7 @@ static char *test_qd_hash_retrieve_prefix_no_match(void *context)
 
     qd_iterator_free(iter);
     qd_iterator_free(address_iter);
+    qd_hash_free(hash);
 
     if(addr)
         return "test_qd_hash_retrieve_prefix_no_match() failed";
@@ -651,6 +659,7 @@ static char *test_qd_hash_retrieve_prefix_no_match_separator(void *context)
 
     qd_iterator_free(iter);
     qd_iterator_free(address_iter);
+    qd_hash_free(hash);
 
     if(addr)
         return "test_qd_hash_retrieve_prefix_no_match_separator() failed";
@@ -682,6 +691,7 @@ static char *test_qd_hash_retrieve_prefix_separator_exact_match(void *context)
 
     qd_iterator_free(iter);
     qd_iterator_free(address_iter);
+    qd_hash_free(hash);
 
     if(addr)
         return 0;
@@ -713,6 +723,7 @@ static char *test_qd_hash_retrieve_prefix_separator_exact_match_1(void *context)
 
     qd_iterator_free(iter);
     qd_iterator_free(address_iter);
+    qd_hash_free(hash);
 
     if(addr)
         return 0;
@@ -747,6 +758,7 @@ static char *test_qd_hash_retrieve_prefix_separator_exact_match_slashes(void *co
 
     qd_iterator_free(iter);
     qd_iterator_free(address_iter);
+    qd_hash_free(hash);
 
     if(addr)
         return 0;
@@ -779,6 +791,7 @@ static char *test_qd_hash_retrieve_prefix_separator_exact_match_dot_at_end(void 
 
     qd_iterator_free(iter);
     qd_iterator_free(address_iter);
+    qd_hash_free(hash);
 
     if(addr)
         return 0;
@@ -811,6 +824,7 @@ static char *test_qd_hash_retrieve_prefix_separator_exact_match_dot_at_end_1(voi
 
     qd_iterator_free(iter);
     qd_iterator_free(address_iter);
+    qd_hash_free(hash);
 
     if(addr)
         return 0;
@@ -883,9 +897,11 @@ static char *test_prefix_hash(void *context)
             qd_iterator_free(iter);
             return error;
         }
+        qd_iterator_free(iter);
         idx++;
     }
 
+    qd_hash_free(hash);
     return 0;
 }
 
@@ -955,9 +971,11 @@ static char *test_prefix_hash_with_space(void *context)
             qd_iterator_free(iter);
             return error;
         }
+        qd_iterator_free(iter);
         idx++;
     }
 
+    qd_hash_free(hash);
     return 0;
 }
 
@@ -996,4 +1014,3 @@ int field_tests(void)
 
     return result;
 }
-

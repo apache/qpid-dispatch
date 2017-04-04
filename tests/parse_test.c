@@ -130,6 +130,7 @@ static char *test_map(void *context)
 
     qd_iterator_t     *data_iter = qd_iterator_binary(data, data_len, ITER_VIEW_ALL);
     qd_parsed_field_t *field     = qd_parse(data_iter);
+
     if (!qd_parse_ok(field)) {
         snprintf(error, 1000, "Parse failed: %s", qd_parse_error(field));
         qd_iterator_free(data_iter);
@@ -207,6 +208,8 @@ static char *test_map(void *context)
         return error;
     }
 
+    qd_iterator_free(data_iter);
+    qd_parse_free(field);
     return 0;
 }
 
@@ -258,7 +261,7 @@ static char *test_parser_errors(void *context)
 
 static char *test_tracemask(void *context)
 {
-    qd_bitmask_t    *bm;
+    qd_bitmask_t    *bm = NULL;
     qd_tracemask_t  *tm = qd_tracemask();
     qd_buffer_list_t list;
     static char      error[1024];
@@ -286,6 +289,8 @@ static char *test_tracemask(void *context)
 
     DEQ_INIT(list);
     qd_compose_take_buffers(comp, &list);
+    qd_compose_free(comp);
+
     int length = 0;
     qd_buffer_t *buf = DEQ_HEAD(list);
     while (buf) {
@@ -295,6 +300,7 @@ static char *test_tracemask(void *context)
 
     qd_iterator_t     *iter = qd_iterator_buffer(DEQ_HEAD(list), 0, length, ITER_VIEW_ALL);
     qd_parsed_field_t *pf   = qd_parse(iter);
+    qd_iterator_free(iter);
 
     bm = qd_tracemask_create(tm, pf);
     if (qd_bitmask_cardinality(bm) != 3) {
@@ -316,6 +322,7 @@ static char *test_tracemask(void *context)
     qd_tracemask_remove_link(tm, 0);
 
     bm = qd_tracemask_create(tm, pf);
+    qd_parse_free(pf);
     if (qd_bitmask_cardinality(bm) != 1) {
         sprintf(error, "Expected cardinality of 1, got %d", qd_bitmask_cardinality(bm));
         return error;
@@ -331,6 +338,7 @@ static char *test_tracemask(void *context)
     }
 
     qd_tracemask_free(tm);
+    qd_bitmask_free(bm);
     return 0;
 }
 
