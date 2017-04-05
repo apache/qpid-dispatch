@@ -129,6 +129,7 @@ static void qd_server_config_free(qd_server_config_t *cf)
     if (cf->sasl_mechanisms) free(cf->sasl_mechanisms);
     if (cf->ssl_profile)     free(cf->ssl_profile);
     if (cf->failover_list)   qd_failover_list_free(cf->failover_list);
+    if (cf->log_message)     free(cf->log_message);
 
     memset(cf, 0, sizeof(*cf));
 }
