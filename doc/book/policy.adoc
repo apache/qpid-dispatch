@@ -146,7 +146,7 @@ This object is the data value contained in entries in the policy/groups map.
 |====
 | Section/Attribute    | default | description
 | *Group Membership*             | |
-| users                | ""      | List of authenticated users in this group.
+| users                | ""      | Comma separated list of authenticated users in this group.
 | *Connection Restrictions*      | |
 | remoteHosts          | ""      | List of remote hosts from which the users may connect. List values may be host names, numeric IP addresses, numeric IP address ranges, or the wildcard '*'. An empty list denies all access.
 | *AMQP Connection Open Limits*  | |
