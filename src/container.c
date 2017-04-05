@@ -827,7 +827,10 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
 void qd_link_free(qd_link_t *link)
 {
     if (!link) return;
-    link->pn_link = 0;
+    if (link->pn_link) {
+        pn_link_set_context(link->pn_link, 0);
+        link->pn_link = 0;
+    }
     link->pn_sess = 0;
     free_qd_link_t(link);
 }
