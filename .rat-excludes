@@ -7,4 +7,6 @@ client-password-file.txt
 server-password-file-bad.txt
 server-password-file.txt
 v3_ca.ext
+.*rat-excludes
+.*rhea-min.js
 .*~
