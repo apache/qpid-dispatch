@@ -86,14 +86,15 @@ class LoadPolicyFromFolder(TestCase):
         replacements = {'{IPV6_LOOPBACK}':', ::1'}
         for f in os.listdir(policy_config_path):
             if f.endswith(".json.in"):
-                with open(policy_config_path + "/" + f) as infile, open(policy_config_path+"/"+f[:-3], 'w') as outfile:
-                    for line in infile:
-                        for src, target in replacements.iteritems():
-                            if ipv6_enabled:
-                                line = line.replace(src, target)
-                            else:
-                                line = line.replace(src, '')
-                        outfile.write(line)
+                with open(policy_config_path+"/"+f[:-3], 'w') as outfile:
+                    with open(policy_config_path + "/" + f) as infile:
+                        for line in infile:
+                            for src, target in replacements.iteritems():
+                                if ipv6_enabled:
+                                    line = line.replace(src, target)
+                                else:
+                                    line = line.replace(src, '')
+                            outfile.write(line)
 
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
