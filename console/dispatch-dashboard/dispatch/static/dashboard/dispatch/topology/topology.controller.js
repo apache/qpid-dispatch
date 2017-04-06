@@ -948,7 +948,7 @@ var QDR = (function (QDR) {
     }
     function removeCrosssection() {
       setTimeout(function () {
-        d3.select("[id^=tooltipsy]").remove()
+        //d3.select("[id^=tooltipsy]").remove()
         $('.hastip').empty();
       }, 1010);
       d3.select("#crosssection svg g").transition()
@@ -1151,7 +1151,7 @@ var QDR = (function (QDR) {
               .text(function(d) {
                   return d.name.substring(0, d.r / 3);
               });
-          $('.hastip').tooltipsy({ alignTo: 'cursor'});
+          //$('.hastip').tooltipsy({ alignTo: 'cursor'});
           svgg.attr("transform", "translate(2,2) scale(0.01)")
 
           var bounds = $("#topology").position()
