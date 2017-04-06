@@ -34,6 +34,7 @@ qd_metric_insert(qd_metric_t *metric, double initial_value, const qd_metric_labe
 {
     // Add new metric
     qd_metric_value_t *value = new_qd_metric_value_t();
+    DEQ_ITEM_INIT(value);
     value->value = initial_value;
     value->num_labels = num_labels;
     value->labels = malloc(sizeof(qd_metric_label_t) * num_labels);
@@ -56,6 +57,7 @@ qd_metric(const char *name, const char *description, qd_metric_type_t type)
     metric->description = description;
     metric->type = type;
     DEQ_INIT(metric->values);
+    DEQ_ITEM_INIT(metric);
 
     return metric;
 }

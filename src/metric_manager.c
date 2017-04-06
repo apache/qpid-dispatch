@@ -108,7 +108,9 @@ qd_metric_t *
 qd_metric_manager_register(qd_metric_manager_t *manager, const char *name, const char *desc, qd_metric_type_t type)
 {
     qd_metric_t *metric = qd_metric(name, desc, type);
-    DEQ_INSERT_TAIL(manager->metric_list, metric);
+    if (metric != NULL) {
+        DEQ_INSERT_TAIL(manager->metric_list, metric);
+    }
     return metric;
 }
 
