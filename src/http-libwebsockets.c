@@ -22,6 +22,7 @@
 #include <qpid/dispatch/driver.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/timer.h>
+#include <qpid/dispatch/buffer.h>
 
 #include <libwebsockets.h>
 
@@ -31,6 +32,7 @@
 
 #include "http.h"
 #include "server_private.h"
+#include "router_core/router_core_private.h"
 #include "config.h"
 
 static qd_log_source_t* http_log;
@@ -121,6 +123,29 @@ static inline int unexpected_close(struct lws *wsi, const char *msg) {
     return -1;
 }
 
+static int handle_metrics(struct lws *wsi)
+{
+    qd_http_server_t *server = wsi_http_server(wsi);
+
+    qd_metric_manager_t *metric_manager= server->dispatch->metric_manager;
+    qd_buffer_list_t buffers;
+    DEQ_INIT(buffers);
+    qd_metric_manager_export(metric_manager, &buffers);
+
+    char response[512];
+    snprintf(response, 512, "HTTP/1.1 200 OK\x0d\x0a" "Content-Type: text/plain\x0d\x0a" "Content-Length: %u\x0d\x0a\x0d\x0a", qd_buffer_list_length(&buffers));
+    lws_write(wsi, (unsigned char *)response, strlen(response), LWS_WRITE_HTTP);
+
+    qd_buffer_t * buf = DEQ_HEAD(buffers);
+    while (buf != NULL) {
+        lws_write(wsi, qd_buffer_base(buf), qd_buffer_size(buf), LWS_WRITE_HTTP);
+        DEQ_REMOVE_HEAD(buffers);
+        qd_buffer_free(buf);
+        buf = DEQ_HEAD(buffers);
+    }
+    return 0;
+}
+
 /*
  * Callback for un-promoted HTTP connections, and low-level external poll operations.
  * Note main HTTP file serving is handled by the "mount" struct below.
@@ -129,11 +154,20 @@ static inline int unexpected_close(struct lws *wsi, const char *msg) {
 static int callback_http(struct lws *wsi, enum lws_callback_reasons reason,
                          void *user, void *in, size_t len)
 {
+    char * request_uri;
+    int retval = 0;
+
     switch (reason) {
 
     case LWS_CALLBACK_HTTP:     /* Called if file mount can't find the file */
-        lws_return_http_status(wsi, HTTP_STATUS_NOT_FOUND, (char*)in);
-        return -1;
+        request_uri = (char *) in;
+        if (strcmp(request_uri, "/metrics/") == 0) {
+            retval = handle_metrics(wsi);
+        } else {
+            lws_return_http_status(wsi, HTTP_STATUS_NOT_FOUND, (char*)in);
+            retval = -1;
+        }
+        break;
 
     case LWS_CALLBACK_ADD_POLL_FD: {
         /* Record WSI against FD here, the connector will be recorded when lws_service returns. */
@@ -165,7 +199,7 @@ static int callback_http(struct lws *wsi, enum lws_callback_reasons reason,
         break;
     }
 
-    return 0;
+    return retval;
 }
 
 /* Buffer to allocate extra header space required by LWS.  */
@@ -427,12 +461,13 @@ qd_http_listener_t *qd_http_listener(qd_http_server_t *s, const qd_server_config
     struct lws_context_creation_info info = {0};
 
     struct lws_http_mount *m = &hl->mount;
-    m->mountpoint = "/";    /* URL mount point */
+    m->mountpoint = "/console";    /* URL mount point */
     m->mountpoint_len = strlen(m->mountpoint); /* length of the mountpoint */
     m->origin = (config->http_root && *config->http_root) ? /* File system root */
         config->http_root : QPID_CONSOLE_STAND_ALONE_INSTALL_DIR;
     m->def = "index.html";  /* Default file name */
     m->origin_protocol = LWSMPRO_FILE; /* mount type is a directory in a filesystem */
+
     info.mounts = m;
     info.port = CONTEXT_PORT_NO_LISTEN_SERVER; /* Don't use LWS listener */
     info.protocols = protocols;
