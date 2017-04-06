@@ -60,6 +60,28 @@ qd_metric(const char *name, const char *description, qd_metric_type_t type)
     return metric;
 }
 
+void
+qd_metric_free(qd_metric_t *metric)
+{
+    if (!metric) return;
+
+    qd_metric_value_t * value = DEQ_HEAD(metric->values);
+    while (value != NULL) {
+        for (int i = 0; i < value->num_labels; i++) {
+            // Casting is OK, we have allocated them
+            free((char *)value->labels[i].key);
+            free((char *)value->labels[i].value);
+        }
+        if (value->num_labels > 0) {
+            free(value->labels);
+        }
+        DEQ_REMOVE_HEAD(metric->values);
+        free_qd_metric_value_t(value);
+        value = DEQ_HEAD(metric->values);
+    }
+    free_qd_metric_t(metric);
+}
+
 static int
 qd_metric_label_cmp(const qd_metric_label_t *la, const qd_metric_label_t *lb, unsigned int num_labels)
 {

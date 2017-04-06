@@ -96,6 +96,12 @@ void
 qd_metric_manager_free(qd_metric_manager_t *manager)
 {
     if (!manager) return;
+    qd_metric_t *metric = DEQ_HEAD(manager->metric_list);
+    while (metric != NULL) {
+        qd_metric_free(metric);
+        DEQ_REMOVE_HEAD(manager->metric_list);
+        metric = DEQ_HEAD(manager->metric_list);
+    }
 }
 
 qd_metric_t *
