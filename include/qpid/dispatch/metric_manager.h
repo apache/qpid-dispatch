@@ -1,5 +1,5 @@
-#ifndef __metric_private_h__
-#define __metric_private_h__ 1
+#ifndef __dispatch_metric_manager_h__
+#define __dispatch_metric_manager_h__ 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -8,9 +8,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * 
  *   http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -20,28 +20,25 @@
  */
 
 #include <qpid/dispatch/metric.h>
-#include <qpid/dispatch/ctools.h>
+#include <qpid/dispatch/buffer.h>
 
-typedef struct qd_metric_value_t qd_metric_value_t;
+/**@file
+ * Server Metric Manager
+ * 
+ * @defgroup metric metric_manager
+ *
+ * Server Metric Manager Functions
+ * @{
+ */
+typedef struct qd_metric_manager_t qd_metric_manager_t;
 
-// TODO: Hash labels for quick lookup
-struct qd_metric_value_t {
-    DEQ_LINKS(qd_metric_value_t);
-    qd_metric_label_t *labels;
-    unsigned int num_labels;
-    double value;
-};
+qd_metric_manager_t *qd_metric_manager();
+void qd_metric_manager_free(qd_metric_manager_t *manager);
+void qd_metric_manager_export(qd_metric_manager_t *manager, qd_buffer_list_t *buffers);
+qd_metric_t *qd_metric_manager_register(qd_metric_manager_t *manager, const char *name, const char *desc, qd_metric_type_t type);
 
-DEQ_DECLARE(qd_metric_value_t, qd_metric_value_list_t);
-
-struct qd_metric_t {
-    DEQ_LINKS(qd_metric_t);
-    const char                 *name;
-    const char                 *description;
-    qd_metric_type_t            type;
-    qd_metric_value_list_t      values;
-};
-
-DEQ_DECLARE(qd_metric_t, qd_metric_list_t);
+/**
+ * @}
+ */
 
 #endif

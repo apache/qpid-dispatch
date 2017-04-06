@@ -55,6 +55,7 @@ extern const char *QD_ROUTER_LINK_TYPE;
 struct qd_router_t {
     qd_dispatch_t            *qd;
     qdr_core_t               *router_core;
+    qd_metric_manager_t      *metric_db;
     qd_tracemask_t           *tracemask;
     qd_log_source_t          *log_source;
     qd_router_mode_t          router_mode;
