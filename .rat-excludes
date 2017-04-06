@@ -8,5 +8,15 @@ server-password-file-bad.txt
 server-password-file.txt
 v3_ca.ext
 .*rat-excludes
-.*rhea-min.js
 .*~
+MANIFEST.in
+valgrind.supp
+VERSION.txt
+.gitignore
+.*rhea-min.js
+angular-patternfly.min.js
+angular-patternfly.min.css
+d3.v3.min.js
+jquery.dynatree.min.js
+slider.js
+ui-grid.js
