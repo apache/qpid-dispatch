@@ -78,7 +78,7 @@ qd_metric_write(qd_metric_t *metric, qd_buffer_list_t *buffers)
         write_string(buffers, " ", 1);
 
         char num[128];
-        snprintf(num, 128, "%f", value->value);
+        snprintf(num, 128, "%f\n", value->value);
         write_string(buffers, num, strlen(num));
         value = DEQ_NEXT(value);
     }
