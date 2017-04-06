@@ -44,8 +44,8 @@ struct qd_metric_label_t {
 qd_metric_t * qd_metric(const char *name, const char *description, qd_metric_type_t type);
 void          qd_metric_free(qd_metric_t *metric);
 void          qd_metric_inc(qd_metric_t *metric, double increment, const qd_metric_label_t labels[], unsigned int num_labels);
-void          qd_metric_dec(qd_metric_t *metric, double value, const qd_metric_label_t labels[], unsigned int num_labels);
-void          qd_metric_set(qd_metric_t *metric, double decrement, const qd_metric_label_t labels[], unsigned int num_labels);
+void          qd_metric_dec(qd_metric_t *metric, double decrement, const qd_metric_label_t labels[], unsigned int num_labels);
+void          qd_metric_set(qd_metric_t *metric, double value, const qd_metric_label_t labels[], unsigned int num_labels);
 
 #define QD_METRIC_INC(m)      qd_metric_inc((m), 1, NULL, 0)
 #define QD_METRIC_INC_N(m, n) qd_metric_inc((m), (n), NULL, 0)
@@ -62,6 +62,18 @@ void          qd_metric_set(qd_metric_t *metric, double decrement, const qd_metr
 
 #define QD_METRIC_DEC(m)      qd_metric_dec((m), 1, NULL, 0)
 #define QD_METRIC_DEC_N(m, n) qd_metric_dec((m), (n), NULL, 0)
+#define QD_METRIC_DEC_L1_N(m, n, label_key, label_value) do { \
+    qd_metric_label_t labels[] = {                          \
+        {                                                   \
+            .key = (label_key),                             \
+            .value = (label_value)                          \
+        }                                                   \
+    };                                                      \
+    qd_metric_dec((m), (n), labels, 1);                     \
+} while (0)
+
+#define QD_METRIC_DEC_L1(m, label_key, label_value) QD_METRIC_DEC_L1_N(m, 1, label_key, label_value)
+
 #define QD_METRIC_SET(m, n)   qd_metric_set((m), (n), NULL, 0)
 
 /**

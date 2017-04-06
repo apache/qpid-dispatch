@@ -111,7 +111,7 @@ void qdr_connection_closed(qdr_connection_t *conn)
 {
     qdr_action_t *action = qdr_action(qdr_connection_closed_CT, "connection_closed");
     action->args.connection.conn = conn;
-    QD_METRIC_DEC(conn->core->metrics.num_connections);
+    QD_METRIC_DEC_L1(conn->core->metrics.num_connections, "container", conn->connection_info->container);
     qdr_action_enqueue(conn->core, action);
 }
 
