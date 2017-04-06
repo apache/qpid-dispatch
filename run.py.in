@@ -115,15 +115,12 @@ def is_binary_exe(program):
 VALGRIND_ERROR = 42   # magic number indicating valgrind found errors
 def with_valgrind(args, outfile=None):
     if use_valgrind() and is_binary_exe(find_exe(args[0])):
-        opts = ['--trace-children=yes',
-                '--leak-check=full',
+        opts = ['--leak-check=full',
                 # Python generates a ton of "possibly lost" and "still in use"
                 # false alarms, restrict to "definite" leaks.
                 # Ideally we should have more specific python exclusions.
                 '--show-leak-kinds=definite',
                 '--errors-for-leak-kinds=definite',
-                '--demangle=yes',
-                '--num-callers=12',
                 '--error-exitcode=%d' % VALGRIND_ERROR,
                 '--quiet']
         opts.append('--tool=%s' % os.environ.get('VALGRIND_TOOL', 'memcheck'))
