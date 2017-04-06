@@ -55,10 +55,29 @@ write_string(qd_buffer_list_t *buffers, const char *str, unsigned long long len)
     }
 }
 
+static const char *
+type_to_string(qd_metric_type_t type)
+{
+    switch (type) {
+    case QD_METRIC_TYPE_GAUGE:
+        return "gauge";
+    case QD_METRIC_TYPE_COUNTER:
+        return "counter";
+    default:
+        return "unknown";
+    }
+}
+
 static void
 qd_metric_write(qd_metric_t *metric, qd_buffer_list_t *buffers)
 {
     qd_metric_value_t * value = DEQ_HEAD(metric->values);
+
+    char buf[256];
+    snprintf(buf, sizeof(buf), "# HELP %s %s\n", metric->name, metric->description);
+    write_string(buffers, buf, strlen(buf));
+    snprintf(buf, sizeof(buf), "# TYPE %s %s\n", metric->name, type_to_string(metric->type));
+    write_string(buffers, buf, strlen(buf));
 
     while (value != NULL) {
         write_string(buffers, metric->name, strlen(metric->name));
@@ -77,9 +96,8 @@ qd_metric_write(qd_metric_t *metric, qd_buffer_list_t *buffers)
         }
         write_string(buffers, " ", 1);
 
-        char num[128];
-        snprintf(num, 128, "%f\n", value->value);
-        write_string(buffers, num, strlen(num));
+        snprintf(buf, sizeof(buf), "%f\n", value->value);
+        write_string(buffers, buf, strlen(buf));
         value = DEQ_NEXT(value);
     }
 }
