@@ -111,6 +111,7 @@ qd_metric_inc(qd_metric_t *metric, double increment, const qd_metric_label_t lab
             value->value += increment;
             return;
         }
+        value = DEQ_NEXT(value);
     }
 
     qd_metric_insert(metric, increment, labels, num_labels);
@@ -125,6 +126,7 @@ qd_metric_dec(qd_metric_t *metric, double decrement, const qd_metric_label_t lab
             value->value -= decrement;
             return;
         }
+        value = DEQ_NEXT(value);
     }
     qd_metric_insert(metric, decrement, labels, num_labels);
 }
@@ -138,6 +140,7 @@ qd_metric_set(qd_metric_t *metric, double numeric_value, const qd_metric_label_t
             value->value = numeric_value;
             return;
         }
+        value = DEQ_NEXT(value);
     }
     qd_metric_insert(metric, numeric_value, labels, num_labels);
 }
