@@ -110,7 +110,7 @@ static char* test_receive_from_messenger(void *context)
     }
     qd_iterator_free(iter);
 
-    size_t test_len = (size_t)qd_message_field_length(msg, QD_FIELD_TO);
+    ssize_t  test_len = (size_t)qd_message_field_length(msg, QD_FIELD_TO);
     if (test_len != 11)
         return "Incorrect field length";
 
@@ -120,6 +120,11 @@ static char* test_receive_from_messenger(void *context)
     if (test_len - hdr_length != 11)
         return "Incorrect length returned from field_copy";
 
+    if (test_len < 0) {
+        pn_message_free(pn_msg);
+        qd_message_free(msg);
+        return "test_len cannot be less than zero";
+    }
     test_field[test_len] = '\0';
     if (strcmp(test_field + hdr_length, "test_addr_1") != 0) {
         pn_message_free(pn_msg);
@@ -178,8 +183,12 @@ static char* test_message_properties(void *context)
     qd_iterator_free(iter);
 
     iter = qd_message_field_iterator(msg, QD_FIELD_MESSAGE_ID);
-    if (!iter) return "Expected iterator for the 'message-id' field";
-    if (qd_iterator_length(iter) != 9) return "Bad length for message-id";
+    if (!iter)
+        return "Expected iterator for the 'message-id' field";
+    if (qd_iterator_length(iter) != 9) {
+        qd_iterator_free(iter);
+        return "Bad length for message-id";
+    }
     if (!qd_iterator_equal(iter, (const unsigned char *)"messageId")) {
         qd_iterator_free(iter);
         return "Invalid message-id";

@@ -299,7 +299,7 @@ static char* test_view_address_hash(void *context)
         char *ret = view_address_hash(context, iter, cases[idx].addr, cases[idx].view);
         qd_iterator_free(iter);
         if (ret) {
-            return strncpy(fail_text, ret, FAIL_TEXT_SIZE);
+            return strncpy(fail_text, ret, FAIL_TEXT_SIZE-1);
         }
     }
 
