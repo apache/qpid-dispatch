@@ -96,8 +96,6 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
         strcat(conn->tenant_space, "/");
     }
 
-    QD_METRIC_INC_L1(core->metrics.num_connections, "container", connection_info->container);
-
     action->args.connection.conn             = conn;
     action->args.connection.connection_label = qdr_field(label);
     action->args.connection.container_id     = qdr_field(remote_container_id);
@@ -111,7 +109,6 @@ void qdr_connection_closed(qdr_connection_t *conn)
 {
     qdr_action_t *action = qdr_action(qdr_connection_closed_CT, "connection_closed");
     action->args.connection.conn = conn;
-    QD_METRIC_DEC_L1(conn->core->metrics.num_connections, "container", conn->connection_info->container);
     qdr_action_enqueue(conn->core, action);
 }
 
