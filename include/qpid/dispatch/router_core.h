@@ -608,6 +608,8 @@ typedef enum {
 
 typedef struct qdr_query_t qdr_query_t;
 
+typedef void (*qdr_manage_response_t) (void *context, const qd_amqp_error_t *status, bool more);
+
 /**
  * qdr_manage_create
  *
@@ -619,10 +621,11 @@ typedef struct qdr_query_t qdr_query_t;
  * @param name The name supplied for the entity
  * @param in_body The body of the request message
  * @param out_body A composed field for the body of the response message
+ * @param response_handler The response handler to call when responding
  */
 void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t type,
                        qd_iterator_t *name, qd_parsed_field_t *in_body, qd_composed_field_t *out_body,
-                       qd_buffer_list_t body_buffers);
+                       qd_buffer_list_t body_buffers, qdr_manage_response_t response_handler);
 
 /**
  * qdr_manage_delete
@@ -634,9 +637,11 @@ void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t 
  * @param type The entity type for the create request
  * @param name The name supplied with the request (or 0 if the identity was supplied)
  * @param identity The identity supplied with the request (or 0 if the name was supplied)
+ * @param response_handler The response handler to call when responding
  */
 void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                       qd_iterator_t *name, qd_iterator_t *identity);
+                       qd_iterator_t *name, qd_iterator_t *identity,
+                       qdr_manage_response_t response_handler);
 
 /**
  * qdr_manage_read
@@ -649,9 +654,11 @@ void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t 
  * @param name The name supplied with the request (or 0 if the identity was supplied)
  * @param identity The identity supplied with the request (or 0 if the name was supplied)
  * @param body A composed field for the body of the response message
+ * @param response_handler The response handler to call when responding
  */
 void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                     qd_iterator_t *name, qd_iterator_t *identity, qd_composed_field_t *body);
+                     qd_iterator_t *name, qd_iterator_t *identity, qd_composed_field_t *body,
+                     qdr_manage_response_t response_handler);
 
 
 /**
@@ -666,10 +673,12 @@ void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t ty
  * @param identity The identity supplied with the request (or 0 if the name was supplied)
  * @param in_body The body of the request message
  * @param out_body A composed field for the body of the response message
+ * @param response_handler The response handler to call when responding
  */
 void qdr_manage_update(qdr_core_t *core, void *context, qd_router_entity_type_t type,
                        qd_iterator_t *name, qd_iterator_t *identity,
-                       qd_parsed_field_t *in_body, qd_composed_field_t *out_body);
+                       qd_parsed_field_t *in_body, qd_composed_field_t *out_body,
+                       qdr_manage_response_t response_handler);
 
 /**
  * Sequence for running a query:
@@ -687,14 +696,12 @@ void qdr_manage_update(qdr_core_t *core, void *context, qd_router_entity_type_t 
  */
 
 qdr_query_t *qdr_manage_query(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                              qd_parsed_field_t *attribute_names, qd_composed_field_t *body);
+                              qd_parsed_field_t *attribute_names, qd_composed_field_t *body,
+                              qdr_manage_response_t response_handler);
 void qdr_query_add_attribute_names(qdr_query_t *query);
 void qdr_query_get_first(qdr_query_t *query, int offset);
 void qdr_query_get_next(qdr_query_t *query);
 void qdr_query_free(qdr_query_t *query);
-
-typedef void (*qdr_manage_response_t) (void *context, const qd_amqp_error_t *status, bool more);
-void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler);
 
 qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            bool             is_authenticated,
