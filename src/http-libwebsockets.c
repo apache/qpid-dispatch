@@ -33,6 +33,7 @@
 #include "http.h"
 #include "server_private.h"
 #include "router_core/router_core_private.h"
+#include "metric_exporter_private.h"
 #include "config.h"
 
 static qd_log_source_t* http_log;
@@ -127,10 +128,9 @@ static int handle_metrics(struct lws *wsi)
 {
     qd_http_server_t *server = wsi_http_server(wsi);
 
-    qd_metric_manager_t *metric_manager= server->dispatch->metric_manager;
     qd_buffer_list_t buffers;
     DEQ_INIT(buffers);
-    qd_metric_manager_export(metric_manager, &buffers);
+    metric_export_prometheus(server->dispatch, &buffers);
 
     char response[512];
     snprintf(response, 512, "HTTP/1.1 200 OK\x0d\x0a" "Content-Type: text/plain\x0d\x0a" "Content-Length: %u\x0d\x0a\x0d\x0a", qd_buffer_list_length(&buffers));
