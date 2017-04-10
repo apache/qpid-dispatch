@@ -124,26 +124,20 @@ static inline int unexpected_close(struct lws *wsi, const char *msg) {
     return -1;
 }
 
-static int handle_metrics(struct lws *wsi)
+static void metric_callback(qd_buffer_list_t data, void *context)
 {
-    qd_http_server_t *server = wsi_http_server(wsi);
-
-    qd_buffer_list_t buffers;
-    DEQ_INIT(buffers);
-    metric_export_prometheus(server->dispatch, &buffers);
-
+    struct lws *wsi = (struct lws *)context;
     char response[512];
-    snprintf(response, 512, "HTTP/1.1 200 OK\x0d\x0a" "Content-Type: text/plain\x0d\x0a" "Content-Length: %u\x0d\x0a\x0d\x0a", qd_buffer_list_length(&buffers));
+    snprintf(response, 512, "HTTP/1.1 200 OK\x0d\x0a" "Content-Type: text/plain\x0d\x0a" "Content-Length: %u\x0d\x0a\x0d\x0a", qd_buffer_list_length(&data));
     lws_write(wsi, (unsigned char *)response, strlen(response), LWS_WRITE_HTTP);
 
-    qd_buffer_t * buf = DEQ_HEAD(buffers);
+    qd_buffer_t * buf = DEQ_HEAD(data);
     while (buf != NULL) {
         lws_write(wsi, qd_buffer_base(buf), qd_buffer_size(buf), LWS_WRITE_HTTP);
-        DEQ_REMOVE_HEAD(buffers);
+        DEQ_REMOVE_HEAD(data);
         qd_buffer_free(buf);
-        buf = DEQ_HEAD(buffers);
+        buf = DEQ_HEAD(data);
     }
-    return 0;
 }
 
 /*
@@ -162,7 +156,8 @@ static int callback_http(struct lws *wsi, enum lws_callback_reasons reason,
     case LWS_CALLBACK_HTTP:     /* Called if file mount can't find the file */
         request_uri = (char *) in;
         if (strcmp(request_uri, "/metrics/") == 0) {
-            retval = handle_metrics(wsi);
+            qd_http_server_t *server = wsi_http_server(wsi);
+            metric_export_prometheus(server->dispatch, metric_callback, (void *)wsi);
         } else {
             lws_return_http_status(wsi, HTTP_STATUS_NOT_FOUND, (char*)in);
             retval = -1;

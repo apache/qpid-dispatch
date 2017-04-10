@@ -47,14 +47,18 @@ static void qdr_agent_response_handler(void *context)
     bool         done = false;
 
     while (!done) {
+        printf("GOing to check query list\n");
         sys_mutex_lock(core->query_lock);
         query = DEQ_HEAD(core->outgoing_query_list);
+        printf("Got query: 0x%p\n", query);
         if (query)
             DEQ_REMOVE_HEAD(core->outgoing_query_list);
         done = DEQ_SIZE(core->outgoing_query_list) == 0;
         sys_mutex_unlock(core->query_lock);
+        printf("Checked query...\n");
 
         if (query) {
+            printf("WE GOT RESPONSE, responding\n");
             bool more = query->more;
             query->response_handler(query->context, &query->status, more);
             if (!more)
@@ -66,9 +70,11 @@ static void qdr_agent_response_handler(void *context)
 
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query)
 {
+    printf("Enqueueing ersponse\n");
     sys_mutex_lock(core->query_lock);
     DEQ_INSERT_TAIL(core->outgoing_query_list, query);
     bool notify = DEQ_SIZE(core->outgoing_query_list) == 1;
+    printf("Enqueueing ersponse, notify: %lu\n", DEQ_SIZE(core->outgoing_query_list));
     sys_mutex_unlock(core->query_lock);
 
     if (notify)
@@ -448,6 +454,7 @@ static void qdrh_query_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool
     qdr_query_t *query  = action->args.agent.query;
     int          offset = action->args.agent.offset;
 
+    printf("CHEcKING QUERY IN CORE THREAD\n");
     if (!discard) {
         switch (query->entity_type) {
         case QD_ROUTER_CONFIG_ADDRESS:    qdra_config_address_get_first_CT(core, query, offset); break;

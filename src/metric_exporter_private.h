@@ -22,5 +22,6 @@
 #include <qpid/dispatch.h>
 #include <qpid/dispatch/buffer.h>
 
-void metric_export_prometheus(qd_dispatch_t *dispatch, qd_buffer_list_t *buffers);
+typedef void(*metric_callback_t)(qd_buffer_list_t data, void *context);
+void metric_export_prometheus(qd_dispatch_t *dispatch, metric_callback_t callback, void *callback_ctx);
 #endif

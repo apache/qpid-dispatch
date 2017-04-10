@@ -18,11 +18,11 @@
  */
 
 #include "metric_exporter_private.h"
+#include "dispatch_private.h"
 #include <stdio.h>
 
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
-#if 0
 static void
 write_string(qd_buffer_list_t *buffers, const char *str, unsigned long long len)
 {
@@ -44,6 +44,7 @@ write_string(qd_buffer_list_t *buffers, const char *str, unsigned long long len)
         }
     }
 }
+#if 0
 
 typedef enum {
     METRIC_TYPE_GAUGE = 1,
@@ -98,11 +99,113 @@ metric_write(qd_metric_t *metric, qd_buffer_list_t *buffers)
 }
 #endif
 
-void
-metric_export_prometheus(qd_dispatch_t *dispatch, qd_buffer_list_t *buffers)
+
+struct metric_query_ctx_t {
+    qdr_query_t *query;
+    sys_mutex_t *lock;
+    sys_cond_t  *cond;
+    qd_composed_field_t *field;
+    metric_callback_t callback;
+
+    int count;
+    int current_count;
+    bool done;
+    void *callback_ctx;
+};
+
+typedef struct metric_query_ctx_t metric_query_ctx_t;
+
+static size_t flatten_bufs(char * buffer, qd_buffer_list_t *content)
 {
-#if 0
-    qdr_manage_handler(core, qd_manage_response_handler);
-    ctx->query = qdr_manage_query(core, ctx, entity_type, attribute_names_parsed_field, field);
-#endif
+    char        *cursor = buffer;
+    qd_buffer_t *buf    = DEQ_HEAD(*content);
+
+    while (buf) {
+        memcpy(cursor, qd_buffer_base(buf), qd_buffer_size(buf));
+        cursor += qd_buffer_size(buf);
+        buf = buf->next;
+    }
+
+    return (size_t) (cursor - buffer);
+}
+
+void
+metric_query_response_handler(void *context, const qd_amqp_error_t *status, bool more)
+{
+    printf("IN QUERY CALLBACK\n");
+    metric_query_ctx_t *ctx = (metric_query_ctx_t *)context;
+
+    if (status->status / 100 == 2) {
+        if (more) {
+            ctx->current_count++;
+            if (ctx->count != ctx->current_count) {
+                qdr_query_get_next(ctx->query);
+                return;
+            } else {
+                qdr_query_free(ctx->query);
+            }
+        }
+    }
+
+    qd_compose_end_list(ctx->field);
+    qd_compose_end_map(ctx->field);
+
+    qd_composed_field_t * field = ctx->field;
+
+    qd_buffer_list_t content;
+    qd_compose_take_buffers(field, &content);
+
+    unsigned int length = qd_buffer_list_length(&content);
+    char * buf = malloc(length);
+    flatten_bufs(buf, &content);
+    pn_data_t *body = pn_data(512);
+    ssize_t written = pn_data_decode(body, buf, length);
+    free(buf);
+    printf("Decoded data: %ld bytes out of %u\n", written, length);
+
+    pn_type_t type = pn_data_type(body);
+    printf("Got data with type: %s\n", pn_type_name(type));
+    size_t count = pn_data_get_map(body);
+    printf("Found map with %lu entries\n", count);
+
+    qd_buffer_list_t callback_data;
+    DEQ_INIT(callback_data);
+    write_string(&callback_data, "HEI", 3);
+
+    ctx->callback(callback_data, ctx->callback_ctx);
+
+    printf("IN QUERY CALLBACK, DONE\n");
+}
+
+void
+metric_export_prometheus(qd_dispatch_t *dispatch, metric_callback_t callback, void *callback_ctx)
+{
+
+    metric_query_ctx_t * ctx = malloc(sizeof(metric_query_ctx_t));
+    if (!ctx) {
+        printf("BUHUOOOO\n");
+        return;
+    }
+
+    ctx->callback = callback;
+    ctx->callback_ctx = callback_ctx;
+    ctx->count = -1;
+    ctx->current_count = 0;
+    ctx->field = qd_compose_subfield(0);
+
+    qd_compose_start_map(ctx->field);
+
+    qd_compose_insert_string(ctx->field, "attributeNames");
+
+    qd_parsed_field_t *attribute_names_parsed_field = NULL;
+    printf("Created query\n");
+
+    ctx->query = qdr_manage_query(dispatch->router->router_core, ctx, QD_ROUTER_LINK, attribute_names_parsed_field, ctx->field, metric_query_response_handler);
+
+    qdr_query_add_attribute_names(ctx->query);
+    qd_compose_insert_string(ctx->field, "results");
+    qd_compose_start_list(ctx->field);
+
+    printf("Sending off query\n");
+    qdr_query_get_first(ctx->query, 0);
 }
