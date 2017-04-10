@@ -271,7 +271,6 @@ qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
     qd->container          = qd_container(qd);
     qd->router             = qd_router(qd, qd->router_mode, qd->router_area, qd->router_id);
     qd->connection_manager = qd_connection_manager(qd);
-    qd->metric_manager     = qd_metric_manager();
     qd->policy             = qd_policy(qd);
     return qd_error_code();
 }
@@ -304,7 +303,6 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     free(qd->sasl_config_path);
     free(qd->sasl_config_name);
     qd_connection_manager_free(qd->connection_manager);
-    qd_metric_manager_free(qd->metric_manager);
     qd_policy_free(qd->policy);
     Py_XDECREF((PyObject*) qd->agent);
     qd_router_free(qd->router);

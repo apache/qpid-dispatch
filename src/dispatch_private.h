@@ -40,7 +40,6 @@ typedef struct qd_config_address_t   qd_config_address_t;
 #include <qpid/dispatch/container.h>
 #include <qpid/dispatch/router.h>
 #include <qpid/dispatch/connection_manager.h>
-#include <qpid/dispatch/metric_manager.h>
 #include "policy.h"
 #include "server_private.h"
 #include "router_private.h"
@@ -51,7 +50,6 @@ struct qd_dispatch_t {
     qd_router_t             *router;
     void                    *agent;
     qd_connection_manager_t *connection_manager;
-    qd_metric_manager_t     *metric_manager;
     qd_policy_t             *policy;
     void                    *dl_handle;
 
