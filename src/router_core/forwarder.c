@@ -142,7 +142,12 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
 
     while (dlv) {
         next = DEQ_NEXT(dlv);
-        if (dlv->settled) {
+        //
+        // Remove pre-settled deliveries unless they are in a link_work
+        // record that is being processed.  If it's being processed, it is
+        // too late to drop the delivery.
+        //
+        if (dlv->settled && dlv->link_work && !dlv->link_work->processing) {
             DEQ_REMOVE(link->undelivered, dlv);
             dlv->where = QDR_DELIVERY_NOWHERE;
 
