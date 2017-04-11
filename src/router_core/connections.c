@@ -238,8 +238,10 @@ int qdr_connection_process(qdr_connection_t *conn)
             link = ref->link;
             qdr_del_link_ref(&conn->links_with_work, ref->link, QDR_LINK_LIST_CLASS_WORK);
             link_work = DEQ_HEAD(link->work_list);
-            if (link_work)
+            if (link_work) {
                 DEQ_REMOVE_HEAD(link->work_list);
+                link_work->processing = true;
+            }
         } else
             link = 0;
         sys_mutex_unlock(conn->work_lock);
@@ -279,13 +281,16 @@ int qdr_connection_process(qdr_connection_t *conn)
                 sys_mutex_lock(conn->work_lock);
                 if (link_work->work_type == QDR_LINK_WORK_DELIVERY && link_work->value > 0) {
                     DEQ_INSERT_HEAD(link->work_list, link_work);
+                    link_work->processing = false;
                     link_work = 0; // Halt work processing
                 } else {
                     qdr_error_free(link_work->error);
                     free_qdr_link_work_t(link_work);
                     link_work = DEQ_HEAD(link->work_list);
-                    if (link_work)
+                    if (link_work) {
                         DEQ_REMOVE_HEAD(link->work_list);
+                        link_work->processing = true;
+                    }
                 }
                 sys_mutex_unlock(conn->work_lock);
                 event_count++;

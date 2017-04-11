@@ -242,8 +242,9 @@ typedef struct qdr_link_work_t {
     qdr_link_work_type_t          work_type;
     qdr_error_t                  *error;
     int                           value;
-    bool                          close_link;
     qdr_link_work_drain_action_t  drain_action;
+    bool                          close_link;
+    bool                          processing;
 } qdr_link_work_t;
 
 ALLOC_DECLARE(qdr_link_work_t);
