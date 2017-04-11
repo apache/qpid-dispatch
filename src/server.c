@@ -1021,8 +1021,9 @@ void qd_server_run(qd_dispatch_t *qd)
     int i;
     assert(qd_server);
     assert(qd_server->container); // Server can't run without a container
-    qd_log(qd_server->log_source, QD_LOG_NOTICE, "Operational, %d Threads Running",
-           qd_server->thread_count);
+    qd_log(qd_server->log_source,
+           QD_LOG_NOTICE, "Operational, %d Threads Running (process ID %ld)",
+           qd_server->thread_count, (long)getpid());
 #ifndef NDEBUG
     qd_log(qd_server->log_source, QD_LOG_INFO, "Running in DEBUG Mode");
 #endif
