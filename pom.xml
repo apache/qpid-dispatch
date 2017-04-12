@@ -16,13 +16,24 @@
 -->
 <!-- Run this file like this - mvn apache-rat:check -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <parent>
+      <groupId>org.apache</groupId>
+      <artifactId>apache</artifactId>
+      <version>18</version>
+    </parent>
+  
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.apache.qpid</groupId>
     <artifactId>qpid-dispatch</artifactId>
     <version>0.8.0</version>
     <name>QpidDispatch</name>
     <inceptionYear>2013</inceptionYear>
-    <url>https://qpid.apache.org</url>    
+    <url>https://qpid.apache.org</url>   
+    
+    <prerequisites>
+        <maven>3.0.4</maven>
+    </prerequisites>
   
     <description>
       Qpid Dispatch Router
@@ -34,52 +45,65 @@
     </properties>   
     
     <build>
+        <defaultGoal>verify</defaultGoal>
         <pluginManagement>
             <plugins>
                 <plugin>
-			        <groupId>org.apache.rat</groupId>
-			        <artifactId>apache-rat-plugin</artifactId>
-			        <executions>
-			          <execution>
-			            <phase>verify</phase>
-			            <goals>
-			              <goal>check</goal>
-			            </goals>
-			          </execution>
-			        </executions>
-			        <configuration>
-			            <excludes>
-	                        <exclude>.travis.yml</exclude>
-			                <exclude>.gitignore</exclude>
-			                <exclude>.autotools</exclude>
-			                <exclude>**/angular-patternfly.min.js</exclude>
-			                <exclude>**/angular-patternfly.min.css</exclude>
-			                <exclude>**/d3.v3.min.js</exclude>
-			                <exclude>**/jquery.dynatree.min.js</exclude>
-			                <exclude>**/slider.js</exclude>
-			                <exclude>**/ui-grid.js</exclude>
-    			            <exclude>**/system_tests_http.txt</exclude>
-	       		            <exclude>**/build/</exclude>
-	       		            <exclude>**/target/</exclude>
-			                <exclude>**/install/</exclude>
-    			            <exclude>**/*.lock</exclude>
-        			        <exclude>**/MANIFEST.in</exclude>
-    			            <exclude>**/valgrind.supp</exclude>
-    			            <exclude>**/*.json.in</exclude>
-    			            <exclude>**/*.json</exclude>
-    			            <exclude>**/rhea-min.js</exclude>
-    			            <exclude>**/VERSION.txt</exclude>
-    			            <exclude>**/v3_ca.ext</exclude>
-    			            <exclude>.*system_test.dir.*</exclude>
-    			            <exclude>**/server-password-file.txt</exclude>
-    			            <exclude>**/server-password-file-bad.txt</exclude>
-    			            <exclude>**/client-password-file.txt</exclude>
-    			            <exclude>**/.idea/**</exclude> <!-- This is for ignoring the intellij idea project files -->
-    			            <exclude>**/*~</exclude> <!-- This is for files created by emacs -->
-			            </excludes>		        
-			        </configuration>                
-                </plugin>
+                    <groupId>org.apache.rat</groupId>
+                    <artifactId>apache-rat-plugin</artifactId>
+                    <version>0.12</version>
+                    <executions>
+                      <execution>
+                        <phase>verify</phase>
+                        <goals>
+                          <goal>check</goal>
+                        </goals>
+                      </execution>
+                   </executions>
+              </plugin>
             </plugins>
         </pluginManagement>        
+        <plugins>
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                            <exclude>.travis.yml</exclude>
+                            <exclude>.gitmodules</exclude>
+                            <exclude>.gitignore</exclude>
+                            <exclude>.autotools</exclude>
+                            <exclude>**/angular-patternfly.min.js</exclude>
+                            <exclude>**/angular-patternfly.min.css</exclude>
+                            <exclude>**/d3.v3.min.js</exclude>
+                            <exclude>**/jquery.dynatree.min.js</exclude>
+                            <exclude>**/slider.js</exclude>
+                            <exclude>**/ui-grid.js</exclude>
+                            <exclude>**/system_tests_http.txt</exclude>
+                            <exclude>**/build/</exclude>
+                            <exclude>**/target/</exclude>
+                            <exclude>**/install/</exclude>
+                            <exclude>**/*.lock</exclude>
+                            <exclude>**/MANIFEST.in</exclude>
+                            <exclude>**/valgrind.supp</exclude>
+                            <exclude>**/*.json.in</exclude>
+                            <exclude>**/*.json</exclude>
+                            <exclude>**/rhea-min.js</exclude>
+                            <exclude>**/VERSION.txt</exclude>
+                            <exclude>**/v3_ca.ext</exclude>
+                            <exclude>**/system_test.dir/**</exclude>
+                            <exclude>**/server-password-file.txt</exclude>
+                            <exclude>**/server-password-file-bad.txt</exclude>
+                            <exclude>**/client-password-file.txt</exclude>
+                            <exclude>**/.idea/**</exclude> <!-- This is for ignoring the intellij idea project files -->
+                            <exclude>**/*~</exclude> <!-- This is for files created by emacs -->
+                            <exclude>.pydevproject</exclude> <!-- PyCharm project file -->
+                            <exclude>.cproject</exclude>
+                            <exclude>**/qpid-proton/**</exclude>
+                            <exclude>qpid-proton/**</exclude>
+                </excludes>
+        </configuration>            
+            </plugin>
+        </plugins>        
     </build>  
 </project>

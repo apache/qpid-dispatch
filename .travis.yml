@@ -21,8 +21,11 @@ os:
 sudo: required
 language:
 - python
+- java
 python:
 - 2.7
+jdk:
+- oraclejdk8
 addons:
   apt:
     packages:
@@ -60,6 +63,7 @@ before_script:
 - PYTHON_VER=`python -c "import sys; print ('python%s.%s' % (sys.version_info[0], sys.version_info[1]))"`
 - export PYTHONPATH=$PYTHONPATH:/usr/local/lib/$PYTHON_VER/dist-packages
 - cd ../..
+- mvn apache-rat:check
 - mkdir build
 - cd build
 - PREFIX=`python -c "import sys; print(sys.prefix)"`
