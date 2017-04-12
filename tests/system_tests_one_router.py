@@ -57,6 +57,14 @@ class RouterTest(TestCase):
         cls.router.wait_ready()
         cls.address = cls.router.addresses[0]
 
+    def test_listen_error(self):
+        """Make sure a router exits if a initial listener fails, doesn't hang"""
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'bad'}),
+            ('listener', {'port': 80})])
+        r = Qdrouterd(name="expect_fail", config=config, wait=False);
+        self.assertEqual(1, r.wait())
+
     def test_01_pre_settled(self):
         addr = self.address+"/pre_settled/1"
         M1 = self.messenger()

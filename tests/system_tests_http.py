@@ -50,6 +50,14 @@ class RouterTestHttp(TestCase):
     def assert_get_cert(self, url):
         self.assertEqual("HTTP test\n", self.get_cert("%s/system_tests_http.txt" % url))
 
+    def test_listen_error(self):
+        """Make sure a router exits if an initial HTTP listener fails, doesn't hang"""
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'bad'}),
+            ('listener', {'port': 80, 'http':True})])
+        r = Qdrouterd(name="expect_fail", config=config, wait=False);
+        self.assertEqual(1, r.wait())
+
     def test_http_get(self):
         config = Qdrouterd.Config([
             ('router', {'id': 'QDR.HTTP'}),

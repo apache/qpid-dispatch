@@ -519,6 +519,17 @@ bool qd_connector_connect(qd_connector_t *ct);
 qd_error_t qd_register_display_name_service(qd_dispatch_t *qd, void *display_name_service);
 
 /**
+ * Get the name of the connection, based on its IP address.
+ */
+const char* qd_connection_name(const qd_connection_t *c);
+
+
+/**
+ * Get the remote host IP address of the connection.
+ */
+const char* qd_connection_remote_ip(const qd_connection_t *c);
+
+/**
  * @}
  */
 

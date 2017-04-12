@@ -607,8 +607,7 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
 
     while (li) {
         if (!li->pn_listener) {
-            qd_listener_listen(li);
-            if (!li->pn_listener && first_start) {
+            if (!qd_listener_listen(li) && first_start) {
                 qd_log(qd->connection_manager->log_source, QD_LOG_CRITICAL,
                        "Listen on %s failed during initial config", li->config.host_port);
                 exit(1);

@@ -375,7 +375,7 @@ static void add_link_to_free_list(qd_pn_free_link_session_list_t  *free_link_ses
 
 
 /*
- * FIXME aconway 2017-04-12: IMO this should not be necessary, we should
+ * TODO aconway 2017-04-12: IMO this should not be necessary, we should
  * be able to pn_*_free links and sessions directly the handler function.
  * They will not actually be freed from memory till the event, connection,
  * proactor etc. have all released their references.

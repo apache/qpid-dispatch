@@ -39,16 +39,19 @@
 qd_dispatch_t* qd_server_dispatch(qd_server_t *server);
 void qd_server_timeout(qd_server_t *server, qd_duration_t delay);
 
-const char* qd_connection_name(const qd_connection_t *c);
+qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t* config);
+void qd_connection_free(qd_connection_t* conn);
+
 qd_connector_t* qd_connection_connector(const qd_connection_t *c);
-const char* qd_connection_hostip(const qd_connection_t *c);
+
+void qd_connection_handle(qd_connection_t *c, pn_event_t *e);
+
 
 const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
 
-qd_http_listener_t *qd_listener_http(qd_listener_t *l);
-
 qd_listener_t *qd_server_listener(qd_server_t *server);
 qd_connector_t *qd_server_connector(qd_server_t *server);
+
 void qd_connector_decref(qd_connector_t* ct);
 void qd_listener_decref(qd_listener_t* ct);
 void qd_server_config_free(qd_server_config_t *cf);
@@ -136,7 +139,7 @@ struct qd_connection_t {
     pn_ssl_t                 *ssl;
     qd_listener_t            *listener;
     qd_connector_t           *connector;
-    void                     *context; // Copy of context from listener or connector
+    void                     *context; // context from listener or connector
     void                     *user_context;
     void                     *link_context; // Context shared by this connection's links
     uint64_t                  connection_id; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
@@ -152,6 +155,7 @@ struct qd_connection_t {
     bool                      policy_counted;
     char                     *role;  //The specified role of the connection, e.g. "normal", "inter-router", "route-container" etc.
     qd_pn_free_link_session_list_t  free_link_session_list;
+    void (*wake)(qd_connection_t*); /* Wake method, different for HTTP vs. proactor */
     char rhost[NI_MAXHOST];     /* Remote host numeric IP for incoming connections */
     char rhost_port[NI_MAXHOST+NI_MAXSERV]; /* Remote host:port for incoming connections */
 };

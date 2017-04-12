@@ -23,17 +23,18 @@
 typedef struct qd_http_listener_t qd_http_listener_t;
 typedef struct qd_http_server_t qd_http_server_t;
 
-struct qd_dispatch_t;
-struct qd_log_source_t;
+struct qd_server_t;
 struct qd_server_config_t;
-struct qdpn_connector_t;
+struct qd_listener_t;
+struct qd_log_source_t;
 
-qd_http_server_t *qd_http_server(struct qd_dispatch_t *dispatch, struct qd_log_source_t *log);
+/* Create a HTTP server */
+qd_http_server_t *qd_http_server(struct qd_server_t *server, struct qd_log_source_t *log);
+
+/* Free the HTTP server */
 void qd_http_server_free(qd_http_server_t*);
-qd_http_listener_t *qd_http_listener(struct qd_http_server_t *s,
-                                     const struct qd_server_config_t *config);
-void qd_http_listener_free(qd_http_listener_t *hl);
-/* On error, qdpn_connector_closed(c) is true. */
-void qd_http_listener_accept(qd_http_listener_t *hl, struct qdpn_connector_t *c);
+
+/* Listening for HTTP, thread safe. */
+qd_http_listener_t *qd_http_server_listen(qd_http_server_t *s, struct qd_listener_t *li);
 
 #endif // QD_HTTP_H

@@ -396,7 +396,7 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
     pn_connection_t *conn = qd_connection_pn(qd_conn);
     qd_dispatch_t *qd = qd_server_dispatch(qd_conn->server);
     qd_policy_t *policy = qd->policy;
-    const char *hostip = qd_connection_hostip(qd_conn);
+    const char *hostip = qd_connection_remote_ip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(conn);
     if (result) {
         qd_log(policy->log_source,
@@ -567,7 +567,7 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
 
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
-    const char *hostip = qd_connection_hostip(qd_conn);
+    const char *hostip = qd_connection_remote_ip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(qd_connection_pn(qd_conn));
 
     if (qd_conn->policy_settings->maxSenders) {
@@ -618,7 +618,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
 
 bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
-    const char *hostip = qd_connection_hostip(qd_conn);
+    const char *hostip = qd_connection_remote_ip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(qd_connection_pn(qd_conn));
 
     if (qd_conn->policy_settings->maxReceivers) {
@@ -683,7 +683,7 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
     if (policy->enableVhostPolicy) {
         // Open connection or not based on policy.
         pn_transport_t *pn_trans = pn_connection_transport(conn);
-        const char *hostip = qd_connection_hostip(qd_conn);
+        const char *hostip = qd_connection_remote_ip(qd_conn);
         const char *pcrh = pn_connection_remote_hostname(conn);
         const char *vhost = (pcrh ? pcrh : "");
         const char *conn_name = qd_connection_name(qd_conn);

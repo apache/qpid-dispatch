@@ -475,9 +475,14 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
     pn_data_exit(pn_connection_properties(conn));
 }
 
+/* Wake function for proactor-manaed connections */
+static void connection_wake(qd_connection_t *ctx) {
+    if (ctx->pn_conn) pn_connection_wake(ctx->pn_conn);
+}
 
-/* Construct a new qd_connection. */
-static qd_connection_t *qd_connection(qd_server_t *server, qd_server_config_t *config) {
+/* Construct a new qd_connection. Thread safe. */
+qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *config)
+{
     qd_connection_t *ctx = new_qd_connection_t();
     if (!ctx) return NULL;
     ZERO(ctx);
@@ -491,6 +496,7 @@ static qd_connection_t *qd_connection(qd_server_t *server, qd_server_config_t *c
         return NULL;
     }
     ctx->server = server;
+    ctx->wake = connection_wake; /* Default, over-ridden for HTTP connections */
     pn_connection_set_context(ctx->pn_conn, ctx);
     DEQ_ITEM_INIT(ctx);
     DEQ_INIT(ctx->deferred_calls);
@@ -508,7 +514,7 @@ static void on_accept(pn_event_t *e)
     assert(pn_event_type(e) == PN_LISTENER_ACCEPT);
     pn_listener_t *pn_listener = pn_event_listener(e);
     qd_listener_t *listener = pn_listener_get_context(pn_listener);
-    qd_connection_t *ctx = qd_connection(listener->server, &listener->config);
+    qd_connection_t *ctx = qd_server_connection(listener->server, &listener->config);
     if (!ctx) {
         qd_log(listener->server->log_source, QD_LOG_CRITICAL,
                "Allocation failure during accept to %s", listener->config.host_port);
@@ -549,25 +555,19 @@ void connect_fail(qd_connection_t *ctx, const char *name, const char *descriptio
 
 
 /* Get the host IP address for the remote end */
-static int set_remote_host_port(qd_connection_t *ctx) {
+static void set_rhost_port(qd_connection_t *ctx) {
     pn_transport_t *tport  = pn_connection_transport(ctx->pn_conn);
-    const struct sockaddr_storage* addr = pn_proactor_addr_sockaddr(pn_proactor_addr_remote(tport));
-    int err = 0;
-    if (!addr) {
-        err = -1;
-        qd_log(ctx->server->log_source, QD_LOG_ERROR, "No remote address for connection to %s");
-    } else {
+    const struct sockaddr_storage* addr =
+        pn_proactor_addr_sockaddr(pn_proactor_addr_remote(tport));
+    if (addr) {
         char rport[NI_MAXSERV] = "";
         int err = getnameinfo((struct sockaddr*)addr, sizeof(*addr),
                               ctx->rhost, sizeof(ctx->rhost), rport, sizeof(rport),
                               NI_NUMERICHOST | NI_NUMERICSERV);
         if (!err) {
             snprintf(ctx->rhost_port, sizeof(ctx->rhost_port), "%s:%s", ctx->rhost, rport);
-        } else {
-            qd_log(ctx->server->log_source, QD_LOG_ERROR, "No remote address for connection to %s");
         }
     }
-    return err;
 }
 
 
@@ -581,7 +581,6 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
     //
     // Proton pushes out its trace to transport_tracer() which in turn writes a trace
     // message to the qdrouter log If trace level logging is enabled on the router set
-    // PN_TRACE_DRV | PN_TRACE_FRM | PN_TRACE_RAW on the proton transport
     //
     if (qd_log_enabled(ctx->server->log_source, QD_LOG_TRACE)) {
         pn_transport_trace(tport, PN_TRACE_FRM);
@@ -593,9 +592,9 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         config = &ctx->listener->config;
         const char *name = config->host_port;
         pn_transport_set_server(tport);
+        set_rhost_port(ctx);
 
-        if (set_remote_host_port(ctx) == 0 &&
-            qd_policy_socket_accept(server->qd->policy, ctx->rhost))
+        if (qd_policy_socket_accept(server->qd->policy, ctx->rhost))
         {
             ctx->policy_counted = true;
         } else {
@@ -667,10 +666,9 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event);
 
 static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
     qd_log_source_t *log = qd_server->log_source;
-
-    /* FIXME aconway 2017-02-20: HTTP support */
     qd_listener_t *li = (qd_listener_t*) pn_listener_get_context(pn_event_listener(e));
     const char *host_port = li->config.host_port;
+
     switch (pn_event_type(e)) {
 
     case PN_LISTENER_OPEN:
@@ -705,7 +703,7 @@ static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
 }
 
 
-static void qd_connection_free(qd_connection_t *ctx)
+void qd_connection_free(qd_connection_t *ctx)
 {
     qd_server_t *qd_server = ctx->server;
 
@@ -751,7 +749,7 @@ static void qd_connection_free(qd_connection_t *ctx)
 /* Events involving a connection or listener are serialized by the proactor so
  * only one event per connection / listener will be processed at a time.
  */
-static bool handle(pn_event_t *e, qd_server_t *qd_server) {
+static bool handle(qd_server_t *qd_server, pn_event_t *e) {
     pn_connection_t *pn_conn = pn_event_connection(e);
     qd_connection_t *ctx  = pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : NULL;
 
@@ -803,7 +801,7 @@ static bool handle(pn_event_t *e, qd_server_t *qd_server) {
     /* TODO aconway 2017-04-18: fold the container handler into the server */
     qd_container_handle_event(qd_server->container, e);
 
-    /* Free the connection after all other processing */
+    /* Free the connection after all other processing is complete */
     if (ctx && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
         pn_connection_set_context(pn_conn, NULL);
         qd_connection_free(ctx);
@@ -819,7 +817,7 @@ static void *thread_run(void *arg)
         pn_event_batch_t *events = pn_proactor_wait(qd_server->proactor);
         pn_event_t * e;
         while (running && (e = pn_event_batch_next(events))) {
-            running = handle(e, qd_server);
+            running = handle(qd_server, e);
         }
         pn_proactor_done(qd_server->proactor, events);
     }
@@ -836,7 +834,7 @@ static void try_open_lh(qd_connector_t *ct)
         return;
     }
 
-    qd_connection_t *ctx = qd_connection(ct->server, &ct->config);
+    qd_connection_t *ctx = qd_server_connection(ct->server, &ct->config);
     if (!ctx) {                 /* Try again later */
         qd_log(ct->server->log_source, QD_LOG_CRITICAL, "Allocation failure connecting to %s",
                ct->config.host_port);
@@ -987,7 +985,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->next_connection_id     = 1;
     qd_server->py_displayname_obj     = 0;
 
-    /* FIXME aconway 2017-01-20: restore HTTP support */
+    qd_server->http = qd_http_server(qd_server, qd_server->log_source);
 
     qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 
@@ -1052,10 +1050,9 @@ void qd_server_stop(qd_dispatch_t *qd)
 
 void qd_server_activate(qd_connection_t *ctx)
 {
-    if (!ctx || !ctx->pn_conn)
-        return;
-    pn_connection_wake(ctx->pn_conn);
+    if (ctx) ctx->wake(ctx);
 }
+
 
 void qd_connection_set_context(qd_connection_t *conn, void *context)
 {
@@ -1133,28 +1130,44 @@ qd_listener_t *qd_server_listener(qd_server_t *server)
     qd_listener_t *li = new_qd_listener_t();
     if (!li) return 0;
     ZERO(li);
-
     sys_atomic_init(&li->ref_count, 1);
     li->server      = server;
     li->http = NULL;
     return li;
 }
 
+static bool qd_listener_listen_pn(qd_listener_t *li) {
+   li->pn_listener = pn_listener();
+    if (li->pn_listener) {
+        pn_listener_set_context(li->pn_listener, li);
+        pn_proactor_listen(li->server->proactor, li->pn_listener, li->config.host_port,
+                           BACKLOG);
+        sys_atomic_inc(&li->ref_count); /* In use by proactor, PN_LISTENER_CLOSE will dec */
+        /* Listen is asynchronous, log "listening" message on PN_LISTENER_OPEN event */
+    } else {
+        qd_log(li->server->log_source, QD_LOG_CRITICAL, "No memory listening on %s",
+               li->config.host_port);
+     }
+    return li->pn_listener;
+}
+
+static bool qd_listener_listen_http(qd_listener_t *li) {
+    if (li->server->http) {
+        /* qd_http_listener holds a reference to li, will decref when closed */
+        qd_http_server_listen(li->server->http, li);
+        return li->http;
+    } else {
+        qd_log(li->server->log_source, QD_LOG_ERROR, "No HTTP support to listen on %s",
+               li->config.host_port);
+        return false;
+    }
+}
+
 
 bool qd_listener_listen(qd_listener_t *li) {
-    if (!li->pn_listener) {      /* Not already listening */
-        li->pn_listener = pn_listener();
-        if (!li->pn_listener) {
-            qd_log(li->server->log_source, QD_LOG_ERROR, "No memory listening on %s",
-                   li->config.host_port);
-            return false;
-        }
-        pn_listener_set_context(li->pn_listener, li);
-        /* Listen is asynchronous, log listening on PN_LISTENER_OPEN */
-        sys_atomic_inc(&li->ref_count);
-        pn_proactor_listen(li->server->proactor, li->pn_listener, li->config.host_port, BACKLOG);
-    }
-    return true;
+    if (li->pn_listener || li->http) /* Already listening */
+        return true;
+    return li->config.http ? qd_listener_listen_http(li) : qd_listener_listen_pn(li);
 }
 
 
@@ -1162,7 +1175,6 @@ void qd_listener_decref(qd_listener_t* li)
 {
     if (li && sys_atomic_dec(&li->ref_count) == 1) {
         qd_server_config_free(&li->config);
-        if (li->http) qd_http_listener_free(li->http);
         free_qd_listener_t(li);
     }
 }
@@ -1238,6 +1250,11 @@ qd_http_listener_t *qd_listener_http(qd_listener_t *li) {
     return li->http;
 }
 
-const char* qd_connection_hostip(const qd_connection_t *c) {
+const char* qd_connection_remote_ip(const qd_connection_t *c) {
     return c->rhost;
+}
+
+/* Expose event handling for HTTP connections */
+void qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
+    handle(c->server, e);
 }
