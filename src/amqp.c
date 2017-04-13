@@ -18,6 +18,9 @@
  */
 
 #include <qpid/dispatch/amqp.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
 const char * const QD_MA_PREFIX  = "x-opt-qd.";
 const char * const QD_MA_INGRESS = "x-opt-qd.ingress";
@@ -63,3 +66,15 @@ const char * const QD_AMQP_COND_PRECONDITION_FAILED = "amqp:precondition-failed"
 const char * const QD_AMQP_COND_RESOURCE_DELETED = "amqp:resource-deleted";
 const char * const QD_AMQP_COND_ILLEGAL_STATE = "amqp:illegal-state";
 const char * const QD_AMQP_COND_FRAME_SIZE_TOO_SMALL = "amqp:frame-size-too-small";
+
+const char * const QD_AMQP_PORT_STR = "5672";
+const char * const QD_AMQPS_PORT_STR = "5671";
+
+int qd_port_int(const char* port_str) {
+    if (!strcmp(port_str, QD_AMQP_PORT_STR)) return QD_AMQP_PORT_INT;
+    if (!strcmp(port_str, QD_AMQPS_PORT_STR)) return QD_AMQPS_PORT_INT;
+    errno = 0;
+    unsigned long n = strtoul(port_str, NULL, 10);
+    if (errno || n > 0xFFFF) return -1;
+    return n;
+}

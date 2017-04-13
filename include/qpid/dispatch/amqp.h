@@ -33,8 +33,16 @@
  * AMQP Constants
  */
 typedef enum {
-    QD_AMQP_MIN_MAX_FRAME_SIZE = 512
+    QD_AMQP_MIN_MAX_FRAME_SIZE = 512,
+    QD_AMQP_PORT_INT = 5672,
+    QD_AMQPS_PORT_INT = 5671
 } qd_amqp_constants_t;
+
+extern const char * const QD_AMQP_PORT_STR;
+extern const char * const QD_AMQPS_PORT_STR;
+
+/* Returns -1 if string is not a number or recognized symbolic port name */
+int qd_port_int(const char* port_str);
 
 /**
  * AMQP Performative Tags
@@ -164,5 +172,6 @@ extern const char * const QD_AMQP_COND_RESOURCE_DELETED;
 extern const char * const QD_AMQP_COND_ILLEGAL_STATE;
 extern const char * const QD_AMQP_COND_FRAME_SIZE_TOO_SMALL;
 /// @};
+
 
 #endif
