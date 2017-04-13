@@ -250,8 +250,19 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     // NOTE:  This is the only multicast mode currently supported.  Others will likely be
     //        implemented in the future.
     //
-    if (!presettled)
+    if (!presettled) {
         in_delivery->settled = true;
+
+        //
+        // If the router is configured to reject unsettled multicasts, settle and reject this delivery.
+        //
+        if (!core->qd->allow_unsettled_multicast) {
+            in_delivery->disposition = PN_REJECTED;
+            in_delivery->error = qdr_error("qd:forbidden", "Deliveries to a multicast address must be pre-settled");
+            qdr_delivery_push_CT(core, in_delivery);
+            return 0;
+        }
+    }
 
     //
     // Forward to local subscribers

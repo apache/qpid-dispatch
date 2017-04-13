@@ -95,6 +95,7 @@ foreach(py_test_module
     system_tests_dynamic_terminus
     system_tests_log_message_components
     system_tests_failover_list
+    system_tests_denied_unsettled_multicast
     ${SYSTEM_TESTS_HTTP}
     )
 

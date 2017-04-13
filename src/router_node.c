@@ -1081,7 +1081,8 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         char *description = qdr_error_description(error);
         pn_condition_set_name(condition, (const char*)name);
         pn_condition_set_description(condition, (const char*)description);
-        pn_data_copy(pn_condition_info(condition), qdr_error_info(error));
+        if (qdr_error_info(error))
+            pn_data_copy(pn_condition_info(condition), qdr_error_info(error));
         //proton makes copies of name and description, so it is ok to free them here.
         free(name);
         free(description);

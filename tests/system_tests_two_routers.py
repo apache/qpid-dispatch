@@ -43,7 +43,7 @@ class RouterTest(TestCase):
         def router(name, client_server, connection):
 
             config = [
-                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
+                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name, 'allowUnsettledMulticast': 'yes'}),
 
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
 
