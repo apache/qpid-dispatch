@@ -91,30 +91,6 @@ static const int BACKLOG = 50;  /* Listening backlog */
 
 static void setup_ssl_sasl_and_open(qd_connection_t *ctx);
 
-/* Construct a new qd_connectoin. */
-static qd_connection_t *qd_connection(qd_server_t *server, const char *role) {
-    qd_connection_t *ctx = new_qd_connection_t();
-    if (!ctx) return NULL;
-    ZERO(ctx);
-    ctx->pn_conn       = pn_connection();
-    ctx->deferred_call_lock = sys_mutex();
-    ctx->role = strdup(role);
-    if (!ctx->pn_conn || !ctx->deferred_call_lock || !role) {
-        if (ctx->pn_conn) pn_connection_free(ctx->pn_conn);
-        if (ctx->deferred_call_lock) sys_mutex_free(ctx->deferred_call_lock);
-        free(ctx->role);
-        return NULL;
-    }
-    ctx->server        = server;
-    DEQ_ITEM_INIT(ctx);
-    DEQ_INIT(ctx->deferred_calls);
-    DEQ_INIT(ctx->free_link_session_list);
-    sys_mutex_lock(server->lock);
-    ctx->connection_id = server->next_connection_id++;
-    sys_mutex_unlock(server->lock);
-    return ctx;
-}
-
 /**
  * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer
  */
@@ -500,20 +476,45 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
 }
 
 
+/* Construct a new qd_connection. */
+static qd_connection_t *qd_connection(qd_server_t *server, qd_server_config_t *config) {
+    qd_connection_t *ctx = new_qd_connection_t();
+    if (!ctx) return NULL;
+    ZERO(ctx);
+    ctx->pn_conn       = pn_connection();
+    ctx->deferred_call_lock = sys_mutex();
+    ctx->role = strdup(config->role);
+    if (!ctx->pn_conn || !ctx->deferred_call_lock || !ctx->role) {
+        if (ctx->pn_conn) pn_connection_free(ctx->pn_conn);
+        if (ctx->deferred_call_lock) sys_mutex_free(ctx->deferred_call_lock);
+        free(ctx->role);
+        return NULL;
+    }
+    ctx->server = server;
+    pn_connection_set_context(ctx->pn_conn, ctx);
+    DEQ_ITEM_INIT(ctx);
+    DEQ_INIT(ctx->deferred_calls);
+    DEQ_INIT(ctx->free_link_session_list);
+    sys_mutex_lock(server->lock);
+    ctx->connection_id = server->next_connection_id++;
+    sys_mutex_unlock(server->lock);
+    decorate_connection(ctx->server, ctx->pn_conn, config);
+    return ctx;
+}
+
+
 static void on_accept(pn_event_t *e)
 {
     assert(pn_event_type(e) == PN_LISTENER_ACCEPT);
     pn_listener_t *pn_listener = pn_event_listener(e);
     qd_listener_t *listener = pn_listener_get_context(pn_listener);
-    qd_connection_t *ctx = qd_connection(listener->server, listener->config.role);
+    qd_connection_t *ctx = qd_connection(listener->server, &listener->config);
     if (!ctx) {
         qd_log(listener->server->log_source, QD_LOG_CRITICAL,
                "Allocation failure during accept to %s", listener->config.host_port);
         return;
     }
-    pn_connection_set_context(ctx->pn_conn, ctx);
     ctx->listener = listener;
-    decorate_connection(listener->server, ctx->pn_conn, &ctx->listener->config);
     qd_log(listener->server->log_source, QD_LOG_TRACE,
            "[%"PRIu64"] Accepting incoming connection from %s to %s",
            ctx->connection_id, qd_connection_name(ctx), ctx->listener->config.host_port);
@@ -835,7 +836,7 @@ static void try_open_lh(qd_connector_t *ct)
         return;
     }
 
-    qd_connection_t *ctx = qd_connection(ct->server, ct->config.role);
+    qd_connection_t *ctx = qd_connection(ct->server, &ct->config);
     if (!ctx) {                 /* Try again later */
         qd_log(ct->server->log_source, QD_LOG_CRITICAL, "Allocation failure connecting to %s",
                ct->config.host_port);
@@ -844,7 +845,6 @@ static void try_open_lh(qd_connector_t *ct)
         return;
     }
     ctx->connector    = ct;
-    decorate_connection(ctx->server, ctx->pn_conn, &ct->config);
     const qd_server_config_t *config = &ct->config;
 
     //
@@ -859,8 +859,6 @@ static void try_open_lh(qd_connector_t *ct)
         pn_connection_set_user(ctx->pn_conn, config->sasl_username);
     if (config->sasl_password)
         pn_connection_set_password(ctx->pn_conn, config->sasl_password);
-
-    pn_connection_set_context(ctx->pn_conn, ctx);
 
     ctx->connector->state = CXTR_STATE_OPEN;
     ct->ctx   = ctx;
