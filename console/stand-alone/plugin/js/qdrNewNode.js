@@ -21,7 +21,7 @@ under the License.
  */
 var QDR = (function(QDR) {
 
-  QDR.module.controller("QDR.NodeDialogController", function($scope, QDRService, $uibModalInstance, newname) {
+  QDR.module.controller("QDR.NodeDialogController", function($scope, QDRService, dialog, newname) {
     var schema = QDRService.schema;
     var myEntities = ['router', 'log', 'listener'];
     var typeMap = {
@@ -298,13 +298,13 @@ var QDR = (function(QDR) {
       // handle the download button click
       // copy the dialog's values to the original node
     $scope.download = function() {
-      $uibModalInstance.close({
+      dialog.close({
         entities: $scope.entities,
         annotations: annotations
       });
     }
     $scope.cancel = function() {
-      $uibModalInstance.close()
+      dialog.close()
     };
 
     $scope.selectAnnotationTab = function(tabName) {
@@ -327,7 +327,7 @@ var QDR = (function(QDR) {
 
   });
 
-  QDR.module.controller("QDR.DownloadDialogController", function($scope, QDRService, $templateCache, $window, $uibModalInstance, results) {
+  QDR.module.controller("QDR.DownloadDialogController", function($scope, QDRService, $templateCache, $window, dialog, results) {
     var result = results.entities;
     var annotations = results.annotations;
     var annotationKeys = Object.keys(annotations);
@@ -437,7 +437,7 @@ var QDR = (function(QDR) {
     }
 
     $scope.done = function() {
-      $uibModalInstance.close();
+      dialog.close();
     }
   });
 

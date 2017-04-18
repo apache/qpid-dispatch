@@ -28,8 +28,8 @@ var QDR = (function(QDR) {
    *
    * Controller for the main interface
    */
-  QDR.module.controller("QDR.ListController", ['$scope', '$location', '$uibModal', '$filter', '$timeout', 'QDRService', 'QDRChartService',
-    function ($scope, $location, $uibModal, $filter, $timeout, QDRService, QDRChartService) {
+  QDR.module.controller("QDR.ListController", ['$scope', '$location', '$dialog', '$filter', '$timeout', 'QDRService', 'QDRChartService',
+    function ($scope, $location, $dialog, $filter, $timeout, QDRService, QDRChartService) {
 
     var updateIntervalHandle = undefined;
     var updateInterval = 5000;
@@ -675,7 +675,7 @@ var QDR = (function(QDR) {
     }
 
     function doDialog(tmpl, chart) {
-        var d = $uibModal.open({
+        var d = $dialog.dialog({
           backdrop: true,
           keyboard: true,
           backdropClick: true,
@@ -691,7 +691,7 @@ var QDR = (function(QDR) {
               }
         });
 
-        d.result.then(function(result) { console.log("d.open().then"); });
+        d.open().then(function(result) { console.log("d.open().then"); });
 
     };
 
@@ -744,7 +744,6 @@ var QDR = (function(QDR) {
           var e = new Folder(entity)
           e.typeName = "entity"
           e.key = entity
-          e.isFolder = true
           e.expand = (expandedList.indexOf(entity) > -1)
           var placeHolder = new Folder("loading...")
           placeHolder.addClass = "loading"
@@ -770,10 +769,6 @@ var QDR = (function(QDR) {
         autoCollapse: $scope.largeNetwork,
         activeVisible: !$scope.largeNetwork,
         debugLevel: 0,
-        classNames: {
-          expander: 'fa-angle',
-          connector: 'dynatree-no-connector'
-          },
         children: entityTreeChildren
       })
       restartUpdate()

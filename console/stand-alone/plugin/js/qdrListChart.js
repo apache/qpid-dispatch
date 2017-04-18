@@ -21,7 +21,7 @@ under the License.
  */
 var QDR = (function(QDR) {
 
-  QDR.module.controller('QDR.ListChartController', function ($scope, $uibModalInstance, $uibModal, $location, QDRChartService, chart, nodeName) {
+  QDR.module.controller('QDR.ListChartController', function ($scope, dialog, $dialog, $location, QDRChartService, chart, nodeName) {
     $scope.chart = chart;
     $scope.dialogSvgChart = null;
     var updateTimer = null;
@@ -29,14 +29,14 @@ var QDR = (function(QDR) {
 
     $scope.showChartsPage = function () {
       cleanup();
-      $uibModalInstance.close(true);
+      dialog.close(true);
       $location.path(QDR.pluginRoot + "/charts");
     };
 
     $scope.addHChart = function () {
       QDRChartService.addHDash($scope.chart);
       cleanup();
-      $uibModalInstance.close(true);
+      dialog.close(true);
     }
 
     $scope.addToDashboardLink = function () {
@@ -100,7 +100,7 @@ var QDR = (function(QDR) {
     }
     $scope.ok = function () {
       cleanup();
-      $uibModalInstance.close(true);
+      dialog.close(true);
       };
 
     $scope.editChart = function () {
@@ -109,7 +109,7 @@ var QDR = (function(QDR) {
 
     function doDialog(template, chart) {
 
-      var d = $uibModal.open({
+      $dialog.dialog({
       backdrop: true,
       keyboard: true,
       backdropClick: true,
@@ -129,7 +129,7 @@ var QDR = (function(QDR) {
           return true
         }
       }
-      }).result.then(function(result) {
+      }).open().then(function(result) {
         $scope.ok()
       });
     };

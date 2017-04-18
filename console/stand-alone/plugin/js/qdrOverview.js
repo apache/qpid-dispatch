@@ -34,7 +34,7 @@ var QDR = (function (QDR) {
    *
    * Controller that handles the QDR overview page
    */
-  QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', '$timeout', '$uibModal', function($scope, QDRService, $location, $timeout, $uibModal) {
+  QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', '$timeout', '$dialog', function($scope, QDRService, $location, $timeout, $dialog) {
 
     console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
     var COLUMNSTATEKEY = 'QDRColumnKey.';
@@ -69,8 +69,8 @@ var QDR = (function (QDR) {
     $scope.isActive = function (nav) {
       return nav == $scope.activeTab;
     }
-    $scope.linkFields = []
-    $scope.link = null;
+    $scope.filteredLinkFields = []
+    $scope.Link = null;
     var refreshInterval = 5000
     $scope.modes = [
       {title: 'Overview', name: 'Overview', right: false}
@@ -206,25 +206,6 @@ var QDR = (function (QDR) {
         }, gotNode)
       }, gotNode)
       loadColState($scope.allRouters)
-    }
-
-    $scope.routerFields = []
-    $scope.routerGrid = {
-      saveKey: 'routerGrid',
-      data: 'routerFields',
-      columnDefs: [
-        {
-          field: 'attribute',
-          displayName: 'Attribute',
-          saveKey: 'routerGrid',
-        },
-        {
-          field: 'value',
-          displayName: 'Value',
-        }
-      ],
-      enableColumnResize: true,
-      multiSelect: false
     }
 
     $scope.router = null;
@@ -478,19 +459,20 @@ var QDR = (function (QDR) {
         }
         return include;
       })
-      QDR.log.debug("setting linkFields in updateLinkGrid")
-      $scope.linkFields = filteredLinks;
+      QDR.log.debug("setting linkFields in updateLinkGrid filteredLinks.length=" + filteredLinks.length)
+      $scope.filteredLinkFields = filteredLinks;
       getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
       // if we have a selected link
-      if ($scope.link) {
+      if ($scope.Link) {
         // find the selected link in the array of all links
-        var links = $scope.linkFields.filter(function (link) {
-          return link.name === $scope.link.data.fields.name;
+        var links = $scope.filteredLinkFields.filter(function (link) {
+          return link.name === $scope.Link.data.fields.name;
         })
         if (links.length > 0) {
           // linkInfo() is the function that is called by dynatree when a link is selected
           // It is passed a dynatree node. We need to simulate that node type to update the link grid
-          linkInfo({data: {title: links[0].title, fields: links[0]}})
+          $scope.Link.data.info({data: {title: links[0].title, fields: links[0]}})
+          //linkInfo({data: {title: links[0].title, fields: links[0]}})
         }
       }
     }
@@ -502,9 +484,9 @@ var QDR = (function (QDR) {
       currentPage: 1
     };
     var getLinkPagedData = function (pageSize, page) {
-      $scope.totalLinks = $scope.linkFields.length
+      $scope.totalLinks = $scope.filteredLinkFields.length
       $scope.linksGrid.showFooter = $scope.totalLinks > 50
-      $scope.pagedLinkData = $scope.linkFields.slice((page - 1) * pageSize, page * pageSize);
+      $scope.pagedLinkData = $scope.filteredLinkFields.slice((page - 1) * pageSize, page * pageSize);
     }
     $scope.$watch('linkPagingOptions', function (newVal, oldVal) {
       if (newVal !== oldVal && newVal.currentPage !== oldVal.currentPage) {
@@ -515,16 +497,6 @@ var QDR = (function (QDR) {
     $scope.totalLinks = 0;
     $scope.pagedLinkData = []
     $scope.selectedLinks = []
-
-    var linkRowTmpl = `
-      <div ng-class="{linkDirIn: row.getProperty('linkDir') == 'in', linkDirOut: row.getProperty('linkDir') == 'out'}">
-        <div ng-style="{ 'cursor': row.cursor }" ng-repeat="col in renderedColumns" ng-class="col.colIndex()" class="ngCell {{col.cellClass}}">
-          <div class="ngVerticalBar" ng-style="{height: rowHeight}" ng-class="{ ngVerticalBarVisible: !$last }">&nbsp;</div>
-          <div ng-cell></div>
-        </div>
-      </div>
-    `;
-
     $scope.linksGrid = {
       saveKey: 'linksGrid',
       data: 'pagedLinkData',
@@ -601,7 +573,8 @@ var QDR = (function (QDR) {
       enableColumnResize: true,
       enableColumnReordering: true,
       showColumnMenu: true,
-      rowTemplate: linkRowTmpl,
+      rowTemplate: 'linkRowTemplate.html',
+      // aggregateTemplate: "linkAggTemplate.html",
       multiSelect: false,
       selectedItems: $scope.selectedLinks,
       plugins: [new ngGridFlexibleHeightPlugin()],
@@ -625,7 +598,6 @@ var QDR = (function (QDR) {
         })
 
     var loadColState = function (grid) {
-return;
       if (!grid)
         return;
       var columns = localStorage.getItem(COLUMNSTATEKEY+grid.saveKey);
@@ -654,17 +626,17 @@ return;
     }
 
     var getAllLinkFields = function (completionCallbacks, selectionCallback) {
-      if (!$scope.linkFields) {
-        QDR.log.info("$scope.linkFields was not defined")
+      if (!$scope.filteredLinkFields) {
+        QDR.log.info("$scope.filteredLinkFields was not defined")
         return;
       }
       var nodeIds = QDRService.nodeIdList()
       var linkFields = []
       var now = Date.now()
       var rate = function (linkName, response, result) {
-        if (!$scope.linkFields)
+        if (!$scope.filteredLinkFields)
           return 0;
-        var oldname = $scope.linkFields.filter(function (link) {
+        var oldname = $scope.filteredLinkFields.filter(function (link) {
           return link.link === linkName
         })
         if (oldname.length === 1) {
@@ -923,8 +895,10 @@ return;
         })
         if (expected === ++received) {
           connectionFields.sort ( function (a,b) { return a.host < b.host ? -1 : a.host > b.host ? 1 : 0})
-          callbacks.forEach( function (cb) {
-            cb(connectionFields)
+          $timeout( function () {
+            callbacks.forEach( function (cb) {
+              cb(connectionFields)
+            })
           })
         }
       }
@@ -933,56 +907,14 @@ return;
       })
     }
 
-    $scope.addressFields = []
-    $scope.addressGrid = {
-      saveKey: 'addGrid',
-      data: 'addressFields',
-      columnDefs: [
-      {
-        field: 'attribute',
-        displayName: 'Attribute',
-        saveKey: 'addGrid',
-        width: '40%'
-      },
-      {
-        field: 'value',
-        displayName: 'Value',
-        width: '40%'
-      }
-      ],
-      enableColumnResize: true,
-      multiSelect: false
-    }
-
-    // get info for a single address
-    var addressInfo = function (address) {
-      $scope.address = address
-      var currentEntity = getCurrentLinksEntity();
-      // we are viewing the addressLinks page
-      if (currentEntity === 'Address' && entityModes[currentEntity].currentModeId === 'links') {
-        updateModeLinks()
-        scheduleNextUpdate()
-        return;
-      }
-
-      $scope.addressFields = [];
-      var fields = Object.keys(address.data.fields)
-      fields.forEach( function (field) {
-        if (field != "title" && field != "uid")
-          $scope.addressFields.push({attribute: field, value: address.data.fields[field]})
-      })
-      scheduleNextUpdate()
-      loadColState($scope.addressGrid);
-    }
-
-    $scope.singleLinkFields = []
-    $scope.linkGrid = {
-      saveKey: 'linkGrid',
-      data: 'singleLinkFields',
-      columnDefs: [
+    var SingleEntityGrid = function (name) {
+      this.saveKey = name
+      this.data = name
+      this.columnDefs = [
         {
           field: 'attribute',
           displayName: 'Attribute',
+          saveKey: this.saveKey,
           width: '40%'
         },
         {
@@ -990,28 +922,43 @@ return;
           displayName: 'Value',
           width: '40%'
         }
-      ],
-      enableColumnResize: true,
-      multiSelect: false
+        ]
+      this.enableColumnResize = true
+      this.multiSelect = false
     }
+    $scope.addressFields = []
+    $scope.addressGrid = new SingleEntityGrid('addressFields')
+    $scope.connectionFields = []
+    $scope.connectionGrid = new SingleEntityGrid('connectionFields')
+    $scope.routerFields = []
+    $scope.routerGrid = new SingleEntityGrid('routerFields')
+    $scope.linkFields = []
+    $scope.linkGrid = new SingleEntityGrid('linkFields')
 
-    // display the grid detail info for a single link
-    var linkInfo = function (link) {
-QDR.log.debug("linkInfo called for " + link.data.key)
-      if (!link) {
-        return;
+    var SingleEntityInfo = function (entityName) {
+      return function (entity) {
+        if (!entity)
+          return
+        $scope[entityName] = entity
+        var currentEntity = getCurrentLinksEntity()
+        if (currentEntity === entityName && entityModes[currentEntity] && entityModes[currentEntity].currentModeId === 'links') {
+          updateModeLinks()
+          scheduleNextUpdate()
+          return
+        }
+        var filteredFields = []
+        var fields = Object.keys(entity.data.fields)
+        fields.forEach( function (field) {
+          if (field != "title" && field != "uid")
+            filteredFields.push({attribute: field, value: entity.data.fields[field]})
+        })
+        $timeout(() => $scope[entityName.toLowerCase()+'Fields'] = filteredFields)
+        //$scope[entityName.toLowerCase()+'Fields'] = filteredFields
+        console.log("-------------- " + entityName + "Fields -----------")
+        console.dump(filteredFields)
+        scheduleNextUpdate()
+        loadColState($scope[entityName.toLowerCase()+'Grid']);
       }
-      $scope.link = link
-
-      $scope.singleLinkFields = [];
-      var fields = Object.keys(link.data.fields)
-      var excludeFields = ["title", "uid", "uncounts", "rawDeliveryCount", "timestamp", "rawAddress"]
-      fields.forEach( function (field) {
-        if (excludeFields.indexOf(field) == -1)
-          $scope.singleLinkFields.push({attribute: field, value: link.data.fields[field]})
-      })
-      scheduleNextUpdate()
-      loadColState($scope.linkGrid);
     }
 
     // get info for a single connection
@@ -1040,15 +987,15 @@ QDR.log.debug("linkInfo called for " + link.data.key)
               currentModeId: savedModeIds.Address,
               filter: function (response, result) {
           var owningAddr = QDRService.valFor(response.attributeNames, result, "owningAddr")
-          var id = $scope.address.data.fields.uid
-          return (owningAddr === $scope.address.data.fields.uid)
+          var id = $scope.Address.data.fields.uid
+          return (owningAddr === $scope.Address.data.fields.uid)
               }
           },
           Connection: {
               currentModeId: savedModeIds.Connection,
               filter: function (response, result) {
           var connectionId = QDRService.valFor(response.attributeNames, result, "connectionId")
-          return (connectionId === $scope.connection.data.fields.identity)
+          return (connectionId === $scope.Connection.data.fields.identity)
               }
           }
       }
@@ -1059,7 +1006,7 @@ QDR.log.debug("linkInfo called for " + link.data.key)
       saveModeIds();
       if (mode.id === 'links') {
 QDR.log.debug("setting linkFields to [] in selectMode")
-        $scope.linkFields = [];
+        $scope.filteredLinkFields = [];
         getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
         updateModeLinks();
       }
@@ -1074,7 +1021,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     var updateEntityLinkGrid = function (linkFields) {
       $timeout(function () {
         QDR.log.debug("setting linkFields in updateEntityLinkGrid");
-        $scope.linkFields = linkFields
+        $scope.filteredLinkFields = linkFields
         getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
       })
     }
@@ -1125,50 +1072,6 @@ QDR.log.debug("setting linkFields to [] in selectMode")
                 node.expand(false);
             })
     }
-    $scope.connectionFields = []
-    $scope.connectionGrid = {
-      saveKey: 'connGrid',
-      data: 'connectionFields',
-      columnDefs: [
-      {
-        field: 'attribute',
-        displayName: 'Attribute',
-        saveKey: 'connGrid',
-        width: '40%'
-      },
-      {
-        field: 'value',
-        displayName: 'Value',
-        width: '40%'
-      }
-      ],
-      enableColumnResize: true,
-      multiSelect: false
-    }
-
-    var connectionInfo = function (connection) {
-      if (!connection)
-        return;
-      $scope.connection = connection
-
-      var currentEntity = getCurrentLinksEntity();
-      // we are viewing the connectionLinks page
-      if (currentEntity === 'Connection' && entityModes[currentEntity].currentModeId === 'links') {
-        updateModeLinks()
-        scheduleNextUpdate()
-        return;
-      }
-
-      $scope.connectionFields = [];
-      var fields = Object.keys(connection.data.fields)
-      fields.forEach( function (field) {
-        if (field != "title" && field != "uid")
-          $scope.connectionFields.push({attribute: field, value: connection.data.fields[field]})
-      })
-      // this is missing an argument?
-      loadColState($scope.connectionGrid);
-    }
-
 
     var logModuleCellTemplate = '<div ng-click="logInfoFor(row, col)" class="ngCellText" ng-class="col.colIndex()"><span ng-cell-text>{{COL_FIELD | pretty}}</span></div>'
     $scope.logModule = {}
@@ -1246,32 +1149,29 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     }
 
     function logDialog(row, col) {
-      var d = $uibModal.open({
-      animation: true,
-      templateUrl: 'viewLogs.html',
-      controller: 'QDR.OverviewLogsController',
-      resolve: {
-        nodeName: function () {
-          return row.entity.nodeName
-        },
-        module: function () {
-          return row.entity.name
-        },
-        level: function () {
-          return col.displayName
-        },
-        nodeId: function () {
-          return row.entity.nodeId
-        },
-      }
-    });
-
-    d.result.then(function (result) {
-      console.log("d.open().then");
-    }, function () {
-      console.log('Modal dismissed at: ' + new Date());
-    });
-  };
+        var d = $dialog.dialog({
+          backdrop: false,
+          keyboard: true,
+          backdropClick: false,
+          templateUrl: 'viewLogs.html',
+          controller: "QDR.OverviewLogsController",
+          resolve: {
+            nodeName: function () {
+              return row.entity.nodeName
+            },
+            module: function () {
+              return row.entity.name
+            },
+            level: function () {
+              return col.displayName
+            },
+            nodeId: function () {
+              return row.entity.nodeId
+            },
+          }
+        });
+        d.open().then(function(result) { console.log("d.open().then"); });
+    };
 
     var numberTemplate = '<div class="ngCellText" ng-class="col.colIndex()"><span ng-cell-text>{{COL_FIELD | pretty}}</span></div>'
     $scope.allLogFields = []
@@ -1520,7 +1420,12 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     }
     // loads list that was saved
     var loadExpandedNodeList = function () {
-      return angular.fromJson(localStorage[OVERVIEWEXPANDEDKEY]) || [];
+      try {
+        return angular.fromJson(localStorage[OVERVIEWEXPANDEDKEY]) || [];
+      } catch (e) {
+        QDR.log.debug("localStorage[OVERVIEWEXPANDEDKEY]=" + localStorage[OVERVIEWEXPANDEDKEY])
+        return ["Routers"]
+      }
     }
     // called when a node is expanded
     // here we save the expanded node so it can be restored when the page reloads
@@ -1537,7 +1442,6 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       })
       $scope.template = template[0];
     }
-    $scope.template = $scope.templates[0]
     // activated is called each time a tree node is clicked
     // based on which node is clicked, load the correct data grid template and start getting the data
     var activated = function (node) {
@@ -1572,8 +1476,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
 
     // we are currently connected. setup a handler to get notified if we are ever disconnected
     QDRService.addDisconnectAction( function () {
-      QDRService.redirectWhenConnected("overview")
-      $scope.$apply();
+      $timeout( () => QDRService.redirectWhenConnected("overview") )
     })
 
     /* --------------------------------------------------
@@ -1622,7 +1525,6 @@ QDR.log.debug("newly created node needs to be activated")
     routers.key = "Routers"
     routers.parent = "Routers"
     routers.addClass = "routers"
-    routers.isFolder = true
     topLevelChildren.push(routers)
     // called when the list of routers changes
     var updateRouterTree = function (nodes) {
@@ -1651,12 +1553,12 @@ QDR.log.debug("newly created node needs to be activated")
     addresses.key = "Addresses"
     addresses.parent = "Addresses"
     addresses.addClass = "addresses"
-    addresses.isFolder = true
     topLevelChildren.push(addresses)
     var updateAddressTree = function (addressFields) {
+      var info = SingleEntityInfo('Address')
       var worker = function (address) {
         var a = new Folder(address.title)
-        a.info = addressInfo
+        a.info = info
         a.key = address.uid
         a.fields = address
         a.type = "Address"
@@ -1693,15 +1595,15 @@ QDR.log.debug("newly created node needs to be activated")
     links.key = "Links"
     links.parent = "Links"
     links.addClass = "links"
-    links.isFolder = true
     topLevelChildren.push(links)
 
     // called both before the tree is created and whenever a background update is done
     var updateLinkTree = function (linkFields) {
+      var info = SingleEntityInfo('Link')
       var worker = function (link) {
         var l = new Folder(link.title)
         var isConsole = QDRService.isConsoleLink(link)
-        l.info = linkInfo
+        l.info = info
         l.key = link.uid
         l.fields = link
         l.type = "Link"
@@ -1726,15 +1628,15 @@ QDR.log.debug("newly created node needs to be activated")
     connections.key = "Connections"
     connections.parent = "Connections"
     connections.addClass = "connections"
-    connections.isFolder = true
     topLevelChildren.push(connections)
 
     updateConnectionTree = function (connectionFields) {
+      var info = SingleEntityInfo('Connection')
       var worker = function (connection) {
         var c = new Folder(connection.host)
         var isConsole = QDRService.isAConsole (connection.properties, connection.identity, connection.role, connection.routerId)
         c.type = "Connection"
-        c.info = connectionInfo
+        c.info = info
         c.key = connection.uid
         c.fields = connection
         if (isConsole)
@@ -1774,7 +1676,6 @@ QDR.log.debug("newly created node needs to be activated")
     logs.clickFolderMode = 1
     logs.key = "Logs"
     logs.parent = "Logs"
-    logs.isFolder = true
     if (QDRService.versionCheck('0.8.0'))
       topLevelChildren.push(logs)
     var initTreeAndGrid = function () {
@@ -1792,10 +1693,6 @@ QDR.log.debug("newly created node needs to be activated")
         activeVisible: !$scope.largeNetwork,
         selectMode: 1,
         debugLevel: 0,
-        classNames: {
-          expander: 'fa-angle',
-          connector: 'dynatree-no-connector'
-          },
         children: topLevelChildren
       })
       treeRoot = $("#overtree").dynatree("getRoot");

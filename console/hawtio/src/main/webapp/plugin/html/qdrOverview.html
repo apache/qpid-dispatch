@@ -52,11 +52,11 @@ under the License.
             <li ng-repeat="mode in gridModes" ng-click="selectMode(mode,'Address')" ng-class="{active : isModeSelected(mode,'Address')}" title="{{mode.title}}" ng-bind-html-unsafe="mode.content"> </li>
         </ul>
         <div ng-if="isModeVisible('Address','attributes')" class="selectedItems">
-            <h3>Address {{address.data.title}}</h3>
+            <h3>Address {{Address.data.title}}</h3>
             <div class="gridStyle noHighlight" ng-grid="addressGrid"></div>
         </div>
         <div ng-if="isModeVisible('Address','links')" class="selectedItems">
-            <h3>Links for address {{address.data.title}}</h3>
+            <h3>Links for address {{Address.data.title}}</h3>
             <div class="gridStyle" ng-grid="linksGrid"></div>
         </div>
     </div>
@@ -79,7 +79,7 @@ under the License.
 </script>
 <script type="text/ng-template" id="link.html">
     <div class="row-fluid">
-        <h3>Link {{link.data.title}}</h3>
+        <h3>Link {{Link.data.title}}</h3>
         <div class="gridStyle noHighlight" ng-grid="linkGrid"></div>
     </div>
 </script>
@@ -98,11 +98,11 @@ under the License.
             <li ng-repeat="mode in gridModes" ng-click="selectMode(mode,'Connection')" ng-class="{active : isModeSelected(mode,'Connection')}" title="{{mode.title}}" ng-bind-html-unsafe="mode.content"> </li>
         </ul>
         <div ng-if="isModeVisible('Connection','attributes')" class="selectedItems">
-            <h3>Connection {{connection.data.title}}</h3>
+            <h3>Connection {{Connection.data.title}}</h3>
             <div class="gridStyle noHighlight" ng-grid="connectionGrid"></div>
         </div>
         <div ng-if="isModeVisible('Connection','links')" class="selectedItems">
-            <h3>Links for connection {{connection.data.title}}</h3>
+            <h3>Links for connection {{Connection.data.title}}</h3>
             <div class="gridStyle" ng-grid="linksGrid"></div>
         </div>
     </div>
