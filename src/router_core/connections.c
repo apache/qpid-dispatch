@@ -734,8 +734,8 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         // Account for the lost reference from the Proton delivery
         //
         if (!dlv->cleared_proton_ref) {
-            qdr_delivery_decref_CT(core, dlv);
             dlv->cleared_proton_ref = true;
+            qdr_delivery_decref_CT(core, dlv);
         }
         dlv = DEQ_HEAD(unsettled);
     }
