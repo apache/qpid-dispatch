@@ -21,7 +21,7 @@ under the License.
  */
 var QDR = (function(QDR) {
 
-  QDR.module.controller('QDR.OverviewLogsController', function ($scope, dialog, QDRService, $timeout, nodeName, nodeId, module, level) {
+  QDR.module.controller('QDR.OverviewLogsController', function ($scope, $uibModalInstance, QDRService, $timeout, nodeName, nodeId, module, level) {
 
       var gotLogInfo = function (nodeId, entity, response, context) {
         var statusCode = context.message.application_properties.statusCode;
@@ -58,7 +58,7 @@ var QDR = (function(QDR) {
     $scope.nodeName = nodeName
     $scope.logFields = []
     $scope.ok = function () {
-      dialog.close(true);
+      $uibModalInstance.close(true);
     };
 
   });

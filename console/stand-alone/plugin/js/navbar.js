@@ -34,38 +34,44 @@ var QDR = (function (QDR) {
         content: '<i class="icon-cogs"></i> Connect',
         title: "Connect to a router",
         isValid: function () { return true; },
-        href: "#" + QDR.pluginRoot + "/connect"
+        href: "#!" + QDR.pluginRoot + "/connect",
+        name: "Connect"
     },
     {
-        content: '<i class="icon-home"></i> Overview',
+        content: '<i class="pficon-home"></i> Overview',
         title: "View router overview",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#" + QDR.pluginRoot + "/overview"
+        href: "#!" + QDR.pluginRoot + "/overview",
+        name: "Overview"
       },
     {
         content: '<i class="icon-list "></i> Entities',
         title: "View the attributes of the router entities",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#" + QDR.pluginRoot + "/list"
+        href: "#!" + QDR.pluginRoot + "/list",
+        name: "Entities"
       },
     {
         content: '<i class="icon-star-empty"></i> Topology',
         title: "View router network topology",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#" + QDR.pluginRoot + "/topology"
+        href: "#!" + QDR.pluginRoot + "/topology",
+        name: "Topology"
       },
     {
         content: '<i class="icon-bar-chart"></i> Charts',
         title: "View charts",
         isValid: function (QDRService, $location) { return QDRService.isConnected() && QDR.isStandalone; },
-        href: "#/charts"
+        href: "#!/charts",
+        name: "Charts"
     },
     {
         content: '<i class="icon-align-left"></i> Schema',
         title: "View dispatch schema",
         isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#" + QDR.pluginRoot + "/schema",
-        right: true
+        href: "#!" + QDR.pluginRoot + "/schema",
+        right: true,
+        name: "Schema"
       }
   ];
   /**
@@ -77,17 +83,22 @@ var QDR = (function (QDR) {
    * The controller for this plugin's navigation bar
    *
    */
-  QDR.module.controller("QDR.NavBarController", ['$scope', 'QDRService', 'QDRChartService', '$routeParams', '$location', function($scope, QDRService, QDRChartService, $routeParams, $location) {
+  QDR.module.controller("QDR.NavBarController", ['$rootScope', '$scope', 'QDRService', 'QDRChartService', '$routeParams', '$location', function($rootScope, $scope, QDRService, QDRChartService, $routeParams, $location) {
     $scope.breadcrumbs = QDR.breadcrumbs;
     $scope.isValid = function(link) {
+      if ($scope.isActive(link.href))
+        $rootScope.$broadcast("setCrumb", {name: link.name, title: link.content})
       return link.isValid(QDRService, $location);
     };
 
     $scope.isActive = function(href) {
-    // highlight the connect tab if we are on the root page
-    if (($location.path() === QDR.pluginRoot) && (href.split("#")[1] === QDR.pluginRoot + "/connect"))
-      return true
-        return href.split("#")[1] == $location.path();
+//QDR.log.info("isActive(" + href + ") location.path() is " + $location.path())
+      // highlight the connect tab if we are on the root page
+      if (($location.path() === QDR.pluginRoot) && (href.split("#")[1] === QDR.pluginRoot + "/connect")) {
+//QDR.log.info("isActive is returning true for connect page")
+        return true
+      }
+      return href.split("#")[1] === '!' + $location.path();
     };
 
     $scope.isRight = function (link) {
@@ -123,7 +134,7 @@ var QDR = (function (QDR) {
   }]);
 
   // controller for the edit/configure chart dialog
-  QDR.module.controller("QDR.ChartDialogController", function($scope, QDRChartService, $location, dialog, chart, updateTick, dashboard, adding) {
+  QDR.module.controller("QDR.ChartDialogController", function($scope, QDRChartService, $location, $uibModalInstance, chart, updateTick, dashboard, adding) {
     var dialogSvgChart = null;
     $scope.svgDivId = "dialogEditChart";    // the div id for the svg chart
 
@@ -166,7 +177,7 @@ var QDR = (function (QDR) {
 
     $scope.showChartsPage = function () {
       cleanup();
-      dialog.close(true);
+      $uibModalInstance.close(true);
       $location.path(QDR.pluginRoot + "/charts");
     };
 
@@ -180,7 +191,7 @@ var QDR = (function (QDR) {
     }
     $scope.okClick = function () {
       cleanup();
-      dialog.close(true);
+      $uibModalInstance.close(true);
     };
 
     var initRateSlider = function () {
