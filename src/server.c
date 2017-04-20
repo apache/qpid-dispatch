@@ -1069,9 +1069,9 @@ static void *thread_run(void *arg)
                     qd_policy_socket_close(qd_server->qd->policy, ctx);
                 }
 
-                qdpn_connector_free(cxtr);
                 invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
                 sys_mutex_free(ctx->deferred_call_lock);
+                qdpn_connector_free(cxtr);
                 free_qd_connection(ctx);
                 qd_server->threads_active--;
                 sys_mutex_unlock(qd_server->lock);
@@ -1557,6 +1557,7 @@ void qd_connection_set_context(qd_connection_t *conn, void *context)
 
 void *qd_connection_get_context(qd_connection_t *conn)
 {
+    /* FIXME aconway 2017-04-20: needs to be thread safe with respect to deletion */
     return conn->user_context;
 }
 

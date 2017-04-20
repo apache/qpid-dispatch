@@ -517,7 +517,6 @@ struct qdr_connection_t {
     DEQ_LINKS_N(ACTIVATE, qdr_connection_t);
     uint64_t                    identity;
     qdr_core_t                 *core;
-    void                       *user_context;
     bool                        incoming;
     bool                        in_activate_list;
     qdr_connection_role_t       role;
@@ -535,6 +534,9 @@ struct qdr_connection_t {
     char                       *tenant_space;
     int                         tenant_space_len;
     qdr_connection_info_t      *connection_info;
+
+    sys_mutex_t                *context_lock;
+    void                       *user_context; /* Updated from IO thread on close */
 };
 
 ALLOC_DECLARE(qdr_connection_t);

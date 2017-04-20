@@ -761,6 +761,7 @@ static int AMQP_closed_handler(void *type_context, qd_connection_t *conn, void *
     qdr_connection_t *qdrc = (qdr_connection_t*) qd_connection_get_context(conn);
 
     if (qdrc) {
+        qdr_connection_set_context(qdrc, NULL);
         qdr_connection_closed(qdrc);
         qd_connection_set_context(conn, 0);
     }
@@ -869,6 +870,7 @@ static void CORE_link_first_attach(void             *context,
 {
     qd_router_t     *router = (qd_router_t*) context;
     qd_connection_t *qconn  = (qd_connection_t*) qdr_connection_get_context(conn);
+    if (!qconn) return;        /* Connection is already closed */
 
     //
     // Create a new link to be attached
