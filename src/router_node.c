@@ -587,9 +587,6 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
     pn_condition_t *cond   = qd_link_pn(link) ? pn_link_remote_condition(qd_link_pn(link)) : 0;
 
     if (rlink) {
-        qdr_error_t *error = qdr_error_from_pn(cond);
-        qdr_link_detach(rlink, dt, error);
-
         //
         // This is the last event for this link that we will send into the core.  Remove the
         // core linkage.  Note that the core->qd linkage is still in place.
@@ -605,6 +602,9 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
             qdr_link_set_context(rlink, 0);
             qd_link_free(link);
         }
+
+        qdr_error_t *error = qdr_error_from_pn(cond);
+        qdr_link_detach(rlink, dt, error);
     }
 
     return 0;

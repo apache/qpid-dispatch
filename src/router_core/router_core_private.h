@@ -534,9 +534,7 @@ struct qdr_connection_t {
     char                       *tenant_space;
     int                         tenant_space_len;
     qdr_connection_info_t      *connection_info;
-
-    sys_mutex_t                *context_lock;
-    void                       *user_context; /* Updated from IO thread on close */
+    void                       *user_context; /* Updated from IO thread, use work_lock */
 };
 
 ALLOC_DECLARE(qdr_connection_t);

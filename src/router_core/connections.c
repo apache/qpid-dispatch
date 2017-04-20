@@ -89,7 +89,6 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     DEQ_INIT(conn->work_list);
     conn->connection_info->role = conn->role;
     conn->work_lock = sys_mutex();
-    conn->context_lock = sys_mutex();
 
     if (vhost) {
         conn->tenant_space_len = strlen(vhost) + 1;
@@ -118,12 +117,7 @@ void qdr_connection_closed(qdr_connection_t *conn)
 void qdr_connection_set_context(qdr_connection_t *conn, void *context)
 {
     if (conn) {
-        /* TODO aconway 2017-04-20: note this could be an atomic pointer store,
-         * but it must provide a full memory barrier.
-         */
-        sys_mutex_lock(conn->context_lock);
         conn->user_context = context;
-        sys_mutex_unlock(conn->context_lock);
     }
 }
 
@@ -187,13 +181,7 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
 
 void *qdr_connection_get_context(const qdr_connection_t *conn)
 {
-    void *ret = NULL;
-    if (conn) {
-        sys_mutex_lock(conn->context_lock);
-        ret = conn->user_context;
-        sys_mutex_unlock(conn->context_lock);
-    }
-    return ret;
+    return conn ? conn->user_context : NULL;
 }
 
 

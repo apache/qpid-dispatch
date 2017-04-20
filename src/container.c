@@ -541,9 +541,7 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                 pn_session_t *sess = qd_link->pn_sess;
                 qd_node_t *node = qd_link->node;
                 qd_detach_type_t dt = pn_event_type(event) == PN_LINK_REMOTE_CLOSE ? QD_CLOSED : QD_DETACHED;
-                if (node)
-                    node->ntype->link_detach_handler(node->context, qd_link, dt);
-                else if (qd_link->pn_link == pn_link) {
+                if (!node && qd_link->pn_link == pn_link) {
                     pn_link_close(pn_link);
                 }
                 if (qd_conn->policy_counted && qd_conn->policy_settings) {
@@ -566,6 +564,9 @@ int pn_event_handler(void *handler_context, void *conn_context, pn_event_t *even
                     if (qd_link->close_sess_with_link && sess)
                         pn_session_close(sess);
                     add_link_to_free_list(&qd_conn->free_link_session_list, pn_link);
+                }
+                if (node) {
+                    node->ntype->link_detach_handler(node->context, qd_link, dt);
                 }
             }
         }
