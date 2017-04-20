@@ -599,7 +599,6 @@ pn_connection_t *qd_connection_pn(qd_connection_t *conn);
 bool qd_connection_inbound(qd_connection_t *conn);
 
 
-/* FIXME aconway 2017-01-19: hide for batching */
 /**
  * Get the event collector for a connection.
  *
