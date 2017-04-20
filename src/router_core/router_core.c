@@ -103,6 +103,9 @@ void qdr_core_free(qdr_core_t *core)
     sys_cond_signal(core->action_cond);
     sys_thread_join(core->thread);
 
+    // Drain the general work lists
+    qdr_general_handler(core);
+
     //
     // Free the core resources
     //
@@ -112,6 +115,8 @@ void qdr_core_free(qdr_core_t *core)
     sys_mutex_free(core->work_lock);
     sys_mutex_free(core->id_lock);
     qd_timer_free(core->work_timer);
+
+
     //we can't call qdr_core_unsubscribe on the subscriptions because the action processing thread has
     //already been shut down. But, all the action would have done at this point is free the subscriptions
     //so we just do that directly.
