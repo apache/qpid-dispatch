@@ -156,19 +156,22 @@ static void qd_set_properties(qd_message_t         *msg,
 static void qd_manage_response_handler(void *context, const qd_amqp_error_t *status, bool more)
 {
     qd_management_context_t *ctx = (qd_management_context_t*) context;
-
+    bool need_free = false;
     if (ctx->operation_type == QD_ROUTER_OPERATION_QUERY) {
         if (status->status / 100 == 2) { // There is no error, proceed to conditionally call get_next
             if (more) {
-               ctx->current_count++; // Increment how many you have at hand
-               if (ctx->count != ctx->current_count) {
-                   qdr_query_get_next(ctx->query);
-                   return;
-               } else
-                   //
-                   // This is the one case where the core agent won't free the query itself.
-                   //
-                   qdr_query_free(ctx->query);
+                ctx->current_count++; // Increment how many you have at hand
+                if (ctx->count != ctx->current_count) {
+                    qdr_query_get_next(ctx->query);
+                    return;
+                } else {
+                    //
+                    // This is one case where the core agent won't free the query itself.
+                    // Don't free immediately as we need status below and it may belong
+                    // to the query.
+                    //
+                    need_free = true;
+                }
             }
         }
         qd_compose_end_list(ctx->field);
@@ -211,6 +214,9 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     qd_message_free(ctx->source);
     qd_compose_free(ctx->field);
 
+    if (need_free) {
+        qdr_query_free(ctx->query);
+    }
     free_qd_management_context_t(ctx);
 }
 
