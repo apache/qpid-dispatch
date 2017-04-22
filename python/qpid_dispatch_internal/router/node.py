@@ -533,8 +533,8 @@ class RouterNode(object):
 
     def unmap_all_addresses(self):
         self.mobile_address_sequence = 0
-        for addr in self.mobile_addresses:
-            self.unmap_address(addr)
+        while self.mobile_addresses:
+            self.unmap_address(self.mobile_addresses[0])
 
 
     def overwrite_addresses(self, addrs):
