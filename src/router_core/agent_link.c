@@ -238,6 +238,7 @@ void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     // Queries that get this far will always succeed.
     //
     query->status = QD_AMQP_OK;
+    printf("SET successful status\n");
 
     //
     // If the offset goes beyond the set of links, end the query now.

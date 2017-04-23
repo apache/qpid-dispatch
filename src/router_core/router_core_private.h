@@ -265,6 +265,7 @@ struct qdr_query_t {
     int                      next_offset;
     bool                     more;
     qd_amqp_error_t          status;
+    qdr_manage_response_t    response_handler;
 };
 
 DEQ_DECLARE(qdr_query_t, qdr_query_list_t); 
@@ -595,11 +596,11 @@ struct qdr_conn_identifier_t {
 
 ALLOC_DECLARE(qdr_conn_identifier_t);
 
-
 struct qdr_core_t {
     qd_dispatch_t     *qd;
     qd_log_source_t   *log;
     qd_log_source_t   *agent_log;
+
     sys_thread_t      *thread;
     bool               running;
     qdr_action_list_t  action_list;
@@ -620,7 +621,6 @@ struct qdr_core_t {
     qdr_query_list_t       outgoing_query_list;
     sys_mutex_t           *query_lock;
     qd_timer_t            *agent_timer;
-    qdr_manage_response_t  agent_response_handler;
     qdr_subscription_t    *agent_subscription_mobile;
     qdr_subscription_t    *agent_subscription_local;
 
@@ -728,6 +728,7 @@ void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,
-                       qd_composed_field_t     *body);
+                       qd_composed_field_t     *body,
+                       qdr_manage_response_t    response_handler);
 
 #endif

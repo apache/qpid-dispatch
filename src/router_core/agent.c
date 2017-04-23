@@ -47,16 +47,20 @@ static void qdr_agent_response_handler(void *context)
     bool         done = false;
 
     while (!done) {
+        printf("GOing to check query list\n");
         sys_mutex_lock(core->query_lock);
         query = DEQ_HEAD(core->outgoing_query_list);
+        printf("Got query: 0x%p\n", query);
         if (query)
             DEQ_REMOVE_HEAD(core->outgoing_query_list);
         done = DEQ_SIZE(core->outgoing_query_list) == 0;
         sys_mutex_unlock(core->query_lock);
+        printf("Checked query...\n");
 
         if (query) {
+            printf("WE GOT RESPONSE, responding\n");
             bool more = query->more;
-            core->agent_response_handler(query->context, &query->status, more);
+            query->response_handler(query->context, &query->status, more);
             if (!more)
                 qdr_query_free(query);
         }
@@ -66,9 +70,11 @@ static void qdr_agent_response_handler(void *context)
 
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query)
 {
+    printf("Enqueueing ersponse\n");
     sys_mutex_lock(core->query_lock);
     DEQ_INSERT_TAIL(core->outgoing_query_list, query);
     bool notify = DEQ_SIZE(core->outgoing_query_list) == 1;
+    printf("Enqueueing ersponse, notify: %lu\n", DEQ_SIZE(core->outgoing_query_list));
     sys_mutex_unlock(core->query_lock);
 
     if (notify)
@@ -79,18 +85,19 @@ void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query)
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,
-                       qd_composed_field_t     *body)
+                       qd_composed_field_t     *body,
+                       qdr_manage_response_t    response_handler)
 {
     qdr_query_t *query = new_qdr_query_t();
 
     DEQ_ITEM_INIT(query);
     ZERO(query);
-    query->core        = core;
-    query->entity_type = type;
-    query->context     = context;
-    query->body        = body;
-    query->more        = false;
-
+    query->core             = core;
+    query->entity_type      = type;
+    query->context          = context;
+    query->body             = body;
+    query->more             = false;
+    query->response_handler = response_handler;
     return query;
 }
 
@@ -109,12 +116,13 @@ void qdr_manage_create(qdr_core_t              *core,
                        qd_iterator_t           *name,
                        qd_parsed_field_t       *in_body,
                        qd_composed_field_t     *out_body,
-                       qd_buffer_list_t         body_buffers)
+                       qd_buffer_list_t         body_buffers,
+                       qdr_manage_response_t    response_handler)
 {
     qdr_action_t *action = qdr_action(qdr_manage_create_CT, "manage_create");
 
     // Create a query object here
-    action->args.agent.query        = qdr_query(core, context, type, out_body);
+    action->args.agent.query        = qdr_query(core, context, type, out_body, response_handler);
     action->args.agent.name         = qdr_field_from_iter(name);
     action->args.agent.in_body      = in_body;
     action->args.agent.body_buffers = body_buffers;
@@ -127,12 +135,13 @@ void qdr_manage_delete(qdr_core_t *core,
                        void  *context,
                        qd_router_entity_type_t  type,
                        qd_iterator_t           *name,
-                       qd_iterator_t           *identity)
+                       qd_iterator_t           *identity,
+                       qdr_manage_response_t    response_handler)
 {
     qdr_action_t *action = qdr_action(qdr_manage_delete_CT, "manage_delete");
 
     // Create a query object here
-    action->args.agent.query = qdr_query(core, context, type, 0);
+    action->args.agent.query = qdr_query(core, context, type, 0, response_handler);
     action->args.agent.name = qdr_field_from_iter(name);
     action->args.agent.identity = qdr_field_from_iter(identity);
 
@@ -145,12 +154,13 @@ void qdr_manage_read(qdr_core_t              *core,
                      qd_router_entity_type_t  entity_type,
                      qd_iterator_t           *name,
                      qd_iterator_t           *identity,
-                     qd_composed_field_t     *body)
+                     qd_composed_field_t     *body,
+                     qdr_manage_response_t    response_handler)
 {
     qdr_action_t *action = qdr_action(qdr_manage_read_CT, "manage_read");
 
     // Create a query object here
-    action->args.agent.query = qdr_query(core, context, entity_type, body);
+    action->args.agent.query = qdr_query(core, context, entity_type, body, response_handler);
     action->args.agent.identity  = qdr_field_from_iter(identity);
     action->args.agent.name = qdr_field_from_iter(name);
 
@@ -164,10 +174,11 @@ void qdr_manage_update(qdr_core_t              *core,
                        qd_iterator_t           *name,
                        qd_iterator_t           *identity,
                        qd_parsed_field_t       *in_body,
-                       qd_composed_field_t     *out_body)
+                       qd_composed_field_t     *out_body,
+                       qdr_manage_response_t    response_handler)
 {
     qdr_action_t *action = qdr_action(qdr_manage_update_CT, "manage_update");
-    action->args.agent.query = qdr_query(core, context, type, out_body);
+    action->args.agent.query = qdr_query(core, context, type, out_body, response_handler);
     action->args.agent.name = qdr_field_from_iter(name);
     action->args.agent.identity = qdr_field_from_iter(identity);
     action->args.agent.in_body = in_body;
@@ -180,10 +191,11 @@ qdr_query_t *qdr_manage_query(qdr_core_t              *core,
                               void                    *context,
                               qd_router_entity_type_t  type,
                               qd_parsed_field_t       *attribute_names,
-                              qd_composed_field_t     *body)
+                              qd_composed_field_t     *body,
+                              qdr_manage_response_t    response_handler)
 {
 
-    qdr_query_t* query = qdr_query(core, context, type, body);
+    qdr_query_t* query = qdr_query(core, context, type, body, response_handler);
 
     switch (query->entity_type) {
     case QD_ROUTER_CONFIG_ADDRESS:    qdr_agent_set_columns(query, attribute_names, qdr_config_address_columns, QDR_CONFIG_ADDRESS_COLUMN_COUNT);  break;
@@ -312,10 +324,6 @@ static void qdr_agent_set_columns(qdr_query_t *query,
 
 
 
-void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler)
-{
-    core->agent_response_handler = response_handler;
-}
 
 
 //==================================================================================
@@ -446,6 +454,7 @@ static void qdrh_query_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool
     qdr_query_t *query  = action->args.agent.query;
     int          offset = action->args.agent.offset;
 
+    printf("CHEcKING QUERY IN CORE THREAD\n");
     if (!discard) {
         switch (query->entity_type) {
         case QD_ROUTER_CONFIG_ADDRESS:    qdra_config_address_get_first_CT(core, query, offset); break;

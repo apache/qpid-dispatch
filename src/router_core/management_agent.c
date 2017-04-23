@@ -252,9 +252,7 @@ static void qd_core_agent_query_handler(qdr_core_t                 *core,
         attribute_names_parsed_field = qd_parse_value_by_key(body, ATTRIBUTE_NAMES);
     }
 
-    // Set the callback function.
-    qdr_manage_handler(core, qd_manage_response_handler);
-    ctx->query = qdr_manage_query(core, ctx, entity_type, attribute_names_parsed_field, field);
+    ctx->query = qdr_manage_query(core, ctx, entity_type, attribute_names_parsed_field, field, qd_manage_response_handler);
 
     //Add the attribute names
     qdr_query_add_attribute_names(ctx->query); //this adds a list of attribute names like ["attribute1", "attribute2", "attribute3", "attribute4",]
@@ -280,14 +278,11 @@ static void qd_core_agent_read_handler(qdr_core_t                 *core,
     //
     qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 
-    // Set the callback function.
-    qdr_manage_handler(core, qd_manage_response_handler);
-
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
     qd_management_context_t *ctx = qd_management_context(qd_message(), msg, body, 0, core, operation_type, 0);
 
     //Call the read API function
-    qdr_manage_read(core, ctx, entity_type, name_iter, identity_iter, body);
+    qdr_manage_read(core, ctx, entity_type, name_iter, identity_iter, body, qd_manage_response_handler);
 }
 
 
@@ -302,9 +297,6 @@ static void qd_core_agent_create_handler(qdr_core_t                 *core,
     //
     qd_composed_field_t *out_body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 
-    // Set the callback function.
-    qdr_manage_handler(core, qd_manage_response_handler);
-
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
     qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
 
@@ -314,7 +306,7 @@ static void qd_core_agent_create_handler(qdr_core_t                 *core,
 
     qd_buffer_list_t empty_list;
     DEQ_INIT(empty_list);
-    qdr_manage_create(core, ctx, entity_type, name_iter, in_body, out_body, empty_list);
+    qdr_manage_create(core, ctx, entity_type, name_iter, in_body, out_body, empty_list, qd_manage_response_handler);
     qd_iterator_free(body_iter);
 }
 
@@ -328,16 +320,13 @@ static void qd_core_agent_update_handler(qdr_core_t                 *core,
 {
     qd_composed_field_t *out_body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 
-    // Set the callback function.
-    qdr_manage_handler(core, qd_manage_response_handler);
-
     qd_management_context_t *ctx = qd_management_context(qd_message(), msg, out_body, 0, core, operation_type, 0);
 
     qd_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
     qd_parsed_field_t *in_body= qd_parse(iter);
     qd_iterator_free(iter);
 
-    qdr_manage_update(core, ctx, entity_type, name_iter, identity_iter, in_body, out_body);
+    qdr_manage_update(core, ctx, entity_type, name_iter, identity_iter, in_body, out_body, qd_manage_response_handler);
 
 }
 
@@ -354,13 +343,10 @@ static void qd_core_agent_delete_handler(qdr_core_t                 *core,
     //
     qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
 
-    // Set the callback function.
-    qdr_manage_handler(core, qd_manage_response_handler);
-
     // Call local function that creates and returns a qd_management_context_t containing the values passed in.
     qd_management_context_t *ctx = qd_management_context(qd_message(), msg, body, 0, core, operation_type, 0);
 
-    qdr_manage_delete(core, ctx, entity_type, name_iter, identity_iter);
+    qdr_manage_delete(core, ctx, entity_type, name_iter, identity_iter, qd_manage_response_handler);
 }
 
 
