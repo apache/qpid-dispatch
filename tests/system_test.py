@@ -34,13 +34,6 @@ import proton
 from proton import Message
 from qpid_dispatch.management.client import Node
 
-try:
-    # NOTE: the tests can be run outside a build to test an installed dispatch.
-    # In this case we won't have access to the run.py module so no valgrind.
-    from run import with_valgrind
-except ImportError:
-    def with_valgrind(args, outfile): return (args, 0)
-
 # Optional modules
 MISSING_MODULES = []
 
@@ -189,13 +182,13 @@ def message(**properties):
 class Process(subprocess.Popen):
     """
     Popen that can be torn down at the end of a TestCase and stores its output.
-    Uses valgrind if enabled.
+    Use $TEST_RUNNER as a prefix to the executable if it is defined in the environment.
     """
 
     # Expected states of a Process at teardown
-    RUNNING = 1                   # Still running
-    EXIT_OK = 2                   # Exit status 0
-    EXIT_FAIL = 3                 # Exit status not 0
+    RUNNING = -1                # Still running
+    EXIT_OK = 0                 # Exit status 0
+    EXIT_FAIL = 1               # Exit status 1
 
     unique_id = 0
     @classmethod
@@ -209,7 +202,8 @@ class Process(subprocess.Popen):
         @param expect: Raise error if process staus not as expected at end of test:
             L{RUNNING} - expect still running.
             L{EXIT_OK} - expect proces to have terminated with 0 exit status.
-            L{EXIT_ERROR} - expect proces to have terminated with non-0 exit status.
+            L{EXIT_FAIL} - expect proces to have terminated with exit status 1.
+            integer    - expected return code
         @keyword stdout: Defaults to the file name+".out"
         @keyword stderr: Defaults to be the same as stdout
         """
@@ -217,56 +211,45 @@ class Process(subprocess.Popen):
         self.args, self.expect = args, expect
         self.outdir = os.getcwd()
         self.outfile = os.path.abspath(self.unique(self.name))
-        self.out = open(self.outfile + '.out', 'w')
-        with open(self.outfile + '.cmd', 'w') as f: f.write("%s\n" % ' '.join(args))
         self.torndown = False
-        kwargs.setdefault('stdout', self.out)
-        kwargs.setdefault('stderr', subprocess.STDOUT)
-        args, self.valgrind_error = with_valgrind(args, self.outfile + '.vg')
-        try:
-            super(Process, self).__init__(args, **kwargs)
-        except Exception, e:
-            raise Exception("subprocess.Popen(%s, %s) failed: %s: %s" %
-                            (args, kwargs, type(e).__name__, e))
+        args = os.environ.get('QPID_DISPATCH_TEST_RUNNER', '').split() + args
+        with open(self.outfile + '.out', 'w') as out:
+            kwargs.setdefault('stdout', out)
+            kwargs.setdefault('stderr', subprocess.STDOUT)
+            try:
+                super(Process, self).__init__(args, **kwargs)
+                with open(self.outfile + '.cmd', 'w') as f:
+                    f.write("%s\npid=%s\n" % (' '.join(args), self.pid))
+            except Exception, e:
+                raise Exception("subprocess.Popen(%s, %s) failed: %s: %s" %
+                                (args, kwargs, type(e).__name__, e))
 
     def assert_running(self):
         """Assert that the proces is still running"""
-        assert self.poll() is None, "%s exited" % self.name
+        assert self.poll() is None, "%s: exited" % ' '.join(self.args)
 
     def teardown(self):
         """Check process status and stop the process if necessary"""
         if self.torndown:
             return
         self.torndown = True
-        status = self.poll()
-        if status is None:    # still running
-            self.terminate()
-            rc = self.wait()
-            if rc is None:
-                self.kill()
-            if self.valgrind_error and rc == self.valgrind_error:
-                # Report that valgrind found errors
-                status = rc;
-        self.out.close()
-        self.check_exit(status)
 
-    def check_exit(self, status):
-        """Check process exit status"""
-        def check(condition, expect):
-            """assert condition with a suitable message for status"""
-            if status is None:
-                actual = "still running"
-            else:
-                actual = "exit %s"%status
-            assert condition, "Expected %s but %s: %s"%(expect, actual, self.name)
-        assert not self.valgrind_error or status != self.valgrind_error, \
-            "Valgrind errors (in %s)\n\n%s\n" % (self.outfile+".vg", open(self.outfile+".vg").read())
-        if self.expect == Process.RUNNING:
-            check(status is None, "still running")
-        elif self.expect == Process.EXIT_OK:
-            check(status == 0, "exit 0")
-        elif self.expect == Process.EXIT_FAIL:
-            check(status != 0, "exit non-0")
+        def error(msg):
+            with open(self.outfile + '.out') as f:
+                raise RuntimeError("Process %s error: %s\n%s\n%s\n>>>>\n%s<<<<" % (
+                    self.pid, msg, ' '.join(self.args),
+                    self.outfile + '.cmd', f.read()));
+
+        status = self.poll()
+        if status is None:      # Still running
+            self.terminate()
+            if self.expect != None and  self.expect != Process.RUNNING:
+                error("still running")
+            self.expect = 0     # Expect clean exit after terminate
+            status = self.wait()
+        if self.expect != None and self.expect != status:
+            error("exit code %s, expected %s" % (status, self.expect))
+
 
 class Config(object):
     """Base class for configuration objects that provide a convenient
@@ -556,7 +539,8 @@ class Tester(object):
                         break
             except Exception, e:
                 errors.append(e)
-        assert not errors, "Errors during teardown: \n%s" % "\n----".join([str(e) for e in errors])
+        if errors:
+            raise RuntimeError("Errors during teardown: \n\n%s" % "\n\n".join([str(e) for e in errors]))
 
 
     def cleanup(self, x):

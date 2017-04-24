@@ -114,6 +114,12 @@ mark_as_advanced(VALGRIND_EXECUTABLE)
 find_package_handle_standard_args(VALGRIND DEFAULT_MSG VALGRIND_EXECUTABLE)
 option(USE_VALGRIND "Use valgrind when running tests" OFF)
 
+if (USE_VALGRIND)
+  set(VG_RUNNER "${VALGRIND_EXECUTABLE} --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=42 --suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp --quiet")
+endif()
+
+set(TEST_RUNNER "${VG_RUNNER}" CACHE STRING "Program to run test executables")
+
 ##
 ## Include directories used by all sub-directories.
 ##

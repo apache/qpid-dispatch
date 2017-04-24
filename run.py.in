@@ -31,16 +31,8 @@ Usage:
 run.py <program> [<arg>....]               # Run a program, can be an interactive shell. Use PATH.
 run.py -m <python-module>  [<arg>....]     # Run a python module. Use PYTHONPATH.
 run.py -s <python-script>.py  [<arg>....]  # Run a python script.
-run.py --vg <program> [<arg>....]          # Run a program with valgrind if enabled. Use PATH.
+run.py -x <program> [<arg>....]            # Run an executable with the test runner
 run.py --sh                                # Print a shell script to set the run.py environment.
-
-Valgrind can be enabled or disabled by the cmake 'USE_VALGRIND' option and the
-environment variable 'USE_VALGRIND' (set to 'ON' or 'OFF'). The environment
-variable takes precendence if set.  By default valgrind runs the 'memcheck'
-tool. The valgrind tool and supression file can be overridden by setting the
-'VALGRIND_TOOL' and 'VALGRIND_SUPPRESSIONS' environment variables,
-respectively. Additional options can be provided via the 'VALGRIND_OPTS'
-environment variable.
 """
 
 import os, sys, runpy
@@ -63,6 +55,9 @@ def getpath(env):
         return path.split(os.pathsep)
     return []
 
+# Test runner program and args (e.g. valgrind)
+test_runner = "${TEST_RUNNER}"
+
 env_vars = {
     'PYTHONPATH': os.pathsep.join(sys.path),
     'PATH': os.pathsep.join(dedup(["${CMAKE_BINARY_DIR}",
@@ -77,21 +72,11 @@ env_vars = {
     'SOURCE_DIR': "${CMAKE_SOURCE_DIR}",
     'BUILD_DIR': "${CMAKE_BINARY_DIR}",
     'QPID_DISPATCH_HOME': "${CMAKE_SOURCE_DIR}",
-    'QPID_DISPATCH_LIB': "${CMAKE_BINARY_DIR}/src/${QPID_DISPATCH_LIB}"
+    'QPID_DISPATCH_LIB': "${CMAKE_BINARY_DIR}/src/${QPID_DISPATCH_LIB}",
+    'QPID_DISPATCH_TEST_RUNNER': test_runner
 }
 os.environ.update(env_vars)
 
-# Valgrind setup
-valgrind_exe = "${VALGRIND_EXECUTABLE}"
-
-def use_valgrind():
-    """True if we should use valgrind"""
-    if not os.path.exists(valgrind_exe): return False
-    def on(str):
-        return str.lower() in ['on', 'yes', '1']
-    env = os.environ.get('USE_VALGRIND')
-    if env: return on(env)
-    return on("${USE_VALGRIND}")
 
 def find_exe(program):
     """Find an executable in the system PATH"""
@@ -111,26 +96,6 @@ def is_binary_exe(program):
     if not program: return None
     p = Popen(['file', '-bi', program], stdout=PIPE, stderr=PIPE)
     return p.communicate()[0].startswith('application/x-executable')
-
-VALGRIND_ERROR = 42   # magic number indicating valgrind found errors
-def with_valgrind(args, outfile=None):
-    if use_valgrind() and is_binary_exe(find_exe(args[0])):
-        opts = ['--leak-check=full',
-                # Python generates a ton of "possibly lost" and "still in use"
-                # false alarms, restrict to "definite" leaks.
-                # Ideally we should have more specific python exclusions.
-                '--show-leak-kinds=definite',
-                '--errors-for-leak-kinds=definite',
-                '--error-exitcode=%d' % VALGRIND_ERROR,
-                '--quiet']
-        opts.append('--tool=%s' % os.environ.get('VALGRIND_TOOL', 'memcheck'))
-        supp = os.environ.get('VALGRIND_SUPPRESSIONS',
-                              '${CMAKE_SOURCE_DIR}/tests/valgrind.supp')
-        opts.append('--suppressions=%s' % supp)
-        if outfile: opts.append('--log-file=%s' % outfile)
-        opts.extend(os.environ.get('VALGRIND_OPTS', "").split())
-        return ([valgrind_exe]+opts+args, VALGRIND_ERROR)
-    return (args, 0)
 
 def run_path(file_path, run_name=None):
     """Wrapper for run path that falls back to exec python for python < 2.7"""
@@ -153,17 +118,17 @@ if __name__ == "__main__":
             error_prefix = "Run python script '%s':"%(sys.argv[0])
             run_path(sys.argv[0], run_name="__main__")
         elif sys.argv[1] == '--sh':
-            for name, value in env_vars.iteritems(): print "%s=%s"%(name, value)
+            for name, value in env_vars.iteritems(): print '%s="%s"'%(name, value)
             print "export %s"%' '.join(env_vars.keys())
-        elif sys.argv[1] == '--vg':
-            args, ignore = with_valgrind(sys.argv[2:])
-            error_prefix = "Run executable '%s' with valgrind: "%(args[0])
+        elif sys.argv[1] == '-x':
+            args = test_runner.split() + sys.argv[2:]
+            error_prefix = "Running '%s': "%(args)
             os.execvp(args[0], args)
         elif sys.argv[1].startswith('-'):
             print usage
         else:
             args = sys.argv[1:]
-            error_prefix = "Run executable '%s': "%(args[0])
+            error_prefix = "Running '%s': "%(args)
             os.execvp(args[0], args)
     except Exception, e:
         print "%s%s: %s"%(error_prefix, type(e).__name__, e)
