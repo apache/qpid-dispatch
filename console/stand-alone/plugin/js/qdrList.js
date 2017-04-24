@@ -226,8 +226,12 @@ var QDR = (function(QDR) {
       for (attr in schemaEntity.attributes) {
         var entity = schemaEntity.attributes[attr]
         var value = ""
-        if (angular.isDefined(entity['default']))
-          value = entity['default']
+        if (angular.isDefined(entity['default'])) {
+          if (entity['type'] === 'integer')
+            value = parseInt(entity['default']) // some default values that are marked as integer are passed as string
+          else
+            value = entity['default']
+        }
         row[attr] = {
           value: value,
           type: entity.type,
