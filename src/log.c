@@ -143,7 +143,9 @@ static log_sink_t* log_sink_lh(const char* name) {
         }
 
         sink = NEW(log_sink_t);
-        *sink = (log_sink_t){ 1, strdup(name), };
+        ZERO(sink);
+        sys_atomic_init(&sink->ref_count, 1);
+        sink->name = strdup(name);
         sink->syslog = syslog;
         sink->file = file;
         DEQ_INSERT_TAIL(sink_list, sink);
@@ -520,7 +522,10 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
             log_sink_t* sink = log_sink_lh(output);
             QD_ERROR_BREAK();
 
-            log_sink_free_lh(src->sink); /* DEFAULT source may already have a sink, so free that sink first */
+            /* DEFAULT source may already have a sink, so free the old sink first */
+            if (src->sink) {
+                log_sink_free_lh(src->sink);
+            }
             src->sink = sink;           /* Assign the new sink   */
 
             if (src->sink->syslog) /* Timestamp off for syslog. */
