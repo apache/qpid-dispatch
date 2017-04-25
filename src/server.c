@@ -500,7 +500,6 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
     pn_connection_set_context(ctx->pn_conn, ctx);
     DEQ_ITEM_INIT(ctx);
     DEQ_INIT(ctx->deferred_calls);
-    DEQ_INIT(ctx->free_link_session_list);
     sys_mutex_lock(server->lock);
     ctx->connection_id = server->next_connection_id++;
     sys_mutex_unlock(server->lock);
