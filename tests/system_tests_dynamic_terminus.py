@@ -123,7 +123,7 @@ class DynamicSourceTest(MessagingHandler):
         self.receiver_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(5, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
 
         self.sender_1_conn = event.container.connect(self.router_1_host)
         self.sender_2_conn = event.container.connect(self.router_2_host)
@@ -203,7 +203,7 @@ class DynamicTargetTest(MessagingHandler):
         self.receiver_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(5, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
 
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver_conn = event.container.connect(self.receiver_host)

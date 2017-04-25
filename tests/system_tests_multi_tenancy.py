@@ -30,7 +30,7 @@ try:
 except ImportError:
     from proton import PN_STATUS_MODIFIED as MODIFIED
 
-    
+
 class RouterTest(TestCase):
 
     inter_router_port = None
@@ -41,7 +41,7 @@ class RouterTest(TestCase):
         super(RouterTest, cls).setUpClass()
 
         def router(name, connection):
-            
+
             config = [
                 ('router', {'mode': 'interior', 'id': name}),
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
@@ -57,15 +57,15 @@ class RouterTest(TestCase):
                 ('address', {'prefix': '0.0.0.0/queue', 'waypoint': 'yes'}),
                 connection
             ]
-            
+
             config = Qdrouterd.Config(config)
 
             cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
 
         cls.routers = []
-        
+
         inter_router_port = cls.tester.get_port()
-        
+
         router('A', ('listener', {'role': 'inter-router', 'port': inter_router_port}))
         router('B', ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port, 'verifyHostName': 'no'}))
 
@@ -494,7 +494,7 @@ class MessageTransferTest(MessagingHandler):
         self.lookup_conn.close()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(10, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
         self.lookup_conn    = event.container.connect(self.lookup_host)
@@ -535,7 +535,7 @@ class MessageTransferTest(MessagingHandler):
             self.receiver_conn.close()
             self.lookup_conn.close()
             self.timer.cancel()
-            
+
     def on_accepted(self, event):
         if event.sender == self.sender:
             self.n_accepted += 1
@@ -587,7 +587,7 @@ class MessageTransferAnonTest(MessagingHandler):
         self.poll()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(10, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.poll_timer     = None
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
@@ -714,7 +714,7 @@ class LinkRouteTest(MessagingHandler):
 
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(10, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.first_conn     = event.container.connect(self.first_host)
         self.second_conn    = event.container.connect(self.second_host)
         self.lookup_conn    = event.container.connect(self.lookup_host)
@@ -833,7 +833,7 @@ class WaypointTest(MessagingHandler):
             self.waypoint_sender.send(m)
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(10, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.first_conn  = event.container.connect(self.first_host)
         self.second_conn = event.container.connect(self.second_host)
 

@@ -19,7 +19,7 @@
 
 import unittest
 from proton import Message, Delivery, PENDING, ACCEPTED, REJECTED
-from system_test import TestCase, Qdrouterd, main_module
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
 
@@ -192,7 +192,7 @@ class AutolinkAttachTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(5, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn  = event.container.connect(self.address)
 
     def on_connection_closed(self, event):
@@ -243,7 +243,7 @@ class AutolinkCreditTest(MessagingHandler):
             self.route_conn.close()
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(5, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.normal_conn = event.container.connect(self.normal_address)
         self.sender      = event.container.create_sender(self.normal_conn, self.dest)
         self.last_action = "Attached normal sender"
@@ -299,7 +299,7 @@ class AutolinkSenderTest(MessagingHandler):
             self.route_conn.close()
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(5, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.route_conn  = event.container.connect(self.route_address)
         self.last_action = "Connected route container"
 
@@ -365,7 +365,7 @@ class AutolinkReceiverTest(MessagingHandler):
             self.route_conn.close()
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(5, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.route_conn  = event.container.connect(self.route_address)
         self.last_action = "Connected route container"
 
@@ -426,7 +426,7 @@ class InterContainerTransferTest(MessagingHandler):
         self.conn_2.close()
 
     def on_start(self, event):
-        self.timer  = event.reactor.schedule(5, Timeout(self))
+        self.timer  = event.reactor.schedule(TIMEOUT, Timeout(self))
         event.container.container_id = 'container.2'
         self.conn_1 = event.container.connect(self.route_address)
         event.container.container_id = 'container.3'
@@ -483,7 +483,7 @@ class ManageAutolinksTest(MessagingHandler):
         self.route_conn.close()
 
     def on_start(self, event):
-        self.timer  = event.reactor.schedule(5, Timeout(self))
+        self.timer  = event.reactor.schedule(TIMEOUT, Timeout(self))
         event.container.container_id = 'container.new'
         self.route_conn  = event.container.connect(self.route_address)
         self.normal_conn = event.container.connect(self.normal_address)

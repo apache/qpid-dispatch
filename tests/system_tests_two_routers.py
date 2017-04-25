@@ -1082,7 +1082,7 @@ class ExcessDeliveriesReleasedTest(MessagingHandler):
         self.conn2.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(5, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn1 = event.container.connect(self.address1)
         self.conn2 = event.container.connect(self.address2)
         self.sender   = event.container.create_sender(self.conn1, self.dest)
@@ -1132,7 +1132,7 @@ class AttachOnInterRouterTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer  = event.reactor.schedule(5, Timeout(self))
+        self.timer  = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn   = event.container.connect(self.address)
         self.sender = event.container.create_sender(self.conn, self.dest)
 

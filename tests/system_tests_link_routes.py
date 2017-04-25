@@ -620,7 +620,7 @@ class DeliveryTagsTest(MessagingHandler):
             self.sender_connection.close()
 
     def on_start(self, event):
-        self.timer               = event.reactor.schedule(5, Timeout(self))
+        self.timer               = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.receiver_connection = event.container.connect(self.listening_address)
 
     def on_connection_remote_open(self, event):
@@ -692,7 +692,7 @@ class CloseWithUnsettledTest(MessagingHandler):
         self.conn_route.close()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn_route = event.container.connect(self.route_addr)
 
     def on_connection_opened(self, event):
@@ -740,7 +740,7 @@ class DynamicSourceTest(MessagingHandler):
         self.conn_route.close()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn_route = event.container.connect(self.route_addr)
 
     def on_connection_opened(self, event):
@@ -797,7 +797,7 @@ class DynamicTargetTest(MessagingHandler):
         self.conn_route.close()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn_route = event.container.connect(self.route_addr)
 
     def on_connection_opened(self, event):
@@ -850,9 +850,9 @@ class DetachNoCloseTest(MessagingHandler):
         self.conn_normal.close()
         self.conn_route.close()
         self.timer.cancel()
-        
+
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn_route = event.container.connect(self.route_addr)
 
     def on_connection_opened(self, event):
@@ -913,9 +913,9 @@ class DetachMixedCloseTest(MessagingHandler):
         self.conn_normal.close()
         self.conn_route.close()
         self.timer.cancel()
-        
+
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn_route = event.container.connect(self.route_addr)
 
     def on_connection_opened(self, event):
@@ -1069,4 +1069,3 @@ class TerminusAddrTest(MessagingHandler):
 
 if __name__ == '__main__':
     unittest.main(main_module())
-

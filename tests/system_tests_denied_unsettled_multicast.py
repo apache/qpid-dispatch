@@ -30,7 +30,7 @@ try:
 except ImportError:
     from proton import PN_STATUS_MODIFIED as MODIFIED
 
-    
+
 class RouterTest(TestCase):
 
     inter_router_port = None
@@ -41,21 +41,21 @@ class RouterTest(TestCase):
         super(RouterTest, cls).setUpClass()
 
         def router(name):
-            
+
             config = [
                 ('router', {'mode': 'standalone', 'id': name}),
                 ('listener', {'port': cls.tester.get_port()}),
                 ('address', {'prefix': 'multicast', 'distribution' : 'multicast'}),
             ]
-            
+
             config = Qdrouterd.Config(config)
 
             cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
 
         cls.routers = []
-        
+
         inter_router_port = cls.tester.get_port()
-        
+
         router('A')
         cls.routers[0].wait_ready()
 
@@ -107,7 +107,7 @@ class DeniedUnsettledMulticastTest(MessagingHandler):
             self.sent_pres += 1
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(5, Timeout(self))
+        self.timer    = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn     = event.container.connect(self.host)
         self.receiver = event.container.create_receiver(self.conn, self.addr)
         self.sender   = event.container.create_sender(self.conn, self.addr)

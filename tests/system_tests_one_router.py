@@ -19,7 +19,7 @@
 
 import unittest
 from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED
-from system_test import TestCase, Qdrouterd, main_module
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SyncRequestResponse
@@ -1247,7 +1247,7 @@ class MulticastUnsettledTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer     = event.reactor.schedule(5, Timeout(self))
+        self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn      = event.container.connect(self.address)
         self.sender    = event.container.create_sender(self.conn, self.dest)
         self.receiver1 = event.container.create_receiver(self.conn, self.dest, name="A")
@@ -1299,7 +1299,7 @@ class MultiframePresettledTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer     = event.reactor.schedule(5, Timeout(self))
+        self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn      = event.container.connect(self.address)
         self.sender    = event.container.create_sender(self.conn, self.dest)
         self.receiver  = event.container.create_receiver(self.conn, self.dest, name="A")
@@ -1346,7 +1346,7 @@ class ReleasedVsModifiedTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer     = event.reactor.schedule(5, Timeout(self))
+        self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn      = event.container.connect(self.address)
         self.sender    = event.container.create_sender(self.conn, self.dest)
         self.receiver  = event.container.create_receiver(self.conn, self.dest, name="A")
@@ -1399,7 +1399,7 @@ class AppearanceOfBalanceTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(5, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn       = event.container.connect(self.address)
         self.sender     = event.container.create_sender(self.conn, self.dest)
         self.receiver_a = event.container.create_receiver(self.conn, self.dest, name="A")
@@ -1456,7 +1456,7 @@ class BatchedSettlementTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(10, Timeout(self))
+        self.timer    = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn     = event.container.connect(self.address)
         self.sender   = event.container.create_sender(self.conn, self.dest)
         self.receiver = event.container.create_receiver(self.conn, self.dest)
@@ -1501,7 +1501,7 @@ class PresettledOverflowTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(5, Timeout(self))
+        self.timer    = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn     = event.container.connect(self.address)
         self.sender   = event.container.create_sender(self.conn, self.dest)
         self.receiver = event.container.create_receiver(self.conn, self.dest)
