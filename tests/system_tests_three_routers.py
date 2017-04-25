@@ -90,6 +90,11 @@ class RouterTest(TestCase):
 #        test.run()
 #        self.assertEqual(None, test.error)
 
+    def test_03_dynamic_request_response(self):
+        test = DynamicRequestResponseTest(self.routers[0].addresses[0], self.routers[2].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -215,6 +220,70 @@ class AnonymousSenderTest(MessagingHandler):
             self.conn1.close()
             self.conn2.close()
             self.timer.cancel()
+
+    def run(self):
+        Container(self).run()
+ 
+ 
+class DynamicRequestResponseTest(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(DynamicRequestResponseTest, self).__init__(prefetch=0)
+        self.address1   = address1
+        self.address2   = address2
+        self.dest       = "closest.dynamicRequestResponse"
+        self.error      = None
+        self.sender     = None
+        self.server_receiver = None
+        self.client_receiver = None
+        self.n_expected = 10
+        self.n_sent     = 0
+        self.n_received = 0
+        self.n_accepted = 0
+ 
+    def timeout(self):
+        self.error = "Timeout Expired %d messages received." % self.n_received
+        self.client_connection.close()
+        self.server_connection.close()
+ 
+    def on_released(self, event):
+        self.n_sent -= 1
+        time.sleep(0.1)
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(5, Timeout(self))
+        self.client_connection = event.container.connect(self.address1)
+        self.server_connection = event.container.connect(self.address2)
+        self.server_receiver = event.container.create_receiver(self.server_connection, self.dest)
+        self.client_receiver = event.container.create_receiver(self.client_connection, None, dynamic=True)
+        self.server_receiver.flow(self.n_expected)
+        self.client_receiver.flow(self.n_expected)
+        self.sender = event.container.create_sender(self.client_connection, None)
+ 
+    def on_sendable(self, event):
+        if self.n_sent < self.n_expected:
+            # We send to server, and ask it to reply to client.
+            request = Message(body=self.n_sent, address=self.dest, reply_to=self.client_receiver.remote_source.address)
+            event.sender.send(request)
+            self.n_sent += 1
+ 
+    def on_accepted(self, event):
+        self.n_accepted += 1
+ 
+    def on_message(self, event):
+
+        # Receiver gets a message and replies to client.
+        if event.receiver == self.server_receiver :
+            self.sender.send ( Message(address=event.message.reply_to, body="Reply hazy, try again later.") )
+
+        # Client gets a message and counts it.
+        elif event.receiver == self.client_receiver :
+            self.n_received += 1
+            if self.n_received == self.n_expected:
+                self.server_receiver.close()
+                self.client_receiver.close()
+                self.client_connection.close()
+                self.server_connection.close()
+                self.timer.cancel()
 
     def run(self):
         Container(self).run()
