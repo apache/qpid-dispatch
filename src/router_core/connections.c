@@ -650,16 +650,17 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     //
     qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
     while (ref) {
-        qdr_delivery_decref_CT(core, ref->dlv);
-
         //
-        // Account for the lost reference from the Proton delivery
+        // Account for possible lost reference from the Proton delivery
         //
         if (!ref->dlv->cleared_proton_ref) {
-            qdr_delivery_decref_CT(core, ref->dlv);
             ref->dlv->cleared_proton_ref = true;
+            qdr_delivery_decref_CT(core, ref->dlv);
         }
-
+        //
+        // Now our reference
+        //
+        qdr_delivery_decref_CT(core, ref->dlv);
         qdr_del_delivery_ref(&updated_deliveries, ref);
         ref = DEQ_HEAD(updated_deliveries);
     }
@@ -683,18 +684,18 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         }
 
         //
-        // Account for the undelivered-list reference
-        //
-        qdr_delivery_decref_CT(core, dlv);
-
-        //
         // Account for the lost reference from the Proton delivery
         // for unsettled deliveries on incoming links
         //
         if (link->link_direction == QD_INCOMING && !dlv->settled && !dlv->cleared_proton_ref) {
-            qdr_delivery_decref_CT(core, dlv);
             dlv->cleared_proton_ref = true;
+            qdr_delivery_decref_CT(core, dlv);
         }
+        //
+        // Now the undelivered-list reference
+        //
+        qdr_delivery_decref_CT(core, dlv);
+
         dlv = DEQ_HEAD(undelivered);
     }
 
@@ -727,17 +728,17 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         }
 
         //
-        // Account for the unsettled-list reference
-        //
-        qdr_delivery_decref_CT(core, dlv);
-
-        //
         // Account for the lost reference from the Proton delivery
         //
         if (!dlv->cleared_proton_ref) {
             dlv->cleared_proton_ref = true;
             qdr_delivery_decref_CT(core, dlv);
         }
+        //
+        // Now the unsettled-list reference
+        //
+        qdr_delivery_decref_CT(core, dlv);
+
         dlv = DEQ_HEAD(unsettled);
     }
 
