@@ -142,6 +142,8 @@ const char CERT_FINGERPRINT_SHA256 = '2';
 const char CERT_FINGERPRINT_SHA512 = '5';
 char *COMPONENT_SEPARATOR = ";";
 
+static void setup_ssl_sasl_and_open(qd_connection_t *ctx);
+
 static qd_thread_t *thread(qd_server_t *qd_server, int id)
 {
     qd_thread_t *thread = NEW(qd_thread_t);
@@ -774,6 +776,12 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
         passes++;
 
         //
+        // If this connection is outbound and is just now opening, do the initial SSL/SASL setup
+        //
+        if (!ctx->opened && !!ctx->connector && !qdpn_connector_closed(cxtr))
+            setup_ssl_sasl_and_open(ctx);
+
+        //
         // Step the engine for pre-handler processing
         //
         qdpn_connector_process(cxtr);
@@ -1197,7 +1205,7 @@ static void cxtr_try_open(void *context)
     //
     // Set up the transport, SASL, and SSL for the connection.
     //
-    pn_transport_t           *tport  = qdpn_connector_transport(ctx->pn_cxtr);
+    pn_transport_t *tport  = qdpn_connector_transport(ctx->pn_cxtr);
 
     //
     // Configure the transport
@@ -1215,6 +1223,16 @@ static void cxtr_try_open(void *context)
         pn_transport_trace(tport, PN_TRACE_FRM);
         pn_transport_set_tracer(tport, transport_tracer);
     }
+
+    ctx->owner_thread = CONTEXT_NO_OWNER;
+}
+
+
+static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
+{
+    qd_connector_t *ct = ctx->connector;
+    const qd_server_config_t *config = ct->config;
+    pn_transport_t *tport  = qdpn_connector_transport(ctx->pn_cxtr);
 
     //
     // Set up SSL if appropriate
@@ -1290,8 +1308,6 @@ static void cxtr_try_open(void *context)
     sys_mutex_unlock(ct->server->lock);
 
     pn_connection_open(ctx->pn_conn);
-
-    ctx->owner_thread = CONTEXT_NO_OWNER;
 }
 
 
