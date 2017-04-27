@@ -146,7 +146,10 @@ static void qdr_connection_insert_column_CT(qdr_connection_t *conn, int col, qd_
         break;
 
     case QDR_CONNECTION_USER:
-        qd_compose_insert_string(body, conn->connection_info->user);
+        if (conn->connection_info->user)
+            qd_compose_insert_string(body, conn->connection_info->user);
+        else
+            qd_compose_insert_null(body);
         break;
 
     case QDR_CONNECTION_IS_ENCRYPTED:

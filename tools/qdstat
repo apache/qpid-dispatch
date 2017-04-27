@@ -104,10 +104,14 @@ class BusManager(Node):
         if not conn.isAuthenticated:
             return "no-auth"
         sasl = conn.sasl
-        if sasl == "GSSAPI":   sasl = "Kerberos"
-        if sasl == "EXTERNAL": sasl = "x.509"
-        if sasl == "ANONYMOUS":
+        if sasl == "GSSAPI":
+            sasl = "Kerberos"
+        elif sasl == "EXTERNAL":
+            sasl = "x.509"
+        elif sasl == "ANONYMOUS":
             return "anonymous-user"
+        if not conn.user:
+            return sasl
         return "%s(%s)" % (conn.user, sasl)
 
     def connSecurity(self, conn):
