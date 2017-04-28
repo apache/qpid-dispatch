@@ -74,6 +74,8 @@ var QDR = (function(QDR) {
     var doConnect = function(opts) {
       if (!$scope.formEntity.address)
         $scope.formEntity.address = "localhost"
+      if (!$scope.formEntity.port)
+        $scope.formEntity.port = 5673
 
       QDRService.addConnectAction(function() {
         QDRService.addDisconnectAction(function() {
