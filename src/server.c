@@ -27,6 +27,7 @@
 
 #include <proton/event.h>
 #include <proton/listener.h>
+#include <proton/netaddr.h>
 #include <proton/proactor.h>
 #include <proton/sasl.h>
 
@@ -556,11 +557,11 @@ void connect_fail(qd_connection_t *ctx, const char *name, const char *descriptio
 /* Get the host IP address for the remote end */
 static void set_rhost_port(qd_connection_t *ctx) {
     pn_transport_t *tport  = pn_connection_transport(ctx->pn_conn);
-    const struct sockaddr_storage* addr =
-        pn_proactor_addr_sockaddr(pn_proactor_addr_remote(tport));
-    if (addr) {
+    struct sockaddr* sa = pn_netaddr_sockaddr(pn_netaddr_remote(tport));
+    size_t salen = pn_netaddr_socklen(pn_netaddr_remote(tport));
+    if (sa && salen) {
         char rport[NI_MAXSERV] = "";
-        int err = getnameinfo((struct sockaddr*)addr, sizeof(*addr),
+        int err = getnameinfo(sa, salen,
                               ctx->rhost, sizeof(ctx->rhost), rport, sizeof(rport),
                               NI_NUMERICHOST | NI_NUMERICSERV);
         if (!err) {
