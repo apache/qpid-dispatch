@@ -34,13 +34,14 @@ class RouterTest(TestCase):
         """Start a router and a messenger"""
         super(RouterTest, cls).setUpClass()
         name = "test-router"
+        RouterTest.listen_port = cls.tester.get_port()
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR', 'allowUnsettledMulticast': 'yes'}),
 
             # Setting the stripAnnotations to 'no' so that the existing tests will work.
             # Setting stripAnnotations to no will not strip the annotations and any tests that were already in this file
             # that were expecting the annotations to not be stripped will continue working.
-            ('listener', {'port': cls.tester.get_port(), 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
+            ('listener', {'port': RouterTest.listen_port, 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
 
             # The following listeners were exclusively added to test the stripAnnotations attribute in qdrouterd.conf file
             # Different listeners will be used to test all allowed values of stripAnnotations ('no', 'both', 'out', 'in')
@@ -61,8 +62,8 @@ class RouterTest(TestCase):
         """Make sure a router exits if a initial listener fails, doesn't hang"""
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'bad'}),
-            ('listener', {'port': 80})])
-        r = Qdrouterd(name="expect_fail", config=config, wait=False);
+            ('listener', {'port': RouterTest.listen_port})])
+        r = Qdrouterd(name="expect_fail", config=config, wait=False)
         self.assertEqual(1, r.wait())
 
     def test_01_pre_settled(self):

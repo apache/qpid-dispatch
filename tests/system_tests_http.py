@@ -52,9 +52,11 @@ class RouterTestHttp(TestCase):
 
     def test_listen_error(self):
         """Make sure a router exits if an initial HTTP listener fails, doesn't hang"""
+        listen_port = self.get_port()
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'bad'}),
-            ('listener', {'port': 80, 'http':True})])
+            ('listener', {'port': listen_port, 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
+            ('listener', {'port': listen_port, 'http':True})])
         r = Qdrouterd(name="expect_fail", config=config, wait=False);
         self.assertEqual(1, r.wait())
 
