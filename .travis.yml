@@ -45,6 +45,7 @@ addons:
     - make
     - valgrind
 
+# This is a test comment added to make a PR.
 before_install:
 - git submodule add https://github.com/apache/qpid-proton.git
 - git submodule init
