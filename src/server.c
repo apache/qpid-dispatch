@@ -557,7 +557,7 @@ void connect_fail(qd_connection_t *ctx, const char *name, const char *descriptio
 /* Get the host IP address for the remote end */
 static void set_rhost_port(qd_connection_t *ctx) {
     pn_transport_t *tport  = pn_connection_transport(ctx->pn_conn);
-    struct sockaddr* sa = pn_netaddr_sockaddr(pn_netaddr_remote(tport));
+    const struct sockaddr* sa = pn_netaddr_sockaddr(pn_netaddr_remote(tport));
     size_t salen = pn_netaddr_socklen(pn_netaddr_remote(tport));
     if (sa && salen) {
         char rport[NI_MAXSERV] = "";
