@@ -16,63 +16,66 @@
 # specific language governing permissions and limitations
 # under the License
 #
-os:
-- linux
-sudo: required
-language:
-- python
-- java
-python:
-- 2.7
-jdk:
-- oraclejdk8
+
+os: linux
+dist: trusty
+sudo: false
+language: c
+
 addons:
   apt:
     packages:
+    # Libuv requirements
+    - automake
+    - libtool
+    # Proton requirements
     - cmake
-    - cmake-curses-gui
-    - uuid-dev
-    - libssl-dev
-    - sasl2-bin
-    - libsasl2-2
     - libsasl2-dev
+    - libssl-dev
+    - python2.7
+    - python2.7-dev
     - sasl2-bin
     - swig
-    - python-dev
-    - ruby-dev
-    - libperl-dev
-    - git
-    - make
-    - valgrind
+    # For apache RAT tool
+    - maven
 
-before_install:
-- git submodule add https://github.com/apache/qpid-proton.git
-- git submodule init
-- git submodule update
-before_script:
-- lsb_release -a
-- cd qpid-proton
-- mkdir build
-- cd build
-- cmake .. -DCMAKE_INSTALL_PREFIX=/usr
-# This builds and installs qpid-proton
-- sudo make install
-- pushd proton-c/bindings/python/dist
-- sudo python ./setup.py build install
+install:
+- PREFIX=$PWD/install
+- git submodule add -b v1.x https://github.com/libuv/libuv
+- git submodule add -b v2.1-stable https://github.com/warmcat/libwebsockets
+- git submodule add https://git-wip-us.apache.org/repos/asf/qpid-proton.git
+- git submodule update --init
+
+# Build and install libuv 1.0 from source, trusty only has 0.10
+- pushd libuv
+- sh autogen.sh
+- ./configure --prefix $PREFIX
+- make && make install
 - popd
-- PYTHON_VER=`python -c "import sys; print ('python%s.%s' % (sys.version_info[0], sys.version_info[1]))"`
-- export PYTHONPATH=$PYTHONPATH:/usr/local/lib/$PYTHON_VER/dist-packages
-- cd ../..
-- mvn apache-rat:check
+
+# Build and install libwebsockets 2.1 from source, trusty only has 1.2
+- mkdir libwebsockets/build
+- pushd libwebsockets/build
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX
+- make install
+- popd
+
+# Build and install latest proton from source.
+- mkdir qpid-proton/build
+- pushd qpid-proton/build
+- export PATH="/usr/bin:$PATH" # Avoid mismatched python interpreters in /opt
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DBUILD_PYTHON=YES -DBUILD_JAVASCRIPT=NO -DBUILD_CPP=NO -DBUILD_GO=NO -DBUILD_RUBY=NO -DBUILD_PHP=NO -DBUILD_PERL=NO 
+- cmake --build . --target install
+- popd
+
+before_script:
+- PREFIX=$PWD/install
+- source qpid-proton/build/config.sh
 - mkdir build
-- cd build
-- PREFIX=`python -c "import sys; print(sys.prefix)"`
-- PYEXE=`python -c "import sys; print(sys.executable)"`
-- echo PYTHON_EXECUTABLE:FILEPATH=$PYEXE
-- echo PYTHON_INCLUDE_DIR:PATH=$PREFIX/include/$PYTHON_VER
-- cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DPYTHON_EXECUTABLE:FILEPATH=$PYEXE -DPYTHON_INCLUDE_DIR:PATH=$PREFIX/include/$PYTHON_VER -DPYTHON_LIBRARY:FILEPATH=/opt/python/2.7.12/lib/libpython2.7.so
-# This build qpid-dispatch
-- sudo make install
+- pushd build
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DUSE_VALGRIND=NO
+- cmake --build . --target install
+
 script:
-# Now run the unit tests
-- ctest -VV
+- ctest -V
+- mvn apache-rat:check
