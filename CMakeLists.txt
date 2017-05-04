@@ -101,6 +101,9 @@ find_library(pthread_lib pthread)
 find_library(dl_lib dl)
 find_library(rt_lib rt)
 find_package(Proton 0.15 REQUIRED)
+if (NOT ProtonProactor_FOUND)
+  message(FATAL_ERROR "Proton library does not provide a proactor")
+endif()
 
 ## Optional dependencies
 include(FindLibWebSockets)
