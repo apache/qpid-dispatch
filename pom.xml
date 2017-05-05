@@ -101,6 +101,8 @@
                             <exclude>.cproject</exclude>
                             <exclude>**/qpid-proton/**</exclude>
                             <exclude>qpid-proton/**</exclude>
+                            <exclude>libuv/**</exclude>
+                            <exclude>libwebsockets/**</exclude>
                 </excludes>
         </configuration>            
             </plugin>

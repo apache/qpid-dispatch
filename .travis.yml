@@ -78,4 +78,5 @@ before_script:
 
 script:
 - ctest -V
+- popd
 - mvn apache-rat:check
