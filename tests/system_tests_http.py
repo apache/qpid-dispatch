@@ -61,6 +61,10 @@ class RouterTestHttp(TestCase):
         self.assertEqual(1, r.wait())
 
     def test_http_get(self):
+
+        if not sys.version_info >= (2, 9):
+            return
+
         config = Qdrouterd.Config([
             ('router', {'id': 'QDR.HTTP'}),
             ('listener', {'port': self.get_port(), 'httpRoot': os.path.dirname(__file__)}),
@@ -93,6 +97,9 @@ class RouterTestHttp(TestCase):
         self.assertRaises(urllib2.URLError, urllib2.urlopen, "https://localhost:%d/nosuch" % r.ports[0])
 
     def test_https_get(self):
+        if not sys.version_info >= (2, 9):
+            return
+
         def listener(**kwargs):
             args = dict(kwargs)
             args.update({'port': self.get_port(), 'httpRoot': os.path.dirname(__file__)})
