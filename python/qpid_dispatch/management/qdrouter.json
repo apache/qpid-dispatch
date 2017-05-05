@@ -686,7 +686,7 @@
                     "description":"(DEPRECATED)IP address: ipv4 or ipv6 literal or a host name. This attribute has been deprecated. Use host instead",
                     "deprecated": true,
                     "type": "string",
-                    "default": "127.0.0.1",
+                    "default": "",
                     "create": true
                 },
                 "allowNoSasl": {

@@ -33,8 +33,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-static char* HOST_ADDR_DEFAULT = "127.0.0.1";
-
 struct qd_config_ssl_profile_t {
     DEQ_LINKS(qd_config_ssl_profile_t);
     uint64_t     identity;
@@ -163,21 +161,17 @@ static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
     char *host = qd_entity_opt_string(entity, "host", 0);
     char *addr = qd_entity_opt_string(entity, "addr", 0);
 
-    if (strcmp(host, HOST_ADDR_DEFAULT) == 0 && strcmp(addr, HOST_ADDR_DEFAULT) == 0) {
+    if (host && addr && strcmp(host, "") == 0 && strcmp(addr, "") == 0) {
         config->host = host;
         free(addr);
     }
-    else if (strcmp(host, addr) == 0) {
+    else if (host && strcmp(host, "") != 0 ) {
         config->host = host;
         free(addr);
     }
-    else if (strcmp(host, HOST_ADDR_DEFAULT) == 0 && strcmp(addr, HOST_ADDR_DEFAULT) != 0) {
-         config->host = addr;
-         free(host);
-    }
-    else if (strcmp(host, HOST_ADDR_DEFAULT) != 0 && strcmp(addr, HOST_ADDR_DEFAULT) == 0) {
-         config->host = host;
-         free(addr);
+    else if (addr && strcmp(addr, "") != 0) {
+        config->host = addr;
+        free(host);
     }
     else {
         free(host);
@@ -190,7 +184,6 @@ static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
     config->host_port = malloc(hplen);
     snprintf(config->host_port, hplen, "%s:%s", config->host, config->port);
 }
-
 
 static void qd_config_ssl_profile_process_password(qd_config_ssl_profile_t* ssl_profile)
 {
