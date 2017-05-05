@@ -19,7 +19,7 @@
 
 os: linux
 dist: trusty
-sudo: false
+sudo: true
 language: c
 
 addons:
