@@ -22,7 +22,7 @@ from subprocess import PIPE, STDOUT
 from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
 from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, AtMostOnce, AtLeastOnce
+from proton.reactor import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption
 import time
 
 
@@ -209,96 +209,74 @@ class TargetedSenderTest(MessagingHandler):
         Container(self).run()
 
 
+class DynamicTarget(LinkOption):
+    def apply(self, link):
+        link.target.dynamic = True
+        link.target.address = None
+
+
 class AnonymousSenderTest(MessagingHandler):
-    def __init__(self, address1, address2):
-        super(AnonymousSenderTest, self).__init__(prefetch=0)
-        self.address1 = address1
-        self.address2 = address2
-        self.dest = "closest.Anonymous"
-        self.error      = None
-        self.sender     = None
-        self.receiver   = None
-        self.n_expected = 10
+
+    def __init__(self, send_addr, recv_addr):
+        super(AnonymousSenderTest, self).__init__()
+        self.send_addr = send_addr
+        self.recv_addr = recv_addr
+
+        self.error     = None
+        self.recv_conn = None
+        self.send_conn = None
+        self.sender    = None
+        self.receiver  = None
+        self.address   = None
+
+        self.expected   = 10
         self.n_sent     = 0
-        self.n_released = 0
         self.n_received = 0
         self.n_accepted = 0
-        self.not_ready  = 0
 
-    def timeout(self):
-        self.error = "Timeout Expired %d messages received." % self.n_received
-        self.conn1.close()
-        self.conn2.close()
 
-    # The problem with using an anonymous sender in a router
-    # network is that it takes finite time for endpoint information
-    # to propagate around the network.  It is possible for me to
-    # start sending before my router knows how to route my messages,
-    # which will cause them to get released, and my test will hang,
-    # doomed to wait eternally for the tenth message to be received.
-    # To fix this, we will detect released messages here, and decrement
-    # the sent message counter, forcing a resend for each drop.
-    # And also pause for a moment, since we know that the network is
-    # not yet ready.
-    # If we still get some released messages, the routers are not ready
-    # yet -- but the one we are connected to will still cheerfully send
-    # us credit, and we will still get sendable events.  Don't keep
-    # sending batches of messages that get released.  It is possible to
-    # keep things so busy that the network doesn't get ready before our
-    # timeout, and we fail.  Mark the net as not ready, and then impose a
-    # delay when we get the next 'sendable' event.
-    def on_released ( self, event ):
-        self.n_released += 1
-        self.n_sent -= 1
-        self.not_ready = 1
-
-    def on_link_opened(self, event):
-        if event.receiver:
-            # This sender has no destination addr, so we will have to
-            # address each message individually.
-            # Also -- Create the sender here, when we know that the
-            # receiver link has opened, because then we are at least
-            # close to being able to send.  (See comment above.)
-            self.sender = event.container.create_sender(self.conn1, None)
+    def timeout ( self ):
+        self.error = "Timeout Expired: n_sent=%d n_received=%d n_accepted=%d" % (self.n_sent, self.n_received, self.n_accepted)
+        self.send_conn.close()
+        self.recv_conn.close()
 
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
-        self.conn1 = event.container.connect(self.address1)
-        self.conn2 = event.container.connect(self.address2)
-        self.receiver = event.container.create_receiver(self.conn2, self.dest)
-        self.receiver.flow(self.n_expected)
+        self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.send_conn = event.container.connect(self.send_addr)
+        self.recv_conn = event.container.connect(self.recv_addr)
+        self.sender    = event.container.create_sender(self.send_conn, options=DynamicTarget())
+
 
     def send(self):
-        while self.sender.credit > 0 and self.n_sent < self.n_expected:
-            msg = Message(body=self.n_sent, address=self.dest)
-            self.sender.send(msg)
+        while self.sender.credit > 0 and self.n_sent < self.expected:
             self.n_sent += 1
-        # Another very rare failure mode is to keep sending so fast that we
-        # never get the accept events, and timeout.  So -- pause a bit after
-        # we have sent all messages.
-        if self.n_sent >= self.n_expected:
-            time.sleep(1.0)
+            m = Message(address=self.address, body="Message %d of %d" % (self.n_sent, self.expected))
+            self.sender.send(m)
+
+
+    def on_link_opened(self, event):
+        if event.sender == self.sender:
+            self.address = self.sender.remote_target.address
+            self.receiver = event.container.create_receiver(self.recv_conn, self.address)
+
 
     def on_sendable(self, event):
-        if event.sender == self.sender:
-            # Here is where we impose the delay, waiting for the network to
-            # get ready, if we have recently had some messages released.
-            if self.not_ready:
-                time.sleep(1.0)
-                self.not_ready = 0
-            self.send()
+        self.send()
+
+
+    def on_message(self, event):
+        if event.receiver == self.receiver:
+            self.n_received += 1
+
 
     def on_accepted(self, event):
         self.n_accepted += 1
+        if self.n_accepted == self.expected:
+            self.send_conn.close()
+            self.recv_conn.close()
+            self.timer.cancel()
 
-    def on_message(self, event):
-        self.n_received += 1
-        if self.n_received == self.n_expected:
-          self.receiver.close()
-          self.conn1.close()
-          self.conn2.close()
-          self.timer.cancel()
 
     def run(self):
         Container(self).run()
