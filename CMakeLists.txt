@@ -100,10 +100,7 @@ endif (NOT COMMAND add_compile_options)
 find_library(pthread_lib pthread)
 find_library(dl_lib dl)
 find_library(rt_lib rt)
-find_package(Proton 0.15 REQUIRED)
-if (NOT ProtonProactor_FOUND)
-  message(FATAL_ERROR "Proton library does not provide a proactor")
-endif()
+find_package(Proton REQUIRED Core Proactor)
 
 ## Optional dependencies
 include(FindLibWebSockets)
@@ -129,7 +126,8 @@ set(TEST_RUNNER "${VG_RUNNER}" CACHE STRING "Program to run test executables")
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/include
-    ${Proton_INCLUDE_DIRS}
+    ${Proton_Proactor_INCLUDE_DIRS}
+    ${Proton_Core_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_PATH}
     )
 

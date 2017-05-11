@@ -120,9 +120,9 @@ endif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
 if(NOT LIBWEBSOCKETS_FOUND)
-target_link_libraries(qpid-dispatch ${ProtonCore_LIBRARIES} ${ProtonProactor_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES})
+target_link_libraries(qpid-dispatch ${Proton_Core_LIBRARIES} ${Proton_Proactor_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES})
 else()
-target_link_libraries(qpid-dispatch ${ProtonCore_LIBRARIES} ${ProtonProactor_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES})
+target_link_libraries(qpid-dispatch ${Proton_Core_LIBRARIES} ${Proton_Proactor_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES})
 endif()
 set_target_properties(qpid-dispatch PROPERTIES
   LINK_FLAGS "${CATCH_UNDEFINED}"
