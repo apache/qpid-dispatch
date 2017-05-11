@@ -399,7 +399,7 @@ QDR.log.debug("attr.description " + attr.description)
           }
           QDRService.ensureAllEntities({entity: ".router"}, function () {
             NewRouterName = genNewName();
-            nodes.push(aNode(id, NewRouterName, "inter-router", undefined, nodes.length, x, y, undefined, true));
+            nodes.push(aNode(id, NewRouterName, "inter-router", '', undefined, nodes.length, x, y, undefined, true));
             force.nodes(nodes).links(links).start();
             restart(false);
           })
@@ -561,12 +561,46 @@ QDR.log.debug("attr.description " + attr.description)
       var nodes = [];
       var links = [];
 
-      var aNode = function(id, name, nodeType, nodeInfo, nodeIndex, x, y, resultIndex, fixed, properties) {
+      var nodeExists = function (connectionContainer) {
         for (var i=0; i<nodes.length; ++i) {
-          if (nodes[i].name === name)
-            return nodes[i]
+          if (nodes[i].container === connectionContainer) {
+            return i
+          }
         }
+        return -1
+      }
+      var normalExists = function (connectionContainer) {
+        var normalInfo = {}
+        for (var i=0; i<nodes.length; ++i) {
+          if (nodes[i].normals) {
+            if (nodes[i].normals.some(function (normal, j) {
+              if (normal.container === connectionContainer && i !== j) {
+                normalInfo = {nodesIndex: i, normalsIndex: j}
+                return true
+              }
+              return false
+            }))
+              break;
+          }
+        }
+        return normalInfo
+      }
+      var getLinkSource = function (nodesIndex) {
+        for (var i=0; i<links.length; ++i) {
+          if (links[i].target === nodesIndex)
+            return i
+        }
+        return -1
+      }
+      var aNode = function(id, name, nodeType, nodeInfo, nodeIndex, x, y, connectionContainer, resultIndex, fixed, properties) {
         properties = properties || {};
+        for (var i=0; i<nodes.length; ++i) {
+          if (nodes[i].name === name || nodes[i].container === connectionContainer) {
+            if (properties.product)
+              nodes[i].properties = properties
+            return nodes[i]
+          }
+        }
         var routerId = QDRService.nameFromId(id)
         return {
           key: id,
@@ -579,7 +613,8 @@ QDR.log.debug("attr.description " + attr.description)
           id: nodeIndex,
           resultIndex: resultIndex,
           fixed: !!+fixed,
-          cls: name == NewRouterName ? 'temp' : ''
+          cls: name == NewRouterName ? 'temp' : '',
+          container: connectionContainer
         };
       };
 
@@ -661,7 +696,7 @@ QDR.log.debug("attr.description " + attr.description)
             position.y = 200 - yInit;
             yInit *= -1
           }
-          nodes.push(aNode(id, name, "inter-router", nodeInfo, nodes.length, position.x, position.y, undefined, position.fixed));
+          nodes.push(aNode(id, name, "inter-router", nodeInfo, nodes.length, position.x, position.y, name, undefined, position.fixed));
           //QDR.log.debug("adding node " + nodes.length-1);
         }
       }
@@ -689,7 +724,7 @@ QDR.log.debug("attr.description " + attr.description)
                 getLink(source, target, dir, "", source + "-" + target);
               }
             } else if (role == "normal" || role == "on-demand" || role === "route-container") {
-              // not a router, but an external client
+              // not an connection between routers, but an external connection
               var name = QDRService.nameFromId(id) + "." + connection.identity;
 
               // if we have any new clients, animate the force graph to position them
@@ -706,10 +741,31 @@ QDR.log.debug("attr.description " + attr.description)
               if (position.y > height) {
                 position.y = Math.round(nodes[source].y + 40 + Math.cos(client / (Math.PI * 2.0)))
               }
-              var node = aNode(id, name, role, nodeInfo, nodes.length, position.x, position.y, j, position.fixed, properties)
+              var existingNodeIndex = nodeExists(connection.container)
+              var normalInfo = normalExists(connection.container)
+              var node = aNode(id, name, role, nodeInfo, nodes.length, position.x, position.y, connection.container, j, position.fixed, properties)
               var nodeType = QDRService.isAConsole(properties, connection.identity, role, node.key) ? "console" : "client"
-              if (role === 'normal') {
-                var cdir = getLinkDir(id, connection, onode)
+              var cdir = getLinkDir(id, connection, onode)
+              if (existingNodeIndex >= 0) {
+                // make a link between the current router (source) and the existing node
+                getLink(source, existingNodeIndex, dir, "small", connection.name);
+              } else if (normalInfo.nodesIndex) {
+                  // get node index of node that contained this connection in its normals array
+                  var normalSource = getLinkSource(normalInfo.nodesIndex)
+                  if (normalSource >= 0) {
+                    if (cdir === 'unknown')
+                      cdir = dir
+                    node.cdir = cdir
+                    nodes.push(node)
+                    // create link from original node to the new node
+                    getLink(links[normalSource].source, nodes.length-1, cdir, "small", connection.name)
+                    // create link from this router to the new node
+                    getLink(source, nodes.length-1, cdir, "small", connection.name)
+                    // remove the old node from the normals list
+                    nodes[normalInfo.nodesIndex].normals.splice(normalInfo.normalsIndex, 1)
+                  }
+              } else if (role === 'normal') {
+              // normal nodes can be collapsed into a single node if they are all the same dir
                 if (cdir !== 'unknown') {
                   node.user = connection.user
                   node.isEncrypted = connection.isEncrypted
@@ -728,6 +784,7 @@ QDR.log.debug("attr.description " + attr.description)
                     normalsParent[nodeType+cdir].normals.push(node)
                   }
                 } else {
+                  node.id = nodes.length - 1 + unknowns.length
                   unknowns.push(node)
                 }
               } else {
@@ -922,7 +979,7 @@ QDR.log.debug("attr.description " + attr.description)
             setTimeout(continueForce, 100, extra)
           }
         }
-        continueForce(forceScale(nodeCount, 20, 200))  // give graph time to settle down
+        continueForce(forceScale(nodeCount, 0, 200))  // give graph time to settle down
       }
 
       var resolveUnknowns = function (nodeInfo, unknowns) {
@@ -937,6 +994,7 @@ QDR.log.debug("attr.description " + attr.description)
 
         QDRService.ensureEntities(unknownNodes, {entity: ".router.link", attrs: ["linkType","connectionId","linkDir"], force: true}, function () {
           initializeLinks(nodeInfo, [])
+          // collapse any router-container nodes that are duplicates
           animate = true;
           force.nodes(nodes).links(links).start();
           restart(false);
@@ -1025,8 +1083,9 @@ QDR.log.debug("attr.description " + attr.description)
             return -i;
           }
         }
-
         //QDR.log.debug("creating new link (" + (links.length) + ") between " + nodes[_source].name + " and " + nodes[_target].name);
+        if (links.some( function (l) { return l.uid === uid}))
+          uid = uid + '.' + links.length
         var link = {
           source: _source,
           target: _target,
@@ -1478,7 +1537,7 @@ QDR.log.debug("attr.description " + attr.description)
               return QDRService.nameFromId(d.key) == '__internal__';
             })
             .classed('normal', function(d) {
-              return d.nodeType == 'normal'
+              return d.nodeType == 'normal' || QDRService.isConsole(d)
             })
             .classed('in', function(d) {
               return d.cdir == 'in'
@@ -1504,6 +1563,9 @@ QDR.log.debug("attr.description " + attr.description)
             .classed('qpid-cpp', function(d) {
               return QDRService.isQpid(d)
             })
+            .classed('route-container', function (d) {
+              return (!QDRService.isArtemis(d) && !QDRService.isQpid(d) && d.nodeType === 'route-container')
+            })
             .classed('client', function(d) {
               return d.nodeType === 'normal' && !d.properties.console_identifier
             })
@@ -1518,7 +1580,7 @@ QDR.log.debug("attr.description " + attr.description)
               if (d.nodeType === 'inter-router') {
                 //QDR.log.debug("showing general form");
                 updateForm(d.key, 'router', 0);
-              } else if (d.nodeType === 'normal' || d.nodeType === 'on-demand') {
+              } else if (d.nodeType === 'normal' || d.nodeType === 'on-demand' || d.nodeType === 'route-container') {
                 //QDR.log.debug("showing connections form");
                 updateForm(d.key, 'connection', d.resultIndex);
               }
@@ -1574,7 +1636,6 @@ QDR.log.debug("attr.description " + attr.description)
             var cur_mouse = d3.mouse(mySvg);
             if (cur_mouse[0] != initial_mouse_down_position[0] ||
               cur_mouse[1] != initial_mouse_down_position[1]) {
-              console.log("mouse pos changed. making this node fixed")
               d.fixed = true;
               setNodesFixed(d.name, true)
               resetMouseVars();
@@ -1671,6 +1732,8 @@ QDR.log.debug("attr.description " + attr.description)
                 y = 9;
               else if (d.nodeType === 'inter-router')
                 y = 4;
+              else if (d.nodeType === 'route-container')
+                y = 5;
               return y;
             })
             .attr('class', 'id')
@@ -1692,14 +1755,13 @@ QDR.log.debug("attr.description " + attr.description)
             .text(function(d) {
               if (QDRService.isConsole(d)) {
                 return '\uf108'; // icon-desktop for this console
-              }
-              if (QDRService.isArtemis(d)) {
+              } else if (QDRService.isArtemis(d)) {
                 return '\ue900'
-              }
-              if (QDRService.isQpid(d)) {
+              } else if (QDRService.isQpid(d)) {
                 return '\ue901';
-              }
-              if (d.nodeType === 'normal')
+              } else if (d.nodeType === 'route-container') {
+                return d.properties.product ? d.properties.product[0].toUpperCase() : 'S'
+              } else if (d.nodeType === 'normal')
                 return '\uf109'; // icon-laptop for clients
               return d.name.length > 7 ? d.name.substr(0, 6) + '...' : d.name;
             });
@@ -1714,18 +1776,17 @@ QDR.log.debug("attr.description " + attr.description)
               x = " x " + d.normals.length;
             if (QDRService.isConsole(d)) {
               return 'Dispatch console' + x
-            }
-            if (d.properties.product == 'qpid-cpp') {
-              return 'Broker - qpid-cpp' + x
-            }
-            if (QDRService.isArtemis(d)) {
+            } else if (QDRService.isArtemis(d)) {
               return 'Broker - Artemis' + x
-            }
-            if (d.cdir === 'in')
+            } else if (d.properties.product == 'qpid-cpp') {
+              return 'Broker - qpid-cpp' + x
+            } else if (d.properties.product) {
+              return d.properties.product
+            } else if (d.cdir === 'in')
               return 'Sender' + x
-            if (d.cdir === 'out')
+            else if (d.cdir === 'out')
               return 'Receiver' + x
-            if (d.cdir === 'both')
+            else if (d.cdir === 'both')
               return 'Sender/Receiver' + x
             return d.nodeType == 'normal' ? 'client' + x : (d.nodeType == 'on-demand' ? 'broker' : 'Router ' + d.name)
           })
@@ -1758,35 +1819,40 @@ QDR.log.debug("attr.description " + attr.description)
           .attr('transform', 'translate(' + (radii['inter-router'] + 2) + ',' + (radii['inter-router'] + 2) + ')')
           .selectAll('g');
         var legendNodes = [];
-        legendNodes.push(aNode("Router", "", "inter-router", undefined, 0, 0, 0, 0, false, {}))
+        legendNodes.push(aNode("Router", "", "inter-router", '', undefined, 0, 0, 0, 0, false, {}))
 
         if (!svg.selectAll('circle.console').empty()) {
-          legendNodes.push(aNode("Console", "", "normal", undefined, 1, 0, 0, 0, false, {
+          legendNodes.push(aNode("Console", "", "normal", '', undefined, 1, 0, 0, 0, false, {
             console_identifier: 'Dispatch console'
           }))
         }
         if (!svg.selectAll('circle.client.in').empty()) {
-          var node = aNode("Sender", "", "normal", undefined, 2, 0, 0, 0, false, {})
+          var node = aNode("Sender", "", "normal", '', undefined, 2, 0, 0, 0, false, {})
           node.cdir = "in"
           legendNodes.push(node)
         }
         if (!svg.selectAll('circle.client.out').empty()) {
-          var node = aNode("Receiver", "", "normal", undefined, 3, 0, 0, 0, false, {})
+          var node = aNode("Receiver", "", "normal", '', undefined, 3, 0, 0, 0, false, {})
           node.cdir = "out"
           legendNodes.push(node)
         }
         if (!svg.selectAll('circle.client.inout').empty()) {
-          var node = aNode("Sender/Receiver", "", "normal", undefined, 4, 0, 0, 0, false, {})
+          var node = aNode("Sender/Receiver", "", "normal", '', undefined, 4, 0, 0, 0, false, {})
           node.cdir = "both"
           legendNodes.push(node)
         }
         if (!svg.selectAll('circle.qpid-cpp').empty()) {
-          legendNodes.push(aNode("Qpid broker", "", "on-demand", undefined, 5, 0, 0, 0, false, {
+          legendNodes.push(aNode("Qpid broker", "", "on-demand", '', undefined, 5, 0, 0, 0, false, {
             product: 'qpid-cpp'
           }))
         }
         if (!svg.selectAll('circle.artemis').empty()) {
-          legendNodes.push(aNode("Artemis broker", "", "route-container", undefined, 6, 0, 0, 0, false, {product: 'apache-activemq-artemis'}))
+          legendNodes.push(aNode("Artemis broker", "", "route-container", '', undefined, 6, 0, 0, 0, false,
+          {product: 'apache-activemq-artemis'}))
+        }
+        if (!svg.selectAll('circle.route-container').empty()) {
+          legendNodes.push(aNode("Service", "", "route-container", 'external-service', undefined, 7, 0, 0, 0, false,
+          {product: ' External Service'}))
         }
         lsvg = lsvg.data(legendNodes, function(d) {
           return d.key;

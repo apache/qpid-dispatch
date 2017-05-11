@@ -37,6 +37,10 @@ ul.qdrListNodes > li > span {
     width: auto;
 }
 
+div.gridDetails {
+    margin-left: 1em;
+}
+
 .selectedItems {
     /* margin-left: 21em; */
 }
@@ -47,6 +51,7 @@ ul.qdrListNodes > li > span {
 
 .qdrListActions {
     width: auto;
+    margin-left: 1em;
 }
 
 div.listAttrName {
@@ -869,6 +874,9 @@ circle.node.normal.console {
 }
 circle.node.artemis {
     fill: lightgreen;
+}
+circle.node.route-container {
+    fill: orange;
 }
 
 text.console, text.on-demand, text.normal {
