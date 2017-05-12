@@ -942,6 +942,10 @@ div#durationSlider, div#rateSlider {
 	padding-left: 10px;
 }
 
+.ngViewport.ng-scope {
+  height: auto !important;
+}
+
 div#list-controller {
     padding-left: 300px;
 }

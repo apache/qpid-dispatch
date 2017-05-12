@@ -164,13 +164,14 @@ var QDR = (function(QDR) {
           var visibleLen = Math.min(obj.entity.linkData.length, 10)
           QDR.log.debug("visibleLen is " + visibleLen)
           var left = parseInt(d3.select('#multiple_details').style("left"))
+          var offset = jQuery('#topology').offset();
           var detailsDiv = d3.select('#link_details')
           detailsDiv
             .style({
               display: 'block',
               opacity: 1,
               left: (left + 20) + "px",
-              top: (mouseY + 20 + $(document).scrollTop()) + "px",
+              top: (mouseY - offset.top + 20 + $(document).scrollTop()) + "px",
               height: ((visibleLen + 1) * 30) + 40 + "px", // +1 for the header row
               'overflow-y': obj.entity.linkData > 10 ? 'scroll' : 'hidden'
             })
@@ -1940,26 +1941,24 @@ var QDR = (function(QDR) {
                 links.results.forEach(function(link) {
                   if (link[linkTypeIndex] === 'endpoint' && link[connectionIdIndex] === n.connectionId) {
                     var l = {};
-                    l.owningAddr = QDRService.valFor(links.attributeNames, link, 'owningAddr');
-                    l.dir = QDRService.valFor(links.attributeNames, link, 'linkDir');
+                    var ll = QDRService.flatten(links.attributeNames, link)
+                    l.owningAddr = ll.owningAddr
+                    l.dir = ll.linkDir
                     if (l.owningAddr && l.owningAddr.length > 2)
                       if (l.owningAddr[0] === 'M')
                         l.owningAddr = l.owningAddr.substr(2)
                       else
                         l.owningAddr = l.owningAddr.substr(1)
 
-                    l.deliveryCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'deliveryCount'));
-                    l.uncounts = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'undeliveredCount') +
-                        QDRService.valFor(links.attributeNames, link, 'unsettledCount'))
-                      //l.undeliveredCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'undeliveredCount'));
-                      //l.unsettledCount = QDRService.pretty(QDRService.valFor(links.attributeNames, link, 'unsettledCount'));
-                    l.adminStatus = QDRService.valFor(links.attributeNames, link, 'adminStatus');
-                    l.operStatus = QDRService.valFor(links.attributeNames, link, 'operStatus');
-                    l.identity = QDRService.valFor(links.attributeNames, link, 'identity')
-                    l.connectionId = QDRService.valFor(links.attributeNames, link, 'connectionId')
+                    l.deliveryCount = ll.deliveryCount
+                    l.uncounts = QDRService.pretty(ll.undeliveredCount + ll.unsettledCount)
+                    l.adminStatus = ll.adminStatus;
+                    l.operStatus = ll.operStatus;
+                    l.identity = ll.identity
+                    l.connectionId = ll.connectionId
                     l.nodeId = n.key
-                    l.type = QDRService.valFor(links.attributeNames, link, 'type')
-                    l.name = QDRService.valFor(links.attributeNames, link, 'name')
+                    l.type = ll.type
+                    l.name = ll.name
 
                     // TODO: remove this fake quiescing/reviving logic when the routers do the work
                     initConnState(n.connectionId)
@@ -2018,12 +2017,13 @@ var QDR = (function(QDR) {
           left = left - 30;
           mouseY = mouseY - 20
         }
+        var offset = jQuery('#topology').offset();
         d3.select('#multiple_details')
           .style({
             display: display,
             opacity: 1,
-            left: (mouseX + $(document).scrollLeft()) + "px",
-            top: (mouseY + $(document).scrollTop()) + "px"
+            left: (mouseX - offset.left + $(document).scrollLeft()) + "px",
+            top: (mouseY - offset.top + $(document).scrollTop()) + "px"
           })
         if (d.normals.length === 1) {
           // simulate a click on the connection to popup the link details
