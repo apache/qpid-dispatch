@@ -594,10 +594,10 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         pn_transport_set_server(tport);
         set_rhost_port(ctx);
 
-        if (qd_policy_socket_accept(server->qd->policy, ctx->rhost))
-        {
-            ctx->policy_counted = true;
-        } else {
+        sys_mutex_lock(server->lock); /* Policy check is not thread safe */
+        ctx->policy_counted = qd_policy_socket_accept(server->qd->policy, ctx->rhost);
+        sys_mutex_unlock(server->lock);
+        if (!ctx->policy_counted) {
             pn_transport_close_tail(tport);
             pn_transport_close_head(tport);
             return;
@@ -719,11 +719,11 @@ void qd_connection_free(qd_connection_t *ctx)
     }
 
     // If counted for policy enforcement, notify it has closed
-    sys_mutex_lock(qd_server->lock);
     if (ctx->policy_counted) {
+        sys_mutex_lock(qd_server->lock); /* Policy check is not thread safe */
         qd_policy_socket_close(qd_server->qd->policy, ctx);
+        sys_mutex_unlock(qd_server->lock);
     }
-    sys_mutex_unlock(qd_server->lock);
 
     invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
     if (ctx->deferred_call_lock)
@@ -949,7 +949,7 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
 
 static void try_open_cb(void *context) {
     qd_connector_t *ct = (qd_connector_t*) context;
-    sys_mutex_lock(ct->lock);
+    sys_mutex_lock(ct->lock);   /* TODO aconway 2017-05-09: this lock looks too big */
     try_open_lh(ct);
     sys_mutex_unlock(ct->lock);
 }
