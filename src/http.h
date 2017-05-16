@@ -23,17 +23,21 @@
 typedef struct qd_http_listener_t qd_http_listener_t;
 typedef struct qd_http_server_t qd_http_server_t;
 
-struct qd_dispatch_t;
+struct qd_listener_t;
 struct qd_log_source_t;
 struct qd_server_config_t;
-struct qdpn_connector_t;
+struct qd_server_t;
 
-qd_http_server_t *qd_http_server(struct qd_dispatch_t *dispatch, struct qd_log_source_t *log);
+qd_http_server_t *qd_http_server(struct qd_server_t *server, struct qd_log_source_t *log);
+
 void qd_http_server_free(qd_http_server_t*);
-qd_http_listener_t *qd_http_listener(struct qd_http_server_t *s,
-                                     const struct qd_server_config_t *config);
-void qd_http_listener_free(qd_http_listener_t *hl);
-/* On error, qdpn_connector_closed(c) is true. */
-void qd_http_listener_accept(qd_http_listener_t *hl, struct qdpn_connector_t *c);
+qd_http_listener_t *qd_http_server_listen(qd_http_server_t *s, struct qd_listener_t *li);
+
+typedef struct qd_http_connection_t qd_http_connection_t;
+
+const char *qd_http_connection_name(qd_http_connection_t* hc);
+const char *qd_http_connection_hostip(qd_http_connection_t* hc);
+bool qd_http_connection_closed(qd_http_connection_t* hc);
+void qd_http_connection_wake(qd_http_connection_t* hc);
 
 #endif // QD_HTTP_H

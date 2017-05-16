@@ -103,7 +103,7 @@ find_library(rt_lib rt)
 find_package(Proton 0.15 REQUIRED)
 
 ## Optional dependencies
-include(FindLibWebSockets)
+find_package(LibWebSockets 2)
 option(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ${LIBWEBSOCKETS_FOUND})
 
 ##

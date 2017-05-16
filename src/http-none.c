@@ -18,32 +18,27 @@
  */
 
 #include <qpid/dispatch/log.h>
-#include <qpid/dispatch/driver.h>
 #include "http.h"
+
+struct qd_dispatch_t;
 
 /* No HTTP implementation available. */
 
-qd_http_server_t *qd_http_server(struct qd_dispatch_t *d, qd_log_source_t *log)
+qd_http_server_t *qd_http_server(struct qd_server_t *s, qd_log_source_t *log)
 {
     qd_log(log, QD_LOG_WARNING, "HTTP support is not available");
     return 0;
 }
 
-void qd_http_server_free(qd_http_server_t *h)
-{
-}
+void qd_http_server_free(qd_http_server_t *h) {}
 
-qd_http_listener_t *qd_http_listener(struct qd_http_server_t *s,
-                                     const struct qd_server_config_t *config)
-{
-    return 0;
-}
+void* qd_http_server_run(void* qd_http_server) { return 0; }
 
-void qd_http_listener_free(qd_http_listener_t *hl)
-{
-}
+qd_http_listener_t *qd_http_server_listen(qd_http_server_t *s, struct qd_listener_t *li) { return 0; }
 
-void qd_http_listener_accept(qd_http_listener_t *hl, struct qdpn_connector_t *c)
-{
-}
+struct qd_qd_http_connection_t { int dummy; };
 
+const char *qd_http_connection_name(qd_http_connection_t* hc) { return ""; }
+const char *qd_http_connection_hostip(qd_http_connection_t* hc) { return ""; }
+bool qd_http_connection_closed(qd_http_connection_t* hc) { return false; }
+void qd_http_connection_wake(qd_http_connection_t *qd_conn) {}

@@ -35,17 +35,22 @@
 void qd_server_timer_pending_LH(qd_timer_t *timer);
 void qd_server_timer_cancel_LH(qd_timer_t *timer);
 
-/* FIXME aconway 2017-01-19: to include/server.h? */
-
 struct qd_dispatch_t* qd_server_dispatch(qd_server_t *server);
 
 const char* qd_connection_name(const qd_connection_t *c);
 const char* qd_connection_hostip(const qd_connection_t *c);
 qd_connector_t* qd_connection_connector(const qd_connection_t *c);
+void qd_connection_free(qd_connection_t *c);
+int qd_connection_process(qd_connection_t *ctx);
 
 const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
 
-qd_http_listener_t *qd_listener_http(qd_listener_t *l);
+uint64_t qd_server_connection_id(qd_server_t *server);
+qd_connection_t *qd_server_connection_allocate();
+
+void qd_server_decorate_connection(
+    qd_server_t *qd_server, pn_connection_t *conn, const qd_server_config_t *config);
+
 
 #define CONTEXT_NO_OWNER -1
 #define CONTEXT_UNSPECIFIED_OWNER -2
@@ -81,6 +86,25 @@ typedef struct qd_pn_free_link_session_t {
 
 DEQ_DECLARE(qd_pn_free_link_session_t, qd_pn_free_link_session_list_t);
 
+#ifndef NI_MAXHOST
+# define NI_MAXHOST 1025
+#endif
+
+#ifndef NI_MAXSERV
+# define NI_MAXSERV 32
+#endif
+
+/**
+ * Listener objects represent the desire to accept incoming transport connections.
+ */
+struct qd_listener_t {
+    qd_server_t              *server;
+    const qd_server_config_t *config;
+    void                     *context;
+    qdpn_listener_t          *pn_listener;
+    qd_http_listener_t       *http;
+};
+
 /**
  * Connection objects wrap Proton connection objects.
  */
@@ -92,6 +116,7 @@ struct qd_connection_t {
     int                       owner_thread;
     int                       enqueued;
     qdpn_connector_t         *pn_cxtr;
+    qd_http_connection_t     *http;
     pn_connection_t          *pn_conn;
     pn_collector_t           *collector;
     pn_ssl_t                 *ssl;

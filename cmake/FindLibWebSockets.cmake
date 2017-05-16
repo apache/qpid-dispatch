@@ -42,24 +42,19 @@ find_path(LIBWEBSOCKETS_INCLUDE_DIRS
   PATHS /usr/include
   )
 
-include(FindPackageHandleStandardArgs)
-
-find_package_handle_standard_args(LIBWEBSOCKETS DEFAULT_MSG LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS)
-
-if(LIBWEBSOCKETS_FOUND)
-  # For the moment we need a patched version of LibWebSockets:
-  # https://github.com/alanconway/libwebsockets/tree/v2.1-stable-aconway-adopt-ssl
-  # This function check verifies we have it.
-  set(CMAKE_REQUIRED_INCLUDES ${LIBWEBSOCKETS_INCLUDE_DIRS})
-  set(CMAKE_REQUIRED_LIBRARIES ${LIBWEBSOCKETS_LIBRARIES})
-  check_function_exists(lws_adopt_socket_vhost LWS_ADOPT_SOCKET_VHOST_FOUND)
-  if (NOT LWS_ADOPT_SOCKET_VHOST_FOUND)
-    message("Cannot use LibWebSockets, no function lws_adopt_socket_vhost")
-    unset(LIBWEBSOCKETS_FOUND)
+# We need vhost support which appeared in v2.0 of libwebsockets
+set(CMAKE_REQUIRED_INCLUDES ${LIBWEBSOCKETS_INCLUDE_DIRS})
+set(CMAKE_REQUIRED_LIBRARIES ${LIBWEBSOCKETS_LIBRARIES})
+set(MSG DEFAULT_MSG)
+if (LIBWEBSOCKETS_LIBRARIES AND LIBWEBSOCKETS_INCLUDE_DIRS)
+  check_function_exists(lws_create_vhost LIBWEBSOCKETS_OK)
+  if (NOT LIBWEBSOCKETS_OK)
+    set(MSG "Cannot use LibWebSockets version < 2 in ${LIBWEBSOCKETS_LIBRARIES}")
+    set(LIBWEBSOCKETS_LIBRARIES "NOTFOUND")
+    set(LIBWEBSOCKETS_INCLUDE_DIRS "NOTFOUND")
   endif()
 endif()
 
-if(NOT LIBWEBSOCKETS_FOUND)
-  set(LIBWEBSOCKETS_LIBRARIES "")
-  set(LIBWEBSOCKETS_INCLUDE_DIRS "")
-endif()
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(LIBWEBSOCKETS ${MSG} LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS)
+

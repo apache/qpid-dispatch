@@ -92,18 +92,6 @@ struct qd_server_t {
 };
 
 /**
- * Listener objects represent the desire to accept incoming transport connections.
- */
-struct qd_listener_t {
-    qd_server_t              *server;
-    const qd_server_config_t *config;
-    void                     *context;
-    qdpn_listener_t          *pn_listener;
-    qd_http_listener_t       *http;
-};
-
-
-/**
  * Connector objects represent the desire to create and maintain an outgoing transport connection.
  */
 struct qd_connector_t {
@@ -160,7 +148,9 @@ static qd_thread_t *thread(qd_server_t *qd_server, int id)
     return thread;
 }
 
-static void free_qd_connection(qd_connection_t *ctx)
+static void invoke_deferred_calls(qd_connection_t *conn, bool discard);
+
+void qd_connection_free(qd_connection_t *ctx)
 {
     if (ctx->policy_settings) {
         if (ctx->policy_settings->sources)
@@ -185,6 +175,10 @@ static void free_qd_connection(qd_connection_t *ctx)
 
     free(ctx->role);
 
+    if (ctx->deferred_call_lock) {
+        invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
+        sys_mutex_free(ctx->deferred_call_lock);
+    }
     free_qd_connection_t(ctx);
 }
 
@@ -423,7 +417,7 @@ static const char *transport_get_user(qd_connection_t *conn, pn_transport_t *tpo
  * Allocate a new qd_connection
  *  with DEQ items initialized, call lock allocated, and all other fields cleared.
  */
-static qd_connection_t *connection_allocate()
+qd_connection_t *qd_server_connection_allocate()
 {
     qd_connection_t *ctx = new_qd_connection_t();
     ZERO(ctx);
@@ -434,6 +428,14 @@ static qd_connection_t *connection_allocate()
     return ctx;
 }
 
+/* Get the next connection ID, thread safe */
+uint64_t qd_server_connection_id(qd_server_t *server)
+{
+    sys_mutex_lock(server->lock);
+    uint64_t id = server->next_connection_id++;
+    sys_mutex_unlock(server->lock);
+    return id;
+}
 
 void qd_connection_set_user(qd_connection_t *conn)
 {
@@ -525,7 +527,7 @@ static const char *log_incoming(char *buf, size_t size, qdpn_connector_t *cxtr)
 }
 
 
-static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, const qd_server_config_t *config)
+void qd_server_decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, const qd_server_config_t *config)
 {
     size_t clen = strlen(QD_CAPABILITY_ANONYMOUS_RELAY);
 
@@ -621,7 +623,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
 
         char logbuf[qd_log_max_len()];
 
-        ctx = connection_allocate();
+        ctx = qd_server_connection_allocate();
         ctx->server        = qd_server;
         ctx->owner_thread  = CONTEXT_UNSPECIFIED_OWNER;
         ctx->pn_cxtr       = cxtr;
@@ -638,7 +640,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
         pn_connection_t *conn = pn_connection();
         ctx->collector = pn_collector();
         pn_connection_collect(conn, ctx->collector);
-        decorate_connection(qd_server, conn, ctx->listener->config);
+        qd_server_decorate_connection(qd_server, conn, ctx->listener->config);
         qdpn_connector_set_connection(cxtr, conn);
         pn_connection_set_context(conn, ctx);
         ctx->pn_conn = conn;
@@ -672,13 +674,7 @@ static void thread_process_listeners_LH(qd_server_t *qd_server)
             pn_transport_set_tracer(tport, transport_tracer);
         }
 
-        if (li->http) {
-            // Set up HTTP if configured, HTTP provides its own SSL.
-            qd_log(qd_server->log_source, QD_LOG_TRACE, "Configuring HTTP%s on %s",
-                   config->ssl_profile ? "S" : "",
-                   log_incoming(logbuf, sizeof(logbuf), cxtr));
-            qd_http_listener_accept(li->http, cxtr);
-        } else if (config->ssl_profile)  {
+        if (!li->http && config->ssl_profile)  {
             // Set up SSL if configured and HTTP is not providing SSL.
             qd_log(qd_server->log_source, QD_LOG_TRACE, "Configuring SSL on %s",
                    log_incoming(logbuf, sizeof(logbuf), cxtr));
@@ -766,31 +762,32 @@ static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
 }
 
 
-static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
+int qd_connection_process(qd_connection_t *ctx)
 {
-    qd_connection_t *ctx = qdpn_connector_context(cxtr);
     int events = 0;
     int passes = 0;
+    qdpn_connector_t *cxtr = ctx->pn_cxtr;
+    qd_http_connection_t *hc = ctx->http;
 
     if (ctx->closed)
         return 0;
-
+    qd_server_t *qd_server = ctx->server;
     do {
         passes++;
 
         //
         // Step the engine for pre-handler processing
         //
-        qdpn_connector_process(cxtr);
-
+        if (cxtr) {
+            qdpn_connector_process(cxtr);
+        }
         //
         // If the connector has closed, notify the client via callback.
         //
-        if (qdpn_connector_closed(cxtr)) {
+        if ((cxtr && qdpn_connector_closed(cxtr)) || (hc && qd_http_connection_closed(hc))) {
             if (ctx->opened)
                 qd_server->conn_handler(qd_server->conn_handler_context, ctx->context,
-                                        QD_CONN_EVENT_CLOSE,
-                                        (qd_connection_t*) qdpn_connector_context(cxtr));
+                                        QD_CONN_EVENT_CLOSE, ctx);
             ctx->closed = true;
             events = 0;
             break;
@@ -798,7 +795,7 @@ static int process_connector(qd_server_t *qd_server, qdpn_connector_t *cxtr)
 
         invoke_deferred_calls(ctx, false);
 
-        qd_connection_t *qd_conn   = (qd_connection_t*) qdpn_connector_context(cxtr);
+        qd_connection_t *qd_conn   = ctx;
         pn_collector_t  *collector = qd_connection_collector(qd_conn);
         pn_event_t      *event;
 
@@ -1046,7 +1043,7 @@ static void *thread_run(void *arg)
             // Even if the connector has failed there are still events that 
             // must be processed so that associated links will be cleaned up.
             //
-            work_done = process_connector(qd_server, cxtr);
+            work_done = qd_connection_process(ctx);
 
             //
             // Check to see if the connector was closed during processing
@@ -1070,9 +1067,7 @@ static void *thread_run(void *arg)
                 }
 
                 qdpn_connector_free(cxtr);
-                invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
-                sys_mutex_free(ctx->deferred_call_lock);
-                free_qd_connection(ctx);
+                qd_connection_free(ctx);
                 qd_server->threads_active--;
                 sys_mutex_unlock(qd_server->lock);
             } else {
@@ -1145,7 +1140,7 @@ static void cxtr_try_open(void *context)
     if (ct->state != CXTR_STATE_CONNECTING)
         return;
 
-    qd_connection_t *ctx = connection_allocate();
+    qd_connection_t *ctx = qd_server_connection_allocate();
     ctx->server       = ct->server;
     ctx->owner_thread = CONTEXT_UNSPECIFIED_OWNER;
     ctx->pn_conn      = pn_connection();
@@ -1161,7 +1156,7 @@ static void cxtr_try_open(void *context)
     qd_log(ct->server->log_source, QD_LOG_INFO, "Connecting to %s:%s", ct->config->host, ct->config->port);
 
     pn_connection_collect(ctx->pn_conn, ctx->collector);
-    decorate_connection(ctx->server, ctx->pn_conn, ct->config);
+    qd_server_decorate_connection(ctx->server, ctx->pn_conn, ct->config);
 
     //
     // qdpn_connector is not thread safe
@@ -1175,8 +1170,7 @@ static void cxtr_try_open(void *context)
     const qd_server_config_t *config = ct->config;
 
     if (ctx->pn_cxtr == 0) {
-        sys_mutex_free(ctx->deferred_call_lock);
-        free_qd_connection(ctx);
+        qd_connection_free(ctx);
         ct->delay = 10000;
         qd_timer_schedule(ct->timer, ct->delay);
         return;
@@ -1354,7 +1348,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->heartbeat_timer        = 0;
     qd_server->next_connection_id     = 1;
     qd_server->py_displayname_obj     = 0;
-    qd_server->http                   = qd_http_server(qd, qd_server->log_source);
+    qd_server->http                   = qd_http_server(qd_server, qd_server->log_source);
     qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 
     return qd_server;
@@ -1534,17 +1528,16 @@ void qd_server_resume(qd_dispatch_t *qd)
 
 void qd_server_activate(qd_connection_t *ctx, bool awaken)
 {
-    if (!ctx)
-        return;
-
     qdpn_connector_t *ctor = ctx->pn_cxtr;
-    if (!ctor)
-        return;
-
-    if (!qdpn_connector_closed(ctor)) {
-        qdpn_connector_activate(ctor, QDPN_CONNECTOR_WRITABLE);
-        if (awaken)
-            qdpn_driver_wakeup(ctx->server->driver);
+    qd_http_connection_t *hc = ctx->http;
+    if (ctor) {
+        if (!qdpn_connector_closed(ctor)) {
+            qdpn_connector_activate(ctor, QDPN_CONNECTOR_WRITABLE);
+            if (awaken)
+                qdpn_driver_wakeup(ctx->server->driver);
+        }
+    } else if (hc) {
+        qd_http_connection_wake(hc);
     }
 }
 
@@ -1636,6 +1629,7 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
 {
     qd_server_t   *qd_server = qd->server;
     qd_listener_t *li        = new_qd_listener_t();
+    ZERO(li);
 
     if (!li)
         return 0;
@@ -1646,23 +1640,23 @@ qd_listener_t *qd_server_listen(qd_dispatch_t *qd, const qd_server_config_t *con
     li->http = NULL;
 
     if (config->http) {
-        li->http = qd_http_listener(qd_server->http, config);
+        li->http = qd_http_server_listen(qd_server->http, li);
         if (!li->http) {
             free_qd_listener_t(li);
             qd_log(qd_server->log_source, QD_LOG_ERROR, "Cannot start HTTP listener on %s:%s",
                    config->host, config->port);
             return NULL;
         }
-    }
+    } else {
+        li->pn_listener = qdpn_listener(
+            qd_server->driver, config->host, config->port, config->protocol_family, li);
 
-    li->pn_listener = qdpn_listener(
-        qd_server->driver, config->host, config->port, config->protocol_family, li);
-
-    if (!li->pn_listener) {
-        free_qd_listener_t(li);
-        qd_log(qd_server->log_source, QD_LOG_ERROR, "Cannot start listener on %s:%s",
-               config->host, config->port);
-        return NULL;
+        if (!li->pn_listener) {
+            free_qd_listener_t(li);
+            qd_log(qd_server->log_source, QD_LOG_ERROR, "Cannot start listener on %s:%s",
+                   config->host, config->port);
+            return NULL;
+        }
     }
     qd_log(qd_server->log_source, QD_LOG_TRACE, "Listening on %s:%s%s", config->host, config->port,
            config->http ? (config->ssl_profile ? "(HTTPS)":"(HTTP)") : "");
@@ -1675,15 +1669,15 @@ void qd_server_listener_free(qd_listener_t* li)
 {
     if (!li)
         return;
-    if (li->http) qd_http_listener_free(li->http);
-    qdpn_listener_free(li->pn_listener);
+    /* The http listener is freed by the http server */
+    if (li->pn_listener) qdpn_listener_free(li->pn_listener);
     free_qd_listener_t(li);
 }
 
 
 void qd_server_listener_close(qd_listener_t* li)
 {
-    if (li)
+    if (li && li->pn_listener)
         qdpn_listener_close(li->pn_listener);
 }
 
@@ -1741,11 +1735,11 @@ void qd_server_timer_cancel_LH(qd_timer_t *timer)
 qd_dispatch_t* qd_server_dispatch(qd_server_t *server) { return server->qd; }
 
 const char* qd_connection_name(const qd_connection_t *c) {
-    return qdpn_connector_name(c->pn_cxtr);
+    return c->pn_cxtr ? qdpn_connector_name(c->pn_cxtr) : qd_http_connection_name(c->http);
 }
 
 const char* qd_connection_hostip(const qd_connection_t *c) {
-    return qdpn_connector_hostip(c->pn_cxtr);
+    return c->pn_cxtr ? qdpn_connector_hostip(c->pn_cxtr) : qd_http_connection_hostip(c->http);
 }
 
 qd_connector_t* qd_connection_connector(const qd_connection_t *c) {

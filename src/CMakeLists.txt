@@ -39,8 +39,10 @@ add_custom_command (
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}
-  ${LIBWEBSOCKETS_INCLUDE_DIRS}
   )
+if (USE_LIBWEBSOCKETS)
+  include_directories(${LIBWEBSOCKETS_INCLUDE_DIRS})
+endif()
 
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES
@@ -112,7 +114,10 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 endif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
-target_link_libraries(qpid-dispatch ${Proton_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES})
+target_link_libraries(qpid-dispatch ${Proton_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES})
+if (USE_LIBWEBSOCKETS)
+  target_link_libraries(qpid-dispatch ${LIBWEBSOCKETS_LIBRARIES})
+endif()
 set_target_properties(qpid-dispatch PROPERTIES
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )
