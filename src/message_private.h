@@ -93,7 +93,32 @@ typedef struct {
     qd_buffer_t         *parse_buffer;
     unsigned char       *parse_cursor;
     qd_message_depth_t   parse_depth;
+                                                          // v1 annotations
     qd_parsed_field_t   *parsed_message_annotations;
+                                                          // v2 annotations
+                                                          // The annotations are split on message egress.
+                                                          // The first element in the map is the interrouter
+                                                          // annotation we care about.
+                                                          // The remainder of the annotations are an opaque
+                                                          // blob of pass-through map values that never get examined.
+                                                          // In order to pass the blob along we need
+                                                          // to track how many elements are in the map and how
+                                                          // many bytes they consume.
+
+    qd_iterator_t       *ma_field_iter_in;                // Entire MESSAGE_ANNOTATION map field
+
+    qd_iterator_t       *ma_v2_annotation_in;             // Incoming message v2 annotation object or
+                                                          // null if there are no incoming router v2 annotations.
+                                                          // The field annotations are in a map and the key
+                                                          // is a fixed value which is not represented here.
+                                                          // This element is the value.
+
+    qd_buffer_t        *ma_v2_blob_buffer;                // starting buffer of pass through annotations (see iterator pointer_t type)
+                                                          // Null if there is no pass-through blob.
+    char               *ma_v2_blob_cursor;                // first byte of remaining blob bytes
+    int                 ma_v2_blob_remaining;             // number of bytes to pass through
+    int                 ma_v2_blob_count;                 // number of map items in the pass-through blob.
+
 } qd_message_content_t;
 
 typedef struct {
