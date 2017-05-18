@@ -112,6 +112,7 @@ extern const char * const QD_MA_TRACE;    ///< Trace
 extern const char * const QD_MA_TO;       ///< To-Override
 extern const char * const QD_MA_PHASE;    ///< Phase for override address
 extern const char * const QD_MA_CLASS;    ///< Message-Class
+extern const char * const QD_MA_ANNOTATIONS; ///< v2 annotation map key
 /// @}
 
 /** @name Container Capabilities */
