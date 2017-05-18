@@ -96,7 +96,7 @@ typedef struct {
                                                           // v1 annotations
     qd_parsed_field_t   *parsed_message_annotations;
                                                           // v2 annotations
-                                                          // The annotations are split on message egress.
+                                                          // The annotations are split on message ingress.
                                                           // The first element in the map is the interrouter
                                                           // annotation we care about.
                                                           // The remainder of the annotations are an opaque
