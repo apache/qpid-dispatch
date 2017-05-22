@@ -145,6 +145,21 @@ qd_message_t *qd_message_copy(qd_message_t *msg);
 qd_parsed_field_t *qd_message_message_annotations(qd_message_t *msg);
 
 /**
+ * Retrieve the message annotations from a message.
+ *
+ * IMPORTANT: The pointer returned by this function remains owned by the message.
+ *            The caller MUST NOT free the parsed field.
+ * 
+ * The v1 scheme returned the map object that had all the annotations. This
+ * v2 scheme returns only the map value element, a list, that has all router values
+ *
+ * @param msg Pointer to a received message.
+ * @return Pointer to the parsed field for the message annotations.  If the message doesn't
+ *         have message annotations, the return value shall be NULL.
+ */
+qd_parsed_field_t *qd_message_v2_annotations(qd_message_t *msg);
+
+/**
  * Set the value for the QD_MA_TRACE field in the outgoing message annotations
  * for the message.
  *

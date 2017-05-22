@@ -939,6 +939,38 @@ qd_parsed_field_t *qd_message_message_annotations(qd_message_t *in_msg)
 }
 
 
+qd_parsed_field_t *qd_message_v2_annotations(qd_message_t *in_msg)
+{
+    qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
+    qd_message_content_t *content = msg->content;
+
+    // caluculate the return value only once
+    if (content->ma_all_annotations)
+        return content->ma_v2;
+
+    // return 0 if annotations are absent
+    content->ma_field_iter_in = qd_message_field_iterator(in_msg, QD_FIELD_MESSAGE_ANNOTATION);
+    if (content->ma_field_iter_in == 0)
+        return 0;
+
+    const char * errorptr = qd_parse_v2_annotations(
+        content->ma_field_iter_in,
+        QD_MA_ANNOTATIONS,
+        &content->ma_all_annotations,
+        &content->ma_count,
+        &content->ma_v2);
+
+    if (errorptr)  // TBD: what now?
+        fprintf(stdout, "message.c parse error: %s\n", errorptr);
+    
+    // parsed_field ma_v2 holds the v2 annotation object
+    // ma_all_annotations->raw_iter.view_pointer {buffer, cursor, remaining} 
+    // describes the remaining annotations blob.
+    
+    return content->ma_v2;
+}
+
+
 void qd_message_set_trace_annotation(qd_message_t *in_msg, qd_composed_field_t *trace_field)
 {
     qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;

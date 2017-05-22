@@ -463,6 +463,7 @@ void qd_iterator_reset_view(qd_iterator_t *iter, qd_iterator_view_t view)
 }
 
 
+
 qd_iterator_view_t qd_iterator_get_view(const qd_iterator_t *iter)
 {
     return iter ? iter->view : ITER_VIEW_ALL;

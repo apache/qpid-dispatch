@@ -229,7 +229,39 @@ int qd_parse_is_scalar(qd_parsed_field_t *field);
  */
 qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *key);
 
+/**
+ * Parse a message annotation map field delimited by a field iterator.
+ * Compare the first key in the map and if it matches then return the
+ * child iterator for the first value in the map.
+ *
+ * The incoming iter is only parsed to move beyond the first key/value pair in
+ * the message annotation map. The raw_iter iterator identifies the remainder of
+ * the annotations.
+ * 
+ * * If there is a key match then the value is returned. The raw_iter addresses
+ *   the map field beyond the key value pair. The returned count is two less than
+ *   the incoming map had at the start.
+ * * If there is no key match then no value is returned. The raw_iter is reset
+ *   and addresses the whole original map. The returned count is equal to the size
+ *   of the incoming map.
+ * 
+ * IMPORTANT: The returned iterator is owned by the field and *must not* be
+ * freed by the caller of this function.
+ *
+ * @param ma_iter_in Field iterator for the annotation map field being parsed.
+ * @param key_name Key name for first map entry
+ * @param all_annotations Parsed field structure that was iterated to find the v2 data
+ * @param count Number of AMQP map entries in all_annotations->raw_iter after the v2 values have been extracted
+ * @param v2_anno Parsed field for the v2 annotation data
+ * @return error string pointer. null if no error
+ */
+const char* qd_parse_v2_annotations(
+    qd_iterator_t      *ma_iter_in,
+    const char         *key_name,
+    qd_parsed_field_t **all_annotations,
+    uint32_t           *count,
+    qd_parsed_field_t **v2);
+
 ///@}
 
 #endif
-

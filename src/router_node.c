@@ -339,6 +339,9 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
         bool                 strip        = qdr_link_strip_annotations_in(rlink);
         qd_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &link_exclusions, strip);
 
+        (void) qd_message_v2_annotations(msg);
+        /// HACKqd_parse_free(xxx);
+        
         if (anonymous_link) {
             qd_iterator_t *addr_iter = 0;
             int phase = 0;

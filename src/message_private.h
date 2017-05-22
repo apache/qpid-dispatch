@@ -66,7 +66,7 @@ typedef struct {
 
 typedef struct {
     sys_mutex_t         *lock;
-    sys_atomic_t         ref_count;                       // The number of messages referencing this
+    sys_atomic_t         ref_count;                       // The number of messages referencing thisqd_parsed_map_remainder_t
     qd_buffer_list_t     buffers;                         // The buffer chain containing the message
     qd_field_location_t  section_message_header;          // The message header list
     qd_field_location_t  section_delivery_annotation;     // The delivery annotation map
@@ -105,19 +105,15 @@ typedef struct {
                                                           // to track how many elements are in the map and how
                                                           // many bytes they consume.
 
-    qd_iterator_t       *ma_field_iter_in;                // Entire MESSAGE_ANNOTATION map field
+    qd_iterator_t       *ma_field_iter_in;                // 'message field iterator' for msg.FIELD_MESSAGE_ANNOTATION
 
-    qd_iterator_t       *ma_v2_annotation_in;             // Incoming message v2 annotation object or
-                                                          // null if there are no incoming router v2 annotations.
-                                                          // The field annotations are in a map and the key
-                                                          // is a fixed value which is not represented here.
-                                                          // This element is the value.
-
-    qd_buffer_t        *ma_v2_blob_buffer;                // starting buffer of pass through annotations (see iterator pointer_t type)
-                                                          // Null if there is no pass-through blob.
-    char               *ma_v2_blob_cursor;                // first byte of remaining blob bytes
-    int                 ma_v2_blob_remaining;             // number of bytes to pass through
-    int                 ma_v2_blob_count;                 // number of map items in the pass-through blob.
+    qd_parsed_field_t   *ma_all_annotations;              // map field partially parsed to find v2 annotations at
+                                                          // the beginnning. Holds 'count' map items addressed by
+                                                          // raw_iter.
+    uint32_t             ma_count;                        // number of map elements in ma_all_annotations->raw_iter 
+                                                          // after the ma_v2 field and its key have been extracted.
+    qd_parsed_field_t   *ma_v2;                           // Incoming message v2 annotation object or null.
+                                                          // parsed out of the beginning of the ma_all_annotations field
 
 } qd_message_content_t;
 
