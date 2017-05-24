@@ -273,6 +273,13 @@ int qd_message_repr_len();
 
 qd_log_source_t* qd_message_log_source();
 
+
+qd_parsed_field_t *qd_message_get_ingress    (qd_message_t *msg);
+qd_parsed_field_t *qd_message_get_phase      (qd_message_t *msg);
+qd_parsed_field_t *qd_message_get_to_override(qd_message_t *msg);
+qd_parsed_field_t *qd_message_get_trace      (qd_message_t *msg);
+int                qd_message_get_phase_val  (qd_message_t *msg);
+
 ///@}
 
 #endif

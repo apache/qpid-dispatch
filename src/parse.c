@@ -538,10 +538,12 @@ const char *qd_parse_v2_annotations(
     qd_parsed_field_t *key_field = qd_parse_internal((*all_annotations)->raw_iter, (*all_annotations));
     if (!key_field) {
         (*all_annotations)->parse_error = "Failed to parse first map key";
+        qd_iterator_reset((*all_annotations)->raw_iter);
         return (*all_annotations)->parse_error;
     }
     if (!qd_parse_ok(key_field)) {
         (*all_annotations)->parse_error = key_field->parse_error;
+        qd_iterator_reset((*all_annotations)->raw_iter);
         return (*all_annotations)->parse_error;
     }
 
@@ -569,5 +571,4 @@ const char *qd_parse_v2_annotations(
     *count -= 2;
     fprintf(stdout, "Just extracted router annotation. Map has %d entries left.\n", *count);
     return 0;
-
 }
