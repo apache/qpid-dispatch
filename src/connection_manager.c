@@ -48,12 +48,24 @@ struct qd_config_ssl_profile_t {
 
 DEQ_DECLARE(qd_config_ssl_profile_t, qd_config_ssl_profile_list_t);
 
+struct qd_config_sasl_plugin_t {
+    DEQ_LINKS(qd_config_sasl_plugin_t);
+    uint64_t     identity;
+    char        *name;
+    char        *auth_service;
+    char        *sasl_init_hostname;
+    char        *auth_ssl_profile;
+};
+
+DEQ_DECLARE(qd_config_sasl_plugin_t, qd_config_sasl_plugin_list_t);
+
 struct qd_connection_manager_t {
     qd_log_source_t              *log_source;
     qd_server_t                  *server;
     qd_listener_list_t            listeners;
     qd_connector_list_t           connectors;
     qd_config_ssl_profile_list_t  config_ssl_profiles;
+    qd_config_sasl_plugin_list_t  config_sasl_plugins;
 };
 
 const char *qd_log_message_components[] =
@@ -91,6 +103,21 @@ static qd_config_ssl_profile_t *qd_find_ssl_profile(qd_connection_manager_t *cm,
     return 0;
 }
 
+/**
+ * Search the list of config_sasl_plugins for an sasl-profile that matches the passed in name
+ */
+static qd_config_sasl_plugin_t *qd_find_sasl_plugin(qd_connection_manager_t *cm, char *name)
+{
+    qd_config_sasl_plugin_t *sasl_plugin = DEQ_HEAD(cm->config_sasl_plugins);
+    while (sasl_plugin) {
+        if (strcmp(sasl_plugin->name, name) == 0)
+            return sasl_plugin;
+        sasl_plugin = DEQ_NEXT(sasl_plugin);
+    }
+
+    return 0;
+}
+
 void qd_server_config_free(qd_server_config_t *cf)
 {
     if (!cf) return;
@@ -104,6 +131,9 @@ void qd_server_config_free(qd_server_config_t *cf)
     if (cf->sasl_username)   free(cf->sasl_username);
     if (cf->sasl_password)   free(cf->sasl_password);
     if (cf->sasl_mechanisms) free(cf->sasl_mechanisms);
+    if (cf->auth_service)    free(cf->auth_service);
+    if (cf->sasl_init_hostname)    free(cf->sasl_init_hostname);
+    if (cf->auth_ssl_conf)   pn_ssl_domain_free(cf->auth_ssl_conf);
     if (cf->ssl_profile)     free(cf->ssl_profile);
     if (cf->failover_list)   qd_failover_list_free(cf->failover_list);
     if (cf->log_message)     free(cf->log_message);
@@ -119,6 +149,7 @@ void qd_server_config_free(qd_server_config_t *cf)
 }
 
 #define CHECK() if (qd_error_code()) goto error
+#define SSTRDUP(S) ((S) ? strdup(S) : NULL)
 
 /**
  * Private function to set the values of booleans strip_inbound_annotations and strip_outbound_annotations
@@ -304,6 +335,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0);   CHECK();
     config->sasl_mechanisms      = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
     config->ssl_profile          = qd_entity_opt_string(entity, "sslProfile", 0);     CHECK();
+    config->sasl_plugin          = qd_entity_opt_string(entity, "saslPlugin", 0);   CHECK();
     config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0);     CHECK();
     config->multi_tenant         = qd_entity_opt_bool(entity, "multiTenant", false);  CHECK();
     set_config_host(config, entity);
@@ -371,7 +403,6 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
         qd_config_ssl_profile_t *ssl_profile =
             qd_find_ssl_profile(qd->connection_manager, config->ssl_profile);
         if (ssl_profile) {
-#define SSTRDUP(S) ((S) ? strdup(S) : NULL)
             config->ssl_certificate_file = SSTRDUP(ssl_profile->ssl_certificate_file);
             config->ssl_private_key_file = SSTRDUP(ssl_profile->ssl_private_key_file);
             config->ssl_password = SSTRDUP(ssl_profile->ssl_password);
@@ -379,6 +410,41 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             config->ssl_trusted_certificates = SSTRDUP(ssl_profile->ssl_trusted_certificates);
             config->ssl_uid_format = SSTRDUP(ssl_profile->ssl_uid_format);
             config->ssl_display_name_file = SSTRDUP(ssl_profile->ssl_display_name_file);
+        }
+    }
+    if (config->sasl_plugin) {
+        qd_config_sasl_plugin_t *sasl_plugin =
+            qd_find_sasl_plugin(qd->connection_manager, config->sasl_plugin);
+        if (sasl_plugin) {
+            config->auth_service = SSTRDUP(sasl_plugin->auth_service);
+            config->sasl_init_hostname = SSTRDUP(sasl_plugin->sasl_init_hostname);
+            qd_log(qd->connection_manager->log_source, QD_LOG_INFO, "Using auth service %s from  SASL Plugin %s", config->auth_service, config->sasl_plugin);
+
+            if (sasl_plugin->auth_ssl_profile) {
+                qd_config_ssl_profile_t *auth_ssl_profile =
+                    qd_find_ssl_profile(qd->connection_manager, sasl_plugin->auth_ssl_profile);
+                config->auth_ssl_conf = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+
+                if (auth_ssl_profile->ssl_certificate_file) {
+                    if (pn_ssl_domain_set_credentials(config->auth_ssl_conf,
+                                                      auth_ssl_profile->ssl_certificate_file,
+                                                      auth_ssl_profile->ssl_private_key_file,
+                                                      auth_ssl_profile->ssl_password)) {
+                        qd_error(QD_ERROR_RUNTIME, "Cannot set SSL credentials for authentication service"); CHECK();
+                    }
+                }
+                if (auth_ssl_profile->ssl_trusted_certificate_db) {
+                    if (pn_ssl_domain_set_trusted_ca_db(config->auth_ssl_conf, auth_ssl_profile->ssl_trusted_certificate_db)) {
+                        qd_error(QD_ERROR_RUNTIME, "Cannot set trusted SSL certificate db for authentication service" ); CHECK();
+                    } else {
+                        if (pn_ssl_domain_set_peer_authentication(config->auth_ssl_conf, PN_SSL_VERIFY_PEER, auth_ssl_profile->ssl_trusted_certificate_db)) {
+                            qd_error(QD_ERROR_RUNTIME, "Cannot set SSL peer verification for authentication service"); CHECK();
+                        }
+                    }
+                }
+            }
+        } else {
+            qd_error(QD_ERROR_RUNTIME, "Cannot find sasl plugin %s", config->sasl_plugin); CHECK();
         }
     }
 
@@ -417,6 +483,19 @@ static bool config_ssl_profile_free(qd_connection_manager_t *cm, qd_config_ssl_p
     free(ssl_profile->ssl_certificate_file);
     free(ssl_profile->ssl_private_key_file);
     free(ssl_profile);
+    return true;
+
+}
+
+static bool config_sasl_plugin_free(qd_connection_manager_t *cm, qd_config_sasl_plugin_t *sasl_plugin)
+{
+    DEQ_REMOVE(cm->config_sasl_plugins, sasl_plugin);
+
+    free(sasl_plugin->name);
+    free(sasl_plugin->auth_service);
+    free(sasl_plugin->sasl_init_hostname);
+    free(sasl_plugin->auth_ssl_profile);
+    free(sasl_plugin);
     return true;
 
 }
@@ -482,6 +561,28 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     error:
         qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create ssl profile: %s", qd_error_message());
         config_ssl_profile_free(cm, ssl_profile);
+        return 0;
+}
+
+qd_config_sasl_plugin_t *qd_dispatch_configure_sasl_plugin(qd_dispatch_t *qd, qd_entity_t *entity)
+{
+    qd_error_clear();
+    qd_connection_manager_t *cm = qd->connection_manager;
+
+    qd_config_sasl_plugin_t *sasl_plugin = NEW(qd_config_sasl_plugin_t);
+    DEQ_ITEM_INIT(sasl_plugin);
+    DEQ_INSERT_TAIL(cm->config_sasl_plugins, sasl_plugin);
+    sasl_plugin->name                       = qd_entity_opt_string(entity, "name", 0); CHECK();
+    sasl_plugin->auth_service               = qd_entity_opt_string(entity, "authService", 0); CHECK();
+    sasl_plugin->sasl_init_hostname         = qd_entity_opt_string(entity, "saslInitHostname", 0); CHECK();
+    sasl_plugin->auth_ssl_profile           = qd_entity_opt_string(entity, "authSslProfile", 0); CHECK();
+
+    qd_log(cm->log_source, QD_LOG_INFO, "Created SASL plugin config with name %s", sasl_plugin->name);
+    return sasl_plugin;
+
+    error:
+        qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create SASL plugin config: %s", qd_error_message());
+        config_sasl_plugin_free(cm, sasl_plugin);
         return 0;
 }
 
@@ -563,6 +664,7 @@ qd_connection_manager_t *qd_connection_manager(qd_dispatch_t *qd)
     DEQ_INIT(cm->listeners);
     DEQ_INIT(cm->connectors);
     DEQ_INIT(cm->config_ssl_profiles);
+    DEQ_INIT(cm->config_sasl_plugins);
 
     return cm;
 }
@@ -589,6 +691,12 @@ void qd_connection_manager_free(qd_connection_manager_t *cm)
     while (sslp) {
         config_ssl_profile_free(cm, sslp);
         sslp = DEQ_HEAD(cm->config_ssl_profiles);
+    }
+
+    qd_config_sasl_plugin_t *saslp = DEQ_HEAD(cm->config_sasl_plugins);
+    while (saslp) {
+        config_sasl_plugin_free(cm, saslp);
+        saslp = DEQ_HEAD(cm->config_sasl_plugins);
     }
 }
 
@@ -641,6 +749,12 @@ void qd_connection_manager_delete_ssl_profile(qd_dispatch_t *qd, void *impl)
 {
     qd_config_ssl_profile_t *ssl_profile = (qd_config_ssl_profile_t*) impl;
     config_ssl_profile_free(qd->connection_manager, ssl_profile);
+}
+
+void qd_connection_manager_delete_sasl_plugin(qd_dispatch_t *qd, void *impl)
+{
+    qd_config_sasl_plugin_t *sasl_plugin = (qd_config_sasl_plugin_t*) impl;
+    config_sasl_plugin_free(qd->connection_manager, sasl_plugin);
 }
 
 

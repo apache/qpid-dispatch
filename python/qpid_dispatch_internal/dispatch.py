@@ -62,6 +62,7 @@ class QdDll(ctypes.PyDLL):
         self._prototype(self.qd_dispatch_configure_listener, ctypes.c_void_p, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_connector, ctypes.c_void_p, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_ssl_profile, ctypes.c_void_p, [self.qd_dispatch_p, py_object])
+        self._prototype(self.qd_dispatch_configure_sasl_plugin, ctypes.c_void_p, [self.qd_dispatch_p, py_object])
 
         self._prototype(self.qd_connection_manager_delete_listener, None, [self.qd_dispatch_p, ctypes.c_void_p])
         self._prototype(self.qd_connection_manager_delete_connector, None, [self.qd_dispatch_p, ctypes.c_void_p])

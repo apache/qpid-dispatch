@@ -173,7 +173,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     policyDir = config.by_type('policy')[0]['policyDir']
     policyDefaultVhost = config.by_type('policy')[0]['defaultVhost']
     # Remaining configuration
-    for t in "sslProfile", "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", \
+    for t in "sslProfile", "authServicePlugin", "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", \
              "router.config.address", "router.config.linkRoute", "router.config.autoLink", \
              "policy", "vhost":
         for a in config.by_type(t):

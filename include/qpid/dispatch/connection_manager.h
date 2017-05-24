@@ -28,6 +28,7 @@
 
 typedef struct qd_connection_manager_t qd_connection_manager_t;
 typedef struct qd_config_ssl_profile_t qd_config_ssl_profile_t;
+typedef struct qd_config_sasl_plugin_t qd_config_sasl_plugin_t;
 
 typedef void (*qd_connection_manager_handler_t) (void *context, qd_connection_t *conn);
 
