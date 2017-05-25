@@ -596,7 +596,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
             (lookup ? "ALLOW" : "DENY"), target, qd_conn->user_id, hostip, vhost);
 
         if (!lookup) {
-            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+            _qd_policy_deny_amqp_sender_link(pn_link, qd_conn);
             return false;
         }
     } else {
@@ -607,7 +607,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
             "%s AMQP Attach anonymous sender for user '%s', rhost '%s', vhost '%s'",
             (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
         if (!lookup) {
-            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+            _qd_policy_deny_amqp_sender_link(pn_link, qd_conn);
             return false;
         }
     }
