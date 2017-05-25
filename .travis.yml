@@ -21,13 +21,11 @@ os: linux
 dist: trusty
 sudo: true
 language: c
+cache: ccache
 
 addons:
   apt:
     packages:
-    # Libuv requirements
-    - automake
-    - libtool
     # Proton requirements
     - cmake
     - libsasl2-dev
@@ -38,27 +36,14 @@ addons:
     - swig
     # For apache RAT tool
     - maven
+    # documentation
+    - asciidoc
+    - dblatex
 
 install:
 - PREFIX=$PWD/install
-- git submodule add -b v1.x https://github.com/libuv/libuv
-- git submodule add -b v2.1-stable https://github.com/warmcat/libwebsockets
 - git submodule add https://git-wip-us.apache.org/repos/asf/qpid-proton.git
 - git submodule update --init
-
-# Build and install libuv 1.0 from source, trusty only has 0.10
-- pushd libuv
-- sh autogen.sh
-- ./configure --prefix $PREFIX
-- make && make install
-- popd
-
-# Build and install libwebsockets 2.1 from source, trusty only has 1.2
-- mkdir libwebsockets/build
-- pushd libwebsockets/build
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX
-- make install
-- popd
 
 # Build and install latest proton from source.
 - mkdir qpid-proton/build
