@@ -46,26 +46,27 @@ void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn);
  * The link is closed and the denial is logged but not counted.
  * @param[in] link proton link being closed
  * @param[in] qd_conn the qd conection
+ * @param[in] condition the AMQP error with which to close the link
  */ 
-void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn);
+void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn, const char *condition);
 
 
 /** Internal function to deny a sender amqp link
  * The link is closed and the denial is logged but not counted.
  * @param[in] link proton link to close
  * @param[in] qd_conn the qd conection
- * @param[in] s_or_r 'sender' or 'receiver' for logging
+ * @param[in] condition the AMQP error with which to close the link
  */ 
-void _qd_policy_deny_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn);
+void _qd_policy_deny_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn, const char *condition);
 
 
 /** Internal function to deny a receiver amqp link
  * The link is closed and the denial is logged but not counted.
  * @param[in] link proton link to close
  * @param[in] qd_conn the qd conection
- * @param[in] s_or_r 'sender' or 'receiver' for logging
+ * @param[in] condition the AMQP error with which to close the link
  */ 
-void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn);
+void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn, const char *condition);
 
 
 /** Perform user name substitution into proposed link name.

@@ -429,10 +429,10 @@ void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_con
 
 //
 //
-void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn)
+void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn, const char *condition)
 {
     pn_condition_t * cond = pn_link_condition(link);
-    (void) pn_condition_set_name(       cond, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED);
+    (void) pn_condition_set_name(       cond, condition);
     (void) pn_condition_set_description(cond, LINK_DISALLOWED);
     pn_link_close(link);
 }
@@ -440,18 +440,18 @@ void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn)
 
 //
 //
-void _qd_policy_deny_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
+void _qd_policy_deny_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn, const char *condition)
 {
-    _qd_policy_deny_amqp_link(pn_link, qd_conn);
+    _qd_policy_deny_amqp_link(pn_link, qd_conn, condition);
     qd_conn->policy_settings->denialCounts->senderDenied++;
 }
 
 
 //
 //
-void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
+void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn, const char *condition)
 {
-    _qd_policy_deny_amqp_link(pn_link, qd_conn);
+    _qd_policy_deny_amqp_link(pn_link, qd_conn, condition);
     qd_conn->policy_settings->denialCounts->receiverDenied++;
 }
 
@@ -576,7 +576,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
             qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
                 "DENY AMQP Attach sender for user '%s', rhost '%s', vhost '%s' based on maxSenders limit",
                 qd_conn->user_id, hostip, vhost);
-            _qd_policy_deny_amqp_sender_link(pn_link, qd_conn);
+            _qd_policy_deny_amqp_sender_link(pn_link, qd_conn, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED);
             return false;
         } else {
             // max sender limit not violated
@@ -596,7 +596,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
             (lookup ? "ALLOW" : "DENY"), target, qd_conn->user_id, hostip, vhost);
 
         if (!lookup) {
-            _qd_policy_deny_amqp_sender_link(pn_link, qd_conn);
+            _qd_policy_deny_amqp_sender_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
             return false;
         }
     } else {
@@ -607,7 +607,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
             "%s AMQP Attach anonymous sender for user '%s', rhost '%s', vhost '%s'",
             (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
         if (!lookup) {
-            _qd_policy_deny_amqp_sender_link(pn_link, qd_conn);
+            _qd_policy_deny_amqp_sender_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
             return false;
         }
     }
@@ -627,7 +627,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
             qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
                 "DENY AMQP Attach receiver for user '%s', rhost '%s', vhost '%s' based on maxReceivers limit",
                 qd_conn->user_id, hostip, vhost);
-            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED);
             return false;
         } else {
             // max receiver limit not violated
@@ -644,7 +644,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
             (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
         // Dynamic source policy rendered the decision
         if (!lookup) {
-            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
         }
         return lookup;
     }
@@ -658,7 +658,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
             (lookup ? "ALLOW" : "DENY"), source, qd_conn->user_id, hostip, vhost);
 
         if (!lookup) {
-            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+            _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
             return false;
         }
     } else {
@@ -666,7 +666,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_TRACE,
                "DENY AMQP Attach receiver link '' for user '%s', rhost '%s', vhost '%s'",
                qd_conn->user_id, hostip, vhost);
-        _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn);
+        _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
         return false;
     }
     // Approved
