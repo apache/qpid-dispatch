@@ -131,11 +131,11 @@ void qdr_core_free(qdr_core_t *core)
 
     qdr_address_t *addr = 0;
     while ( (addr = DEQ_HEAD(core->addrs)) ) {
-        qdr_core_remove_address(core, addr);
+        qdr_core_remove_address_CT(core, addr);
     }
     qdr_address_config_t *addr_config = 0;
     while ( (addr_config = DEQ_HEAD(core->addr_config))) {
-        qdr_core_remove_address_config(core, addr_config);
+        qdr_core_remove_address_config_CT(core, addr_config);
     }
     qd_hash_free(core->addr_hash);
 
@@ -304,7 +304,7 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
     return addr;
 }
 
-void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
+void qdr_core_remove_address_CT(qdr_core_t *core, qdr_address_t *addr)
 {
     // Remove the address from the list and hash index
     qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
@@ -322,7 +322,7 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
     free_qdr_address_t(addr);
 }
 
-void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr)
+void qdr_core_remove_address_config_CT(qdr_core_t *core, qdr_address_config_t *addr)
 {
     // Remove the address from the list and the hash index.
     qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);

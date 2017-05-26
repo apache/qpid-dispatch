@@ -272,7 +272,7 @@ void qdra_config_address_delete_CT(qdr_core_t    *core,
             addr = qdr_address_config_find_by_name_CT(core, name);
 
         if (addr) {
-            qdr_core_remove_address_config(core, addr);
+            qdr_core_remove_address_config_CT(core, addr);
             query->status = QD_AMQP_NO_CONTENT;
         } else
             query->status = QD_AMQP_NOT_FOUND;

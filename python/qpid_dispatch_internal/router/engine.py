@@ -91,7 +91,7 @@ class RouterEngine:
             except IndexError: raise ValueError("No router configuration found")
         return self._config
 
-    def addressAdded(self, addr):
+    def addressAdded(self, addr, in_links, out_capacity):
         """
         """
         try:
@@ -99,6 +99,14 @@ class RouterEngine:
                 self.mobile_address_engine.add_local_address(addr)
         except Exception:
             self.log_ma(LOG_ERROR, "Exception in new-address processing\n%s" % format_exc(LOG_STACK_LIMIT))
+
+    def addressUpdate(self, addr, in_links, out_capacity):
+        """
+        """
+        try:
+            pass
+        except Exception:
+            self.log_ma(LOG_ERROR, "Exception in update-address processing\n%s" % format_exc(LOG_STACK_LIMIT))
 
     def addressRemoved(self, addr):
         """

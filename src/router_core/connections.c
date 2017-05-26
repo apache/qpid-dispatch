@@ -938,24 +938,32 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
         return;
 
     //
-    // If we have just removed a local linkage and it was the last local linkage,
-    // we need to notify the router module that there is no longer a local
+    // If we have just removed a local linkage, we may need to notify the router
+    // module of changes in address state or that there is no longer a local
     // presence of this address.
     //
-    if (was_local && DEQ_SIZE(addr->rlinks) == 0) {
+    if (was_local) {
         const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-        if (key && *key == 'M')
-            qdr_post_mobile_removed_CT(core, key);
+        if (key && *key == 'M') {
+            if (DEQ_SIZE(addr->rlinks) == 0)
+                qdr_post_mobile_removed_CT(core, key);
+            else
+                qdr_post_mobile_update_CT(core, key, DEQ_SIZE(addr->inlinks), addr->out_capacity);
+        }
     }
 
     //
     // If the address has no in-process consumer or destinations, it should be
     // deleted.
     //
-    if (DEQ_SIZE(addr->subscriptions) == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->inlinks) == 0 &&
-        qd_bitmask_cardinality(addr->rnodes) == 0 && addr->ref_count == 0 && !addr->block_deletion &&
-        addr->tracked_deliveries == 0) {
-        qdr_core_remove_address(core, addr);
+    if (DEQ_SIZE(addr->subscriptions)        == 0 &&
+        DEQ_SIZE(addr->rlinks)               == 0 &&
+        DEQ_SIZE(addr->inlinks)              == 0 &&
+        qd_bitmask_cardinality(addr->rnodes) == 0 &&
+        addr->ref_count                      == 0 &&
+        !addr->block_deletion                     &&
+        addr->tracked_deliveries             == 0) {
+        qdr_core_remove_address_CT(core, addr);
     }
 }
 
@@ -1249,6 +1257,27 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 }
 
 
+static void qdr_outgoing_link_added_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link)
+{
+    //
+    // Inform the router module of the change in address state
+    //
+    const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+    if (key && *key == 'M') {
+        if (DEQ_SIZE(addr->rlinks) == 1)
+            qdr_post_mobile_added_CT(core, key, DEQ_SIZE(addr->inlinks), addr->out_capacity);
+        else
+            qdr_post_mobile_update_CT(core, key, DEQ_SIZE(addr->inlinks), addr->out_capacity);
+    }
+
+    //
+    // If this is the first outgoing link on the address, kick off any blocked incoming links
+    //
+    if (DEQ_SIZE(addr->rlinks) == 1)
+        qdr_addr_start_inlinks_CT(core, addr);
+}
+
+
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
@@ -1391,12 +1420,17 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 //
                 link->owning_addr = addr;
                 qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-                if (DEQ_SIZE(addr->rlinks) == 1) {
-                    const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-                    if (key && *key == 'M')
-                        qdr_post_mobile_added_CT(core, key);
-                    qdr_addr_start_inlinks_CT(core, addr);
-                }
+
+                //
+                // Add the link's capacity to the address's aggregate out_capacity
+                //
+                addr->out_capacity += link->capacity;
+
+                //
+                // Do all the action that is needed when an outgoing link is established
+                //
+                qdr_outgoing_link_added_CT(core, addr, link);
+
                 qdr_link_outbound_second_attach_CT(core, link, source, target);
             }
             break;
@@ -1484,12 +1518,16 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
                     link->auto_link->state = QDR_AUTO_LINK_STATE_ACTIVE;
                     qdr_add_link_ref(&link->auto_link->addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
                     link->owning_addr = link->auto_link->addr;
-                    if (DEQ_SIZE(link->auto_link->addr->rlinks) == 1) {
-                        const char *key = (const char*) qd_hash_key_by_handle(link->auto_link->addr->hash_handle);
-                        if (key && *key == 'M')
-                            qdr_post_mobile_added_CT(core, key);
-                        qdr_addr_start_inlinks_CT(core, link->auto_link->addr);
-                    }
+
+                    //
+                    // Add the link's capacity to the address's aggregate out_capacity
+                    //
+                    link->owning_addr->out_capacity += link->capacity;
+
+                    //
+                    // Do all the action that is needed when an outgoing link is established
+                    //
+                    qdr_outgoing_link_added_CT(core, link->owning_addr, link);
                 }
             }
             break;
@@ -1586,6 +1624,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         case QD_LINK_ENDPOINT:
             if (addr) {
                 qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+                addr->out_capacity -= link->capacity;
                 was_local = true;
             }
             break;

@@ -128,7 +128,7 @@ static void qdr_link_route_activate_CT(qdr_core_t *core, qdr_link_route_t *lr, q
         if (DEQ_SIZE(lr->addr->conns) == 1) {
             key = (const char*) qd_hash_key_by_handle(lr->addr->hash_handle);
             if (key)
-                qdr_post_mobile_added_CT(core, key);
+                qdr_post_mobile_added_CT(core, key, 0, 0);
         }
     }
 

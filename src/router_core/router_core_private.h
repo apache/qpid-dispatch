@@ -87,6 +87,8 @@ struct qdr_action_t {
             int           cost;
             qd_bitmask_t *router_set;
             qdr_field_t  *address;
+            uint32_t      in_links;
+            uint32_t      out_capacity;
         } route_table;
 
         //
@@ -172,6 +174,8 @@ struct qdr_general_work_t {
     qdr_receive_t               on_message;
     void                       *on_message_context;
     qd_message_t               *msg;
+    uint32_t                    in_links;
+    uint32_t                    out_capacity;
 };
 
 ALLOC_DECLARE(qdr_general_work_t);
@@ -442,6 +446,9 @@ struct qdr_address_t {
     bool                       local;
     uint32_t                   tracked_deliveries;
     uint64_t                   cost_epoch;
+    uint32_t                   out_capacity;
+    uint32_t                   remote_inlinks;
+    uint32_t                   remote_out_capacity;
 
     //
     // State for "closest" treatment
@@ -469,7 +476,7 @@ DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_treatment_t treatment);
-void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr);
+void qdr_core_remove_address_CT(qdr_core_t *core, qdr_address_t *addr);
 
 struct qdr_address_config_t {
     DEQ_LINKS(qdr_address_config_t);
@@ -483,7 +490,7 @@ struct qdr_address_config_t {
 
 ALLOC_DECLARE(qdr_address_config_t);
 DEQ_DECLARE(qdr_address_config_t, qdr_address_config_list_t);
-void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr);
+void qdr_core_remove_address_config_CT(qdr_core_t *core, qdr_address_config_t *addr);
 
 
 //
@@ -629,6 +636,7 @@ struct qdr_core_t {
     //
     void                 *rt_context;
     qdr_mobile_added_t    rt_mobile_added;
+    qdr_mobile_update_t   rt_mobile_update;
     qdr_mobile_removed_t  rt_mobile_removed;
     qdr_link_lost_t       rt_link_lost;
 
@@ -695,7 +703,8 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
-void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash);
+void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash, uint32_t in_links, uint32_t out_capacity);
+void qdr_post_mobile_update_CT(qdr_core_t *core, const char *address_hash, uint32_t in_links, uint32_t out_capacity);
 void qdr_post_mobile_removed_CT(qdr_core_t *core, const char *address_hash);
 void qdr_post_link_lost_CT(qdr_core_t *core, int link_maskbit);
 

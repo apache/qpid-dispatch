@@ -31,6 +31,7 @@ static qd_log_source_t *log_source = 0;
 static PyObject        *pyRouter   = 0;
 static PyObject        *pyTick     = 0;
 static PyObject        *pyAdded    = 0;
+static PyObject        *pyUpdate   = 0;
 static PyObject        *pyRemoved  = 0;
 static PyObject        *pyLinkLost = 0;
 
@@ -262,6 +263,25 @@ static PyObject* qd_unmap_destination(PyObject *self, PyObject *args)
     return Py_None;
 }
 
+
+static PyObject* qd_update_destination(PyObject *self, PyObject *args)
+{
+    RouterAdapter *adapter = (RouterAdapter*) self;
+    qd_router_t   *router  = adapter->router;
+    const char    *addr_string;
+    uint32_t       in_links;
+    uint32_t       out_capacity;
+
+    if (!PyArg_ParseTuple(args, "sII", &addr_string, &in_links, &out_capacity))
+        return 0;
+
+    qdr_core_update_destination(router->router_core, addr_string, in_links, out_capacity);
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
 static PyObject* qd_get_agent(PyObject *self, PyObject *args) {
     RouterAdapter *adapter = (RouterAdapter*) self;
     PyObject *agent = adapter->router->qd->agent;
@@ -273,17 +293,18 @@ static PyObject* qd_get_agent(PyObject *self, PyObject *args) {
 }
 
 static PyMethodDef RouterAdapter_methods[] = {
-    {"add_router",          qd_add_router,        METH_VARARGS, "A new remote/reachable router has been discovered"},
-    {"del_router",          qd_del_router,        METH_VARARGS, "We've lost reachability to a remote router"},
-    {"set_link",            qd_set_link,          METH_VARARGS, "Set the link for a neighbor router"},
-    {"remove_link",         qd_remove_link,       METH_VARARGS, "Remove the link for a neighbor router"},
-    {"set_next_hop",        qd_set_next_hop,      METH_VARARGS, "Set the next hop for a remote router"},
-    {"remove_next_hop",     qd_remove_next_hop,   METH_VARARGS, "Remove the next hop for a remote router"},
-    {"set_cost",            qd_set_cost,          METH_VARARGS, "Set the cost to reach a remote router"},
-    {"set_valid_origins",   qd_set_valid_origins, METH_VARARGS, "Set the valid origins for a remote router"},
-    {"map_destination",     qd_map_destination,   METH_VARARGS, "Add a newly discovered destination mapping"},
-    {"unmap_destination",   qd_unmap_destination, METH_VARARGS, "Delete a destination mapping"},
-    {"get_agent",           qd_get_agent,         METH_VARARGS, "Get the management agent"},
+    {"add_router",          qd_add_router,         METH_VARARGS, "A new remote/reachable router has been discovered"},
+    {"del_router",          qd_del_router,         METH_VARARGS, "We've lost reachability to a remote router"},
+    {"set_link",            qd_set_link,           METH_VARARGS, "Set the link for a neighbor router"},
+    {"remove_link",         qd_remove_link,        METH_VARARGS, "Remove the link for a neighbor router"},
+    {"set_next_hop",        qd_set_next_hop,       METH_VARARGS, "Set the next hop for a remote router"},
+    {"remove_next_hop",     qd_remove_next_hop,    METH_VARARGS, "Remove the next hop for a remote router"},
+    {"set_cost",            qd_set_cost,           METH_VARARGS, "Set the cost to reach a remote router"},
+    {"set_valid_origins",   qd_set_valid_origins,  METH_VARARGS, "Set the valid origins for a remote router"},
+    {"map_destination",     qd_map_destination,    METH_VARARGS, "Add a newly discovered destination mapping"},
+    {"unmap_destination",   qd_unmap_destination,  METH_VARARGS, "Delete a destination mapping"},
+    {"update_destination",  qd_update_destination, METH_VARARGS, "Update the capacity data for a destination"},
+    {"get_agent",           qd_get_agent,          METH_VARARGS, "Get the management agent"},
     {0, 0, 0, 0}
 };
 
@@ -339,7 +360,7 @@ static PyTypeObject RouterAdapterType = {
 };
 
 
-static void qd_router_mobile_added(void *context, const char *address_hash)
+static void qd_router_mobile_added(void *context, const char *address_hash, uint32_t in_links, uint32_t out_capacity)
 {
     qd_router_t *router = (qd_router_t*) context;
     PyObject    *pArgs;
@@ -347,9 +368,32 @@ static void qd_router_mobile_added(void *context, const char *address_hash)
 
     if (pyAdded && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
         qd_python_lock_state_t lock_state = qd_python_lock();
-        pArgs = PyTuple_New(1);
+        pArgs = PyTuple_New(3);
         PyTuple_SetItem(pArgs, 0, PyString_FromString(address_hash));
+        PyTuple_SetItem(pArgs, 1, PyInt_FromLong((long) in_links));
+        PyTuple_SetItem(pArgs, 2, PyInt_FromLong((long) out_capacity));
         pValue = PyObject_CallObject(pyAdded, pArgs);
+        qd_error_py();
+        Py_DECREF(pArgs);
+        Py_XDECREF(pValue);
+        qd_python_unlock(lock_state);
+    }
+}
+
+
+static void qd_router_mobile_update(void *context, const char *address_hash, uint32_t in_links, uint32_t out_capacity)
+{
+    qd_router_t *router = (qd_router_t*) context;
+    PyObject    *pArgs;
+    PyObject    *pValue;
+
+    if (pyUpdate && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
+        qd_python_lock_state_t lock_state = qd_python_lock();
+        pArgs = PyTuple_New(3);
+        PyTuple_SetItem(pArgs, 0, PyString_FromString(address_hash));
+        PyTuple_SetItem(pArgs, 1, PyInt_FromLong((long) in_links));
+        PyTuple_SetItem(pArgs, 2, PyInt_FromLong((long) out_capacity));
+        pValue = PyObject_CallObject(pyUpdate, pArgs);
         qd_error_py();
         Py_DECREF(pArgs);
         Py_XDECREF(pValue);
@@ -404,6 +448,7 @@ qd_error_t qd_router_python_setup(qd_router_t *router)
     qdr_core_route_table_handlers(router->router_core,
                                   router,
                                   qd_router_mobile_added,
+                                  qd_router_mobile_update,
                                   qd_router_mobile_removed,
                                   qd_router_link_lost);
 
@@ -473,6 +518,7 @@ qd_error_t qd_router_python_setup(qd_router_t *router)
 
     pyTick = PyObject_GetAttrString(pyRouter, "handleTimerTick"); QD_ERROR_PY_RET();
     pyAdded = PyObject_GetAttrString(pyRouter, "addressAdded"); QD_ERROR_PY_RET();
+    pyUpdate = PyObject_GetAttrString(pyRouter, "addressUpdate"); QD_ERROR_PY_RET();
     pyRemoved = PyObject_GetAttrString(pyRouter, "addressRemoved"); QD_ERROR_PY_RET();
     pyLinkLost = PyObject_GetAttrString(pyRouter, "linkLost"); QD_ERROR_PY_RET();
     return qd_error_code();
