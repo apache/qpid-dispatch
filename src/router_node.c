@@ -29,6 +29,11 @@
 #include <qpid/dispatch/router_core.h>
 #include <proton/sasl.h>
 
+// HACK ALERT
+// Define which annotation scheme to use: 0.8.0 v1, or new v2.
+// Match this definition in message.c
+static const bool USE_ANNO_V1 = false;
+
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
 const char *QD_ROUTER_LINK_TYPE = "router.link";
@@ -207,7 +212,6 @@ static qd_iterator_t *router_annotate_message(qd_router_t       *router,
 }
 
 
-// HACK ALERT
 static qd_iterator_t *router_annotate_message2(qd_router_t       *router,
                                                qd_message_t      *msg,
                                                qd_bitmask_t     **link_exclusions,
@@ -425,10 +429,24 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
             }
         }
 
-        qd_parsed_field_t   *in_ma        = qd_message_message_annotations(msg);
+        qd_parsed_field_t   *in_ma = 0;
+        
+        if (USE_ANNO_V1) {
+            in_ma = qd_message_message_annotations(msg);
+        } else {
+            in_ma = qd_message_v2_annotations(msg);
+        }
+
         qd_bitmask_t        *link_exclusions;
         bool                 strip        = qdr_link_strip_annotations_in(rlink);
-        qd_iterator_t *ingress_iter = router_annotate_message(router, in_ma, msg, &link_exclusions, strip);
+
+        qd_iterator_t *ingress_iter = 0;
+        
+        if (USE_ANNO_V1) {
+            ingress_iter = router_annotate_message(router, in_ma, msg, &link_exclusions, strip);
+        } else {
+            ingress_iter = router_annotate_message2(router, msg, &link_exclusions, strip);
+        }
 
         if (anonymous_link) {
             qd_iterator_t *addr_iter = 0;
@@ -438,255 +456,21 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
             // If the message has delivery annotations, get the to-override field from the annotations.
             //
             if (in_ma) {
-                qd_parsed_field_t *ma_to = qd_parse_value_by_key(in_ma, QD_MA_TO);
-                if (ma_to) {
-                    addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
-                    phase = qd_message_get_phase_annotation(msg);
-                }
-            }
-
-            //
-            // Still no destination address?  Use the TO field from the message properties.
-            //
-            if (!addr_iter) {
-                addr_iter = qd_message_field_iterator(msg, QD_FIELD_TO);
-
-                //
-                // If the address came from the TO field and we need to apply a tenant-space,
-                // set the to-override with the annotated address.
-                //
-                if (addr_iter && tenant_space) {
-                    qd_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_WITH_SPACE);
-                    qd_iterator_annotate_space(addr_iter, tenant_space, tenant_space_len);
-                    qd_composed_field_t *to_override = qd_compose_subfield(0);
-                    qd_compose_insert_string_iterator(to_override, addr_iter);
-                    qd_message_set_to_override_annotation(msg, to_override);
-                }
-            }
-
-            if (addr_iter) {
-                qd_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
-                if (phase > 0)
-                    qd_iterator_annotate_phase(addr_iter, '0' + (char) phase);
-                delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
-                                               link_exclusions);
-            }
-        } else {
-            //
-            // This is a targeted link, not anonymous.
-            //
-            const char *term_addr = pn_terminus_get_address(qd_link_remote_target(link));
-            if (!term_addr)
-                term_addr = pn_terminus_get_address(qd_link_source(link));
-
-            if (term_addr) {
-                qd_composed_field_t *to_override = qd_compose_subfield(0);
-                if (tenant_space) {
-                    qd_iterator_t *aiter = qd_iterator_string(term_addr, ITER_VIEW_ADDRESS_WITH_SPACE);
-                    qd_iterator_annotate_space(aiter, tenant_space, tenant_space_len);
-                    qd_compose_insert_string_iterator(to_override, aiter);
-                    qd_iterator_free(aiter);
-                } else
-                    qd_compose_insert_string(to_override, term_addr);
-                qd_message_set_to_override_annotation(msg, to_override);
-                int phase = qdr_link_phase(rlink);
-                if (phase != 0)
-                    qd_message_set_phase_annotation(msg, phase);
-            }
-            delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions);
-        }
-
-        if (delivery) {
-            if (pn_delivery_settled(pnd))
-                pn_delivery_settle(pnd);
-            else {
-                pn_delivery_set_context(pnd, delivery);
-                qdr_delivery_set_context(delivery, pnd);
-                qdr_delivery_incref(delivery);
-            }
-        } else {
-            //
-            // The message is now and will always be unroutable because there is no address.
-            //
-            pn_link_flow(pn_link, 1);
-            pn_delivery_update(pnd, PN_REJECTED);
-            pn_delivery_settle(pnd);
-            qd_message_free(msg);
-        }
-
-        //
-        // Rules for delivering messages:
-        //
-        // For addressed (non-anonymous) links:
-        //   to-override must be set (done in the core?)
-        //   uses qdr_link_deliver to hand over to the core
-        //
-        // For anonymous links:
-        //   If there's a to-override in the annotations, use that address
-        //   Or, use the 'to' field in the message properties
-        //
-
-
-
-    } else {
-        //
-        // Message is invalid.  Reject the message and don't involve the router core.
-        //
-        pn_link_flow(pn_link, 1);
-        pn_delivery_update(pnd, PN_REJECTED);
-        pn_delivery_settle(pnd);
-        qd_message_free(msg);
-    }
-}
-
-
-/**
- * Inbound Delivery Handler
- */
-// HACK ALERT
-static void AMQP_rx_handler2(void* context, qd_link_t *link, pn_delivery_t *pnd)
-{
-    qd_router_t    *router   = (qd_router_t*) context;
-    pn_link_t      *pn_link  = qd_link_pn(link);
-    qdr_link_t     *rlink    = (qdr_link_t*) qd_link_get_context(link);
-    qd_connection_t  *conn   = qd_link_connection(link);
-    const qd_server_config_t *cf = qd_connection_config(conn);
-    qdr_delivery_t *delivery = 0;
-    qd_message_t   *msg;
-
-    //
-    // Receive the message into a local representation.  If the returned message
-    // pointer is NULL, we have not yet received a complete message.
-    //
-    // Note:  In the link-routing case, consider cutting the message through.  There's
-    //        no reason to wait for the whole message to be received before starting to
-    //        send it.
-    //
-    msg = qd_message_receive(pnd);
-
-    if (!msg)
-        return;
-
-    if (cf->log_message) {
-        char repr[qd_message_repr_len()];
-        char* message_repr = qd_message_repr((qd_message_t*)msg,
-                                             repr,
-                                             sizeof(repr),
-                                             cf->log_bits);
-        if (message_repr) {
-            qd_log(qd_message_log_source(), QD_LOG_TRACE, "Link %s received %s",
-                   pn_link_name(pn_link),
-                   message_repr);
-        }
-    }
-
-    //            
-    // Consume the delivery.
-    //
-    pn_link_advance(pn_link);
-
-    //
-    // If there's no router link, free the message and finish.  It's likely that the link
-    // is closing.
-    //
-    if (!rlink) {
-        qd_message_free(msg);
-        return;
-    }
-
-    //
-    // Handle the link-routed case
-    //
-    if (qdr_link_is_routed(rlink)) {
-        pn_delivery_tag_t dtag = pn_delivery_tag(pnd);
-        delivery = qdr_link_deliver_to_routed_link(rlink, msg, pn_delivery_settled(pnd), (uint8_t*) dtag.start, dtag.size,
-                                                   pn_disposition_type(pn_delivery_remote(pnd)), pn_disposition_data(pn_delivery_remote(pnd)));
-
-        if (delivery) {
-            if (pn_delivery_settled(pnd))
-                pn_delivery_settle(pnd);
-            else {
-                pn_delivery_set_context(pnd, delivery);
-                qdr_delivery_set_context(delivery, pnd);
-                qdr_delivery_incref(delivery);
-            }
-        }
-        return;
-    }
-
-    //
-    // Determine if the incoming link is anonymous.  If the link is addressed,
-    // there are some optimizations we can take advantage of.
-    //
-    bool anonymous_link = qdr_link_is_anonymous(rlink);
-
-    //
-    // Determine if the user of this connection is allowed to proxy the
-    // user_id of messages. A message user_id is proxied when the
-    // property value differs from the authenticated user name of the connection.
-    // If the user is not allowed to proxy the user_id then the message user_id
-    // must be blank or it must be equal to the connection user name.
-    //
-    bool              check_user   = false;
-    qdr_connection_t *qdr_conn     = (qdr_connection_t*) qd_connection_get_context(conn);
-    int               tenant_space_len;
-    const char       *tenant_space = qdr_connection_get_tenant_space(qdr_conn, &tenant_space_len);
-    if (conn->policy_settings) 
-        check_user = !conn->policy_settings->allowUserIdProxy;
-
-    //
-    // Validate the content of the delivery as an AMQP message.  This is done partially, only
-    // to validate that we can find the fields we need to route the message.
-    //
-    // If the link is anonymous, we must validate through the message properties to find the
-    // 'to' field.  If the link is not anonymous, we don't need the 'to' field as we will be
-    // using the address from the link target.
-    //
-    qd_message_depth_t  validation_depth = (anonymous_link || check_user) ? QD_DEPTH_PROPERTIES : QD_DEPTH_MESSAGE_ANNOTATIONS;
-    bool                valid_message    = qd_message_check(msg, validation_depth);
-
-    if (valid_message) {
-        if (check_user) {
-            // This connection must not allow proxied user_id
-            qd_iterator_t *userid_iter  = qd_message_field_iterator(msg, QD_FIELD_USER_ID);
-            if (userid_iter) {
-                // The user_id property has been specified
-                if (qd_iterator_remaining(userid_iter) > 0) {
-                    // user_id property in message is not blank
-                    if (!qd_iterator_equal(userid_iter, (const unsigned char *)conn->user_id)) {
-                        // This message is rejected: attempted user proxy is disallowed
-                        qd_log(router->log_source, QD_LOG_DEBUG, "Message rejected due to user_id proxy violation. User:%s", conn->user_id);
-                        pn_link_flow(pn_link, 1);
-                        pn_delivery_update(pnd, PN_REJECTED);
-                        pn_delivery_settle(pnd);
-                        qd_message_free(msg);
-                        qd_iterator_free(userid_iter);
-                        return;
+                if (USE_ANNO_V1) {
+                    qd_parsed_field_t *ma_to = qd_parse_value_by_key(in_ma, QD_MA_TO);
+                    if (ma_to) {
+                        addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
+                        phase = qd_message_get_phase_annotation(msg);
+                    }
+                } else {
+                    qd_parsed_field_t *ma_to = qd_message_get_to_override(msg);
+                    if (ma_to) {
+                        addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
+                        phase = qd_message_get_phase_val(msg);
                     }
                 }
-                qd_iterator_free(userid_iter);
             }
-        }
 
-        qd_parsed_field_t   *in_ma     = qd_message_v2_annotations(msg);
-        qd_bitmask_t        *link_exclusions;
-        bool                 strip        = qdr_link_strip_annotations_in(rlink);
-        qd_iterator_t *ingress_iter = router_annotate_message2(router, msg, &link_exclusions, strip);
-
-        if (anonymous_link) {
-            qd_iterator_t *addr_iter = 0;
-            int phase = 0;
-
-            //
-            // If the message has delivery annotations, get the to-override field from the annotations.
-            //
-            if (in_ma) {
-                qd_parsed_field_t *ma_to = qd_message_get_to_override(msg);
-                if (ma_to) {
-                    addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
-                    phase = qd_message_get_phase_val(msg);
-                }
-            }
             //
             // Still no destination address?  Use the TO field from the message properties.
             //

@@ -66,7 +66,7 @@ typedef struct {
 
 typedef struct {
     sys_mutex_t         *lock;
-    sys_atomic_t         ref_count;                       // The number of messages referencing thisqd_parsed_map_remainder_t
+    sys_atomic_t         ref_count;                       // The number of messages referencing this
     qd_buffer_list_t     buffers;                         // The buffer chain containing the message
     qd_field_location_t  section_message_header;          // The message header list
     qd_field_location_t  section_delivery_annotation;     // The delivery annotation map
@@ -110,7 +110,7 @@ typedef struct {
     qd_iterator_t       *ma_field_iter_in;                // 'message field iterator' for msg.FIELD_MESSAGE_ANNOTATION
 
     qd_parsed_field_t   *ma_all_annotations;              // Map field partially parsed to find v2 annotations at
-                                                          // the beginnning. After parsing thie field holds 'count' 
+                                                          // the beginnning. After parsing this field holds 'count' 
                                                           // map items addressed by raw_iter.
     uint32_t             ma_count;                        // Number of map elements in ma_all_annotations->raw_iter 
                                                           // after the ma_v2 field and its key have been extracted.

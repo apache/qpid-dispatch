@@ -463,7 +463,6 @@ void qd_iterator_reset_view(qd_iterator_t *iter, qd_iterator_view_t view)
 }
 
 
-
 qd_iterator_view_t qd_iterator_get_view(const qd_iterator_t *iter)
 {
     return iter ? iter->view : ITER_VIEW_ALL;
@@ -852,4 +851,14 @@ bool qd_iterator_next_segment(qd_iterator_t *iter, uint32_t *hash)
     free_qd_hash_segment_t(hash_segment);
 
     return true;
+}
+
+
+void qd_iterator_get_view_cursor(
+    const qd_iterator_t *iter,
+    qd_iterator_pointer_t *ptr)
+{
+    ptr->buffer    = iter->view_pointer.buffer;
+    ptr->cursor    = iter->view_pointer.cursor;
+    ptr->remaining = iter->view_pointer.remaining;
 }

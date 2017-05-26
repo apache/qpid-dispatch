@@ -35,6 +35,14 @@
 #include <inttypes.h>
 #include <assert.h>
 
+// HACK ALERT
+// Define which annotation scheme to use: 0.8.0 v1, or new v2.
+// Match this definition in router_node.c
+static const bool USE_ANNO_V1 = false;
+
+// Turn on/off chat
+static const bool BLAB = false;
+
 const char *STR_AMQP_NULL = "null";
 const char *STR_AMQP_TRUE = "T";
 const char *STR_AMQP_FALSE = "F";
@@ -882,6 +890,10 @@ void qd_message_free(qd_message_t *in_msg)
     if (rc == 0) {
         if (content->parsed_message_annotations)
             qd_parse_free(content->parsed_message_annotations);
+        if (content->ma_field_iter_in)
+            qd_iterator_free(content->ma_field_iter_in);
+        if (content->ma_all_annotations)
+            qd_parse_free(content->ma_all_annotations);
 
         qd_buffer_t *buf = DEQ_HEAD(content->buffers);
         while (buf) {
@@ -972,10 +984,11 @@ qd_parsed_field_t *qd_message_v2_annotations(qd_message_t *in_msg)
         &content->ma_count,
         &content->ma_v2);
 
-    if (errorptr)
+    if (BLAB && errorptr)
         fprintf(stdout, "DEBUGGING: message.c parse error: %s\n", errorptr);
     if (!content->ma_v2) {
-        fprintf(stdout, "DEBUGGING: Message has no v2 annotations\n");
+        if (BLAB)
+            fprintf(stdout, "DEBUGGING: Message has no v2 annotations\n");
         return content->ma_v2;
     }
     // parsed_field ma_v2 holds the v2 annotation object
@@ -1213,7 +1226,6 @@ static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
 
 
 // create a buffer chain holding the outgoing message annotations section
-// HACK ALERT
 static void compose_message_annotations2(qd_message_pvt_t *msg, qd_buffer_list_t *out, bool strip_annotations)
 {
     qd_composed_field_t *out_ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
@@ -1228,12 +1240,12 @@ static void compose_message_annotations2(qd_message_pvt_t *msg, qd_buffer_list_t
         qd_compose_insert_symbol(out_ma, QD_MA_ANNOTATIONS);
 
         qd_compose_start_list(out_ma);
-        qd_compose_insert_buffers(out_ma, &msg->ma_to_override);
+        qd_compose_insert_buffers_or_null(out_ma, &msg->ma_to_override);
         qd_compose_insert_int(out_ma, msg->ma_phase);
-        qd_compose_start_list(out_ma);
-        qd_compose_insert_buffers(out_ma, &msg->ma_ingress);
-        qd_compose_end_list(out_ma);
-        qd_compose_insert_buffers(out_ma, &msg->ma_trace);
+        //qd_compose_start_list(out_ma);
+        qd_compose_insert_buffers_or_null(out_ma, &msg->ma_ingress);
+        //qd_compose_end_list(out_ma);
+        qd_compose_insert_buffers_or_null(out_ma, &msg->ma_trace);
         qd_compose_end_list(out_ma);
     }
 
@@ -1242,8 +1254,10 @@ static void compose_message_annotations2(qd_message_pvt_t *msg, qd_buffer_list_t
         if (!map_started) {
             qd_compose_start_map(out_ma);
             map_started = true;
-            // TODO: make it so
         }
+        qd_iterator_pointer_t remaining_cursor;
+        qd_parse_get_view_cursor(msg->content->ma_all_annotations, &remaining_cursor);
+        qd_compose_insert_opaque_elements(out_ma, msg->content->ma_count, &remaining_cursor);
     }
     
     if (map_started) {
@@ -1268,25 +1282,29 @@ void qd_message_send(qd_message_t *in_msg,
     qd_buffer_list_t new_ma;
     DEQ_INIT(new_ma);
 
-    // Process  the message annotations if any
-    compose_message_annotations(msg, &new_ma, strip_annotations);
+    if (USE_ANNO_V1) {
+        // Process  the message annotations if any
+        compose_message_annotations(msg, &new_ma, strip_annotations);
 
-    //
-    // This is the case where the message annotations have been modified.
-    // The message send must be divided into sections:  The existing header;
-    // the new message annotations; the rest of the existing message.
-    // Note that the original message annotations that are still in the
-    // buffer chain must not be sent.
-    //
-    // Start by making sure that we've parsed the message sections through
-    // the message annotations
-    //
-    // ??? NO LONGER NECESSARY???
-    if (!qd_message_check(in_msg, QD_DEPTH_MESSAGE_ANNOTATIONS)) {
-        qd_log(log_source, QD_LOG_ERROR, "Cannot send: %s", qd_error_message);
-        return;
+        //
+        // This is the case where the message annotations have been modified.
+        // The message send must be divided into sections:  The existing header;
+        // the new message annotations; the rest of the existing message.
+        // Note that the original message annotations that are still in the
+        // buffer chain must not be sent.
+        //
+        // Start by making sure that we've parsed the message sections through
+        // the message annotations
+        //
+        // ??? NO LONGER NECESSARY???
+        if (!qd_message_check(in_msg, QD_DEPTH_MESSAGE_ANNOTATIONS)) {
+            qd_log(log_source, QD_LOG_ERROR, "Cannot send: %s", qd_error_message);
+            return;
+        }
+    } else {
+        compose_message_annotations2(msg, &new_ma, strip_annotations);
     }
-
+    
     //
     // Send header if present
     //

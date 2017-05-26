@@ -23,6 +23,9 @@
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
 
+// Turn on/off chat
+static const bool BLAB = false;
+
 DEQ_DECLARE(qd_parsed_field_t, qd_parsed_field_list_t);
 
 struct qd_parsed_field_t {
@@ -523,7 +526,7 @@ const char *qd_parse_v2_annotations(
     if ((*all_annotations)->parse_error)
         return (*all_annotations)->parse_error;
 
-    if (*count != 4)
+    if (BLAB && *count != 2)
         fprintf(stdout, "Count = %d\n", *count);
     
     if (!qd_parse_is_map((*all_annotations))) {
@@ -535,7 +538,7 @@ const char *qd_parse_v2_annotations(
     qd_iterator_advance(ma_iter_in, size - length_of_count);
     
     // Process first key in map. Is this the v2 key?
-    qd_parsed_field_t *key_field = qd_parse_internal((*all_annotations)->raw_iter, (*all_annotations));
+    qd_parsed_field_t *key_field = qd_parse_internal((*all_annotations)->raw_iter, 0);
     if (!key_field) {
         (*all_annotations)->parse_error = "Failed to parse first map key";
         qd_iterator_reset((*all_annotations)->raw_iter);
@@ -544,31 +547,46 @@ const char *qd_parse_v2_annotations(
     if (!qd_parse_ok(key_field)) {
         (*all_annotations)->parse_error = key_field->parse_error;
         qd_iterator_reset((*all_annotations)->raw_iter);
+        qd_parse_free(key_field);
         return (*all_annotations)->parse_error;
     }
 
     qd_iterator_t *key_iter = qd_parse_raw(key_field);
     if (qd_iterator_equal(key_iter, (const unsigned char *)key_name)) {
         // This map entry holds the v2 annotations
-        fprintf(stdout, "I see the key where it belongs!\n");
+        if (BLAB)
+            fprintf(stdout, "I see the key where it belongs!\n");
     } else {
         // No v2 annotations in this message
+        qd_parse_free(key_field);
         qd_iterator_reset((*all_annotations)->raw_iter);
         return 0;
     }
+    qd_parse_free(key_field);
     
     // v2 key is present. get the v2 value
     *v2 = qd_parse_internal((*all_annotations)->raw_iter, (*all_annotations));
     if (!qd_parse_ok(*v2)) {
         qd_iterator_reset((*all_annotations)->raw_iter);
         (*all_annotations)->parse_error = (*v2)->parse_error;
-        fprintf(stdout, "Failed to parse v2 value = %s\n", (*v2)->parse_error);
+        if (BLAB)
+            fprintf(stdout, "Failed to parse v2 value = %s\n", (*v2)->parse_error);
         return (*all_annotations)->parse_error;
     }
+    DEQ_INSERT_TAIL((*all_annotations)->children, *v2);
     
     // Just extracted the parsed field holding the v2 annotations from the incoming
     // message. Set the remainder map field count.
     *count -= 2;
-    fprintf(stdout, "Just extracted router annotation. Map has %d entries left.\n", *count);
+    if (BLAB)
+        fprintf(stdout, "Just extracted router annotation. Map has %d entries left.\n", *count);
     return 0;
+}
+
+
+void qd_parse_get_view_cursor(
+    const qd_parsed_field_t *field,
+    qd_iterator_pointer_t *ptr)
+{
+    qd_iterator_get_view_cursor(field->raw_iter, ptr);
 }

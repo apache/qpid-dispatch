@@ -262,6 +262,18 @@ const char* qd_parse_v2_annotations(
     uint32_t           *count,
     qd_parsed_field_t **v2);
 
+/**
+ * Return the parsed field's cursor position in the raw iter
+ * view pointer buffer chain. This is used to copy opaque 
+ * contents out of a buffer chain.
+ * 
+ * @param field Parsed field that has been partially parsed and still has data in its raw_iter view.
+ * @param ptr Caller's pointer object which is to receive cursor position
+ */
+void qd_parse_get_view_cursor(
+    const qd_parsed_field_t *field,
+    qd_iterator_pointer_t *ptr);
+
 ///@}
 
 #endif
