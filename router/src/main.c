@@ -42,6 +42,11 @@ static const char* argv0 = 0;
  */
 static void signal_handler(int signum)
 {
+    /* Ignore future signals, dispatch may already be freed */
+    signal(SIGHUP,  SIG_IGN);
+    signal(SIGQUIT, SIG_IGN);
+    signal(SIGTERM, SIG_IGN);
+    signal(SIGINT,  SIG_IGN);
     switch (signum) {
     case SIGINT:
         exit_with_sigint = 1;

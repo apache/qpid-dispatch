@@ -756,6 +756,8 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
     switch (pn_event_type(e)) {
 
     case PN_PROACTOR_INTERRUPT:
+        /* Interrupt the next thread */
+        pn_proactor_interrupt(qd_server->proactor);
         /* Stop the current thread */
         return false;
 
@@ -1041,11 +1043,8 @@ void qd_server_run(qd_dispatch_t *qd)
 
 void qd_server_stop(qd_dispatch_t *qd)
 {
-    /* Disconnect everything, interrupt threads */
-    pn_proactor_disconnect(qd->server->proactor, NULL);
-    for (int i = 0; i < qd->server->thread_count; i++) {
-        pn_proactor_interrupt(qd->server->proactor);
-    }
+    /* Interrupt the proactor, async-signal-safe */
+    pn_proactor_interrupt(qd->server->proactor);
 }
 
 void qd_server_activate(qd_connection_t *ctx)
