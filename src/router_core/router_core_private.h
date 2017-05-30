@@ -518,6 +518,7 @@ struct qdr_connection_t {
     uint64_t                    identity;
     qdr_core_t                 *core;
     bool                        incoming;
+    bool                        in_activate_list;
     qdr_connection_role_t       role;
     int                         inter_router_cost;
     qdr_conn_identifier_t      *conn_id;
@@ -610,6 +611,7 @@ struct qdr_core_t {
     qd_timer_t              *work_timer;
 
     qdr_connection_list_t open_connections;
+    qdr_connection_list_t connections_to_activate;
     qdr_link_list_t       open_links;
 
     //

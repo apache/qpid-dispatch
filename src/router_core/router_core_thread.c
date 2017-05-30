@@ -29,6 +29,19 @@
 
 ALLOC_DEFINE(qdr_action_t);
 
+
+static void qdr_activate_connections_CT(qdr_core_t *core)
+{
+    qdr_connection_t *conn = DEQ_HEAD(core->connections_to_activate);
+    while (conn) {
+        DEQ_REMOVE_HEAD_N(ACTIVATE, core->connections_to_activate);
+        conn->in_activate_list = false;
+        qd_server_activate((qd_connection_t*) qdr_connection_get_context(conn));
+        conn = DEQ_HEAD(core->connections_to_activate);
+    }
+}
+
+
 void *router_core_thread(void *arg)
 {
     qdr_core_t        *core = (qdr_core_t*) arg;
@@ -71,6 +84,11 @@ void *router_core_thread(void *arg)
             free_qdr_action_t(action);
             action = DEQ_HEAD(action_list);
         }
+
+        //
+        // Activate all connections that were flagged for activation during the above processing
+        //
+        qdr_activate_connections_CT(core);
     }
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread exited");

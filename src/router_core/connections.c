@@ -491,7 +491,10 @@ void qdr_connection_handlers(qdr_core_t                *core,
 
 void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn)
 {
-    qd_server_activate((qd_connection_t*) qdr_connection_get_context(conn));
+    if (!conn->in_activate_list) {
+        DEQ_INSERT_TAIL_N(ACTIVATE, core->connections_to_activate, conn);
+        conn->in_activate_list = true;
+    }
 }
 
 
@@ -1230,6 +1233,14 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
         qdr_terminus_free(work->target);
         free_qdr_connection_work_t(work);
         work = DEQ_HEAD(conn->work_list);
+    }
+
+    //
+    // If this connection is on the activation list, remove it from the list
+    //
+    if (conn->in_activate_list) {
+        conn->in_activate_list = false;
+        DEQ_REMOVE_N(ACTIVATE, core->connections_to_activate, conn);
     }
 
     DEQ_REMOVE(core->open_connections, conn);
