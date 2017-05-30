@@ -948,7 +948,7 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
             if (DEQ_SIZE(addr->rlinks) == 0)
                 qdr_post_mobile_removed_CT(core, key);
             else
-                qdr_post_mobile_update_CT(core, key, DEQ_SIZE(addr->inlinks), addr->out_capacity);
+                qdr_post_mobile_update_CT(core, key, DEQ_SIZE(addr->inlinks), addr->local_out_capacity);
         }
     }
 
@@ -1265,9 +1265,9 @@ static void qdr_outgoing_link_added_CT(qdr_core_t *core, qdr_address_t *addr, qd
     const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
     if (key && *key == 'M') {
         if (DEQ_SIZE(addr->rlinks) == 1)
-            qdr_post_mobile_added_CT(core, key, DEQ_SIZE(addr->inlinks), addr->out_capacity);
+            qdr_post_mobile_added_CT(core, key, DEQ_SIZE(addr->inlinks), addr->local_out_capacity);
         else
-            qdr_post_mobile_update_CT(core, key, DEQ_SIZE(addr->inlinks), addr->out_capacity);
+            qdr_post_mobile_update_CT(core, key, DEQ_SIZE(addr->inlinks), addr->local_out_capacity);
     }
 
     //
@@ -1424,7 +1424,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 //
                 // Add the link's capacity to the address's aggregate out_capacity
                 //
-                addr->out_capacity += link->capacity;
+                addr->local_out_capacity += link->capacity;
 
                 //
                 // Do all the action that is needed when an outgoing link is established
@@ -1522,7 +1522,7 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
                     //
                     // Add the link's capacity to the address's aggregate out_capacity
                     //
-                    link->owning_addr->out_capacity += link->capacity;
+                    link->owning_addr->local_out_capacity += link->capacity;
 
                     //
                     // Do all the action that is needed when an outgoing link is established
@@ -1624,7 +1624,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         case QD_LINK_ENDPOINT:
             if (addr) {
                 qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-                addr->out_capacity -= link->capacity;
+                addr->local_out_capacity -= link->capacity;
                 was_local = true;
             }
             break;

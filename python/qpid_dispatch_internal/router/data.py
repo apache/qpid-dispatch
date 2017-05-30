@@ -21,7 +21,9 @@
 ## Define the current protocol version.  Any messages that do not contain version
 ## information shall be considered to be coming from routers using version 0.
 ##
-ProtocolVersion = 1L
+## Version 2 - Carry out-capacity and in-link-count per address in MAU
+##
+ProtocolVersion = 2L
 
 def getMandatory(data, key, cls=None):
     """

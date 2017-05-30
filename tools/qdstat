@@ -47,6 +47,7 @@ def parse_args(argv):
     parser.add_option("-l", "--links", help="Show Router Links",            action="store_const", const="l",   dest="show")
     parser.add_option("-n", "--nodes", help="Show Router Nodes",            action="store_const", const="n",   dest="show")
     parser.add_option("-a", "--address", help="Show Router Addresses",      action="store_const", const="a",   dest="show")
+    parser.add_option("-f", "--flowcontrol", help="Show Flow Control Data", action="store_const", const="f",   dest="show")
     parser.add_option("-m", "--memory", help="Show Router Memory Stats",    action="store_const", const="m",   dest="show")
     parser.add_option("--autolinks", help="Show Auto Links",                action="store_const", const="autolinks",  dest="show")
     parser.add_option("--linkroutes", help="Show Link Routes",              action="store_const", const="linkroutes", dest="show")
@@ -399,6 +400,38 @@ class BusManager(Node):
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
+    def displayFlowControl(self):
+        disp = Display(prefix="  ")
+        heads = []
+        heads.append(Header("class"))
+        heads.append(Header("addr"))
+        heads.append(Header("phs"))
+        heads.append(Header("local-in-links", Header.COMMAS))
+        heads.append(Header("local-out-cap", Header.COMMAS))
+        heads.append(Header("remote-in-links", Header.COMMAS))
+        heads.append(Header("remote-out-cap", Header.COMMAS))
+        heads.append(Header("target-credit", Header.COMMAS))
+        rows = []
+        cols = ('localInLinks', 'localOutCapacity', 'remoteInLinks', 'remoteOutCapacity', 'targetInCredit', 'name')
+
+        objects = self.query('org.apache.qpid.dispatch.router.address', cols, limit=self.opts.limit)
+
+        for addr in objects:
+            row = []
+            row.append(self._addr_class(addr.name))
+            row.append(self._addr_text(addr.name))
+            row.append(self._addr_phase(addr.name))
+            row.append(addr.localInLinks)
+            row.append(addr.localOutCapacity)
+            row.append(addr.remoteInLinks)
+            row.append(addr.remoteOutCapacity)
+            row.append(addr.targetInCredit)
+            rows.append(row)
+        title = "Router Addresses"
+        sorter = Sorter(heads, rows, 'addr', 0, True)
+        dispRows = sorter.getSorted()
+        disp.formattedTable(title, heads, dispRows)
+
     def displayAutolinks(self):
         disp = Display(prefix="  ")
         heads = []
@@ -500,6 +533,7 @@ class BusManager(Node):
         if   main == 'l': self.displayRouterLinks()
         elif main == 'n': self.displayRouterNodes()
         elif main == 'a': self.displayAddresses()
+        elif main == 'f': self.displayFlowControl()
         elif main == 'm': self.displayMemory()
         elif main == 'g': self.displayGeneral()
         elif main == 'c': self.displayConnections()

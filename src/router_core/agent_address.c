@@ -37,6 +37,11 @@
 #define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER 14
 #define QDR_ADDRESS_TRANSIT_OUTSTANDING       15
 #define QDR_ADDRESS_TRACKED_DELIVERIES        16
+#define QDR_ADDRESS_LOCAL_IN_LINKS            17
+#define QDR_ADDRESS_LOCAL_OUT_CAPACITY        18
+#define QDR_ADDRESS_REMOTE_IN_LINKS           19
+#define QDR_ADDRESS_REMOTE_OUT_CAPACITY       20
+#define QDR_ADDRESS_TARGET_IN_CREDIT          21
 
 const char *qdr_address_columns[] =
     {"name",
@@ -56,6 +61,11 @@ const char *qdr_address_columns[] =
      "deliveriesFromContainer",
      "transitOutstanding",
      "trackedDeliveries",
+     "localInLinks",
+     "localOutCapacity",
+     "remoteInLinks",
+     "remoteOutCapacity",
+     "targetInCredit",
      0};
 
 
@@ -152,6 +162,26 @@ static void qdr_insert_address_columns_CT(qdr_core_t          *core,
 
     case QDR_ADDRESS_TRACKED_DELIVERIES:
         qd_compose_insert_long(body, addr->tracked_deliveries);
+        break;
+
+    case QDR_ADDRESS_LOCAL_IN_LINKS:
+        qd_compose_insert_long(body, DEQ_SIZE(addr->inlinks));
+        break;
+
+    case QDR_ADDRESS_LOCAL_OUT_CAPACITY:
+        qd_compose_insert_long(body, addr->local_out_capacity);
+        break;
+
+    case QDR_ADDRESS_REMOTE_IN_LINKS:
+        qd_compose_insert_long(body, addr->remote_inlinks);
+        break;
+
+    case QDR_ADDRESS_REMOTE_OUT_CAPACITY:
+        qd_compose_insert_long(body, addr->remote_out_capacity);
+        break;
+
+    case QDR_ADDRESS_TARGET_IN_CREDIT:
+        qd_compose_insert_long(body, addr->target_in_credit);
         break;
 
     default:

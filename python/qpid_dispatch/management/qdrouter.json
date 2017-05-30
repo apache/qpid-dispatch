@@ -1234,6 +1234,26 @@
                 "trackedDeliveries": {
                     "type": "integer",
                     "description": "Number of transit deliveries being tracked for this address (for balanced distribution)."
+                },
+                "localInLinks": {
+                    "type": "integer",
+                    "description": "Number of incoming links for this address attached to the local router."
+                },
+                "localOutCapacity": {
+                    "type": "integer",
+                    "description": "Total link capacity for outgoing links for this address attached to the local router."
+                },
+                "remoteInLinks": {
+                    "type": "integer",
+                    "description": "Number of incoming links for this address attached to remote routers."
+                },
+                "remoteOutCapacity": {
+                    "type": "integer",
+                    "description": "Total link capacity for outgoing links for this address attached to remote routers."
+                },
+                "targetInCredit": {
+                    "type": "integer",
+                    "description": "Calculated target credit for local incoming links for this address."
                 }
             }
         },

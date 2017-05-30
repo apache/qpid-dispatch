@@ -446,9 +446,14 @@ struct qdr_address_t {
     bool                       local;
     uint32_t                   tracked_deliveries;
     uint64_t                   cost_epoch;
-    uint32_t                   out_capacity;
-    uint32_t                   remote_inlinks;
-    uint32_t                   remote_out_capacity;
+
+    //
+    // State for outgoing-capacity-based-flow-control
+    //
+    uint32_t local_out_capacity;  ///< Total link capacity on local outgoing links
+    uint32_t remote_inlinks;      ///< Number of remote incoming links
+    uint32_t remote_out_capacity; ///< Total link capacity on remote outgoing links
+    uint32_t target_in_credit;    ///< Computed target credit for local incoming links
 
     //
     // State for "closest" treatment
