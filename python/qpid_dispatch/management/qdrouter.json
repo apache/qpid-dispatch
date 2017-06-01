@@ -1120,6 +1120,10 @@
                     "type": "integer",
                     "description": "The capacity, in deliveries, for the link.  The number of undelivered plus unsettled deliveries shall not exceed the capacity.  This is enforced by link flow control."
                 },
+                "creditWindow": {
+                    "type": "integer",
+                    "description": "The computed credit window for this link"
+                },
                 "peer": {
                     "type": "string",
                     "description": "Identifier of the paired link if this is an attach-routed link."

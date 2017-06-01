@@ -260,6 +260,7 @@ class BusManager(Node):
         heads.append(Header("addr"))
         heads.append(Header("phs"))
         heads.append(Header("cap"))
+        heads.append(Header("win"))
         heads.append(Header("undel"))
         heads.append(Header("unsett"))
         heads.append(Header("del"))
@@ -274,7 +275,7 @@ class BusManager(Node):
             heads.append(Header("name"))
         rows = []
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
-                'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
+                'capacity', 'creditWindow', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
                 'presettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
                 'modifiedCount', 'adminStatus', 'operStatus', 'linkName')
 
@@ -291,6 +292,7 @@ class BusManager(Node):
             row.append(self._addr_text(link.owningAddr))
             row.append(self._addr_phase(link.owningAddr))
             row.append(link.capacity)
+            row.append(link.creditWindow)
             row.append(link.undeliveredCount)
             row.append(link.unsettledCount)
             row.append(link.deliveryCount)

@@ -29,18 +29,19 @@
 #define QDR_LINK_LINK_DIR           5
 #define QDR_LINK_OWNING_ADDR        6
 #define QDR_LINK_CAPACITY           7
-#define QDR_LINK_PEER               8
-#define QDR_LINK_UNDELIVERED_COUNT  9
-#define QDR_LINK_UNSETTLED_COUNT    10
-#define QDR_LINK_DELIVERY_COUNT     11
-#define QDR_LINK_CONNECTION_ID      12
-#define QDR_LINK_ADMIN_STATE        13
-#define QDR_LINK_OPER_STATE         14
-#define QDR_LINK_PRESETTLED_COUNT   15
-#define QDR_LINK_ACCEPTED_COUNT     16
-#define QDR_LINK_REJECTED_COUNT     17
-#define QDR_LINK_RELEASED_COUNT     18
-#define QDR_LINK_MODIFIED_COUNT     19
+#define QDR_LINK_CREDIT_WINDOW      8
+#define QDR_LINK_PEER               9
+#define QDR_LINK_UNDELIVERED_COUNT  10
+#define QDR_LINK_UNSETTLED_COUNT    11
+#define QDR_LINK_DELIVERY_COUNT     12
+#define QDR_LINK_CONNECTION_ID      13
+#define QDR_LINK_ADMIN_STATE        14
+#define QDR_LINK_OPER_STATE         15
+#define QDR_LINK_PRESETTLED_COUNT   16
+#define QDR_LINK_ACCEPTED_COUNT     17
+#define QDR_LINK_REJECTED_COUNT     18
+#define QDR_LINK_RELEASED_COUNT     19
+#define QDR_LINK_MODIFIED_COUNT     20
 
 const char *qdr_link_columns[] =
     {"name",
@@ -51,6 +52,7 @@ const char *qdr_link_columns[] =
      "linkDir",
      "owningAddr",
      "capacity",
+     "creditWindow",
      "peer",
      "undeliveredCount",
      "unsettledCount",
@@ -131,6 +133,10 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
 
     case QDR_LINK_CAPACITY:
         qd_compose_insert_uint(body, link->capacity);
+        break;
+
+    case QDR_LINK_CREDIT_WINDOW:
+        qd_compose_insert_uint(body, link->credit_window);
         break;
 
     case QDR_LINK_PEER:
