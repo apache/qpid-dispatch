@@ -249,12 +249,18 @@ void qd_compose_insert_buffers(qd_composed_field_t *field, qd_buffer_list_t *lis
 void qd_compose_insert_buffers_or_null(qd_composed_field_t *field, qd_buffer_list_t *list);
 
 /**
- * Insert a raw buffer chain's contents into a map.
- * Bump map element count by given size.
+ * Administratively insert a raw buffer chain's contents into a map.
+ * Bump map element count and size in bytes to reflect opaque that caller will insert later.
+ * 
+ * Note the the bytes are never actually copied into the composed field.
+ * 
+ * @param field A field created by qd_compose().
+ * @param count The number of map elements in the buffer chain.
+ * @param size The number of bytes in the buffer chain
  */
-void qd_compose_insert_opaque_elements(qd_composed_field_t   *field,
-                                       uint32_t               count,
-                                       qd_iterator_pointer_t *raw_ptr);
+void qd_compose_insert_opaque_elements(qd_composed_field_t *field,
+                                       uint32_t             count,
+                                       uint32_t             size);
 
 ///@}
 

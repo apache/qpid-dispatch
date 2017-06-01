@@ -554,30 +554,10 @@ void qd_compose_insert_buffers_or_null(qd_composed_field_t *field,
 }
 
 
-void qd_compose_insert_opaque_elements(qd_composed_field_t   *field,
-                                       uint32_t               count,
-                                       qd_iterator_pointer_t *raw_ptr)
+void qd_compose_insert_opaque_elements(qd_composed_field_t *field,
+                                       uint32_t             count,
+                                       uint32_t             size)
 {
-    //static void qd_insert(qd_composed_field_t *field, const uint8_t *seq, size_t len)
-    qd_buffer_t *buf_in    = raw_ptr->buffer;
-    uint8_t *    seq       = raw_ptr->cursor;
-    size_t       remaining = raw_ptr->remaining;
-
-    if (buf_in == 0 || remaining == 0)
-        return;
-
-    while (buf_in && remaining) {
-        // compute how many bytes left in current buffer and copy them
-        size_t to_copy = qd_buffer_base(buf_in) + qd_buffer_size(buf_in) - seq;
-        if (to_copy > remaining)
-            to_copy = remaining;
-        if (to_copy > 0) {
-            qd_insert(field, seq, to_copy);
-            remaining -= to_copy;
-        }
-        buf_in = DEQ_NEXT(buf_in);
-        seq = qd_buffer_base(buf_in);
-    }
-    
     bump_count_by_n(field, count);
+    bump_length(field, size);
 }

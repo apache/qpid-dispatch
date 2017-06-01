@@ -964,7 +964,7 @@ qd_parsed_field_t *qd_message_message_annotations(qd_message_t *in_msg)
     return content->parsed_message_annotations;
 }
 
-// HACK ALERT
+
 qd_parsed_field_t *qd_message_v2_annotations(qd_message_t *in_msg)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
@@ -987,6 +987,16 @@ qd_parsed_field_t *qd_message_v2_annotations(qd_message_t *in_msg)
         &content->ma_all_annotations,
         &content->ma_count,
         &content->ma_v2);
+
+    // construct pseudo-field location of user annotations blob
+    if (content->ma_count > 0) {
+        qd_iterator_pointer_t remaining;
+        qd_parse_get_view_cursor(msg->content->ma_all_annotations, &remaining);
+        content->field_user_annotations.buffer = remaining.buffer;
+        content->field_user_annotations.offset = remaining.cursor - qd_buffer_base(remaining.buffer);
+        content->field_user_annotations.length = remaining.remaining;
+        content->field_user_annotations.parsed = true;
+    }
 
     if (BLAB && errorptr)
         fprintf(stdout, "DEBUGGING: message.c parse error: %s\n", errorptr);
@@ -1017,7 +1027,7 @@ qd_parsed_field_t *qd_message_v2_annotations(qd_message_t *in_msg)
 
     // extract phase
     content->ma_phase = qd_parse_as_int(content->ma_phase_2);
-    
+
     return content->ma_v2;
 }
 
@@ -1259,9 +1269,10 @@ static void compose_message_annotations2(qd_message_pvt_t *msg, qd_buffer_list_t
             qd_compose_start_map(out_ma);
             map_started = true;
         }
-        qd_iterator_pointer_t remaining_cursor;
-        qd_parse_get_view_cursor(msg->content->ma_all_annotations, &remaining_cursor);
-        qd_compose_insert_opaque_elements(out_ma, msg->content->ma_count, &remaining_cursor);
+
+        // bump the map size and count to reflect user's blob
+        qd_compose_insert_opaque_elements(out_ma, msg->content->ma_count,
+                                          msg->content->field_user_annotations.length);
     }
     
     if (map_started) {
@@ -1353,6 +1364,16 @@ void qd_message_send(qd_message_t *in_msg,
         da_buf = DEQ_NEXT(da_buf);
     }
     qd_buffer_list_free_buffers(&new_ma);
+
+    if (!USE_ANNO_V1) {
+        if (content->field_user_annotations.length > 0) {
+            qd_buffer_t *buf2      = content->field_user_annotations.buffer;
+            unsigned char *cursor2 = content->field_user_annotations.offset + qd_buffer_base(buf);
+            advance(&cursor2, &buf2,
+                    content->field_user_annotations.length,
+                    send_handler, (void*) pnl);
+        }
+    }
 
     //
     // Skip over replaced message annotations
