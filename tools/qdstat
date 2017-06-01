@@ -292,7 +292,10 @@ class BusManager(Node):
             row.append(self._addr_text(link.owningAddr))
             row.append(self._addr_phase(link.owningAddr))
             row.append(link.capacity)
-            row.append(link.creditWindow)
+            if link.linkDir == 'in':
+                row.append(link.creditWindow)
+            else:
+                row.append('-')
             row.append(link.undeliveredCount)
             row.append(link.unsettledCount)
             row.append(link.deliveryCount)
