@@ -760,7 +760,7 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
     // If there is a credit deficit (i.e. the credit window shrank), then reduce the
     // credit by up to the deficit.
     //
-    if (link->credit_deficit > 0) {
+    if (link->link_type == QD_LINK_ENDPOINT && link->credit_deficit > 0) {
         if (link->credit_deficit > credit) {
             link->credit_deficit -= credit;
             credit = 0;
@@ -812,6 +812,9 @@ static void qdr_calculate_target_credit_CT(qdr_address_t *addr)
  */
 void qdr_addr_visit_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
 {
+    const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+    bool is_mobile = (key && *key == 'M');
+
     //
     // Calculate the new target credit for the address.
     //
@@ -822,10 +825,10 @@ void qdr_addr_visit_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
         qdr_link_t *link      = ref->link;
         bool        from_zero = link->credit_window == 0;
 
-        if (DEQ_SIZE(addr->subscriptions) > 0) {
+        if (!is_mobile || DEQ_SIZE(addr->subscriptions) > 0) {
             //
-            // If the address has at least one in-process subscriber and the
-            // credit window is zero (first time through), simply issue the
+            // If the address has at least one in-process subscriber, or is not mobile,
+            // and the credit window is zero (first time through), simply issue the
             // link capacity.  This address will not follow the credit heuristic.
             //
             if (from_zero) {
