@@ -273,11 +273,44 @@ int qd_message_repr_len();
 
 qd_log_source_t* qd_message_log_source();
 
-
+/**
+ * Accessor for message field ingress
+ * 
+ * @param msg A pointer to the message
+ * @return the parsed field
+ */
 qd_parsed_field_t *qd_message_get_ingress    (qd_message_t *msg);
+
+/**
+ * Accessor for message field phase
+ * 
+ * @param msg A pointer to the message
+ * @return the parsed field
+ */
 qd_parsed_field_t *qd_message_get_phase      (qd_message_t *msg);
+
+/**
+ * Accessor for message field to_override
+ * 
+ * @param msg A pointer to the message
+ * @return the parsed field
+ */
 qd_parsed_field_t *qd_message_get_to_override(qd_message_t *msg);
+
+/**
+ * Accessor for message field trace
+ * 
+ * @param msg A pointer to the message
+ * @return the parsed field
+ */
 qd_parsed_field_t *qd_message_get_trace      (qd_message_t *msg);
+
+/**
+ * Accessor for message field phase
+ * 
+ * @param msg A pointer to the message
+ * @return the phase as an integer
+ */
 int                qd_message_get_phase_val  (qd_message_t *msg);
 
 ///@}

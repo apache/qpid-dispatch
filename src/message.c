@@ -1256,9 +1256,7 @@ static void compose_message_annotations2(qd_message_pvt_t *msg, qd_buffer_list_t
         qd_compose_start_list(out_ma);
         qd_compose_insert_buffers_or_null(out_ma, &msg->ma_to_override);
         qd_compose_insert_int(out_ma, msg->ma_phase);
-        //qd_compose_start_list(out_ma);
         qd_compose_insert_buffers_or_null(out_ma, &msg->ma_ingress);
-        //qd_compose_end_list(out_ma);
         qd_compose_insert_buffers_or_null(out_ma, &msg->ma_trace);
         qd_compose_end_list(out_ma);
     }
