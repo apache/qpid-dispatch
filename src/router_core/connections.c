@@ -1360,12 +1360,6 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     // Do the side effects of this link change.
                     //
                     qdr_link_change_CT(core, addr, link);
-
-                    //
-                    // Issue the initial credit only if there are destinations for the address.
-                    //
-                    if (DEQ_SIZE(addr->subscriptions) || DEQ_SIZE(addr->rlinks) || qd_bitmask_cardinality(addr->rnodes))
-                        qdr_link_issue_credit_CT(core, link, link->capacity, false);
                 }
             }
             break;
