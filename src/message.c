@@ -1335,7 +1335,6 @@ void qd_message_send(qd_message_t *in_msg,
     //
     // Send delivery annotation if present
     //
-    cursor = qd_buffer_base(buf);
     if (content->section_delivery_annotation.length > 0) {
         buf    = content->section_delivery_annotation.buffer;
         cursor = content->section_delivery_annotation.offset + qd_buffer_base(buf);
