@@ -242,23 +242,25 @@ class MessageLSR(object):
 class MessageMAU(object):
     """
     """
-    def __init__(self, body, _id=None, _seq=None, _add_list=None, _del_list=None, _exist_list=None):
+    def __init__(self, body, _id=None, _seq=None, _add_map=None, _del_list=None, _update_map=None, _exist_map=None):
         if body:
             self.id = getMandatory(body, 'id', str)
             self.version = getOptional(body, 'pv', 0, long)
             self.area = '0'
             self.mobile_seq = getMandatory(body, 'mobile_seq', long)
-            self.add_list = getOptional(body, 'add', None, list)
+            self.add_map = getOptional(body, 'add', None, dict)
             self.del_list = getOptional(body, 'del', None, list)
-            self.exist_list = getOptional(body, 'exist', None, list)
+            self.update_map = getOptional(body, 'upd', None, dict)
+            self.exist_map = getOptional(body, 'exist', None, dict)
         else:
             self.id = _id
             self.version = ProtocolVersion
             self.area = '0'
             self.mobile_seq = long(_seq)
-            self.add_list = _add_list
+            self.add_map = _add_map
             self.del_list = _del_list
-            self.exist_list = _exist_list
+            self.update_map = _update_map
+            self.exist_map = _exist_map
 
     def get_opcode(self):
         return 'MAU'
@@ -266,21 +268,24 @@ class MessageMAU(object):
     def __repr__(self):
         _add = ''
         _del = ''
+        _upd = ''
         _exist = ''
-        if self.add_list != None:   _add   = ' add=%r'   % self.add_list
+        if self.add_map != None:    _add   = ' add=%r'   % self.add_map
         if self.del_list != None:   _del   = ' del=%r'   % self.del_list
-        if self.exist_list != None: _exist = ' exist=%r' % self.exist_list
-        return "MAU(id=%s pv=%d area=%s mobile_seq=%d%s%s%s)" % \
-                (self.id, self.version, self.area, self.mobile_seq, _add, _del, _exist)
+        if self.update_map != None: _upd   = ' upd=%r'   % self.update_map
+        if self.exist_map != None:  _exist = ' exist=%r' % self.exist_map
+        return "MAU(id=%s pv=%d area=%s mobile_seq=%d%s%s%s%s)" % \
+                (self.id, self.version, self.area, self.mobile_seq, _add, _del, _upd, _exist)
 
     def to_dict(self):
         body = {'id'         : self.id,
                 'pv'         : self.version,
                 'area'       : self.area,
                 'mobile_seq' : self.mobile_seq }
-        if self.add_list != None:   body['add']   = self.add_list
+        if self.add_map != None:    body['add']   = self.add_map
         if self.del_list != None:   body['del']   = self.del_list
-        if self.exist_list != None: body['exist'] = self.exist_list
+        if self.update_map != None: body['upd']   = self.update_map
+        if self.exist_map != None:  body['exist'] = self.exist_map
         return body
 
 

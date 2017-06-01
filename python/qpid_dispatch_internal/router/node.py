@@ -353,6 +353,16 @@ class NodeTracker(object):
         return None
 
 
+    def address_values(self, addr):
+        values = []
+        for nid,node in self.nodes.items():
+            if addr in node.mobile_addresses:
+                values.append(node.mobile_addresses[addr])
+        if len(values) == 0:
+            return (0, 0)
+        return tuple([sum(x) for x in zip(*values)])
+
+
     def _allocate_maskbit(self):
         if self.next_maskbit == None:
             raise Exception("Exceeded Maximum Router Count")
@@ -392,7 +402,7 @@ class RouterNode(object):
         self.next_hop_router         = None
         self.cost                    = None
         self.valid_origins           = None
-        self.mobile_addresses        = []
+        self.mobile_addresses        = {}
         self.mobile_address_sequence = 0
         self.need_ls_request         = True
         self.need_mobile_request     = False
@@ -519,35 +529,62 @@ class RouterNode(object):
         return False
 
 
-    def map_address(self, addr):
-        self.mobile_addresses.append(addr)
+    def map_address(self, addr, values):
+        self.mobile_addresses[addr] = values
         self.adapter.map_destination(addr, self.maskbit)
+        values = self.parent.address_values(addr)
+        self.adapter.update_destination(addr, values[0], values[1])
         self.log(LOG_DEBUG, "Remote destination %s mapped to router %s" % (self._logify(addr), self.id))
 
 
+    def update_address(self, addr, values):
+        self.mobile_addresses[addr] = values
+        values = self.parent.address_values(addr)
+        self.adapter.update_destination(addr, values[0], values[1])
+
+
     def unmap_address(self, addr):
-        self.mobile_addresses.remove(addr)
+        self.mobile_addresses.pop(addr)
         self.adapter.unmap_destination(addr, self.maskbit)
+        values = self.parent.address_values(addr)
+        self.adapter.update_destination(addr, values[0], values[1])
         self.log(LOG_DEBUG, "Remote destination %s unmapped from router %s" % (self._logify(addr), self.id))
 
 
     def unmap_all_addresses(self):
         self.mobile_address_sequence = 0
-        while self.mobile_addresses:
-            self.unmap_address(self.mobile_addresses[0])
+        alist = self.mobile_addresses.keys()
+        for a in alist:
+            self.unmap_address(a)
 
 
     def overwrite_addresses(self, addrs):
-        added   = []
+        added   = {}
         deleted = []
-        for a in addrs:
+        for a,v in addrs.items():
             if a not in self.mobile_addresses:
-                added.append(a)
+                added[a] = v
+                addrs.pop(a)
         for a in self.mobile_addresses:
             if a not in addrs:
                 deleted.append(a)
-        for a in added:
-            self.map_address(a)
+
+        ##
+        ## Map newly added addresses to this node
+        ##
+        for a,v in added.items():
+            self.map_address(a, v)
+
+        ##
+        ## Update addresses whose values have changed
+        ##
+        for a,v in addrs.items():
+            if self.mobile_addresses[a] != v:
+                self.update_address(a, v)
+
+        ##
+        ## Unmap addresses that were not found in the new set
+        ##
         for a in deleted:
             self.unmap_address(a)
 

@@ -756,14 +756,25 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
 {
     assert(link->link_direction == QD_INCOMING);
 
+    //
+    // If there is a credit deficit (i.e. the credit window shrank), then reduce the
+    // credit by up to the deficit.
+    //
+    if (link->credit_deficit > 0) {
+        if (link->credit_deficit > credit) {
+            link->credit_deficit -= credit;
+            credit = 0;
+        } else {
+            credit -= link->credit_deficit;
+            link->credit_deficit = 0;
+        }
+    }
+
     bool drain_changed = link->drain_mode |= drain;
     link->drain_mode   = drain;
 
     if (!drain_changed && credit == 0)
         return;
-
-    if (credit > 0)
-        link->flow_started = true;
 
     qdr_link_work_t *work = new_qdr_link_work_t();
     ZERO(work);
@@ -778,56 +789,92 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
 }
 
 
+static void qdr_calculate_target_credit_CT(qdr_address_t *addr)
+{
+    uint32_t total_in_links     = DEQ_SIZE(addr->inlinks) + addr->remote_inlinks;
+    uint32_t total_out_capacity = addr->local_out_capacity + addr->remote_out_capacity;
+
+    if (total_out_capacity == 0)
+        addr->target_in_credit = 0;
+    else if (total_out_capacity <= total_in_links)
+        addr->target_in_credit = 1;
+    else
+        addr->target_in_credit = total_out_capacity / (total_in_links ? total_in_links : 1);
+}
+
+
 /**
- * This function should be called after adding a new destination (subscription, local link,
- * or remote node) to an address.  If this address now has exactly one destination (i.e. it
- * transitioned from unreachable to reachable), make sure any unstarted in-links are issued
- * initial credit.
+ * This function should be called whenever the target credit for the address is changed.
+ * Each inlink for the address will have its credit adjusted.
  *
  * Also, check the inlinks to see if there are undelivered messages.  If so, drain them to
  * the forwarder.
  */
-void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
+void qdr_addr_visit_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
 {
     //
-    // If there aren't any inlinks, there's no point in proceeding.
+    // Calculate the new target credit for the address.
     //
-    if (DEQ_SIZE(addr->inlinks) == 0)
-        return;
+    qdr_calculate_target_credit_CT(addr);
 
-    if (qdr_addr_path_count_CT(addr) == 1) {
-        qdr_link_ref_t *ref = DEQ_HEAD(addr->inlinks);
-        while (ref) {
-            qdr_link_t *link = ref->link;
+    qdr_link_ref_t *ref = DEQ_HEAD(addr->inlinks);
+    while (ref) {
+        qdr_link_t *link      = ref->link;
+        bool        from_zero = link->credit_window == 0;
 
+        if (DEQ_SIZE(addr->subscriptions) > 0) {
             //
-            // Issue credit to stalled links
+            // If the address has at least one in-process subscriber and the
+            // credit window is zero (first time through), simply issue the
+            // link capacity.  This address will not follow the credit heuristic.
             //
-            if (!link->flow_started)
+            if (from_zero) {
+                link->credit_window = link->capacity;
                 qdr_link_issue_credit_CT(core, link, link->capacity, false);
-
-            //
-            // Drain undelivered deliveries via the forwarder
-            //
-            if (DEQ_SIZE(link->undelivered) > 0) {
-                //
-                // Move all the undelivered to a local list in case not all can be delivered.
-                // We don't want to loop here forever putting the same messages on the undelivered
-                // list.
-                //
-                qdr_delivery_list_t deliveries;
-                DEQ_MOVE(link->undelivered, deliveries);
-
-                qdr_delivery_t *dlv = DEQ_HEAD(deliveries);
-                while (dlv) {
-                    DEQ_REMOVE_HEAD(deliveries);
-                    qdr_link_forward_CT(core, link, dlv, addr);
-                    dlv = DEQ_HEAD(deliveries);
-                }
             }
+        } else {
+            //
+            // Target credit is not to exceed the link capacity.
+            //
+            uint32_t target_credit = (addr->target_in_credit < link->capacity) ? addr->target_in_credit : link->capacity;
+            int32_t  diff = (int32_t) target_credit - (int32_t) link->credit_window;
 
-            ref = DEQ_NEXT(ref);
+            link->credit_window = target_credit;
+            if (diff > 0) {
+                //
+                // We increased the window for this link.  Issue the additional credit.
+                //
+                qdr_link_issue_credit_CT(core, link, diff, false);
+            } else {
+                //
+                // We decreased (or didn't change) the window.  Record the deficit so we
+                // can withhold replenished credit.
+                //
+                link->credit_deficit = (uint32_t) (0 - diff);
+            }
         }
+
+        //
+        // Drain undelivered deliveries via the forwarder after unblocking a zero-credit link.
+        //
+        if (from_zero && DEQ_SIZE(link->undelivered) > 0) {
+            //
+            // Move all the undelivered to a local list in case not all can be delivered.
+            // We don't want to loop here forever putting the same messages on the undelivered
+            // list.
+            //
+            qdr_delivery_list_t deliveries;
+            DEQ_MOVE(link->undelivered, deliveries);
+
+            qdr_delivery_t *dlv = DEQ_HEAD(deliveries);
+            while (dlv) {
+                DEQ_REMOVE_HEAD(deliveries);
+                qdr_link_forward_CT(core, link, dlv, addr);
+                dlv = DEQ_HEAD(deliveries);
+            }
+        }
+
+        ref = DEQ_NEXT(ref);
     }
 }
 

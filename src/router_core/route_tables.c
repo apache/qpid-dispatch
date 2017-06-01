@@ -138,15 +138,11 @@ void qdr_core_update_destination(qdr_core_t *core, const char *address_hash, uin
 
 void qdr_core_route_table_handlers(qdr_core_t           *core, 
                                    void                 *context,
-                                   qdr_mobile_added_t    mobile_added,
                                    qdr_mobile_update_t   mobile_update,
-                                   qdr_mobile_removed_t  mobile_removed,
                                    qdr_link_lost_t       link_lost)
 {
     core->rt_context        = context;
-    core->rt_mobile_added   = mobile_added;
     core->rt_mobile_update  = mobile_update;
-    core->rt_mobile_removed = mobile_removed;
     core->rt_link_lost      = link_lost;
 }
 
@@ -586,7 +582,7 @@ static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool 
         qd_bitmask_set_bit(addr->rnodes, router_maskbit);
         rnode->ref_count++;
         addr->cost_epoch--;
-        qdr_addr_start_inlinks_CT(core, addr);
+        qdr_addr_visit_inlinks_CT(core, addr);
     } while (false);
 
     qdr_field_free(address);
@@ -643,8 +639,8 @@ static void qdr_unmap_destination_CT(qdr_core_t *core, qdr_action_t *action, boo
 static void qdr_update_destination_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     qdr_field_t *address      = action->args.route_table.address;
-    //uint32_t     in_links     = action->args.route_table.in_links;
-    //uint32_t     out_capacity = action->args.route_table.out_capacity;
+    uint32_t     in_links     = action->args.route_table.in_links;
+    uint32_t     out_capacity = action->args.route_table.out_capacity;
 
     if (discard) {
         qdr_field_free(address);
@@ -662,8 +658,15 @@ static void qdr_update_destination_CT(qdr_core_t *core, qdr_action_t *action, bo
         }
 
         //
-        // TODO - Process flow control update actions
+        // Update the remote flow control state.
         //
+        addr->remote_inlinks      = in_links;
+        addr->remote_out_capacity = out_capacity;
+
+        //
+        // Visit inlinks and issue/revoke credit based on the new fow control state.
+        //
+        qdr_addr_visit_inlinks_CT(core, addr);
     } while (false);
 
     qdr_field_free(address);
@@ -700,7 +703,7 @@ static void qdr_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         sub->addr = addr;
         DEQ_ITEM_INIT(sub);
         DEQ_INSERT_TAIL(addr->subscriptions, sub);
-        qdr_addr_start_inlinks_CT(core, addr);
+        qdr_addr_visit_inlinks_CT(core, addr);
 
     } else
         free(sub);
@@ -726,35 +729,11 @@ static void qdr_unsubscribe_CT(qdr_core_t *core, qdr_action_t *action, bool disc
 // Call-back Functions
 //==================================================================================
 
-static void qdr_do_mobile_added(qdr_core_t *core, qdr_general_work_t *work)
-{
-    char *address_hash = qdr_field_copy(work->field);
-    if (address_hash) {
-        core->rt_mobile_added(core->rt_context, address_hash, work->in_links, work->out_capacity);
-        free(address_hash);
-    }
-
-    qdr_field_free(work->field);
-}
-
-
 static void qdr_do_mobile_update(qdr_core_t *core, qdr_general_work_t *work)
 {
     char *address_hash = qdr_field_copy(work->field);
     if (address_hash) {
         core->rt_mobile_update(core->rt_context, address_hash, work->in_links, work->out_capacity);
-        free(address_hash);
-    }
-
-    qdr_field_free(work->field);
-}
-
-
-static void qdr_do_mobile_removed(qdr_core_t *core, qdr_general_work_t *work)
-{
-    char *address_hash = qdr_field_copy(work->field);
-    if (address_hash) {
-        core->rt_mobile_removed(core->rt_context, address_hash);
         free(address_hash);
     }
 
@@ -768,30 +747,12 @@ static void qdr_do_link_lost(qdr_core_t *core, qdr_general_work_t *work)
 }
 
 
-void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash, uint32_t in_links, uint32_t out_capacity)
-{
-    qdr_general_work_t *work = qdr_general_work(qdr_do_mobile_added);
-    work->field        = qdr_field(address_hash);
-    work->in_links     = in_links;
-    work->out_capacity = out_capacity;
-    qdr_post_general_work_CT(core, work);
-}
-
-
 void qdr_post_mobile_update_CT(qdr_core_t *core, const char *address_hash, uint32_t in_links, uint32_t out_capacity)
 {
     qdr_general_work_t *work = qdr_general_work(qdr_do_mobile_update);
     work->field        = qdr_field(address_hash);
     work->in_links     = in_links;
     work->out_capacity = out_capacity;
-    qdr_post_general_work_CT(core, work);
-}
-
-
-void qdr_post_mobile_removed_CT(qdr_core_t *core, const char *address_hash)
-{
-    qdr_general_work_t *work = qdr_general_work(qdr_do_mobile_removed);
-    work->field = qdr_field(address_hash);
     qdr_post_general_work_CT(core, work);
 }
 

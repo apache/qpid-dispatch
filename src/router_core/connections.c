@@ -944,12 +944,8 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
     //
     if (was_local) {
         const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-        if (key && *key == 'M') {
-            if (DEQ_SIZE(addr->rlinks) == 0)
-                qdr_post_mobile_removed_CT(core, key);
-            else
-                qdr_post_mobile_update_CT(core, key, DEQ_SIZE(addr->inlinks), addr->local_out_capacity);
-        }
+        if (key && *key == 'M')
+            qdr_post_mobile_update_CT(core, key, DEQ_SIZE(addr->inlinks), addr->local_out_capacity);
     }
 
     //
@@ -1257,24 +1253,19 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 }
 
 
-static void qdr_outgoing_link_added_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link)
+static void qdr_link_change_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link)
 {
     //
     // Inform the router module of the change in address state
     //
     const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-    if (key && *key == 'M') {
-        if (DEQ_SIZE(addr->rlinks) == 1)
-            qdr_post_mobile_added_CT(core, key, DEQ_SIZE(addr->inlinks), addr->local_out_capacity);
-        else
-            qdr_post_mobile_update_CT(core, key, DEQ_SIZE(addr->inlinks), addr->local_out_capacity);
-    }
+    if (key && *key == 'M')
+        qdr_post_mobile_update_CT(core, key, DEQ_SIZE(addr->inlinks), addr->local_out_capacity);
 
     //
-    // If this is the first outgoing link on the address, kick off any blocked incoming links
+    // Recalculate the flow-control data and issue credit as needed.
     //
-    if (DEQ_SIZE(addr->rlinks) == 1)
-        qdr_addr_start_inlinks_CT(core, addr);
+    qdr_addr_visit_inlinks_CT(core, addr);
 }
 
 
@@ -1366,6 +1357,11 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     qdr_link_outbound_second_attach_CT(core, link, source, target);
 
                     //
+                    // Do the side effects of this link change.
+                    //
+                    qdr_link_change_CT(core, addr, link);
+
+                    //
                     // Issue the initial credit only if there are destinations for the address.
                     //
                     if (DEQ_SIZE(addr->subscriptions) || DEQ_SIZE(addr->rlinks) || qd_bitmask_cardinality(addr->rnodes))
@@ -1427,9 +1423,9 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 addr->local_out_capacity += link->capacity;
 
                 //
-                // Do all the action that is needed when an outgoing link is established
+                // Do the side effects of this link change.
                 //
-                qdr_outgoing_link_added_CT(core, addr, link);
+                qdr_link_change_CT(core, addr, link);
 
                 qdr_link_outbound_second_attach_CT(core, link, source, target);
             }
@@ -1494,7 +1490,13 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
             // Issue credit if this is an anonymous link or if its address has at least one reachable destination.
             //
             qdr_address_t *addr = link->owning_addr;
-            if (!addr || (DEQ_SIZE(addr->subscriptions) || DEQ_SIZE(addr->rlinks) || qd_bitmask_cardinality(addr->rnodes)))
+
+            //
+            // Do the side effects of this link change.
+            //
+            if (addr)
+                qdr_link_change_CT(core, addr, link);
+            else
                 qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
 
@@ -1525,9 +1527,9 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
                     link->owning_addr->local_out_capacity += link->capacity;
 
                     //
-                    // Do all the action that is needed when an outgoing link is established
+                    // Do the side effects of this link change.
                     //
-                    qdr_outgoing_link_added_CT(core, link->owning_addr, link);
+                    qdr_link_change_CT(core, link->owning_addr, link);
                 }
             }
             break;
@@ -1663,8 +1665,14 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     // If there was an address associated with this link, check to see if any address-related
     // cleanup has to be done.
     //
-    if (addr)
+    if (addr) {
+        //
+        // Do the side effects of this link change.
+        //
+        qdr_link_change_CT(core, addr, link);
+        
         qdr_check_addr_CT(core, addr, was_local);
+    }
 
     if (error)
         qdr_error_free(error);

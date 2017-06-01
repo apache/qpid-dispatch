@@ -75,16 +75,12 @@ void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *
 void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address_hash);
 void qdr_core_update_destination(qdr_core_t *core, const char *address_hash, uint32_t in_links, uint32_t out_capacity);
 
-typedef void (*qdr_mobile_added_t)   (void *context, const char *address_hash, uint32_t in_links, uint32_t out_capacity);
 typedef void (*qdr_mobile_update_t)  (void *context, const char *address_hash, uint32_t in_links, uint32_t out_capacity);
-typedef void (*qdr_mobile_removed_t) (void *context, const char *address_hash);
 typedef void (*qdr_link_lost_t)      (void *context, int link_maskbit);
 
 void qdr_core_route_table_handlers(qdr_core_t           *core, 
                                    void                 *context,
-                                   qdr_mobile_added_t    mobile_added,
                                    qdr_mobile_update_t   mobile_update,
-                                   qdr_mobile_removed_t  mobile_removed,
                                    qdr_link_lost_t       link_lost);
 
 /**

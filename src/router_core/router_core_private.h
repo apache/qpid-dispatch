@@ -380,8 +380,9 @@ struct qdr_link_t {
     qdr_link_oper_status_t   oper_status;
     bool                     strip_annotations_in;
     bool                     strip_annotations_out;
-    int                      capacity;
-    bool                     flow_started;   ///< for incoming, true iff initial credit has been granted
+    uint32_t                 capacity;       ///< Configured capacity
+    uint32_t                 credit_window;  ///< Currently effective credit amount
+    uint32_t                 credit_deficit; ///< Number of credit-replenishes to skip to reduce window
     bool                     drain_mode;
     int                      credit_to_core; ///< Number of the available credits incrementally given to the core
 
@@ -640,9 +641,7 @@ struct qdr_core_t {
     // Route table section
     //
     void                 *rt_context;
-    qdr_mobile_added_t    rt_mobile_added;
     qdr_mobile_update_t   rt_mobile_update;
-    qdr_mobile_removed_t  rt_mobile_removed;
     qdr_link_lost_t       rt_link_lost;
 
     //
@@ -700,7 +699,7 @@ void  qdr_forwarder_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain);
-void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr);
+void qdr_addr_visit_inlinks_CT(qdr_core_t *core, qdr_address_t *addr);
 void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv);
 void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *delivery);
@@ -708,9 +707,7 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
-void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash, uint32_t in_links, uint32_t out_capacity);
 void qdr_post_mobile_update_CT(qdr_core_t *core, const char *address_hash, uint32_t in_links, uint32_t out_capacity);
-void qdr_post_mobile_removed_CT(qdr_core_t *core, const char *address_hash);
 void qdr_post_link_lost_CT(qdr_core_t *core, int link_maskbit);
 
 void qdr_post_general_work_CT(qdr_core_t *core, qdr_general_work_t *work);

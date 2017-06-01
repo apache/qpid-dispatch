@@ -34,9 +34,10 @@ class MobileAddressEngine(object):
         self.node_tracker  = node_tracker
         self.id            = self.container.id
         self.mobile_seq    = 0
-        self.local_addrs   = []
-        self.added_addrs   = []
+        self.local_addrs   = {}
+        self.added_addrs   = {}
         self.deleted_addrs = []
+        self.updated_addrs = []
         self.sent_deltas   = {}
 
 
@@ -45,9 +46,12 @@ class MobileAddressEngine(object):
         ## If local addrs have changed, collect the changes and send a MAU with the diffs
         ## Note: it is important that the differential-MAU be sent before a RA is sent
         ##
-        if len(self.added_addrs) > 0 or len(self.deleted_addrs) > 0:
+        if len(self.added_addrs) > 0 or len(self.deleted_addrs) > 0 or len(self.updated_addrs) > 0:
             self.mobile_seq += 1
-            msg = MessageMAU(None, self.id, self.mobile_seq, self.added_addrs, self.deleted_addrs)
+            update_map = {}
+            for k in self.updated_addrs:
+                update_map[k] = self.local_addrs[k]
+            msg = MessageMAU(None, self.id, self.mobile_seq, self.added_addrs, self.deleted_addrs, update_map)
 
             self.sent_deltas[self.mobile_seq] = msg
             if len(self.sent_deltas) > MAX_KEPT_DELTAS:
@@ -55,34 +59,65 @@ class MobileAddressEngine(object):
 
             self.container.send('amqp:/_topo/0/all/qdrouter.ma', msg)
             self.container.log_ma(LOG_TRACE, "SENT: %r" % msg)
-            self.local_addrs.extend(self.added_addrs)
+            self.local_addrs.update(self.added_addrs)
             for addr in self.deleted_addrs:
-                self.local_addrs.remove(addr)
-            self.added_addrs   = []
+                self.local_addrs.pop(addr)
+            self.added_addrs   = {}
             self.deleted_addrs = []
+            self.updated_addrs = []
         return self.mobile_seq
 
 
-    def add_local_address(self, addr):
+    def update_local_address(self, addr, local_in_links, local_out_capacity):
         """
         """
-        if self.local_addrs.count(addr) == 0:
-            if self.added_addrs.count(addr) == 0:
-                self.added_addrs.append(addr)
+        value = (local_in_links, local_out_capacity)
+        if addr not in self.local_addrs:
+            ##
+            ## If the address is not present, schedule it to be added.  If it was
+            ## already scheduled, update the scheduled value.
+            ##
+            self.added_addrs[addr] = value
         else:
+            ##
+            ## If the address is already present
+            ##
             if self.deleted_addrs.count(addr) > 0:
+                ##
+                ## If it was scehduled to be deleted, cancel the deletion.
+                ##
                 self.deleted_addrs.remove(addr)
+
+            ##
+            ## Update the address value and schedule a protocol update
+            ##
+            self.local_addrs[addr] = value
+            if self.updated_addrs.count(addr) == 0:
+                self.updated_addrs.append(addr)
 
 
     def del_local_address(self, addr):
         """
         """
-        if self.local_addrs.count(addr) > 0:
+        if addr in self.local_addrs:
+            ##
+            ## If the address is present, schedule its deletion
+            ##
             if self.deleted_addrs.count(addr) == 0:
                 self.deleted_addrs.append(addr)
+
+            ##
+            ## If there is an update scheduled for this address, remove the update
+            ##
+            if self.updated_addrs.count(addr) > 0:
+                self.updated_addrs.remove(addr)
         else:
-            if self.added_addrs.count(addr) > 0:
-                self.added_addrs.remove(addr)
+            if addr in self.added_addrs:
+                ##
+                ## If the address is not present and it has been scheduled to
+                ## be added, unschedule the addition.
+                ##
+                self.added_addrs.pop(addr)
 
 
     def handle_mau(self, msg, now):
@@ -96,14 +131,14 @@ class MobileAddressEngine(object):
             return
         node = self.node_tracker.router_node(msg.id)
 
-        if msg.exist_list != None:
+        if msg.exist_map != None:
             ##
             ## Absolute MAU
             ##
             if msg.mobile_seq == node.mobile_address_sequence:
                 return
             node.mobile_address_sequence = msg.mobile_seq
-            node.overwrite_addresses(msg.exist_list)
+            node.overwrite_addresses(msg.exist_map)
         else:
             ##
             ## Differential MAU
@@ -113,8 +148,10 @@ class MobileAddressEngine(object):
                 ## This message represents the next expected sequence, incorporate the deltas
                 ##
                 node.mobile_address_sequence += 1
-                for a in msg.add_list:
-                    node.map_address(a)
+                for a,v in msg.add_map.items():
+                    node.map_address(a, v)
+                for a,v in msg.update_map.items():
+                    node.update_address(a, v)
                 for a in msg.del_list:
                     node.unmap_address(a)
 
@@ -149,7 +186,7 @@ class MobileAddressEngine(object):
         ##
         ## The peer needs to be sent an absolute update with the whole address list
         ##
-        smsg = MessageMAU(None, self.id, self.mobile_seq, None, None, self.local_addrs)
+        smsg = MessageMAU(None, self.id, self.mobile_seq, None, None, None, self.local_addrs)
         self.container.send('amqp:/_topo/0/%s/qdrouter.ma' % msg.id, smsg)
         self.container.log_ma(LOG_TRACE, "SENT: %r" % smsg)
 

@@ -128,7 +128,7 @@ static void qdr_link_route_activate_CT(qdr_core_t *core, qdr_link_route_t *lr, q
         if (DEQ_SIZE(lr->addr->conns) == 1) {
             key = (const char*) qd_hash_key_by_handle(lr->addr->hash_handle);
             if (key)
-                qdr_post_mobile_added_CT(core, key, 0, 0);
+                qdr_post_mobile_update_CT(core, key, 1, 1);
         }
     }
 
@@ -150,7 +150,7 @@ static void qdr_link_route_deactivate_CT(qdr_core_t *core, qdr_link_route_t *lr,
         if (DEQ_IS_EMPTY(lr->addr->conns)) {
             key = (const char*) qd_hash_key_by_handle(lr->addr->hash_handle);
             if (key)
-                qdr_post_mobile_removed_CT(core, key);
+                qdr_post_mobile_update_CT(core, key, 0, 0);
         }
     }
 
