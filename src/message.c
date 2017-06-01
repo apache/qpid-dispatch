@@ -40,9 +40,6 @@
 // Match this definition in router_node.c
 static const bool USE_ANNO_V1 = false;
 
-// Turn on/off chat
-static const bool BLAB = false;
-
 const char *STR_AMQP_NULL = "null";
 const char *STR_AMQP_TRUE = "T";
 const char *STR_AMQP_FALSE = "F";
@@ -981,7 +978,7 @@ qd_parsed_field_t *qd_message_v2_annotations(qd_message_t *in_msg)
         return 0;
 
     // parse message into v2 vs. remaining annotations parts
-    const char * errorptr = qd_parse_v2_annotations(
+    (void) qd_parse_v2_annotations(
         content->ma_field_iter_in,
         QD_MA_ANNOTATIONS,
         &content->ma_all_annotations,
@@ -998,11 +995,7 @@ qd_parsed_field_t *qd_message_v2_annotations(qd_message_t *in_msg)
         content->field_user_annotations.parsed = true;
     }
 
-    if (BLAB && errorptr)
-        fprintf(stdout, "DEBUGGING: message.c parse error: %s\n", errorptr);
     if (!content->ma_v2) {
-        if (BLAB)
-            fprintf(stdout, "DEBUGGING: Message has no v2 annotations\n");
         return content->ma_v2;
     }
     // parsed_field ma_v2 holds the v2 annotation object
