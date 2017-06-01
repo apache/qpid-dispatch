@@ -927,7 +927,11 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
 
     copy->content = content;
 
-    qd_message_message_annotations((qd_message_t*) copy);
+    if (USE_ANNO_V1) {
+        (void) qd_message_message_annotations(in_msg);
+    } else {
+        (void) qd_message_v2_annotations(in_msg);
+    }
 
     sys_atomic_inc(&content->ref_count);
 
@@ -1320,6 +1324,18 @@ void qd_message_send(qd_message_t *in_msg,
     //
     // Send delivery annotation if present
     //
+    if (content->section_delivery_annotation.length > 0) {
+        buf    = content->section_delivery_annotation.buffer;
+        cursor = content->section_delivery_annotation.offset + qd_buffer_base(buf);
+        advance(&cursor, &buf,
+                content->section_delivery_annotation.length + content->section_delivery_annotation.hdr_length,
+                send_handler, (void*) pnl);
+    }
+
+    //
+    // Send delivery annotation if present
+    //
+    cursor = qd_buffer_base(buf);
     if (content->section_delivery_annotation.length > 0) {
         buf    = content->section_delivery_annotation.buffer;
         cursor = content->section_delivery_annotation.offset + qd_buffer_base(buf);

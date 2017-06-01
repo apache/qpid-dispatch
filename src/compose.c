@@ -568,7 +568,7 @@ void qd_compose_insert_opaque_elements(qd_composed_field_t   *field,
 
     while (buf_in && remaining) {
         // compute how many bytes left in current buffer and copy them
-        size_t to_copy = qd_buffer_base(buf_in) + qd_buffer_capacity(buf_in) - seq;
+        size_t to_copy = qd_buffer_base(buf_in) + qd_buffer_size(buf_in) - seq;
         if (to_copy > remaining)
             to_copy = remaining;
         if (to_copy > 0) {
