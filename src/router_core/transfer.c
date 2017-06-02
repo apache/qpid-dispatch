@@ -840,7 +840,11 @@ void qdr_addr_visit_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
             // Target credit is not to exceed the link capacity.
             //
             uint32_t target_credit = (addr->target_in_credit < link->capacity) ? addr->target_in_credit : link->capacity;
-            int32_t  diff = (int32_t) target_credit - (int32_t) link->credit_window;
+
+            //
+            // Calculate the change in credit from current to target.
+            //
+            int32_t diff = (int32_t) target_credit - (int32_t) link->credit_window - (int32_t) link->credit_deficit;
 
             link->credit_window = target_credit;
             if (diff > 0) {
