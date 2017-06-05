@@ -35,11 +35,6 @@
 #include <inttypes.h>
 #include <assert.h>
 
-// HACK ALERT
-// Define which annotation scheme to use: 0.8.0 v1, or new v2.
-// Match this definition in router_node.c
-static const bool USE_ANNO_V1 = false;
-
 const char *STR_AMQP_NULL = "null";
 const char *STR_AMQP_TRUE = "T";
 const char *STR_AMQP_FALSE = "F";
@@ -854,6 +849,7 @@ qd_message_t *qd_message()
     DEQ_INIT(msg->ma_ingress);
     msg->ma_phase = 0;
     msg->content = new_qd_message_content_t();
+    msg->ma_v1_inbound = false;
 
     if (msg->content == 0) {
         free_qd_message_t((qd_message_t*) msg);
@@ -921,14 +917,8 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     qd_buffer_list_clone(&copy->ma_trace, &msg->ma_trace);
     qd_buffer_list_clone(&copy->ma_ingress, &msg->ma_ingress);
     copy->ma_phase = msg->ma_phase;
-
     copy->content = content;
-
-    if (USE_ANNO_V1) {
-        (void) qd_message_message_annotations(in_msg);
-    } else {
-        (void) qd_message_v2_annotations(in_msg);
-    }
+    copy->ma_v1_inbound = msg->ma_v1_inbound;
 
     sys_atomic_inc(&content->ref_count);
 
@@ -1077,6 +1067,10 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     //
     if (!msg) {
         msg = (qd_message_pvt_t*) qd_message();
+        qd_link_t       *qdl = (qd_link_t *)pn_link_get_context(link);
+        qd_connection_t *qdc = qd_link_connection(qdl);
+        msg->ma_v1_inbound = qd_connection_uses_v1_annotations(qdc);
+
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
     }
@@ -1284,29 +1278,22 @@ void qd_message_send(qd_message_t *in_msg,
     qd_buffer_t          *buf     = DEQ_HEAD(content->buffers);
     unsigned char        *cursor;
     pn_link_t            *pnl     = qd_link_pn(link);
+    qd_connection_t      *qdc     = qd_link_connection(link);
+    bool use_v1_annotations       = qd_connection_uses_v1_annotations(qdc);
 
     qd_buffer_list_t new_ma;
     DEQ_INIT(new_ma);
 
-    if (USE_ANNO_V1) {
-        // Process  the message annotations if any
-        compose_message_annotations(msg, &new_ma, strip_annotations);
+    // Decode incoming message annotations
+    if (msg->ma_v1_inbound) {
+        (void) qd_message_message_annotations(in_msg);
+    } else {
+        (void) qd_message_v2_annotations(in_msg);
+    }
 
-        //
-        // This is the case where the message annotations have been modified.
-        // The message send must be divided into sections:  The existing header;
-        // the new message annotations; the rest of the existing message.
-        // Note that the original message annotations that are still in the
-        // buffer chain must not be sent.
-        //
-        // Start by making sure that we've parsed the message sections through
-        // the message annotations
-        //
-        // ??? NO LONGER NECESSARY???
-        if (!qd_message_check(in_msg, QD_DEPTH_MESSAGE_ANNOTATIONS)) {
-            qd_log(log_source, QD_LOG_ERROR, "Cannot send: %s", qd_error_message);
-            return;
-        }
+    // Encode outgoing message annotations
+    if (use_v1_annotations) {
+        compose_message_annotations(msg, &new_ma, strip_annotations);
     } else {
         compose_message_annotations2(msg, &new_ma, strip_annotations);
     }
@@ -1356,7 +1343,7 @@ void qd_message_send(qd_message_t *in_msg,
     }
     qd_buffer_list_free_buffers(&new_ma);
 
-    if (!USE_ANNO_V1) {
+    if (!use_v1_annotations) {
         if (content->field_user_annotations.length > 0) {
             qd_buffer_t *buf2      = content->field_user_annotations.buffer;
             unsigned char *cursor2 = content->field_user_annotations.offset + qd_buffer_base(buf);
@@ -1706,4 +1693,16 @@ qd_parsed_field_t *qd_message_get_trace      (qd_message_t *msg)
 int qd_message_get_phase_val(qd_message_t *msg)
 {
     return ((qd_message_pvt_t*)msg)->content->ma_phase;
+}
+
+
+void qd_message_set_annotation_scheme(qd_message_t *msg, bool annotations_v1)
+{
+    ((qd_message_pvt_t*)msg)->ma_v1_inbound = annotations_v1;
+}
+
+
+bool qd_message_get_annotation_scheme  (const qd_message_t *msg)
+{
+    return ((qd_message_pvt_t*)msg)->ma_v1_inbound;
 }

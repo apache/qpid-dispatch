@@ -525,9 +525,15 @@ const char* qd_connection_name(const qd_connection_t *c);
 
 
 /**
+
  * Get the remote host IP address of the connection.
  */
 const char* qd_connection_remote_ip(const qd_connection_t *c);
+
+/**
+ * Does this connection source messages using v1 annotation scheme?
+ */
+bool qd_connection_uses_v1_annotations(const qd_connection_t *c);
 
 /**
  * @}

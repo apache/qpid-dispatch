@@ -313,6 +313,22 @@ qd_parsed_field_t *qd_message_get_trace      (qd_message_t *msg);
  */
 int                qd_message_get_phase_val  (qd_message_t *msg);
 
+/**
+ * Set annotation scheme of received message with annotation scheme used by remote peer
+ * 
+ * @param msg A pointer to the message
+ * @param annotation_v1 true if remote host sent messages with v1 annotation scheme
+ */
+void               qd_message_set_annotation_scheme  (qd_message_t *msg, bool annotation_v1);
+
+/**
+ * Get annotation scheme used by remote peer when message was created
+ * 
+ * @param msg A pointer to the message
+ * @return true if v1 scheme was used
+ */
+bool               qd_message_get_annotation_scheme  (const qd_message_t *msg);
+
 ///@}
 
 #endif

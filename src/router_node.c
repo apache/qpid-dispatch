@@ -29,11 +29,6 @@
 #include <qpid/dispatch/router_core.h>
 #include <proton/sasl.h>
 
-// HACK ALERT
-// Define which annotation scheme to use: 0.8.0 v1, or new v2.
-// Match this definition in message.c
-static const bool USE_ANNO_V1 = false;
-
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
 const char *QD_ROUTER_LINK_TYPE = "router.link";
@@ -430,8 +425,9 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
         }
 
         qd_parsed_field_t   *in_ma = 0;
-        
-        if (USE_ANNO_V1) {
+        bool use_v1_annotations = qd_message_get_annotation_scheme(msg);
+
+        if (use_v1_annotations) {
             in_ma = qd_message_message_annotations(msg);
         } else {
             in_ma = qd_message_v2_annotations(msg);
@@ -442,7 +438,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 
         qd_iterator_t *ingress_iter = 0;
         
-        if (USE_ANNO_V1) {
+        if (use_v1_annotations) {
             ingress_iter = router_annotate_message(router, in_ma, msg, &link_exclusions, strip);
         } else {
             ingress_iter = router_annotate_message2(router, msg, &link_exclusions, strip);
@@ -456,7 +452,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
             // If the message has delivery annotations, get the to-override field from the annotations.
             //
             if (in_ma) {
-                if (USE_ANNO_V1) {
+                if (use_v1_annotations) {
                     qd_parsed_field_t *ma_to = qd_parse_value_by_key(in_ma, QD_MA_TO);
                     if (ma_to) {
                         addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
@@ -810,6 +806,37 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
         //
         if (remote_cost > cost)
             cost = remote_cost;
+
+        //
+        // Check the remote properties for an inter-router message annotation version.
+        //
+        conn->annotations_v1 = false;
+        if (props) {
+            pn_data_rewind(props);
+            pn_data_next(props);
+            if (props && pn_data_type(props) == PN_MAP) {
+                pn_data_enter(props);
+                while (pn_data_next(props)) {
+                    if (pn_data_type(props) == PN_SYMBOL) {
+                        pn_bytes_t sym = pn_data_get_symbol(props);
+                        if (sym.size == strlen(QD_CONNECTION_PROPERTY_VERSION_KEY) &&
+                            strcmp(sym.start, QD_CONNECTION_PROPERTY_VERSION_KEY) == 0) {
+                            pn_data_next(props);
+                            if (pn_data_type(props) == PN_STRING) {
+                                pn_bytes_t version_bytes = pn_data_get_string(props);
+                                // This isolates the remote router's version number.
+                                // Generalized version handling could be handled here.
+                                // Now the only info required is which annotation scheme
+                                // to use. The rule is "0.x.y" is the old scheme and
+                                // anything else is the new v2 scheme.
+                                conn->annotations_v1 = (*(version_bytes.start) == '0');
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if (multi_tenant)

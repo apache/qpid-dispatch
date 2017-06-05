@@ -134,6 +134,7 @@ typedef struct {
     qd_buffer_list_t      ma_trace;        // trace list in outgoing message annotations
     qd_buffer_list_t      ma_ingress;      // ingress field in outgoing message annotations
     int                   ma_phase;        // phase for the override address
+    bool                  ma_v1_inbound;   // incoming message sourced with v1 annotation scheme
 } qd_message_pvt_t;
 
 ALLOC_DECLARE(qd_message_t);
