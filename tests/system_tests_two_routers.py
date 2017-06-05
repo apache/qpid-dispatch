@@ -31,6 +31,11 @@ except ImportError:
     from proton import PN_STATUS_MODIFIED as MODIFIED
 
 
+MA_POS_TO      = 0
+MA_POS_PHASE   = 1
+MA_POS_INGRESS = 2
+MA_POS_TRACE   = 3
+
 class RouterTest(TestCase):
 
     inter_router_port = None
@@ -40,6 +45,7 @@ class RouterTest(TestCase):
         """Start a router and a messenger"""
         super(RouterTest, cls).setUpClass()
 
+        RouterTest.annotations_v1 = False
         def router(name, client_server, connection):
 
             config = [
@@ -387,8 +393,14 @@ class RouterTest(TestCase):
             self.assertEqual(i, rm.body['number'])
             ma = rm.annotations
             self.assertEqual(ma.__class__, dict)
-            self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR.A')
-            self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
+            if RouterTest.annotations_v1:
+                self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR.A')
+                self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
+            else:
+                mal = ma['x-opt-qd2.annotations']
+                self.assertEqual(mal.__class__, list)
+                self.assertEqual(mal[MA_POS_INGRESS], '0/QDR.A')
+                self.assertEqual(mal[MA_POS_TRACE  ], ['0/QDR.A', '0/QDR.B'])
 
         M1.stop()
         M2.stop()
@@ -431,10 +443,16 @@ class RouterTest(TestCase):
         egress_message_annotations = egress_message.annotations
 
         self.assertEqual(egress_message_annotations.__class__, dict)
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
         self.assertEqual(egress_message_annotations['work'], 'hard')
         self.assertEqual(egress_message_annotations['stay'], 'humble')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
+        if RouterTest.annotations_v1:
+            self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
+            self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
+        else:
+            mal = egress_message_annotations['x-opt-qd2.annotations']
+            self.assertEqual(mal.__class__, list)
+            self.assertEqual(mal[MA_POS_INGRESS], '0/QDR.A')
+            self.assertEqual(mal[MA_POS_TRACE  ], ['0/QDR.A', '0/QDR.B'])
 
         M1.stop()
         M2.stop()
@@ -479,8 +497,14 @@ class RouterTest(TestCase):
 
         self.assertEqual(egress_message_annotations.__class__, dict)
         self.assertEqual(egress_message_annotations['custom-annotation'], '1/Custom_Annotation')
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
+        if RouterTest.annotations_v1:
+            self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
+            self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
+        else:
+            mal = egress_message_annotations['x-opt-qd2.annotations']
+            self.assertEqual(mal.__class__, list)
+            self.assertEqual(mal[MA_POS_INGRESS], '0/QDR.A')
+            self.assertEqual(mal[MA_POS_TRACE  ], ['0/QDR.A', '0/QDR.B'])
 
         M1.stop()
         M2.stop()
@@ -508,7 +532,11 @@ class RouterTest(TestCase):
         ## Pre-existing ingress and trace
         ##
         #ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['0/QDR.1']}
-        ingress_message_annotations = {'x-opt-qd.trace': ['0/QDR.1']}
+        if RouterTest.annotations_v1:
+            ingress_message_annotations = {'x-opt-qd.trace': ['0/QDR.1'], 'work': 'hard'}
+        else:
+            ingress_message_annotations = {'x-opt-qd2.annotations': ['', 0, '', ['0/QDR.1']],
+                                           'work': 'hard'}
         ingress_message.annotations = ingress_message_annotations
 
         ingress_message.annotations = ingress_message_annotations
@@ -528,8 +556,14 @@ class RouterTest(TestCase):
         egress_message_annotations = egress_message.annotations
 
         self.assertEqual(egress_message_annotations.__class__, dict)
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.1', '0/QDR.A', '0/QDR.B'])
+        if RouterTest.annotations_v1:
+            self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
+            self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.1', '0/QDR.A', '0/QDR.B'])
+        else:
+            mal = egress_message_annotations['x-opt-qd2.annotations']
+            self.assertEqual(mal.__class__, list)
+            self.assertEqual(mal[MA_POS_INGRESS], '0/QDR.A')
+            self.assertEqual(mal[MA_POS_TRACE  ], ['0/QDR.1', '0/QDR.A', '0/QDR.B'])
 
         M1.stop()
         M2.stop()
@@ -560,10 +594,15 @@ class RouterTest(TestCase):
         # of the first router. If the inbound annotations were not stripped, the router would drop this message
         # since it would consider this message as being looped.
         #
-        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router',
-                                       'x-opt-qd.trace': ['0/QDR.A'],
-                                       'work': 'hard',
-                                       'x-opt-qd': 'humble'}
+        if RouterTest.annotations_v1:
+            ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router',
+                                        'x-opt-qd.trace': ['0/QDR.A'],
+                                        'work': 'hard',
+                                        'x-opt-qd': 'humble'}
+        else:
+            ingress_message_annotations = {'x-opt-qd2.annotations': ['', 0, 'ingress-router', ['0/QDR.A']],
+                                           'work': 'hard',
+                                           'x-opt-qd': 'humble'}
         ingress_message.annotations = ingress_message_annotations
 
         #Put and send the message
@@ -641,7 +680,11 @@ class RouterTest(TestCase):
         ingress_message.body = {'message': 'Hello World!'}
 
         # Annotations with prefix "x-opt-qd." will be skipped
-        ingress_message_annotations = {'work': 'hard', "x-opt-qd": "custom", "x-opt-qd.": "custom"}
+        if RouterTest.annotations_v1:
+            ingress_message_annotations = {'work': 'hard', "x-opt-qd": "custom", "x-opt-qd.": "custom"}
+        else:
+            ingress_message_annotations = {'x-opt-qd2.annotations': ['', 0, 'ingress-router', ['0/QDR.1']],
+                                           'work': 'hard', "x-opt-qd": "custom"}
         ingress_message.annotations = ingress_message_annotations
 
         # Put and send the message
@@ -683,7 +726,10 @@ class RouterTest(TestCase):
         ##
         ## Pre-existing ingress and trace
         ##
-        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['X/QDR']}
+        if RouterTest.annotations_v1:
+            ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['X/QDR']}
+        else:
+            ingress_message_annotations = {'x-opt-qd2.annotations': ['', 0, 'ingress-router', ['X/QDR']]}
         ingress_message.annotations = ingress_message_annotations
 
         #Put and send the message
@@ -701,8 +747,14 @@ class RouterTest(TestCase):
         egress_message_annotations = egress_message.annotations
 
         self.assertEqual(egress_message_annotations.__class__, dict)
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
+        if RouterTest.annotations_v1:
+            self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
+            self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
+        else:
+            mal = egress_message_annotations['x-opt-qd2.annotations']
+            self.assertEqual(mal.__class__, list)
+            self.assertEqual(mal[MA_POS_INGRESS], '0/QDR.A')
+            self.assertEqual(mal[MA_POS_TRACE  ], ['0/QDR.A', '0/QDR.B'])
 
         M1.stop()
         M2.stop()
