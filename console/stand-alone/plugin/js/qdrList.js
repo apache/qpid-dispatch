@@ -85,8 +85,8 @@ var QDR = (function(QDR) {
       }
     ];
     $scope.operations = []
-      $scope.currentMode = $scope.modes[0];
-      $scope.isModeSelected = function (mode) {
+    $scope.currentMode = $scope.modes[0];
+    $scope.isModeSelected = function (mode) {
       return mode === $scope.currentMode;
     }
     $scope.fetchingLog = false;
@@ -741,10 +741,9 @@ var QDR = (function(QDR) {
       var sortedEntities = Object.keys(QDRService.schema.entityTypes).sort();
       sortedEntities.forEach( function (entity) {
         if (excludedEntities.indexOf(entity) == -1) {
-          if (!angular.isDefined($scope.selectedEntity)) {
+          if (!angular.isDefined($scope.selectedEntity))
             $scope.selectedEntity = entity;
-            $scope.operations = lookupOperations()
-          }
+          $scope.operations = lookupOperations()
           var e = new Folder(entity)
           e.typeName = "entity"
           e.key = entity
