@@ -1190,6 +1190,17 @@ void qd_message_send(qd_message_t *in_msg,
     }
 
     //
+    // Send delivery annotation if present
+    //
+    if (content->section_delivery_annotation.length > 0) {
+        buf    = content->section_delivery_annotation.buffer;
+        cursor = content->section_delivery_annotation.offset + qd_buffer_base(buf);
+        advance(&cursor, &buf,
+                content->section_delivery_annotation.length + content->section_delivery_annotation.hdr_length,
+                send_handler, (void*) pnl);
+    }
+
+    //
     // Send new message annotations
     //
     qd_buffer_t *da_buf = DEQ_HEAD(new_ma);
