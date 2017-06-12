@@ -274,7 +274,7 @@ static void close_links(qd_container_t *container, pn_connection_t *conn, bool p
         if (qd_link && qd_link->node) {
             qd_node_t *node = qd_link->node;
             if (print_log)
-                qd_log(container->log_source, QD_LOG_NOTICE,
+                qd_log(container->log_source, QD_LOG_DEBUG,
                        "Aborting link '%s' due to parent connection end",
                        pn_link_name(pn_link));
             node->ntype->link_detach_handler(node->context, qd_link, QD_LOST);
@@ -413,7 +413,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
                                     assert(qd_conn->n_senders >= 0);
                                 }
                             }
-                            qd_log(container->log_source, QD_LOG_NOTICE,
+                            qd_log(container->log_source, QD_LOG_DEBUG,
                                    "Aborting link '%s' due to parent session end",
                                    pn_link_name(pn_link));
                             qd_link->node->ntype->link_detach_handler(qd_link->node->context,
