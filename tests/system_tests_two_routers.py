@@ -1054,6 +1054,37 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
 
+    def test_16_delivery_annotations(self):
+        addr = "amqp:/delivery_annotations.1"
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
+        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
+        tm = Message()
+        rm = Message()
+
+        self.routers[0].wait_address("delivery_annotations.1", 0, 1)
+
+        tm.annotations = {'a1': 'a1', 'b1': 'b2'}
+        tm.address = addr
+        tm.instructions = {'work': 'hard', 'stay': 'humble'}
+        tm.body = {'number': 38}
+        M1.put(tm)
+        M1.send()
+
+        M2.recv(1)
+        M2.get(rm)
+        self.assertEqual(38, rm.body['number'])
+
+        M1.stop()
+        M2.stop()
+
+
 class Timeout(object):
     def __init__(self, parent):
         self.parent = parent
