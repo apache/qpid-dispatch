@@ -1124,6 +1124,14 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    # This test tests the case when the number of receivers is greater than INITIAL_PEER_SIZE
+    # When the number of receivers is greater than INITIAL_PEER_SIZE, the peers are copied from an array into
+    # a linked list and this code tests that copy.
+    def test_22_multicast_unsettled(self):
+        test = MulticastManyReceiversTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
     def test_reject_disposition(self):
         test = RejectDispositionTest(self.address)
         test.run()
@@ -1230,6 +1238,52 @@ class ExcessDeliveriesReleasedTest(MessagingHandler):
         self.n_received += 1
         if self.n_received == 6:
             self.receiver.close()
+
+    def run(self):
+        Container(self).run()
+
+class MulticastManyReceiversTest(MessagingHandler):
+    def __init__(self, address):
+        super(MulticastManyReceiversTest, self).__init__(prefetch=0)
+        self.address = address
+        self.dest = "multicast.MUtest"
+        self.error = None
+        self.count      = 10
+        self.n_sent     = 0
+        self.n_received = 0
+        self.n_accepted = 0
+        self.n_receivers = 10
+
+    def check_if_done(self):
+        if self.n_received == self.count * self.n_receivers and self.n_accepted == self.count:
+            self.timer.cancel()
+            self.conn.close()
+
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d, received=%d, accepted=%d" % (self.n_sent, self.n_received, self.n_accepted)
+        self.conn.close()
+
+    def on_start(self, event):
+        self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn      = event.container.connect(self.address)
+        self.sender    = event.container.create_sender(self.conn, self.dest)
+
+        for i in range(self.n_receivers):
+            event.container.create_receiver(self.conn, self.dest, name=str(i)).flow(self.count)
+
+    def on_sendable(self, event):
+        for i in range(self.count - self.n_sent):
+            msg = Message(body=i)
+            event.sender.send(msg)
+            self.n_sent += 1
+
+    def on_accepted(self, event):
+        self.n_accepted += 1
+        self.check_if_done()
+
+    def on_message(self, event):
+        self.n_received += 1
+        self.check_if_done()
 
     def run(self):
         Container(self).run()

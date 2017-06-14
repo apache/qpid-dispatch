@@ -146,8 +146,17 @@ void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
             if (dlv) {
                 link->credit_to_core--;
                 core->deliver_handler(core->user_context, link, dlv, settled);
-                if (settled)
+                if (settled) {
+                    //
+                    // This decref is for removing the reference from the undelivered list.
+                    //
                     qdr_delivery_decref(core, dlv);
+
+                    //
+                    // This decref is for releasing the peer delivery reference
+                    //
+                    qdr_delivery_decref(core, dlv);
+                }
             }
         }
 
@@ -226,6 +235,28 @@ void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery,
         qdr_delivery_incref(delivery);
 
     qdr_action_enqueue(core, action);
+}
+
+bool qdr_delivery_use_delivery_list(qdr_delivery_t *dlv)
+{
+    if(!dlv)
+        return false;
+
+    // If the number of peers greater than INITIAL_PEER_SIZE, use the ref list and not the list, return false;
+    if (dlv->num_peers > INITIAL_PEER_SIZE)
+        return false;
+
+    return true;
+}
+
+qdr_delivery_t *qdr_delivery_get_peer_CT(qdr_core_t *core, qdr_delivery_t *dlv)
+{
+    if (qdr_delivery_use_delivery_list(dlv))
+        return dlv->peers.peer_list[0];
+    else {
+        qdr_delivery_ref_t *delivery_ref = DEQ_HEAD(dlv->peers.peer_ref_list);
+        return delivery_ref->dlv;
+    }
 }
 
 
@@ -409,6 +440,7 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
 
     qd_bitmask_free(delivery->link_exclusion);
     qdr_error_free(delivery->error);
+
     free_qdr_delivery_t(delivery);
 }
 
@@ -548,8 +580,16 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             //
             // If the delivery has no more references, free it now.
             //
-            assert(!dlv->peer);
+            //assert(!dlv->peer);
             qdr_delivery_decref_CT(core, dlv);
+
+            //
+            // Decrefs would have to be called dlv->num_peers times
+            //
+            for (int i=0; i<dlv->num_peers; i++) {
+                //qdr_delivery_clear_peer_CT(core, dlv);
+                qdr_delivery_decref_CT(core, dlv);
+            }
         } else {
             //
             // Again, don't bother decrementing then incrementing the ref_count
@@ -667,11 +707,19 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
     qd_message_free(msg);
 }
 
+void qdr_delivery_clear_peer_CT(qdr_core_t *core, qdr_delivery_t *dlv)
+{
+    if (qdr_delivery_use_delivery_list(dlv))
+        dlv->peers.peer_list[0]  = 0;
+    else
+        DEQ_REMOVE_HEAD(dlv->peers.peer_ref_list);
+}
+
 
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     qdr_delivery_t *dlv        = action->args.delivery.delivery;
-    qdr_delivery_t *peer       = dlv->peer;
+    qdr_delivery_t *peer       = qdr_delivery_get_peer_CT(core, dlv);
     bool            push       = false;
     bool            peer_moved = false;
     bool            dlv_moved  = false;
@@ -705,8 +753,9 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
     if (settled) {
         if (peer) {
             peer->settled = true;
-            peer->peer = 0;
-            dlv->peer  = 0;
+
+            qdr_delivery_clear_peer_CT(core, dlv);
+            qdr_delivery_clear_peer_CT(core, peer);
 
             if (peer->link) {
                 peer_moved = qdr_delivery_settled_CT(core, peer);

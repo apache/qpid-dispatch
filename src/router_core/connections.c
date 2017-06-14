@@ -673,13 +673,31 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_delivery_t *peer;
     while (dlv) {
         DEQ_REMOVE_HEAD(undelivered);
-        peer = dlv->peer;
-        if (peer) {
-            dlv->peer  = 0;
-            peer->peer = 0;
-            qdr_delivery_release_CT(core, peer);
-            qdr_delivery_decref_CT(core, peer);
-            qdr_delivery_decref_CT(core, dlv);
+
+        //
+        // Find every peer that this delivery has and release and decref it.
+        //
+        if (dlv->num_peers > INITIAL_PEER_SIZE) {
+            qdr_delivery_ref_t *ref = DEQ_HEAD(dlv->peers.peer_ref_list);
+            while (ref) {
+                peer = ref->dlv;
+                qdr_delivery_release_CT(core, peer);
+                qdr_delivery_decref_CT(core, dlv);
+                qdr_delivery_decref_CT(core, peer);
+                qdr_del_delivery_ref(&dlv->peers.peer_ref_list, ref);
+                ref = DEQ_HEAD(dlv->peers.peer_ref_list);
+            }
+        }
+        else {
+            for (int i=0; i < INITIAL_PEER_SIZE; i++) {
+                peer =  dlv->peers.peer_list[i];
+                if (!peer)
+                    continue;
+                qdr_delivery_release_CT(core, peer);
+                qdr_delivery_decref_CT(core, dlv);
+                qdr_delivery_decref_CT(core, peer);
+                peer->peers.peer_list[i]  = 0;
+            }
         }
 
         //
@@ -715,15 +733,29 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
             dlv->tracking_addr = 0;
         }
 
-        peer = dlv->peer;
-        if (peer) {
-            dlv->peer  = 0;
-            peer->peer = 0;
-            if (link->link_direction == QD_OUTGOING)
-                qdr_delivery_failed_CT(core, peer);
-
-            qdr_delivery_decref_CT(core, peer);
-            qdr_delivery_decref_CT(core, dlv);
+        if (dlv->num_peers > INITIAL_PEER_SIZE) {
+            qdr_delivery_ref_t *ref = DEQ_HEAD(dlv->peers.peer_ref_list);
+            while (ref) {
+                peer = ref->dlv;
+                if (link->link_direction == QD_OUTGOING)
+                    qdr_delivery_failed_CT(core, peer);
+                qdr_delivery_decref_CT(core, dlv);
+                qdr_delivery_decref_CT(core, peer);
+                qdr_del_delivery_ref(&dlv->peers.peer_ref_list, ref);
+                ref = DEQ_HEAD(dlv->peers.peer_ref_list);
+            }
+        }
+        else {
+            for (int i=0; i < INITIAL_PEER_SIZE; i++) {
+                peer =  dlv->peers.peer_list[i];
+                if (!peer)
+                    continue;
+                if (link->link_direction == QD_OUTGOING)
+                    qdr_delivery_failed_CT(core, peer);
+                qdr_delivery_decref_CT(core, dlv);
+                qdr_delivery_decref_CT(core, peer);
+                peer->peers.peer_list[i]  = 0;
+            }
         }
 
         //

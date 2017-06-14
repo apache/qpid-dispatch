@@ -26,6 +26,8 @@
 #include <qpid/dispatch/log.h>
 #include <memory.h>
 
+#define INITIAL_PEER_SIZE 8
+
 typedef struct qdr_address_t         qdr_address_t;
 typedef struct qdr_address_config_t  qdr_address_config_t;
 typedef struct qdr_node_t            qdr_node_t;
@@ -303,12 +305,20 @@ typedef enum {
     QDR_DELIVERY_IN_UNSETTLED
 } qdr_delivery_where_t;
 
+
+typedef struct qdr_delivery_ref_t {
+    DEQ_LINKS(struct qdr_delivery_ref_t);
+    qdr_delivery_t *dlv;
+} qdr_delivery_ref_t;
+
+ALLOC_DECLARE(qdr_delivery_ref_t);
+DEQ_DECLARE(qdr_delivery_ref_t, qdr_delivery_ref_list_t);
+
 struct qdr_delivery_t {
     DEQ_LINKS(qdr_delivery_t);
     void                *context;
     sys_atomic_t         ref_count;
     qdr_link_t          *link;
-    qdr_delivery_t      *peer;
     qd_message_t        *msg;
     qd_iterator_t       *to_addr;
     qd_iterator_t       *origin;
@@ -325,18 +335,17 @@ struct qdr_delivery_t {
     qdr_address_t       *tracking_addr;
     int                  tracking_addr_bit;
     qdr_link_work_t     *link_work;         ///< Delivery work item for this delivery
+    int                  num_peers;
+    union {
+        // Initially maintain an array of size INITIAL_PEER_SIZE. This will improve performance in the number of peer deliveries is less than INITIAL_PEER_SIZE
+        qdr_delivery_t         *peer_list[INITIAL_PEER_SIZE];
+        // Use this ref_list if the number of peers is > INITIAL_PEER_SIZE
+        qdr_delivery_ref_list_t peer_ref_list;
+    } peers;
 };
 
 ALLOC_DECLARE(qdr_delivery_t);
 DEQ_DECLARE(qdr_delivery_t, qdr_delivery_list_t);
-
-typedef struct qdr_delivery_ref_t {
-    DEQ_LINKS(struct qdr_delivery_ref_t);
-    qdr_delivery_t *dlv;
-} qdr_delivery_ref_t;
-
-ALLOC_DECLARE(qdr_delivery_ref_t);
-DEQ_DECLARE(qdr_delivery_ref_t, qdr_delivery_ref_list_t);
 
 void qdr_add_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_t *dlv);
 void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref);
@@ -414,6 +423,7 @@ DEQ_DECLARE(qdr_connection_ref_t, qdr_connection_ref_list_t);
 
 void qdr_add_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn);
 void qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn);
+bool qdr_delivery_use_delivery_list(qdr_delivery_t *dlv);
 
 
 struct qdr_subscription_t {
@@ -698,7 +708,8 @@ void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash);
 void qdr_post_mobile_removed_CT(qdr_core_t *core, const char *address_hash);
 void qdr_post_link_lost_CT(qdr_core_t *core, int link_maskbit);
-
+qdr_delivery_t *qdr_delivery_get_peer_CT(qdr_core_t *core, qdr_delivery_t *dlv);
+void qdr_delivery_clear_peer_CT(qdr_core_t *core, qdr_delivery_t *dlv);
 void qdr_post_general_work_CT(qdr_core_t *core, qdr_general_work_t *work);
 void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local);
 
