@@ -952,13 +952,45 @@ var QDR = (function (QDR) {
           if (field != "title" && field != "uid")
             filteredFields.push({attribute: field, value: entity.data.fields[field]})
         })
-        $timeout(() => $scope[entityName.toLowerCase()+'Fields'] = filteredFields)
-        //$scope[entityName.toLowerCase()+'Fields'] = filteredFields
-        console.log("-------------- " + entityName + "Fields -----------")
-        console.dump(filteredFields)
+        $scope[entityName.toLowerCase()+'Fields'] = filteredFields
         scheduleNextUpdate()
         loadColState($scope[entityName.toLowerCase()+'Grid']);
+        //$timeout(() => $scope[entityName.toLowerCase()+'Fields'] = filteredFields)
       }
+    }
+
+    var ConnectionInfo = function (entity) {
+        if (!entity) {
+          QDR.log.info('****************** entity was not. returning')
+          return
+        }
+        $scope.Connection = entity
+QDR.log.info("ConnectionInfo called with " + entity)
+QDR.log.info("$scope.Connection.data.title = " + $scope.Connection.data.title);
+        var currentEntity = getCurrentLinksEntity()
+        if (currentEntity === 'Connection' && entityModes[currentEntity] && entityModes[currentEntity].currentModeId === 'links') {
+          updateModeLinks()
+          scheduleNextUpdate()
+          return
+        }
+        var filteredFields = []
+        var fields = Object.keys(entity.data.fields)
+        fields.forEach( function (field) {
+          if (field != "title" && field != "uid")
+            filteredFields.push({attribute: field, value: entity.data.fields[field]})
+        })
+        $scope.ConnectionFields = filteredFields
+//QDR.log.info("$scope.connectionFields = ");
+//console.dump($scope.connectionFields)
+QDR.log.info("-------------- ConnectionFields  -----------")
+console.dump(filteredFields)
+QDR.log.info("connectionGrid.data is " + $scope.connectionGrid.data)
+//$scope.connectionGrid.data = $scope.connectionFields
+QDR.log.info("$scope.Connection = " + $scope.Connection)
+//console.dump($scope.Connection)
+        scheduleNextUpdate()
+        loadColState($scope.connectionGrid);
+        //$timeout(() => $scope[entityName.toLowerCase()+'Fields'] = filteredFields)
     }
 
     // get info for a single connection
@@ -1062,6 +1094,10 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       return row.entity.adminStatus === 'disabled' ? "Revive" : "Quiesce";
     }
 
+    $scope.showExpandCollapseTree = function () {
+      QDR.log.info("showExpandCollapseTree returning " + !QDRService.isMSIE())
+      return !QDRService.isMSIE()
+    }
     $scope.expandAll = function () {
       $("#overtree").dynatree("getRoot").visit(function(node){
                 node.expand(true);
@@ -1476,7 +1512,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
 
     // we are currently connected. setup a handler to get notified if we are ever disconnected
     QDRService.addDisconnectAction( function () {
-      $timeout( () => QDRService.redirectWhenConnected("overview") )
+      $timeout( function () {QDRService.redirectWhenConnected("overview")} )
     })
 
     /* --------------------------------------------------
@@ -1631,7 +1667,8 @@ QDR.log.debug("newly created node needs to be activated")
     topLevelChildren.push(connections)
 
     updateConnectionTree = function (connectionFields) {
-      var info = SingleEntityInfo('Connection')
+      //var info = SingleEntityInfo('Connection')
+      var info = ConnectionInfo
       var worker = function (connection) {
         var c = new Folder(connection.host)
         var isConsole = QDRService.isAConsole (connection.properties, connection.identity, connection.role, connection.routerId)
@@ -1749,7 +1786,7 @@ QDR.log.debug("newly created node needs to be activated")
     }
     var tick = function () {
       clearTimeout(tickTimer)
-      updateExpanded();
+      $timeout( updateExpanded )
     }
     dataReady = true;
     initTreeAndGrid();

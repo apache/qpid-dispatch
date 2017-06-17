@@ -179,7 +179,20 @@ console.dump(e)
 
       onSubscription: function() {
         self.executeConnectActions();
-        //self.getSchema();
+        var org = $location.search()
+        if (org)
+          org = org.org
+          //QDR.log.info('onSubscription: org is ' + org)
+        if (org && org.length > 0 && org !== "connect") {
+          //QDR.log.info('going to ' + org)
+          self.getSchema(function () {
+            self.setUpdateEntities([])
+            self.topology.get()
+            $location.path(org)
+            $location.search('org', null)
+            $location.replace()
+          });
+        }
       },
 
       startUpdating: function() {
@@ -268,6 +281,9 @@ console.dump(e)
 
       isLargeNetwork: function () {
         return Object.keys(self.topology._nodeInfo).length >= 12
+      },
+      isMSIE: function () {
+        return (document.documentMode || /Edge/.test(navigator.userAgent))
       },
 
       // given an attribute name array, find the value at the same index in the values array
@@ -756,12 +772,12 @@ console.dump(e)
 
 
       getSchema: function(callback) {
-        //QDR.log.debug("getting schema");
+        //QDR.log.info("getting schema");
         var ret;
         self.correlator.request(
           ret = self.sendMgmtQuery('GET-SCHEMA')
         ).then(ret.id, function(response) {
-          //QDR.log.debug("Got schema response");
+          //QDR.log.info("Got schema response");
           // remove deprecated
           for (var entityName in response.entityTypes) {
             var entity = response.entityTypes[entityName]
@@ -955,6 +971,7 @@ console.dump(e)
           return
         }
         self.connectionTimer = setTimeout(function () {
+          connection.close()
           callback({error: "timedout"})
         }, timeout)
         connection.on("connection_open", function (context) {
@@ -964,6 +981,7 @@ console.dump(e)
       },
 
       connect: function(options) {
+        var connection;
         clearTimeout(self.connectionTimer)
         self.topologyInitialized = false;
         if (!self.connected) {
@@ -988,7 +1006,7 @@ console.dump(e)
           }
           var maybeStart = function() {
             if (okay.connection && okay.sender && okay.receiver && self.sendable && !self.connected) {
-              QDR.log.info("okay to start")
+              //QDR.log.info("okay to start")
               self.connected = true;
               self.connection = connection;
               self.sender = sender;
@@ -1006,7 +1024,9 @@ console.dump(e)
 
           // called after connection.open event is fired or connection error has happened
           var connectionCallback = function (options) {
+            //QDR.log.info('connectionCallback called')
             if (!options.error) {
+              //QDR.log.info('there was no error')
               connection = options.connection
               self.version = options.context.connection.properties.version
               QDR.log.debug("connection_opened")
@@ -1015,19 +1035,19 @@ console.dump(e)
               okay.sender = false;
 
               connection.on('disconnected', function(context) {
-                QDR.log.debug("connection disconnected")
+                //QDR.log.info("connection.on(disconnected) called")
                 self.errorText = "Unable to connect"
                 onDisconnect();
               })
               connection.on('connection_close', function(context) {
-                QDR.log.debug("connection closed")
+                //QDR.log.info("connection closed")
                 self.errorText = "Disconnected"
                 onDisconnect();
               })
 
               sender = connection.open_sender();
               sender.on('sender_open', function(context) {
-                QDR.log.debug("sender_opened")
+                //QDR.log.info("sender_opened")
                 okay.sender = true
                 maybeStart()
               })
@@ -1043,13 +1063,19 @@ console.dump(e)
                 }
               });
               receiver.on('receiver_open', function(context) {
-                QDR.log.debug("receiver_opened")
-                okay.receiver = true;
-                maybeStart()
+                //QDR.log.info("receiver_opened")
+                if (receiver.remote && receiver.remote.attach && receiver.remote.attach.source) {
+                  okay.receiver = true;
+                  maybeStart()
+                }
               })
               receiver.on("message", function(context) {
                 self.correlator.resolve(context);
               });
+            } else {
+              //QDR.log.info("there was an error " + options.error)
+              self.errorText = "Unable to connect"
+              onDisconnect();
             }
           }
 
@@ -1058,7 +1084,7 @@ console.dump(e)
           if (!options.connection) {
             QDR.log.debug("rhea.connect was not passed an existing connection")
             options.reconnect = true
-            self.testConnect(options, 10000, connectionCallback)
+            self.testConnect(options, 5000, connectionCallback)
           } else {
             QDR.log.debug("rhea.connect WAS passed an existing connection")
             connectionCallback(options)

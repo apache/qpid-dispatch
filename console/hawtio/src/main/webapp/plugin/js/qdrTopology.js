@@ -489,7 +489,7 @@ QDR.log.debug("attr.description " + attr.description)
       $scope.isFixed = function() {
         if (!$scope.contextNode)
           return false;
-        return ($scope.contextNode.fixed & 0b1);
+        return ($scope.contextNode.fixed == 1);
       }
 
       var mouseX, mouseY;

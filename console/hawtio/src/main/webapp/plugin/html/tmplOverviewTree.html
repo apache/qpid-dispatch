@@ -19,8 +19,10 @@
 
 <script type="text/ng-template" id="overviewheader.html">
     <div class="expand-collapse" ng-controller="QDR.OverviewController">
-        <i class="icon-chevron-down clickable" title="Expand all nodes" ng-click="expandAll()"></i>
-        <i class="icon-chevron-up clickable" title="Unexpand all nodes" ng-click="contractAll()"></i>
+        <div ng-if="showExpandCollapseTree()" >
+            <i class="icon-chevron-down clickable" title="Expand all nodes" ng-click="expandAll()"></i>
+            <i class="icon-chevron-up clickable" title="Unexpand all nodes" ng-click="contractAll()"></i>
+        </div>
     </div>
 </script>
 

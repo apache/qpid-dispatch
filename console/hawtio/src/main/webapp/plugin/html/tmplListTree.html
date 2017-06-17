@@ -21,7 +21,7 @@
     <div class="pane-wrapper">
         <div class="pane-header-wrapper">
             <div class="tree-header"><select ng-options="node as node.name for node in nodes" ng-model="currentNode" ng-change="selectNode(currentNode)"></select></div>
-            <div ng-hide="largeNetwork" class="expand-collapse">
+            <div ng-hide="largeNetwork" ng-if="showExpandCollapseTree()" class="expand-collapse">
                 <i class="icon-chevron-down clickable" title="Expand all nodes" ng-click="expandAll()"></i>
                 <i class="icon-chevron-up clickable" title="Unexpand all nodes" ng-click="contractAll()"></i>
             </div>

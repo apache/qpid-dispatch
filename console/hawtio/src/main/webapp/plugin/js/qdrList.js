@@ -707,6 +707,10 @@ var QDR = (function(QDR) {
     var treeReady = false;
     var serviceReady = false;
     $scope.largeNetwork = QDRService.isLargeNetwork()
+    $scope.showExpandCollapseTree = function () {
+      QDR.log.info("showExpandCollapseTree returning " + !QDRService.isMSIE())
+      return !QDRService.isMSIE()
+    }
     // called after we know for sure the schema is fetched and the routers are all ready
     QDRService.addUpdatedAction("initList", function () {
       QDRService.stopUpdating();
