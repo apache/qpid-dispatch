@@ -48,9 +48,11 @@ span.dynatree-icon {
   margin-right: 5px;
 }
 .dynatree-exp-c span.fa-angle:before, .dynatree-exp-cl span.fa-angle:before {
+  font-family: FontAwesome;
   content: "\f105";
 }
 .dynatree-exp-e span.fa-angle:before, .dynatree-exp-el span.fa-angle:before {
+  font-family: FontAwesome;
   content: "\f107";
 }
 
@@ -60,9 +62,11 @@ span.dynatree-icon {
 }
 
 .dynatree-ico-cf span.dynatree-icon:before {
+  font-family: FontAwesome;
   content: "\f07b";
 }
 .dynatree-ico-ef span.dynatree-icon:before {
+  font-family: FontAwesome;
   content: "\f07c";
 }
 
@@ -133,13 +137,16 @@ div#list-controller {
 }
 
 .icon-bar-chart:before {
+  font-family: FontAwesome;
     content: "\f080";
 }
 
 .icon-step-forward:before {
+  font-family: FontAwesome;
   content: "\f051";
 }
 .icon-step-backward:before {
+  font-family: FontAwesome;
   content: "\f048";
 }
 
@@ -168,4 +175,8 @@ div.chartContainer {
 
 #dispatch-login-container .alert {
   padding-right: 47px;
+}
+
+.fa-edit:before, .fa-trash-o:before {
+  font-family: FontAwesome;
 }

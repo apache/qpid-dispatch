@@ -703,92 +703,127 @@ ul.dispatch-view {
 
 span:not(.dynatree-has-children).address .dynatree-icon:before,
 span:not(.dynatree-has-children).router\.address .dynatree-icon:before {
-    content: "\f0ac";
+  font-family: FontAwesome;
+  content: "\f0ac";
 }
 span:not(.dynatree-has-children).address.mobile .dynatree-icon:before,
 span:not(.dynatree-has-children).router\.address.mobile .dynatree-icon:before {
-    content: "\f109";
+  font-family: FontAwesome;
+  content: "\f109";
 }
 span:not(.dynatree-has-children).address.internal.mobile .dynatree-icon:before,
 span:not(.dynatree-has-children).router\.address.internal.mobile .dynatree-icon:before {
-    content: "\f0ac";
+  font-family: FontAwesome;
+  content: "\f0ac";
 }
 span:not(.dynatree-has-children).address.router .dynatree-icon:before,
 span:not(.dynatree-has-children).router\.address.router .dynatree-icon:before {
-    content: "\f047";
+  font-family: FontAwesome;
+  content: "\f047";
 }
 
 span.address-link .dynatree-icon:before {
-    content: "\f0ac";
+  font-family: FontAwesome;
+  content: "\f0ac";
 }
 
 span:not(.dynatree-has-children).connection.external .dynatree-icon:before {
-    content: "\f109";
+  font-family: FontAwesome;
+  content: "\f109";
 }
 span:not(.dynatree-has-children).connection.normal .dynatree-icon:before {
-    content: "\f08e";
+  font-family: FontAwesome;
+  content: "\f08e";
 }
 span:not(.dynatree-has-children).connection.external.quiesced .dynatree-icon:before {
+  font-family: FontAwesome;
 	content: "\f14c";
 	color: red;
 }
 span:not(.dynatree-has-children).connection.inter-router .dynatree-icon:before {
-     content: "\f07e";
+  font-family: FontAwesome;
+   content: "\f07e";
+}
+span:not(.dynatree-has-children).connection.router-control .dynatree-icon:before {
+  font-family: FontAwesome;
+   content: "\f013";
 }
 span:not(.dynatree-has-children).no-data .dynatree-icon:before {
-     content: "\f05e";
-     color: red !important;
+  font-family: FontAwesome;
+  content: "\f05e";
+  color: red !important;
 }
 span:not(.dynatree-has-children).loading .dynatree-icon:before {
-     content: "\f254";
+  font-family: FontAwesome;
+  content: "\f254";
 }
 span:not(.dynatree-has-children).connector .dynatree-icon:before {
-     content: "\f126";
+  font-family: FontAwesome;
+  content: "\f126";
 }
 span:not(.dynatree-has-children).container .dynatree-icon:before {
-     content: "\f16c";
+  font-family: FontAwesome;
+  content: "\f16c";
 }
 span:not(.dynatree-has-children).log .dynatree-icon:before {
-     content: "\f0f6";
+  font-family: FontAwesome;
+  content: "\f0f6";
 }
 span:not(.dynatree-has-children).router\.node .dynatree-icon:before {
-     content: "\f013";
+  font-family: FontAwesome;
+  content: "\f013";
 }
 span:not(.dynatree-has-children).link.inter-router .dynatree-icon:before,
 span:not(.dynatree-has-children).router\.link.inter-router .dynatree-icon:before{
-     content: "\f07e";
+  font-family: FontAwesome;
+  content: "\f07e";
+}
+span:not(.dynatree-has-children).link.router-control .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.router-control .dynatree-icon:before{
+  font-family: FontAwesome;
+  content: "\f013";
 }
 span:not(.dynatree-has-children).link.endpoint .dynatree-icon:before,
 span:not(.dynatree-has-children).router\.link.endpoint .dynatree-icon:before{
-     content: "\f109";
+  font-family: FontAwesome;
+  content: "\f109";
 }
 span:not(.dynatree-has-children).link.console .dynatree-icon:before,
 span:not(.dynatree-has-children).router\.link.console .dynatree-icon:before {
-     content: "\f108";
+  font-family: FontAwesome;
+  content: "\f108";
 }
 span:not(.dynatree-has-children).listener .dynatree-icon:before {
-     content: "\f025";
+  font-family: FontAwesome;
+  content: "\f025";
 }
 span:not(.dynatree-has-children).connection .dynatree-icon:before {
-     content: "\f07e";
+  font-family: FontAwesome;
+  content: "\f07e";
 }
 span:not(.dynatree-has-children).connection.console .dynatree-icon:before {
-     content: "\f108";
+  font-family: FontAwesome;
+  content: "\f108";
 }
 span:not(.dynatree-has-children).waypoint .dynatree-icon:before {
-     content: "\f0ec";
+  font-family: FontAwesome;
+  content: "\f0ec";
 }
 span:not(.dynatree-has-children).router .dynatree-icon:before {
-     content: "\f047";
+  font-family: FontAwesome;
+  content: "\f047";
 }
 span:not(.dynatree-has-children).fixedAddress .dynatree-icon:before {
-     content: "\f015";
+  font-family: FontAwesome;
+  content: "\f015";
 }
 span:not(.dynatree-has-children).linkRoutePattern .dynatree-icon:before {
-     content: "\f039";
+  font-family: FontAwesome;
+  content: "\f039";
 }
 span:not(.dynatree-has-children).allocator .dynatree-icon:before {
-     content: "\f170";
+  font-family: FontAwesome;
+  content: "\f170";
 }
 
 .ngCellText {

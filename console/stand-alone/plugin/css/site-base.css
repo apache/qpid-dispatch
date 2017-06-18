@@ -4630,6 +4630,7 @@ span.dynatree-expander:before:hover
 
 span.dynatree-icon:before {
     background-position: 0px 0px;
+    font-family: FontAwesome;
     content: "\f013";
 }
 
