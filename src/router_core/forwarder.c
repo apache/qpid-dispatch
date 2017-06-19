@@ -101,33 +101,67 @@ static void qdr_forward_find_closest_remotes_CT(qdr_core_t *core, qdr_address_t 
 
 qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, qdr_link_t *link, qd_message_t *msg)
 {
-    qdr_delivery_t *dlv = new_qdr_delivery_t();
-    uint64_t       *tag = (uint64_t*) dlv->tag;
+    qdr_delivery_t *out_dlv = new_qdr_delivery_t();
+    uint64_t       *tag = (uint64_t*) out_dlv->tag;
 
-    ZERO(dlv);
-    sys_atomic_init(&dlv->ref_count, 0);
-    dlv->link       = link;
-    dlv->msg        = qd_message_copy(msg);
-    dlv->settled    = !in_dlv || in_dlv->settled;
-    dlv->presettled = dlv->settled;
-    *tag            = core->next_tag++;
-    dlv->tag_length = 8;
-    dlv->error      = 0;
+    ZERO(out_dlv);
+    sys_atomic_init(&out_dlv->ref_count, 0);
+    out_dlv->link       = link;
+    out_dlv->msg        = qd_message_copy(msg);
+    out_dlv->settled    = !in_dlv || in_dlv->settled;
+    out_dlv->presettled = out_dlv->settled;
+    *tag                = core->next_tag++;
+    out_dlv->tag_length = 8;
+    out_dlv->error      = 0;
 
-    //
-    // Create peer linkage only if the delivery is not settled
-    //
-    if (!dlv->settled) {
-        if (in_dlv && in_dlv->peer == 0) {
-            dlv->peer = in_dlv;
-            in_dlv->peer = dlv;
+    if (in_dlv) {
+        in_dlv->num_peers++;
+        out_dlv->num_peers++;
+    }
+    else
+        return out_dlv;
 
-            qdr_delivery_incref(dlv);
-            qdr_delivery_incref(in_dlv);
+    if (in_dlv->num_peers == 1) {
+        //
+        // One-to-one relationship between in_dlv and out_dlv.
+        //
+        out_dlv->peers.peer_list[0] = in_dlv;
+        in_dlv->peers.peer_list[0] = out_dlv;
+        qdr_delivery_incref(out_dlv);
+        qdr_delivery_incref(in_dlv);
+    }
+    else if (in_dlv->num_peers > INITIAL_PEER_SIZE) {
+        if (in_dlv->num_peers == INITIAL_PEER_SIZE + 1) {
+            //
+            // Say INITIAL_PEER_SIZE = 8 and peer_list already has 8 elements. We need to add a 9th element
+            // We will copy the 8 elements from peer_list into peer_ref_list and this will happen only once
+            //
+            qdr_delivery_ref_list_t local_dlv_ref_list;
+            DEQ_INIT(local_dlv_ref_list);
+            for (int i=0; i < INITIAL_PEER_SIZE; i++) {
+                qdr_add_delivery_ref(&local_dlv_ref_list, in_dlv->peers.peer_list[i]);
+            }
+
+            // Copy the contents of local_dlv_ref_list to in_dlv->peers.peer_ref_list
+            // We will do this only once when in_dlv->num_peers == INITIAL_PEER_SIZE + 1
+            DEQ_MOVE(local_dlv_ref_list, in_dlv->peers.peer_ref_list);
         }
+
+        qdr_add_delivery_ref(&in_dlv->peers.peer_ref_list, out_dlv);
+        qdr_delivery_incref(out_dlv);
+
+        out_dlv->peers.peer_list[0] = in_dlv;
+        qdr_delivery_incref(in_dlv);
+    }
+    else if (in_dlv->num_peers > 1) {
+         in_dlv->peers.peer_list[in_dlv->num_peers-1] = out_dlv;
+         qdr_delivery_incref(out_dlv);
+
+         out_dlv->peers.peer_list[0] = in_dlv;
+         qdr_delivery_incref(in_dlv);
     }
 
-    return dlv;
+    return out_dlv;
 }
 
 
