@@ -36,7 +36,6 @@ var QDR = (function (QDR) {
    */
   QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', '$timeout', '$dialog', function($scope, QDRService, $location, $timeout, $dialog) {
 
-    console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
     var COLUMNSTATEKEY = 'QDRColumnKey.';
     var OVERVIEWEXPANDEDKEY = "QDROverviewExpanded"
     var OVERVIEWACTIVATEDKEY = "QDROverviewActivated"
@@ -386,22 +385,6 @@ var QDR = (function (QDR) {
               sumObj.toproc = addNull(sumObj.toproc, address.toproc)
               sumObj.fromproc = addNull(sumObj.fromproc, address.fromproc)
             }
-/*
-            addressFields.push({
-              address: QDRService.addr_text(identity),
-              'class': QDRService.addr_class(identity),
-              phase:   addr_phase(identity),
-              inproc:  prettySum("inProcess"),
-              local:   prettySum("subscriberCount"),
-              remote:  prettySum("remoteCount"),
-              'in':    prettySum("deliveriesIngress"),
-              out:     prettySum("deliveriesEgress"),
-              thru:    prettySum("deliveriesTransit"),
-              toproc:  prettySum("deliveriesToContainer"),
-              fromproc:prettySum("deliveriesFromContainer"),
-              uid:     uid
-            })
-*/
           })
         }
         for (var obj in addressObjs) {
@@ -959,40 +942,6 @@ var QDR = (function (QDR) {
       }
     }
 
-    var ConnectionInfo = function (entity) {
-        if (!entity) {
-          QDR.log.info('****************** entity was not. returning')
-          return
-        }
-        $scope.Connection = entity
-QDR.log.info("ConnectionInfo called with " + entity)
-QDR.log.info("$scope.Connection.data.title = " + $scope.Connection.data.title);
-        var currentEntity = getCurrentLinksEntity()
-        if (currentEntity === 'Connection' && entityModes[currentEntity] && entityModes[currentEntity].currentModeId === 'links') {
-          updateModeLinks()
-          scheduleNextUpdate()
-          return
-        }
-        var filteredFields = []
-        var fields = Object.keys(entity.data.fields)
-        fields.forEach( function (field) {
-          if (field != "title" && field != "uid")
-            filteredFields.push({attribute: field, value: entity.data.fields[field]})
-        })
-        $scope.ConnectionFields = filteredFields
-//QDR.log.info("$scope.connectionFields = ");
-//console.dump($scope.connectionFields)
-QDR.log.info("-------------- ConnectionFields  -----------")
-console.dump(filteredFields)
-QDR.log.info("connectionGrid.data is " + $scope.connectionGrid.data)
-//$scope.connectionGrid.data = $scope.connectionFields
-QDR.log.info("$scope.Connection = " + $scope.Connection)
-//console.dump($scope.Connection)
-        scheduleNextUpdate()
-        loadColState($scope.connectionGrid);
-        //$timeout(() => $scope[entityName.toLowerCase()+'Fields'] = filteredFields)
-    }
-
     // get info for a single connection
     $scope.gridModes = [{
         content: '<a><i class="icon-list"></i> Attriutes</a>',
@@ -1322,66 +1271,6 @@ QDR.log.debug("setting linkFields to [] in selectMode")
           updateLogTree($scope.allLogFields)
         }
         QDRService.fetchAllEntities({entity: 'logStats'}, gotAllLogStats, gotLogStats)
-/*
-        var q = QDR.queue(1)
-
-        var queuedSendMethod = function (node, callback) {
-          var gotLogInfo = function (nodeId, entity, response, context) {
-            var statusCode = context.message.application_properties.statusCode;
-            if (statusCode < 200 || statusCode >= 300) {
-              callback("getLog failed with statusCode of " + statusCode)
-            } else {
-              var logFields = response.map( function (result) {
-                return {
-                  nodeId: QDRService.nameFromId(nodeId),
-                  name: result[0],
-                  type: result[1],
-                  message: result[2],
-                  source: result[3],
-                  line: result[4],
-                  time: Date(result[5]).toString()
-                }
-              })
-              logResults.push.apply(logResults, logFields) // append new array to existing
-              callback(null)
-            }
-          }
-          QDRService.sendMethod(node, undefined, {}, "GET-LOG", {}, gotLogInfo)
-        }
-        for (var i=0; i<nodeIds.length; ++i) {
-          q.defer(queuedSendMethod, nodeIds[i])
-        }
-        q.await(function (error) {
-          if (!error) {
-            logResults.sort( function (a, b) {return b.name - a.name})
-            var allLogFields = $scope.allLogFields
-            $scope.allLogFields = [];
-            for (var i=0; i<allLogFields.length; ++i) {
-              $scope.allLogFields.push({module: allLogFields[i].module,
-                count: logResults.filter( function (entry) {
-                  return entry.name === allLogFields[i].module
-                }).length
-              })
-            }
-            $timeout(function () {allLogEntries = logResults; scheduleNextUpdate()})
-          }
-        })
-      }
-      if ($scope.allLogFields.length == 0) {
-        QDRService.fetchEntity(nodeIds[0], "logStats", [], function (nodeName, entity, response) {
-          var moduleIndex = response.attributeNames.indexOf("name")
-          response.results.sort( function (a,b) {return a[moduleIndex] < b[moduleIndex] ? -1 : a[moduleIndex] > b[moduleIndex] ? 1 : 0})
-          response.results.forEach( function (result) {
-            var log = QDRService.flatten(response.attributeNames, result)
-            $scope.allLogFields.push(log)
-          })
-          updateLogTree($scope.allLogFields)
-          haveLogFields()
-        })
-      } else {
-        haveLogFields()
-      }
-        */
     }
 
     $scope.logFields = []
@@ -1413,22 +1302,6 @@ QDR.log.debug("setting linkFields to [] in selectMode")
           })
         }
         QDRService.fetchAllEntities({entity: 'log', attrs: ['module', 'enable']}, gotLogInfo)
-/*
-      $timeout(function () {
-        $scope.log = node
-        $scope.logFields = []
-        for (var n in allLogEntries) {
-          var entry = allLogEntries[n]
-          entry.forEach( function (module) {
-            if (module.name === node.data.key) {
-              module.nodeId = n
-              $scope.logFields.push(module)
-            }
-          })
-        }
-        scheduleNextUpdate()
-      })
-*/
     }
 
     var getExpandedList = function () {
@@ -1667,8 +1540,8 @@ QDR.log.debug("newly created node needs to be activated")
     topLevelChildren.push(connections)
 
     updateConnectionTree = function (connectionFields) {
-      //var info = SingleEntityInfo('Connection')
-      var info = ConnectionInfo
+      var info = SingleEntityInfo('Connection')
+      //var info = ConnectionInfo
       var worker = function (connection) {
         var c = new Folder(connection.host)
         var isConsole = QDRService.isAConsole (connection.properties, connection.identity, connection.role, connection.routerId)
