@@ -498,7 +498,7 @@ var QDR = (function(QDR) {
       $scope.isFixed = function() {
         if (!$scope.contextNode)
           return false;
-        return ($scope.contextNode.fixed & 0b1);
+        return ($scope.contextNode.fixed == 1);
       }
 
       var mouseX, mouseY;
@@ -1632,7 +1632,7 @@ var QDR = (function(QDR) {
             }
             mousedown_node = d;
             // mouse position relative to svg
-            initial_mouse_down_position = d3.mouse(this.parentElement.parentElement.parentElement).slice();
+            initial_mouse_down_position = d3.mouse(this.parentNode.parentNode.parentNode).slice();
           })
           .on('mouseup', function(d) {  // mouse up for circle
             if (!mousedown_node)
@@ -1644,7 +1644,8 @@ var QDR = (function(QDR) {
 
             // check for drag
             mouseup_node = d;
-            var mySvg = this.parentElement.parentElement.parentElement;
+
+            var mySvg = this.parentNode.parentNode.parentNode;
             // if we dragged the node, make it fixed
             var cur_mouse = d3.mouse(mySvg);
             if (cur_mouse[0] != initial_mouse_down_position[0] ||

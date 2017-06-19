@@ -516,14 +516,12 @@ var QDR = (function (QDR) {
     $scope.pagedLinkData = []
     $scope.selectedLinks = []
 
-    var linkRowTmpl = `
-      <div ng-class="{linkDirIn: row.getProperty('linkDir') == 'in', linkDirOut: row.getProperty('linkDir') == 'out'}">
-        <div ng-style="{ 'cursor': row.cursor }" ng-repeat="col in renderedColumns" ng-class="col.colIndex()" class="ngCell {{col.cellClass}}">
-          <div class="ngVerticalBar" ng-style="{height: rowHeight}" ng-class="{ ngVerticalBarVisible: !$last }">&nbsp;</div>
-          <div ng-cell></div>
-        </div>
-      </div>
-    `;
+    var linkRowTmpl = "<div ng-class=\"{linkDirIn: row.getProperty('linkDir') == 'in', linkDirOut: row.getProperty('linkDir') == 'out'}\">" +
+          "<div ng-style=\"{ 'cursor': row.cursor }\" ng-repeat=\"col in renderedColumns\" ng-class=\"col.colIndex()\" class=\"ngCell {{col.cellClass}}\">" +
+          "<div class=\"ngVerticalBar\" ng-style=\"{height: rowHeight}\" ng-class=\"{ ngVerticalBarVisible: !$last }\">&nbsp;</div>" +
+          "<div ng-cell></div>" +
+          "</div>" +
+          "</div>";
 
     $scope.linksGrid = {
       saveKey: 'linksGrid',

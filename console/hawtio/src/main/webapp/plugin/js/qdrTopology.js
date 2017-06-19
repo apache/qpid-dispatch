@@ -1619,7 +1619,7 @@ QDR.log.debug("attr.description " + attr.description)
             }
             mousedown_node = d;
             // mouse position relative to svg
-            initial_mouse_down_position = d3.mouse(this.parentElement.parentElement.parentElement).slice();
+            initial_mouse_down_position = d3.mouse(this.parentNode.parentNode.parentNode).slice();
           })
           .on('mouseup', function(d) {  // mouse up for circle
             if (!mousedown_node)
@@ -1631,7 +1631,7 @@ QDR.log.debug("attr.description " + attr.description)
 
             // check for drag
             mouseup_node = d;
-            var mySvg = this.parentElement.parentElement.parentElement;
+            var mySvg = this.parentNode.parentNode.parentNode;
             // if we dragged the node, make it fixed
             var cur_mouse = d3.mouse(mySvg);
             if (cur_mouse[0] != initial_mouse_down_position[0] ||
