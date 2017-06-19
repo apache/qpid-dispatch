@@ -101,33 +101,26 @@ static void qdr_forward_find_closest_remotes_CT(qdr_core_t *core, qdr_address_t 
 
 qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, qdr_link_t *link, qd_message_t *msg)
 {
-    qdr_delivery_t *dlv = new_qdr_delivery_t();
-    uint64_t       *tag = (uint64_t*) dlv->tag;
+    qdr_delivery_t *out_dlv = new_qdr_delivery_t();
+    uint64_t       *tag = (uint64_t*) out_dlv->tag;
 
-    ZERO(dlv);
-    sys_atomic_init(&dlv->ref_count, 0);
-    dlv->link       = link;
-    dlv->msg        = qd_message_copy(msg);
-    dlv->settled    = !in_dlv || in_dlv->settled;
-    dlv->presettled = dlv->settled;
+    ZERO(out_dlv);
+    sys_atomic_init(&out_dlv->ref_count, 0);
+    out_dlv->link       = link;
+    out_dlv->msg        = qd_message_copy(msg);
+    out_dlv->settled    = !in_dlv || in_dlv->settled;
+    out_dlv->presettled = out_dlv->settled;
     *tag            = core->next_tag++;
-    dlv->tag_length = 8;
-    dlv->error      = 0;
+    out_dlv->tag_length = 8;
+    out_dlv->error      = 0;
 
     //
-    // Create peer linkage only if the delivery is not settled
+    // Create peer linkage only if the outgoing delivery is not settled
     //
-    if (!dlv->settled) {
-        if (in_dlv && in_dlv->peer == 0) {
-            dlv->peer = in_dlv;
-            in_dlv->peer = dlv;
+    if (!out_dlv->settled && in_dlv)
+        qdr_delivery_link_peers_CT(in_dlv, out_dlv);
 
-            qdr_delivery_incref(dlv);
-            qdr_delivery_incref(in_dlv);
-        }
-    }
-
-    return dlv;
+    return out_dlv;
 }
 
 

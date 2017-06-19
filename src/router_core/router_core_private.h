@@ -309,6 +309,7 @@ struct qdr_delivery_t {
     sys_atomic_t         ref_count;
     qdr_link_t          *link;
     qdr_delivery_t      *peer;
+    qdr_delivery_t      *next_peer;
     qd_message_t        *msg;
     qd_iterator_t       *to_addr;
     qd_iterator_t       *origin;
@@ -693,6 +694,28 @@ void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *delivery);
+
+/**
+ * Links the in_dlv to the out_dlv and increments ref counts of both deliveries
+ */
+void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv);
+
+/**
+ * Zeroes out peer references from both peers and decrefs ref counts.
+ */
+void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_delivery_t *peer);
+
+/**
+ * Called before the call to qdr_delivery_next_peer_CT. This positions the peer pointer to the first peer position.
+ */
+void qdr_delivery_start_peer_CT(qdr_delivery_t *dlv);
+
+/**
+ * Returns the first and the subsequent peers of the dlv.
+ */
+qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv);
+
+
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
 void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash);
