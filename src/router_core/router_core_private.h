@@ -708,7 +708,7 @@ void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_del
 /**
  * Called before the call to qdr_delivery_next_peer_CT. This positions the peer pointer to the first peer position.
  */
-void qdr_delivery_start_peer_CT(qdr_delivery_t *dlv);
+qdr_delivery_t *qdr_delivery_first_peer_CT(qdr_delivery_t *dlv);
 
 /**
  * Returns the first and the subsequent peers of the dlv.
