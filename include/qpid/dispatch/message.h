@@ -107,6 +107,14 @@ typedef enum {
     QD_FIELD_REPLY_TO_GROUP_ID
 } qd_message_field_t;
 
+/** Annotation schemes used by remote connection peers */
+typedef enum {
+    QD_ANNO_SCHEME_NONE,
+    QD_ANNO_SCHEME_V1,
+    QD_ANNO_SCHEME_V2
+} qd_message_annotation_scheme_t;
+
+
 
 /**
  * Allocate a new message.
@@ -133,31 +141,14 @@ void qd_message_free(qd_message_t *msg);
 qd_message_t *qd_message_copy(qd_message_t *msg);
 
 /**
- * Retrieve the message annotations from a message.
+ * Retrieve the message annotations from a message and place them in message storage.
  *
  * IMPORTANT: The pointer returned by this function remains owned by the message.
  *            The caller MUST NOT free the parsed field.
  *
  * @param msg Pointer to a received message.
- * @return Pointer to the parsed field for the message annotations.  If the message doesn't
- *         have message annotations, the return value shall be NULL.
  */
-qd_parsed_field_t *qd_message_message_annotations(qd_message_t *msg);
-
-/**
- * Retrieve the message annotations from a message.
- *
- * IMPORTANT: The pointer returned by this function remains owned by the message.
- *            The caller MUST NOT free the parsed field.
- * 
- * The v1 scheme returned the map object that had all the annotations. This
- * v2 scheme returns only the map value element, a list, that has all router values
- *
- * @param msg Pointer to a received message.
- * @return Pointer to the parsed field for the message annotations.  If the message doesn't
- *         have message annotations, the return value shall be NULL.
- */
-qd_parsed_field_t *qd_message_v2_annotations(qd_message_t *msg);
+void qd_message_message_annotations(qd_message_t *msg);
 
 /**
  * Set the value for the QD_MA_TRACE field in the outgoing message annotations
@@ -260,7 +251,7 @@ ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, char 
 //
 
 // Convenience Functions
-void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *buffers);
+void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *buffers, int hello_version);
 void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *content);
 void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2);
 
@@ -314,20 +305,27 @@ qd_parsed_field_t *qd_message_get_trace      (qd_message_t *msg);
 int                qd_message_get_phase_val  (qd_message_t *msg);
 
 /**
- * Set annotation scheme of received message with annotation scheme used by remote peer
+ * Translate a remote hello protocol version number into which annotation scheme to use
  * 
- * @param msg A pointer to the message
- * @param annotation_v1 true if remote host sent messages with v1 annotation scheme
+ * @param hello_version The remote version
+ * @return which scheme to use
  */
-void               qd_message_set_annotation_scheme  (qd_message_t *msg, bool annotation_v1);
+qd_message_annotation_scheme_t qd_message_hello_ver_to_annotation_scheme  (int hello_version);
 
 /**
- * Get annotation scheme used by remote peer when message was created
- * 
- * @param msg A pointer to the message
- * @return true if v1 scheme was used
+ * Return annotation scheme for a received message
+ * @param msg the incoming qd_message_t * qd_message()
+ * @return the scheme that the remote router used to encode the annotations
  */
-bool               qd_message_get_annotation_scheme  (const qd_message_t *msg);
+qd_message_annotation_scheme_t qd_message_get_annotation_scheme (const qd_message_t *msg);
+
+/**
+ * Force the message's incoming hello protocol version for locally-generated test messages
+ * @param msg the message
+ * @param version the hello protocol version
+ */
+void qd_message_set_hello_version (qd_message_t *msg, int version);
+
 
 ///@}
 

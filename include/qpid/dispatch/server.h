@@ -531,9 +531,9 @@ const char* qd_connection_name(const qd_connection_t *c);
 const char* qd_connection_remote_ip(const qd_connection_t *c);
 
 /**
- * Does this connection source messages using v1 annotation scheme?
+ * Get the hello protocol version used by the remote router on this connection
  */
-bool qd_connection_uses_v1_annotations(const qd_connection_t *c);
+int qd_connection_hello_protocol_version(const qd_connection_t *c);
 
 /**
  * @}

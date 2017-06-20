@@ -23,6 +23,7 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/log.h>
+#include <qpid/dispatch/buffer.h>
 #include <proton/object.h>
 #include "message_private.h"
 #include "compose_private.h"
@@ -38,15 +39,6 @@
 const char *STR_AMQP_NULL = "null";
 const char *STR_AMQP_TRUE = "T";
 const char *STR_AMQP_FALSE = "F";
-
-// Locate router message annotations in v2 list field
-typedef enum {
-    MA_POS_TO,
-    MA_POS_PHASE,
-    MA_POS_INGRESS,
-    MA_POS_TRACE,
-    MA_POS_LAST
-} qd_message_annotation_pos_t;
 
 static const unsigned char * const MSG_HDR_LONG                 = (unsigned char*) "\x00\x80\x00\x00\x00\x00\x00\x00\x00\x70";
 static const unsigned char * const MSG_HDR_SHORT                = (unsigned char*) "\x00\x53\x70";
@@ -849,7 +841,7 @@ qd_message_t *qd_message()
     DEQ_INIT(msg->ma_ingress);
     msg->ma_phase = 0;
     msg->content = new_qd_message_content_t();
-    msg->ma_v1_inbound = false;
+    msg->hello_ver_in = 0;
 
     if (msg->content == 0) {
         free_qd_message_t((qd_message_t*) msg);
@@ -860,7 +852,7 @@ qd_message_t *qd_message()
     msg->content->lock = sys_mutex();
     sys_atomic_init(&msg->content->ref_count, 1);
     msg->content->parse_depth = QD_DEPTH_NONE;
-    msg->content->parsed_message_annotations = 0;
+    msg->content->annotations = 0;
 
     return (qd_message_t*) msg;
 }
@@ -881,12 +873,10 @@ void qd_message_free(qd_message_t *in_msg)
     rc = sys_atomic_dec(&content->ref_count) - 1;
 
     if (rc == 0) {
-        if (content->parsed_message_annotations)
-            qd_parse_free(content->parsed_message_annotations);
+        if (content->annotations)
+            qd_parse_free(content->annotations);
         if (content->ma_field_iter_in)
             qd_iterator_free(content->ma_field_iter_in);
-        if (content->ma_all_annotations)
-            qd_parse_free(content->ma_all_annotations);
 
         qd_buffer_t *buf = DEQ_HEAD(content->buffers);
         while (buf) {
@@ -918,100 +908,62 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     qd_buffer_list_clone(&copy->ma_ingress, &msg->ma_ingress);
     copy->ma_phase = msg->ma_phase;
     copy->content = content;
-    copy->ma_v1_inbound = msg->ma_v1_inbound;
+    copy->hello_ver_in = msg->hello_ver_in;
+
+    qd_message_message_annotations((qd_message_t*) copy);
 
     sys_atomic_inc(&content->ref_count);
 
     return (qd_message_t*) copy;
 }
 
-qd_parsed_field_t *qd_message_message_annotations(qd_message_t *in_msg)
+
+void qd_message_message_annotations(qd_message_t *in_msg)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     qd_message_content_t *content = msg->content;
 
-    if (content->parsed_message_annotations)
-        return content->parsed_message_annotations;
+    if (content->ma_parsed)
+        return ;
+    content->ma_parsed = true;
 
-    qd_iterator_t *ma = qd_message_field_iterator(in_msg, QD_FIELD_MESSAGE_ANNOTATION);
-    if (ma == 0)
-        return 0;
-
-    content->parsed_message_annotations = qd_parse(ma);
-    if (content->parsed_message_annotations == 0 ||
-        !qd_parse_ok(content->parsed_message_annotations) ||
-        !qd_parse_is_map(content->parsed_message_annotations)) {
-        qd_iterator_free(ma);
-        qd_parse_free(content->parsed_message_annotations);
-        content->parsed_message_annotations = 0;
-        return 0;
-    }
-
-    qd_iterator_free(ma);
-    return content->parsed_message_annotations;
-}
-
-
-qd_parsed_field_t *qd_message_v2_annotations(qd_message_t *in_msg)
-{
-    qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
-    qd_message_content_t *content = msg->content;
-
-    // caluculate the return value only once
-    if (content->ma_v2_parsed)
-        return content->ma_v2;
-    content->ma_v2_parsed = true;
-
-    // return 0 if annotations are absent
     content->ma_field_iter_in = qd_message_field_iterator(in_msg, QD_FIELD_MESSAGE_ANNOTATION);
     if (content->ma_field_iter_in == 0)
-        return 0;
+        return;
 
-    // parse message into v2 vs. remaining annotations parts
-    (void) qd_parse_v2_annotations(
+    qd_parse_annotations(
+        msg->hello_ver_in,
         content->ma_field_iter_in,
-        QD_MA_ANNOTATIONS,
-        &content->ma_all_annotations,
+        &content->ma_pf_ingress,
+        &content->ma_pf_phase,
+        &content->ma_pf_to_override,
+        &content->ma_pf_trace,
+        &content->ma_user_annotation_blob,
         &content->ma_count,
-        &content->ma_v2);
+        &content->annotations);
 
-    // construct pseudo-field location of user annotations blob
+    // Construct pseudo-field location of user annotations blob
+    // This holds all annotations if no router-specific annotations are present
     if (content->ma_count > 0) {
-        qd_iterator_pointer_t remaining;
-        qd_parse_get_view_cursor(msg->content->ma_all_annotations, &remaining);
-        content->field_user_annotations.buffer = remaining.buffer;
-        content->field_user_annotations.offset = remaining.cursor - qd_buffer_base(remaining.buffer);
-        content->field_user_annotations.length = remaining.remaining;
-        content->field_user_annotations.parsed = true;
+        qd_field_location_t   *cf  = &content->field_user_annotations;
+        qd_iterator_pointer_t *uab = &content->ma_user_annotation_blob;
+        cf->buffer = uab->buffer;
+        cf->offset = uab->cursor - qd_buffer_base(uab->buffer);
+        cf->length = uab->remaining;
+        cf->parsed = true;
+        if (content->ma_count > 4) {
+            //fprintf(stdout, "V2_DEV set ma_count to %d, len=%d\n", content->ma_count, (int)cf->length);
+        }
     }
 
-    if (!content->ma_v2) {
-        return content->ma_v2;
+    if (msg->hello_ver_in != 0) {
+        // extract phase
+        if (content->ma_pf_phase) {
+            content->ma_int_phase = qd_parse_as_int(content->ma_pf_phase);
+        }
     }
-    // parsed_field ma_v2 holds the v2 annotation object
-    // ma_all_annotations->raw_iter.view_pointer {buffer, cursor, remaining} 
-    // describes the remaining annotations blob.
 
-    assert(qd_parse_is_list(content->ma_v2));
-    assert(qd_parse_sub_count(content->ma_v2) == MA_POS_LAST);
-
-    content->ma_ingress_2     = qd_parse_sub_value(content->ma_v2, MA_POS_INGRESS);
-    content->ma_phase_2       = qd_parse_sub_value(content->ma_v2, MA_POS_PHASE);
-    content->ma_to_override_2 = qd_parse_sub_value(content->ma_v2, MA_POS_TO);
-    content->ma_trace_2       = qd_parse_sub_value(content->ma_v2, MA_POS_TRACE);
-
-    // nullify empty fields
-    if (qd_iterator_remaining(qd_parse_raw(content->ma_ingress_2)) == 0)
-        content->ma_ingress_2 = 0;
-    if (qd_iterator_remaining(qd_parse_raw(content->ma_to_override_2)) == 0)
-        content->ma_to_override_2 = 0;
-    if (qd_parse_sub_count(content->ma_trace_2) == 0)
-        content->ma_trace_2 = 0;
-
-    // extract phase
-    content->ma_phase = qd_parse_as_int(content->ma_phase_2);
-
-    return content->ma_v2;
+    return;
 }
 
 
@@ -1067,9 +1019,12 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     //
     if (!msg) {
         msg = (qd_message_pvt_t*) qd_message();
+        // HACK ALERT: This code gets the "hello protocol version" from
+        // the Open performative Version property and not from the protocol
+        // proper.
         qd_link_t       *qdl = (qd_link_t *)pn_link_get_context(link);
         qd_connection_t *qdc = qd_link_connection(qdl);
-        msg->ma_v1_inbound = qd_connection_uses_v1_annotations(qdc);
+        msg->hello_ver_in = qd_connection_hello_protocol_version(qdc);
 
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
@@ -1150,40 +1105,84 @@ static void send_handler(void *context, const unsigned char *start, int length)
 }
 
 
-// create a buffer chain holding the outgoing message annotations section
-static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t *out, bool strip_annotations)
+// create_message_annotations
+//
+// Create a buffer chain holding the outgoing message annotations section.
+// Three types of outbound link are available:
+//  V1 - 0.8.x routers that implement the original annotation scheme
+//  V2 - 1.0.x routers that implement the new annotation scheme
+//  V0 - End system clients that do not get any router annotations
+//
+// These routines do not strictly create the buffer chain in a ready-to-go form.
+// Rather hints are left to transmit the annotations in three sections:
+//   1. The optional map header returned in 'out'. This may hold:
+//     a. empty if no user annotations and no router annotations
+//     b. A map header if just user annotations
+//     c. A map header and the V2 annotation object.
+//     In cases b and c the map header relies on the transmit routine to
+//     send the opaque blob of user annotations.
+//   2. The optional blob of user annotations. The buffers for this section
+//      are not copied into any buffer chain. Instead they are consumed
+//      directly from the incoming message buffer chain.
+//      These buffers are discovered in qd_message_message_annotations
+//      and located using msg.content->ma_user_annotation_blob.
+//   3. The optional V1 annotation key-value pairs.
+//      These are identified by the out_trailer buffer chain.
+//
+// Function qd_message_send must synthesize the annotations by sending
+// buffer chain 'out', the user's blob, and buffer chain 'out_trailer' as required.
+// The map in chain 'out' has been created with a gimmick that adjusts the size
+// of the map in the outbound message even though the the data is not present in
+// buffer chain 'out'.
+static void compose_message_annotations_v0(qd_message_pvt_t *msg, qd_buffer_list_t *out)
 {
     qd_composed_field_t *out_ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
 
     bool map_started = false;
 
-    //We will have to add the custom annotations
-    qd_parsed_field_t *in_ma = qd_parse_dup(msg->content->parsed_message_annotations);
-    if (in_ma) {
-        uint32_t count = qd_parse_sub_count(in_ma);
-
-        for (uint32_t idx = 0; idx < count; idx++) {
-            qd_parsed_field_t *sub_key  = qd_parse_sub_key(in_ma, idx);
-            if (!sub_key)
-                continue;
-
-            qd_iterator_t *iter = qd_parse_raw(sub_key);
-
-            if (!qd_iterator_prefix(iter, QD_MA_PREFIX)) {
-                if (!map_started) {
-                    qd_compose_start_map(out_ma);
-                    map_started = true;
-                }
-                qd_parsed_field_t *sub_value = qd_parse_sub_value(in_ma, idx);
-                qd_compose_insert_typed_iterator(out_ma, qd_parse_typed(sub_key));
-                qd_compose_insert_typed_iterator(out_ma, qd_parse_typed(sub_value));
-            }
+    // if not stripping then add the dispatch router specific annotations.
+    if (msg->content->ma_count > 0) {
+        // insert the incoming message remaining elements
+        if (!map_started) {
+            qd_compose_start_map(out_ma);
+            map_started = true;
         }
 
-        qd_parse_free(in_ma);
+        // Bump the map size and count to reflect user's blob.
+        // Note that the blob is not inserted here. This code adjusts the
+        // size/count of the map that is under construction and the content
+        // is inserted by router-node
+        qd_compose_insert_opaque_elements(out_ma, msg->content->ma_count,
+                                          msg->content->field_user_annotations.length);
     }
 
-    //Add the dispatch router specific annotations only if strip_annotations is false.
+    if (map_started) {
+        qd_compose_end_map(out_ma);
+        qd_compose_take_buffers(out_ma, out);
+    }
+
+    qd_compose_free(out_ma);
+}
+
+
+static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list_t *out,
+                                           qd_buffer_list_t *out_trailer, bool strip_annotations)
+{
+    qd_composed_field_t *out_ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
+
+    bool map_started = false;
+
+    if (msg->content->ma_count > 4) {
+        //fprintf(stdout, "V2_DEV Composing user mesage in v1 format\n");
+    }
+
+    // v1 annotations go into the out_trailer
+    int field_count = 0;
+    qd_composed_field_t *field = qd_compose_subfield(0);
+    if (!field)
+        return;
+
+    // If not stripping then add dispatch router specific annotations
     if (!strip_annotations) {
         if (!DEQ_IS_EMPTY(msg->ma_to_override) ||
             !DEQ_IS_EMPTY(msg->ma_trace) ||
@@ -1196,42 +1195,77 @@ static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
             }
 
             if (!DEQ_IS_EMPTY(msg->ma_to_override)) {
-                qd_compose_insert_symbol(out_ma, QD_MA_TO);
-                qd_compose_insert_buffers(out_ma, &msg->ma_to_override);
+                qd_compose_insert_symbol(field, QD_MA_TO);
+                qd_compose_insert_buffers(field, &msg->ma_to_override);
+                field_count++;
             }
 
             if (!DEQ_IS_EMPTY(msg->ma_trace)) {
-                qd_compose_insert_symbol(out_ma, QD_MA_TRACE);
-                qd_compose_insert_buffers(out_ma, &msg->ma_trace);
+                qd_compose_insert_symbol(field, QD_MA_TRACE);
+                qd_compose_insert_buffers(field, &msg->ma_trace);
+                field_count++;
             }
 
             if (!DEQ_IS_EMPTY(msg->ma_ingress)) {
-                qd_compose_insert_symbol(out_ma, QD_MA_INGRESS);
-                qd_compose_insert_buffers(out_ma, &msg->ma_ingress);
+                qd_compose_insert_symbol(field, QD_MA_INGRESS);
+                qd_compose_insert_buffers(field, &msg->ma_ingress);
+                field_count++;
             }
 
             if (msg->ma_phase != 0) {
-                qd_compose_insert_symbol(out_ma, QD_MA_PHASE);
-                qd_compose_insert_int(out_ma, msg->ma_phase);
+                qd_compose_insert_symbol(field, QD_MA_PHASE);
+                qd_compose_insert_int(field, msg->ma_phase);
+                field_count++;
             }
         }
+    }
+
+    if (msg->content->ma_count > 0) {
+        // insert the incoming message user blob
+        if (!map_started) {
+            qd_compose_start_map(out_ma);
+            map_started = true;
+        }
+
+        // Bump the map size and count to reflect user's blob.
+        // Note that the blob is not inserted here. This code adjusts the
+        // size/count of the map that is under construction and the content
+        // is inserted by router-node
+        qd_compose_insert_opaque_elements(out_ma, msg->content->ma_count,
+                                          msg->content->field_user_annotations.length);
+    }
+
+    if (field_count > 0) {
+        if (!map_started) {
+            qd_compose_start_map(out_ma);
+            map_started = true;
+        }
+        qd_compose_insert_opaque_elements(out_ma, field_count * 2,
+                                          qd_buffer_list_length(&field->buffers));
+
     }
 
     if (map_started) {
         qd_compose_end_map(out_ma);
         qd_compose_take_buffers(out_ma, out);
+        qd_compose_take_buffers(field, out_trailer);
     }
 
     qd_compose_free(out_ma);
+    qd_compose_free(field);
 }
 
 
-// create a buffer chain holding the outgoing message annotations section
-static void compose_message_annotations2(qd_message_pvt_t *msg, qd_buffer_list_t *out, bool strip_annotations)
+static void compose_message_annotations_v2(qd_message_pvt_t *msg, qd_buffer_list_t *out,
+                                           bool strip_annotations)
 {
     qd_composed_field_t *out_ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
 
     bool map_started = false;
+
+    if (msg->content->ma_count > 4) {
+        //fprintf(stdout, "V2_DEV Composing user mesage in v2 format\n");
+    }
 
     // if not stripping then add the dispatch router specific annotations.
     if (!strip_annotations) {
@@ -1242,7 +1276,7 @@ static void compose_message_annotations2(qd_message_pvt_t *msg, qd_buffer_list_t
 
         qd_compose_start_list(out_ma);
         qd_compose_insert_buffers_or_null(out_ma, &msg->ma_to_override);
-        qd_compose_insert_int(out_ma, msg->ma_phase);
+        qd_compose_insert_int(            out_ma,  msg->ma_phase);
         qd_compose_insert_buffers_or_null(out_ma, &msg->ma_ingress);
         qd_compose_insert_buffers_or_null(out_ma, &msg->ma_trace);
         qd_compose_end_list(out_ma);
@@ -1255,17 +1289,39 @@ static void compose_message_annotations2(qd_message_pvt_t *msg, qd_buffer_list_t
             map_started = true;
         }
 
-        // bump the map size and count to reflect user's blob
+        // Bump the map size and count to reflect user's blob.
+        // Note that the blob is not inserted here. This code adjusts the
+        // size/count of the map that is under construction and the content
+        // is inserted by router-node
         qd_compose_insert_opaque_elements(out_ma, msg->content->ma_count,
                                           msg->content->field_user_annotations.length);
     }
-    
+
     if (map_started) {
         qd_compose_end_map(out_ma);
         qd_compose_take_buffers(out_ma, out);
     }
 
     qd_compose_free(out_ma);
+}
+
+
+// create a buffer chain holding the outgoing message annotations section
+static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t *out,
+                                        qd_buffer_list_t *out_trailer,
+                                        bool strip_annotations, int hello_version_out)
+{
+    switch (hello_version_out) {
+    case QD_ANNO_SCHEME_V2:
+        compose_message_annotations_v2(msg, out,              strip_annotations);
+        break;
+    case QD_ANNO_SCHEME_NONE:
+        compose_message_annotations_v0(msg, out);
+        break;
+    case QD_ANNO_SCHEME_V1:
+        compose_message_annotations_v1(msg, out, out_trailer, strip_annotations);
+        break;
+    }
 }
 
 
@@ -1279,24 +1335,19 @@ void qd_message_send(qd_message_t *in_msg,
     unsigned char        *cursor;
     pn_link_t            *pnl     = qd_link_pn(link);
     qd_connection_t      *qdc     = qd_link_connection(link);
-    bool use_v1_annotations       = qd_connection_uses_v1_annotations(qdc);
+    int hello_ver_out             = qd_connection_hello_protocol_version(qdc);
 
     qd_buffer_list_t new_ma;
+    qd_buffer_list_t new_ma_trailer;
     DEQ_INIT(new_ma);
+    DEQ_INIT(new_ma_trailer);
 
-    // Decode incoming message annotations
-    if (msg->ma_v1_inbound) {
-        (void) qd_message_message_annotations(in_msg);
-    } else {
-        (void) qd_message_v2_annotations(in_msg);
+    // HACK ALERT
+    if (msg->content->ma_count > 4) {
+        //fprintf(stdout, "V2_DEV Break here\n");
     }
-
     // Encode outgoing message annotations
-    if (use_v1_annotations) {
-        compose_message_annotations(msg, &new_ma, strip_annotations);
-    } else {
-        compose_message_annotations2(msg, &new_ma, strip_annotations);
-    }
+    compose_message_annotations(msg, &new_ma, &new_ma_trailer, strip_annotations, hello_ver_out);
     
     //
     // Send header if present
@@ -1333,7 +1384,7 @@ void qd_message_send(qd_message_t *in_msg,
     }
 
     //
-    // Send new message annotations
+    // Send new message annotations map start and v2 annotation if any
     //
     qd_buffer_t *da_buf = DEQ_HEAD(new_ma);
     while (da_buf) {
@@ -1343,15 +1394,28 @@ void qd_message_send(qd_message_t *in_msg,
     }
     qd_buffer_list_free_buffers(&new_ma);
 
-    if (!use_v1_annotations) {
-        if (content->field_user_annotations.length > 0) {
-            qd_buffer_t *buf2      = content->field_user_annotations.buffer;
-            unsigned char *cursor2 = content->field_user_annotations.offset + qd_buffer_base(buf);
-            advance(&cursor2, &buf2,
-                    content->field_user_annotations.length,
-                    send_handler, (void*) pnl);
-        }
+    //
+    // Annotations possibly include an opaque blob of user annotations
+    //
+    if (content->field_user_annotations.length > 0) {
+        qd_buffer_t *buf2      = content->field_user_annotations.buffer;
+        unsigned char *cursor2 = content->field_user_annotations.offset + qd_buffer_base(buf);
+        advance(&cursor2, &buf2,
+                content->field_user_annotations.length,
+                send_handler, (void*) pnl);
     }
+
+    //
+    // Annotations may include the v1 new_ma_trailer
+    //
+    qd_buffer_t *ta_buf = DEQ_HEAD(new_ma_trailer);
+    while (ta_buf) {
+        char *to_send = (char*) qd_buffer_base(ta_buf);
+        pn_link_send(pnl, to_send, qd_buffer_size(ta_buf));
+        ta_buf = DEQ_NEXT(ta_buf);
+    }
+    qd_buffer_list_free_buffers(&new_ma_trailer);
+
 
     //
     // Skip over replaced message annotations
@@ -1600,7 +1664,8 @@ ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, char 
 }
 
 
-void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *buffers)
+void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *buffers,
+                          int hello_version)
 {
     qd_composed_field_t  *field   = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_message_content_t *content = MSG_CONTENT(msg);
@@ -1614,9 +1679,13 @@ void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *b
     qd_compose_end_list(field);
 
     qd_buffer_list_t out_ma;
+    qd_buffer_list_t out_ma_trailer;
     DEQ_INIT(out_ma);
-    compose_message_annotations((qd_message_pvt_t*)msg, &out_ma, false);
+    DEQ_INIT(out_ma_trailer);
+    compose_message_annotations((qd_message_pvt_t*)msg, &out_ma, &out_ma_trailer, false, hello_version);
     qd_compose_insert_buffers(field, &out_ma);
+    // TODO: handle user annotation blob
+    qd_compose_insert_buffers(field, &out_ma_trailer);
 
     field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
     qd_compose_start_list(field);
@@ -1674,35 +1743,45 @@ void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_com
 
 qd_parsed_field_t *qd_message_get_ingress    (qd_message_t *msg)
 {
-    return ((qd_message_pvt_t*)msg)->content->ma_ingress_2;
+    return ((qd_message_pvt_t*)msg)->content->ma_pf_ingress;
 }
 
 qd_parsed_field_t *qd_message_get_phase      (qd_message_t *msg)
 {
-    return ((qd_message_pvt_t*)msg)->content->ma_phase_2;
+    return ((qd_message_pvt_t*)msg)->content->ma_pf_phase;
 }
 
 qd_parsed_field_t *qd_message_get_to_override(qd_message_t *msg)
 {
-    return ((qd_message_pvt_t*)msg)->content->ma_to_override_2;
+    return ((qd_message_pvt_t*)msg)->content->ma_pf_to_override;
 }
 qd_parsed_field_t *qd_message_get_trace      (qd_message_t *msg)
 {
-    return ((qd_message_pvt_t*)msg)->content->ma_trace_2;
+    return ((qd_message_pvt_t*)msg)->content->ma_pf_trace;
 }
 int qd_message_get_phase_val(qd_message_t *msg)
 {
-    return ((qd_message_pvt_t*)msg)->content->ma_phase;
+    return ((qd_message_pvt_t*)msg)->content->ma_int_phase;
 }
 
 
-void qd_message_set_annotation_scheme(qd_message_t *msg, bool annotations_v1)
+qd_message_annotation_scheme_t qd_message_hello_ver_to_annotation_scheme  (int hello_version)
 {
-    ((qd_message_pvt_t*)msg)->ma_v1_inbound = annotations_v1;
+    if (hello_version == 1)
+        return QD_ANNO_SCHEME_V1;
+    if (hello_version == 2)
+        return QD_ANNO_SCHEME_V2;
+    return QD_ANNO_SCHEME_NONE;
 }
 
 
-bool qd_message_get_annotation_scheme  (const qd_message_t *msg)
+qd_message_annotation_scheme_t  qd_message_get_annotation_scheme (const qd_message_t *msg)
 {
-    return ((qd_message_pvt_t*)msg)->ma_v1_inbound;
+    return qd_message_hello_ver_to_annotation_scheme(((qd_message_pvt_t *)msg)->hello_ver_in);
+}
+
+
+void qd_message_set_hello_version (qd_message_t *msg, int version)
+{
+    ((qd_message_pvt_t*)msg)->hello_ver_in = version;
 }

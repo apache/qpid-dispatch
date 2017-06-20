@@ -424,6 +424,14 @@ void qd_iterator_get_view_cursor(
     const qd_iterator_t *iter,
     qd_iterator_pointer_t *ptr);
 
+/**
+ * Return iterator's raw size
+ * 
+ * @param iter A field iterator
+ * @return the start.pointer.size
+ */
+int qd_iterator_get_raw_size(const qd_iterator_t *iter);
+
 /** @} */
 /** @} */
 

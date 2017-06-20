@@ -65,7 +65,7 @@ static char* test_send_to_messenger(void *context)
 {
     qd_message_t         *msg     = qd_message();
     qd_message_content_t *content = MSG_CONTENT(msg);
-    qd_message_compose_1(msg, "test_addr_0", 0);
+    qd_message_compose_1(msg, "test_addr_0", 0, 2);
     qd_buffer_t *buf = DEQ_HEAD(content->buffers);
     if (buf == 0) return "Expected a buffer in the test message";
 
@@ -238,9 +238,10 @@ static char* test_check_multiple(void *context)
 }
 
 
-static char* test_send_message_annotations(void *context)
+static char* test_send_message_annotations(int hello_version)
 {
     qd_message_t         *msg     = qd_message();
+    qd_message_set_hello_version(msg, hello_version);
     qd_message_content_t *content = MSG_CONTENT(msg);
 
     qd_composed_field_t *trace = qd_compose_subfield(0);
@@ -258,7 +259,7 @@ static char* test_send_message_annotations(void *context)
     qd_compose_insert_string(ingress, "distress");
     qd_message_set_ingress_annotation(msg, ingress);
 
-    qd_message_compose_1(msg, "test_addr_0", 0);
+    qd_message_compose_1(msg, "test_addr_0", 0, hello_version);
     qd_buffer_t *buf = DEQ_HEAD(content->buffers);
     if (buf == 0) return "Expected a buffer in the test message";
 
@@ -272,42 +273,98 @@ static char* test_send_message_annotations(void *context)
     pn_data_rewind(ma);
     pn_data_next(ma);
     if (pn_data_type(ma) != PN_MAP) return "Invalid message annotation type";
-    if (pn_data_get_map(ma) != 6) return "Invalid map length";
-    pn_data_enter(ma);
-    for (int i = 0; i < 6; i+=2) {
-        pn_data_next(ma);
-        if (pn_data_type(ma) != PN_SYMBOL) return "Bad map index";
-        pn_bytes_t sym = pn_data_get_symbol(ma);
-        if (!strncmp(QD_MA_INGRESS, sym.start, sym.size)) {
+    if (hello_version == 1) {
+        // V1 annotation scheme
+        if (pn_data_get_map(ma) != 6) return "Invalid map length";
+        pn_data_enter(ma);
+        for (int i = 0; i < 6; i+=2) {
             pn_data_next(ma);
-            sym = pn_data_get_string(ma);
-            if (strncmp("distress", sym.start, sym.size)) return "Bad ingress";
-            //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
-        } else if (!strncmp(QD_MA_TO, sym.start, sym.size)) {
+            if (pn_data_type(ma) != PN_SYMBOL) return "Bad map index";
+            pn_bytes_t sym = pn_data_get_symbol(ma);
+            if (!strncmp(QD_MA_INGRESS, sym.start, sym.size)) {
+                pn_data_next(ma);
+                sym = pn_data_get_string(ma);
+                if (strncmp("distress", sym.start, sym.size)) return "Bad ingress";
+                //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
+            } else if (!strncmp(QD_MA_TO, sym.start, sym.size)) {
+                pn_data_next(ma);
+                sym = pn_data_get_string(ma);
+                if (strncmp("to/address", sym.start, sym.size)) return "Bad to override";
+                //fprintf(stderr, "[%.*s]\n", (ifprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);nt)sym.size, sym.start);
+            } else if (!strncmp(QD_MA_TRACE, sym.start, sym.size)) {
+                pn_data_next(ma);
+                if (pn_data_type(ma) != PN_LIST) return "List not found";
+                pn_data_enter(ma);
+                pn_data_next(ma);
+                sym = pn_data_get_string(ma);
+                if (strncmp("Node1", sym.start, sym.size)) return "Bad trace entry";
+                //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
+                pn_data_next(ma);
+                sym = pn_data_get_string(ma);
+                if (strncmp("Node2", sym.start, sym.size)) return "Bad trace entry";
+                //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
+                pn_data_exit(ma);
+            } else return "Unexpected map key";
+        } 
+    } else  if (hello_version == 2) {
+        // V2 annotation scheme
+        if (pn_data_get_map(ma) != 2) return "Invalid map length";
+        pn_data_enter(ma);
+        for (int i = 0; i < 2; i+=2) {
             pn_data_next(ma);
-            sym = pn_data_get_string(ma);
-            if (strncmp("to/address", sym.start, sym.size)) return "Bad to override";
-            //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
-        } else if (!strncmp(QD_MA_TRACE, sym.start, sym.size)) {
-            pn_data_next(ma);
-            if (pn_data_type(ma) != PN_LIST) return "List not found";
-            pn_data_enter(ma);
-            pn_data_next(ma);
-            sym = pn_data_get_string(ma);
-            if (strncmp("Node1", sym.start, sym.size)) return "Bad trace entry";
-            //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
-            pn_data_next(ma);
-            sym = pn_data_get_string(ma);
-            if (strncmp("Node2", sym.start, sym.size)) return "Bad trace entry";
-            //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
-            pn_data_exit(ma);
-        } else return "Unexpected map key";
+            if (pn_data_type(ma) != PN_SYMBOL) return "Bad map index";
+            pn_bytes_t sym = pn_data_get_symbol(ma);
+            if (!strncmp(QD_MA_ANNOTATIONS, sym.start, sym.size)) {
+                pn_data_next(ma);
+                if (pn_data_type(ma) != PN_LIST) return "List not found";
+                pn_data_enter(ma);
+                // TO
+                pn_data_next(ma);
+                sym = pn_data_get_string(ma);
+                if (strncmp("to/address", sym.start, sym.size)) return "Bad to override";
+                // PHASE
+                pn_data_next(ma);
+                int phase = pn_data_get_int(ma);
+                if (phase != 0) return "Bad phase";
+                // INGRESS
+                pn_data_next(ma);
+                sym = pn_data_get_string(ma);
+                if (strncmp("distress", sym.start, sym.size)) return "Bad ingress";
+                // TRACE
+                pn_data_next(ma);
+                if (pn_data_type(ma) != PN_LIST) return "List not found";
+                pn_data_enter(ma);
+                pn_data_next(ma);
+                sym = pn_data_get_string(ma);
+                if (strncmp("Node1", sym.start, sym.size)) return "Bad trace entry1";
+                //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
+                pn_data_next(ma);
+                sym = pn_data_get_string(ma);
+                if (strncmp("Node2", sym.start, sym.size)) return "Bad trace entry2";
+                //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
+                pn_data_exit(ma);
+            } else return "Unexpected map key";
+        }
+    } else {
+        return "unuspported hello version specified";
     }
 
     pn_message_free(pn_msg);
     qd_message_free(msg);
 
     return 0;
+}
+
+
+static char* test_send_message_annotations_v1(void *context)
+{
+    return test_send_message_annotations(1);
+}
+
+
+static char* test_send_message_annotations_v2(void *context)
+{
+    return test_send_message_annotations(2);
 }
 
 
@@ -320,7 +377,8 @@ int message_tests(void)
     TEST_CASE(test_receive_from_messenger, 0);
     TEST_CASE(test_message_properties, 0);
     TEST_CASE(test_check_multiple, 0);
-    TEST_CASE(test_send_message_annotations, 0);
+    TEST_CASE(test_send_message_annotations_v1, 0);
+    TEST_CASE(test_send_message_annotations_v2, 0);
 
     return result;
 }

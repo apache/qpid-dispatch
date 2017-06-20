@@ -22,6 +22,15 @@
 #include <qpid/dispatch/buffer.h>
 #include <qpid/dispatch/iterator.h>
 
+// Locate router message annotations in v2 list field
+typedef enum {
+    MA_POS_TO,
+    MA_POS_PHASE,
+    MA_POS_INGRESS,
+    MA_POS_TRACE,
+    MA_POS_LAST
+} qd_message_annotation_pos_t;
+
 /**@file
  * Parse raw data fields into AMQP data trees.
  *
@@ -180,6 +189,36 @@ uint32_t qd_parse_sub_count(qd_parsed_field_t *field);
  * @param idx The index of the desired sub-field (in range 0..sub_count)
  * @return A pointer to the parsed sub-field
  */
+qd_parsed_field_t *qd_parse_sub_key_rev(qd_parsed_field_t *field, uint32_t idx);
+
+/**
+ * Return a qd_parsed_field_t for the idx'th value in a compound field.
+ * iterating tail-to-head
+ * If idx is equal-to or greater-than the number of sub-fields in field,
+ * this function will return NULL.
+ *
+ * IMPORTANT: The pointer returned by this function remains owned by the
+ * parent field.  It *must not* be freed by the caller.
+ *
+ * @param field The field pointer returned by qd_parse.
+ * @param idx The index of the desired sub-field (in range 0..sub_count)
+ * @return A pointer to the parsed sub-field
+ */
+qd_parsed_field_t *qd_parse_sub_value_rev(qd_parsed_field_t *field, uint32_t idx);
+
+/**
+ * Return a qd_parsed_field_t for the idx'th key in a map field.
+ * iterating tail-to-head
+ * If 'field' is not a map, or idx is equal-to or greater-than the number
+ * of sub-fields in field, this function will return NULL.
+ *
+ * IMPORTANT: The pointer returned by this function remains owned by the
+ * parent field.  It *must not* be freed by the caller.
+ *
+ * @param field The field pointer returned by qd_parse.
+ * @param idx The index of the desired sub-field (in range 0..sub_count)
+ * @return A pointer to the parsed sub-field
+ */
 qd_parsed_field_t *qd_parse_sub_key(qd_parsed_field_t *field, uint32_t idx);
 
 /**
@@ -230,7 +269,11 @@ int qd_parse_is_scalar(qd_parsed_field_t *field);
 qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *key);
 
 /**
- * Parse a message annotation map field delimited by a field iterator.
+ * Parse a message annotation map field.
+ * Return parsed fields for the four router entries.
+ * Return a blob pointer for the user entries in the map we don't care about.
+ * 
+ * delimited by a field iterator.
  * Compare the first key in the map and if it matches then return the
  * child iterator for the first value in the map.
  *
@@ -248,19 +291,26 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
  * IMPORTANT: The returned iterator is owned by the field and *must not* be
  * freed by the caller of this function.
  *
+ * @param hello_version version of hello protocol run by remote peer
  * @param ma_iter_in Field iterator for the annotation map field being parsed.
- * @param key_name Key name for first map entry
- * @param all_annotations Parsed field structure that was iterated to find the v2 data
- * @param count Number of AMQP map entries in all_annotations->raw_iter after the v2 values have been extracted
- * @param v2_anno Parsed field for the v2 annotation data
- * @return error string pointer. null if no error
+ * @param ma_ingress returned parsed field: ingress
+ * @param ma_phase returned parsed field: phase
+ * @param ma_to_override returned parsed field: override
+ * @param ma_trace returned parsed field: trace
+ * @param blob_pointer returned buffer pointer to user's annotation blob
+ * @param blob_item_count number of map entries referenced by blob_iterator
+ * @param annotation_workspace scratch workspace for parser
  */
-const char* qd_parse_v2_annotations(
-    qd_iterator_t      *ma_iter_in,
-    const char         *key_name,
-    qd_parsed_field_t **all_annotations,
-    uint32_t           *count,
-    qd_parsed_field_t **v2);
+void qd_parse_annotations(
+    int                    hello_version,
+    qd_iterator_t         *ma_iter_in,
+    qd_parsed_field_t    **ma_ingress,
+    qd_parsed_field_t    **ma_phase,
+    qd_parsed_field_t    **ma_to_override,
+    qd_parsed_field_t    **ma_trace,
+    qd_iterator_pointer_t *blob_pointer,
+    uint32_t              *blob_item_count,
+    qd_parsed_field_t    **annotation_workspace);
 
 /**
  * Return the parsed field's cursor position in the raw iter

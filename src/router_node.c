@@ -93,124 +93,9 @@ static int AMQP_writable_conn_handler(void *type_context, qd_connection_t *conn,
 
 
 static qd_iterator_t *router_annotate_message(qd_router_t       *router,
-                                              qd_parsed_field_t *in_ma,
                                               qd_message_t      *msg,
                                               qd_bitmask_t     **link_exclusions,
                                               bool               strip_inbound_annotations)
-{
-    qd_iterator_t *ingress_iter = 0;
-
-    qd_parsed_field_t *trace   = 0;
-    qd_parsed_field_t *ingress = 0;
-    qd_parsed_field_t *to      = 0;
-    qd_parsed_field_t *phase   = 0;
-
-    *link_exclusions = 0;
-
-    if (in_ma && !strip_inbound_annotations) {
-        uint32_t count = qd_parse_sub_count(in_ma);
-        bool done = false;
-
-        for (uint32_t idx = 0; idx < count && !done; idx++) {
-            qd_parsed_field_t *sub  = qd_parse_sub_key(in_ma, idx);
-            if (!sub)
-                continue;
-            qd_iterator_t *iter = qd_parse_raw(sub);
-            if (!iter)
-                continue;
-
-            if        (qd_iterator_equal(iter, (unsigned char*) QD_MA_TRACE)) {
-                trace = qd_parse_sub_value(in_ma, idx);
-            } else if (qd_iterator_equal(iter, (unsigned char*) QD_MA_INGRESS)) {
-                ingress = qd_parse_sub_value(in_ma, idx);
-            } else if (qd_iterator_equal(iter, (unsigned char*) QD_MA_TO)) {
-                to = qd_parse_sub_value(in_ma, idx);
-            } else if (qd_iterator_equal(iter, (unsigned char*) QD_MA_PHASE)) {
-                phase = qd_parse_sub_value(in_ma, idx);
-            }
-            done = trace && ingress && to && phase;
-        }
-    }
-
-    //
-    // QD_MA_TRACE:
-    // If there is a trace field, append this router's ID to the trace.
-    // If the router ID is already in the trace the msg has looped.
-    //
-    qd_composed_field_t *trace_field = qd_compose_subfield(0);
-    qd_compose_start_list(trace_field);
-    if (trace) {
-        if (qd_parse_is_list(trace)) {
-            //
-            // Create a link-exclusion map for the items in the trace.  This map will
-            // contain a one-bit for each link that leads to a neighbor router that
-            // the message has already passed through.
-            //
-            *link_exclusions = qd_tracemask_create(router->tracemask, trace);
-
-            //
-            // Append this router's ID to the trace.
-            //
-            uint32_t idx = 0;
-            qd_parsed_field_t *trace_item = qd_parse_sub_value(trace, idx);
-            while (trace_item) {
-                qd_iterator_t *iter = qd_parse_raw(trace_item);
-                qd_iterator_reset_view(iter, ITER_VIEW_ALL);
-                qd_compose_insert_string_iterator(trace_field, iter);
-                idx++;
-                trace_item = qd_parse_sub_value(trace, idx);
-            }
-        }
-    }
-
-    qd_compose_insert_string(trace_field, node_id);
-    qd_compose_end_list(trace_field);
-    qd_message_set_trace_annotation(msg, trace_field);
-
-    //
-    // QD_MA_TO:
-    // Preserve the existing value.
-    //
-    if (to) {
-        qd_composed_field_t *to_field = qd_compose_subfield(0);
-        qd_compose_insert_string_iterator(to_field, qd_parse_raw(to));
-        qd_message_set_to_override_annotation(msg, to_field);
-    }
-
-    //
-    // QD_MA_PHASE:
-    // Preserve the existing value.
-    //
-    if (phase) {
-        int phase_val = qd_parse_as_int(phase);
-        qd_message_set_phase_annotation(msg, phase_val);
-    }
-
-    //
-    // QD_MA_INGRESS:
-    // If there is no ingress field, annotate the ingress as
-    // this router else keep the original field.
-    //
-    qd_composed_field_t *ingress_field = qd_compose_subfield(0);
-    if (ingress && qd_parse_is_scalar(ingress)) {
-        ingress_iter = qd_parse_raw(ingress);
-        qd_compose_insert_string_iterator(ingress_field, ingress_iter);
-    } else
-        qd_compose_insert_string(ingress_field, node_id);
-    qd_message_set_ingress_annotation(msg, ingress_field);
-
-    //
-    // Return the iterator to the ingress field _if_ it was present.
-    // If we added the ingress, return NULL.
-    //
-    return ingress_iter;
-}
-
-
-static qd_iterator_t *router_annotate_message2(qd_router_t       *router,
-                                               qd_message_t      *msg,
-                                               qd_bitmask_t     **link_exclusions,
-                                               bool               strip_inbound_annotations)
 {
     qd_iterator_t *ingress_iter = 0;
 
@@ -227,6 +112,7 @@ static qd_iterator_t *router_annotate_message2(qd_router_t       *router,
     // QD_MA_TRACE:
     // If there is a trace field, append this router's ID to the trace.
     // If the router ID is already in the trace the msg has looped.
+    // This code does not check for the loop condition.
     //
     qd_composed_field_t *trace_field = qd_compose_subfield(0);
     qd_compose_start_list(trace_field);
@@ -355,8 +241,10 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     //
     if (qdr_link_is_routed(rlink)) {
         pn_delivery_tag_t dtag = pn_delivery_tag(pnd);
-        delivery = qdr_link_deliver_to_routed_link(rlink, msg, pn_delivery_settled(pnd), (uint8_t*) dtag.start, dtag.size,
-                                                   pn_disposition_type(pn_delivery_remote(pnd)), pn_disposition_data(pn_delivery_remote(pnd)));
+        delivery = qdr_link_deliver_to_routed_link(rlink, msg, pn_delivery_settled(pnd),
+                                                   (uint8_t*) dtag.start, dtag.size,
+                                                   pn_disposition_type(pn_delivery_remote(pnd)),
+                                                   pn_disposition_data(pn_delivery_remote(pnd)));
 
         if (delivery) {
             if (pn_delivery_settled(pnd))
@@ -398,6 +286,14 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     // 'to' field.  If the link is not anonymous, we don't need the 'to' field as we will be
     // using the address from the link target.
     //
+    //
+    // Validate the content of the delivery as an AMQP message.  This is done partially, only
+    // to validate that we can find the fields we need to route the message.
+    //
+    // If the link is anonymous, we must validate through the message properties to find the
+    // 'to' field.  If the link is not anonymous, we don't need the 'to' field as we will be
+    // using the address from the link target.
+    //
     qd_message_depth_t  validation_depth = (anonymous_link || check_user) ? QD_DEPTH_PROPERTIES : QD_DEPTH_MESSAGE_ANNOTATIONS;
     bool                valid_message    = qd_message_check(msg, validation_depth);
 
@@ -424,25 +320,11 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
             }
         }
 
-        qd_parsed_field_t   *in_ma = 0;
-        bool use_v1_annotations = qd_message_get_annotation_scheme(msg);
-
-        if (use_v1_annotations) {
-            in_ma = qd_message_message_annotations(msg);
-        } else {
-            in_ma = qd_message_v2_annotations(msg);
-        }
-
+        qd_message_message_annotations(msg);
         qd_bitmask_t        *link_exclusions;
         bool                 strip        = qdr_link_strip_annotations_in(rlink);
 
-        qd_iterator_t *ingress_iter = 0;
-        
-        if (use_v1_annotations) {
-            ingress_iter = router_annotate_message(router, in_ma, msg, &link_exclusions, strip);
-        } else {
-            ingress_iter = router_annotate_message2(router, msg, &link_exclusions, strip);
-        }
+        qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions, strip);
 
         if (anonymous_link) {
             qd_iterator_t *addr_iter = 0;
@@ -451,20 +333,10 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
             //
             // If the message has delivery annotations, get the to-override field from the annotations.
             //
-            if (in_ma) {
-                if (use_v1_annotations) {
-                    qd_parsed_field_t *ma_to = qd_parse_value_by_key(in_ma, QD_MA_TO);
-                    if (ma_to) {
-                        addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
-                        phase = qd_message_get_phase_annotation(msg);
-                    }
-                } else {
-                    qd_parsed_field_t *ma_to = qd_message_get_to_override(msg);
-                    if (ma_to) {
-                        addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
-                        phase = qd_message_get_phase_val(msg);
-                    }
-                }
+            qd_parsed_field_t *ma_to = qd_message_get_to_override(msg);
+            if (ma_to) {
+                addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
+                phase = qd_message_get_phase_val(msg);
             }
 
             //
@@ -810,7 +682,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
         //
         // Check the remote properties for an inter-router message annotation version.
         //
-        conn->annotations_v1 = false;
+        conn->hello_protocol_ver = 0;
         if (props) {
             pn_data_rewind(props);
             pn_data_next(props);
@@ -824,12 +696,18 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                             pn_data_next(props);
                             if (pn_data_type(props) == PN_STRING) {
                                 pn_bytes_t version_bytes = pn_data_get_string(props);
-                                // This isolates the remote router's version number.
-                                // Generalized version handling could be handled here.
+                                // This isolates the remote router's hello protocol version number.
                                 // Now the only info required is which annotation scheme
-                                // to use. The rule is "0.x.y" is the old scheme and
+                                // to use. The rule is "0.x.y" is the old v1 scheme and
                                 // anything else is the new v2 scheme.
-                                conn->annotations_v1 = (*(version_bytes.start) == '0');
+                                // 
+                                // 0 - Internally generated messages and messages from clients
+                                // 1 - 0.8.x and earlier v1 version
+                                // 2 - new v2 version
+                                //
+                                // TODO: This should be determined by the hello protocol version
+                                //       running on this connection.
+                                conn->hello_protocol_ver = (*(version_bytes.start) == '0' ? 1 : 2);
                             }
                             break;
                         }
@@ -1188,7 +1066,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
     // handle any delivery-state on the transfer e.g. transactional-state
     qdr_delivery_write_extension_state(dlv, pdlv, true);
     //
-    // If the remote send settle mode is set to 'settled', we should settle the delivery on behalf of the receiver.
+    // If the remote send settle mode is set to 'settled' then settle the delivery on behalf of the receiver.
     //
     bool remote_snd_settled = qd_link_remote_snd_settle_mode(qlink) == PN_SND_SETTLED;
 

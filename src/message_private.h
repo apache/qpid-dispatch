@@ -94,36 +94,21 @@ typedef struct {
     qd_buffer_t         *parse_buffer;
     unsigned char       *parse_cursor;
     qd_message_depth_t   parse_depth;
-                                                          // v1 annotations
-    qd_parsed_field_t   *parsed_message_annotations;
-
-                                                          // v2 annotations
-                                                          // The annotations are split on message ingress.
-                                                          // The first element in the map is the interrouter
-                                                          // annotation we care about.
-                                                          // The remainder of the annotations are an opaque
-                                                          // blob of pass-through map values that never get examined.
-                                                          // In order to pass the blob along we need
-                                                          // to track how many elements are in the map and how
-                                                          // many bytes they consume.
-
-    bool                 ma_v2_parsed;                    // have parsed annotations in incoming message
+                                                          // common annotations
+    bool                 ma_parsed;                       // have parsed annotations in incoming message
     qd_iterator_t       *ma_field_iter_in;                // 'message field iterator' for msg.FIELD_MESSAGE_ANNOTATION
 
-    qd_parsed_field_t   *ma_all_annotations;              // Map field partially parsed to find v2 annotations at
-                                                          // the beginnning. After parsing this field holds 'count' 
-                                                          // map items addressed by raw_iter.
-    uint32_t             ma_count;                        // Number of map elements in ma_all_annotations->raw_iter 
-                                                          // after the ma_v2 field and its key have been extracted.
-    qd_parsed_field_t   *ma_v2;                           // Incoming message v2 annotation object or null.
-                                                          // Parsed out of the beginning of the ma_all_annotations field
-                                                          // and this element is not included in ma_count.
+    qd_parsed_field_t   *annotations;
 
-    qd_parsed_field_t   *ma_ingress_2;
-    qd_parsed_field_t   *ma_phase_2;
-    qd_parsed_field_t   *ma_to_override_2;
-    qd_parsed_field_t   *ma_trace_2;
-    int                  ma_phase;
+    qd_iterator_pointer_t ma_user_annotation_blob;        // Original user annotations
+                                                          // with router annotations stripped
+    uint32_t             ma_count;                        // Number of map elements in blob
+                                                          // after the router fields stripped
+    qd_parsed_field_t   *ma_pf_ingress;
+    qd_parsed_field_t   *ma_pf_phase;
+    qd_parsed_field_t   *ma_pf_to_override;
+    qd_parsed_field_t   *ma_pf_trace;
+    int                  ma_int_phase;
 
 } qd_message_content_t;
 
@@ -134,7 +119,7 @@ typedef struct {
     qd_buffer_list_t      ma_trace;        // trace list in outgoing message annotations
     qd_buffer_list_t      ma_ingress;      // ingress field in outgoing message annotations
     int                   ma_phase;        // phase for the override address
-    bool                  ma_v1_inbound;   // incoming message sourced with v1 annotation scheme
+    int                   hello_ver_in;    // incoming router hello version.
 } qd_message_pvt_t;
 
 ALLOC_DECLARE(qd_message_t);
