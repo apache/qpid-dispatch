@@ -673,13 +673,11 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_delivery_t *peer;
     while (dlv) {
         DEQ_REMOVE_HEAD(undelivered);
-        peer = dlv->peer;
-        if (peer) {
-            dlv->peer  = 0;
-            peer->peer = 0;
+        peer = qdr_delivery_first_peer_CT(dlv);
+        while (peer) {
             qdr_delivery_release_CT(core, peer);
-            qdr_delivery_decref_CT(core, peer);
-            qdr_delivery_decref_CT(core, dlv);
+            qdr_delivery_unlink_peers_CT(core, dlv, peer);
+            peer = qdr_delivery_next_peer_CT(dlv);
         }
 
         //
@@ -715,15 +713,12 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
             dlv->tracking_addr = 0;
         }
 
-        peer = dlv->peer;
-        if (peer) {
-            dlv->peer  = 0;
-            peer->peer = 0;
+        peer = qdr_delivery_first_peer_CT(dlv);
+        while (peer) {
             if (link->link_direction == QD_OUTGOING)
                 qdr_delivery_failed_CT(core, peer);
-
-            qdr_delivery_decref_CT(core, peer);
-            qdr_delivery_decref_CT(core, dlv);
+            qdr_delivery_unlink_peers_CT(core, dlv, peer);
+            peer = qdr_delivery_next_peer_CT(dlv);
         }
 
         //

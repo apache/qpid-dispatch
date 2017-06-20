@@ -413,6 +413,51 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
 }
 
 
+void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
+{
+    assert(!in_dlv->peer);
+    assert(!out_dlv->peer);
+
+    out_dlv->peer = in_dlv;
+    in_dlv->peer = out_dlv;
+
+    qdr_delivery_incref(out_dlv);
+    qdr_delivery_incref(in_dlv);
+}
+
+
+void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_delivery_t *peer)
+{
+    //
+    // Make sure that the passed in deliveries are indeed peers.
+    //
+
+    assert(dlv->peer == peer);
+    assert(peer->peer == dlv);
+
+    dlv->peer  = 0;
+    peer->peer = 0;
+
+    qdr_delivery_decref_CT(core, dlv);
+    qdr_delivery_decref_CT(core, peer);
+}
+
+
+qdr_delivery_t *qdr_delivery_first_peer_CT(qdr_delivery_t *dlv)
+{
+    dlv->next_peer = dlv->peer;
+    return dlv->next_peer;
+}
+
+qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv)
+{
+    //Get the next peer. In the current case we have no next peer.
+    // When a peer list is introduced, this function might return something based on the content of the peer list.
+    dlv->next_peer = 0;
+    return dlv->next_peer;
+}
+
+
 void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 {
     uint32_t ref_count = sys_atomic_dec(&dlv->ref_count);
@@ -671,7 +716,7 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     qdr_delivery_t *dlv        = action->args.delivery.delivery;
-    qdr_delivery_t *peer       = dlv->peer;
+    qdr_delivery_t *peer       = qdr_delivery_first_peer_CT(dlv);
     bool            push       = false;
     bool            peer_moved = false;
     bool            dlv_moved  = false;
@@ -705,17 +750,12 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
     if (settled) {
         if (peer) {
             peer->settled = true;
-            peer->peer = 0;
-            dlv->peer  = 0;
-
             if (peer->link) {
                 peer_moved = qdr_delivery_settled_CT(core, peer);
                 if (peer_moved)
                     push = true;
             }
-
-            qdr_delivery_decref_CT(core, dlv);
-            qdr_delivery_decref_CT(core, peer);
+            qdr_delivery_unlink_peers_CT(core, dlv, peer);
         }
 
         if (dlv->link)
