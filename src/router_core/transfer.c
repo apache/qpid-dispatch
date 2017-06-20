@@ -412,14 +412,38 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
     free_qdr_delivery_t(delivery);
 }
 
+static bool qdr_delivery_has_peer_CT(qdr_delivery_t *dlv)
+{
+    return dlv->peer || DEQ_SIZE(dlv->peers) > 0;
+}
+
 
 void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
 {
-    assert(!in_dlv->peer);
-    assert(!out_dlv->peer);
+    // If there is no delivery or a peer, we cannot link each other.
+    if (!in_dlv || !out_dlv)
+        return;
+
+    if (!qdr_delivery_has_peer_CT(in_dlv)) {
+        // This is the very first peer. Link them up.
+        assert(!out_dlv->peer);
+        in_dlv->peer = out_dlv;
+    }
+    else {
+        if (in_dlv->peer) {
+            // This is the first time we know that in_dlv is going to have more than one peer.
+            // There is already a peer in the in_dlv->peer pointer, move it into a list and zero it out.
+            qdr_add_delivery_ref_CT(&in_dlv->peers, in_dlv->peer);
+
+            // Zero out the peer pointer. Since there is more than one peer, this peer has been moved to the "peers" linked list.
+            // All peers will now reside in the peers linked list. No need to decref/incref here because you are transferring ownership.
+            in_dlv->peer = 0;
+        }
+
+        qdr_add_delivery_ref_CT(&in_dlv->peers, out_dlv);
+    }
 
     out_dlv->peer = in_dlv;
-    in_dlv->peer = out_dlv;
 
     qdr_delivery_incref(out_dlv);
     qdr_delivery_incref(in_dlv);
@@ -428,10 +452,13 @@ void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
 
 void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_delivery_t *peer)
 {
+
+    // If there is no delivery or a peer, we cannot proceed.
+    if (!dlv || !peer)
+        return;
     //
     // Make sure that the passed in deliveries are indeed peers.
     //
-
     assert(dlv->peer == peer);
     assert(peer->peer == dlv);
 
@@ -445,16 +472,42 @@ void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_del
 
 qdr_delivery_t *qdr_delivery_first_peer_CT(qdr_delivery_t *dlv)
 {
-    dlv->next_peer = dlv->peer;
-    return dlv->next_peer;
+    // What if there are no peers for this delivery?
+    if (!qdr_delivery_has_peer_CT(dlv))
+        return 0;
+
+    if (dlv->peer) {
+        // If there is a dlv->peer, it is the one and only peer.
+        return dlv->peer;
+    }
+    else {
+        // The delivery has more than one peer.
+        qdr_delivery_ref_t *dlv_ref = DEQ_HEAD(dlv->peers);
+
+        // Save the next peer to dlv->next_peer_ref so we can use it when somebody calls qdr_delivery_next_peer_CT
+        dlv->next_peer_ref = DEQ_NEXT(dlv_ref);
+
+        // Return the first peer.
+        return dlv_ref->dlv;
+    }
 }
 
 qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv)
 {
-    //Get the next peer. In the current case we have no next peer.
-    // When a peer list is introduced, this function might return something based on the content of the peer list.
-    dlv->next_peer = 0;
-    return dlv->next_peer;
+    if (dlv->peer) {
+        // There is no next_peer if there is only one peer. If there is a non-zero dlv->peer, it is the only peer
+        return 0;
+    }
+    else {
+        // There is more than one peer to this delivery.
+        qdr_delivery_ref_t *next_peer_ref = dlv->next_peer_ref;
+        if (next_peer_ref) {
+            // Save the next peer to dlv->next_peer_ref so we can use it when somebody calls qdr_delivery_next_peer_CT
+            dlv->next_peer_ref = DEQ_NEXT(dlv->next_peer_ref);
+            return next_peer_ref->dlv;
+        }
+        return 0;
+    }
 }
 
 
@@ -883,7 +936,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     sys_mutex_lock(link->conn->work_lock);
     if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
         qdr_delivery_incref(dlv);
-        qdr_add_delivery_ref(&link->updated_deliveries, dlv);
+        qdr_add_delivery_ref_CT(&link->updated_deliveries, dlv);
         qdr_add_link_ref(&link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
         activate = true;
     }
