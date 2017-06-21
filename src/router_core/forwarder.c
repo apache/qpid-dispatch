@@ -110,14 +110,14 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     out_dlv->msg        = qd_message_copy(msg);
     out_dlv->settled    = !in_dlv || in_dlv->settled;
     out_dlv->presettled = out_dlv->settled;
-    *tag            = core->next_tag++;
+    *tag                = core->next_tag++;
     out_dlv->tag_length = 8;
     out_dlv->error      = 0;
 
     //
     // Create peer linkage only if the outgoing delivery is not settled
     //
-    if (!out_dlv->settled && in_dlv)
+    if (!out_dlv->settled)
         qdr_delivery_link_peers_CT(in_dlv, out_dlv);
 
     return out_dlv;

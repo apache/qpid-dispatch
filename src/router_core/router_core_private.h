@@ -303,34 +303,6 @@ typedef enum {
     QDR_DELIVERY_IN_UNSETTLED
 } qdr_delivery_where_t;
 
-struct qdr_delivery_t {
-    DEQ_LINKS(qdr_delivery_t);
-    void                *context;
-    sys_atomic_t         ref_count;
-    qdr_link_t          *link;
-    qdr_delivery_t      *peer;
-    qdr_delivery_t      *next_peer;
-    qd_message_t        *msg;
-    qd_iterator_t       *to_addr;
-    qd_iterator_t       *origin;
-    uint64_t             disposition;
-    pn_data_t           *extension_state;
-    qdr_error_t         *error;
-    bool                 settled;
-    bool                 presettled;
-    bool                 cleared_proton_ref;
-    qdr_delivery_where_t where;
-    uint8_t              tag[32];
-    int                  tag_length;
-    qd_bitmask_t        *link_exclusion;
-    qdr_address_t       *tracking_addr;
-    int                  tracking_addr_bit;
-    qdr_link_work_t     *link_work;         ///< Delivery work item for this delivery
-};
-
-ALLOC_DECLARE(qdr_delivery_t);
-DEQ_DECLARE(qdr_delivery_t, qdr_delivery_list_t);
-
 typedef struct qdr_delivery_ref_t {
     DEQ_LINKS(struct qdr_delivery_ref_t);
     qdr_delivery_t *dlv;
@@ -339,7 +311,38 @@ typedef struct qdr_delivery_ref_t {
 ALLOC_DECLARE(qdr_delivery_ref_t);
 DEQ_DECLARE(qdr_delivery_ref_t, qdr_delivery_ref_list_t);
 
-void qdr_add_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_t *dlv);
+struct qdr_delivery_t {
+    DEQ_LINKS(qdr_delivery_t);
+    void                   *context;
+    sys_atomic_t            ref_count;
+    qdr_link_t             *link;
+    qdr_delivery_t         *peer;          /// Use this peer if the delivery has one and only one peer.
+    qdr_delivery_ref_t     *next_peer_ref;
+    qd_message_t           *msg;
+    qd_iterator_t          *to_addr;
+    qd_iterator_t          *origin;
+    uint64_t                disposition;
+    pn_data_t              *extension_state;
+    qdr_error_t            *error;
+    bool                    settled;
+    bool                    presettled;
+    bool                    cleared_proton_ref;
+    qdr_delivery_where_t    where;
+    uint8_t                 tag[32];
+    int                     tag_length;
+    qd_bitmask_t           *link_exclusion;
+    qdr_address_t          *tracking_addr;
+    int                     tracking_addr_bit;
+    qdr_link_work_t        *link_work;         ///< Delivery work item for this delivery
+    qdr_delivery_ref_list_t peers;             /// Use this list if there if the delivery has more than one peer.
+
+};
+
+ALLOC_DECLARE(qdr_delivery_t);
+DEQ_DECLARE(qdr_delivery_t, qdr_delivery_list_t);
+
+
+void qdr_add_delivery_ref_CT(qdr_delivery_ref_list_t *list, qdr_delivery_t *dlv);
 void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref);
 
 #define QDR_LINK_LIST_CLASS_ADDRESS    0
