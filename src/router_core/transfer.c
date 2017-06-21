@@ -412,6 +412,13 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
     free_qdr_delivery_t(delivery);
 }
 
+static bool qdr_delivery_has_peer_CT(qdr_delivery_t *dlv)
+{
+    if (!dlv->peer && DEQ_SIZE(dlv->peers) == 0)
+        return false;
+    return true;
+}
+
 
 void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
 {
@@ -419,7 +426,7 @@ void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
     if (!in_dlv || !out_dlv)
         return;
 
-    if (!in_dlv->peer) {
+    if (!qdr_delivery_has_peer_CT(in_dlv)) {
         // This is the very first peer. Link them up.
         assert(!out_dlv->peer);
 
@@ -430,7 +437,7 @@ void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
         if (in_dlv->peer) {
             // This is the first time we know that in_dlv is going to have more than one peer.
             // There is already a peer in the in_dlv->peer pointer, move it into a list and zero it out.
-            qdr_add_delivery_ref(&in_dlv->peers, in_dlv->peer);
+            qdr_add_delivery_ref_CT(&in_dlv->peers, in_dlv->peer);
 
             // Zero out the peer pointer. Since there is more than one peer, this peer has been moved to the "peers" linked list.
             // All peers will now reside in the peers linked list. No need to decref/incref here because you are transferring ownership.
@@ -438,7 +445,7 @@ void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
         }
 
         out_dlv->peer = in_dlv;
-        qdr_add_delivery_ref(&in_dlv->peers, out_dlv);
+        qdr_add_delivery_ref_CT(&in_dlv->peers, out_dlv);
     }
 
     qdr_delivery_incref(out_dlv);
@@ -463,13 +470,6 @@ void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_del
 
     qdr_delivery_decref_CT(core, dlv);
     qdr_delivery_decref_CT(core, peer);
-}
-
-static bool qdr_delivery_has_peer_CT(qdr_delivery_t *dlv)
-{
-    if (!dlv->peer && DEQ_SIZE(dlv->peers) == 0)
-        return false;
-    return true;
 }
 
 
@@ -939,7 +939,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     sys_mutex_lock(link->conn->work_lock);
     if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
         qdr_delivery_incref(dlv);
-        qdr_add_delivery_ref(&link->updated_deliveries, dlv);
+        qdr_add_delivery_ref_CT(&link->updated_deliveries, dlv);
         qdr_add_link_ref(&link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
         activate = true;
     }
