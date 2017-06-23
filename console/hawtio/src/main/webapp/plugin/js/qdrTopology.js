@@ -1677,7 +1677,7 @@ QDR.log.debug("attr.description " + attr.description)
           .on("dblclick", function(d) { // circle
             if (d.fixed) {
               d.fixed = false
-              setNodes``(d.name, false)
+              setNodesFixed(d.name, false)
               restart() // redraw the node without a dashed line
               force.start(); // let the nodes move to a new position
             }
