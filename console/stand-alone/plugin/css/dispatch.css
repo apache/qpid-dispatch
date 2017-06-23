@@ -40,7 +40,7 @@ path.link.selected {
 }
 
 path.link {
-  fill: none;
+  fill: #000;
   stroke: #000;
   stroke-width: 4px;
   cursor: default;
