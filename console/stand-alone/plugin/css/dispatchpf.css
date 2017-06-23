@@ -180,3 +180,8 @@ div.chartContainer {
 .fa-edit:before, .fa-trash-o:before {
   font-family: FontAwesome;
 }
+
+div.qdr-topology.pane.left {
+  width: 400px;
+  top: 0;
+}

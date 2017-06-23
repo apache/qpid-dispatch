@@ -23,7 +23,6 @@ var QDR = (function(QDR) {
 
   QDR.module.controller('QDR.TopologyFormController', function($scope, $rootScope, $timeout, QDRService) {
 
-    $scope.panelVisible = true  // show/hide the panel on the left
     $scope.attributes = []
     var nameTemplate = '<div title="{{row.entity.description}}" class="ngCellText {{row.entity.cls}}"><span>{{row.entity.attributeName}}</span></div>';
     var valueTemplate = '<div title="{{row.entity.attributeValue}}" class="ngCellText {{row.entity.cls}}"><span>{{row.entity.attributeValue}}</span></div>';
@@ -60,43 +59,7 @@ var QDR = (function(QDR) {
     $scope.$on('showAddForm', function(event) {
       $scope.form = 'add';
     })
-
-    $scope.hideLeftPane = function () {
-      d3.select(".qdr-topology-form")
-        .transition().duration(300).ease("sin-in")
-        .style("left" , "-309px")
-        .each("end", function () {
-          $timeout(function () {
-            QDR.log.debug("done with transition. setting scope ");
-            $scope.panelVisible = false
-            $rootScope.$broadcast('panel-resized')
-        })
-/*
-      d3.select(".qdr-topology-svg")
-        .transition().duration(300).ease("sin-in")
-        .style("margin-left", "30px")
-        .each("end", function () {
-          resize()
-          $timeout(function () {QDR.log.debug("done with transition. setting scope ");$scope.panelVisible = false})
-        })
-*/
-    })}
-
-    $scope.showLeftPane = function () {
-      d3.select(".qdr-topology-form")
-        .transition().duration(300).ease("sin-out")
-        .style("left" , "0px")
-
-      d3.select(".qdr-topology-svg")
-        .transition().duration(300).ease("sin-out")
-        .style("margin-left", "430px")
-        .each("end", function () {
-          resize()
-          $timeout(function () {QDR.log.debug("done with transition. setting scope ");$scope.panelVisible = true})
-        })
-    }
   })
-
   /**
    * @method TopologyController
    *
@@ -109,6 +72,34 @@ var QDR = (function(QDR) {
       $scope.selectedClient = [];
       $scope.quiesceState = {}
       var dontHide = false;
+
+      $scope.panelVisible = true  // show/hide the panel on the left
+      $scope.hideLeftPane = function () {
+        d3.select(".qdr-topology.pane.left")
+          .transition().duration(300).ease("sin-in")
+          .style("left" , "-380px")
+
+        d3.select(".panel-adjacent")
+          .transition().duration(300).ease("sin-in")
+          .style("margin-left", "30px")
+          .each("end", function () {
+            resize()
+            $timeout(function () {QDR.log.info("done with transition. setting scope ");$scope.panelVisible = false})
+          })
+      }
+      $scope.showLeftPane = function () {
+        d3.select(".qdr-topology.pane.left")
+          .transition().duration(300).ease("sin-out")
+          .style("left" , "0px")
+
+        d3.select(".panel-adjacent")
+          .transition().duration(300).ease("sin-out")
+          .style("margin-left", "430px")
+          .each("end", function () {
+            resize()
+            $timeout(function () {QDR.log.info("done with transition. setting scope ");$scope.panelVisible = true})
+          })
+      }
 
       $scope.quiesceConnection = function(row) {
         var entity = row.entity;
@@ -402,13 +393,13 @@ var QDR = (function(QDR) {
           var x = radiusNormal * 4;
           var y = x;;
           if (newValue > 1) { // add at current mouse position
-            var offset = jQuery('#topology').offset();
-            x = mouseX - offset.left + $(document).scrollLeft();
-            y = mouseY - offset.top + $(document).scrollTop();;
+            var rm = relativeMouse()
+            x = rm.left - rm.offset.left;
+            y = rm.top - rm.offset.top;
           }
           QDRService.ensureAllEntities({entity: ".router"}, function () {
             NewRouterName = genNewName();
-            nodes.push(aNode(id, NewRouterName, "inter-router", '', undefined, nodes.length, x, y, undefined, true));
+            nodes.push(aNode(id, NewRouterName, "inter-router", '', nodes.length, x, y, undefined, undefined, true));
             force.nodes(nodes).links(links).start();
             restart(false);
           })
@@ -498,10 +489,17 @@ var QDR = (function(QDR) {
       $scope.isFixed = function() {
         if (!$scope.contextNode)
           return false;
-        return ($scope.contextNode.fixed == 1);
+        return ($scope.contextNode.fixed & 1);
       }
 
       var mouseX, mouseY;
+      var relativeMouse = function () {
+        var offset = jQuery('#topology').offset();
+        return {left: (mouseX + $(document).scrollLeft()) - 1,
+                top: (mouseY  + $(document).scrollTop()) - 1,
+                offset: offset
+                }
+      }
       // event handlers for popup context menu
       $(document).mousemove(function(e) {
         mouseX = e.clientX;
@@ -683,7 +681,7 @@ var QDR = (function(QDR) {
           localStorage[d.name] = angular.toJson({
             x: Math.round(d.x),
             y: Math.round(d.y),
-            fixed: d.fixed ? 1 : 0,
+            fixed: (d.fixed & 1) ? 1 : 0,
           });
         })
       }
@@ -837,7 +835,6 @@ var QDR = (function(QDR) {
       var gravity = function (d, nodeCount) {
         return forceScale(nodeCount, 0.0001, 0.1)
       }
-
       // initialize the nodes and links array from the QDRService.topology._nodeInfo object
       var initForceGraph = function() {
         nodes = [];
@@ -867,9 +864,10 @@ var QDR = (function(QDR) {
               return;
             if (d3.select('#svg_context_menu').style('display') !== 'block')
               $(document).click();
+            var rm = relativeMouse()
             d3.select('#svg_context_menu')
-              .style('left', (mouseX + $(document).scrollLeft()) + "px")
-              .style('top', (mouseY + $(document).scrollTop()) + "px")
+              .style('left', rm.left + "px")
+              .style('top', (rm.top - rm.offset.top) + "px")
               .style('display', 'block');
           })
           .on('click', function(d) {
@@ -1393,9 +1391,10 @@ var QDR = (function(QDR) {
               return;
 
             mousedown_link = d;
+            var rm = relativeMouse()
             d3.select('#link_context_menu')
-              .style('left', (mouseX + $(document).scrollLeft()) + "px")
-              .style('top', (mouseY + $(document).scrollTop()) + "px")
+              .style('left', rm.left + "px")
+              .style('top', (rm.top - rm.offset.top) + "px")
               .style('display', 'block');
           })
           // left click a path
@@ -1521,7 +1520,7 @@ var QDR = (function(QDR) {
             return (d === selected_node)
           })
           .classed('fixed', function(d) {
-            return d.fixed
+            return d.fixed & 1
           })
 
         // add new circle nodes. if nodes[] is longer than the existing paths, add a new path for each new element
@@ -1544,7 +1543,7 @@ var QDR = (function(QDR) {
               return null;
             })
             .classed('fixed', function(d) {
-              return d.fixed
+              return d.fixed & 1
             })
             .classed('temp', function(d) {
               return QDRService.nameFromId(d.key) == '__internal__';
@@ -1703,13 +1702,13 @@ var QDR = (function(QDR) {
           .on("contextmenu", function(d) {  // circle
             $(document).click();
             d3.event.preventDefault();
-            $scope.contextNode = d;
-            if (!$scope.$$phase) $scope.$apply() // we just changed a scope valiable during an async event
+            $scope.contextNode = d
+            var rm = relativeMouse()
             d3.select('#node_context_menu')
-              .style('left', (mouseX + $(document).scrollLeft()) + "px")
-              .style('top', (mouseY + $(document).scrollTop()) + "px")
+              .style('left', rm.left + "px")
+              .style('top', (rm.top - rm.offset.top) + "px")
               .style('display', 'block');
-
+            if (!$scope.$$phase) $scope.$apply()
           })
           .on("click", function(d) {  // circle
             if (!mouseup_node)
@@ -2018,13 +2017,13 @@ var QDR = (function(QDR) {
           left = left - 30;
           mouseY = mouseY - 20
         }
-        var offset = jQuery('#topology').offset();
+        var rm = relativeMouse()
         d3.select('#multiple_details')
           .style({
             display: display,
             opacity: 1,
-            left: (mouseX - offset.left + $(document).scrollLeft()) + "px",
-            top: (mouseY - offset.top + $(document).scrollTop()) + "px"
+            left: rm.left + "px",
+            top: rm.top + "px"
           })
         if (d.normals.length === 1) {
           // simulate a click on the connection to popup the link details

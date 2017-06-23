@@ -16,75 +16,72 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
-
-<div class="col-sm-9 col-md-10 col-sm-push-3 col-md-push-2 qdr-topology-svg" ng-controller="QDR.TopologyController" style="min-height: 990px;">
-    <!--
-            <ul class="nav nav-tabs ng-scope qdrTopoModes">
-                <li ng-repeat="mode in modes" ng-class="{active : isModeActive(mode.name), 'pull-right' : isRight(mode)}" ng-click="selectMode('{{mode.name}}')" >
-                    <a data-placement="bottom" class="ng-binding"> {{mode.name}} </a></li>
-            </ul>
-    -->
-    <div id="topology" ng-show="mode == 'Diagram'"><!-- d3 toplogy here --></div>
-    <div id="geology" ng-show="mode == 'Globe'"><!-- d3 globe here --></div>
-    <div id="crosssection"><!-- d3 pack here --></div>
-    <!-- <div id="addRouter" ng-show="mode == 'Add Node'"></div> -->
-    <div id="node_context_menu" class="contextMenu">
-        <ul>
-            <li class="na" ng-class="{new: contextNode.cls == 'temp'}" ng-click="addingNode.trigger = 'editNode'">Edit...</li>
-            <li class="na" ng-class="{adding: addingNode.step > 0}" ng-click="addingNode.step = 0">Cancel add</li>
-            <li class="context-separator"></li>
-            <li class="na" ng-class="{'force-display': !isFixed()}" ng-click="setFixed(true)">Freeze in place</li>
-            <li class="na" ng-class="{'force-display': isFixed()}" ng-click="setFixed(false)">Unfreeze</li>
-        </ul>
-    </div>
-    <div id="svg_context_menu" class="contextMenu">
-        <ul>
-            <li ng-click="addingNode.step = 2">Add a new router</li>
-        </ul>
-    </div>
-    <div id="link_context_menu" class="contextMenu">
-        <ul>
-            <li ng-click="reverseLink()">Reverse connection direction</li>
-            <li ng-click="removeLink()">Remove connection</li>
-        </ul>
-    </div>
-    <div id="svg_legend"></div>
-    <div id="multiple_details">
-        <h4 class="grid-title">Connections</h4>
-        <div class="gridStyle" ng-grid="multiDetails"></div>
-    </div>
-    <div id="link_details">
-        <h4 class="grid-title">Links</h4>
-        <div class="gridStyle" ng-grid="linkDetails"></div>
-    </div>
-</div>
-
-<div class="col-sm-3 col-md-2 col-sm-pull-9 col-md-pull-10 sidebar-pf sidebar-pf-left qdr-topology-form" ng-controller="QDR.TopologyFormController" style="min-height: 990px;">
-    <div id="topologyForm" ng-class="{selected : isSelected()}">
-        <div ng-if="form == 'router'">
-            <h4>Router Info</h4>
-            <div class="gridStyle" ng-grid="topoGridOptions"></div>
+<div class="qdrTopology row-fluid" ng-controller="QDR.TopologyController">
+    <div class="qdr-topology pane left" ng-controller="QDR.TopologyFormController">
+        <div id="topologyForm" ng-class="{selected : isSelected()}">
+            <div ng-if="form == 'router'">
+                <h4>Router Info</h4>
+                <div class="gridStyle" ng-grid="topoGridOptions"></div>
+            </div>
+            <div ng-if="form == 'connection'">
+                <h4>Connection Info</h4>
+                <div class="gridStyle" ng-grid="topoGridOptions"></div>
+            </div>
+            <div id="addNodeForm" ng-if="form == 'add'">
+                <h4>Add a new router</h4>
+                <ul>
+                    <li>Click on an existing router to create a connection to the new router</li>
+                    <li>Double-click on the new router to <button ng-click="editNewRouter()">edit</button> its properties</li>
+                    <li ng-show="addingNode.hasLink" >Right-click on a new connection to edit its properties</li>
+                </ul>
+                <button ng-click="cancel()">Cancel</button>
+            </div>
         </div>
-        <div ng-if="form == 'connection'">
-            <h4>Connection Info</h4>
-            <div class="gridStyle" ng-grid="topoGridOptions"></div>
-        </div>
-        <div id="addNodeForm" ng-if="form == 'add'">
-            <h4>Add a new router</h4>
+        <button ng-if="panelVisible" ng-click="hideLeftPane()" class="hideLeft" title="Hide"><i class="icon-step-backward"></i></button>
+        <button ng-if="!panelVisible" ng-click="showLeftPane()" class="hideLeft" title="Show"><i class="icon-step-forward"></i></button>
+    </div>
+    <div class="panel-adjacent">
+        <!--
+                <ul class="nav nav-tabs ng-scope qdrTopoModes">
+                    <li ng-repeat="mode in modes" ng-class="{active : isModeActive(mode.name), 'pull-right' : isRight(mode)}" ng-click="selectMode('{{mode.name}}')" >
+                        <a data-placement="bottom" class="ng-binding"> {{mode.name}} </a></li>
+                </ul>
+        -->
+        <div id="topology" ng-show="mode == 'Diagram'"><!-- d3 toplogy here --></div>
+        <div id="geology" ng-show="mode == 'Globe'"><!-- d3 globe here --></div>
+        <div id="crosssection"><!-- d3 pack here --></div>
+        <!-- <div id="addRouter" ng-show="mode == 'Add Node'"></div> -->
+        <div id="node_context_menu" class="contextMenu">
             <ul>
-                <li>Click on an existing router to create a connection to the new router</li>
-                <li>Double-click on the new router to <button ng-click="editNewRouter()">edit</button> its properties</li>
-                <li ng-show="addingNode.hasLink" >Right-click on a new connection to edit its properties</li>
+                <li class="na" ng-class="{new: contextNode.cls == 'temp'}" ng-click="addingNode.trigger = 'editNode'">Edit...</li>
+                <li class="na" ng-class="{adding: addingNode.step > 0}" ng-click="addingNode.step = 0">Cancel add</li>
+                <li class="context-separator"></li>
+                <li class="na" ng-class="{'force-display': !isFixed()}" ng-click="setFixed(true)">Freeze in place</li>
+                <li class="na" ng-class="{'force-display': isFixed()}" ng-click="setFixed(false)">Unfreeze</li>
             </ul>
-            <button ng-click="cancel()">Cancel</button>
+        </div>
+        <div id="svg_context_menu" class="contextMenu">
+            <ul>
+                <li ng-click="addingNode.step = 2">Add a new router</li>
+            </ul>
+        </div>
+        <div id="link_context_menu" class="contextMenu">
+            <ul>
+                <li ng-click="reverseLink()">Reverse connection direction</li>
+                <li ng-click="removeLink()">Remove connection</li>
+            </ul>
+        </div>
+        <div id="svg_legend"></div>
+        <div id="multiple_details">
+            <h4 class="grid-title">Connections</h4>
+            <div class="gridStyle" ng-grid="multiDetails"></div>
+        </div>
+        <div id="link_details">
+            <h4 class="grid-title">Links</h4>
+            <div class="gridStyle" ng-grid="linkDetails"></div>
         </div>
     </div>
-<!--
-    <button ng-if="panelVisible" ng-click="hideLeftPane()" class="hideLeft" title="Hide"><i class="icon-step-backward"></i></button>
-    <button ng-if="!panelVisible" ng-click="showLeftPane()" class="hideLeft" title="Show"><i class="icon-step-forward"></i></button>
--->
 </div>
-
 
 <script type="text/ng-template" id="titleHeaderCellTemplate.html">
     <div title="{{col.displayName}}" class="ngHeaderSortColumn {{col.headerClass}}" ng-style="{'cursor': col.cursor}" ng-class="{ 'ngSorted': !noSortVisible }">

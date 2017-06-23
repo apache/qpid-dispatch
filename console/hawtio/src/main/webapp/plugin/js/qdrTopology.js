@@ -399,7 +399,7 @@ QDR.log.debug("attr.description " + attr.description)
           }
           QDRService.ensureAllEntities({entity: ".router"}, function () {
             NewRouterName = genNewName();
-            nodes.push(aNode(id, NewRouterName, "inter-router", '', undefined, nodes.length, x, y, undefined, true));
+            nodes.push(aNode(id, NewRouterName, "inter-router", '', nodes.length, x, y, undefined, undefined, true));
             force.nodes(nodes).links(links).start();
             restart(false);
           })
@@ -489,7 +489,7 @@ QDR.log.debug("attr.description " + attr.description)
       $scope.isFixed = function() {
         if (!$scope.contextNode)
           return false;
-        return ($scope.contextNode.fixed == 1);
+        return ($scope.contextNode.fixed & 1);
       }
 
       var mouseX, mouseY;
@@ -670,7 +670,7 @@ QDR.log.debug("attr.description " + attr.description)
           localStorage[d.name] = angular.toJson({
             x: Math.round(d.x),
             y: Math.round(d.y),
-            fixed: d.fixed ? 1 : 0,
+            fixed: (d.fixed & 1) ? 1 : 0,
           });
         })
       }
@@ -1508,7 +1508,7 @@ QDR.log.debug("attr.description " + attr.description)
             return (d === selected_node)
           })
           .classed('fixed', function(d) {
-            return d.fixed
+            return d.fixed & 1
           })
 
         // add new circle nodes. if nodes[] is longer than the existing paths, add a new path for each new element
@@ -1531,7 +1531,7 @@ QDR.log.debug("attr.description " + attr.description)
               return null;
             })
             .classed('fixed', function(d) {
-              return d.fixed
+              return d.fixed & 1
             })
             .classed('temp', function(d) {
               return QDRService.nameFromId(d.key) == '__internal__';
@@ -1677,7 +1677,7 @@ QDR.log.debug("attr.description " + attr.description)
           .on("dblclick", function(d) { // circle
             if (d.fixed) {
               d.fixed = false
-              setNodesFixed(d.name, false)
+              setNodes``(d.name, false)
               restart() // redraw the node without a dashed line
               force.start(); // let the nodes move to a new position
             }
@@ -1689,13 +1689,11 @@ QDR.log.debug("attr.description " + attr.description)
           .on("contextmenu", function(d) {  // circle
             $(document).click();
             d3.event.preventDefault();
-            $scope.contextNode = d;
-            if (!$scope.$$phase) $scope.$apply() // we just changed a scope valiable during an async event
+            $timeout(function () {$scope.contextNode = d})
             d3.select('#node_context_menu')
               .style('left', (mouseX + $(document).scrollLeft()) + "px")
               .style('top', (mouseY + $(document).scrollTop()) + "px")
               .style('display', 'block');
-
           })
           .on("click", function(d) {  // circle
             if (!mouseup_node)
