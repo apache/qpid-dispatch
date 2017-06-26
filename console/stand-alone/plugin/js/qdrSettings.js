@@ -60,14 +60,19 @@ var QDR = (function(QDR) {
 
     $scope.connect = function() {
       if (QDRService.connected) {
-        QDRService.disconnect();
+        $timeout( function () {
+          QDRService.disconnect();
+        })
         return;
       }
 
       if ($scope.settings.$valid) {
         $scope.connectionError = false;
         $scope.connecting = true;
-        $timeout(doConnect) // timeout so connecting animation can display
+        // timeout so connecting animation can display
+        $timeout(function () {
+          doConnect()
+        })
       }
     }
 
@@ -77,20 +82,22 @@ var QDR = (function(QDR) {
       if (!$scope.formEntity.port)
         $scope.formEntity.port = 5673
 
+      var failed = function() {
+        $timeout(function() {
+          QDR.log.debug("disconnect action called");
+          $scope.connecting = false;
+          $scope.connectionErrorText = QDRService.errorText;
+          $scope.connectionError = true;
+        })
+      }
+      QDRService.addDisconnectAction(failed);
       QDRService.addConnectAction(function() {
-        QDRService.addDisconnectAction(function() {
-          $timeout(function() {
-            QDR.log.debug("disconnect action called");
-            $scope.connecting = false;
-            $scope.connectionErrorText = QDRService.errorText;
-            $scope.connectionError = true;
-          })
-        });
+        QDRService.delDisconnectAction(failed)
         QDRService.getSchema(function () {
-          QDR.log.debug("got schema after connection")
+          QDR.log.info("got schema after connection")
           QDRService.addUpdatedAction("initialized", function () {
             QDRService.delUpdatedAction("initialized")
-            QDR.log.debug("got initial topology")
+            QDR.log.info("got initial topology")
             $timeout(function() {
               $scope.connecting = false;
               if ($location.path().startsWith(QDR.pluginRoot)) {
@@ -104,7 +111,7 @@ var QDR = (function(QDR) {
               }
             })
           })
-          QDR.log.debug("requesting a topology")
+          QDR.log.info("requesting a topology")
           QDRService.setUpdateEntities([])
           QDRService.topology.get()
         })

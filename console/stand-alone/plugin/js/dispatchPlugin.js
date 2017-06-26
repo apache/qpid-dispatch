@@ -206,12 +206,10 @@ QDR.log.info("setting location.search to org=null")
     }
     QDR.queue = d3.queue;
 
-    QDRService.initProton();
     QDRService.addUpdatedAction("initChartService", function() {
       QDRService.delUpdatedAction("initChartService")
       QDRChartService.init(); // initialize charting service after we are connected
     });
-
     var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]) || {autostart: false, address: 'localhost', port: 5673}
     if (!QDRService.connected) {
       // attempt to connect to the host:port that served this page
@@ -224,42 +222,48 @@ QDR.log.info("setting location.search to org=null")
 QDR.log.info("was not connected. setting org to overview")
           $location.search("org", "overview")
       }
-
-      QDRService.testConnect({address: host, port: port}, 10000, function (e) {
+      var connectOptions = {address: host, port: port}
+      QDRService.testConnect(connectOptions, 10000, function (e) {
         if (e.error) {
-          QDR.log.debug("failed to auto-connect to " + host + ":" + port)
+          QDR.log.info("failed to auto-connect to " + host + ":" + port)
           // the connect page should rneder
           $timeout(function () {
             $location.path('/connect')
             $location.search('org', org)
           })
         } else {
-          QDRService.addConnectAction(function() {
-            QDRService.getSchema(function () {
-              QDR.log.debug("got schema after connection")
-              QDRService.addUpdatedAction("initialized", function () {
-                QDRService.delUpdatedAction("initialized")
-                QDR.log.debug("got initial topology")
-                $timeout(function() {
-QDR.log.info("after initialization org was " + org + " and location.path() was " + $location.path())
-                  if (org === '' || org === 'connect') {
-                    org = localStorage[QDR.LAST_LOCATION] || "/overview"
-                    if (org === '/')
-                      org = "/overview"
-QDR.log.info("after initialization org was loaded from localStorage and is now " + org)
+QDR.log.info("testConnect succeeded using address:port of browser")
+          QDRService.getSchema(function () {
+            QDR.log.debug("got schema after connection")
+            QDRService.addUpdatedAction("initialized", function () {
+              QDRService.delUpdatedAction("initialized")
+              QDR.log.debug("got initial topology")
+              $timeout(function() {
+    QDR.log.info("after initialization org was " + org + " and location.path() was " + $location.path())
+                if (org === '' || org === 'connect') {
+                  org = localStorage[QDR.LAST_LOCATION] || "/overview"
+                  if (org === '/')
+                    org = "/overview"
+    QDR.log.info("after initialization org was loaded from localStorage and is now " + org)
+                } else {
+                  if (org && $location.path() !== '/connect') {
+                    org = $location.path().substr(1)
                   }
-QDR.log.info("after initialization going to " + org)
-                  $location.path(org)
-                  $location.search('org', null)
-                  $location.replace()
-                })
+                }
+    QDR.log.info("after initialization going to " + org)
+                $location.path(org)
+                $location.search('org', null)
+                $location.replace()
               })
-              QDR.log.debug("requesting a topology")
-              QDRService.setUpdateEntities([])
-              QDRService.topology.get()
             })
-          });
-          QDRService.connect(e)
+            QDR.log.info("requesting a topology")
+            QDRService.setUpdateEntities([])
+            QDRService.topology.get()
+          })
+          $timeout( function () {
+            QDR.log.info("calling connect")
+            QDRService.connect(e)
+          })
         }
       })
     }

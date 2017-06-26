@@ -1384,9 +1384,10 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     }
 
     // we are currently connected. setup a handler to get notified if we are ever disconnected
-    QDRService.addDisconnectAction( function () {
-      $timeout( function () {QDRService.redirectWhenConnected("overview")} )
-    })
+    var onDisconnect = function () {
+      $timeout(function () { QDRService.redirectWhenConnected("overview") })
+    }
+    QDRService.addDisconnectAction( onDisconnect )
 
     /* --------------------------------------------------
      *
@@ -1665,8 +1666,7 @@ QDR.log.debug("newly created node needs to be activated")
     initTreeAndGrid();
     $scope.$on("$destroy", function( event ) {
       clearTimeout(tickTimer)
-      //QDRService.stopUpdating()
-      //QDRService.delUpdatedAction("overview")
+      QDRService.delDisconnectAction( onDisconnect )
     });
 
   }]);

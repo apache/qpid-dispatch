@@ -142,10 +142,10 @@ var QDR = (function(QDR) {
       return;
     }
     // we are currently connected. setup a handler to get notified if we are ever disconnected
-    QDRService.addDisconnectAction( function () {
-      QDRService.redirectWhenConnected("list")
-      $scope.$apply();
-    })
+    var onDisconnect = function () {
+      $timeout(function () { QDRService.redirectWhenConnected("list") })
+    }
+    QDRService.addDisconnectAction( onDisconnect )
 
     $scope.nodes = []
     var excludedEntities = ["management", "org.amqp.management", "operationalEntity", "entity", "configurationEntity", "dummy", "console"];
@@ -633,6 +633,7 @@ var QDR = (function(QDR) {
     $scope.$on("$destroy", function( event ) {
       //QDR.log.debug("scope destroyed for qdrList");
       stopUpdating();
+      QDRService.delDisconnectAction( onDisconnect )
     });
 
     function gotMethodResponse (nodeName, entity, response, context) {
@@ -708,7 +709,7 @@ var QDR = (function(QDR) {
     var serviceReady = false;
     $scope.largeNetwork = QDRService.isLargeNetwork()
     $scope.showExpandCollapseTree = function () {
-      QDR.log.info("showExpandCollapseTree returning " + !QDRService.isMSIE())
+      //QDR.log.info("showExpandCollapseTree returning " + !QDRService.isMSIE())
       return !QDRService.isMSIE()
     }
     // called after we know for sure the schema is fetched and the routers are all ready
@@ -719,7 +720,7 @@ var QDR = (function(QDR) {
       $scope.nodes = QDRService.nodeList().sort(function (a, b) { return a.name.toLowerCase() > b.name.toLowerCase()});
       // unable to get node list? Bail.
       if ($scope.nodes.length == 0) {
-        $location.path("/" + QDR.pluginName + "/connect")
+        $location.path(QDR.pluginRoot + "/connect")
         $location.search('org', "list");
       }
       if (!angular.isDefined($scope.selectedNode)) {

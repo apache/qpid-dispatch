@@ -293,10 +293,13 @@ var QDR = (function(QDR) {
         return;
       }
       // we are currently connected. setup a handler to get notified if we are ever disconnected
-      QDRService.addDisconnectAction(function() {
-        QDRService.redirectWhenConnected("topology");
-        $scope.$apply();
-      })
+      var onDisconnect = function () {
+QDR.log.info("we were just disconnected while on the topology page. Setting org to redirect back once we are connected again")
+        $timeout(function () {
+          QDRService.redirectWhenConnected("topology")
+        })
+      }
+      QDRService.addDisconnectAction( onDisconnect )
 
       var urlPrefix = $location.absUrl();
       urlPrefix = urlPrefix.split("#")[0]
@@ -2132,6 +2135,8 @@ var QDR = (function(QDR) {
         QDRService.stopUpdating();
         QDRService.delUpdatedAction("normalsStats");
         QDRService.delUpdatedAction("topology");
+        QDRService.delDisconnectAction( onDisconnect )
+
         d3.select("#SVG_ID").remove();
         window.removeEventListener('resize', resize);
       });
