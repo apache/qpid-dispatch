@@ -36,6 +36,14 @@ static void bump_count(qd_composed_field_t *field)
         comp->count++;
 }
 
+static void bump_count_by_n(qd_composed_field_t * field, uint32_t n)
+{
+    qd_composite_t *comp = DEQ_HEAD(field->fieldStack);
+    if (comp)
+        comp->count += n;
+}
+
+
 static void bump_length(qd_composed_field_t *field,
                         uint32_t length)
 {
@@ -531,3 +539,25 @@ void qd_compose_insert_buffers(qd_composed_field_t *field,
     }
 }
 
+
+void qd_compose_insert_buffers_or_null(qd_composed_field_t *field,
+                                       qd_buffer_list_t *list)
+{
+    uint32_t len = qd_buffer_list_length(list);
+    if (len) {
+        DEQ_APPEND(field->buffers, *list);
+        bump_length(field, len);
+        bump_count(field);
+    } else {
+        qd_compose_insert_null(field);
+    }
+}
+
+
+void qd_compose_insert_opaque_elements(qd_composed_field_t *field,
+                                       uint32_t             count,
+                                       uint32_t             size)
+{
+    bump_count_by_n(field, count);
+    bump_length(field, size);
+}

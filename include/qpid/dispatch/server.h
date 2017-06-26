@@ -525,9 +525,15 @@ const char* qd_connection_name(const qd_connection_t *c);
 
 
 /**
+
  * Get the remote host IP address of the connection.
  */
 const char* qd_connection_remote_ip(const qd_connection_t *c);
+
+/**
+ * Get the hello protocol version used by the remote router on this connection
+ */
+int qd_connection_hello_protocol_version(const qd_connection_t *c);
 
 /**
  * @}

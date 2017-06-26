@@ -852,3 +852,19 @@ bool qd_iterator_next_segment(qd_iterator_t *iter, uint32_t *hash)
 
     return true;
 }
+
+
+void qd_iterator_get_view_cursor(
+    const qd_iterator_t *iter,
+    qd_iterator_pointer_t *ptr)
+{
+    ptr->buffer    = iter->view_pointer.buffer;
+    ptr->cursor    = iter->view_pointer.cursor;
+    ptr->remaining = iter->view_pointer.remaining;
+}
+
+
+int qd_iterator_get_raw_size(const qd_iterator_t *iter)
+{
+    return iter->start_pointer.remaining;
+}

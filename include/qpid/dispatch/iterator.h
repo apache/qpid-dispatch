@@ -105,6 +105,18 @@ typedef enum {
     ITER_VIEW_ADDRESS_WITH_SPACE
 } qd_iterator_view_t;
 
+
+/**
+ * qd_iterator_pointer_t
+ * 
+ * Pointer type identifies arbitrary data in a buffer list.
+ */
+typedef struct {
+    qd_buffer_t   *buffer;
+    unsigned char *cursor;
+    int            remaining;
+} qd_iterator_pointer_t;
+
 /** @} */
 /** \name global
  * Global Methods
@@ -398,6 +410,27 @@ void qd_iterator_hash_view_segments(qd_iterator_t *iter);
  * @return True iff there is another segment hash to be compared
  */
 bool qd_iterator_next_segment(qd_iterator_t *iter, uint32_t *hash);
+
+/**
+ * Return the parsed field's cursor position in the raw iter
+ * view pointer buffer chain. This is used to copy opaque 
+ * contents out of a buffer chain.
+ * 
+ * @param field Parsed iter that has been partially parsed and still has data in its view.
+ * @param ptr Caller's pointer object which is to receive cursor position
+ * @return none
+ */
+void qd_iterator_get_view_cursor(
+    const qd_iterator_t *iter,
+    qd_iterator_pointer_t *ptr);
+
+/**
+ * Return iterator's raw size
+ * 
+ * @param iter A field iterator
+ * @return the start.pointer.size
+ */
+int qd_iterator_get_raw_size(const qd_iterator_t *iter);
 
 /** @} */
 /** @} */

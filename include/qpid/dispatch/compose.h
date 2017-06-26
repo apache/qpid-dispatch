@@ -237,6 +237,31 @@ void qd_compose_take_buffers(qd_composed_field_t *field,
  */
 void qd_compose_insert_buffers(qd_composed_field_t *field, qd_buffer_list_t *list);
 
+/**
+ * Append a buffer list into a composed field.  If field is a container type
+ * (list, map), the container's count will be incremented by one.
+ * If the buffer list is empty then insert a null.
+ *
+ * @param field A field created by ::qd_compose().
+ * @param list A list of buffers containing a single completely encoded data
+ * object.  Ownership of these buffers is given to field.
+ */
+void qd_compose_insert_buffers_or_null(qd_composed_field_t *field, qd_buffer_list_t *list);
+
+/**
+ * Administratively insert a raw buffer chain's contents into a map.
+ * Bump map element count and size in bytes to reflect opaque that caller will insert later.
+ * 
+ * Note the the bytes are never actually copied into the composed field.
+ * 
+ * @param field A field created by qd_compose().
+ * @param count The number of map elements in the buffer chain.
+ * @param size The number of bytes in the buffer chain
+ */
+void qd_compose_insert_opaque_elements(qd_composed_field_t *field,
+                                       uint32_t             count,
+                                       uint32_t             size);
+
 ///@}
 
 #endif
