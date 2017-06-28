@@ -347,7 +347,7 @@ console.dump(e)
         function gotMethodResponse(nodeName, entity, response, context) {
           var statusCode = context.message.application_properties.statusCode;
           if (statusCode < 200 || statusCode >= 300) {
-            Core.notification('error', context.message.application_properties.statusDescription);
+            Core.notification('error', context.message.statusDescription);
           }
         }
         var attributes = {

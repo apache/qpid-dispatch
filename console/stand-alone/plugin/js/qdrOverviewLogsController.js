@@ -26,7 +26,7 @@ var QDR = (function(QDR) {
       var gotLogInfo = function (nodeId, entity, response, context) {
         var statusCode = context.message.application_properties.statusCode;
         if (statusCode < 200 || statusCode >= 300) {
-          Core.notification('error', context.message.application_properties.statusDescription);
+          Core.notification('error', context.message.statusDescription);
         } else {
           var levelLogs = response.filter( function (result) {
             if (result[1] == null)

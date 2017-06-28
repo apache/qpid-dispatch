@@ -100,8 +100,8 @@ var QDR = (function(QDR) {
           $scope.fetchingLog = false;
           var statusCode = context.message.application_properties.statusCode;
           if (statusCode < 200 || statusCode >= 300) {
-            Core.notification('error', context.message.application_properties.statusDescription);
-            //QDR.log.debug(context.message.application_properties.statusDescription)
+            Core.notification('error', context.message.statusDescription);
+            //QDR.log.debug(context.message.statusDescription)
             return;
           }
           $scope.logResults = response.filter( function (entry) {
@@ -639,8 +639,8 @@ var QDR = (function(QDR) {
     function gotMethodResponse (nodeName, entity, response, context) {
       var statusCode = context.message.application_properties.statusCode;
       if (statusCode < 200 || statusCode >= 300) {
-        Core.notification('error', context.message.application_properties.statusDescription);
-        //QDR.log.debug(context.message.application_properties.statusDescription)
+        Core.notification('error', context.message.statusDescription);
+        //QDR.log.debug(context.message.statusDescription)
       } else {
         var note = entity + " " + $filter('Pascalcase')($scope.currentMode.op) + "d"
         Core.notification('success', note);
