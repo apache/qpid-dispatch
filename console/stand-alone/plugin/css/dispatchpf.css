@@ -102,8 +102,7 @@ div#list-controller {
     position: relative;
 }
 
-#list-controller select,
-#list-controller .tree-header {
+#list-controller .tree-header, #list-controller .tree-header select {
     width: 100%;
 }
 

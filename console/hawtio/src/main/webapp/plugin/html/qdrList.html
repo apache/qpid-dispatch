@@ -50,13 +50,14 @@ under the License.
                     <td>
                     <div ng-if="attribute.input == 'input'">
                         <!-- ng-pattern="testPattern(attribute)" -->
-                        <input ng-if="attribute.type == 'number'" type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.rawValue" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
-                        <input ng-if="attribute.type == 'text'" type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.attributeValue" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
-                        <textarea ng-if="attribute.type == 'textarea'" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.attributeValue" ng-required="attribute.required" class="ui-widget-content ui-corner-all"></textarea>
+                        <div ng-if="attribute.type == 'number'"><input type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.rawValue" ng-required="attribute.required" ng-class="{required: attribute.required, unique: attribute.unique}" class="ui-widget-content ui-corner-all"/><span ng-if="attribute.required" title="required" class="required-indicator"></span><span ng-if="attribute.unique" title="unique" class="unique-indicator"></span></div>
+                        <div ng-if="attribute.type == 'text'"><input type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.attributeValue" ng-required="attribute.required" ng-class="{required: attribute.required, unique: attribute.unique}" class="ui-widget-content ui-corner-all"/><span ng-if="attribute.required" title="required" class="required-indicator"></span><span ng-if="attribute.unique" title="unique" class="unique-indicator"></span></div>
+                        <div ng-if="attribute.type == 'textarea'"><textarea name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.attributeValue" ng-required="attribute.required" ng-class="{required: attribute.required, unique: attribute.unique}" class="ui-widget-content ui-corner-all"></textarea><span ng-if="attribute.required" title="required" class="required-indicator"></span><span ng-if="attribute.unique" title="unique" class="unique-indicator"></span></div>
                         <span ng-if="attribute.type == 'disabled'" >{{getAttributeValue(attribute)}}</span>
                     </div>
                     <div ng-if="attribute.input == 'select'">
-                        <select id="{{attribute.name}}" ng-model="attribute.selected" ng-options="item for item in attribute.rawtype track by item"></select>
+                        <select id="{{attribute.name}}" ng-model="attribute.selected" ng-required="attribute.required" ng-class="{required: attribute.required, unique: attribute.unique}" ng-options="item for item in attribute.rawtype track by item"></select>
+                        <span ng-if="attribute.required" title="required" class="required-indicator"></span><span ng-if="attribute.unique" title="unique" class="unique-indicator"></span>
                     </div>
                     <div ng-if="attribute.input == 'boolean'" class="boolean">
                         <label><input type="radio" ng-model="attribute.rawValue" ng-value="true"> True</label>

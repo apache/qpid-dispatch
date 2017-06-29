@@ -382,6 +382,7 @@ var QDR = (function(QDR) {
           input:          schemaEntity.input,
           type:           schemaEntity.type,
           required:       schemaEntity.required,
+          unique:         schemaEntity.unique,
           selected:       schemaEntity.selected,
           rawtype:        schemaEntity.rawtype,
           disabled:       schemaEntity.disabled,

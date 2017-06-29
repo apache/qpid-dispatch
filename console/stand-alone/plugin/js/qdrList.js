@@ -389,6 +389,7 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
           input:          schemaEntity.input,
           type:           schemaEntity.type,
           required:       schemaEntity.required,
+          unique:         schemaEntity.unique,
           selected:       schemaEntity.selected,
           rawtype:        schemaEntity.rawtype,
           disabled:       schemaEntity.disabled,
