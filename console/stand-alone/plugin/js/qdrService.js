@@ -120,7 +120,7 @@ console.dump(e)
       notifyTopologyDone: function() {
         if (!self.gotTopology) {
           QDR.log.debug("topology was just initialized");
-          console.dump(self.topology._nodeInfo)
+          //console.dump(self.topology._nodeInfo)
           self.gotTopology = true;
           //$rootScope.$apply();
         } else {
@@ -541,10 +541,8 @@ console.dump(e)
             self.topology._getTimer = null
           }
 
-          //QDR.log.debug("starting get topology with correlator.depth of " + self.correlator.depth())
-          //self.topology._lastNodeInfo = angular.copy(self.topology._nodeInfo);
+          //QDR.log.info("starting get topology with correlator.depth of " + self.correlator.depth())
           self.topology._gettingTopo = true;
-
           self.errorText = undefined;
 
           // get the list of nodes to query.
@@ -564,8 +562,8 @@ console.dump(e)
                 var parts = self.receiver.remote.attach.source.address.split('/')
                 parts[4] = '$management'
                 response.push(parts.join('/'))
-                QDR.log.debug("GET-MGMT-NODES returned an empty list. Using ")
-                console.dump(response)
+                //QDR.log.info("GET-MGMT-NODES returned an empty list. Using ")
+                //console.dump(response)
               }
               for (var i=0; i<response.length; ++i) {
                 if (!angular.isDefined(self.topology._nodeInfo[response[i]])) {

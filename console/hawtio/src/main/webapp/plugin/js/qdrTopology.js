@@ -989,10 +989,8 @@ QDR.log.debug("attr.description " + attr.description)
           unknownNodes[unknowns[i].key] = 1
         }
         unknownNodes = Object.keys(unknownNodes)
-          //QDR.log.debug("there were " + unknownNodes.length + " connections with normal links")
-          //console.dump(unknownNodes)
-
-        QDRService.ensureEntities(unknownNodes, {entity: ".router.link", attrs: ["linkType","connectionId","linkDir"], force: true}, function () {
+        //QDR.log.info("-- resolveUnknowns: ensuring .connection and .router.link are present for each node")
+        QDRService.ensureEntities(unknownNodes, [{entity: ".connection", force: true}, {entity: ".router.link", attrs: ["linkType","connectionId","linkDir"], force: true}], function () {
           initializeLinks(nodeInfo, [])
           // collapse any router-container nodes that are duplicates
           animate = true;
@@ -2100,7 +2098,7 @@ QDR.log.debug("attr.description " + attr.description)
             savedKeys[key] = nodeInfo[key]['.connection'].results.length;
         }
         //QDR.log.debug("saving current keys");
-        console.dump(savedKeys);
+        //console.dump(savedKeys);
       };
       // we are about to leave the page, save the node positions
       $rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {

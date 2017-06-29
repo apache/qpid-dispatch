@@ -84,7 +84,7 @@ var QDR = (function(QDR) {
           .style("margin-left", "30px")
           .each("end", function () {
             resize()
-            $timeout(function () {QDR.log.info("done with transition. setting scope ");$scope.panelVisible = false})
+            $timeout(function () {$scope.panelVisible = false})
           })
       }
       $scope.showLeftPane = function () {
@@ -97,7 +97,7 @@ var QDR = (function(QDR) {
           .style("margin-left", "430px")
           .each("end", function () {
             resize()
-            $timeout(function () {QDR.log.info("done with transition. setting scope ");$scope.panelVisible = true})
+            $timeout(function () {$scope.panelVisible = true})
           })
       }
 
@@ -153,7 +153,7 @@ var QDR = (function(QDR) {
           $scope.linkData = obj.entity.linkData;
           $scope.connectionId = obj.entity.connectionId;
           var visibleLen = Math.min(obj.entity.linkData.length, 10)
-          QDR.log.debug("visibleLen is " + visibleLen)
+          //QDR.log.debug("visibleLen is " + visibleLen)
           var left = parseInt(d3.select('#multiple_details').style("left"))
           var offset = jQuery('#topology').offset();
           var detailsDiv = d3.select('#link_details')
@@ -294,7 +294,7 @@ var QDR = (function(QDR) {
       }
       // we are currently connected. setup a handler to get notified if we are ever disconnected
       var onDisconnect = function () {
-QDR.log.info("we were just disconnected while on the topology page. Setting org to redirect back once we are connected again")
+        //QDR.log.info("we were just disconnected while on the topology page. Setting org to redirect back once we are connected again")
         $timeout(function () {
           QDRService.redirectWhenConnected("topology")
         })
@@ -1003,10 +1003,8 @@ QDR.log.info("we were just disconnected while on the topology page. Setting org 
           unknownNodes[unknowns[i].key] = 1
         }
         unknownNodes = Object.keys(unknownNodes)
-          //QDR.log.debug("there were " + unknownNodes.length + " connections with normal links")
-          //console.dump(unknownNodes)
-
-        QDRService.ensureEntities(unknownNodes, {entity: ".router.link", attrs: ["linkType","connectionId","linkDir"], force: true}, function () {
+        //QDR.log.info("-- resolveUnknowns: ensuring .connection and .router.link are present for each node")
+        QDRService.ensureEntities(unknownNodes, [{entity: ".connection", force: true}, {entity: ".router.link", attrs: ["linkType","connectionId","linkDir"], force: true}], function () {
           initializeLinks(nodeInfo, [])
           // collapse any router-container nodes that are duplicates
           animate = true;
@@ -2117,7 +2115,7 @@ QDR.log.info("we were just disconnected while on the topology page. Setting org 
             savedKeys[key] = nodeInfo[key]['.connection'].results.length;
         }
         //QDR.log.debug("saving current keys");
-        console.dump(savedKeys);
+        //console.dump(savedKeys);
       };
       // we are about to leave the page, save the node positions
       $rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {
