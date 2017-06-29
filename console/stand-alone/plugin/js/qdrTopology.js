@@ -721,6 +721,8 @@ var QDR = (function(QDR) {
         var client = 1.0;
         for (var id in nodeInfo) {
           var onode = nodeInfo[id];
+          if (!onode['.connection'])
+            continue
           var conns = onode['.connection'].results;
           var attrs = onode['.connection'].attributeNames;
           //QDR.log.debug("external client parent is " + parent);
@@ -2238,4 +2240,5 @@ var QDR = (function(QDR) {
   ]);
 
   return QDR;
+
 }(QDR || {}));

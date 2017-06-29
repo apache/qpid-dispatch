@@ -791,8 +791,6 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
       QDRService.setUpdateEntities([".connection"])
       QDRService.startUpdating();
     })
-
-
   }]);
 
     return QDR;

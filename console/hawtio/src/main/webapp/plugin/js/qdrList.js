@@ -301,8 +301,10 @@ var QDR = (function(QDR) {
       if (expand && !updatedDetails && tableRows.length > 0) {
         var row = tableRows[0];
         $scope.selectedRecordName = row.name.value;
-        var node = tree.getNodeByKey($scope.selectedRecordName);
-        node.select(true);
+        if (tree.getNodeByKey) {
+          var node = tree.getNodeByKey($scope.selectedRecordName);
+          node.select(true);
+        }
         updateDetails(row)  // update the table on the right
       }
       scrollTreeDiv.scrollTop(scrollTop)
@@ -328,6 +330,8 @@ var QDR = (function(QDR) {
         value.type = []
         // find all the connector names and populate the select
         QDRService.fetchEntity(currentNode.id, '.connector', ['name'], function (nodeName, dotentity, response) {
+          if (!response.results)
+            return
           $scope.detailFields.some( function (field) {
             if (field.name === 'connector') {
               field.rawtype = response.results.map (function (result) {return result[0]})
@@ -458,6 +462,8 @@ var QDR = (function(QDR) {
       }
 
       var gotNodeInfo = function (nodeName, dotentity, response) {
+        if (!response.results)
+          return
         var tableRows = [];
         var records = response.results;
         var aggregates = response.aggregates;

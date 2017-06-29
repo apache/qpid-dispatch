@@ -707,6 +707,8 @@ QDR.log.debug("attr.description " + attr.description)
         var client = 1.0;
         for (var id in nodeInfo) {
           var onode = nodeInfo[id];
+          if (!onode['.connection'])
+            return
           var conns = onode['.connection'].results;
           var attrs = onode['.connection'].attributeNames;
           //QDR.log.debug("external client parent is " + parent);
@@ -1006,6 +1008,8 @@ QDR.log.debug("attr.description " + attr.description)
             {entity: '.'+entity},
             {entity: '.listener', attrs: ["role", "port"]}], function () {
             var onode = nodeInfo[key]
+            if (!onode['.'+entity])
+              return
             var nodeResults = onode['.' + entity].results[resultIndex]
             var nodeAttributes = onode['.' + entity].attributeNames
             var attributes = nodeResults.map(function(row, i) {
@@ -1028,6 +1032,8 @@ QDR.log.debug("attr.description " + attr.description)
 
             // get the list of ports this router is listening on
             if (entity === 'router') {
+              if (!onode['.listener'])
+                return
               var listeners = onode['.listener'].results;
               var listenerAttributes = onode['.listener'].attributeNames;
               var normals = listeners.filter(function(listener) {

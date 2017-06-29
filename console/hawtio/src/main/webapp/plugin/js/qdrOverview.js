@@ -1400,6 +1400,9 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       var scrollTree = $('.qdr-overview.pane.left .pane-viewport')
       var scrollTop = scrollTree.scrollTop();
       var tree = $("#overtree").dynatree("getTree")
+      if (!tree.getNodeByKey) {
+        return
+      }
       var parentNode = tree.getNodeByKey(parentKey);
       parentNode.removeChildren();
 
