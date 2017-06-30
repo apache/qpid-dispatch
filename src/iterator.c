@@ -648,6 +648,59 @@ bool qd_iterator_prefix(qd_iterator_t *iter, const char *prefix)
 }
 
 
+// bare bones copy of field_iterator_move_cursor with no field/view baggage
+void iterator_pointer_move_cursor(qd_iterator_pointer_t *ptr, uint32_t length)
+{
+    uint32_t count = length > ptr->remaining ? ptr->remaining : length;
+
+    while (count) {
+        uint32_t remaining = qd_buffer_cursor(ptr->buffer) - ptr->cursor;
+        remaining = remaining > count ? count : remaining;
+        ptr->cursor += remaining;
+        ptr->remaining -= remaining;
+        count -= remaining;
+        if (ptr->cursor == qd_buffer_cursor(ptr->buffer)) {
+            ptr->buffer = ptr->buffer->next;
+            if (ptr->buffer == 0) {
+                ptr->remaining = 0;
+                ptr->cursor = 0;
+                break;
+            } else {
+                ptr->cursor = qd_buffer_base(ptr->buffer);
+            }
+        }
+    }
+}
+
+
+// bare bones copy of qd_iterator_prefix with no iterator baggage
+bool qd_iterator_prefix_ptr(const qd_iterator_pointer_t *ptr, uint32_t skip, const char *prefix)
+{
+    if (!ptr)
+        return false;
+
+    qd_iterator_pointer_t lptr;
+    *&lptr = *ptr;
+
+    iterator_pointer_move_cursor(&lptr, skip);
+
+    unsigned char *c = (unsigned char*) prefix;
+
+    while(*c && lptr.remaining) {
+        unsigned char ic = *lptr.cursor;
+
+        if (*c != ic)
+            break;
+        c++;
+
+        iterator_pointer_move_cursor(&lptr, 1);
+        lptr.remaining -= 1;
+    }
+
+    return *c == 0;
+}
+
+
 int qd_iterator_length(const qd_iterator_t *iter)
 {
     return iter ? iter->annotation_length + iter->view_start_pointer.remaining : 0;
