@@ -664,6 +664,9 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     pn_data_t *props = pn_conn ? pn_connection_remote_properties(pn_conn) : 0;
 
     if (role == QDR_ROLE_INTER_ROUTER) {
+
+        conn->interrouter = true;
+
         //
         // Check the remote properties for an inter-router cost value.
         //

@@ -530,6 +530,11 @@ const char* qd_connection_name(const qd_connection_t *c);
 const char* qd_connection_remote_ip(const qd_connection_t *c);
 
 /**
+ * Get inter-router vs user connection status
+ */
+bool qd_connection_is_interrouter(const qd_connection_t *c);
+
+/**
  * @}
  */
 
