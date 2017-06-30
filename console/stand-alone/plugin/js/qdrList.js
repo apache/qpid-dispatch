@@ -101,7 +101,7 @@ var QDR = (function(QDR) {
           var statusCode = context.message.application_properties.statusCode;
           if (statusCode < 200 || statusCode >= 300) {
             Core.notification('error', context.message.statusDescription);
-            //QDR.log.debug(context.message.statusDescription)
+            QDR.log.info('Error ' + context.message.statusDescription)
             return;
           }
           $scope.logResults = response.filter( function (entry) {
@@ -648,10 +648,11 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
       var statusCode = context.message.application_properties.statusCode;
       if (statusCode < 200 || statusCode >= 300) {
         Core.notification('error', context.message.statusDescription);
-        QDR.log.debug(context.message.statusDescription)
+        QDR.log.info('Error ' + context.message.statusDescription)
       } else {
         var note = entity + " " + $filter('Pascalcase')($scope.currentMode.op) + "d"
         Core.notification('success', note);
+        QDR.log.info('Success ' + note)
         $scope.selectMode($scope.modes[0]);
         restartUpdate();
       }
