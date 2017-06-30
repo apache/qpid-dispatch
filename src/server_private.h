@@ -154,6 +154,7 @@ struct qd_connection_t {
     sys_mutex_t              *deferred_call_lock;
     bool                      policy_counted;
     char                     *role;  //The specified role of the connection, e.g. "normal", "inter-router", "route-container" etc.
+    bool                      interrouter; // true when *role == "inter-router"
     void (*wake)(qd_connection_t*); /* Wake method, different for HTTP vs. proactor */
     char rhost[NI_MAXHOST];     /* Remote host numeric IP for incoming connections */
     char rhost_port[NI_MAXHOST+NI_MAXSERV]; /* Remote host:port for incoming connections */
