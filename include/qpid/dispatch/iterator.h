@@ -105,6 +105,13 @@ typedef enum {
     ITER_VIEW_ADDRESS_WITH_SPACE
 } qd_iterator_view_t;
 
+
+typedef struct {
+    qd_buffer_t   *buffer;
+    unsigned char *cursor;
+    int            remaining;
+} qd_iterator_pointer_t;
+
 /** @} */
 /** \name global
  * Global Methods
