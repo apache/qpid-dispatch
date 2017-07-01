@@ -1131,6 +1131,8 @@ function ngGridFlexibleHeightPlugin (opts) {
         var innerRecalcForData = function () {
             var gridId = self.grid.gridId;
             var footerPanelSel = '.' + gridId + ' .ngFooterPanel';
+            if (!self.grid.$topPanel || !self.grid.$canvas)
+              return;
             var extraHeight = self.grid.$topPanel.height() + $(footerPanelSel).height();
             var naturalHeight = self.grid.$canvas.height() + 1;
             if (opts != null) {
