@@ -215,7 +215,6 @@ const char *qd_parse_turbo(qd_iterator_t          *iter,
             // If there are this many in the list then this one cannot be a
             // router annotation and must be a user annotation.
             turbo = DEQ_HEAD(*annos);
-            assert(turbo);
             *user_entries += 1;
             *user_bytes += sizeof(turbo->tag) + turbo->size + turbo->length_of_size;
             DEQ_REMOVE_HEAD(*annos);
@@ -635,24 +634,29 @@ const char *qd_parse_annotations_v1(
         qd_parsed_field_t *val_field = qd_parse(val_iter);
         assert(val_field);
 
+        // Hoist the key name out of the buffers into a normal char array
+        char key_name[QD_MA_MAX_KEY + 1];
+        (void)qd_iterator_strncpy(iter, key_name, QD_MA_MAX_KEY);
+
         // transfer ownership of the extracted value to the message
-        if        (qd_iterator_equal(iter, (unsigned char*) QD_MA_TRACE)) {
+        if        (!strcmp(key_name, QD_MA_TRACE)) {
             *ma_trace = val_field;
-        } else if (qd_iterator_equal(iter, (unsigned char*) QD_MA_INGRESS)) {
+        } else if (!strcmp(key_name, QD_MA_INGRESS)) {
             *ma_ingress = val_field;
-        } else if (qd_iterator_equal(iter, (unsigned char*) QD_MA_TO)) {
+        } else if (!strcmp(key_name, QD_MA_TO)) {
             *ma_to_override = val_field;
-        } else if (qd_iterator_equal(iter, (unsigned char*) QD_MA_PHASE)) {
+        } else if (!strcmp(key_name, QD_MA_PHASE)) {
             *ma_phase = val_field;
         } else {
             // TODO: this key had the QD_MA_PREFIX but it does not match
-            //       one of the actual fields.
+            //       one of the actual fields. 
+            qd_parse_free(val_field);
         }
 
         qd_iterator_free(key_iter);
         qd_parse_free(key_field);
         qd_iterator_free(val_iter);
-        // val_field is handed over the message_private and is freed with the message
+        // val_field is usually handed over to message_private and is freed 
 
         anno = DEQ_NEXT(anno_val);
     }
