@@ -75,6 +75,7 @@ typedef struct {
     qd_field_location_t  section_application_properties;  // The application properties list
     qd_field_location_t  section_body;                    // The message body: Data
     qd_field_location_t  section_footer;                  // The footer
+    qd_field_location_t  field_user_annotations;          // Opaque user message annotations, not a real field.
     qd_field_location_t  field_message_id;                // The string value of the message-id
     qd_field_location_t  field_user_id;                   // The string value of the user-id
     qd_field_location_t  field_to;                        // The string value of the to field
@@ -93,7 +94,19 @@ typedef struct {
     qd_buffer_t         *parse_buffer;
     unsigned char       *parse_cursor;
     qd_message_depth_t   parse_depth;
-    qd_parsed_field_t   *parsed_message_annotations;
+
+    bool                 ma_parsed;                       // have parsed annotations in incoming message
+    qd_iterator_t       *ma_field_iter_in;                // 'message field iterator' for msg.FIELD_MESSAGE_ANNOTATION
+
+    qd_iterator_pointer_t ma_user_annotation_blob;        // Original user annotations
+                                                          // with router annotations stripped
+    uint32_t             ma_count;                        // Number of map elements in blob
+                                                          // after the router fields stripped
+    qd_parsed_field_t   *ma_pf_ingress;
+    qd_parsed_field_t   *ma_pf_phase;
+    qd_parsed_field_t   *ma_pf_to_override;
+    qd_parsed_field_t   *ma_pf_trace;
+    int                  ma_int_phase;
 } qd_message_content_t;
 
 typedef struct {
@@ -103,6 +116,7 @@ typedef struct {
     qd_buffer_list_t      ma_trace;        // trace list in outgoing message annotations
     qd_buffer_list_t      ma_ingress;      // ingress field in outgoing message annotations
     int                   ma_phase;        // phase for the override address
+    bool                  is_interrouter;  // true if peer is another router
 } qd_message_pvt_t;
 
 ALLOC_DECLARE(qd_message_t);
