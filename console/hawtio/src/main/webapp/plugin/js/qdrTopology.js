@@ -857,8 +857,8 @@ QDR.log.debug("attr.description " + attr.description)
             if (d3.select('#svg_context_menu').style('display') !== 'block')
               $(document).click();
             d3.select('#svg_context_menu')
-              .style('left', (mouseX + $(document).scrollLeft()) + "px")
-              .style('top', (mouseY + $(document).scrollTop()) + "px")
+              .style('left', (mouseX -1 + $(document).scrollLeft()) + "px")
+              .style('top', (mouseY -1 + $(document).scrollTop()) + "px")
               .style('display', 'block');
           })
           .on('click', function(d) {
@@ -1149,9 +1149,11 @@ QDR.log.debug("attr.description " + attr.description)
 
           var deltaX = dtx - dsx,
             deltaY = dty - dsy,
-            dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
-            normX = deltaX / dist,
-            normY = deltaY / dist;
+            dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+          if (dist == 0)
+            dist = 0.001;
+          var normX = deltaX / dist,
+              normY = deltaY / dist;
           var sourceX = dsx + (sourcePadding * normX),
             sourceY = dsy + (sourcePadding * normY),
             targetX = dtx - (targetPadding * normX),
@@ -1385,8 +1387,8 @@ QDR.log.debug("attr.description " + attr.description)
 
             mousedown_link = d;
             d3.select('#link_context_menu')
-              .style('left', (mouseX + $(document).scrollLeft()) + "px")
-              .style('top', (mouseY + $(document).scrollTop()) + "px")
+              .style('left', (mouseX -1 + $(document).scrollLeft()) + "px")
+              .style('top', (mouseY -1 + $(document).scrollTop()) + "px")
               .style('display', 'block');
           })
           // left click a path
@@ -1580,7 +1582,7 @@ QDR.log.debug("attr.description " + attr.description)
               d3.select(this).attr('transform', 'scale(1.1)');
               return;
             }
-            if (!selected_node) {
+            if (!selected_node && !mousedown_node) {
               if (d.nodeType === 'inter-router') {
                 //QDR.log.debug("showing general form");
                 updateForm(d.key, 'router', 0);
@@ -1597,7 +1599,7 @@ QDR.log.debug("attr.description " + attr.description)
             // enlarge target node
             d3.select(this).attr('transform', 'scale(1.1)');
             // highlight the next-hop route from the selected node to this node
-            mousedown_node = null;
+            //mousedown_node = null;
 
             if (!selected_node) {
               return;
@@ -1695,8 +1697,8 @@ QDR.log.debug("attr.description " + attr.description)
             d3.event.preventDefault();
             $timeout(function () {$scope.contextNode = d})
             d3.select('#node_context_menu')
-              .style('left', (mouseX + $(document).scrollLeft()) + "px")
-              .style('top', (mouseY + $(document).scrollTop()) + "px")
+              .style('left', (mouseX -1 + $(document).scrollLeft()) + "px")
+              .style('top', (mouseY -1 + $(document).scrollTop()) + "px")
               .style('display', 'block');
           })
           .on("click", function(d) {  // circle

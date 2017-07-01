@@ -1159,9 +1159,11 @@ var QDR = (function(QDR) {
 
           var deltaX = dtx - dsx,
             deltaY = dty - dsy,
-            dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY),
-            normX = deltaX / dist,
-            normY = deltaY / dist;
+            dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+          if (dist == 0)
+            dist = 0.001;
+          var normX = deltaX / dist,
+              normY = deltaY / dist;
           var sourceX = dsx + (sourcePadding * normX),
             sourceY = dsy + (sourcePadding * normY),
             targetX = dtx - (targetPadding * normX),
@@ -1591,7 +1593,7 @@ var QDR = (function(QDR) {
               d3.select(this).attr('transform', 'scale(1.1)');
               return;
             }
-            if (!selected_node) {
+            if (!selected_node && !mousedown_node) {
               if (d.nodeType === 'inter-router') {
                 //QDR.log.debug("showing general form");
                 updateForm(d.key, 'router', 0);
@@ -1608,7 +1610,7 @@ var QDR = (function(QDR) {
             // enlarge target node
             d3.select(this).attr('transform', 'scale(1.1)');
             // highlight the next-hop route from the selected node to this node
-            mousedown_node = null;
+            //mousedown_node = null;
 
             if (!selected_node) {
               return;
