@@ -911,7 +911,7 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     qd_buffer_list_clone(&copy->ma_trace, &msg->ma_trace);
     qd_buffer_list_clone(&copy->ma_ingress, &msg->ma_ingress);
     copy->ma_phase = msg->ma_phase;
-    copy->is_interrouter = msg->is_interrouter;
+    copy->strip_annotations_in  = msg->strip_annotations_in;
 
     copy->content = content;
 
@@ -936,7 +936,7 @@ void qd_message_message_annotations(qd_message_t *in_msg)
         return;
 
     qd_parse_annotations(
-        msg->is_interrouter,
+        msg->strip_annotations_in,
         content->ma_field_iter_in,
         &content->ma_pf_ingress,
         &content->ma_pf_phase,
@@ -1022,7 +1022,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         msg = (qd_message_pvt_t*) qd_message();
         qd_link_t       *qdl = (qd_link_t *)pn_link_get_context(link);
         qd_connection_t *qdc = qd_link_connection(qdl);
-        msg->is_interrouter = qd_connection_is_interrouter(qdc);
+        msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
     }
@@ -1250,12 +1250,12 @@ static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list
 // create a buffer chain holding the outgoing message annotations section
 static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t *out,
                                         qd_buffer_list_t *out_trailer,
-                                        bool strip_annotations, bool is_interrouter)
+                                        bool strip_annotations)
 {
-    if (is_interrouter) {
-        compose_message_annotations_v1(msg, out, out_trailer, strip_annotations);
-    } else {
+    if (strip_annotations) {
         compose_message_annotations_v0(msg, out);
+    } else {
+        compose_message_annotations_v1(msg, out, out_trailer, false);
     }
 }
 
@@ -1269,8 +1269,6 @@ void qd_message_send(qd_message_t *in_msg,
     qd_buffer_t          *buf     = DEQ_HEAD(content->buffers);
     unsigned char        *cursor;
     pn_link_t            *pnl     = qd_link_pn(link);
-    qd_connection_t      *qdc     = qd_link_connection(link);
-    bool                  is_rtr  = qd_connection_is_interrouter(qdc);
 
     qd_buffer_list_t new_ma;
     qd_buffer_list_t new_ma_trailer;
@@ -1278,7 +1276,7 @@ void qd_message_send(qd_message_t *in_msg,
     DEQ_INIT(new_ma_trailer);
 
     // Process  the message annotations if any
-    compose_message_annotations(msg, &new_ma, &new_ma_trailer, strip_annotations, is_rtr);
+    compose_message_annotations(msg, &new_ma, &new_ma_trailer, strip_annotations);
 
     //
     // Send header if present
@@ -1601,7 +1599,7 @@ void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *b
     qd_buffer_list_t out_ma_trailer;
     DEQ_INIT(out_ma);
     DEQ_INIT(out_ma_trailer);
-    compose_message_annotations((qd_message_pvt_t*)msg, &out_ma, &out_ma_trailer, false, true);
+    compose_message_annotations((qd_message_pvt_t*)msg, &out_ma, &out_ma_trailer, false);
     qd_compose_insert_buffers(field, &out_ma);
     // TODO: user annotation blob goes here
     qd_compose_insert_buffers(field, &out_ma_trailer);

@@ -636,7 +636,7 @@ const char *qd_parse_annotations_v1(
 
         // Hoist the key name out of the buffers into a normal char array
         char key_name[QD_MA_MAX_KEY + 1];
-        (void)qd_iterator_strncpy(iter, key_name, QD_MA_MAX_KEY);
+        (void)qd_iterator_strncpy(iter, key_name, QD_MA_MAX_KEY + 1);
 
         // transfer ownership of the extracted value to the message
         if        (!strcmp(key_name, QD_MA_TRACE)) {
@@ -680,7 +680,7 @@ const char *qd_parse_annotations_v1(
 
 
 void qd_parse_annotations(
-    bool                   is_interrouter,
+    bool                   strip_annotations_in,
     qd_iterator_t         *ma_iter_in,
     qd_parsed_field_t    **ma_ingress,
     qd_parsed_field_t    **ma_phase,
@@ -723,7 +723,7 @@ void qd_parse_annotations(
 
     qd_iterator_free(raw_iter);
 
-    if (is_interrouter) {
+    if (!strip_annotations_in) {
         (void) qd_parse_annotations_v1(ma_iter_in, ma_ingress, ma_phase,
                                        ma_to_override, ma_trace,
                                        blob_pointer, blob_item_count);

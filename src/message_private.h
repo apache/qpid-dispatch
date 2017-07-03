@@ -116,7 +116,7 @@ typedef struct {
     qd_buffer_list_t      ma_trace;        // trace list in outgoing message annotations
     qd_buffer_list_t      ma_ingress;      // ingress field in outgoing message annotations
     int                   ma_phase;        // phase for the override address
-    bool                  is_interrouter;  // true if peer is another router
+    bool                  strip_annotations_in;
 } qd_message_pvt_t;
 
 ALLOC_DECLARE(qd_message_t);
