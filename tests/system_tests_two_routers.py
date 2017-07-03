@@ -560,10 +560,10 @@ class RouterTest(TestCase):
         # of the first router. If the inbound annotations were not stripped, the router would drop this message
         # since it would consider this message as being looped.
         #
-        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router',
-                                       'x-opt-qd.trace': ['0/QDR.A'],
-                                       'work': 'hard',
-                                       'x-opt-qd': 'humble'}
+        ingress_message_annotations = {'work': 'hard',
+                                       'x-opt-qd': 'humble',
+                                       'x-opt-qd.ingress': 'ingress-router',
+                                       'x-opt-qd.trace': ['0/QDR.A']}
         ingress_message.annotations = ingress_message_annotations
 
         #Put and send the message

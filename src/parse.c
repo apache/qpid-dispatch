@@ -587,6 +587,7 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
 
 
 const char *qd_parse_annotations_v1(
+    bool                   strip_anno_in,
     qd_iterator_t         *ma_iter_in,
     qd_parsed_field_t    **ma_ingress,
     qd_parsed_field_t    **ma_phase,
@@ -606,59 +607,62 @@ const char *qd_parse_annotations_v1(
         return parse_error;
     }
 
-    qd_parsed_turbo_t *anno = DEQ_HEAD(annos);
-    while (anno) {
-        qd_iterator_t *key_iter =
-            qd_iterator_buffer(anno->bufptr.buffer,
-                               anno->bufptr.cursor - qd_buffer_base(anno->bufptr.buffer),
-                               anno->size,
-                               ITER_VIEW_ALL);
-        assert(key_iter);
+    qd_parsed_turbo_t *anno;
+    if (!strip_anno_in) {
+        anno = DEQ_HEAD(annos);
+        while (anno) {
+            qd_iterator_t *key_iter =
+                qd_iterator_buffer(anno->bufptr.buffer,
+                                anno->bufptr.cursor - qd_buffer_base(anno->bufptr.buffer),
+                                anno->size,
+                                ITER_VIEW_ALL);
+            assert(key_iter);
 
-        qd_parsed_field_t *key_field = qd_parse(key_iter);
-        assert(key_field);
+            qd_parsed_field_t *key_field = qd_parse(key_iter);
+            assert(key_field);
 
-        qd_iterator_t *iter = qd_parse_raw(key_field);
-        assert(iter);
+            qd_iterator_t *iter = qd_parse_raw(key_field);
+            assert(iter);
 
-        qd_parsed_turbo_t *anno_val = DEQ_NEXT(anno);
-        assert(anno_val);
+            qd_parsed_turbo_t *anno_val = DEQ_NEXT(anno);
+            assert(anno_val);
 
-        qd_iterator_t *val_iter =
-            qd_iterator_buffer(anno_val->bufptr.buffer,
-                               anno_val->bufptr.cursor - qd_buffer_base(anno_val->bufptr.buffer),
-                               anno_val->size,
-                               ITER_VIEW_ALL);
-        assert(val_iter);
+            qd_iterator_t *val_iter =
+                qd_iterator_buffer(anno_val->bufptr.buffer,
+                                anno_val->bufptr.cursor - qd_buffer_base(anno_val->bufptr.buffer),
+                                anno_val->size,
+                                ITER_VIEW_ALL);
+            assert(val_iter);
 
-        qd_parsed_field_t *val_field = qd_parse(val_iter);
-        assert(val_field);
+            qd_parsed_field_t *val_field = qd_parse(val_iter);
+            assert(val_field);
 
-        // Hoist the key name out of the buffers into a normal char array
-        char key_name[QD_MA_MAX_KEY + 1];
-        (void)qd_iterator_strncpy(iter, key_name, QD_MA_MAX_KEY + 1);
+            // Hoist the key name out of the buffers into a normal char array
+            char key_name[QD_MA_MAX_KEY + 1];
+            (void)qd_iterator_strncpy(iter, key_name, QD_MA_MAX_KEY + 1);
 
-        // transfer ownership of the extracted value to the message
-        if        (!strcmp(key_name, QD_MA_TRACE)) {
-            *ma_trace = val_field;
-        } else if (!strcmp(key_name, QD_MA_INGRESS)) {
-            *ma_ingress = val_field;
-        } else if (!strcmp(key_name, QD_MA_TO)) {
-            *ma_to_override = val_field;
-        } else if (!strcmp(key_name, QD_MA_PHASE)) {
-            *ma_phase = val_field;
-        } else {
-            // TODO: this key had the QD_MA_PREFIX but it does not match
-            //       one of the actual fields. 
-            qd_parse_free(val_field);
+            // transfer ownership of the extracted value to the message
+            if        (!strcmp(key_name, QD_MA_TRACE)) {
+                *ma_trace = val_field;
+            } else if (!strcmp(key_name, QD_MA_INGRESS)) {
+                *ma_ingress = val_field;
+            } else if (!strcmp(key_name, QD_MA_TO)) {
+                *ma_to_override = val_field;
+            } else if (!strcmp(key_name, QD_MA_PHASE)) {
+                *ma_phase = val_field;
+            } else {
+                // TODO: this key had the QD_MA_PREFIX but it does not match
+                //       one of the actual fields. 
+                qd_parse_free(val_field);
+            }
+
+            qd_iterator_free(key_iter);
+            qd_parse_free(key_field);
+            qd_iterator_free(val_iter);
+            // val_field is usually handed over to message_private and is freed 
+
+            anno = DEQ_NEXT(anno_val);
         }
-
-        qd_iterator_free(key_iter);
-        qd_parse_free(key_field);
-        qd_iterator_free(val_iter);
-        // val_field is usually handed over to message_private and is freed 
-
-        anno = DEQ_NEXT(anno_val);
     }
 
     anno = DEQ_HEAD(annos);
@@ -723,11 +727,9 @@ void qd_parse_annotations(
 
     qd_iterator_free(raw_iter);
 
-    if (!strip_annotations_in) {
-        (void) qd_parse_annotations_v1(ma_iter_in, ma_ingress, ma_phase,
-                                       ma_to_override, ma_trace,
-                                       blob_pointer, blob_item_count);
-    }
+    (void) qd_parse_annotations_v1(strip_annotations_in, ma_iter_in, ma_ingress, ma_phase,
+                                    ma_to_override, ma_trace,
+                                    blob_pointer, blob_item_count);
 
     return;
 }
