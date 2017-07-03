@@ -601,8 +601,6 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     qdr_connection_role_t  role = 0;
     int                    cost = 1;
     int                    remote_cost = 1;
-    bool                   strip_annotations_in = false;
-    bool                   strip_annotations_out = false;
     int                    link_capacity = 1;
     const char            *name = 0;
     bool                   multi_tenant = false;
@@ -615,6 +613,8 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     const char     *mech  = 0;
     const char     *user  = 0;
     const char *container = conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0;
+    conn->strip_annotations_in  = false;
+    conn->strip_annotations_out = false;
     if (conn->pn_conn) {
         tport = pn_connection_transport(conn->pn_conn);
         ssl   = conn->ssl;
@@ -643,14 +643,11 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
 
     qd_router_connection_get_config(conn, &role, &cost, &name, &multi_tenant,
-                                    &strip_annotations_in, &strip_annotations_out, &link_capacity);
+                                    &conn->strip_annotations_in, &conn->strip_annotations_out, &link_capacity);
 
     pn_data_t *props = pn_conn ? pn_connection_remote_properties(pn_conn) : 0;
 
     if (role == QDR_ROLE_INTER_ROUTER) {
-
-        conn->interrouter = true;
-
         //
         // Check the remote properties for an inter-router cost value.
         //
@@ -717,8 +714,8 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, cost, connection_id, name,
                                                    pn_connection_remote_container(pn_conn),
-                                                   strip_annotations_in,
-                                                   strip_annotations_out,
+                                                   conn->strip_annotations_in,
+                                                   conn->strip_annotations_out,
                                                    link_capacity,
                                                    vhost,
                                                    connection_info);

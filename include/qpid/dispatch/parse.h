@@ -282,7 +282,7 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
  * and a blob pointer and count for the user entries in the map which are passed
  * through as part of the message payload.
  *
- * @param is_interrouter true if connection is to a router
+ * @param strip_annotations_in strip inbound annotations
  * @param ma_iter_in Field iterator for the annotation map field being parsed.
  * @param ma_ingress returned parsed field: ingress
  * @param ma_phase returned parsed field: phase
@@ -292,7 +292,7 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
  * @param blob_item_count number of map entries referenced by blob_iterator
  */
 void qd_parse_annotations(
-    bool                   is_interrouter,
+    bool                   strip_annotations_in,
     qd_iterator_t         *ma_iter_in,
     qd_parsed_field_t    **ma_ingress,
     qd_parsed_field_t    **ma_phase,
