@@ -541,8 +541,10 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled,
                                                 const uint8_t *tag, int tag_length,
                                                 uint64_t disposition, pn_data_t* disposition_state);
+qdr_delivery_t *qdr_deliver_continue(qdr_delivery_t *delivery);
+qdr_delivery_t *qdr_delivery_delete_settled(qdr_delivery_t *dlv);
 
-void qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
+int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
 
 void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mode);
 
@@ -589,6 +591,10 @@ void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *len
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
 qdr_error_t *qdr_delivery_error(const qdr_delivery_t *delivery);
 void qdr_delivery_write_extension_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv, bool update_disposition);
+bool qdr_delivery_send_complete(const qdr_delivery_t *delivery);
+bool qdr_delivery_tag_sent(const qdr_delivery_t *delivery);
+void qdr_delivery_set_tag_sent(const qdr_delivery_t *delivery, bool tag_sent);
+bool qdr_delivery_receive_complete(const qdr_delivery_t *delivery);
 
 /**
  ******************************************************************************

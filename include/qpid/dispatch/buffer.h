@@ -32,10 +32,13 @@ typedef struct qd_buffer_t qd_buffer_t;
 
 DEQ_DECLARE(qd_buffer_t, qd_buffer_list_t);
 
+extern size_t BUFFER_SIZE;
+
 /** A raw byte buffer .*/
 struct qd_buffer_t {
     DEQ_LINKS(qd_buffer_t);
     unsigned int size;          ///< Size of data content
+    unsigned int fanout;        // The number of receivers for this buffer
 };
 
 /**
@@ -116,6 +119,23 @@ void qd_buffer_list_free_buffers(qd_buffer_list_t *list);
  * @return total number of bytes of data in the buffer list
  */
 unsigned int qd_buffer_list_length(const qd_buffer_list_t *list);
+
+/*
+ * Increase the fanout by 1. How many receivers should this buffer be sent to.
+ */
+void qd_buffer_add_fanout(qd_buffer_t *buf);
+
+/**
+ * Return the buffer's fanout.
+ */
+size_t qd_buffer_fanout(qd_buffer_t *buf);
+
+/**
+ * Advance the buffer by len. Does not manipulate the contents of the buffer
+ * @param buf A pointer to an allocated buffer
+ * @param len The number of octets that by which the buffer should be advanced.
+ */
+unsigned char *qd_buffer_at(qd_buffer_t *buf, size_t len);
 
 
 ///@}

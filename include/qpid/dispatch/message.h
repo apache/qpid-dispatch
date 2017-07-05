@@ -201,9 +201,9 @@ int  qd_message_get_phase_annotation(const qd_message_t *msg);
 void qd_message_set_ingress_annotation(qd_message_t *msg, qd_composed_field_t *ingress_field);
 
 /**
- * Receive message data via a delivery.  This function may be called more than once on the same
- * delivery if the message spans multiple frames.  Once a complete message has been received, this
- * function shall return the message.
+ * Receive message data frame by frame via a delivery.  This function may be called more than once on the same
+ * delivery if the message spans multiple frames. Always returns a message. The message buffers are filled up to the point with the data that was been received so far.
+ * The buffer keeps filling up on successive calls to this function.
  *
  * @param delivery An incoming delivery from a link
  * @return A pointer to the complete message or 0 if the message is not yet complete.
@@ -295,6 +295,61 @@ qd_parsed_field_t *qd_message_get_trace      (qd_message_t *msg);
  * @return the phase as an integer
  */
 int                qd_message_get_phase_val  (qd_message_t *msg);
+
+/*
+ * Should the message be discarded.
+ * A message can be discarded if the disposition is released or rejected.
+ *
+ * @param msg A pointer to the message.
+ **/
+bool qd_message_is_discard(qd_message_t *msg);
+
+/**
+ *Set the discard field on the message to to the passed in boolean value.
+ *
+ * @param msg A pointer to the message.
+ * @param discard - the boolean value of discard.
+ */
+void qd_message_set_discard(qd_message_t *msg, bool discard);
+
+/**
+ * Has the message been completely received?
+ * Return true if the message is fully received
+ * Returns false if only the partial message has been received, if there is more of the message to be received.
+ *
+ * @param msg A pointer to the message.
+ */
+bool qd_message_receive_complete(qd_message_t *msg);
+
+/**
+ * Returns true if the message has been completely received AND the message has been completely sent.
+ */
+bool qd_message_send_complete(qd_message_t *msg);
+
+/**
+ * Returns true if the delivery tag has already been sent.
+ */
+bool qd_message_tag_sent(qd_message_t *msg);
+
+
+/**
+ * Returns true if the delivery tag has already been sent.
+ */
+void qd_message_set_tag_sent(qd_message_t *msg, bool tag_sent);
+
+/**
+ * Get the number of receivers for this message.
+ *
+ * @param msg A pointer to the message.
+ */
+size_t qd_message_fanout(qd_message_t *msg);
+
+/**
+ * Increase the fanout of the message by 1.
+ *
+ * @param msg A pointer to the message.
+ */
+void qd_message_add_fanout(qd_message_t *msg);
 
 ///@}
 

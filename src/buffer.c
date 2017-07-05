@@ -24,17 +24,18 @@
 #include <string.h>
 
 
-static size_t buffer_size = 512;
-static int    size_locked = 0;
+size_t BUFFER_SIZE                 = 512;
+
+static int size_locked = 0;
 
 ALLOC_DECLARE(qd_buffer_t);
-ALLOC_DEFINE_CONFIG(qd_buffer_t, sizeof(qd_buffer_t), &buffer_size, 0);
+ALLOC_DEFINE_CONFIG(qd_buffer_t, sizeof(qd_buffer_t), &BUFFER_SIZE, 0);
 
 
 void qd_buffer_set_size(size_t size)
 {
     assert(!size_locked);
-    buffer_size = size;
+    BUFFER_SIZE = size;
 }
 
 
@@ -44,7 +45,8 @@ qd_buffer_t *qd_buffer(void)
     qd_buffer_t *buf = new_qd_buffer_t();
 
     DEQ_ITEM_INIT(buf);
-    buf->size = 0;
+    buf->size   = 0;
+    buf->fanout = 0;
     return buf;
 }
 
@@ -70,7 +72,7 @@ unsigned char *qd_buffer_cursor(qd_buffer_t *buf)
 
 size_t qd_buffer_capacity(qd_buffer_t *buf)
 {
-    return buffer_size - buf->size;
+    return BUFFER_SIZE - buf->size;
 }
 
 
@@ -83,7 +85,26 @@ size_t qd_buffer_size(qd_buffer_t *buf)
 void qd_buffer_insert(qd_buffer_t *buf, size_t len)
 {
     buf->size += len;
-    assert(buf->size <= buffer_size);
+    assert(buf->size <= BUFFER_SIZE);
+}
+
+void qd_buffer_add_fanout(qd_buffer_t *buf)
+{
+    buf->fanout++;
+}
+
+size_t qd_buffer_fanout(qd_buffer_t *buf)
+{
+    return buf->fanout;
+}
+
+
+unsigned char *qd_buffer_at(qd_buffer_t *buf, size_t len)
+{
+    // If the len is greater than the buffer size, we might point to some garbage.
+    // We dont want that to happen, so do the assert.
+    assert(len <= BUFFER_SIZE);
+    return ((unsigned char*) &buf[1]) + len;
 }
 
 unsigned int qd_buffer_list_clone(qd_buffer_list_t *dst, const qd_buffer_list_t *src)
