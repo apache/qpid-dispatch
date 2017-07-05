@@ -238,6 +238,7 @@ int qdr_connection_process(qdr_connection_t *conn)
         if (ref) {
             link = ref->link;
             qdr_del_link_ref(&conn->links_with_work, ref->link, QDR_LINK_LIST_CLASS_WORK);
+
             link_work = DEQ_HEAD(link->work_list);
             if (link_work) {
                 DEQ_REMOVE_HEAD(link->work_list);
@@ -611,11 +612,13 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_delivery_ref_list_t updated_deliveries;
     qdr_delivery_list_t     undelivered;
     qdr_delivery_list_t     unsettled;
+    qdr_delivery_list_t     settled;
     qdr_link_work_list_t    work_list;
 
     sys_mutex_lock(conn->work_lock);
     DEQ_MOVE(link->work_list, work_list);
     DEQ_MOVE(link->updated_deliveries, updated_deliveries);
+
     DEQ_MOVE(link->undelivered, undelivered);
     qdr_delivery_t *d = DEQ_HEAD(undelivered);
     while (d) {
@@ -628,6 +631,14 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     d = DEQ_HEAD(unsettled);
     while (d) {
         assert(d->where == QDR_DELIVERY_IN_UNSETTLED);
+        d->where = QDR_DELIVERY_NOWHERE;
+        d = DEQ_NEXT(d);
+    }
+
+    DEQ_MOVE(link->settled, settled);
+    d = DEQ_HEAD(settled);
+    while (d) {
+        assert(d->where == QDR_DELIVERY_IN_SETTLED);
         d->where = QDR_DELIVERY_NOWHERE;
         d = DEQ_NEXT(d);
     }
@@ -734,6 +745,31 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         qdr_delivery_decref_CT(core, dlv);
 
         dlv = DEQ_HEAD(unsettled);
+    }
+
+    //Free/unlink/decref the settled deliveries.
+    dlv = DEQ_HEAD(settled);
+    while (dlv) {
+        DEQ_REMOVE_HEAD(settled);
+        peer = qdr_delivery_first_peer_CT(dlv);
+        qdr_delivery_t *next_peer = 0;
+        while (peer) {
+            next_peer = qdr_delivery_next_peer_CT(dlv);
+            qdr_delivery_unlink_peers_CT(core, dlv, peer);
+            peer = next_peer;
+        }
+
+        //
+        // Account for the lost reference from the Proton delivery
+        //
+        if (!dlv->cleared_proton_ref) {
+            dlv->cleared_proton_ref = true;
+            qdr_delivery_decref_CT(core, dlv);
+        }
+
+        // This decref is for the removing the delivery from the settled list
+        qdr_delivery_decref_CT(core, dlv);
+        dlv = DEQ_HEAD(settled);
     }
 
     //
