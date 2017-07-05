@@ -94,17 +94,15 @@ static int AMQP_writable_conn_handler(void *type_context, qd_connection_t *conn,
 
 static qd_iterator_t *router_annotate_message(qd_router_t       *router,
                                               qd_message_t      *msg,
-                                              qd_bitmask_t     **link_exclusions,
-                                              bool               strip_inbound_annotations)
+                                              qd_bitmask_t     **link_exclusions)
 {
     qd_iterator_t *ingress_iter = 0;
 
-    bool s = strip_inbound_annotations;
 
-    qd_parsed_field_t *trace   = s ? 0 : qd_message_get_trace(msg);
-    qd_parsed_field_t *ingress = s ? 0 : qd_message_get_ingress(msg);
-    qd_parsed_field_t *to      = s ? 0 : qd_message_get_to_override(msg);
-    qd_parsed_field_t *phase   = s ? 0 : qd_message_get_phase(msg);
+    qd_parsed_field_t *trace   = qd_message_get_trace(msg);
+    qd_parsed_field_t *ingress = qd_message_get_ingress(msg);
+    qd_parsed_field_t *to      = qd_message_get_to_override(msg);
+    qd_parsed_field_t *phase   = qd_message_get_phase(msg);
 
     *link_exclusions = 0;
 
@@ -321,9 +319,8 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 
         qd_message_message_annotations(msg);
         qd_bitmask_t        *link_exclusions;
-        bool                 strip        = qdr_link_strip_annotations_in(rlink);
 
-        qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions, strip);
+        qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions);
 
         if (anonymous_link) {
             qd_iterator_t *addr_iter = 0;
