@@ -612,7 +612,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_delivery_ref_list_t updated_deliveries;
     qdr_delivery_list_t     undelivered;
     qdr_delivery_list_t     unsettled;
-    qdr_delivery_list_t     settled;
+    //qdr_delivery_list_t     settled;
     qdr_link_work_list_t    work_list;
 
     sys_mutex_lock(conn->work_lock);
@@ -634,12 +634,22 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         d = DEQ_NEXT(d);
     }
 
-    DEQ_MOVE(link->settled, settled);
-    d = DEQ_HEAD(settled);
-    while (d) {
-        assert(d->where == QDR_DELIVERY_IN_SETTLED);
-        d->where = QDR_DELIVERY_NOWHERE;
-        d = DEQ_NEXT(d);
+    //Free/unlink/decref the settled deliveries.
+    qdr_delivery_t *dlv = DEQ_HEAD(link->settled);
+    qdr_delivery_t *peer;
+    while (dlv) {
+            assert(dlv->where == QDR_DELIVERY_IN_SETTLED);
+            dlv->where = QDR_DELIVERY_NOWHERE;
+        DEQ_REMOVE_HEAD(link->settled);
+
+        peer = qdr_delivery_first_peer_CT(dlv);
+        qdr_delivery_t *next_peer = 0;
+        while (peer) {
+            next_peer = qdr_delivery_next_peer_CT(dlv);
+            qdr_delivery_unlink_peers_CT(core, dlv, peer);
+            peer = next_peer;
+        }
+        dlv = DEQ_HEAD(link->settled);
     }
 
     sys_mutex_unlock(conn->work_lock);
@@ -680,8 +690,8 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     // undelivereds can simply be destroyed.  If it's an outgoing link, the
     // undelivereds' peer deliveries need to be released.
     //
-    qdr_delivery_t *dlv = DEQ_HEAD(undelivered);
-    qdr_delivery_t *peer;
+    dlv = DEQ_HEAD(undelivered);
+
     while (dlv) {
         DEQ_REMOVE_HEAD(undelivered);
         peer = qdr_delivery_first_peer_CT(dlv);
@@ -746,24 +756,6 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
 
         dlv = DEQ_HEAD(unsettled);
     }
-
-    //Free/unlink/decref the settled deliveries.
-    dlv = DEQ_HEAD(settled);
-
-    while (dlv) {
-        DEQ_REMOVE_HEAD(settled);
-
-        peer = qdr_delivery_first_peer_CT(dlv);
-        qdr_delivery_t *next_peer = 0;
-        while (peer) {
-            next_peer = qdr_delivery_next_peer_CT(dlv);
-            qdr_delivery_unlink_peers_CT(core, dlv, peer);
-            peer = next_peer;
-        }
-        dlv = DEQ_HEAD(settled);
-    }
-
-
 
     //
     // Remove the reference to this link in the connection's reference lists
