@@ -1196,6 +1196,11 @@ static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list
                 qd_compose_insert_int(field, msg->ma_phase);
                 field_count++;
             }
+            // pad out to four fields
+            for  (; field_count < 4; field_count++) {
+                qd_compose_insert_symbol(field, QD_MA_PREFIX);
+                qd_compose_insert_string(field, "X");
+            }
         }
     }
 
