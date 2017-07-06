@@ -1069,7 +1069,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
         return;
 
     bool remote_snd_settled = qd_link_remote_snd_settle_mode(qlink) == PN_SND_SETTLED;
-    pn_delivery_t *pdlv = pn_link_current(plink);
+    pn_delivery_t *pdlv = 0;
 
     if (!qdr_delivery_tag_sent(dlv)) {
         const char *tag;
@@ -1078,6 +1078,8 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
         qdr_delivery_tag(dlv, &tag, &tag_length);
 
         pn_delivery(plink, pn_dtag(tag, tag_length));
+
+        pdlv = pn_link_current(plink);
 
         // handle any delivery-state on the transfer e.g. transactional-state
         // TODO - for a large message this following function will be called multiple times which is not good.
@@ -1097,6 +1099,10 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
         qdr_delivery_set_tag_sent(dlv, true);
     }
 
+    if (!pdlv) {
+        pdlv = pn_link_current(plink);
+    }
+
     qd_message_send(qdr_delivery_message(dlv), qlink, qdr_link_strip_annotations_out(link));
 
     bool send_complete = qdr_delivery_send_complete(dlv);
@@ -1107,11 +1113,11 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
             // Tell the core that the delivery has been accepted and settled, since we are settling on behalf of the receiver
             qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true, 0, 0, false);
 
-
         pn_link_advance(plink);
 
         if (settled || remote_snd_settled) {
-            pn_delivery_settle(pdlv);
+            if (pdlv)
+                pn_delivery_settle(pdlv);
         }
     }
 }
