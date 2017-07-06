@@ -37,12 +37,6 @@ typedef enum {
     STATE_IN_BODY
 } view_state_t;
 
-typedef struct {
-    qd_buffer_t   *buffer;
-    unsigned char *cursor;
-    int            remaining;
-} pointer_t;
-
 typedef struct qd_hash_segment_t {
     DEQ_LINKS(struct qd_hash_segment_t);
     uint32_t hash;           //The hash of the segment
@@ -54,9 +48,9 @@ ALLOC_DECLARE(qd_hash_segment_t);
 ALLOC_DEFINE(qd_hash_segment_t);
 
 struct qd_iterator_t {
-    pointer_t               start_pointer;      // Pointer to the raw data
-    pointer_t               view_start_pointer; // Pointer to the start of the view
-    pointer_t               view_pointer;       // Pointer to the remaining view
+    qd_iterator_pointer_t   start_pointer;      // Pointer to the raw data
+    qd_iterator_pointer_t   view_start_pointer; // Pointer to the start of the view
+    qd_iterator_pointer_t   view_pointer;       // Pointer to the remaining view
     qd_iterator_view_t      view;
     int                     annotation_length;
     int                     annotation_remaining;
@@ -101,7 +95,7 @@ static void parse_address_view(qd_iterator_t *iter)
     // in order to aid the router in looking up addresses.
     //
 
-    pointer_t save_pointer = iter->view_pointer;
+    qd_iterator_pointer_t save_pointer = iter->view_pointer;
     iter->annotation_length = 1;
 
     if (iter->prefix_override == '\0' && qd_iterator_prefix(iter, "_")) {
@@ -191,7 +185,7 @@ static void parse_node_view(qd_iterator_t *iter)
 void qd_iterator_remove_trailing_separator(qd_iterator_t *iter)
 {
     // Save the iterator's pointer so we can apply it back before returning from this function.
-    pointer_t save_pointer = iter->view_pointer;
+    qd_iterator_pointer_t save_pointer = iter->view_pointer;
 
     char current_octet = 0;
     while (!qd_iterator_end(iter)) {
@@ -224,9 +218,9 @@ static void view_initialize(qd_iterator_t *iter)
     //
     // Advance to the node-id.
     //
-    state_t      state = STATE_START;
-    unsigned int octet;
-    pointer_t    save_pointer = {0,0,0};
+    state_t               state = STATE_START;
+    unsigned int          octet;
+    qd_iterator_pointer_t save_pointer = {0,0,0};
 
     while (!qd_iterator_end(iter) && state != STATE_AT_NODE_ID) {
         octet = qd_iterator_octet(iter);
@@ -636,8 +630,8 @@ bool qd_iterator_prefix(qd_iterator_t *iter, const char *prefix)
     if (!iter)
         return false;
 
-    pointer_t      save_pointer = iter->view_pointer;
-    unsigned char *c            = (unsigned char*) prefix;
+    qd_iterator_pointer_t save_pointer = iter->view_pointer;
+    unsigned char *c                   = (unsigned char*) prefix;
 
     while(*c) {
         if (*c != qd_iterator_octet(iter))
@@ -651,6 +645,59 @@ bool qd_iterator_prefix(qd_iterator_t *iter, const char *prefix)
     }
 
     return true;
+}
+
+
+// bare bones copy of field_iterator_move_cursor with no field/view baggage
+void iterator_pointer_move_cursor(qd_iterator_pointer_t *ptr, uint32_t length)
+{
+    uint32_t count = length > ptr->remaining ? ptr->remaining : length;
+
+    while (count) {
+        uint32_t remaining = qd_buffer_cursor(ptr->buffer) - ptr->cursor;
+        remaining = remaining > count ? count : remaining;
+        ptr->cursor += remaining;
+        ptr->remaining -= remaining;
+        count -= remaining;
+        if (ptr->cursor == qd_buffer_cursor(ptr->buffer)) {
+            ptr->buffer = ptr->buffer->next;
+            if (ptr->buffer == 0) {
+                ptr->remaining = 0;
+                ptr->cursor = 0;
+                break;
+            } else {
+                ptr->cursor = qd_buffer_base(ptr->buffer);
+            }
+        }
+    }
+}
+
+
+// bare bones copy of qd_iterator_prefix with no iterator baggage
+bool qd_iterator_prefix_ptr(const qd_iterator_pointer_t *ptr, uint32_t skip, const char *prefix)
+{
+    if (!ptr)
+        return false;
+
+    qd_iterator_pointer_t lptr;
+    *&lptr = *ptr;
+
+    iterator_pointer_move_cursor(&lptr, skip);
+
+    unsigned char *c = (unsigned char*) prefix;
+
+    while(*c && lptr.remaining) {
+        unsigned char ic = *lptr.cursor;
+
+        if (*c != ic)
+            break;
+        c++;
+
+        iterator_pointer_move_cursor(&lptr, 1);
+        lptr.remaining -= 1;
+    }
+
+    return *c == 0;
 }
 
 
@@ -714,11 +761,11 @@ qd_iovec_t *qd_iterator_iovec(const qd_iterator_t *iter)
     //
     // Count the number of buffers this field straddles
     //
-    pointer_t    pointer   = iter->view_start_pointer;
-    int          bufcnt    = 1;
-    qd_buffer_t *buf       = pointer.buffer;
-    size_t       bufsize   = qd_buffer_size(buf) - (pointer.cursor - qd_buffer_base(pointer.buffer));
-    ssize_t      remaining = pointer.remaining - bufsize;
+    qd_iterator_pointer_t pointer   = iter->view_start_pointer;
+    int                   bufcnt    = 1;
+    qd_buffer_t          *buf       = pointer.buffer;
+    size_t                bufsize   = qd_buffer_size(buf) - (pointer.cursor - qd_buffer_base(pointer.buffer));
+    ssize_t               remaining = pointer.remaining - bufsize;
 
     while (remaining > 0) {
         bufcnt++;
@@ -851,4 +898,14 @@ bool qd_iterator_next_segment(qd_iterator_t *iter, uint32_t *hash)
     free_qd_hash_segment_t(hash_segment);
 
     return true;
+}
+
+
+void qd_iterator_get_view_cursor(
+    const qd_iterator_t   *iter,
+    qd_iterator_pointer_t *ptr)
+{
+    ptr->buffer    = iter->view_pointer.buffer;
+    ptr->cursor    = iter->view_pointer.cursor;
+    ptr->remaining = iter->view_pointer.remaining;
 }

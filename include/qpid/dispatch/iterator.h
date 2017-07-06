@@ -105,6 +105,13 @@ typedef enum {
     ITER_VIEW_ADDRESS_WITH_SPACE
 } qd_iterator_view_t;
 
+
+typedef struct {
+    qd_buffer_t   *buffer;
+    unsigned char *cursor;
+    int            remaining;
+} qd_iterator_pointer_t;
+
 /** @} */
 /** \name global
  * Global Methods
@@ -276,6 +283,18 @@ bool qd_iterator_equal(qd_iterator_t *iter, const unsigned char *string);
 bool qd_iterator_prefix(qd_iterator_t *iter, const char *prefix);
 
 /**
+ * Return true iff the prefix string matches the characters addressed by ptr.
+ * This function ignores octets beyond the length of the prefix.
+ * Caller's pointer is held constant.
+ *
+ * @param ptr buffer chain cursor holding message bytes
+ * @param skip AMQP housekeeping bytes to skip over before finding the incoming string
+ * @param prefix the prefix to be matched
+ * @return true if all bytes of prefix match bytes in user string
+ */
+bool qd_iterator_prefix_ptr(const qd_iterator_pointer_t *ptr, uint32_t skip, const char *prefix);
+
+/**
  * Copy the iterator's view into buffer up to a maximum of n bytes.  Cursor is
  * advanced by the number of bytes copied. There is no trailing '\0' added.
  * @return number of bytes copied.
@@ -398,6 +417,17 @@ void qd_iterator_hash_view_segments(qd_iterator_t *iter);
  * @return True iff there is another segment hash to be compared
  */
 bool qd_iterator_next_segment(qd_iterator_t *iter, uint32_t *hash);
+
+/**
+ * Get an iterator's cursor details.
+ * Exposes iter's buffer, cursor, and remaining values.
+ *
+ * @param iter iter that still has data in its view.
+ * @param ptr Pointer object which is to receive cursor position
+ */
+void qd_iterator_get_view_cursor(
+    const qd_iterator_t   *iter,
+    qd_iterator_pointer_t *ptr);
 
 /** @} */
 /** @} */

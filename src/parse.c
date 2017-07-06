@@ -37,6 +37,9 @@ struct qd_parsed_field_t {
 ALLOC_DECLARE(qd_parsed_field_t);
 ALLOC_DEFINE(qd_parsed_field_t);
 
+ALLOC_DECLARE(qd_parsed_turbo_t);
+ALLOC_DEFINE(qd_parsed_turbo_t);
+
 /**
  * size = the number of bytes following the tag
  * count = the number of elements. Applies only to compound structures
@@ -166,6 +169,100 @@ qd_parsed_field_t *qd_parse(qd_iterator_t *iter)
     if (!iter)
         return 0;
     return qd_parse_internal(iter, 0);
+}
+
+
+const char *qd_parse_turbo(qd_iterator_t          *iter,
+                           qd_parsed_turbo_list_t *annos,
+                           uint32_t               *user_entries,
+                           uint32_t               *user_bytes)
+{
+    if (!iter || !annos || !user_entries || !user_bytes)
+        return  "missing argument";
+
+    DEQ_INIT(*annos);
+    *user_entries = 0;
+    *user_bytes = 0;
+
+    // The iter is addressing the message-annotations map.
+    // Open the field describing the map's items
+    uint8_t  tag             = 0;
+    uint32_t size            = 0;
+    uint32_t count           = 0;
+    uint32_t length_of_count = 0;
+    uint32_t length_of_size  = 0;
+    const char * parse_error = get_type_info(iter, &tag, &size, &count, &length_of_size, &length_of_count);
+
+    if (parse_error)
+        return parse_error;
+
+    if (count == 0)
+        return 0;
+
+    // with four router annotations there will be 8 annos (4 key,val pairs) returned at most
+#define MAX_ALLOCS 8
+    int n_allocs = 0;
+
+    // Do skeletal parse of each map element
+    for (uint32_t idx = 0; idx < count; idx++) {
+        qd_parsed_turbo_t *turbo;
+        if (n_allocs < MAX_ALLOCS) {
+            turbo = new_qd_parsed_turbo_t();
+            n_allocs++;
+
+        } else {
+            // Retire an existing element.
+            // If there are this many in the list then this one cannot be a
+            // router annotation and must be a user annotation.
+            turbo = DEQ_HEAD(*annos);
+            *user_entries += 1;
+            *user_bytes += sizeof(turbo->tag) + turbo->size + turbo->length_of_size;
+            DEQ_REMOVE_HEAD(*annos);
+        }
+        if (!turbo)
+            return "failed to allocate qd_parsed_turbo_t";
+        ZERO(turbo);
+
+        // Get the buffer pointers for the map element
+        qd_iterator_get_view_cursor(iter, &turbo->bufptr);
+
+        // Get description of the map element
+        parse_error = get_type_info(iter, &turbo->tag, &turbo->size, &turbo->count,
+                                    &turbo->length_of_size, &turbo->length_of_count);
+        if (parse_error) {
+            return parse_error;
+        }
+
+        // Save parsed element
+        DEQ_INSERT_TAIL(*annos, turbo);
+
+        // Advance map iterator to next map element
+        qd_iterator_advance(iter, turbo->size - turbo->length_of_count);
+    }
+
+    // remove leading annos in the queue if their prefix is not a match and
+    // return them as part of the user annotations
+    for (int idx=0; idx < n_allocs; idx += 2) {
+        qd_parsed_turbo_t *turbo = DEQ_HEAD(*annos);
+        assert(turbo);
+        if (qd_iterator_prefix_ptr(&turbo->bufptr, turbo->length_of_size + 1, QD_MA_PREFIX))
+            break;
+
+        // leading anno is a user annotation map key
+        // remove the key and value from the list and accumulate them as user items
+        *user_bytes += sizeof(turbo->tag) + turbo->size + turbo->length_of_size;
+        DEQ_REMOVE_HEAD(*annos);
+        free_qd_parsed_turbo_t(turbo);
+
+        turbo = DEQ_HEAD(*annos);
+        assert(turbo);
+        *user_bytes += sizeof(turbo->tag) + turbo->size + turbo->length_of_size;
+        DEQ_REMOVE_HEAD(*annos);
+        free_qd_parsed_turbo_t(turbo);
+
+        *user_entries += 2;
+    }
+    return parse_error;
 }
 
 
@@ -443,9 +540,15 @@ qd_parsed_field_t *qd_parse_sub_value(qd_parsed_field_t *field, uint32_t idx)
 }
 
 
+int is_tag_a_map(uint8_t tag)
+{
+    return tag == QD_AMQP_MAP8 || tag == QD_AMQP_MAP32;
+}
+
+
 int qd_parse_is_map(qd_parsed_field_t *field)
 {
-    return field->tag == QD_AMQP_MAP8 || field->tag == QD_AMQP_MAP32;
+    return is_tag_a_map(field->tag);
 }
 
 
@@ -480,4 +583,153 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
     }
 
     return 0;
+}
+
+
+const char *qd_parse_annotations_v1(
+    bool                   strip_anno_in,
+    qd_iterator_t         *ma_iter_in,
+    qd_parsed_field_t    **ma_ingress,
+    qd_parsed_field_t    **ma_phase,
+    qd_parsed_field_t    **ma_to_override,
+    qd_parsed_field_t    **ma_trace,
+    qd_iterator_pointer_t *blob_pointer,
+    uint32_t              *blob_item_count)
+{
+    // Do full parse
+    qd_iterator_reset(ma_iter_in);
+
+    qd_parsed_turbo_list_t annos;
+    uint32_t               user_entries;
+    uint32_t               user_bytes;
+    const char * parse_error = qd_parse_turbo(ma_iter_in, &annos, &user_entries, &user_bytes);
+    if (parse_error) {
+        return parse_error;
+    }
+
+    qd_parsed_turbo_t *anno;
+    if (!strip_anno_in) {
+        anno = DEQ_HEAD(annos);
+        while (anno) {
+            qd_iterator_t *key_iter =
+                qd_iterator_buffer(anno->bufptr.buffer,
+                                anno->bufptr.cursor - qd_buffer_base(anno->bufptr.buffer),
+                                anno->size,
+                                ITER_VIEW_ALL);
+            assert(key_iter);
+
+            qd_parsed_field_t *key_field = qd_parse(key_iter);
+            assert(key_field);
+
+            qd_iterator_t *iter = qd_parse_raw(key_field);
+            assert(iter);
+
+            qd_parsed_turbo_t *anno_val = DEQ_NEXT(anno);
+            assert(anno_val);
+
+            qd_iterator_t *val_iter =
+                qd_iterator_buffer(anno_val->bufptr.buffer,
+                                anno_val->bufptr.cursor - qd_buffer_base(anno_val->bufptr.buffer),
+                                anno_val->size,
+                                ITER_VIEW_ALL);
+            assert(val_iter);
+
+            qd_parsed_field_t *val_field = qd_parse(val_iter);
+            assert(val_field);
+
+            // Hoist the key name out of the buffers into a normal char array
+            char key_name[QD_MA_MAX_KEY + 1];
+            (void)qd_iterator_strncpy(iter, key_name, QD_MA_MAX_KEY + 1);
+
+            // transfer ownership of the extracted value to the message
+            if        (!strcmp(key_name, QD_MA_TRACE)) {
+                *ma_trace = val_field;
+            } else if (!strcmp(key_name, QD_MA_INGRESS)) {
+                *ma_ingress = val_field;
+            } else if (!strcmp(key_name, QD_MA_TO)) {
+                *ma_to_override = val_field;
+            } else if (!strcmp(key_name, QD_MA_PHASE)) {
+                *ma_phase = val_field;
+            } else {
+                // TODO: this key had the QD_MA_PREFIX but it does not match
+                //       one of the actual fields. 
+                qd_parse_free(val_field);
+            }
+
+            qd_iterator_free(key_iter);
+            qd_parse_free(key_field);
+            qd_iterator_free(val_iter);
+            // val_field is usually handed over to message_private and is freed 
+
+            anno = DEQ_NEXT(anno_val);
+        }
+    }
+
+    anno = DEQ_HEAD(annos);
+    while (anno) {
+        DEQ_REMOVE_HEAD(annos);
+        free_qd_parsed_turbo_t(anno);
+        anno = DEQ_HEAD(annos);
+    }
+
+    // Adjust size of user annotation blob by the size of the router
+    // annotations
+    blob_pointer->remaining = user_bytes;
+    assert(blob_pointer->remaining >= 0);
+
+    *blob_item_count = user_entries;
+    assert(*blob_item_count >= 0);
+    return 0;
+}
+
+
+void qd_parse_annotations(
+    bool                   strip_annotations_in,
+    qd_iterator_t         *ma_iter_in,
+    qd_parsed_field_t    **ma_ingress,
+    qd_parsed_field_t    **ma_phase,
+    qd_parsed_field_t    **ma_to_override,
+    qd_parsed_field_t    **ma_trace,
+    qd_iterator_pointer_t *blob_pointer,
+    uint32_t              *blob_item_count)
+{
+    *ma_ingress             = 0;
+    *ma_phase               = 0;
+    *ma_to_override         = 0;
+    *ma_trace               = 0;
+    ZERO(blob_pointer);
+    *blob_item_count        = 0;
+
+    if (!ma_iter_in)
+        return;
+
+    uint8_t  tag             = 0;
+    uint32_t size            = 0;
+    uint32_t length_of_count = 0;
+    uint32_t length_of_size  = 0;
+
+    const char *parse_error = get_type_info(ma_iter_in, &tag,
+                                            &size, blob_item_count, &length_of_size,
+                                            &length_of_count);
+    if (parse_error)
+        return;
+
+    if (!is_tag_a_map(tag)) {
+        return;
+    }
+
+    // Initial snapshot on size/content of annotation payload
+    qd_iterator_t *raw_iter = qd_iterator_sub(ma_iter_in, (size - length_of_count));
+
+    // If there are no router annotations then all annotations
+    // are the user's opaque blob.
+    qd_iterator_get_view_cursor(raw_iter, blob_pointer);
+
+    qd_iterator_free(raw_iter);
+
+    (void) qd_parse_annotations_v1(strip_annotations_in, ma_iter_in, ma_ingress, ma_phase,
+                                    ma_to_override, ma_trace,
+                                    blob_pointer, blob_item_count);
+
+    return;
 }

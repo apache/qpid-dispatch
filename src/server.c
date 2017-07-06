@@ -1257,3 +1257,7 @@ const char* qd_connection_remote_ip(const qd_connection_t *c) {
 void qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
     handle(c->server, e);
 }
+
+bool qd_connection_strip_annotations_in(const qd_connection_t *c) {
+    return c->strip_annotations_in;
+}
