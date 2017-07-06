@@ -1102,31 +1102,6 @@ static void send_handler(void *context, const unsigned char *start, int length)
 }
 
 
-// create_message_annotations
-//
-// Create a buffer chain holding the outgoing message annotations section.
-// Three types of outbound link are available:
-//  V1 - include router annotations
-//  V0 - End system clients that do not get any router annotations
-//
-// These routines do not strictly create the buffer chain in a ready-to-go form.
-// Rather hints are left to transmit the annotations in three sections:
-//   1. The optional map header returned in 'out'. This may hold:
-//     a. empty if no user annotations and no router annotations
-//     b. A map header if just user annotations
-//     In case b the map header relies on the transmit routine to
-//     send the opaque blob of user annotations.
-//   2. The optional blob of user annotations. The buffers for this section
-//      are not copied into any buffer chain. Instead they are consumed
-//      directly from the incoming message buffer chain.
-//   3. The optional V1 annotation key-value pairs.
-//      These are identified by the out_trailer buffer chain.
-//
-// Function qd_message_send must synthesize the annotations by sending
-// buffer chain 'out', the user's blob, and buffer chain 'out_trailer' as required.
-// The map in chain 'out' has been created with a gimmick that adjusts the size
-// of the map in the outbound message even though the the data is not present in
-// buffer chain 'out'.
 static void compose_message_annotations_v0(qd_message_pvt_t *msg, qd_buffer_list_t *out)
 {
     if (msg->content->ma_count > 0) {
@@ -1149,58 +1124,55 @@ static void compose_message_annotations_v0(qd_message_pvt_t *msg, qd_buffer_list
 
 
 static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list_t *out,
-                                           qd_buffer_list_t *out_trailer, bool strip_annotations)
+                                           qd_buffer_list_t *out_trailer)
 {
     qd_composed_field_t *out_ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
 
     bool map_started = false;
 
-    // v1 annotations go into the out_trailer
     int field_count = 0;
     qd_composed_field_t *field = qd_compose_subfield(0);
     if (!field)
         return;
 
-    // If not stripping then add dispatch router specific annotations
-    if (!strip_annotations) {
-        if (!DEQ_IS_EMPTY(msg->ma_to_override) ||
-            !DEQ_IS_EMPTY(msg->ma_trace) ||
-            !DEQ_IS_EMPTY(msg->ma_ingress) ||
-            msg->ma_phase != 0) {
+    // add dispatch router specific annotations if any are defined
+    if (!DEQ_IS_EMPTY(msg->ma_to_override) ||
+        !DEQ_IS_EMPTY(msg->ma_trace) ||
+        !DEQ_IS_EMPTY(msg->ma_ingress) ||
+        msg->ma_phase != 0) {
 
-            if (!map_started) {
-                qd_compose_start_map(out_ma);
-                map_started = true;
-            }
+        if (!map_started) {
+            qd_compose_start_map(out_ma);
+            map_started = true;
+        }
 
-            if (!DEQ_IS_EMPTY(msg->ma_to_override)) {
-                qd_compose_insert_symbol(field, QD_MA_TO);
-                qd_compose_insert_buffers(field, &msg->ma_to_override);
-                field_count++;
-            }
+        if (!DEQ_IS_EMPTY(msg->ma_to_override)) {
+            qd_compose_insert_symbol(field, QD_MA_TO);
+            qd_compose_insert_buffers(field, &msg->ma_to_override);
+            field_count++;
+        }
 
-            if (!DEQ_IS_EMPTY(msg->ma_trace)) {
-                qd_compose_insert_symbol(field, QD_MA_TRACE);
-                qd_compose_insert_buffers(field, &msg->ma_trace);
-                field_count++;
-            }
+        if (!DEQ_IS_EMPTY(msg->ma_trace)) {
+            qd_compose_insert_symbol(field, QD_MA_TRACE);
+            qd_compose_insert_buffers(field, &msg->ma_trace);
+            field_count++;
+        }
 
-            if (!DEQ_IS_EMPTY(msg->ma_ingress)) {
-                qd_compose_insert_symbol(field, QD_MA_INGRESS);
-                qd_compose_insert_buffers(field, &msg->ma_ingress);
-                field_count++;
-            }
+        if (!DEQ_IS_EMPTY(msg->ma_ingress)) {
+            qd_compose_insert_symbol(field, QD_MA_INGRESS);
+            qd_compose_insert_buffers(field, &msg->ma_ingress);
+            field_count++;
+        }
 
-            if (msg->ma_phase != 0) {
-                qd_compose_insert_symbol(field, QD_MA_PHASE);
-                qd_compose_insert_int(field, msg->ma_phase);
-                field_count++;
-            }
-            // pad out to four fields
-            for  (; field_count < 4; field_count++) {
-                qd_compose_insert_symbol(field, QD_MA_PREFIX);
-                qd_compose_insert_string(field, "X");
-            }
+        if (msg->ma_phase != 0) {
+            qd_compose_insert_symbol(field, QD_MA_PHASE);
+            qd_compose_insert_int(field, msg->ma_phase);
+            field_count++;
+        }
+        // pad out to N fields
+        for  (; field_count < 4; field_count++) {
+            qd_compose_insert_symbol(field, QD_MA_PREFIX);
+            qd_compose_insert_string(field, "X");
         }
     }
 
@@ -1248,7 +1220,7 @@ static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
     if (strip_annotations) {
         compose_message_annotations_v0(msg, out);
     } else {
-        compose_message_annotations_v1(msg, out, out_trailer, false);
+        compose_message_annotations_v1(msg, out, out_trailer);
     }
 }
 
