@@ -136,7 +136,7 @@ size_t qd_buffer_fanout(qd_buffer_t *buf);
  * @param buf A pointer to an allocated buffer
  * @param len The number of octets that by which the buffer should be advanced.
  */
-unsigned char *qd_buffer_advance(qd_buffer_t *buf, size_t len);
+unsigned char *qd_buffer_at(qd_buffer_t *buf, size_t len);
 
 
 ///@}

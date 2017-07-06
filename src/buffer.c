@@ -100,7 +100,7 @@ size_t qd_buffer_fanout(qd_buffer_t *buf)
 }
 
 
-unsigned char *qd_buffer_advance(qd_buffer_t *buf, size_t len)
+unsigned char *qd_buffer_at(qd_buffer_t *buf, size_t len)
 {
     assert(len >=0);
 

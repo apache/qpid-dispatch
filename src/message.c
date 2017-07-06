@@ -1374,7 +1374,7 @@ void qd_message_send(qd_message_t *in_msg,
         size_t buf_size = qd_buffer_size(buf);
 
         // This will send the remaining data in the buffer if any.
-        pn_link_send(pnl, (char*) qd_buffer_advance(buf, msg->cursor.offset), buf_size - msg->cursor.offset);
+        pn_link_send(pnl, (char*) qd_buffer_at(buf, msg->cursor.offset), buf_size - msg->cursor.offset);
 
         // If the entire message has been received,  there is no need to lock before sending because no one else is
         // trying to modify the data structure.
