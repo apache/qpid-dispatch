@@ -112,7 +112,9 @@ extern const char * const QD_MA_TRACE;    ///< Trace
 extern const char * const QD_MA_TO;       ///< To-Override
 extern const char * const QD_MA_PHASE;    ///< Phase for override address
 extern const char * const QD_MA_CLASS;    ///< Message-Class
-extern const int          QD_MA_MAX_KEY;  ///< strlen of longest key name
+extern const int          QD_MA_MAX_KEY_LEN;  ///< strlen of longest key name
+extern const int          QD_MA_N_KEYS;       ///< number of router annotation keys
+extern const int          QD_MA_FILTER_LEN;   ///< size of annotation filter buffer
 /// @}
 
 /** @name Container Capabilities */

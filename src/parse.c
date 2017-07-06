@@ -199,14 +199,12 @@ const char *qd_parse_turbo(qd_iterator_t          *iter,
     if (count == 0)
         return 0;
 
-    // with four router annotations there will be 8 annos (4 key,val pairs) returned at most
-#define MAX_ALLOCS 8
     int n_allocs = 0;
 
     // Do skeletal parse of each map element
     for (uint32_t idx = 0; idx < count; idx++) {
         qd_parsed_turbo_t *turbo;
-        if (n_allocs < MAX_ALLOCS) {
+        if (n_allocs < QD_MA_FILTER_LEN * 2) {
             turbo = new_qd_parsed_turbo_t();
             n_allocs++;
 
@@ -638,8 +636,8 @@ const char *qd_parse_annotations_v1(
             assert(val_field);
 
             // Hoist the key name out of the buffers into a normal char array
-            char key_name[QD_MA_MAX_KEY + 1];
-            (void)qd_iterator_strncpy(iter, key_name, QD_MA_MAX_KEY + 1);
+            char key_name[QD_MA_MAX_KEY_LEN + 1];
+            (void)qd_iterator_strncpy(iter, key_name, QD_MA_MAX_KEY_LEN + 1);
 
             // transfer ownership of the extracted value to the message
             if        (!strcmp(key_name, QD_MA_TRACE)) {

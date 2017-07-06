@@ -954,9 +954,6 @@ void qd_message_message_annotations(qd_message_t *in_msg)
         cf->offset = uab->cursor - qd_buffer_base(uab->buffer);
         cf->length = uab->remaining;
         cf->parsed = true;
-        if (content->ma_count > 4) {
-            //fprintf(stdout, "V2_DEV set ma_count to %d, len=%d\n", content->ma_count, (int)cf->length);
-        }
     }
 
     // extract phase
@@ -1170,7 +1167,7 @@ static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list
             field_count++;
         }
         // pad out to N fields
-        for  (; field_count < 4; field_count++) {
+        for  (; field_count < QD_MA_N_KEYS; field_count++) {
             qd_compose_insert_symbol(field, QD_MA_PREFIX);
             qd_compose_insert_string(field, "X");
         }

@@ -272,9 +272,9 @@ static char* test_send_message_annotations(void *context)
     pn_data_rewind(ma);
     pn_data_next(ma);
     if (pn_data_type(ma) != PN_MAP) return "Invalid message annotation type";
-    if (pn_data_get_map(ma) != 8) return "Invalid map length";
+    if (pn_data_get_map(ma) != QD_MA_N_KEYS * 2) return "Invalid map length";
     pn_data_enter(ma);
-    for (int i = 0; i < 8; i+=2) {
+    for (int i = 0; i < QD_MA_N_KEYS; i++) {
         pn_data_next(ma);
         if (pn_data_type(ma) != PN_SYMBOL) return "Bad map index";
         pn_bytes_t sym = pn_data_get_symbol(ma);
