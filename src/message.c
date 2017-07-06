@@ -1106,8 +1106,7 @@ static void send_handler(void *context, const unsigned char *start, int length)
 //
 // Create a buffer chain holding the outgoing message annotations section.
 // Three types of outbound link are available:
-//  V1 - 0.8.x routers that implement the original annotation scheme
-//  V2 - 1.0.x routers that implement the new annotation scheme
+//  V1 - include router annotations
 //  V0 - End system clients that do not get any router annotations
 //
 // These routines do not strictly create the buffer chain in a ready-to-go form.
@@ -1120,8 +1119,6 @@ static void send_handler(void *context, const unsigned char *start, int length)
 //   2. The optional blob of user annotations. The buffers for this section
 //      are not copied into any buffer chain. Instead they are consumed
 //      directly from the incoming message buffer chain.
-//      These buffers are discovered in qd_message_message_annotations
-//      and located using msg.content->ma_user_annotation_blob.
 //   3. The optional V1 annotation key-value pairs.
 //      These are identified by the out_trailer buffer chain.
 //
@@ -1132,16 +1129,10 @@ static void send_handler(void *context, const unsigned char *start, int length)
 // buffer chain 'out'.
 static void compose_message_annotations_v0(qd_message_pvt_t *msg, qd_buffer_list_t *out)
 {
-    qd_composed_field_t *out_ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
-
-    bool map_started = false;
-
     if (msg->content->ma_count > 0) {
-        // insert the incoming message remaining elements
-        if (!map_started) {
-            qd_compose_start_map(out_ma);
-            map_started = true;
-        }
+        qd_composed_field_t *out_ma = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
+
+        qd_compose_start_map(out_ma);
 
         // Bump the map size and count to reflect user's blob.
         // Note that the blob is not inserted here. This code adjusts the
@@ -1149,14 +1140,11 @@ static void compose_message_annotations_v0(qd_message_pvt_t *msg, qd_buffer_list
         // is inserted by router-node
         qd_compose_insert_opaque_elements(out_ma, msg->content->ma_count,
                                           msg->content->field_user_annotations.length);
-    }
-
-    if (map_started) {
         qd_compose_end_map(out_ma);
         qd_compose_take_buffers(out_ma, out);
-    }
 
-    qd_compose_free(out_ma);
+        qd_compose_free(out_ma);
+    }
 }
 
 
