@@ -300,7 +300,8 @@ DEQ_DECLARE(qdr_router_ref_t, qdr_router_ref_list_t);
 typedef enum {
     QDR_DELIVERY_NOWHERE = 0,
     QDR_DELIVERY_IN_UNDELIVERED,
-    QDR_DELIVERY_IN_UNSETTLED
+    QDR_DELIVERY_IN_UNSETTLED,
+    QDR_DELIVERY_IN_SETTLED
 } qdr_delivery_where_t;
 
 typedef struct qdr_delivery_ref_t {
@@ -310,6 +311,17 @@ typedef struct qdr_delivery_ref_t {
 
 ALLOC_DECLARE(qdr_delivery_ref_t);
 DEQ_DECLARE(qdr_delivery_ref_t, qdr_delivery_ref_list_t);
+
+struct qdr_subscription_t {
+    DEQ_LINKS(qdr_subscription_t);
+    qdr_core_t    *core;
+    qdr_address_t *addr;
+    qdr_receive_t  on_message;
+    void          *on_message_context;
+};
+
+DEQ_DECLARE(qdr_subscription_t, qdr_subscription_list_t);
+
 
 struct qdr_delivery_t {
     DEQ_LINKS(qdr_delivery_t);
@@ -334,6 +346,7 @@ struct qdr_delivery_t {
     qdr_address_t          *tracking_addr;
     int                     tracking_addr_bit;
     qdr_link_work_t        *link_work;         ///< Delivery work item for this delivery
+    qdr_subscription_list_t subscriptions;
     qdr_delivery_ref_list_t peers;             /// Use this list if there if the delivery has more than one peer.
 
 };
@@ -375,6 +388,7 @@ struct qdr_link_t {
     qdr_auto_link_t         *auto_link;          ///< [ref] Auto_link that owns this link
     qdr_delivery_list_t      undelivered;        ///< Deliveries to be forwarded or sent
     qdr_delivery_list_t      unsettled;          ///< Unsettled deliveries
+    qdr_delivery_list_t      settled;            ///< Settled deliveries
     qdr_delivery_ref_list_t  updated_deliveries; ///< References to deliveries (in the unsettled list) with updates.
     bool                     admin_enabled;
     qdr_link_oper_status_t   oper_status;
@@ -418,18 +432,6 @@ DEQ_DECLARE(qdr_connection_ref_t, qdr_connection_ref_list_t);
 
 void qdr_add_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn);
 void qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn);
-
-
-struct qdr_subscription_t {
-    DEQ_LINKS(qdr_subscription_t);
-    qdr_core_t    *core;
-    qdr_address_t *addr;
-    qdr_receive_t  on_message;
-    void          *on_message_context;
-};
-
-DEQ_DECLARE(qdr_subscription_t, qdr_subscription_list_t);
-
 
 struct qdr_address_t {
     DEQ_LINKS(qdr_address_t);
@@ -697,6 +699,7 @@ void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *delivery);
+void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_link_t *link, qd_message_t *msg);
 
 /**
  * Links the in_dlv to the out_dlv and increments ref counts of both deliveries
