@@ -102,8 +102,6 @@ size_t qd_buffer_fanout(qd_buffer_t *buf)
 
 unsigned char *qd_buffer_at(qd_buffer_t *buf, size_t len)
 {
-    assert(len >=0);
-
     // If the len is greater than the buffer size, we might point to some garbage.
     // We dont want that to happen, so do the assert.
     assert(len <= BUFFER_SIZE);

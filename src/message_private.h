@@ -102,12 +102,12 @@ typedef struct {
 
 typedef struct {
     DEQ_LINKS(qd_message_t);   // Deque linkage that overlays the qd_message_t
-    qd_field_location_t   cursor;           // A pointer to the current location of the outgoing byte stream.
-    qd_message_depth_t    message_depth;
-    qd_message_depth_t    sent_depth;
-    bool                  send_complete;
-    bool                  tag_sent;
-    qd_message_content_t *content;
+    qd_field_location_t   cursor;          // A pointer to the current location of the outgoing byte stream.
+    qd_message_depth_t    message_depth;   // What is the depth of the message that has been received so far
+    qd_message_depth_t    sent_depth;      // How much of the message has been sent?  QD_DEPTH_NONE means nothing has been sent so far, QD_DEPTH_HEADER means the header has already been sent, dont send it again and so on.
+    bool                  send_complete;   // Has the message been completely received and completely sent?
+    bool                  tag_sent;        // Tags are sent
+    qd_message_content_t *content;         // The actual content of the message. The content is never copied
     qd_buffer_list_t      ma_to_override;  // to field in outgoing message annotations.
     qd_buffer_list_t      ma_trace;        // trace list in outgoing message annotations
     qd_buffer_list_t      ma_ingress;      // ingress field in outgoing message annotations
@@ -123,10 +123,6 @@ ALLOC_DECLARE(qd_message_content_t);
 void qd_message_initialize();
 
 qd_field_location_t qd_message_cursor(qd_message_pvt_t *msg);
-
-qd_buffer_t *qd_message_cursor_buffer(qd_message_pvt_t *in_msg);
-
-int qd_message_cursor_offset(qd_message_pvt_t *in_msg);
 
 ///@}
 

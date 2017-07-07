@@ -183,6 +183,8 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
 
     DEQ_INSERT_TAIL(link->undelivered, out_dlv);
     out_dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
+
+    // This incref is for putting the delivery in the undelivered list
     qdr_delivery_incref(out_dlv);
 
     //

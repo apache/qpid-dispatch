@@ -638,8 +638,8 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_delivery_t *dlv = DEQ_HEAD(link->settled);
     qdr_delivery_t *peer;
     while (dlv) {
-            assert(dlv->where == QDR_DELIVERY_IN_SETTLED);
-            dlv->where = QDR_DELIVERY_NOWHERE;
+        assert(dlv->where == QDR_DELIVERY_IN_SETTLED);
+        dlv->where = QDR_DELIVERY_NOWHERE;
         DEQ_REMOVE_HEAD(link->settled);
 
         peer = qdr_delivery_first_peer_CT(dlv);
@@ -649,6 +649,13 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
             qdr_delivery_unlink_peers_CT(core, dlv, peer);
             peer = next_peer;
         }
+
+        // This decref is for the proton ref
+        qdr_delivery_decref_CT(core, dlv);
+
+        // This decref is for the removing the delivery from the settled list
+        qdr_delivery_decref_CT(core, dlv);
+
         dlv = DEQ_HEAD(link->settled);
     }
 

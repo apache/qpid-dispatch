@@ -457,10 +457,14 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
         //
         // Settle the proton delivery only if all the data has arrived
         //
-        if (pn_delivery_settled(pnd) && receive_complete) {
-            pn_delivery_settle(pnd);
+        if (pn_delivery_settled(pnd)) {
+            if (receive_complete) {
+                pn_delivery_settle(pnd);
+                return;
+            }
         }
 
+        // If this delivery is unsettled or if this is a settled multi-frame large message, set the context
         pn_delivery_set_context(pnd, delivery);
         qdr_delivery_set_context(delivery, pnd);
         qdr_delivery_incref(delivery);
@@ -1077,6 +1081,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 
         qdr_delivery_tag(dlv, &tag, &tag_length);
 
+        // Create a new proton delivery on link 'plink'
         pn_delivery(plink, pn_dtag(tag, tag_length));
 
         pdlv = pn_link_current(plink);

@@ -1057,16 +1057,6 @@ void qd_message_set_tag_sent(qd_message_t *in_msg, bool tag_sent)
     msg->tag_sent = tag_sent;
 }
 
-qd_buffer_t *qd_message_cursor_buffer(qd_message_pvt_t *in_msg)
-{
-    return in_msg->cursor.buffer;
-}
-
-int qd_message_cursor_offset(qd_message_pvt_t *in_msg)
-{
-    return in_msg->cursor.offset;
-}
-
 qd_field_location_t qd_message_cursor(qd_message_pvt_t *in_msg)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
@@ -1158,7 +1148,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
             }
 
             //
-            // We have received the entire message since rc == PN_EOS, set the receive_complete flag to false
+            // We have received the entire message since rc == PN_EOS, set the receive_complete flag to true
             //
             msg->content->receive_complete = true;
 
@@ -1376,10 +1366,8 @@ void qd_message_send(qd_message_t *in_msg,
         // This will send the remaining data in the buffer if any.
         pn_link_send(pnl, (char*) qd_buffer_at(buf, msg->cursor.offset), buf_size - msg->cursor.offset);
 
-        // If the entire message has been received,  there is no need to lock before sending because no one else is
-        // trying to modify the data structure.
-        if (!receive_complete)
-            sys_mutex_lock(msg->content->lock);
+        // If the entire message has already been received,  taking out this lock is not that expensive
+        sys_mutex_lock(msg->content->lock);
 
         qd_buffer_t *next_buf = DEQ_NEXT(buf);
         if (next_buf) {
@@ -1417,8 +1405,7 @@ void qd_message_send(qd_message_t *in_msg,
             }
         }
 
-        if (!receive_complete)
-            sys_mutex_unlock(msg->content->lock);
+        sys_mutex_unlock(msg->content->lock);
 
         buf = next_buf;
     }
