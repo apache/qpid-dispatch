@@ -374,15 +374,25 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 }
 
 
+static void qdr_do_message_to_addr_free(qdr_core_t *core, qdr_general_work_t *work)
+{
+    if (work->msg)
+        qd_message_free(work->msg);
+    if (work->on_message_context)
+        qd_iterator_free((qd_iterator_t *)work->on_message_context);
+}
+
+
 static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery)
 {
     qdr_link_t *link = delivery->link;
 
-    if (delivery->msg)
-        qd_message_free(delivery->msg);
-
-    if (delivery->to_addr)
-        qd_iterator_free(delivery->to_addr);
+    if (delivery->msg || delivery->to_addr) {
+        qdr_general_work_t *work = qdr_general_work(qdr_do_message_to_addr_free);
+        work->msg                = delivery->msg;
+        work->on_message_context = delivery->to_addr;
+        qdr_post_general_work_CT(core, work);
+    }
 
     if (delivery->tracking_addr) {
         delivery->tracking_addr->outstanding_deliveries[delivery->tracking_addr_bit]--;
