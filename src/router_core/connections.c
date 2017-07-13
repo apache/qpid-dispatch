@@ -857,20 +857,19 @@ static char qdr_prefix_for_dir(qd_direction_t dir)
     return (dir == QD_INCOMING) ? 'C' : 'D';
 }
 
-
 qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter, int *in_phase, int *out_phase)
 {
     qdr_address_config_t *addr = 0;
+    qd_iterator_view_t old_view = qd_iterator_get_view(iter);
 
-    //
-    // Set the prefix to 'Z' for configuration and do a prefix-retrieve to get the most
-    // specific match
-    //
-    qd_iterator_annotate_prefix(iter, 'Z');
+    // @TODO(kgiusti) - why not lookup exact match in has first??
+    qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_WITH_SPACE);
     if (conn && conn->tenant_space)
         qd_iterator_annotate_space(iter, conn->tenant_space, conn->tenant_space_len);
-    qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
+    qd_parse_tree_retrieve_match(core->addr_parse_tree, iter, (void **) &addr);
     qd_iterator_annotate_prefix(iter, '\0');
+    qd_iterator_reset_view(iter, old_view);
+
     if (in_phase)  *in_phase  = addr ? addr->in_phase  : 0;
     if (out_phase) *out_phase = addr ? addr->out_phase : 0;
 
@@ -905,11 +904,11 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_it
         //
         // Handle the mobile address case
         //
-        copy[1] = 'Z';
-        qd_iterator_t  *config_iter = qd_iterator_string(&copy[1], ITER_VIEW_ALL);
-        qdr_address_config_t *addr = 0;
 
-        qd_hash_retrieve_prefix(core->addr_hash, config_iter, (void**) &addr);
+        // @TODO(kgiusti) ask ted if tenant needs to be added first!
+        qd_iterator_t *config_iter = qd_iterator_string(&copy[2], ITER_VIEW_ADDRESS_WITH_SPACE);
+        qdr_address_config_t *addr = 0;
+        qd_parse_tree_retrieve_match(core->addr_parse_tree, config_iter, (void **) &addr);
         if (addr)
             trt = addr->treatment;
         qd_iterator_free(config_iter);

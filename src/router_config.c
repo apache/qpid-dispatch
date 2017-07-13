@@ -180,13 +180,28 @@ qd_error_t qd_router_configure_lrp(qd_router_t *router, qd_entity_t *entity)
 qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 {
     char *name    = 0;
-    char *prefix  = 0;
+    char *pattern = 0;
     char *distrib = 0;
+    char *prefix  = 0;
 
     do {
         name = qd_entity_opt_string(entity, "name", 0);             QD_ERROR_BREAK();
-        prefix = qd_entity_get_string(entity, "prefix");            QD_ERROR_BREAK();
         distrib = qd_entity_opt_string(entity, "distribution", 0);  QD_ERROR_BREAK();
+
+        pattern = qd_entity_opt_string(entity, "pattern", 0);
+        prefix = qd_entity_opt_string(entity, "prefix", 0);
+
+        if (prefix && pattern) {
+            qd_log(router->log_source, QD_LOG_WARNING,
+                   "Cannot set both 'prefix' and 'pattern': ignoring %s, %s",
+                   prefix, pattern);
+            break;
+        } else if (!prefix && !pattern) {
+            qd_log(router->log_source, QD_LOG_WARNING,
+                   "Must set either 'prefix' or 'pattern' attribute:"
+                   " ignoring configured address");
+            break;
+        }
 
         bool  waypoint  = qd_entity_opt_bool(entity, "waypoint", false);
         long  in_phase  = qd_entity_opt_long(entity, "ingressPhase", -1);
@@ -206,6 +221,11 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
         if (prefix) {
             qd_compose_insert_string(body, "prefix");
             qd_compose_insert_string(body, prefix);
+        }
+
+        if (pattern) {
+            qd_compose_insert_string(body, "pattern");
+            qd_compose_insert_string(body, pattern);
         }
 
         if (distrib) {
@@ -235,6 +255,7 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
     free(name);
     free(prefix);
     free(distrib);
+    free(pattern);
 
     return qd_error_code();
 }

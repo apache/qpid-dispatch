@@ -49,7 +49,8 @@ class QdmanageTest(TestCase):
             ('address', {'name': 'test-address', 'prefix': 'abcd', 'distribution': 'multicast'}),
             ('linkRoute', {'name': 'test-link-route', 'prefix': 'xyz', 'dir': 'in'}),
             ('autoLink', {'name': 'test-auto-link', 'addr': 'mnop', 'dir': 'out'}),
-            ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl'})
+            ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl'}),
+            ('address', {'name': 'pattern-address', 'pattern': 'a/*/b/#/c', 'distribution': 'closest'})
         ])
 
         config_2 = Qdrouterd.Config([
@@ -239,9 +240,15 @@ class QdmanageTest(TestCase):
         long_type = 'org.apache.qpid.dispatch.router.config.address'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(len(output), 2)
         self.assertEqual(output[0]['name'], "test-address")
         self.assertEqual(output[0]['distribution'], "multicast")
         self.assertEqual(output[0]['prefix'], "abcd")
+        self.assertTrue('pattern' not in output[0])
+        self.assertEqual(output[1]['name'], "pattern-address")
+        self.assertEqual(output[1]['distribution'], "closest")
+        self.assertEqual(output[1]['pattern'], "a/*/b/#/c")
+        self.assertTrue('prefix' not in output[1])
 
     def test_check_link_route_name(self):
         long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'

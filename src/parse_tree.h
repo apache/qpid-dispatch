@@ -22,28 +22,64 @@
 #include <stdbool.h>
 
 #include <qpid/dispatch/ctools.h>
+#include <qpid/dispatch/iterator.h>
 #include "alloc.h"
 
 
-typedef struct parse_node parse_node_t;
+typedef struct qd_parse_node qd_parse_node_t;
+extern const char * const QD_PARSE_TREE_TOKEN_SEP;
 
-parse_node_t *parse_tree_new(char token_sep);
-void parse_tree_free(parse_node_t *node);
+qd_parse_node_t *qd_parse_tree_new();
+void qd_parse_tree_free(qd_parse_node_t *node);
 
-// return false to stop searching
 
-typedef bool parse_tree_visit_t(void *handle,
-                                const char *pattern,
+// returns old payload or NULL if new
+void *qd_parse_tree_add_pattern(qd_parse_node_t *node,
+                                const qd_iterator_t *pattern,
                                 void *payload);
 
-void parse_tree_find(parse_node_t *node, const char *value,
-                     parse_tree_visit_t *callback, void *handle);
+// returns old payload or NULL if not present
+void *qd_parse_tree_remove_pattern(qd_parse_node_t *node,
+                                   const qd_iterator_t *pattern);
 
-void *parse_tree_add_pattern(parse_node_t *node,
-                             const char *pattern,
-                             void *payload);
+// retrieves the payload pointer
+// returns true if pattern found
+bool qd_parse_tree_get_pattern(qd_parse_node_t *node,
+                               const qd_iterator_t *pattern,
+                               void **payload);
 
-// returns the payload void *
-void *parse_tree_remove_pattern(parse_node_t *node,
-                                const char *pattern);
+// find the 'best' match to 'value', using the following precedence (highest
+// first):
+//
+// 1) exact token match
+// 2) * wildcard match
+// 3) # wildcard match
+//
+// example:
+//   given patterns
+//   1) 'a.b.c'
+//   2) 'a.b.*'
+//   3)'a.b.#'
+//
+//  'a.b.c' will match 1
+//  'a.b.x' will match 2
+//  'a.b' and 'a.b.c.x' will match 3
+//
+// returns true on match and sets *payload
+bool qd_parse_tree_retrieve_match(qd_parse_node_t *node,
+                                  const qd_iterator_t *value,
+                                  void **payload);
+
+// parse tree traversal
+// visit each matching pattern that matches value in the order based on the
+// above precedence rules
+
+// return false to stop tree transversal
+typedef bool qd_parse_tree_visit_t(void *handle,
+                                   const char *pattern,
+                                   void *payload);
+
+void qd_parse_tree_search(qd_parse_node_t *node, const qd_iterator_t *value,
+                          qd_parse_tree_visit_t *callback, void *handle);
+
 #endif /* parse_tree.h */

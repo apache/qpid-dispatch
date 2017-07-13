@@ -19,7 +19,7 @@
 
 
 #include "parse_tree.h"
-
+#include <qpid/dispatch/log.h>
 
 // Wildcard pattern matching:
 // '*' - match exactly one single token
@@ -30,7 +30,7 @@ static const char HASH = '#';
 
 
 // token parsing
-// parse a string of tokens separated by a boundary character.
+// parse a string of tokens separated by a boundary character (. or /).
 //
 // The format of a pattern string is a series of tokens. A
 // token can contain any characters but '#', '*', or the boundary character.
@@ -38,6 +38,7 @@ static const char HASH = '#';
 // TODO(kgiusti): really should create a token parsing qd_iterator_t view.
 // Then all this token/token_iterator stuff can be removed...
 //
+const char * const QD_PARSE_TREE_TOKEN_SEP = "./";
 typedef struct token {
     const char *begin;
     const char *end;
@@ -48,18 +49,17 @@ typedef struct token {
 typedef struct token_iterator {
     token_t token;           // token at head of string
     const char *terminator;  // end of entire string
-    char separator;          // delimits tokens
 } token_iterator_t;
 
 
-static void token_iterator_init(token_iterator_t *t, const char *str,
-                                char separator)
+static void token_iterator_init(token_iterator_t *t, const char *str)
 {
-    const char *tend = strchr(str, separator);
+    while (*str && strchr(QD_PARSE_TREE_TOKEN_SEP, *str))
+        str++;  // skip any leading separators
+    const char *tend = strpbrk(str, QD_PARSE_TREE_TOKEN_SEP);
     t->terminator = str + strlen(str);
     t->token.begin = str;
     t->token.end = (tend) ? tend : t->terminator;
-    t->separator = separator;
 }
 
 
@@ -70,7 +70,7 @@ static void token_iterator_next(token_iterator_t *t)
     } else {
         const char *tend;
         t->token.begin = t->token.end + 1;
-        tend = strchr(t->token.begin, t->separator);
+        tend = strpbrk(t->token.begin, QD_PARSE_TREE_TOKEN_SEP);
         t->token.end = (tend) ? tend : t->terminator;
     }
 }
@@ -107,17 +107,21 @@ static bool token_iterator_match_char(const token_iterator_t *t,
 // #.* ---> *.#
 // #.# ---> #
 //
-static char *normalize_pattern(char *pattern, char token_sep)
+static bool normalize_pattern(char *pattern)
 {
     token_iterator_t t;
+    bool modified = false;
+    char *original = NULL;
 
-    token_iterator_init(&t, pattern, token_sep);
+    token_iterator_init(&t, pattern);
     while (!token_iterator_done(&t)) {
         if (token_iterator_match_char(&t, HASH)) {
             token_t last_token;
             token_iterator_pop(&t, &last_token);
             if (token_iterator_done(&t)) break;
             if (token_iterator_match_char(&t, HASH)) {  // #.# --> #
+                if (!modified) original = strdup(pattern);
+                modified = true;
                 char *src = (char *)t.token.begin;
                 char *dest = (char *)last_token.begin;
                 // note: overlapping strings, can't strcpy
@@ -127,6 +131,8 @@ static char *normalize_pattern(char *pattern, char token_sep)
                 t.terminator = dest;
                 t.token = last_token;
             } else if (token_iterator_match_char(&t, STAR)) { // #.* --> *.#
+                if (!modified) original = strdup(pattern);
+                modified = true;
                 *(char *)t.token.begin = HASH;
                 *(char *)last_token.begin = STAR;
             } else {
@@ -136,7 +142,15 @@ static char *normalize_pattern(char *pattern, char token_sep)
             token_iterator_next(&t);
         }
     }
-    return pattern;
+
+    if (original) {
+        qd_log(qd_log_source("DEFAULT"), QD_LOG_NOTICE,
+               "configured address '%s' optimized and re-written to '%s'",
+               original, pattern);
+        free(original);
+    }
+
+    return modified;
 }
 
 
@@ -156,33 +170,31 @@ static char *normalize_pattern(char *pattern, char token_sep)
 //    +-->x-->y-->...
 //
 
-DEQ_DECLARE(parse_node_t, parse_node_list_t);
-struct parse_node {
-    DEQ_LINKS(parse_node_t);    // siblings
+DEQ_DECLARE(qd_parse_node_t, qd_parse_node_list_t);
+struct qd_parse_node {
+    DEQ_LINKS(qd_parse_node_t); // siblings
     char *token;                // portion of pattern represented by this node
-    char token_sep;             // boundary character between tokens
     bool is_star;
     bool is_hash;
     char *pattern;        // entire normalized pattern matching this node
-    parse_node_list_t  children;
-    struct parse_node  *star_child;
-    struct parse_node  *hash_child;
+    qd_parse_node_list_t  children;
+    struct qd_parse_node  *star_child;
+    struct qd_parse_node  *hash_child;
     void *payload;      // data returned on match against this node
 };
-ALLOC_DECLARE(parse_node_t);
-ALLOC_DEFINE(parse_node_t);
+ALLOC_DECLARE(qd_parse_node_t);
+ALLOC_DEFINE(qd_parse_node_t);
 
 
-static parse_node_t *new_parse_node(const token_t *t, char token_sep)
+static qd_parse_node_t *new_parse_node(const token_t *t)
 {
-    parse_node_t *n = new_parse_node_t();
+    qd_parse_node_t *n = new_qd_parse_node_t();
     if (n) {
         DEQ_ITEM_INIT(n);
         DEQ_INIT(n->children);
         n->payload = NULL;
         n->pattern = NULL;
         n->star_child = n->hash_child = NULL;
-        n->token_sep = token_sep;
 
         if (t) {
             const size_t tlen = TOKEN_LEN(*t);
@@ -201,27 +213,27 @@ static parse_node_t *new_parse_node(const token_t *t, char token_sep)
 
 
 // return count of child nodes
-static int parse_node_child_count(const parse_node_t *n)
+static int parse_node_child_count(const qd_parse_node_t *n)
 {
     return DEQ_SIZE(n->children)
-        + n->star_child ? 1 : 0
-        + n->hash_child ? 1 : 0;
+        + (n->star_child ? 1 : 0)
+        + (n->hash_child ? 1 : 0);
 }
 
 
-static void free_parse_node(parse_node_t *n)
+static void free_parse_node(qd_parse_node_t *n)
 {
     assert(parse_node_child_count(n) == 0);
     free(n->token);
     free(n->pattern);
-    free_parse_node_t(n);
+    free_qd_parse_node_t(n);
 }
 
 
 // find immediate child node matching token
-static parse_node_t *parse_node_find_child(const parse_node_t *node, const token_t *token)
+static qd_parse_node_t *parse_node_find_child(const qd_parse_node_t *node, const token_t *token)
 {
-    parse_node_t *child = DEQ_HEAD(node->children);
+    qd_parse_node_t *child = DEQ_HEAD(node->children);
     while (child && !token_match_str(token, child->token))
         child = DEQ_NEXT(child);
     return child;
@@ -231,7 +243,7 @@ static parse_node_t *parse_node_find_child(const parse_node_t *node, const token
 // Add a new pattern and associated data to the tree.  Returns the old payload
 // if the pattern has already been added to the tree.
 //
-static void *parse_node_add_pattern(parse_node_t *node,
+static void *parse_node_add_pattern(qd_parse_node_t *node,
                                     token_iterator_t *key,
                                     const char *pattern,
                                     void *payload)
@@ -250,8 +262,7 @@ static void *parse_node_add_pattern(parse_node_t *node,
 
     if (token_iterator_match_char(key, STAR)) {
         if (!node->star_child) {
-            node->star_child = new_parse_node(&key->token,
-                                              node->token_sep);
+            node->star_child = new_parse_node(&key->token);
         }
         token_iterator_next(key);
         return parse_node_add_pattern(node->star_child,
@@ -260,8 +271,7 @@ static void *parse_node_add_pattern(parse_node_t *node,
                                       payload);
     } else if (token_iterator_match_char(key, HASH)) {
         if (!node->hash_child) {
-            node->hash_child = new_parse_node(&key->token,
-                                              node->token_sep);
+            node->hash_child = new_parse_node(&key->token);
         }
         token_iterator_next(key);
         return parse_node_add_pattern(node->hash_child,
@@ -273,14 +283,14 @@ static void *parse_node_add_pattern(parse_node_t *node,
         token_t current;
         token_iterator_pop(key, &current);
 
-        parse_node_t *child = parse_node_find_child(node, &current);
+        qd_parse_node_t *child = parse_node_find_child(node, &current);
         if (child) {
             return parse_node_add_pattern(child,
                                           key,
                                           pattern,
                                           payload);
         } else {
-            child = new_parse_node(&current, node->token_sep);
+            child = new_parse_node(&current);
             DEQ_INSERT_TAIL(node->children, child);
             return parse_node_add_pattern(child,
                                           key,
@@ -292,7 +302,7 @@ static void *parse_node_add_pattern(parse_node_t *node,
 
 // remove pattern from the tree.
 // return the payload of the removed pattern
-static void *parse_node_remove_pattern(parse_node_t *node,
+static void *parse_node_remove_pattern(qd_parse_node_t *node,
                                        token_iterator_t *key,
                                        const char *pattern)
 {
@@ -327,7 +337,7 @@ static void *parse_node_remove_pattern(parse_node_t *node,
     } else {
         token_t current;
         token_iterator_pop(key, &current);
-        parse_node_t *child = parse_node_find_child(node, &current);
+        qd_parse_node_t *child = parse_node_find_child(node, &current);
         if (child) {
             old = parse_node_remove_pattern(child, key, pattern);
             if (child->pattern == NULL
@@ -341,14 +351,53 @@ static void *parse_node_remove_pattern(parse_node_t *node,
 }
 
 
-static bool parse_node_find(parse_node_t *, token_iterator_t *,
-                            parse_tree_visit_t *, void *);
+// Find the pattern in the tree, return the payload pointer or NULL if pattern
+// is not in the tree
+static qd_parse_node_t *parse_node_get_pattern(qd_parse_node_t *node,
+                                               token_iterator_t *key,
+                                               const char *pattern)
+{
+    if (!node)
+        return NULL;
+
+    if (token_iterator_done(key))
+        return node;
+
+    if (token_iterator_match_char(key, STAR)) {
+        token_iterator_next(key);
+        return parse_node_get_pattern(node->star_child,
+                                      key,
+                                      pattern);
+    } else if (token_iterator_match_char(key, HASH)) {
+        token_iterator_next(key);
+        return parse_node_get_pattern(node->hash_child,
+                                      key,
+                                      pattern);
+    } else {
+        // check the children nodes
+        token_t current;
+        token_iterator_pop(key, &current);
+
+        qd_parse_node_t *child = parse_node_find_child(node, &current);
+        if (child) {
+            return parse_node_get_pattern(child,
+                                          key,
+                                          pattern);
+        }
+    }
+
+    return NULL;  // not found
+}
+
+
+static bool parse_node_find(qd_parse_node_t *, token_iterator_t *,
+                            qd_parse_tree_visit_t *, void *);
 
 
 // search the sub-trees of this node.
 // This function returns false to stop the search
-static bool parse_node_find_children(parse_node_t *node, token_iterator_t *value,
-                                     parse_tree_visit_t *callback, void *handle)
+static bool parse_node_find_children(qd_parse_node_t *node, token_iterator_t *value,
+                                     qd_parse_tree_visit_t *callback, void *handle)
 {
     if (!token_iterator_done(value)) {
 
@@ -358,7 +407,7 @@ static bool parse_node_find_children(parse_node_t *node, token_iterator_t *value
             token_t child_token;
             token_iterator_pop(&tmp, &child_token);
 
-            parse_node_t *child = parse_node_find_child(node, &child_token);
+            qd_parse_node_t *child = parse_node_find_child(node, &child_token);
             if (child) {
                 if (!parse_node_find(child, &tmp, callback, handle))
                     return false;
@@ -385,8 +434,8 @@ static bool parse_node_find_children(parse_node_t *node, token_iterator_t *value
 
 // This node matched the last token.
 // This function returns false to stop the search
-static bool parse_node_find_token(parse_node_t *node, token_iterator_t *value,
-                                  parse_tree_visit_t *callback, void *handle)
+static bool parse_node_find_token(qd_parse_node_t *node, token_iterator_t *value,
+                                  qd_parse_tree_visit_t *callback, void *handle)
 {
     if (token_iterator_done(value) && node->pattern) {
         // exact match current node
@@ -401,8 +450,8 @@ static bool parse_node_find_token(parse_node_t *node, token_iterator_t *value,
 
 // this node matches any one token
 // returns false to stop the search
-static bool parse_node_find_star(parse_node_t *node, token_iterator_t *value,
-                                 parse_tree_visit_t *callback, void *handle)
+static bool parse_node_find_star(qd_parse_node_t *node, token_iterator_t *value,
+                                 qd_parse_tree_visit_t *callback, void *handle)
 {
     // must match exactly one token:
     if (token_iterator_done(value))
@@ -424,8 +473,8 @@ static bool parse_node_find_star(parse_node_t *node, token_iterator_t *value,
 
 // current node is hash, match the remainder of the string
 // return false to stop search
-static bool parse_node_find_hash(parse_node_t *node, token_iterator_t *value,
-                                 parse_tree_visit_t *callback, void *handle)
+static bool parse_node_find_hash(qd_parse_node_t *node, token_iterator_t *value,
+                                 qd_parse_tree_visit_t *callback, void *handle)
 {
     // consume each token and look for a match on the
     // remaining key.
@@ -444,8 +493,8 @@ static bool parse_node_find_hash(parse_node_t *node, token_iterator_t *value,
 
 
 // find the payload associated with the input string 'value'
-static bool parse_node_find(parse_node_t *node, token_iterator_t *value,
-                            parse_tree_visit_t *callback, void *handle)
+static bool parse_node_find(qd_parse_node_t *node, token_iterator_t *value,
+                            qd_parse_tree_visit_t *callback, void *handle)
 {
     if (node->is_star)
         return parse_node_find_star(node, value, callback, handle);
@@ -456,22 +505,16 @@ static bool parse_node_find(parse_node_t *node, token_iterator_t *value,
 }
 
 
-parse_node_t *parse_tree_new(char token_sep)
-{
-    return new_parse_node(NULL, token_sep);
-}
-
-
-void parse_tree_free(parse_node_t *node)
+static void parse_node_free(qd_parse_node_t *node)
 {
     if (node) {
-        if (node->star_child) parse_tree_free(node->star_child);
-        if (node->hash_child) parse_tree_free(node->hash_child);
+        if (node->star_child) parse_node_free(node->star_child);
+        if (node->hash_child) parse_node_free(node->hash_child);
         node->star_child = node->hash_child = NULL;
         while (!DEQ_IS_EMPTY(node->children)) {
-            parse_node_t *child = DEQ_HEAD(node->children);
+            qd_parse_node_t *child = DEQ_HEAD(node->children);
             DEQ_REMOVE_HEAD(node->children);
-            parse_tree_free(child);
+            parse_node_free(child);
         }
 
         free_parse_node(node);
@@ -479,46 +522,151 @@ void parse_tree_free(parse_node_t *node)
 }
 
 
-// Invoke callback for each pattern that matches 'value
-void parse_tree_find(parse_node_t *node, const char *value,
-                     parse_tree_visit_t *callback, void *handle)
+qd_parse_node_t *qd_parse_tree_new()
+{
+    return new_parse_node(NULL);
+}
+
+
+// find best match for value
+//
+static bool get_first(void *handle, const char *pattern, void *payload)
+{
+    *(void **)handle = payload;
+    return false;
+}
+
+bool qd_parse_tree_retrieve_match(qd_parse_node_t *node,
+                                  const qd_iterator_t *value,
+                                  void **payload)
+{
+    *payload = NULL;
+    qd_parse_tree_search(node, value, get_first, payload);
+    return *payload != NULL;
+}
+
+
+// Invoke callback for each pattern that matches 'value'
+void qd_parse_tree_search(qd_parse_node_t *node,
+                          const qd_iterator_t *value,
+                          qd_parse_tree_visit_t *callback, void *handle)
 {
     token_iterator_t t_iter;
+    // @TODO(kgiusti) for now:
+    qd_iterator_t *dup = qd_iterator_dup(value);
+    char *str = (char *)qd_iterator_copy(dup);
 
-    token_iterator_init(&t_iter, value, node->token_sep);
+    normalize_pattern(str);
+
+    token_iterator_init(&t_iter, str);
     parse_node_find(node, &t_iter, callback, handle);
+
+    free(str);
+    qd_iterator_free(dup);
 }
 
 
 // returns old payload or NULL if new
-void *parse_tree_add_pattern(parse_node_t *node,
-                             const char *pattern,
-                             void *payload)
+void *qd_parse_tree_add_pattern(qd_parse_node_t *node,
+                                const qd_iterator_t *pattern,
+                                void *payload)
 {
     token_iterator_t key;
     void *rc = NULL;
-    char *norm = normalize_pattern(strdup(pattern),
-                                   node->token_sep);
+    // @TODO(kgiusti) for now:
+    qd_iterator_t *dup = qd_iterator_dup(pattern);
+    char *str = (char *)qd_iterator_copy(dup);
 
-    token_iterator_init(&key, norm, node->token_sep);
-    rc = parse_node_add_pattern(node, &key, pattern, payload);
-    free(norm);
+    normalize_pattern(str);
+    qd_log(qd_log_source("DEFAULT"), QD_LOG_DEBUG,
+           "Parse tree add address pattern '%s'", str);
+
+    token_iterator_init(&key, str);
+    rc = parse_node_add_pattern(node, &key, str, payload);
+    free(str);
+    qd_iterator_free(dup);
     return rc;
+}
+
+
+// returns true if pattern exists in tree
+bool qd_parse_tree_get_pattern(qd_parse_node_t *node,
+                               const qd_iterator_t *pattern,
+                               void **payload)
+{
+    token_iterator_t key;
+    qd_parse_node_t *found = NULL;
+    // @TODO(kgiusti) for now:
+    qd_iterator_t *dup = qd_iterator_dup(pattern);
+    char *str = (char *)qd_iterator_copy(dup);
+
+    normalize_pattern((char *)str);
+    qd_log(qd_log_source("DEFAULT"), QD_LOG_DEBUG,
+           "Parse tree get address pattern '%s'", str);
+
+    token_iterator_init(&key, str);
+    found = parse_node_get_pattern(node, &key, str);
+    free(str);
+    qd_iterator_free(dup);
+    *payload = found ? found->payload : NULL;
+    return *payload != NULL;
 }
 
 
 // returns the payload void *
-void *parse_tree_remove_pattern(parse_node_t *node,
-                                const char *pattern)
+void *qd_parse_tree_remove_pattern(qd_parse_node_t *node,
+                                   const qd_iterator_t *pattern)
 {
     token_iterator_t key;
     void *rc = NULL;
-    char *norm = normalize_pattern(strdup(pattern),
-                                   node->token_sep);
+    // @TODO(kgiusti) for now:
+    qd_iterator_t *dup = qd_iterator_dup(pattern);
+    char *str = (char *)qd_iterator_copy(dup);
 
-    token_iterator_init(&key, norm, node->token_sep);
-    rc = parse_node_remove_pattern(node, &key, pattern);
-    free(norm);
+    normalize_pattern(str);
+    qd_log(qd_log_source("DEFAULT"), QD_LOG_DEBUG,
+           "Parse tree remove address pattern '%s'", str);
+
+    token_iterator_init(&key, str);
+    rc = parse_node_remove_pattern(node, &key, str);
+    free(str);
     return rc;
 }
+
+
+#if 0
+#include <stdio.h>
+void qd_parse_tree_dump(qd_parse_node_t *node, int depth)
+{
+    for (int i = 0; i < depth; i++)
+        fprintf(stdout, "  ");
+    fprintf(stdout, "token: %s pattern: %s is star: %s is hash: %s # childs: %d\n",
+            node->token ? node->token : "*NONE*",
+            node->pattern ? node->pattern: "*NONE*",
+            node->is_star ? "yes" : "no",
+            node->is_hash ? "yes" : "no",
+            parse_node_child_count(node));
+    if (node->star_child) qd_parse_tree_dump(node->star_child, depth + 1);
+    if (node->hash_child) qd_parse_tree_dump(node->hash_child, depth + 1);
+    qd_parse_node_t *child = DEQ_HEAD(node->children);
+    while (child) {
+        qd_parse_tree_dump(child, depth + 1);
+        child = DEQ_NEXT(child);
+    }
+}
+
+void qd_parse_tree_free(qd_parse_node_t *node)
+{
+    fprintf(stdout, "PARSE TREE DUMP\n");
+    qd_parse_tree_dump(node, 4);
+    parse_node_free(node);
+}
+
+#else
+
+void qd_parse_tree_free(qd_parse_node_t *node)
+{
+    parse_node_free(node);
+}
+#endif
 

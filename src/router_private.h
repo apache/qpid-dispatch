@@ -32,6 +32,7 @@
 #include <qpid/dispatch/trace_mask.h>
 #include <qpid/dispatch/hash.h>
 #include <qpid/dispatch/log.h>
+#include "parse_tree.h"
 #include "dispatch_private.h"
 #include "entity.h"
 
