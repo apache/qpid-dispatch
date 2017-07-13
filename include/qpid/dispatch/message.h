@@ -133,16 +133,14 @@ void qd_message_free(qd_message_t *msg);
 qd_message_t *qd_message_copy(qd_message_t *msg);
 
 /**
- * Retrieve the message annotations from a message.
+ * Retrieve the message annotations from a message and place them in message storage.
  *
  * IMPORTANT: The pointer returned by this function remains owned by the message.
  *            The caller MUST NOT free the parsed field.
  *
  * @param msg Pointer to a received message.
- * @return Pointer to the parsed field for the message annotations.  If the message doesn't
- *         have message annotations, the return value shall be NULL.
  */
-qd_parsed_field_t *qd_message_message_annotations(qd_message_t *msg);
+void qd_message_message_annotations(qd_message_t *msg);
 
 /**
  * Set the value for the QD_MA_TRACE field in the outgoing message annotations
@@ -257,6 +255,46 @@ char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len, qd_log_bits l
 int qd_message_repr_len();
 
 qd_log_source_t* qd_message_log_source();
+
+/**
+ * Accessor for message field ingress
+ * 
+ * @param msg A pointer to the message
+ * @return the parsed field
+ */
+qd_parsed_field_t *qd_message_get_ingress    (qd_message_t *msg);
+
+/**
+ * Accessor for message field phase
+ * 
+ * @param msg A pointer to the message
+ * @return the parsed field
+ */
+qd_parsed_field_t *qd_message_get_phase      (qd_message_t *msg);
+
+/**
+ * Accessor for message field to_override
+ * 
+ * @param msg A pointer to the message
+ * @return the parsed field
+ */
+qd_parsed_field_t *qd_message_get_to_override(qd_message_t *msg);
+
+/**
+ * Accessor for message field trace
+ * 
+ * @param msg A pointer to the message
+ * @return the parsed field
+ */
+qd_parsed_field_t *qd_message_get_trace      (qd_message_t *msg);
+
+/**
+ * Accessor for message field phase
+ * 
+ * @param msg A pointer to the message
+ * @return the phase as an integer
+ */
+int                qd_message_get_phase_val  (qd_message_t *msg);
 
 ///@}
 

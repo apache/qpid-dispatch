@@ -33,6 +33,28 @@
  */
 
 typedef struct qd_parsed_field_t qd_parsed_field_t;
+typedef struct qd_parsed_turbo_t qd_parsed_turbo_t;
+
+DEQ_DECLARE(qd_parsed_turbo_t, qd_parsed_turbo_list_t);
+
+/**@file
+ * Parse raw data fields into skeletal AMQP data trees.
+ *
+ * @defgroup parse parse
+ *
+ * Parse data from qd_iterator_t into a tree structure representing
+ * an AMQP data type tree.
+ *@{
+ */
+struct qd_parsed_turbo_t {
+    DEQ_LINKS(qd_parsed_turbo_t);
+    qd_iterator_pointer_t bufptr;  // location/size of field in buffer
+    uint8_t               tag;
+    uint32_t              size;
+    uint32_t              count;
+    uint32_t              length_of_size;
+    uint32_t              length_of_count;
+};
 
 /**
  * Parse a field delimited by a field iterator.
@@ -41,6 +63,31 @@ typedef struct qd_parsed_field_t qd_parsed_field_t;
  * @return A pointer to the newly created field.
  */
 qd_parsed_field_t *qd_parse(qd_iterator_t *iter);
+
+/**
+ * Parse message annotations map from a raw iterator
+ * It's called 'turbo' because it is supposed to be fast.
+ * Distinguish between user annotations and router annotations
+ * Enumerate the user entries count and size.
+ * Return the router entries in a list.
+ *
+ * This function knows a priori:
+ *   * the iter is a message annotations map
+ *   * the map key prefix is QD_MA_PREFIX
+ *   * there are 4 router map annotations at most
+ *   * the router annotations are at the end of the map
+ *
+ * @param iter Field iterator for the message annotations map
+ * @param annos returned list of router annotations map entries
+ * @param user_entries number of map user items
+ * @param user_bytes number of map user item bytes
+ * @return 0 if success else pointer to error string
+ */
+const char * qd_parse_turbo(
+                       qd_iterator_t          *iter,
+                       qd_parsed_turbo_list_t *annos,
+                       uint32_t               *user_entries,
+                       uint32_t               *user_bytes);
 
 /**
  * Free the resources associated with a parsed field.
@@ -228,6 +275,31 @@ int qd_parse_is_scalar(qd_parsed_field_t *field);
  * @return The value field corresponding to the key or NULL.
  */
 qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *key);
+
+/**
+ * Parse a message annotation map field.
+ * Return parsed fields for the four router entries or null if any is absent
+ * and a blob pointer and count for the user entries in the map which are passed
+ * through as part of the message payload.
+ *
+ * @param strip_annotations_in strip inbound annotations
+ * @param ma_iter_in Field iterator for the annotation map field being parsed.
+ * @param ma_ingress returned parsed field: ingress
+ * @param ma_phase returned parsed field: phase
+ * @param ma_to_override returned parsed field: override
+ * @param ma_trace returned parsed field: trace
+ * @param blob_pointer returned buffer pointer to user's annotation blob
+ * @param blob_item_count number of map entries referenced by blob_iterator
+ */
+void qd_parse_annotations(
+    bool                   strip_annotations_in,
+    qd_iterator_t         *ma_iter_in,
+    qd_parsed_field_t    **ma_ingress,
+    qd_parsed_field_t    **ma_phase,
+    qd_parsed_field_t    **ma_to_override,
+    qd_parsed_field_t    **ma_trace,
+    qd_iterator_pointer_t *blob_pointer,
+    uint32_t              *blob_item_count);
 
 ///@}
 
