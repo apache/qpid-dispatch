@@ -60,6 +60,7 @@ class QdstatTest(system_test.TestCase):
 
     def test_connections(self):
         self.run_qdstat(['--connections'], r'host.*container.*role')
+        self.run_qdstat(['--connections'], 'no-auth')
 
     def test_links(self):
         out = self.run_qdstat(['--links'], r'endpoint.*out.*local.*temp.')
