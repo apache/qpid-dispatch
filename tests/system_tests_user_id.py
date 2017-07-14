@@ -295,10 +295,11 @@ class QdSSLUseridTest(TestCase):
         user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[10][0]
         self.assertEqual("C=US,ST=NC,L=Raleigh,OU=Dev,O=Client,CN=127.0.0.1", str(user))
 
+        # authenticatePeer is set to 'no' in this listener, there should be no user on the connection.
         addr = self.address(11).replace("amqp", "amqps")
         node = Node.connect(addr)
         user = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'user']).results[11][0]
-        self.assertEqual("anonymous", user)
+        self.assertEqual(None, user)
 
         addr = self.address(12).replace("amqp", "amqps")
         node = Node.connect(addr, ssl_domain=domain)
