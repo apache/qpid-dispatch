@@ -132,7 +132,9 @@ def opts_url(opts):
     return url
 
 def opts_sasl(opts):
-    mechs, user, password, sasl_password_file = opts.sasl_mechanisms, opts.sasl_username, opts.sasl_password, opts.sasl_password_file
+    url = Url(opts.bus)
+    mechs, user, password, sasl_password_file = opts.sasl_mechanisms, (opts.sasl_username or url.username), (opts.sasl_password or url.password), opts.sasl_password_file
+
     if not (mechs or user or password or sasl_password_file):
         return None
 
