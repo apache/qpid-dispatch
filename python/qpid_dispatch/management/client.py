@@ -96,7 +96,7 @@ class Node(object):
                                   timeout=timeout,
                                   ssl_domain=ssl_domain,
                                   sasl_enabled=sasl_enabled,
-                                  allowed_mechs=str(sasl.mechs) if sasl else None,
+                                  allowed_mechs=str(sasl.mechs) if sasl and sasl.mechs != None else None,
                                   user=str(sasl.user) if sasl else None,
                                   password=str(sasl.password) if sasl else None)
 
