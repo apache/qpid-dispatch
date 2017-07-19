@@ -31,10 +31,11 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-An AMQP management client for use with qdrouterd. Sends AMQP management
-operations requests and prints the response in JSON format. This is a
-generic AMQP management tool and can be used with any standard AMQP
-managed endpoint, not just with qdrouter.
+An AMQP management client for use with the Dispatch router daemon 
+('qdrouterd'). Sends AMQP management operations requests and prints 
+the response in JSON format. This is a generic AMQP management tool 
+and can be used with any standard AMQP managed endpoint, not just 
+with 'qdrouterd'.
 
 OPTIONS
 -------
@@ -57,7 +58,7 @@ OPERATIONS
   multiple entities.
 
 `read`::
-  Print all the attributes of a single entity, specified by the --name or
+  Print all of the attributes of a single entity, specified by the --name or
   --identity options.
 
 `update` ['ATTR=VALUE'...]::
@@ -70,19 +71,19 @@ OPERATIONS
   Delete an entity specified by the --name or --identity options.
 
 `get-types` ['TYPE']::
-  List entity types with their base types. With no arguments list all
+  List entity types with their base types. With no arguments, list all
   types.
 
 `get-operations` ['TYPE']::
-  List entity types with their operations. With no arguments list all
+  List entity types with their operations. With no arguments, list all
   types.
 
 `get-attributes` ['TYPE']::
-  List entity types with their attributes. With no arguments list all
+  List entity types with their attributes. With no arguments, list all
   types.
 
 `get-annotations` ['TYPE']::
-  List entity types with their annotations. With no arguments list all
+  List entity types with their annotations. With no arguments, list all
   types.
 
 `get-mgmt-nodes`::
@@ -99,14 +100,14 @@ FILES
 -----
 
 {CMAKE_INSTALL_PREFIX}/{QD_DOC_INSTALL_DIR}/qdrouter.json::
-  Management schema for qdrouterd.
+  Management schema for 'qdrouterd'.
 {CMAKE_INSTALL_PREFIX}/{QD_DOC_INSTALL_DIR}/qdrouter.json.readme.txt::
   Explanation of the management schema.
 
 EXAMPLES
 --------
 
-.Show the logging configuration
+.Show the logging configuration:
 --------------------------------------------------------------
 qdmanage query --type=log
 --------------------------------------------------------------
@@ -116,17 +117,17 @@ qdmanage query --type=log
 qdmanage update name=log/DEFAULT enable=debug+
 --------------------------------------------------------------
 
-.Enable trace log messages only for the MESSAGE module and direct MESSAGE logs to the file "test.log"
+.Enable trace log messages only for the MESSAGE module, and direct MESSAGE logs to the file _test.log_:
 --------------------------------------------------------------
 qdmanage update name=log/MESSAGE enable=trace output=test.log
 --------------------------------------------------------------
 
-.Set MESSAGE logging back to the default
+.Set MESSAGE logging back to the default:
 ------------------------------------------------
 qdmanage update name=log/MESSAGE enable=default
 ------------------------------------------------
 
-.Disable MESSAGE logging
+.Disable MESSAGE logging:
 ---------------------------------------------
 qdmanage update name=log/MESSAGE enable=none
 ---------------------------------------------
