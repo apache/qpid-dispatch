@@ -32,7 +32,7 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-The Qpid Dispatch router (qdrouterd) is a network daemon that directs
+The Qpid Dispatch router ('qdrouterd') is a network daemon that directs
 AMQP 1.0 messages between endpoints, such as messaging clients and
 servers.
 
@@ -45,7 +45,7 @@ FILES
 -----
 
 {SYSCONF_INSTALL_DIR}/qdrouterd.conf::
-  Configuration flie.
+  Configuration file.
 
 SEE ALSO
 --------

@@ -86,11 +86,17 @@ class Node(object):
             else:
                 url.path = u'$management'
 
+        if ssl_domain:
+            sasl_enabled = True
+        else:
+            sasl_enabled = True if sasl else False
+
         # if sasl_mechanism is unicode, convert it to python string
         return BlockingConnection(url,
                                   timeout=timeout,
                                   ssl_domain=ssl_domain,
-                                  allowed_mechs=str(sasl.mechs) if sasl else None,
+                                  sasl_enabled=sasl_enabled,
+                                  allowed_mechs=str(sasl.mechs) if sasl and sasl.mechs != None else None,
                                   user=str(sasl.user) if sasl else None,
                                   password=str(sasl.password) if sasl else None)
 
