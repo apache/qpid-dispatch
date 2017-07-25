@@ -333,7 +333,7 @@ bool qd_message_tag_sent(qd_message_t *msg);
 
 
 /**
- * Returns true if the delivery tag has already been sent.
+ * Sets if the delivery tag has already been sent out or not.
  */
 void qd_message_set_tag_sent(qd_message_t *msg, bool tag_sent);
 

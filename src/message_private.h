@@ -110,12 +110,12 @@ typedef struct {
 
     bool                 discard;                        // Should this message be discarded?
     bool                 receive_complete;               // true if the message has been completely received, false otherwise
-    unsigned int         fanout;                         // The number of receivers for this message. This number does not include in-process subscribers.
+    sys_atomic_t         fanout;                         // The number of receivers for this message. This number does not include in-process subscribers.
 } qd_message_content_t;
 
 typedef struct {
     DEQ_LINKS(qd_message_t);   // Deque linkage that overlays the qd_message_t
-    qd_field_location_t   cursor;          // A pointer to the current location of the outgoing byte stream.
+    qd_iterator_pointer_t cursor;          // A pointer to the current location of the outgoing byte stream.
     qd_message_depth_t    message_depth;   // What is the depth of the message that has been received so far
     qd_message_depth_t    sent_depth;      // How much of the message has been sent?  QD_DEPTH_NONE means nothing has been sent so far, QD_DEPTH_HEADER means the header has already been sent, dont send it again and so on.
     bool                  send_complete;   // Has the message been completely received and completely sent?
@@ -136,7 +136,7 @@ ALLOC_DECLARE(qd_message_content_t);
 /** Initialize logging */
 void qd_message_initialize();
 
-qd_field_location_t qd_message_cursor(qd_message_pvt_t *msg);
+qd_iterator_pointer_t qd_message_cursor(qd_message_pvt_t *msg);
 
 ///@}
 

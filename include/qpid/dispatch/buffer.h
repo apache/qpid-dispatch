@@ -27,6 +27,7 @@
  */
 
 #include <qpid/dispatch/ctools.h>
+#include <qpid/dispatch/atomic.h>
 
 typedef struct qd_buffer_t qd_buffer_t;
 
@@ -38,7 +39,7 @@ extern size_t BUFFER_SIZE;
 struct qd_buffer_t {
     DEQ_LINKS(qd_buffer_t);
     unsigned int size;          ///< Size of data content
-    unsigned int fanout;        // The number of receivers for this buffer
+    sys_atomic_t fanout;        // The number of receivers for this buffer
 };
 
 /**

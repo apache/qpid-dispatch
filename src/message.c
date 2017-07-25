@@ -841,7 +841,7 @@ qd_message_t *qd_message()
     msg->ma_phase      = 0;
     msg->sent_depth    = QD_DEPTH_NONE;
     msg->cursor.buffer = 0;
-    msg->cursor.offset = 0;
+    msg->cursor.cursor = 0;
     msg->send_complete = false;
     msg->tag_sent      = false;
 
@@ -853,8 +853,6 @@ qd_message_t *qd_message()
     }
 
     ZERO(msg->content);
-    msg->content->receive_complete = false;
-    msg->content->discard          = false;
     msg->content->lock = sys_mutex();
     sys_atomic_init(&msg->content->ref_count, 1);
     msg->content->parse_depth = QD_DEPTH_NONE;
@@ -924,7 +922,7 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
 
     copy->sent_depth    = QD_DEPTH_NONE;
     copy->cursor.buffer = 0;
-    copy->cursor.offset = 0;
+    copy->cursor.cursor = 0;
     copy->send_complete = false;
     copy->tag_sent      = false;
 
@@ -1043,7 +1041,7 @@ void qd_message_add_fanout(qd_message_t *in_msg)
 {
     assert(in_msg);
     qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    msg->content->fanout++;
+    sys_atomic_inc(&msg->content->fanout);
 }
 
 bool qd_message_receive_complete(qd_message_t *in_msg)
@@ -1081,7 +1079,7 @@ void qd_message_set_tag_sent(qd_message_t *in_msg, bool tag_sent)
     msg->tag_sent = tag_sent;
 }
 
-qd_field_location_t qd_message_cursor(qd_message_pvt_t *in_msg)
+qd_iterator_pointer_t qd_message_cursor(qd_message_pvt_t *in_msg)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     return msg->cursor;
@@ -1432,9 +1430,9 @@ void qd_message_send(qd_message_t *in_msg,
         // If this message has no header and no delivery annotations and no message annotations, set the offset to 0.
         //
         if (header_consume == 0 && da_consume == 0 && ma_consume ==0)
-            msg->cursor.offset = 0;
+            msg->cursor.cursor = qd_buffer_base(buf);
         else
-            msg->cursor.offset = cursor - qd_buffer_base(buf);
+            msg->cursor.cursor = cursor;
 
         msg->sent_depth = QD_DEPTH_MESSAGE_ANNOTATIONS;
 
@@ -1449,9 +1447,9 @@ void qd_message_send(qd_message_t *in_msg,
         size_t buf_size = qd_buffer_size(buf);
 
         // This will send the remaining data in the buffer if any.
-        int num_bytes_to_send = buf_size - msg->cursor.offset;
+        int num_bytes_to_send = buf_size - (msg->cursor.cursor - qd_buffer_base(buf));
         if (num_bytes_to_send > 0)
-            pn_link_send(pnl, (char*) qd_buffer_at(buf, msg->cursor.offset), num_bytes_to_send);
+            pn_link_send(pnl, (const char*)msg->cursor.cursor, num_bytes_to_send);
 
         // If the entire message has already been received,  taking out this lock is not that expensive
         // because there is no contention for this lock.
@@ -1470,7 +1468,7 @@ void qd_message_send(qd_message_t *in_msg,
                 }
             }
             msg->cursor.buffer = next_buf;
-            msg->cursor.offset = 0;
+            msg->cursor.cursor = qd_buffer_base(next_buf);
         }
         else {
             if (qd_message_receive_complete(in_msg)) {
@@ -1480,7 +1478,7 @@ void qd_message_send(qd_message_t *in_msg,
                 //
                 msg->send_complete = true;
                 msg->cursor.buffer = 0;
-                msg->cursor.offset = 0;
+                msg->cursor.cursor = 0;
 
             }
             else {
@@ -1489,7 +1487,7 @@ void qd_message_send(qd_message_t *in_msg,
                 // you will come back into this function to deliver more as bytes arrive
                 //
                 msg->cursor.buffer = buf;
-                msg->cursor.offset = buf_size;
+                msg->cursor.cursor = qd_buffer_at(buf, buf_size);
             }
         }
 

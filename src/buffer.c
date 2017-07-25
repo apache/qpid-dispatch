@@ -46,7 +46,7 @@ qd_buffer_t *qd_buffer(void)
 
     DEQ_ITEM_INIT(buf);
     buf->size   = 0;
-    buf->fanout = 0;
+    sys_atomic_init(&buf->fanout, 0);
     return buf;
 }
 
@@ -90,7 +90,7 @@ void qd_buffer_insert(qd_buffer_t *buf, size_t len)
 
 void qd_buffer_add_fanout(qd_buffer_t *buf)
 {
-    buf->fanout++;
+    sys_atomic_inc(&buf->fanout);
 }
 
 size_t qd_buffer_fanout(qd_buffer_t *buf)
