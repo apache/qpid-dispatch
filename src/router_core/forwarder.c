@@ -243,6 +243,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     int           fanout               = 0;
     qd_bitmask_t *link_exclusion       = !!in_delivery ? in_delivery->link_exclusion : 0;
     bool          presettled           = !!in_delivery ? in_delivery->settled : true;
+    bool          receive_complete     = qd_message_receive_complete(qdr_delivery_message(in_delivery));
 
     //
     // If the delivery is not presettled, set the settled flag for forwarding so all
@@ -252,8 +253,8 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     //        implemented in the future.
     //
     if (!presettled) {
-        in_delivery->settled = true;
-
+            if (receive_complete)
+                in_delivery->settled = true;
         //
         // If the router is configured to reject unsettled multicasts, settle and reject this delivery.
         //
@@ -359,7 +360,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         //
         // Forward to in-process subscribers
         //
-        bool receive_complete = qd_message_receive_complete(qdr_delivery_message(in_delivery));
+
         qdr_subscription_t *sub = DEQ_HEAD(addr->subscriptions);
         while (sub) {
             //
@@ -392,10 +393,13 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         else {
             //
             // The delivery was not presettled and it was forwarded to at least
-            // one destination.  Accept and settle the delivery.
+            // one destination.  Accept and settle the delivery only if the entire delivery
+            // has been received.
             //
-            in_delivery->disposition = PN_ACCEPTED;
-            qdr_delivery_push_CT(core, in_delivery);
+            if (receive_complete) {
+                in_delivery->disposition = PN_ACCEPTED;
+                qdr_delivery_push_CT(core, in_delivery);
+            }
         }
     }
 

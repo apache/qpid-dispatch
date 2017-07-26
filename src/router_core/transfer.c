@@ -360,6 +360,8 @@ void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *len
 
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery)
 {
+    if (!delivery)
+        return 0;
     return delivery->msg;
 }
 
@@ -563,17 +565,38 @@ void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_del
     // If there is no delivery or a peer, we cannot proceed.
     if (!dlv || !peer)
         return;
-    //
-    // Make sure that the passed in deliveries are indeed peers.
-    //
-    assert(dlv->peer == peer);
-    assert(peer->peer == dlv);
 
-    dlv->peer  = 0;
-    peer->peer = 0;
-
-    qdr_delivery_decref_CT(core, dlv);
-    qdr_delivery_decref_CT(core, peer);
+    if (dlv->peer) {
+        //
+        // This is the easy case. One delivery has only one peer. we can simply
+        // zero them out and directly decref.
+        //
+        assert(dlv->peer == peer);
+        dlv->peer  = 0;
+        peer->peer = 0;
+        qdr_delivery_decref_CT(core, dlv);
+        qdr_delivery_decref_CT(core, peer);
+    }
+    else {
+        //
+        // The dlv has more than one peer. We are going to find the peer of dlv that match with the passed in peer
+        // and delete that peer.
+        //
+        qdr_delivery_ref_t *dlv_ref = DEQ_HEAD(dlv->peers);
+        while (dlv_ref) {
+            qdr_delivery_t * peer_ref = dlv_ref->dlv;
+            if (peer_ref == peer) {
+                if (peer->peer)  {
+                    peer->peer = 0;
+                    qdr_delivery_decref_CT(core, dlv);
+                }
+                qdr_del_delivery_ref(&dlv->peers, dlv_ref);
+                qdr_delivery_decref_CT(core, peer);
+                break;
+            }
+            dlv_ref = DEQ_NEXT(dlv_ref);
+        }
+    }
 }
 
 
@@ -1112,6 +1135,16 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
             sub = DEQ_HEAD(in_dlv->subscriptions);
         }
 
+        if (DEQ_SIZE(in_dlv->peers) > 0) { // This is a multicast delivery
+            bool presettled = !!in_dlv ? in_dlv->settled : true;
+            if (!presettled)
+                in_dlv->settled = true;
+            //
+            // The router will settle on behalf of the receiver in the case of multicast
+            //
+            in_dlv->disposition = PN_ACCEPTED;
+            qdr_delivery_push_CT(core, in_dlv);
+        }
     }
 }
 
