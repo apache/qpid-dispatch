@@ -119,8 +119,10 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
 qdr_delivery_t *qdr_deliver_continue(qdr_delivery_t *in_dlv)
 {
     qdr_action_t   *action = qdr_action(qdr_deliver_continue_CT, "deliver_continue");
-    qdr_delivery_incref(in_dlv);
     action->args.connection.delivery = in_dlv;
+
+    // This incref is for the action reference
+    qdr_delivery_incref(in_dlv);
     qdr_action_enqueue(in_dlv->link->core, action);
     return in_dlv;
 }
@@ -288,6 +290,11 @@ void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery,
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context)
 {
     delivery->context = context;
+}
+
+void qdr_delivery_set_cleared_proton_ref(qdr_delivery_t *dlv, bool cleared_proton_ref)
+{
+    dlv->cleared_proton_ref = cleared_proton_ref;
 }
 
 
@@ -584,8 +591,8 @@ void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_del
         //
         qdr_delivery_ref_t *dlv_ref = DEQ_HEAD(dlv->peers);
         while (dlv_ref) {
-            qdr_delivery_t * peer_ref = dlv_ref->dlv;
-            if (peer_ref == peer) {
+            qdr_delivery_t * peer_dlv = dlv_ref->dlv;
+            if (peer_dlv == peer) {
                 if (peer->peer)  {
                     peer->peer = 0;
                     qdr_delivery_decref_CT(core, dlv);
@@ -779,7 +786,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         qdr_delivery_decref_CT(core, dlv);
         qdr_link_issue_credit_CT(core, link, 1, false);
     } else if (fanout > 0) {
-        if (dlv->settled) {
+        if (dlv->settled || qdr_is_addr_treatment_multicast(addr)) {
             //
             // The delivery is settled.  Keep it off the unsettled list and issue
             // replacement credit for it now.
@@ -798,12 +805,12 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
                 // If this connection goes down, we will have to unlink peer so that peer knows that its peer is not-existent anymore
                 // and need to tell the other side that the message has been aborted.
                 //
-                DEQ_INSERT_TAIL(link->settled, dlv);
-                dlv->where = QDR_DELIVERY_IN_SETTLED;
 
                 //
                 // Again, don't bother decrementing then incrementing the ref_count, we are still using the action ref count
                 //
+                DEQ_INSERT_TAIL(link->settled, dlv);
+                dlv->where = QDR_DELIVERY_IN_SETTLED;
             }
         } else {
             //
@@ -1135,12 +1142,12 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
             sub = DEQ_HEAD(in_dlv->subscriptions);
         }
 
-        if (DEQ_SIZE(in_dlv->peers) > 0) { // This is a multicast delivery
-            bool presettled = !!in_dlv ? in_dlv->settled : true;
-            if (!presettled)
-                in_dlv->settled = true;
+        if (qdr_is_addr_treatment_multicast(in_dlv->link->owning_addr)) { // This is a multicast delivery
+            assert(in_dlv->where == QDR_DELIVERY_IN_SETTLED);
+            in_dlv->settled = true;
             //
-            // The router will settle on behalf of the receiver in the case of multicast
+            // The router will settle on behalf of the receiver in the case of multicast and send out settled
+            // deliveries to the receivers.
             //
             in_dlv->disposition = PN_ACCEPTED;
             qdr_delivery_push_CT(core, in_dlv);

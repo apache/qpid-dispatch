@@ -434,7 +434,6 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
         pn_delivery_set_context(pnd, delivery);
         qdr_delivery_set_context(delivery, pnd);
         qdr_delivery_incref(delivery);
-
     } else {
         //
         // If there is no delivery, the message is now and will always be unroutable because there is no address.
@@ -482,6 +481,7 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
     if (pn_delivery_settled(pnd)) {
         pn_delivery_set_context(pnd, 0);
         qdr_delivery_set_context(delivery, 0);
+        qdr_delivery_set_cleared_proton_ref(delivery, true);
 
         //
         // Don't decref the delivery here.  Rather, we will _give_ the reference to the core.
@@ -1137,6 +1137,7 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         qdr_delivery_set_context(dlv, 0);
         pn_delivery_set_context(pnd, 0);
         pn_delivery_settle(pnd);
+        qdr_delivery_set_cleared_proton_ref(dlv, true);
         qdr_delivery_decref(router->router_core, dlv);
     }
 }

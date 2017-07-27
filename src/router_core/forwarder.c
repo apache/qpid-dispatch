@@ -253,8 +253,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     //        implemented in the future.
     //
     if (!presettled) {
-            if (receive_complete)
-                in_delivery->settled = true;
+        in_delivery->settled = true;
         //
         // If the router is configured to reject unsettled multicasts, settle and reject this delivery.
         //

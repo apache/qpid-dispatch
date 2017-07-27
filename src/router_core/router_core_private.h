@@ -490,7 +490,7 @@ struct qdr_address_config_t {
 ALLOC_DECLARE(qdr_address_config_t);
 DEQ_DECLARE(qdr_address_config_t, qdr_address_config_list_t);
 void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr);
-
+bool qdr_is_addr_treatment_multicast(qdr_address_t *addr);
 
 //
 // Connection Information
