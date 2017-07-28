@@ -542,7 +542,6 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
                                                 const uint8_t *tag, int tag_length,
                                                 uint64_t disposition, pn_data_t* disposition_state);
 qdr_delivery_t *qdr_deliver_continue(qdr_delivery_t *delivery);
-qdr_delivery_t *qdr_delivery_delete_settled(qdr_delivery_t *dlv);
 
 int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
 

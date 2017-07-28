@@ -755,6 +755,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         qdr_delivery_t *next_peer = 0;
         while (peer) {
             next_peer = qdr_delivery_next_peer_CT(dlv);
+            printf("refcount peer - %p - %i\n", (void *)peer, peer->ref_count);
             qdr_delivery_unlink_peers_CT(core, dlv, peer);
             peer = next_peer;
         }

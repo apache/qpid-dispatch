@@ -27,7 +27,6 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_delivery_delete_settled_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 //==================================================================================
 // Internal Functions
@@ -127,15 +126,6 @@ qdr_delivery_t *qdr_deliver_continue(qdr_delivery_t *in_dlv)
     return in_dlv;
 }
 
-qdr_delivery_t *qdr_delivery_delete_settled(qdr_delivery_t *dlv)
-{
-    qdr_action_t   *action = qdr_action(qdr_delivery_delete_settled_CT, "delete_settled");
-    qdr_delivery_incref(dlv);
-    action->args.connection.delivery = dlv;
-    qdr_action_enqueue(dlv->link->core, action);
-    return dlv;
-}
-
 
 int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 {
@@ -167,13 +157,10 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     dlv->link_work = 0;
 
                     if (settled) {
-                        // This will cancel out any peer references that this settled delivery might have.
-                        qdr_delivery_delete_settled(dlv);
-
-                        // This decref is for removing the settled delivery from the undelivered list
-                        qdr_delivery_decref(core, dlv);
-
                         dlv->where = QDR_DELIVERY_NOWHERE;
+
+                        // This decref is for removing this settled delivery from the undelivered list
+                        qdr_delivery_decref(core, dlv);
 
                     } else {
                         DEQ_INSERT_TAIL(link->unsettled, dlv);
@@ -1007,77 +994,6 @@ static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         qdr_delete_delivery_internal_CT(core, action->args.delivery.delivery);
 }
 
-static bool qdr_delivery_is_all_peers_unlinked_CT(qdr_delivery_t *dlv)
-{
-    if (!dlv)
-        return false;
-
-    bool all_peers_unlinked = true;
-
-    qdr_delivery_t *peer =  qdr_delivery_first_peer_CT(dlv);
-    while (peer) {
-        if (peer->peer) {
-            all_peers_unlinked = false;
-            break;
-        }
-
-        peer = qdr_delivery_next_peer_CT(dlv);
-    }
-
-    return all_peers_unlinked;
-
-}
-
-
-static void qdr_delivery_delete_settled_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
-{
-    if (discard)
-        return;
-
-    qdr_delivery_t *dlv  = action->args.connection.delivery;
-
-    // This decref is for the action reference
-    qdr_delivery_decref_CT(core, dlv);
-
-    // unlink the peers
-    qdr_delivery_t *peer = qdr_delivery_first_peer_CT(dlv);
-    while (peer) {
-        sys_mutex_lock(peer->link->conn->work_lock);
-
-        // Why use next_peer here? Because call to qdr_delivery_unlink_peers_CT might free the peer.
-        qdr_delivery_t *next_peer = qdr_delivery_next_peer_CT(dlv);
-
-        qdr_delivery_unlink_peers_CT(core, dlv, peer);
-
-        //
-        // If this is a multicast delivery, it should not be removed from the settled list until all its peers have
-        // been delivered and asked for their unlinking
-        //
-        if (qdr_delivery_is_all_peers_unlinked_CT(peer)) {
-            //
-            // Remove a peer from the settled list only if it has no peers.
-            // If this peer has its own settled peers, they are still linked up and in the process of being delivered.
-            //
-            qdr_delivery_t *settled_delivery = DEQ_HEAD(peer->link->settled);
-
-            // Loop thru the settled list and find the matching delivery and remove it.
-            while(settled_delivery) {
-                if (settled_delivery == peer) {
-                    DEQ_REMOVE(peer->link->settled, peer);
-                    // This decref is for removing the settled peer delivery from the settled list
-                    qdr_delivery_decref_CT(core, peer);
-                    break;
-                }
-                settled_delivery = DEQ_NEXT(settled_delivery);
-            }
-        }
-
-        sys_mutex_unlock(peer->link->conn->work_lock);
-
-        peer = next_peer;
-    }
-}
-
 
 static void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
 {
@@ -1142,15 +1058,31 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
             sub = DEQ_HEAD(in_dlv->subscriptions);
         }
 
-        if (qdr_is_addr_treatment_multicast(in_dlv->link->owning_addr)) { // This is a multicast delivery
+        // This is a multicast delivery
+        if (qdr_is_addr_treatment_multicast(in_dlv->link->owning_addr)) {
             assert(in_dlv->where == QDR_DELIVERY_IN_SETTLED);
-            in_dlv->settled = true;
             //
             // The router will settle on behalf of the receiver in the case of multicast and send out settled
             // deliveries to the receivers.
             //
             in_dlv->disposition = PN_ACCEPTED;
             qdr_delivery_push_CT(core, in_dlv);
+
+            //
+            // The in_dlv has one or more peers. These peers will have to be unlinked.
+            //
+            qdr_delivery_t *peer = qdr_delivery_first_peer_CT(in_dlv);
+            qdr_delivery_t *next_peer = 0;
+            while (peer) {
+                next_peer = qdr_delivery_next_peer_CT(in_dlv);
+                qdr_delivery_unlink_peers_CT(core, in_dlv, peer);
+                peer = next_peer;
+            }
+
+            // Remove the delivery from the settled list and decref the in_dlv.
+            in_dlv->where = QDR_DELIVERY_NOWHERE;
+            qdr_delivery_decref_CT(core, in_dlv); // This decref is for removing the delivery from the settled list.
+            DEQ_REMOVE(in_dlv->link->settled, in_dlv);
         }
     }
 }

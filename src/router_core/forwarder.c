@@ -169,19 +169,19 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
 }
 
 
-void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *out_dlv)
+void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *out_link, qdr_delivery_t *out_dlv)
 {
-    sys_mutex_lock(link->conn->work_lock);
+    sys_mutex_lock(out_link->conn->work_lock);
 
     //
     // If the delivery is pre-settled and the outbound link is at or above capacity,
     // discard all pre-settled deliveries on the undelivered list prior to enqueuing
     // the new delivery.
     //
-    if (out_dlv->settled && link->capacity > 0 && DEQ_SIZE(link->undelivered) >= link->capacity)
-        qdr_forward_drop_presettled_CT_LH(core, link);
+    if (out_dlv->settled && out_link->capacity > 0 && DEQ_SIZE(out_link->undelivered) >= out_link->capacity)
+        qdr_forward_drop_presettled_CT_LH(core, out_link);
 
-    DEQ_INSERT_TAIL(link->undelivered, out_dlv);
+    DEQ_INSERT_TAIL(out_link->undelivered, out_dlv);
     out_dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
 
     // This incref is for putting the delivery in the undelivered list
@@ -192,7 +192,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
     // If there's already a delivery item on the tail of the work list, simply join that item
     // by incrementing the value.
     //
-    qdr_link_work_t *work = DEQ_TAIL(link->work_list);
+    qdr_link_work_t *work = DEQ_TAIL(out_link->work_list);
     if (work && work->work_type == QDR_LINK_WORK_DELIVERY) {
         work->value++;
     } else {
@@ -200,16 +200,16 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *
         ZERO(work);
         work->work_type = QDR_LINK_WORK_DELIVERY;
         work->value     = 1;
-        DEQ_INSERT_TAIL(link->work_list, work);
+        DEQ_INSERT_TAIL(out_link->work_list, work);
     }
-    qdr_add_link_ref(&link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+    qdr_add_link_ref(&out_link->conn->links_with_work, out_link, QDR_LINK_LIST_CLASS_WORK);
     out_dlv->link_work = work;
-    sys_mutex_unlock(link->conn->work_lock);
+    sys_mutex_unlock(out_link->conn->work_lock);
 
     //
     // Activate the outgoing connection for later processing.
     //
-    qdr_connection_activate_CT(core, link->conn);
+    qdr_connection_activate_CT(core, out_link->conn);
 }
 
 
