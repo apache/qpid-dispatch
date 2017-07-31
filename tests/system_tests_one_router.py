@@ -27,21 +27,21 @@ from qpid_dispatch.management.client import Node
 
 CONNECTION_PROPERTIES = {u'connection': u'properties', u'int_property': 6451}
 
-class RouterTest(TestCase):
+class OneRouterTest(TestCase):
     """System tests involving a single router"""
     @classmethod
     def setUpClass(cls):
         """Start a router and a messenger"""
-        super(RouterTest, cls).setUpClass()
+        super(OneRouterTest, cls).setUpClass()
         name = "test-router"
-        RouterTest.listen_port = cls.tester.get_port()
+        OneRouterTest.listen_port = cls.tester.get_port()
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR', 'allowUnsettledMulticast': 'yes'}),
 
             # Setting the stripAnnotations to 'no' so that the existing tests will work.
             # Setting stripAnnotations to no will not strip the annotations and any tests that were already in this file
             # that were expecting the annotations to not be stripped will continue working.
-            ('listener', {'port': RouterTest.listen_port, 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
+            ('listener', {'port': OneRouterTest.listen_port, 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
 
             # The following listeners were exclusively added to test the stripAnnotations attribute in qdrouterd.conf file
             # Different listeners will be used to test all allowed values of stripAnnotations ('no', 'both', 'out', 'in')
@@ -63,7 +63,7 @@ class RouterTest(TestCase):
         """Make sure a router exits if a initial listener fails, doesn't hang"""
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'bad'}),
-            ('listener', {'port': RouterTest.listen_port})])
+            ('listener', {'port': OneRouterTest.listen_port})])
         r = Qdrouterd(name="expect_fail", config=config, wait=False)
         self.assertEqual(1, r.wait())
 
@@ -1106,6 +1106,11 @@ class RouterTest(TestCase):
     #    test.run()
     #    self.assertEqual(None, test.error)
 
+    def test_16a_multicast_no_receivcer(self):
+        test = MulticastUnsettledNoReceiverTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
     def test_18_released_vs_modified(self):
         test = ReleasedVsModifiedTest(self.address)
         test.run()
@@ -1452,6 +1457,59 @@ class MultiframePresettledTest(MessagingHandler):
         if not event.delivery.settled:
             self.error = "Received unsettled delivery"
         self.n_received += 1
+        self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+class MulticastUnsettledNoReceiverTest(MessagingHandler):
+    """
+    Creates a sender to a multicast address. Router provides a credit of 'linkCapacity' to this sender even
+    if there are no receivers (The sender should be able to send messages to multicast addresses even when no receiver
+    is connected). The router will send a disposition of released back to the sender and will end up dropping
+    these messages since there is no receiver.
+    """
+    def __init__(self, address):
+        super(MulticastUnsettledNoReceiverTest, self).__init__(prefetch=0)
+        self.address = address
+        self.dest = "multicast.MulticastNoReceiverTest"
+        self.error = "Some error"
+        self.n_sent = 0
+        self.max_send = 250
+        self.n_released = 0
+        self.n_accepted = 0
+        self.timer = None
+        self.conn = None
+        self.sender = None
+
+    def check_if_done(self):
+        if self.n_accepted > 0:
+            self.error = "Messages should not be accepted as there are no receivers"
+            self.timer.cancel()
+            self.conn.close()
+        elif self.n_sent == self.n_released:
+            self.error = None
+            self.timer.cancel()
+            self.conn.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn, self.dest)
+
+    def on_sendable(self, event):
+        if self.n_sent >= self.max_send:
+            return
+        self.n_sent += 1
+        msg = Message(body=self.n_sent)
+        event.sender.send(msg)
+
+    def on_accepted(self, event):
+        self.n_accepted += 1
+        self.check_if_done()
+
+    def on_released(self, event):
+        self.n_released += 1
         self.check_if_done()
 
     def run(self):
