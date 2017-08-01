@@ -71,15 +71,18 @@ bool qd_parse_tree_retrieve_match(qd_parse_node_t *node,
                                   void **payload);
 
 // parse tree traversal
-// visit each matching pattern that matches value in the order based on the
-// above precedence rules
 
 // return false to stop tree transversal
 typedef bool qd_parse_tree_visit_t(void *handle,
                                    const char *pattern,
                                    void *payload);
 
+// visit each matching pattern that matches value in the order based on the
+// above precedence rules
 void qd_parse_tree_search(qd_parse_node_t *node, const qd_iterator_t *value,
                           qd_parse_tree_visit_t *callback, void *handle);
+
+// visit each terminal node on the tree, returns last value returned by callback
+bool qd_parse_tree_walk(qd_parse_node_t *node, qd_parse_tree_visit_t *callback, void *handle);
 
 #endif /* parse_tree.h */
