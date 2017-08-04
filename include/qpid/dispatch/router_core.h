@@ -304,6 +304,15 @@ bool qdr_terminus_has_capability(qdr_terminus_t *term, const char *capability);
 bool qdr_terminus_is_anonymous(qdr_terminus_t *term);
 
 /**
+ * qdr_terminus_is_coordinator
+ *
+ * Indicates if the terminus is a coordinator.
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @return true iff the terminus is a coordinator
+ */
+bool qdr_terminus_is_coordinator(qdr_terminus_t *term);
+
+/**
  * qdr_terminus_is_dynamic
  *
  * Indicate whether this terminus represents a dynamic endpoint.

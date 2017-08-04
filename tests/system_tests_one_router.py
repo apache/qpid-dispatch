@@ -18,9 +18,9 @@
 #
 
 import unittest
-from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED
+from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED, Url
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
-from proton.handlers import MessagingHandler
+from proton.handlers import MessagingHandler, TransactionHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SyncRequestResponse
 from qpid_dispatch.management.client import Node
@@ -1141,6 +1141,11 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_25_reject_coordinator(self):
+        test = RejectCoordinatorTest(self.address)
+        test.run()
+        self.assertTrue(test.passed)
+
     def test_reject_disposition(self):
         test = RejectDispositionTest(self.address)
         test.run()
@@ -1611,6 +1616,58 @@ class BatchedSettlementTest(MessagingHandler):
     def on_accepted(self, event):
         self.n_settled += 1
         self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+
+class RejectCoordinatorTest(MessagingHandler, TransactionHandler):
+    def __init__(self, url):
+        super(RejectCoordinatorTest, self).__init__(prefetch=0)
+        self.url = Url(url)
+        self.error = "Link attach forbidden, there is no route to a coordinator, the router cannot coordinate " \
+                     "transactions by itself. Try setting up a linkRoute to a coordinator and try again"
+        self.container = None
+        self.conn = None
+        self.sender = None
+        self.timer = None
+        self.passed = False
+        self.link_error = False
+        self.link_remote_close = False
+
+    def timeout(self):
+        self.conn.close()
+
+    def check_if_done(self):
+        if self.link_remote_close and self.link_error:
+            self.passed = True
+            self.conn.close()
+            self.timer.cancel()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.container = event.container
+        self.conn = self.container.connect(self.url)
+        self.sender = self.container.create_sender(self.conn, self.url.path)
+        # declare_transaction tries to create a link with name "txn-ctrl" to the
+        # transaction coordinator which has its own target, it has no address
+        # The router cannot coordinate transactions itself and so there will be a link error when this
+        # link is attempted to be created
+        self.container.declare_transaction(self.conn, handler=self)
+
+    def on_link_error(self, event):
+        link = event.link
+        # If the link name is 'txn-ctrl' and there is a link error and it matches self.error, then we know
+        # that the router has rejected the link because it cannot coordinate transactions itself
+        if link.name == "txn-ctrl" and link.remote_condition.description == self.error:
+            self.link_error = True
+            self.check_if_done()
+
+    def on_link_remote_close(self, event):
+        link = event.link
+        if link.name == "txn-ctrl":
+            self.link_remote_close = True
+            self.check_if_done()
 
     def run(self):
         Container(self).run()
