@@ -663,6 +663,7 @@ void *qd_parse_tree_remove_pattern(qd_parse_node_t *node,
     token_iterator_init(&key, str);
     rc = parse_node_remove_pattern(node, &key, str);
     free(str);
+    qd_iterator_free(dup);
     return rc;
 }
 
