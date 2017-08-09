@@ -57,6 +57,20 @@ class RouterTest(TestCase):
                 ('address', {'prefix': 'closest', 'distribution': 'closest'}),
                 ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
                 ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+
+                # for testing pattern matching
+                ('address', {'pattern': 'a.b.c.d',
+                             'distribution': 'closest'}),
+                ('address', {'pattern': '#.b.c.d',
+                             'distribution': 'multicast'}),
+                ('address', {'pattern': 'a/*/#/d',
+                             'distribution': 'closest'}),
+                ('address', {'pattern': '*/b/c/d',
+                             'distribution': 'multicast'}),
+                ('address', {'pattern': 'a.x.d',
+                             'distribution': 'closest'}),
+                ('address', {'pattern': 'a.*.d',
+                             'distribution': 'multicast'}),
                 connection
             ]
 
@@ -1089,6 +1103,69 @@ class RouterTest(TestCase):
 
         M1.stop()
         M2.stop()
+
+    def test_17_address_wildcard(self):
+        # verify proper distribution is selected by wildcard
+        addresses = [
+            # (address, count of messages expected to be received)
+            ('a.b.c.d',   1), # closest 'a.b.c.d'
+            ('b.c.d',     2), # multi   '#.b.c.d'
+            ('f.a.b.c.d', 2), # multi   '#.b.c.d
+            ('a.c.d',     2), # multi   'a.*.d'
+            ('a/c/c/d',   1), # closest 'a/*/#.d
+            ('a/x/z/z/d', 1), # closest 'a/*/#.d
+            ('a/x/d',     1), # closest 'a.x.d'
+            ('a.x.e',     1), # balanced  ----
+            ('m.b.c.d',   2)  # multi   '*/b/c/d'
+        ]
+
+        # two receivers per address - one for each router
+        receivers = []
+        for a in addresses:
+            for x in range(2):
+                M = self.messenger(timeout=0.1)
+                M.route("amqp:/*", self.routers[x].addresses[0]+"/$1")
+                M.start()
+                M.subscribe('amqp:/' + a[0])
+                receivers.append(M)
+            self.routers[0].wait_address(a[0], 1, 1)
+            self.routers[1].wait_address(a[0], 1, 1)
+
+        # single sender sends one message to each address
+        M1 = self.messenger()
+        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
+        M1.start()
+        for a in addresses:
+            tm = Message()
+            tm.address = 'amqp:/' + a[0]
+            tm.body = {'address': a[0]}
+            M1.put(tm)
+            M1.send()
+
+        # gather all received messages
+        msgs_recvd = {}
+        rm = Message()
+        for M in receivers:
+            try:
+                while True:
+                    M.recv(1)
+                    M.get(rm)
+                    index = rm.body.get('address', "ERROR")
+                    if index not in msgs_recvd:
+                        msgs_recvd[index] = 0
+                    msgs_recvd[index] += 1
+            except Exception as exc:
+                self.assertTrue("None" in str(exc))
+
+        # verify expected count == actual count
+        self.assertTrue("ERROR" not in msgs_recvd)
+        for a in addresses:
+            self.assertTrue(a[0] in msgs_recvd)
+            self.assertEqual(a[1], msgs_recvd[a[0]])
+
+        M1.stop()
+        for M in receivers:
+            M.stop()
 
 
 class Timeout(object):

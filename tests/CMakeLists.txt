@@ -32,6 +32,7 @@ set(unit_test_SOURCES
     tool_test.c
     failoverlist_test.c
     timer_test.c
+    parse_tree_tests
     )
 if (USE_MEMORY_POOL)
   list(APPEND unit_test_SOURCES alloc_test.c)

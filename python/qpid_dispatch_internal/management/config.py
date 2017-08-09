@@ -59,13 +59,22 @@ class Config(object):
         begin = re.compile(r'([\w-]+)[ \t]*{') # WORD {
         end = re.compile(r'}')                 # }
         attr = re.compile(r'([\w-]+)[ \t]*:[ \t]*(.+)') # WORD1: VALUE
+        pattern = re.compile(r'([\w-]+)[ \t]*:[ \t]*([\S]+).*')
 
         def sub(line):
             """Do substitutions to make line json-friendly"""
-            line = line.split('#')[0].strip() # Strip comments
-            line = re.sub(begin, r'["\1", {', line)
-            line = re.sub(end, r'}],', line)
-            line = re.sub(attr, r'"\1": "\2",', line)
+            line = line.strip()
+            if line.startswith("#"):
+                return ""
+            # 'pattern:' is a special snowflake.  It allows '#' characters in
+            # its value, so they cannot be treated as comment delimiters
+            if line.split(':')[0].strip().lower() == "pattern":
+                line = re.sub(pattern, r'"\1": "\2",', line)
+            else:
+                line = line.split('#')[0].strip()
+                line = re.sub(begin, r'["\1", {', line)
+                line = re.sub(end, r'}],', line)
+                line = re.sub(attr, r'"\1": "\2",', line)
             return line
 
         js_text = "[%s]"%("\n".join([sub(l) for l in lines]))

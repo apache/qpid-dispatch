@@ -33,7 +33,7 @@ void qdra_config_address_get_CT(qdr_core_t    *core,
                                 qdr_query_t   *query,
                                 const char    *qdr_config_address_columns[]);
 
-#define QDR_CONFIG_ADDRESS_COLUMN_COUNT 8
+#define QDR_CONFIG_ADDRESS_COLUMN_COUNT 9
 
 const char *qdr_config_address_columns[QDR_CONFIG_ADDRESS_COLUMN_COUNT + 1];
 

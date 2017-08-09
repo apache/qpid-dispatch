@@ -49,7 +49,8 @@ class QdmanageTest(TestCase):
             ('address', {'name': 'test-address', 'prefix': 'abcd', 'distribution': 'multicast'}),
             ('linkRoute', {'name': 'test-link-route', 'prefix': 'xyz', 'dir': 'in'}),
             ('autoLink', {'name': 'test-auto-link', 'addr': 'mnop', 'dir': 'out'}),
-            ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl'})
+            ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl'}),
+            ('address', {'name': 'pattern-address', 'pattern': 'a/*/b/#/c', 'distribution': 'closest'})
         ])
 
         config_2 = Qdrouterd.Config([
@@ -239,9 +240,15 @@ class QdmanageTest(TestCase):
         long_type = 'org.apache.qpid.dispatch.router.config.address'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(len(output), 2)
         self.assertEqual(output[0]['name'], "test-address")
         self.assertEqual(output[0]['distribution'], "multicast")
         self.assertEqual(output[0]['prefix'], "abcd")
+        self.assertTrue('pattern' not in output[0])
+        self.assertEqual(output[1]['name'], "pattern-address")
+        self.assertEqual(output[1]['distribution'], "closest")
+        self.assertEqual(output[1]['pattern'], "a/*/b/#/c")
+        self.assertTrue('prefix' not in output[1])
 
     def test_check_link_route_name(self):
         long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
@@ -344,7 +351,59 @@ class QdmanageTest(TestCase):
                          ' name=' + ssl_profile_name + ' certDb=' + self.ssl_file('ca-certificate.pem')
         output = json.loads(self.run_qdmanage(ssl_create_command))
         self.assertEqual(output['name'], ssl_profile_name)
-        self.run_qdmanage('DELETE --type=sslProfile --name=' + ssl_profile_name)
+        self.run_qdmanage('DELETE --type=sslProfile --name=' +
+        ssl_profile_name)
+
+    def test_create_delete_address_pattern(self):
+        config = [('mercury.*.earth.#', 'closest'),
+                  ('*/mars/*/#', 'multicast'),
+                  ('*.mercury', 'closest'),
+                  ('*/#/pluto', 'multicast')]
+        long_type = 'org.apache.qpid.dispatch.router.config.address'
+
+        # add patterns:
+        pcount = 0
+        for p in config:
+            query_command = 'CREATE --type=' + long_type + \
+                                             ' pattern=' + p[0] + \
+                                             ' distribution=' + p[1] + \
+                                             ' name=Pattern' + str(pcount)
+            self.run_qdmanage(query_command)
+            pcount += 1
+
+        # verify correctly added:
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+        total = len(output)
+
+        pcount = 0
+        for o in output:
+            pattern = o.get('pattern')
+            if pattern is not None:
+                for p in config:
+                    if p[0] == pattern:
+                        pcount += 1
+                        self.assertEqual(p[1], o.get('distribution'))
+        self.assertEqual(pcount, len(config))
+
+        # delete
+        pcount = 0
+        for p in config:
+            query_command = 'DELETE --type=' + long_type + \
+                                             ' --name=Pattern' + str(pcount)
+            self.run_qdmanage(query_command)
+            pcount += 1
+
+        # verify deleted:
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(len(output), total - len(config))
+        for o in output:
+            pattern = o.get('pattern')
+            if pattern is not None:
+                for p in config:
+                    self.assertNotEqual(p[0], pattern)
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

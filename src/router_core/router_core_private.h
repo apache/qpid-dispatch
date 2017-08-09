@@ -477,9 +477,10 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr);
 
 struct qdr_address_config_t {
     DEQ_LINKS(qdr_address_config_t);
-    qd_hash_handle_t       *hash_handle;
     char                   *name;
     uint64_t                identity;
+    char                   *pattern;
+    bool                    is_prefix;
     qd_address_treatment_t  treatment;
     int                     in_phase;
     int                     out_phase;
@@ -661,6 +662,7 @@ struct qdr_core_t {
     qd_hash_t                 *conn_id_hash;
     qdr_address_list_t         addrs;
     qd_hash_t                 *addr_hash;
+    qd_parse_node_t           *addr_parse_tree;
     qdr_address_t             *hello_addr;
     qdr_address_t             *router_addr_L;
     qdr_address_t             *routerma_addr_L;

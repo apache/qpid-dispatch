@@ -425,10 +425,8 @@ void qd_compose_insert_binary_buffers(qd_composed_field_t *field, qd_buffer_list
 }
 
 
-void qd_compose_insert_string(qd_composed_field_t *field, const char *value)
+void qd_compose_insert_string_n(qd_composed_field_t *field, const char *value, size_t len)
 {
-    uint32_t len = strlen(value);
-
     if (len < 256) {
         qd_insert_8(field, QD_AMQP_STR8_UTF8);
         qd_insert_8(field, (uint8_t) len);
@@ -438,6 +436,12 @@ void qd_compose_insert_string(qd_composed_field_t *field, const char *value)
     }
     qd_insert(field, (const uint8_t*) value, len);
     bump_count(field);
+}
+
+
+void qd_compose_insert_string(qd_composed_field_t *field, const char *value)
+{
+    qd_compose_insert_string_n(field, value, strlen(value));
 }
 
 

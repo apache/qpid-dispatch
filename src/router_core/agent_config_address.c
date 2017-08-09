@@ -30,6 +30,7 @@
 #define QDR_CONFIG_ADDRESS_WAYPOINT      5
 #define QDR_CONFIG_ADDRESS_IN_PHASE      6
 #define QDR_CONFIG_ADDRESS_OUT_PHASE     7
+#define QDR_CONFIG_ADDRESS_PATTERN       8
 
 const char *qdr_config_address_columns[] =
     {"name",
@@ -40,6 +41,7 @@ const char *qdr_config_address_columns[] =
      "waypoint",
      "ingressPhase",
      "egressPhase",
+     "pattern",
      0};
 
 const char *CONFIG_ADDRESS_TYPE = "org.apache.qpid.dispatch.router.config.address";
@@ -47,7 +49,6 @@ const char *CONFIG_ADDRESS_TYPE = "org.apache.qpid.dispatch.router.config.addres
 static void qdr_config_address_insert_column_CT(qdr_address_config_t *addr, int col, qd_composed_field_t *body, bool as_map)
 {
     const char *text = 0;
-    const char *key;
 
     if (as_map)
         qd_compose_insert_string(body, qdr_config_address_columns[col]);
@@ -72,9 +73,20 @@ static void qdr_config_address_insert_column_CT(qdr_address_config_t *addr, int 
         break;
 
     case QDR_CONFIG_ADDRESS_PREFIX:
-        key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-        if (key && key[0] == 'Z')
-            qd_compose_insert_string(body, &key[1]);
+        if (addr->is_prefix && addr->pattern) {
+            // Note (kgiusti): internally we prepend a '/#' to the configured
+            // prefix and treat it like a pattern.  Remove trailing '/#' to put
+            // it back into its original form
+            const size_t len = strlen(addr->pattern);
+            assert(len > 1);
+            qd_compose_insert_string_n(body, addr->pattern, len - 2);
+        } else
+            qd_compose_insert_null(body);
+        break;
+
+    case QDR_CONFIG_ADDRESS_PATTERN:
+        if (!addr->is_prefix && addr->pattern)
+            qd_compose_insert_string(body, addr->pattern);
         else
             qd_compose_insert_null(body);
         break;
@@ -284,11 +296,16 @@ void qdra_config_address_delete_CT(qdr_core_t    *core,
     qdr_agent_enqueue_response_CT(core, query);
 }
 
+void qd_parse_tree_dump(qd_parse_node_t *node, int depth);
+
 void qdra_config_address_create_CT(qdr_core_t         *core,
                                    qd_iterator_t      *name,
                                    qdr_query_t        *query,
                                    qd_parsed_field_t  *in_body)
 {
+    qd_iterator_t *iter = NULL;
+    char *buf = NULL;
+
     while (true) {
         //
         // Ensure there isn't a duplicate name and that the body is a map
@@ -318,35 +335,62 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         // Extract the fields from the request
         //
         qd_parsed_field_t *prefix_field    = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_PREFIX]);
+        qd_parsed_field_t *pattern_field   = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_PATTERN]);
         qd_parsed_field_t *distrib_field   = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_DISTRIBUTION]);
         qd_parsed_field_t *waypoint_field  = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_WAYPOINT]);
         qd_parsed_field_t *in_phase_field  = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_IN_PHASE]);
         qd_parsed_field_t *out_phase_field = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_OUT_PHASE]);
 
         //
-        // Prefix field is mandatory.  Fail if it is not here.
+        // Either a prefix or a pattern field is mandatory.  Prefix and pattern
+        // are mutually exclusive. Fail if either both or none are given.
         //
-        if (!prefix_field) {
+        if ((!prefix_field && !pattern_field) || (prefix_field && pattern_field)) {
             query->status = QD_AMQP_BAD_REQUEST;
-            query->status.description = "prefix field is mandatory";
+            query->status.description = prefix_field ? "cannot specify both prefix and pattern"
+                : "a prefix or pattern field is mandatory";
             qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_ADDRESS_TYPE, query->status.description);
             break;
         }
 
+        // strip leading and trailing token separators
+        qd_iterator_t *tmp = qd_iterator_dup(qd_parse_raw(prefix_field ? prefix_field : pattern_field));
+        const int len = qd_iterator_length(tmp);
+        buf = malloc(len + 3);   // +'/#' if needed
+        char *pattern = qd_iterator_strncpy(tmp, buf, len + 1);
+        qd_iterator_free(tmp);
+
+        while (*pattern && strchr(QD_PARSE_TREE_TOKEN_SEP, *pattern))
+            pattern++;
+        while (*pattern && strchr(QD_PARSE_TREE_TOKEN_SEP, pattern[strlen(pattern) - 1]))
+            pattern[strlen(pattern) - 1] = '\0';
+
+        if (!*pattern) {
+            query->status = QD_AMQP_BAD_REQUEST;
+            query->status.description = "invalid address pattern";
+            qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_ADDRESS_TYPE, query->status.description);
+            break;
+        }
+
+        if (prefix_field) {
+            // convert the old prefix value into a pattern by appending '/#'
+            // (match zero or more tokens)
+            strcat(pattern, "/#");
+        }
+
+        iter = qd_iterator_string(pattern, ITER_VIEW_ALL);
+
         //
-        // Ensure that there isn't another configured address with the same prefix
+        // Ensure that there isn't another configured address with the same pattern
         //
-        qd_iterator_t *iter = qd_parse_raw(prefix_field);
-        qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-        qd_iterator_annotate_prefix(iter, 'Z');
-        addr = 0;
-        qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
-        if (!!addr) {
+
+        if (qd_parse_tree_get_pattern(core->addr_parse_tree, iter, (void **)&addr)) {
             query->status = QD_AMQP_BAD_REQUEST;
             query->status.description = "Address prefix conflicts with an existing entity";
             qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_ADDRESS_TYPE, query->status.description);
             break;
         }
+
 
         bool waypoint  = waypoint_field  ? qd_parse_as_bool(waypoint_field) : false;
         int  in_phase  = in_phase_field  ? qd_parse_as_int(in_phase_field)  : -1;
@@ -374,6 +418,7 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         //
         // The request is good.  Create the entity and insert it into the hash index and list.
         //
+
         addr = new_qdr_address_config_t();
         DEQ_ITEM_INIT(addr);
         addr->name      = name ? (char*) qd_iterator_copy(name) : 0;
@@ -381,8 +426,11 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         addr->treatment = qdra_address_treatment_CT(distrib_field);
         addr->in_phase  = in_phase;
         addr->out_phase = out_phase;
+        addr->pattern   = (char *) qd_iterator_copy(iter);
+        addr->is_prefix = !!prefix_field;
 
-        qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
+        qd_iterator_reset_view(iter, ITER_VIEW_ALL);
+        qd_parse_tree_add_pattern(core->addr_parse_tree, iter, addr);
         DEQ_INSERT_TAIL(core->addr_config, addr);
 
         //
@@ -412,6 +460,11 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         qdr_agent_enqueue_response_CT(core, query);
     } else
         qdr_query_free(query);
+
+    if (buf) {
+        free(buf);
+        qd_iterator_free(iter);
+    }
 }
 
 

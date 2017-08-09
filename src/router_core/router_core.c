@@ -138,7 +138,7 @@ void qdr_core_free(qdr_core_t *core)
         qdr_core_remove_address_config(core, addr_config);
     }
     qd_hash_free(core->addr_hash);
-
+    qd_parse_tree_free(core->addr_parse_tree);
     qd_hash_free(core->conn_id_hash);
     //TODO what about the actual connection identifier objects?
 
@@ -324,15 +324,20 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
 
 void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr)
 {
-    // Remove the address from the list and the hash index.
-    qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
+    qdr_address_config_t *tmp;
+    qd_iterator_t *pattern = qd_iterator_string(addr->pattern, ITER_VIEW_ALL);
+
+    // Remove the address from the list and the parse tree
     DEQ_REMOVE(core->addr_config, addr);
+    qd_parse_tree_get_pattern(core->addr_parse_tree, pattern, (void **) &tmp);
+    assert(tmp == addr);
 
     // Free resources associated with this address.
     if (addr->name) {
         free(addr->name);
     }
-    qd_hash_handle_free(addr->hash_handle);
+    qd_iterator_free(pattern);
+    free(addr->pattern);
     free_qdr_address_config_t(addr);
 }
 
