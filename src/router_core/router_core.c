@@ -274,6 +274,8 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment)
 {
+    if (treatment == QD_TREATMENT_UNAVAILABLE)
+        return 0;
     qdr_address_t *addr = new_qdr_address_t();
     ZERO(addr);
     addr->treatment = treatment;
@@ -295,10 +297,12 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr) {
         addr = qdr_address_CT(core, treatment);
-        qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
-        DEQ_INSERT_TAIL(core->addrs, addr);
-        addr->block_deletion = true;
-        addr->local = (aclass == 'L');
+        if (addr) {
+            qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
+            DEQ_INSERT_TAIL(core->addrs, addr);
+            addr->block_deletion = true;
+            addr->local = (aclass == 'L');
+        }
     }
     qd_iterator_free(iter);
     return addr;

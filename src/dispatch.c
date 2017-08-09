@@ -50,7 +50,10 @@ qd_router_t    *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *
 void            qd_router_setup_late(qd_dispatch_t *qd);
 void            qd_router_free(qd_router_t *router);
 void            qd_error_initialize();
-
+const char     *CLOSEST_DISTRIBUTION   = "closest";
+const char     *MULTICAST_DISTRIBUTION = "multicast";
+const char     *BALANCED_DISTRIBUTION  = "balanced";
+const char     *UNAVAILABLE_DISTRIBUTION = "unavailable";
 qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
 {
     qd_dispatch_t *qd = NEW(qd_dispatch_t);
@@ -76,6 +79,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_dispatch_set_router_area(qd, strdup("0"));
     qd_dispatch_set_router_id(qd, strdup("0"));
     qd->router_mode = QD_ROUTER_MODE_ENDPOINT;
+    qd->default_treatment   = QD_TREATMENT_LINK_BALANCED;
 
     qd_python_initialize(qd, python_pkgdir);
     if (qd_error_code()) { qd_dispatch_free(qd); return 0; }
@@ -163,10 +167,27 @@ qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entit
     return QD_ERROR_NONE;
 }
 
+void qd_dispatch_set_router_default_distribution(qd_dispatch_t *qd, char *distribution)
+{
+    if (distribution) {
+        if (strcmp(distribution, MULTICAST_DISTRIBUTION) == 0)
+            qd->default_treatment = QD_TREATMENT_MULTICAST_ONCE;
+        else if (strcmp(distribution, CLOSEST_DISTRIBUTION) == 0)
+            qd->default_treatment = QD_TREATMENT_ANYCAST_CLOSEST;
+        else if (strcmp(distribution, BALANCED_DISTRIBUTION) == 0)
+            qd->default_treatment = QD_TREATMENT_ANYCAST_BALANCED;
+        else if (strcmp(distribution, UNAVAILABLE_DISTRIBUTION) == 0)
+            qd->default_treatment = QD_TREATMENT_UNAVAILABLE;
+    }
+    else
+        // The default for the router defaultDistribution field is QD_TREATMENT_ANYCAST_BALANCED
+        qd->default_treatment = QD_TREATMENT_ANYCAST_BALANCED;
+}
 
 qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_dispatch_set_router_id(qd, qd_entity_opt_string(entity, "routerId", 0)); QD_ERROR_RET();
+    qd_dispatch_set_router_default_distribution(qd, qd_entity_opt_string(entity, "defaultDistribution", 0)); QD_ERROR_RET();
     if (! qd->router_id) {
         qd_dispatch_set_router_id(qd, qd_entity_opt_string(entity, "id", 0)); QD_ERROR_RET();
     }

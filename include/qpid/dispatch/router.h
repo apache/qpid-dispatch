@@ -42,7 +42,8 @@ typedef enum {
     QD_TREATMENT_MULTICAST_ONCE   = 1,
     QD_TREATMENT_ANYCAST_CLOSEST  = 2,
     QD_TREATMENT_ANYCAST_BALANCED = 3,
-    QD_TREATMENT_LINK_BALANCED    = 4
+    QD_TREATMENT_LINK_BALANCED    = 4,
+    QD_TREATMENT_UNAVAILABLE      = 5
 } qd_address_treatment_t;
 
 #include <qpid/dispatch/router_core.h>

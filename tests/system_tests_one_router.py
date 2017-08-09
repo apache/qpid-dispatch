@@ -53,6 +53,7 @@ class RouterTest(TestCase):
             ('address', {'prefix': 'closest', 'distribution': 'closest'}),
             ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
             ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+            ('address', {'prefix': 'unavailable', 'distribution': 'unavailable'})
         ])
         cls.router = cls.tester.qdrouterd(name, config)
         cls.router.wait_ready()
@@ -1124,6 +1125,16 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_27_create_unavailable_sender(self):
+        test = UnavailableSender(self.address)
+        test.run()
+        self.assertTrue(test.passed)
+
+    def test_28_create_unavailable_receiver(self):
+        test = UnavailableReceiver(self.address)
+        test.run()
+        self.assertTrue(test.passed)
+
     def test_reject_disposition(self):
         test = RejectDispositionTest(self.address)
         test.run()
@@ -1234,6 +1245,64 @@ class ExcessDeliveriesReleasedTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+class UnavailableBase(MessagingHandler):
+    def __init__(self, address):
+        super(UnavailableBase, self).__init__()
+        self.address = address
+        self.dest = "unavailable"
+        self.conn = None
+        self.sender = None
+        self.receiver = None
+        self.link_error = False
+        self.link_closed = False
+        self.passed = False
+        self.timer = None
+        self.link_name = "test_link"
+
+    def check_if_done(self):
+        if self.link_error and self.link_closed:
+            self.passed = True
+            self.conn.close()
+            self.timer.cancel()
+
+    def on_link_error(self, event):
+        link = event.link
+        if event.link.name == self.link_name and link.remote_condition.description \
+                == "Node not found":
+            self.link_error = True
+        self.check_if_done()
+
+    def on_link_remote_close(self, event):
+        if event.link.name == self.link_name:
+            self.link_closed = True
+            self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+class UnavailableSender(UnavailableBase):
+    def __init__(self, address):
+        super(UnavailableSender, self).__init__(address)
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn = event.container.connect(self.address)
+        # Creating a sender to an address with unavailable distribution
+        # The router will not allow this link to be established. It will close the link with an error of
+        # "Node not found"
+        self.sender = event.container.create_sender(self.conn, self.dest, name=self.link_name)
+
+class UnavailableReceiver(UnavailableBase):
+    def __init__(self, address):
+        super(UnavailableReceiver, self).__init__(address)
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn = event.container.connect(self.address)
+        # Creating a receiver to an address with unavailable distribution
+        # The router will not allow this link to be established. It will close the link with an error of
+        # "Node not found"
+        self.receiver = event.container.create_receiver(self.conn, self.dest, name=self.link_name)
 
 class MulticastUnsettledTest(MessagingHandler):
     def __init__(self, address):

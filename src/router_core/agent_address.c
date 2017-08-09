@@ -80,11 +80,12 @@ static void qdr_insert_address_columns_CT(qdr_core_t          *core,
 
     case QDR_ADDRESS_DISTRIBUTION: {
         switch (addr->treatment) {
-        case QD_TREATMENT_MULTICAST_FLOOD:  qd_compose_insert_string(body, "flood");        break;
-        case QD_TREATMENT_MULTICAST_ONCE:   qd_compose_insert_string(body, "multicast");    break;
-        case QD_TREATMENT_ANYCAST_CLOSEST:  qd_compose_insert_string(body, "closest");      break;
-        case QD_TREATMENT_ANYCAST_BALANCED: qd_compose_insert_string(body, "balanced");     break;
-        case QD_TREATMENT_LINK_BALANCED:    qd_compose_insert_string(body, "linkBalanced"); break;
+            case QD_TREATMENT_MULTICAST_FLOOD:  qd_compose_insert_string(body, "flood");        break;
+            case QD_TREATMENT_MULTICAST_ONCE:   qd_compose_insert_string(body, "multicast");    break;
+            case QD_TREATMENT_ANYCAST_CLOSEST:  qd_compose_insert_string(body, "closest");      break;
+            case QD_TREATMENT_ANYCAST_BALANCED: qd_compose_insert_string(body, "balanced");     break;
+            case QD_TREATMENT_LINK_BALANCED:    qd_compose_insert_string(body, "linkBalanced"); break;
+            case QD_TREATMENT_UNAVAILABLE:      qd_compose_insert_string(body, "unavailable");  break;
         }
         break;
     }
