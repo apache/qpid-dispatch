@@ -874,7 +874,8 @@ qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connec
     if (in_phase)  *in_phase  = addr ? addr->in_phase  : 0;
     if (out_phase) *out_phase = addr ? addr->out_phase : 0;
 
-    return addr ? addr->treatment : QD_TREATMENT_ANYCAST_BALANCED;
+
+    return addr ? addr->treatment : core->qd->treatment;
 }
 
 
@@ -885,7 +886,7 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_it
     char *copy    = storage;
     bool  on_heap = false;
     int   length  = qd_iterator_length(iter);
-    qd_address_treatment_t trt = QD_TREATMENT_ANYCAST_BALANCED;
+    qd_address_treatment_t trt = core->qd->treatment;
 
     if (length > HASH_STORAGE_SIZE) {
         copy    = (char*) malloc(length + 1);
@@ -976,7 +977,8 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
                                                      qdr_terminus_t   *terminus,
                                                      bool              create_if_not_found,
                                                      bool              accept_dynamic,
-                                                     bool             *link_route)
+                                                     bool             *link_route,
+                                                     bool             *forbidden)
 {
     qdr_address_t *addr = 0;
 
@@ -984,6 +986,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     // Unless expressly stated, link routing is not indicated for this terminus.
     //
     *link_route = false;
+    *forbidden = false;
 
     if (qdr_terminus_is_dynamic(terminus)) {
         //
@@ -1086,6 +1089,11 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     int addr_phase;
     qd_address_treatment_t treat = qdr_treatment_for_address_CT(core, conn, iter, &in_phase, &out_phase);
 
+    if (treat == QD_TREATMENT_LINK_FORBIDDEN) {
+        *forbidden = true;
+        return 0;
+    }
+
     qd_iterator_annotate_prefix(iter, '\0'); // Cancel previous override
     addr_phase = dir == QD_INCOMING ? in_phase : out_phase;
     qd_iterator_annotate_phase(iter, (char) addr_phase + '0');
@@ -1093,8 +1101,10 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr && create_if_not_found) {
         addr = qdr_address_CT(core, treat);
-        qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
-        DEQ_INSERT_TAIL(core->addrs, addr);
+        if (addr) {
+            qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
+            DEQ_INSERT_TAIL(core->addrs, addr);
+        }
     }
 
     return addr;
@@ -1300,9 +1310,15 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 //
                 // This link has a target address
                 //
-                bool           link_route;
-                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, true, &link_route);
-                if (!addr) {
+                bool  link_route;
+                bool  forbidden;
+                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, true, &link_route, &forbidden);
+                if (forbidden) {
+                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
+                    qdr_terminus_free(source);
+                    qdr_terminus_free(target);
+                }
+                else if (!addr) {
                     //
                     // No route to this destination, reject the link
                     //
@@ -1357,9 +1373,15 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         //
         switch (link->link_type) {
         case QD_LINK_ENDPOINT: {
-            bool           link_route;
-            qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, source, true, true, &link_route);
-            if (!addr) {
+            bool  link_route;
+            bool  forbidden;
+            qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, source, true, true, &link_route, &forbidden);
+            if (forbidden) {
+                qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
+                qdr_terminus_free(source);
+                qdr_terminus_free(target);
+            }
+            else if (!addr) {
                 //
                 // No route to this destination, reject the link
                 //

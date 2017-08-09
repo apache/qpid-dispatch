@@ -504,6 +504,13 @@
                     "deprecated": true,
                     "description": "(DEPRECATED) This value is no longer used in the router.",
                     "create": true
+                },
+                "defaultDistribution": {
+                    "type": ["multicast", "closest", "balanced", "forbidden"],
+                    "description": "Default forwarding treatment for any address without a specified treatment. multicast - one copy of each message delivered to all subscribers; closest - messages delivered to only the closest subscriber; balanced - messages delivered to one subscriber with load balanced across subscribers; linkBalanced - for link-routing, link attaches balanced across destinations; forbidden - this address is forbidden, link attaches to an address of forbidden distribution will be rejected.",
+                    "create": true,
+                    "required": false,
+                    "default": "balanced"
                 }
             }
         },
@@ -956,7 +963,7 @@
                     "required": true
                 },
                 "distribution": {
-                    "type": ["multicast", "closest", "balanced"],
+                    "type": ["multicast", "closest", "balanced", "forbidden"],
                     "description": "Treatment of traffic associated with the address",
                     "create": true,
                     "required": false,
@@ -1172,8 +1179,8 @@
             "extends": "operationalEntity",
             "attributes": {
                 "distribution": {
-                    "type": ["flood", "multicast", "closest", "balanced", "linkBalanced"],
-                    "description": "Forwarding treatment for the address: flood - messages delivered to all subscribers along all available paths (this will cause duplicate deliveries if there are redundant paths); multi - one copy of each message delivered to all subscribers; anyClosest - messages delivered to only the closest subscriber; anyBalanced - messages delivered to one subscriber with load balanced across subscribers; linkBalanced - for link-routing, link attaches balanced across destinations."
+                    "type": ["flood", "multicast", "closest", "balanced", "linkBalanced", "forbidden"],
+                    "description": "Forwarding treatment for the address: flood - messages delivered to all subscribers along all available paths (this will cause duplicate deliveries if there are redundant paths); multicast - one copy of each message delivered to all subscribers; closest - messages delivered to only the closest subscriber; balanced - messages delivered to one subscriber with load balanced across subscribers; linkBalanced - for link-routing, link attaches balanced across destinations; forbidden - this address is forbidden, link attaches to an address of forbidden distribution will be rejected."
                 },
                 "inProcess": {
                     "type": "integer",

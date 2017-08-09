@@ -80,6 +80,7 @@ foreach(py_test_module
     system_tests_drain
     system_tests_management
     system_tests_one_router
+    system_tests_default_distribution
     system_tests_policy
     system_tests_protocol_family
     system_tests_protocol_settings
