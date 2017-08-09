@@ -1331,10 +1331,14 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     qdr_link_outbound_second_attach_CT(core, link, source, target);
 
                     //
-                    // Issue the initial credit only if there are destinations for the address.
+                    // Issue the initial credit only if there are destinations for the address or if the address treatment is multicast.
                     //
-                    if (DEQ_SIZE(addr->subscriptions) || DEQ_SIZE(addr->rlinks) || qd_bitmask_cardinality(addr->rnodes))
+                    if (DEQ_SIZE(addr->subscriptions)
+                            || DEQ_SIZE(addr->rlinks)
+                            || qd_bitmask_cardinality(addr->rnodes)
+                            || qdr_is_addr_treatment_multicast(addr)) {
                         qdr_link_issue_credit_CT(core, link, link->capacity, false);
+                    }
                 }
             }
             break;

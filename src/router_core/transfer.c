@@ -613,16 +613,26 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
     if (addr && addr == link->owning_addr && qdr_addr_path_count_CT(addr) == 0) {
         //
         // We are trying to forward a delivery on an address that has no outbound paths
-        // AND the incoming link is targeted (not anonymous).  In this case, we must put
-        // the delivery on the incoming link's undelivered list.  Note that it is safe
+        // AND the incoming link is targeted (not anonymous).
+
+        // If the owning_addr is a multicast addr and there are no outbound paths, we will release this delivery
+        // and replenish the credit.
+
+        // For non multicast addresses, put the delivery on the incoming link's undelivered list.  Note that it is safe
         // to do this because the undelivered list will be flushed once the number of
         // paths transitions from zero to one.
         //
         // Use the action-reference as the reference for undelivered rather
         // than decrementing and incrementing the delivery ref_count.
         //
-        DEQ_INSERT_TAIL(link->undelivered, dlv);
-        dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
+        if (qdr_is_addr_treatment_multicast(link->owning_addr)) {
+            qdr_delivery_release_CT(core, dlv);
+            qdr_link_issue_credit_CT(core, link, 1, false);
+        }
+        else {
+            DEQ_INSERT_TAIL(link->undelivered, dlv);
+            dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
+        }
         return;
     }
 

@@ -304,6 +304,17 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
     return addr;
 }
 
+
+bool qdr_is_addr_treatment_multicast(qdr_address_t *addr)
+{
+    if (addr) {
+        if (addr->treatment == QD_TREATMENT_MULTICAST_FLOOD || addr->treatment == QD_TREATMENT_MULTICAST_ONCE)
+            return true;
+    }
+    return false;
+}
+
+
 void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
 {
     // Remove the address from the list and hash index
