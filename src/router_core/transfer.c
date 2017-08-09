@@ -639,9 +639,9 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
     // can be because there were no receivers or because the address was not defined in the config file.
     // If the treatment for such addresses is set to be forbidden, we send back a rejected disposition and detach the link
     //
-    else if (core->qd->treatment == QD_TREATMENT_LINK_FORBIDDEN) {
+    else if (core->qd->default_treatment == QD_TREATMENT_FORBIDDEN) {
         dlv->disposition = PN_REJECTED;
-        dlv->error = qdr_error("qd:forbidden", "Sending deliveries to this address is forbidden");
+        dlv->error = qdr_error(QD_AMQP_COND_NOT_ALLOWED, "Sending deliveries to this address is forbidden");
         qdr_delivery_push_CT(core, dlv);
         //
         // We will not detach this link because this could be anonymous sender. We don't know

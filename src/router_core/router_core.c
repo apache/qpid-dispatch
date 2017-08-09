@@ -274,7 +274,7 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment)
 {
-    if (treatment == QD_TREATMENT_LINK_FORBIDDEN)
+    if (treatment == QD_TREATMENT_FORBIDDEN)
         return 0;
     qdr_address_t *addr = new_qdr_address_t();
     ZERO(addr);

@@ -43,7 +43,7 @@ typedef enum {
     QD_TREATMENT_ANYCAST_CLOSEST  = 2,
     QD_TREATMENT_ANYCAST_BALANCED = 3,
     QD_TREATMENT_LINK_BALANCED    = 4,
-    QD_TREATMENT_LINK_FORBIDDEN   = 5
+    QD_TREATMENT_FORBIDDEN        = 5
 } qd_address_treatment_t;
 
 #include <qpid/dispatch/router_core.h>

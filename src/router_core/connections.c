@@ -875,7 +875,7 @@ qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connec
     if (out_phase) *out_phase = addr ? addr->out_phase : 0;
 
 
-    return addr ? addr->treatment : core->qd->treatment;
+    return addr ? addr->treatment : core->qd->default_treatment;
 }
 
 
@@ -886,7 +886,7 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_it
     char *copy    = storage;
     bool  on_heap = false;
     int   length  = qd_iterator_length(iter);
-    qd_address_treatment_t trt = core->qd->treatment;
+    qd_address_treatment_t trt = core->qd->default_treatment;
 
     if (length > HASH_STORAGE_SIZE) {
         copy    = (char*) malloc(length + 1);
@@ -1089,7 +1089,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     int addr_phase;
     qd_address_treatment_t treat = qdr_treatment_for_address_CT(core, conn, iter, &in_phase, &out_phase);
 
-    if (treat == QD_TREATMENT_LINK_FORBIDDEN) {
+    if (treat == QD_TREATMENT_FORBIDDEN) {
         *forbidden = true;
         return 0;
     }
@@ -1314,7 +1314,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 bool  forbidden;
                 qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, true, &link_route, &forbidden);
                 if (forbidden) {
-                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
+                    qdr_link_outbound_detach_CT(core, link, qdr_error(QD_AMQP_COND_NOT_ALLOWED, "Connectivity to the node is forbidden"), 0, true);
                     qdr_terminus_free(source);
                     qdr_terminus_free(target);
                 }
@@ -1377,7 +1377,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             bool  forbidden;
             qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, source, true, true, &link_route, &forbidden);
             if (forbidden) {
-                qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
+                qdr_link_outbound_detach_CT(core, link, qdr_error(QD_AMQP_COND_NOT_ALLOWED, "Connectivity to the node is forbidden"), 0, true);
                 qdr_terminus_free(source);
                 qdr_terminus_free(target);
             }

@@ -79,7 +79,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_dispatch_set_router_area(qd, strdup("0"));
     qd_dispatch_set_router_id(qd, strdup("0"));
     qd->router_mode = QD_ROUTER_MODE_ENDPOINT;
-    qd->treatment   = QD_TREATMENT_LINK_BALANCED;
+    qd->default_treatment   = QD_TREATMENT_LINK_BALANCED;
 
     qd_python_initialize(qd, python_pkgdir);
     if (qd_error_code()) { qd_dispatch_free(qd); return 0; }
@@ -171,17 +171,17 @@ void qd_dispatch_set_router_default_distribution(qd_dispatch_t *qd, char *distri
 {
     if (distribution) {
         if (strcmp(distribution, MULTICAST_DISTRIBUTION) == 0)
-            qd->treatment = QD_TREATMENT_MULTICAST_ONCE;
+            qd->default_treatment = QD_TREATMENT_MULTICAST_ONCE;
         else if (strcmp(distribution, CLOSEST_DISTRIBUTION) == 0)
-            qd->treatment = QD_TREATMENT_ANYCAST_CLOSEST;
+            qd->default_treatment = QD_TREATMENT_ANYCAST_CLOSEST;
         else if (strcmp(distribution, BALANCED_DISTRIBUTION) == 0)
-            qd->treatment = QD_TREATMENT_ANYCAST_BALANCED;
+            qd->default_treatment = QD_TREATMENT_ANYCAST_BALANCED;
         else if (strcmp(distribution, FORBIDDEN_DISTRIBUTION) == 0)
-            qd->treatment = QD_TREATMENT_LINK_FORBIDDEN;
+            qd->default_treatment = QD_TREATMENT_FORBIDDEN;
     }
     else
         // The default for the router defaultDistribution field is QD_TREATMENT_ANYCAST_BALANCED
-        qd->treatment = QD_TREATMENT_ANYCAST_BALANCED;
+        qd->default_treatment = QD_TREATMENT_ANYCAST_BALANCED;
 }
 
 qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)

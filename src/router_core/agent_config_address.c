@@ -212,7 +212,7 @@ static qd_address_treatment_t qdra_address_treatment_CT(qd_parsed_field_t *field
         if (qd_iterator_equal(iter, (unsigned char*) "multicast"))    return QD_TREATMENT_MULTICAST_ONCE;
         if (qd_iterator_equal(iter, (unsigned char*) "closest"))      return QD_TREATMENT_ANYCAST_CLOSEST;
         if (qd_iterator_equal(iter, (unsigned char*) "balanced"))     return QD_TREATMENT_ANYCAST_BALANCED;
-        if (qd_iterator_equal(iter, (unsigned char*) "forbidden"))    return QD_TREATMENT_LINK_FORBIDDEN;
+        if (qd_iterator_equal(iter, (unsigned char*) "forbidden"))    return QD_TREATMENT_FORBIDDEN;
     }
     return QD_TREATMENT_ANYCAST_BALANCED;
 }

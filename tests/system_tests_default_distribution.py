@@ -133,7 +133,7 @@ class ForbiddenAnonymousSender(MessagingHandler):
         self.timer = None
         self.link_name = "anon_link"
         self.error_description = "Sending deliveries to this address is forbidden"
-        self.error_name = u'qd:forbidden'
+        self.error_name = u'amqp:not-allowed'
         self.num_sent = 0
 
     def on_start(self, event):
