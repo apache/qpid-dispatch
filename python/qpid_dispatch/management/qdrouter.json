@@ -507,7 +507,7 @@
                 },
                 "defaultDistribution": {
                     "type": ["multicast", "closest", "balanced", "forbidden"],
-                    "description": "Default forwarding treatment for any address without a specified treatment. multicast - one copy of each message delivered to all subscribers; closest - messages delivered to only the closest subscriber; balanced - messages delivered to one subscriber with load balanced across subscribers; linkBalanced - for link-routing, link attaches balanced across destinations; forbidden - this address is forbidden, link attaches to an address of forbidden distribution will be rejected.",
+                    "description": "Default forwarding treatment for any address without a specified treatment. multicast - one copy of each message delivered to all subscribers; closest - messages delivered to only the closest subscriber; balanced - messages delivered to one subscriber with load balanced across subscribers; forbidden - this address is forbidden, link attaches to an address of forbidden distribution will be rejected.",
                     "create": true,
                     "required": false,
                     "default": "balanced"
