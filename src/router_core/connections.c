@@ -824,6 +824,11 @@ void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t
             work->error = qdr_error("qd:connection-role", "Link attach forbidden on inter-router connection");
             break;
 
+        case QDR_CONDITION_COORDINATOR_NOT_FOUND:
+            work->error = qdr_error(QD_AMQP_COND_NOT_FOUND, "Link attach forbidden, there is no route to a coordinator, "
+                    "the router cannot coordinate transactions by itself. Try setting up a linkRoute to a coordinator and try again");
+            break;
+
         case QDR_CONDITION_NONE:
             work->error = 0;
             break;
@@ -1321,7 +1326,22 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                         qdr_terminus_free(target);
                     }
 
-                } else {
+                }
+
+                else if (qdr_terminus_is_coordinator(target)) {
+                    //
+                    // This target terminus is a coordinator.
+                    // If we got here, it means that the coordinator link attach could not be link routed to a broker (or to the next router).
+                    // The router should reject this link because the router cannot coordinate transactions itself.
+                    //
+                    // The attach response should have a null target to indicate refusal and the immediately coming detach.
+                    qdr_link_outbound_second_attach_CT(core, link, source, 0);
+
+                    // Now, send back a detach with the error amqp:not-found
+                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_COORDINATOR_NOT_FOUND, true);
+                }
+                else
+                    {
                     //
                     // Associate the link with the address.  With this association, it will be unnecessary
                     // to do an address lookup for deliveries that arrive on this link.
