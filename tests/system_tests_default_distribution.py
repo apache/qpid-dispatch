@@ -29,7 +29,7 @@ class DefaultDistributionTest(TestCase):
         super(DefaultDistributionTest, cls).setUpClass()
         name = "test-router"
         config = Qdrouterd.Config([
-            ('router', {'mode': 'standalone', 'id': 'QDR', "defaultDistribution": 'forbidden'}),
+            ('router', {'mode': 'standalone', 'id': 'QDR', "defaultDistribution": 'unavailable'}),
 
             ('listener', {'port': cls.tester.get_port()}),
 
@@ -41,18 +41,18 @@ class DefaultDistributionTest(TestCase):
         cls.router.wait_ready()
         cls.address = cls.router.addresses[0]
 
-    def test_create_forbidden_sender(self):
-        test = ForbiddenSender(self.address)
+    def test_create_unavailable_sender(self):
+        test = UnavailableSender(self.address)
         test.run()
         self.assertTrue(test.passed)
 
-    def test_create_forbidden_receiver(self):
-        test = ForbiddenReceiver(self.address)
+    def test_create_unavailable_receiver(self):
+        test = UnavailableReceiver(self.address)
         test.run()
         self.assertTrue(test.passed)
 
     def test_anonymous_sender(self):
-        test = ForbiddenAnonymousSender(self.address)
+        test = UnavailableAnonymousSender(self.address)
         test.run()
         self.assertTrue(test.received_error)
 class Timeout(object):
@@ -62,11 +62,11 @@ class Timeout(object):
     def on_timer_task(self, event):
         self.parent.timeout()
 
-class ForbiddenBase(MessagingHandler):
+class UnavailableBase(MessagingHandler):
     def __init__(self, address):
-        super(ForbiddenBase, self).__init__()
+        super(UnavailableBase, self).__init__()
         self.address = address
-        self.dest = "ForbiddenBase"
+        self.dest = "UnavailableBase"
         self.conn = None
         self.sender = None
         self.receiver = None
@@ -85,7 +85,7 @@ class ForbiddenBase(MessagingHandler):
     def on_link_error(self, event):
         link = event.link
         if event.link.name == self.link_name and link.remote_condition.description \
-                == "Connectivity to the node is forbidden":
+                == "Node not found":
             self.link_error = True
         self.check_if_done()
 
@@ -97,43 +97,43 @@ class ForbiddenBase(MessagingHandler):
     def run(self):
         Container(self).run()
 
-class ForbiddenSender(ForbiddenBase):
+class UnavailableSender(UnavailableBase):
     def __init__(self, address):
-        super(ForbiddenSender, self).__init__(address)
+        super(UnavailableSender, self).__init__(address)
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn = event.container.connect(self.address)
-        # Creating a sender to an address with forbidden distribution
+        # Creating a sender to an address with unavailable distribution
         # The router will not allow this link to be established. It will close the link with an error of
-        # "Connectivity to the node is forbidden"
+        # "Node not found"
         self.sender = event.container.create_sender(self.conn, self.dest, name=self.link_name)
 
-class ForbiddenReceiver(ForbiddenBase):
+class UnavailableReceiver(UnavailableBase):
     def __init__(self, address):
-        super(ForbiddenReceiver, self).__init__(address)
+        super(UnavailableReceiver, self).__init__(address)
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn = event.container.connect(self.address)
-        # Creating a receiver to an address with forbidden distribution
+        # Creating a receiver to an address with unavailable distribution
         # The router will not allow this link to be established. It will close the link with an error of
-        # "Connectivity to the node is forbidden"
+        # "Node not found"
         self.receiver = event.container.create_receiver(self.conn, self.dest, name=self.link_name)
 
-class ForbiddenAnonymousSender(MessagingHandler):
+class UnavailableAnonymousSender(MessagingHandler):
     def __init__(self, address):
-        super(ForbiddenAnonymousSender, self).__init__()
+        super(UnavailableAnonymousSender, self).__init__()
         self.address = address
-        self.dest = "ForbiddenBase"
+        self.dest = "UnavailableBase"
         self.conn = None
         self.sender = None
         self.receiver = None
         self.received_error = False
         self.timer = None
         self.link_name = "anon_link"
-        self.error_description = "Sending deliveries to this address is forbidden"
-        self.error_name = u'amqp:not-allowed'
+        self.error_description = "Deliveries cannot be sent to an unavailable address"
+        self.error_name = u'amqp:not-found'
         self.num_sent = 0
 
     def on_start(self, event):
@@ -145,8 +145,8 @@ class ForbiddenAnonymousSender(MessagingHandler):
     def on_sendable(self, event):
         if self.num_sent < 1:
             msg = Message(id=1, body='Hello World')
-            # this is a forbidden address
-            msg.address = "SomeForbiddenAddress"
+            # this is a unavailable address
+            msg.address = "SomeUnavailableAddress"
             event.sender.send(msg)
             self.num_sent += 1
 

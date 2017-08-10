@@ -637,16 +637,16 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
     //
     // There is no address that we can send this delivery to, which means the addr was not found in our hastable. This
     // can be because there were no receivers or because the address was not defined in the config file.
-    // If the treatment for such addresses is set to be forbidden, we send back a rejected disposition and detach the link
+    // If the treatment for such addresses is set to be unavailable, we send back a rejected disposition and detach the link
     //
-    else if (core->qd->default_treatment == QD_TREATMENT_FORBIDDEN) {
+    else if (core->qd->default_treatment == QD_TREATMENT_UNAVAILABLE) {
         dlv->disposition = PN_REJECTED;
-        dlv->error = qdr_error(QD_AMQP_COND_NOT_ALLOWED, "Sending deliveries to this address is forbidden");
+        dlv->error = qdr_error(QD_AMQP_COND_NOT_FOUND, "Deliveries cannot be sent to an unavailable address");
         qdr_delivery_push_CT(core, dlv);
         //
         // We will not detach this link because this could be anonymous sender. We don't know
         // which address the sender will be sending to next
-        // If this was not an anonymous sender, the initial attach would have been rejected if the target address was forbidden.
+        // If this was not an anonymous sender, the initial attach would have been rejected if the target address was unavailable.
         //
         return;
     }

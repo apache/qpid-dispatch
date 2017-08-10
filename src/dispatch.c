@@ -53,7 +53,7 @@ void            qd_error_initialize();
 const char     *CLOSEST_DISTRIBUTION   = "closest";
 const char     *MULTICAST_DISTRIBUTION = "multicast";
 const char     *BALANCED_DISTRIBUTION  = "balanced";
-const char     *FORBIDDEN_DISTRIBUTION = "forbidden";
+const char     *UNAVAILABLE_DISTRIBUTION = "unavailable";
 qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
 {
     qd_dispatch_t *qd = NEW(qd_dispatch_t);
@@ -176,8 +176,8 @@ void qd_dispatch_set_router_default_distribution(qd_dispatch_t *qd, char *distri
             qd->default_treatment = QD_TREATMENT_ANYCAST_CLOSEST;
         else if (strcmp(distribution, BALANCED_DISTRIBUTION) == 0)
             qd->default_treatment = QD_TREATMENT_ANYCAST_BALANCED;
-        else if (strcmp(distribution, FORBIDDEN_DISTRIBUTION) == 0)
-            qd->default_treatment = QD_TREATMENT_FORBIDDEN;
+        else if (strcmp(distribution, UNAVAILABLE_DISTRIBUTION) == 0)
+            qd->default_treatment = QD_TREATMENT_UNAVAILABLE;
     }
     else
         // The default for the router defaultDistribution field is QD_TREATMENT_ANYCAST_BALANCED

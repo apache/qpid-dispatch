@@ -978,7 +978,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
                                                      bool              create_if_not_found,
                                                      bool              accept_dynamic,
                                                      bool             *link_route,
-                                                     bool             *forbidden)
+                                                     bool             *unavailable)
 {
     qdr_address_t *addr = 0;
 
@@ -986,7 +986,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     // Unless expressly stated, link routing is not indicated for this terminus.
     //
     *link_route = false;
-    *forbidden = false;
+    *unavailable = false;
 
     if (qdr_terminus_is_dynamic(terminus)) {
         //
@@ -1089,8 +1089,8 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     int addr_phase;
     qd_address_treatment_t treat = qdr_treatment_for_address_CT(core, conn, iter, &in_phase, &out_phase);
 
-    if (treat == QD_TREATMENT_FORBIDDEN) {
-        *forbidden = true;
+    if (treat == QD_TREATMENT_UNAVAILABLE) {
+        *unavailable = true;
         return 0;
     }
 
@@ -1311,10 +1311,10 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 // This link has a target address
                 //
                 bool  link_route;
-                bool  forbidden;
-                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, true, &link_route, &forbidden);
-                if (forbidden) {
-                    qdr_link_outbound_detach_CT(core, link, qdr_error(QD_AMQP_COND_NOT_ALLOWED, "Connectivity to the node is forbidden"), 0, true);
+                bool  unavailable;
+                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, true, &link_route, &unavailable);
+                if (unavailable) {
+                    qdr_link_outbound_detach_CT(core, link, qdr_error(QD_AMQP_COND_NOT_FOUND, "Node not found"), 0, true);
                     qdr_terminus_free(source);
                     qdr_terminus_free(target);
                 }
@@ -1374,10 +1374,10 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         switch (link->link_type) {
         case QD_LINK_ENDPOINT: {
             bool  link_route;
-            bool  forbidden;
-            qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, source, true, true, &link_route, &forbidden);
-            if (forbidden) {
-                qdr_link_outbound_detach_CT(core, link, qdr_error(QD_AMQP_COND_NOT_ALLOWED, "Connectivity to the node is forbidden"), 0, true);
+            bool  unavailable;
+            qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, source, true, true, &link_route, &unavailable);
+            if (unavailable) {
+                qdr_link_outbound_detach_CT(core, link, qdr_error(QD_AMQP_COND_NOT_FOUND, "Node not found"), 0, true);
                 qdr_terminus_free(source);
                 qdr_terminus_free(target);
             }

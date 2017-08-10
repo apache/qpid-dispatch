@@ -53,7 +53,7 @@ class RouterTest(TestCase):
             ('address', {'prefix': 'closest', 'distribution': 'closest'}),
             ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
             ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
-            ('address', {'prefix': 'forbidden', 'distribution': 'forbidden'})
+            ('address', {'prefix': 'unavailable', 'distribution': 'unavailable'})
         ])
         cls.router = cls.tester.qdrouterd(name, config)
         cls.router.wait_ready()
@@ -1125,13 +1125,13 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_27_create_forbidden_sender(self):
-        test = ForbiddenSender(self.address)
+    def test_27_create_unavailable_sender(self):
+        test = UnavailableSender(self.address)
         test.run()
         self.assertTrue(test.passed)
 
-    def test_28_create_forbidden_receiver(self):
-        test = ForbiddenReceiver(self.address)
+    def test_28_create_unavailable_receiver(self):
+        test = UnavailableReceiver(self.address)
         test.run()
         self.assertTrue(test.passed)
 
@@ -1245,11 +1245,11 @@ class ExcessDeliveriesReleasedTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
-class ForbiddenBase(MessagingHandler):
+class UnavailableBase(MessagingHandler):
     def __init__(self, address):
-        super(ForbiddenBase, self).__init__()
+        super(UnavailableBase, self).__init__()
         self.address = address
-        self.dest = "forbidden"
+        self.dest = "unavailable"
         self.conn = None
         self.sender = None
         self.receiver = None
@@ -1268,7 +1268,7 @@ class ForbiddenBase(MessagingHandler):
     def on_link_error(self, event):
         link = event.link
         if event.link.name == self.link_name and link.remote_condition.description \
-                == "Connectivity to the node is forbidden":
+                == "Node not found":
             self.link_error = True
         self.check_if_done()
 
@@ -1280,28 +1280,28 @@ class ForbiddenBase(MessagingHandler):
     def run(self):
         Container(self).run()
 
-class ForbiddenSender(ForbiddenBase):
+class UnavailableSender(UnavailableBase):
     def __init__(self, address):
-        super(ForbiddenSender, self).__init__(address)
+        super(UnavailableSender, self).__init__(address)
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn = event.container.connect(self.address)
-        # Creating a sender to an address with forbidden distribution
+        # Creating a sender to an address with unavailable distribution
         # The router will not allow this link to be established. It will close the link with an error of
-        # "Connectivity to the node is forbidden"
+        # "Node not found"
         self.sender = event.container.create_sender(self.conn, self.dest, name=self.link_name)
 
-class ForbiddenReceiver(ForbiddenBase):
+class UnavailableReceiver(UnavailableBase):
     def __init__(self, address):
-        super(ForbiddenReceiver, self).__init__(address)
+        super(UnavailableReceiver, self).__init__(address)
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn = event.container.connect(self.address)
-        # Creating a receiver to an address with forbidden distribution
+        # Creating a receiver to an address with unavailable distribution
         # The router will not allow this link to be established. It will close the link with an error of
-        # "Connectivity to the node is forbidden"
+        # "Node not found"
         self.receiver = event.container.create_receiver(self.conn, self.dest, name=self.link_name)
 
 class MulticastUnsettledTest(MessagingHandler):
