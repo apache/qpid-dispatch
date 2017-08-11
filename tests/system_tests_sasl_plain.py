@@ -198,7 +198,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
 
         Creates two routers (QDR.X and QDR.Y) and sets up PLAIN authentication on QDR.X.
         QDR.Y connects to QDR.X by providing a sasl_username and a sasl_password.
-        This PLAIN authentication is done over an TLS/SSLv3 connection.
+        This PLAIN authentication is done over a TLS connection.
 
         """
         super(RouterTestPlainSaslOverSsl, cls).setUpClass()
@@ -291,14 +291,14 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         self.assertEqual(1, split_list.count("normal"))
 
     def test_inter_router_plain_over_ssl_exists(self):
-        """The setUpClass sets up two routers with SASL PLAIN enabled over TLS/SSLv3.
+        """The setUpClass sets up two routers with SASL PLAIN enabled over TLS.
 
         This test makes executes a query for type='org.apache.qpid.dispatch.connection' over
         an unauthenticated listener to
         QDR.X and makes sure that the output has an "inter-router" connection to
         QDR.Y whose authentication is PLAIN. This ensures that QDR.Y did not
         somehow use SASL ANONYMOUS to connect to QDR.X
-        Also makes sure that TLSv1/SSLv3 was used as sslProto
+        Also makes sure that TLSv1.x was used as sslProto
 
         """
         if not SASL.extended():
@@ -307,8 +307,8 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         local_node = Node.connect(self.routers[0].addresses[1], timeout=TIMEOUT)
         results = local_node.query(type='org.apache.qpid.dispatch.connection').results
 
-        # sslProto should be TLSv1/SSLv3
-        self.assertEqual(u'TLSv1/SSLv3', results[0][10])
+        # sslProto should be TLSv1.x
+        self.assertTrue(u'TLSv1' in results[0][10])
 
         # role should be inter-router
         self.assertEqual(u'inter-router', results[0][3])
@@ -499,8 +499,8 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
         self.assertTrue(found, "Connection to %s not found" % search)
 
-        # sslProto should be TLSv1/SSLv3
-        self.assertEqual(u'TLSv1/SSLv3', results[N][10])
+        # sslProto should be TLSv1.x
+        self.assertTrue(u'TLSv1' in results[N][10])
 
         # role should be inter-router
         self.assertEqual(u'inter-router', results[N][3])
