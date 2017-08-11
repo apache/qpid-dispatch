@@ -165,6 +165,10 @@ static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
         config->host = host;
         free(addr);
     }
+    else if (host && addr && strcmp(host, addr) != 0 && strcmp(host, "127.0.0.1") == 0) {
+        config->host = addr;
+        free(host);
+    }
     else if (host && strcmp(host, "") != 0 ) {
         config->host = host;
         free(addr);
