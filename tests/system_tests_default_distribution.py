@@ -17,6 +17,9 @@
 # under the License.
 #
 
+import re
+import system_test
+from subprocess import PIPE
 from system_test import TestCase, Qdrouterd, TIMEOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -41,6 +44,17 @@ class DefaultDistributionTest(TestCase):
         cls.router.wait_ready()
         cls.address = cls.router.addresses[0]
 
+    def run_qdstat(self, args, regexp=None, address=None):
+        p = self.popen(
+            ['qdstat', '--bus', str(address or self.address), '--timeout', str(system_test.TIMEOUT) ] + args,
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+
+        out = p.communicate()[0]
+        assert p.returncode == 0, \
+            "qdstat exit status %s, output:\n%s" % (p.returncode, out)
+        if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+        return out
+
     def test_create_unavailable_sender(self):
         test = UnavailableSender(self.address)
         test.run()
@@ -55,6 +69,16 @@ class DefaultDistributionTest(TestCase):
         test = UnavailableAnonymousSender(self.address)
         test.run()
         self.assertTrue(test.received_error)
+
+    def test_general(self):
+        out = self.run_qdstat(['--general'], r'(?s)Router Statistics.*Mode\s*Standalone')
+        self.assertTrue("Connections  1" in out)
+        self.assertTrue("Nodes        0" in out)
+        self.assertTrue("Auto Links   0" in out)
+        self.assertTrue("Link Routes  0" in out)
+        self.assertTrue("Router Id    QDR" in out)
+        self.assertTrue("Mode         standalone" in out)
+
 class Timeout(object):
     def __init__(self, parent):
         self.parent = parent

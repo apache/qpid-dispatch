@@ -1129,23 +1129,29 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     int addr_phase;
     qd_address_treatment_t treat = qdr_treatment_for_address_CT(core, conn, iter, &in_phase, &out_phase);
 
-    if (treat == QD_TREATMENT_UNAVAILABLE) {
-        *unavailable = true;
-        return 0;
-    }
-
     qd_iterator_annotate_prefix(iter, '\0'); // Cancel previous override
     addr_phase = dir == QD_INCOMING ? in_phase : out_phase;
     qd_iterator_annotate_phase(iter, (char) addr_phase + '0');
 
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
+
+    if (addr && addr->treatment == QD_TREATMENT_UNAVAILABLE)
+        *unavailable = true;
+
     if (!addr && create_if_not_found) {
         addr = qdr_address_CT(core, treat);
         if (addr) {
             qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(core->addrs, addr);
         }
+
+        if (!addr && treat == QD_TREATMENT_UNAVAILABLE)
+            *unavailable = true;
     }
+
+    if (qdr_terminus_is_coordinator(terminus))
+        *unavailable = false;
+
 
     return addr;
 }
