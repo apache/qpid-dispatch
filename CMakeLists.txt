@@ -146,7 +146,13 @@ else (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
  add_compile_options(-lpthread)
 endif (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
 
-set(CATCH_UNDEFINED "-Wl,-z,defs")
+if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wno-gnu-statement-expression)
+endif()
+
+if (NOT (USE_SANITIZERS OR USE_TSAN))
+  set(CATCH_UNDEFINED "-Wl,-z,defs")
+endif ()
 
 ##
 ## Header file installation
