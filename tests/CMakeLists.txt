@@ -92,7 +92,7 @@ foreach(py_test_module
     system_tests_user_id_proxy
     system_tests_deprecated
     system_tests_two_routers
-    system_tests_three_routers
+    system_tests_distribution
     system_tests_multi_tenancy
     system_tests_dynamic_terminus
     system_tests_log_message_components
