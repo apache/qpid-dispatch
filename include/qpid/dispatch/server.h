@@ -23,6 +23,7 @@
 #include <qpid/dispatch/failoverlist.h>
 #include <proton/engine.h>
 #include <proton/event.h>
+#include <proton/ssl.h>
 
 struct qd_container_t;
 
@@ -150,6 +151,24 @@ typedef struct qd_server_config_t {
      * Space-separated list of SASL mechanisms to be accepted for the connection.
      */
     char *sasl_mechanisms;
+
+    /**
+     * Address, i.e. host:port, of remote authentication service to connect to.
+     * (listener only)
+     */
+    char *auth_service;
+    /**
+     * Hostname to set on sasl-init sent to authentication service.
+     */
+    char *sasl_init_hostname;
+    /**
+     * Ssl config for connecting to the authentication service.
+     */
+    pn_ssl_domain_t *auth_ssl_conf;
+    /**
+     * The name of the related sasl plugin config.
+     */
+    char *sasl_plugin;
 
     /**
      * If appropriate for the mechanism, the username for authentication

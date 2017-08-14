@@ -40,6 +40,7 @@
 #include "timer_private.h"
 #include "alloc.h"
 #include "config.h"
+#include "remote_sasl.h"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -345,6 +346,11 @@ qd_error_t qd_entity_refresh_sslProfile(qd_entity_t* entity, void *impl)
     return QD_ERROR_NONE;
 }
 
+qd_error_t qd_entity_refresh_authServicePlugin(qd_entity_t* entity, void *impl)
+{
+    return QD_ERROR_NONE;
+}
+
 
 static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_config_t *config, pn_transport_t *tport)
 {
@@ -621,6 +627,10 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         pn_sasl_config_name(sasl, ctx->server->sasl_config_name);
         if (config->sasl_mechanisms)
             pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
+        if (config->auth_service) {
+            qd_log(server->log_source, QD_LOG_INFO, "enabling remote authentication service %s", config->auth_service);
+            qdr_use_remote_authentication_service(tport, config->auth_service, config->sasl_init_hostname, config->auth_ssl_conf);
+        }
         pn_transport_require_auth(tport, config->requireAuthentication);
         pn_transport_require_encryption(tport, config->requireEncryption);
         pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
@@ -751,6 +761,10 @@ void qd_connection_free(qd_connection_t *ctx)
  */
 static bool handle(qd_server_t *qd_server, pn_event_t *e) {
     pn_connection_t *pn_conn = pn_event_connection(e);
+    if (pn_conn && qdr_is_authentication_service_connection(pn_conn)) {
+        qdr_handle_authentication_service_connection_event(e);
+        return true;
+    }
     qd_connection_t *ctx  = pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : NULL;
 
     switch (pn_event_type(e)) {

@@ -563,6 +563,33 @@
             }
         },
 
+        "authServicePlugin": {
+            "description":"EXPERIMENTAL. Attributes for setting SASL plugin.",
+            "referential": true,
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "authService": {
+                    "type": "string",
+                    "description": "Address of a service to delegate authentication to.",
+                    "required": true,
+                    "create": true
+                },
+                "saslInitHostname": {
+                    "type": "string",
+                    "description": "Value to set for hostname field on sasl-init",
+                    "required": false,
+                    "create": true
+                },
+                "authSslProfile": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Name of the sslProfile to use for the authentication service.",
+                    "create": true
+                }
+            }
+        },
+
         "listener": {
             "description": "Listens for incoming connections to the router.",
             "extends": "configurationEntity",
@@ -621,6 +648,12 @@
                     "type": "boolean",
                     "default": false,
                     "description": "yes: Require the peer's identity to be authenticated; no: Do not require any authentication.",
+                    "create": true
+                },
+                "saslPlugin": {
+                    "type": "string",
+                    "required": false,
+                    "description": "EXPERIMENTAL. Name of the a sasl plugin configuration section to use for this listener (e.g. authServicePlugin).",
                     "create": true
                 },
                 "requireEncryption": {

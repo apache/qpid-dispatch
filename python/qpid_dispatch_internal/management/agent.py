@@ -359,6 +359,18 @@ class SslProfileEntity(EntityAdapter):
     def __str__(self):
         return super(SslProfileEntity, self).__str__().replace("Entity(", "SslProfileEntity(")
 
+class AuthServicePluginEntity(EntityAdapter):
+    def create(self):
+        return self._qd.qd_dispatch_configure_sasl_plugin(self._dispatch, self)
+
+    def _delete(self):
+        self._qd.qd_connection_manager_delete_sasl_plugin(self._dispatch, self._implementations[0].key)
+    def _identifier(self):
+        return self.name
+
+    def __str__(self):
+        return super(AuthServicePluginEntity, self).__str__().replace("Entity(", "AuthServicePluginEntity(")
+
 class ListenerEntity(EntityAdapter):
     def create(self):
         config_listener = self._qd.qd_dispatch_configure_listener(self._dispatch, self)
