@@ -229,7 +229,7 @@ qd_error_t qd_entity_set_stringf(qd_entity_t *entity, const char* attribute, con
     char dummy[1];
     va_list ap;
     va_start(ap, format);
-    int len = vsnprintf(dummy, 1, format, ap);
+    size_t len = vsnprintf(dummy, 1, format, ap);
     va_end(ap);
 
     char buf[len+1];
