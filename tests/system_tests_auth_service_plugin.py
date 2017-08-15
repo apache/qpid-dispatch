@@ -127,7 +127,10 @@ class SimpleConnect(MessagingHandler):
 
     def on_transport_error(self, event):
         self.error = event.transport.condition
-        event.connection.close()
+        if event.connection:
+            event.connection.close()
+        else:
+            print("ERROR: %s" % error)
 
     def run(self):
         Container(self).run()
