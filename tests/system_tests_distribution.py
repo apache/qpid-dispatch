@@ -101,7 +101,7 @@ class AddressCheckerTimeout ( object ):
 
 
 #================================================================
-#     Setup 
+#     Setup
 #================================================================
 
 class DistributionTests ( TestCase ):
@@ -110,7 +110,7 @@ class DistributionTests ( TestCase ):
     def setUpClass(cls):
         """
         Create a router topology that is a superset of the topologies we will
-        need for various tests.  So far, we have only two types of tests: 
+        need for various tests.  So far, we have only two types of tests:
         3-router linear, and 3-router triangular.  The various tests simply
         attach their senders and receivers appropriately to 'see' their
         desired topology.
@@ -133,18 +133,18 @@ class DistributionTests ( TestCase ):
 
 
 
-        #                                                                          
+        #
         #     Connection picture
         #
-        #           1           1                                                    
-        #         A <-------- B <------ C                                         
-        #          ^ 2       ^ 2                                                    
-        #           \       /                                                      
-        #            \     /                                                       
-        #             \   /                                                        
-        #              \ /                                                         
-        #               D                                                          
-        #                                                                          
+        #           1           1
+        #         A <-------- B <------ C
+        #          ^ 2       ^ 2
+        #           \       /
+        #            \     /
+        #             \   /
+        #              \ /
+        #               D
+        #
         #
 
         A_client_port          = cls.tester.get_port()
@@ -158,7 +158,7 @@ class DistributionTests ( TestCase ):
         B_inter_router_port_2  = cls.tester.get_port()
 
         # "Route-container port" does not mean that the port
-        # contains a route.  It means that any client that 
+        # contains a route.  It means that any client that
         # connectsd to the port is considered to be a route-
         # container.
         A_route_container_port = cls.tester.get_port()
@@ -171,7 +171,7 @@ class DistributionTests ( TestCase ):
         # Costs are associated not with routers, but with the
         # connections between routers.  In the config, they may
         # be attached to the inter-router listener, or the connector,
-        # or both.  If both the inter-router listener and the 
+        # or both.  If both the inter-router listener and the
         # connector have associated costs, the higher of the two
         # will be used.
         cls.A_B_cost =   10
@@ -217,11 +217,11 @@ class DistributionTests ( TestCase ):
                         'containerId': 'LinkRouteTest'
                       }
                     )
-                 ] 
+                 ]
                )
 
         router ( 'B',
-                 [  
+                 [
                     ( 'listener',
                       { 'port': B_client_port,
                         'role': 'normal',
@@ -419,37 +419,37 @@ class DistributionTests ( TestCase ):
         test.run()
         self.assertEqual(None, test.error)
 
-        #                                                                          
+        #
         #     Cost picture for balanced distribution tests.
         #
         #              10          20
-        #         A <-------- B <------ C                                         
-        #          ^         ^                                                      
-        #           \       /                                                      
-        #       50   \     /  100                                                  
-        #             \   /                                                        
-        #              \ /                                                         
-        #               D                                                          
-        #                                                                          
-
-           
-        #  Here is how the message balancing should work for 
+        #         A <-------- B <------ C
+        #          ^         ^
+        #           \       /
+        #       50   \     /  100
+        #             \   /
+        #              \ /
+        #               D
+        #
+        #
+        #
+        #  Here is how the message balancing should work for
         #  various total number of messages, up to 100:
-        # 
+        #
         #  NOTE: remember these messages are all unsettled.
         #        And will stay that way.  This is not a realistic
-        #        usage scenario, but it the best way to test the 
+        #        usage scenario, but it the best way to test the
         #        balanced distribution algorithm.
         #
         #  1. Messages start flowing in at A.  They will all
         #     be used by A (sent to its receiver) until the
         #     total == cost ( A, B ).
-        # 
+        #
         #  2. At that point, A will start sharing with B,
         #     one-for-me-one-for-you. (So A will go to 11 before
         #     B gets its first message.)
         #
-        #  3. A and B will count up until B reaches 
+        #  3. A and B will count up until B reaches
         #     cost ( B, C )
         #     B will then start sharings its messages with C,
         #     one-for-me-one-for-you.  (So B will go to 21 before
@@ -459,10 +459,10 @@ class DistributionTests ( TestCase ):
         #     A is still taking every other message, B is only getting
         #     A's overflow, and now B is sharing half of that with C.
         #     So at this point B will start falling farther behind A.
-        #  
+        #
         #  5. The totals here are completely deterministic, so we pass
         #     to the test a 'slop' amount of 0.
-        #     
+        #
         #    total   near --10--> mid ---20--> far
         #
         #     1        1            0            0
@@ -487,15 +487,16 @@ class DistributionTests ( TestCase ):
         #     100     55           33           12
         #
 
- 
+
     def test_09_balanced_linear ( self ):
-        # slop is how much the second two values may diverge from 
+        # slop is how much the second two values may diverge from
         # the expected.  But they still must sum to total - A.
         total      = 100
         expected_A = 55
         expected_B = 33
         expected_C = 12
         slop       = 0
+        omit_middle_receiver = False
         test = BalancedTest ( self.A_addr,
                               self.B_addr,
                               self.C_addr,
@@ -504,7 +505,40 @@ class DistributionTests ( TestCase ):
                               expected_A,
                               expected_B,
                               expected_C,
-                              slop
+                              slop,
+                              omit_middle_receiver
+                            )
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_10_balanced_linear_omit_middle_receiver ( self ):
+        # If we omit the middle receiver, then router A will count
+        # up to cost ( A, B ) and the keep counting up a further
+        # cost ( B, C ) before it starts to spill over.
+        # That is, it will count up to
+        #    cost ( A, B ) + cost ( B, C ) == 30
+        # After that it will start sharing downstream (router C)
+        # one-for-me-one-for-you.  So when the number of total messages
+        # is odd, A will be 31 ahead of C.  When total message count is
+        # even, A will be 30 ahead.
+        # As in the other linear scenario, there is no 'slop' here.
+        total      = 100
+        expected_A = 65
+        expected_B = 0
+        expected_C = 35
+        slop       = 0
+        omit_middle_receiver = True
+        test = BalancedTest ( self.A_addr,
+                              self.B_addr,
+                              self.C_addr,
+                              "addr_09",
+                              total,
+                              expected_A,
+                              expected_B,
+                              expected_C,
+                              slop,
+                              omit_middle_receiver
                             )
         test.run()
         self.assertEqual(None, test.error)
@@ -515,7 +549,7 @@ class DistributionTests ( TestCase ):
         #     Cost picture
         #
         #              10          20
-        #         A <-------- B <------ C                                               
+        #         A <-------- B <------ C
         #          ^         ^
         #           \       /
         #       50   \     /  100
@@ -533,19 +567,19 @@ class DistributionTests ( TestCase ):
         #  2. A will always keep the message for itself (for its own receiver)
         #     if it can do so without violating rule (1).
         #
-        #  3. So, A will count up to 11, and then it will start alternating 
-        #     with B.  
+        #  3. So, A will count up to 11, and then it will start alternating
+        #     with B.
         #
         #  4. When A counts up to 51, it must also start sharing with D.
         #     It will alternate between B and D.
         #
-        #  5. As long as B does not yet have 100 messages, it will not 
+        #  5. As long as B does not yet have 100 messages, it will not
         #     share with D.
         #
-        #  6. So! at 100 messages total, A must be above both of its 
-        #     neighbors by that neighbor's cost, or 1 more -- and the total 
+        #  6. So! at 100 messages total, A must be above both of its
+        #     neighbors by that neighbor's cost, or 1 more -- and the total
         #     of all 3 must sum to 100.
-        #     
+        #
         #     A = B + 10      B = A - 10
         #     A = D + 50      D = A - 50
         #     A + B + D == 100
@@ -560,18 +594,19 @@ class DistributionTests ( TestCase ):
         #     A is 50 or 51 > D --> D ==  4 or  3
         #     B == 43 and D == 3
 
-        #     So pass these values in to the test: (54, 43, 3) 
+        #     So pass these values in to the test: (54, 43, 3)
         #     and test that:
         #       1. A is exactly that value.
         #       2. B and D sum to 100 - A
         #       3. B and D are both with 1 of their expected values.
         #
-    def test_10_balanced_triangle ( self ):
+    def test_11_balanced_triangle ( self ):
         total      = 100
         expected_A = 54
         expected_B = 43
         expected_C = 3
         slop       = 1
+        omit_middle_receiver = False
         test = BalancedTest ( self.A_addr,
                               self.B_addr,
                               self.D_addr,
@@ -580,7 +615,8 @@ class DistributionTests ( TestCase ):
                               expected_A,
                               expected_B,
                               expected_C,
-                              slop
+                              slop,
+                              omit_middle_receiver
                             )
         test.run()
         self.assertEqual(None, test.error)
@@ -596,13 +632,13 @@ class DistributionTests ( TestCase ):
 
 
 #================================================================
-#     Tests 
+#     Tests
 #================================================================
 
 
 class TargetedSenderTest ( MessagingHandler ):
     """
-    A 'targeted' sender is one in which we tell the router what 
+    A 'targeted' sender is one in which we tell the router what
     address we want to send to. (As opposed to letting the router
     pass back an address to us.)
     """
@@ -744,7 +780,7 @@ class DynamicReplyTo(MessagingHandler):
     In this test we have a separate 'client' and 'server' with separate
     connections.  The client sends requests to the server, and embeds in
     them its desired reply-to address.  The server uses that address to
-    send back messages.  The tests ends with success if the client receives 
+    send back messages.  The tests ends with success if the client receives
     the expected number of replies, or with failure if we time out before
     that happens.
     """
@@ -1106,7 +1142,7 @@ class ClosestTest ( MessagingHandler ):
             if response.status_code == 200 and response.subscriberCount == 2 and response.remoteCount == 2:
                 # now we know that we have two subscribers on nearside router, and two remote
                 # routers that know about the address. The network is ready.
-                # Now we can make the nearside sender without getting a 
+                # Now we can make the nearside sender without getting a
                 # "No Path To Destination" error.
                 self.sender = event.container.create_sender ( self.send_cnx, self.dest )
 
@@ -1201,13 +1237,13 @@ class ClosestTest ( MessagingHandler ):
 class BalancedTest ( MessagingHandler ):
     """
     This test is topology-agnostic. This code thinks of its nodes as 1, 2, 3.
-    The caller knows if they are linear or triangular, or a tree.  It calculates 
+    The caller knows if they are linear or triangular, or a tree.  It calculates
     the expected results for nodes 1, 2, and 3, and also tells me if there can be
-    a little 'slop' in the results. 
-    ( Slop can happen in some topologies when you can't tell whether spillover 
+    a little 'slop' in the results.
+    ( Slop can happen in some topologies when you can't tell whether spillover
     will happen first to node 2, or to node 3.
     """
-    def __init__ ( self, router_1, router_2, router_3, addr_suffix, total_messages, expected_1, expected_2, expected_3, slop ):
+    def __init__ ( self, router_1, router_2, router_3, addr_suffix, total_messages, expected_1, expected_2, expected_3, slop, omit_middle_receiver ):
         super ( BalancedTest, self ).__init__(prefetch=0, auto_accept=False)
         self.error       = None
         self.router_3    = router_3
@@ -1220,6 +1256,10 @@ class BalancedTest ( MessagingHandler ):
         self.n_sent          = 0
         self.n_received      = 0
 
+        self.recv_1 = None
+        self.recv_2 = None
+        self.recv_3 = None
+
         self.count_3 = 0
         self.count_2 = 0
         self.count_1 = 0
@@ -1228,6 +1268,7 @@ class BalancedTest ( MessagingHandler ):
         self.expected_2 = expected_2
         self.expected_3 = expected_3
         self.slop       = slop
+        self.omit_middle_receiver = omit_middle_receiver
 
         self.address_check_timer    = None
         self.address_check_receiver = None
@@ -1261,11 +1302,13 @@ class BalancedTest ( MessagingHandler ):
         self.cnx_1    = event.container.connect ( self.router_1 )
 
         self.recv_3  = event.container.create_receiver ( self.cnx_3,  self.dest )
-        self.recv_2  = event.container.create_receiver ( self.cnx_2,  self.dest )
+        if self.omit_middle_receiver is False :
+            self.recv_2 = event.container.create_receiver ( self.cnx_2,  self.dest )
         self.recv_1  = event.container.create_receiver ( self.cnx_1,  self.dest )
 
         self.recv_3.flow ( self.total_messages )
-        self.recv_2.flow ( self.total_messages )
+        if self.omit_middle_receiver is False :
+            self.recv_2.flow ( self.total_messages )
         self.recv_1.flow ( self.total_messages )
 
         self.address_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True )
@@ -1289,7 +1332,12 @@ class BalancedTest ( MessagingHandler ):
         if event.receiver == self.address_check_receiver:
             # This is one of my route-readiness checking messages.
             response = self.address_checker.parse_address_query_response(event.message)
-            if response.status_code == 200 and response.subscriberCount == 1 and response.remoteCount == 2:
+            if self.omit_middle_receiver is True :
+                expected_remotes = 1
+            else :
+                expected_remotes = 2
+
+            if response.status_code == 200 and response.subscriberCount == 1 and response.remoteCount == expected_remotes:
                 # Got confirmation of dest addr fully propagated through network.
                 # Since I have 3 nodes, I want to see 1 subscriber (which is on the local router) and
                 # 2 remote routers that know about my destination address.
@@ -1315,7 +1363,7 @@ class BalancedTest ( MessagingHandler ):
             # because it always will be due to how the code counts things.
             if self.n_received == self.total_messages:
                 if self.count_1 != self.expected_1:
-                    self.bail ( "bad count 1: cxount %d != expected %d" % (self.count_1, self.expected_1) )
+                    self.bail ( "bad count 1: count %d != expected %d" % (self.count_1, self.expected_1) )
                 elif abs(self.count_2 - self.expected_2) > self.slop:
                     self.bail ( "count_2 %d is more than %d different from expectation %d" % (self.count_2, self.slop, self.expected_2) )
                 elif abs(self.count_3 - self.expected_3) > self.slop:
