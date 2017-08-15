@@ -75,7 +75,7 @@ sql_select: dummy select
 
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
-                     ('authServicePlugin', {'name':'myauth', 'authService': 'localhost:%d' % auth_service_port}),
+                     ('authServicePlugin', {'name':'myauth', 'authService': '127.0.0.1:%d' % auth_service_port}),
                      ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin':'myauth', 'saslMechanisms':'PLAIN'}),
                      ('router', {'mode': 'standalone', 'id': 'router'})
         ])).wait_ready()
@@ -88,7 +88,7 @@ sql_select: dummy select
         if not SASL.extended():
             self.skipTest("Cyrus library not available. skipping test")
 
-        test = SimpleConnect("localhost:%d" % self.router_port, 'test@domain.com', 'password')
+        test = SimpleConnect("127.0.0.1:%d" % self.router_port, 'test@domain.com', 'password')
         test.run()
         self.assertEqual(True, test.connected)
         self.assertEqual(None, test.error)
@@ -101,7 +101,7 @@ sql_select: dummy select
         if not SASL.extended():
             self.skipTest("Cyrus library not available. skipping test")
 
-        test = SimpleConnect("localhost:%d" % self.router_port, 'test@domain.com', 'foo')
+        test = SimpleConnect("127.0.0.1:%d" % self.router_port, 'test@domain.com', 'foo')
         test.run()
         self.assertEqual(False, test.connected)
         self.assertEqual('amqp:unauthorized-access', test.error.name)
