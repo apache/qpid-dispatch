@@ -414,7 +414,7 @@ void qdr_handle_authentication_service_connection_event(pn_event_t *e)
     } else if (pn_event_type(e) == PN_TRANSPORT_CLOSED) {
         pnx_sasl_logf(transport, "disconnected from authentication service");
         qdr_sasl_relay_t* impl = (qdr_sasl_relay_t*) pnx_sasl_get_context(transport);
-        if (impl->downstream) {
+        if (!impl->downstream_released && impl->downstream) {
             pn_connection_release(impl->downstream);
             impl->downstream = 0;
             pnx_sasl_logf(transport, "authentication service: downstream connection released");

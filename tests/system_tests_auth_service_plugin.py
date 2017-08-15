@@ -130,7 +130,7 @@ class SimpleConnect(MessagingHandler):
         if event.connection:
             event.connection.close()
         else:
-            print("ERROR: %s" % error)
+            print("ERROR: %s" % self.error)
 
     def run(self):
         Container(self).run()
