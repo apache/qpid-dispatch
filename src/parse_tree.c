@@ -401,12 +401,6 @@ static bool parse_node_find(qd_parse_node_t *, token_iterator_t *,
 static bool parse_node_find_children(qd_parse_node_t *node, token_iterator_t *value,
                                      qd_parse_tree_visit_t *callback, void *handle)
 {
-    qd_log(node->log_source, QD_LOG_DEBUG,
-           "find_children token=%s pattern=%s input=%s",
-           node->token ? node->token : "NULL",
-           node->pattern ? node->pattern : "NULL",
-           value->token);
-
     if (!token_iterator_done(value)) {
 
         // check exact match first (precedence)
@@ -445,12 +439,6 @@ static bool parse_node_find_children(qd_parse_node_t *node, token_iterator_t *va
 static bool parse_node_find_token(qd_parse_node_t *node, token_iterator_t *value,
                                   qd_parse_tree_visit_t *callback, void *handle)
 {
-    qd_log(node->log_source, QD_LOG_DEBUG,
-           "find_token token=%s pattern=%s input=%s",
-           node->token ? node->token : "NULL",
-           node->pattern ? node->pattern : "NULL",
-           value->token);
-
     if (token_iterator_done(value) && node->pattern) {
         // exact match current node
         if (!callback(handle, node->pattern, node->payload))
@@ -468,12 +456,6 @@ static bool parse_node_find_token(qd_parse_node_t *node, token_iterator_t *value
 static bool parse_node_find_star(qd_parse_node_t *node, token_iterator_t *value,
                                  qd_parse_tree_visit_t *callback, void *handle)
 {
-    qd_log(node->log_source, QD_LOG_DEBUG,
-           "find_star token=%s pattern=%s input=%s",
-           node->token ? node->token : "NULL",
-           node->pattern ? node->pattern : "NULL",
-           value->token);
-
     // must match exactly one token:
     if (token_iterator_done(value))
         return true;  // no match here, but continue searching
@@ -497,12 +479,6 @@ static bool parse_node_find_star(qd_parse_node_t *node, token_iterator_t *value,
 static bool parse_node_find_hash(qd_parse_node_t *node, token_iterator_t *value,
                                  qd_parse_tree_visit_t *callback, void *handle)
 {
-    qd_log(node->log_source, QD_LOG_DEBUG,
-           "find_hash token=%s pattern=%s input=%s",
-           node->token ? node->token : "NULL",
-           node->pattern ? node->pattern : "NULL",
-           value->token);
-
     // consume each token and look for a match on the
     // remaining key.
     while (!token_iterator_done(value)) {
@@ -523,12 +499,6 @@ static bool parse_node_find_hash(qd_parse_node_t *node, token_iterator_t *value,
 static bool parse_node_find(qd_parse_node_t *node, token_iterator_t *value,
                             qd_parse_tree_visit_t *callback, void *handle)
 {
-    qd_log(node->log_source, QD_LOG_DEBUG,
-           "node_find token=%s pattern=%s input=%s",
-           node->token ? node->token : "NULL",
-           node->pattern ? node->pattern : "NULL",
-           value->token);
-
     if (node->is_star)
         return parse_node_find_star(node, value, callback, handle);
     else if (node->is_hash)
@@ -575,6 +545,8 @@ bool qd_parse_tree_retrieve_match(qd_parse_node_t *node,
 {
     *payload = NULL;
     qd_parse_tree_search(node, value, get_first, payload);
+    if (*payload == NULL)
+        qd_log(node->log_source, QD_LOG_TRACE, "Parse tree match not found");
     return *payload != NULL;
 }
 
@@ -588,6 +560,7 @@ void qd_parse_tree_search(qd_parse_node_t *node,
     // @TODO(kgiusti) for now:
     qd_iterator_t *dup = qd_iterator_dup(value);
     char *str = (char *)qd_iterator_copy(dup);
+    qd_log(node->log_source, QD_LOG_TRACE, "Parse tree search for '%s'", str);
 
     normalize_pattern(str);
 
@@ -611,7 +584,7 @@ void *qd_parse_tree_add_pattern(qd_parse_node_t *node,
     char *str = (char *)qd_iterator_copy(dup);
 
     normalize_pattern(str);
-    qd_log(node->log_source, QD_LOG_DEBUG,
+    qd_log(node->log_source, QD_LOG_TRACE,
            "Parse tree add address pattern '%s'", str);
 
     token_iterator_init(&key, str);
@@ -634,7 +607,7 @@ bool qd_parse_tree_get_pattern(qd_parse_node_t *node,
     char *str = (char *)qd_iterator_copy(dup);
 
     normalize_pattern((char *)str);
-    qd_log(node->log_source, QD_LOG_DEBUG,
+    qd_log(node->log_source, QD_LOG_TRACE,
            "Parse tree get address pattern '%s'", str);
 
     token_iterator_init(&key, str);
@@ -657,7 +630,7 @@ void *qd_parse_tree_remove_pattern(qd_parse_node_t *node,
     char *str = (char *)qd_iterator_copy(dup);
 
     normalize_pattern(str);
-    qd_log(node->log_source, QD_LOG_DEBUG,
+    qd_log(node->log_source, QD_LOG_TRACE,
            "Parse tree remove address pattern '%s'", str);
 
     token_iterator_init(&key, str);
