@@ -140,6 +140,8 @@ typedef enum {
     QDR_ROLE_ON_DEMAND
 } qdr_connection_role_t;
 
+typedef void (*qdr_connection_bind_context_t) (qdr_connection_t *context, void* token);
+
 /**
  * qdr_connection_opened
  *
@@ -170,7 +172,9 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   strip_annotations_out,
                                         int                    link_capacity,
                                         const char            *vhost,
-                                        qdr_connection_info_t *connection_info);
+                                        qdr_connection_info_t *connection_info,
+                                        qdr_connection_bind_context_t context_binder,
+                                        void* bind_token);
 
 /**
  * qdr_connection_closed

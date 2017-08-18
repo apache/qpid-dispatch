@@ -616,6 +616,12 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
     return 0;
 }
 
+static void bind_connection_context(qdr_connection_t *qdrc, void* token)
+{
+    qd_connection_t *conn = (qd_connection_t*) token;
+    qd_connection_set_context(conn, qdrc);
+    qdr_connection_set_context(qdrc, conn);
+}
 
 static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool inbound)
 {
@@ -733,18 +739,15 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                                                                  ssl_ssf,
                                                                  is_ssl);
 
-    qdr_connection_t *qdrc = qdr_connection_opened(router->router_core, inbound, role, cost, connection_id, name,
-                                                   pn_connection_remote_container(pn_conn),
-                                                   conn->strip_annotations_in,
-                                                   conn->strip_annotations_out,
-                                                   link_capacity,
-                                                   vhost,
-                                                   connection_info);
-
-    qd_connection_set_context(conn, qdrc);
-    qdr_connection_set_context(qdrc, conn);
+    qdr_connection_opened(router->router_core, inbound, role, cost, connection_id, name,
+                          pn_connection_remote_container(pn_conn),
+                          conn->strip_annotations_in,
+                          conn->strip_annotations_out,
+                          link_capacity,
+                          vhost,
+                          connection_info,
+                          bind_connection_context, conn);
 }
-
 
 static int AMQP_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {

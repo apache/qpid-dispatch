@@ -68,7 +68,9 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   strip_annotations_out,
                                         int                    link_capacity,
                                         const char            *vhost,
-                                        qdr_connection_info_t *connection_info)
+                                        qdr_connection_info_t *connection_info,
+                                        qdr_connection_bind_context_t context_binder,
+                                        void                  *bind_token)
 {
     qdr_action_t     *action = qdr_action(qdr_connection_opened_CT, "connection_opened");
     qdr_connection_t *conn   = new_qdr_connection_t();
@@ -95,6 +97,10 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
         conn->tenant_space = (char*) malloc(conn->tenant_space_len + 1);
         strcpy(conn->tenant_space, vhost);
         strcat(conn->tenant_space, "/");
+    }
+
+    if (context_binder) {
+        context_binder(conn, bind_token);
     }
 
     action->args.connection.conn             = conn;
