@@ -368,25 +368,30 @@ class DistributionTests ( TestCase ):
         cls.C_addr = router_C.addresses[0]
         cls.D_addr = router_D.addresses[0]
 
+
     def test_01_targeted_sender_AC ( self ):
         test = TargetedSenderTest ( self.A_addr, self.C_addr, "closest/01" )
         test.run()
         self.assertEqual ( None, test.error )
+
 
     def test_02_targeted_sender_DC ( self ):
         test = TargetedSenderTest ( self.D_addr, self.C_addr, "closest/02" )
         test.run()
         self.assertEqual ( None, test.error )
 
+
     def test_03_anonymous_sender_AC ( self ):
         test = AnonymousSenderTest ( self.A_addr, self.C_addr )
         test.run()
         self.assertEqual ( None, test.error )
 
+
     def test_04_anonymous_sender_DC ( self ):
         test = AnonymousSenderTest ( self.D_addr, self.C_addr )
         test.run()
         self.assertEqual ( None, test.error )
+
 
     def test_05_dynamic_reply_to_AC ( self ):
         test = DynamicReplyTo ( self.A_addr, self.C_addr )
@@ -407,7 +412,7 @@ class DistributionTests ( TestCase ):
                                    "addr_07"
                                  )
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertEqual ( None, test.error )
 
 
     def test_08_closest ( self ):
@@ -418,6 +423,16 @@ class DistributionTests ( TestCase ):
                            )
         test.run()
         self.assertEqual(None, test.error)
+
+
+    def test_09_closest_mesh ( self ):
+        test = ClosestTest ( self.A_addr,
+                             self.B_addr,
+                             self.D_addr,
+                             "addr_09"
+                           )
+        test.run()
+        self.assertEqual ( None, test.error )
 
         #
         #     Cost picture for balanced distribution tests.
@@ -487,8 +502,7 @@ class DistributionTests ( TestCase ):
         #     100     55           33           12
         #
 
-
-    def test_09_balanced_linear ( self ):
+    def test_10_balanced_linear ( self ):
         # slop is how much the second two values may diverge from
         # the expected.  But they still must sum to total - A.
         total      = 100
@@ -497,10 +511,11 @@ class DistributionTests ( TestCase ):
         expected_C = 12
         slop       = 0
         omit_middle_receiver = False
+
         test = BalancedTest ( self.A_addr,
                               self.B_addr,
                               self.C_addr,
-                              "addr_09",
+                              "addr_10",
                               total,
                               expected_A,
                               expected_B,
@@ -512,7 +527,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual(None, test.error)
 
 
-    def test_10_balanced_linear_omit_middle_receiver ( self ):
+    def test_11_balanced_linear_omit_middle_receiver ( self ):
         # If we omit the middle receiver, then router A will count
         # up to cost ( A, B ) and the keep counting up a further
         # cost ( B, C ) before it starts to spill over.
@@ -529,10 +544,11 @@ class DistributionTests ( TestCase ):
         expected_C = 35
         slop       = 0
         omit_middle_receiver = True
+
         test = BalancedTest ( self.A_addr,
                               self.B_addr,
                               self.C_addr,
-                              "addr_10",
+                              "addr_11",
                               total,
                               expected_A,
                               expected_B,
@@ -541,7 +557,7 @@ class DistributionTests ( TestCase ):
                               omit_middle_receiver
                             )
         test.run()
-        self.assertEqual(None, test.error)
+        self.assertEqual ( None, test.error )
 
 
         #     Reasoning for the triangular balanced case:
@@ -600,32 +616,26 @@ class DistributionTests ( TestCase ):
         #       2. B and D sum to 100 - A
         #       3. B and D are both with 1 of their expected values.
         #
-    def test_11_balanced_triangle ( self ):
+    def test_12_balanced_mesh ( self ):
         total      = 100
         expected_A = 54
         expected_B = 43
-        expected_C = 3
+        expected_D = 3
         slop       = 1
         omit_middle_receiver = False
         test = BalancedTest ( self.A_addr,
                               self.B_addr,
                               self.D_addr,
-                              "addr_11",
+                              "addr_12",
                               total,
                               expected_A,
                               expected_B,
-                              expected_C,
+                              expected_D,
                               slop,
                               omit_middle_receiver
                             )
         test.run()
-        self.assertEqual(None, test.error)
-
-
-
-
-
-
+        self.assertEqual ( None, test.error )
 
 
 
@@ -655,11 +665,13 @@ class TargetedSenderTest ( MessagingHandler ):
         self.n_received = 0
         self.n_accepted = 0
 
+
     def timeout(self):
         self.error = "Timeout Expired: n_sent=%d n_received=%d n_accepted=%d" % \
                      (self.n_sent, self.n_received, self.n_accepted)
         self.send_conn.close()
         self.recv_conn.close()
+
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
@@ -669,18 +681,22 @@ class TargetedSenderTest ( MessagingHandler ):
         self.receiver = event.container.create_receiver(self.recv_conn, self.dest)
         self.receiver.flow(self.n_expected)
 
+
     def send(self):
       while self.sender.credit > 0 and self.n_sent < self.n_expected:
         msg = Message(body=self.n_sent)
         self.sender.send(msg)
         self.n_sent += 1
 
+
     def on_sendable(self, event):
         if self.n_sent < self.n_expected:
             self.send()
 
+
     def on_accepted(self, event):
         self.n_accepted += 1
+
 
     def on_message(self, event):
         self.n_received += 1
@@ -689,6 +705,7 @@ class TargetedSenderTest ( MessagingHandler ):
             self.send_conn.close()
             self.recv_conn.close()
             self.timer.cancel()
+
 
     def run(self):
         Container(self).run()
@@ -734,11 +751,13 @@ class AnonymousSenderTest ( MessagingHandler ):
         self.send_conn.close()
         self.recv_conn.close()
 
+
     def on_start(self, event):
         self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.send_conn = event.container.connect(self.send_addr)
         self.recv_conn = event.container.connect(self.recv_addr)
         self.sender    = event.container.create_sender(self.send_conn, options=DynamicTarget())
+
 
     def send(self):
         while self.sender.credit > 0 and self.n_sent < self.expected:
@@ -746,18 +765,22 @@ class AnonymousSenderTest ( MessagingHandler ):
             m = Message(address=self.address, body="Message %d of %d" % (self.n_sent, self.expected))
             self.sender.send(m)
 
+
     def on_link_opened(self, event):
         if event.sender == self.sender:
             # Here we are told the address that we will use for the sender.
             self.address = self.sender.remote_target.address
             self.receiver = event.container.create_receiver(self.recv_conn, self.address)
 
+
     def on_sendable(self, event):
         self.send()
+
 
     def on_message(self, event):
         if event.receiver == self.receiver:
             self.n_received += 1
+
 
     def on_accepted(self, event):
         self.n_accepted += 1
@@ -765,6 +788,7 @@ class AnonymousSenderTest ( MessagingHandler ):
             self.send_conn.close()
             self.recv_conn.close()
             self.timer.cancel()
+
 
     def run(self):
         Container(self).run()
@@ -818,7 +842,6 @@ class DynamicReplyTo(MessagingHandler):
 
         self.server_receiver   = event.container.create_receiver(self.server_connection, self.dest)
         self.client_receiver   = event.container.create_receiver(self.client_connection, None, dynamic=True)
-
 
 
     def on_sendable(self, event):
@@ -1012,58 +1035,49 @@ class LinkAttachRouting ( MessagingHandler ):
 class ClosestTest ( MessagingHandler ):
     """
     Test whether distance-based message routing works in a
-    linear 3-router network.
+    3-router network. The network may be linear or mesh,
+    depending on which routers the caller gives us.
 
-    sender -----> NEAR -----> MID -----> FAR
-                   |           |          |
-                   v           v          v
-                  near        mid        far
-                  rcvrs       rcvrs      rcvrs
+    (Illustration is a linear network.)
 
-    With a linear network of 3 routers, set up a sender on the
-    near one, and then 2 receivers each on the near, middle, and
-    far routers.
-    After the first 10 messages have been received, close the
-    near routers and check results so far.  All 10 messages should
-    have gone to the near receivers, and none to the mid or far
-    receivers.
-    After the next 10 messages have been received, close the two
-    middle routers and check again.  All 10 messages should have
-    gone to the middle receivers, and none to the far ones.
-    Finally, after another 10 messages have been received, check
-    that they went to the far receivers.
+    sender -----> Router_1 -----> Router_2 -----> Router_3
+                     |              |                |
+                     v              v                v
+                  rcvr_1_a       rcvr_2_a         rcvr_3_a
+                  rcvr_1_b       rcvr_2_b         rcvr_3_b
+
+    With a linear network of 3 routers, set up a sender on
+    router_1, and then 2 receivers each on all 3 routers.
+
     """
-    def __init__ ( self, near_router, mid_router, far_router, addr_suffix ):
+    def __init__ ( self, router_1, router_2, router_3, addr_suffix ):
         super ( ClosestTest, self ).__init__(prefetch=0)
-        self.error         = None
-        self.near_router   = near_router
-        self.mid_router    = mid_router
-        self.far_router    = far_router
-        self.addr_suffix   = addr_suffix
-        self.dest          = "closest/" + addr_suffix
+        self.error       = None
+        self.router_1    = router_1
+        self.router_2    = router_2
+        self.router_3    = router_3
+        self.addr_suffix = addr_suffix
+        self.dest        = "closest/" + addr_suffix
 
         # This n_expected is actually the minimum number of messages
         # I will send.  The real number will be higher because some
-        # will be released when I close the near and middle receivers.
+        # will be released when I close some receivers.
         self.n_expected = 300
         self.one_third  = self.n_expected / 3
 
-        # n_received -- the grand total -- is used to decide when to
-        # close the near receivers and later the middle ones.
-        self.n_received    = 0
+        self.n_received = 0
 
-        # Counters for the near, middle, and far receivers are used
-        # to determine whether there has been an error.
-        self.near_1_count = 0
-        self.near_2_count = 0
-        self.mid_1_count  = 0
-        self.mid_2_count  = 0
-        self.far_1_count  = 0
-        self.far_2_count  = 0
+        self.count_1_a = 0
+        self.count_1_b = 0
+        self.count_2_a = 0
+        self.count_2_b = 0
+        self.count_3_a = 0
+        self.count_3_b = 0
 
         self.addr_check_timer    = None
         self.addr_check_receiver = None
         self.addr_check_sender   = None
+        self.bailed = False
 
     def timeout ( self ):
         self.check_results ( )
@@ -1078,51 +1092,51 @@ class ClosestTest ( MessagingHandler ):
         self.timer.cancel()
         self.error = text
         self.send_cnx.close()
-        self.near_cnx.close()
-        self.mid_cnx.close()
-        self.far_cnx.close()
+        self.cnx_1.close()
+        self.cnx_2.close()
+        self.cnx_3.close()
         if self.addr_check_timer:
             self.addr_check_timer.cancel()
 
 
     def on_start ( self, event ):
         self.timer    = event.reactor.schedule  ( TIMEOUT, Timeout(self) )
-        self.send_cnx = event.container.connect ( self.near_router )
-        self.near_cnx = event.container.connect ( self.near_router )
-        self.mid_cnx  = event.container.connect ( self.mid_router )
-        self.far_cnx  = event.container.connect ( self.far_router )
+        self.send_cnx = event.container.connect ( self.router_1 )
+        self.cnx_1    = event.container.connect ( self.router_1 )
+        self.cnx_2    = event.container.connect ( self.router_2 )
+        self.cnx_3    = event.container.connect ( self.router_3 )
 
         # Warning!
         # The two receiver-links on each router must be given
         # explicit distinct names, or we will in fact only get
         # one link.  And then wonder why receiver 2 on each
         # router isn't getting any messages.
-        self.near_recv_1 = event.container.create_receiver  ( self.near_cnx, self.dest, name="1" )
-        self.near_recv_2 = event.container.create_receiver  ( self.near_cnx, self.dest, name="2" )
+        self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name="1" )
+        self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name="2" )
 
-        self.mid_recv_1  = event.container.create_receiver  ( self.mid_cnx,  self.dest, name="1" )
-        self.mid_recv_2  = event.container.create_receiver  ( self.mid_cnx,  self.dest, name="2" )
+        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="1" )
+        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="2" )
 
-        self.far_recv_1  = event.container.create_receiver  ( self.far_cnx,  self.dest, name="1" )
-        self.far_recv_2  = event.container.create_receiver  ( self.far_cnx,  self.dest, name="2" )
+        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="1" )
+        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="2" )
 
-        self.near_recv_1.flow ( self.n_expected )
-        self.mid_recv_1.flow  ( self.n_expected )
-        self.far_recv_1.flow  ( self.n_expected )
+        self.recv_1_a.flow ( self.n_expected )
+        self.recv_2_a.flow ( self.n_expected )
+        self.recv_3_a.flow ( self.n_expected )
 
-        self.near_recv_2.flow ( self.n_expected )
-        self.mid_recv_2.flow  ( self.n_expected )
-        self.far_recv_2.flow  ( self.n_expected )
+        self.recv_1_b.flow ( self.n_expected )
+        self.recv_2_b.flow ( self.n_expected )
+        self.recv_3_b.flow ( self.n_expected )
 
-        self.addr_check_receiver = event.container.create_receiver ( self.near_cnx, dynamic=True )
-        self.addr_check_sender   = event.container.create_sender ( self.near_cnx, "$management" )
+        self.addr_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True )
+        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management" )
 
 
     def on_link_opened(self, event):
         if event.receiver:
             event.receiver.flow ( self.n_expected )
         if event.receiver == self.addr_check_receiver:
-            # Step 2. my addr-check link has opened: make the addr_checker with the given address.
+            # my addr-check link has opened: make the addr_checker with the given address.
             self.addr_checker = AddressChecker ( self.addr_check_receiver.remote_source.address )
             self.addr_check()
 
@@ -1140,9 +1154,9 @@ class ClosestTest ( MessagingHandler ):
             # This is a response to one of my address-readiness checking messages.
             response = self.addr_checker.parse_address_query_response(event.message)
             if response.status_code == 200 and response.subscriberCount == 2 and response.remoteCount == 2:
-                # now we know that we have two subscribers on nearside router, and two remote
+                # now we know that we have two subscribers on attached router, and two remote
                 # routers that know about the address. The network is ready.
-                # Now we can make the nearside sender without getting a
+                # Now we can make the sender without getting a
                 # "No Path To Destination" error.
                 self.sender = event.container.create_sender ( self.send_cnx, self.dest )
 
@@ -1158,59 +1172,51 @@ class ClosestTest ( MessagingHandler ):
             # This is a payload message.
             self.n_received += 1
 
-            # Increment the near, mid, or far counts, depending on
-            # which receiver the message came in on.
-            if event.receiver == self.near_recv_1:
-                self.near_1_count        += 1
-            elif event.receiver == self.near_recv_2:
-                self.near_2_count        += 1
-            elif event.receiver == self.mid_recv_1:
-                self.mid_1_count         += 1
-            elif event.receiver == self.mid_recv_2:
-                self.mid_2_count         += 1
-            elif event.receiver == self.far_recv_1:
-                self.far_1_count         += 1
-            elif event.receiver == self.far_recv_2:
-                self.far_2_count         += 1
+            # Count the messages that have come in for
+            # each receiver.
+            if event.receiver == self.recv_1_a:
+                self.count_1_a += 1
+            elif event.receiver == self.recv_1_b:
+                self.count_1_b += 1
+            elif event.receiver == self.recv_2_a:
+                self.count_2_a += 1
+            elif event.receiver == self.recv_2_b:
+                self.count_2_b += 1
+            elif event.receiver == self.recv_3_a:
+                self.count_3_a += 1
+            elif event.receiver == self.recv_3_b:
+                self.count_3_b += 1
 
             if self.n_received == self.one_third:
                 # The first one-third of messages should have gone exclusively
                 # to the near receivers.  At this point we should have
                 # no messages in the mid or far receivers.
-                self.near_recv_1.close()
-                self.near_recv_2.close()
-                if self.mid_1_count + self.mid_2_count + self.far_1_count + self.far_2_count > 0 :
-                    self.bail ( "error: mid or far receivers got messages before near were closed." )
-                # Make sure we got one third of the messages.
-                if self.near_1_count + self.near_2_count < self.one_third:
-                    self.bail ( "error: the near receivers got too few messages." )
+                self.recv_1_a.close()
+                self.recv_1_b.close()
+                if (self.count_2_a + self.count_2_b + self.count_3_a + self.count_3_b) > 0 :
+                    self.bail ( "error: routers 2 or 3 got messages before router 1 receivers were closed." )
                 # Make sure both receivers got some messages.
-                if self.near_1_count * self.near_2_count == 0:
-                    self.bail ( "error: one of the near receivers got no messages." )
+                if (self.count_1_a * self.count_1_b) == 0:
+                    self.bail ( "error: one of the receivers on router 1 got no messages." )
 
             elif self.n_received == 2 * self.one_third:
                 # The next one-third of messages should have gone exclusively
-                # to the mid receivers.  At this point we should have
+                # to the router_2 receivers.  At this point we should have
                 # no messages in the far receivers.
-                self.mid_recv_1.close()
-                self.mid_recv_2.close()
-                if self.far_1_count + self.far_2_count > 0 :
-                    self.bail ( "error: far receivers got messages before mid were closed." )
-                # Make sure we got one third of the messages.
-                if self.mid_1_count + self.mid_2_count < self.one_third:
-                    self.bail ( "error: the mid receivers got too few messages." )
+                self.recv_2_a.close()
+                self.recv_2_b.close()
+                if (self.count_3_a + self.count_3_b) > 0 :
+                    self.bail ( "error: router 3 got messages before 2 was closed." )
                 # Make sure both receivers got some messages.
-                if self.mid_1_count * self.mid_2_count == 0:
-                    self.bail ( "error: one of the mid receivers got no messages." )
+                if (self.count_2_a * self.count_2_b) == 0:
+                    self.bail ( "error: one of the receivers on router 2 got no messages." )
 
             # By the time we reach the expected number of messages
-            # we have closed the near and middle receivers.  If the far
-            # receivers are empty at this point, something is wrong.
+            # we have closed the router_1 and router_2 receivers.  If the
+            # router_3 receivers are empty at this point, something is wrong.
             if self.n_received >= self.n_expected :
-                if self.far_1_count + self.far_2_count < self.one_third:
-                    self.bail ( "error: the far receivers got too few messages." )
-                if self.far_1_count * self.far_2_count == 0:
-                    self.bail ( "error: one of the far receivers got no messages." )
+                if (self.count_3_a * self.count_3_b) == 0:
+                    self.bail ( "error: one of the receivers on router 3 got no messages." )
                 else:
                     self.bail ( None )
 
