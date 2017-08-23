@@ -1625,8 +1625,8 @@ class RejectCoordinatorTest(MessagingHandler, TransactionHandler):
     def __init__(self, url):
         super(RejectCoordinatorTest, self).__init__(prefetch=0)
         self.url = Url(url)
-        self.error = "Link attach forbidden, there is no route to a coordinator, the router cannot coordinate " \
-                     "transactions by itself. Try setting up a linkRoute to a coordinator and try again"
+        self.error = "The router can't coordinate transactions by itself, a linkRoute to a coordinator must be " \
+                     "configured to use transactions."
         self.container = None
         self.conn = None
         self.sender = None
@@ -1659,7 +1659,8 @@ class RejectCoordinatorTest(MessagingHandler, TransactionHandler):
         link = event.link
         # If the link name is 'txn-ctrl' and there is a link error and it matches self.error, then we know
         # that the router has rejected the link because it cannot coordinate transactions itself
-        if link.name == "txn-ctrl" and link.remote_condition.description == self.error:
+        if link.name == "txn-ctrl" and link.remote_condition.description == self.error and \
+                        link.remote_condition.name == 'amqp:precondition-failed':
             self.link_error = True
             self.check_if_done()
 

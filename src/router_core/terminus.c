@@ -91,8 +91,11 @@ void qdr_terminus_free(qdr_terminus_t *term)
 
 void qdr_terminus_copy(qdr_terminus_t *from, pn_terminus_t *to)
 {
-    if (!from)
+    if (!from) {
+        pn_terminus_set_type(to, PN_UNSPECIFIED);
         return;
+    }
+
     if (from->coordinator) {
         pn_terminus_set_type(to, PN_COORDINATOR);
         pn_data_copy(pn_terminus_capabilities(to), from->capabilities);
