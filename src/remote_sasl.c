@@ -28,6 +28,9 @@
 #include <proton/proactor.h>
 #include <proton/sasl.h>
 #include <proton/sasl-plugin.h>
+#include <qpid/dispatch/log.h>
+
+static qd_log_source_t* auth_service_log;
 
 typedef struct
 {
@@ -81,6 +84,8 @@ static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* s
     instance->authentication_service_address = strdup(address);
     if (sasl_init_hostname) {
         instance->sasl_init_hostname = strdup(sasl_init_hostname);
+    } else {
+        instance->sasl_init_hostname = 0;
     }
     instance->selected_mechanism = 0;
     instance->response.start = 0;
@@ -102,6 +107,7 @@ static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* s
 static void delete_qdr_sasl_relay_t(qdr_sasl_relay_t* instance)
 {
     if (instance->authentication_service_address) free(instance->authentication_service_address);
+    if (instance->sasl_init_hostname) free(instance->sasl_init_hostname);
     if (instance->mechlist) free(instance->mechlist);
     if (instance->selected_mechanism) free(instance->selected_mechanism);
     if (instance->response.start) free(instance->response.start);
@@ -207,7 +213,7 @@ static void remote_sasl_prepare(pn_transport_t *transport)
     if (!impl) return;
     if (pnx_sasl_is_client(transport)) {
         if (impl->downstream_state == UPSTREAM_INIT_RECEIVED) {
-            pnx_sasl_set_selected_mechanism(transport, strdup(impl->selected_mechanism));
+            pnx_sasl_set_selected_mechanism(transport, impl->selected_mechanism);
             pnx_sasl_set_local_hostname(transport, impl->sasl_init_hostname);
             pnx_sasl_set_bytes_out(transport, pn_bytes(impl->response.size, impl->response.start));
             pnx_sasl_set_desired_state(transport, SASL_POSTED_INIT);
@@ -231,6 +237,9 @@ static void remote_sasl_prepare(pn_transport_t *transport)
                 pnx_sasl_fail_authentication(transport);
             }
             pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
+        } else if (impl->upstream_state == DOWNSTREAM_CLOSED) {
+            pnx_sasl_fail_authentication(transport);
+            pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
         }
         impl->upstream_state = 0;
     }
@@ -249,7 +258,7 @@ static bool notify_upstream(qdr_sasl_relay_t* impl, uint8_t state)
 
 static bool notify_downstream(qdr_sasl_relay_t* impl, uint8_t state)
 {
-    if (!impl->downstream_released) {
+    if (!impl->downstream_released && impl->downstream) {
         impl->downstream_state = state;
         pn_connection_wake(impl->downstream);
         return true;
@@ -383,6 +392,7 @@ static void set_remote_impl(pn_transport_t *transport, qdr_sasl_relay_t* context
 
 void qdr_use_remote_authentication_service(pn_transport_t *transport, const char* address, const char* sasl_init_hostname, pn_ssl_domain_t* ssl_domain)
 {
+    auth_service_log = qd_log_source("AUTHSERVICE");
     qdr_sasl_relay_t* context = new_qdr_sasl_relay_t(address, sasl_init_hostname);
     context->ssl_domain = ssl_domain;
     set_remote_impl(transport, context);
@@ -393,37 +403,37 @@ void qdr_handle_authentication_service_connection_event(pn_event_t *e)
     pn_connection_t *conn = pn_event_connection(e);
     pn_transport_t *transport = pn_event_transport(e);
     if (pn_event_type(e) == PN_CONNECTION_BOUND) {
-        pnx_sasl_logf(transport, "Handling connection bound event for authentication service connection");
+        qd_log(auth_service_log, QD_LOG_DEBUG, "Handling connection bound event for authentication service connection");
         qdr_sasl_relay_t* context = get_sasl_relay_context(conn);
         if (context->ssl_domain) {
             pn_ssl_t* ssl = pn_ssl(transport);
             if (!ssl || pn_ssl_init(ssl, context->ssl_domain, 0)) {
-                pnx_sasl_logf(transport, "Cannot initialise SSL");
+                qd_log(auth_service_log, QD_LOG_WARNING, "Cannot initialise SSL");
             } else {
-                pnx_sasl_logf(transport, "Successfully initialised SSL");
+                qd_log(auth_service_log, QD_LOG_DEBUG, "Successfully initialised SSL");
             }
         }
         set_remote_impl(pn_event_transport(e), context);
     } else if (pn_event_type(e) == PN_CONNECTION_REMOTE_OPEN) {
-        pnx_sasl_logf(transport, "authentication against service complete; closing connection");
+        qd_log(auth_service_log, QD_LOG_DEBUG, "authentication against service complete; closing connection");
         pn_connection_close(conn);
     } else if (pn_event_type(e) == PN_CONNECTION_REMOTE_CLOSE) {
-        pnx_sasl_logf(transport, "authentication service closed connection");
+        qd_log(auth_service_log, QD_LOG_DEBUG, "authentication service closed connection");
         pn_connection_close(conn);
         pn_transport_close_head(transport);
     } else if (pn_event_type(e) == PN_TRANSPORT_CLOSED) {
-        pnx_sasl_logf(transport, "disconnected from authentication service");
+        qd_log(auth_service_log, QD_LOG_DEBUG, "disconnected from authentication service");
         qdr_sasl_relay_t* impl = (qdr_sasl_relay_t*) pnx_sasl_get_context(transport);
-        if (impl->downstream) {
-            pn_proactor_release_connection(impl->downstream);
-            pn_connection_release(impl->downstream);
-            impl->downstream = 0;
-            pnx_sasl_logf(transport, "authentication service: downstream connection released");
-        }
         if (!impl->complete) {
             notify_upstream(impl, DOWNSTREAM_CLOSED);
+            pn_condition_t* condition = pn_transport_condition(transport);
+            if (condition) {
+                qd_log(auth_service_log, QD_LOG_WARNING, "Downstream disconnected: %s %s", pn_condition_get_name(condition), pn_condition_get_description(condition));
+            } else {
+                qd_log(auth_service_log, QD_LOG_WARNING, "Downstream disconnected, no details available");
+            }
         }
-    } else if (transport) {
-        pnx_sasl_logf(transport, "Ignoring event for authentication service connection: %s", pn_event_type_name(pn_event_type(e)));
+    } else {
+        qd_log(auth_service_log, QD_LOG_DEBUG, "Ignoring event for authentication service connection: %s", pn_event_type_name(pn_event_type(e)));
     }
 }
