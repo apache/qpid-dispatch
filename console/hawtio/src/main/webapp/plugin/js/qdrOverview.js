@@ -944,7 +944,7 @@ var QDR = (function (QDR) {
 
     // get info for a single connection
     $scope.gridModes = [{
-        content: '<a><i class="icon-list"></i> Attriutes</a>',
+        content: '<a><i class="icon-list"></i> Attributes</a>',
         id: 'attributes',
         title: "View attributes"
       },
