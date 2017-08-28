@@ -177,6 +177,9 @@ var QDR = (function(QDR) {
    *     topLevelTabs array.
    */
   QDR.module.run(function(workspace, viewRegistry, layoutFull, $route, $rootScope, $location, $timeout, localStorage, QDRService, QDRChartService) {
+
+    QDR.queue = d3.queue;
+
     QDR.log.info("*************creating Dispatch Console************");
     var curPath = $location.path()
     QDR.log.info("curPath is " + curPath)
@@ -204,10 +207,9 @@ var QDR = (function(QDR) {
 
     Core.addCSS(QDR.contextPath + "plugin/css/dispatch.css");
     Core.addCSS(QDR.contextPath + "plugin/css/plugin.css");
-    //Core.addCSS("https://cdn.rawgit.com/mohsen1/json-formatter/master/dist/json-formatter.min.css");
-    Core.addCSS("https://cdnjs.cloudflare.com/ajax/libs/jquery.tipsy/1.0.2/jquery.tipsy.css");
-    Core.addCSS("https://code.jquery.com/ui/1.8.24/themes/base/jquery-ui.css");
-    Core.addCSS("https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css");
+    Core.addCSS(QDR.contextPath + "plugin/css/jquery.tipsy.css");
+    Core.addCSS(QDR.contextPath + "plugin/css/jquery-ui.css");
+    Core.addCSS(QDR.contextPath + "plugin/css/font-awesome.min.css");
 
     // tell hawtio that we have our own custom layout for
     // our view
@@ -286,20 +288,6 @@ QDR.log.info("showing dispatch tab: going to page " + lastLocation)
   return QDR;
 
 })(QDR || {});
-
-// force an more modern version of d3 to load
-$.getScript('https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.14/d3.min.js', function() {});
-$.getScript('https://cdnjs.cloudflare.com/ajax/libs/d3-queue/3.0.3/d3-queue.min.js', function() {
-  QDR.queue = d3.queue;
-});
-
-// tooltips on the list page
-$.getScript('https://cdn.rawgit.com/jaz303/tipsy/master/src/javascripts/jquery.tipsy.js', function() {});
-// tooltips on the topology page
-$.getScript('https://cdn.rawgit.com/briancray/tooltipsy/master/tooltipsy.min.js', function() {});
-// download string as file
-$.getScript('https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2014-11-29/FileSaver.min.js', function() {});
-
 
 // tell the hawtio plugin loader about our plugin so it can be
 // bootstrapped with the rest of angular
