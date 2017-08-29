@@ -10,3 +10,4 @@ tests/system_test.dir/
 .idea
 .metadata
 .settings
+console/test/topolgies/config-*
