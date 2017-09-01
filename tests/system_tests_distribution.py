@@ -370,302 +370,659 @@ class DistributionTests ( TestCase ):
         cls.D_addr = router_D.addresses[0]
 
 
-    def test_01_targeted_sender_AC ( self ):
-        test = TargetedSenderTest ( self.A_addr, self.C_addr, "closest/01" )
-        test.run()
-        self.assertEqual ( None, test.error )
+
+   def test_01_targeted_sender_AC ( self ):
+       test = TargetedSenderTest ( self.A_addr, self.C_addr, "closest/01" )
+       test.run()
+       self.assertEqual ( None, test.error )
 
 
-    def test_02_targeted_sender_DC ( self ):
-        test = TargetedSenderTest ( self.D_addr, self.C_addr, "closest/02" )
-        test.run()
-        self.assertEqual ( None, test.error )
+   def test_02_targeted_sender_DC ( self ):
+       test = TargetedSenderTest ( self.D_addr, self.C_addr, "closest/02" )
+       test.run()
+       self.assertEqual ( None, test.error )
 
 
-    def test_03_anonymous_sender_AC ( self ):
-        test = AnonymousSenderTest ( self.A_addr, self.C_addr )
-        test.run()
-        self.assertEqual ( None, test.error )
+   def test_03_anonymous_sender_AC ( self ):
+       test = AnonymousSenderTest ( self.A_addr, self.C_addr )
+       test.run()
+       self.assertEqual ( None, test.error )
 
 
-    def test_04_anonymous_sender_DC ( self ):
-        test = AnonymousSenderTest ( self.D_addr, self.C_addr )
-        test.run()
-        self.assertEqual ( None, test.error )
+   def test_04_anonymous_sender_DC ( self ):
+       test = AnonymousSenderTest ( self.D_addr, self.C_addr )
+       test.run()
+       self.assertEqual ( None, test.error )
 
 
-    def test_05_dynamic_reply_to_AC ( self ):
-        test = DynamicReplyTo ( self.A_addr, self.C_addr )
-        test.run()
-        self.assertEqual ( None, test.error )
+   def test_05_dynamic_reply_to_AC ( self ):
+       test = DynamicReplyTo ( self.A_addr, self.C_addr )
+       test.run()
+       self.assertEqual ( None, test.error )
 
 
-    def test_06_dynamic_reply_to_DC ( self ):
-        test = DynamicReplyTo ( self.D_addr, self.C_addr )
-        test.run()
-        self.assertEqual ( None, test.error )
+   def test_06_dynamic_reply_to_DC ( self ):
+       test = DynamicReplyTo ( self.D_addr, self.C_addr )
+       test.run()
+       self.assertEqual ( None, test.error )
 
 
-    def test_07_linkroute ( self ):
-        test = LinkAttachRouting ( self.C_addr,
-                                   self.A_route_container_addr,
-                                   self.linkroute_prefix,
-                                   "addr_07"
-                                 )
-        test.run()
-        self.assertEqual ( None, test.error )
+   def test_07_linkroute ( self ):
+       test = LinkAttachRouting ( self.C_addr,
+                                  self.A_route_container_addr,
+                                  self.linkroute_prefix,
+                                  "addr_07"
+                                )
+       test.run()
+       self.assertEqual ( None, test.error )
 
 
-    def test_08_closest ( self ):
-        test = ClosestTest ( self.A_addr,
+   def test_08_closest_linear ( self ):
+       test = ClosestTest ( self.A_addr,
+                            self.B_addr,
+                            self.C_addr,
+                            "addr_08"
+                          )
+       test.run()
+       self.assertEqual ( None, test.error )
+
+
+   def test_09_closest_mesh ( self ):
+       test = ClosestTest ( self.A_addr,
+                            self.B_addr,
+                            self.D_addr,
+                            "addr_09"
+                          )
+       test.run()
+       self.assertEqual ( None, test.error )
+
+       #
+       #     Cost picture for balanced distribution tests.
+       #
+       #              10          20
+       #         A <-------- B <------ C
+       #          ^         ^
+       #           \       /
+       #       50   \     /  100
+       #             \   /
+       #              \ /
+       #               D
+       #
+       #
+       #
+       #  Here is how the message balancing should work for
+       #  various total number of messages, up to 100:
+       #
+       #  NOTE: remember these messages are all unsettled.
+       #        And will stay that way.  This is not a realistic
+       #        usage scenario, but it the best way to test the
+       #        balanced distribution algorithm.
+       #
+       #  1. Messages start flowing in at A.  They will all
+       #     be used by A (sent to its receiver) until the
+       #     total == cost ( A, B ).
+       #
+       #  2. At that point, A will start sharing with B,
+       #     one-for-me-one-for-you. (So A will go to 11 before
+       #     B gets its first message.)
+       #
+       #  3. A and B will count up until B reaches
+       #     cost ( B, C )
+       #     B will then start sharings its messages with C,
+       #     one-for-me-one-for-you.  (So B will go to 21 before
+       #     C gets its first message.)
+       #
+       #  4. However note: it is NOT round-robin at this point.
+       #     A is still taking every other message, B is only getting
+       #     A's overflow, and now B is sharing half of that with C.
+       #     So at this point B will start falling farther behind A.
+       #
+       #  5. The totals here are completely deterministic, so we pass
+       #     to the test a 'slop' amount of 0.
+       #
+       #    total   near --10--> mid ---20--> far
+       #
+       #     1        1            0            0
+       #     10      10            0            0
+       #     11      11            0            0
+       #     12      11            1            0
+       #     13      12            1            0
+       #     14      12            2            0
+       #     ...
+       #     50      30           20            0
+       #     51      31           20            0
+       #     52      31           21            0
+       #     53      32           21            0
+       #     54      32           21            1
+       #     55      33           21            1
+       #     56      33           22            1
+       #     57      34           22            1
+       #     58      34           22            2
+       #     59      35           22            2
+       #     60      35           23            2
+       #     ...
+       #     100     55           33           12
+       #
+
+   def test_10_balanced_linear ( self ):
+       # slop is how much the second two values may diverge from
+       # the expected.  But they still must sum to total - A.
+       total      = 100
+       expected_A = 55
+       expected_B = 33
+       expected_C = 12
+       slop       = 0
+       omit_middle_receiver = False
+
+       test = BalancedTest ( self.A_addr,
                              self.B_addr,
                              self.C_addr,
-                             "addr_08"
+                             "addr_10",
+                             total,
+                             expected_A,
+                             expected_B,
+                             expected_C,
+                             slop,
+                             omit_middle_receiver
                            )
-        test.run()
-        self.assertEqual ( None, test.error )
+       test.run()
+       self.assertEqual ( None, test.error )
 
 
-    def test_09_closest_mesh ( self ):
-        test = ClosestTest ( self.A_addr,
+   def test_11_balanced_linear_omit_middle_receiver ( self ):
+       # If we omit the middle receiver, then router A will count
+       # up to cost ( A, B ) and the keep counting up a further
+       # cost ( B, C ) before it starts to spill over.
+       # That is, it will count up to
+       #    cost ( A, B ) + cost ( B, C ) == 30
+       # After that it will start sharing downstream (router C)
+       # one-for-me-one-for-you.  So when the number of total messages
+       # is odd, A will be 31 ahead of C.  When total message count is
+       # even, A will be 30 ahead.
+       # As in the other linear scenario, there is no 'slop' here.
+       total      = 100
+       expected_A = 65
+       expected_B = 0
+       expected_C = 35
+       slop       = 0
+       omit_middle_receiver = True
+
+       test = BalancedTest ( self.A_addr,
+                             self.B_addr,
+                             self.C_addr,
+                             "addr_11",
+                             total,
+                             expected_A,
+                             expected_B,
+                             expected_C,
+                             slop,
+                             omit_middle_receiver
+                           )
+       test.run()
+       self.assertEqual ( None, test.error )
+
+
+       #     Reasoning for the triangular balanced case:
+       #
+       #     Cost picture
+       #
+       #              10          20
+       #         A <-------- B <------ C
+       #          ^         ^
+       #           \       /
+       #       50   \     /  100
+       #             \   /
+       #              \ /
+       #               D
+       #
+       # We are doing  ( A, B, D ), with the sender attached at A.
+       # All these messages are unsettled, which is what allows us to
+       # see how the balanced distribution algorithm works.
+       #
+       #  1. total unsettled msgs at A cannot be more than B_cost + 1,
+       #     and also cannot be more than D_cost + 1
+       #
+       #  2. A will always keep the message for itself (for its own receiver)
+       #     if it can do so without violating rule (1).
+       #
+       #  3. So, A will count up to 11, and then it will start alternating
+       #     with B.
+       #
+       #  4. When A counts up to 51, it must also start sharing with D.
+       #     It will alternate between B and D.
+       #
+       #  5. As long as B does not yet have 100 messages, it will not
+       #     share with D.
+       #
+       #  6. So! at 100 messages total, A must be above both of its
+       #     neighbors by that neighbor's cost, or 1 more -- and the total
+       #     of all 3 must sum to 100.
+       #
+       #     A = B + 10      B = A - 10
+       #     A = D + 50      D = A - 50
+       #     A + B + D == 100
+       #     -->
+       #     A + (A - 10) + (A - 50) == 100
+       #     3A - 60 == 100
+       #     A == 53.333...
+       #     A == 54
+       #
+       #     so B + D == 46
+       #     A is 10 or 11 > B --> B == 44 or 43
+       #     A is 50 or 51 > D --> D ==  4 or  3
+       #     B == 43 and D == 3
+       #
+       #     So pass these values in to the test: (54, 43, 3)
+       #     and test that:
+       #       1. A is exactly that value.
+       #       2. B and D sum to 100 - A
+       #       3. B and D are both with 1 of their expected values.
+       #
+   def test_12_balanced_mesh ( self ):
+       total      = 100
+       expected_A = 54
+       expected_B = 43
+       expected_D = 3
+       slop       = 1
+       omit_middle_receiver = False
+       test = BalancedTest ( self.A_addr,
                              self.B_addr,
                              self.D_addr,
-                             "addr_09"
+                             "addr_12",
+                             total,
+                             expected_A,
+                             expected_B,
+                             expected_D,
+                             slop,
+                             omit_middle_receiver
                            )
-        test.run()
-        self.assertEqual ( None, test.error )
+       test.run()
+       self.assertEqual ( None, test.error )
 
-        #
-        #     Cost picture for balanced distribution tests.
-        #
-        #              10          20
-        #         A <-------- B <------ C
-        #          ^         ^
-        #           \       /
-        #       50   \     /  100
-        #             \   /
-        #              \ /
-        #               D
-        #
-        #
-        #
-        #  Here is how the message balancing should work for
-        #  various total number of messages, up to 100:
-        #
-        #  NOTE: remember these messages are all unsettled.
-        #        And will stay that way.  This is not a realistic
-        #        usage scenario, but it the best way to test the
-        #        balanced distribution algorithm.
-        #
-        #  1. Messages start flowing in at A.  They will all
-        #     be used by A (sent to its receiver) until the
-        #     total == cost ( A, B ).
-        #
-        #  2. At that point, A will start sharing with B,
-        #     one-for-me-one-for-you. (So A will go to 11 before
-        #     B gets its first message.)
-        #
-        #  3. A and B will count up until B reaches
-        #     cost ( B, C )
-        #     B will then start sharings its messages with C,
-        #     one-for-me-one-for-you.  (So B will go to 21 before
-        #     C gets its first message.)
-        #
-        #  4. However note: it is NOT round-robin at this point.
-        #     A is still taking every other message, B is only getting
-        #     A's overflow, and now B is sharing half of that with C.
-        #     So at this point B will start falling farther behind A.
-        #
-        #  5. The totals here are completely deterministic, so we pass
-        #     to the test a 'slop' amount of 0.
-        #
-        #    total   near --10--> mid ---20--> far
-        #
-        #     1        1            0            0
-        #     10      10            0            0
-        #     11      11            0            0
-        #     12      11            1            0
-        #     13      12            1            0
-        #     14      12            2            0
-        #     ...
-        #     50      30           20            0
-        #     51      31           20            0
-        #     52      31           21            0
-        #     53      32           21            0
-        #     54      32           21            1
-        #     55      33           21            1
-        #     56      33           22            1
-        #     57      34           22            1
-        #     58      34           22            2
-        #     59      35           22            2
-        #     60      35           23            2
-        #     ...
-        #     100     55           33           12
-        #
 
-    def test_10_balanced_linear ( self ):
-        # slop is how much the second two values may diverge from
-        # the expected.  But they still must sum to total - A.
-        total      = 100
-        expected_A = 55
-        expected_B = 33
-        expected_C = 12
-        slop       = 0
-        omit_middle_receiver = False
-
-        test = BalancedTest ( self.A_addr,
+   def test_13_multicast_linear ( self ):
+       test = MulticastTest ( self.A_addr,
                               self.B_addr,
                               self.C_addr,
-                              "addr_10",
-                              total,
-                              expected_A,
-                              expected_B,
-                              expected_C,
-                              slop,
-                              omit_middle_receiver
+                              "addr_13"
                             )
-        test.run()
-        self.assertEqual ( None, test.error )
+       test.run()
+       self.assertEqual ( None, test.error )
 
 
-    def test_11_balanced_linear_omit_middle_receiver ( self ):
-        # If we omit the middle receiver, then router A will count
-        # up to cost ( A, B ) and the keep counting up a further
-        # cost ( B, C ) before it starts to spill over.
-        # That is, it will count up to
-        #    cost ( A, B ) + cost ( B, C ) == 30
-        # After that it will start sharing downstream (router C)
-        # one-for-me-one-for-you.  So when the number of total messages
-        # is odd, A will be 31 ahead of C.  When total message count is
-        # even, A will be 30 ahead.
-        # As in the other linear scenario, there is no 'slop' here.
-        total      = 100
-        expected_A = 65
-        expected_B = 0
-        expected_C = 35
-        slop       = 0
-        omit_middle_receiver = True
-
-        test = BalancedTest ( self.A_addr,
-                              self.B_addr,
-                              self.C_addr,
-                              "addr_11",
-                              total,
-                              expected_A,
-                              expected_B,
-                              expected_C,
-                              slop,
-                              omit_middle_receiver
-                            )
-        test.run()
-        self.assertEqual ( None, test.error )
-
-
-        #     Reasoning for the triangular balanced case:
-
-        #     Cost picture
-        #
-        #              10          20
-        #         A <-------- B <------ C
-        #          ^         ^
-        #           \       /
-        #       50   \     /  100
-        #             \   /
-        #              \ /
-        #               D
-        #
-        # We are doing  ( A, B, D ), with the sender attached at A.
-        # All these messages are unsettled, which is what allows us to
-        # see how the balanced distribution algorithm works.
-        #
-        #  1. total unsettled msgs at A cannot be more than B_cost + 1,
-        #     and also cannot be more than D_cost + 1
-        #
-        #  2. A will always keep the message for itself (for its own receiver)
-        #     if it can do so without violating rule (1).
-        #
-        #  3. So, A will count up to 11, and then it will start alternating
-        #     with B.
-        #
-        #  4. When A counts up to 51, it must also start sharing with D.
-        #     It will alternate between B and D.
-        #
-        #  5. As long as B does not yet have 100 messages, it will not
-        #     share with D.
-        #
-        #  6. So! at 100 messages total, A must be above both of its
-        #     neighbors by that neighbor's cost, or 1 more -- and the total
-        #     of all 3 must sum to 100.
-        #
-        #     A = B + 10      B = A - 10
-        #     A = D + 50      D = A - 50
-        #     A + B + D == 100
-        #     -->
-        #     A + (A - 10) + (A - 50) == 100
-        #     3A - 60 == 100
-        #     A == 53.333...
-        #     A == 54
-        #
-        #     so B + D == 46
-        #     A is 10 or 11 > B --> B == 44 or 43
-        #     A is 50 or 51 > D --> D ==  4 or  3
-        #     B == 43 and D == 3
-
-        #     So pass these values in to the test: (54, 43, 3)
-        #     and test that:
-        #       1. A is exactly that value.
-        #       2. B and D sum to 100 - A
-        #       3. B and D are both with 1 of their expected values.
-        #
-    def test_12_balanced_mesh ( self ):
-        total      = 100
-        expected_A = 54
-        expected_B = 43
-        expected_D = 3
-        slop       = 1
-        omit_middle_receiver = False
-        test = BalancedTest ( self.A_addr,
+   def test_14_multicast_mesh ( self ):
+       test = MulticastTest ( self.A_addr,
                               self.B_addr,
                               self.D_addr,
-                              "addr_12",
-                              total,
-                              expected_A,
-                              expected_B,
-                              expected_D,
-                              slop,
-                              omit_middle_receiver
+                              "addr_14"
                             )
-        test.run()
+       test.run()
+       self.assertEqual ( None, test.error )
+
+
+    def test_15_linkroute_linear_all_local ( self ) :
+        """
+        This test should route all senders' link-attaches
+        to the local containers on router A.
+        """
+
+        addr_suffix = "addr_15"
+
+        # Choose which routers to give the test.
+        # This choice controls topology.  ABC is linear.
+        routers = ( self.A_route_container_addr,
+                    self.B_route_container_addr,
+                    self.C_route_container_addr
+                  )
+
+        # Tell the test on which routers to make its link-container cnxs.
+        where_to_make_connections                = ( 2, 2, 2 )
+        where_the_routed_link_attaches_should_go = ( 4, 0, 0 )
+
+        #-----------------------------------------------------------------------
+        # This is the instruction-list that the test looks at as various
+        # milestones are met during testing. If a given event happens,
+        # and if it matches the event in the current step of the instructions,
+        # then the test will execute the action in the current step, and
+        # advance to the next.
+        # These instructions lists make the test more flexible, so I can get
+        # different behavior without writing *almost* the same code mutiple
+        # times.
+        #-----------------------------------------------------------------------
+
+        # note: if 'done' is present in an action, it always means 'succeed now'.
+        # If there had been a failure, that would have been caught in an
+        # earlier part of ther action.
+
+        instructions = [
+                         # Once the link-routable address is ready to use in
+                         # the router network, create 4 senders.
+                         {
+                           'event'  : 'address_ready',
+                           'action' : { 'fn'   : 'make_senders',
+                                         'arg' : 4
+                                      }
+                         },
+                         # In this action, the list-argument to the function
+                         # shows how we expect link-attach routes to be
+                         # distributed: 4 to the first router,
+                         # none to the other two.
+                         {
+                           'event'  : 'got_receivers',
+                           'action' : { 'fn'   : 'check_receiver_distribution',
+                                        'arg'  : where_the_routed_link_attaches_should_go,
+                                      }
+                         },
+                         {
+                           'event'  : 'receiver_distribution_ok',
+                           'action' : {'fn'    : 'none',
+                                       'done'  : 'succeed'
+                                      }
+                         }
+                       ]
+
+        # Tell the test how to check for the address being ready.
+        n_local_containers = 2
+        n_remote_routers   = 1  # NOTE: BUGALERT -- THIS SHOULD BE 2
+
+        test = RoutingTest ( self.A_addr,  # all senders are attached here
+                             routers,
+                             self.linkroute_prefix,
+                             addr_suffix,
+                             instructions,
+                             where_to_make_connections,
+                             n_local_containers,
+                             n_remote_routers,
+                             "Test 15"
+                           )
+        test.run ( )
         self.assertEqual ( None, test.error )
 
 
-    def test_13_multicast_linear ( self ):
-        test = MulticastTest ( self.A_addr,
-                               self.B_addr,
-                               self.C_addr,
-                               "addr_13"
-                             )
-        test.run()
+
+    def test_16_linkroute_linear_all_B ( self ) :
+        """
+        This test should route all senders' link-attaches
+        to the remote connections on router B.
+        """
+
+        addr_suffix = "addr_16"
+
+        # Choose which routers to give the test.
+        # This choice controls topology.  ABC is linear.
+        routers = ( self.A_route_container_addr,
+                    self.B_route_container_addr,
+                    self.C_route_container_addr
+                  )
+
+        # Tell the test on which routers to make its link-container cnxs.
+        where_to_make_connections                = ( 0, 2, 2 )
+        where_the_routed_link_attaches_should_go = ( 0, 4, 0 )
+
+        #-----------------------------------------------------------------------
+        # This is the instruction-list that the test looks at as various
+        # milestones are met during testing. If a given event happens,
+        # and if it matches the event in the current step of the instructions,
+        # then the test will execute the action in the current step, and
+        # advance to the next.
+        # These instructions lists make the test more flexible, so I can get
+        # different behavior without writing *almost* the same code mutiple
+        # times.
+        #-----------------------------------------------------------------------
+
+        # note: if 'done' is present in an action, it always means 'succeed now'.
+        # If there had been a failure, that would have been caught in an
+        # earlier part of ther action.
+
+        instructions = [
+                         # Once the link-routable address is ready to use in
+                         # the router network, create 4 senders.
+                         {
+                           'event'  : 'address_ready',
+                           'action' : { 'fn'   : 'make_senders',
+                                         'arg' : 4
+                                      }
+                         },
+                         # In this action, the list-argument to the function
+                         # shows how we expect link-attach routes to be
+                         # distributed: 4 to router B,
+                         # none anywhere else.
+                         {
+                           'event'  : 'got_receivers',
+                           'action' : { 'fn'   : 'check_receiver_distribution',
+                                        'arg'  : where_the_routed_link_attaches_should_go,
+                                      }
+                         },
+                         {
+                           'event'  : 'receiver_distribution_ok',
+                           'action' : {'fn'    : 'none',
+                                       'done'  : 'succeed'
+                                      }
+                         }
+                       ]
+
+        # Tell the test how to check for the address being ready.
+        n_local_containers = 0
+        n_remote_routers   = 1  # NOTE: BUGALERT -- THIS SHOULD BE 2
+
+        test = RoutingTest ( self.A_addr,  # all senders are attached here
+                             routers,
+                             self.linkroute_prefix,
+                             addr_suffix,
+                             instructions,
+                             where_to_make_connections,
+                             n_local_containers,
+                             n_remote_routers,
+                             "Test 16"
+                           )
+        test.run ( )
         self.assertEqual ( None, test.error )
 
 
-    def test_14_multicast_mesh ( self ):
-        test = MulticastTest ( self.A_addr,
-                               self.B_addr,
-                               self.D_addr,
-                               "addr_14"
-                             )
-        test.run()
+
+    def test_17_linkroute_linear_all_C ( self ) :
+        """
+        This test should route all senders' link-attaches
+        to the remote connections on router C.
+        """
+
+        self.skipTest("This test disabled pending bugfix.")
+
+        addr_suffix = "addr_17"
+
+        # Choose which routers to give the test.
+        # This choice controls topology.  ABC is linear.
+        routers = ( self.A_route_container_addr,
+                    self.B_route_container_addr,
+                    self.C_route_container_addr
+                  )
+
+        # Tell the test on which routers to make its link-container cnxs.
+        where_to_make_connections                = ( 0, 0, 2 )
+        where_the_routed_link_attaches_should_go = ( 0, 0, 4 )
+
+        #-----------------------------------------------------------------------
+        # This is the instruction-list that the test looks at as various
+        # milestones are met during testing. If a given event happens,
+        # and if it matches the event in the current step of the instructions,
+        # then the test will execute the action in the current step, and
+        # advance to the next.
+        # These instructions lists make the test more flexible, so I can get
+        # different behavior without writing *almost* the same code mutiple
+        # times.
+        #-----------------------------------------------------------------------
+
+        # note: if 'done' is present in an action, it always means 'succeed now'.
+        # If there had been a failure, that would have been caught in an
+        # earlier part of ther action.
+
+        instructions = [
+                         # Once the link-routable address is ready to use in
+                         # the router network, create 4 senders.
+                         {
+                           'event'  : 'address_ready',
+                           'action' : { 'fn'   : 'make_senders',
+                                         'arg' : 4
+                                      }
+                         },
+                         # In this action, the list-argument to the function
+                         # shows how we expect link-attach routes to be
+                         # distributed: 4 to router B,
+                         # none anywhere else.
+                         {
+                           'event'  : 'got_receivers',
+                           'action' : { 'fn'   : 'check_receiver_distribution',
+                                        'arg'  : where_the_routed_link_attaches_should_go
+                                      }
+                         },
+                         {
+                           'event'  : 'receiver_distribution_ok',
+                           'action' : {'fn'    : 'none',
+                                       'done'  : 'succeed'
+                                      }
+                         }
+                       ]
+
+        # Tell the test how to check for the address being ready.
+        n_local_containers = 0
+        n_remote_routers   = 1  # NOTE: BUGALERT -- THIS SHOULD BE 2
+
+        test = RoutingTest ( self.A_addr,  # all senders are attached here
+                             routers,
+                             self.linkroute_prefix,
+                             addr_suffix,
+                             instructions,
+                             where_to_make_connections,
+                             n_local_containers,
+                             n_remote_routers,
+                             "Test 17"
+                           )
+        test.run ( )
         self.assertEqual ( None, test.error )
 
 
+    def test_18_linkroute_linear_kill_1 ( self ) :
+        """
+        Start out as usual, making four senders and seeing their link-attaches
+        routed to router A (local). But then kill the two route-container
+        connections to router A, and make four more senders.  Their link-attaches
+        should get routed to router B.
+        """
+
+        self.skipTest("This test disabled pending bugfix.")
+
+        addr_suffix = "addr_18"
+
+        # Choose which routers to give the test.
+        # This choice controls topology.  ABC is linear.
+        routers = ( self.A_route_container_addr,
+                    self.B_route_container_addr,
+                    self.C_route_container_addr
+                  )
+
+        # Tell the test on which routers to make its link-container cnxs.
+        where_to_make_connections = ( 2, 2, 2 )
+
+        # And where to expect the resulting link-attaches to end up.
+        first_4                   = ( 4, 0, 0 )   # All go to A
+        second_4                  = ( 0, 4, 0 )   # All go to B
+
+        #-----------------------------------------------------------------------
+        # This is the instruction-list that the test looks at as various
+        # milestones are met during testing. If a given event happens,
+        # and if it matches the event in the current step of the instructions,
+        # then the test will execute the action in the current step, and
+        # advance to the next.
+        # These instructions lists make the test more flexible, so I can get
+        # different behavior without writing *almost* the same code mutiple
+        # times.
+        #-----------------------------------------------------------------------
+
+        # note: if 'done' is present in an action, it always means 'succeed now'.
+        # If there had been a failure, that would have been caught in an
+        # earlier part of ther action.
+
+        instructions = [
+                         # Once the link-routable address is ready to use in
+                         # the router network, create 4 senders.
+                         {
+                           'event'  : 'address_ready',
+                           'action' : { 'fn'   : 'make_senders',
+                                         'arg' : 4
+                                      }
+                         },
+                         # Check the distribution of the first four
+                         # link-attach routings, then go immediately
+                         # to the next instruction step.
+                         {
+                           'event'  : 'got_receivers',
+                           'action' : { 'fn'   : 'check_receiver_distribution',
+                                        'arg'  : first_4
+                                      }
+                         },
+                         # After we see that the first 4 senders have
+                         # had their link-attaches routed to the right place,
+                         # (which will be router A), close all route-container
+                         # connections to that router.
+                         {
+                           'event'  : 'receiver_distribution_ok',
+                           'action' : { 'fn'   : 'kill_connections',
+                                        'arg'  : 0
+                                      }
+                         },
+                         # Once the route-container connections on A are
+                         # closed, make 4 new senders
+                         {
+                           'event'  : 'connections_closed',
+                           'action' : { 'fn'   : 'make_senders',
+                                         'arg' : 4
+                                      }
+                         },
+                         # The link-attaches from these 4 new senders
+                         # should now all to the route-container connections
+                         # on router B.
+                         {
+                           'event'  : 'got_receivers',
+                           'action' : { 'fn'   : 'check_receiver_distribution',
+                                        'arg'  : second_4
+                                      }
+                         },
+                         # If we receive confirmation that the link-attaches
+                         # have gone to the right place, we succeed.
+                         {
+                           'event'  : 'receiver_distribution_ok',
+                           'action' : { 'fn'   : 'none',
+                                        'done' : 'succeed'
+                                      }
+                         }
+                       ]
+
+        # Tell the test how to check for the address being ready.
+        n_local_containers = 0
+        # NOTE TODO FIXME -- THIS SHOULD BE 2
+        # But if I set it to 2 here, none of the tests will work.
+        # This is the first bug to fix^W^W^W functionality improvement opportunity
+        # to take advantage of.
+        n_remote_routers   = 1
+
+        test = RoutingTest ( self.A_addr,  # all senders are attached here
+                             routers,
+                             self.linkroute_prefix,
+                             addr_suffix,
+                             instructions,
+                             where_to_make_connections,
+                             n_local_containers,
+                             n_remote_routers,
+                             "Test 18"
+                           )
+        test.run ( )
+        self.assertEqual ( None, test.error )
 
 
 
 #================================================================
 #     Tests
 #================================================================
-
 
 class TargetedSenderTest ( MessagingHandler ):
     """
@@ -1101,7 +1458,6 @@ class ClosestTest ( MessagingHandler ):
         self.bailed = False
 
     def timeout ( self ):
-        self.check_results ( )
         self.bail ( "Timeout Expired " )
 
 
@@ -1601,6 +1957,345 @@ class MulticastTest ( MessagingHandler ):
         container = Container(self)
         container.run()
 
+
+
+
+
+class RoutingTest ( MessagingHandler ):
+    """
+    Accept a network of three routers -- either linear or triangle,
+    depending on what the caller chooses -- make some senders, and see
+    where the tests go. This test may also kill some connections, make
+    some more sewnders, and then see where *their* link-attaches get
+    routed. This test's exact behavior is determined by the list of
+    instructions that are passed in by the caller, each instruction being
+    executed when some milestone in the test is met.
+
+    NOTE that no payload messages are sent in this test! I send some
+    management messages to see when the router network is ready for me,
+    but other than that, all I care about is the link-attaches that happen
+    each time I make a sender -- and where they are routed to.
+    """
+    def __init__ ( self,
+                   sender_host,
+                   route_container_addrs,
+                   linkroute_prefix,
+                   addr_suffix,
+                   instructions,
+                   where_to_make_connections,
+                   n_local_containers,
+                   n_remote_routers,
+                   test_name
+                 ):
+        super ( RoutingTest, self ).__init__(prefetch=0)
+
+        self.debug     = False
+        self.test_name = test_name
+
+        self.sender_host           = sender_host
+        self.route_container_addrs = route_container_addrs
+        self.linkroute_prefix      = linkroute_prefix
+        self.link_routable_address = self.linkroute_prefix + '.' + addr_suffix
+
+        self.instructions = instructions
+        self.current_step_index = 0
+
+        self.where_to_make_connections = where_to_make_connections
+        self.sender_cnx                = None
+        self.error                     = None
+        self.linkroute_check_timer     = None
+        self.linkroute_check_receiver  = None
+        self.linkroute_check_sender    = None
+
+        # These numbers tell me how to know when the
+        # link-attach routable address is ready to use
+        # in the router network.
+        self.n_local_containers = n_local_containers
+        self.n_remote_routers   = n_remote_routers
+
+        self.receiver_count     = 0
+        self.connections_closed = 0
+        self.connections_to_be_closed = 0
+        self.expected_receivers = 0
+        self.done               = False
+        self.my_senders         = []
+
+        # This list of dicts stores the number of route-container
+        # connections that have been made to each of the three routers.
+        # Each dict will hold one of these:
+        #    < cnx : receiver_count >
+        # for each cnx on that router.
+        self.router_cnx_counts = [ dict(), dict(), dict() ]
+        self.cnx_status        = dict()
+
+
+    def debug_print ( self, message ) :
+        if self.debug :
+            print message
+
+
+    # Some places in the test generate their own testing-events
+    # or testing milestones, and call this fn.  If the event
+    # corresponds to the one in the current 'step' of the
+    # instructions from the caller, this function will perform
+    # some action, and advance to the next step.
+    # It's a simple, linear state machine, to make this test more
+    # flexible.
+    def execute_next_instruction ( self, event ):
+
+        if self.current_step_index == len(self.instructions) :
+            self.debug_print ( "All done bailing out." )
+            self.bail ( None )
+            return
+
+        current_step = self.instructions [ self.current_step_index ]
+
+        # If the test-milestone event that the caller passed in
+        # matches the next one on the list, execute the associated
+        # action and advance the current step.
+        # If the associated action is a check, and if that check fails,
+        # then the check code itself will end this test in failure.
+        # For the test to succeed, we must reach the final step of
+        # the instructions, which must be an explicit 'succeed' step.
+        if event == current_step['event'] :
+            self.current_step_index += 1
+            self.debug_print ( "\nexecute_next_instruction: %s" % event )
+            action = current_step['action']
+
+            self.debug_print ( "    action['fn'] == %s" % action['fn'] )
+
+            # Each step of the instructions has an associated
+            # action, which is a function to call, and maybe
+            # an argument to pass to it.
+            if action['fn'] == 'make_senders' :
+                arg = int(action['arg'])
+                self.make_senders ( arg )
+                self.expected_receivers = arg
+                self.receiver_count = 0
+            elif action['fn'] == 'check_receiver_distribution' :
+                error = self.check_router_cnx_receiver_count ( action['arg'] )
+                if error :
+                    self.debug_print ( "check_router_cnx_receiver_count error" )
+                    self.done = True
+                    self.bail ( error )
+                    return
+                else:
+                    self.debug_print ( "receiver_distribution_ok" )
+                    self.execute_next_instruction ( 'receiver_distribution_ok' )
+            elif action['fn'] == 'kill_connections' :
+                self.connections_to_be_closed = 2
+                self.connections_closed       = 0
+                self.close_route_container_connections_on_router_n ( action['arg'] )
+            elif action['fn'] == 'none' :
+                if 'done' in action:
+                    # This is the final instruction on the list
+                    # that tells us explicitly to terminate
+                    # with success.
+                    self.debug_print ( "done -- succeeding." )
+                    self.bail ( None )
+
+
+    # If this happens, the test is hanging.
+    def timeout ( self ):
+        self.bail ( "Timeout Expired" )
+
+
+    # This helps us periodically send management queries
+    # to learn when our address os ready to be used on the
+    # router network.
+    def address_check_timeout(self):
+        self.linkroute_check()
+
+
+    def bail ( self, text ):
+        self.done = True
+        self.error = text
+        self.close_route_container_connections()
+        self.sender_cnx.close()
+        self.timer.cancel()
+        if self.linkroute_check_timer:
+            self.linkroute_check_timer.cancel()
+
+
+    def on_start ( self, event ):
+
+        self.debug_print ( "\n\n%s ===========================================\n\n" % self.test_name )
+        self.timer = event.reactor.schedule ( TIMEOUT, Timeout(self) )
+        self.sender_cnx = event.container.connect(self.sender_host)
+
+        # Instructions from on high tell us how many route-container
+        # connections to make on each router. For each one that we
+        # make, we store it in a dict for that router, and associate
+        # the number 0 with it. That number will be incremented every
+        # time that connection is awarded a receiver. (Every time it
+        # gets a sender's link-attach routed to it.)
+        for router in range(len(self.where_to_make_connections)) :
+            how_many_for_this_router = self.where_to_make_connections[router]
+            for j in range(how_many_for_this_router) :
+              route_container_addr = self.route_container_addrs[router]
+              cnx = event.container.connect ( route_container_addr )
+              # In the dict of connections and actual receiver
+              # counts, store this cnx, and 0.
+              self.router_cnx_counts[router][cnx] = 0
+              self.cnx_status[cnx] = 1
+              self.debug_print ( "on_start: made cnx %s on router %d" % ( str(cnx), router ) )
+
+        self.linkroute_check_receiver = event.container.create_receiver ( self.sender_cnx, dynamic=True )
+        self.linkroute_check_sender   = event.container.create_sender   ( self.sender_cnx, "$management" )
+
+
+    #-----------------------------------------------------
+    # Check the count of how many receivers came in for
+    # each connection compared to what was expected.
+    #-----------------------------------------------------
+    def check_router_cnx_receiver_count ( self, expected_receiver_counts ) :
+        for router in range(len(self.router_cnx_counts)) :
+            cnx_dict = self.router_cnx_counts[router]
+            # Sum up all receivers for this router.
+            actual = 0
+            for cnx in cnx_dict :
+                receiver_count = cnx_dict[cnx]
+                actual += receiver_count
+
+            expected = expected_receiver_counts[router]
+            if actual != expected :
+                return "router %d -- expected %d -- actual %d" % (router, expected, actual)
+            else :
+                self.debug_print ( "check_router_cnx_receiver_count: good: router %d expected: %d actual: %d" % (router, expected, actual) )
+            router += 1
+        return None
+
+
+    def close_route_container_connections ( self ) :
+        for router in range(len(self.router_cnx_counts)) :
+            cnx_dict = self.router_cnx_counts[router]
+            for cnx in cnx_dict :
+                if self.cnx_status[cnx] :
+                    cnx.close()
+
+
+    def close_route_container_connections_on_router_n ( self, n ) :
+        self.debug_print ( "close_route_container_connections_on_router_n %d" % n )
+        cnx_dict = self.router_cnx_counts[n]
+        for cnx in cnx_dict :
+            if self.cnx_status[cnx] :
+                cnx.close()
+
+
+    # When a new receiver is handed to us (because a link-attach from a
+    # sender has been routed to one of our route-container connections)
+    # increment the number associated with that connection.
+    # Also indicate to the caller whether this was indeed one of the
+    # route-container connections that we made.
+    def increment_router_cnx_receiver_count ( self, new_cnx ) :
+        for router in range(len(self.router_cnx_counts)) :
+            cnx_dict = self.router_cnx_counts[router]
+            for cnx in cnx_dict :
+                if cnx == new_cnx :
+                    # This cnx has been awarded a new receiver.
+                    cnx_dict[cnx] += 1
+                    return True
+        return False
+
+
+    def this_is_one_of_my_connections ( self, test_cnx ) :
+        for router in range(len((self.router_cnx_counts))) :
+            cnx_dict = self.router_cnx_counts[router]
+            for cnx in cnx_dict :
+                if cnx == test_cnx :
+                    return True
+        return False
+
+
+    def on_link_opened ( self, event ):
+        if self.done :
+          return
+
+        if event.receiver:
+            if event.receiver == self.linkroute_check_receiver:
+                # If the linkroute readiness checker can't strike oil in 30
+                # tries, we are seriously out of luck, and will soon time out.
+                event.receiver.flow ( 30 )
+
+        if event.receiver == self.linkroute_check_receiver:
+            self.linkroute_checker = AddressChecker(self.linkroute_check_receiver.remote_source.address)
+            self.linkroute_check()
+        else :
+          if event.receiver :
+              this_is_one_of_mine = self.increment_router_cnx_receiver_count ( event.receiver.connection )
+              if this_is_one_of_mine :
+                  self.receiver_count += 1
+                  if self.receiver_count == self.expected_receivers :
+                    self.execute_next_instruction ( 'got_receivers' )
+
+
+    def on_connection_closed ( self, event ):
+        if self.this_is_one_of_my_connections ( event.connection ) :
+            self.cnx_status[event.connection] = 0
+            self.connections_closed += 1
+            if self.connections_to_be_closed :
+                self.debug_print ( "on_connection_closed : %d of %d closed : %s" % (self.connections_closed, self.connections_to_be_closed, str(event.connection)) )
+                if self.connections_closed == self.connections_to_be_closed :
+                    # Reset both of these counters here, because
+                    # they are only used each time we get a 'close connections'
+                    # instruction, to jkeep track of its progress.
+                    self.connections_to_be_closed = 0
+                    self.cconnections_closed      = 0
+                    self.execute_next_instruction ( 'connections_closed' )
+
+
+    #-------------------------------------------------
+    # All senders get attached to the first router.
+    #-------------------------------------------------
+    def make_senders ( self, n ):
+        self.debug_print ( "making %d senders" % n )
+        for i in xrange(n):
+            sender_name = "sender_A_%d" % len ( self.my_senders )
+            sender = self.sender_container.create_sender ( self.sender_cnx,
+                                                           self.link_routable_address,
+                                                           name=sender_name
+                                                         )
+            self.my_senders.append ( sender )
+
+
+    #-----------------------------------------------------------------
+    # The only messages I care about in this test are the management
+    # ones I send to determine when the router network is ready
+    # to start routing my sender-attaches.
+    #-----------------------------------------------------------------
+    def on_message ( self, event ):
+        if event.receiver == self.linkroute_check_receiver:
+            response = self.linkroute_checker.parse_address_query_response ( event.message )
+            if response.status_code == 200                        and \
+               response.containerCount >= self.n_local_containers and \
+               response.remoteCount >= self.n_remote_routers :
+                # We can quit checking now.
+                if self.linkroute_check_timer:
+                    self.linkroute_check_timer.cancel()
+                    self.linkroute_check_timer = None
+                self.sender_container = event.container
+                self.execute_next_instruction ( 'address_ready' )
+            else:
+                # If the latest check did not find the link-attach route ready,
+                # schedule another check a little while from now.
+                self.linkroute_check_timer = event.reactor.schedule ( 1.00, AddressCheckerTimeout(self))
+
+
+    def linkroute_check ( self ):
+        # Send the message that will query the management code to discover
+        # information about our destination address. We cannot make our payload
+        # sender until the network is ready.
+        #
+        # BUGALERT: We have to prepend the 'D' to this linkroute prefix
+        # because that's what the router does internally.  Someday this
+        # may change.
+        self.linkroute_check_sender.send ( self.linkroute_checker.make_address_query("D" + self.linkroute_prefix) )
+
+
+    def run(self):
+        container = Container(self)
+        container.container_id = 'LinkRouteTest'
+        container.run()
 
 
 
