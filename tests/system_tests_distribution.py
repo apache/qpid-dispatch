@@ -370,296 +370,296 @@ class DistributionTests ( TestCase ):
         cls.D_addr = router_D.addresses[0]
 
 
-
-   def test_01_targeted_sender_AC ( self ):
-       test = TargetedSenderTest ( self.A_addr, self.C_addr, "closest/01" )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_02_targeted_sender_DC ( self ):
-       test = TargetedSenderTest ( self.D_addr, self.C_addr, "closest/02" )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_03_anonymous_sender_AC ( self ):
-       test = AnonymousSenderTest ( self.A_addr, self.C_addr )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_04_anonymous_sender_DC ( self ):
-       test = AnonymousSenderTest ( self.D_addr, self.C_addr )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_05_dynamic_reply_to_AC ( self ):
-       test = DynamicReplyTo ( self.A_addr, self.C_addr )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_06_dynamic_reply_to_DC ( self ):
-       test = DynamicReplyTo ( self.D_addr, self.C_addr )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_07_linkroute ( self ):
-       test = LinkAttachRouting ( self.C_addr,
-                                  self.A_route_container_addr,
-                                  self.linkroute_prefix,
-                                  "addr_07"
-                                )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_08_closest_linear ( self ):
-       test = ClosestTest ( self.A_addr,
-                            self.B_addr,
-                            self.C_addr,
-                            "addr_08"
-                          )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_09_closest_mesh ( self ):
-       test = ClosestTest ( self.A_addr,
-                            self.B_addr,
-                            self.D_addr,
-                            "addr_09"
-                          )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-       #
-       #     Cost picture for balanced distribution tests.
-       #
-       #              10          20
-       #         A <-------- B <------ C
-       #          ^         ^
-       #           \       /
-       #       50   \     /  100
-       #             \   /
-       #              \ /
-       #               D
-       #
-       #
-       #
-       #  Here is how the message balancing should work for
-       #  various total number of messages, up to 100:
-       #
-       #  NOTE: remember these messages are all unsettled.
-       #        And will stay that way.  This is not a realistic
-       #        usage scenario, but it the best way to test the
-       #        balanced distribution algorithm.
-       #
-       #  1. Messages start flowing in at A.  They will all
-       #     be used by A (sent to its receiver) until the
-       #     total == cost ( A, B ).
-       #
-       #  2. At that point, A will start sharing with B,
-       #     one-for-me-one-for-you. (So A will go to 11 before
-       #     B gets its first message.)
-       #
-       #  3. A and B will count up until B reaches
-       #     cost ( B, C )
-       #     B will then start sharings its messages with C,
-       #     one-for-me-one-for-you.  (So B will go to 21 before
-       #     C gets its first message.)
-       #
-       #  4. However note: it is NOT round-robin at this point.
-       #     A is still taking every other message, B is only getting
-       #     A's overflow, and now B is sharing half of that with C.
-       #     So at this point B will start falling farther behind A.
-       #
-       #  5. The totals here are completely deterministic, so we pass
-       #     to the test a 'slop' amount of 0.
-       #
-       #    total   near --10--> mid ---20--> far
-       #
-       #     1        1            0            0
-       #     10      10            0            0
-       #     11      11            0            0
-       #     12      11            1            0
-       #     13      12            1            0
-       #     14      12            2            0
-       #     ...
-       #     50      30           20            0
-       #     51      31           20            0
-       #     52      31           21            0
-       #     53      32           21            0
-       #     54      32           21            1
-       #     55      33           21            1
-       #     56      33           22            1
-       #     57      34           22            1
-       #     58      34           22            2
-       #     59      35           22            2
-       #     60      35           23            2
-       #     ...
-       #     100     55           33           12
-       #
-
-   def test_10_balanced_linear ( self ):
-       # slop is how much the second two values may diverge from
-       # the expected.  But they still must sum to total - A.
-       total      = 100
-       expected_A = 55
-       expected_B = 33
-       expected_C = 12
-       slop       = 0
-       omit_middle_receiver = False
-
-       test = BalancedTest ( self.A_addr,
+ 
+    def test_01_targeted_sender_AC ( self ):
+        test = TargetedSenderTest ( self.A_addr, self.C_addr, "closest/01" )
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_02_targeted_sender_DC ( self ):
+        test = TargetedSenderTest ( self.D_addr, self.C_addr, "closest/02" )
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_03_anonymous_sender_AC ( self ):
+        test = AnonymousSenderTest ( self.A_addr, self.C_addr )
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_04_anonymous_sender_DC ( self ):
+        test = AnonymousSenderTest ( self.D_addr, self.C_addr )
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_05_dynamic_reply_to_AC ( self ):
+        test = DynamicReplyTo ( self.A_addr, self.C_addr )
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_06_dynamic_reply_to_DC ( self ):
+        test = DynamicReplyTo ( self.D_addr, self.C_addr )
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_07_linkroute ( self ):
+        test = LinkAttachRouting ( self.C_addr,
+                                   self.A_route_container_addr,
+                                   self.linkroute_prefix,
+                                   "addr_07"
+                                 )
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_08_closest_linear ( self ):
+        test = ClosestTest ( self.A_addr,
                              self.B_addr,
                              self.C_addr,
-                             "addr_10",
-                             total,
-                             expected_A,
-                             expected_B,
-                             expected_C,
-                             slop,
-                             omit_middle_receiver
+                             "addr_08"
                            )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_11_balanced_linear_omit_middle_receiver ( self ):
-       # If we omit the middle receiver, then router A will count
-       # up to cost ( A, B ) and the keep counting up a further
-       # cost ( B, C ) before it starts to spill over.
-       # That is, it will count up to
-       #    cost ( A, B ) + cost ( B, C ) == 30
-       # After that it will start sharing downstream (router C)
-       # one-for-me-one-for-you.  So when the number of total messages
-       # is odd, A will be 31 ahead of C.  When total message count is
-       # even, A will be 30 ahead.
-       # As in the other linear scenario, there is no 'slop' here.
-       total      = 100
-       expected_A = 65
-       expected_B = 0
-       expected_C = 35
-       slop       = 0
-       omit_middle_receiver = True
-
-       test = BalancedTest ( self.A_addr,
-                             self.B_addr,
-                             self.C_addr,
-                             "addr_11",
-                             total,
-                             expected_A,
-                             expected_B,
-                             expected_C,
-                             slop,
-                             omit_middle_receiver
-                           )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-       #     Reasoning for the triangular balanced case:
-       #
-       #     Cost picture
-       #
-       #              10          20
-       #         A <-------- B <------ C
-       #          ^         ^
-       #           \       /
-       #       50   \     /  100
-       #             \   /
-       #              \ /
-       #               D
-       #
-       # We are doing  ( A, B, D ), with the sender attached at A.
-       # All these messages are unsettled, which is what allows us to
-       # see how the balanced distribution algorithm works.
-       #
-       #  1. total unsettled msgs at A cannot be more than B_cost + 1,
-       #     and also cannot be more than D_cost + 1
-       #
-       #  2. A will always keep the message for itself (for its own receiver)
-       #     if it can do so without violating rule (1).
-       #
-       #  3. So, A will count up to 11, and then it will start alternating
-       #     with B.
-       #
-       #  4. When A counts up to 51, it must also start sharing with D.
-       #     It will alternate between B and D.
-       #
-       #  5. As long as B does not yet have 100 messages, it will not
-       #     share with D.
-       #
-       #  6. So! at 100 messages total, A must be above both of its
-       #     neighbors by that neighbor's cost, or 1 more -- and the total
-       #     of all 3 must sum to 100.
-       #
-       #     A = B + 10      B = A - 10
-       #     A = D + 50      D = A - 50
-       #     A + B + D == 100
-       #     -->
-       #     A + (A - 10) + (A - 50) == 100
-       #     3A - 60 == 100
-       #     A == 53.333...
-       #     A == 54
-       #
-       #     so B + D == 46
-       #     A is 10 or 11 > B --> B == 44 or 43
-       #     A is 50 or 51 > D --> D ==  4 or  3
-       #     B == 43 and D == 3
-       #
-       #     So pass these values in to the test: (54, 43, 3)
-       #     and test that:
-       #       1. A is exactly that value.
-       #       2. B and D sum to 100 - A
-       #       3. B and D are both with 1 of their expected values.
-       #
-   def test_12_balanced_mesh ( self ):
-       total      = 100
-       expected_A = 54
-       expected_B = 43
-       expected_D = 3
-       slop       = 1
-       omit_middle_receiver = False
-       test = BalancedTest ( self.A_addr,
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_09_closest_mesh ( self ):
+        test = ClosestTest ( self.A_addr,
                              self.B_addr,
                              self.D_addr,
-                             "addr_12",
-                             total,
-                             expected_A,
-                             expected_B,
-                             expected_D,
-                             slop,
-                             omit_middle_receiver
+                             "addr_09"
                            )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_13_multicast_linear ( self ):
-       test = MulticastTest ( self.A_addr,
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+        #
+        #     Cost picture for balanced distribution tests.
+        #
+        #              10          20
+        #         A <-------- B <------ C
+        #          ^         ^
+        #           \       /
+        #       50   \     /  100
+        #             \   /
+        #              \ /
+        #               D
+        #
+        #
+        #
+        #  Here is how the message balancing should work for
+        #  various total number of messages, up to 100:
+        #
+        #  NOTE: remember these messages are all unsettled.
+        #        And will stay that way.  This is not a realistic
+        #        usage scenario, but it the best way to test the
+        #        balanced distribution algorithm.
+        #
+        #  1. Messages start flowing in at A.  They will all
+        #     be used by A (sent to its receiver) until the
+        #     total == cost ( A, B ).
+        #
+        #  2. At that point, A will start sharing with B,
+        #     one-for-me-one-for-you. (So A will go to 11 before
+        #     B gets its first message.)
+        #
+        #  3. A and B will count up until B reaches
+        #     cost ( B, C )
+        #     B will then start sharings its messages with C,
+        #     one-for-me-one-for-you.  (So B will go to 21 before
+        #     C gets its first message.)
+        #
+        #  4. However note: it is NOT round-robin at this point.
+        #     A is still taking every other message, B is only getting
+        #     A's overflow, and now B is sharing half of that with C.
+        #     So at this point B will start falling farther behind A.
+        #
+        #  5. The totals here are completely deterministic, so we pass
+        #     to the test a 'slop' amount of 0.
+        #
+        #    total   near --10--> mid ---20--> far
+        #
+        #     1        1            0            0
+        #     10      10            0            0
+        #     11      11            0            0
+        #     12      11            1            0
+        #     13      12            1            0
+        #     14      12            2            0
+        #     ...
+        #     50      30           20            0
+        #     51      31           20            0
+        #     52      31           21            0
+        #     53      32           21            0
+        #     54      32           21            1
+        #     55      33           21            1
+        #     56      33           22            1
+        #     57      34           22            1
+        #     58      34           22            2
+        #     59      35           22            2
+        #     60      35           23            2
+        #     ...
+        #     100     55           33           12
+        #
+ 
+    def test_10_balanced_linear ( self ):
+        # slop is how much the second two values may diverge from
+        # the expected.  But they still must sum to total - A.
+        total      = 100
+        expected_A = 55
+        expected_B = 33
+        expected_C = 12
+        slop       = 0
+        omit_middle_receiver = False
+ 
+        test = BalancedTest ( self.A_addr,
                               self.B_addr,
                               self.C_addr,
-                              "addr_13"
+                              "addr_10",
+                              total,
+                              expected_A,
+                              expected_B,
+                              expected_C,
+                              slop,
+                              omit_middle_receiver
                             )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
-   def test_14_multicast_mesh ( self ):
-       test = MulticastTest ( self.A_addr,
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_11_balanced_linear_omit_middle_receiver ( self ):
+        # If we omit the middle receiver, then router A will count
+        # up to cost ( A, B ) and the keep counting up a further
+        # cost ( B, C ) before it starts to spill over.
+        # That is, it will count up to
+        #    cost ( A, B ) + cost ( B, C ) == 30
+        # After that it will start sharing downstream (router C)
+        # one-for-me-one-for-you.  So when the number of total messages
+        # is odd, A will be 31 ahead of C.  When total message count is
+        # even, A will be 30 ahead.
+        # As in the other linear scenario, there is no 'slop' here.
+        total      = 100
+        expected_A = 65
+        expected_B = 0
+        expected_C = 35
+        slop       = 0
+        omit_middle_receiver = True
+ 
+        test = BalancedTest ( self.A_addr,
+                              self.B_addr,
+                              self.C_addr,
+                              "addr_11",
+                              total,
+                              expected_A,
+                              expected_B,
+                              expected_C,
+                              slop,
+                              omit_middle_receiver
+                            )
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+        #     Reasoning for the triangular balanced case:
+        #
+        #     Cost picture
+        #
+        #              10          20
+        #         A <-------- B <------ C
+        #          ^         ^
+        #           \       /
+        #       50   \     /  100
+        #             \   /
+        #              \ /
+        #               D
+        #
+        # We are doing  ( A, B, D ), with the sender attached at A.
+        # All these messages are unsettled, which is what allows us to
+        # see how the balanced distribution algorithm works.
+        #
+        #  1. total unsettled msgs at A cannot be more than B_cost + 1,
+        #     and also cannot be more than D_cost + 1
+        #
+        #  2. A will always keep the message for itself (for its own receiver)
+        #     if it can do so without violating rule (1).
+        #
+        #  3. So, A will count up to 11, and then it will start alternating
+        #     with B.
+        #
+        #  4. When A counts up to 51, it must also start sharing with D.
+        #     It will alternate between B and D.
+        #
+        #  5. As long as B does not yet have 100 messages, it will not
+        #     share with D.
+        #
+        #  6. So! at 100 messages total, A must be above both of its
+        #     neighbors by that neighbor's cost, or 1 more -- and the total
+        #     of all 3 must sum to 100.
+        #
+        #     A = B + 10      B = A - 10
+        #     A = D + 50      D = A - 50
+        #     A + B + D == 100
+        #     -->
+        #     A + (A - 10) + (A - 50) == 100
+        #     3A - 60 == 100
+        #     A == 53.333...
+        #     A == 54
+        #
+        #     so B + D == 46
+        #     A is 10 or 11 > B --> B == 44 or 43
+        #     A is 50 or 51 > D --> D ==  4 or  3
+        #     B == 43 and D == 3
+        #
+        #     So pass these values in to the test: (54, 43, 3)
+        #     and test that:
+        #       1. A is exactly that value.
+        #       2. B and D sum to 100 - A
+        #       3. B and D are both with 1 of their expected values.
+        #
+    def test_12_balanced_mesh ( self ):
+        total      = 100
+        expected_A = 54
+        expected_B = 43
+        expected_D = 3
+        slop       = 1
+        omit_middle_receiver = False
+        test = BalancedTest ( self.A_addr,
                               self.B_addr,
                               self.D_addr,
-                              "addr_14"
+                              "addr_12",
+                              total,
+                              expected_A,
+                              expected_B,
+                              expected_D,
+                              slop,
+                              omit_middle_receiver
                             )
-       test.run()
-       self.assertEqual ( None, test.error )
-
-
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_13_multicast_linear ( self ):
+        test = MulticastTest ( self.A_addr,
+                               self.B_addr,
+                               self.C_addr,
+                               "addr_13"
+                             )
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
+    def test_14_multicast_mesh ( self ):
+        test = MulticastTest ( self.A_addr,
+                               self.B_addr,
+                               self.D_addr,
+                               "addr_14"
+                             )
+        test.run()
+        self.assertEqual ( None, test.error )
+ 
+ 
     def test_15_linkroute_linear_all_local ( self ) :
         """
         This test should route all senders' link-attaches
