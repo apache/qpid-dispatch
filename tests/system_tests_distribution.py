@@ -1991,9 +1991,9 @@ class MulticastTest ( MessagingHandler ):
 
 class RoutingTest ( MessagingHandler ):
     """
-    Accept a network of three routers -- either linear or triangle,
+    Accept a network of three routers -- either linear or triangular,
     depending on what the caller chooses -- make some senders, and see
-    where the tests go. This test may also kill some connections, make
+    where the links go. This test may also kill some connections, make
     some more sewnders, and then see where *their* link-attaches get
     routed. This test's exact behavior is determined by the list of
     instructions that are passed in by the caller, each instruction being
@@ -2323,10 +2323,12 @@ class RoutingTest ( MessagingHandler ):
     def on_message ( self, event ):
         if event.receiver == self.linkroute_check_receiver:
             response = self.linkroute_checker.parse_address_query_response ( event.message )
+
+            self.debug_print ( "on_message: got %d local %d remote" % (response.containerCount, response.remoteCount) )
+
             if response.status_code == 200                        and \
                response.containerCount >= self.n_local_containers and \
                response.remoteCount >= self.n_remote_routers :
-                self.debug_print ( "on_message: got %d local %d remote" % (response.containerCount, response.remoteCount) )
                 # We can quit checking now.
                 if self.linkroute_check_timer:
                     self.linkroute_check_timer.cancel()
