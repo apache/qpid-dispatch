@@ -52,7 +52,6 @@ setup(
     package_dir={'' : '${CMAKE_SOURCE_DIR}/python'},
     packages=['qpid_dispatch', 'qpid_dispatch.management'],
     package_data={'qpid_dispatch.management': ['*.json']},
-    scripts=['${CMAKE_SOURCE_DIR}/tools/qdstat', '${CMAKE_SOURCE_DIR}/tools/qdmanage'],
     cmdclass={'build_py': BuildPy},
 
     version='${QPID_DISPATCH_VERSION}',
