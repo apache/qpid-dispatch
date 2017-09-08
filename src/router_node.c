@@ -514,6 +514,12 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
 static int AMQP_incoming_link_handler(void* context, qd_link_t *link)
 {
     qd_connection_t  *conn     = qd_link_connection(link);
+
+    // The connection that this link belongs to is gone. Perhaps an AMQP close came in.
+    // This link handler should not continue since there is no connection.
+    if (conn == 0)
+        return 0;
+
     qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
 
     char *terminus_addr = (char*)pn_terminus_get_address(pn_link_remote_target((pn_link_t  *)qd_link_pn(link)));
@@ -536,6 +542,12 @@ static int AMQP_incoming_link_handler(void* context, qd_link_t *link)
 static int AMQP_outgoing_link_handler(void* context, qd_link_t *link)
 {
     qd_connection_t  *conn     = qd_link_connection(link);
+
+    // The connection that this link belongs to is gone. Perhaps an AMQP close came in.
+    // This link handler should not continue since there is no connection.
+    if (conn == 0)
+        return 0;
+
     qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
 
     char *terminus_addr = (char*)pn_terminus_get_address(pn_link_remote_source((pn_link_t  *)qd_link_pn(link)));
