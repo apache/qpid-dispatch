@@ -45,11 +45,14 @@ class PathEngine(object):
         ##
         ## Setup Dijkstra's Algorithm
         ##
+        hops = {}
         cost = {}
         prev = {}
         for _id in link_states:
+            hops[_id] = None  # infinite
             cost[_id] = None  # infinite
             prev[_id] = None  # undefined
+        hops[root] = 0   # no hops to the root node
         cost[root] = 0   # no cost to the root node
         unresolved = NodeSet(cost)
 
@@ -65,6 +68,7 @@ class PathEngine(object):
                 if unresolved.contains(v):
                     alt = cost[u] + v_cost
                     if cost[v] == None or alt < cost[v]:
+                        hops[v] = hops[u] + 1
                         cost[v] = alt
                         prev[v] = u
                         unresolved.set_cost(v, alt)
@@ -76,13 +80,14 @@ class PathEngine(object):
         for u, val in prev.items():
             if not val:
                 prev.pop(u)
+                hops.pop(u)
                 cost.pop(u)
 
         ##
         ## Return previous-node and cost maps.  Prev is a map of all reachable, remote nodes to
         ## their predecessor node.  Cost is a map of all reachable nodes and their costs.
         ##
-        return prev, cost
+        return prev, cost, hops
 
 
     def _calculate_valid_origins(self, nodeset, collection):
@@ -97,7 +102,7 @@ class PathEngine(object):
                 valid_origin[node] = []
 
         for root in valid_origin.keys():
-            prev, cost = self._calculate_tree_from_root(root, collection)
+            prev, cost, hops = self._calculate_tree_from_root(root, collection)
             nodes = prev.keys()
             while len(nodes) > 0:
                 u = nodes[0]
@@ -121,8 +126,14 @@ class PathEngine(object):
         ##
         ## Generate the shortest-path tree with the local node as root
         ##
-        prev, cost = self._calculate_tree_from_root(self.id, collection)
+        prev, cost, hops = self._calculate_tree_from_root(self.id, collection)
         nodes = prev.keys()
+
+        ##
+        ## We will also compute the radius of the topology.  This is the number of
+        ## hops (not cost) to the most distant router from the local node
+        ##
+        radius = max(hops.values()) if len(hops) > 0 else 0
 
         ##
         ## Distill the path tree into a map of next hops for each node
@@ -147,7 +158,7 @@ class PathEngine(object):
         ##
         valid_origins = self._calculate_valid_origins(prev.keys(), collection)
 
-        return (next_hops, cost, valid_origins)
+        return (next_hops, cost, valid_origins, radius)
 
 
 

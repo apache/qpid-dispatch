@@ -228,7 +228,7 @@ class PathTest(unittest.TestCase):
         collection = { 'R1': LinkState(None, 'R1', 1, {'R2':1}),
                        'R2': LinkState(None, 'R2', 1, {'R1':1, 'R3':1}),
                        'R3': LinkState(None, 'R3', 1, {'R2':1}) }
-        next_hops, costs, valid_origins = self.engine.calculate_routes(collection)
+        next_hops, costs, valid_origins, radius = self.engine.calculate_routes(collection)
         self.assertEqual(len(next_hops), 2)
         self.assertEqual(next_hops['R2'], 'R2')
         self.assertEqual(next_hops['R3'], 'R2')
@@ -237,6 +237,8 @@ class PathTest(unittest.TestCase):
         valid_origins['R3'].sort()
         self.assertEqual(valid_origins['R2'], [])
         self.assertEqual(valid_origins['R3'], [])
+
+        self.assertEqual(radius, 2)
 
     def test_topology2(self):
         """
@@ -256,7 +258,7 @@ class PathTest(unittest.TestCase):
                        'R4': LinkState(None, 'R4', 1, {'R2':1, 'R5':1}),
                        'R5': LinkState(None, 'R5', 1, {'R3':1, 'R4':1, 'R6':1}),
                        'R6': LinkState(None, 'R6', 1, {'R5':1}) }
-        next_hops, costs, valid_origins = self.engine.calculate_routes(collection)
+        next_hops, costs, valid_origins, radius = self.engine.calculate_routes(collection)
         self.assertEqual(len(next_hops), 5)
         self.assertEqual(next_hops['R2'], 'R2')
         self.assertEqual(next_hops['R3'], 'R2')
@@ -274,6 +276,8 @@ class PathTest(unittest.TestCase):
         self.assertEqual(valid_origins['R4'], [])
         self.assertEqual(valid_origins['R5'], [])
         self.assertEqual(valid_origins['R6'], [])
+
+        self.assertEqual(radius, 4)
 
     def test_topology3(self):
         """
@@ -293,7 +297,7 @@ class PathTest(unittest.TestCase):
                        'R1': LinkState(None, 'R1', 1, {'R3':1, 'R5':1}),
                        'R5': LinkState(None, 'R5', 1, {'R1':1, 'R4':1, 'R6':1}),
                        'R6': LinkState(None, 'R6', 1, {'R5':1}) }
-        next_hops, costs, valid_origins = self.engine.calculate_routes(collection)
+        next_hops, costs, valid_origins, radius = self.engine.calculate_routes(collection)
         self.assertEqual(len(next_hops), 5)
         self.assertEqual(next_hops['R2'], 'R3')
         self.assertEqual(next_hops['R3'], 'R3')
@@ -311,6 +315,8 @@ class PathTest(unittest.TestCase):
         self.assertEqual(valid_origins['R4'], [])
         self.assertEqual(valid_origins['R5'], ['R2', 'R3'])
         self.assertEqual(valid_origins['R6'], ['R2', 'R3'])
+
+        self.assertEqual(radius, 2)
 
     def test_topology4(self):
         """
@@ -330,7 +336,7 @@ class PathTest(unittest.TestCase):
                        'R1': LinkState(None, 'R1', 1, {'R3':1, 'R5':1}),
                        'R5': LinkState(None, 'R5', 1, {'R1':1, 'R4':1, 'R6':1}),
                        'R6': LinkState(None, 'R6', 1, {'R5':1, 'R7':1}) }
-        next_hops, costs, valid_origins = self.engine.calculate_routes(collection)
+        next_hops, costs, valid_origins, radius = self.engine.calculate_routes(collection)
         self.assertEqual(len(next_hops), 6)
         self.assertEqual(next_hops['R2'], 'R3')
         self.assertEqual(next_hops['R3'], 'R3')
@@ -352,6 +358,8 @@ class PathTest(unittest.TestCase):
         self.assertEqual(valid_origins['R6'], ['R2', 'R3'])
         self.assertEqual(valid_origins['R7'], ['R2', 'R3'])
 
+        self.assertEqual(radius, 3)
+
     def test_topology5(self):
         """
 
@@ -370,7 +378,7 @@ class PathTest(unittest.TestCase):
                        'R1': LinkState(None, 'R1', 1, {'R3':1, 'R5':1, 'R2':1}),
                        'R5': LinkState(None, 'R5', 1, {'R1':1, 'R4':1, 'R6':1}),
                        'R6': LinkState(None, 'R6', 1, {'R5':1, 'R7':1}) }
-        next_hops, costs, valid_origins = self.engine.calculate_routes(collection)
+        next_hops, costs, valid_origins, radius = self.engine.calculate_routes(collection)
         self.assertEqual(len(next_hops), 6)
         self.assertEqual(next_hops['R2'], 'R2')
         self.assertEqual(next_hops['R3'], 'R3')
@@ -399,6 +407,8 @@ class PathTest(unittest.TestCase):
         self.assertEqual(valid_origins['R6'], ['R2', 'R3'])
         self.assertEqual(valid_origins['R7'], ['R2', 'R3'])
 
+        self.assertEqual(radius, 3)
+
     def test_topology5_with_asymmetry1(self):
         """
 
@@ -417,7 +427,7 @@ class PathTest(unittest.TestCase):
                        'R1': LinkState(None, 'R1', 1, {'R3':1, 'R5':1, 'R2':1}),
                        'R5': LinkState(None, 'R5', 1, {'R1':1, 'R4':1, 'R6':1}),
                        'R6': LinkState(None, 'R6', 1, {'R5':1, 'R7':1}) }
-        next_hops, costs, valid_origins = self.engine.calculate_routes(collection)
+        next_hops, costs, valid_origins, radius = self.engine.calculate_routes(collection)
         self.assertEqual(len(next_hops), 6)
         self.assertEqual(next_hops['R2'], 'R2')
         self.assertEqual(next_hops['R3'], 'R3')
@@ -439,6 +449,8 @@ class PathTest(unittest.TestCase):
         self.assertEqual(valid_origins['R6'], ['R2', 'R3'])
         self.assertEqual(valid_origins['R7'], ['R2', 'R3'])
 
+        self.assertEqual(radius, 3)
+
     def test_topology5_with_asymmetry2(self):
         """
 
@@ -457,7 +469,7 @@ class PathTest(unittest.TestCase):
                        'R1': LinkState(None, 'R1', 1, {'R3':1, 'R5':1}),
                        'R5': LinkState(None, 'R5', 1, {'R1':1, 'R4':1, 'R6':1}),
                        'R6': LinkState(None, 'R6', 1, {'R5':1, 'R7':1}) }
-        next_hops, costs, valid_origins = self.engine.calculate_routes(collection)
+        next_hops, costs, valid_origins, radius = self.engine.calculate_routes(collection)
         self.assertEqual(len(next_hops), 6)
         self.assertEqual(next_hops['R2'], 'R3')
         self.assertEqual(next_hops['R3'], 'R3')
@@ -479,6 +491,8 @@ class PathTest(unittest.TestCase):
         self.assertEqual(valid_origins['R6'], ['R2', 'R3'])
         self.assertEqual(valid_origins['R7'], ['R2', 'R3'])
 
+        self.assertEqual(radius, 3)
+
     def test_topology5_with_asymmetry3(self):
         """
 
@@ -497,7 +511,7 @@ class PathTest(unittest.TestCase):
                        'R1': LinkState(None, 'R1', 1, {'R3':1, 'R5':1}),
                        'R5': LinkState(None, 'R5', 1, {'R1':1, 'R4':1}),
                        'R6': LinkState(None, 'R6', 1, {'R5':1, 'R7':1}) }
-        next_hops, costs, valid_origins = self.engine.calculate_routes(collection)
+        next_hops, costs, valid_origins, radius = self.engine.calculate_routes(collection)
         self.assertEqual(len(next_hops), 4)
         self.assertEqual(next_hops['R2'], 'R3')
         self.assertEqual(next_hops['R3'], 'R3')
@@ -512,6 +526,8 @@ class PathTest(unittest.TestCase):
         self.assertEqual(valid_origins['R3'], ['R5'])
         self.assertEqual(valid_origins['R4'], [])
         self.assertEqual(valid_origins['R5'], ['R2', 'R3'])
+
+        self.assertEqual(radius, 2)
 
     def test_topology5_with_costs1(self):
         """
@@ -533,7 +549,7 @@ class PathTest(unittest.TestCase):
                        'R1': LinkState(None, 'R1', 1, {'R3':3,  'R5':10, 'R2':20}),
                        'R5': LinkState(None, 'R5', 1, {'R1':10, 'R4':5,  'R6':2}),
                        'R6': LinkState(None, 'R6', 1, {'R5':2,  'R7':1}) }
-        next_hops, costs, valid_origins = self.engine.calculate_routes(collection)
+        next_hops, costs, valid_origins, radius = self.engine.calculate_routes(collection)
         self.assertEqual(len(next_hops), 6)
         self.assertEqual(next_hops['R2'], 'R3')
         self.assertEqual(next_hops['R3'], 'R3')
@@ -562,6 +578,8 @@ class PathTest(unittest.TestCase):
         self.assertEqual(valid_origins['R6'], [])
         self.assertEqual(valid_origins['R7'], [])
 
+        self.assertEqual(radius, 3)
+
     def test_topology5_with_costs2(self):
         """
 
@@ -582,7 +600,7 @@ class PathTest(unittest.TestCase):
                        'R1': LinkState(None, 'R1', 1, {'R3':100, 'R5':10,  'R2':5}),
                        'R5': LinkState(None, 'R5', 1, {'R1':10,  'R4':100, 'R6':2}),
                        'R6': LinkState(None, 'R6', 1, {'R5':2,   'R7':1}) }
-        next_hops, costs, valid_origins = self.engine.calculate_routes(collection)
+        next_hops, costs, valid_origins, radius = self.engine.calculate_routes(collection)
         self.assertEqual(len(next_hops), 6)
         self.assertEqual(next_hops['R2'], 'R2')
         self.assertEqual(next_hops['R3'], 'R2')
@@ -611,6 +629,8 @@ class PathTest(unittest.TestCase):
         self.assertEqual(valid_origins['R6'], ['R2', 'R3', 'R4'])
         self.assertEqual(valid_origins['R7'], ['R2', 'R3', 'R4'])
 
+        self.assertEqual(radius, 3)
+
     def test_topology6_path_vs_valid_origin(self):
         """
 
@@ -634,14 +654,17 @@ class PathTest(unittest.TestCase):
 
         self.id = 'R3'
         self.engine = PathEngine(self)
-        r3_next_hops, r3_costs, r3_valid_origins = self.engine.calculate_routes(collection)
+        r3_next_hops, r3_costs, r3_valid_origins, r3_radius = self.engine.calculate_routes(collection)
 
         self.id = 'R1'
         self.engine = PathEngine(self)
-        r1_next_hops, r1_costs, r1_valid_origins = self.engine.calculate_routes(collection)
+        r1_next_hops, r1_costs, r1_valid_origins, r1_radius = self.engine.calculate_routes(collection)
 
         self.assertEqual(r1_next_hops['R6'], 'R2')
         self.assertEqual(r3_valid_origins['R6'], [])
+
+        self.assertEqual(r1_radius, 3)
+        self.assertEqual(r3_radius, 2)
 
 
 if __name__ == '__main__':

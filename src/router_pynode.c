@@ -219,6 +219,19 @@ static PyObject* qd_set_valid_origins(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* qd_set_radius(PyObject *self, PyObject *args)
+{
+    RouterAdapter *adapter = (RouterAdapter*) self;
+    qd_router_t   *router  = adapter->router;
+
+    if (!PyArg_ParseTuple(args, "i", &router->topology_radius))
+        return 0;
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
 static PyObject* qd_map_destination(PyObject *self, PyObject *args)
 {
     RouterAdapter *adapter = (RouterAdapter*) self;
@@ -281,6 +294,7 @@ static PyMethodDef RouterAdapter_methods[] = {
     {"remove_next_hop",     qd_remove_next_hop,   METH_VARARGS, "Remove the next hop for a remote router"},
     {"set_cost",            qd_set_cost,          METH_VARARGS, "Set the cost to reach a remote router"},
     {"set_valid_origins",   qd_set_valid_origins, METH_VARARGS, "Set the valid origins for a remote router"},
+    {"set_radius",          qd_set_radius,        METH_VARARGS, "Set the current topology radius"},
     {"map_destination",     qd_map_destination,   METH_VARARGS, "Add a newly discovered destination mapping"},
     {"unmap_destination",   qd_unmap_destination, METH_VARARGS, "Delete a destination mapping"},
     {"get_agent",           qd_get_agent,         METH_VARARGS, "Get the management agent"},

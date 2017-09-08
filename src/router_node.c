@@ -92,9 +92,10 @@ static int AMQP_writable_conn_handler(void *type_context, qd_connection_t *conn,
 }
 
 
-static qd_iterator_t *router_annotate_message(qd_router_t       *router,
-                                              qd_message_t      *msg,
-                                              qd_bitmask_t     **link_exclusions)
+static qd_iterator_t *router_annotate_message(qd_router_t   *router,
+                                              qd_message_t  *msg,
+                                              qd_bitmask_t **link_exclusions,
+                                              uint32_t      *distance)
 {
     qd_iterator_t *ingress_iter = 0;
 
@@ -105,6 +106,7 @@ static qd_iterator_t *router_annotate_message(qd_router_t       *router,
     qd_parsed_field_t *phase   = qd_message_get_phase(msg);
 
     *link_exclusions = 0;
+    *distance        = 0;
 
     //
     // QD_MA_TRACE:
@@ -116,6 +118,11 @@ static qd_iterator_t *router_annotate_message(qd_router_t       *router,
     qd_compose_start_list(trace_field);
     if (trace) {
         if (qd_parse_is_list(trace)) {
+            //
+            // Return the distance in hops that this delivery has traveled.
+            //
+            *distance = qd_parse_sub_count(trace);
+
             //
             // Create a link-exclusion map for the items in the trace.  This map will
             // contain a one-bit for each link that leads to a neighbor router that
@@ -351,10 +358,26 @@ static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
     }
 
     qd_message_message_annotations(msg);
-    qd_bitmask_t        *link_exclusions;
+    qd_bitmask_t *link_exclusions;
+    uint32_t      distance;
 
-    qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions);
+    qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions, &distance);
 
+    //
+    // If this delivery has traveled further than the known radius of the network topology (plus 1),
+    // release and settle the delivery.  This can happen in the case of "flood" multicast where the
+    // deliveries follow all available paths.  This will only discard messages that will reach their
+    // destinations via shorter paths.
+    //
+    if (distance > (router->topology_radius + 1)) {
+        qd_message_set_discard(msg, true);
+        pn_link_flow(pn_link, 1);
+        pn_delivery_update(pnd, PN_RELEASED);
+        pn_delivery_settle(pnd);
+        qd_message_free(msg);
+        return;
+    }
+    
     if (anonymous_link) {
         qd_iterator_t *addr_iter = 0;
         int phase = 0;

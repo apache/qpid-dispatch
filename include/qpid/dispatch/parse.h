@@ -203,7 +203,7 @@ int64_t qd_parse_as_long(qd_parsed_field_t *field);
 bool qd_parse_as_bool(qd_parsed_field_t *field);
 
 /**
- * Return the number of sub-field in a compound field.  If the field is
+ * Return the number of sub-fields in a compound field.  If the field is
  * a list or array, this is the number of items in the list/array.  If
  * the field is a map, this is the number of key/value pairs in the map
  * (i.e. half the number of actual sub-field in the map).

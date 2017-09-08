@@ -65,6 +65,13 @@ struct qd_router_t {
 
     sys_mutex_t              *lock;
     qd_timer_t               *timer;
+
+    //
+    // Store the "radius" of the current network topology.  This is defined as the
+    // distance in hops (not cost) from the local router to the most distant known
+    // router in the topology.
+    //
+    int topology_radius;
 };
 
 #endif
