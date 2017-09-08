@@ -1166,9 +1166,14 @@ class OneRouterTest(TestCase):
 
         results = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'properties']).results
 
-        self.assertEqual(results[0][0][u'connection'], u'properties')
-        self.assertEqual(results[0][0][u'int_property'], 6451)
+        found = False
+        for result in results:
+            if u'connection' in result[0] and u'int_property' in result[0]:
+                found = True
+                self.assertEqual(result[0][u'connection'], u'properties')
+                self.assertEqual(result[0][u'int_property'], 6451)
 
+        self.assertTrue(found)
         client.connection.close()
 
 
