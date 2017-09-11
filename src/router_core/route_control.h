@@ -24,6 +24,7 @@
 qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_iterator_t          *name,
                                               qd_parsed_field_t      *prefix_field,
+                                              qd_parsed_field_t      *pattern_field,
                                               qd_parsed_field_t      *container_field,
                                               qd_parsed_field_t      *connection_field,
                                               qd_address_treatment_t  treatment,
@@ -48,5 +49,8 @@ void qdr_route_connection_opened_CT(qdr_core_t       *core,
                                     qdr_field_t      *connection_field);
 
 void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn);
+
+void qdr_link_route_map_pattern_CT(qdr_core_t *core, qd_iterator_t *address, qdr_address_t *addr);
+void qdr_link_route_unmap_pattern_CT(qdr_core_t *core, qd_iterator_t *address);
 
 #endif

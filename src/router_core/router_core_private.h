@@ -445,6 +445,7 @@ struct qdr_address_t {
     qd_address_treatment_t     treatment;
     qdr_forwarder_t           *forwarder;
     int                        ref_count;     ///< Number of link-routes + auto-links referencing this address
+    int                        map_count;     ///< parse tree map/unmap operations for link route patterns
     bool                       block_deletion;
     bool                       local;
     uint32_t                   tracked_deliveries;
@@ -547,6 +548,18 @@ struct qdr_connection_t {
 ALLOC_DECLARE(qdr_connection_t);
 DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);
 
+// Address hash prefixes for link routes:
+//  'C' old style prefix address, incoming
+//  'D' old style prefix address, outgoing
+//  'E' link route pattern address, incoming
+//  'F' link route pattern address, outgoing
+#define QDR_IS_LINK_ROUTE_PREFIX(p) ((p) == 'C' || (p) == 'D')
+#define QDR_IS_LINK_ROUTE(p) ((p) == 'E' || (p) == 'F' || QDR_IS_LINK_ROUTE_PREFIX(p))
+#define QDR_LINK_ROUTE_DIR(p) (((p) == 'C' || (p) == 'E') ? QD_INCOMING : QD_OUTGOING)
+#define QDR_LINK_ROUTE_HASH(dir, is_prefix) \
+    (((dir) == QD_INCOMING)                 \
+     ? ((is_prefix) ? 'C' : 'E')            \
+     : ((is_prefix) ? 'D' : 'F'))
 
 struct qdr_link_route_t {
     DEQ_LINKS(qdr_link_route_t);
@@ -558,11 +571,13 @@ struct qdr_link_route_t {
     qdr_conn_identifier_t  *conn_id;
     qd_address_treatment_t  treatment;
     bool                    active;
+    bool                    is_prefix;
+    char                   *pattern;
 };
 
 ALLOC_DECLARE(qdr_link_route_t);
 DEQ_DECLARE(qdr_link_route_t, qdr_link_route_list_t);
-
+void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr);
 
 typedef enum {
     QDR_AUTO_LINK_STATE_INACTIVE,
@@ -664,7 +679,8 @@ struct qdr_core_t {
     qd_hash_t                 *conn_id_hash;
     qdr_address_list_t         addrs;
     qd_hash_t                 *addr_hash;
-    qd_parse_node_t           *addr_parse_tree;
+    qd_parse_tree_t           *addr_parse_tree;
+    qd_parse_tree_t           *link_route_tree[2];   // QD_INCOMING, QD_OUTGOING
     qdr_address_t             *hello_addr;
     qdr_address_t             *router_addr_L;
     qdr_address_t             *routerma_addr_L;

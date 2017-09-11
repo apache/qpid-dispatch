@@ -64,7 +64,8 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 
         if (prefix && pattern) {
             qd_log(router->log_source, QD_LOG_WARNING,
-                   "Cannot set both 'prefix' and 'pattern': ignoring %s, %s",
+                   "Cannot set both 'prefix' and 'pattern': ignoring"
+                   " configured address %s, %s",
                    prefix, pattern);
             break;
         } else if (!prefix && !pattern) {
@@ -137,6 +138,7 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
 
     char *name      = 0;
     char *prefix    = 0;
+    char *pattern   = 0;
     char *container = 0;
     char *c_name    = 0;
     char *distrib   = 0;
@@ -144,11 +146,25 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
 
     do {
         name      = qd_entity_opt_string(entity, "name", 0);         QD_ERROR_BREAK();
-        prefix    = qd_entity_get_string(entity, "prefix");          QD_ERROR_BREAK();
         container = qd_entity_opt_string(entity, "containerId", 0);  QD_ERROR_BREAK();
         c_name    = qd_entity_opt_string(entity, "connection", 0);   QD_ERROR_BREAK();
         distrib   = qd_entity_opt_string(entity, "distribution", 0); QD_ERROR_BREAK();
         dir       = qd_entity_opt_string(entity, "dir", 0);          QD_ERROR_BREAK();
+
+        prefix    = qd_entity_opt_string(entity, "prefix", 0);
+        pattern   = qd_entity_opt_string(entity, "pattern", 0);
+
+        if (prefix && pattern) {
+            qd_log(router->log_source, QD_LOG_WARNING,
+                   "Cannot set both 'prefix' and 'pattern': ignoring link route %s, %s",
+                   prefix, pattern);
+            break;
+        } else if (!prefix && !pattern) {
+            qd_log(router->log_source, QD_LOG_WARNING,
+                   "Must set either 'prefix' or 'pattern' attribute:"
+                   " ignoring link route address");
+            break;
+        }
 
         //
         // Formulate this configuration as a route and create it through the core management API.
@@ -164,6 +180,11 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
         if (prefix) {
             qd_compose_insert_string(body, "prefix");
             qd_compose_insert_string(body, prefix);
+        }
+
+        if (pattern) {
+            qd_compose_insert_string(body, "pattern");
+            qd_compose_insert_string(body, pattern);
         }
 
         if (container) {
@@ -198,6 +219,7 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
     free(c_name);
     free(distrib);
     free(dir);
+    free(pattern);
 
     return qd_error_code();
 }

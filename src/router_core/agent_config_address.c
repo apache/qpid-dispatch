@@ -297,7 +297,6 @@ void qdra_config_address_delete_CT(qdr_core_t    *core,
     qdr_agent_enqueue_response_CT(core, query);
 }
 
-void qd_parse_tree_dump(qd_parse_node_t *node, int depth);
 
 void qdra_config_address_create_CT(qdr_core_t         *core,
                                    qd_iterator_t      *name,

@@ -113,10 +113,74 @@ static void qdr_route_log_CT(qdr_core_t *core, const char *text, const char *nam
 }
 
 
+// true if pattern is equivalent to an old style prefix match
+// (e.g.  non-wildcard-prefix.#
+static bool qdr_link_route_pattern_is_prefix(const char *pattern)
+{
+    const int len = (int) strlen(pattern);
+    return (!strchr(pattern, '*') &&
+            (strchr(pattern, '#') == &pattern[len - 1]));
+
+}
+
+
+// convert a link route pattern to a mobile address hash string
+// e.g. "a.b.c.#" --> "Ca.b.c"; "a.*.b.#" --> "Ea.*.b.#"
+// Caller must free returned string
+static char *qdr_link_route_pattern_to_address(const char *pattern,
+                                               qd_direction_t dir)
+{
+    unsigned char *addr;
+    qd_iterator_t *iter;
+    const int len = (int) strlen(pattern);
+
+    assert(len > 0);
+    if (qdr_link_route_pattern_is_prefix(pattern)) {
+        // a pattern that is compatible with the old prefix config
+        // (i.e. only wildcard is '#' at the end), strip the trailing '#' and
+        // advertise them as 'C' or 'D' for backwards compatibility
+        iter = qd_iterator_binary(pattern, len - 1, ITER_VIEW_ADDRESS_HASH);
+        qd_iterator_annotate_prefix(iter, QDR_LINK_ROUTE_HASH(dir, true));
+    } else {
+        // a true link route pattern
+        iter = qd_iterator_string(pattern, ITER_VIEW_ADDRESS_HASH);
+        qd_iterator_annotate_prefix(iter, QDR_LINK_ROUTE_HASH(dir, false));
+    }
+    addr = qd_iterator_copy(iter);
+    qd_iterator_free(iter);
+
+    // caller must free() result
+    return (char *)addr;
+}
+
+
+// convert a link route address in hash format back to a proper pattern.
+// e.g. "Ca.b.c" --> "a.b.c.#"; "Ea.*.#.b --> "a.*.#.b"
+// Caller responsible for calling free() on returned string
+static char *qdr_address_to_link_route_pattern(qd_iterator_t *addr_hash,
+                                               qd_direction_t *dir)
+{
+    int len = qd_iterator_length(addr_hash);
+    char *pattern = malloc(len + 3);   // append ".#" if prefix
+    char *rc = 0;
+    qd_iterator_strncpy(addr_hash, pattern, len + 1);
+    qd_iterator_reset(addr_hash);
+    if (QDR_IS_LINK_ROUTE_PREFIX(pattern[0])) {
+        // old style link route prefix address.  It needs to be converted to a
+        // pattern by appending ".#"
+        strcat(pattern, ".#");
+    }
+    rc = strdup(&pattern[1]);   // skip the prefix
+    if (dir)
+        *dir = QDR_LINK_ROUTE_DIR(pattern[0]);
+    free(pattern);
+    return rc;
+}
+
+
 static void qdr_link_route_activate_CT(qdr_core_t *core, qdr_link_route_t *lr, qdr_connection_t *conn)
 {
-    const char *key;
-
+    char *address;
     qdr_route_log_CT(core, "Link Route Activated", lr->name, lr->identity, conn);
 
     //
@@ -126,9 +190,10 @@ static void qdr_link_route_activate_CT(qdr_core_t *core, qdr_link_route_t *lr, q
     if (lr->addr) {
         qdr_add_connection_ref(&lr->addr->conns, conn);
         if (DEQ_SIZE(lr->addr->conns) == 1) {
-            key = (const char*) qd_hash_key_by_handle(lr->addr->hash_handle);
-            if (key)
-                qdr_post_mobile_added_CT(core, key);
+            address = qdr_link_route_pattern_to_address(lr->pattern, lr->dir);
+            qd_log(core->log, QD_LOG_TRACE, "Activating link route pattern [%s]", address);
+            qdr_post_mobile_added_CT(core, address);
+            free(address);
         }
     }
 
@@ -138,8 +203,6 @@ static void qdr_link_route_activate_CT(qdr_core_t *core, qdr_link_route_t *lr, q
 
 static void qdr_link_route_deactivate_CT(qdr_core_t *core, qdr_link_route_t *lr, qdr_connection_t *conn)
 {
-    const char *key;
-
     qdr_route_log_CT(core, "Link Route Deactivated", lr->name, lr->identity, conn);
 
     //
@@ -148,9 +211,10 @@ static void qdr_link_route_deactivate_CT(qdr_core_t *core, qdr_link_route_t *lr,
     if (lr->addr) {
         qdr_del_connection_ref(&lr->addr->conns, conn);
         if (DEQ_IS_EMPTY(lr->addr->conns)) {
-            key = (const char*) qd_hash_key_by_handle(lr->addr->hash_handle);
-            if (key)
-                qdr_post_mobile_removed_CT(core, key);
+            char *address = qdr_link_route_pattern_to_address(lr->pattern, lr->dir);
+            qd_log(core->log, QD_LOG_TRACE, "Deactivating link route pattern [%s]", address);
+            qdr_post_mobile_removed_CT(core, address);
+            free(address);
         }
     }
 
@@ -205,36 +269,62 @@ static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, q
 qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_iterator_t          *name,
                                               qd_parsed_field_t      *prefix_field,
+                                              qd_parsed_field_t      *pattern_field,
                                               qd_parsed_field_t      *container_field,
                                               qd_parsed_field_t      *connection_field,
                                               qd_address_treatment_t  treatment,
                                               qd_direction_t          dir)
 {
-    qdr_link_route_t *lr = new_qdr_link_route_t();
+    const bool is_prefix = !!prefix_field;
+    qd_iterator_t *iter = qd_parse_raw(is_prefix ? prefix_field : pattern_field);
+    int len = qd_iterator_length(iter);
+    char *pattern = malloc(len + 1 + (is_prefix ? 2 : 0));
+
+    qd_iterator_strncpy(iter, pattern, len + 1);
+
+    // forward compatibility hack: convert the old style prefix addresses into
+    // a proper pattern addresses by appending ".#"
+    if (is_prefix) {
+        char suffix = pattern[strlen(pattern) - 1];
+        if (suffix == '#') {
+            // already converted - do nothing
+        } else {
+            if (!strchr(QD_PARSE_TREE_TOKEN_SEP, suffix))
+                strcat(pattern, ".");  // use . for legacy
+            strcat(pattern, "#");
+        }
+    }
 
     //
     // Set up the link_route structure
     //
+    qdr_link_route_t *lr = new_qdr_link_route_t();
     ZERO(lr);
     lr->identity  = qdr_identifier(core);
     lr->name      = name ? (char*) qd_iterator_copy(name) : 0;
     lr->dir       = dir;
     lr->treatment = treatment;
+    lr->is_prefix = is_prefix;
+    lr->pattern   = pattern;
+
 
     //
-    // Find or create an address for link-attach routing
+    // Add the address to the routing hash table and map it as a pattern in the
+    // wildcard pattern parse tree
     //
-    qd_iterator_t *iter = qd_parse_raw(prefix_field);
-    qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    qd_iterator_annotate_prefix(iter, dir == QD_INCOMING ? 'C' : 'D');
-
-    qd_hash_retrieve(core->addr_hash, iter, (void*) &lr->addr);
-    if (!lr->addr) {
-        lr->addr = qdr_address_CT(core, treatment);
-        DEQ_INSERT_TAIL(core->addrs, lr->addr);
-        qd_hash_insert(core->addr_hash, iter, lr->addr, &lr->addr->hash_handle);
+    {
+        char *addr_hash = qdr_link_route_pattern_to_address(lr->pattern, dir);
+        qd_iterator_t *a_iter = qd_iterator_string(addr_hash, ITER_VIEW_ALL);
+        qd_hash_retrieve(core->addr_hash, a_iter, (void*) &lr->addr);
+        if (!lr->addr) {
+            lr->addr = qdr_address_CT(core, treatment);
+            DEQ_INSERT_TAIL(core->addrs, lr->addr);
+            qd_hash_insert(core->addr_hash, a_iter, lr->addr, &lr->addr->hash_handle);
+        }
+        qdr_link_route_map_pattern_CT(core, a_iter, lr->addr);
+        qd_iterator_free(a_iter);
+        free(addr_hash);
     }
-
     lr->addr->ref_count++;
 
     //
@@ -254,6 +344,8 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
     // Add the link route to the core list
     //
     DEQ_INSERT_TAIL(core->link_routes, lr);
+    qd_log(core->log, QD_LOG_TRACE, "Link route %spattern added: pattern=%s name=%s",
+           is_prefix ? "prefix " : "", lr->pattern, lr->name);
 
     return lr;
 }
@@ -277,6 +369,17 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
     }
 
     //
+    // Pull the pattern from the parse tree
+    //
+    {
+        char *addr = qdr_link_route_pattern_to_address(lr->pattern, lr->dir);
+        qd_iterator_t *iter = qd_iterator_string(addr, ITER_VIEW_ALL);
+        qdr_link_route_unmap_pattern_CT(core, iter);
+        qd_iterator_free(iter);
+        free(addr);
+    }
+
+    //
     // Disassociate the link route from its address.  Check to see if the address
     // should be removed.
     //
@@ -287,9 +390,9 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
     //
     // Remove the link route from the core list.
     //
-    DEQ_REMOVE(core->link_routes, lr);
-    free(lr->name);
-    free_qdr_link_route_t(lr);
+    qd_log(core->log, QD_LOG_TRACE, "Link route %spattern removed: pattern=%s name=%s",
+           lr->is_prefix ? "prefix " : "", lr->pattern, lr->name);
+    qdr_core_delete_link_route(core, lr);
 }
 
 
@@ -459,3 +562,49 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
     }
 }
 
+
+void qdr_link_route_map_pattern_CT(qdr_core_t *core, qd_iterator_t *address, qdr_address_t *addr)
+{
+    qd_direction_t dir;
+    char *pattern = qdr_address_to_link_route_pattern(address, &dir);
+    qd_iterator_t *iter = qd_iterator_string(pattern, ITER_VIEW_ALL);
+
+    qdr_address_t *other_addr;
+    bool found = qd_parse_tree_get_pattern(core->link_route_tree[dir], iter, (void **)&other_addr);
+    if (!found) {
+        qd_parse_tree_add_pattern(core->link_route_tree[dir], iter, addr);
+        addr->ref_count++;
+    } else {
+        // already mapped
+        if (other_addr != addr)
+            qd_log(core->log, QD_LOG_CRITICAL, "Link route %s not correctly mapped",
+                   pattern);
+    }
+    addr->map_count++;
+
+    qd_iterator_free(iter);
+    free(pattern);
+}
+
+
+void qdr_link_route_unmap_pattern_CT(qdr_core_t *core, qd_iterator_t *address)
+{
+    qd_direction_t dir;
+    char *pattern = qdr_address_to_link_route_pattern(address, &dir);
+    qd_iterator_t *iter = qd_iterator_string(pattern, ITER_VIEW_ALL);
+    qdr_address_t *addr;
+    bool found = qd_parse_tree_get_pattern(core->link_route_tree[dir], iter, (void **)&addr);
+    if (found) {
+        assert(addr->map_count > 0);
+        addr->map_count--;
+        if (addr->map_count == 0) {
+            qd_parse_tree_remove_pattern(core->link_route_tree[dir], iter);
+            addr->ref_count--;
+        }
+    } else
+        qd_log(core->log, QD_LOG_CRITICAL, "link route pattern ummap: Pattern '%s' not found",
+               pattern);
+
+    qd_iterator_free(iter);
+    free(pattern);
+}

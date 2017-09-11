@@ -27,7 +27,7 @@ static char *test_add_remove(void *context)
 {
     qd_iterator_t *piter = qd_iterator_string("I.am.Sam", ITER_VIEW_ALL);
     qd_iterator_t *piter2 = qd_iterator_string("Sam.I.Am", ITER_VIEW_ALL);
-    qd_parse_node_t *node = qd_parse_tree_new();
+    qd_parse_tree_t *node = qd_parse_tree_new();
     void *payload;
 
     if (qd_parse_tree_remove_pattern(node, piter))
@@ -107,7 +107,7 @@ static char *check_normalize(const char *input,
     const char *patterns[1];
     void *payloads[1];
     visit_handle_t vh = {0, patterns, payloads};
-    qd_parse_node_t *node = qd_parse_tree_new();
+    qd_parse_tree_t *node = qd_parse_tree_new();
     qd_iterator_t *iter = qd_iterator_string(input, ITER_VIEW_ALL);
     void *payload;
 
@@ -172,7 +172,7 @@ static char *match_test(const char *pattern,
 {
     char *rc = NULL;
     qd_iterator_t *piter = qd_iterator_string(pattern, ITER_VIEW_ALL);
-    qd_parse_node_t *node = qd_parse_tree_new();
+    qd_parse_tree_t *node = qd_parse_tree_new();
     void *payload = (void *)"found";
 
     if (qd_parse_tree_add_pattern(node, piter, payload))
@@ -370,7 +370,7 @@ static char *test_multiple_matches(void *context)
     const char *_patterns[PCOUNT] = {NULL};
     void *_payloads[PCOUNT] = {NULL};
     visit_handle_t vh = {0, _patterns, _payloads};
-    qd_parse_node_t *node = qd_parse_tree_new();
+    qd_parse_tree_t *node = qd_parse_tree_new();
 
     // build the tree
     for (int i = 0; i < PCOUNT; i++) {

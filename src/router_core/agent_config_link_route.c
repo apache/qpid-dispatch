@@ -32,6 +32,7 @@
 #define QDR_CONFIG_LINK_ROUTE_CONTAINER_ID  6
 #define QDR_CONFIG_LINK_ROUTE_DIR           7
 #define QDR_CONFIG_LINK_ROUTE_OPER_STATUS   8
+#define QDR_CONFIG_LINK_ROUTE_PATTERN       9
 
 const char *qdr_config_link_route_columns[] =
     {"name",
@@ -43,6 +44,7 @@ const char *qdr_config_link_route_columns[] =
      "containerId",
      "dir",
      "operStatus",
+     "pattern",
      0};
 
 const char *CONFIG_LINKROUTE_TYPE = "org.apache.qpid.dispatch.router.config.linkRoute";
@@ -76,11 +78,21 @@ static void qdr_config_link_route_insert_column_CT(qdr_link_route_t *lr, int col
         qd_compose_insert_string(body, CONFIG_LINKROUTE_TYPE);
         break;
 
-    case QDR_CONFIG_LINK_ROUTE_PREFIX:
-        key = (const char*) qd_hash_key_by_handle(lr->addr->hash_handle);
-        if (key && (key[0] == 'C' || key[0] == 'D'))
-            qd_compose_insert_string(body, &key[1]);
+    case QDR_CONFIG_LINK_ROUTE_PATTERN:
+        if (lr->pattern && !lr->is_prefix)
+            qd_compose_insert_string(body, lr->pattern);
         else
+            qd_compose_insert_null(body);
+        break;
+
+    case QDR_CONFIG_LINK_ROUTE_PREFIX:
+        if (lr->pattern && lr->is_prefix) {
+            // the prefix is converted to a pattern by appending '.#' to the
+            // prefix, so strip it off
+            const size_t len = strlen(lr->pattern);
+            assert(len > 2);
+            qd_compose_insert_string_n(body, lr->pattern, len - 2);
+        } else
             qd_compose_insert_null(body);
         break;
 
@@ -375,6 +387,7 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         // Extract the fields from the request
         //
         qd_parsed_field_t *prefix_field     = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_PREFIX]);
+        qd_parsed_field_t *pattern_field    = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_PATTERN]);
         qd_parsed_field_t *distrib_field    = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_DISTRIBUTION]);
         qd_parsed_field_t *connection_field = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_CONNECTION]);
         qd_parsed_field_t *container_field  = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_CONTAINER_ID]);
@@ -392,11 +405,21 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         }
 
         //
-        // Prefix and dir fields are mandatory.  Fail if they're not both here.
+        // The dir field is mandatory.
+        // Either a prefix or a pattern field is mandatory.  However prefix and pattern
+        // are mutually exclusive. Fail if either both or none are given.
         //
-        if (!prefix_field || !dir_field) {
+        const char *msg = NULL;
+        if (!dir_field) {
+            msg = "No 'dir' attribute provided - it is mandatory";
+        } else if (!prefix_field && !pattern_field) {
+            msg = "Either a 'prefix' or 'pattern' attribute must be provided";
+        } else if (prefix_field && pattern_field) {
+            msg = "Cannot specify both a 'prefix' and a 'pattern' attribute";
+        }
+        if (msg) {
             query->status = QD_AMQP_BAD_REQUEST;
-            query->status.description = "prefix and dir fields are mandatory";
+            query->status.description = msg;
             qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_LINKROUTE_TYPE, query->status.description);
             break;
         }
@@ -422,7 +445,8 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         //
         // The request is good.  Create the entity.
         //
-        lr = qdr_route_add_link_route_CT(core, name, prefix_field, container_field, connection_field, trt, dir);
+
+        lr = qdr_route_add_link_route_CT(core, name, prefix_field, pattern_field, container_field, connection_field, trt, dir);
 
         //
         // Compose the result map for the response.
