@@ -1037,15 +1037,21 @@
         },
 
         "router.config.linkRoute": {
-            "description": "Entity type for link-route configuration.  This is used to identify remote containers that shall be destinations for routed link-attaches.  The link-routing configuration applies to an addressing space defined by a prefix.",
+            "description": "Entity type for link-route configuration.  This is used to identify remote containers that shall be destinations for routed link-attaches.  The link-routing configuration applies to an addressing space defined by a prefix or a pattern.",
             "extends": "configurationEntity",
             "operations": ["CREATE", "DELETE"],
             "attributes": {
                 "prefix": {
                     "type": "string",
-                    "description": "The address prefix for the configured settings",
+                    "description": "The address prefix for the configured settings. Cannot be used with the pattern attribute.",
                     "create": true,
-                    "required": true
+                    "required": false
+                },
+                "pattern": {
+                    "type": "string",
+                    "description": "A wildcarded pattern for address matching. Link addresses are matched against this pattern. Matching addresses use the configured settings. The pattern consists of one or more tokens separated by a forward slash '/'. A token can be one of the following: a * character, a # character, or a sequence of characters that do not include /, *, or #.  The * token matches any single token.  The # token matches zero or more tokens. * has higher precedence than #, and exact match has the highest precedence. Cannot be used with the prefix attribute.",
+                    "create": true,
+                    "required": false
                 },
                 "containerId": {
                     "type": "string",

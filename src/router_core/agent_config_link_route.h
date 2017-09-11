@@ -33,7 +33,7 @@ void qdra_config_link_route_get_CT(qdr_core_t    *core,
                                    qdr_query_t   *query,
                                    const char    *qdr_config_link_route_columns[]);
 
-#define QDR_CONFIG_LINK_ROUTE_COLUMN_COUNT 9
+#define QDR_CONFIG_LINK_ROUTE_COLUMN_COUNT 10
 
 const char *qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_COLUMN_COUNT + 1];
 

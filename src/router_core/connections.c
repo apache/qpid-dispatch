@@ -899,17 +899,11 @@ static void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *lin
 }
 
 
-static char qdr_prefix_for_dir(qd_direction_t dir)
-{
-    return (dir == QD_INCOMING) ? 'C' : 'D';
-}
-
 qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter, int *in_phase, int *out_phase)
 {
     qdr_address_config_t *addr = 0;
     qd_iterator_view_t old_view = qd_iterator_get_view(iter);
 
-    // @TODO(kgiusti) - why not lookup exact match in has first??
     qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_WITH_SPACE);
     if (conn && conn->tenant_space)
         qd_iterator_annotate_space(iter, conn->tenant_space, conn->tenant_space_len);
@@ -941,7 +935,7 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_it
 
     qd_iterator_strncpy(iter, copy, length + 1);
 
-    if (copy[0] == 'C' || copy[0] == 'D')
+    if (QDR_IS_LINK_ROUTE(copy[0]))
         //
         // Handle the link-route address case
         // TODO - put link-routes into the config table with a different prefix from 'Z'
@@ -952,8 +946,6 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_it
         //
         // Handle the mobile address case
         //
-
-        // @TODO(kgiusti) ask ted if tenant needs to be added first!
         qd_iterator_t *config_iter = qd_iterator_string(&copy[2], ITER_VIEW_ADDRESS_WITH_SPACE);
         qdr_address_config_t *addr = 0;
         qd_parse_tree_retrieve_match(core->addr_parse_tree, config_iter, (void **) &addr);
@@ -1042,18 +1034,16 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
         //
         qd_iterator_t *dnp_address = qdr_terminus_dnp_address(terminus);
         if (dnp_address) {
-            qd_iterator_reset_view(dnp_address, ITER_VIEW_ADDRESS_HASH);
-            qd_iterator_annotate_prefix(dnp_address, qdr_prefix_for_dir(dir));
+            qd_iterator_reset_view(dnp_address, ITER_VIEW_ADDRESS_WITH_SPACE);
             if (conn->tenant_space)
                 qd_iterator_annotate_space(dnp_address, conn->tenant_space, conn->tenant_space_len);
-            qd_hash_retrieve_prefix(core->addr_hash, dnp_address, (void**) &addr);
+            qd_parse_tree_retrieve_match(core->link_route_tree[dir], dnp_address, (void**) &addr);
 
             if (addr && conn->tenant_space) {
                 //
                 // If this link is in a tenant space, translate the dnp address to
                 // the fully-qualified view
                 //
-                qd_iterator_reset_view(dnp_address, ITER_VIEW_ADDRESS_WITH_SPACE);
                 qdr_terminus_set_dnp_address_iterator(terminus, dnp_address);
             }
 
@@ -1108,11 +1098,10 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     // a link-route destination for the address.
     //
     qd_iterator_t *iter = qdr_terminus_get_address(terminus);
-    qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    qd_iterator_annotate_prefix(iter, qdr_prefix_for_dir(dir));
+    qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_WITH_SPACE);
     if (conn->tenant_space)
         qd_iterator_annotate_space(iter, conn->tenant_space, conn->tenant_space_len);
-    qd_hash_retrieve_prefix(core->addr_hash, iter, (void**) &addr);
+    qd_parse_tree_retrieve_match(core->link_route_tree[dir], iter, (void**) &addr);
     if (addr) {
         *link_route = true;
 
@@ -1121,7 +1110,6 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
         // the fully-qualified view
         //
         if (conn->tenant_space) {
-            qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_WITH_SPACE);
             qdr_terminus_set_address_iterator(terminus, iter);
         }
         return addr;
@@ -1135,6 +1123,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     int addr_phase;
     qd_address_treatment_t treat = qdr_treatment_for_address_CT(core, conn, iter, &in_phase, &out_phase);
 
+    qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
     qd_iterator_annotate_prefix(iter, '\0'); // Cancel previous override
     addr_phase = dir == QD_INCOMING ? in_phase : out_phase;
     qd_iterator_annotate_phase(iter, (char) addr_phase + '0');
@@ -1157,7 +1146,6 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
 
     if (qdr_terminus_is_coordinator(terminus))
         *unavailable = false;
-
 
     return addr;
 }
