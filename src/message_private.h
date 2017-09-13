@@ -68,6 +68,7 @@ typedef struct {
     sys_mutex_t         *lock;
     sys_atomic_t         ref_count;                       // The number of messages referencing this
     qd_buffer_list_t     buffers;                         // The buffer chain containing the message
+    qd_buffer_t         *pending;                         // Buffer owned by and filled by qd_message_receive
     qd_field_location_t  section_message_header;          // The message header list
     qd_field_location_t  section_delivery_annotation;     // The delivery annotation map
     qd_field_location_t  section_message_annotation;      // The message annotation map
