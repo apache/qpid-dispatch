@@ -1155,7 +1155,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 
 
     // Loop until msg is complete, error seen, or incoming bytes are consumed
-    bool recv_error = false;
+    bool recv_error_or_eos = false;
     while (1) {
         //
         // handle EOS and clean up after pn receive errors
@@ -1163,7 +1163,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         bool at_eos = (pn_delivery_partial(delivery) == false) &&
                       (pn_delivery_pending(delivery) == 0);
 
-        if (at_eos || recv_error) {
+        if (at_eos || recv_error_or_eos) {
             // Message is complete
             sys_mutex_lock(msg->content->lock);
             {
@@ -1217,11 +1217,9 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
                           (char*) qd_buffer_cursor(msg->content->pending),
                           qd_buffer_capacity(msg->content->pending));
 
-        assert (rc != PN_EOS); // Just checked for this moments ago
-
         if (rc < 0) {
-            // error seen. next pass breaks out of loop
-            recv_error = true;
+            // error or eos seen. next pass breaks out of loop
+            recv_error_or_eos = true;
         } else if (rc > 0) {
             //
             // We have received a positive number of bytes for the message.  Advance
