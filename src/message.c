@@ -1497,10 +1497,11 @@ void qd_message_send(qd_message_t *in_msg,
     }
 
     buf = msg->cursor.buffer;
-
     assert (buf);
 
-    while (buf) {
+    pn_session_t     *pns  = pn_link_session(pnl);
+
+    while (buf && pn_session_outgoing_bytes(pns) < QD_QLIMIT_Q3_UPPER) {
         size_t buf_size = qd_buffer_size(buf);
 
         // This will send the remaining data in the buffer if any.

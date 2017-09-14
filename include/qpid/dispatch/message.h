@@ -42,6 +42,9 @@
 // Q2 defines the number of buffers allowed in a message's buffer chain
 #define QD_QLIMIT_Q2_UPPER 128
 #define QD_QLIMIT_Q2_LOWER 120
+//
+// Q3 defines the number of bytes allowed in a session's outgoing_bytes
+#define QD_QLIMIT_Q3_UPPER (256 * 1000)
 
 // Callback for status change (confirmed persistent, loaded-in-memory, etc.)
 
