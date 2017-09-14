@@ -172,7 +172,7 @@ static void do_receive(pn_delivery_t *pnd)
     if (link) {
         qd_node_t *node = link->node;
         if (node) {
-            node->ntype->rx_handler(node->context, link, pnd);
+            node->ntype->rx_handler(node->context, link);
             return;
         }
     }
