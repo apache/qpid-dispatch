@@ -70,7 +70,8 @@ typedef enum {
 typedef struct qd_node_t     qd_node_t;
 typedef struct qd_link_t     qd_link_t;
 
-typedef void (*qd_container_delivery_handler_t)    (void *node_context, qd_link_t *link, pn_delivery_t *delivery);
+typedef void (*qd_container_delivery_handler_t)    (void *node_context, qd_link_t *link);
+typedef void (*qd_container_disposition_handler_t) (void *node_context, qd_link_t *link, pn_delivery_t *pnd);
 typedef int  (*qd_container_link_handler_t)        (void *node_context, qd_link_t *link);
 typedef int  (*qd_container_link_detach_handler_t) (void *node_context, qd_link_t *link, qd_detach_type_t dt);
 typedef void (*qd_container_node_handler_t)        (void *type_context, qd_node_t *node);
@@ -88,11 +89,11 @@ typedef struct {
      * @{
      */
 
-    /** Invoked when a new received delivery is avaliable for processing. */
+    /** Invoked when a new or existing received delivery is avaliable for processing. */
     qd_container_delivery_handler_t rx_handler;
 
     /** Invoked when an existing delivery changes disposition or settlement state. */
-    qd_container_delivery_handler_t disp_handler;
+    qd_container_disposition_handler_t disp_handler;
 
     /** Invoked when an attach for a new incoming link is received. */
     qd_container_link_handler_t incoming_handler;

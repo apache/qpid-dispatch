@@ -191,10 +191,14 @@ static qd_iterator_t *router_annotate_message(qd_router_t   *router,
 /**
  * Inbound Delivery Handler
  */
-static void AMQP_rx_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
+static void AMQP_rx_handler(void* context, qd_link_t *link)
 {
     qd_router_t    *router       = (qd_router_t*) context;
     pn_link_t      *pn_link      = qd_link_pn(link);
+    assert(pn_link);
+    pn_delivery_t  *pnd          = pn_link_current(pn_link);
+    if (!pnd)
+        return;
     qdr_link_t     *rlink        = (qdr_link_t*) qd_link_get_context(link);
     qd_connection_t  *conn       = qd_link_connection(link);
     const qd_server_config_t *cf = qd_connection_config(conn);
