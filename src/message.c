@@ -36,6 +36,9 @@
 #include <inttypes.h>
 #include <assert.h>
 
+#define LOCK   sys_mutex_lock
+#define UNLOCK sys_mutex_unlock
+
 const char *STR_AMQP_NULL = "null";
 const char *STR_AMQP_TRUE = "T";
 const char *STR_AMQP_FALSE = "F";
@@ -1140,6 +1143,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         msg = (qd_message_pvt_t*) qd_message();
         qd_link_t       *qdl = (qd_link_t *)pn_link_get_context(link);
         qd_connection_t *qdc = qd_link_connection(qdl);
+        msg->content->input_link = pn_link_get_context(link);
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
@@ -1153,6 +1157,14 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         return discard_receive(delivery, link, (qd_message_t *)msg);
     }
 
+    //
+    // If input is in holdoff then just exit. When enough buffers
+    // have been processed and freed by outbound processing then
+    // message holdoff is cleared and receiving may continue.
+    //
+    if (msg->content->q2_input_holdoff) {
+        return (qd_message_t*)msg;
+    }
 
     // Loop until msg is complete, error seen, or incoming bytes are consumed
     bool recv_error_or_eos = false;
@@ -1165,7 +1177,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 
         if (at_eos || recv_error_or_eos) {
             // Message is complete
-            sys_mutex_lock(msg->content->lock);
+            LOCK(msg->content->lock);
             {
                 // Append last buffer if any with data
                 if (msg->content->pending) {
@@ -1183,12 +1195,13 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
                 }
 
                 msg->content->receive_complete = true;
+                msg->content->input_link = 0;
 
                 // unlink message and delivery
                 pn_record_set(record, PN_DELIVERY_CTX, 0);
             }
-            sys_mutex_unlock(msg->content->lock);
-            return (qd_message_t*) msg;
+            UNLOCK(msg->content->lock);
+            break;
         }
 
         //
@@ -1201,9 +1214,15 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
             // Pending buffer exists
             if (qd_buffer_capacity(msg->content->pending) == 0) {
                 // Pending buffer is full
-                sys_mutex_lock(msg->content->lock);
+                LOCK(msg->content->lock);
                 DEQ_INSERT_TAIL(msg->content->buffers, msg->content->pending);
-                sys_mutex_unlock(msg->content->lock);
+                msg->content->pending = 0;
+                if (qd_message_Q2_holdoff_should_block((qd_message_t *)msg)) {
+                    msg->content->q2_input_holdoff = true;
+                    UNLOCK(msg->content->lock);
+                    break;
+                }
+                UNLOCK(msg->content->lock);
                 msg->content->pending = qd_buffer();
             } else {
                 // Pending buffer still has capacity
@@ -1233,11 +1252,11 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
             // the entire message.  We'll be back later to finish it up.
             // Return the message so that the caller can start sending out whatever we have received so far
             //
-            return (qd_message_t*) msg;
+            break;
         }
     }
 
-    return 0;
+    return (qd_message_t*) msg;
 }
 
 
@@ -1373,7 +1392,8 @@ static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
 
 void qd_message_send(qd_message_t *in_msg,
                      qd_link_t    *link,
-                     bool          strip_annotations)
+                     bool          strip_annotations,
+                     bool         *restart_rx)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     qd_message_content_t *content = msg->content;
@@ -1381,6 +1401,7 @@ void qd_message_send(qd_message_t *in_msg,
     pn_link_t            *pnl     = qd_link_pn(link);
 
     int                  fanout   = qd_message_fanout(in_msg);
+    *restart_rx                   = false;
 
     if (msg->sent_depth < QD_DEPTH_MESSAGE_ANNOTATIONS) {
 
@@ -1491,7 +1512,7 @@ void qd_message_send(qd_message_t *in_msg,
 
         // If the entire message has already been received,  taking out this lock is not that expensive
         // because there is no contention for this lock.
-        sys_mutex_lock(msg->content->lock);
+        LOCK(msg->content->lock);
 
         qd_buffer_t *next_buf = DEQ_NEXT(buf);
         if (next_buf) {
@@ -1503,6 +1524,21 @@ void qd_message_send(qd_message_t *in_msg,
                     DEQ_REMOVE_HEAD(content->buffers);
                     qd_buffer_free(local_buf);
                     local_buf = DEQ_HEAD(content->buffers);
+
+                    // by freeing a buffer there now may be room to restart a
+                    // stalled message receiver
+                    if (msg->content->q2_input_holdoff) {
+                        if (qd_message_Q2_holdoff_should_unblock((qd_message_t *)msg)) {
+                            // wake up receive side
+                            // Note: clearing holdoff here is easy compared to
+                            // clearing it in the deferred callback. Tracing
+                            // shows that rx_handler may run and subsequently
+                            // set input holdoff before the deferred handler
+                            // runs.
+                            msg->content->q2_input_holdoff = false;
+                            *restart_rx = true;
+                        }
+                    }
                 }
             }
             msg->cursor.buffer = next_buf;
@@ -1529,7 +1565,7 @@ void qd_message_send(qd_message_t *in_msg,
             }
         }
 
-        sys_mutex_unlock(msg->content->lock);
+        UNLOCK(msg->content->lock);
 
         buf = next_buf;
     }
@@ -1678,9 +1714,9 @@ int qd_message_check(qd_message_t *in_msg, qd_message_depth_t depth)
     qd_message_content_t *content = msg->content;
     int                   result;
 
-    sys_mutex_lock(content->lock);
+    LOCK(content->lock);
     result = qd_message_check_LH(content, depth);
-    sys_mutex_unlock(content->lock);
+    UNLOCK(content->lock);
     return result;
 }
 
@@ -1888,4 +1924,10 @@ bool qd_message_Q2_holdoff_should_block(qd_message_t *msg)
 bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg)
 {
     return DEQ_SIZE(((qd_message_pvt_t*)msg)->content->buffers) < QD_QLIMIT_Q2_LOWER;
+}
+
+
+qd_link_t * qd_message_get_receiving_link(const qd_message_t *msg)
+{
+    return ((qd_message_pvt_t *)msg)->content->input_link;
 }

@@ -893,3 +893,7 @@ bool qd_link_drain_changed(qd_link_t *link, bool *mode)
 }
 
 
+void *qd_link_get_node_context(const qd_link_t *link)
+{
+    return (link && link->node) ? link->node->context : 0;
+}

@@ -559,4 +559,9 @@ bool is_log_component_enabled(qd_log_bits log_message, char *component_name);
  */
 bool qd_connection_strip_annotations_in(const qd_connection_t *c);
 
+/**
+ * @}
+ */
+void qd_connection_wake(qd_connection_t *ctx);
+
 #endif
