@@ -1865,3 +1865,27 @@ int qd_message_get_phase_val(qd_message_t *msg)
 {
     return ((qd_message_pvt_t*)msg)->content->ma_int_phase;
 }
+
+
+void qd_message_set_Q2_input_holdoff(qd_message_t *msg, bool holdoff)
+{
+    ((qd_message_pvt_t*)msg)->q2_input_holdoff = holdoff;
+}
+
+
+bool qd_message_get_Q2_input_holdoff(qd_message_t *msg)
+{
+    return ((qd_message_pvt_t*)msg)->q2_input_holdoff;
+}
+
+
+bool qd_message_Q2_holdoff_should_block(qd_message_t *msg)
+{
+    return DEQ_SIZE(((qd_message_pvt_t*)msg)->content->buffers) >= QD_QLIMIT_Q2_UPPER;
+}
+
+
+bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg)
+{
+    return DEQ_SIZE(((qd_message_pvt_t*)msg)->content->buffers) < QD_QLIMIT_Q2_LOWER;
+}
