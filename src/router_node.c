@@ -40,6 +40,8 @@ static char *container_role = "route-container";
 static char *direct_prefix;
 static char *node_id;
 
+static void deferred_AMQP_rx_handler(void *context, bool discard);
+
 /**
  * Determine the role of a connection
  */
@@ -228,6 +230,13 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
                        pn_link_name(pn_link),
                        message_repr);
             }
+        }
+
+        // Link stalling may have ignored some delivery events.
+        // If there's another delivery pending then reschedule this.
+        pn_delivery_t *npnd = pn_link_current(pn_link);
+        if (npnd) {
+            qd_connection_invoke_deferred(conn, deferred_AMQP_rx_handler, link);
         }
     }
 
@@ -470,6 +479,19 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         pn_delivery_update(pnd, PN_REJECTED);
         pn_delivery_settle(pnd);
         qd_message_free(msg);
+    }
+}
+
+
+/**
+ * Deferred callback for inbound delivery handler
+ */
+static void deferred_AMQP_rx_handler(void *context, bool discard) {
+    if (!discard) {
+        qd_link_t     *qdl = (qd_link_t*)context;
+        qd_router_t   *qdr = (qd_router_t *)qd_link_get_node_context(qdl);
+        assert(qdr != 0);
+        AMQP_rx_handler(qdr, qdl);
     }
 }
 
@@ -1118,7 +1140,18 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
         pdlv = pn_link_current(plink);
     }
 
-    qd_message_send(qdr_delivery_message(dlv), qlink, qdr_link_strip_annotations_out(link));
+    bool restart_rx = false;
+
+    qd_message_t *msg_out = qdr_delivery_message(dlv);
+    qd_message_send(msg_out, qlink, qdr_link_strip_annotations_out(link), &restart_rx);
+
+    if (restart_rx) {
+        qd_link_t *qdl_in = qd_message_get_receiving_link(msg_out);
+        assert(qdl_in);
+        qd_connection_t *qdc_in = qd_link_connection(qdl_in);
+        assert(qdc_in);
+        qd_connection_invoke_deferred(qdc_in, deferred_AMQP_rx_handler, qdl_in);
+    }
 
     bool send_complete = qdr_delivery_send_complete(dlv);
 

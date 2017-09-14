@@ -112,7 +112,8 @@ typedef struct {
     bool                 discard;                        // Should this message be discarded?
     bool                 receive_complete;               // true if the message has been completely received, false otherwise
     sys_atomic_t         fanout;                         // The number of receivers for this message. This number does not include in-process subscribers.
-    bool                 q2_input_holdoff;               // hold off calling pn_link_recv 
+    bool                 q2_input_holdoff;               // hold off calling pn_link_recv
+    qd_link_t           *input_link;                     // message received on this link
 } qd_message_content_t;
 
 typedef struct {

@@ -178,6 +178,7 @@ void qd_link_close(qd_link_t *link);
 void qd_link_detach(qd_link_t *link);
 bool qd_link_drain_changed(qd_link_t *link, bool *mode);
 void qd_link_free(qd_link_t *link);
+void *qd_link_get_node_context(const qd_link_t *link);
 
 ///@}
 #endif
