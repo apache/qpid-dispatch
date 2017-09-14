@@ -61,6 +61,17 @@ static void set_content(qd_message_content_t *content, size_t len)
 }
 
 
+static void set_content_bufs(qd_message_content_t *content, int nbufs)
+{
+    for (; nbufs > 0; nbufs--) {
+        qd_buffer_t *buf = qd_buffer();
+        size_t segment   = qd_buffer_capacity(buf);
+        qd_buffer_insert(buf, segment);
+        DEQ_INSERT_TAIL(content->buffers, buf);
+    }
+}
+
+
 static char* test_send_to_messenger(void *context)
 {
     qd_message_t         *msg     = qd_message();
@@ -314,6 +325,27 @@ static char* test_send_message_annotations(void *context)
 }
 
 
+static char* test_q2_input_holdoff_sensing(void *context)
+{
+    if (QD_QLIMIT_Q2_LOWER >= QD_QLIMIT_Q2_UPPER)
+        return "QD_LIMIT_Q2 lower limit is bigger than upper limit";
+
+    for (int nbufs=1; nbufs<QD_QLIMIT_Q2_UPPER + 1; nbufs++) {
+        qd_message_t         *msg     = qd_message();
+        qd_message_content_t *content = MSG_CONTENT(msg);
+
+        set_content_bufs(content, nbufs);
+        if (qd_message_Q2_holdoff_should_block(msg) != (nbufs >= QD_QLIMIT_Q2_UPPER))
+            return "qd_message_holdoff_would_block was miscalculated";
+        if (qd_message_Q2_holdoff_should_unblock(msg) != (nbufs < QD_QLIMIT_Q2_LOWER))
+            return "qd_message_holdoff_would_unblock was miscalculated";
+
+        qd_message_free(msg);
+    }
+    return 0;
+}
+
+
 int message_tests(void)
 {
     int result = 0;
@@ -324,6 +356,7 @@ int message_tests(void)
     TEST_CASE(test_message_properties, 0);
     TEST_CASE(test_check_multiple, 0);
     TEST_CASE(test_send_message_annotations, 0);
+    TEST_CASE(test_q2_input_holdoff_sensing, 0);
 
     return result;
 }

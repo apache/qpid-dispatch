@@ -127,6 +127,7 @@ typedef struct {
     qd_buffer_list_t      ma_ingress;      // ingress field in outgoing message annotations
     int                   ma_phase;        // phase for the override address
     bool                  strip_annotations_in;
+    bool                  q2_input_holdoff;// hold off calling pn_link_recv 
 } qd_message_pvt_t;
 
 ALLOC_DECLARE(qd_message_t);
