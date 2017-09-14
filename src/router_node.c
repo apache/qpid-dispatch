@@ -1147,10 +1147,12 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 
     if (restart_rx) {
         qd_link_t *qdl_in = qd_message_get_receiving_link(msg_out);
-        assert(qdl_in);
-        qd_connection_t *qdc_in = qd_link_connection(qdl_in);
-        assert(qdc_in);
-        qd_connection_invoke_deferred(qdc_in, deferred_AMQP_rx_handler, qdl_in);
+        if (qdl_in) {
+            qd_connection_t *qdc_in = qd_link_connection(qdl_in);
+            if (qdc_in) {
+                qd_connection_invoke_deferred(qdc_in, deferred_AMQP_rx_handler, qdl_in);
+            }
+        }
     }
 
     bool send_complete = qdr_delivery_send_complete(dlv);
