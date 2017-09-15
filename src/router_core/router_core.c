@@ -337,13 +337,11 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
 
 void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr)
 {
-    qdr_address_config_t *tmp;
     qd_iterator_t *pattern = qd_iterator_string(addr->pattern, ITER_VIEW_ALL);
 
     // Remove the address from the list and the parse tree
     DEQ_REMOVE(core->addr_config, addr);
-    qd_parse_tree_get_pattern(core->addr_parse_tree, pattern, (void **) &tmp);
-    assert(tmp == addr);
+    qd_parse_tree_remove_pattern(core->addr_parse_tree, pattern);
 
     // Free resources associated with this address.
     if (addr->name) {

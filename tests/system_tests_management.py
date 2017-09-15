@@ -38,6 +38,7 @@ ROUTER = PREFIX + 'router'
 LINK = ROUTER + '.link'
 ADDRESS = ROUTER + '.address'
 NODE = ROUTER + '.node'
+CONFIG_ADDRESS = ROUTER + '.config.address'
 
 def short_name(name):
     if name.startswith(PREFIX):
@@ -161,6 +162,11 @@ class ManagementTest(system_test.TestCase):
         self.assertMapSubset(attributes, entity.attributes)
         return entity
 
+    def assert_read_ok(self, type, name, attributes):
+        entity = self.node.read(type, name)
+        self.assertMapSubset(attributes, entity.attributes)
+        return entity
+
     def test_create_listener(self):
         """Create a new listener on a running router"""
 
@@ -246,6 +252,36 @@ class ManagementTest(system_test.TestCase):
         msgr.subscribe(address)
         msgr.put(message(address=address, body='hello'))
         self.assertEqual('hello', msgr.fetch().body)
+
+    def test_create_config_address(self):
+        self.assert_create_ok(CONFIG_ADDRESS, 'myConfigAddr', dict(prefix='prefixA'))
+        self.assert_read_ok(CONFIG_ADDRESS, 'myConfigAddr',
+                            dict(prefix='prefixA', pattern=None))
+        msgr = self.messenger()
+        address = self.router.addresses[0]+'/prefixA/other'
+        msgr.subscribe(address)
+        msgr.put(message(address=address, body='hello'))
+        self.assertEqual('hello', msgr.fetch().body)
+        msgr.stop()
+        del msgr
+        self.node.delete(CONFIG_ADDRESS, name='myConfigAddr')
+        self.assertRaises(NotFoundStatus, self.node.read,
+                          type=CONFIG_ADDRESS, name='myConfigAddr')
+
+    def test_create_config_address_pattern(self):
+        self.assert_create_ok(CONFIG_ADDRESS, 'patternAddr', dict(pattern='a.*.b'))
+        self.assert_read_ok(CONFIG_ADDRESS, 'patternAddr',
+                            dict(prefix=None, pattern='a.*.b'))
+        msgr = self.messenger()
+        address = self.router.addresses[0]+'/a.HITHERE.b'
+        msgr.subscribe(address)
+        msgr.put(message(address=address, body='hello'))
+        self.assertEqual('hello', msgr.fetch().body)
+        msgr.stop()
+        del msgr
+        self.node.delete(CONFIG_ADDRESS, name='patternAddr')
+        self.assertRaises(NotFoundStatus, self.node.read,
+                          type=CONFIG_ADDRESS, name='patternAddr')
 
     def test_dummy(self):
         """Test all operations on the dummy test entity"""
