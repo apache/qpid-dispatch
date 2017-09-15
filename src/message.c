@@ -1104,8 +1104,9 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
     qd_message_pvt_t *msg  = (qd_message_pvt_t*)msg_in;
 
     while (1) {
-        char dummy[BUFFER_SIZE];
-        ssize_t rc = pn_link_recv(link, dummy, BUFFER_SIZE);
+#define DISCARD_BUFFER_SIZE (128 * 1024)
+        char dummy[DISCARD_BUFFER_SIZE];
+        ssize_t rc = pn_link_recv(link, dummy, DISCARD_BUFFER_SIZE);
 
         if (rc == 0) {
             // have read all available pn_link incoming bytes
