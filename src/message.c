@@ -1114,6 +1114,7 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
         } else if (rc == PN_EOS || rc < 0) {
             // end of message or error. Call the message complete
             msg->content->receive_complete = true;
+            msg->content->input_link = 0;
 
             pn_record_t *record = pn_delivery_attachments(delivery);
             pn_record_set(record, PN_DELIVERY_CTX, 0);
