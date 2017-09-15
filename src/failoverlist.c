@@ -23,16 +23,6 @@
 #include <ctype.h>
 #include <string.h>
 
-typedef struct qd_failover_item_t {
-    DEQ_LINKS(struct qd_failover_item_t);
-    const char *scheme;
-    const char *host;
-    const char *port;
-    const char *hostname;
-} qd_failover_item_t;
-
-DEQ_DECLARE(qd_failover_item_t, qd_failover_item_list_t);
-
 struct qd_failover_list_t {
     qd_failover_item_list_t  item_list;
     char                    *text;

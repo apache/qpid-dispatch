@@ -631,9 +631,77 @@ qd_error_t qd_entity_refresh_listener(qd_entity_t* entity, void *impl)
 }
 
 
+static int get_failover_info_length(qd_failover_item_list_t   conn_info_list)
+{
+    int arr_length = 0;
+    qd_failover_item_t *item = DEQ_HEAD(conn_info_list);
+
+    item = DEQ_NEXT(item);
+    while(item) {
+        if (item->scheme) {
+            // The +3 is for the '://'
+            arr_length += strlen(item->scheme) + 3;
+        }
+        if (item->host_port) {
+            arr_length += strlen(item->host_port);
+        }
+        item = DEQ_NEXT(item);
+        if (item) {
+            // This is for the comma between the items
+            arr_length += 2;
+        }
+    }
+
+    if (arr_length > 0)
+        // This is for the final '\0'
+        arr_length += 1;
+
+    return arr_length;
+}
+
 qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
 {
-    return QD_ERROR_NONE;
+    qd_connector_t *ct = (qd_connector_t*) impl;
+
+    if (DEQ_SIZE(ct->conn_info_list) > 1) {
+        qd_failover_item_list_t   conn_info_list = ct->conn_info_list;
+
+        qd_failover_item_t *item = DEQ_HEAD(conn_info_list);
+
+        //
+        // As you can see we are skipping the head of the list. The
+        // first item in the list is always the original connection information
+        // and we dont want to display that information as part of the failover list.
+        //
+        int arr_length = get_failover_info_length(conn_info_list);
+        char failover_info[arr_length];
+        memset(failover_info, 0, sizeof(failover_info));
+
+        item = DEQ_NEXT(item);
+
+        while(item) {
+            if (item->scheme) {
+                strcat(failover_info, item->scheme);
+                strcat(failover_info, "://");
+            }
+            if (item->host_port) {
+                strcat(failover_info, item->host_port);
+            }
+            item = DEQ_NEXT(item);
+            if (item) {
+                strcat(failover_info, ", ");
+            }
+        }
+
+        if (qd_entity_set_string(entity, "failoverList", failover_info) == 0)
+            return QD_ERROR_NONE;
+    }
+    else {
+        if (qd_entity_clear(entity, "failoverList") == 0)
+            return QD_ERROR_NONE;
+    }
+
+    return qd_error_code();
 }
 
 
@@ -645,6 +713,24 @@ qd_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *
         DEQ_ITEM_INIT(ct);
         DEQ_INSERT_TAIL(cm->connectors, ct);
         log_config(cm->log_source, &ct->config, "Connector");
+
+        //
+        // Add the first item to the ct->conn_info_list
+        // The initial connection information and any backup connection information is stored in the conn_info_list
+        //
+        qd_failover_item_t *item = NEW(qd_failover_item_t);
+        ZERO(item);
+        item->scheme   = 0;
+        item->host     = strdup(ct->config.host);
+        item->port     = strdup(ct->config.port);
+        item->hostname = 0;
+
+        int hplen = strlen(item->host) + strlen(item->port) + 2;
+        item->host_port = malloc(hplen);
+        snprintf(item->host_port, hplen, "%s:%s", item->host , item->port);
+
+        DEQ_INSERT_TAIL(ct->conn_info_list, item);
+
         return ct;
     }
     qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create connector: %s", qd_error_message());
