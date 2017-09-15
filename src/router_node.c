@@ -741,6 +741,149 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
             cost = remote_cost;
     }
 
+    bool found_failover = false;
+
+    if (conn->connector && DEQ_SIZE(conn->connector->conn_info_list) > 1) {
+        // Here we are simply removing all other failover information except the one we used to make a successful connection.
+        int i = 1;
+        qd_failover_item_t *item = DEQ_HEAD(conn->connector->conn_info_list);
+        qd_failover_item_t *next_item = 0;
+        while(item) {
+            if (i != conn->connector->conn_index) {
+                next_item = DEQ_NEXT(item);
+                free(item->scheme);
+                free(item->host);
+                free(item->port);
+                free(item->hostname);
+                free(item->host_port);
+                DEQ_REMOVE(conn->connector->conn_info_list, item);
+
+                free(item);
+                item = next_item;
+            }
+            else {
+                item = DEQ_NEXT(item);
+            }
+            i += 1;
+        }
+        conn->connector->conn_index = 0;
+
+        // By the end of this loop we should be left with only one element in the conn_info_list.
+    }
+
+    if (props) {
+        pn_data_rewind(props);
+        pn_data_next(props);
+        if (props && pn_data_type(props) == PN_MAP) {
+            pn_data_enter(props);
+
+            //
+            // We are attempting to find a connection property called failover-server-list.
+            // which looks something like this
+            //      :"failover-server-list"=[{:"network-host"="some-host", :port="35000"}, {:"network-host"="localhost", :port="25000"}]
+            // Note that the failover-list can contain one or more maps that contain failover connection information.
+            // In the following code, we are trying to get the contents of each map into the qd_failover_item_t object.
+            //
+            while (pn_data_next(props)) {
+                if (pn_data_type(props) == PN_SYMBOL) {
+                    pn_bytes_t sym = pn_data_get_symbol(props);
+                    if (sym.size == strlen(QD_CONNECTION_PROPERTY_FAILOVER_LIST_KEY) &&
+                            strcmp(sym.start, QD_CONNECTION_PROPERTY_FAILOVER_LIST_KEY) == 0) {
+                        found_failover = true;
+                    }
+                }
+                else if (pn_data_type(props) == PN_LIST && found_failover) {
+                    size_t list_num_items = pn_data_get_list(props);
+
+                    if (list_num_items > 0) {
+
+                        pn_data_enter(props); // enter list
+
+                        for (int i=0; i < list_num_items; i++) {
+                            pn_data_next(props);// this is the first element of the list, a map.
+                            if (props && pn_data_type(props) == PN_MAP) {
+
+                                size_t map_num_items = pn_data_get_map(props);
+                                pn_data_enter(props);
+
+                                qd_failover_item_t *item = NEW(qd_failover_item_t);
+                                ZERO(item);
+
+                                // We have found a map with the connection information. Step thru the map contents and create qd_failover_item_t
+
+                                for (int j=0; j < map_num_items/2; j++) {
+
+                                    pn_data_next(props);
+                                    if (pn_data_type(props) == PN_SYMBOL) {
+                                        pn_bytes_t sym = pn_data_get_symbol(props);
+                                        if (sym.size == strlen(QD_CONNECTION_PROPERTY_FAILOVER_NETHOST_KEY) &&
+                                                                            strcmp(sym.start, QD_CONNECTION_PROPERTY_FAILOVER_NETHOST_KEY) == 0) {
+                                            pn_data_next(props);
+                                            if (pn_data_type(props) == PN_STRING) {
+                                                item->host = strdup(pn_data_get_string(props).start);
+                                            }
+                                        }
+                                        else if (sym.size == strlen(QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY) &&
+                                                                            strcmp(sym.start, QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY) == 0) {
+                                            pn_data_next(props);
+                                            if (pn_data_type(props) == PN_STRING) {
+                                                item->port = strdup(pn_data_get_string(props).start);
+                                            }
+
+                                        }
+                                        else if (sym.size == strlen(QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY) &&
+                                                                            strcmp(sym.start, QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY) == 0) {
+                                            pn_data_next(props);
+                                            if (pn_data_type(props) == PN_STRING) {
+                                                item->scheme = strdup(pn_data_get_string(props).start);
+                                            }
+
+                                        }
+                                        else if (sym.size == strlen(QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY) &&
+                                                                            strcmp(sym.start, QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY) == 0) {
+                                            pn_data_next(props);
+                                            if (pn_data_type(props) == PN_STRING) {
+                                                item->hostname = strdup(pn_data_get_string(props).start);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                int host_length = strlen(item->host);
+                                //
+                                // We will not even bother inserting the item if there is no host available.
+                                //
+                                if (host_length != 0) {
+                                    if (item->scheme == 0)
+                                        item->scheme = strdup("amqp");
+                                    if (item->port == 0)
+                                        item->port = strdup("5672");
+
+                                    int hplen = strlen(item->host) + strlen(item->port) + 2;
+                                    item->host_port = malloc(hplen);
+                                    snprintf(item->host_port, hplen, "%s:%s", item->host, item->port);
+
+                                    DEQ_INSERT_TAIL(conn->connector->conn_info_list, item);
+
+                                    qd_log(router->log_source, QD_LOG_DEBUG, "Added %s as backup host", item->host_port);
+                                }
+                                else {
+                                        free(item->scheme);
+                                        free(item->host);
+                                        free(item->port);
+                                        free(item->hostname);
+                                        free(item->host_port);
+                                        free(item);
+                                }
+                            }
+                            pn_data_exit(props);
+                        }
+                    } // list_num_items > 0
+                }
+            }
+        }
+    }
+
     if (multi_tenant)
         vhost = pn_connection_remote_hostname(pn_conn);
 

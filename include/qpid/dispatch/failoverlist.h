@@ -1,5 +1,6 @@
 #ifndef __failoverlist_h__
 #define __failoverlist_h__ 1
+#include <qpid/dispatch/ctools.h>
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,6 +24,17 @@
  * qd_failover_list_t - This type stores one failover list.
  */
 typedef struct qd_failover_list_t qd_failover_list_t;
+
+typedef struct qd_failover_item_t {
+    DEQ_LINKS(struct qd_failover_item_t);
+    char *scheme;
+    char *host;
+    char *port;
+    char *hostname;
+    char *host_port;
+} qd_failover_item_t;
+
+DEQ_DECLARE(qd_failover_item_t, qd_failover_item_list_t);
 
 /**
  * qd_failover_list

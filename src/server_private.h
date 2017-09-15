@@ -119,6 +119,10 @@ struct qd_connector_t {
     sys_mutex_t              *lock;
     cxtr_state_t              state;
     qd_connection_t          *ctx;
+
+    /* This conn_list contains all the connection information needed to make a connection. It also includes failover connection information */
+    qd_failover_item_list_t   conn_info_list;
+    int                       conn_index; // Which connection in the connection list to connect to next.
     DEQ_LINKS(qd_connector_t);
 };
 
