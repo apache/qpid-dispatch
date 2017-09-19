@@ -32,7 +32,6 @@ CONFIGURATION = PREFIX + 'configurationEntity'
 OPERATIONAL = PREFIX + 'operationalEntity'
 LISTENER = PREFIX + 'listener'
 CONNECTOR = PREFIX + 'connector'
-FIXED_ADDRESS = PREFIX + 'fixedAddress'
 DUMMY = PREFIX + 'dummy'
 ROUTER = PREFIX + 'router'
 LINK = ROUTER + '.link'
@@ -244,14 +243,6 @@ class ManagementTest(system_test.TestCase):
 
         # Invalid values
         self.assertRaises(ManagementError, node.update, dict(identity="log/AGENT", enable="foo"))
-
-    def test_create_fixed_address(self):
-        self.assert_create_ok(FIXED_ADDRESS, 'fixed1', dict(prefix='fixed1'))
-        msgr = self.messenger()
-        address = self.router.addresses[0]+'/fixed1'
-        msgr.subscribe(address)
-        msgr.put(message(address=address, body='hello'))
-        self.assertEqual('hello', msgr.fetch().body)
 
     def test_create_config_address(self):
         self.assert_create_ok(CONFIG_ADDRESS, 'myConfigAddr', dict(prefix='prefixA'))

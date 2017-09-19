@@ -374,7 +374,7 @@
             "singleton": true,
             "attributes": {
                 "id": {
-                    "description":"Router's unique identity. One of id or routerId is required. The router will fail to start without id or routerId",
+                    "description":"Router's unique identity. The router will fail to start without id.",
                     "type": "string",
                     "required": false,
                     "create": true
@@ -491,20 +491,6 @@
                     "required": false,
                     "default": false
                 },
-                "routerId": {
-                    "description":"(DEPRECATED) Router's unique identity. This attribute has been deprecated. Use id instead",
-                    "type": "string",
-                    "required": false,
-                    "deprecated": true,
-                    "create": true
-                },
-                "mobileAddrMaxAge": {
-                    "type": "integer",
-                    "default": 60,
-                    "deprecated": true,
-                    "description": "(DEPRECATED) This value is no longer used in the router.",
-                    "create": true
-                },
                 "defaultDistribution": {
                     "type": ["multicast", "closest", "balanced", "unavailable"],
                     "description": "Default forwarding treatment for any address without a specified treatment. multicast - one copy of each message delivered to all subscribers; closest - messages delivered to only the closest subscriber; balanced - messages delivered to one subscriber with load balanced across subscribers; unavailable - this address is unavailable, link attaches to an address of unavilable distribution will be rejected.",
@@ -618,11 +604,10 @@
                     "type": [
                         "normal",
                         "inter-router",
-                        "route-container",
-                        "on-demand"
+                        "route-container"
                     ],
                     "default": "normal",
-                    "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. route-container role can be used for router-container connections, for example, a router-broker connection. on-demand role has been deprecated.",
+                    "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. route-container role can be used for router-container connections, for example, a router-broker connection.",
                     "create": true
                 },
                 "cost": {
@@ -722,31 +707,6 @@
                     "required": false,
                     "description": "A comma-separated list of failover urls to be supplied to connected clients.  Form: [(amqp|amqps|ws|wss)://]host_or_ip[:port]"
                 },
-                "addr": {
-                    "description":"(DEPRECATED)IP address: ipv4 or ipv6 literal or a host name. This attribute has been deprecated. Use host instead",
-                    "deprecated": true,
-                    "type": "string",
-                    "default": "",
-                    "create": true
-                },
-                "allowNoSasl": {
-                    "type": "boolean",
-                    "create": true,
-                    "deprecated": true,
-                    "description": "(DEPRECATED) This attribute is now controlled by the authenticatePeer attribute."
-                },
-                "requirePeerAuth": {
-                    "type": "boolean",
-                    "create": true,
-                    "deprecated": true,
-                    "description": "(DEPRECATED) This attribute is now controlled by the authenticatePeer attribute."
-                },
-                "allowUnsecured": {
-                    "type": "boolean",
-                    "create": true,
-                    "deprecated": true,
-                    "description": "(DEPRECATED) This attribute is now controlled by the requireEncryption attribute."
-                },
                 "http": {
                     "type": "boolean",
                     "default": false,
@@ -796,11 +756,10 @@
                     "type": [
                         "normal",
                         "inter-router",
-                        "route-container",
-                        "on-demand"
+                        "route-container"
                     ],
                     "default": "normal",
-                    "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. route-container role can be used for router-container connections, for example, a router-broker connection. on-demand role has been deprecated.",
+                    "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. route-container role can be used for router-container connections, for example, a router-broker connection.",
                     "create": true
                 },
                 "cost": {
@@ -882,13 +841,6 @@
                     "description": "The password that the connector is using to connect to a peer.",
                     "create": true,
                     "hidden": true
-                },
-                "addr": {
-                    "description":"(DEPRECATED)IP address: ipv4 or ipv6 literal or a host name. This attribute has been deprecated. Use host instead",
-                    "deprecated": true,
-                    "type": "string",
-                    "default": "127.0.0.1",
-                    "create": true
                 },
                 "logMessage": {
                     "type": "string",
@@ -1414,9 +1366,10 @@
         },
 
         "console": {
-            "description": "Start a websocket/tcp proxy and http file server to serve the web console",
+            "description": "(DEPRECATED) Start a websocket/tcp proxy and http file server to serve the web console",
             "extends": "configurationEntity",
             "singleton": true,
+            "deprecated": true,
             "attributes": {
                 "listener": {
                     "type": "string",
@@ -1534,7 +1487,7 @@
                 }
             }
         },
-
+        
         "vhostStats": {
             "description": "Virtual host connection and access statistics.",
             "extends": "operationalEntity",
@@ -1560,148 +1513,7 @@
                 "receiverDenied": {"type": "integer", "graph": true}
             }
         },
-
-        "container": {
-            "description":"(DEPRECATED)Attributes related to the AMQP container. This entity has been deprecated. Use the router entity instead.",
-            "extends": "configurationEntity",
-            "deprecated": true,
-            "singleton": true,
-            "attributes": {
-
-                "containerName": {
-                    "type": "string",
-                    "description": "The  name of the AMQP container.  If not specified, the container name will be set to a value of the container's choosing.  The automatically assigned container name is not guaranteed to be persistent across restarts of the container.",
-                    "create": true
-
-                },
-                "workerThreads": {
-                    "type": "integer",
-                    "default": 4,
-                    "description": "The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .",
-                    "create": true
-
-                },
-                "debugDump": {
-                    "type": "path",
-                    "description": "A file to dump debugging information that can't be logged normally.",
-                    "create": true
-
-                },
-                "saslConfigPath": {
-                    "type": "path",
-                    "description": "Absolute path to the SASL configuration file.",
-                    "required": false,
-                    "create": true
-                },
-                "saslConfigName": {
-                    "type": "string",
-                    "description": "Name of the SASL configuration.  This string + '.conf' is the name of the configuration file.",
-                    "required": false,
-                    "create": true
-                }
-            }
-        },
-
-        "waypoint": {
-            "description":"(DEPRECATED) A remote node that messages for an address pass through. This entity has been deprecated. Use autoLink instead",
-            "deprecated": true,
-            "extends": "configurationEntity",
-            "operations": ["CREATE", "DELETE"],
-            "attributes": {
-                "address": {
-                    "description":"The AMQP address of the waypoint.",
-                    "type": "string",
-                    "required": true,
-                    "create": true
-                },
-                "connector": {
-                    "description":"The name of the on-demand connector used to reach the waypoint's container.",
-                    "type": "string",
-                    "required": true,
-                    "create": true
-                },
-                "inPhase": {
-                    "description":"The phase of the address as it is routed _to_ the waypoint.",
-                    "type": "integer",
-                    "default": -1,
-                    "create": true
-                },
-                "outPhase": {
-                    "description":"The phase of the address as it is routed _from_ the waypoint.",
-                    "type": "integer",
-                    "default": -1,
-                    "create": true
-                }
-            }
-        },
-
-        "fixedAddress": {
-            "description":"(DEPRECATED) Establishes treatment for addresses starting with a prefix. This entity has been deprecated. Use address instead",
-            "extends": "configurationEntity",
-            "deprecated": true,
-            "operations": ["CREATE"],
-            "attributes": {
-                "prefix": {
-                    "type": "string",
-                    "required": true,
-                    "description": "The address prefix (always starting with '/').",
-                    "create": true
-                },
-                "phase": {
-                    "type": "integer",
-                    "description": "The phase of a multi-hop address passing through one or more waypoints.",
-                    "create": true
-                },
-                "fanout": {
-                    "type": [
-                        "multiple",
-                        "single"
-                    ],
-                    "default": "multiple",
-                    "description": "One of 'multiple' or 'single'.  Multiple fanout is a non-competing pattern.  If there are multiple consumers using the same address, each consumer will receive its own copy of every message sent to the address.  Single fanout is a competing pattern where each message is sent to only one consumer.",
-                    "create": true
-                },
-                "bias": {
-                    "type": [
-                        "closest",
-                        "spread"
-                    ],
-                    "default": "closest",
-                    "description": "Only if fanout is single.  One of 'closest' or 'spread'.  Closest bias means that messages to an address will always be delivered to the closest (lowest cost) subscribed consumer. Spread bias will distribute the messages across subscribers in an approximately even manner.",
-                    "create": true
-                }
-            }
-        },
-
-        "linkRoutePattern": {
-            "description":"(DEPRECATED) An address pattern to match against link sources and targets to cause the router to link-route the attach across the network to a remote node. This entity has been deprecated. Use linkRoute instead",
-            "deprecated": true,
-            "extends": "configurationEntity",
-            "operations": ["CREATE"],
-            "attributes": {
-                "prefix": {
-                    "description":"An address prefix to match against target and source addresses.  This pattern must be of the form '<text>.<text1>.<textN>' or '<text>' or '<text>.' and matches any address that contains that prefix.  For example, if the prefix is set to org.apache (or org.apache.), any address that has the prefix 'org.apache'  (like org.apache.dev) will match. Note that a prefix must not start with a (.), can end in a (.) and can contain zero or more dots (.).  Any characters between the dots are simply treated as part of the address",
-                    "type": "string",
-                    "required": true,
-                    "create": true
-                },
-                "dir": {
-                    "description":"Link direction for match: 'in' matches only links inbound to the client; 'out' matches only links outbound from the client; 'both' matches any link.",
-                    "type": ["in", "out", "both"],
-                    "required": false,
-                    "default": "both",
-                    "create": true
-                },
-                "connector": {
-                    "description":"The name of the on-demand connector used to reach the target node's container.  If this value is not provided, it means that the target container is expected to be connected to a different router in the network.  This prevents links to a link-routable address from being misinterpreted as message-routing links when there is no route to a valid destination available.",
-                    "type": "string",
-                    "required": false,
-                    "default": "",
-                    "create": true
-                }
-            }
-        },
-
+        
         "dummy": {
             "description": "Dummy entity for test purposes.",
             "extends": "entity",

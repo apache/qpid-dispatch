@@ -139,7 +139,7 @@ class QdmanageTest(TestCase):
         def long_type(name):
             return u'org.apache.qpid.dispatch.'+name
 
-        types = ['listener', 'log', 'container', 'router']
+        types = ['listener', 'log', 'router']
         long_types = [long_type(name) for name in types]
 
         qall = json.loads(self.run_qdmanage('query'))
@@ -177,7 +177,7 @@ class QdmanageTest(TestCase):
 
     def test_get_types(self):
         out = json.loads(self.run_qdmanage("get-types"))
-        self.assertEqual(len(out), 29)
+        self.assertEqual(len(out), 25)
 
     def test_get_log(self):
         log = json.loads(self.run_qdmanage("get-log limit=1"))[0]

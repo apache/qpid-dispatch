@@ -160,8 +160,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     for m in modules:
         agent.configure(attributes=dict(type="log", module=m))
 
-    # Configure and prepare container and router before we can activate the agent.
-    configure(config.by_type('container')[0])
+    # Configure and prepare the router before we can activate the agent.
     configure(config.by_type('router')[0])
     qd.qd_dispatch_prepare(dispatch)
     qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.
@@ -173,7 +172,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     policyDir = config.by_type('policy')[0]['policyDir']
     policyDefaultVhost = config.by_type('policy')[0]['defaultVhost']
     # Remaining configuration
-    for t in "sslProfile", "authServicePlugin", "fixedAddress", "listener", "connector", "waypoint", "linkRoutePattern", \
+    for t in "sslProfile", "authServicePlugin", "listener", "connector", \
              "router.config.address", "router.config.linkRoute", "router.config.autoLink", \
              "policy", "vhost":
         for a in config.by_type(t):

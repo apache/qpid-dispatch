@@ -174,7 +174,7 @@ Core APIs
       General Events:
         Response
 
-    This management API is used to manage addresses, waypoints, and link-route
+    This management API is used to manage addresses, link-routes etc.
     destinations.
 
 
@@ -245,8 +245,6 @@ org
         console
         container
         dummy
-        fixedAddress      (deprecated)
-        linkRoutePattern  (deprecated)
         listener
         log
         router
@@ -254,8 +252,6 @@ org
           link
           node
           route           (proposed)
-          waypoint        (proposed)
-        waypoint          (deprecated)
 
 
 ============================

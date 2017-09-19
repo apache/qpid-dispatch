@@ -35,7 +35,6 @@ const char *QD_ROUTER_LINK_TYPE = "router.link";
 const char *CORE_AGENT_ADDRESS = "$management";
 
 static char *router_role    = "inter-router";
-static char *on_demand_role = "on-demand";
 static char *container_role = "route-container";
 static char *direct_prefix;
 static char *node_id;
@@ -66,8 +65,7 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
             *strip_annotations_out = false;
             *role = QDR_ROLE_INTER_ROUTER;
             *cost = cf->inter_router_cost;
-        } else if (cf && (strcmp(cf->role, container_role) == 0 ||
-                          strcmp(cf->role, on_demand_role) == 0))  // backward compat
+        } else if (cf && (strcmp(cf->role, container_role) == 0))  // backward compat
             *role = QDR_ROLE_ROUTE_CONTAINER;
         else
             *role = QDR_ROLE_NORMAL;
