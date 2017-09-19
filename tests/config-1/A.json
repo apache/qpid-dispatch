@@ -56,26 +56,29 @@
 	"port": 20000,
 	"saslMechanisms": "ANONYMOUS"
     }],
-    ["fixedAddress", {
-	"prefix": "/closest/",
-	"fanout": "single",
-	"bias": "closest"
+    ["address", {
+	"prefix": "closest",
+	"distribution": "closest"
     }],
 
-    ["fixedAddress", {
-	"prefix": "/spread/",
-	"fanout": "single",
-	"bias": "spread"
+    ["address", {
+	"prefix": "multicast",
+	"distribution": "multicast"
     }],
 
-    ["fixedAddress", {
-	"prefix": "/multicast/",
-	"fanout": "multiple"
+    ["address", {
+	"prefix": "broadcast",
+	"distribution": "multicast"
     }],
 
-    ["fixedAddress", {
-	"prefix": "/",
-	"fanout": "multiple"
+    ["address", {
+	"prefix": "unicast",
+	"distribution": "closest"
+    }],
+
+    ["address", {
+	"prefix": "exclusive",
+	"distribution": "closest"
     }]
 ]
 

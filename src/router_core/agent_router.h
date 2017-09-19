@@ -21,7 +21,7 @@
 
 #include "router_core_private.h"
 
-#define QDR_ROUTER_COLUMN_COUNT  24
+#define QDR_ROUTER_COLUMN_COUNT  22
 
 const char *qdr_router_columns[QDR_ROUTER_COLUMN_COUNT + 1];
 

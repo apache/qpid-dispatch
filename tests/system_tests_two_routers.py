@@ -84,6 +84,7 @@ class TwoRouterTest(TestCase):
 
         router('A', 'server',
                ('listener', {'role': 'inter-router', 'port': inter_router_port}))
+
         router('B', 'client',
                ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port,
                               'verifyHostName': 'no'}))

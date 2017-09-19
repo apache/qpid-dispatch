@@ -41,13 +41,6 @@ SCHEMA_1 = {
             "singleton": True,
             "attributes": {
                 "workerThreads": {"type": "integer", "default": 1},
-                "routerId": {
-                    "description":"(DEPRECATED) Router's unique identity. This attribute has been deprecated. Use id instead",
-                    "type": "string",
-                    "required": False,
-                    "deprecated": True,
-                    "create": True
-                },
                 "name": {"type": "string",
                          "required": True,
                          "unique": True},
@@ -159,9 +152,6 @@ class SchemaTest(unittest.TestCase):
 
         # The container entity itself has been deprecated
         self.assertTrue(s.entity_types['org.example.container'].deprecated)
-
-        # The routerId attribute of the container entity has been deprecated
-        self.assertTrue(s.entity_types['org.example.container'].attributes['routerId'].deprecated)
 
         # This will make sure that deprecated flag defaults to false for entities
         self.assertFalse(s.entity_types['org.example.connector'].deprecated)

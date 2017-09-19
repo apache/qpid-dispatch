@@ -48,7 +48,6 @@ const char *qdr_connection_roles[] =
     {"normal",
      "inter-router",
      "route-container",
-     "on-demand",
      0};
 
 const char *qdr_connection_columns[] =

@@ -91,7 +91,6 @@ foreach(py_test_module
     system_tests_sasl_plain
     system_tests_user_id
     system_tests_user_id_proxy
-    system_tests_deprecated
     system_tests_two_routers
     system_tests_distribution
     system_tests_multi_tenancy
