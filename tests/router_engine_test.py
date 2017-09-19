@@ -154,8 +154,7 @@ class NeighborTest(unittest.TestCase):
             'helloInterval'    :  1.0,
             'helloMaxAge'      :  3.0,
             'raInterval'       : 30.0,
-            'remoteLsMaxAge'   : 60.0,
-            'mobileAddrMaxAge' : 60.0  })
+            'remoteLsMaxAge'   : 60.0 })
         self.neighbors = {}
 
     def test_hello_sent(self):

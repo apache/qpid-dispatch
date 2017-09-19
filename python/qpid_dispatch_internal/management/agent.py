@@ -229,22 +229,6 @@ class EntityAdapter(SchemaEntity):
         return "Entity(%s)" % ", ".join("%s=%s" % (k, '*******' if self.entity_type.attribute(k).hidden else self.attributes[k]) for k in keys)
 
 
-class ContainerEntity(EntityAdapter):
-    """
-    The ContainerEntity has been deprecated. Use the the RouterEntity instead
-    """
-
-    def create(self):
-        self._qd.qd_dispatch_configure_container(self._dispatch, self)
-
-    def _identifier(self):
-        self.attributes.setdefault("containerName", "00000000-0000-0000-0000-000000000000")
-        return self.attributes["containerName"]
-
-    def __str__(self):
-        return super(ContainerEntity, self).__str__().replace("Entity(", "ContainerEntity(")
-
-
 class RouterEntity(EntityAdapter):
     def __init__(self, agent, entity_type, attributes=None):
         super(RouterEntity, self).__init__(agent, entity_type, attributes, validate=False)
@@ -253,15 +237,10 @@ class RouterEntity(EntityAdapter):
         self._add_implementation(
             CImplementation(agent.qd, entity_type, self._dispatch))
 
-    def _identifier(self): return self.attributes.get('id')
+    def _identifier(self):
+        return self.attributes.get('id')
 
     def create(self):
-        try:
-            if self.routerId:
-                self._agent.log(LOG_WARNING, "routerId is deprecated, use id instead")
-        except:
-            pass
-
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
 
     def __str__(self):
@@ -400,29 +379,6 @@ class ConnectorEntity(EntityAdapter):
 
     def __str__(self):
         return super(ConnectorEntity, self).__str__().replace("Entity(", "ConnectorEntity(")
-
-class FixedAddressEntity(EntityAdapter):
-    def create(self):
-        self._qd.qd_dispatch_configure_fixed_address(self._dispatch, self)
-
-    def __str__(self):
-        return super(FixedAddressEntity, self).__str__().replace("Entity(", "FixedAddressEntity(")
-
-
-class WaypointEntity(EntityAdapter):
-    def create(self):
-        self._qd.qd_dispatch_configure_waypoint(self._dispatch, self)
-        #self._qd.qd_waypoint_activate_all(self._dispatch)
-
-    def __str__(self):
-        return super(WaypointEntity, self).__str__().replace("Entity(", "WaypointEntity(")
-
-class LinkRoutePatternEntity(EntityAdapter):
-    def create(self):
-        self._qd.qd_dispatch_configure_lrp(self._dispatch, self)
-
-    def __str__(self):
-        return super(LinkRoutePatternEntity, self).__str__().replace("Entity(", "LinkRoutePatternEntity(")
 
 class AddressEntity(EntityAdapter):
     def create(self):

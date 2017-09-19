@@ -83,7 +83,7 @@ class LinkRouteTest(TestCase):
                    ('listener', {'role': 'normal', 'host': '0.0.0.0', 'port': b_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    ('listener', {'name': 'test-tag', 'role': 'route-container', 'host': '0.0.0.0', 'port': test_tag_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
 
-                   # This is an on-demand connection made from QDR.B's ephemeral port to a_listener_port
+                   # This is an route-container connection made from QDR.B's ephemeral port to a_listener_port
                    ('connector', {'name': 'broker', 'role': 'route-container', 'host': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    # Only inter router communication must happen on 'inter-router' connectors. This connector makes
                    # a connection from the router B's ephemeral port to c_listener_port

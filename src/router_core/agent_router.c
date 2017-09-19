@@ -43,9 +43,7 @@
 #define QDR_ROUTER_DEBUG_DUMP             18
 #define QDR_ROUTER_SASL_CONFIG_PATH       19
 #define QDR_ROUTER_SASL_CONFIG_NAME       20
-#define QDR_ROUTER_ROUTER_ID              21
-#define QDR_ROUTER_MOBILE_ADDR_MAX_AGE    22
-#define QDR_ROUTER_CONNECTION_COUNT       23
+#define QDR_ROUTER_CONNECTION_COUNT       21
 
 const char *qdr_router_columns[] =
     {"name",
@@ -69,8 +67,6 @@ const char *qdr_router_columns[] =
      "debugDump",
      "saslConfigPath",
      "saslConfigName",
-     "routerId",
-     "mobileAddrMaxAge",
      "connectionCount",
      0};
 
@@ -143,7 +139,6 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
         qd_compose_insert_ulong(body, DEQ_SIZE(core->auto_links));
         break;
 
-    case QDR_ROUTER_ROUTER_ID:
     case QDR_ROUTER_ID:
     case QDR_ROUTER_NAME:
         if (core->router_id)

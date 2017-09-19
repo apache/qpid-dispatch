@@ -189,29 +189,7 @@ static void load_strip_annotations(qd_server_config_t *config, const char* strip
  */
 static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
 {
-    char *host = qd_entity_opt_string(entity, "host", 0);
-    char *addr = qd_entity_opt_string(entity, "addr", 0);
-
-    if (host && addr && strcmp(host, "") == 0 && strcmp(addr, "") == 0) {
-        config->host = host;
-        free(addr);
-    }
-    else if (host && addr && strcmp(host, addr) != 0 && strcmp(host, "127.0.0.1") == 0) {
-        config->host = addr;
-        free(host);
-    }
-    else if (host && strcmp(host, "") != 0 ) {
-        config->host = host;
-        free(addr);
-    }
-    else if (addr && strcmp(addr, "") != 0) {
-        config->host = addr;
-        free(host);
-    }
-    else {
-        free(host);
-        free(addr);
-    }
+    config->host = qd_entity_opt_string(entity, "host", 0);
 
     assert(config->host);
 
@@ -313,8 +291,6 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     bool verifyHostName     = qd_entity_opt_bool(entity, "verifyHostName",    true);     CHECK();
     bool requireEncryption  = qd_entity_opt_bool(entity, "requireEncryption", false);    CHECK();
     bool requireSsl         = qd_entity_opt_bool(entity, "requireSsl",        false);    CHECK();
-    bool depRequirePeerAuth = qd_entity_opt_bool(entity, "requirePeerAuth",   false);    CHECK();
-    bool depAllowUnsecured  = qd_entity_opt_bool(entity, "allowUnsecured", !requireSsl); CHECK();
 
     memset(config, 0, sizeof(*config));
     config->log_message          = qd_entity_opt_string(entity, "logMessage", 0);     CHECK();
@@ -392,11 +368,11 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     stripAnnotations = 0;
     CHECK();
 
-    config->requireAuthentication = authenticatePeer || depRequirePeerAuth;
-    config->requireEncryption     = requireEncryption || !depAllowUnsecured;
+    config->requireAuthentication = authenticatePeer;
+    config->requireEncryption     = requireEncryption || requireSsl;
 
     if (config->ssl_profile) {
-        config->ssl_required = requireSsl || !depAllowUnsecured;
+        config->ssl_required = requireSsl;
         config->ssl_require_peer_authentication = config->sasl_mechanisms &&
             strstr(config->sasl_mechanisms, "EXTERNAL") != 0;
 
@@ -412,6 +388,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             config->ssl_display_name_file = SSTRDUP(ssl_profile->ssl_display_name_file);
         }
     }
+
     if (config->sasl_plugin) {
         qd_config_sasl_plugin_t *sasl_plugin =
             qd_find_sasl_plugin(qd->connection_manager, config->sasl_plugin);
