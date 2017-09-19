@@ -1272,6 +1272,162 @@ class DistributionTests ( TestCase ):
 
 
 
+    def test_21_linkroute_mesh_failover ( self ) :
+        """
+                       c           c
+        senders --->   A --------- B
+                        \         /
+                         \       /
+                          \     /
+                           \   /
+                            \ /
+                             D
+                             c
+
+        'c' indicates that I make connections to the route-container
+        listeners at the marked routers.
+        """
+
+        addr_suffix = "addr_21"
+
+        # Choose which routers to give the test.
+        # This choice controls topology.  ABD is triangular
+        # i.e. 3-mesh.
+        routers = ( self.A_route_container_addr,
+                    self.B_route_container_addr,
+                    self.D_route_container_addr
+                  )
+
+        # NOTE : about these 3-tuples.
+        # The positions in these tuples correspond to the routers passed
+        # in to the test: ( router_1, router_2, router_3 )
+        # router_1 is always the 'local' one -- the one where the
+        # test make its senders.
+
+        # Tell the test on which routers to make its link-container cnxs.
+        where_to_make_connections = ( 2, 2, 2 )
+        first_four                = ( 4, 0, 0 )
+        second_four               = ( 4, 2, 2 )
+        third_four                = ( 4, 2, 6 )
+
+        # Tell the test how to check for the address being ready.
+        n_local_containers = 1
+        n_remote_routers   = 2
+
+        #-----------------------------------------------------------------------
+        # This is the instruction-list that the test looks at as various
+        # milestones are met during testing. If a given event happens,
+        # and if it matches the event in the current step of the instructions,
+        # then the test will execute the action in the current step, and
+        # advance to the next.
+        # These instructions lists make the test more flexible, so I can get
+        # different behavior without writing *almost* the same code mutiple
+        # times.
+        #-----------------------------------------------------------------------
+
+        # note: if 'done' is present in an action, it always means 'succeed now'.
+        # If there had been a failure, that would have been caught in an
+        # earlier part of the action.
+
+        instructions = [
+                         # Once the link-routable address is ready to use in
+                         # the router network, create 4 senders.
+                         {
+                           'event'  : 'address_ready',
+                           'action' : { 'fn'   : 'make_senders',
+                                         'arg' : 4
+                                      }
+                         },
+                         # In this action, the list-argument to the function
+                         # shows how we expect link-attach routes to be
+                         # distributed: 4 to router B,
+                         # none anywhere else.
+                         {
+                           'event'  : 'got_receivers',
+                           'action' : { 'fn'   : 'check_receiver_distribution',
+                                        'arg'  : first_four,
+                                      }
+                         },
+                         # After we see that the first 4 senders have
+                         # had their link-attaches routed to the right place,
+                         # (which will be router A), close all route-container
+                         # connections to that router.
+                         {
+                           'event'  : 'receiver_distribution_ok',
+                           'action' : { 'fn'   : 'kill_connections',
+                                        'arg'  : 0
+                                      }
+                         },
+                         # Once the route-container connections on A are
+                         # closed, make 4 new senders
+                         {
+                           'event'  : 'connections_closed',
+                           'action' : { 'fn'   : 'make_senders',
+                                        'arg'  : 4
+                                      }
+                         },
+                         # The link-attaches from these 4 new senders
+                         # should now all have gone to the route-container
+                         # connections on router B.
+                         {
+                           'event'  : 'got_receivers',
+                           'action' : { 'fn'   : 'check_receiver_distribution',
+                                        'arg'  : second_four
+                                      }
+                         },
+                         # If we receive confirmation that the link-attaches
+                         # have gone to the right place, we ruthlessly
+                         # kill the next set of connections. Will we stop at
+                         # nothing to defeat this code ?!??!?
+                         {
+                           'event'  : 'receiver_distribution_ok',
+                           'action' : { 'fn'   : 'kill_connections',
+                                        'arg'  : 1
+                                      }
+                         },
+                         # Once the route-container connections on B are
+                         # closed, make 4 new senders
+                         {
+                           'event'  : 'connections_closed',
+                           'action' : { 'fn'   : 'make_senders',
+                                        'arg'  : 4
+                                      }
+                         },
+                         # The link-attaches from these 4 new senders
+                         # should now all have gone to the route-container
+                         # connections on router C.
+                         {
+                           'event'  : 'got_receivers',
+                           'action' : { 'fn'   : 'check_receiver_distribution',
+                                        'arg'  : third_four
+                                      }
+                         },
+                         # If we receive confirmation that the link-attaches
+                         # have gone to the right place, we succeed.
+                         {
+                           'event'  : 'receiver_distribution_ok',
+                           'action' : { 'fn'   : 'none',
+                                        'done' : 'succeed'
+                                      }
+                         }
+                       ]
+
+        test = RoutingTest ( self.A_addr,  # all senders are attached here
+                             routers,
+                             self.linkroute_prefix_1,
+                             addr_suffix,
+                             instructions,
+                             where_to_make_connections,
+                             n_local_containers,
+                             n_remote_routers,
+                             "Test 21"
+                           )
+        test.run ( )
+        self.assertEqual ( None, test.error )
+
+
+
+
 
 
 #================================================================
