@@ -713,6 +713,14 @@ static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
 }
 
 
+bool qd_connector_has_failover_info(qd_connector_t* ct)
+{
+    if (ct && DEQ_SIZE(ct->conn_info_list) > 1)
+        return true;
+    return false;
+}
+
+
 void qd_connection_free(qd_connection_t *ctx)
 {
     qd_server_t *qd_server = ctx->server;
@@ -723,9 +731,25 @@ void qd_connection_free(qd_connection_t *ctx)
     if (ctx->connector) {
         sys_mutex_lock(ctx->connector->lock);
         ctx->connector->ctx = 0;
+        // Increment the connection index by so that we can try connecting to the failover url (if any).
+        bool has_failover = qd_connector_has_failover_info(ctx->connector);
+        if (has_failover) {
+            if (DEQ_SIZE(ctx->connector->conn_info_list) == ctx->connector->conn_index)
+                // Start round robin again
+                ctx->connector->conn_index = 1;
+            else
+                ctx->connector->conn_index += 1;
+
+            // Go thru the failover list round robin.
+            // IMPORTANT: Note here that we set the re-try timer to 1 second.
+            // We want to quickly keep cycling thru the failover urls every second.
+            qd_timer_schedule(ctx->connector->timer, 1000);
+        }
+
         ctx->connector->state = CXTR_STATE_CONNECTING;
         sys_mutex_unlock(ctx->connector->lock);
-        qd_timer_schedule(ctx->connector->timer, ctx->connector->delay);
+        if (!has_failover)
+            qd_timer_schedule(ctx->connector->timer, ctx->connector->delay);
     }
 
     // If counted for policy enforcement, notify it has closed
@@ -856,6 +880,19 @@ static void *thread_run(void *arg)
 }
 
 
+qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
+
+    qd_failover_item_t *item = DEQ_HEAD(ct->conn_info_list);
+
+    if (DEQ_SIZE(ct->conn_info_list) > 1) {
+        for (int i=1; i < ct->conn_index; i++) {
+            item = DEQ_NEXT(item);
+        }
+    }
+    return item;
+}
+
+
 /* Timer callback to try/retry connection open */
 static void try_open_lh(qd_connector_t *ct)
 {
@@ -880,7 +917,13 @@ static void try_open_lh(qd_connector_t *ct)
     // Set the hostname on the pn_connection. This hostname will be used by proton as the
     // hostname in the open frame.
     //
-    pn_connection_set_hostname(ctx->pn_conn, config->host);
+
+    qd_failover_item_t *item = qd_connector_get_conn_info(ct);
+
+    char *current_host = item->host;
+    char *host_port = item->host_port;
+
+    pn_connection_set_hostname(ctx->pn_conn, current_host);
 
     // Set the sasl user name and password on the proton connection object. This has to be
     // done before pn_proactor_connect which will bind a transport to the connection
@@ -894,9 +937,9 @@ static void try_open_lh(qd_connector_t *ct)
     ct->delay = 5000;
 
     qd_log(ct->server->log_source, QD_LOG_TRACE,
-           "[%"PRIu64"] Connecting to %s", ctx->connection_id, config->host_port);
+           "[%"PRIu64"] Connecting to %s", ctx->connection_id, host_port);
     /* Note: the transport is configured in the PN_CONNECTION_BOUND event */
-    pn_proactor_connect(ct->server->proactor, ctx->pn_conn, config->host_port);
+    pn_proactor_connect(ct->server->proactor, ctx->pn_conn, host_port);
 }
 
 static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
@@ -1214,6 +1257,10 @@ qd_connector_t *qd_server_connector(qd_server_t *server)
     if (!ct) return 0;
     sys_atomic_init(&ct->ref_count, 1);
     ct->server  = server;
+    qd_failover_item_list_t conn_info_list;
+    DEQ_INIT(conn_info_list);
+    ct->conn_info_list = conn_info_list;
+    ct->conn_index = 0;
     ct->lock = sys_mutex();
     ct->timer = qd_timer(ct->server->qd, try_open_cb, ct);
     if (!ct->lock || !ct->timer) {
@@ -1248,6 +1295,18 @@ void qd_connector_decref(qd_connector_t* ct)
         sys_mutex_unlock(ct->lock);
         qd_server_config_free(&ct->config);
         qd_timer_free(ct->timer);
+
+        qd_failover_item_t *item = DEQ_HEAD(ct->conn_info_list);
+        while (item) {
+            DEQ_REMOVE_HEAD(ct->conn_info_list);
+            free(item->scheme);
+            free(item->host);
+            free(item->port);
+            free(item->hostname);
+            free(item->host_port);
+            free(item);
+            item = DEQ_HEAD(ct->conn_info_list);
+        }
         free_qd_connector_t(ct);
     }
 }
