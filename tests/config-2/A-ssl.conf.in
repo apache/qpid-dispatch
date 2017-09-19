@@ -25,7 +25,7 @@
 
 router {
     mode: interior
-    routerId: QDR.A
+    id: QDR.A
 }
 
 sslProfile {
@@ -51,27 +51,30 @@ listener {
     port: 20102
     saslMechanisms: EXTERNAL
     sslProfile: test-ssl
-    requirePeerAuth: yes
+    authenticatePeer: yes
 }
 
-fixedAddress {
-    prefix: /closest/
-    fanout: single
-    bias: closest
+address {
+    prefix: closest
+    distribution: closest
 }
 
-fixedAddress {
-    prefix: /spread/
-    fanout: single
-    bias: spread
+address {
+    prefix: multicast
+    distribution: multicast
 }
 
-fixedAddress {
-    prefix: /multicast/
-    fanout: multiple
+address {
+    prefix: unicast
+    distribution: closest
 }
 
-fixedAddress {
-    prefix: /
-    fanout: multiple
+address {
+    prefix: exclusive
+    distribution: closest
+}
+
+address {
+    prefix: broadcast
+    distribution: multicast
 }

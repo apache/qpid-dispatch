@@ -149,24 +149,6 @@ qd_error_t qd_dispatch_validate_config(const char *config_path)
 }
 
 
-/**
- * The Container Entity has been deprecated and will be removed in the future. Use the RouterEntity instead.
- */
-qd_error_t qd_dispatch_configure_container(qd_dispatch_t *qd, qd_entity_t *entity)
-{
-    // Add a log warning. Check to see if too early
-    qd->thread_count   = qd_entity_opt_long(entity, "workerThreads", 4); QD_ERROR_RET();
-    qd->sasl_config_path = qd_entity_opt_string(entity, "saslConfigPath", 0); QD_ERROR_RET();
-    qd->sasl_config_name = qd_entity_opt_string(entity, "saslConfigName", 0); QD_ERROR_RET();
-    char *dump_file = qd_entity_opt_string(entity, "debugDump", 0); QD_ERROR_RET();
-    if (dump_file) {
-        qd_alloc_debug_dump(dump_file); QD_ERROR_RET();
-        free(dump_file);
-    }
-
-    return QD_ERROR_NONE;
-}
-
 void qd_dispatch_set_router_default_distribution(qd_dispatch_t *qd, char *distribution)
 {
     if (distribution) {
@@ -186,11 +168,8 @@ void qd_dispatch_set_router_default_distribution(qd_dispatch_t *qd, char *distri
 
 qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
 {
-    qd_dispatch_set_router_id(qd, qd_entity_opt_string(entity, "routerId", 0)); QD_ERROR_RET();
     qd_dispatch_set_router_default_distribution(qd, qd_entity_opt_string(entity, "defaultDistribution", 0)); QD_ERROR_RET();
-    if (! qd->router_id) {
-        qd_dispatch_set_router_id(qd, qd_entity_opt_string(entity, "id", 0)); QD_ERROR_RET();
-    }
+    qd_dispatch_set_router_id(qd, qd_entity_opt_string(entity, "id", 0)); QD_ERROR_RET();
     if (!qd->router_id) {
         qd_log_source_t *router_log = qd_log_source("ROUTER");
         qd_log(router_log, QD_LOG_CRITICAL, "Router Id not specified - process exiting");
@@ -217,24 +196,6 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
 
     return QD_ERROR_NONE;
 
-}
-
-qd_error_t qd_dispatch_configure_fixed_address(qd_dispatch_t *qd, qd_entity_t *entity) {
-    if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
-    qd_router_configure_fixed_address(qd->router, entity);
-    return qd_error_code();
-}
-
-qd_error_t qd_dispatch_configure_waypoint(qd_dispatch_t *qd, qd_entity_t *entity) {
-    if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
-    qd_router_configure_waypoint(qd->router, entity);
-    return qd_error_code();
-}
-
-qd_error_t qd_dispatch_configure_lrp(qd_dispatch_t *qd, qd_entity_t *entity) {
-    if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
-    qd_router_configure_lrp(qd->router, entity);
-    return qd_error_code();
 }
 
 qd_error_t qd_dispatch_configure_address(qd_dispatch_t *qd, qd_entity_t *entity) {
