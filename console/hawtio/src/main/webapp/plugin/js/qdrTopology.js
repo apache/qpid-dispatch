@@ -1846,7 +1846,7 @@ QDR.log.debug("attr.description " + attr.description)
           legendNodes.push(node)
         }
         if (!svg.selectAll('circle.qpid-cpp').empty()) {
-          legendNodes.push(aNode("Qpid broker", "", "on-demand", '', undefined, 5, 0, 0, 0, false, {
+          legendNodes.push(aNode("Qpid broker", "", "route-container", '', undefined, 5, 0, 0, 0, false, {
             product: 'qpid-cpp'
           }))
         }

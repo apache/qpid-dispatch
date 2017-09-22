@@ -303,11 +303,11 @@ console.dump(e)
       },
 
       isArtemis: function(d) {
-        return d.nodeType === 'route-container' && d.properties.product === 'apache-activemq-artemis';
+        return (d.nodeType === 'route-container' || d.nodeType === 'on-demand') && (d.properties && d.properties.product === 'apache-activemq-artemis');
       },
 
       isQpid: function(d) {
-        return d.nodeType === 'on-demand' && (d.properties && d.properties.product === 'qpid-cpp');
+        return (d.nodeType === 'route-container' || d.nodeType === 'on-demand') && (d.properties && d.properties.product === 'qpid-cpp');
       },
 
       isAConsole: function(properties, connectionId, nodeType, key) {
