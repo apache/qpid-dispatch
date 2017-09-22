@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ -n "$1" ]
+then
+  search_dir=$1
+else
+  echo "deploy: Start routers for all of the config files in a given directory"
+  echo "Usage:"
+  echo "deploy directory"
+  echo "       where directory contains the router config files"
+  exit 1
+fi
+
+for file in "${search_dir}/"*.conf
+do
+  echo "starting $file"
+  qdrouterd -c `pwd`/$file -d
+  sleep 1
+done
