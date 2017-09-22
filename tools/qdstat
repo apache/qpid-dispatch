@@ -235,7 +235,7 @@ class BusManager(Node):
         rows.append(('Version',       router.version))
         rows.append(('Mode',          router.mode))
         rows.append(('Area',          router.area))
-        rows.append(('Router Id',     router.routerId))
+        rows.append(('Router Id',     router.id))
         rows.append(('Link Routes',   router.linkRouteCount))
         rows.append(('Auto Links',    router.autoLinkCount))
         rows.append(('Links',         router.linkCount))
