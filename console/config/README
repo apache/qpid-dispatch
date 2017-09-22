@@ -1,0 +1,22 @@
+Qpid Dispatch config file read/update/write utility
+=============
+
+A utility to read, update, and write dispatch router config files.
+
+Dependencies
+============
+
+- tested using python 2.7
+
+Running
+====================
+
+There are no build steps.
+
+To run:
+- change to the console/config directory
+- run ./config.py
+- in the address bar of a browser, enter localhost:8000
+
+
+
