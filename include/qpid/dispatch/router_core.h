@@ -528,6 +528,15 @@ void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_termin
 void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error);
 
 /**
+ * qdr_link_delete
+ *
+ * Request that the router-core delete this link and free all its associated resources.
+ *
+ * @param link The link pointer returned by qdr_link_first_attach or in a FIRST_ATTACH event.
+ */
+void qdr_link_delete(qdr_link_t *link);
+
+/**
  * qdr_link_deliver
  *
  * Deliver a message to the router core for forwarding.  This function is used in cases where

@@ -537,7 +537,6 @@ struct qdr_connection_t {
     qdr_connection_work_list_t  work_list;
     sys_mutex_t                *work_lock;
     qdr_link_ref_list_t         links;
-    qdr_link_ref_list_t         links_with_deliveries;
     qdr_link_ref_list_t         links_with_work;
     char                       *tenant_space;
     int                         tenant_space_len;

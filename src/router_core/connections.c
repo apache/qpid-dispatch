@@ -29,6 +29,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_link_delete_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 ALLOC_DEFINE(qdr_connection_t);
 ALLOC_DEFINE(qdr_connection_work_t);
@@ -322,7 +323,7 @@ int qdr_connection_process(qdr_connection_t *conn)
             }
 
             if (free_link)
-                free_qdr_link_t(link);
+                qdr_link_delete(link);
         }
     } while (free_link || link);
 
@@ -464,6 +465,15 @@ void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error)
 }
 
 
+void qdr_link_delete(qdr_link_t *link)
+{
+    qdr_action_t *action = qdr_action(qdr_link_delete_CT, "link_delete");
+
+    action->args.connection.link = link;
+    qdr_action_enqueue(link->core, action);
+}
+
+
 void qdr_connection_handlers(qdr_core_t                *core,
                              void                      *context,
                              qdr_connection_activate_t  activate,
@@ -588,30 +598,8 @@ static void qdr_generate_link_name(const char *label, char *buffer, size_t lengt
 }
 
 
-static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
-    //
-    // Remove the link from the master list of links
-    //
-    DEQ_REMOVE(core->open_links, link);
-
-    //
-    // If the link has a connected peer, unlink the peer
-    //
-    if (link->connected_link) {
-        link->connected_link->connected_link = 0;
-        link->connected_link = 0;
-    }
-
-    //
-    // If this link is involved in inter-router communication, remove its reference
-    // from the core mask-bit tables
-    //
-    if (link->link_type == QD_LINK_CONTROL)
-        core->control_links_by_mask_bit[conn->mask_bit] = 0;
-    if (link->link_type == QD_LINK_ROUTER)
-        core->data_links_by_mask_bit[conn->mask_bit] = 0;
-
     //
     // Clean up the lists of deliveries on this link
     //
@@ -619,10 +607,8 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_delivery_list_t     undelivered;
     qdr_delivery_list_t     unsettled;
     qdr_delivery_list_t     settled;
-    qdr_link_work_list_t    work_list;
 
     sys_mutex_lock(conn->work_lock);
-    DEQ_MOVE(link->work_list, work_list);
     DEQ_MOVE(link->updated_deliveries, updated_deliveries);
 
     DEQ_MOVE(link->undelivered, undelivered);
@@ -649,17 +635,6 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         d = DEQ_NEXT(d);
     }
     sys_mutex_unlock(conn->work_lock);
-
-    //
-    // Free the work list
-    //
-    qdr_link_work_t *link_work = DEQ_HEAD(work_list);
-    while (link_work) {
-        DEQ_REMOVE_HEAD(work_list);
-        qdr_error_free(link_work->error);
-        free_qdr_link_work_t(link_work);
-        link_work = DEQ_HEAD(work_list);
-    }
 
     //
     // Free all the 'updated' references
@@ -777,6 +752,57 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         qdr_delivery_decref_CT(core, dlv);
         dlv = DEQ_HEAD(settled);
     }
+}
+
+
+static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+{
+    //
+    // Remove the link from the master list of links
+    //
+    DEQ_REMOVE(core->open_links, link);
+
+    //
+    // If the link has a connected peer, unlink the peer
+    //
+    if (link->connected_link) {
+        link->connected_link->connected_link = 0;
+        link->connected_link = 0;
+    }
+
+    //
+    // If this link is involved in inter-router communication, remove its reference
+    // from the core mask-bit tables
+    //
+    if (link->link_type == QD_LINK_CONTROL)
+        core->control_links_by_mask_bit[conn->mask_bit] = 0;
+    if (link->link_type == QD_LINK_ROUTER)
+        core->data_links_by_mask_bit[conn->mask_bit] = 0;
+
+    //
+    // Clean up the work list
+    //
+    qdr_link_work_list_t work_list;
+
+    sys_mutex_lock(conn->work_lock);
+    DEQ_MOVE(link->work_list, work_list);
+    sys_mutex_unlock(conn->work_lock);
+
+    //
+    // Free the work list
+    //
+    qdr_link_work_t *link_work = DEQ_HEAD(work_list);
+    while (link_work) {
+        DEQ_REMOVE_HEAD(work_list);
+        qdr_error_free(link_work->error);
+        free_qdr_link_work_t(link_work);
+        link_work = DEQ_HEAD(work_list);
+    }
+
+    //
+    // Clean up any remaining deliveries
+    //
+    qdr_link_cleanup_deliveries_CT(core, conn, link);
 
     //
     // Remove the reference to this link in the connection's reference lists
@@ -876,9 +902,6 @@ void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t
             break;
         }
     }
-
-    if (link->detach_count == 2)
-        qdr_link_cleanup_CT(core, link->conn, link);
 
     qdr_link_enqueue_work_CT(core, link, work);
 }
@@ -1692,11 +1715,12 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         }
     }
 
-    //
-    // TODO - If this link is owned by an auto_link, handle the unexpected detach.
-    //
-
     if (link->detach_count == 1) {
+        //
+        // Handle the disposition of any deliveries that remain on the link
+        //
+        qdr_link_cleanup_deliveries_CT(core, conn, link);
+        
         //
         // If the detach occurred via protocol, send a detach back.
         //
@@ -1718,4 +1742,17 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         qdr_error_free(error);
 }
 
+
+static void qdr_link_delete_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    if (discard)
+        return;
+
+    qdr_link_t *link = action->args.connection.link;
+
+    if (link && link->conn) {
+        qdr_link_cleanup_CT(core, link->conn, link);
+        free_qdr_link_t(link);
+    }
+}
 
