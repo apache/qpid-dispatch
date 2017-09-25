@@ -26,25 +26,25 @@
 #include "alloc.h"
 
 
-typedef struct qd_parse_node qd_parse_node_t;
+typedef struct qd_parse_node qd_parse_tree_t;
 extern const char * const QD_PARSE_TREE_TOKEN_SEP;
 
-qd_parse_node_t *qd_parse_tree_new();
-void qd_parse_tree_free(qd_parse_node_t *node);
+qd_parse_tree_t *qd_parse_tree_new(void);
+void qd_parse_tree_free(qd_parse_tree_t *tree);
 
 
 // returns old payload or NULL if new
-void *qd_parse_tree_add_pattern(qd_parse_node_t *node,
+void *qd_parse_tree_add_pattern(qd_parse_tree_t *node,
                                 const qd_iterator_t *pattern,
                                 void *payload);
 
 // returns old payload or NULL if not present
-void *qd_parse_tree_remove_pattern(qd_parse_node_t *node,
+void *qd_parse_tree_remove_pattern(qd_parse_tree_t *node,
                                    const qd_iterator_t *pattern);
 
 // retrieves the payload pointer
 // returns true if pattern found
-bool qd_parse_tree_get_pattern(qd_parse_node_t *node,
+bool qd_parse_tree_get_pattern(qd_parse_tree_t *tree,
                                const qd_iterator_t *pattern,
                                void **payload);
 
@@ -66,7 +66,7 @@ bool qd_parse_tree_get_pattern(qd_parse_node_t *node,
 //  'a.b' and 'a.b.c.x' will match 3
 //
 // returns true on match and sets *payload
-bool qd_parse_tree_retrieve_match(qd_parse_node_t *node,
+bool qd_parse_tree_retrieve_match(qd_parse_tree_t *tree,
                                   const qd_iterator_t *value,
                                   void **payload);
 
@@ -79,10 +79,10 @@ typedef bool qd_parse_tree_visit_t(void *handle,
 
 // visit each matching pattern that matches value in the order based on the
 // above precedence rules
-void qd_parse_tree_search(qd_parse_node_t *node, const qd_iterator_t *value,
+void qd_parse_tree_search(qd_parse_tree_t *tree, const qd_iterator_t *value,
                           qd_parse_tree_visit_t *callback, void *handle);
 
 // visit each terminal node on the tree, returns last value returned by callback
-bool qd_parse_tree_walk(qd_parse_node_t *node, qd_parse_tree_visit_t *callback, void *handle);
+bool qd_parse_tree_walk(qd_parse_tree_t *tree, qd_parse_tree_visit_t *callback, void *handle);
 
 #endif /* parse_tree.h */

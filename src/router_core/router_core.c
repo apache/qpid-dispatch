@@ -18,6 +18,7 @@
  */
 
 #include "router_core_private.h"
+#include "route_control.h"
 #include <stdio.h>
 #include <strings.h>
 
@@ -129,6 +130,11 @@ void qdr_core_free(qdr_core_t *core)
         }
     }
 
+    qdr_link_route_t *link_route = 0;
+    while ( (link_route = DEQ_HEAD(core->link_routes))) {
+        qdr_core_delete_link_route(core, link_route);
+    }
+
     qdr_address_t *addr = 0;
     while ( (addr = DEQ_HEAD(core->addrs)) ) {
         qdr_core_remove_address(core, addr);
@@ -139,6 +145,8 @@ void qdr_core_free(qdr_core_t *core)
     }
     qd_hash_free(core->addr_hash);
     qd_parse_tree_free(core->addr_parse_tree);
+    qd_parse_tree_free(core->link_route_tree[QD_INCOMING]);
+    qd_parse_tree_free(core->link_route_tree[QD_OUTGOING]);
     qd_hash_free(core->conn_id_hash);
     //TODO what about the actual connection identifier objects?
 
@@ -317,14 +325,24 @@ bool qdr_is_addr_treatment_multicast(qdr_address_t *addr)
     return false;
 }
 
+void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr)
+{
+    DEQ_REMOVE(core->link_routes, lr);
+    free(lr->name);
+    free(lr->pattern);
+    free_qdr_link_route_t(lr);
+}
+
 void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
 {
-    // Remove the address from the list and hash index
-    qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
+    // Remove the address from the list, hash index, and parse tree
     DEQ_REMOVE(core->addrs, addr);
+    if (addr->hash_handle) {
+        qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
+        qd_hash_handle_free(addr->hash_handle);
+    }
 
     // Free resources associated with this address
-    qd_hash_handle_free(addr->hash_handle);
     qd_bitmask_free(addr->rnodes);
     if (addr->treatment == QD_TREATMENT_ANYCAST_CLOSEST) {
         qd_bitmask_free(addr->closest_remotes);

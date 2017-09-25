@@ -586,7 +586,9 @@ var QDR = (function (QDR) {
             if (addr[0] == 'A')  return "area"
             if (addr[0] == 'L')  return "local"
             if (addr[0] == 'C')  return "link-incoming"
+            if (addr[0] == 'E')  return "link-incoming"
             if (addr[0] == 'D')  return "link-outgoing"
+            if (addr[0] == 'F')  return "link-outgoing"
             if (addr[0] == 'T')  return "topo"
             return "unknown: " + addr[0]
       }

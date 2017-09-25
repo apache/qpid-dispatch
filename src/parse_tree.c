@@ -170,6 +170,7 @@ static bool normalize_pattern(char *pattern)
 //    +-->x-->y-->...
 //
 
+typedef struct qd_parse_node qd_parse_node_t;
 DEQ_DECLARE(qd_parse_node_t, qd_parse_node_list_t);
 struct qd_parse_node {
     DEQ_LINKS(qd_parse_node_t); // siblings
@@ -525,7 +526,7 @@ static void parse_node_free(qd_parse_node_t *node)
 }
 
 
-qd_parse_node_t *qd_parse_tree_new()
+qd_parse_tree_t *qd_parse_tree_new()
 {
     return new_parse_node(NULL);
 }
@@ -539,7 +540,7 @@ static bool get_first(void *handle, const char *pattern, void *payload)
     return false;
 }
 
-bool qd_parse_tree_retrieve_match(qd_parse_node_t *node,
+bool qd_parse_tree_retrieve_match(qd_parse_tree_t *node,
                                   const qd_iterator_t *value,
                                   void **payload)
 {
@@ -552,7 +553,7 @@ bool qd_parse_tree_retrieve_match(qd_parse_node_t *node,
 
 
 // Invoke callback for each pattern that matches 'value'
-void qd_parse_tree_search(qd_parse_node_t *node,
+void qd_parse_tree_search(qd_parse_tree_t *node,
                           const qd_iterator_t *value,
                           qd_parse_tree_visit_t *callback, void *handle)
 {
@@ -573,7 +574,7 @@ void qd_parse_tree_search(qd_parse_node_t *node,
 
 
 // returns old payload or NULL if new
-void *qd_parse_tree_add_pattern(qd_parse_node_t *node,
+void *qd_parse_tree_add_pattern(qd_parse_tree_t *node,
                                 const qd_iterator_t *pattern,
                                 void *payload)
 {
@@ -596,7 +597,7 @@ void *qd_parse_tree_add_pattern(qd_parse_node_t *node,
 
 
 // returns true if pattern exists in tree
-bool qd_parse_tree_get_pattern(qd_parse_node_t *node,
+bool qd_parse_tree_get_pattern(qd_parse_tree_t *node,
                                const qd_iterator_t *pattern,
                                void **payload)
 {
@@ -620,7 +621,7 @@ bool qd_parse_tree_get_pattern(qd_parse_node_t *node,
 
 
 // returns the payload void *
-void *qd_parse_tree_remove_pattern(qd_parse_node_t *node,
+void *qd_parse_tree_remove_pattern(qd_parse_tree_t *node,
                                    const qd_iterator_t *pattern)
 {
     token_iterator_t key;
@@ -641,7 +642,7 @@ void *qd_parse_tree_remove_pattern(qd_parse_node_t *node,
 }
 
 
-bool qd_parse_tree_walk(qd_parse_node_t *node, qd_parse_tree_visit_t *callback, void *handle)
+bool qd_parse_tree_walk(qd_parse_tree_t *node, qd_parse_tree_visit_t *callback, void *handle)
 {
     if (node->pattern) {  // terminal node for pattern
         if (!callback(handle, node->pattern, node->payload))
