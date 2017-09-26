@@ -150,6 +150,7 @@ var QDR = (function (QDR) {
         }
       ],
       enableColumnResize: true,
+      jqueryUIDraggable: true,
       enablePaging: true,
       showFooter: $scope.totalRouters > 50,
       totalServerItems: 'totalRouters',
@@ -223,6 +224,7 @@ var QDR = (function (QDR) {
           displayName: 'Value',
         }
       ],
+      jqueryUIDraggable: true,
       enableColumnResize: true,
       multiSelect: false
     }
@@ -318,6 +320,7 @@ var QDR = (function (QDR) {
       pagingOptions: $scope.addressPagingOptions,
       enableColumnResize: true,
       multiSelect: false,
+      jqueryUIDraggable: true,
       selectedItems: $scope.selectedAddresses,
       plugins: [new ngGridFlexibleHeightPlugin()],
       afterSelectionChange: function(data) {
@@ -603,6 +606,7 @@ var QDR = (function (QDR) {
       showColumnMenu: true,
       rowTemplate: linkRowTmpl,
       multiSelect: false,
+      jqueryUIDraggable: true,
       selectedItems: $scope.selectedLinks,
       plugins: [new ngGridFlexibleHeightPlugin()],
       afterSelectionChange: function(data) {
@@ -850,6 +854,7 @@ return;
       pagingOptions: $scope.connectionPagingOptions,
       enableColumnResize: true,
       multiSelect: false,
+      jqueryUIDraggable: true,
       selectedItems: $scope.allConnectionSelections,
       plugins: [new ngGridFlexibleHeightPlugin()],
       afterSelectionChange: function(data) {
@@ -951,6 +956,7 @@ return;
       }
       ],
       enableColumnResize: true,
+      jqueryUIDraggable: true,
       multiSelect: false
     }
 
@@ -992,6 +998,7 @@ return;
         }
       ],
       enableColumnResize: true,
+      jqueryUIDraggable: true,
       multiSelect: false
     }
 
@@ -1143,6 +1150,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       }
       ],
       enableColumnResize: true,
+      jqueryUIDraggable: true,
       multiSelect: false
     }
 
@@ -1229,6 +1237,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
         },
       ],
       enableColumnResize: true,
+      jqueryUIDraggable: true,
       multiSelect: false,
       selectedItems: $scope.logModuleSelected,
       plugins: [new ngGridFlexibleHeightPlugin()],
@@ -1336,6 +1345,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       ],
       //enableCellSelection: true,
       enableColumnResize: true,
+      jqueryUIDraggable: true,
       multiSelect: false,
       selectedItems: $scope.allLogSelections,
       plugins: [new ngGridFlexibleHeightPlugin()],

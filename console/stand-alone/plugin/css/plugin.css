@@ -348,7 +348,6 @@ label.rateGroup {
 
 div.chartOptions div.dlg-slider {
     float: left;
-    margin-left: 2em;
     width: 28em;
     font-size: 14px;
 }
@@ -368,7 +367,12 @@ input[type="radio"] {
 
 div.chartOptions legend {
     font-size: 1.2em;
+    font-weight: bold;
     margin-bottom: 10px;
+}
+
+div.chartOptions tab > div {
+  margin-left: 1em;
 }
 
 div.chartOptions span.minicolors-swatch {

@@ -3,6 +3,9 @@ The stand-alone qpid dispatch console is an html web site that monitors and cont
 
 To install the console:
 - The console files are normally installed under /usr/share/qpid-dispatch/console/stand-alone
+- Install the javascript libraries / css files
+  - cd <install directory>
+  - bower install
 
 To run the web console:
 - Ensure one of the routers in your network is configured with a normal listener with http: true

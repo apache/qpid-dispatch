@@ -30,6 +30,7 @@ var QDR = (function(QDR) {
       data: 'attributes',
       enableColumnResize: false,
       multiSelect: false,
+      jqueryUIDraggable: true,
       columnDefs: [{
         field: 'attributeName',
         displayName: 'Attribute',
@@ -137,6 +138,7 @@ var QDR = (function(QDR) {
         data: 'multiData',
         selectedItems: $scope.selectedClient,
         multiSelect: false,
+        jqueryUIDraggable: true,
         afterSelectionChange: function(obj) {
           if (obj.selected && obj.orig) {
             var detailsDiv = d3.select('#link_details')
@@ -247,6 +249,7 @@ var QDR = (function(QDR) {
       $scope.linkData = [];
       $scope.linkDetails = {
         data: 'linkData',
+        jqueryUIDraggable: true,
         columnDefs: [{
             field: 'adminStatus',
             cellTemplate: "titleCellTemplate.html",

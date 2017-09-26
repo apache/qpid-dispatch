@@ -634,6 +634,7 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
       columnDefs: "detailCols",
       enableColumnResize: true,
       multiSelect: false,
+      jqueryUIDraggable: true,
       beforeSelectionChange: function() {
           return false;
       }
