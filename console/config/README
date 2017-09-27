@@ -7,14 +7,16 @@ Dependencies
 ============
 
 - tested using python 2.7
+- bower to install the 3rd party javascript libraries
 
 Running
 ====================
 
-There are no build steps.
+Install the 3rd party javascript libraries:
+- in the console/config/ directory run
+  bower install
+This will create a bower_components/ directory can install the needed files
 
-To run:
-- change to the console/config directory
 - run ./config.py
 - in the address bar of a browser, enter localhost:8000
 
