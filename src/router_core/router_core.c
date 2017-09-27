@@ -338,6 +338,12 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
     // Remove the address from the list, hash index, and parse tree
     DEQ_REMOVE(core->addrs, addr);
     if (addr->hash_handle) {
+        const char *a_str = (const char *)qd_hash_key_by_handle(addr->hash_handle);
+        if (QDR_IS_LINK_ROUTE(a_str[0])) {
+            qd_iterator_t *iter = qd_iterator_string(a_str, ITER_VIEW_ALL);
+            qdr_link_route_unmap_pattern_CT(core, iter);
+            qd_iterator_free(iter);
+        }
         qd_hash_remove_by_handle(core->addr_hash, addr->hash_handle);
         qd_hash_handle_free(addr->hash_handle);
     }

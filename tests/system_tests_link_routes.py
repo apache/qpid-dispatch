@@ -93,6 +93,7 @@ class LinkRouteTest(TestCase):
                ])
         router('B',
                [
+                   # Listener for clients, note that the tests assume this listener is first in this list:
                    ('listener', {'role': 'normal', 'host': '0.0.0.0', 'port': b_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    ('listener', {'name': 'test-tag', 'role': 'route-container', 'host': '0.0.0.0', 'port': test_tag_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
 
@@ -123,7 +124,9 @@ class LinkRouteTest(TestCase):
                )
         router('C',
                [
-                   # The client will exclusively use the following listener to connect to QDR.C
+                   # The client will exclusively use the following listener to
+                   # connect to QDR.C, the tests assume this is the first entry
+                   # in the list
                    ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(), 'saslMechanisms': 'ANONYMOUS'}),
                    ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': c_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
                    # The dot(.) at the end is ignored by the address hashing scheme.
@@ -399,8 +402,9 @@ class LinkRouteTest(TestCase):
 
         blocking_connection.close()
 
-    def _link_route_pattern_match(self, connect_host, include_host,
-                                  exclude_host, test_address):
+    def _link_route_pattern_match(self, connect_node, include_host,
+                                  exclude_host, test_address,
+                                  expected_pattern):
         """
         This helper function ensures that messages sent to 'test_address' pass
         through 'include_host', and are *not* routed to 'exclude_host'
@@ -421,9 +425,13 @@ class LinkRouteTest(TestCase):
                               type='org.apache.qpid.dispatch.router.address',
                               name=route)
 
-        # Connect to 'connect_host' and send message to 'address'
+        # wait until the host we're connecting to gets its next hop for the
+        # pattern we're connecting to
+        connect_node.wait_address(expected_pattern, remotes=1, delay=0.1)
 
-        blocking_connection = BlockingConnection(connect_host)
+        # Connect to 'connect_node' and send message to 'address'
+
+        blocking_connection = BlockingConnection(connect_node.addresses[0])
         blocking_receiver = blocking_connection.create_receiver(address=test_address)
         blocking_sender = blocking_connection.create_sender(address=test_address,
                                                             options=AtMostOnce())
@@ -469,24 +477,28 @@ class LinkRouteTest(TestCase):
         """
         qdr_A = self.routers[0].addresses[0]
         qdr_D = self.routers[3].addresses[0]
-        qdr_C = self.routers[2].addresses[0]
+        qdr_C = self.routers[2]  # note: the node, not the address!
 
-        self._link_route_pattern_match(connect_host=qdr_C,
+        self._link_route_pattern_match(connect_node=qdr_C,
                                        include_host=qdr_A,
                                        exclude_host=qdr_D,
-                                       test_address='a.notD.toA')
-        self._link_route_pattern_match(connect_host=qdr_C,
+                                       test_address='a.notD.toA',
+                                       expected_pattern='a.*.toA.#')
+        self._link_route_pattern_match(connect_node=qdr_C,
                                        include_host=qdr_D,
                                        exclude_host=qdr_A,
-                                       test_address='a.notA.toD')
-        self._link_route_pattern_match(connect_host=qdr_C,
+                                       test_address='a.notA.toD',
+                                       expected_pattern='a.*.toD.#')
+        self._link_route_pattern_match(connect_node=qdr_C,
                                        include_host=qdr_A,
                                        exclude_host=qdr_D,
-                                       test_address='a.toD.toA.xyz')
-        self._link_route_pattern_match(connect_host=qdr_C,
+                                       test_address='a.toD.toA.xyz',
+                                       expected_pattern='a.*.toA.#')
+        self._link_route_pattern_match(connect_node=qdr_C,
                                        include_host=qdr_D,
                                        exclude_host=qdr_A,
-                                       test_address='a.toA.toD.abc')
+                                       test_address='a.toA.toD.abc',
+                                       expected_pattern='a.*.toD.#')
 
     def test_custom_annotations_match(self):
         """

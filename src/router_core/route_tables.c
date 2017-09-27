@@ -572,8 +572,6 @@ static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool 
 
         qd_iterator_t *iter = address->iterator;
         qdr_address_t *addr = 0;
-        const char prefix = (char) qd_iterator_octet(iter);
-        qd_iterator_reset(iter);
 
         qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
         if (!addr) {
@@ -581,11 +579,14 @@ static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool 
             qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_ITEM_INIT(addr);
             DEQ_INSERT_TAIL(core->addrs, addr);
-        }
-
-        if (QDR_IS_LINK_ROUTE(prefix)) {
-            // add the link route pattern to the wildcard address parse tree
-            qdr_link_route_map_pattern_CT(core, iter, addr);
+            // if the address is a link route, add the pattern to the wildcard
+            // address parse tree
+            {
+                const char *a_str = (const char *)qd_hash_key_by_handle(addr->hash_handle);
+                if (QDR_IS_LINK_ROUTE(a_str[0])) {
+                    qdr_link_route_map_pattern_CT(core, iter, addr);
+                }
+            }
         }
 
         qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
@@ -623,21 +624,13 @@ static void qdr_unmap_destination_CT(qdr_core_t *core, qdr_action_t *action, boo
         qdr_node_t    *rnode = core->routers_by_mask_bit[router_maskbit];
         qd_iterator_t *iter  = address->iterator;
         qdr_address_t *addr  = 0;
-        const char prefix = (char) qd_iterator_octet(iter);
 
-        qd_iterator_reset(iter);
         qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
-
         if (!addr) {
             qd_log(core->log, QD_LOG_CRITICAL, "unmap_destination: Address not found");
             break;
         }
-
-        if (QDR_IS_LINK_ROUTE(prefix)) {
-            // pull it from the wildcard address parse tree
-            qdr_link_route_unmap_pattern_CT(core, iter);
-        }
-
+        
         qd_bitmask_clear_bit(addr->rnodes, router_maskbit);
         rnode->ref_count--;
         addr->cost_epoch--;
