@@ -56,9 +56,6 @@ QDR.log.debug("attr.description " + attr.description)
       $scope.attributes = attributes;
       $scope.form = args.entity;
     })
-    $scope.$on('showAddForm', function(event) {
-      $scope.form = 'add';
-    })
   })
 
   /**
@@ -301,20 +298,6 @@ QDR.log.debug("attr.description " + attr.description)
       urlPrefix = urlPrefix.split("#")[0]
       QDR.log.debug("started QDR.TopologyController with urlPrefix: " + urlPrefix);
 
-      $scope.addingNode = {
-        step: 0,
-        hasLink: false,
-        trigger: ''
-      };
-
-      $scope.cancel = function() {
-        $scope.addingNode.step = 0;
-      }
-      $scope.editNewRouter = function() {
-        $scope.addingNode.trigger = 'editNode';
-      }
-
-      var NewRouterName = "__NEW__";
       // mouse event vars
       var selected_node = null,
         selected_link = null,
@@ -325,151 +308,11 @@ QDR.log.debug("attr.description " + attr.description)
         initial_mouse_down_position = null;
 
       $scope.schema = "Not connected";
-
-      $scope.modes = [{
-          title: 'Topology view',
-          name: 'Diagram',
-          right: false
-        },
-        /* {title: 'Add a new router node', name: 'Add Router', right: true} */
-      ];
-      $scope.mode = "Diagram";
       $scope.contextNode = null; // node that is associated with the current context menu
-
-      $scope.isModeActive = function(name) {
-        if ((name == 'Add Router' || name == 'Diagram') && $scope.addingNode.step > 0)
-          return true;
-        return ($scope.mode == name);
-      }
-      $scope.selectMode = function(name) {
-        if (name == "Add Router") {
-          name = 'Diagram';
-          if ($scope.addingNode.step > 0) {
-            $scope.addingNode.step = 0;
-          } else {
-            // start adding node mode
-            $scope.addingNode.step = 1;
-          }
-        } else {
-          $scope.addingNode.step = 0;
-        }
-
-        $scope.mode = name;
-      }
-      $scope.$watch(function() { return $scope.addingNode.step }, function(newValue, oldValue) {
-        if (newValue == 0 && oldValue != 0) {
-          // we are cancelling the add
-
-          // find the New node
-          nodes.every(function(n, i) {
-            // for the placeholder node, the key will be __internal__
-            if (QDRService.nameFromId(n.key) == '__internal__') {
-              var newLinks = links.filter(function(e, i) {
-                  return e.source.id == n.id || e.target.id == n.id;
-                })
-                // newLinks is an array of links to remove
-              newLinks.map(function(e) {
-                  links.splice(links.indexOf(e), 1);
-                })
-                // i is the index of the node to remove
-              nodes.splice(i, 1);
-              force.nodes(nodes).links(links).start();
-              restart(false);
-              return false; // stop looping
-            }
-            return true;
-          })
-          updateForm(Object.keys(QDRService.topology.nodeInfo())[0], 'router', 0);
-
-        } else if (newValue > 0) {
-          // we are starting the add mode
-          $scope.$broadcast('showAddForm')
-
-          resetMouseVars();
-          selected_node = null;
-          selected_link = null;
-          // add a new node
-          var id = "amqp:/_topo/0/__internal__/$management";
-          var x = radiusNormal * 4;
-          var y = x;;
-          if (newValue > 1) { // add at current mouse position
-            var offset = jQuery('#topology').offset();
-            x = mouseX - offset.left + $(document).scrollLeft();
-            y = mouseY - offset.top + $(document).scrollTop();;
-          }
-          QDRService.ensureAllEntities({entity: ".router"}, function () {
-            NewRouterName = genNewName();
-            nodes.push(aNode(id, NewRouterName, "inter-router", '', nodes.length, x, y, undefined, undefined, true));
-            force.nodes(nodes).links(links).start();
-            restart(false);
-          })
-        }
-      })
       $scope.isRight = function(mode) {
         return mode.right;
       }
 
-      // for ng-grid that shows details for multiple consoles/clients
-      // generate unique name for router and containerName
-      var genNewName = function() {
-        var nodeInfo = QDRService.topology.nodeInfo();
-        var nameIndex = 1;
-        var newName = "R." + nameIndex;
-
-        var names = [];
-        for (key in nodeInfo) {
-          var node = nodeInfo[key];
-          var router = node['.router'];
-          var attrNames = router.attributeNames;
-          var name = QDRService.valFor(attrNames, router.results[0], 'routerId')
-          if (!name)
-            name = QDRService.valFor(attrNames, router.results[0], 'name')
-          names.push(name);
-        }
-
-        while (names.indexOf(newName) >= 0) {
-          newName = "R." + nameIndex++;
-        }
-        return newName;
-      }
-
-      $scope.$watch(function() {
-        return $scope.addingNode.trigger
-      }, function(newValue, oldValue) {
-        if (newValue == 'editNode') {
-          $scope.addingNode.trigger = "";
-          editNode();
-        }
-      })
-
-      function editNode() {
-        doAddDialog(NewRouterName);
-      };
-      $scope.reverseLink = function() {
-        if (!mousedown_link)
-          return;
-        var d = mousedown_link;
-        var tmp = d.left;
-        d.left = d.right;;
-        d.right = tmp;
-        restart(false);
-        tick();
-      }
-      $scope.removeLink = function() {
-        if (!mousedown_link)
-          return;
-        var d = mousedown_link;
-        links.every(function(l, i) {
-          if (l.source.id == d.source.id && l.target.id == d.target.id) {
-            links.splice(i, 1);
-            force.links(links).start();
-            return false; // exit the 'every' loop
-          }
-          return true;
-        });
-        restart(false);
-        tick();
-      }
       var setNodesFixed = function (name, b) {
         nodes.some(function (n) {
           if (n.name === name) {
@@ -613,7 +456,7 @@ QDR.log.debug("attr.description " + attr.description)
           id: nodeIndex,
           resultIndex: resultIndex,
           fixed: !!+fixed,
-          cls: name == NewRouterName ? 'temp' : '',
+          cls: '',
           container: connectionContainer
         };
       };
@@ -697,7 +540,6 @@ QDR.log.debug("attr.description " + attr.description)
             yInit *= -1
           }
           nodes.push(aNode(id, name, "inter-router", nodeInfo, nodes.length, position.x, position.y, name, undefined, position.fixed));
-          //QDR.log.debug("adding node " + nodes.length-1);
         }
       }
 
@@ -847,20 +689,6 @@ QDR.log.debug("attr.description " + attr.description)
           .attr("id", "SVG_ID")
           .attr('width', width)
           .attr('height', height)
-          .on("contextmenu", function(d) {
-            if (d3.event.defaultPrevented)
-              return;
-            d3.event.preventDefault();
-
-            if ($scope.addingNode.step != 0)
-              return;
-            if (d3.select('#svg_context_menu').style('display') !== 'block')
-              $(document).click();
-            d3.select('#svg_context_menu')
-              .style('left', (mouseX -1 + $(document).scrollLeft()) + "px")
-              .style('top', (mouseY -1 + $(document).scrollTop()) + "px")
-              .style('display', 'block');
-          })
           .on('click', function(d) {
             removeCrosssection()
           });
@@ -1294,9 +1122,6 @@ QDR.log.debug("attr.description " + attr.description)
           .classed('highlighted', function(d) {
             return d.highlighted;
           })
-          .classed('temp', function(d) {
-            return d.cls == 'temp';
-          })
           .attr('marker-start', function(d) {
             var sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
             if (d.highlighted)
@@ -1322,19 +1147,10 @@ QDR.log.debug("attr.description " + attr.description)
             var sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
             return d.right ? 'url(' + urlPrefix + '#end-arrow' + sel + ')' : '';
           })
-          .classed('temp', function(d) {
-            return d.cls == 'temp';
-          })
           .classed('small', function(d) {
             return d.cls == 'small';
           })
           .on('mouseover', function(d) { // mouse over a path
-            if ($scope.addingNode.step > 0) {
-              if (d.cls == 'temp') {
-                d3.select(this).classed('over', true);
-              }
-              return;
-            }
             //QDR.log.debug("showing connections form");
             var resultIndex = 0; // the connection to use
             var left = d.left ? d.target : d.source;
@@ -1369,27 +1185,9 @@ QDR.log.debug("attr.description " + attr.description)
             restart();
           })
           .on('mouseout', function(d) { // mouse out of a path
-            if ($scope.addingNode.step > 0) {
-              if (d.cls == 'temp') {
-                d3.select(this).classed('over', false);
-              }
-              return;
-            }
             //QDR.log.debug("showing connections form");
             selected_link = null;
             restart();
-          })
-          .on("contextmenu", function(d) {  // right click a path
-            $(document).click();
-            d3.event.preventDefault();
-            if (d.cls !== "temp")
-              return;
-
-            mousedown_link = d;
-            d3.select('#link_context_menu')
-              .style('left', (mouseX -1 + $(document).scrollLeft()) + "px")
-              .style('top', (mouseY -1 + $(document).scrollTop()) + "px")
-              .style('display', 'block');
           })
           // left click a path
           .on("click", function (d) {
@@ -1539,9 +1337,6 @@ QDR.log.debug("attr.description " + attr.description)
             .classed('fixed', function(d) {
               return d.fixed & 1
             })
-            .classed('temp', function(d) {
-              return QDRService.nameFromId(d.key) == '__internal__';
-            })
             .classed('normal', function(d) {
               return d.nodeType == 'normal' || QDRService.isConsole(d)
             })
@@ -1578,10 +1373,6 @@ QDR.log.debug("attr.description " + attr.description)
         }
         appendCircle(g)
           .on('mouseover', function(d) {  // mouseover a circle
-            if ($scope.addingNode.step > 0) {
-              d3.select(this).attr('transform', 'scale(1.1)');
-              return;
-            }
             if (!selected_node && !mousedown_node) {
               if (d.nodeType === 'inter-router') {
                 //QDR.log.debug("showing general form");
@@ -1650,23 +1441,6 @@ QDR.log.debug("attr.description " + attr.description)
             }
 
             // we didn't drag, we just clicked on the node
-            if ($scope.addingNode.step > 0) {
-              if (d.nodeType !== 'inter-router')
-                return;
-              if (QDRService.nameFromId(d.key) == '__internal__')
-                return;
-
-              // add a link from the clicked node to the new node
-              getLink(d.id, nodes.length - 1, "in", "temp", "__internal__");
-              $scope.addingNode.hasLink = true;
-              if (!$scope.$$phase) $scope.$apply()
-                // add new elements to the svg
-              force.links(links).start();
-              restart();
-              return;
-
-            }
-
             // if this node was selected, unselect it
             if (mousedown_node === selected_node) {
               selected_node = null;
@@ -2079,8 +1853,6 @@ QDR.log.debug("attr.description " + attr.description)
       function hasChanged() {
         // Don't update the underlying topology diagram if we are adding a new node.
         // Once adding is completed, the topology will update automatically if it has changed
-        if ($scope.addingNode.step > 0)
-          return -2;
         var nodeInfo = QDRService.topology.nodeInfo();
         if (Object.keys(nodeInfo).length != Object.keys(savedKeys).length)
           return Object.keys(nodeInfo).length > Object.keys(savedKeys).length ? 1 : -1;
@@ -2112,7 +1884,6 @@ QDR.log.debug("attr.description " + attr.description)
       $rootScope.$on('$locationChangeStart', function(event, newUrl, oldUrl) {
         //QDR.log.debug("locationChangeStart");
         savePositions()
-        $scope.addingNode.step = 0;
       });
       // When the DOM element is removed from the page,
       // AngularJS will trigger the $destroy event on
@@ -2182,48 +1953,6 @@ QDR.log.debug("attr.description " + attr.description)
       setupInitialUpdate();
       QDRService.startUpdating();
 
-      function doAddDialog(NewRouterName) {
-        QDRService.ensureAllEntities({entity: ".listener"}, function () {
-          var d = $dialog.dialog({
-            dialogClass: "modal dlg-large",
-            backdrop: true,
-            keyboard: true,
-            backdropClick: true,
-            controller: 'QDR.NodeDialogController',
-            templateUrl: 'node-config-template.html',
-            resolve: {
-              newname: function() {
-                return NewRouterName;
-              }
-            }
-          });
-          $timeout(function () {
-            d.open().then(function(result) {
-              if (result)
-                doDownloadDialog(result);
-            });
-          })
-        })
-      };
-
-      function doDownloadDialog(result) {
-        d = $dialog.dialog({
-          backdrop: true,
-          keyboard: true,
-          backdropClick: true,
-          controller: 'QDR.DownloadDialogController',
-          templateUrl: 'download-dialog-template.html',
-          resolve: {
-            results: function() {
-              return result;
-            }
-          }
-        });
-        d.open().then(function(result) {
-          //QDR.log.debug("download dialog done")
-        })
-        if (!$scope.$$phase) $scope.$apply()
-      };
     }
   ]);
 
