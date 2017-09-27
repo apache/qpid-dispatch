@@ -50,13 +50,6 @@ svg:not(.active):not(.ctrl) path.link {
   cursor: pointer;
 }
 
-path.link.temp {
-  opacity: 0.3;
-}
-path.link.temp.over {
-  opacity: 0.8;
-  stroke-dasharray: 10,2;
-}
 path.link.small {
   stroke-width: 2.5;
   stroke: darkgray;
@@ -119,11 +112,6 @@ circle.node.on-demand.artemis {
 circle.node.fixed {
     stroke-dasharray: 10,2;
 }
-circle.node.temp {
-    stroke: #f80;
-    fill: #f0f0ff;
-}
-
 text {
   font: 12px sans-serif;
   pointer-events: none;
