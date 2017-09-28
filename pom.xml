@@ -69,40 +69,50 @@
                 <artifactId>apache-rat-plugin</artifactId>
                 <configuration>
                     <excludes>
-                            <exclude>.travis.yml</exclude>
-                            <exclude>.gitmodules</exclude>
-                            <exclude>.gitignore</exclude>
-                            <exclude>.autotools</exclude>
-                            <exclude>**/angular-patternfly.min.js</exclude>
-                            <exclude>**/angular-patternfly.min.css</exclude>
-                            <exclude>**/d3.v3.min.js</exclude>
-                            <exclude>**/jquery.dynatree.min.js</exclude>
-                            <exclude>**/slider.js</exclude>
-                            <exclude>**/ui-grid.js</exclude>
-                            <exclude>**/system_tests_http.txt</exclude>
-                            <exclude>**/build/</exclude>
-                            <exclude>**/target/</exclude>
-                            <exclude>**/install/</exclude>
-                            <exclude>**/*.lock</exclude>
-                            <exclude>**/MANIFEST.in</exclude>
-                            <exclude>**/valgrind.supp</exclude>
-                            <exclude>**/*.json.in</exclude>
-                            <exclude>**/*.json</exclude>
-                            <exclude>**/rhea-min.js</exclude>
-                            <exclude>**/VERSION.txt</exclude>
-                            <exclude>**/v3_ca.ext</exclude>
-                            <exclude>**/system_test.dir/**</exclude>
-                            <exclude>**/server-password-file.txt</exclude>
-                            <exclude>**/server-password-file-bad.txt</exclude>
-                            <exclude>**/client-password-file.txt</exclude>
-                            <exclude>**/.idea/**</exclude> <!-- This is for ignoring the intellij idea project files -->
-                            <exclude>**/*~</exclude> <!-- This is for files created by emacs -->
-                            <exclude>.pydevproject</exclude> <!-- PyCharm project file -->
-                            <exclude>.cproject</exclude>
-                            <exclude>**/qpid-proton/**</exclude>
-                            <exclude>qpid-proton/**</exclude>
-                            <exclude>libuv/**</exclude>
-                            <exclude>libwebsockets/**</exclude>
+                      <exclude>.travis.yml</exclude>
+                      <exclude>CMakeCache.txt</exclude>
+                      <exclude>.gitmodules</exclude>
+                      <exclude>.gitignore</exclude>
+                      <exclude>.autotools</exclude>
+                      <exclude>**/angular-patternfly.min.js</exclude>
+                      <exclude>**/angular-patternfly.min.css</exclude>
+                      <exclude>**/d3.v3.min.js</exclude>
+                      <exclude>**/jquery.tipsy.js</exclude>
+                      <exclude>**/jquery.tipsy.js</exclude>
+                      <exclude>**/zd3-queue.min.js</exclude>
+                      <exclude>**/d3.min.js</exclude>
+                      <exclude>**/tooltipsy.min.js</exclude>
+                      <exclude>**/font-awesome.min.css</exclude>
+                      <exclude>**/jquery-ui.css</exclude>
+                      <exclude>**/jquery.tipsy.css</exclude>
+                      <exclude>**/jquery.dynatree.min.js</exclude>
+                      <exclude>**/slider.js</exclude>
+                      <exclude>**/ui-grid.js</exclude>
+                      <exclude>**/system_tests_http.txt</exclude>
+                      <exclude>**/build/</exclude>
+                      <exclude>**/target/</exclude>
+                      <exclude>**/install/</exclude>
+                      <exclude>**/*.lock</exclude>
+                      <exclude>**/MANIFEST.in</exclude>
+                      <exclude>**/valgrind.supp</exclude>
+                      <exclude>**/*.json.in</exclude>
+                      <exclude>**/*.json</exclude>
+                      <exclude>**/rhea-min.js</exclude>
+                      <exclude>**/VERSION.txt</exclude>
+                      <exclude>**/v3_ca.ext</exclude>
+                      <exclude>**/system_test.dir/**</exclude>
+                      <exclude>**/server-password-file.txt</exclude>
+                      <exclude>**/server-password-file-bad.txt</exclude>
+                      <exclude>**/client-password-file.txt</exclude>
+                      <exclude>**/.idea/**</exclude> <!-- This is for ignoring the intellij idea project files -->
+                      <exclude>**/*~</exclude> <!-- This is for files created by emacs -->
+                      <exclude>.pydevproject</exclude> <!-- PyCharm project file -->
+                      <exclude>.cproject</exclude>
+                      <exclude>**/qpid-proton/**</exclude>
+                      <exclude>**/CMakeFiles/**</exclude>
+                      <exclude>qpid-proton/**</exclude>
+                      <exclude>libuv/**</exclude>
+                      <exclude>libwebsockets/**</exclude>
                 </excludes>
         </configuration>            
             </plugin>
