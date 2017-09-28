@@ -177,8 +177,13 @@ static char* test_message_properties(void *context)
     set_content(content, size);
 
     qd_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_CORRELATION_ID);
-    if (!iter) return "Expected iterator for the 'correlation-id' field";
-    if (qd_iterator_length(iter) != 13) return "Bad length for correlation-id";
+    if (!iter) {
+        return "Expected iterator for the 'correlation-id' field";
+    }
+    if (qd_iterator_length(iter) != 13) {
+        qd_iterator_free(iter);
+        return "Bad length for correlation-id";
+    }
     if (!qd_iterator_equal(iter, (const unsigned char *)"correlationId")) {
         qd_iterator_free(iter);
         return "Invalid correlation-id";

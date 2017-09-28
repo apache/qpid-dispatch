@@ -676,7 +676,6 @@ const char *qd_parse_annotations_v1(
     assert(blob_pointer->remaining >= 0);
 
     *blob_item_count = user_entries;
-    assert(*blob_item_count >= 0);
     return 0;
 }
 
