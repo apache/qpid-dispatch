@@ -1394,10 +1394,12 @@
                 },
                 "proxy": {
                     "type": "string",
+                    "required": true,
                     "description": "The full path to the proxy program to run."
                  },
                 "home": {
                     "type": "string",
+                    "required": true,
                     "description": "The full path to the html/css/js files for the console."
                 },
                 "args": {

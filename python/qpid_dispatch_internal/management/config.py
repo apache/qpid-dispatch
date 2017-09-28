@@ -114,7 +114,7 @@ class Config(object):
             sections = self._parserawjson(source) if raw_json else self._parse(source)
             # Add missing singleton sections
             for et in self.get_config_types():
-                if et.singleton and not [s for s in sections if s[0] == et.short_name]:
+                if et.singleton and not et.deprecated and not [s for s in sections if s[0] == et.short_name]:
                     sections.append((et.short_name, {}))
             entities = [dict(type=self.schema.long_name(s[0]), **s[1]) for s in sections]
             self.schema.validate_all(entities)

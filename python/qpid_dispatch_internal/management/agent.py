@@ -407,6 +407,7 @@ class ConsoleEntity(EntityAdapter):
 
     def create(self):
         # if a named listener is present, use its host:port
+        self._agent.log(LOG_WARNING, "Console entity is deprecated: Use http:yes on listener entity instead")
         name = self.attributes.get('listener')
         if name:
             listeners = self._agent.find_entity_by_type("listener")
