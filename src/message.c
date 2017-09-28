@@ -1509,8 +1509,8 @@ void qd_message_send(qd_message_t *in_msg,
         // This will send the remaining data in the buffer if any.
         int num_bytes_to_send = buf_size - (msg->cursor.cursor - qd_buffer_base(buf));
         if (num_bytes_to_send > 0) {
-            pn_link_send(pnl, (const char*)msg->cursor.cursor, num_bytes_to_send);
-            // TODO: DISPATCH-819 check pn_link_send return value
+            // We are deliberately avoiding the return value of pn_link_send because we can't do anything nice with it.
+            (void) pn_link_send(pnl, (const char*)msg->cursor.cursor, num_bytes_to_send);
         }
 
         // If the entire message has already been received,  taking out this lock is not that expensive
