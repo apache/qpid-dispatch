@@ -445,7 +445,6 @@ struct qdr_address_t {
     qd_address_treatment_t     treatment;
     qdr_forwarder_t           *forwarder;
     int                        ref_count;     ///< Number of link-routes + auto-links referencing this address
-    int                        map_count;     ///< parse tree map/unmap operations for link route patterns
     bool                       block_deletion;
     bool                       local;
     uint32_t                   tracked_deliveries;

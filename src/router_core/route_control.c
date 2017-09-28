@@ -307,7 +307,6 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
     lr->is_prefix = is_prefix;
     lr->pattern   = pattern;
 
-
     //
     // Add the address to the routing hash table and map it as a pattern in the
     // wildcard pattern parse tree
@@ -320,8 +319,9 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
             lr->addr = qdr_address_CT(core, treatment);
             DEQ_INSERT_TAIL(core->addrs, lr->addr);
             qd_hash_insert(core->addr_hash, a_iter, lr->addr, &lr->addr->hash_handle);
+            qdr_link_route_map_pattern_CT(core, a_iter, lr->addr);
         }
-        qdr_link_route_map_pattern_CT(core, a_iter, lr->addr);
+
         qd_iterator_free(a_iter);
         free(addr_hash);
     }
@@ -369,19 +369,8 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
     }
 
     //
-    // Pull the pattern from the parse tree
-    //
-    {
-        char *addr = qdr_link_route_pattern_to_address(lr->pattern, lr->dir);
-        qd_iterator_t *iter = qd_iterator_string(addr, ITER_VIEW_ALL);
-        qdr_link_route_unmap_pattern_CT(core, iter);
-        qd_iterator_free(iter);
-        free(addr);
-    }
-
-    //
     // Disassociate the link route from its address.  Check to see if the address
-    // should be removed.
+    // (and its associated pattern) should be removed.
     //
     qdr_address_t *addr = lr->addr;
     if (addr && --addr->ref_count == 0)
@@ -563,6 +552,9 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
 }
 
 
+// add the link route address pattern to the lookup tree
+// address is the hashed address, which includes 'C','D','E', or 'F' classifier
+// in the first char.  The pattern follows in the second char.
 void qdr_link_route_map_pattern_CT(qdr_core_t *core, qd_iterator_t *address, qdr_address_t *addr)
 {
     qd_direction_t dir;
@@ -573,20 +565,21 @@ void qdr_link_route_map_pattern_CT(qdr_core_t *core, qd_iterator_t *address, qdr
     bool found = qd_parse_tree_get_pattern(core->link_route_tree[dir], iter, (void **)&other_addr);
     if (!found) {
         qd_parse_tree_add_pattern(core->link_route_tree[dir], iter, addr);
-        addr->ref_count++;
     } else {
-        // already mapped
-        if (other_addr != addr)
-            qd_log(core->log, QD_LOG_CRITICAL, "Link route %s not correctly mapped",
-                   pattern);
+        // the pattern is mapped once when the address is added to the hash
+        // table.  It should not be mapped twice
+        qd_log(core->log, QD_LOG_CRITICAL, "Link route %s mapped redundantly!",
+               pattern);
     }
-    addr->map_count++;
 
     qd_iterator_free(iter);
     free(pattern);
 }
 
 
+// remove the link route address pattern from the lookup tree.
+// address is the hashed address, which includes 'C','D','E', or 'F' classifier
+// in the first char.  The pattern follows in the second char.
 void qdr_link_route_unmap_pattern_CT(qdr_core_t *core, qd_iterator_t *address)
 {
     qd_direction_t dir;
@@ -595,15 +588,13 @@ void qdr_link_route_unmap_pattern_CT(qdr_core_t *core, qd_iterator_t *address)
     qdr_address_t *addr;
     bool found = qd_parse_tree_get_pattern(core->link_route_tree[dir], iter, (void **)&addr);
     if (found) {
-        assert(addr->map_count > 0);
-        addr->map_count--;
-        if (addr->map_count == 0) {
-            qd_parse_tree_remove_pattern(core->link_route_tree[dir], iter);
-            addr->ref_count--;
-        }
-    } else
+        qd_parse_tree_remove_pattern(core->link_route_tree[dir], iter);
+    } else {
+        // expected that the pattern is removed when the address is deleted.
+        // Attempting to remove it twice is unexpected
         qd_log(core->log, QD_LOG_CRITICAL, "link route pattern ummap: Pattern '%s' not found",
                pattern);
+    }
 
     qd_iterator_free(iter);
     free(pattern);
