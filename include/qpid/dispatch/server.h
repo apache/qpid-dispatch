@@ -301,6 +301,11 @@ typedef struct qd_server_config_t {
     bool ssl_require_peer_authentication;
 
     /**
+     * Specifies the enabled ciphers so the SSL Ciphers can be hardened.
+     */
+    char *ciphers;
+
+    /**
      * Allow the connection to be redirected by the peer (via CLOSE->Redirect).  This is
      * meaningful for outgoing (connector) connections only.
      */
