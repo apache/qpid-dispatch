@@ -1,0 +1,43 @@
+{
+  "name": "Apache Qpid Dispatch Console",
+  "authors": [],
+  "description": "Console for Apache Qpid Dispatch Router",
+  "main": "index.html",
+  "keywords": [
+    "Apache",
+    "Qpid",
+    "Dispatch",
+    "Console"
+  ],
+  "license": "Apache 2.0",
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "#2.1.4",
+    "angular-patternfly": "^4.11.0",
+    "jquery.tipsy": "*",
+    "jquery.dynatree": "dynatree#^1.2.8",
+    "json-formatter": "^0.6.0",
+    "html5shiv": "^3.7.3",
+    "angular-route": "^1.6.6",
+    "angular-resource": "^1.6.6",
+    "d3-queue": "^3.0.7",
+    "topojson": "^3.0.2",
+    "tooltipsy": "*",
+    "angular-ui-slider": "^0.4.0",
+    "notifyjs": "^0.4.2",
+    "ng-grid": "2.0.11"
+  },
+  "resolutions": {
+    "angular": "1.6.6",
+    "jquery": "2.1.4"
+  }
+}
+
