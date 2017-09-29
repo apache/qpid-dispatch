@@ -66,7 +66,7 @@ var QDR = (function(QDR) {
    *
    * This plugin's angularjs module instance
    */
-  QDR.module = angular.module(QDR.pluginName, ['ngRoute', 'ngSanitize', 'ngResource', 'ui.bootstrap', 'ngGrid', 'ui.slider', 'patternfly.card']);
+  QDR.module = angular.module(QDR.pluginName, ['ngRoute', 'ngSanitize', 'ngResource', 'ui.bootstrap', 'ngGrid', 'ui.slider']);
 //  QDR.module = angular.module(QDR.pluginName, ['ngResource', 'ngGrid', 'ui.bootstrap', 'ui.slider'/*, 'minicolors' */]);
 
   Core = {

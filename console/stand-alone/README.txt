@@ -3,14 +3,6 @@ The stand-alone qpid dispatch console is an html web site that monitors and cont
 
 To install the console:
 - The console files are normally installed under /usr/share/qpid-dispatch/console/stand-alone
-- Install the javascript libraries / css files
-  - cd <install directory>
-  - bower install
-
-For more info on bower see https://bower.io/
-To install bower:
-- sudo dnf install npm
-- sudo npm install -g bower
 
 To run the web console:
 - Ensure one of the routers in your network is configured with a normal listener with http: true
@@ -26,4 +18,8 @@ listener {
 
 The router will serve the console's html/js/css from the install directory.
 The cosole will automatically connect to the router at localhost:5673
+
+Note: An internet connection is required on the machine that is running the console in order to retrieve the 3rd party javascript / css files.
+
+
 
