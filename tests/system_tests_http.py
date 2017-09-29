@@ -19,10 +19,7 @@
 
 import unittest, os, json, threading, sys, ssl, urllib2
 import ssl
-import run
-from subprocess import PIPE, Popen, STDOUT
 from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
-from qpid_dispatch.management.client import Node
 
 class RouterTestHttp(TestCase):
 
@@ -111,6 +108,7 @@ class RouterTestHttp(TestCase):
                             'certDb': self.ssl_file('ca-certificate.pem'),
                             'certFile': self.ssl_file('server-certificate.pem'),
                             'keyFile': self.ssl_file('server-private-key.pem'),
+                            'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
                             'password': 'server-password'
             }),
             listener(sslProfile='simple-ssl', requireSsl=False, authenticatePeer=False),

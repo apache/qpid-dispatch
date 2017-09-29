@@ -380,6 +380,13 @@ static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_confi
         }
     }
 
+    if (config->ciphers) {
+        if (pn_ssl_domain_set_ciphers(domain, config->ciphers)) {
+            pn_ssl_domain_free(domain);
+            return qd_error(QD_ERROR_RUNTIME, "Cannot set ciphers. The ciphers string might be invalid. Use openssl ciphers -v <ciphers> to validate");
+        }
+    }
+
     const char *trusted = config->ssl_trusted_certificate_db;
     if (config->ssl_trusted_certificates)
         trusted = config->ssl_trusted_certificates;
@@ -1026,6 +1033,14 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
                                               config->ssl_password)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
                        "SSL local configuration failed for %s:%s",
+                       config->host, config->port);
+            }
+        }
+
+        if (config->ciphers) {
+            if (pn_ssl_domain_set_ciphers(domain, config->ciphers)) {
+                qd_log(ct->server->log_source, QD_LOG_ERROR,
+                       "SSL cipher configuration failed for %s:%s",
                        config->host, config->port);
             }
         }
