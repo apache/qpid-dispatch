@@ -7,6 +7,11 @@ To install the console:
   - cd <install directory>
   - bower install
 
+For more info on bower see https://bower.io/
+To install bower:
+- sudo dnf install npm
+- sudo npm install -g bower
+
 To run the web console:
 - Ensure one of the routers in your network is configured with a normal listener with http: true
 listener {
