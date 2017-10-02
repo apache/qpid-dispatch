@@ -147,6 +147,9 @@ under the License.
                             <label><input type="radio" ng-model="attribute.value" value="true"> True</label>
                             <label><input type="radio" ng-model="attribute.value" value="false"> False</label>
                         </div>
+                        <div ng-if="attribute.input == 'checkbox'" class="boolean">
+                            <label><input id="attribute.name" type="checkbox" ng-model="attribute.value"></label>
+                        </div>
                     </div>
                 </div>
             </fieldset>
@@ -205,7 +208,7 @@ under the License.
         <div class="description">
             Set the host of all listeners on this router. Also ensure that all internal connectors to this router use this host.
         </div>
-            <label for="host" class="entity-description">Enter a new topology directory name</label>
+            <label for="host" class="entity-description">Enter a machine name or IP address</label>
             <fieldset>
                 <input type="text" name="host" id="host" ng-model="host" ng-required="true" class="ui-widget-content ui-corner-all"/>
             </fieldset>

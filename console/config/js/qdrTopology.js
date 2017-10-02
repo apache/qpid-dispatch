@@ -87,7 +87,7 @@ var QDR = (function(QDR) {
               x = savedPositions[node.name].x
               y = savedPositions[node.name].y
             }
-            var anode = aNode(node.key, node.name, node.nodeType, undefined, nodes.length, x, y, undefined, false)
+            var anode = aNode(node.key, node.name, node.nodeType, 'router', nodes.length, x, y, undefined, false)
             if (node['host'])
               anode['host'] = node['host']
             sections.forEach( function (section) {
@@ -105,7 +105,7 @@ var QDR = (function(QDR) {
           for (var i=0; i<nodes.length; ++i) {
             var node = nodes[i]
             sections.forEach( function (section) {
-              if (node[section+'s'] && section !== 'log') {
+              if (node[section+'s']) {
                 for (var key in node[section+'s']) {
                   var type = section
                   if (section === 'listener' && key == settings.http_port)
@@ -223,7 +223,7 @@ var QDR = (function(QDR) {
           properties = {product: 'qpid-cpp'}
           nodeType = "route-container"
         }
-        var node = aNode(id, name, nodeType, undefined, nodes.length, contextNode.x, contextNode.y - radius - radiusNormal,
+        var node = aNode(id, name, nodeType, type, nodes.length, contextNode.x, contextNode.y - radius - radiusNormal,
                              contextNode.id, false, properties)
         var entity = type === 'console' ? 'listener' : type
         entity = (type === 'artemis' || type === 'qpid') ? 'connector' : entity
@@ -347,7 +347,7 @@ var QDR = (function(QDR) {
         var name = genNewName()
         var nextId = nodes.length //maxNodeIndex() + 1
         var id = "amqp:/_topo/0/" + name + "/$management";
-        var node = aNode(id, name, "inter-router", undefined, nextId, x, y, undefined, false)
+        var node = aNode(id, name, "inter-router", 'router', nextId, x, y, undefined, false)
         node.host = settings.default_host
         nodes.push(node);
         $scope.selected_node = node
@@ -551,7 +551,7 @@ var QDR = (function(QDR) {
           id: nodeIndex,
           host: '0.0.0.0',
           resultIndex: resultIndex,
-          cls: ''
+          cls: nodeInfo
         };
       };
 
@@ -888,9 +888,6 @@ var QDR = (function(QDR) {
           .classed('highlighted', function(d) {
             return d.highlighted;
           })
-          .classed('temp', function(d) {
-            return d.cls == 'temp';
-          })
           .attr('marker-start', function(d) {
             var sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
             if (d.highlighted)
@@ -915,9 +912,6 @@ var QDR = (function(QDR) {
           .attr('marker-end', function(d) {
             var sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
             return d.right ? 'url(#end-arrow' + sel + ')' : '';
-          })
-          .classed('temp', function(d) {
-            return d.cls == 'temp';
           })
           .classed('small', function(d) {
             return d.cls == 'small';
@@ -979,6 +973,9 @@ var QDR = (function(QDR) {
             if (QDRService.isArtemis(d)) {
               return 'Broker - Artemis'
             }
+            if (d.cls === 'log') {
+              return 'Log' + (d.entityKey ? (': ' + d.entityKey) : '')
+            }
             if (d.cdir === 'in')
               return 'Listener on port ' + d.entityKey
             if (d.cdir === 'out')
@@ -1030,6 +1027,12 @@ var QDR = (function(QDR) {
             .classed('out', function(d) {
               return d.cdir == 'out'
             })
+            .classed('connector', function(d) {
+              return d.cls == 'connector'
+            })
+            .classed('listener', function(d) {
+              return d.cls == 'listener'
+            })
             .classed('selected', function (d) {
               return $scope.selected_node === d
             })
@@ -1041,6 +1044,9 @@ var QDR = (function(QDR) {
             })
             .classed('on-demand', function(d) {
               return d.nodeType == 'route-container'
+            })
+            .classed('log', function(d) {
+              return d.cls === 'log'
             })
             .classed('console', function(d) {
               return QDRService.isConsole(d)
@@ -1187,6 +1193,9 @@ var QDR = (function(QDR) {
               return y;
             })
             .attr('class', 'id')
+            .classed('log', function(d) {
+              return d.cls === 'log'
+            })
             .classed('console', function(d) {
               return QDRService.isConsole(d)
             })
@@ -1209,6 +1218,8 @@ var QDR = (function(QDR) {
                 return '\ue900'
               } else if (QDRService.isQpid(d)) {
                 return '\ue901';
+              } else if (d.cls === 'log') {
+                return '\uf036';
               } else if (d.nodeType === 'route-container') {
                 return d.properties.product ? d.properties.product[0].toUpperCase() : 'S'
               } else if (d.nodeType === 'normal' && d.cdir === "in") // listener
@@ -1223,7 +1234,7 @@ var QDR = (function(QDR) {
             // rotatie the listener icon 180 degrees to use as the connector icon
            .attr("transform", function (d) {
               var nAngle = 0
-              if (d.nodeType === 'normal' && d.cdir === "out")
+              if (d.nodeType === 'normal' && d.cdir === "out" && d.cls === 'connector')
                 nAngle = 180
               return "rotate("+nAngle+")"
             });
@@ -1253,27 +1264,30 @@ var QDR = (function(QDR) {
           .attr('transform', 'translate(' + (radii['inter-router'] + 2) + ',' + (radii['inter-router'] + 2) + ')')
           .selectAll('g');
         var legendNodes = [];
-        legendNodes.push(aNode("Router", "", "inter-router", undefined, 0, 0, 0, 0, false, {}))
+        legendNodes.push(aNode("Router", "", "inter-router", 'router', 0, 0, 0, 0, false, {}))
 
         if (!svg.selectAll('circle.console').empty()) {
-          legendNodes.push(aNode("Console", "", "normal", undefined, 1, 0, 0, 0, false, {
+          legendNodes.push(aNode("Console", "", "normal", 'console', 1, 0, 0, 0, false, {
             console_identifier: 'Dispatch console'
           }))
         }
-        if (!svg.selectAll('circle.client.in').empty()) {
-          var node = aNode("Listener", "", "normal", undefined, 2, 0, 0, 0, false, {})
+        if (!svg.selectAll('circle.listener').empty()) {
+          var node = aNode("Listener", "", "normal", 'listener', 2, 0, 0, 0, false, {})
           node.cdir = "in"
           legendNodes.push(node)
         }
-        if (!svg.selectAll('circle.client.out').empty()) {
-          var node = aNode("Connector", "", "normal", undefined, 3, 0, 0, 0, false, {})
+        if (!svg.selectAll('circle.connector').empty()) {
+          var node = aNode("Connector", "", "normal", 'connector', 3, 0, 0, 0, false, {})
           node.cdir = "out"
           legendNodes.push(node)
         }
-        if (!svg.selectAll('circle.client.inout').empty()) {
-          var node = aNode("sslProfile", "", "normal", undefined, 4, 0, 0, 0, false, {})
+        if (!svg.selectAll('circle.sslProfile').empty()) {
+          var node = aNode("sslProfile", "", "normal", 'sslProfile', 4, 0, 0, 0, false, {})
           node.cdir = "both"
           legendNodes.push(node)
+        }
+        if (!svg.selectAll('circle.log').empty()) {
+          legendNodes.push(aNode("Logs", "", "normal", 'log', 5, 0, 0, 0, false, {}))
         }
         if (!svg.selectAll('circle.qpid-cpp').empty()) {
           legendNodes.push(genNodeToAdd({key:'Qpid broker', name:'legend', x:0, y:0, id:'legend'}, 'qpid', ''))
@@ -1282,7 +1296,7 @@ var QDR = (function(QDR) {
           legendNodes.push(genNodeToAdd({key:'Artemis broker', name:'legend', x:0, y:0, id:'legend'}, 'artemis', ''))
         }
         if (!svg.selectAll('circle.route-container').empty()) {
-          legendNodes.push(aNode("Service", "", "route-container", 'external-service', undefined, 7, 0, 0, 0, false,
+          legendNodes.push(aNode("Service", "", "route-container", 'service', 8, 0, 0, 0, false,
           {product: ' External Service'}))
         }
         lsvg = lsvg.data(legendNodes, function(d) {
@@ -1543,8 +1557,24 @@ var QDR = (function(QDR) {
                     else if (o.node[key] !== context && (context !== 'new' && context !== 'artemis' && context != 'qpid')) {
                       delete nodeObj[context]
                     }
+                    if (entity === 'log') {
+                      if (o.node.apply) {
+                        // apply this log module/enable to all routers
+                        for (var i=0; i<nodes.length; i++) {
+                          if (nodes[i].nodeType === 'inter-router') {
+                            var logs = nodes[i]['logs']
+                            if (!logs)
+                              nodes[i]['logs'] = {}
+                            if (!nodes[i].logs[o.node[key]])
+                              addToNode(nodes[i], 'log', o.node[key])
+                            nodes[i].logs[o.node[key]] = o.node
+                          }
+                        }
+                        return
+                      }
+                    }
                     nodeObj[o.node[key]] = o.node
-                    if (entity === 'log' || entity === 'sslProfile')
+                    if (entity === 'sslProfile')
                       return
                     if (context === 'new' || context === 'artemis' || context === 'qpid') {
                       if (context !== 'new')

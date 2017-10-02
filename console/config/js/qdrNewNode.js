@@ -27,7 +27,7 @@ var QDR = (function(QDR) {
     if (!angular.isDefined(context))
       $scope.context = 'new'
     var newContext = {"new":maxPort+1, "artemis":61616, "qpid":5672, 'log':'', 'sslProfile':''}
-    $scope.title = ((context && context in newContext) ? "Edit " : "Add ") + entityType + " section"
+    $scope.title = ((context && context in newContext) ? "Add " : "Edit ") + entityType + " section"
     if (context === 'artemis')
       $scope.title += " to an Artemis broker"
     if (context === 'qpid')
@@ -223,6 +223,22 @@ var QDR = (function(QDR) {
             }
           })
         }
+        // add checkbox to apply this log module/enable to all routers
+        $scope.applyLog = {isChecked: false}
+        ediv.attributes.push( {
+          sort: 'last',
+          name: 'apply',
+          humanName: 'Apply to all routers',
+          description: 'Apply this to all routers',
+          type: 'checkbox',
+          rawtype: 'boolean',
+          input: 'checkbox',
+          selected: undefined,
+          'default': false,
+          value: $scope.applyLog.isChecked,
+          required: false,
+          unique: false
+        })
       }
       // sort ediv.attributes on name
       var allNames = ediv.attributes.map( function (attr) {
@@ -245,6 +261,14 @@ var QDR = (function(QDR) {
       if (keyIndex > 0) {
         allNames.move(keyIndex, 0)
       }
+      // move any entities with sort: last to end
+      for (var i=0; i<ediv.attributes.length; i++) {
+        var attr = ediv.attributes[i]
+        if (attr.sort && attr.sort === 'last') {
+          allNames.move(allNames.indexOf(attr.name), allNames.length-1)
+        }
+      }
+
       // now order the entity attributes by allNames
       ediv.attributes.sort(function(attr1, attr2){
           return allNames.indexOf(attr1['name']) - allNames.indexOf(attr2['name'])

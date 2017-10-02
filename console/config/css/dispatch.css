@@ -164,6 +164,11 @@ text.id {
   font-weight: bold;
 }
 
+text.id.log {
+  text-anchor: middle;
+  font-weight: normal;
+}
+
 text.label {
   text-anchor: start;
   font-weight: bold;
