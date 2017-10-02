@@ -216,18 +216,23 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         //
         pn_link_advance(pn_link);
 
-        // Since the entire message has been received, we can print out its contents to the log if necessary.
-        if (cf->log_message) {
-            char repr[qd_message_repr_len()];
-            char* message_repr = qd_message_repr((qd_message_t*)msg,
-                                                 repr,
-                                                 sizeof(repr),
-                                                 cf->log_bits);
-            if (message_repr) {
-                qd_log(qd_message_log_source(), QD_LOG_TRACE, "Link %s received %s",
-                       pn_link_name(pn_link),
-                       message_repr);
+        if (!qd_message_aborted(msg)) {
+            // Since the entire message has been received, we can print out its contents to the log if necessary.
+            if (cf->log_message) {
+                char repr[qd_message_repr_len()];
+                char* message_repr = qd_message_repr((qd_message_t*)msg,
+                                                    repr,
+                                                    sizeof(repr),
+                                                    cf->log_bits);
+                if (message_repr) {
+                    qd_log(qd_message_log_source(), QD_LOG_TRACE, "Link %s received %s",
+                        pn_link_name(pn_link),
+                        message_repr);
+                }
             }
+        } else {
+            qd_log(qd_message_log_source(), QD_LOG_TRACE, "Link '%s' received aborted message",
+                       pn_link_name(pn_link));
         }
 
         // Link stalling may have ignored some delivery events.
@@ -338,11 +343,13 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
 
     if (delivery) {
         qdr_deliver_continue(delivery);
-
-        if (pn_delivery_settled(pnd) && receive_complete) {
-            pn_delivery_settle(pnd);
-            qdr_delivery_decref(router->router_core, delivery);
+        if (receive_complete) {
+          if (pn_delivery_settled(pnd) || pn_delivery_aborted(pnd)) {
+              pn_delivery_settle(pnd);
+              qdr_delivery_decref(router->router_core, delivery);
+          }
         }
+
         return;
     }
 
@@ -531,9 +538,10 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
         qdr_delivery_set_cleared_proton_ref(delivery, true);
 
         //
-        // Don't decref the delivery here.  Rather, we will _give_ the reference to the core.
+        // Don't decref the delivery here.  Rather, we will _give_ the reference to the core if the delivery is not aborted.
         //
-        give_reference = true;
+        if (!pn_delivery_aborted(pnd))
+            give_reference = true;
     }
 
     //
@@ -1299,16 +1307,37 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
     bool send_complete = qdr_delivery_send_complete(dlv);
 
     if (send_complete) {
-        if (!settled && remote_snd_settled) {
-            // Tell the core that the delivery has been accepted and settled, since we are settling on behalf of the receiver
-            qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true, 0, 0, false);
-        }
+        if (qd_message_aborted(msg_out)) {
 
-        pn_link_advance(plink);
+            // This message has been aborted.
+            // When a sender aborts a message the message is implicitly settled.
+            // Tell the core that the delivery has been rejected and settled.
+            qdr_delivery_update_disposition(router->router_core, dlv, PN_REJECTED, true, 0, 0, false);
 
-        if (settled || remote_snd_settled) {
-            if (pdlv)
+            // Aborted messages must be settled locally
+            // Settling does not produce any disposition to message sender.
+            if (pdlv) {
+                qdr_delivery_set_context(dlv, 0);
+                pn_delivery_set_context(pdlv, 0);
+                pn_link_advance(plink);
                 pn_delivery_settle(pdlv);
+                qdr_delivery_set_cleared_proton_ref(dlv, true);
+                qdr_delivery_decref(router->router_core, dlv);
+            }
+
+        } else {
+            if (!settled && remote_snd_settled) {
+                // Tell the core that the delivery has been accepted and settled, since we are settling on behalf of the receiver
+                qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true, 0, 0, false);
+            }
+
+            pn_link_advance(plink);
+
+            if (settled || remote_snd_settled) {
+                if (pdlv)
+                    pn_delivery_settle(pdlv);
+            }
+
         }
     }
 }

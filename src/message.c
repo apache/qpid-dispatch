@@ -1410,6 +1410,17 @@ void qd_message_send(qd_message_t *in_msg,
 
     if (msg->sent_depth < QD_DEPTH_MESSAGE_ANNOTATIONS) {
 
+        if (msg->content->aborted) {
+            // Message is aborted before any part of it has been sent.
+            // Declare the message to be sent,
+            msg->send_complete = true;
+            // the link has an outgoing deliver. abort it.
+            pn_delivery_abort(pn_link_current(pnl));
+
+            // TODO: Dispose of message buffers that may have accumulated
+            return;
+        }
+
         qd_buffer_list_t new_ma;
         qd_buffer_list_t new_ma_trailer;
         DEQ_INIT(new_ma);
@@ -1560,6 +1571,9 @@ void qd_message_send(qd_message_t *in_msg,
                 msg->cursor.buffer = 0;
                 msg->cursor.cursor = 0;
 
+                if (msg->content->aborted) {
+                    pn_delivery_abort(pn_link_current(pnl));
+                }
             }
             else {
                 //
