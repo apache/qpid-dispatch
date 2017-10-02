@@ -283,7 +283,7 @@ static qd_log_bits populate_log_message(const qd_server_config_t *config)
 }
 
 
-static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, qd_entity_t* entity)
+static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *config, qd_entity_t* entity, bool is_listener)
 {
     qd_error_clear();
 
@@ -307,6 +307,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->max_sessions         = qd_entity_get_long(entity, "maxSessions");         CHECK();
     uint64_t ssn_frames          = qd_entity_opt_long(entity, "maxSessionFrames", 0); CHECK();
     config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds");  CHECK();
+    if (is_listener)
+        config->initial_handshake_timeout_seconds = qd_entity_get_long(entity, "initialHandshakeTimeoutSeconds");  CHECK();
     config->sasl_username        = qd_entity_opt_string(entity, "saslUsername", 0);   CHECK();
     config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0);   CHECK();
     config->sasl_mechanisms      = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
@@ -577,7 +579,7 @@ qd_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *en
 {
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_listener_t *li = qd_server_listener(qd->server);
-    if (!li || load_server_config(qd, &li->config, entity) != QD_ERROR_NONE) {
+    if (!li || load_server_config(qd, &li->config, entity, true) != QD_ERROR_NONE) {
         qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create listener: %s", qd_error_message());
         qd_listener_decref(li);
         return 0;
@@ -686,7 +688,7 @@ qd_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *
 {
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_connector_t *ct = qd_server_connector(qd->server);
-    if (ct && load_server_config(qd, &ct->config, entity) == QD_ERROR_NONE) {
+    if (ct && load_server_config(qd, &ct->config, entity, false) == QD_ERROR_NONE) {
         DEQ_ITEM_INIT(ct);
         DEQ_INSERT_TAIL(cm->connectors, ct);
         log_config(cm->log_source, &ct->config, "Connector");

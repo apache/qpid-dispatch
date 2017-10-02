@@ -680,6 +680,14 @@
                     "type": "integer",
                     "default": 16,
                     "description": "The idle timeout, in seconds, for connections through this listener.  If no frames are received on the connection for this time interval, the connection shall be closed.",
+                    "required": false,
+                    "create": true
+                },
+                "initialHandshakeTimeoutSeconds": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "The timeout, in seconds, for the initial handshake for connections coming in through listeners.  If the time interval expires before the peer sends the AMQP OPEN frame, the connection shall be closed.  A value of zero (the default) disables this timeout.",
+                    "required": false,
                     "create": true
                 },
                 "stripAnnotations": {

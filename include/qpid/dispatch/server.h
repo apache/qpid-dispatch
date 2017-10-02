@@ -350,6 +350,13 @@ typedef struct qd_server_config_t {
     int idle_timeout_seconds;
 
     /**
+     * The timeout, in seconds, for the initial connection handshake.  If a connection is established
+     * inbound (via a listener) and the timeout expires before the OPEN frame arrives, the connection
+     * shall be closed.
+     */
+    int initial_handshake_timeout_seconds;
+
+    /**
      *  Holds comma separated list that indicates which components of the message should be logged.
      *  Defaults to 'none' (log nothing). If you want all properties and application properties of the message logged use 'all'.
      *  Specific components of the message can be logged by indicating the components via a comma separated list.

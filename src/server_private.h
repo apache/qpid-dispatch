@@ -139,6 +139,7 @@ struct qd_connection_t {
     bool                      opened; // An open callback was invoked for this connection
     bool                      closed;
     int                       enqueued;
+    qd_timer_t               *timer;   // Timer for initial-setup
     pn_connection_t          *pn_conn;
     pn_ssl_t                 *ssl;
     qd_listener_t            *listener;
