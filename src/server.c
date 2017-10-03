@@ -507,6 +507,7 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
         if (ctx->pn_conn) pn_connection_free(ctx->pn_conn);
         if (ctx->deferred_call_lock) sys_mutex_free(ctx->deferred_call_lock);
         free(ctx->role);
+        free(ctx);
         return NULL;
     }
     ctx->server = server;
