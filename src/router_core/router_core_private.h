@@ -36,6 +36,7 @@ typedef struct qdr_link_route_t      qdr_link_route_t;
 typedef struct qdr_auto_link_t       qdr_auto_link_t;
 typedef struct qdr_conn_identifier_t qdr_conn_identifier_t;
 typedef struct qdr_connection_ref_t  qdr_connection_ref_t;
+typedef struct qdr_address_ref_t     qdr_address_ref_t;
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
@@ -474,6 +475,17 @@ struct qdr_address_t {
 ALLOC_DECLARE(qdr_address_t);
 DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
+struct qdr_address_ref_t {
+    DEQ_LINKS(qdr_address_ref_t);
+    qdr_address_t *addr;
+};
+
+ALLOC_DECLARE(qdr_address_ref_t);
+DEQ_DECLARE(qdr_address_ref_t, qdr_address_ref_list_t);
+
+void qdr_add_address_ref(qdr_address_ref_list_t *ref_list, qdr_address_t *addr);
+void qdr_del_address_ref(qdr_address_ref_list_t *ref_list, qdr_address_t *addr);
+
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_treatment_t treatment);
 void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr);
@@ -538,6 +550,7 @@ struct qdr_connection_t {
     sys_mutex_t                *work_lock;
     qdr_link_ref_list_t         links;
     qdr_link_ref_list_t         links_with_work;
+    qdr_address_ref_list_t      addr_refs;
     char                       *tenant_space;
     int                         tenant_space_len;
     qdr_connection_info_t      *connection_info;

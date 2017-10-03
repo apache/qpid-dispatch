@@ -47,6 +47,7 @@ const char * const QD_CONNECTION_PROPERTY_FAILOVER_NETHOST_KEY  = "network-host"
 const char * const QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY     = "port";
 const char * const QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY   = "scheme";
 const char * const QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY = "hostname";
+const char * const QD_CONNECTION_PROPERTY_LINK_ROUTE_PATTERNS   = "qd.link-route-patterns";
 
 const qd_amqp_error_t QD_AMQP_OK = { 200, "OK" };
 const qd_amqp_error_t QD_AMQP_CREATED = { 201, "Created" };
