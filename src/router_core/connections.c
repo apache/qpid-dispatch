@@ -1186,14 +1186,11 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
         DEQ_ITEM_INIT(conn);
         DEQ_INSERT_TAIL(core->open_connections, conn);
 
-        if (conn->role == QDR_ROLE_NORMAL) {
-            //
-            // No action needed for NORMAL connections
-            //
-            qdr_field_free(action->args.connection.connection_label);
-            qdr_field_free(action->args.connection.container_id);
-            return;
-        }
+        //
+        // Notify the router-control module of the new connection.  There may be
+        // important side-effects in the router core that result.
+        //
+        qdr_route_connection_opened_CT(core, conn, action->args.connection.container_id, action->args.connection.connection_label);
 
         if (conn->role == QDR_ROLE_INTER_ROUTER) {
             //
@@ -1220,22 +1217,6 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
                 (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data());
                 (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data());
             }
-        }
-
-        if (conn->role == QDR_ROLE_ROUTE_CONTAINER) {
-            //
-            // Notify the route-control module that a route-container connection has opened.
-            // There may be routes that need to be activated due to the opening of this connection.
-            //
-
-            //
-            // If there's a connection label, use it as the identifier.  Otherwise, use the remote
-            // container id.
-            //
-            qdr_field_t *cid = action->args.connection.connection_label ?
-                action->args.connection.connection_label : action->args.connection.container_id;
-            if (cid)
-                qdr_route_connection_opened_CT(core, conn, action->args.connection.container_id, action->args.connection.connection_label);
         }
     }
 

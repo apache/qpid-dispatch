@@ -103,6 +103,7 @@ foreach(py_test_module
     system_tests_authz_service_plugin
     system_tests_delivery_abort
     system_tests_topology
+    system_tests_dynamic_link_routes
     ${SYSTEM_TESTS_HTTP}
     )
 
