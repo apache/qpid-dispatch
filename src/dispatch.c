@@ -50,10 +50,14 @@ qd_router_t    *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *
 void            qd_router_setup_late(qd_dispatch_t *qd);
 void            qd_router_free(qd_router_t *router);
 void            qd_error_initialize();
+static void qd_dispatch_set_router_id(qd_dispatch_t *qd, char *_id);
+static void qd_dispatch_set_router_area(qd_dispatch_t *qd, char *_area);
+
 const char     *CLOSEST_DISTRIBUTION   = "closest";
 const char     *MULTICAST_DISTRIBUTION = "multicast";
 const char     *BALANCED_DISTRIBUTION  = "balanced";
 const char     *UNAVAILABLE_DISTRIBUTION = "unavailable";
+
 qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
 {
     qd_dispatch_t *qd = NEW(qd_dispatch_t);
@@ -148,8 +152,8 @@ qd_error_t qd_dispatch_validate_config(const char *config_path)
 	return validation_error;
 }
 
-
-void qd_dispatch_set_router_default_distribution(qd_dispatch_t *qd, char *distribution)
+// Takes ownership of distribution string.
+static void qd_dispatch_set_router_default_distribution(qd_dispatch_t *qd, char *distribution)
 {
     if (distribution) {
         if (strcmp(distribution, MULTICAST_DISTRIBUTION) == 0)
@@ -164,6 +168,7 @@ void qd_dispatch_set_router_default_distribution(qd_dispatch_t *qd, char *distri
     else
         // The default for the router defaultDistribution field is QD_TREATMENT_ANYCAST_BALANCED
         qd->default_treatment = QD_TREATMENT_ANYCAST_BALANCED;
+    free(distribution);
 }
 
 qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
@@ -270,14 +275,16 @@ void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent) {
     qd->agent = agent;
 }
 
-void qd_dispatch_set_router_id(qd_dispatch_t *qd, char *_id) {
+// Takes ownership of _id
+static void qd_dispatch_set_router_id(qd_dispatch_t *qd, char *_id) {
     if (qd->router_id) {
         free(qd->router_id);
     }
     qd->router_id = _id;
 }
 
-void qd_dispatch_set_router_area(qd_dispatch_t *qd, char *_area) {
+// Takes ownership of _area
+static void qd_dispatch_set_router_area(qd_dispatch_t *qd, char *_area) {
     if (qd->router_area) {
         free(qd->router_area);
     }
