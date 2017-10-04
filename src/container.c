@@ -323,7 +323,11 @@ static void writable_handler(qd_container_t *container, pn_connection_t *conn, q
 void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
 {
     pn_connection_t *conn = pn_event_connection(event);
-    qd_connection_t *qd_conn = conn ? pn_connection_get_context(conn) : NULL;
+
+    if (!conn)
+        return;
+
+    qd_connection_t *qd_conn = pn_connection_get_context(conn);
     pn_session_t    *ssn = NULL;
     pn_link_t       *pn_link = NULL;
     qd_link_t       *qd_link = NULL;
