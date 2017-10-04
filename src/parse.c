@@ -228,6 +228,7 @@ const char *qd_parse_turbo(qd_iterator_t          *iter,
         parse_error = get_type_info(iter, &turbo->tag, &turbo->size, &turbo->count,
                                     &turbo->length_of_size, &turbo->length_of_count);
         if (parse_error) {
+            free_qd_parsed_turbo_t(turbo);
             return parse_error;
         }
 
