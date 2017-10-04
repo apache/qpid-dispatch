@@ -576,19 +576,19 @@ void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_del
         // The dlv has more than one peer. We are going to find the peer of dlv that match with the passed in peer
         // and delete that peer.
         //
-        qdr_delivery_ref_t *dlv_ref = DEQ_HEAD(dlv->peers);
-        while (dlv_ref) {
-            qdr_delivery_t * peer_dlv = dlv_ref->dlv;
+        qdr_delivery_ref_t *peer_ref = DEQ_HEAD(dlv->peers);
+        while (peer_ref) {
+            qdr_delivery_t *peer_dlv = peer_ref->dlv;
             if (peer_dlv == peer) {
-                if (peer->peer)  {
+                qdr_del_delivery_ref(&dlv->peers, peer_ref);
+                if (peer->peer == dlv)  {
                     peer->peer = 0;
                     qdr_delivery_decref_CT(core, dlv);
                 }
-                qdr_del_delivery_ref(&dlv->peers, dlv_ref);
                 qdr_delivery_decref_CT(core, peer);
                 break;
             }
-            dlv_ref = DEQ_NEXT(dlv_ref);
+            peer_ref = DEQ_NEXT(peer_ref);
         }
     }
 }
@@ -606,13 +606,13 @@ qdr_delivery_t *qdr_delivery_first_peer_CT(qdr_delivery_t *dlv)
     }
     else {
         // The delivery has more than one peer.
-        qdr_delivery_ref_t *dlv_ref = DEQ_HEAD(dlv->peers);
+        qdr_delivery_ref_t *peer_ref = DEQ_HEAD(dlv->peers);
 
         // Save the next peer to dlv->next_peer_ref so we can use it when somebody calls qdr_delivery_next_peer_CT
-        dlv->next_peer_ref = DEQ_NEXT(dlv_ref);
+        dlv->next_peer_ref = DEQ_NEXT(peer_ref);
 
         // Return the first peer.
-        return dlv_ref->dlv;
+        return peer_ref->dlv;
     }
 }
 
