@@ -1108,8 +1108,8 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
 
             // Remove the delivery from the settled list and decref the in_dlv.
             in_dlv->where = QDR_DELIVERY_NOWHERE;
-            qdr_delivery_decref_CT(core, in_dlv); // This decref is for removing the delivery from the settled list.
             DEQ_REMOVE(in_dlv->link->settled, in_dlv);
+            qdr_delivery_decref_CT(core, in_dlv); // This decref is for removing the delivery from the settled list.
         }
     }
 }
