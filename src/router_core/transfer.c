@@ -1072,7 +1072,6 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
 
     qdr_deliver_continue_peers_CT(core, in_dlv);
 
-
     if (qd_message_receive_complete(qdr_delivery_message(in_dlv))) {
         //
         // The entire message has now been received. Check to see if there are in process subscriptions that need to
@@ -1081,7 +1080,7 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
         qdr_subscription_t *sub = DEQ_HEAD(in_dlv->subscriptions);
         while (sub) {
             DEQ_REMOVE_HEAD(in_dlv->subscriptions);
-            qdr_forward_on_message_CT(core, sub, in_dlv ? in_dlv->link : 0, in_dlv->msg);
+            qdr_forward_on_message_CT(core, sub, in_dlv->link, in_dlv->msg);
             sub = DEQ_HEAD(in_dlv->subscriptions);
         }
 
