@@ -129,16 +129,16 @@ qdr_delivery_t *qdr_deliver_continue(qdr_delivery_t *in_dlv)
 
 int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 {
+    printf("qdr_link_process_deliveries - credit: %d\n", credit);
     qdr_connection_t *conn = link->conn;
     qdr_delivery_t   *dlv;
-    bool              drained = false;
     int               offer   = -1;
     bool              settled = false;
     bool              send_complete = false;
     int               num_deliveries_completed = 0;
 
     if (link->link_direction == QD_OUTGOING) {
-        while (credit > 0 && !drained) {
+        while (credit > 0) {
             sys_mutex_lock(conn->work_lock);
             dlv = DEQ_HEAD(link->undelivered);
             sys_mutex_unlock(conn->work_lock);
@@ -176,27 +176,27 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     //
                     // The message is still being received/sent.
                     // 1. We cannot remove the delivery from the undelivered list.
-                    // This delivery needs to stay at the head of the undelivered list until the entire message has been sent out i.e other deliveries in the
-                    // undelivered list have to wait before this entire large delivery is sent out
+                    //    This delivery needs to stay at the head of the undelivered list until the entire message
+                    //    has been sent out i.e other deliveries in the undelivered list have to wait before this
+                    //    entire large delivery is sent out
                     // 2. We need to call deliver_handler so any newly arrived bytes can be pushed out
-                    // 3. We need to break out of this loop otherwise a thread will keep spinning in here until the entire message has been sent out.
+                    // 3. We need to break out of this loop otherwise a thread will keep spinning in here until
+                    //    the entire message has been sent out.
                     //
                     sys_mutex_unlock(conn->work_lock);
 
                     //
-                    // Note here that we are not incrementing num_deliveries_processed. Since this delivery is still coming in or still being sent out,
-                    // we cannot consider this delivery as fully processed.
+                    // Note here that we are not incrementing num_deliveries_processed. Since this delivery is
+                    // still coming in or still being sent out, we cannot consider this delivery as fully processed.
                     //
                     return num_deliveries_completed;
                 }
                 sys_mutex_unlock(conn->work_lock);
-
-            }
+            } else
+                break;
         }
 
-        if (drained)
-            core->drained_handler(core->user_context, link);
-        else if (offer != -1)
+        if (offer != -1)
             core->offer_handler(core->user_context, link, offer);
     }
 
