@@ -771,8 +771,7 @@ void qd_connection_free(qd_connection_t *ctx)
     }
 
     invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
-    if (ctx->deferred_call_lock)
-        sys_mutex_free(ctx->deferred_call_lock);
+    sys_mutex_free(ctx->deferred_call_lock);
 
     if (ctx->policy_settings) {
         if (ctx->policy_settings->sources)
