@@ -665,6 +665,9 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
 
 static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
 {
+    if (!conn)
+        return;
+
     // Lock access to deferred_calls, other threads may concurrently add to it.  Invoke
     // the calls outside of the critical section.
     //
@@ -822,7 +825,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
         qdr_handle_authentication_service_connection_event(e);
         return true;
     }
-    qd_connection_t *ctx  = pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : NULL;
+    qd_connection_t *ctx = pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : NULL;
 
     switch (pn_event_type(e)) {
 
@@ -857,9 +860,9 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
 
     case PN_CONNECTION_REMOTE_OPEN:
         // If we are transitioning to the open state, notify the client via callback.
-        if (ctx->timer)
+        if (ctx && ctx->timer)
             qd_timer_free(ctx->timer);
-        if (!ctx->opened) {
+        if (ctx && !ctx->opened) {
             ctx->opened = true;
             if (ctx->connector) {
                 ctx->connector->delay = 2000;  // Delay re-connect in case there is a recurring error
@@ -1235,6 +1238,9 @@ const qd_server_config_t *qd_connection_config(const qd_connection_t *conn)
 
 void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, void *context)
 {
+    if (!conn)
+        return;
+
     qd_deferred_call_t *dc = new_qd_deferred_call_t();
     DEQ_ITEM_INIT(dc);
     dc->call    = call;
