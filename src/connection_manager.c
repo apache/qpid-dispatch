@@ -309,8 +309,9 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->max_sessions         = qd_entity_get_long(entity, "maxSessions");         CHECK();
     uint64_t ssn_frames          = qd_entity_opt_long(entity, "maxSessionFrames", 0); CHECK();
     config->idle_timeout_seconds = qd_entity_get_long(entity, "idleTimeoutSeconds");  CHECK();
-    if (is_listener)
+    if (is_listener) {
         config->initial_handshake_timeout_seconds = qd_entity_get_long(entity, "initialHandshakeTimeoutSeconds");  CHECK();
+    }
     config->sasl_username        = qd_entity_opt_string(entity, "saslUsername", 0);   CHECK();
     config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0);   CHECK();
     config->sasl_mechanisms      = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
