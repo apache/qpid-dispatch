@@ -129,7 +129,6 @@ qdr_delivery_t *qdr_deliver_continue(qdr_delivery_t *in_dlv)
 
 int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 {
-    printf("qdr_link_process_deliveries - credit: %d\n", credit);
     qdr_connection_t *conn = link->conn;
     qdr_delivery_t   *dlv;
     int               offer   = -1;
