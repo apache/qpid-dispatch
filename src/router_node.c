@@ -1242,6 +1242,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 {
     qd_router_t *router = (qd_router_t*) context;
     qd_link_t   *qlink  = (qd_link_t*) qdr_link_get_context(link);
+
     if (!qlink)
         return;
 
@@ -1276,6 +1277,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
             if (qdr_delivery_get_context(dlv) == 0)  {
                 pn_delivery_set_context(pdlv, dlv);
                 qdr_delivery_set_context(dlv, pdlv);
+                qdr_delivery_set_set_proton_ref(dlv, true);
                 qdr_delivery_incref(dlv);
             }
         }
@@ -1290,6 +1292,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
     bool restart_rx = false;
 
     qd_message_t *msg_out = qdr_delivery_message(dlv);
+
     qd_message_send(msg_out, qlink, qdr_link_strip_annotations_out(link), &restart_rx);
 
     if (restart_rx) {
@@ -1320,7 +1323,10 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
                 pn_link_advance(plink);
                 pn_delivery_settle(pdlv);
                 qdr_delivery_set_cleared_proton_ref(dlv, true);
-                qdr_delivery_decref(router->router_core, dlv);
+
+                if (qdr_delivery_get_set_proton_ref(dlv)) {
+                    qdr_delivery_decref(router->router_core, dlv);
+                }
             }
 
         } else {
