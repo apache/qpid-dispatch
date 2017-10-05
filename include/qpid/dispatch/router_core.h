@@ -617,6 +617,8 @@ bool qdr_delivery_tag_sent(const qdr_delivery_t *delivery);
 void qdr_delivery_set_tag_sent(const qdr_delivery_t *delivery, bool tag_sent);
 bool qdr_delivery_receive_complete(const qdr_delivery_t *delivery);
 void qdr_delivery_set_cleared_proton_ref(qdr_delivery_t *dlv, bool cleared_proton_ref);
+void qdr_delivery_set_set_proton_ref(qdr_delivery_t *dlv, bool set_proton_ref);
+bool qdr_delivery_get_set_proton_ref(qdr_delivery_t *dlv);
 
 /**
  ******************************************************************************

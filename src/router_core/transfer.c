@@ -283,6 +283,16 @@ void qdr_delivery_set_cleared_proton_ref(qdr_delivery_t *dlv, bool cleared_proto
     dlv->cleared_proton_ref = cleared_proton_ref;
 }
 
+void qdr_delivery_set_set_proton_ref(qdr_delivery_t *dlv, bool set_proton_ref)
+{
+    dlv->set_proton_ref = set_proton_ref;
+}
+
+bool qdr_delivery_get_set_proton_ref(qdr_delivery_t *dlv)
+{
+    return dlv->set_proton_ref;
+}
+
 
 void *qdr_delivery_get_context(qdr_delivery_t *delivery)
 {
