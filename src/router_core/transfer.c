@@ -336,6 +336,21 @@ void qdr_delivery_incref(qdr_delivery_t *delivery)
     sys_atomic_inc(&delivery->ref_count);
 }
 
+void qdr_delivery_set_aborted(const qdr_delivery_t *delivery, bool aborted)
+{
+    assert(delivery);
+
+    qd_message_set_aborted(delivery->msg, aborted);
+}
+
+
+bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery)
+{
+    if (!delivery)
+        return false;
+    return qd_message_aborted(delivery->msg);
+}
+
 
 void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery)
 {
@@ -1031,7 +1046,7 @@ static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 }
 
 
-static void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
+void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
 {
     qdr_delivery_t *peer = qdr_delivery_first_peer_CT(in_dlv);
     while (peer) {

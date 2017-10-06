@@ -730,6 +730,11 @@ void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
 void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_delivery_t *peer);
 
 /**
+ *
+ */
+void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv);
+
+/**
  * Returns the first peer of the delivery.
  * @see qdr_delivery_next_peer_CT
  */
