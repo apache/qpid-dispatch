@@ -644,8 +644,8 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
         sys_mutex_unlock(ctx->server->lock);
 
-        qd_log(ctx->server->log_source, QD_LOG_INFO, "Accepted connection to %s from %s",
-               name, ctx->rhost_port);
+        qd_log(ctx->server->log_source, QD_LOG_INFO, "Accepted connection to %s from %s on transport %p",
+               name, ctx->rhost_port, (void *) tport);
     } else if (ctx->connector) { /* Establishing an outgoing connection */
         config = &ctx->connector->config;
         setup_ssl_sasl_and_open(ctx);
