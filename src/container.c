@@ -52,6 +52,7 @@ ALLOC_DEFINE(qd_node_t);
 
 /** Encapsulates a proton link for sending and receiving messages */
 struct qd_link_t {
+    DEQ_LINKS(qd_link_t);
     pn_session_t               *pn_sess;
     pn_link_t                  *pn_link;
     qd_direction_t              direction;
@@ -61,6 +62,8 @@ struct qd_link_t {
     bool                        close_sess_with_link;
     pn_snd_settle_mode_t        remote_snd_settle_mode;
 };
+
+DEQ_DECLARE(qd_link_t, qd_link_list_t);
 
 ALLOC_DECLARE(qd_link_t);
 ALLOC_DEFINE(qd_link_t);
@@ -82,6 +85,7 @@ struct qd_container_t {
     sys_mutex_t          *lock;
     qd_node_t            *default_node;
     qdc_node_type_list_t  node_type_list;
+    qd_link_list_t        links;
 };
 
 static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
@@ -104,6 +108,11 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
         pn_link_close(pn_link);
         return;
     }
+
+    ZERO(link);
+    sys_mutex_lock(container->lock);
+    DEQ_INSERT_TAIL(container->links, link);
+    sys_mutex_unlock(container->lock);
     link->pn_sess    = pn_link_session(pn_link);
     link->pn_link    = pn_link;
     link->direction  = QD_OUTGOING;
@@ -140,6 +149,10 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
         return;
     }
 
+    ZERO(link);
+    sys_mutex_lock(container->lock);
+    DEQ_INSERT_TAIL(container->links, link);
+    sys_mutex_unlock(container->lock);
     link->pn_sess    = pn_link_session(pn_link);
     link->pn_link    = pn_link;
     link->direction  = QD_INCOMING;
@@ -268,6 +281,7 @@ static void close_links(qd_container_t *container, pn_connection_t *conn, bool p
 
         if (qd_link && qd_link_get_context(qd_link) == 0) {
             pn_link = pn_link_next(pn_link, 0);
+            qd_link_free(qd_link);
             continue;
         }
 
@@ -550,6 +564,7 @@ qd_container_t *qd_container(qd_dispatch_t *qd)
 {
     qd_container_t *container = NEW(qd_container_t);
 
+    ZERO(container);
     container->qd            = qd;
     container->log_source    = qd_log_source("CONTAINER");
     container->server        = qd->server;
@@ -571,6 +586,13 @@ void qd_container_free(qd_container_t *container)
     if (!container) return;
     if (container->default_node)
         qd_container_destroy_node(container->default_node);
+
+    qd_link_t *link = DEQ_HEAD(container->links);
+    while (link) {
+        DEQ_REMOVE_HEAD(container->links);
+        free_qd_link_t(link);
+        link = DEQ_HEAD(container->links);
+    }
 
     qd_node_t *node = DEQ_HEAD(container->nodes);
     while (node) {
@@ -726,6 +748,10 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     }
     const qd_server_config_t * cf = qd_connection_config(conn);
 
+    ZERO(link);
+    sys_mutex_lock(node->container->lock);
+    DEQ_INSERT_TAIL(node->container->links, link);
+    sys_mutex_unlock(node->container->lock);
     link->pn_sess = pn_session(qd_connection_pn(conn));
     pn_session_set_incoming_capacity(link->pn_sess, cf->incoming_capacity);
 
@@ -757,6 +783,10 @@ void qd_link_free(qd_link_t *link)
         link->pn_link = 0;
     }
     link->pn_sess = 0;
+    qd_container_t *container = link->node->container;
+    sys_mutex_lock(container->lock);
+    DEQ_REMOVE(container->links, link);
+    sys_mutex_unlock(container->lock);
     free_qd_link_t(link);
 }
 

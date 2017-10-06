@@ -48,7 +48,7 @@
 
 struct qd_server_t {
     qd_dispatch_t            *qd;
-    const int                thread_count; /* Immutable */
+    const int                 thread_count; /* Immutable */
     const char               *container_name;
     const char               *sasl_config_path;
     const char               *sasl_config_name;
@@ -58,11 +58,12 @@ struct qd_server_t {
     void                     *start_context;
     sys_cond_t               *cond;
     sys_mutex_t              *lock;
+    qd_connection_list_t      conn_list;
     int                       pause_requests;
     int                       threads_paused;
     int                       pause_next_sequence;
     int                       pause_now_serving;
-    uint64_t                 next_connection_id;
+    uint64_t                  next_connection_id;
     void                     *py_displayname_obj;
     qd_http_server_t         *http;
 };
@@ -517,6 +518,7 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
     DEQ_INIT(ctx->deferred_calls);
     sys_mutex_lock(server->lock);
     ctx->connection_id = server->next_connection_id++;
+    DEQ_INSERT_TAIL(server->conn_list, ctx);
     sys_mutex_unlock(server->lock);
     decorate_connection(ctx->server, ctx->pn_conn, config);
     return ctx;
@@ -763,12 +765,14 @@ void qd_connection_free(qd_connection_t *ctx)
             qd_timer_schedule(ctx->connector->timer, ctx->connector->delay);
     }
 
+    sys_mutex_lock(qd_server->lock);
+    DEQ_REMOVE(qd_server->conn_list, ctx);
+
     // If counted for policy enforcement, notify it has closed
     if (ctx->policy_counted) {
-        sys_mutex_lock(qd_server->lock); /* Policy check is not thread safe */
         qd_policy_socket_close(qd_server->qd->policy, ctx);
-        sys_mutex_unlock(qd_server->lock);
     }
+    sys_mutex_unlock(qd_server->lock);
 
     invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
     sys_mutex_free(ctx->deferred_call_lock);
@@ -783,6 +787,8 @@ void qd_connection_free(qd_connection_t *ctx)
     }
 
     if (ctx->free_user_id) free((char*)ctx->user_id);
+    if (ctx->timer) qd_timer_free(ctx->timer);
+    free(ctx->name);
     free(ctx->role);
     free_qd_connection_t(ctx);
 
@@ -811,6 +817,7 @@ static void startup_timer_handler(void *context)
     //
     qd_connection_t *ctx = (qd_connection_t*) context;
     qd_timer_free(ctx->timer);
+    ctx->timer = 0;
     qd_connection_invoke_deferred(ctx, timeout_on_handhsake, context);
 }
 
@@ -859,8 +866,10 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
 
     case PN_CONNECTION_REMOTE_OPEN:
         // If we are transitioning to the open state, notify the client via callback.
-        if (ctx && ctx->timer)
+        if (ctx && ctx->timer) {
             qd_timer_free(ctx->timer);
+            ctx->timer = 0;
+        }
         if (ctx && !ctx->opened) {
             ctx->opened = true;
             if (ctx->connector) {
@@ -1103,6 +1112,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->start_context    = 0;
     qd_server->lock             = sys_mutex();
     qd_server->cond             = sys_cond();
+    DEQ_INIT(qd_server->conn_list);
 
     qd_timer_initialize(qd_server->lock);
 
@@ -1124,6 +1134,16 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
+    qd_connection_t *ctx = DEQ_HEAD(qd_server->conn_list);
+    while (ctx) {
+        DEQ_REMOVE_HEAD(qd_server->conn_list);
+        if (ctx->free_user_id) free((char*)ctx->user_id);
+        sys_mutex_free(ctx->deferred_call_lock);
+        free(ctx->name);
+        free(ctx->role);
+        free_qd_connection_t(ctx);
+        ctx = DEQ_HEAD(qd_server->conn_list);
+    }
     qd_http_server_free(qd_server->http);
     qd_timer_finalize();
     pn_proactor_free(qd_server->proactor);

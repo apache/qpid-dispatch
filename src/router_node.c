@@ -596,14 +596,12 @@ static int AMQP_outgoing_link_handler(void* context, qd_link_t *link)
         return 0;
 
     qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
-
     char *terminus_addr = (char*)pn_terminus_get_address(pn_link_remote_source((pn_link_t  *)qd_link_pn(link)));
-
-    qdr_link_t       *qdr_link = qdr_link_first_attach(qdr_conn, QD_OUTGOING,
-                                                       qdr_terminus(qd_link_remote_source(link)),
-                                                       qdr_terminus(qd_link_remote_target(link)),
-                                                       pn_link_name(qd_link_pn(link)),
-                                                       terminus_addr);
+    qdr_link_t *qdr_link = qdr_link_first_attach(qdr_conn, QD_OUTGOING,
+                                                 qdr_terminus(qd_link_remote_source(link)),
+                                                 qdr_terminus(qd_link_remote_target(link)),
+                                                 pn_link_name(qd_link_pn(link)),
+                                                 terminus_addr);
     qdr_link_set_context(qdr_link, link);
     qd_link_set_context(link, qdr_link);
 

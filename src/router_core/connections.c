@@ -143,37 +143,23 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            bool             ssl)
 {
     qdr_connection_info_t *connection_info = new_qdr_connection_info_t();
+    ZERO(connection_info);
     connection_info->is_encrypted          = is_encrypted;
     connection_info->is_authenticated      = is_authenticated;
     connection_info->opened                = opened;
     connection_info->container             = container;
 
     if (sasl_mechanisms)
-        connection_info->sasl_mechanisms      = strdup(sasl_mechanisms);
-    else
-        connection_info->sasl_mechanisms = 0;
-
+        connection_info->sasl_mechanisms = strdup(sasl_mechanisms);
     connection_info->dir = dir;
-
     if (host)
         connection_info->host = strdup(host);
-    else
-        connection_info->host = 0;
-
     if (ssl_proto)
         connection_info->ssl_proto = strdup(ssl_proto);
-    else
-        connection_info->ssl_proto = 0;
-
     if (ssl_cipher)
         connection_info->ssl_cipher = strdup(ssl_cipher);
-    else
-        connection_info->ssl_cipher = 0;
-
     if (user)
         connection_info->user = strdup(user);
-    else
-        connection_info->user = 0;
 
     pn_data_t *qdr_conn_properties = pn_data(0);
     pn_data_copy(qdr_conn_properties, connection_properties);
@@ -183,6 +169,18 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
     connection_info->ssl     = ssl;
 
     return connection_info;
+}
+
+
+static void qdr_connection_info_free(qdr_connection_info_t *ci)
+{
+    free(ci->sasl_mechanisms);
+    free(ci->host);
+    free(ci->ssl_proto);
+    free(ci->ssl_cipher);
+    free(ci->user);
+    pn_data_free(ci->connection_properties);
+    free_qdr_connection_info_t(ci);
 }
 
 
@@ -1238,20 +1236,11 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
     qdr_field_free(action->args.connection.container_id);
 }
 
-static void qdr_connection_free(qdr_connection_t *conn)
+void qdr_connection_free(qdr_connection_t *conn)
 {
-    if (conn->connection_info) {
-        free(conn->connection_info->sasl_mechanisms);
-        free(conn->connection_info->host);
-        free(conn->connection_info->ssl_proto);
-        free(conn->connection_info->ssl_cipher);
-        free(conn->connection_info->user);
-        pn_data_free(conn->connection_info->connection_properties);
-    }
-
+    sys_mutex_free(conn->work_lock);
     free(conn->tenant_space);
-
-    free_qdr_connection_info_t(conn->connection_info);
+    qdr_connection_info_free(conn->connection_info);
     free_qdr_connection_t(conn);
 }
 
@@ -1275,11 +1264,20 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
         qd_bitmask_set_bit(core->neighbor_free_mask, conn->mask_bit);
 
     //
+    // Remove the references in the links_with_work list
+    //
+    qdr_link_ref_t *link_ref = DEQ_HEAD(conn->links_with_work);
+    while (link_ref) {
+        qdr_del_link_ref(&conn->links_with_work, link_ref->link, QDR_LINK_LIST_CLASS_WORK);
+        link_ref = DEQ_HEAD(conn->links_with_work);
+    }
+
+    //
     // TODO - Clean up links associated with this connection
     //        This involves the links and the dispositions of deliveries stored
     //        with the links.
     //
-    qdr_link_ref_t *link_ref = DEQ_HEAD(conn->links);
+    link_ref = DEQ_HEAD(conn->links);
     while (link_ref) {
         qdr_link_t *link = link_ref->link;
 
@@ -1312,7 +1310,6 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     }
 
     DEQ_REMOVE(core->open_connections, conn);
-    sys_mutex_free(conn->work_lock);
     qdr_connection_free(conn);
 }
 

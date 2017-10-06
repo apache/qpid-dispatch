@@ -155,6 +155,13 @@ void qdr_core_free(qdr_core_t *core)
         qdr_router_node_free(core, rnode);
     }
 
+    qdr_connection_t *conn = DEQ_HEAD(core->open_connections);
+    while (conn) {
+        DEQ_REMOVE_HEAD(core->open_connections);
+        qdr_connection_free(conn);
+        conn = DEQ_HEAD(core->open_connections);
+    }
+
     if (core->query_lock)                sys_mutex_free(core->query_lock);
     if (core->routers_by_mask_bit)       free(core->routers_by_mask_bit);
     if (core->control_links_by_mask_bit) free(core->control_links_by_mask_bit);
