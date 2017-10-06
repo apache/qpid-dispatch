@@ -1518,6 +1518,14 @@ void qd_message_send(qd_message_t *in_msg,
     pn_session_t     *pns  = pn_link_session(pnl);
 
     while (buf && pn_session_outgoing_bytes(pns) < QD_QLIMIT_Q3_UPPER) {
+
+        if (msg->content->aborted) {
+            if (pn_link_current(pnl)) {
+                pn_delivery_abort(pn_link_current(pnl));
+            }
+            break;
+        }
+
         size_t buf_size = qd_buffer_size(buf);
 
         // This will send the remaining data in the buffer if any.
@@ -1956,4 +1964,12 @@ qd_link_t * qd_message_get_receiving_link(const qd_message_t *msg)
 bool qd_message_aborted(const qd_message_t *msg)
 {
     return ((qd_message_pvt_t *)msg)->content->aborted;
+}
+
+void qd_message_set_aborted(const qd_message_t *msg, bool aborted)
+{
+    if (!msg)
+        return;
+    qd_message_pvt_t * msg_pvt = (qd_message_pvt_t *)msg;
+    msg_pvt->content->aborted = aborted;
 }
