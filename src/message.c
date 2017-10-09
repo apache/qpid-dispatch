@@ -1521,6 +1521,7 @@ void qd_message_send(qd_message_t *in_msg,
 
         if (msg->content->aborted) {
             if (pn_link_current(pnl)) {
+                msg->send_complete = true;
                 pn_delivery_abort(pn_link_current(pnl));
             }
             break;
