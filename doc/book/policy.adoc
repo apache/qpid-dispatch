@@ -153,7 +153,7 @@ This object is the data value contained in entries in the policy/groups map.
 | maxFrameSize         | 2^31-1  | Largest frame that may be sent on this connection. (AMQP Open, max-frame-size)
 | maxSessions          | 65535   | Maximum number of sessions that may be created on this connection. (AMQP Open, channel-max)
 | *AMQP Session Begin Limits*    | |
-| maxSessionWindow     | 2^31-1  |Incoming capacity for new sessions. (AMQP Begin, incoming-window)
+| maxSessionWindow     | 2^31-1  |Incoming capacity for new sessions measured in octets. AMQP Begin, incoming-window measured in AMQP frames is calculated by (maxSessionWindow / maxFrameSize). (AMQP Begin, incoming-window)
 | *AMQP Link Attach*             | |
 | maxMessageSize       | 0       | Largest message size supported by links created on this connection. If this field is zero there is no maximum size imposed by the link endpoint. (AMQP Attach, max-message-size)
 | maxSenders           | 2^31-1  | Maximum number of sending links that may be created on this connection.
@@ -299,13 +299,9 @@ vhost {
 Policy provides a mechanism to control how much system buffer memory a
 user connection can potentially consume. The formula for computing
 buffer memory consumption for each session is
+set directly by _maxSessionWindow_.
 
-[optons="nowrap"]
-----
-  potential buffer usage = maxFrameSize * maxSessionWindow
-----
-
-By adjusting _maxFrameSize_, _maxSessions_, and _maxSessionWindow_ an
+By adjusting _maxSessions_, and _maxSessionWindow_ an
 administrator can prevent a user from consuming too much memory by
 buffering messages in flight.
 
@@ -330,14 +326,14 @@ vhost {
         traders: {
             users: trader-1, trader-2, ...       <2>
             maxFrameSize: 10000                  <3>
-            maxSessionWindow: 500                <3>
+            maxSessionWindow: 5000000            <3>
             maxSessions: 1                       <4>
             ...
         },
         feeds: {
             users: nyse-feed, nasdaq-feed        <5>
             maxFrameSize: 60000                  <6>
-            maxSessionWindow: 20000              <6>
+            maxSessionWindow: 1200000000         <6>
             maxSessions: 3                       <7>
             ...
         }
