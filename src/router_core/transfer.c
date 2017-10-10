@@ -1168,6 +1168,30 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
 
 
 /**
+ * Attempt to push all of the undelivered deliveries on an incoming link downrange.
+ */
+void qdr_drain_inbound_undelivered_CT(qdr_core_t *core, qdr_link_t *link, qdr_address_t *addr)
+{
+    if (DEQ_SIZE(link->undelivered) > 0) {
+        //
+        // Move all the undelivered to a local list in case not all can be delivered.
+        // We don't want to loop here forever putting the same messages on the undelivered
+        // list.
+        //
+        qdr_delivery_list_t deliveries;
+        DEQ_MOVE(link->undelivered, deliveries);
+
+        qdr_delivery_t *dlv = DEQ_HEAD(deliveries);
+        while (dlv) {
+            DEQ_REMOVE_HEAD(deliveries);
+            qdr_link_forward_CT(core, link, dlv, addr);
+            dlv = DEQ_HEAD(deliveries);
+        }
+    }
+}
+
+
+/**
  * This function should be called after adding a new destination (subscription, local link,
  * or remote node) to an address.  If this address now has exactly one destination (i.e. it
  * transitioned from unreachable to reachable), make sure any unstarted in-links are issued
@@ -1198,22 +1222,7 @@ void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
             //
             // Drain undelivered deliveries via the forwarder
             //
-            if (DEQ_SIZE(link->undelivered) > 0) {
-                //
-                // Move all the undelivered to a local list in case not all can be delivered.
-                // We don't want to loop here forever putting the same messages on the undelivered
-                // list.
-                //
-                qdr_delivery_list_t deliveries;
-                DEQ_MOVE(link->undelivered, deliveries);
-
-                qdr_delivery_t *dlv = DEQ_HEAD(deliveries);
-                while (dlv) {
-                    DEQ_REMOVE_HEAD(deliveries);
-                    qdr_link_forward_CT(core, link, dlv, addr);
-                    dlv = DEQ_HEAD(deliveries);
-                }
-            }
+            qdr_drain_inbound_undelivered_CT(core, link, addr);
 
             ref = DEQ_NEXT(ref);
         }
