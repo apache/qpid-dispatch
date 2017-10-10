@@ -27,6 +27,7 @@ from proton.utils    import BlockingConnection
 from qpid_dispatch.management.client import Node
 
 import time
+import datetime
 
 
 
@@ -119,13 +120,102 @@ class DistributionTests ( TestCase ):
         super(DistributionTests, cls).setUpClass()
 
 
+        cls.linkroute_prefix   = "0.0.0.0/linkroute"
+        cls.waypoint_prefix_1  = "0.0.0.0/queue_1"
+        cls.waypoint_prefix_2  = "0.0.0.0/queue_2"
+
+        #-----------------------------------------------------
+        # Here are some chunks of configuration that will be
+        # the same on all routers.
+        #-----------------------------------------------------
+
+        linkroute_configuration =             \
+        [
+            ( 'linkRoute',
+              { 'prefix': cls.linkroute_prefix,
+                'dir': 'in',
+                'containerId': 'LinkRouteTest'
+              }
+            ),
+            ( 'linkRoute',
+              { 'prefix': cls.linkroute_prefix,
+                'dir': 'out',
+                'containerId': 'LinkRouteTest'
+              }
+            )
+        ]
+
+
+        waypoint_configuration_1 =        \
+        [
+            ( 'address', 
+              { 'prefix': cls.waypoint_prefix_1, 
+                'waypoint': 'yes'
+              }
+            ),
+            ( 'autoLink', 
+              { 'addr': cls.waypoint_prefix_1 + '.waypoint', 
+                'containerId': 'WaypointTest', 
+                'dir': 'in'
+              }
+            ),
+            ( 'autoLink', 
+              { 'addr': cls.waypoint_prefix_1 + '.waypoint',
+                'containerId': 'WaypointTest', 
+                'dir': 'out'
+              }
+            )
+        ]
+
+        waypoint_configuration_2 =               \
+        [
+            ( 'address', 
+              { 'prefix': cls.waypoint_prefix_2, 
+                'ingressPhase' : 0,    # into the waypoint-process
+                'egressPhase'  : 2,    # out of the waypoint process
+              }
+            ),
+            ( 'autoLink', 
+              { 'addr': cls.waypoint_prefix_2 + '.waypoint', 
+                'phase' : 0,    
+                'containerId': 'WaypointTest2', 
+                'dir': 'out'    # out-of-router
+              }
+            ),
+            ( 'autoLink', 
+              { 'addr': cls.waypoint_prefix_2 + '.waypoint',
+                'phase' : 1,   
+                'containerId': 'WaypointTest2', 
+                'dir': 'in'    # into-router
+              }
+            ),
+            ( 'autoLink', 
+              { 'addr': cls.waypoint_prefix_2 + '.waypoint',
+                'phase' : 1,   # out-of-router
+                'containerId': 'WaypointTest2', 
+                'dir': 'out'
+              }
+            ),
+            ( 'autoLink', 
+              { 'addr': cls.waypoint_prefix_2 + '.waypoint',
+                'phase' : 2,   # into-router
+                'containerId': 'WaypointTest2', 
+                'dir': 'in'
+              }
+            )
+        ]
+
         def router(name, more_config):
 
             config = [ ('router',  {'mode': 'interior', 'id': name}),
                        ('address', {'prefix': 'closest',   'distribution': 'closest'}),
                        ('address', {'prefix': 'balanced',  'distribution': 'balanced'}),
                        ('address', {'prefix': 'multicast', 'distribution': 'multicast'})
-                     ] + more_config
+                     ]                          \
+                     + linkroute_configuration  \
+                     + waypoint_configuration_1 \
+                     + waypoint_configuration_2 \
+                     + more_config
 
             config = Qdrouterd.Config(config)
 
@@ -147,6 +237,11 @@ class DistributionTests ( TestCase ):
         #              \ /
         #               D
         #
+        #  Note: in the above picture, an arrow from, i.e., B to A
+        #        means that B initiates the connection from itself to A.
+        #        So if you see "B ----> A" in the picture, you should also
+        #        see a connector block in the configuration of B that 
+        #        connects to an inter-router port on A.
         #
 
         A_client_port          = cls.tester.get_port()
@@ -181,7 +276,6 @@ class DistributionTests ( TestCase ):
         cls.A_D_cost =   50
         cls.B_D_cost =  100
 
-        cls.linkroute_prefix_1 = "0.0.0.0/linkroute_1"
 
         router ( 'A',
                  [
@@ -202,21 +296,9 @@ class DistributionTests ( TestCase ):
                       }
                     ),
                     ( 'listener',
-                      { 'port': A_route_container_port,  # route-container is number 3
+                      { 'port': A_route_container_port,  # route-container is listener number 3
                         'stripAnnotations': 'no',
                         'role': 'route-container'
-                      }
-                    ),
-                    ( 'linkRoute',
-                      { 'prefix': cls.linkroute_prefix_1,
-                        'dir': 'in',
-                        'containerId': 'LinkRouteTest'
-                      }
-                    ),
-                    ( 'linkRoute',
-                      { 'prefix': cls.linkroute_prefix_1,
-                        'dir': 'out',
-                        'containerId': 'LinkRouteTest'
                       }
                     )
                  ]
@@ -246,18 +328,6 @@ class DistributionTests ( TestCase ):
                         'role': 'route-container'
                       }
                     ),
-                    ( 'linkRoute',
-                      { 'prefix': cls.linkroute_prefix_1,
-                        'dir': 'in',
-                        'containerId': 'LinkRouteTest'
-                      }
-                    ),
-                    ( 'linkRoute',
-                      { 'prefix': cls.linkroute_prefix_1,
-                        'dir': 'out',
-                        'containerId': 'LinkRouteTest'
-                      }
-                    ),
                     ( 'connector',
                       {  'name': 'connectorToA',
                          'role': 'inter-router',
@@ -282,18 +352,6 @@ class DistributionTests ( TestCase ):
                          'stripAnnotations': 'no',
                          'role': 'route-container'
                        }
-                    ),
-                    ( 'linkRoute',
-                      { 'prefix': cls.linkroute_prefix_1,
-                        'dir': 'in',
-                        'containerId': 'LinkRouteTest'
-                      }
-                    ),
-                    ( 'linkRoute',
-                      { 'prefix': cls.linkroute_prefix_1,
-                        'dir': 'out',
-                        'containerId': 'LinkRouteTest'
-                      }
                     ),
                     ( 'connector',
                       {  'name': 'connectorToB',
@@ -326,18 +384,6 @@ class DistributionTests ( TestCase ):
                          'port': A_inter_router_port_2,
                          'verifyHostName': 'no',
                          'cost' : cls.A_D_cost
-                      }
-                    ),
-                    ( 'linkRoute',
-                      { 'prefix': cls.linkroute_prefix_1,
-                        'dir': 'in',
-                        'containerId': 'LinkRouteTest'
-                      }
-                    ),
-                    ( 'linkRoute',
-                      { 'prefix': cls.linkroute_prefix_1,
-                        'dir': 'out',
-                        'containerId': 'LinkRouteTest'
                       }
                     ),
                     ( 'connector',
@@ -411,28 +457,38 @@ class DistributionTests ( TestCase ):
     def test_07_linkroute ( self ):
         test = LinkAttachRouting ( self.C_addr,
                                    self.A_route_container_addr,
-                                   self.linkroute_prefix_1,
+                                   self.linkroute_prefix,
                                    "addr_07"
                                  )
         test.run()
         self.assertEqual ( None, test.error )
 
 
-    def test_08_closest_linear ( self ):
+    def test_08_linkroute_check_only ( self ):
+        test = LinkAttachRoutingCheckOnly ( self.C_addr,
+                                            self.A_route_container_addr,
+                                            self.linkroute_prefix,
+                                            "addr_08"
+                                          )
+        test.run()
+        self.assertEqual ( None, test.error )
+
+
+    def test_09_closest_linear ( self ):
         test = ClosestTest ( self.A_addr,
                              self.B_addr,
                              self.C_addr,
-                             "addr_08"
+                             "addr_09"
                            )
         test.run()
         self.assertEqual ( None, test.error )
 
 
-    def test_09_closest_mesh ( self ):
+    def test_10_closest_mesh ( self ):
         test = ClosestTest ( self.A_addr,
                              self.B_addr,
                              self.D_addr,
-                             "addr_09"
+                             "addr_10"
                            )
         test.run()
         self.assertEqual ( None, test.error )
@@ -505,7 +561,7 @@ class DistributionTests ( TestCase ):
         #     100     55           33           12
         #
 
-    def test_10_balanced_linear ( self ):
+    def test_11_balanced_linear ( self ):
         # slop is how much the second two values may diverge from
         # the expected.  But they still must sum to total - A.
         total      = 100
@@ -522,7 +578,7 @@ class DistributionTests ( TestCase ):
         test = BalancedTest ( self.A_addr,
                               self.B_addr,
                               self.C_addr,
-                              "addr_10",
+                              "addr_11",
                               total,
                               expected_A,
                               expected_B,
@@ -534,7 +590,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    def test_11_balanced_linear_omit_middle_receiver ( self ):
+    def test_12_balanced_linear_omit_middle_receiver ( self ):
         # If we omit the middle receiver, then router A will count
         # up to cost ( A, B ) and the keep counting up a further
         # cost ( B, C ) before it starts to spill over.
@@ -559,7 +615,7 @@ class DistributionTests ( TestCase ):
         test = BalancedTest ( self.A_addr,
                               self.B_addr,
                               self.C_addr,
-                              "addr_11",
+                              "addr_12",
                               total,
                               expected_A,
                               expected_B,
@@ -627,7 +683,7 @@ class DistributionTests ( TestCase ):
         #       2. B and D sum to 100 - A
         #       3. B and D are both with 1 of their expected values.
         #
-    def test_12_balanced_mesh ( self ):
+    def test_13_balanced_mesh ( self ):
         total      = 100
         expected_A = 54
         expected_B = 43
@@ -637,7 +693,7 @@ class DistributionTests ( TestCase ):
         test = BalancedTest ( self.A_addr,
                               self.B_addr,
                               self.D_addr,
-                              "addr_12",
+                              "addr_13",
                               total,
                               expected_A,
                               expected_B,
@@ -649,33 +705,33 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    def test_13_multicast_linear ( self ):
+    def test_14_multicast_linear ( self ):
         test = MulticastTest ( self.A_addr,
                                self.B_addr,
                                self.C_addr,
-                               "addr_13"
-                             )
-        test.run()
-        self.assertEqual ( None, test.error )
-
-
-    def test_14_multicast_mesh ( self ):
-        test = MulticastTest ( self.A_addr,
-                               self.B_addr,
-                               self.D_addr,
                                "addr_14"
                              )
         test.run()
         self.assertEqual ( None, test.error )
 
 
-    def test_15_linkroute_linear_all_local ( self ) :
+    def test_15_multicast_mesh ( self ):
+        test = MulticastTest ( self.A_addr,
+                               self.B_addr,
+                               self.D_addr,
+                               "addr_15"
+                             )
+        test.run()
+        self.assertEqual ( None, test.error )
+
+
+    def test_16_linkroute_linear_all_local ( self ) :
         """
         This test should route all senders' link-attaches
         to the local containers on router A.
         """
 
-        addr_suffix = "addr_15"
+        addr_suffix = "addr_16"
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABC is linear.
@@ -742,26 +798,26 @@ class DistributionTests ( TestCase ):
 
         test = RoutingTest ( self.A_addr,  # all senders are attached here
                              routers,
-                             self.linkroute_prefix_1,
+                             self.linkroute_prefix,
                              addr_suffix,
                              instructions,
                              where_to_make_connections,
                              n_local_containers,
                              n_remote_routers,
-                             "Test 15"
+                             "Test 16"
                            )
         test.run ( )
         self.assertEqual ( None, test.error )
 
 
 
-    def test_16_linkroute_linear_all_B ( self ) :
+    def test_17_linkroute_linear_all_B ( self ) :
         """
         This test should route all senders' link-attaches
         to the remote connections on router B.
         """
 
-        addr_suffix = "addr_16"
+        addr_suffix = "addr_17"
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABC is linear.
@@ -828,26 +884,26 @@ class DistributionTests ( TestCase ):
 
         test = RoutingTest ( self.A_addr,  # all senders are attached here
                              routers,
-                             self.linkroute_prefix_1,
+                             self.linkroute_prefix,
                              addr_suffix,
                              instructions,
                              where_to_make_connections,
                              n_local_containers,
                              n_remote_routers,
-                             "Test 16"
+                             "Test 17"
                            )
         test.run ( )
         self.assertEqual ( None, test.error )
 
 
 
-    def test_17_linkroute_linear_all_C ( self ) :
+    def test_18_linkroute_linear_all_C ( self ) :
         """
         This test should route all senders' link-attaches
         to the remote connections on router C.
         """
 
-        addr_suffix = "addr_17"
+        addr_suffix = "addr_18"
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABC is linear.
@@ -914,19 +970,19 @@ class DistributionTests ( TestCase ):
 
         test = RoutingTest ( self.A_addr,  # all senders are attached here
                              routers,
-                             self.linkroute_prefix_1,
+                             self.linkroute_prefix,
                              addr_suffix,
                              instructions,
                              where_to_make_connections,
                              n_local_containers,
                              n_remote_routers,
-                             "Test 17"
+                             "Test 18"
                            )
         test.run ( )
         self.assertEqual ( None, test.error )
 
 
-    def test_18_linkroute_linear_kill ( self ) :
+    def test_19_linkroute_linear_kill ( self ) :
         """
         Start out as usual, making four senders and seeing their link-attaches
         routed to router A (local). But then kill the two route-container
@@ -934,7 +990,7 @@ class DistributionTests ( TestCase ):
         should get routed to router B.
         """
 
-        addr_suffix = "addr_18"
+        addr_suffix = "addr_19"
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABC is linear.
@@ -1059,20 +1115,20 @@ class DistributionTests ( TestCase ):
 
         test = RoutingTest ( self.A_addr,  # all senders are attached here
                              routers,
-                             self.linkroute_prefix_1,
+                             self.linkroute_prefix,
                              addr_suffix,
                              instructions,
                              where_to_make_connections,
                              n_local_containers,
                              n_remote_routers,
-                             "Test 18"
+                             "Test 19"
                            )
         test.run ( )
         self.assertEqual ( None, test.error )
 
 
 
-    def test_19_linkroute_mesh_all_local ( self ) :
+    def test_20_linkroute_mesh_all_local ( self ) :
         """
                        c           c
         senders --->   A --------- B
@@ -1091,7 +1147,7 @@ class DistributionTests ( TestCase ):
         to the local containers on router A.
         """
 
-        addr_suffix = "addr_19"
+        addr_suffix = "addr_20"
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABD is triangular,
@@ -1159,19 +1215,19 @@ class DistributionTests ( TestCase ):
 
         test = RoutingTest ( self.A_addr,  # all senders are attached here
                              routers,
-                             self.linkroute_prefix_1,
+                             self.linkroute_prefix,
                              addr_suffix,
                              instructions,
                              where_to_make_connections,
                              n_local_containers,
                              n_remote_routers,
-                             "Test 19"
+                             "Test 20"
                            )
         test.run ( )
         self.assertEqual ( None, test.error )
 
 
-    def test_20_linkroute_mesh_nonlocal ( self ) :
+    def test_21_linkroute_mesh_nonlocal ( self ) :
         """
                                    c
         senders --->   A --------- B
@@ -1190,7 +1246,7 @@ class DistributionTests ( TestCase ):
         between the connections on routers B and D.
         """
 
-        addr_suffix = "addr_20"
+        addr_suffix = "addr_21"
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABD is triangular
@@ -1258,13 +1314,13 @@ class DistributionTests ( TestCase ):
 
         test = RoutingTest ( self.A_addr,  # all senders are attached here
                              routers,
-                             self.linkroute_prefix_1,
+                             self.linkroute_prefix,
                              addr_suffix,
                              instructions,
                              where_to_make_connections,
                              n_local_containers,
                              n_remote_routers,
-                             "Test 20"
+                             "Test 21"
                            )
         test.run ( )
         self.assertEqual ( None, test.error )
@@ -1272,7 +1328,7 @@ class DistributionTests ( TestCase ):
 
 
 
-    def test_21_linkroute_mesh_failover ( self ) :
+    def test_22_linkroute_mesh_kill ( self ) :
         """
                        c           c
         senders --->   A --------- B
@@ -1288,7 +1344,7 @@ class DistributionTests ( TestCase ):
         listeners at the marked routers.
         """
 
-        addr_suffix = "addr_21"
+        addr_suffix = "addr_22"
 
         # Choose which routers to give the test.
         # This choice controls topology.  ABD is triangular
@@ -1414,16 +1470,37 @@ class DistributionTests ( TestCase ):
 
         test = RoutingTest ( self.A_addr,  # all senders are attached here
                              routers,
-                             self.linkroute_prefix_1,
+                             self.linkroute_prefix,
                              addr_suffix,
                              instructions,
                              where_to_make_connections,
                              n_local_containers,
                              n_remote_routers,
-                             "Test 21"
+                             "Test 22"
                            )
         test.run ( )
         self.assertEqual ( None, test.error )
+
+
+    def test_23_waypoint ( self ) :
+        test = WaypointTest ( self.A_addr,
+                              self.B_addr,
+                              self.C_route_container_addr,
+                              self.waypoint_prefix_1 + '.waypoint'
+                            )
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_24_serial_waypoint_test ( self ):
+        test = SerialWaypointTest ( self.A_addr,
+                                    self.B_addr,
+                                    self.C_route_container_addr,
+                                    self.waypoint_prefix_2 + '.waypoint'
+                                  )
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 
 
@@ -1668,6 +1745,118 @@ class DynamicReplyTo(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
+
+
+
+class LinkAttachRoutingCheckOnly ( MessagingHandler ):
+    """
+    """
+    def __init__ ( self, client_host, linkroute_container_host, linkroute_prefix, addr_suffix ):
+        super ( LinkAttachRoutingCheckOnly, self ).__init__(prefetch=0)
+        self.client_host               = client_host
+        self.linkroute_container_host  = linkroute_container_host
+        self.linkroute_prefix          = linkroute_prefix
+        self.link_routable_address     = self.linkroute_prefix + '.' + addr_suffix
+
+        self.client_cnx               = None
+        self.linkroute_container_cnx  = None
+        self.error                    = None
+        self.client_sender            = None
+        self.linkroute_check_timer    = None
+        self.linkroute_check_receiver = None
+        self.linkroute_check_sender   = None
+
+        self.debug = False
+
+
+    def debug_print ( self, message ) :
+        if self.debug :
+            print message
+
+
+    def timeout ( self ):
+        self.bail ( "Timeout Expired: n_sent=%d n_rcvd=%d n_settled=%d" %
+                    (self.n_sent, self.n_rcvd, self.n_settled) )
+
+
+    def address_check_timeout(self):
+        self.debug_print ( "address_check_timeout -------------" )
+        self.linkroute_check()
+
+
+    def bail ( self, text ):
+        self.debug_print ( "bail -------------" )
+        self.error = text
+        self.linkroute_container_cnx.close()
+        self.client_cnx.close()
+        self.timer.cancel()
+        if self.linkroute_check_timer:
+            self.linkroute_check_timer.cancel()
+
+
+    def on_start(self, event):
+        self.debug_print ( "on_start -------------" )
+        self.timer        = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.client_cnx = event.container.connect(self.client_host)
+        self.linkroute_container_cnx  = event.container.connect(self.linkroute_container_host)
+
+        # The linkroute_check_receiver will receive the replies to my management queries
+        # that check whether the network is ready. The way this works is, I declare the
+        # receiver dynamic here.  That means that when the link for this receiver opens,
+        # I will get a remote_source address for it. I then pass that address to the
+        # Address Checker object, which uses that as the reply-to address for the queries
+        # that it sends.
+        self.linkroute_check_receiver = event.container.create_receiver(self.client_cnx, dynamic=True)
+        self.linkroute_check_sender   = event.container.create_sender(self.client_cnx, "$management")
+
+
+    def on_link_opened ( self, event ) :
+        self.debug_print ( "on_link_opened -------------" )
+        if event.receiver == self.linkroute_check_receiver:
+            event.receiver.flow(30)
+            # Because we created the linkroute_check_receiver 'dynamic', when it opens
+            # it will have its address filled in. That is the address we want our 
+            # AddressChecker replies to go to.
+            self.linkroute_checker = AddressChecker ( self.linkroute_check_receiver.remote_source.address )
+            self.linkroute_check()
+
+
+    def on_message(self, event):
+        self.debug_print ( "on_message -------------" )
+        if event.receiver == self.linkroute_check_receiver:
+            # This is one of my route-readiness checking messages.
+            response = self.linkroute_checker.parse_address_query_response(event.message)
+            self.debug_print ( "    status_code: %d   remoteCount: %d   containerCount: %d" % ( response.status_code, response.remoteCount, response.containerCount ) )
+            if response.status_code == 200 and (response.remoteCount + response.containerCount) > 0:
+                # Step 3: got confirmation of link-attach knowledge fully propagated
+                # to Nearside router.  Now we can make the client sender without getting
+                # a No Path To Destination error.
+                self.client_sender = event.container.create_sender(self.client_cnx, self.link_routable_address)
+                # And we can quit checking.
+                self.bail ( None )
+            else:
+                # If the latest check did not find the link-attack route ready,
+                # schedule another check a little while from now.
+                self.linkroute_check_timer = event.reactor.schedule(0.25, AddressCheckerTimeout(self))
+
+
+    def linkroute_check ( self ):
+        self.debug_print ( "linkroute_check -------------" )
+        # Send the message that will query the management code to discover
+        # information about our destination address. We cannot make our payload
+        # sender until the network is ready.
+        #
+        # BUGALERT: We have to prepend the 'D' to this linkroute prefix
+        # because that's what the router does internally.  Someday this
+        # may change.
+        self.linkroute_check_sender.send ( self.linkroute_checker.make_address_query("D" + self.linkroute_prefix) )
+
+
+    def run(self):
+        container = Container(self)
+        container.container_id = 'LinkRouteTest'
+        container.run()
 
 
 
@@ -2223,7 +2412,6 @@ class MulticastTest ( MessagingHandler ):
         self.bailed = False
 
     def timeout ( self ):
-        self.check_results ( )
         self.bail ( "Timeout Expired " )
 
 
@@ -2363,7 +2551,6 @@ class MulticastTest ( MessagingHandler ):
     def run(self):
         container = Container(self)
         container.run()
-
 
 
 
@@ -2878,6 +3065,534 @@ class RoutingTest ( MessagingHandler ):
         container = Container(self)
         container.container_id = 'LinkRouteTest'
         container.run()
+
+
+
+
+
+
+class WaypointTest ( MessagingHandler ):
+    """
+    Messages from a client sender to a client receiver are first 
+    diverted out of the router into a separate waypoint receiver,
+    which stores them in a fifo.  This simulates reception by a 
+    broker or some other arbitrary process.
+    The message then returns from the waypoint sender back to the 
+    router, and then arrives at the client receiver.
+    """
+    def __init__ ( self, client_host_1, client_host_2, route_container_host, destination ):
+        super(WaypointTest, self).__init__()
+        self.client_host_1        = client_host_1
+        self.client_host_2        = client_host_2
+        self.route_container_host = route_container_host
+        self.destination          = destination
+
+        self.client_connection          = None
+        self.route_container_connection = None
+        self.error                      = None
+        self.waypoint_sender            = None
+        self.waypoint_receiver          = None
+        self.waypoint_queue             = []
+
+        self.messages_per_sender = 10
+
+        self.senders   = [ 
+                           {
+                             'sender'  : None,
+                             'to_send' : 0,
+                             'n_sent'  : 0
+                           },
+
+                           {
+                             'sender'  : None,
+                             'to_send' : 0,
+                             'n_sent'  : 0
+                           }
+                         ]
+        self.receivers = [ 
+                           {
+                             'receiver'   : None,
+                             'n_received' : 0
+                           },
+
+                           {
+                             'receiver'   : None,
+                             'n_received' : 0
+                           }
+                         ]
+
+        self.n_sent     = 0
+        self.n_rcvd     = 0
+        self.n_thru     = 0
+        self.n_senders  = 2
+        self.n_expected = self.messages_per_sender * self.n_senders
+
+        self.n_transitions = 0
+
+        # Each message goes out from the client sender (1)
+        # and finally in to the client receiver (2).
+        # But in the meantime it goes into (3) and out of (4)
+        # the waypoint.
+        self.n_expected_transitions = self.messages_per_sender * self.n_senders * 4
+
+        self.debug = False
+
+
+    def timeout(self):
+        self.bail ( "Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d" % (self.n_sent, self.n_rcvd, self.n_thru) )
+
+
+
+    def bail ( self, text ):
+        self.error = text
+        self.route_container_connection.close()
+        self.client_connection.close()
+        self.timer.cancel()
+
+
+
+    def debug_print ( self, message ) :
+        if self.debug :
+            print message
+
+
+
+    def send_from_client ( self, sender, n_messages, sender_index ):
+        n_sent = 0
+        self.debug_print ( "send_from_client -------------------" );
+        while sender.credit > 0 and n_sent < n_messages:
+            n_sent      += 1
+            self.n_sent += 1
+            msg = Message ( body=n_sent )
+            self.debug_print ( "    send_from_client -- sender: %d n_sent: %d" % ( sender_index, n_sent ) )
+            sender.send ( msg )
+            # We send from a client
+            self.n_transitions += 1
+
+
+
+    def send_from_waypoint ( self ):
+        self.debug_print ( "send_from_waypoint ---------------------" )
+
+        if len(self.waypoint_queue) <= 0 :
+          self.debug_print ( "    waypoint queue is empty." )
+          return
+
+        while self.waypoint_sender.credit > 0 and len(self.waypoint_queue) > 0:
+            m = self.waypoint_queue.pop()
+            message_content_number = m.body
+            self.debug_print ( "    send_from_waypoint num is %d " % message_content_number )
+            self.waypoint_sender.send ( m )
+            self.n_thru += 1
+            # We send from a waypoint.
+            self.n_transitions += 1
+
+
+
+    def on_start ( self, event ):
+        self.timer = event.reactor.schedule ( TIMEOUT, Timeout(self) )
+        self.client_connection          = event.container.connect ( self.client_host_1 )
+
+        # Creating this connection is what gets things started. 
+        self.route_container_connection = event.container.connect ( self.route_container_host )
+
+        self.debug_print ( "    creating clients for connection" )
+        for i in range(len(self.senders)) :
+            sender   = self.senders[i]
+            receiver = self.receivers[i]
+
+            sender['sender'] = event.container.create_sender ( self.client_connection, 
+                                                               self.destination, 
+                                                               name="sender_%d" % i)
+            sender['to_send'] = self.messages_per_sender
+            sender['n_sent']  = 0
+
+            receiver['receiver'] = event.container.create_receiver ( self.client_connection, 
+                                                                     self.destination, 
+                                                                     name="receiver_%d" % i)
+            receiver['n_received'] = 0
+
+
+
+    def on_link_opening(self, event):
+        self.debug_print ( "on_link_opening -------------------------- " )
+        if event.sender:
+            self.debug_print ( "    sender: %s" % event.sender.remote_source.address )
+            event.sender.source.address = event.sender.remote_source.address
+            event.sender.open()
+            if event.sender.remote_source.address == self.destination:
+                self.debug_print ( "    that's one of my waypoint senders: %s" % self.destination )
+                self.waypoint_sender = event.sender
+
+        elif event.receiver:
+            self.debug_print ( "    receiver: %s" % event.receiver.remote_target.address )
+            event.receiver.target.address = event.receiver.remote_target.address
+            event.receiver.open()
+            if event.receiver.remote_target.address == self.destination:
+                self.debug_print ( "    that's one of mine." )
+                self.waypoint_receiver = event.receiver
+                self.waypoint_receiver.flow ( 1000 )
+
+
+
+    def on_sendable ( self, event ):
+        self.debug_print ( "on_sendable ---------------------------- " )
+        for i in range(len(self.senders)) :
+            sender = self.senders[i]
+            if sender['sender'] == event.sender :
+                if sender['n_sent'] < sender['to_send'] :
+                    self.send_from_client ( sender['sender'], sender['to_send'], i )
+                    sender['n_sent'] = sender['to_send']
+                    self.debug_print ( "    sent %d" % sender['n_sent'] )
+                    return
+        if event.sender == self.waypoint_sender :
+            self.send_from_waypoint ( )
+         
+
+    def on_message ( self, event ):
+        self.debug_print ( "on_message ---------------------------- " )
+        if event.receiver == self.waypoint_receiver :
+            self.debug_print ( "    waypoint receiver" )
+            m = Message(body=event.message.body)
+            # We receive to a waypoint.
+            self.n_transitions += 1
+            self.waypoint_queue.append(m)
+            self.debug_print ( "    queue depth is now %d" % len(self.waypoint_queue) )
+            self.send_from_waypoint ( )
+        else :
+            for i in range(len(self.receivers)) :
+                self.debug_print ( "    client receiver" )
+                receiver = self.receivers[i]
+                if event.receiver == receiver['receiver'] :
+                    message_content_number = event.message.body
+                    receiver['n_received'] += 1
+                    # We receive to a client.
+                    self.n_transitions += 1
+                    self.debug_print ( "    client receiver %d has %d messages." % ( i, receiver['n_received'] ) )
+                    self.n_rcvd += 1
+                    if self.n_rcvd >= self.n_expected and self.n_thru >= self.n_expected:
+                        if self.n_transitions != self.n_expected_transitions :
+                            self.bail ( "expected %d transitions, but got %d" % ( self.n_expected_transitions, self.n_transitions ) )
+                        else :
+                            self.debug_print ( "    success" )
+                            self.bail ( None )
+
+
+    def run(self):
+        container = Container(self)
+        container.container_id = 'WaypointTest'
+        container.run()
+
+
+
+
+
+class SerialWaypointTest ( MessagingHandler ):
+    """
+    Messages from a client sender on their way to a client receiver are 
+    first re-routed to two separate waypoint 'processes', in serial.
+    The waypoint processes are simulated in this test by separate 'waypoint'
+    receivers that store the messages in fifo lists, and separate 'waypoint'
+    senders that pop them off the fifos and send them.  This simulates 
+    either a broker, or some arbitrary processing on the message.
+    """
+    def __init__ ( self, client_host_1, client_host_2, route_container_host, destination ):
+        super(SerialWaypointTest, self).__init__()
+        self.client_host_1        = client_host_1
+        self.client_host_2        = client_host_2
+        self.route_container_host = route_container_host
+        self.destination          = destination
+
+        self.sender_connections  = []        
+        self.route_container_connection = None
+        self.error               = None
+
+        self.messages_per_sender = 100
+
+        # There are 2 sending clients and 2 receiving clients
+        # only because I wanted to have more than 1, and 2 
+        # appeared to be the next available integer. 
+        # This has nothing to do with the fact that there are 
+        # 2 waypoints.
+        self.senders = [ 
+                         { 'sender'  : None,
+                           'to_send' : self.messages_per_sender,
+                           'n_sent'  : 0
+                         },
+                         { 'sender'  : None,
+                           'to_send' : self.messages_per_sender,
+                           'n_sent'  : 0
+                         }
+                       ]
+
+        self.receivers = [ 
+                           { 'receiver'   : None,
+                             'n_received' : 0
+                           },
+                           { 'receiver'   : None,
+                             'n_received' : 0
+                           }
+                         ]
+
+        self.n_waypoint_senders   = 0
+        self.n_waypoint_receivers = 0
+
+        self.waypoints = [
+                           { 'sender'     : None,
+                             'n_sent'     : 0,
+                             'receiver'   : None,
+                             'n_received' : 0,
+                             'queue'      : [],
+                             'n_sent'     : 0,
+                             'name'       : '1'
+                           },
+                           { 'sender'     : None,
+                             'n_sent'     : 0,
+                             'receiver'   : None,
+                             'n_received' : 0,
+                             'queue'      : [],
+                             'n_sent'     : 0,
+                             'name'       : '2'
+                           }
+                         ]
+
+        self.n_sent = 0
+        self.n_rcvd = 0
+        self.n_thru = 0
+        self.n_transitions = 0
+        self.n_expected_received    = self.messages_per_sender * len(self.senders)
+        
+        # Each message is sent from one client sender, and finally received 
+        # by one client receiver.  In the meantime in goes into, and then 
+        # comes back out of, two separate waypoints.  That's a total of
+        # six links -- or 'transitions' -- for each message.
+        n_links_per_message = 2 + 2 * len(self.waypoints)
+        self.n_expected_transitions = len(self.senders) * self.messages_per_sender * n_links_per_message
+
+        self.debug = False
+
+
+    def timeout(self):
+        self.bail ( "Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d" % (self.n_sent, self.n_rcvd, self.n_thru) )
+
+
+    def bail ( self, text ):
+        self.error = text
+        self.route_container_connection.close()
+        for cnx in self.sender_connections :
+          cnx.close()
+        self.timer.cancel()
+
+
+    def debug_print ( self, message ) :
+        if self.debug :
+            print message
+
+
+    def send_from_client ( self, sender, n_messages, sender_index ):
+        n_sent = 0
+        while sender.credit > 0 and n_sent < n_messages:
+            msg = Message ( body=n_sent )
+            sender.send ( msg )
+            n_sent             += 1
+            self.n_sent        += 1
+            self.n_transitions += 1
+            self.debug_print ( "send_from_client -- sender: %d n_sent: %d" % ( sender_index, n_sent ) )
+
+
+
+    def send_from_waypoint ( self, waypoint ):
+        self.debug_print ( "send_from_waypoint ------------------------------" )
+
+        while waypoint['sender'].credit > 0 and len(waypoint['queue']) > 0:
+            m = waypoint['queue'].pop()
+            message_content_number = m.body
+            waypoint['sender'].send ( m )
+            waypoint['n_sent'] += 1
+            self.n_thru        += 1
+            self.n_transitions += 1
+            self.debug_print ( "send_from_waypoint %s is %d " % ( waypoint['name'], message_content_number) )
+
+
+
+    def on_start ( self, event ):
+        self.timer = event.reactor.schedule ( TIMEOUT, Timeout(self) )
+        self.sender_connections.append ( event.container.connect(self.client_host_1) )
+        self.sender_connections.append ( event.container.connect(self.client_host_2) )
+        # Creating this connection is what gets things started. 
+        self.route_container_connection = event.container.connect ( self.route_container_host )
+
+        for i in range(len(self.sender_connections)) :
+            cnx = self.sender_connections[i] 
+            sender   = self.senders[i]
+            receiver = self.receivers[i]
+
+            sender['sender'] = event.container.create_sender ( cnx, 
+                                                               self.destination, 
+                                                               name="sender_%d" % i)
+            sender['to_send'] = self.messages_per_sender
+            sender['n_sent']  = 0
+            
+            receiver['receiver'] = event.container.create_receiver ( cnx, 
+                                                                     self.destination, 
+                                                                     name="receiver_%d" % i)
+            receiver['n_received'] = 0
+
+
+    def on_link_opening ( self, event ):
+
+        self.debug_print ( "on_link_opening -------------------------- " )
+
+        if event.sender:
+            self.debug_print ( "    sender: %s" % event.sender.remote_source.address )
+            event.sender.source.address = event.sender.remote_source.address
+            event.sender.open()
+            if event.sender.remote_source.address == self.destination:
+                if self.n_waypoint_senders < 2 :
+                    self.debug_print ( "    store this as one of my waypoint senders." )
+                    self.waypoints[self.n_waypoint_senders]['sender'] = event.sender
+                    self.n_waypoint_senders += 1
+
+        elif event.receiver:
+            self.debug_print ( "    receiver: %s" % event.receiver.remote_target.address )
+            event.receiver.target.address = event.receiver.remote_target.address
+            event.receiver.open()
+            if event.receiver.remote_target.address == self.destination:
+                self.debug_print ( "    store this as one of my waypoint receivers." )
+                if self.n_waypoint_receivers < 2 :
+                    self.waypoints[self.n_waypoint_receivers]['receiver'] = event.receiver
+                    self.n_waypoint_receivers += 1
+            
+
+
+    def on_sendable ( self, event ):
+        self.debug_print ( "on_sendable ------------------------------" )
+        for index in range(len(self.senders)) :
+            sender = self.senders[index]
+            if event.sender == sender['sender'] :
+                self.debug_print ( "    client sender %d" % index )
+                if sender['n_sent'] < sender['to_send'] :
+                    self.debug_print ( "    sending %d" % sender['to_send'] )
+                    self.send_from_client ( sender['sender'], sender['to_send'], index )
+                    sender['n_sent'] = sender['to_send']  # n_sent = n_to_send
+                else :
+                    self.debug_print ( "    this sender is already finished." )
+                return
+
+        for j in range(len(self.waypoints)) :
+            sender = self.waypoints[j]['sender']
+            if event.sender == sender :
+                self.debug_print ( "    waypoint_sender %d" % j )
+                self.send_from_waypoint ( self.waypoints[j] )
+                return
+
+
+    def on_message(self, event):
+
+        self.debug_print ( "on_message --------------------------- " )
+
+        # Is this one of our client receivers ?
+        for i in range(len(self.receivers)) :
+            receiver = self.receivers[i]
+            if event.receiver == receiver['receiver'] :
+                receiver['n_received'] += 1
+                self.n_transitions     += 1
+                self.debug_print ("    client receiver %d has %d messages." % ( i, receiver['n_received'] ) )
+                message_content_number = event.message.body
+                self.n_rcvd += 1
+                if self.n_rcvd >= self.n_expected_received and self.n_thru >= self.n_expected_received:
+                    self.debug_print ( "DONE -- self.n_rcvd: %d   self.n_thru: %d" % ( self.n_rcvd, self.n_thru ) )
+                    if self.debug :
+                        self.report ( )
+                    self.check_results_and_bail ( )
+                    return
+
+        # Is this one of our waypoint receivers ?
+        for j in range(len(self.waypoints)) :
+            waypoint = self.waypoints[j]
+            if event.receiver == waypoint['receiver'] :
+                m = Message ( body=event.message.body )
+                waypoint [ 'queue' ].append ( m )
+                waypoint [ 'n_received' ] += 1
+                self.n_transitions        += 1
+                self.debug_print ( "    message received at waypoint %d, queue depth is now %d" % (j, len(waypoint['queue'])))
+                self.send_from_waypoint ( waypoint )
+
+
+
+    def check_results_and_bail ( self ) :
+
+        if self.n_expected_transitions != self.n_transitions :
+            self.bail ( "total transitions were %d, but %d were expected." % ( self.n_transitions, self.n_expected_transitions ) )
+            return
+
+        mps                 = self.messages_per_sender
+        n_senders           = len(self.senders)
+        total_messages_sent = mps * n_senders
+
+        # For total messages sent, the expected value and
+        # the actual value must be the same.  The two receivers
+        # may receive different numbers (although the total should
+        # be correct) but each of the senders must send the expected
+        # number of messages or something is wrong.
+        for i in range(n_senders) :
+            sndr = self.senders[i]
+            if sndr['n_sent'] != mps :
+              self.bail ( "sender %d sent %d messages instead of %d" % ( i, sndr['n_sent'], mps ) )
+              return
+
+        n_waypoints = len(self.waypoints)
+        total_expected_waypoint_receptions = total_messages_sent * n_waypoints
+        total_actual_waypoint_receptions   = 0
+
+        for i in range(n_waypoints) :
+            total_actual_waypoint_receptions += self.waypoints[i]['n_received']
+
+        if total_actual_waypoint_receptions != total_expected_waypoint_receptions :
+            self.bail ( "total waypoint receptions were %d, but %d were expected." % ( total_actual_waypoint_receptions, total_expected_waypoint_receptions) )
+            return
+          
+        total_messages_received = 0
+        for i in range(len(self.receivers)) :
+            this_receiver_got = self.receivers[i]['n_received']
+            total_messages_received += this_receiver_got
+
+        if total_messages_received != total_messages_sent :
+            self.bail ( "total_messages_received: %d but %d were expected." % (total_messages_received, total_messages_sent) )
+            return
+
+        self.debug_print ( "\nsuccess\n" )
+        self.bail ( None ) 
+            
+
+        
+
+
+    def report ( self ) :
+        print "\n\n==========================================================\nreport\n"
+
+        for i in range(len(self.senders)) :
+            print "    client sender %d sent %d messages." % ( i, self.senders[i]['n_sent'] )
+
+        print "\n"
+
+        for i in range(len(self.waypoints)) :
+            print "    waypoint %d received %d messages." % ( i, self.waypoints[i]['n_received'] )
+            print "    waypoint %d sent     %d messages." % ( i, self.waypoints[i]['n_sent'] )
+
+        print "\n"
+
+        for i in range(len(self.receivers)) :
+            print "    client receiver %d received %d messages." % ( i, self.receivers[i]['n_received'] )
+
+        print "\nend report\n=========================================================\n\n"
+
+
+    def run(self):
+        container = Container(self)
+        container.container_id = 'WaypointTest2'
+        container.run()
+
 
 
 
