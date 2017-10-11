@@ -764,6 +764,23 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
 }
 
 
+static void qdr_link_abort_undelivered_CT(qdr_core_t *core, qdr_link_t *link)
+{
+    assert(link->link_direction == QD_OUTGOING);
+
+    qdr_connection_t *conn = link->conn;
+
+    sys_mutex_lock(conn->work_lock);
+    qdr_delivery_t *dlv = DEQ_HEAD(link->undelivered);
+    while (dlv) {
+        if (!qdr_delivery_receive_complete(dlv))
+            qdr_delivery_set_aborted(dlv, true);
+        dlv = DEQ_NEXT(dlv);
+    }
+    sys_mutex_unlock(conn->work_lock);
+}
+
+
 static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
     //
@@ -1638,6 +1655,14 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     // For routed links, propagate the detach
     //
     if (link->connected_link) {
+        //
+        // If the connected link is outgoing and there is a delivery on the connected link's undelivered
+        // list that is not receive-complete, we must flag that delivery as aborted or it will forever
+        // block the propagation of the detach.
+        //
+        if (link->connected_link->link_direction == QD_OUTGOING)
+            qdr_link_abort_undelivered_CT(core, link->connected_link);
+
         if (dt != QD_LOST)
             qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE, dt == QD_CLOSED);
         else {
