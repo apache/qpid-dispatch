@@ -404,6 +404,20 @@ bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg);
  */
 qd_link_t * qd_message_get_receiving_link(const qd_message_t *msg);
 
+/**
+ * Return message aborted state
+ * @param msg A pointer to the message
+ * @return true if the message has been aborted
+ */
+bool qd_message_aborted(const qd_message_t *msg);
+
+/**
+ * Set the aborted flag on the message.
+ * @param msg A pointer to the message
+ * @param aborted
+ */
+void qd_message_set_aborted(const qd_message_t *msg, bool aborted);
+
 ///@}
 
 #endif

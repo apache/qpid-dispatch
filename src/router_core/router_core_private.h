@@ -340,6 +340,7 @@ struct qdr_delivery_t {
     bool                    settled;
     bool                    presettled;
     bool                    cleared_proton_ref;
+    bool                    set_proton_ref;
     qdr_delivery_where_t    where;
     uint8_t                 tag[32];
     int                     tag_length;
@@ -727,6 +728,11 @@ void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
  * Zeroes out peer references from both peers and decrefs ref counts.
  */
 void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_delivery_t *peer);
+
+/**
+ *
+ */
+void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv);
 
 /**
  * Returns the first peer of the delivery.

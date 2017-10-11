@@ -707,6 +707,11 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         while (peer) {
             if (link->link_direction == QD_OUTGOING)
                 qdr_delivery_failed_CT(core, peer);
+
+            if (!qdr_delivery_send_complete(peer)) {
+                qdr_delivery_set_aborted(peer, true);
+                qdr_deliver_continue_peers_CT(core, dlv);
+            }
             qdr_delivery_unlink_peers_CT(core, dlv, peer);
             peer = qdr_delivery_next_peer_CT(dlv);
         }
@@ -734,6 +739,10 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         qdr_delivery_t *next_peer = 0;
         while (peer) {
             next_peer = qdr_delivery_next_peer_CT(dlv);
+            if (!qdr_delivery_send_complete(peer)) {
+                qdr_delivery_set_aborted(peer, true);
+                qdr_deliver_continue_peers_CT(core, dlv);
+            }
             qdr_delivery_unlink_peers_CT(core, dlv, peer);
             peer = next_peer;
         }

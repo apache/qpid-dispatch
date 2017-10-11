@@ -1114,6 +1114,7 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
         } else if (rc == PN_EOS || rc < 0) {
             // end of message or error. Call the message complete
             msg->content->receive_complete = true;
+            msg->content->aborted = pn_delivery_aborted(delivery);
             msg->content->input_link = 0;
 
             pn_record_t *record = pn_delivery_attachments(delivery);
@@ -1169,15 +1170,16 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     }
 
     // Loop until msg is complete, error seen, or incoming bytes are consumed
-    bool recv_error_or_eos = false;
+    bool recv_error = false;
     while (1) {
         //
         // handle EOS and clean up after pn receive errors
         //
         bool at_eos = (pn_delivery_partial(delivery) == false) &&
+                      (pn_delivery_aborted(delivery) == false) &&
                       (pn_delivery_pending(delivery) == 0);
 
-        if (at_eos || recv_error_or_eos) {
+        if (at_eos || recv_error) {
             // Message is complete
             LOCK(msg->content->lock);
             {
@@ -1197,6 +1199,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
                 }
 
                 msg->content->receive_complete = true;
+                msg->content->aborted = pn_delivery_aborted(delivery);
                 msg->content->input_link = 0;
 
                 // unlink message and delivery
@@ -1240,7 +1243,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 
         if (rc < 0) {
             // error or eos seen. next pass breaks out of loop
-            recv_error_or_eos = true;
+            recv_error = true;
         } else if (rc > 0) {
             //
             // We have received a positive number of bytes for the message.  Advance
@@ -1407,6 +1410,17 @@ void qd_message_send(qd_message_t *in_msg,
 
     if (msg->sent_depth < QD_DEPTH_MESSAGE_ANNOTATIONS) {
 
+        if (msg->content->aborted) {
+            // Message is aborted before any part of it has been sent.
+            // Declare the message to be sent,
+            msg->send_complete = true;
+            // the link has an outgoing deliver. abort it.
+            pn_delivery_abort(pn_link_current(pnl));
+
+            // TODO: Dispose of message buffers that may have accumulated
+            return;
+        }
+
         qd_buffer_list_t new_ma;
         qd_buffer_list_t new_ma_trailer;
         DEQ_INIT(new_ma);
@@ -1504,6 +1518,15 @@ void qd_message_send(qd_message_t *in_msg,
     pn_session_t     *pns  = pn_link_session(pnl);
 
     while (buf && pn_session_outgoing_bytes(pns) < QD_QLIMIT_Q3_UPPER) {
+
+        if (msg->content->aborted) {
+            if (pn_link_current(pnl)) {
+                msg->send_complete = true;
+                pn_delivery_abort(pn_link_current(pnl));
+            }
+            break;
+        }
+
         size_t buf_size = qd_buffer_size(buf);
 
         // This will send the remaining data in the buffer if any.
@@ -1557,6 +1580,9 @@ void qd_message_send(qd_message_t *in_msg,
                 msg->cursor.buffer = 0;
                 msg->cursor.cursor = 0;
 
+                if (msg->content->aborted) {
+                    pn_delivery_abort(pn_link_current(pnl));
+                }
             }
             else {
                 //
@@ -1933,4 +1959,18 @@ bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg)
 qd_link_t * qd_message_get_receiving_link(const qd_message_t *msg)
 {
     return ((qd_message_pvt_t *)msg)->content->input_link;
+}
+
+
+bool qd_message_aborted(const qd_message_t *msg)
+{
+    return ((qd_message_pvt_t *)msg)->content->aborted;
+}
+
+void qd_message_set_aborted(const qd_message_t *msg, bool aborted)
+{
+    if (!msg)
+        return;
+    qd_message_pvt_t * msg_pvt = (qd_message_pvt_t *)msg;
+    msg_pvt->content->aborted = aborted;
 }

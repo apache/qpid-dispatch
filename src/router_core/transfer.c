@@ -283,6 +283,16 @@ void qdr_delivery_set_cleared_proton_ref(qdr_delivery_t *dlv, bool cleared_proto
     dlv->cleared_proton_ref = cleared_proton_ref;
 }
 
+void qdr_delivery_set_set_proton_ref(qdr_delivery_t *dlv, bool set_proton_ref)
+{
+    dlv->set_proton_ref = set_proton_ref;
+}
+
+bool qdr_delivery_get_set_proton_ref(qdr_delivery_t *dlv)
+{
+    return dlv->set_proton_ref;
+}
+
 
 void *qdr_delivery_get_context(qdr_delivery_t *delivery)
 {
@@ -324,6 +334,21 @@ bool qdr_delivery_receive_complete(const qdr_delivery_t *delivery)
 void qdr_delivery_incref(qdr_delivery_t *delivery)
 {
     sys_atomic_inc(&delivery->ref_count);
+}
+
+void qdr_delivery_set_aborted(const qdr_delivery_t *delivery, bool aborted)
+{
+    assert(delivery);
+
+    qd_message_set_aborted(delivery->msg, aborted);
+}
+
+
+bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery)
+{
+    if (!delivery)
+        return false;
+    return qd_message_aborted(delivery->msg);
 }
 
 
@@ -1021,7 +1046,7 @@ static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 }
 
 
-static void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
+void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
 {
     qdr_delivery_t *peer = qdr_delivery_first_peer_CT(in_dlv);
     while (peer) {
