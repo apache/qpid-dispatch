@@ -1,0 +1,52 @@
+---
+-
+  hosts: deploy_routers
+  become: true
+
+  tasks:
+    - name: install Dispatch Router
+      block:
+        - name: install Dispatch Router
+          dnf: pkg={{item}} state=installed
+          with_items:
+            - qpid-dispatch-router
+            - qpid-dispatch-tools
+
+        - name: handle console
+          block:
+            - name: prepare to install console
+              file:
+                path: /usr/local/share/qpid-dispatch
+                state: directory
+            - name: install console
+              synchronize:
+                src: ../../stand-alone
+                dest: /usr/local/share/qpid-dispatch
+                archive: no
+                recursive: yes
+                delete: yes
+          when: create_console
+
+        - name: create directories
+          file:
+            path: '{{ item }}'
+            state: directory
+          with_items:
+            - /var/log/qdrouterd
+            - /usr/local/etc/qpid-dispatch
+
+      when: ansible_os_family == "RedHat"
+
+    - name: Copying router configs
+      copy:
+        src: '../topologies/{{topology}}/{{item}}.conf'
+        dest: /usr/local/etc/qpid-dispatch
+      with_items: '{{ nodes }}'
+
+    - name: stop running routers
+      action: shell pkill -f qdrouterd
+      ignore_errors: True
+
+    - name: start routers
+      shell: "sleep 1 ; qdrouterd --config /usr/local/etc/qpid-dispatch/{{ item }}.conf -d ; sleep 1"
+      with_items: "{{ nodes }}"
