@@ -33,9 +33,26 @@ var QDR = (function(QDR) {
       var sections = ['log', 'connector', 'sslProfile', 'listener']
 
       $scope.Publish = function () {
-        doPublish()
+        doOperation("PUBLISH", function (response) {
+          Core.notification('info', $scope.mockTopologyDir + " published");
+          QDR.log.info("published " + $scope.mockTopologyDir)
+        })
       }
-      var doPublish = function (nodeIndex, callback) {
+      $scope.Deploy = function () {
+        // send the deploy command
+        doOperation("DEPLOY", function (response) {
+          QDR.log.info("deployment " + $scope.mockTopologyDir + " started")
+        })
+        // show the deploy status dialog
+        doDeployDialog()
+      }
+
+      $scope.showConfig = function (node) {
+        doOperation("SHOW-CONFIG", function (response) {
+          doShowConfigDialog(response)
+        }, {nodeIndex: node.index})
+      }
+      var doOperation = function (operation, callback, extraProps) {
         var l = []
         links.forEach( function (link) {
           if (link.source.nodeType === 'inter-router' && link.target.nodeType === 'inter-router')
@@ -44,27 +61,17 @@ var QDR = (function(QDR) {
                     cls: link.cls})
         })
         var props = {nodes: nodes, links: l, topology: $scope.mockTopologyDir, settings: settings}
-        if (angular.isDefined(nodeIndex)) {
-          op = "SHOW-CONFIG"
-          props.nodeIndex = nodeIndex
-        } else {
-          op = "PUBLISH"
-        }
-        QDRService.sendMethod(op, props, function (response) {
-          if (!angular.isDefined(nodeIndex)) {
-            Core.notification('info', props.topology + " published");
-            QDR.log.info("published " + $scope.mockTopologyDir)
-          } else {
+        if (extraProps)
+          Object.assign(props, props, extraProps)
+        QDRService.sendMethod(operation, props, function (response) {
+          if (callback)
             callback(response)
-          }
-        })
-      }
-      $scope.showConfig = function (node) {
-        doPublish(node.index, function (response) {
-          doShowConfigDialog(response)
         })
       }
 
+      $scope.canDeploy = function () {
+        return nodes.length > 0
+      }
       $scope.$watch('mockTopologyDir', function(newVal, oldVal) {
         if (oldVal != newVal) {
           switchTopology(newVal)
@@ -127,7 +134,9 @@ var QDR = (function(QDR) {
           animate = true
           QDR.log.info("switched to " + topology)
           initForceGraph()
-          Core.notification('info', "switched to " + props.topology);
+          $timeout( function () {
+            Core.notification('info', "switched to " + props.topology);
+          })
         })
       }
 
@@ -137,7 +146,9 @@ var QDR = (function(QDR) {
         $scope.selected_node = null
         resetMouseVars()
         force.nodes(nodes).links(links).start();
-        restart();
+        $timeout( function () {
+          restart();
+        })
       }
 
       $scope.delNode = function (node, skipinit) {
@@ -1370,6 +1381,10 @@ var QDR = (function(QDR) {
 
       $scope.mockTopologies = []
       $scope.mockTopologyDir = ""
+      $scope.ansible = false
+      QDRService.sendMethod("ANSIBLE-INSTALLED", {}, function (response) {
+        $scope.ansible = (response !== "")
+      })
       QDRService.sendMethod("GET-TOPOLOGY-LIST", {}, function (response) {
         $scope.mockTopologies = response.sort()
         QDRService.sendMethod("GET-TOPOLOGY", {}, function (response) {
@@ -1453,6 +1468,48 @@ var QDR = (function(QDR) {
           });
         })
       };
+      function doDeployDialog() {
+        var host = undefined
+        var port = undefined
+        for (var i=0; i<nodes.length; i++) {
+          var node = nodes[i]
+          if (node.listeners) {
+            for (var l in node.listeners) {
+              var listener = node.listeners[l]
+              if (listener.http) {
+                host = node.host
+                port = listener.port
+              }
+            }
+          }
+        }
+        var d = $uibModal.open({
+          dialogClass: "modal dlg-large",
+          backdrop: true,
+          keyboard: true,
+          backdropClick: true,
+          controller: 'QDR.DeployDialogController',
+          templateUrl: 'deploy-template.html',
+          resolve: {
+            dir: function () {
+              return $scope.mockTopologyDir
+            },
+            http_host: function () {
+              return host
+            },
+            http_port: function () {
+              return port
+            }
+          }
+        });
+        $timeout(function () {
+          d.result.then(function(result) {
+            if (result) {
+            }
+          });
+        })
+      }
+
       function doSettingsDialog(opts) {
         var d = $uibModal.open({
           dialogClass: "modal dlg-large",
@@ -1674,6 +1731,58 @@ var QDR = (function(QDR) {
 
   })
 
+  QDR.module.controller("QDR.DeployDialogController", function($scope, $uibModalInstance, QDRService, $timeout, $sce, dir, http_host, http_port) {
+    // setup polling to get deployment status
+    $scope.polling = true
+    $scope.state = "Deploying"
+    $scope.address = ""
+    var pollTimer = null
+    function doPoll() {
+      QDRService.sendMethod("DEPLOY-STATUS", {config: dir}, function (response) {
+        if (response[1] === 'DONE') {
+          $scope.polling = false
+          $scope.state = "Deploy Completed"
+          Core.notification('info', dir + " deployed");
+          if (http_host && http_port) {
+            $scope.address = $sce.trustAsHtml("http://" + http_host + ":" + http_port + "/#!/topology")
+          }
+        }
+        $timeout(function () {
+          $scope.status = response[0]
+          scrollToEnd()
+          if (response[1] === 'DONE') {
+          }
+          if ($scope.polling) (
+            pollTimer = setTimeout(doPoll, 1000)
+          )
+        })
+      })
+    }
+    pollTimer = setTimeout(doPoll, 1000)
+    $scope.hasConsole = function () {
+      return http_host && http_port
+    }
+
+    function scrollTopTween(scrollTop) {
+      return function() {
+        var i = d3.interpolateNumber(this.scrollTop, scrollTop);
+        return function(t) { this.scrollTop = i(t); };
+      }
+    }
+    var scrollToEnd = function () {
+      var scrollheight = d3.select("#deploy_status").property("scrollHeight");
+
+      d3.select('#deploy_status')
+        .transition().duration(1000)
+        .tween("uniquetweenname", scrollTopTween(scrollheight));
+    }
+    $scope.cancel = function () {
+      polling = false
+      clearTimeout(pollTimer)
+      $uibModalInstance.close()
+    }
+
+  })
 
   return QDR;
 }(QDR || {}));

@@ -20,6 +20,7 @@
 import json
 import re
 from schema import Schema
+import pdb
 
 class ConfigSection(object):
     def __init__(self, type, defaults, ignore, opts):
@@ -56,6 +57,10 @@ class RouterSection(ConfigSection):
     def __init__(self, id, **kwargs):
         super(RouterSection, self).__init__("router", RouterSection.defaults, RouterSection.ignore, kwargs)
         self.setEntry("id", id)
+
+    def __repr__(self):
+        s = super(RouterSection, self).__repr__()
+        return s.replace('deploy_host', '#deploy_host', 1)
 
 class ListenerSection(ConfigSection):
     defaults = {"role": "normal",

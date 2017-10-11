@@ -29,8 +29,12 @@ import SimpleHTTPServer
 import SocketServer
 import json
 import cStringIO
+import yaml
+import threading
+import subprocess
 
 import pdb
+from distutils.spawn import find_executable
 
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
@@ -38,7 +42,7 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
 get_class = lambda x: globals()[x]
 sectionKeys = {"log": "module", "sslProfile": "name", "connector": "port", "listener": "port"}
 
-# borrowed from qpid-dispatch/python/qpid_dispatch_internal/management/config.py
+# modified from qpid-dispatch/python/qpid_dispatch_internal/management/config.py
 def _parse(lines):
     """Parse config file format into a section list"""
     begin = re.compile(r'([\w-]+)[ \t]*{') # WORD {
@@ -50,7 +54,10 @@ def _parse(lines):
         """Do substitutions to make line json-friendly"""
         line = line.strip()
         if line.startswith("#"):
-            return ""
+            if line.startswith("#deploy_host:"):
+                line = line[1:]
+            else:
+                return ""
         # 'pattern:' is a special snowflake.  It allows '#' characters in
         # its value, so they cannot be treated as comment delimiters
         if line.split(':')[0].strip().lower() == "pattern":
@@ -92,7 +99,9 @@ class Manager(object):
     def __init__(self, topology, verbose):
         self.topology = topology
         self.verbose = verbose
-        self.base = "topologies/"
+        self.topo_base = "topologies/"
+        self.deploy_base = "deployments/"
+        self.state = None
 
     def operation(self, op, request):
         m = op.replace("-", "_")
@@ -104,6 +113,85 @@ class Manager(object):
         if self.verbose:
             print "Got request " + op
         return method(request)
+
+    def ANSIBLE_INSTALLED(self, request):
+        if self.verbose:
+            print "Ansible is", "installed" if find_executable("ansible") else "not installed"
+        return "installed" if find_executable("ansible") else ""
+
+    # if the node has listeners, and one of them has an http:'true'
+    def has_console(self, node):
+        #n = False
+        #return node.get('listeners') and any([n or h.get('http') for l, h in node.get('listeners').iteritems()])
+
+        listeners = node.get('listeners')
+        if listeners:
+            for k, listener in listeners.iteritems():
+                if listener.get('http'):
+                    return True
+
+        return False
+
+    def DEPLOY(self, request):
+        nodes = request["nodes"]
+        topology = request["topology"]
+
+        self.PUBLISH(request, deploy=True)
+
+        inventory = {'deploy_routers':
+             {'vars': {'topology': topology},
+              'hosts': {}
+            }
+        }
+        hosts = inventory['deploy_routers']['hosts']
+
+        #pdb.set_trace()
+        for node in nodes:
+            if node['cls'] == 'router':
+                host = node['host']
+                if not host in hosts:
+                    hosts[host] = {'nodes': [], 'create_console': False}
+                # if any of the nodes for this host has a console, set create_console for this host to true
+                hosts[host]['create_console'] = (hosts[host]['create_console'] or self.has_console(node))
+                hosts[host]['nodes'].append(node['name'])
+                # local hosts need to be marked as such
+                if host in ('0.0.0.0', 'localhost', '127.0.0.1'):
+                    hosts[host]['ansible_connection'] = 'local'
+
+        with open(self.deploy_base + 'inventory.yml', 'w') as n:
+            yaml.safe_dump(inventory, n, default_flow_style=False)
+
+        # start ansible-playbook in separate thread and callback when done
+        def popenCallback(callback, args):
+            def popen(callback, args):
+                # send all output to deploy.txt so we can send it to the console in DEPLOY_STATUS
+                with open('deploy.txt', 'w') as fout:
+                    proc = subprocess.Popen(args, stdout=fout, stderr=fout)
+                    proc.wait()
+                    callback()
+                return
+            thread = threading.Thread(target=popen, args=(callback, args))
+            thread.start()
+
+        def ansible_done():
+            if self.verbose:
+                print "-------------- DEPLOYMENT DONE ----------------"
+            self.state = "DONE"
+
+        self.state = "DEPLOYING"
+        popenCallback(ansible_done, ['ansible-playbook', self.deploy_base + 'install_dispatch.yaml', '-i', self.deploy_base + 'inventory.yml'])
+
+        return "deployment started"
+
+    def DEPLOY_STATUS(self, request):
+        with open('deploy.txt', 'r') as fin:
+            content = fin.readlines()
+
+        # remove leading blank line
+        if len(content) > 1 and content[0] == '\n':
+            content.pop(0)
+
+        return [''.join(content), self.state]
 
     def GET_LOG(self, request):
         return []
@@ -118,7 +206,7 @@ class Manager(object):
         nodes = []
         links = []
 
-        dc = DirectoryConfigs('./' + self.base + topology + '/')
+        dc = DirectoryConfigs('./' + self.topo_base + topology + '/')
         configs = dc.configs
 
         port_map = []
@@ -126,6 +214,8 @@ class Manager(object):
             port_map.append({'connectors': [], 'listeners': []})
             node = {}
             for sect in configs[file]:
+                # remove notes to self
+                host = sect[1].pop('deploy_host', None)
                 section = dc.asSection(sect)
                 if section:
                     if section.type == "router":
@@ -133,15 +223,11 @@ class Manager(object):
                         node["nodeType"] = unicode("inter-router")
                         node["name"] = section.entries["id"]
                         node["key"] = "amqp:/_topo/0/" + node["name"] + "/$management"
+                        if host:
+                            node['host'] = host
                         nodes.append(node)
 
                     elif section.type in sectionKeys:
-                        # look for a host in a listener
-                        if section.type == 'listener':
-                            host = section.entries.get('host')
-                            if host and 'host' not in node:
-                                node['host'] = host
-
                         role = section.entries.get('role')
                         if role == 'inter-router':
                             # we are processing an inter-router listener or connector: so create a link
@@ -171,50 +257,20 @@ class Manager(object):
         return unicode(self.topology)
 
     def GET_TOPOLOGY_LIST(self, request):
-        return [unicode(f) for f in os.listdir(self.base) if os.path.isdir(self.base + f)]
+        return [unicode(f) for f in os.listdir(self.topo_base) if os.path.isdir(self.topo_base + f)]
 
     def SWITCH(self, request):
         self.topology = request["topology"]
-        tdir = './' + self.base + self.topology + '/'
+        tdir = './' + self.topo_base + self.topology + '/'
         if not os.path.exists(tdir):
             os.makedirs(tdir)
         return self.LOAD(request)
-
-    def FIND_DIR(self, request):
-        dir = request['relativeDir']
-        files = request['fileList']
-        # find a directory with this name that contains these files
-
 
     def SHOW_CONFIG(self, request):
         nodeIndex = request['nodeIndex']
         return self.PUBLISH(request, nodeIndex)
 
-    def PUBLISH(self, request, nodeIndex=None):
-        nodes = request["nodes"]
-        links = request["links"]
-        topology = request["topology"]
-        settings = request["settings"]
-        http_port = settings.get('http_port', 5675)
-        listen_port = settings.get('internal_port', 2000)
-        default_host = settings.get('default_host', '0.0.0.0')
-
-        if nodeIndex and nodeIndex >= len(nodes):
-            return "Node index out of range"
-
-        if self.verbose:
-            if nodeIndex is None:
-                print("PUBLISHing to " + topology)
-            else:
-                print("Creating config for " + topology + " node " + nodes[nodeIndex]['name'])
-
-        if nodeIndex is None:
-            # remove all .conf files from the output dir. they will be recreated below possibly under new names
-            for f in glob(self.base + topology + "/*.conf"):
-                if self.verbose:
-                    print "Removing", f
-                os.remove(f)
-
+    def _connect_(self, links, nodes, default_host, listen_port):
         for link in links:
             s = nodes[link['source']]
             t = nodes[link['target']]
@@ -239,6 +295,36 @@ class Manager(object):
             t['conns'].append({"port": lport, "host": lhost})
             t['conn_to'].append(s['name'])
 
+    def PUBLISH(self, request, nodeIndex=None, deploy=False):
+        nodes = request["nodes"]
+        links = request["links"]
+        topology = request["topology"]
+        settings = request["settings"]
+        http_port = settings.get('http_port', 5675)
+        listen_port = settings.get('internal_port', 2000)
+        default_host = settings.get('default_host', '0.0.0.0')
+
+        if nodeIndex and nodeIndex >= len(nodes):
+            return "Node index out of range"
+
+        if self.verbose:
+            if nodeIndex is not None:
+                print("Creating config for " + topology + " node " + nodes[nodeIndex]['name'])
+            elif deploy:
+                print("DEPLOYing to " + topology)
+            else:
+                print("PUBLISHing to " + topology)
+
+        if nodeIndex is None:
+            # remove all .conf files from the output dir. they will be recreated below possibly under new names
+            for f in glob(self.topo_base + topology + "/*.conf"):
+                if self.verbose:
+                    print "Removing", f
+                os.remove(f)
+
+        # establish connections and listeners for each node based on links
+        self._connect_(links, nodes, default_host, listen_port)
+
         # now process all the routers
         for node in nodes:
             if node['nodeType'] == 'inter-router':
@@ -246,10 +332,10 @@ class Manager(object):
                     print "------------- processing node", node["name"], "---------------"
 
                 nname = node["name"]
-                if nodeIndex is None:
-                    config_fp = open(self.base + topology + "/" + nname + ".conf", "w+")
-                else:
+                if nodeIndex is not None:
                     config_fp = cStringIO.StringIO()
+                else:
+                    config_fp = open(self.topo_base + topology + "/" + nname + ".conf", "w+")
 
                 # add a router section in the config file
                 r = RouterSection(**node)
@@ -258,6 +344,8 @@ class Manager(object):
                 else:
                     r.setEntry('mode', 'interior')
                 r.setEntry('id', node['name'])
+                if nodeIndex is None:
+                    r.setEntry('deploy_host', node.get('host', ''))
                 config_fp.write(str(r) + "\n")
 
                 # write other sections
@@ -269,10 +357,15 @@ class Manager(object):
                             c = get_class(cname)
                             if sectionKey == "listener" and o['port'] != 'amqp' and int(o['port']) == http_port:
                                 config_fp.write("\n# Listener for a console\n")
+                                if deploy:
+                                    o['httpRoot'] = '/usr/local/share/qpid-dispatch/stand-alone'
+                            if node.get('host') == o.get('host'):
+                                o['host'] = '0.0.0.0'
                             config_fp.write(str(c(**o)) + "\n")
 
                 if 'listener' in node:
-                    lhost = node.get('host', default_host)
+                    # always listen on localhost
+                    lhost = "0.0.0.0"
                     listenerSection = ListenerSection(node['listener'], **{'host': lhost, 'role': 'inter-router'})
                     if 'listen_from' in node and len(node['listen_from']) > 0:
                         config_fp.write("\n# listener for connectors from " + ', '.join(node['listen_from']) + "\n")
@@ -282,6 +375,8 @@ class Manager(object):
                     for idx, conns in enumerate(node['conns']):
                         conn_port = conns['port']
                         conn_host = conns['host']
+                        if node.get('host') == conn_host:
+                            conn_host = "0.0.0.0"
                         connectorSection = ConnectorSection(conn_port, **{'host': conn_host, 'role': 'inter-router'})
                         if 'conn_to' in node and len(node['conn_to']) > idx:
                             config_fp.write("\n# connect to " + node['conn_to'][idx] + "\n")

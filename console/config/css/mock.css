@@ -126,3 +126,13 @@ div.boolean label {
 .alert {
   max-width: 20em;
 }
+
+input.router-host {
+  width: 45em;
+}
+
+pre.tail {
+  max-height: 15em;
+  min-height: 15em;
+  overflow-y: scroll;
+}
