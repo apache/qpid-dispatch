@@ -94,7 +94,6 @@ circle.node.reflexive {
 circle.node.selected {
   stroke: #6F6 !important;
   stroke-width: 2px;
-  fill: #e0e0ff !important;
 }
 circle.node.highlighted {
   stroke: #6F6;

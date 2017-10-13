@@ -32,12 +32,7 @@ import cStringIO
 import yaml
 import threading
 import subprocess
-
-import pdb
 from distutils.spawn import find_executable
-
-def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for _ in range(size))
 
 get_class = lambda x: globals()[x]
 sectionKeys = {"log": "module", "sslProfile": "name", "connector": "port", "listener": "port"}
@@ -101,6 +96,7 @@ class Manager(object):
         self.verbose = verbose
         self.topo_base = "topologies/"
         self.deploy_base = "deployments/"
+        self.deploy_file = self.deploy_base + "deploy.txt"
         self.state = None
 
     def operation(self, op, request):
@@ -135,6 +131,8 @@ class Manager(object):
     def DEPLOY(self, request):
         nodes = request["nodes"]
         topology = request["topology"]
+        inventory_file = self.deploy_base + "inventory.yml"
+        ansible_become_pass = "ansible_become_pass"
 
         self.PUBLISH(request, deploy=True)
 
@@ -145,7 +143,6 @@ class Manager(object):
         }
         hosts = inventory['deploy_routers']['hosts']
 
-        #pdb.set_trace()
         for node in nodes:
             if node['cls'] == 'router':
                 host = node['host']
@@ -154,37 +151,44 @@ class Manager(object):
                 # if any of the nodes for this host has a console, set create_console for this host to true
                 hosts[host]['create_console'] = (hosts[host]['create_console'] or self.has_console(node))
                 hosts[host]['nodes'].append(node['name'])
+                # pass in the password for eash host if provided
+                if request.get(ansible_become_pass + "_" + host):
+                    hosts[host][ansible_become_pass] = request.get(ansible_become_pass + "_" + host)
                 # local hosts need to be marked as such
                 if host in ('0.0.0.0', 'localhost', '127.0.0.1'):
                     hosts[host]['ansible_connection'] = 'local'
 
-        with open(self.deploy_base + 'inventory.yml', 'w') as n:
+        with open(inventory_file, 'w') as n:
             yaml.safe_dump(inventory, n, default_flow_style=False)
 
-        # start ansible-playbook in separate thread and callback when done
+        # start ansible-playbook in separate thread so we don't have to wait and can still get a callback when done
         def popenCallback(callback, args):
             def popen(callback, args):
                 # send all output to deploy.txt so we can send it to the console in DEPLOY_STATUS
-                with open('deploy.txt', 'w') as fout:
+                with open(self.deploy_file, 'w') as fout:
                     proc = subprocess.Popen(args, stdout=fout, stderr=fout)
                     proc.wait()
-                    callback()
+                    callback(proc.returncode)
                 return
             thread = threading.Thread(target=popen, args=(callback, args))
             thread.start()
 
-        def ansible_done():
+        def ansible_done(returncode):
+            os.remove(inventory_file)
             if self.verbose:
-                print "-------------- DEPLOYMENT DONE ----------------"
-            self.state = "DONE"
+                print "-------------- DEPLOYMENT DONE with return code", returncode, "------------"
+            if returncode:
+                self.state = returncode
+            else:
+                self.state = "DONE"
 
         self.state = "DEPLOYING"
-        popenCallback(ansible_done, ['ansible-playbook', self.deploy_base + 'install_dispatch.yaml', '-i', self.deploy_base + 'inventory.yml'])
+        popenCallback(ansible_done, ['ansible-playbook', self.deploy_base + 'install_dispatch.yaml', '-i', inventory_file])
 
         return "deployment started"
 
     def DEPLOY_STATUS(self, request):
-        with open('deploy.txt', 'r') as fin:
+        with open(self.deploy_file, 'r') as fin:
             content = fin.readlines()
 
         # remove leading blank line

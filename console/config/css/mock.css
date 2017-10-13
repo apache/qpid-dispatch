@@ -136,3 +136,30 @@ pre.tail {
   min-height: 15em;
   overflow-y: scroll;
 }
+
+circle.node {
+  opacity: 0.5;
+}
+circle.node.inter-router.highlighted {
+  opacity: 1;
+}
+circle.node {
+    stroke-width: 0;
+}
+
+.host_color, .host_name {
+  display: inline-block;
+}
+
+.host_color {
+  width: 1em;
+  height: 1em;
+  border: 0;
+}
+.host_name {
+  font-weight: bold;
+}
+
+.host_pass {
+  float: right;
+}

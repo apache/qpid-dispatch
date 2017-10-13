@@ -223,22 +223,6 @@ var QDR = (function(QDR) {
             }
           })
         }
-        // add checkbox to apply this log module/enable to all routers
-        $scope.applyLog = {isChecked: false}
-        ediv.attributes.push( {
-          sort: 'last',
-          name: 'apply',
-          humanName: 'Apply to all routers',
-          description: 'Apply this to all routers',
-          type: 'checkbox',
-          rawtype: 'boolean',
-          input: 'checkbox',
-          selected: undefined,
-          'default': false,
-          value: $scope.applyLog.isChecked,
-          required: false,
-          unique: false
-        })
       }
       // sort ediv.attributes on name
       var allNames = ediv.attributes.map( function (attr) {

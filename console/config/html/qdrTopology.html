@@ -23,11 +23,13 @@ under the License.
             <button class="btn btn-primary" type="button" ng-click="Publish()" title="Save this topology">Publish</button>
             <button class="btn btn-primary" type="button" ng-click="Clear()" title="Remove all routers">Clear</button>
             <button class="btn btn-primary" type="button" ng-click="Deploy()" ng-disabled="!canDeploy()" ng-if="ansible" title="Deploy this topology">Deploy</button>
+            <button class="btn btn-primary pull-right" type="button" ng-click="doHelp()" title="Show help">?</button>
             <button class="btn btn-primary pull-right" type="button" ng-click="doSettings()" title="Show global settings">Settings</button>
             <button class="btn btn-primary pull-right" type="button" ng-click="showNewDlg()" title="Enter a new topology name">New Topology</button>
             <div class="selected-node pull-right">
                 <button class="btn btn-primary" type="button" ng-click="addAnotherNode(true)"><b class="plus caret"></b> Add new router</button>
-                <button id="action_button" class="btn btn-primary" type="button" ng-disabled="!selected_node" ng-click="showActions($event)" title="Show actions on selected router">Actions <b class="down caret"></b></button>
+                <!-- <button id="action_button" class="btn btn-primary" type="button" ng-disabled="!selected_node" ng-click="showActions($event)" title="Show actions on selected router">Actions <b class="down caret"></b></button> -->
+                <button id="multiple_action_button" class="btn btn-primary" type="button" ng-disabled="!anySelectedNodes()" ng-click="showMultiActions($event)" title="Show actions on selected routers">Actions for selected routers<b class="down caret"></b></button>
             </div>
         </div>
         <div id="topology"><!-- d3 toplogy here --></div>
@@ -48,10 +50,10 @@ under the License.
     <div id="action_menu" class="contextMenu">
         <ul>
             <li ng-click="editSection(selected_node, 'router')">Edit router info</li>
-            <li ng-click="setRouterHost(selected_node)">Set router host</li>
+            <li ng-click="setRouterHost()">Set router host</li>
 
             <li class="context-separator"></li>
-            <li ng-click="editSection(selected_node, 'log', 'new')">Add new log section</li>
+            <li ng-click="editSection(false, 'log', 'new')">Add new log section</li>
             <li ng-repeat="log in getSectionList(selected_node, 'log')" ng-click="editSection(selected_node, 'log', log)">Edit/Delete {{log}} log section</li>
 
             <li class="context-separator"></li>
@@ -71,13 +73,24 @@ under the License.
             <!-- <li ng-repeat="listener in getSectionList(selected_node, 'listener')" ng-click="editSection(selected_node, 'listener', listener)">Edit/Delete listener on port {{listener}} </li> -->
 
             <li class="context-separator"></li>
-            <li ng-click="delNode(selected_node)">Delete this node</li>
+            <li ng-click="deleteNode(false)">Delete this node</li>
             <li ng-click="showConfig(selected_node)">Show generated config</li>
+        </ul>
+    </div>
+    <div id="multiple_action_menu" class="contextMenu">
+        <ul>
+            <li ng-click="setRouterHost(true)">Set host for selected routers</li>
+
+            <li class="context-separator"></li>
+            <li ng-click="editSection(true, 'log', 'new')">Add log section for selected routers</li>
+
+            <li class="context-separator"></li>
+            <li ng-click="deleteNode(true)">Delete selected nodes</li>
         </ul>
     </div>
     <div id="client_context_menu" class="contextMenu">
         <ul>
-            <li ng-click="delNode(selected_node)">Delete</li>
+            <li ng-click="deleteNode(false)">Delete</li>
             <li class="context-separator"></li>
             <li ng-click="editThisSection(selected_node)">Edit</li>
         </ul>
@@ -227,14 +240,33 @@ under the License.
         <div class="modal-header">
             <h3 class="modal-title">{{state}}</h3>
         </div>
-        <div class="modal-body">
-            <pre id="deploy_status" class="tail">{{status}}</pre>
-            <div ng-hide="polling" id="message">Deployed.
-                <div ng-show="hasConsole()">Browse to <a ng-href="{{address}}" target="_blank">here</a> to manage the router.</div>
+        <div ng-hide="deploy_state == 'deploying'">
+            <div class="modal-body">
+                <div ng-repeat="host in hosts">
+                    <div class="host_color circle node" ng-class="host.color"></div>
+                    <div class="host_name">{{host.name}}</div>
+                    <button class="btn btn-basic host_pass" ng-click="show_pass(host)" ng-hide="showing_pass == host.name">Sudo Password</button>
+                    <div class="host_pass" ng-show="showing_pass == host.name"><input ng-keyup="$event.keyCode == 13 ? show_pass() : null" focus-when="showing_pass == host.name" ng-model="host.pass" type="password" /> <button class="btn btn-basic" ng-click="show_pass()">OK</button></div>
+                    <ul class="host_nodes">
+                        <li ng-repeat="node in host.nodes">{{node}}</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" type="button" ng-click="deploy()">Deploy</button>
+                <button ng-class="close_button_class" class="btn" type="button" ng-click="cancel()">Cancel</button>
             </div>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-warning" type="button" ng-click="cancel()">Close</button>
+        <div ng-show="deploy_state == 'deploying'">
+            <div class="modal-body">
+                <pre id="deploy_output" class="tail">{{status}}</pre>
+                <div ng-show="done()" id="message">Deployed.
+                    <div ng-show="hasConsole()">Browse to <a ng-href="{{address}}" target="_blank">here</a> to manage the router.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button ng-class="close_button_class" class="btn" type="button" ng-click="cancel()">Close</button>
+            </div>
         </div>
     </form>
 </script>
