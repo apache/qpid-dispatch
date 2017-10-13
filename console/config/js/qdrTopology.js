@@ -1443,11 +1443,18 @@ var QDR = (function(QDR) {
         var style = document.createElement("style");
         style.appendChild(document.createTextNode(""));
         document.head.appendChild(style);
+        var sheet = style.sheet ? style.sheet : style.styleSheet;
         for (var i=0; i<10; i++) {
-          //console.log("adding rule " + "circle.node.host"+i + ", fill: " + hostColors(i) + ";")
-          style.sheet.addRule("circle.node.host"+i, "fill: " + hostColors(i) + ";", 0);
-          style.sheet.addRule("circle.node.host"+i+".multi-selected", "fill: url(#host_"+i+")", 1);
-          style.sheet.addRule("div.node.host"+i, "background-color: " + hostColors(i) + ";", 2);
+          if (sheet.insertRule) {
+            sheet.insertRule("button {color:red}", 0);
+            sheet.insertRule("circle.node.host"+i+" {fill: " + hostColors(i) + ";}", 0);
+            sheet.insertRule("circle.node.host"+i+".multi-selected {fill: url(#host_"+i+");}", 1);
+            sheet.insertRule("div.node.host"+i+" {background-color: " + hostColors(i) + ";}", 2);
+          } else if (sheet.addRule) { // for IE < 9
+            sheet.addRule("circle.node.host"+i, "fill: " + hostColors(i) + ";", 0);
+            sheet.addRule("circle.node.host"+i+".multi-selected", "fill: url(#host_"+i+")", 1);
+            sheet.addRule("div.node.host"+i, "background-color: " + hostColors(i) + ";", 2);
+          }
         }
 
       }

@@ -65,21 +65,13 @@ var QDR = (function(QDR) {
    *
    * This plugin's angularjs module instance
    */
-  QDR.module = angular.module(QDR.pluginName, ['ngAnimate', 'ngResource', 'ngRoute', 'ngSanitize', 'ui.bootstrap']);
+  QDR.module = angular.module(QDR.pluginName, ['ngAnimate', 'ngResource', 'ngSanitize', 'ui.bootstrap']);
 
   Core = {
     notification: function (severity, msg) {
       $.notify(msg, severity)
     }
   }
-
-  // set up the routing for this plugin
-  QDR.module.config(function($routeProvider) {
-    $routeProvider
-      .otherwise({
-          templateUrl: QDR.templatePath + 'qdrTopology.html'
-        })
-  });
 
   QDR.module.config(function ($compileProvider) {
     $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|ftp|mailto|chrome-extension|file|blob):/);
@@ -134,7 +126,7 @@ var QDR = (function(QDR) {
   }
     // one-time initialization happens in the run function
     // of our module
-  QDR.module.run( ["$rootScope", '$route', '$timeout', "$location", "$log", "QDRService", function ($rootScope, $route, $timeout, $location, $log, QDRService) {
+  QDR.module.run( ["$log", "QDRService", function ($log, QDRService) {
     QDR.log = new QDR.logger($log);
     QDR.log.info("*************creating config editor************");
     QDRService.getSchema(function () {

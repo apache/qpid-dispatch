@@ -15,7 +15,7 @@ Running
 Install the 3rd party javascript libraries:
 - in the console/config/ directory run
   bower install
-This will create a bower_components/ directory can install the needed files
+This will create a bower_components/ directory and install the needed files
 
 - run ./config.py
 - in the address bar of a browser, enter localhost:8000
