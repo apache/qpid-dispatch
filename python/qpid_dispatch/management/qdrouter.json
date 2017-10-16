@@ -926,30 +926,37 @@
             "attributes": {
                 "traceCount": {
                     "description": "How many trace-level events have happened on this log.",
+                    "graph": true,
                     "type": "integer"
                 } ,
                 "debugCount": {
                     "description": "How many debug-level events have happened on this log.",
+                    "graph": true,
                     "type": "integer"
                 } ,
                 "infoCount": {
                     "description": "How many info-level events have happened on this log.",
+                    "graph": true,
                     "type": "integer"
                 } ,
                 "noticeCount": {
                     "description": "How many notice-level events have happened on this log.",
+                    "graph": true,
                     "type": "integer"
                 } ,
                 "warningCount": {
                     "description": "How many warning-level events have happened on this log.",
+                    "graph": true,
                     "type": "integer"
                 } ,
                 "errorCount": {
                     "description": "How many error-level events have happened on this log.",
+                    "graph": true,
                     "type": "integer"
                 } ,
                 "criticalCount": {
                     "description": "How many critical-level events have happened on this log.",
+                    "graph": true,
                     "type": "integer"
                 }
             }
