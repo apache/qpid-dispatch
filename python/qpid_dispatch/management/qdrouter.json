@@ -397,6 +397,10 @@
                     "type": "string",
                     "description": "Software Version"
                 },
+                "hostName": {
+                    "type": "string",
+                    "description": "hostName of machine on which router is running"
+                },
                 "helloInterval": {
                     "type": "integer",
                     "default": 1,
