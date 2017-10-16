@@ -63,6 +63,7 @@ data that may be updated in other threads.
 """
 
 import traceback, json, pstats
+import socket
 from itertools import ifilter, chain
 from traceback import format_exc
 from threading import Lock
@@ -241,6 +242,10 @@ class RouterEntity(EntityAdapter):
         return self.attributes.get('id')
 
     def create(self):
+        try:
+            self.attributes[u"hostName"] = socket.gethostbyaddr(socket.gethostname())[0]
+        except:
+            self.attributes[u"hostName"] = ''
         self._qd.qd_dispatch_configure_router(self._dispatch, self)
 
     def __str__(self):
