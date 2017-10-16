@@ -269,7 +269,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
             //
             if (pn_delivery_settled(pnd) && receive_complete) {
                 pn_delivery_settle(pnd);
-                qdr_delivery_decref(router->router_core, delivery);
+                qdr_delivery_decref(router->router_core, delivery, "AMQP_rx_handler - link route settled delivery");
             }
         }
         else {
@@ -282,7 +282,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
                                                        pn_disposition_data(pn_delivery_remote(pnd)));
             pn_delivery_set_context(pnd, delivery);
             qdr_delivery_set_context(delivery, pnd);
-            qdr_delivery_incref(delivery);
+            qdr_delivery_incref(delivery, "AMQP_rx_handler - link-route add to proton delivery");
         }
 
         return;
@@ -346,7 +346,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         if (receive_complete) {
           if (pn_delivery_settled(pnd) || pn_delivery_aborted(pnd)) {
               pn_delivery_settle(pnd);
-              qdr_delivery_decref(router->router_core, delivery);
+              qdr_delivery_decref(router->router_core, delivery, "AMQP_rx_handler - message-route settled");
           }
         }
 
@@ -474,7 +474,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         // If this delivery is unsettled or if this is a settled multi-frame large message, set the context
         pn_delivery_set_context(pnd, delivery);
         qdr_delivery_set_context(delivery, pnd);
-        qdr_delivery_incref(delivery);
+        qdr_delivery_incref(delivery, "AMQP_rx_handler - message-route add proton delivery");
     } else {
         //
         // If there is no delivery, the message is now and will always be unroutable because there is no address.
@@ -1278,7 +1278,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
                 pn_delivery_set_context(pdlv, dlv);
                 qdr_delivery_set_context(dlv, pdlv);
                 qdr_delivery_set_set_proton_ref(dlv, true);
-                qdr_delivery_incref(dlv);
+                qdr_delivery_incref(dlv, "CORE_link_deliver - add to proton delivery");
             }
         }
 
@@ -1325,7 +1325,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
                 qdr_delivery_set_cleared_proton_ref(dlv, true);
 
                 if (qdr_delivery_get_set_proton_ref(dlv)) {
-                    qdr_delivery_decref(router->router_core, dlv);
+                    qdr_delivery_decref(router->router_core, dlv, "CORE_link_deliver - get_set_proton_ref");
                 }
             }
 
@@ -1389,7 +1389,7 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         pn_delivery_set_context(pnd, 0);
         pn_delivery_settle(pnd);
         qdr_delivery_set_cleared_proton_ref(dlv, true);
-        qdr_delivery_decref(router->router_core, dlv);
+        qdr_delivery_decref(router->router_core, dlv, "CORE_delivery_update - remove proton delivery");
     }
 }
 

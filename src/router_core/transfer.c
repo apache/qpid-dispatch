@@ -20,6 +20,7 @@
 #include "router_core_private.h"
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -121,7 +122,7 @@ qdr_delivery_t *qdr_deliver_continue(qdr_delivery_t *in_dlv)
     action->args.connection.delivery = in_dlv;
 
     // This incref is for the action reference
-    qdr_delivery_incref(in_dlv);
+    qdr_delivery_incref(in_dlv, "qdr_deliver_continue - add to action list");
     qdr_action_enqueue(in_dlv->link->core, action);
     return in_dlv;
 }
@@ -159,7 +160,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                         dlv->where = QDR_DELIVERY_NOWHERE;
 
                         // This decref is for removing this settled delivery from the undelivered list
-                        qdr_delivery_decref(core, dlv);
+                        qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - remove from undelivered list");
 
                     } else {
                         DEQ_INSERT_TAIL(link->unsettled, dlv);
@@ -267,7 +268,7 @@ void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery,
     // the given ref rather than increment a new one.
     //
     if (!ref_given)
-        qdr_delivery_incref(delivery);
+        qdr_delivery_incref(delivery, "qdr_delivery_update_disposition - add to action");
 
     qdr_action_enqueue(core, action);
 }
@@ -331,9 +332,12 @@ bool qdr_delivery_receive_complete(const qdr_delivery_t *delivery)
 }
 
 
-void qdr_delivery_incref(qdr_delivery_t *delivery)
+void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label)
 {
-    sys_atomic_inc(&delivery->ref_count);
+    uint32_t rc = sys_atomic_inc(&delivery->ref_count);
+    if (delivery && delivery->link)
+        qd_log(delivery->link->core->log, QD_LOG_DEBUG,
+               "qdr_delivery_incref:    dlv:%lx rc:%"PRIu32" label:%s", (long) delivery, rc + 1, label);
 }
 
 void qdr_delivery_set_aborted(const qdr_delivery_t *delivery, bool aborted)
@@ -352,10 +356,11 @@ bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery)
 }
 
 
-void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery)
+void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char *label)
 {
     uint32_t ref_count = sys_atomic_dec(&delivery->ref_count);
     assert(ref_count > 0);
+    qd_log(core->log, QD_LOG_DEBUG, "qdr_delivery_decref:    dlv:%lx rc:%"PRIu32" label:%s", (long) delivery, ref_count - 1, label);
 
     if (ref_count == 1) {
         //
@@ -408,7 +413,7 @@ void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     // Remove the unsettled reference
     //
     if (moved)
-        qdr_delivery_decref_CT(core, dlv);
+        qdr_delivery_decref_CT(core, dlv, "qdr_delivery_release_CT - remove from unsettled list");
 }
 
 
@@ -427,7 +432,7 @@ void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     // Remove the unsettled reference
     //
     if (moved)
-        qdr_delivery_decref_CT(core, dlv);
+        qdr_delivery_decref_CT(core, dlv, "qdr_delivery_failed_CT - remove from unsettled list");
 }
 
 
@@ -572,8 +577,8 @@ void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
 
     out_dlv->peer = in_dlv;
 
-    qdr_delivery_incref(out_dlv);
-    qdr_delivery_incref(in_dlv);
+    qdr_delivery_incref(out_dlv, "qdr_delivery_link_peers_CT - linked to peer (1)");
+    qdr_delivery_incref(in_dlv, "qdr_delivery_link_peers_CT - linked to peer (2)");
 }
 
 
@@ -592,8 +597,8 @@ void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_del
         assert(dlv->peer == peer);
         dlv->peer  = 0;
         peer->peer = 0;
-        qdr_delivery_decref_CT(core, dlv);
-        qdr_delivery_decref_CT(core, peer);
+        qdr_delivery_decref_CT(core, dlv, "qdr_delivery_unlink_peers_CT - unlinked from peer (1)");
+        qdr_delivery_decref_CT(core, peer, "qdr_delivery_unlink_peers_CT - unlinked from peer (2)");
     }
     else {
         //
@@ -607,9 +612,9 @@ void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_del
                 qdr_del_delivery_ref(&dlv->peers, peer_ref);
                 if (peer->peer == dlv)  {
                     peer->peer = 0;
-                    qdr_delivery_decref_CT(core, dlv);
+                    qdr_delivery_decref_CT(core, dlv, "qdr_delivery_unlink_peers_CT - unlinked from peer (3)");
                 }
-                qdr_delivery_decref_CT(core, peer);
+                qdr_delivery_decref_CT(core, peer, "qdr_delivery_unlink_peers_CT - unlinked from peer (4)");
                 break;
             }
             peer_ref = DEQ_NEXT(peer_ref);
@@ -659,11 +664,11 @@ qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv)
 }
 
 
-void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv)
+void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv, const char *label)
 {
     uint32_t ref_count = sys_atomic_dec(&dlv->ref_count);
-
     assert(ref_count > 0);
+    qd_log(core->log, QD_LOG_DEBUG, "qdr_delivery_decref_CT: dlv:%lx rc:%"PRIu32" label:%s", (long) dlv, ref_count - 1, label);
 
     if (ref_count == 1)
         qdr_delete_delivery_internal_CT(core, dlv);
@@ -821,7 +826,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         //
         // Decrementing the delivery ref count for the action
         //
-        qdr_delivery_decref_CT(core, dlv);
+        qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (1)");
         qdr_link_issue_credit_CT(core, link, 1, false);
     } else if (fanout > 0) {
         if (dlv->settled || qdr_is_addr_treatment_multicast(addr)) {
@@ -834,7 +839,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
                 //
                 // This decref is for the action ref
                 //
-                qdr_delivery_decref_CT(core, dlv);
+                qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (2)");
             }
             else {
                 //
@@ -910,7 +915,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             // If the delivery is settled, decrement the ref_count on the delivery.
             // This count was the owned-by-action count.
             //
-            qdr_delivery_decref_CT(core, dlv);
+            qdr_delivery_decref_CT(core, dlv, "qdr_link_deliver_CT - removed from action");
         }
         return;
     }
@@ -1025,15 +1030,15 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
     //
     // Release the action reference, possibly freeing the delivery
     //
-    qdr_delivery_decref_CT(core, dlv);
+    qdr_delivery_decref_CT(core, dlv, "qdr_update_delivery_CT - remove from action");
 
     //
     // Release the unsettled references if the deliveries were moved
     //
     if (dlv_moved)
-        qdr_delivery_decref_CT(core, dlv);
+        qdr_delivery_decref_CT(core, dlv, "qdr_update_delivery_CT - removed from unsettled (1)");
     if (peer_moved)
-        qdr_delivery_decref_CT(core, peer);
+        qdr_delivery_decref_CT(core, peer, "qdr_update_delivery_CT - removed from unsettled (2)");
     if (error_unassigned)
         qdr_error_free(error);
 }
@@ -1086,7 +1091,7 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
     qdr_delivery_t *in_dlv  = action->args.connection.delivery;
 
     // This decref is for the action reference
-    qdr_delivery_decref_CT(core, in_dlv);
+    qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from action");
 
     //
     // If it is already in the undelivered list or it has no peers, don't try to deliver this again.
@@ -1132,7 +1137,7 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
             // Remove the delivery from the settled list and decref the in_dlv.
             in_dlv->where = QDR_DELIVERY_NOWHERE;
             DEQ_REMOVE(in_dlv->link->settled, in_dlv);
-            qdr_delivery_decref_CT(core, in_dlv); // This decref is for removing the delivery from the settled list.
+            qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from settled list");
         }
     }
 }
@@ -1240,7 +1245,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 
     sys_mutex_lock(link->conn->work_lock);
     if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
-        qdr_delivery_incref(dlv);
+        qdr_delivery_incref(dlv, "qdr_delivery_push_CT - add to updated list");
         qdr_add_delivery_ref_CT(&link->updated_deliveries, dlv);
         qdr_add_link_ref(&link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
         activate = true;

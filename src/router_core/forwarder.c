@@ -162,7 +162,7 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
                 free_qdr_link_work_t(dlv->link_work);
                 dlv->link_work = 0;
             }
-            qdr_delivery_decref_CT(core, dlv);
+            qdr_delivery_decref_CT(core, dlv, "qdr_forward_drop_presettled_CT_LH - remove from link-work list");
         }
         dlv = next;
     }
@@ -185,7 +185,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *out_link, qdr_delivery
     out_dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
 
     // This incref is for putting the delivery in the undelivered list
-    qdr_delivery_incref(out_dlv);
+    qdr_delivery_incref(out_dlv, "qdr_forward_deliver_CT - add to undelivered list");
 
     //
     // We must put a work item on the link's work list to represent this pending delivery.

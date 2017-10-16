@@ -606,8 +606,8 @@ void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery,
 
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
 void *qdr_delivery_get_context(qdr_delivery_t *delivery);
-void qdr_delivery_incref(qdr_delivery_t *delivery);
-void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery);
+void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label);
+void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char *label);
 void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *length);
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
 qdr_error_t *qdr_delivery_error(const qdr_delivery_t *delivery);
