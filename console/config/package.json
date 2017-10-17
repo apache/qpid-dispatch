@@ -1,0 +1,37 @@
+{
+  "name": "qpid-dispatch-console-config",
+  "version": "0.1.0",
+  "description": "Apache Qpid Dispatch Console Config and Deploy Utility",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Apache",
+    "Qpid",
+    "Dispatch",
+    "Console"
+  ],
+  "author": "Redhat",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "angular": "^1.6.6",
+    "angular-animate": "^1.6.6",
+    "angular-resource": "^1.6.6",
+    "angular-sanitize": "^1.6.6",
+    "angular-ui-bootstrap": "^2.5.6",
+    "d3": "^3.5.17",
+    "font-awesome": "^4.7.0",
+    "html5shiv": "^3.7.3",
+    "jquery": "^3.2.1",
+    "jquery-ui-dist": "^1.12.1",
+    "jquery-ui-themes": "^1.12.0",
+    "notifyjs-browser": "^0.4.2",
+    "patternfly": "^3.28.1"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://git-wip-us.apache.org/repos/asf/qpid-dispatch"
+  }
+}
