@@ -69,27 +69,52 @@ class RouterTest(TestCase):
         cls.routers[1].wait_router_connected('A')
 
 
-    def test_01_message_route_interrupted_stream_one_router(self):
+    def test_01_message_route_truncated_one_router(self):
+        test = MessageRouteTruncateTest(self.routers[0].addresses[0],
+                                        self.routers[0].addresses[0],
+                                        "addr_01")
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_02_message_route_truncated_two_routers(self):
+        test = MessageRouteTruncateTest(self.routers[0].addresses[0],
+                                        self.routers[1].addresses[0],
+                                        "addr_02")
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_03_link_route_truncated_one_router(self):
+        test = LinkRouteTruncateTest(self.routers[0].addresses[0],
+                                     self.routers[0].addresses[1],
+                                     "link.addr_03",
+                                     self.routers[0].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_04_link_route_truncated_two_routers(self):
+        test = LinkRouteTruncateTest(self.routers[1].addresses[0],
+                                     self.routers[0].addresses[1],
+                                     "link.addr_04",
+                                     self.routers[1].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_05_message_route_abort_one_router(self):
         test = MessageRouteAbortTest(self.routers[0].addresses[0],
                                      self.routers[0].addresses[0],
-                                     "addr_01")
+                                     "addr_05")
         test.run()
         self.assertEqual(None, test.error)
 
 
-    def test_02_message_route_interrupted_stream_two_routers(self):
+    def test_06_message_route_abort_one_router(self):
         test = MessageRouteAbortTest(self.routers[0].addresses[0],
                                      self.routers[1].addresses[0],
-                                     "addr_02")
-        test.run()
-        self.assertEqual(None, test.error)
-
-
-    def test_03_link_route_interrupted_stream_one_router(self):
-        test = LinkRouteAbortTest(self.routers[0].addresses[0],
-                                  self.routers[0].addresses[1],
-                                  "link.addr_03",
-                                  self.routers[0].addresses[0])
+                                     "addr_06")
         test.run()
         self.assertEqual(None, test.error)
 
@@ -137,9 +162,9 @@ class PollTimeout(object):
         self.parent.poll_timeout()
 
 
-class MessageRouteAbortTest(MessagingHandler):
+class MessageRouteTruncateTest(MessagingHandler):
     def __init__(self, sender_host, receiver_host, address):
-        super(MessageRouteAbortTest, self).__init__()
+        super(MessageRouteTruncateTest, self).__init__()
         self.sender_host      = sender_host
         self.receiver_host    = receiver_host
         self.address          = address
@@ -238,9 +263,9 @@ class MessageRouteAbortTest(MessagingHandler):
         Container(self).run()
 
 
-class LinkRouteAbortTest(MessagingHandler):
+class LinkRouteTruncateTest(MessagingHandler):
     def __init__(self, sender_host, receiver_host, address, query_host):
-        super(LinkRouteAbortTest, self).__init__()
+        super(LinkRouteTruncateTest, self).__init__()
         self.sender_host      = sender_host
         self.receiver_host    = receiver_host
         self.address          = address
@@ -355,6 +380,92 @@ class LinkRouteAbortTest(MessagingHandler):
         container = Container(self)
         container.container_id="LRC"
         container.run()
+
+
+class MessageRouteAbortTest(MessagingHandler):
+    def __init__(self, sender_host, receiver_host, address):
+        super(MessageRouteAbortTest, self).__init__()
+        self.sender_host      = sender_host
+        self.receiver_host    = receiver_host
+        self.address          = address
+
+        self.sender_conn   = None
+        self.receiver_conn = None
+        self.error         = None
+        self.sender1       = None
+        self.receiver      = None
+        self.delivery      = None
+
+        self.program       = [('D', 10), ('D', 10), ('A', 10), ('A', 10), ('D', 10), ('D', 10),
+                              ('A', 100), ('D', 100),
+                              ('A', 1000), ('A', 1000), ('A', 1000), ('A', 1000), ('A', 1000), ('D', 1000),
+                              ('A', 10000), ('A', 10000), ('A', 10000), ('A', 10000), ('A', 10000), ('D', 10000),
+                              ('A', 100000), ('A', 100000), ('A', 100000), ('A', 100000), ('A', 100000), ('D', 100000), ('F', 10)]
+        self.result        = []
+        self.expected_result = [10, 10, 10, 10, 100, 1000, 10000, 100000]
+
+    def timeout(self):
+        self.error = "Timeout Expired - Unprocessed Ops: %r, Result: %r" % (self.program, self.result)
+        self.sender_conn.close()
+        self.receiver_conn.close()
+
+    def on_start(self, event):
+        self.timer         = event.reactor.schedule(10.0, Timeout(self))
+        self.sender_conn   = event.container.connect(self.sender_host)
+        self.receiver_conn = event.container.connect(self.receiver_host)
+        self.sender1       = event.container.create_sender(self.sender_conn, self.address, name="S1")
+        self.receiver      = event.container.create_receiver(self.receiver_conn, self.address)
+
+    def send(self):
+        op, size = self.program.pop(0) if len(self.program) > 0 else (None, None)
+
+        if op == None:
+            return
+
+        body = ""
+        if op == 'F':
+            body = "FINISH"
+        else:
+            for i in range(size / 10):
+                body += "0123456789"
+        msg = Message(body=body)
+        
+        if op in 'DF':
+            delivery = self.sender1.send(msg)
+
+        if op == 'A':
+            self.delivery = self.sender1.delivery(self.sender1.delivery_tag())
+            encoded = msg.encode()
+            self.sender1.stream(encoded)
+
+    def finish(self):
+        if self.result != self.expected_result:
+            self.error = "Expected: %r, Actual: %r" % (self.expected_result, self.result)
+        self.sender_conn.close()
+        self.receiver_conn.close()
+        self.timer.cancel()
+        
+    def on_sendable(self, event):
+        if event.sender == self.sender1:
+            if self.delivery:
+                self.delivery.abort()
+                self.delivery = None
+            else:
+                self.send()
+
+    def on_message(self, event):
+        m = event.message
+        if m.body == "FINISH":
+            self.finish()
+        else:
+            self.result.append(len(m.body))
+            self.send()
+
+    def on_aborted(self, event):
+        self.send()
+
+    def run(self):
+        Container(self).run()
 
 
 if __name__ == '__main__':

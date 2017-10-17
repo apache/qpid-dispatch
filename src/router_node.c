@@ -72,12 +72,14 @@ static void qdr_node_disconnect_deliveries(qdr_core_t *core, qd_link_t *link, qd
     qd_link_ref_t      *ref  = (qd_link_ref_t*) pn_delivery_get_context(pdlv);
     qd_link_ref_list_t *list = qd_link_get_ref_list(link);
 
-    DEQ_REMOVE(*list, ref);
-    free_qd_link_ref_t(ref);
+    if (ref) {
+        DEQ_REMOVE(*list, ref);
+        free_qd_link_ref_t(ref);
 
-    pn_delivery_set_context(pdlv, 0);
-    qdr_delivery_set_context(qdlv, 0);
-    qdr_delivery_decref(core, qdlv, "removed reference from pn_delivery");
+        pn_delivery_set_context(pdlv, 0);
+        qdr_delivery_set_context(qdlv, 0);
+        qdr_delivery_decref(core, qdlv, "removed reference from pn_delivery");
+    }
 }
 
 
@@ -338,8 +340,8 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
             // Settle the proton delivery only if all the data has been received.
             //
             if (pn_delivery_settled(pnd) && receive_complete) {
+                qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
                 pn_delivery_settle(pnd);
-                qdr_delivery_decref(router->router_core, delivery, "AMQP_rx_handler - link route settled delivery");
             }
         }
         else {
@@ -412,10 +414,10 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
     if (delivery) {
         qdr_deliver_continue(delivery);
         if (receive_complete) {
-          if (pn_delivery_settled(pnd) || pn_delivery_aborted(pnd)) {
-              pn_delivery_settle(pnd);
-              qdr_delivery_decref(router->router_core, delivery, "AMQP_rx_handler - message-route settled");
-          }
+            if (pn_delivery_settled(pnd)) {
+                qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
+                pn_delivery_settle(pnd);
+            }
         }
 
         return;
