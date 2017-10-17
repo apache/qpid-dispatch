@@ -640,13 +640,6 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
     while (ref) {
         //
-        // Account for possible lost reference from the Proton delivery
-        //
-        if (!ref->dlv->cleared_proton_ref) {
-            ref->dlv->cleared_proton_ref = true;
-            qdr_delivery_decref_CT(core, ref->dlv, "qdr_link_cleanup_deliveries_CT - lost proton ref (1)");
-        }
-        //
         // Now our reference
         //
         qdr_delivery_decref_CT(core, ref->dlv, "qdr_link_cleanup_deliveries_CT - remove from updated list");
@@ -670,14 +663,6 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
             peer = qdr_delivery_next_peer_CT(dlv);
         }
 
-        //
-        // Account for the lost reference from the Proton delivery
-        // for unsettled deliveries on incoming links
-        //
-        if (link->link_direction == QD_INCOMING && !dlv->settled && !dlv->cleared_proton_ref) {
-            dlv->cleared_proton_ref = true;
-            qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - lost proton ref (2) ");
-        }
         //
         // Now the undelivered-list reference
         //
@@ -717,13 +702,6 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         }
 
         //
-        // Account for the lost reference from the Proton delivery
-        //
-        if (!dlv->cleared_proton_ref) {
-            dlv->cleared_proton_ref = true;
-            qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - lost proton ref (3)");
-        }
-        //
         // Now the unsettled-list reference
         //
         qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - remove from unsettled list");
@@ -747,14 +725,6 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
             next_peer = qdr_delivery_next_peer_CT(dlv);
             qdr_delivery_unlink_peers_CT(core, dlv, peer);
             peer = next_peer;
-        }
-
-        //
-        // Account for the lost reference from the Proton delivery
-        //
-        if (!dlv->cleared_proton_ref) {
-            dlv->cleared_proton_ref = true;
-            qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - lost proton ref (4)");
         }
 
         // This decref is for the removing the delivery from the settled list

@@ -18,7 +18,7 @@
  */
 
 #include <Python.h>
-#include "alloc.h"
+#include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
 #include <memory.h>

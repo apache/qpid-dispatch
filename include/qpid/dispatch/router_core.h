@@ -606,6 +606,7 @@ void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery,
 
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
 void *qdr_delivery_get_context(qdr_delivery_t *delivery);
+qdr_link_t *qdr_delivery_link(const qdr_delivery_t *delivery);
 void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label);
 void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char *label);
 void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *length);
@@ -618,9 +619,6 @@ void qdr_delivery_set_tag_sent(const qdr_delivery_t *delivery, bool tag_sent);
 bool qdr_delivery_receive_complete(const qdr_delivery_t *delivery);
 void qdr_delivery_set_aborted(const qdr_delivery_t *delivery, bool aborted);
 bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery);
-void qdr_delivery_set_cleared_proton_ref(qdr_delivery_t *dlv, bool cleared_proton_ref);
-void qdr_delivery_set_set_proton_ref(qdr_delivery_t *dlv, bool set_proton_ref);
-bool qdr_delivery_get_set_proton_ref(qdr_delivery_t *dlv);
 
 /**
  ******************************************************************************

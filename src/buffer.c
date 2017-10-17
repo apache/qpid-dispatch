@@ -18,7 +18,7 @@
  */
 
 #include <qpid/dispatch/buffer.h>
-#include "alloc.h"
+#include <qpid/dispatch/alloc.h>
 
 #include <stdint.h>
 #include <string.h>

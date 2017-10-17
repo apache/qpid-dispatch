@@ -24,6 +24,7 @@
 #include <qpid/dispatch/amqp.h>
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/failoverlist.h>
+#include <qpid/dispatch/alloc.h>
 
 #include <proton/event.h>
 #include <proton/listener.h>
@@ -38,7 +39,6 @@
 #include "policy.h"
 #include "server_private.h"
 #include "timer_private.h"
-#include "alloc.h"
 #include "config.h"
 #include "remote_sasl.h"
 #include <stdio.h>

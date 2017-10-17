@@ -48,7 +48,6 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    sys_atomic_init(&dlv->ref_count, 1); // referenced by the action
     dlv->link           = link;
     dlv->msg            = msg;
     dlv->to_addr        = 0;
@@ -57,6 +56,8 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
     dlv->presettled     = settled;
     dlv->link_exclusion = link_exclusion;
     dlv->error          = 0;
+
+    qdr_delivery_incref(dlv, "qdr_link_deliver - newly created delivery");
 
     action->args.connection.delivery = dlv;
     qdr_action_enqueue(link->core, action);
@@ -72,7 +73,6 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    sys_atomic_init(&dlv->ref_count, 1); // referenced by the action
     dlv->link           = link;
     dlv->msg            = msg;
     dlv->to_addr        = addr;
@@ -81,6 +81,8 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     dlv->presettled     = settled;
     dlv->link_exclusion = link_exclusion;
     dlv->error          = 0;
+
+    qdr_delivery_incref(dlv, "qdr_link_deliver_to - newly created delivery");
 
     action->args.connection.delivery = dlv;
     qdr_action_enqueue(link->core, action);
@@ -99,7 +101,6 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    sys_atomic_init(&dlv->ref_count, 1); // referenced by the action
     dlv->link       = link;
     dlv->msg        = msg;
     dlv->settled    = settled;
@@ -107,6 +108,7 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     dlv->error      = 0;
 
     qdr_delivery_read_extension_state(dlv, disposition, disposition_data, true);
+    qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - newly created delivery");
 
     action->args.connection.delivery = dlv;
     action->args.connection.tag_length = tag_length;
@@ -279,25 +281,16 @@ void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context)
     delivery->context = context;
 }
 
-void qdr_delivery_set_cleared_proton_ref(qdr_delivery_t *dlv, bool cleared_proton_ref)
-{
-    dlv->cleared_proton_ref = cleared_proton_ref;
-}
-
-void qdr_delivery_set_set_proton_ref(qdr_delivery_t *dlv, bool set_proton_ref)
-{
-    dlv->set_proton_ref = set_proton_ref;
-}
-
-bool qdr_delivery_get_set_proton_ref(qdr_delivery_t *dlv)
-{
-    return dlv->set_proton_ref;
-}
-
 
 void *qdr_delivery_get_context(qdr_delivery_t *delivery)
 {
     return delivery->context;
+}
+
+
+qdr_link_t *qdr_delivery_link(const qdr_delivery_t *delivery)
+{
+    return delivery ? delivery->link : 0;
 }
 
 
@@ -335,6 +328,8 @@ bool qdr_delivery_receive_complete(const qdr_delivery_t *delivery)
 void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label)
 {
     uint32_t rc = sys_atomic_inc(&delivery->ref_count);
+    assert(rc > 0 || !delivery->ref_counted);
+    delivery->ref_counted = true;
     if (delivery && delivery->link)
         qd_log(delivery->link->core->log, QD_LOG_DEBUG,
                "qdr_delivery_incref:    dlv:%lx rc:%"PRIu32" label:%s", (long) delivery, rc + 1, label);
@@ -498,6 +493,7 @@ static void qdr_do_message_to_addr_free(qdr_core_t *core, qdr_general_work_t *wo
 
 static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery)
 {
+    assert(sys_atomic_get(&delivery->ref_count) == 0);
     qdr_link_t *link = delivery->link;
 
     if (delivery->msg || delivery->to_addr) {
@@ -667,8 +663,8 @@ qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv)
 void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv, const char *label)
 {
     uint32_t ref_count = sys_atomic_dec(&dlv->ref_count);
-    assert(ref_count > 0);
     qd_log(core->log, QD_LOG_DEBUG, "qdr_delivery_decref_CT: dlv:%lx rc:%"PRIu32" label:%s", (long) dlv, ref_count - 1, label);
+    assert(ref_count > 0);
 
     if (ref_count == 1)
         qdr_delete_delivery_internal_CT(core, dlv);

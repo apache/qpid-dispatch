@@ -17,8 +17,7 @@
  * under the License.
  */
 
-#include "alloc.h"
-
+#include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch.h>
 #include <qpid/dispatch/buffer.h>
 #include <stdio.h>

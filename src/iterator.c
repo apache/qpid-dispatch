@@ -19,7 +19,7 @@
 
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/ctools.h>
-#include "alloc.h"
+#include <qpid/dispatch/alloc.h>
 #include "message_private.h"
 #include <stdio.h>
 #include <string.h>

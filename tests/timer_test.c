@@ -21,7 +21,7 @@
 #include <limits.h>
 #include <qpid/dispatch/timer.h>
 #include "dispatch_private.h"
-#include "alloc.h"
+#include <qpid/dispatch/alloc.h>
 #include "timer_private.h"
 #include "test_case.h"
 #include <qpid/dispatch/threading.h>

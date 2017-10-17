@@ -23,9 +23,9 @@
 #include "qpid/dispatch/server.h"
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/static_assert.h"
+#include "qpid/dispatch/alloc.h"
 
 #include "config.h"
-#include "alloc.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include <dlfcn.h>

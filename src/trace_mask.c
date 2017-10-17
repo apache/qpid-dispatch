@@ -21,7 +21,7 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/hash.h>
-#include "alloc.h"
+#include <qpid/dispatch/alloc.h>
 
 typedef struct {
     qd_hash_handle_t *hash_handle;

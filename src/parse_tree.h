@@ -23,7 +23,7 @@
 
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/iterator.h>
-#include "alloc.h"
+#include <qpid/dispatch/alloc.h>
 
 
 typedef struct qd_parse_node qd_parse_tree_t;

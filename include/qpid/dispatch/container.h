@@ -33,6 +33,7 @@
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/ctools.h>
+#include <qpid/dispatch/alloc.h>
 
 typedef uint8_t qd_dist_mode_t;
 #define QD_DIST_COPY 0x01
@@ -156,6 +157,19 @@ qd_lifetime_policy_t qd_container_node_get_life_policy(const qd_node_t *node);
 
 qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char *name);
 void qd_link_free(qd_link_t *link);
+
+/**
+ * List of reference in the qd_link used to track abandoned deliveries
+ */
+typedef struct qd_link_ref_t {
+    DEQ_LINKS(struct qd_link_ref_t);
+    void *ref;
+} qd_link_ref_t;
+
+ALLOC_DECLARE(qd_link_ref_t);
+DEQ_DECLARE(qd_link_ref_t, qd_link_ref_list_t);
+
+qd_link_ref_list_t *qd_link_get_ref_list(qd_link_t *link);
 
 /**
  * Context associated with the link for storing link-specific state.

@@ -23,10 +23,10 @@
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/static_assert.h>
+#include <qpid/dispatch/alloc.h>
 
 #include "config.h"
 #include "dispatch_private.h"
-#include "alloc.h"
 #include "http.h"
 #include "log_private.h"
 #include "router_private.h"

@@ -18,7 +18,7 @@
  */
 
 #include <qpid/dispatch/buffer.h>
-#include "alloc.h"
+#include <qpid/dispatch/alloc.h>
 
 int message_tests();
 int field_tests();

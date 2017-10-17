@@ -41,6 +41,76 @@ static char *node_id;
 
 static void deferred_AMQP_rx_handler(void *context, bool discard);
 
+//==============================================================================
+// Functions to handle the linkage between proton deliveries and qdr deliveries
+//==============================================================================
+
+//
+// qd_link.list_of_references(pn_delivery_t)
+// pn_delivery.context => reference-entry
+// qdr_delivery.context => pn_delivery
+//
+
+
+static void qdr_node_connect_deliveries(qd_link_t *link, qdr_delivery_t *qdlv, pn_delivery_t *pdlv)
+{
+    qd_link_ref_t      *ref  = new_qd_link_ref_t();
+    qd_link_ref_list_t *list = qd_link_get_ref_list(link);
+    ZERO(ref);
+    ref->ref = qdlv;
+    DEQ_INSERT_TAIL(*list, ref);
+
+    pn_delivery_set_context(pdlv, ref);
+    qdr_delivery_set_context(qdlv, pdlv);
+    qdr_delivery_incref(qdlv, "referenced by a pn_delivery");
+    
+}
+
+
+static void qdr_node_disconnect_deliveries(qdr_core_t *core, qd_link_t *link, qdr_delivery_t *qdlv, pn_delivery_t *pdlv)
+{
+    qd_link_ref_t      *ref  = (qd_link_ref_t*) pn_delivery_get_context(pdlv);
+    qd_link_ref_list_t *list = qd_link_get_ref_list(link);
+
+    DEQ_REMOVE(*list, ref);
+    free_qd_link_ref_t(ref);
+
+    pn_delivery_set_context(pdlv, 0);
+    qdr_delivery_set_context(qdlv, 0);
+    qdr_delivery_decref(core, qdlv, "removed reference from pn_delivery");
+}
+
+
+static pn_delivery_t *qdr_node_delivery_pn_from_qdr(qdr_delivery_t *dlv)
+{
+    return dlv ? (pn_delivery_t*) qdr_delivery_get_context(dlv) : 0;
+}
+
+
+static qdr_delivery_t *qdr_node_delivery_qdr_from_pn(pn_delivery_t *dlv)
+{
+    qd_link_ref_t *ref = (qd_link_ref_t*) pn_delivery_get_context(dlv);
+    return ref ? (qdr_delivery_t*) ref->ref : 0;
+}
+
+
+static void qdr_node_reap_abandoned_deliveries(qdr_core_t *core, qd_link_t *link)
+{
+    qd_link_ref_list_t *list = qd_link_get_ref_list(link);
+    qd_link_ref_t      *ref  = DEQ_HEAD(*list);
+
+    while (ref) {
+        DEQ_REMOVE_HEAD(*list);
+        qdr_delivery_t *dlv = (qdr_delivery_t*) ref->ref;
+        qdr_delivery_set_context(dlv, 0);
+        qdr_delivery_decref(core, dlv, "qdr_node_reap_abandoned_deliveries");
+        ref = DEQ_HEAD(*list);
+    }
+}
+
+
+
+
 /**
  * Determine the role of a connection
  */
@@ -202,7 +272,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
     qdr_link_t     *rlink        = (qdr_link_t*) qd_link_get_context(link);
     qd_connection_t  *conn       = qd_link_connection(link);
     const qd_server_config_t *cf = qd_connection_config(conn);
-    qdr_delivery_t *delivery     = pn_delivery_get_context(pnd);
+    qdr_delivery_t *delivery     = qdr_node_delivery_qdr_from_pn(pnd);
 
     //
     // Receive the message into a local representation.
@@ -280,9 +350,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
                                                        dtag.size,
                                                        pn_disposition_type(pn_delivery_remote(pnd)),
                                                        pn_disposition_data(pn_delivery_remote(pnd)));
-            pn_delivery_set_context(pnd, delivery);
-            qdr_delivery_set_context(delivery, pnd);
-            qdr_delivery_incref(delivery, "AMQP_rx_handler - link-route add to proton delivery");
+            qdr_node_connect_deliveries(link, delivery, pnd);
         }
 
         return;
@@ -471,10 +539,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
             }
         }
 
-        // If this delivery is unsettled or if this is a settled multi-frame large message, set the context
-        pn_delivery_set_context(pnd, delivery);
-        qdr_delivery_set_context(delivery, pnd);
-        qdr_delivery_incref(delivery, "AMQP_rx_handler - message-route add proton delivery");
+        qdr_node_connect_deliveries(link, delivery, pnd);
     } else {
         //
         // If there is no delivery, the message is now and will always be unroutable because there is no address.
@@ -507,42 +572,19 @@ static void deferred_AMQP_rx_handler(void *context, bool discard) {
 static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery_t *pnd)
 {
     qd_router_t    *router   = (qd_router_t*) context;
-    qdr_delivery_t *delivery = (qdr_delivery_t*) pn_delivery_get_context(pnd);
+    qdr_delivery_t *delivery = qdr_node_delivery_qdr_from_pn(pnd);
 
     //
     // It's important to not do any processing without a qdr_delivery.  When pre-settled
     // multi-frame deliveries arrive, it's possible for the settlement to register before
     // the whole message arrives.  Such premature settlement indications must be ignored.
     //
-
-    if (!delivery)
+    if (!delivery || !qdr_delivery_receive_complete(delivery))
         return;
 
-    bool receive_complete = qdr_delivery_receive_complete(delivery);
-
-    if (!receive_complete)
-        return;
-
-    pn_disposition_t *disp   = pn_delivery_remote(pnd);
-    pn_condition_t *cond     = pn_disposition_condition(disp);
-    qdr_error_t    *error    = qdr_error_from_pn(cond);
-
-    bool            give_reference = false;
-
-    //
-    // If the delivery is settled, remove the linkage between the PN and QDR deliveries.
-    //
-    if (pn_delivery_settled(pnd)) {
-        pn_delivery_set_context(pnd, 0);
-        qdr_delivery_set_context(delivery, 0);
-        qdr_delivery_set_cleared_proton_ref(delivery, true);
-
-        //
-        // Don't decref the delivery here.  Rather, we will _give_ the reference to the core if the delivery is not aborted.
-        //
-        if (!pn_delivery_aborted(pnd))
-            give_reference = true;
-    }
+    pn_disposition_t *disp  = pn_delivery_remote(pnd);
+    pn_condition_t   *cond  = pn_disposition_condition(disp);
+    qdr_error_t      *error = qdr_error_from_pn(cond);
 
     //
     // Update the disposition of the delivery
@@ -552,12 +594,13 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
                                     pn_delivery_settled(pnd),
                                     error,
                                     pn_disposition_data(disp),
-                                    give_reference);
+                                    false);
 
     //
     // If settled, close out the delivery
     //
     if (pn_delivery_settled(pnd)) {
+        qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
         pn_delivery_settle(pnd);
     }
 }
@@ -654,6 +697,7 @@ static int AMQP_link_flow_handler(void* context, qd_link_t *link)
  */
 static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_type_t dt)
 {
+    qd_router_t    *router = (qd_router_t*) context;
     qdr_link_t     *rlink  = (qdr_link_t*) qd_link_get_context(link);
     pn_condition_t *cond   = qd_link_pn(link) ? pn_link_remote_condition(qd_link_pn(link)) : 0;
 
@@ -671,6 +715,7 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
         //
         if (dt == QD_LOST || qdr_link_get_context(rlink) == 0) {
             qdr_link_set_context(rlink, 0);
+            qdr_node_reap_abandoned_deliveries(router->router_core, link);
             qd_link_free(link);
         }
 
@@ -1130,7 +1175,8 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
 
 static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close)
 {
-    qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    qd_router_t *router = (qd_router_t*) context;
+    qd_link_t   *qlink  = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
         return;
 
@@ -1158,8 +1204,10 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
     //
     // If this is the second detach, free the qd_link
     //
-    if (!first)
+    if (!first) {
+        qdr_node_reap_abandoned_deliveries(router->router_core, qlink);
         qd_link_free(qlink);
+    }
 }
 
 
@@ -1274,12 +1322,8 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
         // If the remote send settle mode is set to 'settled', we should settle the delivery on behalf of the receiver.
         //
         if (!settled && !remote_snd_settled) {
-            if (qdr_delivery_get_context(dlv) == 0)  {
-                pn_delivery_set_context(pdlv, dlv);
-                qdr_delivery_set_context(dlv, pdlv);
-                qdr_delivery_set_set_proton_ref(dlv, true);
-                qdr_delivery_incref(dlv, "CORE_link_deliver - add to proton delivery");
-            }
+            if (qdr_delivery_get_context(dlv) == 0)
+                qdr_node_connect_deliveries(qlink, dlv, pdlv);
         }
 
         qdr_delivery_set_tag_sent(dlv, true);
@@ -1318,15 +1362,10 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
             // Aborted messages must be settled locally
             // Settling does not produce any disposition to message sender.
             if (pdlv) {
-                qdr_delivery_set_context(dlv, 0);
-                pn_delivery_set_context(pdlv, 0);
+                if (qdr_delivery_get_context(dlv) != 0)
+                    qdr_node_disconnect_deliveries(router->router_core, qlink, dlv, pdlv);
                 pn_link_advance(plink);
                 pn_delivery_settle(pdlv);
-                qdr_delivery_set_cleared_proton_ref(dlv, true);
-
-                if (qdr_delivery_get_set_proton_ref(dlv)) {
-                    qdr_delivery_decref(router->router_core, dlv, "CORE_link_deliver - get_set_proton_ref");
-                }
             }
 
         } else {
@@ -1350,7 +1389,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled)
 {
     qd_router_t   *router = (qd_router_t*) context;
-    pn_delivery_t *pnd    = (pn_delivery_t*) qdr_delivery_get_context(dlv);
+    pn_delivery_t *pnd    = qdr_node_delivery_pn_from_qdr(dlv);
 
     if (!pnd)
         return;
@@ -1361,8 +1400,8 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         pn_condition_t *condition = pn_disposition_condition(pn_delivery_local(pnd));
         char *name = qdr_error_name(error);
         char *description = qdr_error_description(error);
-        pn_condition_set_name(condition, (const char*)name);
-        pn_condition_set_description(condition, (const char*)description);
+        pn_condition_set_name(condition, (const char*) name);
+        pn_condition_set_description(condition, (const char*) description);
         if (qdr_error_info(error))
             pn_data_copy(pn_condition_info(condition), qdr_error_info(error));
         //proton makes copies of name and description, so it is ok to free them here.
@@ -1385,11 +1424,10 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     // If the delivery is settled, remove the linkage and settle the proton delivery.
     //
     if (settled) {
-        qdr_delivery_set_context(dlv, 0);
-        pn_delivery_set_context(pnd, 0);
+        qdr_link_t *qlink = qdr_delivery_link(dlv);
+        qd_link_t  *link  = (qd_link_t*) qdr_link_get_context(qlink);
+        qdr_node_disconnect_deliveries(router->router_core, link, dlv, pnd);
         pn_delivery_settle(pnd);
-        qdr_delivery_set_cleared_proton_ref(dlv, true);
-        qdr_delivery_decref(router->router_core, dlv, "CORE_delivery_update - remove proton delivery");
     }
 }
 

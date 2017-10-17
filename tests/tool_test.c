@@ -22,7 +22,7 @@
 #include <string.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/bitmask.h>
-#include "alloc.h"
+#include <qpid/dispatch/alloc.h>
 
 typedef struct item_t {
     DEQ_LINKS(struct item_t);

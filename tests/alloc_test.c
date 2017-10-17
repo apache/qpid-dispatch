@@ -18,7 +18,7 @@
  */
 
 #include "test_case.h"
-#include "alloc.h"
+#include <qpid/dispatch/alloc.h>
 #include <stdio.h>
 #include <string.h>
 

@@ -61,13 +61,14 @@ struct qd_link_t {
     bool                        drain_mode;
     bool                        close_sess_with_link;
     pn_snd_settle_mode_t        remote_snd_settle_mode;
+    qd_link_ref_list_t          ref_list;
 };
 
 DEQ_DECLARE(qd_link_t, qd_link_list_t);
 
 ALLOC_DECLARE(qd_link_t);
 ALLOC_DEFINE(qd_link_t);
-
+ALLOC_DEFINE(qd_link_ref_t);
 
 typedef struct qdc_node_type_t {
     DEQ_LINKS(struct qdc_node_type_t);
@@ -789,6 +790,12 @@ void qd_link_free(qd_link_t *link)
     DEQ_REMOVE(container->links, link);
     sys_mutex_unlock(container->lock);
     free_qd_link_t(link);
+}
+
+
+qd_link_ref_list_t *qd_link_get_ref_list(qd_link_t *link)
+{
+    return &link->ref_list;
 }
 
 

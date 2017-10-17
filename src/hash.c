@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "alloc.h"
+#include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/hash.h>
 #include <qpid/dispatch/ctools.h>
 

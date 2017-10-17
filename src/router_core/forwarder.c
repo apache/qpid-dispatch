@@ -105,7 +105,6 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     uint64_t       *tag = (uint64_t*) out_dlv->tag;
 
     ZERO(out_dlv);
-    sys_atomic_init(&out_dlv->ref_count, 0);
     out_dlv->link       = link;
     out_dlv->msg        = qd_message_copy(msg);
     out_dlv->settled    = !in_dlv || in_dlv->settled;
