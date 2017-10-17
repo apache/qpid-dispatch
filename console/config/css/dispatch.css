@@ -163,7 +163,7 @@ text.id {
   font-weight: bold;
 }
 
-text.id.log {
+text.id.log, text.id.address {
   text-anchor: middle;
   font-weight: normal;
 }

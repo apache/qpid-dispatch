@@ -57,6 +57,10 @@ under the License.
             <li ng-repeat="log in getSectionList(selected_node, 'log')" ng-click="editSection(selected_node, 'log', log)">Edit/Delete {{log}} log section</li>
 
             <li class="context-separator"></li>
+            <li ng-click="editSection(false, 'address', 'new')">Add new address section</li>
+            <li ng-repeat="address in getSectionList(selected_node, 'address')" ng-click="editSection(selected_node, 'address', address)">Edit/Delete {{address}} address section</li>
+
+            <li class="context-separator"></li>
             <li ng-click="editSection(selected_node, 'sslProfile', 'new')">Add new sslProfile section</li>
             <li ng-repeat="ssl in getSectionList(selected_node, 'sslProfile')" ng-click="editSection(selected_node, 'sslProfile', ssl)">Edit/Delete {{ssl}} sslProfile section</li>
 
@@ -83,6 +87,9 @@ under the License.
 
             <li class="context-separator"></li>
             <li ng-click="editSection(true, 'log', 'new')">Add log section for selected routers</li>
+
+            <li class="context-separator"></li>
+            <li ng-click="editSection(true, 'address', 'new')">Add address section for selected routers</li>
 
             <li class="context-separator"></li>
             <li ng-click="deleteNode(true)">Delete selected nodes</li>
@@ -151,18 +158,18 @@ under the License.
                     <div class="form-input-container" tooltip-append-to-body="true" tooltip-placement="right" uib-tooltip-html="attributeDescription" ng-mouseenter="setDescription(attribute, $event)" tooltip-class="edit-tooltip">
                         <label class="form-label" for="{{attribute.name}}">{{attribute.humanName}}</label>
                         <div ng-if="attribute.input == 'input'">
-                            <input class="edit_input" ng-if="attribute.type == 'number'" type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
-                            <input class="edit_input" ng-if="attribute.type == 'text'" type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
+                            <input class="edit_input" ng-if="attribute.type == 'number'" type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="isItRequired(attribute)" class="ui-widget-content ui-corner-all"/>
+                            <input class="edit_input" ng-if="attribute.type == 'text'" type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="isItRequired(attribute)" class="ui-widget-content ui-corner-all"/>
                         </div>
                         <div ng-if="attribute.input == 'select'">
-                            <select class="edit_input" id="{{attribute.name}}" ng-model="attribute.selected" ng-options="item for item in attribute.rawtype"></select>
+                            <select class="edit_input" id="{{attribute.name}}" ng-model="attribute.selected" ng-required="isItRequired(attribute)" ng-options="item for item in attribute.rawtype"></select>
                         </div>
                         <div ng-if="attribute.input == 'boolean'" class="boolean">
                             <label><input type="radio" ng-model="attribute.value" value="true"> True</label>
                             <label><input type="radio" ng-model="attribute.value" value="false"> False</label>
                         </div>
                         <div ng-if="attribute.input == 'checkbox'" class="boolean">
-                            <label><input id="attribute.name" type="checkbox" ng-model="attribute.value"></label>
+                            <label><input id="attribute.name" type="checkbox" ng-required="isItRequired(attribute)" ng-model="attribute.value"></label>
                         </div>
                     </div>
                 </div>

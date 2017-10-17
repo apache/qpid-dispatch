@@ -35,7 +35,7 @@ import subprocess
 from distutils.spawn import find_executable
 
 get_class = lambda x: globals()[x]
-sectionKeys = {"log": "module", "sslProfile": "name", "connector": "port", "listener": "port"}
+sectionKeys = {"log": "module", "sslProfile": "name", "connector": "port", "listener": "port", "address": "distribution"}
 
 # modified from qpid-dispatch/python/qpid_dispatch_internal/management/config.py
 def _parse(lines):
@@ -355,9 +355,15 @@ class Manager(object):
                 # write other sections
                 for sectionKey in sectionKeys:
                     if sectionKey+'s' in node:
+                        if self.verbose:
+                            print "found", sectionKey+'s'
                         for k in node[sectionKey+'s']:
+                            if self.verbose:
+                                print "processing", k
                             o = node[sectionKey+'s'][k]
                             cname = sectionKey[0].upper() + sectionKey[1:] + "Section"
+                            if self.verbose:
+                                print "class name is", cname
                             c = get_class(cname)
                             if sectionKey == "listener" and o['port'] != 'amqp' and int(o['port']) == http_port:
                                 config_fp.write("\n# Listener for a console\n")
@@ -365,6 +371,8 @@ class Manager(object):
                                     o['httpRoot'] = '/usr/local/share/qpid-dispatch/stand-alone'
                             if node.get('host') == o.get('host'):
                                 o['host'] = '0.0.0.0'
+                            if self.verbose:
+                                print "attributes", o, "is written as", str(c(**o))
                             config_fp.write(str(c(**o)) + "\n")
 
                 if 'listener' in node:

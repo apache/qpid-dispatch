@@ -23,7 +23,7 @@ from schema import Schema
 import pdb
 
 class ConfigSection(object):
-    def __init__(self, type, defaults, ignore, opts):
+    def __init__(self, type, defaults, ignore, forced, opts):
         self.type = type
         self.entries = {}
         for key in defaults:
@@ -33,7 +33,9 @@ class ConfigSection(object):
         for key in list(opts.keys()):
             if not key in Schema.attrs(self.type):
                 del opts[key]
-            elif key.endswith('Count') or key in ignore or opts[key] is None or opts[key] == Schema.default(self.type, key):
+            elif key.endswith('Count') or key in ignore or opts[key] is None:
+                del opts[key]
+            elif opts[key] == Schema.default(self.type, key) and key not in forced:
                 del opts[key]
 
         self.setEntries(opts)
@@ -55,7 +57,7 @@ class RouterSection(ConfigSection):
     defaults = {"mode": "interior"}
     ignore = ["type", "routerId", "identity", "name"]
     def __init__(self, id, **kwargs):
-        super(RouterSection, self).__init__("router", RouterSection.defaults, RouterSection.ignore, kwargs)
+        super(RouterSection, self).__init__("router", RouterSection.defaults, RouterSection.ignore, [], kwargs)
         self.setEntry("id", id)
 
     def __repr__(self):
@@ -68,7 +70,7 @@ class ListenerSection(ConfigSection):
                  "saslMechanisms": 'ANONYMOUS'
                  }
     def __init__(self, port, **kwargs):
-        super(ListenerSection, self).__init__("listener", ListenerSection.defaults, [], kwargs)
+        super(ListenerSection, self).__init__("listener", ListenerSection.defaults, [], [], kwargs)
         self.setEntry("port", port)
 
 class ConnectorSection(ConfigSection):
@@ -77,16 +79,20 @@ class ConnectorSection(ConfigSection):
                 "saslMechanisms": 'ANONYMOUS'
                 }
     def __init__(self, port, **kwargs):
-        super(ConnectorSection, self).__init__("connector", ConnectorSection.defaults, [], kwargs)
+        super(ConnectorSection, self).__init__("connector", ConnectorSection.defaults, [], [], kwargs)
         self.setEntry("port", port)
 
 class SslProfileSection(ConfigSection):
     def __init__(self, **kwargs):
-        super(SslProfileSection, self).__init__("sslProfile", {}, [], kwargs)
+        super(SslProfileSection, self).__init__("sslProfile", {}, [], [], kwargs)
 
 class LogSection(ConfigSection):
     def __init__(self, **kwargs):
-        super(LogSection, self).__init__("log", {}, [], kwargs)
+        super(LogSection, self).__init__("log", {}, [], [], kwargs)
+
+class AddressSection(ConfigSection):
+    def __init__(self, **kwargs):
+        super(AddressSection, self).__init__("address", {}, [], ['distribution'], kwargs)
 
 if __name__ == '__main__':
     Schema.init('../')

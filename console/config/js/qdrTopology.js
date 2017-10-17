@@ -30,7 +30,7 @@ var QDR = (function(QDR) {
     function($scope, $rootScope, QDRService, $location, $timeout, $uibModal) {
 
       var settings = {baseName: "A", http_port: 5673, normal_port: 22000, internal_port: 2000, default_host: "0.0.0.0", artemis_port: 61616, qpid_port: 5672}
-      var sections = ['log', 'connector', 'sslProfile', 'listener']
+      var sections = ['log', 'connector', 'sslProfile', 'listener', 'address']
       // mouse event vars
       var selected_link = null,
         mousedown_link = null,
@@ -953,6 +953,9 @@ var QDR = (function(QDR) {
           if (d.cls === 'log') {
             return 'Log' + (d.entityKey ? (': ' + d.entityKey) : '')
           }
+          if (d.cls === 'address') {
+            return 'Address' + (d.entityKey ? (': ' + d.entityKey) : '')
+          }
           if (d.cdir === 'in')
             return 'Listener on port ' + d.entityKey
           if (d.cdir === 'out')
@@ -983,6 +986,9 @@ var QDR = (function(QDR) {
           })
           .classed('connector', function(d) {
             return d.cls == 'connector'
+          })
+          .classed('address', function(d) {
+            return d.cls == 'address'
           })
           .classed('listener', function(d) {
             return d.cls == 'listener'
@@ -1037,6 +1043,9 @@ var QDR = (function(QDR) {
           .classed('log', function(d) {
             return d.cls === 'log'
           })
+          .classed('address', function(d) {
+            return d.cls === 'address'
+          })
           .classed('console', function(d) {
             return QDRService.isConsole(d)
           })
@@ -1061,6 +1070,8 @@ var QDR = (function(QDR) {
               return '\ue901';
             } else if (d.cls === 'log') {
               return '\uf036';
+            } else if (d.cls === 'address') {
+              return '\uf2bc';
             } else if (d.nodeType === 'route-container') {
               return d.properties.product ? d.properties.product[0].toUpperCase() : 'S'
             } else if (d.nodeType === 'normal' && d.cdir === "in") // listener
@@ -1362,13 +1373,18 @@ var QDR = (function(QDR) {
           node.cdir = "out"
           legendNodes.push(node)
         }
+        if (!svg.selectAll('circle.address').empty()) {
+          var node = aNode("Address", "", "normal", 'address', 4, 0, 0, 0, false, {})
+          node.cdir = "out"
+          legendNodes.push(node)
+        }
         if (!svg.selectAll('circle.sslProfile').empty()) {
-          var node = aNode("sslProfile", "", "normal", 'sslProfile', 4, 0, 0, 0, false, {})
+          var node = aNode("sslProfile", "", "normal", 'sslProfile', 5, 0, 0, 0, false, {})
           node.cdir = "both"
           legendNodes.push(node)
         }
         if (!svg.selectAll('circle.log').empty()) {
-          legendNodes.push(aNode("Logs", "", "normal", 'log', 5, 0, 0, 0, false, {}))
+          legendNodes.push(aNode("Logs", "", "normal", 'log', 6, 0, 0, 0, false, {}))
         }
         if (!svg.selectAll('circle.qpid-cpp').empty()) {
           legendNodes.push(genNodeToAdd({key:'Qpid broker', name:'legend', x:0, y:0, id:'legend'}, 'qpid', ''))
@@ -1377,7 +1393,7 @@ var QDR = (function(QDR) {
           legendNodes.push(genNodeToAdd({key:'Artemis broker', name:'legend', x:0, y:0, id:'legend'}, 'artemis', ''))
         }
         if (!svg.selectAll('circle.route-container').empty()) {
-          legendNodes.push(aNode("Service", "", "route-container", 'service', 8, 0, 0, 0, false,
+          legendNodes.push(aNode("Service", "", "route-container", 'service', 9, 0, 0, 0, false,
           {product: ' External Service'}))
         }
         // add a circle for each unique host in nodes
@@ -1731,7 +1747,7 @@ var QDR = (function(QDR) {
       }
 
       function doEditDialog(node, entity, context, multi) {
-        var entity2key = {router: 'name', log: 'module', sslProfile: 'name', connector: 'port', listener: 'port'}
+        var entity2key = {router: 'name', log: 'module', sslProfile: 'name', connector: 'port', listener: 'port', address: 'pattern|prefix'}
         var d = $uibModal.open({
           dialogClass: "modal dlg-large",
           backdrop: true,
@@ -1770,7 +1786,6 @@ var QDR = (function(QDR) {
             }
           }
         });
-        $timeout(function () {
           d.result.then(function(result) {
             if (result) {
               if (entity === 'router') {
@@ -1785,8 +1800,6 @@ var QDR = (function(QDR) {
                 }
               }
               else {
-                var key = entity2key[entity]
-                var nodeObj = node[entity+'s']
                 if ('del' in result) {
                   // find the 'normal' node that is associated with this entry
                   var n = findChildNode(entity, context, node.name)
@@ -1795,45 +1808,51 @@ var QDR = (function(QDR) {
                 } else {
                   var rVals = valFromMapArray(result.entities, "actualName", entity)
                   if (rVals) {
+                    var nodeObj = node[entity+'s']
+                    var key = entity2key[entity]
                     var o = new FormValues(rVals)
+                    oNodeKey = o.node[key]
+                    // address can have either a prefix or pattern
+                    if (entity === 'address') {
+                      oNodeKey = o.node['prefix'] ? o.node['prefix'] : o.node['pattern']
+                    }
                     if (!angular.isDefined(nodeObj)) {
                       node[entity+'s'] = {}
                       nodeObj = node[entity+'s']
                     }
                     // we were editing an existing section and the key for that section was changed
-                    else if (o.node[key] !== context && (context !== 'new' && context !== 'artemis' && context != 'qpid')) {
+                    else if (oNodeKey !== context && context !== 'new' && context !== 'artemis' && context != 'qpid') {
                       delete nodeObj[context]
                     }
-                    if (entity === 'log') {
+                    if (entity === 'log' || entity === 'address') {
                       if (multi) {
-                        // apply this log module/enable to all selected routers
+                        // apply this entity's key to all selected routers
                         for (var i=0; i<nodes.length; i++) {
                           if (isSelectedNode(nodes[i])) {
-                            var logs = nodes[i]['logs']
-                            if (!logs)
-                              nodes[i]['logs'] = {}
-                            if (!nodes[i].logs[o.node[key]])
-                              addToNode(nodes[i], 'log', o.node[key])
-                            nodes[i].logs[o.node[key]] = o.node
+                            var ents = nodes[i][entity+'s']
+                            if (!ents)
+                              nodes[i][entity+'s'] = {}
+                            if (!nodes[i][entity+'s'][oNodeKey])
+                              addToNode(nodes[i], entity, oNodeKey)
+                            nodes[i][entity+'s'][oNodeKey] = o.node
                           }
                         }
                         return
                       }
                     }
-                    nodeObj[o.node[key]] = o.node
+                    nodeObj[oNodeKey] = o.node
                     if (entity === 'sslProfile')
                       return
                     if (context === 'new' || context === 'artemis' || context === 'qpid') {
                       if (context !== 'new')
                         entity = context
-                      addToNode(node, entity, o.node[key])
+                      addToNode(node, entity, oNodeKey)
                     }
                   }
                 }
               }
             }
           });
-        })
       };
 
       var FormValues = function (entity) {

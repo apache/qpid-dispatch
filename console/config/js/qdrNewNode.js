@@ -37,9 +37,12 @@ var QDR = (function(QDR) {
     myEntities.push(entityType)
     var readOnlyAttrs = { 'router': ['version', 'id', 'identity'],
                           'log': ['name', 'identity'],
+                          'address': ['identity'],
                           'linkRoute': ['identity'],
                           "sslProfile": ['identity'],
                           "connector": ['identity']}
+    // one of the following must be present
+    var requiredAttrs = {'address': ['prefix', 'pattern']}
 
     var typeMap = {
       integer: 'number',
@@ -239,11 +242,12 @@ var QDR = (function(QDR) {
       }
 
       // move entities key into first position
-      var keyIndex = allNames.findIndex(function (name) {
-        return name === entityKey
-      })
-      if (keyIndex > 0) {
-        allNames.move(keyIndex, 0)
+      for (var i=0, keys=entityKey.split('|'); i<keys.length; i++) {
+        var keyIndex = allNames.findIndex(function (name) {
+          return name === keys[i]
+        })
+        if (keyIndex > 0)
+          allNames.move(keyIndex, 0)
       }
       // move any entities with sort: last to end
       for (var i=0; i<ediv.attributes.length; i++) {
@@ -272,6 +276,16 @@ var QDR = (function(QDR) {
     $scope.attributeUnique = '';
     $scope.active = 'router'
     $scope.fieldsetDivs = "/fieldsetDivs.html"
+
+    $scope.isItRequired = function (attribute) {
+      if (requiredAttrs[entityType] && requiredAttrs[entityType].indexOf(attribute.name) > -1) {
+        var s = requiredAttrs[entityType].some( function (attr) {
+          return (getEdivAttr($scope.entities[0], attr).value)
+        })
+        return !s
+      } else
+        return attribute.required
+    }
     $scope.setActive = function(tabName) {
       $scope.active = tabName
     }
