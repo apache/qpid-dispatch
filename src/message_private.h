@@ -95,7 +95,6 @@ typedef struct {
     qd_buffer_t         *parse_buffer;
     unsigned char       *parse_cursor;
     qd_message_depth_t   parse_depth;
-    bool                 ma_parsed;                       // have parsed annotations in incoming message
     qd_iterator_t       *ma_field_iter_in;                // 'message field iterator' for msg.FIELD_MESSAGE_ANNOTATION
 
     qd_iterator_pointer_t ma_user_annotation_blob;        // Original user annotations
@@ -107,14 +106,14 @@ typedef struct {
     qd_parsed_field_t   *ma_pf_to_override;
     qd_parsed_field_t   *ma_pf_trace;
     int                  ma_int_phase;
-    //qd_parsed_field_t   *parsed_message_annotations;
+    sys_atomic_t         fanout;                         // The number of receivers for this message. This number does not include in-process subscribers.
+    qd_link_t           *input_link;                     // message received on this link
 
+    bool                 ma_parsed;                      // have parsed annotations in incoming message
     bool                 discard;                        // Should this message be discarded?
     bool                 receive_complete;               // true if the message has been completely received, false otherwise
-    sys_atomic_t         fanout;                         // The number of receivers for this message. This number does not include in-process subscribers.
     bool                 q2_input_holdoff;               // hold off calling pn_link_recv
     bool                 aborted;                        // receive completed with abort flag set
-    qd_link_t           *input_link;                     // message received on this link
 } qd_message_content_t;
 
 typedef struct {
@@ -122,14 +121,14 @@ typedef struct {
     qd_iterator_pointer_t cursor;          // A pointer to the current location of the outgoing byte stream.
     qd_message_depth_t    message_depth;   // What is the depth of the message that has been received so far
     qd_message_depth_t    sent_depth;      // How much of the message has been sent?  QD_DEPTH_NONE means nothing has been sent so far, QD_DEPTH_HEADER means the header has already been sent, dont send it again and so on.
-    bool                  send_complete;   // Has the message been completely received and completely sent?
-    bool                  tag_sent;        // Tags are sent
     qd_message_content_t *content;         // The actual content of the message. The content is never copied
     qd_buffer_list_t      ma_to_override;  // to field in outgoing message annotations.
     qd_buffer_list_t      ma_trace;        // trace list in outgoing message annotations
     qd_buffer_list_t      ma_ingress;      // ingress field in outgoing message annotations
     int                   ma_phase;        // phase for the override address
     bool                  strip_annotations_in;
+    bool                  send_complete;   // Has the message been completely received and completely sent?
+    bool                  tag_sent;        // Tags are sent
 } qd_message_pvt_t;
 
 ALLOC_DECLARE(qd_message_t);
