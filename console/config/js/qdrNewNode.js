@@ -275,7 +275,15 @@ var QDR = (function(QDR) {
     $scope.attributeRequired = '';
     $scope.attributeUnique = '';
     $scope.active = 'router'
-    $scope.fieldsetDivs = "/fieldsetDivs.html"
+
+    $scope.isItDisabled = function (attribute) {
+      if (requiredAttrs[entityType] && requiredAttrs[entityType].indexOf(attribute.name) > -1) {
+        return requiredAttrs[entityType].some( function (attr) {
+          return (attr !== attribute.name) && (getEdivAttr($scope.entities[0], attr).value)
+        })
+      } else
+        return false
+    }
 
     $scope.isItRequired = function (attribute) {
       if (requiredAttrs[entityType] && requiredAttrs[entityType].indexOf(attribute.name) > -1) {
