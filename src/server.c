@@ -1144,7 +1144,6 @@ void qd_server_free(qd_server_t *qd_server)
         free_qd_connection_t(ctx);
         ctx = DEQ_HEAD(qd_server->conn_list);
     }
-    qd_http_server_free(qd_server->http);
     qd_timer_finalize();
     pn_proactor_free(qd_server->proactor);
     sys_mutex_free(qd_server->lock);
@@ -1182,6 +1181,7 @@ void qd_server_run(qd_dispatch_t *qd)
         sys_thread_free(threads[i]);
     }
     free(threads);
+    qd_http_server_free(qd_server->http);
 
     qd_log(qd_server->log_source, QD_LOG_NOTICE, "Shut Down");
 }
