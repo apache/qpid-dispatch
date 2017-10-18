@@ -1416,8 +1416,6 @@ void qd_message_send(qd_message_t *in_msg,
             msg->send_complete = true;
             // the link has an outgoing deliver. abort it.
             pn_delivery_abort(pn_link_current(pnl));
-
-            // TODO: Dispose of message buffers that may have accumulated
             return;
         }
 
