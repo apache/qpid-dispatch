@@ -50,6 +50,8 @@ class ConfigSection(object):
         self.entries.update(d)
 
     def __repr__(self):
+        # ensure all entries have values
+        self.entries = {k: v for k, v in self.entries.iteritems() if self.entries.get(k)}
         raw = self.type + " " + json.dumps(self.entries, indent=4, separators=('', ': '))
         return re.sub('["]', '', raw)
 

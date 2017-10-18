@@ -35,7 +35,7 @@ import subprocess
 from distutils.spawn import find_executable
 
 get_class = lambda x: globals()[x]
-sectionKeys = {"log": "module", "sslProfile": "name", "connector": "port", "listener": "port", "address": "distribution"}
+sectionKeys = {"log": "module", "sslProfile": "name", "connector": "port", "listener": "port", "address": "prefix|pattern"}
 
 # modified from qpid-dispatch/python/qpid_dispatch_internal/management/config.py
 def _parse(lines):
@@ -244,7 +244,11 @@ class Manager(object):
                             if section.type+'s' not in node:
                                 node[section.type+'s'] = {}
                             key = sectionKeys[section.type]
-                            val = section.entries.get(key)
+                            if '|' in key:
+                                # assumes at least one of the keys will have a value
+                                val = [section.entries.get(x) for x in key.split('|') if section.entries.get(x)][0]
+                            else:
+                                val = section.entries.get(key)
                             node[section.type+'s'][val] = section.entries
 
         for source, ports_for_this_routers in enumerate(port_map):

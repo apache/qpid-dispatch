@@ -20,7 +20,7 @@ under the License.
         <div id="buttonBar" class="navbar-primary">
             Current topology
             <select ng-model="mockTopologyDir" ng-options="item for item in mockTopologies"></select>
-            <button class="btn btn-primary" type="button" ng-click="Publish()" title="Save this topology">Publish</button>
+            <button class="btn btn-primary" type="button" ng-click="Publish()" title="Save this topology">Save</button>
             <button class="btn btn-primary" type="button" ng-click="Clear()" title="Remove all routers">Clear</button>
             <button class="btn btn-primary" type="button" ng-click="Deploy()" ng-disabled="!canDeploy()" ng-if="ansible" title="Deploy this topology">Deploy</button>
             <button class="btn btn-primary pull-right" type="button" ng-click="doHelp()" title="Show help">?</button>
@@ -77,7 +77,7 @@ under the License.
             <!-- <li ng-repeat="listener in getSectionList(selected_node, 'listener')" ng-click="editSection(selected_node, 'listener', listener)">Edit/Delete listener on port {{listener}} </li> -->
 
             <li class="context-separator"></li>
-            <li ng-click="deleteNode(false)">Delete this node</li>
+            <li ng-click="deleteNode(false)">Delete this router</li>
             <li ng-click="showConfig(selected_node)">Show generated config</li>
         </ul>
     </div>
@@ -158,18 +158,18 @@ under the License.
                     <div class="form-input-container" tooltip-append-to-body="true" tooltip-placement="right" uib-tooltip-html="attributeDescription" ng-mouseenter="setDescription(attribute, $event)" tooltip-class="edit-tooltip">
                         <label class="form-label" for="{{attribute.name}}">{{attribute.humanName}}</label>
                         <div ng-if="attribute.input == 'input'">
-                            <input class="edit_input" ng-if="attribute.type == 'number'" type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="isItRequired(attribute)" class="ui-widget-content ui-corner-all"/>
-                            <input class="edit_input" ng-if="attribute.type == 'text'" type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="isItRequired(attribute)" class="ui-widget-content ui-corner-all"/>
+                            <input class="edit_input" ng-if="attribute.type == 'number'" type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="isItRequired(attribute)" ng-disabled="isItDisabled(attribute)" class="ui-widget-content ui-corner-all"/>
+                            <input class="edit_input" ng-if="attribute.type == 'text'" type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="isItRequired(attribute)" ng-disabled="isItDisabled(attribute)" class="ui-widget-content ui-corner-all"/>
                         </div>
                         <div ng-if="attribute.input == 'select'">
-                            <select class="edit_input" id="{{attribute.name}}" ng-model="attribute.selected" ng-required="isItRequired(attribute)" ng-options="item for item in attribute.rawtype"></select>
+                            <select class="edit_input" id="{{attribute.name}}" ng-model="attribute.selected" ng-required="isItRequired(attribute)" ng-disabled="isItDisabled(attribute)" ng-options="item for item in attribute.rawtype"></select>
                         </div>
                         <div ng-if="attribute.input == 'boolean'" class="boolean">
                             <label><input type="radio" ng-model="attribute.value" value="true"> True</label>
                             <label><input type="radio" ng-model="attribute.value" value="false"> False</label>
                         </div>
                         <div ng-if="attribute.input == 'checkbox'" class="boolean">
-                            <label><input id="attribute.name" type="checkbox" ng-required="isItRequired(attribute)" ng-model="attribute.value"></label>
+                            <label><input id="attribute.name" type="checkbox" ng-required="isItRequired(attribute)" ng-disabled="isItDisabled(attribute)" ng-model="attribute.value"></label>
                         </div>
                     </div>
                 </div>
@@ -186,7 +186,7 @@ under the License.
 <script type="text/ng-template" id="show-config-template.html">
     <form novalidate ng-submit="ok()">
     <div class="modal-header">
-        <h3 class="modal-title">Current config file if published</h3>
+        <h3 class="modal-title">Current config file if saved</h3>
     </div>
     <div class="modal-body">
             <fieldset>
