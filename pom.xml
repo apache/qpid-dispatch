@@ -26,9 +26,9 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.apache.qpid</groupId>
     <artifactId>qpid-dispatch</artifactId>
-    <version>0.8.0</version>
+    <version>1.0.0</version>
     <name>QpidDispatch</name>
-    <inceptionYear>2013</inceptionYear>
+    <inceptionYear>2017</inceptionYear>
     <url>https://qpid.apache.org</url>   
     
     <prerequisites>
