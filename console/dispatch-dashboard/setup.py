@@ -19,7 +19,8 @@ setup(
     name = 'dispatch',
     version = '0.0.1',
     description = 'dashboard extension for OpenStack Dashboard',
-    author = 'Redhat',
+    author = 'Apache Qpid',
+    author_email = 'dev@qpid.apache.org',
     classifiers = [
         'Environment :: OpenStack',
         'Framework :: Django',
