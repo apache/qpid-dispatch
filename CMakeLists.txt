@@ -31,6 +31,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 # Build time switch to turn off memory pooling.
 option(USE_MEMORY_POOL "Use per-thread memory pools" ON)
 option(QD_MEMORY_STATS "Track memory pool usage statistics" ON)
+option(SYSTEMD "Install systemd compatible startup script" OFF)
+option(SYSVINIT "Install sysvinit compatible startup script" OFF)
 
 file(STRINGS "${CMAKE_SOURCE_DIR}/VERSION.txt" QPID_DISPATCH_VERSION)
 
@@ -188,6 +190,17 @@ install(FILES
   LICENSE
   README
   DESTINATION ${QD_DOC_INSTALL_DIR})
+
+# SYSTEMD or SYSVINIT
+if(SYSTEMD AND SYSVINIT)
+  message(FATAL_ERROR "Both SYSTEMD and SYSVINIT are set to ON. Only one can be set to ON")
+endif()
+if(SYSTEMD)
+    install(FILES etc/qdrouterd.service DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
+endif(SYSTEMD)
+if(SYSVINIT)
+    install(FILES etc/qdrouterd DESTINATION ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
+endif(SYSVINIT)
 
 
 add_subdirectory(src) # Build src first so other subdirs can use QPID_DISPATCH_LIB
