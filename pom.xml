@@ -110,6 +110,7 @@
                       <exclude>.cproject</exclude>
                       <exclude>**/qpid-proton/**</exclude>
                       <exclude>**/CMakeFiles/**</exclude>
+                      <exclude>**/licenses/**</exclude>
                       <exclude>qpid-proton/**</exclude>
                       <exclude>libuv/**</exclude>
                       <exclude>libwebsockets/**</exclude>
