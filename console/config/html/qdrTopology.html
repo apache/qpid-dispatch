@@ -1,0 +1,279 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<div class="qdrTopology row-fluid" ng-controller="QDR.TopologyController">
+        <div id="buttonBar" class="navbar-primary">
+            Current topology
+            <select ng-model="mockTopologyDir" ng-options="item for item in mockTopologies"></select>
+            <button class="btn btn-primary" type="button" ng-click="Publish()" title="Save this topology">Save</button>
+            <button class="btn btn-primary" type="button" ng-click="Clear()" title="Remove all routers">Clear</button>
+            <button class="btn btn-primary" type="button" ng-click="Deploy()" ng-disabled="!canDeploy()" ng-if="ansible" title="Deploy this topology">Deploy</button>
+            <button class="btn btn-primary pull-right" type="button" ng-click="doHelp()" title="Show help">?</button>
+            <button class="btn btn-primary pull-right" type="button" ng-click="doSettings()" title="Show global settings">Settings</button>
+            <button class="btn btn-primary pull-right" type="button" ng-click="showNewDlg()" title="Enter a new topology name">New Topology</button>
+            <div class="selected-node pull-right">
+                <button class="btn btn-primary" type="button" ng-click="addAnotherNode(true)"><b class="plus caret"></b> Add new router</button>
+                <!-- <button id="action_button" class="btn btn-primary" type="button" ng-disabled="!selected_node" ng-click="showActions($event)" title="Show actions on selected router">Actions <b class="down caret"></b></button> -->
+                <button id="multiple_action_button" class="btn btn-primary" type="button" ng-disabled="!anySelectedNodes()" ng-click="showMultiActions($event)" title="Show actions on selected routers">Actions for selected routers<b class="down caret"></b></button>
+            </div>
+        </div>
+        <div id="topology"><!-- d3 toplogy here --></div>
+        <div id="svg_context_menu" class="contextMenu">
+            <ul>
+                <li ng-click="addAnotherNode()">Add a new router</li>
+            </ul>
+        </div>
+        <div id="link_context_menu" class="contextMenu">
+            <ul>
+                <li ng-click="reverseLink()">Reverse connection direction</li>
+                <li ng-click="removeLink()">Remove connection</li>
+                <li class="context-separator"></li>
+                <li ng-click="linkConfig()">Set port for connection.</li>
+            </ul>
+        </div>
+        <div id="svg_legend"></div>
+    <div id="action_menu" class="contextMenu">
+        <ul>
+            <li ng-click="editSection(selected_node, 'router')">Edit router info</li>
+            <li ng-click="setRouterHost()">Set router host</li>
+
+            <li class="context-separator"></li>
+            <li ng-click="editSection(false, 'log', 'new')">Add new log section</li>
+            <li ng-repeat="log in getSectionList(selected_node, 'log')" ng-click="editSection(selected_node, 'log', log)">Edit/Delete {{log}} log section</li>
+
+            <li class="context-separator"></li>
+            <li ng-click="editSection(false, 'address', 'new')">Add new address section</li>
+            <li ng-repeat="address in getSectionList(selected_node, 'address')" ng-click="editSection(selected_node, 'address', address)">Edit/Delete {{address}} address section</li>
+
+            <li class="context-separator"></li>
+            <li ng-click="editSection(selected_node, 'sslProfile', 'new')">Add new sslProfile section</li>
+            <li ng-repeat="ssl in getSectionList(selected_node, 'sslProfile')" ng-click="editSection(selected_node, 'sslProfile', ssl)">Edit/Delete {{ssl}} sslProfile section</li>
+
+            <li class="context-separator"></li>
+            <li ng-click="editSection(selected_node, 'connector', 'new')">Add new connector section</li>
+            <li ng-click="editSection(selected_node, 'connector', 'artemis')">Add new connector for Artemis broker</li>
+            <li ng-click="editSection(selected_node, 'connector', 'qpid')">Add new connector for Qpid broker</li>
+            <!-- <li ng-repeat="connector in getSectionList(selected_node, 'connector')" ng-click="editSection(selected_node, 'connector', connector)">Edit/Delete {{connector}} connector section</li> -->
+
+            <li class="context-separator"></li>
+            <li ng-click="editSection(selected_node, 'listener', 'new')">Add new listener section</li>
+            <li ng-if="!hasConsoleListener()" ng-click="addConsoleListener(selected_node)">Add listener for console</li>
+            <li ng-if="hasConsoleListener(selected_node)" ng-click="delConsoleListener(selected_node)">Delete listener for console</li>
+            <!-- <li ng-repeat="listener in getSectionList(selected_node, 'listener')" ng-click="editSection(selected_node, 'listener', listener)">Edit/Delete listener on port {{listener}} </li> -->
+
+            <li class="context-separator"></li>
+            <li ng-click="deleteNode(false)">Delete this router</li>
+            <li ng-click="showConfig(selected_node)">Show generated config</li>
+        </ul>
+    </div>
+    <div id="multiple_action_menu" class="contextMenu">
+        <ul>
+            <li ng-click="setRouterHost(true)">Set host for selected routers</li>
+
+            <li class="context-separator"></li>
+            <li ng-click="editSection(true, 'log', 'new')">Add log section for selected routers</li>
+
+            <li class="context-separator"></li>
+            <li ng-click="editSection(true, 'address', 'new')">Add address section for selected routers</li>
+
+            <li class="context-separator"></li>
+            <li ng-click="deleteNode(true)">Delete selected nodes</li>
+        </ul>
+    </div>
+    <div id="client_context_menu" class="contextMenu">
+        <ul>
+            <li ng-click="deleteNode(false)">Delete</li>
+            <li class="context-separator"></li>
+            <li ng-click="editThisSection(selected_node)">Edit</li>
+        </ul>
+    </div>
+</div>
+
+
+<script type="text/ng-template" id="settings-template.html">
+    <form novalidate name="editForm" ng-submit="setSettings()">
+    <div class="modal-header">
+        <h3 class="modal-title">Global settings</h3>
+    </div>
+    <div class="modal-body">
+
+            <fieldset>
+                <div ng-repeat="attribute in entity.attributes">
+                    <label class="form-label" for="{{attribute.name}}">{{attribute.humanName}}</label>
+<!-- we can't do <input type="{angular expression}"> because... jquery throws an exception because...??? -->
+                    <div ng-if="attribute.input == 'input'">
+                        <!-- ng-pattern="testPattern(attribute)" -->
+                        <input ng-if="attribute.type == 'number'" type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
+                        <input ng-if="attribute.type == 'text'" type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="attribute.required" class="ui-widget-content ui-corner-all"/>
+                    </div>
+                    <div ng-if="attribute.input == 'select'">
+                        <select id="{{attribute.name}}" ng-model="attribute.selected" ng-options="item for item in attribute.rawtype"></select>
+                    </div>
+                    <div ng-if="attribute.input == 'boolean'" class="boolean">
+                        <label><input name="{{attribute.name}}" type="radio" ng-model="attribute.value" ng-value="true"> True</label>
+                        <label><input name="{{attribute.name}}" type="radio" ng-model="attribute.value" ng-value="false"> False</label>
+                    </div>
+                    <div ng-if="attribute.input == 'file'">
+                        <input type="file" id="FileUpload" custom-on-change="uploadFile" webkitdirectory mozdirectory msdirectory odirectory directory multiple />
+                    </div>
+                </div>
+            </fieldset>
+
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="submit" ng-click="setSettings()" ng-disabled="editForm.$invalid" >OK</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+    </form>
+</script>
+
+
+<!--
+    This is the template for the node add/edit dialog
+-->
+<script type="text/ng-template" id="node-config-template.html">
+    <form novalidate name="editForm" ng-submit="save()">
+    <div class="modal-header">
+        <h3 class="modal-title">{{title}}</h3>
+    </div>
+    <div class="modal-body">
+
+            <fieldset>
+                <div ng-repeat="attribute in entities[0].attributes">
+                    <div class="form-input-container" tooltip-append-to-body="true" tooltip-placement="right" uib-tooltip-html="attributeDescription" ng-mouseenter="setDescription(attribute, $event)" tooltip-class="edit-tooltip">
+                        <label class="form-label" for="{{attribute.name}}">{{attribute.humanName}}</label>
+                        <div ng-if="attribute.input == 'input'">
+                            <input class="edit_input" ng-if="attribute.type == 'number'" type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="isItRequired(attribute)" ng-disabled="isItDisabled(attribute)" class="ui-widget-content ui-corner-all"/>
+                            <input class="edit_input" ng-if="attribute.type == 'text'" type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.value" ng-required="isItRequired(attribute)" ng-disabled="isItDisabled(attribute)" class="ui-widget-content ui-corner-all"/>
+                        </div>
+                        <div ng-if="attribute.input == 'select'">
+                            <select class="edit_input" id="{{attribute.name}}" ng-model="attribute.selected" ng-required="isItRequired(attribute)" ng-disabled="isItDisabled(attribute)" ng-options="item for item in attribute.rawtype"></select>
+                        </div>
+                        <div ng-if="attribute.input == 'boolean'" class="boolean">
+                            <label><input type="radio" ng-model="attribute.value" value="true"> True</label>
+                            <label><input type="radio" ng-model="attribute.value" value="false"> False</label>
+                        </div>
+                        <div ng-if="attribute.input == 'checkbox'" class="boolean">
+                            <label><input id="attribute.name" type="checkbox" ng-required="isItRequired(attribute)" ng-disabled="isItDisabled(attribute)" ng-model="attribute.value"></label>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="submit" ng-disabled="editForm.$invalid" ng-click="save()">OK</button>
+        <button ng-if="showDelete()" class="btn btn-secondary" type="button" ng-click="del()">Delete</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+    </form>
+</script>
+
+<script type="text/ng-template" id="show-config-template.html">
+    <form novalidate ng-submit="ok()">
+    <div class="modal-header">
+        <h3 class="modal-title">Current config file if saved</h3>
+    </div>
+    <div class="modal-body">
+            <fieldset>
+                <pre class="config-area">{{config}}</pre>
+            </fieldset>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="submit" ng-click="ok()">OK</button>
+    </div>
+    </form>
+</script>
+
+<script type="text/ng-template" id="new-config-template.html">
+
+    <form novalidate name="editForm" ng-submit="setSettings()">
+    <div class="modal-header">
+        <h3 class="modal-title">Create new topology</h3>
+    </div>
+    <div class="modal-body">
+
+            <label for="newTopo" class="entity-description">Enter a new topology directory name</label>
+            <fieldset>
+                <input type="text" name="newTopo" id="newTopo" ng-model="newTopology" ng-required="true" class="ui-widget-content ui-corner-all"/>
+            </fieldset>
+
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="submit" ng-click="setSettings()">OK</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+    </form>
+</script>
+
+<script type="text/ng-template" id="set-router-host.html">
+    <form novalidate name="editForm" ng-submit="setSettings()">
+    <div class="modal-header">
+        <h3 class="modal-title">Set router host</h3>
+    </div>
+    <div class="modal-body">
+        <div class="description">
+            Set the host of all listeners on this router. Also ensure that all internal connectors to this router use this host.
+        </div>
+            <label for="host" class="entity-description">Enter a machine name or IP address</label>
+            <fieldset>
+                <input type="text" name="host" id="host" ng-model="host" ng-required="true" class="router-host ui-widget-content ui-corner-all"/>
+            </fieldset>
+
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" type="submit" ng-click="setSettings()">OK</button>
+        <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+    </div>
+    </form>
+</script>
+
+<script type="text/ng-template" id="deploy-template.html">
+    <form novalidate>
+        <div class="modal-header">
+            <h3 class="modal-title">{{state}}</h3>
+        </div>
+        <div ng-hide="deploy_state == 'deploying'">
+            <div class="modal-body">
+                <div ng-repeat="host in hosts">
+                    <div class="host_color circle node" ng-class="host.color"></div>
+                    <div class="host_name">{{host.name}}</div>
+                    <button class="btn btn-basic host_pass" ng-click="show_pass(host)" ng-hide="showing_pass == host.name">Sudo Password</button>
+                    <div class="host_pass" ng-show="showing_pass == host.name"><input ng-keyup="$event.keyCode == 13 ? show_pass() : null" focus-when="showing_pass == host.name" ng-model="host.pass" type="password" /> <button class="btn btn-basic" ng-click="show_pass()">OK</button></div>
+                    <ul class="host_nodes">
+                        <li ng-repeat="node in host.nodes">{{node}}</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" type="button" ng-click="deploy()">Deploy</button>
+                <button ng-class="close_button_class" class="btn" type="button" ng-click="cancel()">Cancel</button>
+            </div>
+        </div>
+        <div ng-show="deploy_state == 'deploying'">
+            <div class="modal-body">
+                <pre id="deploy_output" class="tail">{{status}}</pre>
+                <div ng-show="done()" id="message">Deployed.
+                    <div ng-show="hasConsole()">Browse to <a ng-href="{{address}}" target="_blank">here</a> to manage the router.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button ng-class="close_button_class" class="btn" type="button" ng-click="cancel()">Close</button>
+            </div>
+        </div>
+    </form>
+</script>

@@ -1,0 +1,28 @@
+Qpid Dispatch config file read/update/write utility
+=============
+
+A utility to read, update, write, and deploy dispatch router config files.
+
+Dependencies
+============
+
+- tested using python 2.7
+- npm to install the 3rd party javascript libraries
+  http://blog.npmjs.org/post/85484771375/how-to-install-npm
+
+- ansible if you wish to deploy the routers
+http://docs.ansible.com/ansible/latest/intro_installation.html
+
+Running
+====================
+
+Install the 3rd party javascript libraries:
+- in the console/config/ directory run
+  npm install
+This will create a node_modules/ directory and install the needed files
+
+- run ./config.py
+- in the address bar of a browser, enter localhost:8000
+
+
+

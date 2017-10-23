@@ -1,0 +1,165 @@
+/*
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License
+*/
+
+#buttonBar {
+  padding: 1em;
+  border-bottom: 1px solid lightgrey;
+  color: #f5f5f5;
+}
+
+.navbar-primary {
+    font-size: 14px;
+    background-image: linear-gradient(to bottom,#1d1d1d 0,#030303 100%);
+    background-repeat: repeat-x;
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff1d1d1d', endColorstr='#ff030303', GradientType=0);
+}
+
+#buttonBar select {
+    position: relative;
+    top: 2px;
+    margin-left: 0.25em;
+    margin-right: 0.5em;
+    color: black;
+}
+
+path.more {
+  stroke-width: 1;
+  stroke: black;
+}
+
+.edit_input {
+  width: 20em !important;
+}
+
+.pull-right {
+  float: right;
+  margin-left: 0.25em;
+}
+
+.selected-node {
+  margin: 0 5em;
+}
+
+#action_menu {
+  position: absolute;
+}
+
+span.btn-icon {
+  position: relative;
+  top: -2px;
+  padding-left: 2px;
+  font-family: PatternFlyIcons-webfont;
+}
+
+label.form-label {
+  font-weight: 800;
+  margin-top: 1em;
+  margin-bottom: 0;
+}
+
+span.logo {
+    letter-spacing: 4px;
+}
+
+.navbar-brand {
+  padding: 1px !important;
+}
+
+.config-area {
+  max-height: 35em;
+}
+
+.btn .caret {
+  font-weight: 800;
+  padding-right: 2px;
+}
+.btn .down.caret {
+  top: -2px;
+}
+
+.btn .plus.caret:before {
+ content:"\f067";
+}
+
+.btn .down.caret:before {
+ content:"\f0dd";
+}
+
+.tooltip.edit-tooltip .tooltip-inner {
+  min-width: 25em;
+  color: #880000;
+  background-color: #fcfcfc;
+  box-shadow: 0 6px 12px rgba(0,0,0,.175);
+  border: 1px solid #333333;
+}
+.tooltip.edit-tooltip .tooltip-arrow {
+  /* display: none; */
+  color: $ffff68;
+}
+
+
+.form-input-container {
+  display: inline-block;
+  width: 20em;
+}
+
+div.boolean label {
+  margin-bottom: 0;
+}
+
+.alert {
+  max-width: 20em;
+}
+
+input.router-host {
+  width: 45em;
+}
+
+pre.tail {
+  max-height: 15em;
+  min-height: 15em;
+  overflow-y: scroll;
+}
+
+circle.node {
+  opacity: 0.5;
+}
+circle.node.inter-router.highlighted {
+  opacity: 1;
+}
+circle.node {
+    stroke-width: 0;
+}
+
+.host_color, .host_name {
+  display: inline-block;
+}
+
+.host_color {
+  width: 1em;
+  height: 1em;
+  border: 0;
+}
+.host_name {
+  font-weight: bold;
+}
+
+.host_pass {
+  float: right;
+}

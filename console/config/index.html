@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<html xmlns:ng="http://angularjs.org">
+
+<head>
+
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Qpid Dispatch Config Processor</title>
+
+    <link rel="shortcut icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
+
+    <link href='node_modules/font-awsome/css/font-awesome.min.css' type="text/css">
+    <link href="node_modules/jquery-ui-themes/themes/smoothness/jquery-ui.min.css" rel="stylesheet" type='text/css'>
+    <link href="node_modules/patternfly/dist/css/patternfly.min.css" rel="stylesheet" type='text/css'>
+    <link href="node_modules/patternfly/dist/css/patternfly-additions.min.css" rel="stylesheet" type='text/css'>
+
+    <link rel="stylesheet" href="css/plugin.css" type="text/css"/>
+    <link rel="stylesheet" href="css/dispatch.css" type="text/css"/>
+    <link rel="stylesheet" href="css/site-base.css" type="text/css"/>
+    <link rel="stylesheet" href="css/mock.css" type="text/css"/>
+
+</head>
+
+<body ng-app="QDR">
+
+    <nav class="navbar navbar-default navbar-pf" role="navigation">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="/">
+                <span class="logo">Qpid Dispatch config file processor</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div id="main-container">
+                <div ng-include src="'html/qdrTopology.html'"></div>
+            </div>
+        </div>
+    </div>
+
+
+<!--[if lt IE 9]>
+<script src="node_modules/html5shiv/dist/html5shiv.min.js"></script>
+<![endif]-->
+
+<script src="node_modules/jquery/dist/jquery.min.js"></script>
+<script src="node_modules/jquery-ui-dist/jquery-ui.min.js"></script>
+
+<!-- Angular -->
+<script src="node_modules/angular/angular.min.js"></script>
+<script src="node_modules/angular-animate/angular-animate.min.js"></script>
+<script src="node_modules/angular-ui-bootstrap/dist/ui-bootstrap.js"></script>
+<script src="node_modules/angular-ui-bootstrap/dist/ui-bootstrap-tpls.js"></script>
+<script src="node_modules/angular-resource/angular-resource.min.js"></script>
+<script src="node_modules/angular-sanitize/angular-sanitize.min.js"></script>
+
+<script src='node_modules/d3/d3.min.js'></script>
+<script src="node_modules/notifyjs-browser/dist/notify.js"></script>
+
+<script type="text/javascript" src="js/dispatchPlugin.js"></script>
+<script type="text/javascript" src="js/qdrService.js"></script>
+<script type="text/javascript" src="js/qdrTopology.js"></script>
+<script type="text/javascript" src="js/qdrNewNode.js"></script>
+
+
+<script type="text/javascript">
+        //angular.element(document.getElementsByTagName('head')).append(angular.element('<base href="' + window.location.pathname + '" />'));
+</script>
+
+</body>
+</html>
+
