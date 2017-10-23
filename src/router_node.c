@@ -353,6 +353,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
                                                        pn_disposition_type(pn_delivery_remote(pnd)),
                                                        pn_disposition_data(pn_delivery_remote(pnd)));
             qdr_node_connect_deliveries(link, delivery, pnd);
+            qdr_delivery_decref(router->router_core, delivery, "release protection of return from deliver_to_routed_link");
         }
 
         return;
@@ -542,6 +543,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         }
 
         qdr_node_connect_deliveries(link, delivery, pnd);
+        qdr_delivery_decref(router->router_core, delivery, "release protection of return from deliver");
     } else {
         //
         // If there is no delivery, the message is now and will always be unroutable because there is no address.

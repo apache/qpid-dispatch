@@ -58,6 +58,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
     dlv->error          = 0;
 
     qdr_delivery_incref(dlv, "qdr_link_deliver - newly created delivery, add to action list");
+    qdr_delivery_incref(dlv, "qdr_link_deliver - protect returned value");
 
     action->args.connection.delivery = dlv;
     qdr_action_enqueue(link->core, action);
@@ -83,6 +84,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     dlv->error          = 0;
 
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - newly created delivery, add to action list");
+    qdr_delivery_incref(dlv, "qdr_link_deliver_to - protect returned value");
 
     action->args.connection.delivery = dlv;
     qdr_action_enqueue(link->core, action);
@@ -109,6 +111,7 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
 
     qdr_delivery_read_extension_state(dlv, disposition, disposition_data, true);
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - newly created delivery, add to action list");
+    qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - protect returned value");
 
     action->args.connection.delivery = dlv;
     action->args.connection.tag_length = tag_length;
@@ -328,7 +331,7 @@ void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label)
     uint32_t rc = sys_atomic_inc(&delivery->ref_count);
     assert(rc > 0 || !delivery->ref_counted);
     delivery->ref_counted = true;
-    if (delivery && delivery->link)
+    if (delivery->link)
         qd_log(delivery->link->core->log, QD_LOG_DEBUG,
                "Delivery incref:    dlv:%lx rc:%"PRIu32" %s", (long) delivery, rc + 1, label);
 }
