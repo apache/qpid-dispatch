@@ -296,7 +296,7 @@ int main(int argc, char **argv)
             exit(0);
 
         case 'v' :
-            fprintf(stdout, "Qpid Dispatch Router %s\n", QPID_DISPATCH_VERSION);
+            fprintf(stdout, "%s\n", QPID_DISPATCH_VERSION);
             exit(0);
 
         case '?' :
