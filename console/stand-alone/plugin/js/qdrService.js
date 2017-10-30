@@ -175,7 +175,7 @@ console.dump(e)
         },
         // called by receiver's on('message') handler when a response arrives
         resolve: function(context) {
-          var correlationID = context.message.properties.correlation_id;
+          var correlationID = context.message.correlation_id;
           this._objects[correlationID].resolver(context.message.body, context);
           delete this._objects[correlationID];
         },
@@ -803,8 +803,8 @@ console.dump(e)
             }
           }
           self.schema = response;
+          callback()
         }, ret.error);
-        callback()
       },
 
       getNodeInfo: function(nodeName, entity, attrs, q, callback) {
@@ -868,11 +868,9 @@ console.dump(e)
           }
           var msg = {
             body: attrs,
-            properties: {
-              to: fullAddr,
-              reply_to: self.receiver.remote.attach.source.address,
-              correlation_id: ret.id
-            },
+            to: fullAddr,
+            reply_to: self.receiver.remote.attach.source.address,
+            correlation_id: ret.id,
             application_properties: application_properties
           }
           self.sender.send(msg);
@@ -932,11 +930,9 @@ console.dump(e)
 
           self.sender.send({
             body: body,
-            properties: {
-              to: to,
-              reply_to: self.receiver.remote.attach.source.address,
-              correlation_id: ret.id
-            },
+            to: to,
+            reply_to: self.receiver.remote.attach.source.address,
+            correlation_id: ret.id,
             application_properties: application_properties
           })
         } catch (e) {
