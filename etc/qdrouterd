@@ -88,12 +88,17 @@ case "$1" in
         RETVAL=$?
         ;;
 
+    try-restart|condrestart)
+        status $prog
+        if [ "$?" -eq "0" ]; then restart; fi
+        ;;
+
     reload|force-reload)
         exit 3			# Not implemented
         ;;
 
     *)
-        echo "Usage: $0 {start|stop|status|restart|reload|force-reload}"
+        echo "Usage: $0 {start|stop|status|restart|reload|try-restart|condrestart|force-reload}"
         exit 2			# Invalid arguments
         ;;
 esac
