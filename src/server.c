@@ -734,7 +734,7 @@ bool qd_connector_has_failover_info(qd_connector_t* ct)
 }
 
 
-void qd_connection_free(qd_connection_t *ctx)
+static void qd_connection_free(qd_connection_t *ctx)
 {
     qd_server_t *qd_server = ctx->server;
 
@@ -742,6 +742,7 @@ void qd_connection_free(qd_connection_t *ctx)
 
     // If this is a dispatch connector, schedule the re-connect timer
     if (ctx->connector) {
+        long delay = ctx->connector->delay;
         sys_mutex_lock(ctx->connector->lock);
         ctx->connector->ctx = 0;
         // Increment the connection index by so that we can try connecting to the failover url (if any).
@@ -756,13 +757,17 @@ void qd_connection_free(qd_connection_t *ctx)
             // Go thru the failover list round robin.
             // IMPORTANT: Note here that we set the re-try timer to 1 second.
             // We want to quickly keep cycling thru the failover urls every second.
-            qd_timer_schedule(ctx->connector->timer, 1000);
+            delay = 1000;
         }
 
         ctx->connector->state = CXTR_STATE_CONNECTING;
         sys_mutex_unlock(ctx->connector->lock);
-        if (!has_failover)
-            qd_timer_schedule(ctx->connector->timer, ctx->connector->delay);
+
+        //
+        // Increment the ref-count to account for the timer's reference to the connector.
+        //
+        sys_atomic_inc(&ctx->connector->ref_count);
+        qd_timer_schedule(ctx->connector->timer, delay);
     }
 
     sys_mutex_lock(qd_server->lock);
@@ -962,6 +967,7 @@ static void try_open_lh(qd_connector_t *ct)
         qd_log(ct->server->log_source, QD_LOG_CRITICAL, "Allocation failure connecting to %s",
                ct->config.host_port);
         ct->delay = 10000;
+        sys_atomic_inc(&ct->ref_count);
         qd_timer_schedule(ct->timer, ct->delay);
         return;
     }
@@ -1086,9 +1092,11 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
 
 static void try_open_cb(void *context) {
     qd_connector_t *ct = (qd_connector_t*) context;
-    sys_mutex_lock(ct->lock);   /* TODO aconway 2017-05-09: this lock looks too big */
-    try_open_lh(ct);
-    sys_mutex_unlock(ct->lock);
+    if (!qd_connector_decref(ct)) {
+        sys_mutex_lock(ct->lock);   /* TODO aconway 2017-05-09: this lock looks too big */
+        try_open_lh(ct);
+        sys_mutex_unlock(ct->lock);
+    }
 }
 
 
@@ -1362,7 +1370,7 @@ bool qd_connector_connect(qd_connector_t *ct)
 }
 
 
-void qd_connector_decref(qd_connector_t* ct)
+bool qd_connector_decref(qd_connector_t* ct)
 {
     if (ct && sys_atomic_dec(&ct->ref_count) == 1) {
         sys_mutex_lock(ct->lock);
@@ -1385,7 +1393,9 @@ void qd_connector_decref(qd_connector_t* ct)
             item = DEQ_HEAD(ct->conn_info_list);
         }
         free_qd_connector_t(ct);
+        return true;
     }
+    return false;
 }
 
 void qd_server_timeout(qd_server_t *server, qd_duration_t duration) {
