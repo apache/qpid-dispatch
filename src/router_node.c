@@ -1340,10 +1340,14 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
     }
 
     bool restart_rx = false;
+    bool q3_stalled = false;
 
     qd_message_t *msg_out = qdr_delivery_message(dlv);
 
-    qd_message_send(msg_out, qlink, qdr_link_strip_annotations_out(link), &restart_rx);
+    qd_message_send(msg_out, qlink, qdr_link_strip_annotations_out(link), &restart_rx, &q3_stalled);
+
+    if (q3_stalled)
+        qdr_link_stalled_outbound(link);
 
     if (restart_rx) {
         qd_link_t *qdl_in = qd_message_get_receiving_link(msg_out);

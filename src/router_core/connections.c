@@ -384,6 +384,12 @@ bool qdr_link_strip_annotations_out(const qdr_link_t *link)
 }
 
 
+void qdr_link_stalled_outbound(qdr_link_t *link)
+{
+    link->stalled_outbound = true;
+}
+
+
 const char *qdr_link_name(const qdr_link_t *link)
 {
     return link->name;
