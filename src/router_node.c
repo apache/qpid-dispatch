@@ -69,6 +69,9 @@ static void qdr_node_connect_deliveries(qd_link_t *link, qdr_delivery_t *qdlv, p
 
 static void qdr_node_disconnect_deliveries(qdr_core_t *core, qd_link_t *link, qdr_delivery_t *qdlv, pn_delivery_t *pdlv)
 {
+    if (!link)
+        return;
+
     qd_link_ref_t      *ref  = (qd_link_ref_t*) pn_delivery_get_context(pdlv);
     qd_link_ref_list_t *list = qd_link_get_ref_list(link);
 
@@ -104,8 +107,10 @@ static void qdr_node_reap_abandoned_deliveries(qdr_core_t *core, qd_link_t *link
     while (ref) {
         DEQ_REMOVE_HEAD(*list);
         qdr_delivery_t *dlv = (qdr_delivery_t*) ref->ref;
+        ref->ref = 0;
         qdr_delivery_set_context(dlv, 0);
         qdr_delivery_decref(core, dlv, "qdr_node_reap_abandoned_deliveries");
+        free_qd_link_ref_t(ref);
         ref = DEQ_HEAD(*list);
     }
 }
