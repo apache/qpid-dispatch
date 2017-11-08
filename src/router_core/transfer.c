@@ -1061,7 +1061,7 @@ void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
         //
         if (work) {
             sys_mutex_lock(peer->link->conn->work_lock);
-            if (work == DEQ_HEAD(peer->link->work_list)) {
+            if (work->processing || work == DEQ_HEAD(peer->link->work_list)) {
                 qdr_add_link_ref(&peer->link->conn->links_with_work, peer->link, QDR_LINK_LIST_CLASS_WORK);
                 sys_mutex_unlock(peer->link->conn->work_lock);
 
