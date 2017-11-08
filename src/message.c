@@ -1398,7 +1398,8 @@ static void compose_message_annotations(qd_message_pvt_t *msg, qd_buffer_list_t 
 void qd_message_send(qd_message_t *in_msg,
                      qd_link_t    *link,
                      bool          strip_annotations,
-                     bool         *restart_rx)
+                     bool         *restart_rx,
+                     bool         *q3_stalled)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     qd_message_content_t *content = msg->content;
@@ -1407,6 +1408,7 @@ void qd_message_send(qd_message_t *in_msg,
 
     int                  fanout   = qd_message_fanout(in_msg);
     *restart_rx                   = false;
+    *q3_stalled                   = false;
 
     if (msg->sent_depth < QD_DEPTH_MESSAGE_ANNOTATIONS) {
 
@@ -1515,8 +1517,7 @@ void qd_message_send(qd_message_t *in_msg,
 
     pn_session_t     *pns  = pn_link_session(pnl);
 
-    while (buf && pn_session_outgoing_bytes(pns) < QD_QLIMIT_Q3_UPPER) {
-
+    while (buf && pn_session_outgoing_bytes(pns) <= QD_QLIMIT_Q3_UPPER) {
         if (msg->content->aborted) {
             if (pn_link_current(pnl)) {
                 msg->send_complete = true;
@@ -1596,6 +1597,8 @@ void qd_message_send(qd_message_t *in_msg,
 
         buf = next_buf;
     }
+
+    *q3_stalled = (pn_session_outgoing_bytes(pns) > QD_QLIMIT_Q3_UPPER);
 }
 
 

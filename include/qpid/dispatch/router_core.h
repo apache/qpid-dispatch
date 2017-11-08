@@ -474,6 +474,14 @@ bool qdr_link_strip_annotations_in(const qdr_link_t *link);
 bool qdr_link_strip_annotations_out(const qdr_link_t *link);
 
 /**
+ * qdr_link_stalled_outbound
+ *
+ * Tell the link that it has been stalled outbound due to back-pressure from the
+ * transport buffers.  Stalling is undone during link-flow processing.
+ */
+void qdr_link_stalled_outbound(qdr_link_t *link);
+
+/**
  * qdr_link_name
  *
  * Retrieve the name of the link.
