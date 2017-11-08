@@ -227,8 +227,9 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery);
  * @param link The outgoing link on which to send the message.
  * @param strip_outbound_annotations [in] annotation control flag
  * @param restart_rx [out] indication to wake up receive process
+ * @param q3_stalled [out] indicates that the link is stalled due to proton-buffer-full
  */
-void qd_message_send(qd_message_t *msg, qd_link_t *link, bool strip_outbound_annotations, bool *restart_rx);
+void qd_message_send(qd_message_t *msg, qd_link_t *link, bool strip_outbound_annotations, bool *restart_rx, bool *q3_stalled);
 
 /**
  * Check that the message is well-formed up to a certain depth.  Any part of the message that is

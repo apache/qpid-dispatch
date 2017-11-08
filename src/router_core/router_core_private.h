@@ -391,14 +391,15 @@ struct qdr_link_t {
     qdr_delivery_list_t      unsettled;          ///< Unsettled deliveries
     qdr_delivery_list_t      settled;            ///< Settled deliveries
     qdr_delivery_ref_list_t  updated_deliveries; ///< References to deliveries (in the unsettled list) with updates.
-    bool                     admin_enabled;
     qdr_link_oper_status_t   oper_status;
+    int                      capacity;
+    int                      credit_to_core; ///< Number of the available credits incrementally given to the core
+    bool                     admin_enabled;
     bool                     strip_annotations_in;
     bool                     strip_annotations_out;
-    int                      capacity;
     bool                     flow_started;   ///< for incoming, true iff initial credit has been granted
     bool                     drain_mode;
-    int                      credit_to_core; ///< Number of the available credits incrementally given to the core
+    bool                     stalled_outbound;  ///< Indicates that this link is stalled on outbound buffer backpressure
 
     uint64_t total_deliveries;
     uint64_t presettled_deliveries;

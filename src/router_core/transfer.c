@@ -687,6 +687,16 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     link->drain_mode = drain;
 
     //
+    // If the link was stalled due to internal backpressure from the transport, put it
+    // on the links-with-work list and activate the connection to resume sending.
+    //
+    if (link->stalled_outbound) {
+        link->stalled_outbound = false;
+        qdr_add_link_ref(&link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+        activate = true;
+    }
+
+    //
     // If this is an attach-routed link, propagate the flow data downrange.
     // Note that the credit value is incremental.
     //
@@ -704,29 +714,27 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
                 work->drain_action = QDR_LINK_WORK_DRAIN_ACTION_DRAINED;
             qdr_link_enqueue_work_CT(core, clink, work);
         }
+    } else {
+        //
+        // Handle the replenishing of credit outbound
+        //
+        if (link->link_direction == QD_OUTGOING && (credit > 0 || drain_was_set)) {
+            if (drain_was_set) {
+                work = new_qdr_link_work_t();
+                ZERO(work);
+                work->work_type    = QDR_LINK_WORK_FLOW;
+                work->drain_action = QDR_LINK_WORK_DRAIN_ACTION_DRAINED;
+            }
 
-        return;
-    }
-
-    //
-    // Handle the replenishing of credit outbound
-    //
-    if (link->link_direction == QD_OUTGOING && (credit > 0 || drain_was_set)) {
-        if (drain_was_set) {
-            work = new_qdr_link_work_t();
-            ZERO(work);
-            work->work_type    = QDR_LINK_WORK_FLOW;
-            work->drain_action = QDR_LINK_WORK_DRAIN_ACTION_DRAINED;
+            sys_mutex_lock(link->conn->work_lock);
+            if (work)
+                DEQ_INSERT_TAIL(link->work_list, work);
+            if (DEQ_SIZE(link->undelivered) > 0 || drain_was_set) {
+                qdr_add_link_ref(&link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+                activate = true;
+            }
+            sys_mutex_unlock(link->conn->work_lock);
         }
-
-        sys_mutex_lock(link->conn->work_lock);
-        if (work)
-            DEQ_INSERT_TAIL(link->work_list, work);
-        if (DEQ_SIZE(link->undelivered) > 0 || drain_was_set) {
-            qdr_add_link_ref(&link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
-            activate = true;
-        }
-        sys_mutex_unlock(link->conn->work_lock);
     }
 
     //
