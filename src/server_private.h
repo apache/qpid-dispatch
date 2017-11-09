@@ -40,7 +40,6 @@ qd_dispatch_t* qd_server_dispatch(qd_server_t *server);
 void qd_server_timeout(qd_server_t *server, qd_duration_t delay);
 
 qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t* config);
-void qd_connection_free(qd_connection_t* conn);
 
 qd_connector_t* qd_connection_connector(const qd_connection_t *c);
 
@@ -52,7 +51,7 @@ const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
 qd_listener_t *qd_server_listener(qd_server_t *server);
 qd_connector_t *qd_server_connector(qd_server_t *server);
 
-void qd_connector_decref(qd_connector_t* ct);
+bool qd_connector_decref(qd_connector_t* ct);
 void qd_listener_decref(qd_listener_t* ct);
 void qd_server_config_free(qd_server_config_t *cf);
 
