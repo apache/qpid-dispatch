@@ -1,12 +1,17 @@
-Qpid Dispatch
-=============
+= Qpid Dispatch
+
+image:https://img.shields.io/travis/apache/qpid-dispatch.svg[
+"Travis",
+link="https://travis-ci.org/apache/qpid-dispatch"]
+image:https://img.shields.io/github/license/apache/qpid-dispatch.svg[
+"License",
+link="https://github.com/apache/qpid-dispatch/blob/master/LICENSE"]
 
 A lightweight AMQP router for building scalable, available, and performant messaging
 interconnect.
 
-Dependencies
-============
-
+== Building and testing
+=== Dependencies
 To build dispatch on a yum-based Linux system, you will need the following
 packages installed:
 
@@ -20,55 +25,62 @@ packages installed:
 - cyrus-sasl-devel
 - asciidoc (for building docs)
 
-Dispatch will not build on Windows.
+NOTE: Dispatch will not build on Windows.
 
+=== Build
 To build formatted documentation (man pages, HTML, PDF) see the requirements in doc/README
-
-Building and testing
-====================
-
 From the dispatch directory:
 
+[source]
+----
 $ mkdir my_build    # or directory of your choice.
 $ cd my_build
 $ cmake ..
 $ make
+----
 
-
-Running The Tests
-=================
+=== Running The Tests
 
 From the <build> directory you can run all the system and tests with:
+[source]
+----
 $ ctest -VV
+----
 
 ctest uses the script <build>/test/run.py to set up the correct environment for
 tests. You can use it to run tests individually from the <build>/tests
-directory, for example:
+directory.
 
+.Example
+[source]
+----
 $ ./run.py unit_tests_size 3
 $ ./run.py -m unittest system_tests_qdstat
+----
 
 Run it without arguments to get a summary of how it can be used:
+[source]
+----
 $ ./run.py
+----
 
-
-Clean build, install and test
-=============================
-
+=== Clean build, install and test
+[source]
+----
 $ source config.sh; test.sh
+----
 
-This does the following:
-- NOTE: delete any existing directories 'build' and 'install'
+.This does the following:
 - Do a fresh cmake and make in directory 'build'
 - Run unit tests (not system tests) in 'build'
 - Do 'make install' into the directory 'install'
 - Run system tests on the installation in 'install'.
 
 
-Using Valgrind
-==============
+NOTE: delete any existing directories 'build' and 'install'
+
+=== Using Valgrind
 
 If valgrind is installed and cmake option 'USE_VALGRIND' is 'ON' the tests will
 be run with valgrind's memcheck debugger. You can set other types of test runner
 or modify the valgrind flags by setting the TEST_RUNNER cmake variable.
-

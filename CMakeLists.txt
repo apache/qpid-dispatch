@@ -186,7 +186,7 @@ install(PROGRAMS
 # Doc files
 install(FILES
   LICENSE
-  README
+  README.adoc
   DESTINATION ${QD_DOC_INSTALL_DIR})
 
 add_subdirectory(src) # Build src first so other subdirs can use QPID_DISPATCH_LIB
