@@ -437,7 +437,7 @@ class RouterNode(object):
         self.next_hop_router = None
         self.adapter.set_link(self.maskbit, link_id)
         self.adapter.remove_next_hop(self.maskbit)
-        self.log(LOG_TRACE, "Node %s link set: link_id=%r" % (self.id, link_id))
+        self.log(LOG_TRACE, "Node %s link set: link_id=%r (removed next hop)" % (self.id, link_id))
         return True
 
 
@@ -458,6 +458,11 @@ class RouterNode(object):
 
     def set_next_hop(self, next_hop):
         if self.id == next_hop.id:
+            ##
+            ## If the next hop is self (destination is a neighbor) and there
+            ## was a next hop in place, explicitly remove the next hop (DISPATCH-873).
+            ##
+            self.remove_next_hop()
             return
         if self.next_hop_router and self.next_hop_router.id == next_hop.id:
             return
