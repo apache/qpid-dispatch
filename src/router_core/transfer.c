@@ -771,6 +771,10 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             qdr_delivery_release_CT(core, dlv);
             qdr_link_issue_credit_CT(core, link, 1, false);
             qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (no path)");
+            if (dlv->settled) {
+                // Increment the presettled_dropped_deliveries on the in_link
+                link->dropped_presettled_deliveries++;
+            }
         }
         else {
             DEQ_INSERT_TAIL(link->undelivered, dlv);

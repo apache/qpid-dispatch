@@ -263,6 +263,7 @@ class BusManager(Node):
         heads.append(Header("unsett"))
         heads.append(Header("del"))
         heads.append(Header("presett"))
+        heads.append(Header("droppedpresett"))
         heads.append(Header("acc"))
         heads.append(Header("rej"))
         heads.append(Header("rel"))
@@ -274,7 +275,7 @@ class BusManager(Node):
         rows = []
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
                 'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
-                'presettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
+                'presettledCount', 'droppedPresettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
                 'modifiedCount', 'adminStatus', 'operStatus', 'linkName')
 
         objects = self.query('org.apache.qpid.dispatch.router.link', cols, limit=self.opts.limit)
@@ -294,6 +295,7 @@ class BusManager(Node):
             row.append(link.unsettledCount)
             row.append(link.deliveryCount)
             row.append(link.presettledCount)
+            row.append(link.droppedPresettledCount)
             row.append(link.acceptedCount)
             row.append(link.rejectedCount)
             row.append(link.releasedCount)
