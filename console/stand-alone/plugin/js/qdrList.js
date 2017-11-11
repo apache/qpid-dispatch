@@ -281,7 +281,7 @@ var QDR = (function(QDR) {
         return active[0].key
       return null
     }
-    // the data for the selected entity is available, populate the tree
+    // the data for the selected entity is available, populate the tree on the left
     var updateTreeChildren = function (entity, tableRows, expand) {
       var tree = $("#entityTree").fancytree("getTree"), node;
       if (tree) {
@@ -469,6 +469,25 @@ var QDR = (function(QDR) {
         q.await(function (error) {
           if (error)
             QDR.log.error(error.message)
+
+          if (!tree.getActiveNode()) {
+            if ($scope.ActivatedKey) {
+              var node = tree.getNodeByKey($scope.ActivatedKey)
+              if (node) {
+                node.setActive(true, {noEvents: true})
+              }
+            }
+            if (!tree.getActiveNode()) {
+              var first = tree.getFirstChild()
+              if (first) {
+                var child = first.getFirstChild()
+                if (child)
+                  first = child
+              }
+              first.setActive(true)
+            }
+          }
+
           // once all expanded tree nodes have been update, schedule another update
           updateIntervalHandle = setTimeout(updateExpandedEntities, updateInterval)
         })
@@ -565,7 +584,7 @@ var QDR = (function(QDR) {
             tableRows.push(row);
           }
           tableRows.sort( function (a, b) { return a.name.value.localeCompare(b.name.value) })
-          setTimeout(selectRow, 0, {entity: dotentity, rows: tableRows, expand: expand});
+          selectRow({entity: dotentity, rows: tableRows, expand: expand});
         }
         callback(null)  // let queue handler know we are done
       }
@@ -834,12 +853,6 @@ var QDR = (function(QDR) {
 
     // this gets called once tree is initialized
     var onTreeInitialized = function (event, data) {
-      if ($scope.ActivatedKey) {
-        var node = data.tree.getNodeByKey($scope.ActivatedKey)
-        if (node) {
-          node.setActive(true, {noEvents: true})
-        }
-      }
       updateExpandedEntities();
     }
 
