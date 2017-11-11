@@ -30,6 +30,7 @@
     "angular-ui-bootstrap": "^2.5.6",
     "angular-ui-grid": "^4.0.8",
     "angular-ui-slider": "^0.4.0",
+    "bluebird": "^3.5.1",
     "d3": "^3.5.14",
     "d3-queue": "^3.0.7",
     "dispatch-management": "^0.1.0",
