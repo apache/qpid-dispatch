@@ -51,7 +51,7 @@ var QDR = (function(QDR) {
     }, true);
 
     $scope.buttonText = function() {
-      if (QDRService.isConnected()) {
+      if (QDRService.management.connection.is_connected()) {
         return "Disconnect";
       } else {
         return "Connect";
@@ -59,9 +59,9 @@ var QDR = (function(QDR) {
     };
 
     $scope.connect = function() {
-      if (QDRService.connected) {
+      if (QDRService.management.connection.is_connected()) {
         $timeout( function () {
-          QDRService.disconnect();
+          QDRService.management.connection.disconnect();
         })
         return;
       }
@@ -76,53 +76,58 @@ var QDR = (function(QDR) {
       }
     }
 
-    var doConnect = function(opts) {
+    var doConnect = function() {
+    QDR.log.info("doConnect called on connect page")
       if (!$scope.formEntity.address)
         $scope.formEntity.address = "localhost"
       if (!$scope.formEntity.port)
         $scope.formEntity.port = 5673
 
       var failed = function() {
+        QDR.log.info("disconnect action called");
         $timeout(function() {
-          QDR.log.debug("disconnect action called");
           $scope.connecting = false;
-          $scope.connectionErrorText = QDRService.errorText;
-          $scope.connectionError = true;
+          $scope.connectionErrorText = "Unable to connect to " + $scope.formEntity.address + ":" + $scope.formEntity.port
+          $scope.connectionError = true
         })
       }
-      QDRService.addDisconnectAction(failed);
-      QDRService.addConnectAction(function() {
-        QDRService.delDisconnectAction(failed)
-        QDRService.getSchema(function () {
-          QDR.log.info("got schema after connection")
-          QDRService.addUpdatedAction("initialized", function () {
-            QDRService.delUpdatedAction("initialized")
-            QDR.log.info("got initial topology")
-            $timeout(function() {
-              $scope.connecting = false;
-              if ($location.path().startsWith(QDR.pluginRoot)) {
-                  var searchObject = $location.search();
-                  var goto = "overview";
-                  if (searchObject.org && searchObject.org !== "connect") {
-                    goto = searchObject.org;
-                  }
-                  $location.search('org', null)
-                  $location.path(QDR.pluginRoot + "/" + goto);
-              }
-            })
-          })
-          QDR.log.info("requesting a topology")
-          QDRService.setUpdateEntities([])
-          QDRService.topology.get()
-        })
-      });
       var options = {address: $scope.formEntity.address, port: $scope.formEntity.port}
-      // if we have already successfully connected (the test connections succeeded)
-      if (opts && opts.connection) {
-        options.connection = opts.connection
-        options.context = opts.context
-      }
-      QDRService.connect(options);
+      QDRService.management.connection.testConnect(options, function (e) {
+        if (e.error) {
+          failed()
+        } else {
+          QDR.log.info("test connect from connect page succeeded")
+          QDRService.management.connection.addConnectAction(function() {
+            QDR.log.info("real connect from connect page succeeded")
+            // get notified if at any time the connection fails
+            QDRService.management.connection.addDisconnectAction(QDRService.onDisconnect);
+            QDRService.management.getSchema(function () {
+              QDR.log.info("got schema after connection")
+              QDRService.management.topology.addUpdatedAction("initialized", function () {
+                QDRService.management.topology.delUpdatedAction("initialized")
+                QDR.log.info("got initial topology")
+                $timeout(function() {
+                  $scope.connecting = false;
+                  if ($location.path().startsWith(QDR.pluginRoot)) {
+                      var searchObject = $location.search();
+                      var goto = "overview";
+                      if (searchObject.org && searchObject.org !== "connect") {
+                        goto = searchObject.org;
+                      }
+                      $location.search('org', null)
+                      $location.path(QDR.pluginRoot + "/" + goto);
+                  }
+                })
+              })
+              QDR.log.info("requesting a topology")
+              QDRService.management.topology.setUpdateEntities([])
+              QDRService.management.topology.get()
+            })
+          });
+          options.reconnect = true
+          QDRService.management.connection.connect(options)
+        }
+      })
     }
   }]);
 

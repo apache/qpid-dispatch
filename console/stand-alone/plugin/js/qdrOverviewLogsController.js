@@ -23,7 +23,7 @@ var QDR = (function(QDR) {
 
   QDR.module.controller('QDR.OverviewLogsController', function ($scope, $uibModalInstance, QDRService, $timeout, nodeName, nodeId, module, level) {
 
-      var gotLogInfo = function (nodeId, entity, response, context) {
+      var gotLogInfo = function (nodeId, response, context) {
         var statusCode = context.message.application_properties.statusCode;
         if (statusCode < 200 || statusCode >= 300) {
           Core.notification('error', context.message.statusDescription);
@@ -36,7 +36,7 @@ var QDR = (function(QDR) {
           })
           var logFields = levelLogs.map( function (result) {
             return {
-              nodeId: QDRService.nameFromId(nodeId),
+              nodeId: QDRService.management.topology.nameFromId(nodeId),
               name: result[0],
               type: result[1],
               message: result[2],
@@ -51,7 +51,8 @@ var QDR = (function(QDR) {
           })
         }
       }
-      QDRService.sendMethod(nodeId, undefined, {}, "GET-LOG", {module: module}, gotLogInfo)
+      QDRService.management.connection.sendMethod(nodeId, undefined, {}, "GET-LOG", {module: module})
+        .then( function (response) {gotLogInfo(nodeId, response.response, response.context)})
 
     $scope.loading = true
     $scope.module = module

@@ -26,7 +26,7 @@ ul.qdrListNodes > li > span {
   display: block;
 }
 
-.qdrList .gridStyle {
+.qdrList .grid {
     width: 20em;
     margin-right: 0;
     float: left;
@@ -215,6 +215,7 @@ div.d3Chart .title {
 div.d3Chart {
     padding: 1em 0;
     border: 1px solid #C0C0C0;
+    margin-bottom: 2em;
 }
 div.d3Chart.hDash {
     border: 0px;
@@ -288,7 +289,7 @@ div.qdrList li.active, ul.qdrListNodes li.active {
     background-color: #e0e0ff;
 }
 
-div.qdr-attributes span.dynatree-selected a {
+div.qdr-attributes span.fancytree-selected a {
     background-color: #e0e0ff;
 }
 div.qdr-attributes.pane, div.qdr-topology.pane {
@@ -309,7 +310,7 @@ div#main.qdr div.qdrList div.selected {
 }
 
 #dialogChart, #dialogEditChart {
-    height: 200px;
+    height: 220px;
 }
 
 .chartOptions .modal-body {
@@ -483,6 +484,9 @@ ul.qdrTopoModes {
 	left: 10px;
 }
 
+.overview-tree, .qdr-attributes {
+  min-height: calc(100vh - 90px)
+}
 .treeContainer {
 	width: 100%;
 	float: left;
@@ -501,16 +505,12 @@ ul.qdrTopoModes {
 	margin-left: 260px;
 }
 
-.gridStyle:not(.noHighlight) .ui-grid-row:hover .ui-grid-cell-contents {
-	background-color: #e0e0ff;
+.grid:not(.noHighlight) .ui-grid-row:hover .ui-grid-cell-contents {
+  /*background-color: #e0e0ff; */
+  background-color: #e9f2f9
 }
-
 .ngCellText {
 	padding: 4px 0 0 4px;
-}
-
-.overview {
-	border-bottom: 1px solid #d4d4d4;
 }
 
 .ui-grid-row.ui-grid-row-selected > [ui-grid-row] > .ui-grid-cell {
@@ -700,132 +700,132 @@ ul.dispatch-view {
 	margin-bottom: 0 !important;
 }
 
-.qdr-overview.pane.left span:not(.dynatree-has-children) .dynatree-icon:before,
-.qdr-attributes.pane.left span:not(.dynatree-has-children) .dynatree-icon:before {
+.qdr-overview.pane.left span:not(.fancytree-has-children) .fancytree-icon:before,
+.qdr-attributes.pane.left span:not(.fancytree-has-children) .fancytree-icon:before {
     color: green;
 }
 
-span:not(.dynatree-has-children).address .dynatree-icon:before,
-span:not(.dynatree-has-children).router\.address .dynatree-icon:before {
+span:not(.fancytree-has-children).address .fancytree-icon:before,
+span:not(.fancytree-has-children).router\.address .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f0ac";
 }
-span:not(.dynatree-has-children).address.mobile .dynatree-icon:before,
-span:not(.dynatree-has-children).router\.address.mobile .dynatree-icon:before {
+span:not(.fancytree-has-children).address.mobile .fancytree-icon:before,
+span:not(.fancytree-has-children).router\.address.mobile .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f109";
 }
-span:not(.dynatree-has-children).address.internal.mobile .dynatree-icon:before,
-span:not(.dynatree-has-children).router\.address.internal.mobile .dynatree-icon:before {
+span:not(.fancytree-has-children).address.internal.mobile .fancytree-icon:before,
+span:not(.fancytree-has-children).router\.address.internal.mobile .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f0ac";
 }
-span:not(.dynatree-has-children).address.router .dynatree-icon:before,
-span:not(.dynatree-has-children).router\.address.router .dynatree-icon:before {
+span:not(.fancytree-has-children).address.router .fancytree-icon:before,
+span:not(.fancytree-has-children).router\.address.router .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f047";
 }
 
-span.address-link .dynatree-icon:before {
+span.address-link .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f0ac";
 }
 
-span:not(.dynatree-has-children).connection.external .dynatree-icon:before {
+span:not(.fancytree-has-children).connection.external .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f109";
 }
-span:not(.dynatree-has-children).connection.normal .dynatree-icon:before {
+span:not(.fancytree-has-children).connection.normal .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f08e";
 }
-span:not(.dynatree-has-children).connection.external.quiesced .dynatree-icon:before {
+span:not(.fancytree-has-children).connection.external.quiesced .fancytree-icon:before {
   font-family: FontAwesome;
 	content: "\f14c";
 	color: red;
 }
-span:not(.dynatree-has-children).connection.inter-router .dynatree-icon:before {
+span:not(.fancytree-has-children).connection.inter-router .fancytree-icon:before {
   font-family: FontAwesome;
    content: "\f07e";
 }
-span:not(.dynatree-has-children).connection.router-control .dynatree-icon:before {
+span:not(.fancytree-has-children).connection.router-control .fancytree-icon:before {
   font-family: FontAwesome;
    content: "\f013";
 }
-span:not(.dynatree-has-children).no-data .dynatree-icon:before {
+span:not(.fancytree-has-children).no-data .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f05e";
   color: red !important;
 }
-span:not(.dynatree-has-children).loading .dynatree-icon:before {
+span:not(.fancytree-has-children).loading .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f254";
 }
-span:not(.dynatree-has-children).connector .dynatree-icon:before {
+span:not(.fancytree-has-children).connector .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f126";
 }
-span:not(.dynatree-has-children).container .dynatree-icon:before {
+span:not(.fancytree-has-children).container .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f16c";
 }
-span:not(.dynatree-has-children).log .dynatree-icon:before {
+span:not(.fancytree-has-children).log .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f0f6";
 }
-span:not(.dynatree-has-children).router\.node .dynatree-icon:before {
+span:not(.fancytree-has-children).router\.node .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f013";
 }
-span:not(.dynatree-has-children).link.inter-router .dynatree-icon:before,
-span:not(.dynatree-has-children).router\.link.inter-router .dynatree-icon:before{
+span:not(.fancytree-has-children).link.inter-router .fancytree-icon:before,
+span:not(.fancytree-has-children).router\.link.inter-router .fancytree-icon:before{
   font-family: FontAwesome;
   content: "\f07e";
 }
-span:not(.dynatree-has-children).link.router-control .dynatree-icon:before,
-span:not(.dynatree-has-children).router\.link.router-control .dynatree-icon:before{
+span:not(.fancytree-has-children).link.router-control .fancytree-icon:before,
+span:not(.fancytree-has-children).router\.link.router-control .fancytree-icon:before{
   font-family: FontAwesome;
   content: "\f013";
 }
-span:not(.dynatree-has-children).link.endpoint .dynatree-icon:before,
-span:not(.dynatree-has-children).router\.link.endpoint .dynatree-icon:before{
+span:not(.fancytree-has-children).link.endpoint .fancytree-icon:before,
+span:not(.fancytree-has-children).router\.link.endpoint .fancytree-icon:before{
   font-family: FontAwesome;
   content: "\f109";
 }
-span:not(.dynatree-has-children).link.console .dynatree-icon:before,
-span:not(.dynatree-has-children).router\.link.console .dynatree-icon:before {
+span:not(.fancytree-has-children).link.console .fancytree-icon:before,
+span:not(.fancytree-has-children).router\.link.console .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f108";
 }
-span:not(.dynatree-has-children).listener .dynatree-icon:before {
+span:not(.fancytree-has-children).listener .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f025";
 }
-span:not(.dynatree-has-children).connection .dynatree-icon:before {
+span:not(.fancytree-has-children).connection .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f07e";
 }
-span:not(.dynatree-has-children).connection.console .dynatree-icon:before {
+span:not(.fancytree-has-children).connection.console .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f108";
 }
-span:not(.dynatree-has-children).waypoint .dynatree-icon:before {
+span:not(.fancytree-has-children).waypoint .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f0ec";
 }
-span:not(.dynatree-has-children).router .dynatree-icon:before {
+span:not(.fancytree-has-children).router .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f047";
 }
-span:not(.dynatree-has-children).fixedAddress .dynatree-icon:before {
+span:not(.fancytree-has-children).fixedAddress .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f015";
 }
-span:not(.dynatree-has-children).linkRoutePattern .dynatree-icon:before {
+span:not(.fancytree-has-children).linkRoutePattern .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f039";
 }
-span:not(.dynatree-has-children).allocator .dynatree-icon:before {
+span:not(.fancytree-has-children).allocator .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f170";
 }

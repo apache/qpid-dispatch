@@ -22,22 +22,24 @@ under the License.
 var QDR = (function(QDR) {
 
   /**
-   * @method ListController
-   * @param $scope
-   * @param QDRService
-   *
    * Controller for the main interface
    */
   QDR.module.controller("QDR.ListController", ['$scope', '$location', '$uibModal', '$filter', '$timeout', 'QDRService', 'QDRChartService',
     function ($scope, $location, $uibModal, $filter, $timeout, QDRService, QDRChartService) {
 
+    QDR.log.debug("QDR.ListControll started with location of " + $location.path() + " and connection of  " + QDRService.management.connection.is_connected());
     var updateIntervalHandle = undefined;
     var updateInterval = 5000;
     var ListExpandedKey = "QDRListExpanded";
+    var SelectedEntityKey = "QDRSelectedEntity"
+    var ActivatedKey = "QDRActivatedKey"
     $scope.details = {};
 
     $scope.tmplListTree = QDR.templatePath + 'tmplListTree.html';
-    $scope.selectedEntity = localStorage['QDRSelectedEntity'] || "address";
+    $scope.selectedEntity = localStorage[SelectedEntityKey] || "address";
+    $scope.ActivatedKey = localStorage[ActivatedKey] || null;
+    if ($scope.selectedEntity == "undefined")
+      $scope.selectedEntity = undefined
     $scope.selectedNode = localStorage['QDRSelectedNode'];
     $scope.selectedNodeId = localStorage['QDRSelectedNodeId'];
     $scope.selectedRecordName = localStorage['QDRSelectedRecordName'];
@@ -57,8 +59,6 @@ var QDR = (function(QDR) {
         op: 'UPDATE',
         title: "Update this attribute",
         isValid: function () {
-          //QDR.log.debug("isValid UPDAATE? " + this.op)
-          //console.dump($scope.operations)
           return $scope.operations.indexOf(this.op) > -1
         }
       },
@@ -96,28 +96,30 @@ var QDR = (function(QDR) {
         $scope.logResults = [];
         $scope.fetchingLog = true;
         var entity; // undefined since it is not supported in the GET-LOG call
-        QDRService.sendMethod($scope.currentNode.id, entity, {}, $scope.currentMode.op, {}, function (nodeName, entity, response, context) {
-          $scope.fetchingLog = false;
-          var statusCode = context.message.application_properties.statusCode;
+        QDRService.management.connection.sendMethod($scope.currentNode.id, entity, {}, $scope.currentMode.op)
+          .then( function (response) {
+          var statusCode = response.context.message.application_properties.statusCode;
           if (statusCode < 200 || statusCode >= 300) {
-            Core.notification('error', context.message.statusDescription);
-            QDR.log.info('Error ' + context.message.statusDescription)
+            Core.notification('error', response.context.message.statusDescription);
+            QDR.log.error('Error ' + response.context.message.statusDescription)
             return;
           }
-          $scope.logResults = response.filter( function (entry) {
-            return entry[0] === $scope.detailsObject.module
-          }).sort( function (a, b) {
-            return b[5] - a[5]
-          }).map( function (entry) {
-            return {
-              type: entry[1],
-              message: entry[2],
-              source: entry[3],
-              line: entry[4],
-              time: Date(entry[5]).toString()
-            }
+          $timeout( function () {
+            $scope.fetchingLog = false;
+            $scope.logResults = response.response.filter( function (entry) {
+              return entry[0] === $scope.detailsObject.module
+            }).sort( function (a, b) {
+              return b[5] - a[5]
+            }).map( function (entry) {
+              return {
+                type: entry[1],
+                message: entry[2],
+                source: entry[3],
+                line: entry[4],
+                time: Date(entry[5]).toString()
+              }
+            })
           })
-          $scope.$apply();
         })
       }
     }
@@ -126,47 +128,40 @@ var QDR = (function(QDR) {
     }
 
     $scope.expandAll = function () {
-      $("#entityTree").dynatree("getRoot").visit(function(node){
-                node.expand(true);
-            });
+      $("#entityTree").fancytree("getTree").visit(function(node){
+        node.setExpanded(true);
+      });
     }
     $scope.contractAll = function () {
-      $("#entityTree").dynatree("getRoot").visit(function(node){
-                node.expand(false);
-            });
+      $("#entityTree").fancytree("getTree").visit(function(node){
+        node.setExpanded(false);
+      });
     }
 
-    if (!QDRService.connected) {
+    if (!QDRService.management.connection.is_connected()) {
       // we are not connected. we probably got here from a bookmark or manual page reload
-      QDRService.redirectWhenConnected("list");
+      QDR.redirectWhenConnected($location, "list")
       return;
     }
-    var onDisconnect = function () {
-QDR.log.info("we were just disconnected while on the list page. Setting org to redirect back once we are connected again")
-      $timeout( function () {
-        QDRService.redirectWhenConnected("list")
-      })
-    }
-    // we are currently connected. setup a handler to get notified if we are ever disconnected
-    QDRService.addDisconnectAction( onDisconnect )
 
     $scope.nodes = []
     var excludedEntities = ["management", "org.amqp.management", "operationalEntity", "entity", "configurationEntity", "dummy", "console"];
     var aggregateEntities = ["router.address"];
     var classOverrides = {
       "connection": function (row, nodeId) {
-        var isConsole = QDRService.isAConsole (row.properties.value, row.identity.value, row.role.value, nodeId)
+        var isConsole = QDRService.utilities.isAConsole (row.properties.value, row.identity.value, row.role.value, nodeId)
         return isConsole ? "console" : row.role.value === "inter-router" ? "inter-router" : "external";
       },
       "router.link": function (row, nodeId) {
         var link = {nodeId: nodeId, connectionId: row.connectionId.value}
-        var isConsole = QDRService.isConsoleLink(link)
+
+        var isConsole = QDRService.utilities.isConsole(QDRService.management.topology.getConnForLink(link))
         return isConsole ? "console" : row.linkType.value;
       },
       "router.address": function (row) {
-        var identity = QDRService.identity_clean(row.identity.value)
-        var address = QDRService.addr_text(identity)
-        var cls = QDRService.addr_class(identity)
+        var identity = QDRService.utilities.identity_clean(row.identity.value)
+        var address = QDRService.utilities.addr_text(identity)
+        var cls = QDRService.utilities.addr_class(identity)
         if (address === "$management")
           cls = "internal " + cls
         return cls
@@ -174,29 +169,51 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
     }
 
     var lookupOperations = function () {
-      var ops = QDRService.schema.entityTypes[$scope.selectedEntity].operations.filter( function (op) { return op !== 'READ'});
+      var ops = QDRService.management.schema().entityTypes[$scope.selectedEntity].operations.filter( function (op) { return op !== 'READ'});
       $scope.operation = ops.length ? ops[0] : "";
       return ops;
     }
-
     var entityTreeChildren = [];
     var expandedList = angular.fromJson(localStorage[ListExpandedKey]) || [];
-    var onTreeNodeExpanded = function (expanded, node) {
+    var saveExpanded = function () {
       // save the list of entities that are expanded
-      var tree = $("#entityTree").dynatree("getTree");
-      var list = [];
+      var tree = $("#entityTree").fancytree("getTree");
+      var list = []
       tree.visit( function (tnode) {
         if (tnode.isExpanded()) {
-          list.push(tnode.data.key)
+          list.push(tnode.key)
         }
       })
       localStorage[ListExpandedKey] = JSON.stringify(list)
+    }
 
-      if (expanded)
-        onTreeSelected(node);
+    var onTreeNodeBeforeActivate = function (event, data) {
+      // if node is toplevel entity
+      if (data.node.data.typeName === "entity") {
+        // if the current active node is not this one and not one of its children
+        var active = data.tree.getActiveNode()
+        if (active && !data.node.isActive() && data.node.isExpanded()) {  // there is an active node and it's not this one
+          var any = false
+          var children = data.node.getChildren()
+          if (children) {
+            any = children.some( function (child) {
+              return child.key === active.key
+            })
+          }
+          if (!any) // none of the clicked on node's children was active
+            return false  // don't activate, just collapse this top level node
+        }
+      }
+      return true
+    }
+    var onTreeNodeExpanded = function (event, data) {
+      saveExpanded()
+      updateExpandedEntities()
     }
     // a tree node was selected
-    var onTreeSelected = function (selectedNode) {
+    var onTreeNodeActivated = function (event, data) {
+      $scope.ActivatedKey = data.node.key
+      var selectedNode = data.node
       $timeout( function () {
         if ($scope.currentMode.id === 'operations')
           $scope.currentMode = $scope.modes[0];
@@ -207,25 +224,29 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
           $scope.currentMode = $scope.modes[0];
         }
         if (selectedNode.data.typeName === "entity") {
-          $scope.selectedEntity = selectedNode.data.key;
+          $scope.selectedEntity = selectedNode.key;
           $scope.operations = lookupOperations()
         } else if (selectedNode.data.typeName === 'attribute') {
-          $scope.selectedEntity = selectedNode.parent.data.key;
+          $scope.selectedEntity = selectedNode.parent.key;
           $scope.operations = lookupOperations()
-          $scope.selectedRecordName = selectedNode.data.key;
+          $scope.selectedRecordName = selectedNode.key;
           updateDetails(selectedNode.data.details);   // update the table on the right
-          $("#entityTree").dynatree("getRoot").visit(function(node){
-             node.select(false);
-          });
-          selectedNode.select();
         }
       })
     }
-
+    var getExpanded = function (tree) {
+      var list = []
+      tree.visit( function (tnode) {
+        if (tnode.isExpanded()) {
+          list.push(tnode)
+        }
+      })
+      return list
+    }
     // fill in an empty results recoord based on the entities schema
     var fromSchema = function (entityName) {
       var row = {}
-      var schemaEntity = QDRService.schema.entityTypes[entityName]
+      var schemaEntity = QDRService.management.schema().entityTypes[entityName]
       for (attr in schemaEntity.attributes) {
         var entity = schemaEntity.attributes[attr]
         var value = ""
@@ -248,77 +269,98 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
       return row;
     }
     $scope.hasCreate = function () {
-      var schemaEntity = QDRService.schema.entityTypes[$scope.selectedEntity]
+      var schemaEntity = QDRService.management.schema().entityTypes[$scope.selectedEntity]
       return (schemaEntity.operations.indexOf("CREATE") > -1)
     }
 
-    var stopUpdating = function () {
-      if (angular.isDefined(updateIntervalHandle)) {
-        clearInterval(updateIntervalHandle);
-      }
-      updateIntervalHandle = undefined;
+    var getActiveChild = function (node) {
+      var active = node.children.filter(function (child) {
+        return child.isActive()
+      })
+      if (active.length > 0)
+        return active[0].key
+      return null
     }
-
     // the data for the selected entity is available, populate the tree
-    var updateEntityChildren = function (entity, tableRows, expand) {
-      var tree = $("#entityTree").dynatree("getTree");
-      if (!tree.getNodeByKey) {
-        return stopUpdating()
+    var updateTreeChildren = function (entity, tableRows, expand) {
+      var tree = $("#entityTree").fancytree("getTree"), node;
+      if (tree) {
+        node = tree.getNodeByKey(entity)
       }
-      var node = tree.getNodeByKey(entity)
+      if (!tree || !node) {
+        return
+      }
+      var wasActive = node.isActive()
+      var wasExpanded = node.isExpanded()
+      var activeChildKey = getActiveChild(node)
+      node.removeChildren()
       var updatedDetails = false;
-      var scrollTreeDiv = $('.qdr-attributes.pane.left .pane-viewport')
-      var scrollTop = scrollTreeDiv.scrollTop();
-      node.removeChildren();
       if (tableRows.length == 0) {
-          node.addChild({
+        var newNode = {
           addClass:   "no-data",
-              typeName:   "none",
-              title:      "no data",
-          key:        node.data.key + ".1"
-          })
-          if (expand) {
-              updateDetails(fromSchema(entity));
-                 $scope.selectedRecordName = entity;
+          typeName:   "none",
+          title:      "no data",
+          key:        node.key + ".1"
+        }
+        node.addNode(newNode)
+        if (expand) {
+          updateDetails(fromSchema(entity));
+          $scope.selectedRecordName = entity;
         }
       } else {
-        tableRows.forEach( function (row) {
+        var children = tableRows.map( function (row) {
           var addClass = entity;
           if (classOverrides[entity]) {
             addClass += " " + classOverrides[entity](row, $scope.currentNode.id);
           }
           var child = {
-                        typeName:   "attribute",
-                        addClass:   addClass,
-                        tooltip:    addClass,
-                        key:        row.name.value,
-                        title:      row.name.value,
-                        details:    row
-                    }
-          if (row.name.value === $scope.selectedRecordName) {
-            if (expand)
-              updateDetails(row); // update the table on the right
-            child.select = true;
-            updatedDetails = true;
+            typeName:   "attribute",
+            extraClasses:   addClass,
+            tooltip:    addClass,
+            key:        row.name.value,
+            title:      row.name.value,
+            details:    row
           }
-          node.addChild(child)
+          return child
         })
+        node.addNode(children)
       }
-      // if the selectedRecordName was not found, select the 1st one
-      if (expand && !updatedDetails && tableRows.length > 0) {
-        var row = tableRows[0];
-        $scope.selectedRecordName = row.name.value;
-        var node = tree.getNodeByKey($scope.selectedRecordName);
-        node.select(true);
-        updateDetails(row)  // update the table on the right
+      // top level node was expanded
+      if (wasExpanded)
+        node.setExpanded(true, {noAnimation: true, noEvents: true})
+      // if the parent node was active, but none of the children were active, active the 1st child
+      if (wasActive) {
+        if (!activeChildKey) {
+          activeChildKey = node.children[0].key
+        }
       }
-      scrollTreeDiv.scrollTop(scrollTop)
+      if (!tree.getActiveNode())
+         activeChildKey = $scope.ActivatedKey
+      // re-active the previously active child node
+      if (activeChildKey) {
+        var newNode = tree.getNodeByKey(activeChildKey)
+        // the node may not be there after the update
+        if (newNode)
+          newNode.setActive(true) // fires the onTreeNodeActivated event for this node
+      }
+      resizer()
     }
+
+
+    var resizer = function () {
+      // this forces the tree and the grid to be the size of the browser window.
+      // the effect is that the tree and the grid will have vertical scroll bars if needed.
+      // the alternative is to let the tree and grid determine the size of the page and have
+      // the scroll bar on the window
+      var viewport = $('#list-controller .pane-viewport')
+      viewport.height( window.innerHeight - viewport.offset().top)
+    }
+    $(window).resize(resizer);
 
     var schemaProps = function (entityName, key, currentNode) {
          var typeMap = {integer: 'number', string: 'text', path: 'text', boolean: 'boolean', map: 'textarea'};
 
-      var entity = QDRService.schema.entityTypes[entityName]
+      var entity = QDRService.management.schema().entityTypes[entityName]
       var value = entity.attributes[key]
       // skip identity and depricated fields
       if (!value)
@@ -334,7 +376,7 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
         // turn input into a select. the values will be populated later
         value.type = []
         // find all the connector names and populate the select
-        QDRService.fetchEntity(currentNode.id, '.connector', ['name'], function (nodeName, dotentity, response) {
+        QDRService.management.topology.fetchEntity(currentNode.id, 'connector', ['name'], function (nodeName, dotentity, response) {
           $scope.detailFields.some( function (field) {
             if (field.name === 'connector') {
               field.rawtype = response.results.map (function (result) {return result[0]})
@@ -344,7 +386,7 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
         });
       }
       return {    name:       key,
-            humanName:  QDRService.humanify(key),
+            humanName:  QDRService.utilities.humanify(key),
                         description:value.description,
                         type:       disabled ? 'disabled' : typeMap[value.type],
                         rawtype:    value.type,
@@ -376,14 +418,14 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
         })
         var schemaEntity = schemaProps($scope.selectedEntity, attr, $scope.currentNode)
         details.push( {
-          attributeName:  QDRService.humanify(attr),
-          attributeValue: attr === 'port' ? row[attr].value : QDRService.pretty(row[attr].value),
+          attributeName:  QDRService.utilities.humanify(attr),
+          attributeValue: attr === 'port' ? row[attr].value : QDRService.utilities.pretty(row[attr].value),
           name:           attr,
           changed:        changed.length,
           rawValue:       row[attr].value,
           graph:          row[attr].graph,
           title:          row[attr].title,
-          aggregateValue: QDRService.pretty(row[attr].aggregate),
+          aggregateValue: QDRService.utilities.pretty(row[attr].aggregate),
           aggregateTip:   row[attr].aggregateTip,
 
           input:          schemaEntity.input,
@@ -401,28 +443,35 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
     }
 
     var applyDetails = function (details) {
-      $scope.detailFields = details;
-      aggregateColumn();
-      $scope.$apply();
-      // ng-grid bug? the entire table doesn't always draw unless a reflow is triggered;
-      $(window).trigger('resize');
+      $timeout( function () {
+        $scope.detailFields = details;
+        aggregateColumn();
+      })
     }
 
-    var restartUpdate = function () {
-      stopUpdating();
-      updateTableData($scope.selectedEntity, true);
-      updateIntervalHandle = setInterval(updateExpandedEntities, updateInterval);
+    // called from html ng-style="getTableHeight()"
+    $scope.getTableHeight = function () {
+      return {
+        height: ($scope.detailFields.length * 30 + 40) + 'px'
+      }
     }
+
     var updateExpandedEntities = function () {
-      var tree = $("#entityTree").dynatree("getTree");
-      if (tree.visit) {
-        tree.visit( function (node) {
-          if (node.isExpanded()) {
-            updateTableData(node.data.key, node.data.key === $scope.selectedEntity)
-          }
+      clearTimeout(updateIntervalHandle)
+      var tree = $("#entityTree").fancytree("getTree");
+      if (tree) {
+        var q = d3.queue(10)
+        var expanded = getExpanded(tree)
+        expanded.forEach( function (node) {
+          q.defer(q_updateTableData, node.key, node.key === $scope.selectedEntity)
         })
-      } else {
-        stopUpdating();
+
+        q.await(function (error) {
+          if (error)
+            QDR.log.error(error.message)
+          // once all expanded tree nodes have been update, schedule another update
+          updateIntervalHandle = setTimeout(updateExpandedEntities, updateInterval)
+        })
       }
     }
 
@@ -430,12 +479,15 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
       $scope.selectedNode = node.name;
       $scope.selectedNodeId = node.id;
       setCurrentNode();
-      restartUpdate();
     };
+    $scope.$watch('ActivatedKey', function(newValue, oldValue) {
+      if (newValue !== oldValue) {
+        localStorage[ActivatedKey] = $scope.ActivatedKey;
+      }
+    })
     $scope.$watch('selectedEntity', function(newValue, oldValue) {
       if (newValue !== oldValue) {
         localStorage['QDRSelectedEntity'] = $scope.selectedEntity;
-        restartUpdate();
         $scope.operations = lookupOperations()
       }
     })
@@ -452,15 +504,10 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
     })
 
     /* Called periodically to refresh the data on the page */
-    var updateTableData = function (entity, expand) {
-      if (!QDRService.connected) {
-        // we are no longer connected. bail back to the connect page
-        $location.path("/" + QDR.pluginName + "/connect")
-        $location.search('org', "list");
-        return;
-      }
-      // don't update the data when on the operations tab
-      if ($scope.currentMode.id === 'operations') {
+    var q_updateTableData = function (entity, expand, callback) {
+      // don't update the data when on the operations tabs
+      if ($scope.currentMode.id !== 'attributes') {
+        callback(null)
         return;
       }
 
@@ -473,7 +520,7 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
         if (attributeNames) {
           var nameIndex = attributeNames.indexOf("name");
           var identityIndex = attributeNames.indexOf("identity");
-          var ent = QDRService.schema.entityTypes[entity];
+          var ent = QDRService.management.schema().entityTypes[entity];
           for (var i=0; i<records.length; ++i) {
             var record = records[i];
             var aggregate = aggregates ? aggregates[i] : undefined;
@@ -486,8 +533,10 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
               }
             }
             if (!rowName) {
-              QDR.log.error("response attributeNames did not contain a name field");
+              var msg = "response attributeNames did not contain a name field"
+              QDR.log.error(msg);
               console.dump(response.attributeNames);
+              callback(Error(msg))
               return;
             }
             for (var j=0; j<attributeNames.length; ++j) {
@@ -515,23 +564,23 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
             }
             tableRows.push(row);
           }
+          tableRows.sort( function (a, b) { return a.name.value.localeCompare(b.name.value) })
+          setTimeout(selectRow, 0, {entity: dotentity, rows: tableRows, expand: expand});
         }
-
-        tableRows.sort( function (a, b) { return a.name.value.localeCompare(b.name.value) })
-        setTimeout(selectRow, 0, {entity: dotentity, rows: tableRows, expand: expand});
+        callback(null)  // let queue handler know we are done
       }
       // if this entity should show an aggregate column, send the request to get the info for this entity from all the nedes
       if (aggregateEntities.indexOf(entity) > -1) {
-        var nodeInfo = QDRService.topology.nodeInfo();
-        QDRService.getMultipleNodeInfo(Object.keys(nodeInfo), entity, [], gotNodeInfo, $scope.selectedNodeId);
+        var nodeInfo = QDRService.management.topology.nodeInfo();
+        QDRService.management.topology.getMultipleNodeInfo(Object.keys(nodeInfo), entity, [], gotNodeInfo, $scope.selectedNodeId);
       } else {
-        QDRService.fetchEntity($scope.selectedNodeId, entity, [], gotNodeInfo);
+        QDRService.management.topology.fetchEntity($scope.selectedNodeId, entity, [], gotNodeInfo);
       }
     };
 
-    // tableRows are the records that were returned, this populates the left hand table on the page
+    // tableRows are the records that were returned, this populates the left hand tree on the page
     var selectRow = function (info) {
-      updateEntityChildren(info.entity, info.rows, info.expand);
+      updateTreeChildren(info.entity, info.rows, info.expand);
       fixTooltips();
     }
 
@@ -541,7 +590,7 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
         var table = "<table class='tiptable'><tbody>";
         data.forEach (function (row) {
           table += "<tr>";
-          table += "<td>" + row.node + "</td><td align='right'>" + QDRService.pretty(row.val) + "</td>";
+          table += "<td>" + row.node + "</td><td align='right'>" + QDRService.utilities.pretty(row.val) + "</td>";
           table += "</tr>"
         })
         table += "</tbody></table>"
@@ -574,7 +623,7 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
     $scope.addToGraph = function(rowEntity) {
       var chart = QDRChartService.registerChart(
         {nodeId: $scope.selectedNodeId,
-         entity: "." + $scope.selectedEntity,
+         entity: $scope.selectedEntity,
          name:   $scope.selectedRecordName,
          attr:    rowEntity.name,
          forceCreate: true});
@@ -595,7 +644,6 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
       doDialog('tmplListChart.html', chart);
     }
 
-    $scope.detailCols = [];
     var aggregateColumn = function () {
       if ((aggregateEntities.indexOf($scope.selectedEntity) > -1 && $scope.detailCols.length != 3) ||
         (aggregateEntities.indexOf($scope.selectedEntity) == -1 && $scope.detailCols.length != 2)) {
@@ -604,12 +652,14 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
          {
            field: 'attributeName',
            displayName: 'Attribute',
-           cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName">{{row.entity[col.field]}}<i ng-if="row.entity.graph" ng-click="addToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>'
+           cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}<i ng-if="row.entity.graph" ng-click="grid.appScope.addToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>'
+
+                         //'<div title="{{row.entity.title}}" class="listAttrName">{{row.entity[col.field]}}<i ng-if="row.entity.graph" ng-click="addToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>'
          },
          {
            field: 'attributeValue',
            displayName: 'Value',
-           cellTemplate: '<div class="ngCellText" ng-class="{\'changed\': row.entity.changed == 1}"><span>{{row.getProperty(col.field)}}</span></div>'
+           cellTemplate: '<div class="ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}"><span>{{COL_FIELD CUSTOM_FILTERS | pretty}}</span></div>'
          }
          ]
         if (aggregateEntities.indexOf($scope.selectedEntity) > -1) {
@@ -618,7 +668,7 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
              width: '10%',
              field: 'aggregateValue',
              displayName: 'Aggregate',
-             cellTemplate: '<div class="hastip" alt="{{row.entity.aggregateTip}}"><span ng-class="{\'changed\': row.entity.changed == 1}">{{row.entity[col.field]}}</span><i ng-if="row.entity.graph" ng-click="addAllToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>',
+             cellTemplate: '<div class="hastip ui-grid-cell-contents" alt="{{row.entity.aggregateTip}}"><span ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS}}</span><i ng-if="row.entity.graph" ng-click="grid.appScope.addAllToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>',
              cellClass: 'aggregate'
            }
           )
@@ -629,33 +679,43 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
     }
 
     // the table on the right of the page contains a row for each field in the selected record in the table on the left
+    $scope.desiredTableHeight = 340;
+    $scope.detailCols = [];
     $scope.details = {
       data: 'detailFields',
-      columnDefs: "detailCols",
+      columnDefs: [
+        {
+          field: 'attributeName',
+          displayName: 'Attribute',
+          cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}<i ng-if="row.entity.graph" ng-click="grid.appScope.addToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>'
+          //'<div title="{{row.entity.title}}" class="listAttrName">{{row.entity[col.field]}}<i ng-if="row.entity.graph" ng-click="addToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>'
+        },
+        {
+          field: 'attributeValue',
+          displayName: 'Value',
+          cellTemplate: '<div class="ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}"><span>{{COL_FIELD CUSTOM_FILTERS | pretty}}</span></div>'
+        }
+      ],
       enableColumnResize: true,
       multiSelect: false,
-      jqueryUIDraggable: true,
-      beforeSelectionChange: function() {
-          return false;
-      }
+      jqueryUIDraggable: true
     };
+
     $scope.$on("$destroy", function( event ) {
-      //QDR.log.debug("scope destroyed for qdrList");
-      stopUpdating();
-      QDRService.delDisconnectAction( onDisconnect )
+      clearTimeout(updateIntervalHandle)
+      $(window).off("resize", resizer);
     });
 
-    function gotMethodResponse (nodeName, entity, response, context) {
+    function gotMethodResponse (entity, context) {
       var statusCode = context.message.application_properties.statusCode;
       if (statusCode < 200 || statusCode >= 300) {
         Core.notification('error', context.message.statusDescription);
-        QDR.log.info('Error ' + context.message.statusDescription)
+        QDR.log.error('Error ' + context.message.statusDescription)
       } else {
         var note = entity + " " + $filter('Pascalcase')($scope.currentMode.op) + "d"
         Core.notification('success', note);
-        QDR.log.info('Success ' + note)
+        QDR.log.debug('Success ' + note)
         $scope.selectMode($scope.modes[0]);
-        restartUpdate();
       }
     }
     $scope.ok = function () {
@@ -678,11 +738,13 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
             attributes[field.name] = value
         }
       })
-      QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, undefined, gotMethodResponse)
+      QDRService.management.connection.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op)
+       .then(function (response) {gotMethodResponse($scope.selectedEntity, response.context)})
     }
     $scope.remove = function () {
       var attributes = {type: $scope.selectedEntity, name: $scope.selectedRecordName}
-      QDRService.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op, undefined, gotMethodResponse)
+      QDRService.management.connection.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op)
+       .then(function (response) {gotMethodResponse($scope.selectedEntity, response.context)})
     }
 
     function doDialog(tmpl, chart) {
@@ -702,7 +764,7 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
               }
         });
 
-        d.result.then(function(result) { console.log("d.open().then"); });
+        d.result.then(function(result) { QDR.log.debug("d.open().then"); });
 
     };
 
@@ -717,13 +779,13 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
 
     var treeReady = false;
     var serviceReady = false;
-    $scope.largeNetwork = QDRService.isLargeNetwork()
+    $scope.largeNetwork = QDRService.management.topology.isLargeNetwork()
     // called after we know for sure the schema is fetched and the routers are all ready
-    QDRService.addUpdatedAction("initList", function () {
-      QDRService.stopUpdating();
-      QDRService.delUpdatedAction("initList")
+    QDRService.management.topology.addUpdatedAction("initList", function () {
+      QDRService.management.topology.stopUpdating();
+      QDRService.management.topology.delUpdatedAction("initList")
 
-      $scope.nodes = QDRService.nodeList().sort(function (a, b) { return a.name.toLowerCase() > b.name.toLowerCase()});
+      $scope.nodes = QDRService.management.topology.nodeList().sort(function (a, b) { return a.name.toLowerCase() > b.name.toLowerCase()});
       // unable to get node list? Bail.
       if ($scope.nodes.length == 0) {
         $location.path("/" + QDR.pluginName + "/connect")
@@ -745,7 +807,7 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
           $scope.currentNode = $scope.nodes[0];
         }
       }
-      var sortedEntities = Object.keys(QDRService.schema.entityTypes).sort();
+      var sortedEntities = Object.keys(QDRService.management.schema().entityTypes).sort();
       sortedEntities.forEach( function (entity) {
         if (excludedEntities.indexOf(entity) == -1) {
           if (!angular.isDefined($scope.selectedEntity))
@@ -754,9 +816,8 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
           var e = new Folder(entity)
           e.typeName = "entity"
           e.key = entity
-          e.isFolder = true
-          e.expand = (expandedList.indexOf(entity) > -1)
-          var placeHolder = new Folder("loading...")
+          e.expanded = (expandedList.indexOf(entity) > -1)
+          var placeHolder = new Leaf("loading...")
           placeHolder.addClass = "loading"
           e.children = [placeHolder]
           entityTreeChildren.push(e)
@@ -765,33 +826,46 @@ QDR.log.info("we were just disconnected while on the list page. Setting org to r
       serviceReady = true;
       initTree();
     })
+    // called by ng-init="treeReady()" in tmplListTree.html
     $scope.treeReady = function () {
       treeReady = true;
       initTree();
     }
 
+    // this gets called once tree is initialized
+    var onTreeInitialized = function (event, data) {
+      if ($scope.ActivatedKey) {
+        var node = data.tree.getNodeByKey($scope.ActivatedKey)
+        if (node) {
+          node.setActive(true, {noEvents: true})
+        }
+      }
+      updateExpandedEntities();
+    }
+
     var initTree = function () {
       if (!treeReady || !serviceReady)
         return;
-      $('#entityTree').dynatree({
-        onActivate: onTreeSelected,
-        onExpand: onTreeNodeExpanded,
+      $('#entityTree').fancytree({
+        activate: onTreeNodeActivated,
+        expand: onTreeNodeExpanded,
+        beforeActivate: onTreeNodeBeforeActivate,
+        init: onTreeInitialized,
         selectMode: 1,
         autoCollapse: $scope.largeNetwork,
         activeVisible: !$scope.largeNetwork,
+        clickFolderMode: 3,
         debugLevel: 0,
-        classNames: {
+        extraClasses: {
           expander: 'fa-angle',
-          connector: 'dynatree-no-connector'
+          connector: 'fancytree-no-connector'
           },
-        children: entityTreeChildren
+        source: entityTreeChildren
       })
-      restartUpdate()
-      updateExpandedEntities();
     };
-    QDRService.ensureAllEntities({entity: ".connection"}, function () {
-      QDRService.setUpdateEntities([".connection"])
-      QDRService.startUpdating();
+    QDRService.management.topology.ensureAllEntities({entity: "connection"}, function () {
+      QDRService.management.topology.setUpdateEntities(["connection"])
+      QDRService.management.topology.startUpdating(true);
     })
   }]);
 

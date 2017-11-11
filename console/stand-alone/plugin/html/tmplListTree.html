@@ -17,10 +17,10 @@
  under the License
 -->
 
-<div class="col-sm-9 col-md-10 col-sm-push-3 col-md-push-2" style="min-height: 990px;">
+<div class="col-sm-9 col-md-10 col-sm-push-3 col-md-push-2">
     <ng-include src="'listGrid.html'"></ng-include>
 </div>
-<div class="col-sm-3 col-md-2 col-sm-pull-9 col-md-pull-10 sidebar-pf sidebar-pf-left" style="min-height: 990px;">
+<div class="qdr-attributes col-sm-3 col-md-2 col-sm-pull-9 col-md-pull-10 sidebar-pf sidebar-pf-left">
     <div class="pane-wrapper">
         <div class="pane-header-wrapper">
             <div class="tree-header"><select ng-options="node as node.name for node in nodes" ng-model="currentNode" ng-change="selectNode(currentNode)"></select></div>

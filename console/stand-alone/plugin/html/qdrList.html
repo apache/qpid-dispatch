@@ -27,7 +27,9 @@ under the License.
         <h4>{{selectedRecordName}}</h4>
         <div ng-show="currentMode.id === 'attributes'" class="selectedItems">
             <div ng-show="selectedRecordName === selectedEntity" class="no-content">There are no {{selectedEntity | safePlural}}</div>
-            <div ng-hide="selectedRecordName === selectedEntity" ng-grid="details"></div>
+            <div ng-hide="selectedRecordName === selectedEntity" ui-grid="details" ui-grid-auto-resize ui-grid-resize-columns ui-grid-save-state
+                 ng-style="getTableHeight()">
+            </div>
         </div>
         <div ng-show="currentMode.id === 'delete'">
             <div class="delete" ng-show="selectedRecordName !== selectedEntity">

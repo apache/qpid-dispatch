@@ -21,55 +21,47 @@ under the License.
  */
 var QDR = (function (QDR) {
 
-  /**
-   * @property breadcrumbs
-   * @type {{content: string, title: string, isValid: isValid, href: string}[]}
-   *
-   * Data structure that defines the sub-level tabs for
-   * our plugin, used by the navbar controller to show
-   * or hide tabs based on some criteria
-   */
   QDR.breadcrumbs = [
     {
         content: '<i class="icon-cogs"></i> Connect',
         title: "Connect to a router",
         isValid: function () { return true; },
-        href: "#!" + QDR.pluginRoot + "/connect",
+        href: "#/connect",
         name: "Connect"
     },
     {
         content: '<i class="pficon-home"></i> Overview',
         title: "View router overview",
-        isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#!" + QDR.pluginRoot + "/overview",
+        isValid: function (QDRService) {return QDRService.management.connection.is_connected() },
+        href: "#/overview",
         name: "Overview"
       },
     {
         content: '<i class="icon-list "></i> Entities',
         title: "View the attributes of the router entities",
-        isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#!" + QDR.pluginRoot + "/list",
+        isValid: function (QDRService) { return QDRService.management.connection.is_connected() },
+        href: "#/list",
         name: "Entities"
       },
     {
         content: '<i class="icon-star-empty"></i> Topology',
         title: "View router network topology",
-        isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#!" + QDR.pluginRoot + "/topology",
+        isValid: function (QDRService) { return QDRService.management.connection.is_connected() },
+        href: "#/topology",
         name: "Topology"
       },
     {
         content: '<i class="icon-bar-chart"></i> Charts',
         title: "View charts",
-        isValid: function (QDRService, $location) { return QDRService.isConnected() && QDR.isStandalone; },
-        href: "#!/charts",
+        isValid: function (QDRService, $location) { return QDRService.management.connection.is_connected() },
+        href: "#/charts",
         name: "Charts"
     },
     {
         content: '<i class="icon-align-left"></i> Schema',
         title: "View dispatch schema",
-        isValid: function (QDRService) { return QDRService.isConnected(); },
-        href: "#!" + QDR.pluginRoot + "/schema",
+        isValid: function (QDRService) { return QDRService.management.connection.is_connected() },
+        href: "#/schema",
         right: true,
         name: "Schema"
       }
@@ -86,19 +78,11 @@ var QDR = (function (QDR) {
   QDR.module.controller("QDR.NavBarController", ['$rootScope', '$scope', 'QDRService', 'QDRChartService', '$routeParams', '$location', function($rootScope, $scope, QDRService, QDRChartService, $routeParams, $location) {
     $scope.breadcrumbs = QDR.breadcrumbs;
     $scope.isValid = function(link) {
-      if ($scope.isActive(link.href))
-        $rootScope.$broadcast("setCrumb", {name: link.name, title: link.content})
       return link.isValid(QDRService, $location);
     };
 
     $scope.isActive = function(href) {
-//QDR.log.info("isActive(" + href + ") location.path() is " + $location.path())
-      // highlight the connect tab if we are on the root page
-      if (($location.path() === QDR.pluginRoot) && (href.split("#")[1] === QDR.pluginRoot + "/connect")) {
-//QDR.log.info("isActive is returning true for connect page")
-        return true
-      }
-      return href.split("#")[1] === '!' + $location.path();
+      return href.split("#")[1] === $location.path();
     };
 
     $scope.isRight = function (link) {

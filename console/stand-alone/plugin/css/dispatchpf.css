@@ -25,52 +25,61 @@ span.logo {
 .navbar-pf .navbar-brand {
   padding: 2px 0 2px;
 }
-/* using dynatree instead of treeview */
-#overtree ul.dynatree-container,
-#entityTree ul.dynatree-container,
-#schema ul.dynatree-container {
+/* using fancytree instead of treeview */
+
+#overtree ul.fancytree-container,
+#entityTree ul.fancytree-container,
+#schema ul.fancytree-container {
     background-color: transparent;
     border: 0px;
 }
 
-span.dynatree-folder a {
+span.fancytree-folder a {
     font-weight: normal;
     font-size: 12px;
 }
 
-ul.dynatree-container li,
-span.dynatree-icon {
+ul.fancytree-container li,
+span.fancytree-icon {
   background-image: none;
 }
 
-.dynatree-exp-c span.fa-angle, .dynatree-exp-e span.fa-angle,
-.dynatree-exp-cl span.fa-angle, .dynatree-exp-el span.fa-angle {
+.fancytree-exp-c span.fa-angle, .fancytree-exp-e span.fa-angle,
+.fancytree-exp-cl span.fa-angle, .fancytree-exp-el span.fa-angle {
   margin-right: 5px;
 }
-.dynatree-exp-c span.fa-angle:before, .dynatree-exp-cl span.fa-angle:before {
+.fancytree-exp-c span.fa-angle:before, .fancytree-exp-cl span.fa-angle:before {
   font-family: FontAwesome;
   content: "\f105";
 }
-.dynatree-exp-e span.fa-angle:before, .dynatree-exp-el span.fa-angle:before {
+.fancytree-exp-e .fancytree-expander:before, .fancytree-exp-el .fancytree-expander:before {
+  font-family: FontAwesome;
+  content: "\f107";
+}
+.fancytree-exp-c .fancytree-expander:before, .fancytree-exp-cl .fancytree-expander:before {
+  font-family: FontAwesome;
+  content: "\f105";
+}
+.fancytree-exp-e span.fa-angle:before, .fancytree-exp-el span.fa-angle:before {
   font-family: FontAwesome;
   content: "\f107";
 }
 
-.dynatree-ico-ef span.dynatree-icon, .dynatree-ico-cf span.dynatree-icon {
+.fancytree-ico-ef span.fancytree-icon, .fancytree-ico-cf span.fancytree-icon {
   background-image: initial;
-  font-family: FontAwsome;
+  font-family: FontAwesome;
 }
 
-.dynatree-ico-cf span.dynatree-icon:before {
+.fancytree-ico-cf span.fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f07b";
 }
-.dynatree-ico-ef span.dynatree-icon:before {
+.fancytree-ico-ef span.fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f07c";
 }
 
-ul.dynatree-container a {
+ul.fancytree-container a {
     color: #363636;
 }
 
@@ -100,6 +109,8 @@ div#list-controller {
 
 .pane-viewport {
     position: relative;
+    /* height: calc(100vh - 20px); */
+    overflow: auto;
 }
 
 #list-controller .tree-header, #list-controller .tree-header select {
@@ -183,4 +194,59 @@ div.chartContainer {
 div.qdr-topology.pane.left {
   width: 400px;
   top: 0;
+}
+/*
+.treeview .list-group-item.node-selected {
+  color: #FFFFFF !important;
+  background-color: #428bca !important;
+}
+*/
+span.fancytree-expander {
+  display: none;
+}
+
+#overview-controller span.fancytree-expander {
+  display: inline-block;
+}
+
+.fancytree-active .fancytree-title,
+.fancytree-active .fancytree-icon,
+.fancytree-active .fancytree-expander {
+  color: white;
+}
+
+.ui-grid {
+  border: 0px;
+}
+
+.ui-grid-header {
+  border: 1px solid #d4d4d4;
+}
+
+#overview-controller .sidebar-pf-left, #list-controller .sidebar-pf-left {
+  padding-right: 0px;
+}
+
+#crosshtml {
+  position: absolute;
+  display: none;
+  padding: 1em;
+  border: 1px solid grey;
+  background-color: white;
+  border-radius: 4px;
+}
+
+.pane-bar {
+  float: right;
+  height: calc(100vh - 75px);
+  width: 6px;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  position: absolute;
+  top: 0;
+  right: -6px;
+  cursor: ew-resize;
+
+
+  display: none;
 }

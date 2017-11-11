@@ -19,30 +19,24 @@ under the License.
 /**
  * @module QDR
  */
-/**
- * @module QDR
- */
 var QDR = (function (QDR) {
 
   /**
-   * @method OverviewController
-   * @param $scope
-   * @param QDRService
-   * @param QDRChartServer
-   * dialogServer
-   * $location
    *
    * Controller that handles the QDR overview page
    */
-  QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', '$timeout', '$uibModal', function($scope, QDRService, $location, $timeout, $uibModal) {
+  QDR.module.controller("QDR.OverviewController", ['$scope', 'QDRService', '$location', '$timeout', '$uibModal', 'uiGridConstants', function($scope, QDRService, $location, $timeout, $uibModal, uiGridConstants) {
 
-    console.log("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.connected);
+    QDR.log.debug("QDR.OverviewControll started with location of " + $location.path() + " and connection of  " + QDRService.management.connection.is_connected());
+    var updateIntervalHandle = undefined;
+    var updateInterval = 5000;
+
     var COLUMNSTATEKEY = 'QDRColumnKey.';
     var OVERVIEWEXPANDEDKEY = "QDROverviewExpanded"
     var OVERVIEWACTIVATEDKEY = "QDROverviewActivated"
     var FILTERKEY = "QDROverviewFilters"
     var OVERVIEWMODEIDS = "QDROverviewModeIds"
-    var treeRoot;   // the dynatree root node. initialized once log data is received
+    var treeRoot;   // the fancytree root node. initialized once log data is received
 
     // we want attributes to be listed first, so add it at index 0
     $scope.subLevelTabs = [{
@@ -91,14 +85,22 @@ var QDR = (function (QDR) {
     ];
     var topLevelChildren = [];
 
-    $scope.allRouterSelected = function (row ) {
-      console.log("row selected" + row)
-    }
     function afterSelectionChange(rowItem, checkAll) {
       var nodeId = rowItem.entity.nodeId;
-      $("#overtree").dynatree("getTree").activateKey(nodeId);
+      $("#overtree").fancytree("getTree").activateKey(nodeId);
     }
 
+    var selectRow = function (gridApi) {
+      if (!gridApi.selection)
+        return
+      gridApi.selection.on.rowSelectionChanged($scope,function(row){
+        var treeKey = row.grid.options.treeKey
+        if (treeKey && row.entity[treeKey]) {
+          var key = row.entity[treeKey]
+          $("#overtree").fancytree("getTree").activateKey(key);
+        }
+      })
+    }
     $scope.routerPagingOptions = {
       pageSizes: [50, 100, 500],
       pageSize: 50,
@@ -118,9 +120,9 @@ var QDR = (function (QDR) {
     $scope.totalRouters = 0;
     $scope.allRouterFields = [];
     $scope.pagedRouterFields = [];
-    $scope.allRouterSelections = [];
     $scope.allRouters = {
       saveKey: 'allRouters',
+      treeKey: 'nodeId',
       data: 'pagedRouterFields',
       columnDefs: [
         {
@@ -156,55 +158,48 @@ var QDR = (function (QDR) {
       totalServerItems: 'totalRouters',
       pagingOptions: $scope.routerPagingOptions,
       multiSelect: false,
-      selectedItems: $scope.allRouterSelections,
-      plugins: [new ngGridFlexibleHeightPlugin()],
-      afterSelectionChange: function(data) {
-        if (data.selected) {
-          var selItem = $scope.allRouterSelections[0]
-          var nodeId = selItem.nodeId
-          // activate Routers->nodeId in the tree
-          $("#overtree").dynatree("getTree").activateKey(nodeId);
-        }
-      }
+      enableSelectAll: false,
+      onRegisterApi: selectRow,
+      enableSelectionBatchEvent: false,
+      enableRowHeaderSelection: false,
+      minRowsToShow: Math.min(QDRService.management.topology.nodeIdList().length, 50),
+      noUnselect: true,
     };
 
     // get info for all routers
-    var allRouterInfo = function () {
+    var allRouterInfo = function (node, callback) {
       var nodes = {}
       // gets called each node/entity response
       var gotNode = function (nodeName, entity, response) {
         if (!nodes[nodeName])
           nodes[angular.copy(nodeName)] = {}
-        nodes[nodeName][entity] = angular.copy(response);
+        nodes[nodeName][entity] = response;
       }
       // send the requests for all connection and router info for all routers
-      QDRService.fetchAllEntities([{entity: ".connection", attrs: ["role"]}], function () {
-        QDRService.fetchAllEntities([{entity: ".router"}], function () {
-          // we have all the data now in the nodes object
-          var allRouterFields = []
-          for (var node in nodes) {
-            var connections = 0
-            for (var i=0; i<nodes[node][".connection"].results.length; ++i) {
-              // we only requested "role" so it will be at [0]
-              if (nodes[node][".connection"].results[i][0] === 'inter-router')
-                ++connections
-            }
-            var routerRow = {connections: connections, nodeId: node, id: QDRService.nameFromId(node)}
-            nodes[node][".router"].attributeNames.forEach( function (routerAttr, i) {
-              if (routerAttr !== "routerId" && routerAttr !== "id")
-                routerRow[routerAttr] = nodes[node][".router"].results[0][i]
-            })
-            allRouterFields.push(routerRow)
+      QDRService.management.topology.fetchAllEntities([
+        {entity: "connection", attrs: ["role"]},
+        {entity: "router"}], function () {
+        // we have all the data now in the nodes object
+        var allRouterFields = []
+        for (var node in nodes) {
+          var connections = 0
+          for (var i=0; i<nodes[node]["connection"].results.length; ++i) {
+            // we only requested "role" so it will be at [0]
+            if (nodes[node]["connection"].results[i][0] === 'inter-router')
+              ++connections
           }
-          $timeout(function () {
-            $scope.allRouterFields = allRouterFields
-            getPagedData($scope.routerPagingOptions.pageSize, $scope.routerPagingOptions.currentPage);
-            updateRouterTree(nodeIds)
-            scheduleNextUpdate()
-            //if ($scope.router)
-            //  routerInfo($scope.router)
+          var routerRow = {connections: connections, nodeId: node, id: QDRService.management.topology.nameFromId(node)}
+          nodes[node]["router"].attributeNames.forEach( function (routerAttr, i) {
+            if (routerAttr !== "routerId" && routerAttr !== "id")
+              routerRow[routerAttr] = nodes[node]["router"].results[0][i]
           })
-        }, gotNode)
+          allRouterFields.push(routerRow)
+        }
+        $scope.allRouterFields = allRouterFields
+        expandGridToContent("Routers", $scope.allRouterFields.length)
+        getPagedData($scope.routerPagingOptions.pageSize, $scope.routerPagingOptions.currentPage);
+        updateRouterTree(nodeIds)
+        callback(null)
       }, gotNode)
       loadColState($scope.allRouters)
     }
@@ -226,29 +221,29 @@ var QDR = (function (QDR) {
       ],
       jqueryUIDraggable: true,
       enableColumnResize: true,
+      minRowsToShow: 25,
       multiSelect: false
     }
 
     $scope.router = null;
     // get info for a single router
-    var routerInfo = function (node) {
+    var routerInfo = function (node, callback) {
       $scope.router = node
 
       var routerFields = [];
       $scope.allRouterFields.some( function (field) {
-        if (field.id === node.data.title) {
+        if (field.id === node.title) {
           Object.keys(field).forEach ( function (key) {
-            if (key !== '$$hashKey') {
-              var attr = (key === 'connections') ? 'External connections' : key
-              routerFields.push({attribute: attr, value: field[key]})
-            }
+            var attr = (key === 'connections') ? 'External connections' : key
+            routerFields.push({attribute: attr, value: field[key]})
           })
           return true
         }
       })
-      $timeout(function () {$scope.routerFields = routerFields})
-      scheduleNextUpdate()
+      $scope.routerFields = routerFields
+      expandGridToContent("Router", $scope.routerFields.length)
       loadColState($scope.routerGrid);
+      callback(null)
     }
 
     $scope.addressPagingOptions = {
@@ -273,6 +268,7 @@ var QDR = (function (QDR) {
     $scope.selectedAddresses = []
     $scope.addressesGrid = {
       saveKey: 'addressesGrid',
+      treeKey: 'uid',
       data: 'pagedAddressesData',
       columnDefs: [
         {
@@ -320,20 +316,15 @@ var QDR = (function (QDR) {
       pagingOptions: $scope.addressPagingOptions,
       enableColumnResize: true,
       multiSelect: false,
-      jqueryUIDraggable: true,
-      selectedItems: $scope.selectedAddresses,
-      plugins: [new ngGridFlexibleHeightPlugin()],
-      afterSelectionChange: function(data) {
-        if (data.selected) {
-          var selItem = data.entity;
-          var nodeId = selItem.uid
-          $("#overtree").dynatree("getTree").activateKey(nodeId);
-        }
-      }
+      enableSelectAll: false,
+      onRegisterApi: selectRow,
+      enableSelectionBatchEvent: false,
+      enableRowHeaderSelection: false,
+      noUnselect: true
     };
 
     // get info for all addresses
-    var allAddressInfo = function () {
+    var allAddressInfo = function (address, callback) {
       var nodes = {}
       // gets called each node/entity response
       var gotNode = function (nodeName, entity, response) {
@@ -362,16 +353,16 @@ var QDR = (function (QDR) {
         return ''
       }
       var prettyVal = function (val) {
-        return QDRService.pretty(val || "-")
+        return QDRService.utilities.pretty(val || "-")
       }
       var addressFields = []
       var addressObjs = {}
       // send the requests for all connection and router info for all routers
-      QDRService.fetchAllEntities({entity: ".router.address"}, function () {
+      QDRService.management.topology.fetchAllEntities({entity: "router.address"}, function () {
         for (var node in nodes) {
-          var response = nodes[node][".router.address"]
+          var response = nodes[node]["router.address"]
           response.results.forEach( function (result) {
-            var address = QDRService.flatten(response.attributeNames, result)
+            var address = QDRService.utilities.flatten(response.attributeNames, result)
 
             var addNull = function (oldVal, newVal) {
               if (oldVal != null && newVal != null)
@@ -382,12 +373,12 @@ var QDR = (function (QDR) {
             }
 
             var uid = address.identity
-            var identity = QDRService.identity_clean(uid)
+            var identity = QDRService.utilities.identity_clean(uid)
 
-            if (!addressObjs[QDRService.addr_text(identity)+QDRService.addr_class(identity)])
-              addressObjs[QDRService.addr_text(identity)+QDRService.addr_class(identity)] = {
-                address: QDRService.addr_text(identity),
-                'class': QDRService.addr_class(identity),
+            if (!addressObjs[QDRService.utilities.addr_text(identity)+QDRService.utilities.addr_class(identity)])
+              addressObjs[QDRService.utilities.addr_text(identity)+QDRService.utilities.addr_class(identity)] = {
+                address: QDRService.utilities.addr_text(identity),
+                'class': QDRService.utilities.addr_class(identity),
                 phase:   addr_phase(identity),
                 inproc:  address.inProcess,
                 local:   address.subscriberCount,
@@ -400,7 +391,7 @@ var QDR = (function (QDR) {
                 uid:     uid
               }
             else {
-              var sumObj = addressObjs[QDRService.addr_text(identity)+QDRService.addr_class(identity)]
+              var sumObj = addressObjs[QDRService.utilities.addr_text(identity)+QDRService.utilities.addr_class(identity)]
               sumObj.inproc = addNull(sumObj.inproc, address.inproc)
               sumObj.local = addNull(sumObj.local, address.local)
               sumObj.remote = addNull(sumObj.remote, address.remote)
@@ -410,22 +401,6 @@ var QDR = (function (QDR) {
               sumObj.toproc = addNull(sumObj.toproc, address.toproc)
               sumObj.fromproc = addNull(sumObj.fromproc, address.fromproc)
             }
-/*
-            addressFields.push({
-              address: QDRService.addr_text(identity),
-              'class': QDRService.addr_class(identity),
-              phase:   addr_phase(identity),
-              inproc:  prettySum("inProcess"),
-              local:   prettySum("subscriberCount"),
-              remote:  prettySum("remoteCount"),
-              'in':    prettySum("deliveriesIngress"),
-              out:     prettySum("deliveriesEgress"),
-              thru:    prettySum("deliveriesTransit"),
-              toproc:  prettySum("deliveriesToContainer"),
-              fromproc:prettySum("deliveriesFromContainer"),
-              uid:     uid
-            })
-*/
           })
         }
         for (var obj in addressObjs) {
@@ -458,15 +433,14 @@ var QDR = (function (QDR) {
           } else
             addressFields[i].title = addressFields[i].address
         }
-        $timeout(function () {
-          $scope.addressesData = addressFields
-          getAddressPagedData($scope.addressPagingOptions.pageSize, $scope.addressPagingOptions.currentPage);
-          // repopulate the tree's child nodes
-          updateAddressTree(addressFields)
-          scheduleNextUpdate()
-        })
+        $scope.addressesData = addressFields
+        expandGridToContent("Addresses", $scope.addressesData.length)
+        getAddressPagedData($scope.addressPagingOptions.pageSize, $scope.addressPagingOptions.currentPage);
+        // repopulate the tree's child nodes
+        updateAddressTree(addressFields)
+        loadColState($scope.addressesGrid);
+        callback(null)
       }, gotNode)
-      loadColState($scope.addressesGrid);
     }
 
     var updateLinkGrid = function ( linkFields ) {
@@ -478,13 +452,14 @@ var QDR = (function (QDR) {
             include = false;
         }
         if ($scope.filter.hideConsoles) {
-          if (QDRService.isConsoleLink(link))
+          if (QDRService.utilities.isConsole(QDRService.management.topology.getConnForLink(link)))
             include = false;
         }
         return include;
       })
       QDR.log.debug("setting linkFields in updateLinkGrid")
       $scope.linkFields = filteredLinks;
+      expandGridToContent("Links", $scope.linkFields.length)
       getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
       // if we have a selected link
       if ($scope.link) {
@@ -493,9 +468,9 @@ var QDR = (function (QDR) {
           return link.name === $scope.link.data.fields.name;
         })
         if (links.length > 0) {
-          // linkInfo() is the function that is called by dynatree when a link is selected
-          // It is passed a dynatree node. We need to simulate that node type to update the link grid
-          linkInfo({data: {title: links[0].title, fields: links[0]}})
+          // linkInfo() is the function that is called by fancytree when a link is selected
+          // It is passed a fancytree node. We need to simulate that node type to update the link grid
+          linkInfo({data: {title: links[0].title, fields: links[0]}}, function () {$timeout(function (){})})
         }
       }
     }
@@ -521,15 +496,9 @@ var QDR = (function (QDR) {
     $scope.pagedLinkData = []
     $scope.selectedLinks = []
 
-    var linkRowTmpl = "<div ng-class=\"{linkDirIn: row.getProperty('linkDir') == 'in', linkDirOut: row.getProperty('linkDir') == 'out'}\">" +
-          "<div ng-style=\"{ 'cursor': row.cursor }\" ng-repeat=\"col in renderedColumns\" ng-class=\"col.colIndex()\" class=\"ngCell {{col.cellClass}}\">" +
-          "<div class=\"ngVerticalBar\" ng-style=\"{height: rowHeight}\" ng-class=\"{ ngVerticalBarVisible: !$last }\">&nbsp;</div>" +
-          "<div ng-cell></div>" +
-          "</div>" +
-          "</div>";
-
     $scope.linksGrid = {
       saveKey: 'linksGrid',
+      treeKey: 'uid',
       data: 'pagedLinkData',
       columnDefs: [
         {
@@ -604,20 +573,15 @@ var QDR = (function (QDR) {
       enableColumnResize: true,
       enableColumnReordering: true,
       showColumnMenu: true,
-      rowTemplate: linkRowTmpl,
+      rowTemplate: 'linkRowTemplate.html',
+      minRowsToShow: 15,
       multiSelect: false,
-      jqueryUIDraggable: true,
-      selectedItems: $scope.selectedLinks,
-      plugins: [new ngGridFlexibleHeightPlugin()],
-      afterSelectionChange: function(data) {
-        if (data.selected) {
-          var selItem = data.entity;
-          var nodeId = selItem.uid
-          $("#overtree").dynatree("getTree").activateKey(nodeId);
-        }
-            }
+      enableSelectAll: false,
+      onRegisterApi: selectRow,
+      enableSelectionBatchEvent: false,
+      enableRowHeaderSelection: false,
+      noUnselect: true
     };
-
 
     $scope.$on('ngGridEventColumns', function (e, columns) {
       var saveInfo = columns.map( function (col) {
@@ -643,26 +607,27 @@ return;
         })
       }
     }
-    var allLinkInfo = function () {
+    var allLinkInfo = function (node, callback) {
       var gridCallback = function (linkFields) {
-        QDRService.ensureAllEntities({entity: ".connection", force: true}, function () {
+        QDRService.management.topology.ensureAllEntities({entity: "connection", force: true}, function () {
           // only update the grid with these fields if the List tree node is selected
           // this is becuase we are using the link grid in other places and we don't want to overwrite it
           if ($scope.template.name === "Links")
             updateLinkGrid(linkFields)
           updateLinkTree(linkFields)
+          callback(null)
         })
       }
-      getAllLinkFields([gridCallback, scheduleNextUpdate])
+      getAllLinkFields([gridCallback])
       loadColState($scope.linksGrid);
     }
 
     var getAllLinkFields = function (completionCallbacks, selectionCallback) {
       if (!$scope.linkFields) {
-        QDR.log.info("$scope.linkFields was not defined")
+        QDR.log.debug("$scope.linkFields was not defined!")
         return;
       }
-      var nodeIds = QDRService.nodeIdList()
+      var nodeIds = QDRService.management.topology.nodeIdList()
       var linkFields = []
       var now = Date.now()
       var rate = function (linkName, response, result) {
@@ -675,7 +640,7 @@ return;
           var elapsed = (now - oldname[0].timestamp) / 1000;
           if (elapsed < 0)
             return 0
-          var delivered = QDRService.valFor(response.attributeNames, result, "deliveryCount") - oldname[0].rawDeliveryCount
+          var delivered = QDRService.utilities.valFor(response.attributeNames, result, "deliveryCount") - oldname[0].rawDeliveryCount
           //QDR.log.debug("elapsed " + elapsed + " delivered " + delivered)
           return elapsed > 0 ? parseFloat(Math.round((delivered/elapsed) * 100) / 100).toFixed(2) : 0;
         } else {
@@ -686,6 +651,7 @@ return;
       var expected = nodeIds.length;
       var received = 0;
       var gotLinkInfo = function (nodeName, entity, response) {
+        if (response.results)
         response.results.forEach( function (result) {
           var nameIndex = response.attributeNames.indexOf('name')
           var prettyVal = function (field) {
@@ -694,20 +660,20 @@ return;
               return "-"
             }
             var val = result[fieldIndex]
-            return QDRService.pretty(val)
+            return QDRService.utilities.pretty(val)
           }
           var uncounts = function () {
-            var und = QDRService.valFor(response.attributeNames, result, "undeliveredCount")
-            var uns = QDRService.valFor(response.attributeNames, result, "unsettledCount")
-            return QDRService.pretty(und + uns)
+            var und = QDRService.utilities.valFor(response.attributeNames, result, "undeliveredCount")
+            var uns = QDRService.utilities.valFor(response.attributeNames, result, "unsettledCount")
+            return QDRService.utilities.pretty(und + uns)
           }
           var linkName = function () {
-            var namestr = QDRService.nameFromId(nodeName)
-            return namestr + ':' + QDRService.valFor(response.attributeNames, result, "identity")
+            var namestr = QDRService.management.topology.nameFromId(nodeName)
+            return namestr + ':' + QDRService.utilities.valFor(response.attributeNames, result, "identity")
           }
           var fixAddress = function () {
             var addresses = []
-            var owningAddr = QDRService.valFor(response.attributeNames, result, "owningAddr") || ""
+            var owningAddr = QDRService.utilities.valFor(response.attributeNames, result, "owningAddr") || ""
             var rawAddress = owningAddr
             /*
                  - "L*"  =>  "* (local)"
@@ -743,12 +709,12 @@ return;
             return addresses
           }
           if (!selectionCallback || selectionCallback(response, result)) {
-            var adminStatus = QDRService.valFor(response.attributeNames, result, "adminStatus")
-            var operStatus = QDRService.valFor(response.attributeNames, result, "operStatus")
+            var adminStatus = QDRService.utilities.valFor(response.attributeNames, result, "adminStatus")
+            var operStatus = QDRService.utilities.valFor(response.attributeNames, result, "operStatus")
             var linkName = linkName()
-            var linkType = QDRService.valFor(response.attributeNames, result, "linkType")
+            var linkType = QDRService.utilities.valFor(response.attributeNames, result, "linkType")
             var addresses = fixAddress();
-            var link = QDRService.flatten(response.attributeNames, result)
+            var link = QDRService.utilities.flatten(response.attributeNames, result)
             linkFields.push({
               link:       linkName,
               title:      linkName,
@@ -764,7 +730,7 @@ return;
               releasedCount: prettyVal("releasedCount"),
               deliveryCount:prettyVal("deliveryCount") + " ",
 
-              rate: QDRService.pretty(rate(linkName, response, result)),
+              rate: QDRService.utilities.pretty(rate(linkName, response, result)),
               capacity: link.capacity,
               undeliveredCount: link.undeliveredCount,
               unsettledCount: link.unsettledCount,
@@ -794,7 +760,7 @@ return;
         }
       }
       nodeIds.forEach( function (nodeId) {
-        QDRService.fetchEntity(nodeId, "router.link", [], gotLinkInfo);
+        QDRService.management.topology.fetchEntity(nodeId, "router.link", [], gotLinkInfo);
       })
     }
 
@@ -820,6 +786,7 @@ return;
     $scope.allConnectionSelections = [];
     $scope.allConnectionGrid = {
       saveKey: 'allConnGrid',
+      treeKey: 'uid',
       data: 'pagedConnectionsData',
       columnDefs: [
       {
@@ -854,26 +821,21 @@ return;
       pagingOptions: $scope.connectionPagingOptions,
       enableColumnResize: true,
       multiSelect: false,
-      jqueryUIDraggable: true,
-      selectedItems: $scope.allConnectionSelections,
-      plugins: [new ngGridFlexibleHeightPlugin()],
-      afterSelectionChange: function(data) {
-        if (data.selected) {
-          var selItem = $scope.allConnectionSelections[0]
-          var nodeId = selItem.uid
-          // activate Routers->nodeId in the tree
-          $("#overtree").dynatree("getTree").activateKey(nodeId);
-        }
-      }
+      enableSelectAll: false,
+      onRegisterApi: selectRow,
+      enableSelectionBatchEvent: false,
+      enableRowHeaderSelection: false,
+      noUnselect: true
     };
     // get info for a all connections
-    var allConnectionInfo = function () {
-      getAllConnectionFields([updateConnectionGrid, updateConnectionTree, scheduleNextUpdate])
+    var allConnectionInfo = function (connection, callback) {
+      getAllConnectionFields([updateConnectionGrid, updateConnectionTree, function () {callback(null)}])
       loadColState($scope.allConnectionGrid);
     }
     // called after conection data is available
     var updateConnectionGrid = function (connectionFields) {
       $scope.allConnectionFields = connectionFields;
+      expandGridToContent("Connections", $scope.allConnectionFields.length)
       getConnectionPagedData($scope.connectionPagingOptions.pageSize, $scope.connectionPagingOptions.currentPage);
     }
 
@@ -881,7 +843,7 @@ return;
     // called periodically
     // creates a connectionFields array and calls the callbacks (updateTree and updateGrid)
     var getAllConnectionFields = function (callbacks) {
-      var nodeIds = QDRService.nodeIdList()
+      var nodeIds = QDRService.management.topology.nodeIdList()
       var connectionFields = [];
       var expected = nodeIds.length;
       var received = 0;
@@ -889,8 +851,8 @@ return;
         response.results.forEach( function (result) {
 
           var auth = "no_auth"
-          var sasl = QDRService.valFor(response.attributeNames, result, "sasl")
-          if (QDRService.valFor(response.attributeNames, result, "isAuthenticated")) {
+          var sasl = QDRService.utilities.valFor(response.attributeNames, result, "sasl")
+          if (QDRService.utilities.valFor(response.attributeNames, result, "isAuthenticated")) {
             auth = sasl
             if (sasl === "ANONYMOUS")
               auth = "anonymous-user"
@@ -899,27 +861,27 @@ return;
                 sasl = "Kerberos"
               if (sasl === "EXTERNAL")
                 sasl = "x.509"
-              auth = QDRService.valFor(response.attributeNames, result, "user") + "(" +
-                  QDRService.valFor(response.attributeNames, result, "sslCipher") + ")"
+              auth = QDRService.utilities.valFor(response.attributeNames, result, "user") + "(" +
+                  QDRService.utilities.valFor(response.attributeNames, result, "sslCipher") + ")"
               }
           }
 
           var sec = "no-security"
-          if (QDRService.valFor(response.attributeNames, result, "isEncrypted")) {
+          if (QDRService.utilities.valFor(response.attributeNames, result, "isEncrypted")) {
             if (sasl === "GSSAPI")
               sec = "Kerberos"
             else
-              sec = QDRService.valFor(response.attributeNames, result, "sslProto") + "(" +
-                  QDRService.valFor(response.attributeNames, result, "sslCipher") + ")"
+              sec = QDRService.utilities.valFor(response.attributeNames, result, "sslProto") + "(" +
+                  QDRService.utilities.valFor(response.attributeNames, result, "sslCipher") + ")"
           }
 
-          var host = QDRService.valFor(response.attributeNames, result, "host")
+          var host = QDRService.utilities.valFor(response.attributeNames, result, "host")
           var connField = {
             host: host,
             security: sec,
             authentication: auth,
             routerId: nodeName,
-            uid: host + QDRService.valFor(response.attributeNames, result, "identity")
+            uid: host + QDRService.utilities.valFor(response.attributeNames, result, "identity")
           }
           response.attributeNames.forEach( function (attribute, i) {
             connField[attribute] = result[i]
@@ -934,7 +896,7 @@ return;
         }
       }
       nodeIds.forEach( function (nodeId) {
-        QDRService.fetchEntity(nodeId, ".connection", [], gotConnectionInfo)
+        QDRService.management.topology.fetchEntity(nodeId, "connection", [], gotConnectionInfo)
       })
     }
 
@@ -956,18 +918,19 @@ return;
       }
       ],
       enableColumnResize: true,
+      minRowsToShow: 11,
       jqueryUIDraggable: true,
       multiSelect: false
     }
 
     // get info for a single address
-    var addressInfo = function (address) {
+    var addressInfo = function (address, callback) {
       $scope.address = address
       var currentEntity = getCurrentLinksEntity();
       // we are viewing the addressLinks page
       if (currentEntity === 'Address' && entityModes[currentEntity].currentModeId === 'links') {
         updateModeLinks()
-        scheduleNextUpdate()
+        callback(null)
         return;
       }
 
@@ -977,7 +940,8 @@ return;
         if (field != "title" && field != "uid")
           $scope.addressFields.push({attribute: field, value: address.data.fields[field]})
       })
-      scheduleNextUpdate()
+      expandGridToContent("Address", $scope.addressFields.length)
+      callback(null)
       loadColState($scope.addressGrid);
     }
 
@@ -998,14 +962,15 @@ return;
         }
       ],
       enableColumnResize: true,
+      minRowsToShow: 24,
       jqueryUIDraggable: true,
       multiSelect: false
     }
 
     // display the grid detail info for a single link
-    var linkInfo = function (link) {
-QDR.log.debug("linkInfo called for " + link.data.key)
+    var linkInfo = function (link, callback) {
       if (!link) {
+        callback(null)
         return;
       }
       $scope.link = link
@@ -1017,7 +982,8 @@ QDR.log.debug("linkInfo called for " + link.data.key)
         if (excludeFields.indexOf(field) == -1)
           $scope.singleLinkFields.push({attribute: field, value: link.data.fields[field]})
       })
-      scheduleNextUpdate()
+      expandGridToContent("Link", $scope.singleLinkFields.length)
+      callback(null)
       loadColState($scope.linkGrid);
     }
 
@@ -1042,34 +1008,34 @@ QDR.log.debug("linkInfo called for " + link.data.key)
         {Address: 'attributes', Connection: 'attributes'}
     }
     var savedModeIds = loadModeIds()
-      var entityModes = {
-          Address: {
-              currentModeId: savedModeIds.Address,
-              filter: function (response, result) {
-          var owningAddr = QDRService.valFor(response.attributeNames, result, "owningAddr")
+    var entityModes = {
+      Address: {
+        currentModeId: savedModeIds.Address,
+        filter: function (response, result) {
+          var owningAddr = QDRService.utilities.valFor(response.attributeNames, result, "owningAddr")
           var id = $scope.address.data.fields.uid
           return (owningAddr === $scope.address.data.fields.uid)
-              }
-          },
-          Connection: {
-              currentModeId: savedModeIds.Connection,
-              filter: function (response, result) {
-          var connectionId = QDRService.valFor(response.attributeNames, result, "connectionId")
+        }
+      },
+      Connection: {
+        currentModeId: savedModeIds.Connection,
+        filter: function (response, result) {
+          var connectionId = QDRService.utilities.valFor(response.attributeNames, result, "connectionId")
           return (connectionId === $scope.connection.data.fields.identity)
-              }
-          }
+        }
       }
+    }
     $scope.selectMode = function (mode, entity) {
       if (!mode || !entity)
         return;
       entityModes[entity].currentModeId = mode.id;
       saveModeIds();
       if (mode.id === 'links') {
-QDR.log.debug("setting linkFields to [] in selectMode")
         $scope.linkFields = [];
         getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
         updateModeLinks();
       }
+      updateExpanded()
     }
     $scope.isModeSelected = function (mode, entity) {
       return mode.id === entityModes[entity].currentModeId
@@ -1079,23 +1045,20 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     }
 
     var updateEntityLinkGrid = function (linkFields) {
-      $timeout(function () {
-        QDR.log.debug("setting linkFields in updateEntityLinkGrid");
-        $scope.linkFields = linkFields
-        getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
-      })
+      $scope.linkFields = linkFields
+      expandGridToContent("Link", $scope.linkFields.length)
+      getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
     }
     // based on which entity is selected, get and filter the links
     var updateModeLinks = function () {
       var currentEntity = getCurrentLinksEntity()
       if (!currentEntity)
         return;
-      var selectionCallback = entityModes[currentEntity].filter;
-      getAllLinkFields([updateEntityLinkGrid], selectionCallback)
+      getAllLinkFields([updateEntityLinkGrid], entityModes[currentEntity].filter)
     }
     var getCurrentLinksEntity = function () {
       var currentEntity;
-      var active = $("#overtree").dynatree("getActiveNode");
+      var active = $("#overtree").fancytree("getActiveNode");
       if (active) {
         currentEntity = active.data.type;
       }
@@ -1111,8 +1074,15 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     }
 
     $scope.quiesceLink = function (row, $event) {
-      QDRService.quiesceLink(row.entity.nodeId, row.entity.name);
       $event.stopPropagation()
+      QDRService.management.topology.quiesceLink(row.entity.nodeId, row.entity.name)
+        .then( function (results, context) {
+          var statusCode = context.message.application_properties.statusCode;
+          if (statusCode < 200 || statusCode >= 300) {
+            Core.notification('error', context.message.statusDescription);
+            QDR.log.error('Error ' + context.message.statusDescription)
+          }
+        })
     }
 
     $scope.quiesceLinkDisabled = function (row) {
@@ -1123,12 +1093,12 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     }
 
     $scope.expandAll = function () {
-      $("#overtree").dynatree("getRoot").visit(function(node){
+      $("#overtree").fancytree("getRoot").visit(function(node){
                 node.expand(true);
             });
     }
     $scope.contractAll = function () {
-      $("#overtree").dynatree("getRoot").visit(function(node){
+      $("#overtree").fancytree("getRoot").visit(function(node){
                 node.expand(false);
             })
     }
@@ -1150,20 +1120,23 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       }
       ],
       enableColumnResize: true,
+      minRowsToShow: 21,
       jqueryUIDraggable: true,
       multiSelect: false
     }
 
-    var connectionInfo = function (connection) {
-      if (!connection)
+    var connectionInfo = function (connection, callback) {
+      if (!connection) {
+        callback(null)
         return;
+      }
       $scope.connection = connection
 
       var currentEntity = getCurrentLinksEntity();
       // we are viewing the connectionLinks page
       if (currentEntity === 'Connection' && entityModes[currentEntity].currentModeId === 'links') {
         updateModeLinks()
-        scheduleNextUpdate()
+        callback(null)
         return;
       }
 
@@ -1173,12 +1146,16 @@ QDR.log.debug("setting linkFields to [] in selectMode")
         if (field != "title" && field != "uid")
           $scope.connectionFields.push({attribute: field, value: connection.data.fields[field]})
       })
+      expandGridToContent("Connection", $scope.connectionFields.length)
       // this is missing an argument?
       loadColState($scope.connectionGrid);
+      callback(null)
     }
 
 
-    var logModuleCellTemplate = '<div ng-click="logInfoFor(row, col)" class="ngCellText" ng-class="col.colIndex()"><span ng-cell-text>{{COL_FIELD | pretty}}</span></div>'
+    //var logModuleCellTemplate = '<div ng-click="logInfoFor(row, col)" class="ui-grid-cell-contents">{{grid.getCellValue(row, col) | pretty}}</div>'
+    var logModuleCellTemplate = '<div class="ui-grid-cell-contents" ng-click="grid.appScope.logInfoFor(row, col)">{{COL_FIELD CUSTOM_FILTERS | pretty}}</div>'
+
     $scope.logModule = {}
     $scope.logModuleSelected = []
     $scope.logModuleData = []
@@ -1239,15 +1216,12 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       enableColumnResize: true,
       jqueryUIDraggable: true,
       multiSelect: false,
-      selectedItems: $scope.logModuleSelected,
-      plugins: [new ngGridFlexibleHeightPlugin()],
-      afterSelectionChange: function(data) {
-        if (data.selected) {
-            var selItem = $scope.logModuleSelected[0]
-            var nodeId = selItem.nodeId
-
-        }
-      }
+      enableSelectAll: false,
+      onRegisterApi: selectRow,
+      enableSelectionBatchEvent: false,
+      enableRowHeaderSelection: false,
+      minRowsToShow: Math.min(QDRService.management.topology.nodeIdList().length, 50),
+      noUnselect: true
     }
 
     $scope.logInfoFor = function (row, col) {
@@ -1274,11 +1248,10 @@ QDR.log.debug("setting linkFields to [] in selectMode")
         },
       }
     });
-
     d.result.then(function (result) {
-      console.log("d.open().then");
+      QDR.log.debug("d.open().then");
     }, function () {
-      console.log('Modal dismissed at: ' + new Date());
+      QDR.log.debug('Modal dismissed at: ' + new Date());
     });
   };
 
@@ -1287,6 +1260,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
     $scope.allLogSelections = [];
     $scope.allLogGrid = {
       saveKey: 'allLogGrid',
+      treeKey: 'name',
       data: 'allLogFields',
       columnDefs: [
         {
@@ -1294,12 +1268,6 @@ QDR.log.debug("setting linkFields to [] in selectMode")
           saveKey: 'allLogGrid',
           displayName: 'Module'
         },
-/*        {
-          field: 'enable',
-          displayName: 'Enable'
-        },
-*/
-
         {
           field: 'noticeCount',
           displayName: 'Notice',
@@ -1345,24 +1313,17 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       ],
       //enableCellSelection: true,
       enableColumnResize: true,
-      jqueryUIDraggable: true,
+      minRowsToShow: 17,
       multiSelect: false,
-      selectedItems: $scope.allLogSelections,
-      plugins: [new ngGridFlexibleHeightPlugin()],
-
-      afterSelectionChange: function(data) {
-        if (data.selected) {
-            var selItem = $scope.allLogSelections[0]
-            var nodeId = selItem.name
-            // activate in the tree
-            $("#overtree").dynatree("getTree").activateKey(nodeId);
-        }
-      }
-
+      enableSelectAll: false,
+      onRegisterApi: selectRow,
+      enableSelectionBatchEvent: false,
+      enableRowHeaderSelection: false,
+      noUnselect: true
     };
 
     var allLogEntries = {}
-    var allLogInfo = function () {
+    var allLogInfo = function (log, callback) {
         // update the count of entries for each module
         $scope.allLogFields = []
         var logResults = {}
@@ -1371,7 +1332,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
         var gotLogStats = function (node, entity, response) {
           logDetails[node] = []
           response.results.forEach( function (result) {
-            var oresult = QDRService.flatten(response.attributeNames, result)
+            var oresult = QDRService.utilities.flatten(response.attributeNames, result)
             // make a copy for the details grid since logResults has the same object reference
             logDetails[node].push(angular.copy(oresult))
             if (!(oresult.name in logResults)) {
@@ -1392,117 +1353,54 @@ QDR.log.debug("setting linkFields to [] in selectMode")
           sortedModules.forEach( function (module) {
             $scope.allLogFields.push(logResults[module])
           })
+          expandGridToContent("Logs", $scope.allLogFields.length)
           allLogEntries = logDetails
           updateLogTree($scope.allLogFields)
+          callback(null)
         }
-        QDRService.fetchAllEntities({entity: 'logStats'}, gotAllLogStats, gotLogStats)
-/*
-        var q = QDR.queue(1)
+        QDRService.management.topology.fetchAllEntities({entity: 'logStats'}, gotAllLogStats, gotLogStats)
+    }
 
-        var queuedSendMethod = function (node, callback) {
-          var gotLogInfo = function (nodeId, entity, response, context) {
-            var statusCode = context.message.application_properties.statusCode;
-            if (statusCode < 200 || statusCode >= 300) {
-              callback("getLog failed with statusCode of " + statusCode)
-            } else {
-              var logFields = response.map( function (result) {
-                return {
-                  nodeId: QDRService.nameFromId(nodeId),
-                  name: result[0],
-                  type: result[1],
-                  message: result[2],
-                  source: result[3],
-                  line: result[4],
-                  time: Date(result[5]).toString()
-                }
-              })
-              logResults.push.apply(logResults, logFields) // append new array to existing
-              callback(null)
-            }
-          }
-          QDRService.sendMethod(node, undefined, {}, "GET-LOG", {}, gotLogInfo)
+    var expandGridToContent = function (type, rows) {
+      var tree = $("#overtree").fancytree("getTree")
+      var node = tree.getActiveNode()
+      if (node) {
+        if (node.data.type === type) {
+          var height = (rows+1) * 30 + 40 // header is 40px
+          var gridDetails = $('#overview-controller .grid')
+          gridDetails.css('height', height + "px")
         }
-        for (var i=0; i<nodeIds.length; ++i) {
-          q.defer(queuedSendMethod, nodeIds[i])
-        }
-        q.await(function (error) {
-          if (!error) {
-            logResults.sort( function (a, b) {return b.name - a.name})
-            var allLogFields = $scope.allLogFields
-            $scope.allLogFields = [];
-            for (var i=0; i<allLogFields.length; ++i) {
-              $scope.allLogFields.push({module: allLogFields[i].module,
-                count: logResults.filter( function (entry) {
-                  return entry.name === allLogFields[i].module
-                }).length
-              })
-            }
-            $timeout(function () {allLogEntries = logResults; scheduleNextUpdate()})
-          }
-        })
       }
-      if ($scope.allLogFields.length == 0) {
-        QDRService.fetchEntity(nodeIds[0], "logStats", [], function (nodeName, entity, response) {
-          var moduleIndex = response.attributeNames.indexOf("name")
-          response.results.sort( function (a,b) {return a[moduleIndex] < b[moduleIndex] ? -1 : a[moduleIndex] > b[moduleIndex] ? 1 : 0})
-          response.results.forEach( function (result) {
-            var log = QDRService.flatten(response.attributeNames, result)
-            $scope.allLogFields.push(log)
-          })
-          updateLogTree($scope.allLogFields)
-          haveLogFields()
-        })
-      } else {
-        haveLogFields()
-      }
-        */
     }
 
     $scope.logFields = []
     // get info for a single log
-    var logInfo = function (node) {
+    var logInfo = function (node, callback) {
 
         var gotLogInfo = function (responses) {
-          $timeout(function () {
-            $scope.logModuleData = []
-            $scope.logModule.module = node.data.key
-            for (var n in responses) {
-              var moduleIndex = responses[n]['log'].attributeNames.indexOf("module")
-              var result = responses[n]['log'].results.filter( function (r) {
-                return r[moduleIndex] === node.data.key
-              })[0]
-              var logInfo = QDRService.flatten(responses[n]['log'].attributeNames, result)
-              var entry = allLogEntries[n]
-              entry.forEach( function (module) {
-                if (module.name === node.data.key) {
-                  module.nodeName = QDRService.nameFromId(n)
-                  module.nodeId = n
-                  module.enable = logInfo.enable
-                  $scope.logModuleData.push(module)
-                }
-              })
-            }
-            $scope.logModuleData.sort ( function (a,b) { return a.nodeName < b.nodeName? -1 : a.nodeName> b.nodeName? 1 : 0})
-            scheduleNextUpdate()
-          })
+          $scope.logModuleData = []
+          $scope.logModule.module = node.key
+          for (var n in responses) {
+            var moduleIndex = responses[n]['log'].attributeNames.indexOf("module")
+            var result = responses[n]['log'].results.filter( function (r) {
+              return r[moduleIndex] === node.key
+            })[0]
+            var logInfo = QDRService.utilities.flatten(responses[n]['log'].attributeNames, result)
+            var entry = allLogEntries[n]
+            entry.forEach( function (module) {
+              if (module.name === node.key) {
+                module.nodeName = QDRService.management.topology.nameFromId(n)
+                module.nodeId = n
+                module.enable = logInfo.enable
+                $scope.logModuleData.push(module)
+              }
+            })
+          }
+          $scope.logModuleData.sort ( function (a,b) { return a.nodeName < b.nodeName? -1 : a.nodeName> b.nodeName? 1 : 0})
+          expandGridToContent("Log", $scope.logModuleData.length)
+          callback(null)
         }
-        QDRService.fetchAllEntities({entity: 'log', attrs: ['module', 'enable']}, gotLogInfo)
-/*
-      $timeout(function () {
-        $scope.log = node
-        $scope.logFields = []
-        for (var n in allLogEntries) {
-          var entry = allLogEntries[n]
-          entry.forEach( function (module) {
-            if (module.name === node.data.key) {
-              module.nodeId = n
-              $scope.logFields.push(module)
-            }
-          })
-        }
-        scheduleNextUpdate()
-      })
-*/
+        QDRService.management.topology.fetchAllEntities({entity: 'log', attrs: ['module', 'enable']}, gotLogInfo)
     }
 
     var getExpandedList = function () {
@@ -1512,7 +1410,7 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       if (treeRoot.visit) {
         treeRoot.visit(function(node){
           if (node.isExpanded()) {
-            list.push(node.data.parent)
+            list.push(node.data.parentKey)
           }
           });
       }
@@ -1545,49 +1443,30 @@ QDR.log.debug("setting linkFields to [] in selectMode")
       var template = $scope.templates.filter( function (tpl) {
         return tpl.name == type;
       })
-      $scope.template = template[0];
+      $timeout( function () {
+        $scope.template = template[0];
+      })
     }
     $scope.template = $scope.templates[0]
     // activated is called each time a tree node is clicked
     // based on which node is clicked, load the correct data grid template and start getting the data
-    var activated = function (node) {
-      QDR.log.debug("node activated: " + node.data.title)
+    var onTreeNodeActivated = function (event, data) {
       saveExpanded()
-      saveActivated(node.data.key)
-
-      setTemplate(node)
-      // the nodes info function will fetch the grids data
-      if (node.data.info) {
-        $timeout(function () {
-          if (node.data.key === node.data.parent) {
-            node.data.info()
-          }
-          else {
-            node.data.info(node)
-          }
-        })
-      }
+      saveActivated(data.node.key)
+      $scope.ActivatedKey = data.node.key
+      setTemplate(data.node)
+      updateExpanded()
     }
 
-    var treeNodeExpanded = function (node) {
+    var onTreeNodeExpanded = function (event, data) {
       saveExpanded()
-      tick()
+      updateExpanded()
     }
-    $scope.template = {url: ''};
 
-    if (!QDRService.connected) {
-      QDRService.redirectWhenConnected("overview")
+    if (!QDRService.management.connection.is_connected()) {
+      QDR.redirectWhenConnected($location, "overview")
       return;
     }
-
-    // we are currently connected. setup a handler to get notified if we are ever disconnected
-    var onDisconnect = function () {
-QDR.log.info("we were just disconnected while on the overview page. Setting org to redirect back once we are connected again")
-      $timeout(function () {
-        QDRService.redirectWhenConnected("overview")
-      })
-    }
-    QDRService.addDisconnectAction( onDisconnect )
 
     /* --------------------------------------------------
      *
@@ -1595,98 +1474,127 @@ QDR.log.info("we were just disconnected while on the overview page. Setting org 
      *
      * -------------------------------------------------
      */
-    // utility function called by each top level tree node when it needs to populate its child nodes
-    var updateLeaves = function (leaves, parentKey, parentFolder, worker) {
-      var scrollTree = $('.qdr-overview.pane.left .pane-viewport')
-      var scrollTop = scrollTree.scrollTop();
-      var tree = $("#overtree").dynatree("getTree")
-      var parentNode = tree.getNodeByKey(parentKey);
-      parentNode.removeChildren();
-
-      leaves.forEach( function (leaf) {
-        parentNode.addChild(worker(leaf))
+    var getActiveChild = function (node) {
+      var active = node.children.filter(function (child) {
+        return child.isActive()
       })
-      scrollTree.scrollTop(scrollTop)
-      if (firstTime) {
-        var newActive = tree.getActiveNode();
-        if (newActive &&
-//            newActive.data.key === lastKey &&
-            newActive.data.key !== newActive.data.parent &&  // this is a leaf node
-            newActive.data.parent === parentKey) {          // the active node was just created
-          firstTime = false
-QDR.log.debug("newly created node needs to be activated")
-          activated(newActive)
+      if (active.length > 0)
+        return active[0].key
+      return null
+    }
+    // utility function called by each top level tree node when it needs to populate its child nodes
+    var updateLeaves = function (leaves, entity, worker) {
+      var tree = $("#overtree").fancytree("getTree"), node;
+      if (tree) {
+        node = tree.getNodeByKey(entity)
+      }
+      if (!tree || !node) {
+        return
+      }
+      var wasActive = node.isActive()
+      var wasExpanded = node.isExpanded()
+      var activeChildKey = getActiveChild(node)
+      node.removeChildren()
+      var children = []
+      leaves.forEach( function (leaf) {
+        children.push(worker(leaf))
+      })
+      node.addNode(children)
+      // top level node was expanded
+      if (wasExpanded)
+        node.setExpanded(true, {noAnimation: true, noEvents: true})
+      if (wasActive) {
+        node.setActive(true, {noAnimation: true, noEvents: true})
+      } else {
+        // re-active the previously active child node
+        if (activeChildKey) {
+          var newNode = tree.getNodeByKey(activeChildKey)
+          // the node may not be there after the update
+          if (newNode)
+            newNode.setActive(true, {noAnimation: true, noEvents: true}) // fires the onTreeNodeActivated event for this node
         }
       }
-     }
+      resizer()
+    }
+
+    var resizer = function () {
+      // this forces the tree and the grid to be the size of the browser window.
+      // the effect is that the tree and the grid will have vertical scroll bars if needed.
+      // the alternative is to let the tree and grid determine the size of the page and have
+      // the scroll bar on the window
+      var viewport = $('#overview-controller .pane-viewport')
+      viewport.height( window.innerHeight - viewport.offset().top)
+
+      // remove the comments to allow the tree to take all the height it needs
+/*
+      var gridDetails = $('#overview-controller .grid')
+      gridDetails.height( window.innerHeight - gridDetails.offset().top)
+
+      var gridViewport = $('#overview-controller .ui-grid-viewport')
+      gridViewport.height( window.innerHeight - gridViewport.offset().top )
+*/
+    }
+    $(window).resize(resizer);
 
     // get saved tree state
-    var lastKey = loadActivatedNode();
+    $scope.ActivatedKey = loadActivatedNode();
     var expandedNodeList = loadExpandedNodeList();
     var firstTime = true;
 
     // create a routers tree branch
     var routers = new Folder("Routers")
     routers.type = "Routers"
-    routers.info = allRouterInfo
-    routers.activate = lastKey === 'Routers'
-    routers.expand = (expandedNodeList.indexOf("Routers") > -1)
-    routers.clickFolderMode = 1
+    routers.info = {fn: allRouterInfo}
+    routers.expanded = (expandedNodeList.indexOf("Routers") > -1)
     routers.key = "Routers"
-    routers.parent = "Routers"
-    routers.addClass = "routers"
-    routers.isFolder = true
+    routers.parentKey= "Routers"
+    routers.extraClasses = "routers"
     topLevelChildren.push(routers)
     // called when the list of routers changes
     var updateRouterTree = function (nodes) {
       var worker = function (node) {
-        var name = QDRService.nameFromId(node)
-        var router = new Folder(name)
+        var name = QDRService.management.topology.nameFromId(node)
+        var router = new Leaf(name)
         router.type = "Router"
-        router.info = routerInfo
+        router.info = {fn: routerInfo}
         router.nodeId = node
         router.key = node
-        router.addClass = "router"
-        router.parent = "Routers"
-        router.activate = lastKey === node
+        router.extraClasses = "router"
+        router.parentKey = "Routers"
         return router;
       }
-      $timeout(function () {updateLeaves(nodes, "Routers", routers, worker)})
+      updateLeaves(nodes, "Routers", worker)
     }
 
     // create an addresses tree branch
     var addresses = new Folder("Addresses")
     addresses.type = "Addresses"
-    addresses.info = allAddressInfo
-    addresses.activate = lastKey === 'Addresses'
-    addresses.expand = (expandedNodeList.indexOf("Addresses") > -1)
-    addresses.clickFolderMode = 1
+    addresses.info = {fn: allAddressInfo}
+    addresses.expanded = (expandedNodeList.indexOf("Addresses") > -1)
     addresses.key = "Addresses"
-    addresses.parent = "Addresses"
-    addresses.addClass = "addresses"
-    addresses.isFolder = true
+    addresses.parentKey = "Addresses"
+    addresses.extraClasses = "addresses"
     topLevelChildren.push(addresses)
     var updateAddressTree = function (addressFields) {
       var worker = function (address) {
-        var a = new Folder(address.title)
-        a.info = addressInfo
+        var a = new Leaf(address.title)
+        a.info = {fn: addressInfo}
         a.key = address.uid
         a.fields = address
         a.type = "Address"
         a.tooltip = address['class'] + " address"
         if (address.address === '$management')
           a.tooltip = "internal " + a.tooltip
-        a.addClass = a.tooltip
-        a.activate = lastKey === address.uid
-        a.parent = "Addresses"
+        a.extraClasses = a.tooltip
+        a.parentKey = "Addresses"
         return a;
       }
-      $timeout(function () {updateLeaves(addressFields, "Addresses", addresses, worker)})
+      updateLeaves(addressFields, "Addresses", worker)
     }
 
     $scope.$watch("filter", function (newValue, oldValue) {
       if (newValue !== oldValue) {
-        $timeout(allLinkInfo);
+        allLinkInfo(null, function () {$timeout(function (){})})
         localStorage[FILTERKEY] = JSON.stringify($scope.filter)
       }
     }, true)
@@ -1699,120 +1607,88 @@ QDR.log.debug("newly created node needs to be activated")
     $scope.filter = angular.fromJson(localStorage[FILTERKEY]) || {endpointsOnly: "true", hideConsoles: true};
     var links = new Folder("Links")
     links.type = "Links"
-    links.info = allLinkInfo
-    links.activate = lastKey === 'Links'
-    links.expand = (expandedNodeList.indexOf("Links") > -1)
-    links.clickFolderMode = 1
+    links.info = {fn: allLinkInfo}
+    links.expanded = (expandedNodeList.indexOf("Links") > -1)
     links.key = "Links"
-    links.parent = "Links"
-    links.addClass = "links"
-    links.isFolder = true
+    links.parentKey = "Links"
+    links.extraClasses = "links"
     topLevelChildren.push(links)
 
     // called both before the tree is created and whenever a background update is done
     var updateLinkTree = function (linkFields) {
       var worker = function (link) {
-        var l = new Folder(link.title)
-        var isConsole = QDRService.isConsoleLink(link)
-        l.info = linkInfo
+        var l = new Leaf(link.title)
+        var isConsole = QDRService.utilities.isConsole(QDRService.management.topology.getConnForLink(link))
+        l.info = {fn: linkInfo}
         l.key = link.uid
         l.fields = link
         l.type = "Link"
-        l.parent = "Links"
-        l.activate = lastKey === link.uid
+        l.parentKey = "Links"
         if (isConsole)
           l.tooltip = "console link"
         else
           l.tooltip = link.linkType  + " link"
-        l.addClass = l.tooltip
+        l.extraClasses = l.tooltip
         return l;
       }
-      $timeout(function () {updateLeaves(linkFields, "Links", links, worker)})
+      updateLeaves(linkFields, "Links", worker)
     }
 
     var connections = new Folder("Connections")
     connections.type = "Connections"
-    connections.info = allConnectionInfo
-    connections.activate = lastKey === 'Connections'
-    connections.expand = (expandedNodeList.indexOf("Connections") > -1)
-    connections.clickFolderMode = 1
+    connections.info = {fn: allConnectionInfo}
+    connections.expanded = (expandedNodeList.indexOf("Connections") > -1)
     connections.key = "Connections"
-    connections.parent = "Connections"
-    connections.addClass = "connections"
-    connections.isFolder = true
+    connections.parentKey = "Connections"
+    connections.extraClasses = "connections"
     topLevelChildren.push(connections)
 
     updateConnectionTree = function (connectionFields) {
       var worker = function (connection) {
-        var c = new Folder(connection.host)
-        var isConsole = QDRService.isAConsole (connection.properties, connection.identity, connection.role, connection.routerId)
+        var c = new Leaf(connection.host)
+        var isConsole = QDRService.utilities.isAConsole (connection.properties, connection.identity, connection.role, connection.routerId)
         c.type = "Connection"
-        c.info = connectionInfo
+        c.info = {fn: connectionInfo}
         c.key = connection.uid
         c.fields = connection
         if (isConsole)
           c.tooltip = "console connection"
         else
           c.tooltip = connection.role === "inter-router" ? "inter-router connection" : "external connection"
-        c.addClass = c.tooltip
-        c.parent = "Connections"
-        c.activate = lastKey === connection.uid
+        c.extraClasses = c.tooltip
+        c.parentKey = "Connections"
         return c
       }
-      $timeout(function () {updateLeaves(connectionFields, "Connections", connections, worker)})
+      updateLeaves(connectionFields, "Connections", worker)
     }
 
     var updateLogTree = function (logFields) {
       var worker = function (log) {
-        var l = new Folder(log.name)
+        var l = new Leaf(log.name)
         l.type = "Log"
-        l.info = logInfo
+        l.info = {fn: logInfo}
         l.key = log.name
-        l.parent = "Logs"
-        l.activate = lastKey === l.key
-        l.addClass = "log"
+        l.parentKey = "Logs"
+        l.extraClasses = "log"
         return l
       }
-      $timeout(function () {updateLeaves(logFields, "Logs", logs, worker)})
+      updateLeaves(logFields, "Logs", worker)
     }
 
     var htmlReady = false;
     var dataReady = false;
-    $scope.largeNetwork = QDRService.isLargeNetwork()
+    $scope.largeNetwork = QDRService.management.topology.isLargeNetwork()
     var logs = new Folder("Logs")
     logs.type = "Logs"
-    logs.info = allLogInfo
-    logs.activate = lastKey === 'Logs'
-    logs.expand = (expandedNodeList.indexOf("Logs") > -1)
-    logs.clickFolderMode = 1
+    logs.info = {fn: allLogInfo}
+    logs.expanded = (expandedNodeList.indexOf("Logs") > -1)
     logs.key = "Logs"
-    logs.parent = "Logs"
-    logs.isFolder = true
-    if (QDRService.versionCheck('0.8.0'))
+    logs.parentKey = "Logs"
+    if (QDRService.management.connection.versionCheck('0.8.0'))
       topLevelChildren.push(logs)
-    var initTreeAndGrid = function () {
-      if (!htmlReady || !dataReady)
-        return;
-      var div = angular.element("#overtree");
-      if (!div.width()) {
-        setTimeout(initTreeAndGrid, 100);
-        return;
-      }
-      $('#overtree').dynatree({
-        onActivate: activated,
-        onExpand: treeNodeExpanded,
-        autoCollapse: $scope.largeNetwork,
-        activeVisible: !$scope.largeNetwork,
-        selectMode: 1,
-        debugLevel: 0,
-        classNames: {
-          expander: 'fa-angle',
-          connector: 'dynatree-no-connector'
-          },
-        children: topLevelChildren
-      })
-      treeRoot = $("#overtree").dynatree("getRoot");
-      tick()
+
+    var onTreeInitialized = function (event, data) {
+      treeRoot = data.tree
       loadColState($scope.allRouters);
       loadColState($scope.routerGrid);
       loadColState($scope.addressesGrid);
@@ -1821,6 +1697,28 @@ QDR.log.debug("newly created node needs to be activated")
       loadColState($scope.linkGrid);
       loadColState($scope.allConnectionGrid);
       loadColState($scope.connectionGrid);
+      var activeNode = treeRoot.getNodeByKey($scope.ActivatedKey)
+      if (activeNode)
+        activeNode.setActive(true)
+      updateExpanded()
+    }
+    var initTreeAndGrid = function () {
+      if (!htmlReady || !dataReady)
+        return;
+      var div = angular.element("#overtree");
+      if (!div.width()) {
+        setTimeout(initTreeAndGrid, 100);
+        return;
+      }
+      $('#overtree').fancytree({
+        activate: onTreeNodeActivated,
+        expand: onTreeNodeExpanded,
+        init: onTreeInitialized,
+        autoCollapse: $scope.largeNetwork,
+        activeVisible: !$scope.largeNetwork,
+        clickFolderMode: 1,
+        source: topLevelChildren
+      })
     }
 
     $scope.overviewLoaded = function () {
@@ -1828,51 +1726,57 @@ QDR.log.debug("newly created node needs to be activated")
       initTreeAndGrid();
     }
 
-    var nodeIds = QDRService.nodeIdList()
-    //updateRouterTree(nodeIds);
+    var nodeIds = QDRService.management.topology.nodeIdList()
     // add placeholders for the top level tree nodes
     var topLevelTreeNodes = [routers, addresses, links, connections, logs]
     topLevelTreeNodes.forEach( function (parent) {
-      var placeHolder = new Folder("loading...")
-      placeHolder.addClass = "loading"
+      var placeHolder = new Leaf("loading...")
+      placeHolder.extraClasses = "loading"
       parent.children = [placeHolder]
     })
 
-    var singleQ = null
     var updateExpanded = function () {
-      if (!treeRoot)
-        return;
-      if (treeRoot.visit) {
-        treeRoot.visit(function(node){
-          if (node.isActive())
-            setTemplate(node)
+      QDR.log.debug("updateExpandedEntities")
+      clearTimeout(updateIntervalHandle)
+
+      var tree = $("#overtree").fancytree("getTree");
+      if (tree && tree.visit) {
+        var q = d3.queue(10)
+        tree.visit( function (node) {
           if (node.isActive() || node.isExpanded()) {
-            if (node.data.key === node.data.parent) {
-              node.data.info()
-            }
-            else {
-              node.data.info(node)
+            q.defer(node.data.info.fn, node)
+          }
+        })
+        q.await( function (error) {
+          if (error)
+            QDR.log.error(error.message)
+
+          // if there are no active nodes, activate the saved one
+          var tree = $("#overtree").fancytree("getTree")
+          if (!tree.getActiveNode()) {
+            var active = tree.getNodeByKey($scope.ActivatedKey)
+            if (active) {
+              active.setActive(true)
+            } else {
+              tree.getNodeByKey("Routers").setActive(true)
             }
           }
+
+          // fancytree animations sometimes stop short of shrinking its placeholder spans
+          d3.selectAll('.ui-effects-placeholder').style('height', '0px')
+          // once all expanded tree nodes have been update, schedule another update
+          $timeout(function () {
+            updateIntervalHandle = setTimeout(updateExpanded, updateInterval)
+          })
         })
       }
     }
 
-    var tickTimer;
-    var scheduleNextUpdate = function () {
-      clearTimeout(tickTimer)
-      tickTimer = setTimeout(tick, refreshInterval)
-    }
-    var tick = function () {
-      clearTimeout(tickTimer)
-      updateExpanded();
-    }
     dataReady = true;
     initTreeAndGrid();
     $scope.$on("$destroy", function( event ) {
-      clearTimeout(tickTimer)
-      QDRService.delDisconnectAction( onDisconnect )
-      //QDRService.stopUpdating()
+      clearTimeout(updateIntervalHandle)
+      $(window).off("resize", resizer);
     });
 
   }]);

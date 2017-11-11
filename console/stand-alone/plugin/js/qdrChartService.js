@@ -81,7 +81,7 @@ var QDR = (function(QDR) {
             var nameparts = name.split('/');
             if (nameparts.length == 2)
               name = nameparts[1];
-            var key = QDRService.nameFromId(this.request().nodeId) + this.request().entity + name + this.attr() + "_" + this.instance + "_" + (this.request().aggregate ? "1" : "0");
+            var key = QDRService.management.topology.nameFromId(this.request().nodeId) + this.request().entity + name + this.attr() + "_" + this.instance + "_" + (this.request().aggregate ? "1" : "0");
             // remove all characters except letters,numbers, and _
             return key.replace(/[^\w]/gi, '')
           }
@@ -142,9 +142,9 @@ var QDR = (function(QDR) {
           return this;
         }
         this.title = function(_) {
-          var name = this.request().aggregate ? 'Aggregate' : QDRService.nameFromId(this.nodeId());
+          var name = this.request().aggregate ? 'Aggregate' : QDRService.management.topology.nameFromId(this.nodeId());
           var computed = name +
-            " " + QDRService.humanify(this.attr()) +
+            " " + QDRService.utilities.humanify(this.attr()) +
             " - " + this.name()
           if (!arguments.length) return this.userTitle || computed;
 
@@ -266,11 +266,11 @@ var QDR = (function(QDR) {
 
         init: function() {
           self.loadCharts();
-          QDRService.addDisconnectAction(function() {
+          QDRService.management.connection.addDisconnectAction(function() {
             self.charts.forEach(function(chart) {
               self.unRegisterChart(chart, true)
             })
-            QDRService.addConnectAction(self.init);
+            QDRService.management.connection.addConnectAction(self.init);
           })
         },
 
@@ -461,10 +461,10 @@ var QDR = (function(QDR) {
             }
           }
           if (request.aggregate) {
-            var nodeList = QDRService.nodeIdList()
-            QDRService.getMultipleNodeInfo(nodeList, request.entity, attrs, saveResponse, request.nodeId);
+            var nodeList = QDRService.management.topology.nodeIdList()
+            QDRService.management.topology.getMultipleNodeInfo(nodeList, request.entity, attrs, saveResponse, request.nodeId);
           } else {
-            QDRService.fetchEntity(request.nodeId, request.entity, attrs, saveResponse);
+            QDRService.management.topology.fetchEntity(request.nodeId, request.entity, attrs, saveResponse);
           }
           // it is now safe to schedule another request
           if (once)
@@ -527,7 +527,7 @@ var QDR = (function(QDR) {
           var charts = angular.fromJson(localStorage["QDRCharts"]);
           if (charts) {
             // get array of known ids
-            var nodeList = QDRService.nodeList().map(function(node) {
+            var nodeList = QDRService.management.topology.nodeList().map(function(node) {
               return node.id;
             })
             charts.forEach(function(chart) {
@@ -587,7 +587,7 @@ var QDR = (function(QDR) {
             var now = new Date();
             var visibleDate = new Date(now.getTime() - chart.visibleDuration * 60 * 1000);
             var data = chart.data();
-            var nodeList = QDRService.nodeIdList();
+            var nodeList = QDRService.management.topology.nodeIdList();
 
             if (chart.type == "rate") {
               var rateData = [];
@@ -608,7 +608,7 @@ var QDR = (function(QDR) {
                         nodeList.forEach(function(node, nodeIndex) {
                           if (d1[2][nodeIndex] && d[2][nodeIndex])
                             detail.push({
-                              node: QDRService.nameFromId(node),
+                              node: QDRService.management.topology.nameFromId(node),
                               val: (d1[2][nodeIndex].val - d[2][nodeIndex].val) / elapsed
                             })
                         })
@@ -696,9 +696,9 @@ var QDR = (function(QDR) {
               }
               // create and initialize the chart
               this.svgchart = self.timeSeriesStackedChart(id, width, height,
-                  QDRService.humanify(this.chart.attr()),
+                  QDRService.utilities.humanify(this.chart.attr()),
                   this.chart.name(),
-                  QDRService.nameFromId(this.chart.nodeId()),
+                  QDRService.management.topology.nameFromId(this.chart.nodeId()),
                   this.chart.entity(),
                   stacked,
                   this.chart.visibleDuration)

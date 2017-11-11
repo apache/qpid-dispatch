@@ -60,14 +60,19 @@ var QDR = (function(QDR) {
   QDR.SETTINGS_KEY = 'QDRSettings';
   QDR.LAST_LOCATION = "QDRLastLocation";
 
+  QDR.redirectWhenConnected = function ($location, org) {
+    $location.path(QDR.pluginRoot + "/connect")
+    $location.search('org', org);
+  }
+
   /**
    * @property module
    * @type {object}
    *
    * This plugin's angularjs module instance
    */
-  QDR.module = angular.module(QDR.pluginName, ['ngRoute', 'ngSanitize', 'ngResource', 'ui.bootstrap', 'ngGrid', 'ui.slider']);
-//  QDR.module = angular.module(QDR.pluginName, ['ngResource', 'ngGrid', 'ui.bootstrap', 'ui.slider'/*, 'minicolors' */]);
+  QDR.module = angular.module(QDR.pluginName, ['ngRoute', 'ngSanitize', 'ngResource', 'ui.bootstrap',
+        'ui.grid', 'ui.grid.selection', 'ui.grid.autoResize', 'ui.grid.resizeColumns', 'ui.grid.saveState', 'ui.slider']);
 
   Core = {
     notification: function (severity, msg) {
@@ -81,46 +86,22 @@ var QDR = (function(QDR) {
       .when('/', {
         templateUrl: QDR.templatePath + 'qdrOverview.html'
         })
-      .when('/QDR/overview', {
-        templateUrl: QDR.templatePath + 'qdrOverview.html'
-        })
       .when('/overview', {
           templateUrl: QDR.templatePath + 'qdrOverview.html'
-        })
-      .when('/QDR/topology', {
-          templateUrl: QDR.templatePath + 'qdrTopology.html'
         })
       .when('/topology', {
           templateUrl: QDR.templatePath + 'qdrTopology.html'
         })
-      .when('/QDR/list', {
-          templateUrl: QDR.templatePath + 'qdrList.html'
-        })
       .when('/list', {
           templateUrl: QDR.templatePath + 'qdrList.html'
         })
-      .when('#/list', {
-          templateUrl: QDR.templatePath + 'qdrList.html'
-        })
-      .when('/#/list', {
-          templateUrl: QDR.templatePath + 'qdrList.html'
-        })
-      .when('/QDR/schema', {
-          templateUrl: QDR.templatePath + 'qdrSchema.html'
-        })
       .when('/schema', {
           templateUrl: QDR.templatePath + 'qdrSchema.html'
-        })
-      .when('/QDR/charts', {
-          templateUrl: QDR.templatePath + 'qdrCharts.html'
         })
       .when('/charts', {
           templateUrl: QDR.templatePath + 'qdrCharts.html'
         })
       .when('/connect', {
-          templateUrl: QDR.templatePath + 'qdrConnect.html'
-        })
-      .otherwise({
           templateUrl: QDR.templatePath + 'qdrConnect.html'
         })
   });
@@ -142,7 +123,7 @@ var QDR = (function(QDR) {
 
   QDR.module.filter('humanify', function (QDRService) {
     return function (input) {
-      return QDRService.humanify(input);
+      return QDRService.utilities.humanify(input);
     };
   });
 
@@ -195,23 +176,20 @@ var QDR = (function(QDR) {
     QDR.log = new QDR.logger($log);
     QDR.log.info("*************creating Dispatch Console************");
     var curPath = $location.path()
-QDR.log.info("curPath = " + curPath)
     var org = curPath.substr(1)
     if (org && org.length > 0 && org !== "connect") {
-QDR.log.info("setting location.search to org=" + org)
       $location.search('org', org)
     } else {
-QDR.log.info("setting location.search to org=null")
       $location.search('org', null)
     }
     QDR.queue = d3.queue;
 
-    QDRService.addUpdatedAction("initChartService", function() {
-      QDRService.delUpdatedAction("initChartService")
+    QDRService.management.topology.addUpdatedAction("initChartService", function() {
+      QDRService.management.topology.delUpdatedAction("initChartService")
       QDRChartService.init(); // initialize charting service after we are connected
     });
     var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]) || {autostart: false, address: 'localhost', port: 5673}
-    if (!QDRService.connected) {
+    if (!QDRService.management.connection.is_connected()) {
       // attempt to connect to the host:port that served this page
       var protocol = $location.protocol()
       var host = $location.host()
@@ -219,50 +197,51 @@ QDR.log.info("setting location.search to org=null")
       var search = $location.search()
       if (search.org) {
         if (search.org === 'connect')
-QDR.log.info("was not connected. setting org to overview")
           $location.search("org", "overview")
       }
       var connectOptions = {address: host, port: port}
-      QDRService.testConnect(connectOptions, 10000, function (e) {
+      QDRService.management.connection.testConnect(connectOptions, function (e) {
         if (e.error) {
-          QDR.log.info("failed to auto-connect to " + host + ":" + port)
+          QDR.log.debug("failed to auto-connect to " + host + ":" + port)
+          QDR.log.debug("redirecting to connect page")
           // the connect page should rneder
           $timeout(function () {
             $location.path('/connect')
             $location.search('org', org)
           })
         } else {
-QDR.log.info("testConnect succeeded using address:port of browser")
-          QDRService.getSchema(function () {
-            QDR.log.debug("got schema after connection")
-            QDRService.addUpdatedAction("initialized", function () {
-              QDRService.delUpdatedAction("initialized")
-              QDR.log.debug("got initial topology")
-              $timeout(function() {
-    QDR.log.info("after initialization org was " + org + " and location.path() was " + $location.path())
-                if (org === '' || org === 'connect') {
-                  org = localStorage[QDR.LAST_LOCATION] || "/overview"
-                  if (org === '/')
-                    org = "/overview"
-    QDR.log.info("after initialization org was loaded from localStorage and is now " + org)
-                } else {
-                  if (org && $location.path() !== '/connect') {
-                    org = $location.path().substr(1)
+          QDR.log.info("Connect succeeded. Using address:port of browser")
+          // register an onConnect event handler
+          QDRService.management.connection.addConnectAction( function () {
+            QDRService.management.getSchema(function () {
+              QDR.log.debug("got schema after connection")
+              QDRService.management.topology.addUpdatedAction("initialized", function () {
+                QDRService.management.topology.delUpdatedAction("initialized")
+                QDR.log.debug("got initial topology")
+                $timeout(function() {
+                  if (org === '' || org === 'connect') {
+                    org = localStorage[QDR.LAST_LOCATION] || "/overview"
+                    if (org === '/')
+                      org = "/overview"
+                  } else {
+                    if (org && $location.path() !== '/connect') {
+                      org = $location.path().substr(1)
+                    }
                   }
-                }
-    QDR.log.info("after initialization going to " + org)
-                $location.path(org)
-                $location.search('org', null)
-                $location.replace()
+                  $location.path(org)
+                  $location.search('org', null)
+                  $location.replace()
+                })
               })
+              QDR.log.info("requesting a topology")
+              QDRService.management.topology.setUpdateEntities([])
+              QDRService.management.topology.get() // gets the list of routers
             })
-            QDR.log.info("requesting a topology")
-            QDRService.setUpdateEntities([])
-            QDRService.topology.get()
           })
           $timeout( function () {
-            QDR.log.info("calling connect")
-            QDRService.connect(e)
+            // complete the connection (create the sender/receiver)
+            connectOptions.reconnect = true
+            QDRService.management.connection.connect(connectOptions)
           })
         }
       })
@@ -270,7 +249,6 @@ QDR.log.info("testConnect succeeded using address:port of browser")
 
     $rootScope.$on('$routeChangeSuccess', function(event, next, current) {
       var path = $location.path();
-QDR.log.info("routeChangeSuccess: path is now " + path)
       if (path !== "/connect") {
         localStorage[QDR.LAST_LOCATION] = path;
       }

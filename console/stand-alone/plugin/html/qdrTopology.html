@@ -20,12 +20,16 @@ under the License.
     <div class="qdr-topology pane left" ng-controller="QDR.TopologyFormController">
         <div id="topologyForm" ng-class="{selected : isSelected()}">
             <div ng-if="form == 'router'">
-                <h4>Router Info</h4>
-                <div class="gridStyle" ng-grid="topoGridOptions"></div>
+                <h4 uib-popover="This is popover text"
+                          popover-title="The title"
+                          popover-trigger="'mouseenter'"
+                          popover-append-to-body="true">
+                        Router Info</h4>
+                <div class="grid" ui-grid="topoGridOptions" ui-grid-auto-resize ng-style="infoStyle()"></div>
             </div>
             <div ng-if="form == 'connection'">
                 <h4>Connection Info</h4>
-                <div class="gridStyle" ng-grid="topoGridOptions"></div>
+                <div class="grid" ui-grid="topoGridOptions" ui-grid-auto-resize ng-style="infoStyle()"></div>
             </div>
         </div>
         <button ng-if="panelVisible" ng-click="hideLeftPane()" class="hideLeft" title="Hide"><i class="icon-step-backward"></i></button>
@@ -33,7 +37,8 @@ under the License.
     </div>
     <div class="panel-adjacent">
         <div id="topology"><!-- d3 toplogy here --></div>
-        <div id="crosssection"><!-- d3 pack here --></div>
+        <div id="crosssection"></div><div id="crosshtml" ng-bind-html="crosshtml"></div>
+
         <div id="node_context_menu" class="contextMenu">
             <ul>
                 <li class="na" ng-class="{'force-display': !isFixed()}" ng-click="setFixed(true)">Freeze in place</li>
@@ -43,11 +48,11 @@ under the License.
         <div id="svg_legend"></div>
         <div id="multiple_details">
             <h4 class="grid-title">Connections</h4>
-            <div class="gridStyle" ng-grid="multiDetails"></div>
+            <div class="grid" ui-grid="multiDetails" ui-grid-selection ui-grid-auto-resize ng-style="connectionsStyle()"></div>
         </div>
         <div id="link_details">
             <h4 class="grid-title">Links</h4>
-            <div class="gridStyle" ng-grid="linkDetails"></div>
+            <div class="grid" ui-grid="linkDetails" ui-grid-auto-resize ng-style="linksStyle()"></div>
         </div>
     </div>
 </div>
@@ -61,5 +66,5 @@ under the License.
     </div>
 </script>
 <script type="text/ng-template" id="titleCellTemplate.html">
-    <div title="{{row.entity[col.field]}}" class="ngCellText">{{row.entity[col.field]}}</div>
+    <div title="{{row.entity.attributeValue}}" class="ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}</div>
 </script>

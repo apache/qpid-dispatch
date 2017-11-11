@@ -616,8 +616,8 @@ div.filter-title h6 {
 button.btn-filter {
 	float: right;
 }
-span.dynatree-expanded button.btn-filter,
-a.dynatree-title:hover button.btn-filter {
+span.fancytree-expanded button.btn-filter,
+a.fancytree-title:hover button.btn-filter {
  	visibility: visible;
 }
 
@@ -672,9 +672,9 @@ div.topoGrid .ui-grid-viewport {
 }
 
 .pane-viewport {
-	top: 24px !important;
+  top: 26px !important;
 }
-.dynatree-node.loading {
+.fancytree-node.loading {
   position: initial;
 }
 
@@ -724,3 +724,8 @@ select.required, input.required {
 }
 
 .unique-indicator
+
+.error {
+  color: red;
+  font-weight: bold;
+}

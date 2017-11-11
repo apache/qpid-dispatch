@@ -22,15 +22,15 @@ under the License.
 var QDR = (function (QDR) {
 
   QDR.module.controller("QDR.SchemaController", ['$scope', '$location', '$timeout', 'QDRService', function($scope, $location, $timeout, QDRService) {
-    if (!QDRService.connected) {
-      QDRService.redirectWhenConnected("schema")
+    if (!QDRService.management.connection.is_connected()) {
+      QDR.redirectWhenConnected($location, "schema")
       return;
     }
     var onDisconnect = function () {
-      $timeout( function () {QDRService.redirectWhenConnected("schema")})
+      $timeout( function () {QDR.redirectWhenConnected("schema")})
     }
     // we are currently connected. setup a handler to get notified if we are ever disconnected
-    QDRService.addDisconnectAction( onDisconnect )
+    QDRService.management.connection.addDisconnectAction( onDisconnect )
 
     var keys2kids = function (tree, obj) {
       if (obj === Object(obj)) {
@@ -40,7 +40,7 @@ var QDR = (function (QDR) {
           var key = keys[i];
           var kid = {title: key}
           if (obj[key] === Object(obj[key])) {
-              kid.isFolder = true
+              kid.folder = true
               keys2kids(kid, obj[key])
           } else {
             kid.title += (': ' + JSON.stringify(obj[key],null,2))
@@ -51,10 +51,10 @@ var QDR = (function (QDR) {
     }
 
     var tree = []
-    for (var key in QDRService.schema) {
+    for (var key in QDRService.management.schema()) {
       var kid = {title: key}
-      kid.isFolder = true
-      var val = QDRService.schema[key]
+      kid.folder = true
+      var val = QDRService.management.schema()[key]
       if (val === Object(val))
         keys2kids(kid, val)
       else
@@ -62,17 +62,18 @@ var QDR = (function (QDR) {
 
       tree.push(kid);
     }
-    $('#schema').dynatree({
+    $('#schema').fancytree({
       minExpandLevel: 2,
+      clickFolderMode: 3,
       classNames: {
         expander: 'fa-angle',
-        connector: 'dynatree-no-connector'
+        connector: 'fancytree-no-connector'
       },
-      children: tree
+      source: tree
     })
 
       $scope.$on("$destroy", function(event) {
-        QDRService.delDisconnectAction( onDisconnect )
+        QDRService.management.connection.delDisconnectAction( onDisconnect )
       });
 
   }]);
