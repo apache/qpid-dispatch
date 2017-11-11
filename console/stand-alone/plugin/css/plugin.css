@@ -58,13 +58,22 @@ div.listAttrName {
     padding-top: 5px;
 }
 
-div.listAttrName i.icon-bar-chart {
+div.listAttrName button {
     float: right;
     margin: 3px 5px;
 }
 
+@-moz-document url-prefix() {
+  div.listAttrName button {
+    top: -24px;
+    position: relative;
+    margin: 3px 0px;
+    padding: 0 5px !important;
+  }
+}
+
 div.listAttrName i.icon-bar-chart.active, div.hastip i.icon-bar-chart.active, li.haschart i {
-    background-color: #AAFFAA;
+    /*background-color: #AAFFAA; */
 }
 
 div#main div ul.nav li a:not(.btn) {
