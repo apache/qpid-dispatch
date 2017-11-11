@@ -205,11 +205,7 @@
 # Third Party Dependency Licensing Information:
 ###############################################
 
-The following 4 files are licensed under the above Apache License, Version 2.0
-1. console/stand-alone/plugin/lib/rhea-min.js
-2. console/hawtio/src/main/webapp/plugin/lib/rhea-min.js
-3. console/stand-alone/bower_components/angular-patternfly/dist/angular-patternfly.min.js
-4. console/stand-alone/bower_components/angular-patternfly/dist/styles/angular-patternfly.min.css
+console/hawtio/src/main/webapp/plugin/lib/rhea-min.js is licensed under the above Apache License, Version 2.0
 
 The following 3 files are licensed under the BSD license, for details see licenses/d3.js-license
 1. console/dispatch-dashboard/dispatch/static/dashboard/dispatch/lib/d3.v3.min.js
