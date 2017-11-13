@@ -213,11 +213,30 @@ address {
 }
 ----
 
-`prefix`:: The address prefix. All messages that match this prefix will be distributed according to the distribution pattern you specify.
+`prefix` | `pattern`:: The address or group of addresses to which the address settings should be applied. You can specify a prefix to match an exact address or segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
 +
 //tag::prefix-matching[]
-The prefix can match either an exact address or a segment within an address that is delimited by either a `.` or `/` character. For example, the prefix `my_address` would match the address `my_address` as well as `my_address.1` and `my_address/1`. However, it would not match `my_address1`.
+A _prefix_ matches either an exact address or a segment within an address that is delimited by either a `.` or `/` character. For example, the prefix `my_address` would match the address `my_address` as well as `my_address.1` and `my_address/1`. However, it would not match `my_address1`.
 //end::prefix-matching[]
++
+//tag::pattern-matching[]
+A _pattern_ matches an address that corresponds to a pattern. A pattern is a sequence of words delimited by either a `.` or `/` character. You can use wildcard characters to represent a word. The  `*` character matches exactly one word, and the `#` character matches any sequence of zero or more words.
++
+The following table shows some examples of address patterns:
++
+[cols="25,75"]
+|===
+| This pattern... | Matches...
+| `news`          | `news`
+| `news/*/sports` | `news/europe/sports` and `news/usa/sports`, but not `news`  or `news/europe/fr/sports`
+| `news/#`        | `news`, `news/europe`, `news/usa`, `news/usa/sports`
+|===
++
+[NOTE]
+====
+You can convert a `prefix` value to a `pattern` by appending `/\#` to it. For example, the prefix `a/b/c` is equivalent to the pattern `a/b/c/#`.
+====
+//end::pattern-matching[]
 
 `distribution`:: The message distribution pattern. The default is `balanced`, but you can specify any of the following options:
 +
@@ -288,11 +307,13 @@ address {
 }
 ----
 
-`prefix`:: The address prefix that matches the broker queue to which you want to route messages.
+`prefix` | `pattern`:: The address prefix that matches the broker queue to which you want to route messages.
 +
-//tag::prefix-matching[]
-The prefix can match either an exact address or a segment within an address that is delimited by either a `.` or `/` character. For example, the prefix `my_address` would match the address `my_address` as well as `my_address.1` and `my_address/1`. However, it would not match `my_address1`.
-//end::prefix-matching[]
+The address prefix or pattern that matches the broker queue to which you want to send messages. You can specify a prefix to match an exact address or segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
++
+include::routing.adoc[tags=prefix-matching]
++
+include::routing.adoc[tags=pattern-matching]
 
 `waypoint`:: Set this attribute to `yes` so that the router handles messages sent to this address as a waypoint.
 --
@@ -567,12 +588,16 @@ linkRoute {
 }
 ----
 
-`prefix`:: The address prefix that matches the broker queue to which you want to send messages. All messages that match this prefix will be distributed along the link route.
+`prefix` | `pattern`:: The address prefix or pattern that matches the broker queue that should be the destination for routed link-attaches. All messages that match this prefix or pattern will be distributed along the link route. You can specify a prefix to match an exact address or segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
 +
 include::routing.adoc[tags=prefix-matching]
++
+include::routing.adoc[tags=pattern-matching]
+
 `connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
 +
-If multiple brokers are connected to the router through this connection, requests for addresses matching the link route's prefix are balanced across the brokers. Alternatively, if you want to specify a particular broker, use `containerID` and add the broker's container ID.
+If multiple brokers are connected to the router through this connection, requests for addresses matching the link route's prefix or pattern are balanced across the brokers. Alternatively, if you want to specify a particular broker, use `containerID` and add the broker's container ID.
+
 `dir`:: Set this attribute to `in` to specify that clients can send messages into the router network on this link route.
 
 For information about additional attributes, see xref:router_configuration_file_linkroute[linkRoute] in the _Configuration Reference_.
@@ -591,12 +616,15 @@ linkRoute {
 }
 ----
 
-`prefix`:: The address prefix that matches the broker queue to which you want to receive messages. All messages that match this prefix will be distributed along the link route.
+`prefix` | `pattern`:: The address prefix or pattern that matches the broker queue from which you want to receive routed link-attaches. All messages that match this prefix or pattern will be distributed along the link route. You can specify a prefix to match an exact address or segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
 +
 include::routing.adoc[tags=prefix-matching]
++
+include::routing.adoc[tags=pattern-matching]
+
 `connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
 +
-If multiple brokers are connected to the router through this connection, requests for addresses matching the link route's prefix are balanced across the brokers. Alternatively, if you want to specify a particular broker, use `containerID` and add the broker's container ID.
+If multiple brokers are connected to the router through this connection, requests for addresses matching the link route's prefix or pattern are balanced across the brokers. Alternatively, if you want to specify a particular broker, use `containerID` and add the broker's container ID.
 `dir`:: Set this attribute to `out` to specify that this link route is for receivers.
 
 For information about additional attributes, see xref:router_configuration_file_linkroute[linkRoute] in the _Configuration Reference_.
