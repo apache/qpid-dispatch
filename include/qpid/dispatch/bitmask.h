@@ -27,6 +27,8 @@
  *@{
  */
 
+#include <stdbool.h>
+
 /** A bit mask */
 typedef struct qd_bitmask_t qd_bitmask_t;
 
@@ -45,6 +47,8 @@ int qd_bitmask_clear_bit(qd_bitmask_t *b, int bitnum);
 int qd_bitmask_value(qd_bitmask_t *b, int bitnum);
 int qd_bitmask_first_set(qd_bitmask_t *b, int *bitnum);
 int qd_bitmask_cardinality(const qd_bitmask_t *b);
+
+bool qd_bitmask_valid_bit_value(int bitnum);
 
 int _qdbm_start(qd_bitmask_t *b);
 void _qdbm_next(qd_bitmask_t *b, int *v);

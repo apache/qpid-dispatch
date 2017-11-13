@@ -776,10 +776,12 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     // If this link is involved in inter-router communication, remove its reference
     // from the core mask-bit tables
     //
-    if (link->link_type == QD_LINK_CONTROL)
-        core->control_links_by_mask_bit[conn->mask_bit] = 0;
-    if (link->link_type == QD_LINK_ROUTER)
-        core->data_links_by_mask_bit[conn->mask_bit] = 0;
+    if (qd_bitmask_valid_bit_value(conn->mask_bit)) {
+        if (link->link_type == QD_LINK_CONTROL)
+            core->control_links_by_mask_bit[conn->mask_bit] = 0;
+        if (link->link_type == QD_LINK_ROUTER)
+            core->data_links_by_mask_bit[conn->mask_bit] = 0;
+    }
 
     //
     // Clean up the work list
@@ -1340,6 +1342,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     // Reject any attaches of inter-router links that arrive on connections that are not inter-router.
     //
     if (((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)) {
+        link->link_type = QD_LINK_ENDPOINT; // Demote the link type to endpoint if this is not an inter-router connection
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
         qdr_terminus_free(source);
         qdr_terminus_free(target);

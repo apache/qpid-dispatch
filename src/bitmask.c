@@ -152,6 +152,12 @@ int qd_bitmask_cardinality(const qd_bitmask_t *b)
 }
 
 
+bool qd_bitmask_valid_bit_value(int bitnum)
+{
+    return (bitnum >= 0 && bitnum < QD_BITMASK_BITS);
+}
+
+
 int _qdbm_start(qd_bitmask_t *b)
 {
     int v;
