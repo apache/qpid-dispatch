@@ -1350,6 +1350,7 @@ return;
         var gotAllLogStats = function () {
           var sortedModules = Object.keys(logResults)
           sortedModules.sort(function (a,b) {return a<b?-1:a>b?1:0})
+          $scope.allLogFields = []
           sortedModules.forEach( function (module) {
             $scope.allLogFields.push(logResults[module])
           })
