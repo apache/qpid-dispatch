@@ -20,11 +20,7 @@ under the License.
     <div class="qdr-topology pane left" ng-controller="QDR.TopologyFormController">
         <div id="topologyForm" ng-class="{selected : isSelected()}">
             <div ng-if="form == 'router'">
-                <h4 uib-popover="This is popover text"
-                          popover-title="The title"
-                          popover-trigger="'mouseenter'"
-                          popover-append-to-body="true">
-                        Router Info</h4>
+                <h4 Router Info</h4>
                 <div class="grid" ui-grid="topoGridOptions" ui-grid-auto-resize ng-style="infoStyle()"></div>
             </div>
             <div ng-if="form == 'connection'">
