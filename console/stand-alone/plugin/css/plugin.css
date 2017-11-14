@@ -915,6 +915,7 @@ table.log-entry pre {
     background-color: #f5f5f5;
     color: inherit;
     margin: 0;
+    white-space: pre-wrap;
 }
 
 circle.node.normal.console {
