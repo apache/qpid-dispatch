@@ -432,12 +432,9 @@ console.log("showEntityForm " + args.entity)
       var links = [];
 
       var nodeExists = function (connectionContainer) {
-        for (var i=0; i<nodes.length; ++i) {
-          if (nodes[i].container === connectionContainer) {
-            return i
-          }
-        }
-        return -1
+        return nodes.findIndex( function (node) {
+          return node.container === connectionContainer
+        })
       }
       var normalExists = function (connectionContainer) {
         var normalInfo = {}
@@ -594,7 +591,7 @@ console.log("showEntityForm " + args.entity)
               if (target >= 0) {
                 getLink(source, target, dir, "", source + "-" + target);
               }
-            } else if (role == "normal" || role == "on-demand" || role === "route-container") {
+            } /* else if (role == "normal" || role == "on-demand" || role === "route-container")*/ {
               // not an connection between routers, but an external connection
               var name = QDRService.management.topology.nameFromId(id) + "." + connection.identity;
 
