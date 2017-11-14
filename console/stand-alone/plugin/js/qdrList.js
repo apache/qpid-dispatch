@@ -24,8 +24,8 @@ var QDR = (function(QDR) {
   /**
    * Controller for the main interface
    */
-  QDR.module.controller("QDR.ListController", ['$scope', '$location', '$uibModal', '$filter', '$timeout', 'QDRService', 'QDRChartService',
-    function ($scope, $location, $uibModal, $filter, $timeout, QDRService, QDRChartService) {
+  QDR.module.controller("QDR.ListController", ['$scope', '$location', '$uibModal', '$filter', '$timeout', 'QDRService', 'QDRChartService', 'uiGridConstants',
+    function ($scope, $location, $uibModal, $filter, $timeout, QDRService, QDRChartService, uiGridConstants) {
 
     QDR.log.debug("QDR.ListControll started with location of " + $location.path() + " and connection of  " + QDRService.management.connection.is_connected());
     var updateIntervalHandle = undefined;
@@ -214,6 +214,7 @@ var QDR = (function(QDR) {
     var onTreeNodeActivated = function (event, data) {
       $scope.ActivatedKey = data.node.key
       var selectedNode = data.node
+      $scope.selectedTreeNode = data.node
       $timeout( function () {
         if ($scope.currentMode.id === 'operations')
           $scope.currentMode = $scope.modes[0];
@@ -226,11 +227,17 @@ var QDR = (function(QDR) {
         if (selectedNode.data.typeName === "entity") {
           $scope.selectedEntity = selectedNode.key;
           $scope.operations = lookupOperations()
+          updateExpandedEntities()
         } else if (selectedNode.data.typeName === 'attribute') {
           $scope.selectedEntity = selectedNode.parent.key;
           $scope.operations = lookupOperations()
           $scope.selectedRecordName = selectedNode.key;
           updateDetails(selectedNode.data.details);   // update the table on the right
+        } else if (selectedNode.data.typeName === 'none') {
+          $scope.selectedEntity = selectedNode.parent.key;
+          $scope.selectedRecordName = $scope.selectedEntity
+          updateDetails(fromSchema($scope.selectedEntity));
+
         }
       })
     }
@@ -439,14 +446,7 @@ var QDR = (function(QDR) {
         })
         $scope.detailsObject[attr] = row[attr].value;
       })
-      setTimeout(applyDetails, 1, details)
-    }
-
-    var applyDetails = function (details) {
-      $timeout( function () {
-        $scope.detailFields = details;
-        aggregateColumn();
-      })
+      $scope.detailFields = details;
     }
 
     // called from html ng-style="getTableHeight()"
@@ -487,6 +487,8 @@ var QDR = (function(QDR) {
               first.setActive(true)
             }
           }
+
+          d3.selectAll('.ui-effects-placeholder').style('height', '0px')
 
           // once all expanded tree nodes have been update, schedule another update
           updateIntervalHandle = setTimeout(updateExpandedEntities, updateInterval)
@@ -663,40 +665,7 @@ var QDR = (function(QDR) {
       doDialog('tmplListChart.html', chart);
     }
 
-    var aggregateColumn = function () {
-      if ((aggregateEntities.indexOf($scope.selectedEntity) > -1 && $scope.detailCols.length != 3) ||
-        (aggregateEntities.indexOf($scope.selectedEntity) == -1 && $scope.detailCols.length != 2)) {
-        // column defs have to be reassigned and not spliced, so no push/pop
-         $scope.detailCols = [
-         {
-           field: 'attributeName',
-           displayName: 'Attribute',
-           cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}<i ng-if="row.entity.graph" ng-click="grid.appScope.addToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>'
-
-                         //'<div title="{{row.entity.title}}" class="listAttrName">{{row.entity[col.field]}}<i ng-if="row.entity.graph" ng-click="addToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>'
-         },
-         {
-           field: 'attributeValue',
-           displayName: 'Value',
-           cellTemplate: '<div class="ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}"><span>{{COL_FIELD CUSTOM_FILTERS | pretty}}</span></div>'
-         }
-         ]
-        if (aggregateEntities.indexOf($scope.selectedEntity) > -1) {
-          $scope.detailCols.push(
-           {
-             width: '10%',
-             field: 'aggregateValue',
-             displayName: 'Aggregate',
-             cellTemplate: '<div class="hastip ui-grid-cell-contents" alt="{{row.entity.aggregateTip}}"><span ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS}}</span><i ng-if="row.entity.graph" ng-click="grid.appScope.addAllToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>',
-             cellClass: 'aggregate'
-           }
-          )
-        }
-      }
-      if ($scope.selectedRecordName === "")
-        $scope.detailCols = [];
-    }
-
+    $scope.gridApi = undefined;
     // the table on the right of the page contains a row for each field in the selected record in the table on the left
     $scope.desiredTableHeight = 340;
     $scope.detailCols = [];
@@ -707,7 +676,6 @@ var QDR = (function(QDR) {
           field: 'attributeName',
           displayName: 'Attribute',
           cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}<button ng-if="row.entity.graph" title="Click to view/add a graph" ng-click="grid.appScope.addToGraph(row.entity)" class="btn btn-success"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>'
-          //'<div title="{{row.entity.title}}" class="listAttrName">{{row.entity[col.field]}}<i ng-if="row.entity.graph" ng-click="addToGraph(row.entity)" ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></div>'
         },
         {
           field: 'attributeValue',
@@ -717,7 +685,10 @@ var QDR = (function(QDR) {
       ],
       enableColumnResize: true,
       multiSelect: false,
-      jqueryUIDraggable: true
+      jqueryUIDraggable: true,
+      onRegisterApi: function(gridApi) {
+        $scope.gridApi = gridApi;
+      }
     };
 
     $scope.$on("$destroy", function( event ) {
@@ -728,8 +699,9 @@ var QDR = (function(QDR) {
     function gotMethodResponse (entity, context) {
       var statusCode = context.message.application_properties.statusCode;
       if (statusCode < 200 || statusCode >= 300) {
-        Core.notification('error', context.message.statusDescription);
-        QDR.log.error('Error ' + context.message.statusDescription)
+        var note = "Failed to " + $filter('Pascalcase')($scope.currentMode.op) + " " + entity + ": " + context.message.application_properties.statusDescription
+        Core.notification('error', note);
+        QDR.log.error('Error ' + note)
       } else {
         var note = entity + " " + $filter('Pascalcase')($scope.currentMode.op) + "d"
         Core.notification('success', note);
@@ -761,7 +733,8 @@ var QDR = (function(QDR) {
        .then(function (response) {gotMethodResponse($scope.selectedEntity, response.context)})
     }
     $scope.remove = function () {
-      var attributes = {type: $scope.selectedEntity, name: $scope.selectedRecordName}
+      var identity = $scope.selectedTreeNode.data.details.identity.value
+      var attributes = {type: $scope.selectedEntity, identity: identity}
       QDRService.management.connection.sendMethod($scope.currentNode.id, $scope.selectedEntity, attributes, $scope.currentMode.op)
        .then(function (response) {gotMethodResponse($scope.selectedEntity, response.context)})
     }
