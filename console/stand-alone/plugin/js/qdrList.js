@@ -304,7 +304,7 @@ var QDR = (function(QDR) {
       var updatedDetails = false;
       if (tableRows.length == 0) {
         var newNode = {
-          addClass:   "no-data",
+          extraClasses:   "no-data",
           typeName:   "none",
           title:      "no data",
           key:        node.key + ".1"
@@ -424,6 +424,25 @@ var QDR = (function(QDR) {
           return (old.name === attr) ? old.graph && old.rawValue != row[attr].value : false;
         })
         var schemaEntity = schemaProps($scope.selectedEntity, attr, $scope.currentNode)
+/*
+[{
+  "type": "value",
+  "rateWindow": 1000,
+  "areaColor": "#cbe7f3",
+  "lineColor": "#058dc7",
+  "visibleDuration": 10,
+  "userTitle": null,
+  "dashboard": true,
+  "hdash": false,
+  "instance": 1,
+  "name": "Lqdhello",
+  "attr": "deliveriesFromContainer",
+  "nodeId": "amqp:/_topo/0/QDR.A/$management",
+  "entity": "router.address",
+  "interval": 1000,
+  "duration": 10
+}]
+*/
         details.push( {
           attributeName:  QDRService.utilities.humanify(attr),
           attributeValue: attr === 'port' ? row[attr].value : QDRService.utilities.pretty(row[attr].value),
@@ -432,6 +451,8 @@ var QDR = (function(QDR) {
           rawValue:       row[attr].value,
           graph:          row[attr].graph,
           title:          row[attr].title,
+          chartExists:    (QDRChartService.findCharts({name: row.name.value, attr: attr, nodeId: $scope.currentNode.id, entity: $scope.selectedEntity}).length > 0),
+          //chartExists:    QDRChartService.findChartRequest($scope.currentNode.id, $scope.selectedEntity) !== null,
           aggregateValue: QDRService.utilities.pretty(row[attr].aggregate),
           aggregateTip:   row[attr].aggregateTip,
 
@@ -447,6 +468,7 @@ var QDR = (function(QDR) {
         $scope.detailsObject[attr] = row[attr].value;
       })
       $scope.detailFields = details;
+      aggregateColumn();
     }
 
     // called from html ng-style="getTableHeight()"
@@ -665,6 +687,42 @@ var QDR = (function(QDR) {
       doDialog('tmplListChart.html', chart);
     }
 
+    var aggregateColumn = function () {
+      if ((aggregateEntities.indexOf($scope.selectedEntity) > -1 && $scope.detailCols.length != 3) ||
+        (aggregateEntities.indexOf($scope.selectedEntity) == -1 && $scope.detailCols.length != 2)) {
+        // column defs have to be reassigned and not spliced, so no push/pop
+        $scope.detailCols = [
+        {
+          field: 'attributeName',
+          displayName: 'Attribute',
+          cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}<button ng-if="row.entity.graph" title="Click to view/add a graph" ng-click="grid.appScope.addToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.chartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>'
+        },
+        {
+          field: 'attributeValue',
+          displayName: 'Value',
+          cellTemplate: '<div class="ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS | pretty}}</div>'
+        }
+        ]
+        if (aggregateEntities.indexOf($scope.selectedEntity) > -1) {
+          $scope.detailCols.push(
+          {
+            width: '10%',
+            field: 'aggregateValue',
+            displayName: 'Aggregate',
+            cellTemplate: '<div class="hastip ui-grid-cell-contents" alt="{{row.entity.aggregateTip}}" ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS}} <button title="Click to view/add a graph" ng-if="row.entity.graph" ng-click="grid.appScope.addAllToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.chartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>',
+            cellClass: 'aggregate'
+          }
+          )
+        }
+      }
+      if ($scope.selectedRecordName === "")
+        $scope.detailCols = [];
+
+      $scope.details.columnDefs = $scope.detailCols
+      if ($scope.gridApi)
+        $scope.gridApi.core.notifyDataChange( uiGridConstants.dataChange.COLUMN );
+    }
+
     $scope.gridApi = undefined;
     // the table on the right of the page contains a row for each field in the selected record in the table on the left
     $scope.desiredTableHeight = 340;
@@ -675,7 +733,7 @@ var QDR = (function(QDR) {
         {
           field: 'attributeName',
           displayName: 'Attribute',
-          cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}<button ng-if="row.entity.graph" title="Click to view/add a graph" ng-click="grid.appScope.addToGraph(row.entity)" class="btn btn-success"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>'
+          cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}<button ng-if="row.entity.graph" title="Click to view/add a graph" ng-click="grid.appScope.addToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.chartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>'
         },
         {
           field: 'attributeValue',

@@ -1364,7 +1364,9 @@ return;
 
     var expandGridToContent = function (type, rows) {
       var tree = $("#overtree").fancytree("getTree")
-      var node = tree.getActiveNode()
+      var node = null
+      if (tree && tree.getActiveNode)
+        node = tree.getActiveNode()
       if (node) {
         if (node.data.type === type) {
           var height = (rows+1) * 30 + 40 // header is 40px
@@ -1486,7 +1488,7 @@ return;
     // utility function called by each top level tree node when it needs to populate its child nodes
     var updateLeaves = function (leaves, entity, worker) {
       var tree = $("#overtree").fancytree("getTree"), node;
-      if (tree) {
+      if (tree && tree.getNodeByKey) {
         node = tree.getNodeByKey(entity)
       }
       if (!tree || !node) {

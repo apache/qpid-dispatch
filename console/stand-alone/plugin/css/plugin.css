@@ -838,6 +838,35 @@ span:not(.fancytree-has-children).allocator .fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f170";
 }
+span:not(.fancytree-has-children).policy .fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f256";
+}
+span:not(.fancytree-has-children).logStats .fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f080";
+}
+span:not(.fancytree-has-children).autoLink .fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f0c1";
+}
+span:not(.fancytree-has-children).authServicePlugin .fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f0c1";
+}
+span:not(.fancytree-has-children).sslProfile .fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f023";
+}
+span:not(.fancytree-has-children).vhost .fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f108";
+}
+span:not(.fancytree-has-children).vhostStats .fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f080";
+}
+
 
 .ngCellText {
 /*    color: #333333; */

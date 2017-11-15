@@ -32,14 +32,9 @@ var QDR = (function (QDR) {
 
   if (!QDRService.management.connection.is_connected()) {
     // we are not connected. we probably got here from a bookmark or manual page reload
-    QDR.redirectWhenConnected($locaion, "charts");
+    QDR.redirectWhenConnected($location, "charts");
     return;
   }
-  // we are currently connected. setup a handler to get notified if we are ever disconnected
-  QDRService.management.connection.addDisconnectAction( function () {
-    QDR.redirectWhenConnected($locaion, "charts")
-    $scope.$apply();
-  })
 
   $scope.svgCharts = [];
   // create an svg object for each chart
