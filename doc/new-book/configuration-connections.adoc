@@ -56,7 +56,10 @@ If you have set up SSL/TLS or SASL in your environment, you can configure the ro
 [[adding_outgoing_connections]]
 == Adding Outgoing Connections
 
-Configuring outgoing connections involves setting the host and port on which the router should connect to other routers and brokers.
+Configuring outgoing connections involves setting the host and port on which the router connects to other routers and brokers.
+
+// Adding this here for now; in the future it might be better to have separate procedures for creating inter-router and route-container connections.
+When a router connects to a broker, the broker may provide backup connection data that the router can use if the primary connection fails. If the primary connection fails, the router attempts to reconnect by using a combination of the primary and -- if provided -- backup connections. For more information about viewing the backup connection data provided by the broker, see xref:managing_connectors[].
 
 .Procedure
 
