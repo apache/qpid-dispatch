@@ -222,7 +222,7 @@ A _prefix_ matches either an exact address or the beginning segment within an ad
 //tag::pattern-matching[]
 A _pattern_ matches an address that corresponds to a pattern. A pattern is a sequence of words delimited by either a `.` or `/` character. You can use wildcard characters to represent a word. The  `*` character matches exactly one word, and the `#` character matches any sequence of zero or more words.
 +
-The pattern configuration and the address(es) that match the pattern should use the same delimiter character. For example, if you configure the pattern to be `my.+`, then the addresses that match the pattern should also use a `.` as a delimiter (instead of a `/`).
+The pattern configuration and the address(es) that match the pattern should use the same delimiter character. For example, if you configure the pattern to be `my.*`, then the addresses that match the pattern should also use a `.` as a delimiter (instead of a `/`).
 +
 The following table shows some examples of address patterns:
 +
