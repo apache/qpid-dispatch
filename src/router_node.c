@@ -471,7 +471,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         qd_message_free(msg);
         return;
     }
-    
+
     if (anonymous_link) {
         qd_iterator_t *addr_iter = 0;
         int phase = 0;
@@ -543,6 +543,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         if (pn_delivery_settled(pnd)) {
             if (receive_complete) {
                 pn_delivery_settle(pnd);
+                qdr_delivery_decref(router->router_core, delivery, "release protection of return from deliver");
                 return;
             }
         }
