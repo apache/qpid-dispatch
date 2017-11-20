@@ -215,7 +215,7 @@ qdmanage query role port --type=connector
 a|
 [options="nowrap",subs="+quotes"]
 ----
-qdmanage query failoverList --name=_CONNECTOR_NAME_
+qdmanage query failoverList --type=connector --name=CONNECTOR_NAME
 ----
 
 |View the attributes configured for a connector
