@@ -76,7 +76,7 @@ To enable a cipher list, enter one or more cipher strings separated by colons (`
 ciphers: ALL:!aNULL:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP
 ----
 +
-To see the full list of available ciphers, use the *`openssl ciphers`* command. For more information about each cipher, see the link:https://www.openssl.org/docs/manmaster/man1/ciphers.html[ciphers man page^].
+To see the full list of available ciphers, use the `openssl ciphers` command. For more information about each cipher, see the link:https://www.openssl.org/docs/manmaster/man1/ciphers.html[ciphers man page^].
 
 `certDb`:: The absolute path to the database that contains the public certificates of trusted certificate authorities (CA).
 +
