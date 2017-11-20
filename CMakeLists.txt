@@ -18,11 +18,14 @@
 ##
 
 # Set default build type. Must come before project() which sets default to ""
-set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
-  "Build type: Debug, Release, RelWithDebInfo or MinSizeRel (default RelWithDebInfo)")
-if (CMAKE_BUILD_TYPE MATCHES "Deb")
+if (NOT CMAKE_BUILD_TYPE)
+  set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
+    "Build type: Debug, Release, RelWithDebInfo, MinSizeRel or Coverage (default RelWithDebInfo)" FORCE)
+endif(NOT CMAKE_BUILD_TYPE)
+if (CMAKE_BUILD_TYPE MATCHES "Deb|Cover")
   set (has_debug_symbols " (has debug symbols)")
-endif (CMAKE_BUILD_TYPE MATCHES "Deb")
+endif (CMAKE_BUILD_TYPE MATCHES "Deb|Cover")
+message(STATUS "Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
 
 project(qpid-dispatch C)
 
@@ -115,7 +118,11 @@ find_package_handle_standard_args(VALGRIND DEFAULT_MSG VALGRIND_EXECUTABLE)
 option(USE_VALGRIND "Use valgrind when running tests" OFF)
 
 if (USE_VALGRIND)
-  set(TEST_RUNNER "${VALGRIND_EXECUTABLE} --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=42 --suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp")
+  if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+    message(WARNING "Building for coverage analysis; disabling valgrind run-time error detection")
+  else ()
+    set(TEST_RUNNER "${VALGRIND_EXECUTABLE} --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=42 --suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp")
+  endif ()
 endif()
 
 option(USE_SANITIZERS "Compile with sanitizers (ASan, UBSan, TSan); incompatible with Valgrind" OFF)
@@ -153,6 +160,21 @@ if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
  endif(HAS_PEDANTIC_FLAG)
  add_compile_options(-std=gnu99)
  add_compile_options(-pthread)
+ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+   set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage")
+   set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "--coverage")
+   set (CMAKE_MODULE_LINKER_FLAGS_COVERAGE "--coverage")
+   set (CMAKE_SHARED_LINKER_FLAGS_COVERAGE "--coverage")
+   mark_as_advanced(
+     CMAKE_C_FLAGS_COVERAGE
+     CMAKE_EXE_LINKER_FLAGS_COVERAGE
+     CMAKE_MODULE_LINKER_FLAGS_COVERAGE
+     CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
+   make_directory(${CMAKE_BINARY_DIR}/coverage_results)
+   add_custom_target(coverage
+     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/coverage_results
+     COMMAND ${CMAKE_SOURCE_DIR}/bin/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+ endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 else (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
  add_compile_options(-xc99)
  add_compile_options(-errwarn=%all)
