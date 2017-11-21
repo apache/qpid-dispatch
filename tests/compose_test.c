@@ -151,8 +151,6 @@ static char *test_compose_insert_empty_string(void *context)
 
     char *right = (char*) qd_buffer_base(buf);
 
-    printf("Buffer size is %i\n", (int)qd_buffer_size(buf));
-
     for (int idx = 0; idx < qd_buffer_size(buf); idx++) {
         if (empty_string[idx] != right[idx])
             return "Pattern Mismatch";
