@@ -141,6 +141,62 @@ static char *vector1 =
 
 static int vector1_length = 69;
 
+static char *test_compose_insert_empty_string(void *context)
+{
+    char *empty_string = "\x00\x53\x75\xa1\x00";
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
+    qd_compose_insert_string(field, 0);
+
+    qd_buffer_t *buf = DEQ_HEAD(field->buffers);
+
+    char *right = (char*) qd_buffer_base(buf);
+
+    printf("Buffer size is %i\n", (int)qd_buffer_size(buf));
+
+    for (int idx = 0; idx < qd_buffer_size(buf); idx++) {
+        if (empty_string[idx] != right[idx])
+            return "Pattern Mismatch";
+    }
+
+    return 0;
+}
+
+static char *test_compose_insert_empty_symbol(void *context)
+{
+    char *empty_string = "\x00\x53\x75\xa3\x00";
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
+    qd_compose_insert_symbol(field, 0);
+
+    qd_buffer_t *buf = DEQ_HEAD(field->buffers);
+
+    char *right = (char*) qd_buffer_base(buf);
+
+    for (int idx = 0; idx < qd_buffer_size(buf); idx++) {
+        if (empty_string[idx] != right[idx])
+            return "Pattern Mismatch";
+    }
+
+    return 0;
+}
+
+static char *test_compose_insert_empty_binary(void *context)
+{
+    char *empty_string = "\x00\x53\x75\xa0\x00";
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
+    qd_compose_insert_binary(field, 0, 0);
+
+    qd_buffer_t *buf = DEQ_HEAD(field->buffers);
+
+    char *right = (char*) qd_buffer_base(buf);
+
+    for (int idx = 0; idx < qd_buffer_size(buf); idx++) {
+        if (empty_string[idx] != right[idx])
+            return "Pattern Mismatch";
+    }
+
+    return 0;
+}
+
 static char *test_compose_nested_composites(void *context)
 {
     qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_DELIVERY_ANNOTATIONS, 0);
@@ -346,6 +402,9 @@ int compose_tests()
 
     TEST_CASE(test_compose_list_of_maps, 0);
     TEST_CASE(test_compose_nested_composites, 0);
+    TEST_CASE(test_compose_insert_empty_symbol, 0);
+    TEST_CASE(test_compose_insert_empty_string, 0);
+    TEST_CASE(test_compose_insert_empty_binary, 0);
     TEST_CASE(test_compose_scalars, 0);
     TEST_CASE(test_compose_subfields, 0);
 

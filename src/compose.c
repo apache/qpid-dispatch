@@ -441,7 +441,10 @@ void qd_compose_insert_string_n(qd_composed_field_t *field, const char *value, s
 
 void qd_compose_insert_string(qd_composed_field_t *field, const char *value)
 {
-    qd_compose_insert_string_n(field, value, strlen(value));
+    if (value)
+        qd_compose_insert_string_n(field, value, strlen(value));
+    else
+        qd_compose_insert_string_n(field, value, 0);
 }
 
 
@@ -494,7 +497,9 @@ void qd_compose_insert_string_iterator(qd_composed_field_t *field, qd_iterator_t
 
 void qd_compose_insert_symbol(qd_composed_field_t *field, const char *value)
 {
-    uint32_t len = strlen(value);
+    uint32_t len = 0;
+    if (value)
+        len = strlen(value);
 
     if (len < 256) {
         qd_insert_8(field, QD_AMQP_SYM8);
