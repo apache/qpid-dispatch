@@ -1270,6 +1270,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     // Reject any attaches of inter-router links that arrive on connections that are not inter-router.
     //
     if (((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)) {
+        link->link_type = QD_LINK_ENDPOINT;
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
