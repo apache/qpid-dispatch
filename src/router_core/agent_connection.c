@@ -212,12 +212,14 @@ static void qdr_connection_insert_column_CT(qdr_connection_t *conn, int col, qd_
                     // We are assuming for now that all values are either strings or integers
                     qd_get_next_pn_data(&data, &value_string, &value_int);
 
-                    qd_compose_insert_string(body, key);
-
-                    if (value_string)
-                        qd_compose_insert_string(body, value_string);
-                    else if (value_int)
-                        qd_compose_insert_int(body, value_int);
+                    // We now have the key and the value. Do not insert the key or the value if key is empty
+                    if (key) {
+                        qd_compose_insert_string(body, key);
+                        if (value_string)
+                            qd_compose_insert_string(body, value_string);
+                        else if (value_int)
+                            qd_compose_insert_int(body, value_int);
+                    }
 
                 }
             }

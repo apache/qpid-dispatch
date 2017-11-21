@@ -18,14 +18,18 @@
 #
 
 import unittest
-from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED, Url
+from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED, Url, symbol
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler, TransactionHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SyncRequestResponse
 from qpid_dispatch.management.client import Node
 
-CONNECTION_PROPERTIES = {u'connection': u'properties', u'int_property': 6451}
+CONNECTION_PROPERTIES_UNICODE_STRING = {u'connection': u'properties', u'int_property': 6451}
+CONNECTION_PROPERTIES_SYMBOL = dict()
+CONNECTION_PROPERTIES_SYMBOL[symbol("connection")] = symbol("properties")
+CONNECTION_PROPERTIES_BINARY = {'client_identifier': 'policy_server'}
+
 
 class OneRouterTest(TestCase):
     """System tests involving a single router"""
@@ -1156,10 +1160,13 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertTrue(test.received_error)
 
-    def test_connection_properties(self):
+    def test_connection_properties_unicode_string(self):
+        """
+        Tests connection property that is a map of unicode strings and integers
+        """
         connection = BlockingConnection(self.router.addresses[0],
                                         timeout=60,
-                                        properties=CONNECTION_PROPERTIES)
+                                        properties=CONNECTION_PROPERTIES_UNICODE_STRING)
         client = SyncRequestResponse(connection)
 
         node = Node.connect(self.router.addresses[0])
@@ -1174,6 +1181,57 @@ class OneRouterTest(TestCase):
                 self.assertEqual(result[0][u'int_property'], 6451)
 
         self.assertTrue(found)
+        client.connection.close()
+
+    def test_connection_properties_symbols(self):
+        """
+        Tests connection property that is a map of symbols
+        """
+        connection = BlockingConnection(self.router.addresses[0],
+                                        timeout=60,
+                                        properties=CONNECTION_PROPERTIES_SYMBOL)
+        client = SyncRequestResponse(connection)
+
+        node = Node.connect(self.router.addresses[0])
+
+        results = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'properties']).results
+
+        found = False
+        for result in results:
+            if u'connection' in result[0]:
+                if result[0][u'connection'] == u'properties':
+                    found = True
+                    break
+
+        self.assertTrue(found)
+
+        client.connection.close()
+
+    def test_connection_properties_binary(self):
+        """
+        Tests connection property that is a binary map. The router ignores AMQP binary data type.
+        Router should not return anything for connection properties
+        """
+        connection = BlockingConnection(self.router.addresses[0],
+                                        timeout=60,
+                                        properties=CONNECTION_PROPERTIES_BINARY)
+        client = SyncRequestResponse(connection)
+
+        node = Node.connect(self.router.addresses[0])
+
+        results = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'properties']).results
+
+        results_found = True
+
+        for result in results:
+            if not result[0]:
+                results_found = False
+            else:
+                results_found = True
+                break
+
+        self.assertFalse(results_found)
+
         client.connection.close()
 
 
