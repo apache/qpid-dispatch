@@ -296,7 +296,7 @@ static void listener_start(qd_http_listener_t *hl, qd_http_server_t *hs) {
         info.ssl_private_key_filepath = config->ssl_private_key_file;
         info.ssl_private_key_password = config->ssl_password;
         info.ssl_ca_filepath = config->ssl_trusted_certificates;
-        info.ssl_cipher_list = config->ciphers;
+        info.ssl_cipher_list = config->ssl_ciphers;
 
         info.options |=
             LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT |

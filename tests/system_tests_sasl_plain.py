@@ -227,6 +227,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                      'certFile': cls.ssl_file('server-certificate.pem'),
                                      'keyFile': cls.ssl_file('server-private-key.pem'),
                                      'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
+                                     'protocols': 'TLSv1.1 TLSv1.2',
                                      'password': 'server-password'}),
                      ('router', {'workerThreads': 1,
                                  'id': 'QDR.X',

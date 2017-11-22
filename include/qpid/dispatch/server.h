@@ -303,7 +303,13 @@ typedef struct qd_server_config_t {
     /**
      * Specifies the enabled ciphers so the SSL Ciphers can be hardened.
      */
-    char *ciphers;
+    char *ssl_ciphers;
+
+    /**
+     * This list is a space separated string of the allowed TLS protocols. The current possibilities are TLSv1 TLSv1.1 TLSv1.2.
+     * For example, if you want to permit only TLSv.1.1 and TLSv1.2, your value for the protocols would be TLSv1.1 TLSv1.2. If this attribute is not set, then all the TLS protocols are allowed.
+     */
+    char *ssl_protocols;
 
     /**
      * Allow the connection to be redirected by the peer (via CLOSE->Redirect).  This is
